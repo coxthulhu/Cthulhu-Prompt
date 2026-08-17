@@ -6,12 +6,14 @@ import { PromptStatus } from '@shared/Prompt'
 import { promptCollection } from './PromptCollection'
 
 export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] => [
-  ...promptFolder.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id),
+  ...promptFolder.categoryOrder.categories.flatMap((category) =>
+    category.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id)
+  ),
   ...promptFolder.completedPromptIds
 ]
 
 export const isPromptFolderEmpty = (promptFolder: PromptFolder): boolean =>
-  promptFolder.entries.length === 0 &&
+  promptFolder.categoryOrder.categories.every((category) => category.entries.length === 0) &&
   promptFolder.completedPromptIds.length === 0 &&
   getCategoryOrderCategoryIds(promptFolder.categoryOrder).length === 0 &&
   Object.values(promptFolder.settings).every((value) => (value ?? '').trim().length === 0)
@@ -27,7 +29,6 @@ export const getPromptFolderCompletedPromptIds = (promptFolder: PromptFolder): s
 ]
 
 export const getPromptFolderActiveEntryIds = (promptFolder: PromptFolder): string[] =>
-  promptFolder.entries.flatMap((entry) => {
-    if (entry.kind === 'folder') return [entry.id]
+  promptFolder.categoryOrder.categories.flatMap((category) => category.entries).flatMap((entry) => {
     return promptCollection.get(entry.id)?.status === PromptStatus.Completed ? [] : [entry.id]
   })

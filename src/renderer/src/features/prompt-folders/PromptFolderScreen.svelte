@@ -13,10 +13,20 @@
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
-  import CreatePromptSubfolderDialog from './CreatePromptSubfolderDialog.svelte'
-  import type { PromptFolderDividerTarget } from './promptFolderScreenRows'
   import CreateCategoryDialog from './CreateCategoryDialog.svelte'
-  import { createCategory } from '@renderer/data/Mutations/CategoryMutations'
+  import {
+    createCategory,
+    deleteCategory,
+    moveCategory,
+    renameCategory
+  } from '@renderer/data/Mutations/CategoryMutations'
+  import { setCategoryDescriptionWithAutosave } from '@renderer/data/Mutations/CategoryMutations'
+  import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
+  import {
+    clearPromptFolderSettingsFieldRowMeasuredHeight,
+    recordPromptFolderSettingsRowMeasuredHeight
+  } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
+  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 
   let {
     screenRootFolderId,
@@ -49,11 +59,14 @@
 
   let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
   let renamePromptFolderId = $state<string | null>(null)
-  let createPromptSubfolderDialog = $state<{
-    openDialog: (target: PromptFolderDividerTarget) => void
-  } | null>(null)
   /** Imperative handle for opening category creation from the root header. */
   let createCategoryDialog = $state<{ openDialog: () => void } | null>(null)
+  /** Imperative handle for opening category rename. */
+  let renameCategoryDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
+  /** Category currently selected for rename. */
+  let renameCategoryId = $state<string | null>(null)
+  /** Category currently awaiting deletion confirmation. */
+  let deleteCategoryId = $state<string | null>(null)
   let deletePromptFolderId = $state<string | null>(null)
 
   const renamePromptFolderTarget = $derived(
@@ -64,36 +77,12 @@
       ? 'Prompt Template Folder'
       : 'Prompt Folder'
   )
-  // Duplicate folder names only conflict within the same on-disk parent folder.
+  // Root folder names conflict with same-kind root siblings.
   const renamePromptFolderSiblings = $derived.by(() => {
     if (!renamePromptFolderTarget) return []
-
-    const parentFolder = controller.promptFolders.find((folder) =>
-      folder.entries.some(
-        (entry) => entry.kind === 'folder' && entry.id === renamePromptFolderTarget.id
-      )
-    )
-    const siblingIds = new Set(
-      parentFolder
-        ? parentFolder.entries.filter((entry) => entry.kind === 'folder').map((entry) => entry.id)
-        : controller.promptFolders
-            .filter(
-              (folder) =>
-                !controller.promptFolders.some((candidate) =>
-                  candidate.entries.some(
-                    (entry) => entry.kind === 'folder' && entry.id === folder.id
-                  )
-                )
-            )
-            .map((folder) => folder.id)
-    )
-
     return controller.promptFolders.filter(
       (folder) =>
-        (parentFolder
-          ? folder.kind === renamePromptFolderTarget.kind
-          : (folder.kind === 'template') === (renamePromptFolderTarget.kind === 'template')) &&
-        siblingIds.has(folder.id)
+        (folder.kind === 'template') === (renamePromptFolderTarget.kind === 'template')
     )
   })
 
@@ -117,10 +106,6 @@
     )
   }
 
-  const openCreatePromptSubfolderDialog = (target: PromptFolderDividerTarget) => {
-    createPromptSubfolderDialog?.openDialog(target)
-  }
-
   /** Opens category creation for the screen's root folder. */
   const openCreateCategoryDialog = (): void => {
     createCategoryDialog?.openDialog()
@@ -138,6 +123,77 @@
     )
   }
 
+  /** Category currently selected for rename. */
+  const renameCategoryTarget = $derived(
+    controller.categories.find((category) => category.id === renameCategoryId) ?? null
+  )
+
+  /** Opens category rename with its current display name. */
+  const openRenameCategoryDialog = (categoryId: string): void => {
+    const category = controller.categories.find((candidate) => candidate.id === categoryId)
+    if (!category) return
+    renameCategoryId = categoryId
+    renameCategoryDialog?.openDialog(category.displayName)
+  }
+
+  /** Persists a validated category display name. */
+  const handleRenameCategory = async (displayName: string): Promise<boolean> => {
+    if (!renameCategoryTarget) return false
+    return await runIpcBestEffort(
+      async () => {
+        await renameCategory(renameCategoryTarget.id, displayName)
+        return true
+      },
+      () => false
+    )
+  }
+
+  /** Deletes the selected category and moves its content to Uncategorized. */
+  const performCategoryDelete = async (): Promise<void> => {
+    if (!deleteCategoryId) return
+    /** Stable category ID retained while the dialog closes. */
+    const categoryId = deleteCategoryId
+    deleteCategoryId = null
+    await runIpcBestEffort(() => deleteCategory(categoryId))
+  }
+
+  /** Persists one category-group reorder from the folder screen. */
+  const handleMoveCategory = (categoryId: string, previousCategoryId: string | null): void => {
+    void runIpcBestEffort(() =>
+      moveCategory(controller.screenRootFolderId, categoryId, previousCategoryId)
+    )
+  }
+
+  /** Updates and measures the sole category setting before its paced autosave. */
+  const handleCategoryDescriptionChange = (
+    categoryId: string,
+    text: string,
+    measurement: TextMeasurement
+  ): void => {
+    const category = controller.categories.find((candidate) => candidate.id === categoryId)
+    if (!category) return
+    const textChanged = category.description !== text
+    recordPromptFolderSettingsRowMeasuredHeight(
+      categoryId,
+      'folderDescription',
+      measurement,
+      textChanged
+    )
+    if (textChanged) setCategoryDescriptionWithAutosave(categoryId, text, AUTOSAVE_MS)
+  }
+
+  /** Adds or removes a category description through the same expandable settings UI. */
+  const handleCategoryDescriptionPresenceChange = (
+    categoryId: string,
+    isPresent: boolean
+  ): void => {
+    const category = controller.categories.find((candidate) => candidate.id === categoryId)
+    const description = isPresent ? '' : null
+    if (!category || category.description === description) return
+    clearPromptFolderSettingsFieldRowMeasuredHeight(categoryId, 'folderDescription')
+    setCategoryDescriptionWithAutosave(categoryId, description, AUTOSAVE_MS)
+  }
+
   const isEmptyPromptFolder = (promptFolderId: string): boolean => {
     const promptFolder = controller.promptFolders.find((folder) => folder.id === promptFolderId)
     if (!promptFolder) return false
@@ -149,9 +205,6 @@
     if (!workspaceId) return
 
     const isRootPromptFolder = promptFolderId === controller.screenRootFolderId
-    const parentPromptFolderId = controller.promptFolders.find((folder) =>
-      folder.entries.some((entry) => entry.kind === 'folder' && entry.id === promptFolderId)
-    )?.id
     deletePromptFolderId = null
     const didDelete = await runIpcBestEffort(
       async () => {
@@ -164,8 +217,6 @@
     if (didDelete && isRootPromptFolder) {
       didDeleteScreenRootFolder = true
       onRootPromptFolderDeleted()
-    } else if (didDelete && parentPromptFolderId) {
-      controller.handleDeletedPromptFolder(parentPromptFolderId)
     }
   }
 
@@ -253,6 +304,7 @@
             promptTemplateTextById={controller.promptTemplateTextById}
             promptMetadataByPromptId={controller.promptMetadataByPromptId}
             promptFolders={controller.promptFolders}
+            categories={controller.categories}
             activeScreenRows={controller.activePromptFolderScreenRows}
             visiblePromptIds={controller.visiblePromptIds}
             activePromptCount={controller.activePromptCount}
@@ -265,7 +317,6 @@
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
-            onAddSubfolder={openCreatePromptSubfolderDialog}
             onAddCategory={openCreateCategoryDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptFolder={handleDeletePromptFolder}
@@ -274,9 +325,9 @@
             onMovePromptDown={controller.handleMovePromptDown}
             canMovePrompt={controller.canMovePrompt}
             onPromptTreeDrop={controller.handlePromptTreeDrop}
-            onPromptFolderTreeDrop={controller.handlePromptFolderTreeDrop}
-            onSettingsFieldChange={controller.handleSettingsFieldChange}
-            onSettingsFieldPresenceChange={controller.handleSettingsFieldPresenceChange}
+            onMoveCategory={handleMoveCategory}
+            onCategoryDescriptionChange={handleCategoryDescriptionChange}
+            onCategoryDescriptionPresenceChange={handleCategoryDescriptionPresenceChange}
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
             onScrollApiChange={controller.setScrollApi}
@@ -287,6 +338,10 @@
             onSettingsSectionToggle={controller.toggleSettingsSectionExpanded}
             onPromptsSectionToggle={controller.togglePromptsSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}
+            onRenameCategory={openRenameCategoryDialog}
+            onDeleteCategory={(categoryId) => {
+              deleteCategoryId = categoryId
+            }}
             {onScreenModeChange}
           />
         {/if}
@@ -306,20 +361,25 @@
   {/snippet}
 </PromptFolderFindIntegration>
 
-<CreatePromptSubfolderDialog
-  bind:this={createPromptSubfolderDialog}
-  workspaceId={controller.workspaceId}
-  isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
-  promptFolders={controller.promptFolders}
-  isPromptFolderListLoading={false}
-  onCreated={controller.handleCreatedSubfolder}
-/>
-
 <CreateCategoryDialog
   bind:this={createCategoryDialog}
   categories={controller.categories}
   isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
   onsubmit={handleCreateCategory}
+/>
+
+<CreateCategoryDialog
+  bind:this={renameCategoryDialog}
+  categories={controller.categories}
+  excludedCategoryId={renameCategoryId}
+  isWorkspaceReady={controller.workspaceId !== null && renameCategoryTarget !== null}
+  dialogTitle="Rename Category"
+  dialogSubtitle="Choose a new name for this category."
+  submitLabel="Rename Category"
+  submittingLabel="Renaming..."
+  failureMessage="Failed to rename category. Please try again."
+  testIdPrefix="rename"
+  onsubmit={handleRenameCategory}
 />
 
 <PromptFolderNameDialog
@@ -350,7 +410,7 @@
 <ConfirmationDialog
   open={deletePromptFolderTarget !== null}
   title={`Delete ${deleteFolderTitle}`}
-  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents and subfolders?`}
+  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents?`}
   confirmText={deletePromptFolderTarget?.kind === 'template'
     ? 'Delete Template Folder'
     : 'Delete Prompt Folder'}
@@ -363,6 +423,18 @@
       void performPromptFolderDelete(deletePromptFolderTarget.id)
     }
   }}
+/>
+
+<ConfirmationDialog
+  open={deleteCategoryId !== null}
+  title="Delete Category"
+  description={`Are you sure you want to delete “${controller.categories.find((category) => category.id === deleteCategoryId)?.displayName ?? ''}”? Its contents will move to Uncategorized.`}
+  confirmText="Delete Category"
+  confirmTestId="category-confirm-delete-button"
+  oncancel={() => {
+    deleteCategoryId = null
+  }}
+  onconfirm={performCategoryDelete}
 />
 
 <style>

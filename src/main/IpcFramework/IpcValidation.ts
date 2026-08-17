@@ -18,6 +18,7 @@ import type {
   Category,
   CreateCategoryPayload,
   DeleteCategoryPayload,
+  MoveCategoryPayload,
   RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
@@ -243,13 +244,6 @@ const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
   kind: (value) => (value === 'prompt' || value === 'template' ? value : null),
   folderName: parseString,
   displayName: parseString,
-  entries: parseArray(
-    parseObject({
-      kind: (value) =>
-        value === 'prompt' || value === 'template' || value === 'folder' ? value : null,
-      id: parseString
-    })
-  ),
   completedPromptIds: parseArray(parseString),
   categoryOrder: parseObject({
     categories: parseArray(
@@ -431,16 +425,6 @@ const parseCloseWorkspacePayload = parseObject<CloseWorkspacePayload>({})
 const parseCloseWorkspaceWireRequest: Parser<IpcRequestWithPayload<CloseWorkspacePayload>> =
   parseWireRequestWithPayload<CloseWorkspacePayload>(parseCloseWorkspacePayload)
 
-const parseNullablePromptFolderRevisionPayloadEntity = (
-  value: unknown
-): RevisionPayloadEntity<PromptFolder> | null | undefined => {
-  if (value === null) {
-    return null
-  }
-
-  return parsePromptFolderRevisionPayloadEntity(value) ?? undefined
-}
-
 const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -450,9 +434,8 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
   const valueKeys = Object.keys(record)
 
   if (
-    valueKeys.length !== 6 ||
+    valueKeys.length !== 5 ||
     !('workspace' in record) ||
-    !('parentPromptFolder' in record) ||
     !('promptFolderId' in record) ||
     !('kind' in record) ||
     !('displayName' in record) ||
@@ -462,16 +445,12 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
   }
 
   const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
-  const parentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
-    record.parentPromptFolder
-  )
   const promptFolderId = parseString(record.promptFolderId)
   const kind = record.kind === 'prompt' || record.kind === 'template' ? record.kind : null
   const displayName = parseString(record.displayName)
 
   if (
     !workspace ||
-    parentPromptFolder === undefined ||
     promptFolderId === null ||
     kind === null ||
     displayName === null ||
@@ -482,7 +461,6 @@ const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value
 
   return {
     workspace,
-    parentPromptFolder,
     promptFolderId,
     kind,
     displayName,
@@ -501,9 +479,10 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
 
     const record = value as Record<string, unknown>
     if (
-      Object.keys(record).length !== 3 ||
+      Object.keys(record).length !== 4 ||
       !('promptFolder' in record) ||
       !('content' in record) ||
+      !('categoryId' in record) ||
       !('previousEntryId' in record)
     ) {
       return null
@@ -512,11 +491,12 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
     const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
     const content = parseContentRevisionPayloadEntity(record.content)
     const previousEntryId = record.previousEntryId
-    if (!promptFolder || !content || (previousEntryId !== null && typeof previousEntryId !== 'string')) {
+    const categoryId = record.categoryId
+    if (!promptFolder || !content || (categoryId !== null && typeof categoryId !== 'string') || (previousEntryId !== null && typeof previousEntryId !== 'string')) {
       return null
     }
 
-    return { promptFolder, content, previousEntryId }
+    return { promptFolder, content, categoryId, previousEntryId }
   }
 
   const parseRevisionPayload = parseObject<MarkdownContentRevisionPayload<TContent>>({
@@ -531,10 +511,11 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
 
     const record = value as Record<string, unknown>
     if (
-      Object.keys(record).length !== 4 ||
+      Object.keys(record).length !== 5 ||
       !('sourcePromptFolder' in record) ||
       !('destinationPromptFolder' in record) ||
       !('content' in record) ||
+      !('categoryId' in record) ||
       !('previousEntryId' in record)
     ) {
       return null
@@ -546,16 +527,18 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
     )
     const content = parseContentRevisionPayloadEntity(record.content)
     const previousEntryId = record.previousEntryId
+    const categoryId = record.categoryId
     if (
       !sourcePromptFolder ||
       !destinationPromptFolder ||
       !content ||
+      (categoryId !== null && typeof categoryId !== 'string') ||
       (previousEntryId !== null && typeof previousEntryId !== 'string')
     ) {
       return null
     }
 
-    return { sourcePromptFolder, destinationPromptFolder, content, previousEntryId }
+    return { sourcePromptFolder, destinationPromptFolder, content, categoryId, previousEntryId }
   }
 
   return {
@@ -634,6 +617,17 @@ const parseDeleteCategoryPayload = parseObject<DeleteCategoryPayload>({
 const parseDeleteCategoryWireRequest: Parser<IpcRequestWithPayload<DeleteCategoryPayload>> =
   parseWireRequestWithPayload<DeleteCategoryPayload>(parseDeleteCategoryPayload)
 
+/** Parser for category reordering payloads. */
+const parseMoveCategoryPayload = parseObject<MoveCategoryPayload>({
+  promptFolder: parsePromptFolderRevisionPayloadEntity,
+  categoryId: parseString,
+  previousCategoryId: parseNullableString
+})
+
+/** Wire request parser for category reordering. */
+const parseMoveCategoryWireRequest: Parser<IpcRequestWithPayload<MoveCategoryPayload>> =
+  parseWireRequestWithPayload<MoveCategoryPayload>(parseMoveCategoryPayload)
+
 const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return null
@@ -641,25 +635,21 @@ const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value
 
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 3 ||
+    Object.keys(record).length !== 2 ||
     !('workspace' in record) ||
-    !('parentPromptFolder' in record) ||
     !('promptFolder' in record)
   ) {
     return null
   }
 
   const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
-  const parentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
-    record.parentPromptFolder
-  )
   const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
 
-  if (!workspace || parentPromptFolder === undefined || !promptFolder) {
+  if (!workspace || !promptFolder) {
     return null
   }
 
-  return { workspace, parentPromptFolder, promptFolder }
+  return { workspace, promptFolder }
 }
 
 const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePromptFolderPayload>> =
@@ -684,10 +674,8 @@ const parseMovePromptFolderPayload: Parser<MovePromptFolderPayload> = (value) =>
   const valueKeys = Object.keys(record)
 
   if (
-    valueKeys.length !== 5 ||
+    valueKeys.length !== 3 ||
     !('workspace' in record) ||
-    !('sourceParentPromptFolder' in record) ||
-    !('destinationParentPromptFolder' in record) ||
     !('promptFolderId' in record) ||
     !('previousEntryId' in record)
   ) {
@@ -695,18 +683,10 @@ const parseMovePromptFolderPayload: Parser<MovePromptFolderPayload> = (value) =>
   }
 
   const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
-  const sourceParentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
-    record.sourceParentPromptFolder
-  )
-  const destinationParentPromptFolder = parseNullablePromptFolderRevisionPayloadEntity(
-    record.destinationParentPromptFolder
-  )
   const promptFolderId = parseString(record.promptFolderId)
 
   if (
     !workspace ||
-    sourceParentPromptFolder === undefined ||
-    destinationParentPromptFolder === undefined ||
     promptFolderId === null ||
     (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
   ) {
@@ -715,8 +695,6 @@ const parseMovePromptFolderPayload: Parser<MovePromptFolderPayload> = (value) =>
 
   return {
     workspace,
-    sourceParentPromptFolder,
-    destinationParentPromptFolder,
     promptFolderId,
     previousEntryId: record.previousEntryId
   }
@@ -824,6 +802,9 @@ export const parseSetCategoryDescriptionRequest = createRequestParser(
 
 /** Validated request parser for category deletion IPC. */
 export const parseDeleteCategoryRequest = createRequestParser(parseDeleteCategoryWireRequest)
+
+/** Validated request parser for category reordering IPC. */
+export const parseMoveCategoryRequest = createRequestParser(parseMoveCategoryWireRequest)
 
 export const parseDeletePromptFolderRequest = createRequestParser(
   parseDeletePromptFolderWireRequest

@@ -5,13 +5,12 @@ import {
   type SetPromptStatusResponsePayload
 } from '@shared/Prompt'
 import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
-import { promptEntryRef, removeEntry } from '@shared/OrderContainer'
+import { promptEntryRef } from '@shared/OrderContainer'
 import type { PromptFolder } from '@shared/PromptFolder'
 import {
-  appendCategoryOrderEntry,
+  insertCategoryOrderEntry,
   removeCategoryOrderEntry
 } from '@shared/PromptFolder'
-import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
@@ -32,7 +31,6 @@ import {
   resolveCompletedPromptFolderName
 } from '../Persistence/PromptPersistencePaths'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
-import { collectWorkspacePromptFolders } from './PromptFolderPathHelpers'
 import {
   getPlannedMarkdownPersistenceFields,
   planMarkdownFilenamePersistenceFields,
@@ -87,22 +85,6 @@ const createPromptFilenameUpdateHandles = (
   return handles
 }
 
-// Finds the top-level prompt folder that contains one folder in the loaded tree.
-const resolveRootPromptFolderId = (
-  treeIndex: ReturnType<typeof buildPromptFolderTreeIndex>,
-  promptFolderId: string
-): string | null => {
-  if (!treeIndex.has(promptFolderId)) return null
-
-  let rootPromptFolderId = promptFolderId
-  let parentPromptFolderId = treeIndex.get(rootPromptFolderId)?.parentPromptFolderId ?? null
-  while (parentPromptFolderId !== null) {
-    rootPromptFolderId = parentPromptFolderId
-    parentPromptFolderId = treeIndex.get(rootPromptFolderId)?.parentPromptFolderId ?? null
-  }
-  return rootPromptFolderId
-}
-
 const buildSetPromptStatusConflictResponse = (
   sourcePromptFolderId: string,
   rootPromptFolderId: string,
@@ -152,19 +134,7 @@ const setupPromptStatusMutationHandler = (): void => {
             return { success: false, error: 'Prompt status data not loaded' }
           }
 
-          const workspace = data.workspace.committedStore.getEntry(
-            sourcePromptFolder.persistenceFields.workspaceId
-          )
-          if (!workspace) return { success: false, error: 'Workspace not loaded' }
-          const treeIndex = buildPromptFolderTreeIndex(
-            workspace.committed,
-            collectWorkspacePromptFolders(workspace.committed)
-          )
-          const sourceRootPromptFolderId = resolveRootPromptFolderId(
-            treeIndex,
-            requestedSourcePromptFolder.id
-          )
-          if (sourceRootPromptFolderId !== requestedRootPromptFolder.id) {
+          if (requestedSourcePromptFolder.id !== requestedRootPromptFolder.id) {
             return { success: false, error: 'Root prompt folder did not match' }
           }
 
@@ -176,12 +146,6 @@ const setupPromptStatusMutationHandler = (): void => {
             requestedPrompt.id
           )
           const isCompletedPrompt = prompt.committed.status === PromptStatus.Completed
-          if (
-            isCompletedPrompt &&
-            requestedSourcePromptFolder.id !== requestedRootPromptFolder.id
-          ) {
-            return { success: false, error: 'Completed prompt owner must be the root folder' }
-          }
           if (
             (isCompletedPrompt && !hasCompletedPromptEntry) ||
             (!isCompletedPrompt && !hasActivePromptEntry)
@@ -246,15 +210,10 @@ const setupPromptStatusMutationHandler = (): void => {
             true
           ).filter((promptId) => promptId !== requestedPrompt.id)
           if (targetStatus === PromptStatus.Completed) completedPromptIds.push(requestedPrompt.id)
-          const nextEntries =
-            targetStatus === PromptStatus.Completed
-              ? removeEntry(sourcePromptFolder.committed.entries, 'prompt', requestedPrompt.id)
-              : isCompletedPrompt
-                ? [promptEntryRef(requestedPrompt.id), ...rootPromptFolder.committed.entries]
-                : sourcePromptFolder.committed.entries
-          const activePromptIds = nextEntries.flatMap((entry) =>
-            entry.kind === 'prompt' ? [entry.id] : []
-          )
+          /** Active prompt IDs after the requested status transition. */
+          const activePromptIds = getActiveMarkdownContentIds(rootPromptFolder.committed, 'prompt')
+            .filter((promptId) => promptId !== requestedPrompt.id)
+          if (targetStatus !== PromptStatus.Completed) activePromptIds.unshift(requestedPrompt.id)
           const targetPromptOverride = new Map([
             [requestedPrompt.id, { content: targetPrompt, persistenceFields }]
           ])
@@ -274,39 +233,18 @@ const setupPromptStatusMutationHandler = (): void => {
               id: requestedSourcePromptFolder.id,
               expectedRevision: requestedSourcePromptFolder.expectedRevision,
               recipe: (draft) => {
-                draft.entries = nextEntries
-                if (requestedSourcePromptFolder.id === requestedRootPromptFolder.id) {
-                  draft.completedPromptIds = completedPromptIds
-                  draft.categoryOrder =
-                    targetStatus === PromptStatus.Completed
-                      ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
-                      : appendCategoryOrderEntry(
-                          draft.categoryOrder,
-                          categoryOrderEntry,
-                          targetPrompt.category
-                        )
-                }
+                draft.completedPromptIds = completedPromptIds
+                draft.categoryOrder =
+                  targetStatus === PromptStatus.Completed
+                    ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
+                    : insertCategoryOrderEntry(
+                        draft.categoryOrder,
+                        categoryOrderEntry,
+                        targetPrompt.category ?? null,
+                        null
+                      )
               }
             }),
-            ...(requestedSourcePromptFolder.id === requestedRootPromptFolder.id
-              ? {}
-              : {
-                  rootPromptFolder: tx.promptFolder.update({
-                    id: requestedRootPromptFolder.id,
-                    expectedRevision: requestedRootPromptFolder.expectedRevision,
-                    recipe: (draft) => {
-                      draft.completedPromptIds = completedPromptIds
-                      draft.categoryOrder =
-                        targetStatus === PromptStatus.Completed
-                          ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
-                          : appendCategoryOrderEntry(
-                              draft.categoryOrder,
-                              categoryOrderEntry,
-                              targetPrompt.category
-                            )
-                    }
-                  })
-                }),
             prompt: tx.prompt.update({
               id: requestedPrompt.id,
               expectedRevision: requestedPrompt.expectedRevision,

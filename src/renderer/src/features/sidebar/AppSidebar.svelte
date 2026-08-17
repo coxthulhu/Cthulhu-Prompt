@@ -18,7 +18,6 @@
     type PromptTreeEntryDragPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import { resolvePromptHandleDropMove } from '@renderer/features/drag-drop/promptHandleDrag'
-  import { resolvePromptFolderEntryDropMove } from '@renderer/features/drag-drop/promptFolderEntryDrag'
   import type { ScreenId } from '@renderer/app/screens'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
@@ -163,33 +162,7 @@
       null
     if (!selectedRootFolder) return []
 
-    const promptFolderById = new SvelteMap<string, PromptFolder>()
-    for (const promptFolder of promptFolderQuery.data) {
-      if (!promptFolder) {
-        continue
-      }
-
-      promptFolderById.set(promptFolder.id, promptFolder)
-    }
-
-    const orderedPromptFolders: PromptFolder[] = []
-    const addPromptFolderWithDescendants = (promptFolderId: string): void => {
-      const promptFolder = promptFolderById.get(promptFolderId)
-      if (!promptFolder || promptFolder.kind !== selectedRootFolder.kind) {
-        return
-      }
-
-      orderedPromptFolders.push(promptFolder)
-      for (const entry of promptFolder.entries) {
-        if (entry.kind === 'folder') addPromptFolderWithDescendants(entry.id)
-      }
-    }
-
-    for (const entry of selectedWorkspace.entries) {
-      addPromptFolderWithDescendants(entry.id)
-    }
-
-    return orderedPromptFolders
+    return [selectedRootFolder]
   })
 
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
@@ -253,9 +226,6 @@
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
   const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] => {
-    const promptFolderById = new Map(
-      promptFolderQuery.data.map((promptFolder) => [promptFolder.id, promptFolder])
-    )
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
     const templateById = new Map(
       promptTemplateQuery.data.map((template) => [template.id, template])
@@ -267,20 +237,7 @@
       let promptCount = 0
       let newestModifiedAt: string | null = null
 
-      for (const entry of promptFolder.entries) {
-        if (entry.kind === 'folder') {
-          const childFolder = promptFolderById.get(entry.id)
-          if (!childFolder || childFolder.kind !== promptFolder.kind) continue
-          const childMetadata = getFolderMetadata(childFolder)
-          promptCount += childMetadata.promptCount
-          if (
-            childMetadata.newestModifiedAt &&
-            (!newestModifiedAt || childMetadata.newestModifiedAt > newestModifiedAt)
-          ) {
-            newestModifiedAt = childMetadata.newestModifiedAt
-          }
-          continue
-        }
+      for (const entry of promptFolder.categoryOrder.categories.flatMap((group) => group.entries)) {
 
         promptCount += 1
         const modifiedAt =
@@ -677,14 +634,7 @@
         position: 'after'
       }
       if (!isPromptHandleDragPayload(entryPayload)) {
-        return (
-          resolvePromptFolderEntryDropMove(
-            allFolders,
-            getPromptFolderActiveEntryIds,
-            entryPayload.folderId,
-            dropPayload
-          ) !== null
-        )
+        return false
       }
       const sourceFolder = allFolders.find(
         (folder) => folder.id === entryPayload.sourceFolderId

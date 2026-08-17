@@ -78,7 +78,7 @@ describe('FolderOrderV2 repair', () => {
       [`${ACTIVE_PATH}/Alpha.prompt.md`]: serializePromptMarkdown(
         createPrompt('prompt-alpha', 'alpha')
       ),
-      [`${ACTIVE_PATH}/Nested/Beta.prompt.md`]: serializePromptMarkdown(
+      [`${ACTIVE_PATH}/Beta.prompt.md`]: serializePromptMarkdown(
         createPrompt('prompt-beta', 'Beta', categoryId)
       ),
       [`${WORKSPACE_PATH}/Prompts/${ROOT_FOLDER_NAME}/Completed/Completed.prompt.md`]:
@@ -115,11 +115,7 @@ describe('FolderOrderV2 repair', () => {
       ]
     })
     expect(readPrompt('Zebra.prompt.md')).not.toHaveProperty('category')
-    /** Repaired nested prompt read directly from its active subfolder. */
-    const nestedPrompt = parsePromptMarkdown(
-      vol.readFileSync(`${ACTIVE_PATH}/Nested/Beta.prompt.md`, 'utf8').toString()
-    )!
-    expect(nestedPrompt).not.toHaveProperty('category')
+    expect(readPrompt('Beta.prompt.md')).not.toHaveProperty('category')
   })
 
   it('preserves valid order, inserts new categories at index 1, and makes V2 win front matter', () => {
@@ -176,7 +172,7 @@ describe('FolderOrderV2 repair', () => {
     expect(readPrompt('Missing.prompt.md')).not.toHaveProperty('category')
   })
 
-  it('repairs recursive templates, duplicate references, stale entries, and deleted categories', () => {
+  it('repairs flat templates, duplicate references, stale entries, and deleted categories', () => {
     /** Valid category retained after repair. */
     const retainedCategoryId = 'template-category-retained'
     /** Deleted category whose surviving template is moved to Uncategorized. */
@@ -190,7 +186,7 @@ describe('FolderOrderV2 repair', () => {
       [`${TEMPLATE_ROOT_PATH}/Direct.template.md`]: serializePromptTemplateMarkdown(
         createTemplate('template-direct', 'Direct', retainedCategoryId)
       ),
-      [`${TEMPLATE_ROOT_PATH}/Nested/Nested.template.md`]: serializePromptTemplateMarkdown(
+      [`${TEMPLATE_ROOT_PATH}/Nested.template.md`]: serializePromptTemplateMarkdown(
         createTemplate('template-nested', 'Nested', deletedCategoryId)
       ),
       [TEMPLATE_CATEGORY_ORDER_PATH]: JSON.stringify({
@@ -234,9 +230,9 @@ describe('FolderOrderV2 repair', () => {
     const directTemplate = parsePromptTemplateMarkdown(
       vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Direct.template.md`, 'utf8').toString()
     )!
-    /** Nested template repaired after its deleted category group redirects to Uncategorized. */
+    /** Second template repaired after its deleted category group redirects to Uncategorized. */
     const nestedTemplate = parsePromptTemplateMarkdown(
-      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Nested/Nested.template.md`, 'utf8').toString()
+      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Nested.template.md`, 'utf8').toString()
     )!
     expect(directTemplate).not.toHaveProperty('category')
     expect(nestedTemplate).not.toHaveProperty('category')

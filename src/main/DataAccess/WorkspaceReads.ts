@@ -13,7 +13,6 @@ import {
 } from '@shared/OrderContainer'
 import {
   copyPromptFolderSettings,
-  createNestedCategoryOrder,
   type CategoryOrder,
   type CategoryOrderEntryRef,
   type PromptFolder,
@@ -31,20 +30,16 @@ import {
   parsePromptTemplateMarkdown
 } from '../Persistence/PromptFrontmatter'
 import {
-  PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
-  CATEGORIES_DIRECTORY_NAME,
   CATEGORY_FILENAME_SUFFIX,
   resolveActivePromptFolderName,
   resolvePromptFolderPath,
   resolvePromptRootDirectoryName,
   resolvePromptFolderInfoPath,
   resolvePromptFolderCategoryOrderPath,
-  resolvePromptFolderOrderPath,
   resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath,
-  resolvePromptFolderStorageName,
   resolvePromptPathsFromStem,
   resolveCategoriesDirectoryPath,
   resolveWorkspaceFolderOrderPath
@@ -91,7 +86,8 @@ const readContentIds = (
   const contentKind = kind
   const activeFolderName = resolveActivePromptFolderName(folderName, kind)
   const contentStemById = readContentStemById(workspacePath, activeFolderName, contentKind)
-  return readPromptFolderEntries(workspacePath, folderName, kind)
+  return readPromptFolderCategoryOrder(workspacePath, folderName, kind).categories
+    .flatMap((category) => category.entries)
     .filter((entry) => entry.kind === contentKind && contentStemById.has(entry.id))
     .map((entry) => entry.id)
 }
@@ -145,58 +141,6 @@ const writeRepairedOrder = <TEntry extends EntryRef>(
   }
 
   return entries
-}
-
-const readDirectPromptFolderRefs = (
-  workspacePath: string,
-  parentFolderPath: string | null,
-  kind: PromptFolderKind
-): FolderEntryRef[] => {
-  const fs = getFs()
-  const diskPath = parentFolderPath
-    ? resolvePromptFolderPath(
-        workspacePath,
-        kind === 'prompt'
-          ? resolveActivePromptFolderName(parentFolderPath, kind)
-          : parentFolderPath,
-        kind
-      )
-    : path.join(workspacePath, resolvePromptRootDirectoryName(kind))
-
-  if (!fs.existsSync(diskPath)) return []
-
-  return fs
-    .readdirSync(diskPath, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .sort((left, right) => left.name.toLowerCase().localeCompare(right.name.toLowerCase()))
-    .flatMap((entry) => {
-      if (entry.name === PROMPT_FOLDER_INFO_DIRECTORY_NAME) {
-        return []
-      }
-
-      const folderPath = parentFolderPath ? path.join(parentFolderPath, entry.name) : entry.name
-      if (!isPromptFolderDirectory(workspacePath, folderPath, kind)) return []
-      return [folderEntryRef(readPromptFolderInfo(workspacePath, folderPath, kind).folderId)]
-    })
-}
-
-export const readPromptFolderEntries = (
-  workspacePath: string,
-  folderName: string,
-  kind: PromptFolderKind = 'prompt'
-): EntryRef[] => {
-  const orderPath = resolvePromptFolderOrderPath(workspacePath, folderName, kind)
-  const persistedEntries = readOrderEntries<EntryRef>(orderPath)
-  const activeFolderName = resolveActivePromptFolderName(folderName, kind)
-  const contentKind = kind
-  const activeContentEntries = [
-    ...readContentStemById(workspacePath, activeFolderName, contentKind).keys()
-  ].map((id) => (contentKind === 'prompt' ? promptEntryRef(id) : promptTemplateEntryRef(id)))
-  const discoveredEntries = [
-    ...activeContentEntries,
-    ...readDirectPromptFolderRefs(workspacePath, folderName, kind)
-  ]
-  return writeRepairedOrder(orderPath, persistedEntries, discoveredEntries)
 }
 
 const readDirectWorkspaceFolderRefs = (workspacePath: string): FolderEntryRef[] => {
@@ -370,13 +314,13 @@ const readCategoryOrderFile = (
   return { categories }
 }
 
-/** Discovers all active content in the root's existing subfolder hierarchy for the flat category order. */
+/** Discovers all active content in the root's flat active directory. */
 const readRootCategoryOrderContents = (
   workspacePath: string,
   rootFolderName: string,
   kind: PromptFolderContentKind
 ): CategoryOrderContent[] => {
-  /** Filesystem used for recursive active-content discovery. */
+  /** Filesystem used for active-content discovery. */
   const fs = getFs()
   /** Physical root containing every active item covered by the category order. */
   const activeRootPath = resolvePromptFolderPath(
@@ -390,23 +334,13 @@ const readRootCategoryOrderContents = (
   /** First valid discovered record for each stable content ID. */
   const contentById = new Map<string, CategoryOrderContent>()
 
-  /** Visits one active hierarchy directory and records valid markdown content. */
-  const visit = (folderPath: string): void => {
+  if (fs.existsSync(activeRootPath)) {
     for (const entry of fs
-      .readdirSync(folderPath, { withFileTypes: true })
+      .readdirSync(activeRootPath, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))) {
-      /** Full path for the current filesystem entry. */
-      const entryPath = path.join(folderPath, entry.name)
-      if (entry.isDirectory()) {
-        if (
-          entry.name !== PROMPT_FOLDER_INFO_DIRECTORY_NAME &&
-          entry.name !== CATEGORIES_DIRECTORY_NAME
-        ) {
-          visit(entryPath)
-        }
-        continue
-      }
       if (!entry.isFile() || !entry.name.endsWith(filenameSuffix)) continue
+      /** Full path of one active prompt or template markdown file. */
+      const entryPath = path.join(activeRootPath, entry.name)
       /** Parsed content whose stable ID participates in category ordering. */
       const content =
         kind === 'prompt'
@@ -420,8 +354,6 @@ const readRootCategoryOrderContents = (
       })
     }
   }
-
-  if (fs.existsSync(activeRootPath)) visit(activeRootPath)
   return [...contentById.values()].sort((left, right) => {
     /** Case-insensitive displayed-name comparison requested for repaired entries. */
     const nameComparison = getPromptDisplayTitle(left.content)
@@ -541,7 +473,6 @@ export const readPromptFolder = (
   const folderDescription = readOptionalTextFile(
     resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
   )
-  const entries = readPromptFolderEntries(workspacePath, folderPath, kind)
   const completedPromptIds =
     kind === 'prompt' && folderName === folderPath
       ? [
@@ -551,17 +482,13 @@ export const readPromptFolder = (
           ).keys()
         ]
       : []
-  /** Root-owned category ordering, absent for nested folders. */
-  const categoryOrder =
-    folderName === folderPath
-      ? readPromptFolderCategoryOrder(workspacePath, folderPath, kind)
-      : createNestedCategoryOrder()
+  /** Root-owned category ordering. */
+  const categoryOrder = readPromptFolderCategoryOrder(workspacePath, folderPath, kind)
 
   const baseFolder = {
     id: info.folderId,
     folderName,
     displayName: info.displayName,
-    entries,
     completedPromptIds,
     categoryOrder
   }
@@ -690,57 +617,9 @@ const isPromptFolderDirectory = (
   return fs.existsSync(infoPath) && readJsonFile<PromptFolderInfoFile>(infoPath).kind === kind
 }
 
-const readPromptSubfolders = (
-  workspacePath: string,
-  parentFolderPath: string,
-  kind: PromptFolderKind
-): PromptFolder[] => {
-  const fs = getFs()
-  const parentDiskFolderPath = resolvePromptFolderPath(
-    workspacePath,
-    kind === 'prompt'
-      ? resolveActivePromptFolderName(parentFolderPath, kind)
-      : resolvePromptFolderStorageName(parentFolderPath, kind),
-    kind
-  )
-  const promptFolders: PromptFolder[] = []
-
-  if (!fs.existsSync(parentDiskFolderPath)) {
-    return promptFolders
-  }
-
-  for (const entry of fs.readdirSync(parentDiskFolderPath, { withFileTypes: true })) {
-    if (!entry.isDirectory()) {
-      continue
-    }
-
-    if (entry.name === PROMPT_FOLDER_INFO_DIRECTORY_NAME) {
-      continue
-    }
-
-    const folderPath = path.join(parentFolderPath, entry.name)
-    if (!isPromptFolderDirectory(workspacePath, folderPath, kind)) {
-      continue
-    }
-
-    const promptFolder = readPromptFolder(workspacePath, folderPath, entry.name, kind)
-    promptFolders.push(promptFolder)
-    promptFolders.push(...readPromptSubfolders(workspacePath, folderPath, kind))
-  }
-
-  return promptFolders
-}
-
 export const readAllPromptFolders = (
   workspacePath: string,
   kind: PromptFolderKind = 'prompt'
 ): PromptFolder[] => {
-  const promptFolders: PromptFolder[] = []
-
-  for (const promptFolder of readPromptFolders(workspacePath, kind)) {
-    promptFolders.push(promptFolder)
-    promptFolders.push(...readPromptSubfolders(workspacePath, promptFolder.folderName, kind))
-  }
-
-  return promptFolders
+  return readPromptFolders(workspacePath, kind)
 }

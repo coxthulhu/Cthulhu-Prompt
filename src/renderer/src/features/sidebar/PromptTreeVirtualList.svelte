@@ -1,5 +1,6 @@
 <script module lang="ts">
   import type { PromptFolder } from '@shared/PromptFolder'
+  import type { Category } from '@shared/Category'
   import type { VirtualWindowRowComponentProps } from '../virtualizer/virtualWindowTypes'
 
   export type PromptTreeRow =
@@ -9,15 +10,15 @@
       }
     | {
         kind: 'folder'
-        folder: PromptFolder
-        parentFolder: PromptFolder | null
+        category: Category
+        rootFolder: PromptFolder
         indentCount: number
         endsVisibleBranch: boolean
-        isSubfolder: boolean
       }
     | {
         kind: 'folder-prompt'
         folder: PromptFolder
+        categoryId: string | null
         promptId: string
         indentCount: number
         isLastRow: boolean

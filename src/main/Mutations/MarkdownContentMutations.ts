@@ -9,10 +9,9 @@ import {
   type MarkdownContentRevisionPayload,
   type MoveMarkdownContentPayload
 } from '@shared/MarkdownContent'
-import { removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import {
-  appendCategoryOrderEntry,
   findCategoryOrderEntryCategoryId,
+  insertCategoryOrderEntry,
   removeCategoryOrderEntry,
   type CategoryOrderEntryRef,
   type PromptFolder,
@@ -41,7 +40,6 @@ import {
   shouldUpdateMarkdownFilename,
   type MarkdownFilenameTarget
 } from './MarkdownContentMutationHelpers'
-import { resolveRootPromptFolderIdFromData } from './PromptFolderPathHelpers'
 
 type MutationParser<TPayload> = (
   request: unknown
@@ -183,8 +181,6 @@ export const setupMarkdownContentMutationHandlers = <
   const buildMoveConflictResponse = (
     sourcePromptFolderId: string,
     destinationPromptFolderId: string,
-    sourceRootPromptFolderId: string,
-    destinationRootPromptFolderId: string,
     contentId: string
   ) => {
     const source = data.promptFolder.committedStore.getEntry(sourcePromptFolderId)
@@ -199,9 +195,7 @@ export const setupMarkdownContentMutationHandlers = <
       payload: {
         promptFolders: buildPromptFolderSnapshots([
           sourcePromptFolderId,
-          destinationPromptFolderId,
-          sourceRootPromptFolderId,
-          destinationRootPromptFolderId
+          destinationPromptFolderId
         ]),
         content: config.buildSnapshot(content)
       }
@@ -211,8 +205,12 @@ export const setupMarkdownContentMutationHandlers = <
   ipcMain.handle(config.channels.create, async (_, request: unknown) => {
     return await runMutationIpcRequest(request, config.parsers.create, async (validatedRequest) => {
       try {
-        const { promptFolder: requestedFolder, content: requestedContent, previousEntryId } =
-          validatedRequest.payload
+        const {
+          promptFolder: requestedFolder,
+          content: requestedContent,
+          categoryId,
+          previousEntryId
+        } = validatedRequest.payload
         const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
         const contentId = requestedContent.data.id
         if (
@@ -224,19 +222,11 @@ export const setupMarkdownContentMutationHandlers = <
         if (config.getContent(contentId)) {
           return { success: false, error: `${config.label} already exists` }
         }
-        /** Root folder whose V2 order owns the new content. */
-        const rootPromptFolderId = resolveRootPromptFolderIdFromData(requestedFolder.id)
-        /** Authoritative root folder used to normalize category ownership. */
-        const rootPromptFolder = data.promptFolder.committedStore.getEntry(rootPromptFolderId)
-        if (!rootPromptFolder) return { success: false, error: 'Root prompt folder not loaded' }
-
-        const insertIndex = resolveEntryInsertIndex(
-          promptFolder.committed.entries,
-          previousEntryId
-        )
-        if (insertIndex === null) {
-          return { success: false, error: `Previous ${config.label.toLowerCase()} not found` }
-        }
+        if (
+          !promptFolder.committed.categoryOrder.categories.some(
+            (category) => category.categoryId === categoryId
+          )
+        ) return { success: false, error: 'Category not loaded' }
 
         const titleFields = resolvePromptTitleUpdateForPromptIds({
           promptIds: getActiveMarkdownContentIds(promptFolder.committed, config.kind),
@@ -252,12 +242,12 @@ export const setupMarkdownContentMutationHandlers = <
             titleFields,
             getCurrentIsoSecondTimestamp()
           ),
-          rootPromptFolder.committed
+          promptFolder.committed
         )
+        if (categoryId === null) delete content.category
+        else content.category = categoryId
         /** Category-order reference for the new prompt or template. */
         const categoryOrderEntry = config.createEntryRef(contentId)
-        const nextEntries = [...promptFolder.committed.entries]
-        nextEntries.splice(insertIndex, 0, config.createEntryRef(contentId))
         const basePersistenceFields: MarkdownPersistenceFields = {
           workspaceId: promptFolder.persistenceFields.workspaceId,
           workspacePath: promptFolder.persistenceFields.workspacePath,
@@ -279,30 +269,14 @@ export const setupMarkdownContentMutationHandlers = <
             id: requestedFolder.id,
             expectedRevision: requestedFolder.expectedRevision,
             recipe: (draft) => {
-              draft.entries = nextEntries
-              if (requestedFolder.id === rootPromptFolderId) {
-                draft.categoryOrder = appendCategoryOrderEntry(
-                  draft.categoryOrder,
-                  categoryOrderEntry,
-                  content.category
-                )
-              }
+              draft.categoryOrder = insertCategoryOrderEntry(
+                draft.categoryOrder,
+                categoryOrderEntry,
+                categoryId,
+                previousEntryId
+              )
             }
           }),
-          ...(requestedFolder.id === rootPromptFolderId
-            ? {}
-            : {
-                rootPromptFolder: tx.promptFolder.update({
-                  id: rootPromptFolderId,
-                  recipe: (draft) => {
-                    draft.categoryOrder = appendCategoryOrderEntry(
-                      draft.categoryOrder,
-                      categoryOrderEntry,
-                      content.category
-                    )
-                  }
-                })
-              }),
           content: config.createContent(tx, {
             id: contentId,
             data: content,
@@ -316,10 +290,7 @@ export const setupMarkdownContentMutationHandlers = <
             data.promptFolder.committedStore.getEntry(requestedFolder.id),
             `${config.label} folder not loaded`,
             () => ({
-              promptFolders: buildPromptFolderSnapshots([
-                requestedFolder.id,
-                rootPromptFolderId
-              ])
+              promptFolders: buildPromptFolderSnapshots([requestedFolder.id])
             })
           )
         }
@@ -331,10 +302,7 @@ export const setupMarkdownContentMutationHandlers = <
         return {
           success: true,
           payload: {
-            promptFolders: buildPromptFolderSnapshots([
-              requestedFolder.id,
-              rootPromptFolderId
-            ]),
+            promptFolders: buildPromptFolderSnapshots([requestedFolder.id]),
             content: config.buildSnapshot(createdContent)
           }
         }
@@ -366,8 +334,6 @@ export const setupMarkdownContentMutationHandlers = <
             })
           )
         }
-        /** Root folder whose V2 order may contain the deleted content. */
-        const rootPromptFolderId = resolveRootPromptFolderIdFromData(requestedFolder.id)
         /** Category-order reference removed with the content. */
         const categoryOrderEntry = config.createEntryRef(contentId)
 
@@ -379,33 +345,17 @@ export const setupMarkdownContentMutationHandlers = <
             id: requestedFolder.id,
             expectedRevision: requestedFolder.expectedRevision,
             recipe: (draft) => {
-              draft.entries = removeEntry(draft.entries, config.kind, contentId)
               if (config.kind === 'prompt') {
                 draft.completedPromptIds = draft.completedPromptIds.filter(
                   (id) => id !== contentId
                 )
               }
-              if (requestedFolder.id === rootPromptFolderId) {
-                draft.categoryOrder = removeCategoryOrderEntry(
-                  draft.categoryOrder,
-                  categoryOrderEntry
-                )
-              }
+              draft.categoryOrder = removeCategoryOrderEntry(
+                draft.categoryOrder,
+                categoryOrderEntry
+              )
             }
           }),
-          ...(requestedFolder.id === rootPromptFolderId
-            ? {}
-            : {
-                rootPromptFolder: tx.promptFolder.update({
-                  id: rootPromptFolderId,
-                  recipe: (draft) => {
-                    draft.categoryOrder = removeCategoryOrderEntry(
-                      draft.categoryOrder,
-                      categoryOrderEntry
-                    )
-                  }
-                })
-              }),
           content: config.deleteContent(tx, contentId, requestedContent.expectedRevision),
           ...createFilenameUpdateHandles(tx, filenamePlans, new Set([contentId]))
         })))!
@@ -415,10 +365,7 @@ export const setupMarkdownContentMutationHandlers = <
             data.promptFolder.committedStore.getEntry(requestedFolder.id),
             `${config.label} folder not loaded`,
             () => ({
-              promptFolders: buildPromptFolderSnapshots([
-                requestedFolder.id,
-                rootPromptFolderId
-              ])
+              promptFolders: buildPromptFolderSnapshots([requestedFolder.id])
             })
           )
         }
@@ -428,10 +375,7 @@ export const setupMarkdownContentMutationHandlers = <
           ? {
               success: true,
               payload: {
-                promptFolders: buildPromptFolderSnapshots([
-                  requestedFolder.id,
-                  rootPromptFolderId
-                ])
+                promptFolders: buildPromptFolderSnapshots([requestedFolder.id])
               }
             }
           : { success: false, error: `${config.label} delete commit did not complete` }
@@ -456,12 +400,6 @@ export const setupMarkdownContentMutationHandlers = <
         ) {
           return { success: false, error: `${config.label} folder not loaded` }
         }
-        /** Root folder whose V2 order owns active content category placement. */
-        const rootPromptFolderId = resolveRootPromptFolderIdFromData(promptFolder.committed.id)
-        /** Authoritative category-order owner for normalization and repair. */
-        const rootPromptFolder = data.promptFolder.committedStore.getEntry(rootPromptFolderId)
-        if (!rootPromptFolder) return { success: false, error: 'Root prompt folder not loaded' }
-
         const titleFields = resolvePromptTitleUpdateForPromptIds({
           promptIds: getActiveMarkdownContentIds(promptFolder.committed, config.kind),
           lookupPrompt: (contentId) => config.getContent(contentId)?.committed ?? null,
@@ -473,13 +411,13 @@ export const setupMarkdownContentMutationHandlers = <
         })
         const updatedContent = normalizeContentCategory(
           config.updatePersisted(requestedContent.data, content.committed, titleFields),
-          rootPromptFolder.committed
+          promptFolder.committed
         )
         /** Category-order reference for the updated prompt or template. */
         const categoryOrderEntry = config.createEntryRef(requestedContent.id)
         /** Current V2 category assignment, or undefined when the entry is absent. */
         const currentCategoryId = findCategoryOrderEntryCategoryId(
-          rootPromptFolder.committed.categoryOrder,
+          promptFolder.committed.categoryOrder,
           categoryOrderEntry
         )
         /** Whether active-status ownership requires a V2 category-order update. */
@@ -513,13 +451,14 @@ export const setupMarkdownContentMutationHandlers = <
           ...(shouldUpdateCategoryOrder
             ? {
                 rootPromptFolder: tx.promptFolder.update({
-                  id: rootPromptFolderId,
+                  id: promptFolder.committed.id,
                   recipe: (draft) => {
                     draft.categoryOrder = config.canMove(updatedContent)
-                      ? appendCategoryOrderEntry(
+                      ? insertCategoryOrderEntry(
                           draft.categoryOrder,
                           categoryOrderEntry,
-                          updatedContent.category
+                          updatedContent.category ?? null,
+                          null
                         )
                       : removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
                   }
@@ -535,7 +474,7 @@ export const setupMarkdownContentMutationHandlers = <
             `${config.label} not loaded`,
             (latestContent) => ({
               content: config.buildSnapshot(latestContent),
-              promptFolders: buildPromptFolderSnapshots([rootPromptFolderId])
+              promptFolders: buildPromptFolderSnapshots([promptFolder.committed.id])
             })
           )
         }
@@ -549,7 +488,7 @@ export const setupMarkdownContentMutationHandlers = <
         return {
           success: true,
           payload: {
-            promptFolders: buildPromptFolderSnapshots([rootPromptFolderId]),
+            promptFolders: buildPromptFolderSnapshots([promptFolder.committed.id]),
             content: config.buildSnapshot(committedContent)
           }
         }
@@ -566,19 +505,12 @@ export const setupMarkdownContentMutationHandlers = <
           sourcePromptFolder: requestedSource,
           destinationPromptFolder: requestedDestination,
           content: requestedContent,
+          categoryId,
           previousEntryId
         } = validatedRequest.payload
         const source = data.promptFolder.committedStore.getEntry(requestedSource.id)
         const destination = data.promptFolder.committedStore.getEntry(requestedDestination.id)
         const content = config.getContent(requestedContent.id)
-        /** Source root that owns the content's current V2 placement. */
-        const sourceRootPromptFolderId = source
-          ? resolveRootPromptFolderIdFromData(requestedSource.id)
-          : requestedSource.id
-        /** Destination root that will own the moved content's V2 placement. */
-        const destinationRootPromptFolderId = destination
-          ? resolveRootPromptFolderIdFromData(requestedDestination.id)
-          : requestedDestination.id
         if (
           !source ||
           !destination ||
@@ -591,35 +523,16 @@ export const setupMarkdownContentMutationHandlers = <
           return buildMoveConflictResponse(
             requestedSource.id,
             requestedDestination.id,
-            sourceRootPromptFolderId,
-            destinationRootPromptFolderId,
             requestedContent.id
           )
         }
-
+        if (
+          !destination.committed.categoryOrder.categories.some(
+            (category) => category.categoryId === categoryId
+          )
+        ) return { success: false, error: 'Category not loaded' }
+        /** Whether persistence transfers the markdown file between root folders. */
         const isSameFolder = requestedSource.id === requestedDestination.id
-        const destinationEntries = isSameFolder
-          ? removeEntry(source.committed.entries, config.kind, requestedContent.id)
-          : destination.committed.entries
-        const insertIndex = resolveEntryInsertIndex(
-          destinationEntries,
-          previousEntryId
-        )
-        if (insertIndex === null) {
-          return { success: false, error: `Order-after ${config.label.toLowerCase()} not found` }
-        }
-
-        const nextSourceEntries = removeEntry(
-          source.committed.entries,
-          config.kind,
-          requestedContent.id
-        )
-        const nextDestinationEntries = [...destinationEntries]
-        nextDestinationEntries.splice(
-          insertIndex,
-          0,
-          config.createEntryRef(requestedContent.id)
-        )
         const destinationContentIds = getActiveMarkdownContentIds(
           destination.committed,
           config.kind
@@ -639,15 +552,13 @@ export const setupMarkdownContentMutationHandlers = <
                 }).fallbackTitle
               }
             : content.committed
-        /** Cross-root content drops remove the category before the file is persisted. */
+        /** Content copy whose front matter matches the destination category. */
         const movedContent: TContent = { ...contentWithDestinationFallback }
-        /** Whether the move transfers V2 ownership between root folders. */
-        const isCrossRootMove = sourceRootPromptFolderId !== destinationRootPromptFolderId
-        if (!isSameFolder && isCrossRootMove) {
-          delete movedContent.category
-        }
-        /** Category-order reference transferred only for cross-root moves. */
+        if (categoryId === null) delete movedContent.category
+        else movedContent.category = categoryId
+        /** Category-order reference transferred between groups or roots. */
         const categoryOrderEntry = config.createEntryRef(requestedContent.id)
+        /** Markdown persistence fields after an optional cross-root transfer. */
         const movedPersistenceFields: MarkdownPersistenceFields = isSameFolder
           ? content.persistenceFields
           : {
@@ -680,93 +591,63 @@ export const setupMarkdownContentMutationHandlers = <
                 ])
               )
             ]
-        const outcome = isSameFolder
-          ? (await runAtomicDataTransaction((tx) => ({
-              sourcePromptFolder: tx.promptFolder.update({
-                id: requestedSource.id,
-                expectedRevision: requestedSource.expectedRevision,
-                recipe: (draft) => {
-                  draft.entries = nextDestinationEntries
-                }
-              }),
-              ...createFilenameUpdateHandles(tx, filenamePlans, new Set())
-            })))!
-          : (await runAtomicDataTransaction((tx) => ({
-              sourcePromptFolder: tx.promptFolder.update({
-                id: requestedSource.id,
-                expectedRevision: requestedSource.expectedRevision,
-                recipe: (draft) => {
-                  draft.entries = nextSourceEntries
-                  if (isCrossRootMove && requestedSource.id === sourceRootPromptFolderId) {
+        /** Atomic V2 order, front-matter, and optional file-transfer result. */
+        const outcome = (await runAtomicDataTransaction((tx) => ({
+          ...(isSameFolder
+            ? {
+                promptFolder: tx.promptFolder.update({
+                  id: requestedSource.id,
+                  expectedRevision: requestedSource.expectedRevision,
+                  recipe: (draft) => {
+                    draft.categoryOrder = insertCategoryOrderEntry(
+                      draft.categoryOrder,
+                      categoryOrderEntry,
+                      categoryId,
+                      previousEntryId
+                    )
+                  }
+                })
+              }
+            : {
+                sourcePromptFolder: tx.promptFolder.update({
+                  id: requestedSource.id,
+                  expectedRevision: requestedSource.expectedRevision,
+                  recipe: (draft) => {
                     draft.categoryOrder = removeCategoryOrderEntry(
                       draft.categoryOrder,
                       categoryOrderEntry
                     )
                   }
-                }
-              }),
-              destinationPromptFolder: tx.promptFolder.update({
-                id: requestedDestination.id,
-                expectedRevision: requestedDestination.expectedRevision,
-                recipe: (draft) => {
-                  draft.entries = nextDestinationEntries
-                  if (
-                    isCrossRootMove &&
-                    requestedDestination.id === destinationRootPromptFolderId
-                  ) {
-                    draft.categoryOrder = appendCategoryOrderEntry(
+                }),
+                destinationPromptFolder: tx.promptFolder.update({
+                  id: requestedDestination.id,
+                  expectedRevision: requestedDestination.expectedRevision,
+                  recipe: (draft) => {
+                    draft.categoryOrder = insertCategoryOrderEntry(
                       draft.categoryOrder,
                       categoryOrderEntry,
-                      undefined
+                      categoryId,
+                      previousEntryId
                     )
                   }
-                }
+                })
               }),
-              ...(!isCrossRootMove || requestedSource.id === sourceRootPromptFolderId
-                ? {}
-                : {
-                    sourceRootPromptFolder: tx.promptFolder.update({
-                      id: sourceRootPromptFolderId,
-                      recipe: (draft) => {
-                        draft.categoryOrder = removeCategoryOrderEntry(
-                          draft.categoryOrder,
-                          categoryOrderEntry
-                        )
-                      }
-                    })
-                  }),
-              ...(!isCrossRootMove || requestedDestination.id === destinationRootPromptFolderId
-                ? {}
-                : {
-                    destinationRootPromptFolder: tx.promptFolder.update({
-                      id: destinationRootPromptFolderId,
-                      recipe: (draft) => {
-                        draft.categoryOrder = appendCategoryOrderEntry(
-                          draft.categoryOrder,
-                          categoryOrderEntry,
-                          undefined
-                        )
-                      }
-                    })
-                  }),
-              content: config.updateContent(tx, {
-                id: requestedContent.id,
-                expectedRevision: requestedContent.expectedRevision,
-                data: movedContent,
-                persistenceFields: getPlannedMarkdownPersistenceFields(
-                  filenamePlans,
-                  requestedContent.id
-                )
-              }),
-              ...createFilenameUpdateHandles(tx, filenamePlans, new Set([requestedContent.id]))
-            })))!
+          content: config.updateContent(tx, {
+            id: requestedContent.id,
+            expectedRevision: requestedContent.expectedRevision,
+            data: movedContent,
+            persistenceFields: getPlannedMarkdownPersistenceFields(
+              filenamePlans,
+              requestedContent.id
+            )
+          }),
+          ...createFilenameUpdateHandles(tx, filenamePlans, new Set([requestedContent.id]))
+        })))!
 
         if (outcome.status === 'conflict') {
           return buildMoveConflictResponse(
             requestedSource.id,
             requestedDestination.id,
-            sourceRootPromptFolderId,
-            destinationRootPromptFolderId,
             requestedContent.id
           )
         }
@@ -783,9 +664,7 @@ export const setupMarkdownContentMutationHandlers = <
           payload: {
             promptFolders: buildPromptFolderSnapshots([
               requestedSource.id,
-              requestedDestination.id,
-              sourceRootPromptFolderId,
-              destinationRootPromptFolderId
+              requestedDestination.id
             ]),
             content: config.buildSnapshot(updatedContent)
           }

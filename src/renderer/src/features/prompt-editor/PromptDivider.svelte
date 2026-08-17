@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FolderPlus, Plus } from 'lucide-svelte'
+  import { Plus } from 'lucide-svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type { DroppableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
@@ -11,21 +11,17 @@
 
   let {
     onAddPrompt,
-    onAddSubfolder,
     mode = 'add',
     contentLabel = 'Prompt',
     disabled = false,
     testId,
-    subfolderTestId,
     getDropOptions
   }: {
     onAddPrompt?: () => void
-    onAddSubfolder?: () => void
     mode?: 'add' | 'separator'
     contentLabel?: 'Prompt' | 'Template'
     disabled?: boolean
     testId?: string
-    subfolderTestId?: string
     getDropOptions?: () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
   } = $props()
 </script>
@@ -94,22 +90,6 @@
             <Plus size={13} aria-hidden="true" />
             <span>{dividerText}</span>
           </button>
-          {#if onAddSubfolder}
-            <button
-              class="promptDividerActionButton"
-              type="button"
-              aria-label="Add Subfolder"
-              title="Add Subfolder"
-              {disabled}
-              data-testid={subfolderTestId}
-              onclick={() => {
-                onAddSubfolder()
-              }}
-            >
-              <FolderPlus size={13} aria-hidden="true" />
-              <span>Add Subfolder</span>
-            </button>
-          {/if}
         </div>
         <button
           class="promptDividerSeparatorButton"

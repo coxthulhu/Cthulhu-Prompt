@@ -1,11 +1,6 @@
 import type { PromptPersisted } from './Prompt'
 import type { PromptTemplatePersisted } from './PromptTemplate'
-import type {
-  EntryRef,
-  OrderContainer,
-  PromptEntryRef,
-  PromptTemplateEntryRef
-} from './OrderContainer'
+import type { PromptEntryRef, PromptTemplateEntryRef } from './OrderContainer'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { Workspace } from './Workspace'
@@ -33,9 +28,6 @@ export type CategoryOrder = {
 export const createRootCategoryOrder = (): CategoryOrder => ({
   categories: [{ categoryId: null, entries: [] }]
 })
-
-/** Creates empty category ordering for a non-root folder. */
-export const createNestedCategoryOrder = (): CategoryOrder => ({ categories: [] })
 
 /** Returns the ordered category IDs owned by one root folder. */
 export const getCategoryOrderCategoryIds = (categoryOrder: CategoryOrder): string[] =>
@@ -91,6 +83,69 @@ export const appendCategoryOrderEntry = (
   }
 }
 
+/** Inserts one content reference at a specific position in a category group. */
+export const insertCategoryOrderEntry = (
+  categoryOrder: CategoryOrder,
+  entry: CategoryOrderEntryRef,
+  categoryId: string | null,
+  previousEntryId: string | null
+): CategoryOrder => {
+  /** Ordering with the moved content removed from its previous category. */
+  const withoutEntry = removeCategoryOrderEntry(categoryOrder, entry)
+  /** Requested group that receives the content reference. */
+  const targetGroup = withoutEntry.categories.find(
+    (category) => category.categoryId === categoryId
+  )
+  if (!targetGroup) throw new Error('Category not found')
+
+  /** Position immediately following the requested predecessor. */
+  const insertIndex =
+    previousEntryId === null
+      ? 0
+      : targetGroup.entries.findIndex((candidate) => candidate.id === previousEntryId) + 1
+  if (previousEntryId !== null && insertIndex === 0) {
+    throw new Error('Previous category entry not found')
+  }
+
+  return {
+    categories: withoutEntry.categories.map((category) => {
+      if (category.categoryId !== categoryId) return category
+      /** Ordered entries with the moved reference inserted once. */
+      const entries = [...category.entries]
+      entries.splice(insertIndex, 0, entry)
+      return { ...category, entries }
+    })
+  }
+}
+
+/** Reorders one category while keeping Uncategorized fixed at the beginning. */
+export const moveCategoryOrderGroup = (
+  categoryOrder: CategoryOrder,
+  categoryId: string,
+  previousCategoryId: string | null
+): CategoryOrder => {
+  /** Category group removed before its new insertion position is resolved. */
+  const movedGroup = categoryOrder.categories.find(
+    (category) => category.categoryId === categoryId
+  )
+  if (!movedGroup) throw new Error('Category not found')
+
+  /** Categorized groups excluding the dragged group. */
+  const categories = categoryOrder.categories.filter(
+    (category) => category.categoryId !== null && category.categoryId !== categoryId
+  )
+  /** Position after the requested categorized predecessor. */
+  const insertIndex =
+    previousCategoryId === null
+      ? 0
+      : categories.findIndex((category) => category.categoryId === previousCategoryId) + 1
+  if (previousCategoryId !== null && insertIndex === 0) {
+    throw new Error('Previous category not found')
+  }
+  categories.splice(insertIndex, 0, movedGroup)
+  return { categories: [categoryOrder.categories[0]!, ...categories] }
+}
+
 /** Inserts a new empty category immediately after Uncategorized. */
 export const insertCategoryOrderGroup = (
   categoryOrder: CategoryOrder,
@@ -123,7 +178,7 @@ export const deleteCategoryOrderGroup = (
   }
 }
 
-interface PromptFolderBase extends OrderContainer<EntryRef> {
+interface PromptFolderBase {
   id: string
   folderName: string
   displayName: string
@@ -210,7 +265,6 @@ export type RenamePromptFolderPayload = {
 
 export type CreatePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
-  parentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
   promptFolderId: string
   kind: PromptFolderKind
   displayName: string
@@ -219,21 +273,17 @@ export type CreatePromptFolderPayload = {
 
 export type CreatePromptFolderResponsePayload = {
   workspace?: RevisionEnvelope<Workspace>
-  parentPromptFolder?: RevisionEnvelope<PromptFolder>
   promptFolder?: RevisionEnvelope<PromptFolder>
 }
 
 export type DeletePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
-  parentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
   promptFolder: RevisionPayloadEntity<PromptFolder>
 }
 
 export type DeletePromptFolderResponsePayload = {
   workspace?: RevisionEnvelope<Workspace>
-  parentPromptFolder?: RevisionEnvelope<PromptFolder>
   promptFolder?: RevisionEnvelope<PromptFolder>
-  categoryOrderPromptFolder?: RevisionEnvelope<PromptFolder>
 }
 
 export type LoadPromptFolderInitialPayload = {

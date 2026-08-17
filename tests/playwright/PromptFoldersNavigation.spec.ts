@@ -143,56 +143,54 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeVisible()
     await expect(
       nestedFolderEditor.locator('[data-testid="prompt-folder-drag-handle"]')
-    ).toHaveAttribute('aria-label', 'Drag prompt template folder')
+    ).toHaveAttribute('aria-label', 'Drag category')
     await expect(
       nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]')
-    ).toHaveAttribute('aria-label', 'Rename prompt template folder')
+    ).toHaveAttribute('aria-label', 'Rename category')
     await expect(
       nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]')
-    ).toHaveAttribute('aria-label', 'Delete prompt template folder')
+    ).toHaveAttribute('aria-label', 'Delete category')
 
     await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-title-edit"]').click()
-    const renameTemplateFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Rename Prompt Template Folder"]'
+    const renameCategoryDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Rename Category"]'
     )
-    await expect(renameTemplateFolderDialog).toBeVisible()
+    await expect(renameCategoryDialog).toBeVisible()
     await expect(
-      renameTemplateFolderDialog.locator('[data-testid="dialog-header-icon"]')
+      renameCategoryDialog.locator('[data-testid="dialog-header-icon"]')
     ).toBeVisible()
     await expect(
-      renameTemplateFolderDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Choose a new name for this prompt template folder.')
-    await expect(renameTemplateFolderDialog.getByLabel('Prompt Template Folder Name')).toBeVisible()
-    await renameTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
+      renameCategoryDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveText('Choose a new name for this category.')
+    await expect(renameCategoryDialog.getByLabel('Category Name')).toBeVisible()
+    await renameCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
 
     await nestedFolderEditor.locator('[data-testid="prompt-folder-editor-delete-button"]').click()
-    const deleteTemplateFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Template Folder"]'
+    const deleteCategoryDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Category"]'
     )
-    await expect(deleteTemplateFolderDialog).toBeVisible()
+    await expect(deleteCategoryDialog).toBeVisible()
     await expect(
-      deleteTemplateFolderDialog.locator('[data-testid="dialog-header-icon"]')
+      deleteCategoryDialog.locator('[data-testid="dialog-header-icon"]')
     ).toBeVisible()
     await expect(
-      deleteTemplateFolderDialog.locator('[data-testid="dialog-subtitle"]')
+      deleteCategoryDialog.locator('[data-testid="dialog-subtitle"]')
     ).toHaveCount(0)
     await expect(
-      deleteTemplateFolderDialog.getByRole('button', { name: 'Delete Template Folder' })
+      deleteCategoryDialog.getByRole('button', { name: 'Delete Category' })
     ).toBeVisible()
-    await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
+    await deleteCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
 
-    await mainWindow.locator('[data-testid="prompt-divider-add-subfolder-initial"]').first().click()
-    const createTemplateSubfolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Prompt Template Subfolder"]'
+    await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
+    const createCategoryDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Category"]'
     )
-    await expect(createTemplateSubfolderDialog).toBeVisible()
+    await expect(createCategoryDialog).toBeVisible()
     await expect(
-      createTemplateSubfolderDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Add a new subfolder to this prompt template folder.')
-    await expect(
-      createTemplateSubfolderDialog.getByLabel('Prompt Template Folder Name')
-    ).toBeVisible()
-    await createTemplateSubfolderDialog.getByRole('button', { name: 'Cancel' }).click()
+      createCategoryDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveText('Add a category to this root folder.')
+    await expect(createCategoryDialog.getByLabel('Category Name')).toBeVisible()
+    await createCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toHaveAttribute(
@@ -204,9 +202,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Delete prompt template folder'
     )
     await mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]').click()
+    const renameTemplateFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Rename Prompt Template Folder"]'
+    )
     await expect(renameTemplateFolderDialog).toBeVisible()
     await renameTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
     await mainWindow.locator('[data-testid="prompt-folder-delete-button"]').click()
+    const deleteTemplateFolderDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Template Folder"]'
+    )
     await expect(deleteTemplateFolderDialog).toBeVisible()
     await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
 
@@ -234,7 +238,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
   })
 
-  test('loads and renders subfolder disk entries in the root prompt folder screen', async ({
+  test('loads and renders category entries in the root prompt folder screen', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -257,32 +261,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
     ).toBeVisible()
-
-    const nestedFolderLoad = await mainWindow.evaluate(
-      async ({ workspaceId, nestedFolderId }) => {
-        return await window.electron.ipcRenderer.invoke('load-prompt-folder-initial', {
-          requestId: `test-nested-load-${Date.now()}`,
-          clientId: window.ipcClientId,
-          payload: {
-            workspaceId,
-            promptFolderId: nestedFolderId
-          }
-        })
-      },
-      {
-        workspaceId: createDeterministicId(SUBFOLDERS_WORKSPACE_PATH),
-        nestedFolderId: createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
-      }
-    )
-
-    expect(nestedFolderLoad.success).toBe(true)
-    const nestedFolderId = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
-    const loadedNestedFolder = nestedFolderLoad.promptFolders.find(
-      (promptFolder) => promptFolder.id === nestedFolderId
-    )
-    expect(loadedNestedFolder?.data.displayName).toBe('Nested')
-    expect(loadedNestedFolder?.data.entries).toEqual([{ kind: 'prompt', id: 'nested-prompt' }])
-    expect(nestedFolderLoad.prompts.map((prompt) => prompt.id)).toEqual(['nested-prompt'])
+    // Stable category identity connects the flattened fixture to its folder-style row.
+    const nestedCategoryId = createDeterministicId(`${SUBFOLDERS_WORKSPACE_PATH}:Main/Nested`)
+    await expect(
+      mainWindow.locator(`[data-testid="prompt-folder-editor-${nestedCategoryId}"]`)
+    ).toContainText('Nested')
   })
 
   test('restores prompt content when revisiting folders', async ({ testSetup }) => {
@@ -805,10 +788,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderOrder.json`
+          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderOrderV2.json`
         )
       )
-    ).toEqual({ entries: [] })
+    ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
     expect(
       await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Completed`)
     ).toBe(false)

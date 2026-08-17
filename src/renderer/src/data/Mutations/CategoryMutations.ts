@@ -5,18 +5,23 @@ import type {
   CreateCategoryResponsePayload,
   DeleteCategoryPayload,
   DeleteCategoryResponsePayload,
+  MoveCategoryPayload,
   RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
 import { normalizeCategoryDisplayName } from '@shared/Category'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import type { IpcMutationPayloadResult } from '@shared/IpcResult'
+import type { Transaction } from '@tanstack/svelte-db'
 import { createPromptFull } from '@shared/Prompt'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import {
   deleteCategoryOrderGroup,
   getCategoryOrderCategoryIds,
-  insertCategoryOrderGroup
+  insertCategoryOrderGroup,
+  moveCategoryOrderGroup,
+  type PromptFolderRevisionResponsePayload
 } from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -24,9 +29,60 @@ import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraftCollection'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import {
+  mutatePacedRevisionUpdateTransaction,
+  runRevisionMutation
+} from '../IpcFramework/RevisionCollections'
+import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
+import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { upsertPromptDraft } from '../UiState/PromptDraftHydration'
 import { upsertPromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
+
+/** Reads the latest optimistic category value captured by a paced transaction. */
+const readLatestCategoryFromTransaction = (
+  transaction: Transaction<any>,
+  categoryId: string
+): Category =>
+  getLatestMutationModifiedRecord(transaction, categoryCollection.id, categoryId, () =>
+    categoryCollection.get(categoryId)!
+  )
+
+/** Queues a debounced category-description update using the latest optimistic value. */
+export const setCategoryDescriptionWithAutosave = (
+  categoryId: string,
+  description: string | null,
+  debounceMs: number
+): void => {
+  mutatePacedRevisionUpdateTransaction<CategoryRevisionResponsePayload>({
+    collectionId: categoryCollection.id,
+    elementId: categoryId,
+    debounceMs,
+    mutateOptimistically: ({ collections }) => {
+      collections.category.update(categoryId, (draft) => {
+        draft.description = description
+      })
+    },
+    persistMutations: async ({ transaction }) => {
+      /** Latest category containing all edits merged into this autosave transaction. */
+      const latestCategory = readLatestCategoryFromTransaction(transaction, categoryId)
+      return await ipcInvokeWithPayload<
+        IpcMutationPayloadResult<CategoryRevisionResponsePayload>,
+        SetCategoryDescriptionPayload
+      >('set-category-description', {
+        category: {
+          id: categoryId,
+          expectedRevision: categoryCollection.utils.getAuthoritativeRevision(categoryId),
+          data: latestCategory
+        },
+        description: latestCategory.description
+      })
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      categoryCollection.utils.upsertAuthoritative(payload.category)
+    },
+    conflictMessage: 'Category description update conflict'
+  })
+}
 
 /** Creates a root-owned category and returns its stable client-generated ID. */
 export const createCategory = async (
@@ -120,6 +176,41 @@ export const setCategoryDescription = async (
       categoryCollection.utils.upsertAuthoritative(payload.category)
     },
     conflictMessage: 'Category description update conflict'
+  })
+}
+
+/** Reorders one category group within its owning root folder. */
+export const moveCategory = async (
+  promptFolderId: string,
+  categoryId: string,
+  previousCategoryId: string | null
+): Promise<void> => {
+  /** Root folder whose FolderOrderV2 category sequence changes. */
+  const promptFolder = promptFolderCollection.get(promptFolderId)
+  if (!promptFolder) throw new Error('Root prompt folder not loaded')
+
+  await runRevisionMutation<PromptFolderRevisionResponsePayload>({
+    mutateOptimistically: ({ collections }) => {
+      collections.promptFolder.update(promptFolderId, (draft) => {
+        draft.categoryOrder = moveCategoryOrderGroup(
+          draft.categoryOrder,
+          categoryId,
+          previousCategoryId
+        )
+      })
+    },
+    persistMutations: async ({ entities, invoke }) =>
+      await invoke<{ payload: MoveCategoryPayload }>('move-category', {
+        payload: {
+          promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
+          categoryId,
+          previousCategoryId
+        }
+      }),
+    handleSuccessOrConflictResponse: (payload) => {
+      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
+    },
+    conflictMessage: 'Category move conflict'
   })
 }
 

@@ -34,7 +34,6 @@ const templateFolder = (id: string, templateIds: string[] = []) => ({
   kind: 'template' as const,
   folderName: id,
   displayName: id,
-  entries: templateIds.map((templateId) => ({ kind: 'template' as const, id: templateId })),
   completedPromptIds: [],
   categoryOrder: {
     categories: [
@@ -183,7 +182,7 @@ describe('prompt template mutations', () => {
       fallbackTitle: 'New Template',
       isEdited: true
     })
-    expect(sourceFolder.entries).toEqual([
+    expect(sourceFolder.categoryOrder.categories[0]?.entries).toEqual([
       { kind: 'template', id: 'new-template' },
       { kind: 'template', id: 'paced-template' }
     ])
@@ -222,7 +221,7 @@ describe('prompt template mutations', () => {
     })
     expect(deleteTemplate).toHaveBeenCalledWith('paced-template')
     expect(deleteDraft).toHaveBeenCalledWith('paced-template')
-    expect(sourceAfterDelete.entries).toEqual([])
+    expect(sourceAfterDelete.categoryOrder.categories[0]?.entries).toEqual([])
     await deleteOptions.persistMutations({ entities: entityBuilders, transaction: {} })
     expect(ipcInvokeWithPayload).toHaveBeenLastCalledWith(
       'delete-prompt-template',
@@ -252,8 +251,8 @@ describe('prompt template mutations', () => {
         promptTemplateDraft: { update: updateDraft }
       }
     })
-    expect(sourceAfterMove.entries).toEqual([])
-    expect(destinationAfterMove.entries).toEqual([
+    expect(sourceAfterMove.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(destinationAfterMove.categoryOrder.categories[0]?.entries).toEqual([
       { kind: 'template', id: 'paced-template' }
     ])
     expect(updateTemplate).toHaveBeenCalledWith('paced-template', expect.any(Function))

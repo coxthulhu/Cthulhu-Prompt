@@ -6,7 +6,7 @@
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
-  import type { PromptFolder } from '@shared/PromptFolder'
+  import type { Category } from '@shared/Category'
   import type { Action } from 'svelte/action'
   import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
@@ -22,7 +22,7 @@
   import type { PromptRowDropOptions } from './promptTreeRowOptions'
 
   type Props = {
-    folder: PromptFolder
+    folder: Category
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
@@ -103,7 +103,7 @@
       testId: folderSettingsTestId(folder)
     }
     /*
-    Show more/show less is paused until prompt tree subfolders reuse this folder row.
+    Show more/show less remains disabled for category rows.
     ...(isExpanded && folder.promptCount > visiblePromptLimit
       ? [
           isShowingAllPrompts

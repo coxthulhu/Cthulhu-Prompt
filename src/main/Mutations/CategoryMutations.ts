@@ -11,7 +11,8 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
   deleteCategoryOrderGroup,
   getCategoryOrderCategoryIds,
-  insertCategoryOrderGroup
+  insertCategoryOrderGroup,
+  moveCategoryOrderGroup
 } from '@shared/PromptFolder'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
@@ -27,6 +28,7 @@ import {
 import {
   parseCreateCategoryRequest,
   parseDeleteCategoryRequest,
+  parseMoveCategoryRequest,
   parseRenameCategoryRequest,
   parseSetCategoryDescriptionRequest
 } from '../IpcFramework/IpcValidation'
@@ -417,6 +419,41 @@ export const setupCategoryMutationHandlers = (): void => {
           promptTemplateIds
         )
         if (!payload) return { success: false, error: 'Category delete commit did not complete' }
+        return outcome.status === 'conflict'
+          ? { success: false, conflict: true, payload }
+          : { success: true, payload }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : String(error) }
+      }
+    })
+  })
+
+  ipcMain.handle('move-category', async (_, request: unknown) => {
+    return await runMutationIpcRequest(request, parseMoveCategoryRequest, async (validated) => {
+      try {
+        /** Revision-bearing root folder whose category order changes. */
+        const requestedFolder = validated.payload.promptFolder
+        /** Authoritative root folder selected for category reordering. */
+        const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
+        if (!promptFolder) return { success: false, error: 'Root prompt folder not loaded' }
+        /** Atomic category-group reorder result. */
+        const outcome = await runAtomicDataTransaction((tx) => ({
+          promptFolder: tx.promptFolder.update({
+            id: requestedFolder.id,
+            expectedRevision: requestedFolder.expectedRevision,
+            recipe: (draft) => {
+              draft.categoryOrder = moveCategoryOrderGroup(
+                draft.categoryOrder,
+                validated.payload.categoryId,
+                validated.payload.previousCategoryId
+              )
+            }
+          })
+        }))
+        /** Latest authoritative folder returned for success or conflict. */
+        const updatedFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
+        if (!updatedFolder) return { success: false, error: 'Root prompt folder not loaded' }
+        const payload = { promptFolder: buildPromptFolderSnapshot(updatedFolder) }
         return outcome.status === 'conflict'
           ? { success: false, conflict: true, payload }
           : { success: true, payload }

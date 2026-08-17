@@ -1,84 +1,39 @@
 import { ipcMain } from 'electron'
 import type { IpcMutationActionResponse } from '@shared/IpcResult'
+import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
+import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
+import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
+import { data } from '../Data/Data'
+import { buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
 import {
   parseCloseWorkspaceRequest,
   parseCreateWorkspaceRequest,
   parseMovePromptFolderRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
-import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
-import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
-import { data } from '../Data/Data'
-import * as path from 'path'
-import { buildPromptFolderTreeIndex, MAX_PROMPT_SUBFOLDER_DEPTH } from '@shared/PromptFolderTree'
-import {
-  folderEntryRef,
-  removeEntry,
-  resolveEntryInsertIndex
-} from '@shared/OrderContainer'
-import {
-  buildPromptFolderSnapshot,
-  buildPromptSnapshot,
-  buildPromptTemplateSnapshot,
-  buildWorkspaceSnapshot,
-  collectLoadedPromptFolderDescendantIds
-} from '../Data/DataSnapshotHelpers'
-import {
-  refreshPromptFolderTreePersistencePaths,
-  collectWorkspacePromptFolders
-} from './PromptFolderPathHelpers'
-import { collectPromptFolderContentIds } from './PromptFolderContentMutations'
-import {
-  appendCategoryOrderEntry,
-  createNestedCategoryOrder,
-  createRootCategoryOrder,
-  removeCategoryOrderEntry,
-  type CategoryOrder
-} from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
 
-/** Resolves the top-level owner of one folder in a loaded workspace tree. */
-const resolveRootPromptFolderId = (
-  treeIndex: ReturnType<typeof buildPromptFolderTreeIndex>,
-  promptFolderId: string
-): string => {
-  let rootFolderId = promptFolderId
-  let parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
-  while (parentFolderId !== null) {
-    rootFolderId = parentFolderId
-    parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
-  }
-  return rootFolderId
-}
-
+/** Registers workspace lifecycle and root-folder ordering mutations. */
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
     'create-workspace',
-    async (_, request: unknown): Promise<IpcMutationActionResponse> => {
-      // Special-case payload: this create request uses command-style workspace fields,
-      // not the normal  revision mutation entity shape.
-      return await runMutationIpcRequest(
-        request,
-        parseCreateWorkspaceRequest,
-        async (validatedRequest) => {
-          const payload = validatedRequest.payload
-          return await createWorkspace(
-            payload.workspacePath,
-            payload.workspaceName,
-            payload.includeExamplePrompts
-          )
-        }
-      )
-    }
+    async (_, request: unknown): Promise<IpcMutationActionResponse> =>
+      await runMutationIpcRequest(request, parseCreateWorkspaceRequest, async (validated) => {
+        /** Validated command-style workspace creation payload. */
+        const payload = validated.payload
+        return await createWorkspace(
+          payload.workspacePath,
+          payload.workspaceName,
+          payload.includeExamplePrompts
+        )
+      })
   )
 
   ipcMain.handle(
     'close-workspace',
-    async (_, request: unknown): Promise<IpcMutationActionResponse> => {
-      return await runMutationIpcRequest(request, parseCloseWorkspaceRequest, async () => {
-        return { success: true }
-      })
-    }
+    async (_, request: unknown): Promise<IpcMutationActionResponse> =>
+      await runMutationIpcRequest(request, parseCloseWorkspaceRequest, async () => ({
+        success: true
+      }))
   )
 
   ipcMain.handle('move-prompt-folder', async (_, request: unknown) => {
@@ -87,383 +42,63 @@ export const setupWorkspaceMutationHandlers = (): void => {
       parseMovePromptFolderRequest,
       async (validatedRequest) => {
         try {
+          /** Validated root-folder reorder command. */
           const payload = validatedRequest.payload
-          const requestedWorkspace = payload.workspace
-          const committedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-
-          if (!committedWorkspace) {
-            return { success: false, error: 'Workspace not loaded' }
-          }
-
-          const movedPromptFolder = data.promptFolder.committedStore.getEntry(
-            payload.promptFolderId
-          )
-
-          if (!movedPromptFolder) {
+          /** Workspace whose root-folder order changes. */
+          const workspace = data.workspace.committedStore.getEntry(payload.workspace.id)
+          /** Root folder being reordered. */
+          const promptFolder = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
+          if (!workspace || !promptFolder) {
             return { success: false, error: 'Prompt folder not loaded' }
           }
-
-          const sourceParentPromptFolder = payload.sourceParentPromptFolder
-            ? data.promptFolder.committedStore.getEntry(payload.sourceParentPromptFolder.id)
-            : null
-          const destinationParentPromptFolder = payload.destinationParentPromptFolder
-            ? data.promptFolder.committedStore.getEntry(payload.destinationParentPromptFolder.id)
-            : null
-          const promptFolders = collectWorkspacePromptFolders(committedWorkspace.committed)
-          const treeIndex = buildPromptFolderTreeIndex(committedWorkspace.committed, promptFolders)
-          const movedLocation = treeIndex.get(payload.promptFolderId)
-          if (!movedLocation) return { success: false, error: 'Prompt folder not in workspace' }
-
-          const sourceParentPromptFolderId = movedLocation.parentPromptFolderId
-          const destinationParentPromptFolderId = payload.destinationParentPromptFolder?.id ?? null
-
-          if ((payload.sourceParentPromptFolder?.id ?? null) !== sourceParentPromptFolderId) {
-            return { success: false, error: 'Source parent prompt folder did not match' }
+          if (!workspace.committed.entries.some((entry) => entry.id === payload.promptFolderId)) {
+            return { success: false, error: 'Prompt folder not in workspace' }
           }
-
-          if (payload.sourceParentPromptFolder && !sourceParentPromptFolder) {
-            return { success: false, error: 'Source parent prompt folder not loaded' }
-          }
-
-          if (payload.destinationParentPromptFolder && !destinationParentPromptFolder) {
-            return { success: false, error: 'Destination parent prompt folder not loaded' }
-          }
-
-          if (
-            destinationParentPromptFolder &&
-            destinationParentPromptFolder.committed.kind !== movedPromptFolder.committed.kind
-          ) {
-            return { success: false, error: 'Destination prompt folder kind did not match' }
-          }
-
-          const descendantIds = collectLoadedPromptFolderDescendantIds(payload.promptFolderId)
-          if (
-            destinationParentPromptFolderId === payload.promptFolderId ||
-            (destinationParentPromptFolderId !== null &&
-              descendantIds.includes(destinationParentPromptFolderId))
-          ) {
-            return { success: false, error: 'Cannot move a prompt folder into itself' }
-          }
-
-          const sourceEntries =
-            sourceParentPromptFolder?.committed.entries ?? committedWorkspace.committed.entries
-
-          if (
-            !sourceEntries.some(
-              (entry) => entry.kind === 'folder' && entry.id === payload.promptFolderId
-            )
-          ) {
-            return { success: false, error: 'Prompt folder not found in source parent' }
-          }
-
-          const isSameParent = sourceParentPromptFolderId === destinationParentPromptFolderId
-          const destinationEntries = isSameParent
-            ? removeEntry(sourceEntries, 'folder', payload.promptFolderId)
-            : (destinationParentPromptFolder?.committed.entries ??
-              committedWorkspace.committed.entries)
-          const insertIndex = resolveEntryInsertIndex(
-            destinationEntries,
-            payload.previousEntryId
-          )
-
-          if (insertIndex === null) {
-            return { success: false, error: 'Previous entry not found' }
-          }
-
-          const nextDepth = destinationParentPromptFolderId
-            ? (treeIndex.get(destinationParentPromptFolderId)?.depth ?? 0) + 1
-            : 0
-          const depthDelta = nextDepth - movedLocation.depth
-          const deepestMovedDepth = Math.max(
-            movedLocation.depth,
-            ...descendantIds.map(
-              (promptFolderId) => treeIndex.get(promptFolderId)?.depth ?? movedLocation.depth
-            )
-          )
-
-          if (deepestMovedDepth + depthDelta > MAX_PROMPT_SUBFOLDER_DEPTH) {
-            return {
-              success: false,
-              error: 'Prompt folders can contain up to 8 nested subfolder layers'
-            }
-          }
-
-          const movedFolderPath = destinationParentPromptFolder
-            ? path.join(
-                destinationParentPromptFolder.persistenceFields.folderPath,
-                movedPromptFolder.committed.folderName
-              )
-            : movedPromptFolder.committed.folderName
-          /** Source and destination roots determine whether category IDs remain valid. */
-          const sourceRootPromptFolderId = resolveRootPromptFolderId(
-            treeIndex,
+          /** Root order after removing the dragged folder. */
+          const entries = removeEntry(
+            workspace.committed.entries,
+            'folder',
             payload.promptFolderId
           )
-          const destinationRootPromptFolderId = destinationParentPromptFolderId
-            ? resolveRootPromptFolderId(treeIndex, destinationParentPromptFolderId)
-            : payload.promptFolderId
-          const isCrossRootMove =
-            sourceRootPromptFolderId !== destinationRootPromptFolderId
-          const movedContentIds = collectPromptFolderContentIds([
-            payload.promptFolderId,
-            ...descendantIds
-          ])
-          /** Active prompt IDs represented in FolderOrderV2. */
-          const movedActivePromptIds = movedContentIds.prompt.filter(
-            (promptId) =>
-              data.prompt.committedStore.getEntry(promptId)?.committed.status !==
-              PromptStatus.Completed
-          )
-          /** Active content keys used to preserve the source V2 relative order. */
-          const movedActiveContentKeys = new Set([
-            ...movedActivePromptIds.map((promptId) => `prompt:${promptId}`),
-            ...movedContentIds.template.map((templateId) => `template:${templateId}`)
-          ])
-          /** Source root entry used to derive transferred V2 ordering. */
-          const sourceRootPromptFolder = data.promptFolder.committedStore.getEntry(
-            sourceRootPromptFolderId
-          )!
-          /** Active moved entries in their prior category-view order. */
-          const movedCategoryOrderEntries = sourceRootPromptFolder.committed.categoryOrder.categories
-            .flatMap((category) => category.entries)
-            .filter((entry) => movedActiveContentKeys.has(`${entry.kind}:${entry.id}`))
-          /** Repaired V2 values assigned to roots affected by a cross-root move. */
-          const categoryOrderByPromptFolderId = new Map<string, CategoryOrder>()
-          if (isCrossRootMove) {
-            /** Source order after removing every active entry in the moved subtree. */
-            let nextSourceCategoryOrder = sourceRootPromptFolder.committed.categoryOrder
-            for (const entry of movedCategoryOrderEntries) {
-              nextSourceCategoryOrder = removeCategoryOrderEntry(nextSourceCategoryOrder, entry)
-            }
-            categoryOrderByPromptFolderId.set(
-              sourceRootPromptFolderId,
-              sourceRootPromptFolderId === payload.promptFolderId
-                ? createNestedCategoryOrder()
-                : nextSourceCategoryOrder
-            )
-
-            /** Destination root order, initialized when the moved folder becomes a new root. */
-            let nextDestinationCategoryOrder =
-              destinationRootPromptFolderId === payload.promptFolderId
-                ? createRootCategoryOrder()
-                : data.promptFolder.committedStore.getEntry(destinationRootPromptFolderId)!
-                    .committed.categoryOrder
-            for (const entry of movedCategoryOrderEntries) {
-              nextDestinationCategoryOrder = appendCategoryOrderEntry(
-                nextDestinationCategoryOrder,
-                entry,
-                undefined
-              )
-            }
-            categoryOrderByPromptFolderId.set(
-              destinationRootPromptFolderId,
-              nextDestinationCategoryOrder
-            )
-          }
-          const categoryClearedPromptIds = isCrossRootMove
-            ? movedContentIds.prompt.filter(
-                (promptId) => data.prompt.committedStore.getEntry(promptId)?.committed.category
-              )
-            : []
-          const categoryClearedTemplateIds = isCrossRootMove
-            ? movedContentIds.template.filter(
-                (templateId) =>
-                  data.promptTemplate.committedStore.getEntry(templateId)?.committed.category
-              )
-            : []
-          const modifiedPromptFolderIds = new Set<string>()
-
-          const transactionOutcome = await runAtomicDataTransaction((tx) => {
-            const handles: Record<
-              string,
-              | ReturnType<typeof tx.workspace.update>
-              | ReturnType<typeof tx.promptFolder.update>
-              | ReturnType<typeof tx.prompt.update>
-              | ReturnType<typeof tx.promptTemplate.update>
-            > = {}
-            /** Folder IDs whose existing transaction handles also apply V2 changes. */
-            const handledPromptFolderIds = new Set<string>()
-
-            const nextDestinationEntries = [...destinationEntries]
-            nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
-
-            if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
-              handles.workspace = tx.workspace.update({
-                id: requestedWorkspace.id,
-                expectedRevision: requestedWorkspace.expectedRevision,
-                recipe: (draft) => {
-                  draft.entries = nextDestinationEntries.filter((entry) => entry.kind === 'folder')
-                }
-              })
-            } else if (isSameParent && sourceParentPromptFolder) {
-              modifiedPromptFolderIds.add(sourceParentPromptFolder.committed.id)
-              handledPromptFolderIds.add(sourceParentPromptFolder.committed.id)
-              handles.sourceParentPromptFolder = tx.promptFolder.update({
-                id: sourceParentPromptFolder.committed.id,
-                expectedRevision: payload.sourceParentPromptFolder?.expectedRevision,
-                recipe: (draft) => {
-                  draft.entries = nextDestinationEntries
-                  /** V2 order assigned when this parent is also an affected root. */
-                  const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
-                  if (categoryOrder) draft.categoryOrder = categoryOrder
-                }
-              })
-            } else {
-              if (sourceParentPromptFolder) {
-                modifiedPromptFolderIds.add(sourceParentPromptFolder.committed.id)
-                handledPromptFolderIds.add(sourceParentPromptFolder.committed.id)
-                handles.sourceParentPromptFolder = tx.promptFolder.update({
-                  id: sourceParentPromptFolder.committed.id,
-                  expectedRevision: payload.sourceParentPromptFolder?.expectedRevision,
-                  recipe: (draft) => {
-                    draft.entries = removeEntry(draft.entries, 'folder', payload.promptFolderId)
-                    /** V2 order assigned when this parent is also the source root. */
-                    const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
-                    if (categoryOrder) draft.categoryOrder = categoryOrder
-                  }
-                })
-              } else {
-                handles.workspace = tx.workspace.update({
-                  id: requestedWorkspace.id,
-                  expectedRevision: requestedWorkspace.expectedRevision,
-                  recipe: (draft) => {
-                    draft.entries = removeEntry(draft.entries, 'folder', payload.promptFolderId)
-                  }
-                })
+          /** New insertion index after the requested root predecessor. */
+          const insertIndex = resolveEntryInsertIndex(entries, payload.previousEntryId)
+          if (insertIndex === null) return { success: false, error: 'Previous entry not found' }
+          entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
+          /** Atomic root-folder reorder result. */
+          const outcome = await runAtomicDataTransaction((tx) => ({
+            workspace: tx.workspace.update({
+              id: workspace.committed.id,
+              expectedRevision: payload.workspace.expectedRevision,
+              recipe: (draft) => {
+                draft.entries = entries
               }
-
-              if (destinationParentPromptFolder) {
-                modifiedPromptFolderIds.add(destinationParentPromptFolder.committed.id)
-                handledPromptFolderIds.add(destinationParentPromptFolder.committed.id)
-                handles.destinationParentPromptFolder = tx.promptFolder.update({
-                  id: destinationParentPromptFolder.committed.id,
-                  expectedRevision: payload.destinationParentPromptFolder?.expectedRevision,
-                  recipe: (draft) => {
-                    draft.entries = nextDestinationEntries
-                    /** V2 order assigned when this parent is also the destination root. */
-                    const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
-                    if (categoryOrder) draft.categoryOrder = categoryOrder
-                  }
-                })
-              } else {
-                handles.destinationWorkspace = tx.workspace.update({
-                  id: requestedWorkspace.id,
-                  expectedRevision: requestedWorkspace.expectedRevision,
-                  recipe: (draft) => {
-                    draft.entries = nextDestinationEntries.filter(
-                      (entry) => entry.kind === 'folder'
-                    )
-                  }
-                })
+            })
+          }))
+          /** Latest authoritative workspace for success or conflict reconciliation. */
+          const updatedWorkspace = data.workspace.committedStore.getEntry(workspace.committed.id)
+          if (!updatedWorkspace) return { success: false, error: 'Workspace not loaded' }
+          return outcome.status === 'conflict'
+            ? {
+                success: false,
+                conflict: true,
+                payload: {
+                  workspace: buildWorkspaceSnapshot(updatedWorkspace),
+                  promptFolders: [],
+                  prompts: [],
+                  promptTemplates: []
+                }
               }
-            }
-
-            for (const promptId of categoryClearedPromptIds) {
-              handles[`prompt:${promptId}`] = tx.prompt.update({
-                id: promptId,
-                recipe: (draft) => {
-                  delete draft.category
+            : {
+                success: true,
+                payload: {
+                  workspace: buildWorkspaceSnapshot(updatedWorkspace),
+                  promptFolders: [],
+                  prompts: [],
+                  promptTemplates: []
                 }
-              })
-            }
-            for (const templateId of categoryClearedTemplateIds) {
-              handles[`promptTemplate:${templateId}`] = tx.promptTemplate.update({
-                id: templateId,
-                recipe: (draft) => {
-                  delete draft.category
-                }
-              })
-            }
-
-            if (!isSameParent) {
-              modifiedPromptFolderIds.add(payload.promptFolderId)
-              handledPromptFolderIds.add(payload.promptFolderId)
-              handles.movedPromptFolder = tx.promptFolder.update({
-                id: payload.promptFolderId,
-                recipe: (draft) => {
-                  /** Root/nested V2 shape assigned when the moved folder changes ownership role. */
-                  const categoryOrder = categoryOrderByPromptFolderId.get(draft.id)
-                  if (categoryOrder) draft.categoryOrder = categoryOrder
-                },
-                persistenceFields: {
-                  ...movedPromptFolder.persistenceFields,
-                  folderPath: movedFolderPath,
-                  previousFolderPath: movedPromptFolder.persistenceFields.folderPath
-                }
-              })
-            }
-
-            for (const [categoryOrderPromptFolderId, categoryOrder] of categoryOrderByPromptFolderId) {
-              if (handledPromptFolderIds.has(categoryOrderPromptFolderId)) continue
-              modifiedPromptFolderIds.add(categoryOrderPromptFolderId)
-              handles[`categoryOrder:${categoryOrderPromptFolderId}`] = tx.promptFolder.update({
-                id: categoryOrderPromptFolderId,
-                recipe: (draft) => {
-                  draft.categoryOrder = categoryOrder
-                }
-              })
-            }
-
-            return handles
-          })
-
-          if (transactionOutcome.status === 'conflict') {
-            const latestWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-
-            if (!latestWorkspace) {
-              return { success: false, error: 'Workspace not loaded' }
-            }
-
-            return {
-              success: false,
-              conflict: true,
-              payload: {
-                workspace: buildWorkspaceSnapshot(latestWorkspace),
-                promptFolders: [...modifiedPromptFolderIds].flatMap((promptFolderId) => {
-                  const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)
-                  return promptFolder ? [buildPromptFolderSnapshot(promptFolder)] : []
-                }),
-                prompts: categoryClearedPromptIds.flatMap((promptId) => {
-                  const prompt = data.prompt.committedStore.getEntry(promptId)
-                  return prompt ? [buildPromptSnapshot(prompt)] : []
-                }),
-                promptTemplates: categoryClearedTemplateIds.flatMap((templateId) => {
-                  const template = data.promptTemplate.committedStore.getEntry(templateId)
-                  return template ? [buildPromptTemplateSnapshot(template)] : []
-                })
               }
-            }
-          }
-
-          refreshPromptFolderTreePersistencePaths(payload.promptFolderId)
-
-          const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-
-          if (!updatedWorkspace) {
-            return { success: false, error: 'Prompt folder move commit did not complete' }
-          }
-
-          return {
-            success: true,
-            payload: {
-              workspace: buildWorkspaceSnapshot(updatedWorkspace),
-              promptFolders: [...modifiedPromptFolderIds].flatMap((promptFolderId) => {
-                const promptFolder = data.promptFolder.committedStore.getEntry(promptFolderId)
-                return promptFolder ? [buildPromptFolderSnapshot(promptFolder)] : []
-              }),
-              prompts: categoryClearedPromptIds.flatMap((promptId) => {
-                const prompt = data.prompt.committedStore.getEntry(promptId)
-                return prompt ? [buildPromptSnapshot(prompt)] : []
-              }),
-              promptTemplates: categoryClearedTemplateIds.flatMap((templateId) => {
-                const template = data.promptTemplate.committedStore.getEntry(templateId)
-                return template ? [buildPromptTemplateSnapshot(template)] : []
-              })
-            }
-          }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message }
+          return { success: false, error: error instanceof Error ? error.message : String(error) }
         }
       }
     )

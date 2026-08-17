@@ -343,13 +343,15 @@ const buildCompletedFallbackGapWorkspace = () => {
   }).markdownPath
 
   workspace[
-    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
+    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
   ] = JSON.stringify(
     {
-      entries: [...activePrompts.map((prompt) => prompt.id), completedPrompt.id].map((id) => ({
-        kind: 'prompt',
-        id
-      }))
+      categories: [
+        {
+          categoryId: null,
+          entries: activePrompts.map((prompt) => ({ kind: 'prompt', id: prompt.id }))
+        }
+      ]
     },
     null,
     2
@@ -413,13 +415,15 @@ const buildCompletedSelfHealingWorkspace = () => {
 
   return {
     ...workspace,
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`]:
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrderV2.json`]:
       JSON.stringify(
         {
-          entries: [completedPrompt.id, activePrompt.id].map((id) => ({
-            kind: 'prompt',
-            id
-          }))
+          categories: [
+            {
+              categoryId: null,
+              entries: [{ kind: 'prompt', id: activePrompt.id }]
+            }
+          ]
         },
         null,
         2
@@ -507,12 +511,15 @@ const buildCompletedModeWorkspace = () => {
     promptTitle: oldestCompletedPrompt.title
   }).markdownPath
 
-  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`] =
+  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrderV2.json`] =
     JSON.stringify(
       {
-        entries: [newestCompletedPrompt.id, oldestCompletedPrompt.id, activePrompt.id].map(
-          (id) => ({ kind: 'prompt', id })
-        )
+        categories: [
+          {
+            categoryId: null,
+            entries: [{ kind: 'prompt', id: activePrompt.id }]
+          }
+        ]
       },
       null,
       2
@@ -901,7 +908,7 @@ describe('Prompt folder prompt management', () => {
     await expect(dividerActions).toHaveCSS('transition-timing-function', 'ease')
     await expect(dividerRow.locator('.cthulhuUiSeparator')).toHaveCount(2)
     await expect(dividerButton).toHaveText('Add Prompt')
-    await expect(dividerActions.getByRole('button')).toHaveCount(2)
+    await expect(dividerActions.getByRole('button')).toHaveCount(1)
     expect(dividerButtonBoxBefore).not.toBeNull()
     expect(dividerButtonIconBox).not.toBeNull()
     expect(dividerRowBox).not.toBeNull()
@@ -1327,7 +1334,7 @@ describe('Prompt folder prompt management', () => {
     expect(
       await readPromptFolderEntries(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
       )
     ).toEqual([{ kind: 'prompt', id: 'dev-2' }])
 
@@ -1376,7 +1383,7 @@ describe('Prompt folder prompt management', () => {
         async () =>
           await readPromptFolderEntries(
             electronApp,
-            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`
+            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrderV2.json`
           )
       )
       .toEqual([{ kind: 'prompt', id: activePromptId }])
@@ -1435,7 +1442,8 @@ describe('Prompt folder prompt management', () => {
             sourcePromptFolder: toPayloadEntity(sourcePromptFolder),
             destinationPromptFolder: toPayloadEntity(destinationPromptFolder),
             content: toPayloadEntity(prompt),
-            previousEntryId: null
+            previousEntryId: null,
+            categoryId: null
           }
         })
       },
@@ -2076,7 +2084,7 @@ describe('Prompt folder prompt management', () => {
         async () =>
           await readPromptFolderEntries(
             electronApp,
-            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrder.json`
+            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrderV2.json`
           )
       )
       .toEqual([

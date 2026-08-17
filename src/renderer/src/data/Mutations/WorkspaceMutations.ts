@@ -4,20 +4,17 @@ import type {
   MovePromptFolderPayload,
   MovePromptFolderResponsePayload
 } from '@shared/Workspace'
-import type { IpcMutationActionResponse } from '@shared/IpcResult'
+import type { IpcMutationActionResponse, IpcMutationPayloadResult } from '@shared/IpcResult'
+import { removeEntry, resolveEntryInsertIndex, folderEntryRef } from '@shared/OrderContainer'
+import type {
+  DeletePromptFolderPayload,
+  DeletePromptFolderResponsePayload
+} from '@shared/PromptFolder'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { promptCollection } from '../Collections/PromptCollection'
-import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { promptDraftCollection } from '../Collections/PromptDraftCollection'
-import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraftCollection'
-import { createPromptFull } from '@shared/Prompt'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
-import { upsertPromptDraft } from '../UiState/PromptDraftHydration'
-import { upsertPromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
 import {
   deletePromptFolderDrafts,
   removePromptFolderDraft
@@ -27,371 +24,129 @@ import {
   setSelectedWorkspaceId
 } from '../UiState/WorkspaceSelection.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
-import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
-import {
-  folderEntryRef,
-  promptEntryRef,
-  promptTemplateEntryRef,
-  removeEntry,
-  resolveEntryInsertIndex
-} from '@shared/OrderContainer'
-import {
-  removeCategoryOrderEntry,
-  type DeletePromptFolderPayload,
-  type DeletePromptFolderResponsePayload,
-  type PromptFolder
-} from '@shared/PromptFolder'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import {
   deletePromptFolderContentRecords,
   deletePromptFolderContentsOptimistically
 } from './PromptFolderContentMutations'
 
-const collectWorkspacePromptFolders = (workspaceId: string): PromptFolder[] => {
-  const workspace = workspaceCollection.get(workspaceId)
-  if (!workspace) return []
-
-  const folders: PromptFolder[] = []
-  const visit = (folderId: string) => {
-    const folder = promptFolderCollection.get(folderId)
-    if (!folder || folders.some((current) => current.id === folderId)) return
-    folders.push(folder)
-    for (const entry of folder.entries) if (entry.kind === 'folder') visit(entry.id)
-  }
-  for (const entry of workspace.entries) visit(entry.id)
-  return folders
-}
-
+/** Clears every renderer record owned by one closed workspace. */
 const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => {
-  if (!workspaceId) {
-    return
-  }
-
+  if (!workspaceId) return
+  /** Workspace being removed from renderer state. */
   const workspace = workspaceCollection.get(workspaceId)
-  if (!workspace) {
-    return
-  }
-
+  if (!workspace) return
+  /** Complete root-owned entity graph being removed. */
   const graph = collectPromptFolderGraphIds(workspace.entries.map((entry) => entry.id))
   deletePromptFolderContentRecords(graph)
   for (const promptFolderId of graph.promptFolderIds) {
     promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
     removePromptFolderDraft(promptFolderId)
   }
-
   workspaceCollection.utils.deleteAuthoritative(workspaceId)
 }
 
+/** Creates a workspace through the command-style IPC endpoint. */
 export const createWorkspace = async (
   workspacePath: string,
   workspaceName: string,
   includeExamplePrompts: boolean
-): Promise<IpcMutationActionResponse> => {
-  // Special-case payload: create-workspace expects command arguments,
-  // not a normal  revision mutation payload object.
-  return await ipcInvokeWithPayload<IpcMutationActionResponse, CreateWorkspacePayload>(
+): Promise<IpcMutationActionResponse> =>
+  await ipcInvokeWithPayload<IpcMutationActionResponse, CreateWorkspacePayload>(
     'create-workspace',
-    {
-      workspacePath,
-      workspaceName,
-      includeExamplePrompts
-    }
+    { workspacePath, workspaceName, includeExamplePrompts }
   )
-}
 
+/** Closes the selected workspace and clears its renderer graph. */
 export const closeWorkspace = async (): Promise<void> => {
+  /** Workspace identity retained for cleanup after IPC settles. */
   const selectedWorkspaceId = getSelectedWorkspaceId()
-
   try {
     await runLoad(() =>
       ipcInvokeWithPayload<IpcMutationActionResponse, CloseWorkspacePayload>('close-workspace', {})
     )
   } finally {
-    // Side effect: clear renderer  workspace state when the workspace closes.
+    // Side effect: clear renderer workspace state after closing.
     setSelectedWorkspaceId(null)
     clearSelectedWorkspaceCollections(selectedWorkspaceId)
   }
 }
 
+/** Deletes one root prompt folder and every entity it owns. */
 export const deletePromptFolder = async (
   workspaceId: string,
   promptFolderId: string
 ): Promise<void> => {
+  /** Workspace that directly owns the root folder. */
   const workspace = workspaceCollection.get(workspaceId)
-  if (!workspace) {
-    throw new Error('Workspace not loaded')
-  }
-
+  /** Root folder selected for deletion. */
   const promptFolder = promptFolderCollection.get(promptFolderId)
-  if (!promptFolder) {
-    throw new Error('Prompt folder not loaded')
-  }
-
-  const promptFolders = collectWorkspacePromptFolders(workspaceId)
-  const treeIndex = buildPromptFolderTreeIndex(workspace, promptFolders)
-  const parentPromptFolderId = treeIndex.get(promptFolderId)?.parentPromptFolderId ?? null
-  const parentPromptFolder = parentPromptFolderId
-    ? promptFolderCollection.get(parentPromptFolderId)
-    : null
-
-  if (parentPromptFolderId && !parentPromptFolder) {
-    throw new Error('Parent prompt folder not loaded')
-  }
-
-  const deletedGraph = collectPromptFolderGraphIds([promptFolderId])
-  const deletedPromptFolderIds = [...deletedGraph.promptFolderIds]
-  /** Root folder whose V2 order loses content from a deleted nested subtree. */
-  let categoryOrderPromptFolderId = promptFolderId
-  /** Parent walked while resolving the V2 owner. */
-  let categoryOrderParentId = treeIndex.get(categoryOrderPromptFolderId)?.parentPromptFolderId ?? null
-  while (categoryOrderParentId !== null) {
-    categoryOrderPromptFolderId = categoryOrderParentId
-    categoryOrderParentId = treeIndex.get(categoryOrderPromptFolderId)?.parentPromptFolderId ?? null
-  }
-  /** V2 content references removed with the deleted subtree. */
-  const deletedCategoryOrderEntries = [
-    ...[...deletedGraph.contentIds.prompt].map(promptEntryRef),
-    ...[...deletedGraph.contentIds.template].map(promptTemplateEntryRef)
-  ]
+  if (!workspace || !promptFolder) throw new Error('Prompt folder not loaded')
+  /** Renderer graph removed with the root folder. */
+  const graph = collectPromptFolderGraphIds([promptFolderId])
 
   await runRevisionMutation<DeletePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
-      if (parentPromptFolderId) {
-        collections.promptFolder.update(parentPromptFolderId, (draft) => {
-          draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
-          if (parentPromptFolderId === categoryOrderPromptFolderId) {
-            for (const entry of deletedCategoryOrderEntries) {
-              draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-            }
-          }
-        })
-      } else {
-        collections.workspace.update(workspaceId, (draft) => {
-          draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
-        })
-      }
-      if (
-        parentPromptFolderId !== null &&
-        parentPromptFolderId !== categoryOrderPromptFolderId
-      ) {
-        collections.promptFolder.update(categoryOrderPromptFolderId, (draft) => {
-          for (const entry of deletedCategoryOrderEntries) {
-            draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-          }
-        })
-      }
-      deletePromptFolderContentsOptimistically(collections, deletedGraph)
-      collections.promptFolder.delete(deletedPromptFolderIds)
+      collections.workspace.update(workspaceId, (draft) => {
+        draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
+      })
+      deletePromptFolderContentsOptimistically(collections, graph)
+      collections.promptFolder.delete(promptFolderId)
     },
-    persistMutations: async ({ entities }) => {
-      return await ipcInvokeWithPayload<
+    persistMutations: async ({ entities }) =>
+      await ipcInvokeWithPayload<
         IpcMutationPayloadResult<DeletePromptFolderResponsePayload>,
         DeletePromptFolderPayload
       >('delete-prompt-folder', {
         workspace: entities.workspace({ id: workspaceId, data: workspace }),
-        parentPromptFolder: parentPromptFolderId
-          ? entities.promptFolder({
-              id: parentPromptFolderId,
-              data: parentPromptFolder!
-            })
-          : null,
         promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder })
-      })
-    },
+      }),
     handleSuccessOrConflictResponse: (payload) => {
-      if (payload.workspace) {
-        workspaceCollection.utils.upsertAuthoritative(payload.workspace)
-      }
-      if (payload.parentPromptFolder) {
-        promptFolderCollection.utils.upsertAuthoritative(payload.parentPromptFolder)
-      }
+      if (payload.workspace) workspaceCollection.utils.upsertAuthoritative(payload.workspace)
       if (payload.promptFolder) {
         promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      }
-      if (payload.categoryOrderPromptFolder) {
-        promptFolderCollection.utils.upsertAuthoritative(payload.categoryOrderPromptFolder)
       }
     },
     conflictMessage: 'Prompt folder delete conflict',
     onSuccess: () => {
-      deletePromptFolderContentRecords(deletedGraph)
-      promptFolderCollection.utils.deleteManyAuthoritative(deletedPromptFolderIds)
-      deletePromptFolderDrafts(deletedPromptFolderIds)
+      deletePromptFolderContentRecords(graph)
+      promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
+      deletePromptFolderDrafts([promptFolderId])
     }
   })
 }
 
+/** Reorders one root prompt folder within its workspace. */
 export const movePromptFolder = async (
   workspaceId: string,
   promptFolderId: string,
-  previousEntryId: string | null,
-  destinationParentPromptFolderId: string | null = null
+  previousEntryId: string | null
 ): Promise<void> => {
+  /** Workspace whose root order changes. */
   const workspace = workspaceCollection.get(workspaceId)
+  if (!workspace) throw new Error('Workspace not loaded')
+  /** Root order after removing the dragged folder. */
+  const entries = removeEntry(workspace.entries, 'folder', promptFolderId)
+  /** Insertion index following the requested root predecessor. */
+  const insertIndex = resolveEntryInsertIndex(entries, previousEntryId)
+  if (insertIndex === null) throw new Error('Previous entry not found')
+  entries.splice(insertIndex, 0, folderEntryRef(promptFolderId))
 
-  if (!workspace) {
-    throw new Error('Workspace not loaded')
-  }
-
-  const promptFolder = promptFolderCollection.get(promptFolderId)
-
-  if (!promptFolder) {
-    throw new Error('Prompt folder not loaded')
-  }
-
-  const treeIndex = buildPromptFolderTreeIndex(
-    workspace,
-    collectWorkspacePromptFolders(workspaceId)
-  )
-  const sourceParentPromptFolderId = treeIndex.get(promptFolderId)?.parentPromptFolderId ?? null
-  const sourceParentPromptFolder = sourceParentPromptFolderId
-    ? promptFolderCollection.get(sourceParentPromptFolderId)
-    : null
-  const destinationParentPromptFolder = destinationParentPromptFolderId
-    ? promptFolderCollection.get(destinationParentPromptFolderId)
-    : null
-  /** Resolves a folder's current top-level owner from the renderer tree index. */
-  const resolveRootFolderId = (folderId: string): string => {
-    let rootFolderId = folderId
-    let parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
-    while (parentFolderId !== null) {
-      rootFolderId = parentFolderId
-      parentFolderId = treeIndex.get(rootFolderId)?.parentPromptFolderId ?? null
-    }
-    return rootFolderId
-  }
-  /** Cross-root subtree moves invalidate every assigned category in that subtree. */
-  const isCrossRootMove =
-    resolveRootFolderId(promptFolderId) !==
-    (destinationParentPromptFolderId
-      ? resolveRootFolderId(destinationParentPromptFolderId)
-      : promptFolderId)
-  const movedGraph = collectPromptFolderGraphIds([promptFolderId])
-
-  if (sourceParentPromptFolderId && !sourceParentPromptFolder) {
-    throw new Error('Source parent prompt folder not loaded')
-  }
-
-  if (destinationParentPromptFolderId && !destinationParentPromptFolder) {
-    throw new Error('Destination parent prompt folder not loaded')
-  }
-
-  if (
-    destinationParentPromptFolder &&
-    destinationParentPromptFolder.kind !== promptFolder.kind
-  ) {
-    throw new Error('Destination prompt folder kind did not match')
-  }
-
-  const isSameParent = sourceParentPromptFolderId === destinationParentPromptFolderId
-  const sourceEntries = sourceParentPromptFolder?.entries ?? workspace.entries
-  const destinationEntries = isSameParent
-    ? removeEntry(sourceEntries, 'folder', promptFolderId)
-    : (destinationParentPromptFolder?.entries ?? workspace.entries)
-  const insertIndex = resolveEntryInsertIndex(destinationEntries, previousEntryId)
-
-  if (insertIndex === null) {
-    throw new Error('Previous entry not found')
-  }
-
-  const nextDestinationEntries = [...destinationEntries]
-  nextDestinationEntries.splice(insertIndex, 0, folderEntryRef(promptFolderId))
   await runRevisionMutation<MovePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
-      if (isCrossRootMove) {
-        for (const promptId of movedGraph.contentIds.prompt) {
-          collections.prompt.update(promptId, (draft) => {
-            delete draft.category
-          })
-          collections.promptDraft.update(promptId, (draft) => {
-            delete draft.category
-          })
-        }
-        for (const templateId of movedGraph.contentIds.template) {
-          collections.promptTemplate.update(templateId, (draft) => {
-            delete draft.category
-          })
-          collections.promptTemplateDraft.update(templateId, (draft) => {
-            delete draft.category
-          })
-        }
-      }
-      if (sourceParentPromptFolderId === null && destinationParentPromptFolderId === null) {
-        collections.workspace.update(workspaceId, (draft) => {
-          draft.entries = [...nextDestinationEntries]
-        })
-        return
-      }
-
-      if (isSameParent && sourceParentPromptFolderId) {
-        collections.promptFolder.update(sourceParentPromptFolderId, (draft) => {
-          draft.entries = [...nextDestinationEntries]
-        })
-        return
-      }
-
-      if (sourceParentPromptFolderId) {
-        collections.promptFolder.update(sourceParentPromptFolderId, (draft) => {
-          draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
-        })
-      } else {
-        collections.workspace.update(workspaceId, (draft) => {
-          draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
-        })
-      }
-
-      if (destinationParentPromptFolderId) {
-        collections.promptFolder.update(destinationParentPromptFolderId, (draft) => {
-          draft.entries = [...nextDestinationEntries]
-        })
-      } else {
-        collections.workspace.update(workspaceId, (draft) => {
-          draft.entries = [...nextDestinationEntries]
-        })
-      }
+      collections.workspace.update(workspaceId, (draft) => {
+        draft.entries = entries
+      })
     },
-    persistMutations: async ({ entities, invoke, transaction }) => {
-      const result = await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {
+    persistMutations: async ({ entities, invoke }) =>
+      await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {
         payload: {
-          workspace: entities.workspace({
-            id: workspaceId,
-            data: workspace
-          }),
-          sourceParentPromptFolder: sourceParentPromptFolderId
-            ? entities.promptFolder({
-                id: sourceParentPromptFolderId,
-                data: sourceParentPromptFolder!
-              })
-            : null,
-          destinationParentPromptFolder: destinationParentPromptFolderId
-            ? entities.promptFolder({
-                id: destinationParentPromptFolderId,
-                data: destinationParentPromptFolder!
-              })
-            : null,
+          workspace: entities.workspace({ id: workspaceId, data: workspace }),
           promptFolderId,
           previousEntryId
         }
-      })
-      if (result.success && isCrossRootMove) {
-        promptDraftCollection.utils.acceptMutations(transaction)
-        promptTemplateDraftCollection.utils.acceptMutations(transaction)
-      }
-      return result
-    },
+      }),
     handleSuccessOrConflictResponse: (payload) => {
       workspaceCollection.utils.upsertAuthoritative(payload.workspace)
-      promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
-      for (const prompt of payload.prompts) {
-        const fullPrompt = { ...prompt, data: createPromptFull(prompt.data) }
-        promptCollection.utils.upsertAuthoritative(fullPrompt)
-        upsertPromptDraft(fullPrompt.data)
-      }
-      for (const template of payload.promptTemplates) {
-        const fullTemplate = { ...template, data: createPromptTemplateFull(template.data) }
-        promptTemplateCollection.utils.upsertAuthoritative(fullTemplate)
-        upsertPromptTemplateDrafts([fullTemplate.data])
-      }
     },
     conflictMessage: 'Prompt folder move conflict'
   })

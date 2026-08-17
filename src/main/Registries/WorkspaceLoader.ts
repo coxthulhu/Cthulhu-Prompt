@@ -2,7 +2,6 @@ import * as path from 'path'
 import { PromptStatus } from '@shared/Prompt'
 import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
-import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
 import { isWorkspaceRootPath } from '@shared/workspacePath'
 import { getFs } from '../fs-provider'
 import {
@@ -20,7 +19,6 @@ import {
   buildPromptFolderSnapshot,
   buildPromptTemplateSnapshot,
   buildWorkspaceSnapshot,
-  collectLoadedPromptFolderDescendantIds,
   getLoadedCategoryEntries,
   getLoadedPromptEntries,
   getLoadedPromptTemplateEntries
@@ -35,28 +33,6 @@ import {
 } from '../Persistence/PromptPersistencePaths'
 
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
-
-const resolveLoadedPromptFolderPath = (
-  promptFolderId: string,
-  promptFolderById: Map<string, { folderName: string }>,
-  parentPromptFolderIdById: ReadonlyMap<string, string | null>
-): string => {
-  const promptFolder = promptFolderById.get(promptFolderId)
-
-  if (!promptFolder) {
-    throw new Error('Prompt folder not loaded')
-  }
-
-  const parentPromptFolderId = parentPromptFolderIdById.get(promptFolderId) ?? null
-  if (parentPromptFolderId === null) {
-    return promptFolder.folderName
-  }
-
-  return path.join(
-    resolveLoadedPromptFolderPath(parentPromptFolderId, promptFolderById, parentPromptFolderIdById),
-    promptFolder.folderName
-  )
-}
 
 const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
   if (!isWorkspaceInfoPath(workspaceInfoPath)) {
@@ -88,10 +64,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   const prompts: WorkspaceLoadPayload['prompts'] = []
   const promptTemplates: WorkspaceLoadPayload['promptTemplates'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
-  const loadedPromptFolderIds = workspaceSnapshot.data.entries.flatMap((entry) => [
-    entry.id,
-    ...collectLoadedPromptFolderDescendantIds(entry.id)
-  ])
+  const loadedPromptFolderIds = workspaceSnapshot.data.entries.map((entry) => entry.id)
   const loadedPromptIds: string[] = []
   const loadedPromptTemplateIds: string[] = []
 
@@ -112,9 +85,10 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     }
 
     if (promptFolderSnapshot.data.kind === 'template') {
-      const templateIds = promptFolderSnapshot.data.entries
-        .filter((entry) => entry.kind === 'template')
-        .map((entry) => entry.id)
+      /** Template IDs in their category-view order. */
+      const templateIds = promptFolderSnapshot.data.categoryOrder.categories.flatMap(
+        (category) => category.entries.map((entry) => entry.id)
+      )
       for (const templateEntry of getLoadedPromptTemplateEntries(templateIds)) {
         loadedPromptTemplateIds.push(templateEntry.committed.id)
         promptTemplates.push(buildPromptTemplateSnapshot(templateEntry))
@@ -123,9 +97,9 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     }
 
     const promptIds = [
-      ...promptFolderSnapshot.data.entries
-        .filter((entry) => entry.kind === 'prompt')
-        .map((entry) => entry.id),
+      ...promptFolderSnapshot.data.categoryOrder.categories.flatMap((category) =>
+        category.entries.map((entry) => entry.id)
+      ),
       ...promptFolderSnapshot.data.completedPromptIds
     ]
     const loadedPromptEntries = getLoadedPromptEntries(promptIds)
@@ -181,29 +155,12 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   const promptFolders = readAllPromptFolders(workspacePath)
   const promptTemplateFolders = readAllPromptFolders(workspacePath, 'template')
   const allPromptFolders = [...promptFolders, ...promptTemplateFolders]
-  const promptFolderById = new Map(
-    allPromptFolders.map((promptFolder) => [promptFolder.id, promptFolder])
-  )
 
   // Side effect: hydrate workspace into the new committed data store.
   await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath, workspaceInfoPath })
 
   const workspace = data.workspace.committedStore.getEntry(workspaceId)?.committed
   if (!workspace) throw new Error('Workspace data not loaded')
-
-  const treeIndex = buildPromptFolderTreeIndex(workspace, allPromptFolders)
-  const parentPromptFolderIdById = new Map(
-    [...treeIndex].map(([promptFolderId, location]) => [
-      promptFolderId,
-      location.parentPromptFolderId
-    ])
-  )
-  const promptFolderPathById = new Map(
-    allPromptFolders.map((promptFolder) => [
-      promptFolder.id,
-      resolveLoadedPromptFolderPath(promptFolder.id, promptFolderById, parentPromptFolderIdById)
-    ])
-  )
 
   // Side effect: hydrate all prompt folders before loading prompt records.
   await Promise.all(
@@ -212,16 +169,16 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
         workspaceId,
         workspacePath,
         folderName: promptFolder.folderName,
-        folderPath: promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName,
+        folderPath: promptFolder.folderName,
         kind: promptFolder.kind
       })
     )
   )
 
-  /** Category load tasks hydrate records owned only by top-level prompt and template folders. */
+  /** Category load tasks hydrate records owned by root prompt and template folders. */
   const categoryLoadTasks = allPromptFolders.flatMap((promptFolder) => {
-    if (parentPromptFolderIdById.get(promptFolder.id) !== null) return []
-    const rootFolderName = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
+    /** Root folder name used by category persistence. */
+    const rootFolderName = promptFolder.folderName
     const categoryStemById = readCategoryStemById(workspacePath, rootFolderName, promptFolder.kind)
     return getCategoryOrderCategoryIds(promptFolder.categoryOrder).flatMap((categoryId) => {
       const categoryStem = categoryStemById.get(categoryId)
@@ -244,7 +201,7 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   await Promise.all(categoryLoadTasks)
 
   const promptLoadTasks = promptFolders.flatMap((promptFolder) => {
-    const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
+    const folderPath = promptFolder.folderName
     const activeFolderPath = resolveActivePromptFolderName(folderPath, promptFolder.kind)
     const promptStemByPromptId = readPromptStemByPromptId(workspacePath, activeFolderPath)
     const completedFolderPath = resolveCompletedPromptFolderName(folderPath, promptFolder.kind)
@@ -255,8 +212,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 
     return [
       ...[
-        ...promptFolder.entries.flatMap((entry) =>
-          entry.kind === 'prompt' ? [{ promptId: entry.id, isCompleted: false }] : []
+        ...promptFolder.categoryOrder.categories.flatMap((category) =>
+          category.entries.map((entry) => ({ promptId: entry.id, isCompleted: false }))
         ),
         ...promptFolder.completedPromptIds.map((promptId) => ({ promptId, isCompleted: true }))
       ].flatMap(({ promptId, isCompleted }) => {
@@ -283,11 +240,10 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   await Promise.all(promptLoadTasks)
 
   const promptTemplateLoadTasks = promptTemplateFolders.flatMap((promptFolder) => {
-    const folderPath = promptFolderPathById.get(promptFolder.id) ?? promptFolder.folderName
+    const folderPath = promptFolder.folderName
     const templateStemById = readPromptTemplateStemById(workspacePath, folderPath)
 
-    return promptFolder.entries.flatMap((entry) => {
-      if (entry.kind !== 'template') return []
+    return promptFolder.categoryOrder.categories.flatMap((category) => category.entries).flatMap((entry) => {
       const templateStem = templateStemById.get(entry.id)
       if (!templateStem) return []
 

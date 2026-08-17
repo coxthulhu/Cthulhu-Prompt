@@ -1,6 +1,5 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
-import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import {
   isPromptFull,
   type Prompt,
@@ -49,6 +48,7 @@ import {
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import type { Category } from '@shared/Category'
+import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
@@ -56,16 +56,10 @@ import {
   deletePromptTemplate,
   movePromptTemplate
 } from '@renderer/data/Mutations/PromptTemplateMutations'
-import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
 import {
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
 } from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
-import {
-  setPromptFolderDraftSettingsField,
-  setPromptFolderDraftSettingsFieldPresence,
-  type PromptFolderSettingsDraftField
-} from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import {
   lookupWorkspacePersistedPromptFolderSettingsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderPromptsSectionExpandedState,
@@ -94,10 +88,8 @@ import {
 } from './promptFolderRowIds'
 import {
   resolvePromptHandleDropMove,
-  type PromptFolderEntryDragPayload,
   type PromptHandleDropPayload
 } from '../drag-drop/promptHandleDrag'
-import { resolvePromptFolderEntryDropMove } from '../drag-drop/promptFolderEntryDrag'
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 import { PromptFolderScreenMode } from './promptFolderScreenMode'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
@@ -300,24 +292,22 @@ export const createPromptFolderScreenController = ({
     return draftsById
   })
   const screenRootFolderDraft = $derived(promptFolderDraftById[screenRootFolderId] ?? null)
-  const getActiveEntryIdsForFolder = (folder: PromptFolder): string[] =>
-    folder.entries.flatMap((entry) => {
-      if (entry.kind === 'folder') return [entry.id]
-      if (entry.kind !== contentKind) return []
-      return contentKind === 'prompt' && promptById[entry.id]?.status === PromptStatus.Completed
-        ? []
-        : [entry.id]
-    })
-  const findContainingRootFolderId = (folderId: string): string => {
-    let containingRootId = folderId
-    while (true) {
-      const parent = promptFolderQuery.data.find((folder) =>
-        folder?.entries.some((entry) => entry.kind === 'folder' && entry.id === containingRootId)
-      )
-      if (!parent) return containingRootId
-      containingRootId = parent.id
-    }
-  }
+  /** Loaded categories indexed by stable ID. */
+  const categoryById = $derived.by<Record<string, Category>>(() =>
+    Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
+  )
+  /** Root-owned categories in FolderOrderV2 order. */
+  const categories = $derived.by(() =>
+    screenRootFolder
+      ? getCategoryOrderCategoryIds(screenRootFolder.categoryOrder).flatMap((categoryId) => {
+          const category = categoryById[categoryId]
+          return category ? [category] : []
+        })
+      : []
+  )
+  // Categories belong to the current root while root-folder destinations own themselves.
+  const findContainingRootFolderId = (folderId: string): string =>
+    categoryById[folderId] ? screenRootFolderId : folderId
   const completedPrompts = $derived.by(() => {
     if (!screenRootFolder || isTemplateFolder) return []
 
@@ -437,6 +427,9 @@ export const createPromptFolderScreenController = ({
       if (!folder) continue
       expandedByFolderId[folder.id] = getIsPromptsSectionExpanded(folder.id)
     }
+    for (const category of categories) {
+      expandedByFolderId[category.id] = getIsPromptsSectionExpanded(category.id)
+    }
     return expandedByFolderId
   })
   const settingsSectionExpandedByFolderId = $derived.by<Record<string, boolean>>(() => {
@@ -444,6 +437,9 @@ export const createPromptFolderScreenController = ({
     for (const folder of promptFolderQuery.data) {
       if (!folder) continue
       expandedByFolderId[folder.id] = getIsSettingsSectionExpanded(folder.id)
+    }
+    for (const category of categories) {
+      expandedByFolderId[category.id] = getIsSettingsSectionExpanded(category.id)
     }
     return expandedByFolderId
   })
@@ -461,16 +457,12 @@ export const createPromptFolderScreenController = ({
 
     return buildPromptFolderScreenRows({
       rootFolder: screenRootFolder,
-      descendantFolders: promptFolderQuery.data.filter(
-        (candidate): candidate is PromptFolder =>
-          candidate !== undefined && candidate.id !== screenRootFolder.id
-      ),
+      categories,
       promptIds: isTemplateFolder
         ? promptTemplateQuery.data.map((template) => template.id)
         : promptQuery.data.flatMap((prompt) =>
             prompt.status !== PromptStatus.Completed ? [prompt.id] : []
           ),
-      contentKind,
       isFolderExpanded: (folderId) =>
         folderId === screenRootFolderId || (promptsSectionExpandedByFolderId[folderId] ?? true)
     })
@@ -485,16 +477,12 @@ export const createPromptFolderScreenController = ({
 
     return buildPromptFolderScreenRows({
       rootFolder: screenRootFolder,
-      descendantFolders: promptFolderQuery.data.filter(
-        (candidate): candidate is PromptFolder =>
-          candidate !== undefined && candidate.id !== screenRootFolder.id
-      ),
+      categories,
       promptIds: isTemplateFolder
         ? promptTemplateQuery.data.map((template) => template.id)
         : promptQuery.data.flatMap((prompt) =>
             prompt.status !== PromptStatus.Completed ? [prompt.id] : []
           ),
-      contentKind,
       isFolderExpanded: () => true
     }).flatMap((row) => (row.kind === 'prompt-editor' ? [row.promptId] : []))
   })
@@ -616,7 +604,6 @@ export const createPromptFolderScreenController = ({
       promptNavigation.selectionSource === 'folder-open' ||
       promptNavigation.selectionSource === 'prompt-create' ||
       promptNavigation.selectionSource === 'prompt-divider-create' ||
-      promptNavigation.selectionSource === 'subfolder-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
       promptNavigation.selectionSource === 'folder-move' ||
       promptNavigation.selectionSource === 'header' ||
@@ -731,23 +718,12 @@ export const createPromptFolderScreenController = ({
   }
 
   const findFolderPath = (
-    currentFolderId: string,
+    _currentFolderId: string,
     targetFolderId: string,
-    visitedFolderIds = new SvelteSet<string>()
+    _visitedFolderIds = new SvelteSet<string>()
   ): string[] | null => {
-    if (visitedFolderIds.has(currentFolderId)) return null
-    visitedFolderIds.add(currentFolderId)
-    if (currentFolderId === targetFolderId) return [currentFolderId]
-
-    const currentFolder = promptFolderQuery.data.find((folder) => folder?.id === currentFolderId)
-    if (!currentFolder) return null
-    for (const entry of currentFolder.entries) {
-      if (entry.kind !== 'folder') continue
-      const childPath = findFolderPath(entry.id, targetFolderId, visitedFolderIds)
-      if (childPath) return [currentFolderId, ...childPath]
-    }
-
-    return null
+    if (targetFolderId === screenRootFolderId) return [screenRootFolderId]
+    return categoryById[targetFolderId] ? [screenRootFolderId, targetFolderId] : null
   }
 
   const expandSectionForRow = (row: ActivePromptTreeRow, expandFolderSettings = true): boolean => {
@@ -867,17 +843,6 @@ export const createPromptFolderScreenController = ({
     }
   }
 
-  const handleCreatedSubfolder = (promptFolderId: string): void => {
-    promptNavigation.select({
-      screenRootFolderId,
-      rowOwnerFolderId: promptFolderId,
-      row: 'folder-settings',
-      source: 'subfolder-create',
-      forceRequest: true,
-      contentReveal: { scrollType: 'center', expandFolderSettings: false }
-    })
-  }
-
   const selectMovedPrompt = (
     destinationPromptFolderId: string,
     promptId: string,
@@ -905,20 +870,6 @@ export const createPromptFolderScreenController = ({
       )
     }
 
-    onScreenRootFolderSelect(destinationRootFolderId)
-  }
-
-  const selectMovedPromptFolder = (promptFolderId: string): void => {
-    const destinationRootFolderId = findContainingRootFolderId(promptFolderId)
-    promptNavigation.select({
-      screenRootFolderId: destinationRootFolderId,
-      rowOwnerFolderId: promptFolderId,
-      row: 'folder-settings',
-      source: 'folder-move',
-      forceRequest: true,
-      contentReveal: { scrollType: 'center', expandFolderSettings: false },
-      treeExpansion: 'ancestors'
-    })
     onScreenRootFolderSelect(destinationRootFolderId)
   }
 
@@ -970,9 +921,10 @@ export const createPromptFolderScreenController = ({
       return false
     }
 
-    for (const promptId of cachedPromptFolder.entries
-      .filter((entry) => entry.kind === cachedPromptFolder.kind)
-      .map((entry) => entry.id)) {
+    for (const promptId of getActiveMarkdownContentIds(
+      cachedPromptFolder,
+      cachedPromptFolder.kind
+    )) {
       if (cachedPromptFolder.kind === 'template') {
         const template = promptTemplateCollection.get(promptId)
         if (!promptTemplateDraftCollection.get(promptId) || !template || !isPromptTemplateFull(template)) {
@@ -1058,7 +1010,7 @@ export const createPromptFolderScreenController = ({
         contentReveal: {
           scrollType: initialRevealScrollType,
           expandFolderSettings:
-            source !== 'folder-open' && source !== 'subfolder-create' && source !== 'folder-move'
+            source !== 'folder-open' && source !== 'folder-move'
         },
         focusPromptId:
           source === 'prompt-create' && initialSelectionTarget.kind === 'prompt'
@@ -1171,7 +1123,8 @@ export const createPromptFolderScreenController = ({
     sourcePromptFolderId: string,
     promptId: string,
     destinationPromptFolderId: string,
-    previousEntryId: string | null
+    previousEntryId: string | null,
+    categoryId: string | null
   ): Promise<boolean> => {
     const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
     if (
@@ -1190,21 +1143,6 @@ export const createPromptFolderScreenController = ({
       return false
     }
 
-    const nextMove = resolvePromptHandleDropMove(
-      sourcePromptFolder.id,
-      getActiveEntryIdsForFolder(sourcePromptFolder),
-      promptId,
-      {
-        folderId: destinationPromptFolderId,
-        targetEntryId: previousEntryId,
-        position: 'after'
-      },
-      getActiveEntryIdsForFolder(destinationPromptFolder)
-    )
-    if (!nextMove) {
-      return false
-    }
-
     return await runIpcBestEffort(
       async () => {
         if (isTemplateFolder) {
@@ -1212,14 +1150,16 @@ export const createPromptFolderScreenController = ({
             sourcePromptFolder.id,
             destinationPromptFolderId,
             promptId,
-            previousEntryId
+            previousEntryId,
+            categoryId
           )
         } else {
           await movePrompt(
             sourcePromptFolder.id,
             destinationPromptFolderId,
             promptId,
-            previousEntryId
+            previousEntryId,
+            categoryId
           )
         }
         return true
@@ -1229,7 +1169,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleAddPrompt = async (target: PromptFolderDividerTarget) => {
-    const rowOwnerFolder = promptFolderCollection.get(target.ownerFolderId)
+    const rowOwnerFolder = promptFolderCollection.get(screenRootFolderId)
     if (!rowOwnerFolder || isCreatingPrompt) {
       return
     }
@@ -1239,13 +1179,18 @@ export const createPromptFolderScreenController = ({
     if (isTemplateFolder) {
       const creation = createBlankPromptTemplateInFolder(
         rowOwnerFolder.id,
-        target.previousEntryId
+        target.previousEntryId,
+        target.categoryId
       )
-      selectCreatedPrompt(rowOwnerFolder.id, creation.templateId)
+      selectCreatedPrompt(target.categoryId ?? rowOwnerFolder.id, creation.templateId)
       await runIpcBestEffort(() => creation.persistence)
     } else {
-      const creation = createBlankPromptInFolder(rowOwnerFolder.id, target.previousEntryId)
-      selectCreatedPrompt(rowOwnerFolder.id, creation.promptId)
+      const creation = createBlankPromptInFolder(
+        rowOwnerFolder.id,
+        target.previousEntryId,
+        target.categoryId
+      )
+      selectCreatedPrompt(target.categoryId ?? rowOwnerFolder.id, creation.promptId)
       await runIpcBestEffort(() => creation.persistence)
     }
 
@@ -1253,60 +1198,66 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleDeletePrompt = (target: PromptFolderPromptTarget) => {
-    if (!promptFolderCollection.get(target.ownerFolderId)) {
+    if (!promptFolderCollection.get(screenRootFolderId)) {
       return
     }
 
     void runIpcBestEffort(async () => {
       if (isTemplateFolder) {
-        await deletePromptTemplate(target.ownerFolderId, target.promptId)
+        await deletePromptTemplate(screenRootFolderId, target.promptId)
       } else {
-        await deletePrompt(target.ownerFolderId, target.promptId)
+        await deletePrompt(screenRootFolderId, target.promptId)
       }
     })
   }
 
   const handleSetPromptStatus = (target: PromptFolderPromptTarget, status: PromptStatus) => {
     if (isTemplateFolder) return
-    if (!promptFolderCollection.get(target.ownerFolderId)) {
+    if (!promptFolderCollection.get(screenRootFolderId)) {
       return
     }
 
     void runIpcBestEffort(async () => {
-      await setPromptStatus(target.ownerFolderId, screenRootFolderId, target.promptId, status)
+      await setPromptStatus(screenRootFolderId, screenRootFolderId, target.promptId, status)
     })
   }
 
   const logicalPromptDropTargets = $derived.by<PromptHandleDropPayload[]>(() => {
     if (!screenRootFolder) return []
+    /** Linear placement targets spanning Uncategorized and every category. */
     const targets: PromptHandleDropPayload[] = []
-    const visitedFolderIds = new SvelteSet<string>()
-
-    const addFolderTargets = (folder: PromptFolder): void => {
-      if (visitedFolderIds.has(folder.id)) return
-      visitedFolderIds.add(folder.id)
-      targets.push({ folderId: folder.id, targetEntryId: null, position: 'after' })
-
-      for (const entryId of getActiveEntryIdsForFolder(folder)) {
-        const childFolder = promptFolderCollection.get(entryId)
-        if (childFolder) addFolderTargets(childFolder)
-        targets.push({ folderId: folder.id, targetEntryId: entryId, position: 'after' })
+    for (const group of screenRootFolder.categoryOrder.categories) {
+      targets.push({
+        folderId: screenRootFolder.id,
+        categoryId: group.categoryId,
+        targetEntryId: null,
+        position: 'after'
+      })
+      for (const entry of group.entries) {
+        targets.push({
+          folderId: screenRootFolder.id,
+          categoryId: group.categoryId,
+          targetEntryId: entry.id,
+          position: 'after'
+        })
       }
     }
-
-    addFolderTargets(screenRootFolder)
     return targets
   })
+
+  /** Returns active content IDs for one exact category group. */
+  const getCategoryEntryIds = (categoryId: string | null): string[] =>
+    screenRootFolder?.categoryOrder.categories
+      .find((group) => group.categoryId === categoryId)
+      ?.entries.map((entry) => entry.id) ?? []
 
   const resolveAdjacentPromptMove = (
     target: PromptFolderPromptTarget,
     direction: 'up' | 'down'
   ) => {
-    const sourceFolder = promptFolderCollection.get(target.ownerFolderId)
-    if (!sourceFolder) return null
     const currentTargetIndex = logicalPromptDropTargets.findIndex(
       (candidate) =>
-        candidate.folderId === target.ownerFolderId &&
+        (candidate.categoryId ?? null) === target.categoryId &&
         candidate.targetEntryId === target.promptId &&
         candidate.position === 'after'
     )
@@ -1319,16 +1270,23 @@ export const createPromptFolderScreenController = ({
       targetIndex += step
     ) {
       const dropTarget = logicalPromptDropTargets[targetIndex]
-      const destinationFolder = promptFolderCollection.get(dropTarget.folderId)
-      if (!destinationFolder) continue
+      /** Destination category entry IDs used by no-op detection. */
+      const destinationEntryIds = getCategoryEntryIds(dropTarget.categoryId ?? null)
       const move = resolvePromptHandleDropMove(
-        sourceFolder.id,
-        getActiveEntryIdsForFolder(sourceFolder),
+        target.categoryId ?? 'uncategorized',
+        getCategoryEntryIds(target.categoryId),
         target.promptId,
-        dropTarget,
-        getActiveEntryIdsForFolder(destinationFolder)
+        { ...dropTarget, folderId: dropTarget.categoryId ?? 'uncategorized' },
+        destinationEntryIds
       )
-      if (move) return move
+      if (move) {
+        return {
+          ...move,
+          sourcePromptFolderId: screenRootFolderId,
+          destinationPromptFolderId: screenRootFolderId,
+          categoryId: dropTarget.categoryId ?? null
+        }
+      }
     }
     return null
   }
@@ -1346,12 +1304,12 @@ export const createPromptFolderScreenController = ({
       promptEditorRowId(move.promptId),
       promptFolderDividerRowId(
         screenRootFolderId,
-        move.sourcePromptFolderId,
+        target.ownerFolderId,
         move.promptId
       ),
       promptFolderDividerRowId(
         screenRootFolderId,
-        move.destinationPromptFolderId,
+        move.categoryId ?? screenRootFolderId,
         move.previousEntryId
       )
     )
@@ -1359,10 +1317,11 @@ export const createPromptFolderScreenController = ({
       move.sourcePromptFolderId,
       move.promptId,
       move.destinationPromptFolderId,
-      move.previousEntryId
+      move.previousEntryId,
+      move.categoryId
     )
-    if (didMove && move.sourcePromptFolderId !== move.destinationPromptFolderId) {
-      selectMovedPrompt(move.destinationPromptFolderId, move.promptId, false)
+    if (didMove && target.categoryId !== move.categoryId) {
+      selectMovedPrompt(move.categoryId ?? screenRootFolderId, move.promptId, false)
     }
     return didMove
   }
@@ -1377,20 +1336,45 @@ export const createPromptFolderScreenController = ({
     source: PromptFolderPromptTarget,
     dropPayload: PromptHandleDropPayload | null
   ) => {
-    const sourcePromptFolder = promptFolderCollection.get(source.ownerFolderId)
+    const sourcePromptFolder = promptFolderCollection.get(screenRootFolderId)
     if (!sourcePromptFolder) {
       return
     }
 
+    if (dropPayload && dropPayload.folderId !== screenRootFolderId) {
+      /** Different root selected through the sidebar folder dropdown. */
+      const destinationPromptFolder = promptFolderCollection.get(dropPayload.folderId)
+      if (!destinationPromptFolder || destinationPromptFolder.kind !== contentKind) return
+      /** Cross-root placement always targets destination Uncategorized. */
+      const nextMove = resolvePromptHandleDropMove(
+        screenRootFolderId,
+        getCategoryEntryIds(source.categoryId),
+        source.promptId,
+        { ...dropPayload, categoryId: null },
+        getActiveMarkdownContentIds(destinationPromptFolder, contentKind)
+      )
+      if (!nextMove) return
+      void movePromptFromFolder(
+        screenRootFolderId,
+        source.promptId,
+        destinationPromptFolder.id,
+        nextMove.previousEntryId,
+        null
+      )
+      selectMovedPrompt(destinationPromptFolder.id, source.promptId)
+      return
+    }
+
     const nextMove = resolvePromptHandleDropMove(
-      sourcePromptFolder.id,
-      getActiveEntryIdsForFolder(sourcePromptFolder),
+      source.categoryId ?? 'uncategorized',
+      getCategoryEntryIds(source.categoryId),
       source.promptId,
-      dropPayload,
+      dropPayload
+        ? { ...dropPayload, folderId: dropPayload.categoryId ?? 'uncategorized' }
+        : null,
       dropPayload
         ? ((): string[] | null => {
-            const targetFolder = promptFolderCollection.get(dropPayload.folderId)
-            return targetFolder ? getActiveEntryIdsForFolder(targetFolder) : null
+            return getCategoryEntryIds(dropPayload.categoryId ?? null)
           })()
         : null
     )
@@ -1399,60 +1383,16 @@ export const createPromptFolderScreenController = ({
     }
 
     void movePromptFromFolder(
-      source.ownerFolderId,
+      screenRootFolderId,
       source.promptId,
-      nextMove.destinationPromptFolderId,
-      nextMove.previousEntryId
+      screenRootFolderId,
+      nextMove.previousEntryId,
+      dropPayload?.categoryId ?? null
     )
 
-    const destinationRootFolderId = findContainingRootFolderId(
-      nextMove.destinationPromptFolderId
-    )
-    if (destinationRootFolderId !== screenRootFolderId) {
-      selectMovedPrompt(nextMove.destinationPromptFolderId, source.promptId)
+    if (source.categoryId !== (dropPayload?.categoryId ?? null)) {
+      selectMovedPrompt(dropPayload?.categoryId ?? screenRootFolderId, source.promptId)
     }
-  }
-
-  const handlePromptFolderTreeDrop = (
-    source: PromptFolderEntryDragPayload,
-    dropPayload: PromptHandleDropPayload | null
-  ): void => {
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (!workspaceId) return
-    const move = resolvePromptFolderEntryDropMove(
-      promptFolderQuery.data.filter((folder): folder is PromptFolder => Boolean(folder)),
-      getActiveEntryIdsForFolder,
-      source.folderId,
-      dropPayload
-    )
-    if (!move) return
-
-    void runIpcBestEffort(async () => {
-      await movePromptFolder(
-        workspaceId,
-        move.promptFolderId,
-        move.previousEntryId,
-        move.destinationParentPromptFolderId
-      )
-      selectMovedPromptFolder(move.promptFolderId)
-    })
-  }
-
-  const handleSettingsFieldChange = (
-    ownerFolderId: string,
-    field: PromptFolderSettingsDraftField,
-    text: string,
-    measurement: TextMeasurement
-  ) => {
-    setPromptFolderDraftSettingsField(ownerFolderId, field, text, measurement)
-  }
-
-  const handleSettingsFieldPresenceChange = (
-    ownerFolderId: string,
-    field: PromptFolderSettingsDraftField,
-    isPresent: boolean
-  ) => {
-    setPromptFolderDraftSettingsFieldPresence(ownerFolderId, field, isPresent)
   }
 
   const activeHeaderRowId = 'prompt-header' as const
@@ -1553,16 +1493,6 @@ export const createPromptFolderScreenController = ({
     setCurrentFolderSelection(resolveScrollFollowRow(latestCenteredPromptTreeRow), 'scroll-follow')
   }
 
-  const handleDeletedPromptFolder = (parentPromptFolderId: string): void => {
-    setCurrentFolderSelection(
-      parentPromptFolderId === screenRootFolderId
-        ? { kind: 'root-header', rowOwnerFolderId: screenRootFolderId }
-        : { kind: 'folder-settings', rowOwnerFolderId: parentPromptFolderId },
-      'restore',
-      { forceRequest: true }
-    )
-  }
-
   return {
     get workspaceId(): string | null {
       return workspaceId
@@ -1595,10 +1525,7 @@ export const createPromptFolderScreenController = ({
       )
     },
     get categories(): Category[] {
-      const ownedCategoryIds = new SvelteSet(
-        screenRootFolder ? getCategoryOrderCategoryIds(screenRootFolder.categoryOrder) : []
-      )
-      return categoryQuery.data.filter((category) => ownedCategoryIds.has(category.id))
+      return categories
     },
     get activePromptFolderScreenRows(): PromptFolderScreenRow[] {
       return activePromptFolderScreenRows
@@ -1671,17 +1598,12 @@ export const createPromptFolderScreenController = ({
     handleHeaderFolderClick,
     handleFindMatchReveal,
     handleAddPrompt,
-    handleCreatedSubfolder,
-    handleDeletedPromptFolder,
     handleDeletePrompt,
     handleSetPromptStatus,
     handleMovePromptUp,
     handleMovePromptDown,
     canMovePrompt,
     handlePromptTreeDrop,
-    handlePromptFolderTreeDrop,
-    handleSettingsFieldChange,
-    handleSettingsFieldPresenceChange,
     setScrollToWithinWindowBand,
     setScrollToAndTrackRowCentered,
     setScrollApi,

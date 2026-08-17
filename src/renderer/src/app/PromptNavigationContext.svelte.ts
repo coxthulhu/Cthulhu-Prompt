@@ -21,7 +21,6 @@ export type PromptNavigationSource =
   | 'header'
   | 'prompt-create'
   | 'prompt-divider-create'
-  | 'subfolder-create'
   | 'prompt-move'
   | 'folder-move'
 

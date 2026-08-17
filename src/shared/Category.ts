@@ -34,6 +34,13 @@ export type SetCategoryDescriptionPayload = {
   description: string | null
 }
 
+/** Payload used to reorder one category within its owning root folder. */
+export type MoveCategoryPayload = {
+  promptFolder: RevisionPayloadEntity<PromptFolder>
+  categoryId: string
+  previousCategoryId: string | null
+}
+
 /** Authoritative category snapshot returned by category updates. */
 export type CategoryRevisionResponsePayload = {
   category: RevisionEnvelope<Category>

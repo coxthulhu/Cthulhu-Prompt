@@ -36,9 +36,9 @@ const SECOND_PROMPT_TITLE = 'Alpha Second'
 const folderPath = (folderName: string): string =>
   `${WORKSPACE_PATH}/Prompts/${folderName.replace(/\s+/g, '')}`
 
-// Returns the persisted ordering file used by a prompt folder's active hierarchy.
+// Returns the persisted category ordering file used by a prompt folder root.
 const activeOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrder.json`
+  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrderV2.json`
 
 // Returns the persisted category-view ordering file owned by a prompt root.
 const activeCategoryOrderPath = (folderName: string): string =>
@@ -94,7 +94,7 @@ const waitForActivePromptIds = async (
 }
 
 describe('Prompt folder storage', () => {
-  test('creates the canonical disk layout and enables subfolder controls', async ({
+  test('creates the canonical disk layout and enables category controls', async ({
     electronApp,
     testSetup
   }) => {
@@ -118,12 +118,11 @@ describe('Prompt folder storage', () => {
     await mainWindow.locator(FOLDER_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
 
-    // The selected prompt root exposes subfolder insertion controls.
+    // The selected prompt root exposes category creation without legacy subfolder dividers.
     const selectorTrigger = mainWindow.locator(promptFolderSelectorTriggerSelector)
     await expect(selectorTrigger).toContainText(ALPHA_NAME)
-    await expect(
-      mainWindow.locator('[data-testid^="prompt-divider-add-subfolder-"]')
-    ).not.toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-add-category-button"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-subfolder-"]')).toHaveCount(0)
 
     // The root metadata identifies a prompt folder while only Active owns an order file.
     const alphaPath = folderPath(ALPHA_NAME)
@@ -149,6 +148,7 @@ describe('Prompt folder storage', () => {
     // The canonical layout omits root ordering and status metadata not explicitly required.
     const omittedPaths = [
       `${alphaPath}/_FolderInfo/FolderOrder.json`,
+      `${alphaPath}/Active/_FolderInfo/FolderOrder.json`,
       `${alphaPath}/Active/_FolderInfo/FolderInfo.json`,
       `${alphaPath}/Active/_FolderInfo/Description.md`,
       `${alphaPath}/Completed/_FolderInfo/FolderInfo.json`,

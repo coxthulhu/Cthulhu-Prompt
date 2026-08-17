@@ -256,11 +256,13 @@ export const readPromptFolderEntries = async (
   folderOrderPath: string
 ): Promise<Array<{ kind: 'prompt' | 'folder'; id: string }>> => {
   const fileContents = await readTextFile(electronApp, folderOrderPath)
-  return (
-    JSON.parse(fileContents) as {
+  /** Current root ordering groups active content beneath category ownership. */
+  const order = JSON.parse(fileContents) as {
+    categories: Array<{
       entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
-    }
-  ).entries
+    }>
+  }
+  return order.categories.flatMap((category) => category.entries)
 }
 
 export const readPromptFolderEntryIds = async (

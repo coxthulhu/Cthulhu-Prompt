@@ -11,7 +11,8 @@ export type BlankPromptCreation = {
 
 export const createBlankPromptInFolder = (
   promptFolderId: string,
-  previousEntryId: string | null
+  previousEntryId: string | null,
+  categoryId: string | null = null
 ): BlankPromptCreation => {
   const promptId = compactGuid(window.crypto.randomUUID())
   const now = getCurrentIsoSecondTimestamp()
@@ -28,6 +29,6 @@ export const createBlankPromptInFolder = (
 
   return {
     promptId,
-    persistence: createPrompt(promptFolderId, optimisticPrompt, previousEntryId)
+    persistence: createPrompt(promptFolderId, optimisticPrompt, previousEntryId, categoryId)
   }
 }

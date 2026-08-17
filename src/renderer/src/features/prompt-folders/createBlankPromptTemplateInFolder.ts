@@ -6,7 +6,8 @@ import type { PromptTemplateFull } from '@shared/PromptTemplate'
 
 export const createBlankPromptTemplateInFolder = (
   promptFolderId: string,
-  previousEntryId: string | null
+  previousEntryId: string | null,
+  categoryId: string | null = null
 ): { templateId: string; persistence: Promise<void> } => {
   const templateId = compactGuid(window.crypto.randomUUID())
   const now = getCurrentIsoSecondTimestamp()
@@ -22,6 +23,11 @@ export const createBlankPromptTemplateInFolder = (
 
   return {
     templateId,
-    persistence: createPromptTemplate(promptFolderId, template, previousEntryId)
+    persistence: createPromptTemplate(
+      promptFolderId,
+      template,
+      previousEntryId,
+      categoryId
+    )
   }
 }

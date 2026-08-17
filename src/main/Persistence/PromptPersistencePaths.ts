@@ -10,14 +10,13 @@ export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const WORKSPACE_FOLDER_ORDER_FILENAME = 'WorkspaceFolderOrder.json'
-export const PROMPT_FOLDER_ORDER_FILENAME = 'FolderOrder.json'
 /** Filename for category-view ordering owned by a root folder. */
 export const PROMPT_FOLDER_CATEGORY_ORDER_FILENAME = 'FolderOrderV2.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
 export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 export const PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX = '.template.md'
-// Canonical directory containing active prompts, subfolders, and active ordering.
+// Canonical directory containing active prompts and active ordering.
 export const ACTIVE_PROMPTS_FOLDER_NAME = 'Active'
 // Canonical flat directory containing every completed prompt owned by a root.
 export const COMPLETED_PROMPTS_FOLDER_NAME = 'Completed'
@@ -50,8 +49,7 @@ export const resolveActivePromptFolderName = (
 ): string => {
   if (kind === 'template') return folderName
 
-  const [rootFolderName, ...subfolderNames] = folderName.split(/[\\/]/)
-  return path.join(rootFolderName!, ACTIVE_PROMPTS_FOLDER_NAME, ...subfolderNames)
+  return path.join(folderName, ACTIVE_PROMPTS_FOLDER_NAME)
 }
 
 // Maps every logical prompt-folder path to its root folder's flat completed directory.
@@ -61,17 +59,15 @@ export const resolveCompletedPromptFolderName = (
 ): string => {
   if (kind === 'template') return folderName
 
-  const [rootFolderName] = folderName.split(/[\\/]/)
-  return path.join(rootFolderName!, COMPLETED_PROMPTS_FOLDER_NAME)
+  return path.join(folderName, COMPLETED_PROMPTS_FOLDER_NAME)
 }
 
 // Resolves the physical directory that owns one prompt-folder entity's metadata.
 export const resolvePromptFolderStorageName = (
   folderName: string,
-  kind: PromptFolderKind
+  _kind: PromptFolderKind
 ): string => {
-  if (kind === 'template' || !/[\\/]/.test(folderName)) return folderName
-  return resolveActivePromptFolderName(folderName, kind)
+  return folderName
 }
 
 export const resolveWorkspaceInfoPath = (
@@ -87,20 +83,6 @@ export const resolveWorkspacePathFromInfoPath = (workspaceInfoPath: string): str
 
 export const isWorkspaceInfoPath = (workspaceInfoPath: string): boolean => {
   return workspaceInfoPath.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX)
-}
-
-export const resolvePromptFolderOrderPath = (
-  workspacePath: string,
-  folderName: string,
-  kind: PromptFolderKind
-): string => {
-  const orderFolderName =
-    kind === 'prompt' ? resolveActivePromptFolderName(folderName, kind) : folderName
-  return path.join(
-    resolvePromptFolderPath(workspacePath, orderFolderName, kind),
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-    PROMPT_FOLDER_ORDER_FILENAME
-  )
 }
 
 /** Resolves the root-owned category ordering file for prompts or templates. */

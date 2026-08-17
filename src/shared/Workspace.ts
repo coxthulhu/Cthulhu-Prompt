@@ -16,8 +16,6 @@ export interface Workspace extends WorkspaceRoot {
 
 export type MovePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
-  sourceParentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
-  destinationParentPromptFolder: RevisionPayloadEntity<PromptFolder> | null
   promptFolderId: string
   previousEntryId: string | null
 }

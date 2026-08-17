@@ -16,7 +16,9 @@ export const getActiveMarkdownContentIds = (
   promptFolder: PromptFolder,
   kind: PromptFolderContentKind
 ): string[] =>
-  promptFolder.entries.flatMap((entry) => (entry.kind === kind ? [entry.id] : []))
+  promptFolder.categoryOrder.categories.flatMap((category) =>
+    category.entries.flatMap((entry) => (entry.kind === kind ? [entry.id] : []))
+  )
 
 export const getMarkdownContentIds = (
   promptFolder: PromptFolder,
@@ -38,6 +40,7 @@ export type MarkdownContentRevisionResponsePayload<TContent extends MarkdownCont
 export type CreateMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
   content: RevisionPayloadEntity<TContent>
+  categoryId: string | null
   previousEntryId: string | null
 }
 
@@ -59,6 +62,7 @@ export type MoveMarkdownContentPayload<TContent extends MarkdownContentPersisted
   sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
   destinationPromptFolder: RevisionPayloadEntity<PromptFolder>
   content: RevisionPayloadEntity<TContent>
+  categoryId: string | null
   previousEntryId: string | null
 }
 

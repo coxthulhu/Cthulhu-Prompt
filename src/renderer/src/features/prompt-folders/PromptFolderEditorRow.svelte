@@ -4,7 +4,6 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import {
     PROMPT_FOLDER_SETTINGS_FIELDS,
@@ -40,8 +39,6 @@
     promptFolderId: string
     folderDisplayName: string
     promptCount: number
-    completedPromptCount: number
-    subfolderCount: number
     folderSettings: PromptFolderSettings
     contentKind: PromptFolderContentKind
     rowId: string
@@ -82,8 +79,6 @@
     promptFolderId,
     folderDisplayName,
     promptCount,
-    completedPromptCount,
-    subfolderCount,
     folderSettings,
     contentKind,
     rowId,
@@ -113,17 +108,9 @@
   }: Props = $props()
 
   const contentName = $derived(contentKind === 'template' ? 'template' : 'prompt')
-  const folderLabel = $derived(
-    contentKind === 'template' ? 'prompt template folder' : 'prompt folder'
-  )
+  const folderLabel = 'category'
   const promptCountLabel = $derived(
     `${promptCount} ${promptCount === 1 ? contentName : `${contentName}s`}`
-  )
-  const completedPromptCountLabel = $derived(
-    `${completedPromptCount} completed prompt${completedPromptCount === 1 ? '' : 's'}`
-  )
-  const subfolderCountLabel = $derived(
-    `${subfolderCount} ${subfolderCount === 1 ? 'subfolder' : 'subfolders'}`
   )
   const cardHeightPx = $derived(Math.max(0, virtualRowHeightPx - rowPaddingTopPx))
   const hydratedFields = $state<Record<PromptFolderSettingsField, boolean>>({
@@ -236,7 +223,7 @@
   >
     {#snippet sidebar()}
       {#if dragOptions}
-        <PromptFolderEditorSidebar {dragOptions} {contentKind} />
+        <PromptFolderEditorSidebar {dragOptions} />
       {/if}
     {/snippet}
 
@@ -288,12 +275,6 @@
 
           <div class="prompt-folder-editor-metadata-row">
             <span>{promptCountLabel}</span>
-            {#if contentKind === 'prompt'}
-              <SeparatorDot />
-              <span>{completedPromptCountLabel}</span>
-            {/if}
-            <SeparatorDot />
-            <span>{subfolderCountLabel}</span>
           </div>
         </div>
       </div>
@@ -302,8 +283,8 @@
         <IconButtonBar>
           <IconButton
             icon={Settings}
-            label={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
-            title={isSettingsSectionExpanded ? 'Hide folder settings' : 'Show folder settings'}
+            label={isSettingsSectionExpanded ? 'Hide category settings' : 'Show category settings'}
+            title={isSettingsSectionExpanded ? 'Hide category settings' : 'Show category settings'}
             hoverVariant="accent"
             active={isSettingsSectionExpanded}
             ariaPressed={isSettingsSectionExpanded}
@@ -330,10 +311,10 @@
       <div class="prompt-folder-editor-settings">
         <EditorSubtitleBar
           icon={Settings}
-          title="Folder Settings"
+          title="Category Settings"
           configuredCount={configuredSettingsCount}
           totalCount={settingsFields.length}
-          actionsLabel="Folder settings"
+          actionsLabel="Category settings"
           testId="prompt-folder-settings-toolbar"
         >
           {#snippet actions()}

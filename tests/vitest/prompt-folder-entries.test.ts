@@ -7,7 +7,6 @@ const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   kind: 'prompt',
   folderName: 'Folder',
   displayName: 'Folder',
-  entries: [],
   completedPromptIds: [],
   categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: {
@@ -17,13 +16,18 @@ const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
 })
 
 describe('isPromptFolderEmpty', () => {
-  it('requires entries, completed prompts, and settings to all be empty', () => {
+  it('requires category-order entries, completed prompts, and settings to all be empty', () => {
     expect(isPromptFolderEmpty(createFolder())).toBe(true)
-    expect(isPromptFolderEmpty(createFolder({ entries: [{ kind: 'prompt', id: 'prompt' }] }))).toBe(
-      false
-    )
     expect(
-      isPromptFolderEmpty(createFolder({ entries: [{ kind: 'folder', id: 'subfolder' }] }))
+      isPromptFolderEmpty(
+        createFolder({
+          categoryOrder: {
+            categories: [
+              { categoryId: null, entries: [{ kind: 'prompt', id: 'prompt' }] }
+            ]
+          }
+        })
+      )
     ).toBe(false)
     expect(isPromptFolderEmpty(createFolder({ completedPromptIds: ['completed'] }))).toBe(false)
     expect(

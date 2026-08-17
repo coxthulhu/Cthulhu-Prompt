@@ -10,7 +10,6 @@ const templateFolder = {
   kind: 'template',
   folderName: 'Templates',
   displayName: 'Templates',
-  entries: [],
   completedPromptIds: [],
   categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
   settings: { folderDescription: null }
@@ -23,6 +22,50 @@ const request = (payload: object) => ({
 })
 
 describe('prompt template IPC validation', () => {
+  it('requires an explicit nullable category placement', () => {
+    expect(
+      parseCreatePromptTemplateRequest(
+        request({
+          promptFolder: { id: templateFolder.id, expectedRevision: 1, data: templateFolder },
+          content: {
+            id: 'template-1',
+            expectedRevision: 0,
+            data: {
+              id: 'template-1',
+              title: '',
+              fallbackTitle: 'New Template',
+              createdAt: '',
+              modifiedAt: '',
+              templateText: ''
+            }
+          },
+          previousEntryId: null
+        })
+      ).success
+    ).toBe(false)
+    expect(
+      parseCreatePromptTemplateRequest(
+        request({
+          promptFolder: { id: templateFolder.id, expectedRevision: 1, data: templateFolder },
+          content: {
+            id: 'template-1',
+            expectedRevision: 0,
+            data: {
+              id: 'template-1',
+              title: '',
+              fallbackTitle: 'New Template',
+              createdAt: '',
+              modifiedAt: '',
+              templateText: ''
+            }
+          },
+          categoryId: 'category-a',
+          previousEntryId: null
+        })
+      ).success
+    ).toBe(true)
+  })
+
   it('accepts template create data without status fields', () => {
     expect(
       parseCreatePromptTemplateRequest(
@@ -40,6 +83,7 @@ describe('prompt template IPC validation', () => {
               templateText: ''
             }
           },
+          categoryId: null,
           previousEntryId: null
         })
       ).success
@@ -73,6 +117,7 @@ describe('prompt template IPC validation', () => {
               templateText: ''
             }
           },
+          categoryId: null,
           previousEntryId: null
         })
       ).success
@@ -97,6 +142,7 @@ describe('prompt template IPC validation', () => {
               status: 'Todo'
             }
           },
+          categoryId: null,
           previousEntryId: null
         })
       ).success
@@ -151,6 +197,7 @@ describe('prompt template IPC validation', () => {
               status: 'Todo'
             }
           },
+          categoryId: null,
           previousEntryId: null
         })
       ).success
@@ -187,6 +234,7 @@ describe('prompt template IPC validation', () => {
               status: 'Todo'
             }
           },
+          categoryId: null,
           previousEntryId: null
         })
       ).success

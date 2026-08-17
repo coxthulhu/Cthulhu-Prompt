@@ -22,7 +22,7 @@ vi.mock('../../src/main/DataAccess/MarkdownContentUiStateDataAccess', () => ({
 }))
 
 describe('prompt template workspace loading', () => {
-  it('loads nested template folders and sends full templates to the renderer', async () => {
+  it('loads a flat template root and sends full templates to the renderer', async () => {
     const workspacePath = '/ws/template-loading'
     vol.fromJSON(
       createWorkspaceWithTemplateFolders(workspacePath, [
@@ -31,19 +31,11 @@ describe('prompt template workspace loading', () => {
           displayName: 'Root Templates',
           folderId: 'template-root',
           description: 'Root description',
-          subfolders: [
+          templates: [
             {
-              folderName: 'Nested',
-              displayName: 'Nested Templates',
-              folderId: 'template-nested',
-              description: 'Nested description',
-              templates: [
-                {
-                  id: 'nested-template',
-                  title: 'Nested Template',
-                  templateText: 'Use {{value}}.'
-                }
-              ]
+              id: 'nested-template',
+              title: 'Nested Template',
+              templateText: 'Use {{value}}.'
             }
           ]
         }
@@ -57,23 +49,27 @@ describe('prompt template workspace loading', () => {
     expect(result.workspace.data.entries).toEqual([
       { kind: 'folder', id: 'template-root' }
     ])
-    expect(result.promptFolders.map((folder) => folder.id)).toEqual([
-      'template-root',
-      'template-nested'
-    ])
+    expect(result.promptFolders.map((folder) => folder.id)).toEqual(['template-root'])
     const rootTemplateFolder = result.promptFolders.find(
       (folder) => folder.id === 'template-root'
     )?.data
     expect(rootTemplateFolder).toMatchObject({
       kind: 'template',
-      entries: [{ kind: 'folder', id: 'template-nested' }]
+      categoryOrder: {
+        categories: [
+          {
+            categoryId: null,
+            entries: [{ kind: 'template', id: 'nested-template' }]
+          }
+        ]
+      }
     })
     expect(rootTemplateFolder?.settings).toEqual({
       folderDescription: 'Root description'
     })
     expect(result.promptTemplates).toHaveLength(1)
     const templateModifiedAt = vol
-      .statSync(`${workspacePath}/Templates/Root/Nested/Nested Template.template.md`)
+      .statSync(`${workspacePath}/Templates/Root/Nested Template.template.md`)
       .mtime.toISOString()
     expect(result.promptTemplates[0]?.data).toMatchObject({
       id: 'nested-template',

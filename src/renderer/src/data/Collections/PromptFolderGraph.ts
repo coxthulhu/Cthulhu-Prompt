@@ -36,9 +36,6 @@ export const collectPromptFolderGraphIds = (
         graph.contentIds[kind].add(contentId)
       }
     }
-    for (const entry of promptFolder.entries) {
-      if (entry.kind === 'folder') visitFolder(entry.id)
-    }
   }
 
   for (const rootPromptFolderId of rootPromptFolderIds) visitFolder(rootPromptFolderId)

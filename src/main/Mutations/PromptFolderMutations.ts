@@ -1,24 +1,13 @@
 import { ipcMain } from 'electron'
-import * as path from 'path'
 import {
   copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
-  createNestedCategoryOrder,
   createRootCategoryOrder,
   getCategoryOrderCategoryIds,
-  removeCategoryOrderEntry,
   type PromptFolder,
   type PromptFolderKind
 } from '@shared/PromptFolder'
-import {
-  folderEntryRef,
-  promptEntryRef,
-  promptTemplateEntryRef,
-  removeEntry,
-  resolveEntryInsertIndex,
-  type EntryRef
-} from '@shared/OrderContainer'
-import { buildPromptFolderTreeIndex } from '@shared/PromptFolderTree'
+import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import {
   hasPromptFolderNameConflict,
   preparePromptFolderName,
@@ -27,11 +16,7 @@ import {
 } from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
-import {
-  buildPromptFolderSnapshot,
-  buildWorkspaceSnapshot,
-  collectLoadedPromptFolderDescendantIds
-} from '../Data/DataSnapshotHelpers'
+import { buildPromptFolderSnapshot, buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
 import {
   parseCreatePromptFolderRequest,
   parseDeletePromptFolderRequest,
@@ -40,12 +25,6 @@ import {
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
-import {
-  refreshPromptFolderTreePersistencePaths,
-  resolvePromptFolderPathFromData,
-  collectWorkspacePromptFolders,
-  resolveRootPromptFolderIdFromData
-} from './PromptFolderPathHelpers'
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
 import {
@@ -53,20 +32,18 @@ import {
   createPromptFolderContentDeleteHandles
 } from './PromptFolderContentMutations'
 
+/** Returns root-folder name candidates of one content kind from workspace ordering. */
 const getPromptFolderNameCandidates = (
-  entries: readonly EntryRef[],
+  workspaceEntries: readonly { id: string }[],
   kind: PromptFolderKind
 ): PromptFolderNameCandidate[] =>
-  entries.flatMap((entry) => {
-    if (entry.kind !== 'folder') return []
+  workspaceEntries.flatMap((entry) => {
+    /** Loaded root folder referenced by the workspace entry. */
     const promptFolder = data.promptFolder.committedStore.getEntry(entry.id)?.committed
-    return promptFolder && (promptFolder.kind === 'template') === (kind === 'template')
-      ? [promptFolder]
-      : []
+    return promptFolder && promptFolder.kind === kind ? [promptFolder] : []
   })
 
-const MAX_SUBFOLDER_DEPTH = 8
-
+/** Registers root prompt-folder creation, deletion, rename, and settings mutations. */
 export const setupPromptFolderMutationHandlers = (): void => {
   ipcMain.handle('create-prompt-folder', async (_, request: unknown) => {
     return await runMutationIpcRequest(
@@ -74,181 +51,98 @@ export const setupPromptFolderMutationHandlers = (): void => {
       parseCreatePromptFolderRequest,
       async (validatedRequest) => {
         try {
+          /** Validated root-folder creation command. */
           const payload = validatedRequest.payload
-          const requestedWorkspace = payload.workspace
-          const requestedParentPromptFolder = payload.parentPromptFolder
-          const committedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-
-          if (!committedWorkspace) {
-            return { success: false, error: 'Workspace not loaded' }
-          }
-
-          const committedParentPromptFolder = requestedParentPromptFolder
-            ? data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id)
-            : null
-
-          if (requestedParentPromptFolder && !committedParentPromptFolder) {
-            return { success: false, error: 'Parent prompt folder not loaded' }
-          }
-
-          if (
-            committedParentPromptFolder &&
-            committedParentPromptFolder.committed.kind !== payload.kind
-          ) {
-            return { success: false, error: 'Parent prompt folder kind did not match' }
-          }
-
-          const treeIndex = buildPromptFolderTreeIndex(
-            committedWorkspace.committed,
-            collectWorkspacePromptFolders(committedWorkspace.committed)
-          )
-          const parentDepth = committedParentPromptFolder
-            ? (treeIndex.get(committedParentPromptFolder.committed.id)?.depth ?? 0)
-            : -1
-
-          if (parentDepth >= MAX_SUBFOLDER_DEPTH) {
-            return {
-              success: false,
-              error: 'Prompt folders can contain up to 8 nested subfolder layers'
-            }
-          }
-
-          const siblingEntries =
-            committedParentPromptFolder?.committed.entries ?? committedWorkspace.committed.entries
-
+          /** Workspace that will own the new root folder. */
+          const workspace = data.workspace.committedStore.getEntry(payload.workspace.id)
+          if (!workspace) return { success: false, error: 'Workspace not loaded' }
           if (
             payload.previousEntryId !== null &&
-            !siblingEntries.some((entry) => entry.id === payload.previousEntryId)
+            !workspace.committed.entries.some((entry) => entry.id === payload.previousEntryId)
           ) {
             return { success: false, error: 'Previous entry not found' }
           }
 
-          const {
-            validation,
-            displayName: normalizedDisplayName,
-            folderName
-          } = preparePromptFolderName(payload.displayName)
-
-          if (!validation.isValid) {
+          /** Validated display and disk names for the new root folder. */
+          const preparedName = preparePromptFolderName(payload.displayName)
+          if (!preparedName.validation.isValid) {
             return {
               success: false,
-              error: validation.errorMessage ?? 'Invalid prompt folder name'
+              error: preparedName.validation.errorMessage ?? 'Invalid prompt folder name'
             }
           }
-
           if (
             hasPromptFolderNameConflict(
-              getPromptFolderNameCandidates(siblingEntries, payload.kind),
-              folderName
+              getPromptFolderNameCandidates(workspace.committed.entries, payload.kind),
+              preparedName.folderName
             )
           ) {
             return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
 
-          const insertIndex = resolveEntryInsertIndex(siblingEntries, payload.previousEntryId)!
-          const folderPath = committedParentPromptFolder
-            ? path.join(committedParentPromptFolder.persistenceFields.folderPath, folderName)
-            : folderName
-          const newPromptFolder: PromptFolder = {
+          /** Workspace insertion index for the new root folder. */
+          const insertIndex = resolveEntryInsertIndex(
+            workspace.committed.entries,
+            payload.previousEntryId
+          )!
+          /** Initial persisted root-folder record. */
+          const promptFolder: PromptFolder = {
             id: payload.promptFolderId,
             kind: payload.kind,
-            folderName,
-            displayName: normalizedDisplayName,
-            entries: [],
+            folderName: preparedName.folderName,
+            displayName: preparedName.displayName,
             completedPromptIds: [],
-            categoryOrder: requestedParentPromptFolder
-              ? createNestedCategoryOrder()
-              : createRootCategoryOrder(),
+            categoryOrder: createRootCategoryOrder(),
             settings: createEmptyPromptFolderSettings()
           } as PromptFolder
+          /** Atomic workspace-order and folder-create result. */
+          const outcome = await runAtomicDataTransaction((tx) => ({
+            workspace: tx.workspace.update({
+              id: payload.workspace.id,
+              expectedRevision: payload.workspace.expectedRevision,
+              recipe: (draft) => {
+                /** Updated root-folder order. */
+                const entries = [...draft.entries]
+                entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
+                draft.entries = entries
+              }
+            }),
+            promptFolder: tx.promptFolder.create({
+              id: payload.promptFolderId,
+              data: promptFolder,
+              persistenceFields: {
+                workspaceId: payload.workspace.id,
+                workspacePath: workspace.committed.workspacePath,
+                folderName: preparedName.folderName,
+                folderPath: preparedName.folderName,
+                kind: payload.kind
+              }
+            })
+          }))
 
-          const transactionOutcome = await runAtomicDataTransaction((tx) => {
-            return {
-              orderContainer: committedParentPromptFolder
-                ? tx.promptFolder.update({
-                    id: committedParentPromptFolder.committed.id,
-                    expectedRevision: requestedParentPromptFolder?.expectedRevision,
-                    recipe: (draft) => {
-                      const entries = [...draft.entries]
-                      entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
-                      draft.entries = entries
-                    }
-                  })
-                : tx.workspace.update({
-                    id: requestedWorkspace.id,
-                    expectedRevision: requestedWorkspace.expectedRevision,
-                    recipe: (draft) => {
-                      const entries = [...draft.entries]
-                      entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
-                      draft.entries = entries
-                    }
-                  }),
-              promptFolder: tx.promptFolder.create({
-                id: payload.promptFolderId,
-                data: newPromptFolder,
-                persistenceFields: {
-                  workspaceId: requestedWorkspace.id,
-                  workspacePath: committedWorkspace.committed.workspacePath,
-                  folderName,
-                  folderPath,
-                  kind: payload.kind
-                }
-              })
-            }
-          })
-
-          if (transactionOutcome.status === 'conflict') {
-            if (requestedParentPromptFolder) {
-              return buildConflictResponseFromLatest(
-                data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id),
-                'Parent prompt folder not loaded',
-                (latestParentPromptFolder) => ({
-                  parentPromptFolder: buildPromptFolderSnapshot(latestParentPromptFolder)
-                })
-              )
-            }
-
+          if (outcome.status === 'conflict') {
             return buildConflictResponseFromLatest(
-              data.workspace.committedStore.getEntry(requestedWorkspace.id),
+              data.workspace.committedStore.getEntry(payload.workspace.id),
               'Workspace not loaded',
-              (latestWorkspace) => ({
-                workspace: buildWorkspaceSnapshot(latestWorkspace)
-              })
+              (latestWorkspace) => ({ workspace: buildWorkspaceSnapshot(latestWorkspace) })
             )
           }
-
-          const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-          const updatedParentPromptFolder = requestedParentPromptFolder
-            ? data.promptFolder.committedStore.getEntry(requestedParentPromptFolder.id)
-            : null
-          const createdPromptFolder = data.promptFolder.committedStore.getEntry(
-            payload.promptFolderId
-          )
-
-          if (
-            !updatedWorkspace ||
-            (requestedParentPromptFolder && !updatedParentPromptFolder) ||
-            !createdPromptFolder
-          ) {
+          /** Authoritative workspace after creation. */
+          const updatedWorkspace = data.workspace.committedStore.getEntry(payload.workspace.id)
+          /** Authoritative new prompt folder. */
+          const createdFolder = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
+          if (!updatedWorkspace || !createdFolder) {
             return { success: false, error: 'Prompt folder create commit did not complete' }
           }
-
           return {
             success: true,
             payload: {
-              ...(requestedParentPromptFolder
-                ? {
-                    parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder!)
-                  }
-                : {
-                    workspace: buildWorkspaceSnapshot(updatedWorkspace)
-                  }),
-              promptFolder: buildPromptFolderSnapshot(createdPromptFolder)
+              workspace: buildWorkspaceSnapshot(updatedWorkspace),
+              promptFolder: buildPromptFolderSnapshot(createdFolder)
             }
           }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message }
+          return { success: false, error: error instanceof Error ? error.message : String(error) }
         }
       }
     )
@@ -260,200 +154,72 @@ export const setupPromptFolderMutationHandlers = (): void => {
       parseDeletePromptFolderRequest,
       async (validatedRequest) => {
         try {
+          /** Validated root-folder deletion command. */
           const payload = validatedRequest.payload
-          const requestedWorkspace = payload.workspace
-          const requestedPromptFolder = payload.promptFolder
-          const requestedParentPromptFolder = payload.parentPromptFolder
-          const committedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-          const committedPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedPromptFolder.id
-          )
-
-          if (!committedWorkspace) {
-            return { success: false, error: 'Workspace not loaded' }
-          }
-
-          if (!committedPromptFolder) {
+          /** Workspace that directly owns the root folder. */
+          const workspace = data.workspace.committedStore.getEntry(payload.workspace.id)
+          /** Root folder selected for deletion. */
+          const promptFolder = data.promptFolder.committedStore.getEntry(payload.promptFolder.id)
+          if (!workspace || !promptFolder) {
             return { success: false, error: 'Prompt folder not loaded' }
           }
-
-          const promptFolders = collectWorkspacePromptFolders(committedWorkspace.committed)
-          const treeIndex = buildPromptFolderTreeIndex(committedWorkspace.committed, promptFolders)
-          if (!treeIndex.has(requestedPromptFolder.id)) {
+          if (!workspace.committed.entries.some((entry) => entry.id === promptFolder.committed.id)) {
             return { success: false, error: 'Prompt folder does not belong to the workspace' }
           }
-          const parentPromptFolderId =
-            treeIndex.get(requestedPromptFolder.id)?.parentPromptFolderId ?? null
 
-          if ((requestedParentPromptFolder?.id ?? null) !== parentPromptFolderId) {
-            return { success: false, error: 'Parent prompt folder did not match' }
-          }
-
-          const committedParentPromptFolder = parentPromptFolderId
-            ? data.promptFolder.committedStore.getEntry(parentPromptFolderId)
-            : null
-
-          if (parentPromptFolderId && !committedParentPromptFolder) {
-            return { success: false, error: 'Parent prompt folder not loaded' }
-          }
-
-          const deletedPromptFolderIds = [
-            requestedPromptFolder.id,
-            ...collectLoadedPromptFolderDescendantIds(requestedPromptFolder.id)
-          ]
-          const deletedContentIds = collectPromptFolderContentIds(deletedPromptFolderIds)
-          /** Surviving root whose V2 order loses content from a deleted nested subtree. */
-          const categoryOrderPromptFolderId = parentPromptFolderId
-            ? resolveRootPromptFolderIdFromData(requestedPromptFolder.id)
-            : null
-          /** V2 content references removed with the deleted subtree. */
-          const deletedCategoryOrderEntries = [
-            ...deletedContentIds.prompt.map(promptEntryRef),
-            ...deletedContentIds.template.map(promptTemplateEntryRef)
-          ]
-          /** Category records owned by roots included in the deleted folder subtree. */
-          const deletedCategoryIds = deletedPromptFolderIds.flatMap(
-            (promptFolderId) =>
-              getCategoryOrderCategoryIds(
-                data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
-                  .categoryOrder ?? createNestedCategoryOrder()
-              )
-          )
-
-          const transactionOutcome = (await runAtomicDataTransaction((tx) => ({
-            orderContainer: committedParentPromptFolder
-              ? tx.promptFolder.update({
-                  id: committedParentPromptFolder.committed.id,
-                  expectedRevision: requestedParentPromptFolder?.expectedRevision,
-                  recipe: (draft) => {
-                    draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
-                    if (committedParentPromptFolder.committed.id === categoryOrderPromptFolderId) {
-                      for (const entry of deletedCategoryOrderEntries) {
-                        draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-                      }
-                    }
-                  }
-                })
-              : tx.workspace.update({
-                  id: committedWorkspace.committed.id,
-                  expectedRevision: requestedWorkspace.expectedRevision,
-                  recipe: (draft) => {
-                    draft.entries = removeEntry(draft.entries, 'folder', requestedPromptFolder.id)
-                  }
-                }),
-            ...(categoryOrderPromptFolderId !== null &&
-              committedParentPromptFolder?.committed.id !== categoryOrderPromptFolderId
-              ? {
-                  categoryOrderPromptFolder: tx.promptFolder.update({
-                    id: categoryOrderPromptFolderId,
-                    recipe: (draft) => {
-                      for (const entry of deletedCategoryOrderEntries) {
-                        draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-                      }
-                    }
-                  })
-                }
-              : {}),
-            ...createPromptFolderContentDeleteHandles(tx, deletedContentIds),
+          /** Content IDs owned by the deleted root. */
+          const contentIds = collectPromptFolderContentIds([promptFolder.committed.id])
+          /** Category IDs owned by the deleted root. */
+          const categoryIds = getCategoryOrderCategoryIds(promptFolder.committed.categoryOrder)
+          /** Atomic graph deletion result. */
+          const outcome = await runAtomicDataTransaction((tx) => ({
+            workspace: tx.workspace.update({
+              id: workspace.committed.id,
+              expectedRevision: payload.workspace.expectedRevision,
+              recipe: (draft) => {
+                draft.entries = removeEntry(draft.entries, 'folder', promptFolder.committed.id)
+              }
+            }),
+            ...createPromptFolderContentDeleteHandles(tx, contentIds),
             ...Object.fromEntries(
-              deletedCategoryIds.map((categoryId) => [
+              categoryIds.map((categoryId) => [
                 `category:${categoryId}`,
                 tx.category.delete({ id: categoryId })
               ])
             ),
-            ...Object.fromEntries(
-              deletedPromptFolderIds.toReversed().map((promptFolderId) => [
-                `promptFolder:${promptFolderId}`,
-                tx.promptFolder.delete({
-                  id: promptFolderId,
-                  expectedRevision:
-                    promptFolderId === requestedPromptFolder.id
-                      ? requestedPromptFolder.expectedRevision
-                      : undefined
-                })
-              ])
-            )
-          })))!
+            promptFolder: tx.promptFolder.delete({
+              id: promptFolder.committed.id,
+              expectedRevision: payload.promptFolder.expectedRevision
+            })
+          }))
 
-          if (transactionOutcome.status === 'conflict') {
-            if (transactionOutcome.conflictLabel === 'orderContainer') {
-              return committedParentPromptFolder
-                ? buildConflictResponseFromLatest(
-                    data.promptFolder.committedStore.getEntry(parentPromptFolderId!),
-                    'Parent prompt folder not loaded',
-                    (latestParentPromptFolder) => ({
-                      parentPromptFolder: buildPromptFolderSnapshot(latestParentPromptFolder)
-                    })
-                  )
-                : buildConflictResponseFromLatest(
-                    data.workspace.committedStore.getEntry(requestedWorkspace.id),
-                    'Workspace not loaded',
-                    (latestWorkspace) => ({
-                      workspace: buildWorkspaceSnapshot(latestWorkspace)
-                    })
-                  )
-            }
-
+          if (outcome.status === 'conflict') {
             return buildConflictResponseFromLatest(
-              data.promptFolder.committedStore.getEntry(requestedPromptFolder.id),
-              'Prompt folder not loaded',
-              (latestPromptFolder) => ({
-                promptFolder: buildPromptFolderSnapshot(latestPromptFolder)
-              })
+              data.workspace.committedStore.getEntry(payload.workspace.id),
+              'Workspace not loaded',
+              (latestWorkspace) => ({ workspace: buildWorkspaceSnapshot(latestWorkspace) })
             )
           }
-
-          for (const contentId of [
-            ...deletedContentIds.prompt,
-            ...deletedContentIds.template
-          ]) {
-            // Side effect: remove persisted Monaco view state for deleted content.
+          for (const contentId of [...contentIds.prompt, ...contentIds.template]) {
+            // Side effect: remove Monaco state owned by deleted content.
             MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(
-              requestedWorkspace.id,
+              payload.workspace.id,
               contentId
             )
           }
-
-          const updatedWorkspace = data.workspace.committedStore.getEntry(requestedWorkspace.id)
-          const updatedParentPromptFolder = parentPromptFolderId
-            ? data.promptFolder.committedStore.getEntry(parentPromptFolderId)
-            : null
-
-          if (!updatedWorkspace || (parentPromptFolderId && !updatedParentPromptFolder)) {
+          /** Authoritative workspace after deletion. */
+          const updatedWorkspace = data.workspace.committedStore.getEntry(payload.workspace.id)
+          if (!updatedWorkspace) {
             return { success: false, error: 'Prompt folder delete commit did not complete' }
           }
-
-          const remainingPromptFolderIds = collectWorkspacePromptFolders(
-            updatedWorkspace.committed
-          ).map((promptFolder) => promptFolder.id)
-          // Side effect: remove persisted UI state for the deleted folder subtree.
+          // Side effect: prune UI state for the deleted root folder.
           UserPersistenceDataAccess.cleanupWorkspacePromptFolderUiState(
-            requestedWorkspace.id,
-            remainingPromptFolderIds
+            payload.workspace.id,
+            updatedWorkspace.committed.entries.map((entry) => entry.id)
           )
-
-          return {
-            success: true,
-            payload: committedParentPromptFolder
-              ? {
-                  parentPromptFolder: buildPromptFolderSnapshot(updatedParentPromptFolder!),
-                  ...(categoryOrderPromptFolderId
-                    ? {
-                        categoryOrderPromptFolder: buildPromptFolderSnapshot(
-                          data.promptFolder.committedStore.getEntry(
-                            categoryOrderPromptFolderId
-                          )!
-                        )
-                      }
-                    : {})
-                }
-              : {
-                  workspace: buildWorkspaceSnapshot(updatedWorkspace)
-                }
-          }
+          return { success: true, payload: { workspace: buildWorkspaceSnapshot(updatedWorkspace) } }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message }
+          return { success: false, error: error instanceof Error ? error.message : String(error) }
         }
       }
     )
@@ -465,118 +231,66 @@ export const setupPromptFolderMutationHandlers = (): void => {
       parseRenamePromptFolderRequest,
       async (validatedRequest) => {
         try {
+          /** Validated root-folder rename command. */
           const payload = validatedRequest.payload
-          const requestedPromptFolder = payload.promptFolder
-          const committedPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedPromptFolder.id
+          /** Root folder being renamed. */
+          const promptFolder = data.promptFolder.committedStore.getEntry(payload.promptFolder.id)
+          if (!promptFolder) return { success: false, error: 'Prompt folder not loaded' }
+          /** Workspace that owns the root folder. */
+          const workspace = data.workspace.committedStore.getEntry(
+            promptFolder.persistenceFields.workspaceId
           )
-
-          if (!committedPromptFolder) {
-            return { success: false, error: 'Prompt folder not loaded' }
-          }
-
-          const committedWorkspace = data.workspace.committedStore.getEntry(
-            committedPromptFolder.persistenceFields.workspaceId
-          )
-
-          if (!committedWorkspace) {
-            return { success: false, error: 'Workspace not loaded' }
-          }
-
-          const {
-            validation,
-            displayName: normalizedDisplayName,
-            folderName
-          } = preparePromptFolderName(payload.displayName)
-
-          if (!validation.isValid) {
+          if (!workspace) return { success: false, error: 'Workspace not loaded' }
+          /** Validated display and disk names. */
+          const preparedName = preparePromptFolderName(payload.displayName)
+          if (!preparedName.validation.isValid) {
             return {
               success: false,
-              error: validation.errorMessage ?? 'Invalid prompt folder name'
+              error: preparedName.validation.errorMessage ?? 'Invalid prompt folder name'
             }
           }
-
-          const treeIndex = buildPromptFolderTreeIndex(
-            committedWorkspace.committed,
-            collectWorkspacePromptFolders(committedWorkspace.committed)
-          )
-          const parentPromptFolderId =
-            treeIndex.get(requestedPromptFolder.id)?.parentPromptFolderId ?? null
-          const siblingEntries = parentPromptFolderId
-            ? (data.promptFolder.committedStore.getEntry(parentPromptFolderId)?.committed.entries ??
-              [])
-            : committedWorkspace.committed.entries
-
           if (
             hasPromptFolderNameConflict(
-              getPromptFolderNameCandidates(siblingEntries, requestedPromptFolder.data.kind),
-              folderName,
-              requestedPromptFolder.id
+              getPromptFolderNameCandidates(workspace.committed.entries, promptFolder.committed.kind),
+              preparedName.folderName,
+              promptFolder.committed.id
             )
           ) {
             return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
-
-          const previousFolderPath = committedPromptFolder.persistenceFields.folderPath
-          const folderPath = resolvePromptFolderPathFromData(
-            requestedPromptFolder.id,
-            new Map([
-              [
-                requestedPromptFolder.id,
-                {
-                  folderName
-                }
-              ]
-            ])
-          )
-          const transactionOutcome = await runAtomicDataTransaction((tx) => {
-            return {
-              promptFolder: tx.promptFolder.update({
-                id: requestedPromptFolder.id,
-                expectedRevision: requestedPromptFolder.expectedRevision,
-                recipe: (draft) => {
-                  draft.displayName = normalizedDisplayName
-                  draft.folderName = folderName
-                },
-                persistenceFields: {
-                  ...committedPromptFolder.persistenceFields,
-                  folderName,
-                  folderPath,
-                  previousFolderPath
-                }
-              })
-            }
-          })
-
-          if (transactionOutcome.status === 'conflict') {
+          /** Previous disk path used by atomic directory rename persistence. */
+          const previousFolderPath = promptFolder.persistenceFields.folderPath
+          /** Atomic root-folder rename result. */
+          const outcome = await runAtomicDataTransaction((tx) => ({
+            promptFolder: tx.promptFolder.update({
+              id: promptFolder.committed.id,
+              expectedRevision: payload.promptFolder.expectedRevision,
+              recipe: (draft) => {
+                draft.displayName = preparedName.displayName
+                draft.folderName = preparedName.folderName
+              },
+              persistenceFields: {
+                ...promptFolder.persistenceFields,
+                folderName: preparedName.folderName,
+                folderPath: preparedName.folderName,
+                previousFolderPath
+              }
+            })
+          }))
+          if (outcome.status === 'conflict') {
             return buildConflictResponseFromLatest(
-              data.promptFolder.committedStore.getEntry(requestedPromptFolder.id),
+              data.promptFolder.committedStore.getEntry(promptFolder.committed.id),
               'Prompt folder not loaded',
-              (latestPromptFolder) => ({
-                promptFolder: buildPromptFolderSnapshot(latestPromptFolder)
-              })
+              (latestFolder) => ({ promptFolder: buildPromptFolderSnapshot(latestFolder) })
             )
           }
-
-          refreshPromptFolderTreePersistencePaths(requestedPromptFolder.id)
-
-          const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedPromptFolder.id
-          )
-
-          if (!updatedPromptFolder) {
-            return { success: false, error: 'Prompt folder rename commit did not complete' }
-          }
-
-          return {
-            success: true,
-            payload: {
-              promptFolder: buildPromptFolderSnapshot(updatedPromptFolder)
-            }
-          }
+          /** Authoritative renamed root folder. */
+          const updatedFolder = data.promptFolder.committedStore.getEntry(promptFolder.committed.id)
+          return updatedFolder
+            ? { success: true, payload: { promptFolder: buildPromptFolderSnapshot(updatedFolder) } }
+            : { success: false, error: 'Prompt folder rename commit did not complete' }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message }
+          return { success: false, error: error instanceof Error ? error.message : String(error) }
         }
       }
     )
@@ -588,54 +302,35 @@ export const setupPromptFolderMutationHandlers = (): void => {
       parseUpdatePromptFolderSettingsRequest,
       async (validatedRequest) => {
         try {
-          const requestedPromptFolder = validatedRequest.payload.promptFolder
-          const committedPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedPromptFolder.id
-          )
-
-          if (!committedPromptFolder) {
-            return { success: false, error: 'Prompt folder not loaded' }
-          }
-
-          const transactionOutcome = await runAtomicDataTransaction((tx) => {
-            return {
-              promptFolder: tx.promptFolder.update({
-                id: requestedPromptFolder.id,
-                expectedRevision: requestedPromptFolder.expectedRevision,
-                recipe: (draft) => {
-                  draft.settings = copyPromptFolderSettings(requestedPromptFolder.data)
-                }
-              })
-            }
-          })
-
-          if (transactionOutcome.status === 'conflict') {
+          /** Revision-bearing root-folder settings update. */
+          const requestedFolder = validatedRequest.payload.promptFolder
+          /** Loaded root folder selected for settings persistence. */
+          const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
+          if (!promptFolder) return { success: false, error: 'Prompt folder not loaded' }
+          /** Atomic folder-settings update result. */
+          const outcome = await runAtomicDataTransaction((tx) => ({
+            promptFolder: tx.promptFolder.update({
+              id: requestedFolder.id,
+              expectedRevision: requestedFolder.expectedRevision,
+              recipe: (draft) => {
+                draft.settings = copyPromptFolderSettings(requestedFolder.data)
+              }
+            })
+          }))
+          if (outcome.status === 'conflict') {
             return buildConflictResponseFromLatest(
-              data.promptFolder.committedStore.getEntry(requestedPromptFolder.id),
+              data.promptFolder.committedStore.getEntry(requestedFolder.id),
               'Prompt folder not loaded',
-              (latestPromptFolder) => ({
-                promptFolder: buildPromptFolderSnapshot(latestPromptFolder)
-              })
+              (latestFolder) => ({ promptFolder: buildPromptFolderSnapshot(latestFolder) })
             )
           }
-
-          const updatedPromptFolder = data.promptFolder.committedStore.getEntry(
-            requestedPromptFolder.id
-          )
-
-          if (!updatedPromptFolder) {
-            return { success: false, error: 'Prompt folder update commit did not complete' }
-          }
-
-          return {
-            success: true,
-            payload: {
-              promptFolder: buildPromptFolderSnapshot(updatedPromptFolder)
-            }
-          }
+          /** Authoritative folder after settings persistence. */
+          const updatedFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
+          return updatedFolder
+            ? { success: true, payload: { promptFolder: buildPromptFolderSnapshot(updatedFolder) } }
+            : { success: false, error: 'Prompt folder update commit did not complete' }
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
-          return { success: false, error: message }
+          return { success: false, error: error instanceof Error ? error.message : String(error) }
         }
       }
     )

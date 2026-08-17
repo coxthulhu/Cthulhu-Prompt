@@ -60,7 +60,6 @@
           selectedWorkspaceId,
           normalizedDisplayName,
           null,
-          null,
           selectedFolderType.id
         )
 

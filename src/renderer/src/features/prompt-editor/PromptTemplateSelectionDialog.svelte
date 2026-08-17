@@ -7,8 +7,10 @@
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+  import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import type { PromptTemplateReference } from '@shared/Prompt'
   import type { PromptFolder } from '@shared/PromptFolder'
+  import type { Category } from '@shared/Category'
   import type { Workspace } from '@shared/Workspace'
   import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
   import PromptTreeFolderRow from '../sidebar/PromptTreeFolderRow.svelte'
@@ -37,7 +39,7 @@
       }
     | {
         kind: 'folder'
-        folder: PromptFolder
+        folder: Category
         indentCount: number
         endsVisibleBranch: boolean
       }
@@ -103,6 +105,8 @@
   const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
     data: Array<{ id: string; title: string; fallbackTitle: string; templateText: string }>
   }
+  // Reactive category metadata supplies folder-style rows inside each template root.
+  const categoryQuery = useLiveQuery(categoryCollection)
   // Folder expansion is local to one opening of the dialog.
   const collapsedFolderIds = new SvelteSet<string>()
   // Ordered available IDs stage full-dialog edits until confirmation.
@@ -119,6 +123,10 @@
   // Constant-time folder lookup used while flattening the hierarchy into rows.
   const promptFolderById = $derived.by(() =>
     Object.fromEntries(promptFolderQuery.data.map((folder) => [folder.id, folder]))
+  )
+  // Constant-time category lookup resolves FolderOrderV2 groups into display rows.
+  const categoryById = $derived.by(() =>
+    Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
   )
   // Titles for templates that can actually wrap prompt text.
   const templateTitleById = $derived.by(() =>
@@ -137,15 +145,13 @@
     const countAvailableTemplates = (folder: PromptFolder): number => {
       if (counts[folder.id] !== undefined) return counts[folder.id]
 
-      const count = folder.entries.reduce((total, entry) => {
-        if (entry.kind === 'template') {
-          return total + (templateTitleById[entry.id] ? 1 : 0)
-        }
-
-        const childFolder = promptFolderById[entry.id]
-        return total +
-          (childFolder?.kind === 'template' ? countAvailableTemplates(childFolder) : 0)
-      }, 0)
+      const count = folder.categoryOrder.categories
+        .flatMap((group) => group.entries)
+        .reduce(
+          (total, entry) =>
+            total + (entry.kind === 'template' && templateTitleById[entry.id] ? 1 : 0),
+          0
+        )
       counts[folder.id] = count
       return count
     }
@@ -215,14 +221,13 @@
     else collapsedFolderIds.add(folderId)
   }
 
-  // Filters a folder to nonempty nested template folders and usable template drafts.
-  const getAvailableEntries = (folder: PromptFolder) =>
-    folder.entries.filter((entry) =>
-      entry.kind === 'folder'
-        ? promptFolderById[entry.id]?.kind === 'template' &&
-          availableTemplateCountByFolderId[entry.id] > 0
-        : entry.kind === 'template' && Boolean(templateTitleById[entry.id])
-    )
+  // Filters one category group to usable template drafts.
+  const getAvailableEntries = (folder: PromptFolder, categoryId: string | null) =>
+    folder.categoryOrder.categories
+      .find((group) => group.categoryId === categoryId)
+      ?.entries.filter(
+        (entry) => entry.kind === 'template' && Boolean(templateTitleById[entry.id])
+      ) ?? []
 
   // Applies a quick selection immediately or toggles an ordered staged selection.
   const handleTemplateSelect = (templateId: string): void => {
@@ -259,45 +264,6 @@
   const virtualItems = $derived.by((): VirtualWindowItem<TemplateDialogRow>[] => {
     const items: VirtualWindowItem<TemplateDialogRow>[] = []
 
-    // Recursively flattens one visible nested folder into shared prompt-tree rows.
-    const addFolderRows = (
-      folder: PromptFolder,
-      indentCount: number,
-      isLastSibling: boolean
-    ): void => {
-      const isExpanded = getFolderExpanded(folder.id)
-      const childEntries = getAvailableEntries(folder)
-      items.push({
-        id: `${folder.id}:folder`,
-        row: {
-          kind: 'folder',
-          folder,
-          indentCount,
-          endsVisibleBranch: isLastSibling && (!isExpanded || childEntries.length === 0)
-        }
-      })
-      if (!isExpanded) return
-
-      for (const [entryIndex, entry] of childEntries.entries()) {
-        const isLastChild = entryIndex === childEntries.length - 1
-        const childFolder = entry.kind === 'folder' ? promptFolderById[entry.id] : null
-        if (childFolder) {
-          addFolderRows(childFolder, indentCount + 1, isLastChild)
-          continue
-        }
-        items.push({
-          id: `${folder.id}:template:${entry.id}`,
-          row: {
-            kind: 'template',
-            folderId: folder.id,
-            templateId: entry.id,
-            indentCount: indentCount + 1,
-            isLastRow: isLastChild
-          }
-        })
-      }
-    }
-
     for (const rootFolder of rootTemplateFolders) {
       items.push({
         id: `${rootFolder.id}:header`,
@@ -312,14 +278,8 @@
         row: { kind: 'base-folder-header-spacer', folderId: rootFolder.id }
       })
 
-      const rootEntries = getAvailableEntries(rootFolder)
+      const rootEntries = getAvailableEntries(rootFolder, null)
       for (const [entryIndex, entry] of rootEntries.entries()) {
-        const isLastChild = entryIndex === rootEntries.length - 1
-        const childFolder = entry.kind === 'folder' ? promptFolderById[entry.id] : null
-        if (childFolder) {
-          addFolderRows(childFolder, 0, isLastChild)
-          continue
-        }
         items.push({
           id: `${rootFolder.id}:template:${entry.id}`,
           row: {
@@ -327,9 +287,41 @@
             folderId: rootFolder.id,
             templateId: entry.id,
             indentCount: 0,
-            isLastRow: isLastChild
+            isLastRow: entryIndex === rootEntries.length - 1
           }
         })
+      }
+
+      for (const [groupIndex, group] of rootFolder.categoryOrder.categories.slice(1).entries()) {
+        if (!group.categoryId) continue
+        const category = categoryById[group.categoryId]
+        const categoryEntries = getAvailableEntries(rootFolder, group.categoryId)
+        if (!category || categoryEntries.length === 0) continue
+        const isExpanded = getFolderExpanded(category.id)
+        items.push({
+          id: `${category.id}:folder`,
+          row: {
+            kind: 'folder',
+            folder: category,
+            indentCount: 0,
+            endsVisibleBranch:
+              groupIndex === rootFolder.categoryOrder.categories.length - 2 &&
+              (!isExpanded || categoryEntries.length === 0)
+          }
+        })
+        if (!isExpanded) continue
+        for (const [entryIndex, entry] of categoryEntries.entries()) {
+          items.push({
+            id: `${category.id}:template:${entry.id}`,
+            row: {
+              kind: 'template',
+              folderId: rootFolder.id,
+              templateId: entry.id,
+              indentCount: 1,
+              isLastRow: entryIndex === categoryEntries.length - 1
+            }
+          })
+        }
       }
 
       items.push({

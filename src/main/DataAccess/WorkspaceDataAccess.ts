@@ -24,7 +24,6 @@ import {
   resolveCompletedPromptFolderName,
   resolvePromptFolderCategoryOrderPath,
   resolvePromptFolderPath,
-  resolvePromptFolderOrderPath,
   resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
 
@@ -98,7 +97,6 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,
     PROMPT_FOLDER_INFO_FILENAME
   )
-  const orderPath = resolvePromptFolderOrderPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt')
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
   const examplePrompts = includeExamplePrompts
@@ -152,11 +150,6 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     ),
     'utf8'
   )
-  fs.writeFileSync(
-    orderPath,
-    JSON.stringify({ entries: promptIds.map(promptEntryRef) }, null, 2),
-    'utf8'
-  )
   // Side effect: initialize category-view ordering with every bundled prompt uncategorized.
   fs.writeFileSync(
     resolvePromptFolderCategoryOrderPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'),
@@ -205,11 +198,6 @@ const writeMyTemplatesFolder = (workspacePath: string): string => {
       null,
       2
     ),
-    'utf8'
-  )
-  fs.writeFileSync(
-    resolvePromptFolderOrderPath(workspacePath, DEFAULT_TEMPLATE_FOLDER_NAME, 'template'),
-    JSON.stringify({ entries: [] }, null, 2),
     'utf8'
   )
   // Side effect: initialize template category-view ordering at the template root.

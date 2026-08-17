@@ -1,8 +1,8 @@
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
-import { promptEntryRef, removeEntry } from '@shared/OrderContainer'
+import { promptEntryRef } from '@shared/OrderContainer'
 import {
-  appendCategoryOrderEntry,
+  insertCategoryOrderEntry,
   removeCategoryOrderEntry
 } from '@shared/PromptFolder'
 import {
@@ -143,7 +143,6 @@ export const setPromptStatus = async (
     throw new Error('Root prompt folder not loaded')
   }
   const prompt = promptCollection.get(promptId)
-  const isCompletedPrompt = prompt?.status === PromptStatus.Completed
   const promptDraft = promptDraftCollection.get(promptId)
   if (!promptDraft) throw new Error('Prompt draft not loaded')
 
@@ -216,7 +215,6 @@ export const setPromptStatus = async (
       })
       collections.promptFolder.update(promptFolderId, (draft) => {
         if (targetStatus === PromptStatus.Completed) {
-          draft.entries = removeEntry(draft.entries, 'prompt', promptId)
           if (
             promptFolderId === rootPromptFolderId &&
             !draft.completedPromptIds.includes(promptId)
@@ -232,12 +230,12 @@ export const setPromptStatus = async (
           return
         }
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-        if (isCompletedPrompt) draft.entries = [promptEntryRef(promptId), ...draft.entries]
         if (promptFolderId === rootPromptFolderId) {
-          draft.categoryOrder = appendCategoryOrderEntry(
+          draft.categoryOrder = insertCategoryOrderEntry(
             draft.categoryOrder,
             categoryOrderEntry,
-            nextPrompt.category
+            nextPrompt.category ?? null,
+            null
           )
         }
       })
@@ -254,10 +252,11 @@ export const setPromptStatus = async (
           draft.categoryOrder =
             targetStatus === PromptStatus.Completed
               ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
-              : appendCategoryOrderEntry(
+              : insertCategoryOrderEntry(
                   draft.categoryOrder,
                   categoryOrderEntry,
-                  nextPrompt.category
+                  nextPrompt.category ?? null,
+                  null
                 )
         })
       }

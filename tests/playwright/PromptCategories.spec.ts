@@ -2,18 +2,14 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
-  getWorkspaceInfoPath,
-  setupWorkspaceScenario
+  getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
-  parsePromptMarkdown,
-  serializePromptMarkdown
-} from '../../src/main/Persistence/PromptFrontmatter'
-import {
-  beginPromptFolderHandleDrag,
   beginPromptHandleDrag,
+  beginPromptTreeFolderRowDrag,
   finishActiveDrag,
   moveActiveDragToTarget,
   promptFolderSelectorDropdownItemSelector,
@@ -28,6 +24,8 @@ const WORKSPACE_PATH = '/ws/prompt-categories'
 // Stable category IDs make frontmatter and category file ownership explicit.
 const PROMPT_CATEGORY_ID = '11111111111111111111111111111111'
 const TEMPLATE_CATEGORY_ID = '22222222222222222222222222222222'
+// Stable second category ID verifies whole-group reordering.
+const SECOND_PROMPT_CATEGORY_ID = '44444444444444444444444444444444'
 // Stable pre-existing category ID used to verify index-1 insertion.
 const EXISTING_CATEGORY_ID = '33333333333333333333333333333333'
 // Stable root IDs are used as prompt-folder selector drag targets.
@@ -254,6 +252,166 @@ describe('Prompt categories', () => {
     })
   })
 
+  test('renders category rows and supports prompt and category drag placement', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Categorized workspace extended with an empty reorder destination. */
+    const filesystem = createCategorizedWorkspace()
+    filesystem[
+      `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Second.category.json`
+    ] = JSON.stringify(
+      {
+        id: SECOND_PROMPT_CATEGORY_ID,
+        displayName: 'Second',
+        description: null
+      },
+      null,
+      2
+    )
+    /** Root FolderOrderV2 path observed after every drag operation. */
+    const orderPath =
+      `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+    /** Initial order gains the empty second category after Code Review. */
+    const initialOrder = JSON.parse(filesystem[orderPath]!) as {
+      categories: Array<{
+        categoryId: string | null
+        entries: Array<{ kind: 'prompt'; id: string }>
+      }>
+    }
+    initialOrder.categories.push({ categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] })
+    filesystem[orderPath] = JSON.stringify(initialOrder, null, 2)
+
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+    await testHelpers.navigateToPromptFolders('Prompts')
+
+    /** Folder-style category editor for the populated category. */
+    const categoryEditor = mainWindow.locator(
+      `[data-testid="prompt-folder-editor-${PROMPT_CATEGORY_ID}"]`
+    )
+    await expect(categoryEditor).toContainText('Code Review')
+    await expect(categoryEditor).toContainText('1 prompt')
+    await expect(categoryEditor).not.toContainText('subfolder')
+    await expect(mainWindow.locator('[data-testid^="prompt-divider-add-subfolder"]')).toHaveCount(0)
+    await categoryEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+    await expect(categoryEditor.locator('[data-testid="prompt-folder-settings-toolbar"]')).toBeVisible()
+    await expect(
+      categoryEditor.locator('[data-testid^="prompt-folder-settings-toggle-"]')
+    ).toHaveCount(1)
+    await expect(
+      categoryEditor.locator('[data-testid="prompt-folder-settings-toggle-folderDescription"]')
+    ).toContainText('Description')
+    await categoryEditor.locator('[data-testid="prompt-folder-editor-settings-toggle"]').click()
+
+    /** Plain divider after the first category separates the two category cards. */
+    const betweenCategorySeparator = mainWindow.locator(
+      `[data-testid="prompt-folder-category-separator-${PROMPT_CATEGORY_ID}"]`
+    )
+    await expect(betweenCategorySeparator).toBeVisible()
+    await expect(betweenCategorySeparator.locator('.cthulhuUiSeparator')).toHaveCount(1)
+    await expect(betweenCategorySeparator.locator('button')).toHaveCount(0)
+    /** Plain divider after the final category closes the category list. */
+    const finalCategorySeparator = mainWindow.locator(
+      `[data-testid="prompt-folder-category-separator-${SECOND_PROMPT_CATEGORY_ID}"]`
+    )
+    await expect(finalCategorySeparator).toBeVisible()
+    await expect(finalCategorySeparator.locator('.cthulhuUiSeparator')).toHaveCount(1)
+    await expect(finalCategorySeparator.locator('button')).toHaveCount(0)
+
+    /** Dropping on the visual category boundary cannot change prompt placement. */
+    await beginPromptHandleDrag(mainWindow, 'categorized-prompt')
+    await moveActiveDragToTarget(
+      mainWindow,
+      `[data-testid="prompt-folder-category-separator-${PROMPT_CATEGORY_ID}"]`
+    )
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toEqual(initialOrder)
+
+    /** Category title bar accepts the formerly uncategorized prompt at its start. */
+    const categoryTitleBar =
+      `[data-testid="prompt-folder-editor-${PROMPT_CATEGORY_ID}"] ` +
+      '[data-testid="prompt-folder-editor-title-bar"]'
+    await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
+    await moveActiveDragToTarget(mainWindow, categoryTitleBar, 'bottom')
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(() => readCategoryOrder(electronApp, orderPath))
+      .toMatchObject({
+        categories: [
+          {
+            categoryId: null,
+            entries: [{ kind: 'prompt', id: 'unknown-category-prompt' }]
+          },
+          {
+            categoryId: PROMPT_CATEGORY_ID,
+            entries: [
+              { kind: 'prompt', id: 'uncategorized-prompt' },
+              { kind: 'prompt', id: 'categorized-prompt' }
+            ]
+          },
+          { categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] }
+        ]
+      })
+    await expect
+      .poll(async () =>
+        parsePromptMarkdown(
+          await readTextFile(
+            electronApp,
+            `${WORKSPACE_PATH}/Prompts/Prompts/Active/Uncategorized Prompt.prompt.md`
+          )
+        )
+      )
+      .toMatchObject({ category: PROMPT_CATEGORY_ID })
+
+    /** Top edge of an Uncategorized prompt places content before it at root level. */
+    const uncategorizedStartDivider =
+      '[data-testid="prompt-tree-prompt-unknown-category-prompt"]'
+    await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
+    await moveActiveDragToTarget(mainWindow, uncategorizedStartDivider, 'top')
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(() => readCategoryOrder(electronApp, orderPath))
+      .toMatchObject({
+        categories: [
+          {
+            categoryId: null,
+            entries: [
+              { kind: 'prompt', id: 'uncategorized-prompt' },
+              { kind: 'prompt', id: 'unknown-category-prompt' }
+            ]
+          },
+          {
+            categoryId: PROMPT_CATEGORY_ID,
+            entries: [{ kind: 'prompt', id: 'categorized-prompt' }]
+          },
+          { categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] }
+        ]
+      })
+
+    /** Dragging the first category after the second retains its prompt as one group. */
+    const secondCategoryTitleBar = '[data-testid="prompt-tree-folder-toggle-button-Second"]'
+    await beginPromptTreeFolderRowDrag(mainWindow, 'Code Review')
+    await moveActiveDragToTarget(mainWindow, secondCategoryTitleBar, 'bottom')
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () =>
+        (await readCategoryOrder(electronApp, orderPath)).categories.map(
+          (category) => category.categoryId
+        )
+      )
+      .toEqual([null, SECOND_PROMPT_CATEGORY_ID, PROMPT_CATEGORY_ID])
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
+      categories: [
+        { categoryId: null },
+        { categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] },
+        {
+          categoryId: PROMPT_CATEGORY_ID,
+          entries: [{ kind: 'prompt', id: 'categorized-prompt' }]
+        }
+      ]
+    })
+  })
+
   test('creates trimmed unique categories and treats them as root content', async ({
     electronApp,
     testSetup
@@ -405,11 +563,6 @@ describe('Prompt categories', () => {
                 kind: 'prompt',
                 folderName: 'Prompts',
                 displayName: 'Prompts',
-                entries: [
-                  { kind: 'prompt', id: 'categorized-prompt' },
-                  { kind: 'prompt', id: 'uncategorized-prompt' },
-                  { kind: 'prompt', id: 'unknown-category-prompt' }
-                ],
                 completedPromptIds: [],
                 categoryOrder: {
                   categories: [
@@ -680,137 +833,4 @@ describe('Prompt categories', () => {
       })
   })
 
-  test('inherits a root category in a subfolder and clears it on a cross-root subtree move', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const sourceRootId = 'nested-category-source-root'
-    const destinationRootId = 'nested-category-destination-root'
-    const nestedFolderId = '000000000000000000000000c9876c4a'
-    const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [
-      {
-        folderName: 'Hierarchy',
-        displayName: 'Hierarchy',
-        promptFolderId: sourceRootId
-      },
-      {
-        folderName: 'Destination',
-        displayName: 'Destination',
-        promptFolderId: destinationRootId
-      }
-    ])
-    const hierarchyFixture = setupWorkspaceScenario(WORKSPACE_PATH, 'subfolders-ui')
-    for (const [filePath, contents] of Object.entries(hierarchyFixture)) {
-      if (filePath.includes(`${WORKSPACE_PATH}/Prompts/Hierarchy/`)) {
-        filesystem[filePath] = contents
-      }
-    }
-    filesystem[`${WORKSPACE_PATH}/Prompts/Hierarchy/_FolderInfo/FolderInfo.json`] = JSON.stringify(
-      { displayName: 'Hierarchy', folderId: sourceRootId, kind: 'prompt' },
-      null,
-      2
-    )
-    filesystem[`${WORKSPACE_PATH}/Prompts/Hierarchy/Categories/Code Review.category.json`] =
-      JSON.stringify(
-        { id: PROMPT_CATEGORY_ID, displayName: 'Code Review', description: null },
-        null,
-        2
-      )
-    const nestedPromptPath =
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/Nested Prompt.prompt.md`
-    const nestedPromptData = parsePromptMarkdown(filesystem[nestedPromptPath]!)!
-    filesystem[nestedPromptPath] = serializePromptMarkdown({
-      ...nestedPromptData,
-      category: PROMPT_CATEGORY_ID
-    })
-    const grandchildPromptPath =
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/Nested/Grandchild/Grandchild Prompt.prompt.md`
-    const grandchildPromptData = parsePromptMarkdown(filesystem[grandchildPromptPath]!)!
-    filesystem[grandchildPromptPath] = serializePromptMarkdown({
-      ...grandchildPromptData,
-      category: PROMPT_CATEGORY_ID
-    })
-    filesystem[
-      `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/_FolderInfo/FolderOrderV2.json`
-    ] = JSON.stringify(
-      {
-        categories: [
-          { categoryId: null, entries: [] },
-          {
-            categoryId: PROMPT_CATEGORY_ID,
-            entries: [
-              { kind: 'prompt', id: 'subfolders-ui-nested-prompt' },
-              { kind: 'prompt', id: 'subfolders-ui-grandchild-prompt' }
-            ]
-          }
-        ]
-      },
-      null,
-      2
-    )
-
-    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
-    await testHelpers.navigateToPromptFolders('Hierarchy')
-    const nestedPrompt = mainWindow.locator(promptEditorSelector('subfolders-ui-nested-prompt'))
-    await expect(nestedPrompt.locator('.prompt-editor-metadata-category')).toHaveCount(0)
-
-    await beginPromptFolderHandleDrag(mainWindow, nestedFolderId)
-    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptFolderSelectorDropdownItemSelector(destinationRootId)
-    )
-    await finishActiveDrag(mainWindow)
-
-    const movedNestedPromptPath =
-      `${WORKSPACE_PATH}/Prompts/Destination/Active/Nested/Nested Prompt.prompt.md`
-    const movedGrandchildPromptPath =
-      `${WORKSPACE_PATH}/Prompts/Destination/Active/Nested/Grandchild/Grandchild Prompt.prompt.md`
-    await expect.poll(() => checkFileExists(electronApp, movedNestedPromptPath)).toBe(true)
-    await expect.poll(() => checkFileExists(electronApp, movedGrandchildPromptPath)).toBe(true)
-    await expect.poll(() => readTextFile(electronApp, movedNestedPromptPath)).not.toContain(
-      'category:'
-    )
-    await expect.poll(() => readTextFile(electronApp, movedGrandchildPromptPath)).not.toContain(
-      'category:'
-    )
-    await expect(nestedPrompt.locator('.prompt-editor-metadata-category')).toHaveCount(0)
-    await expect
-      .poll(() =>
-        readCategoryOrder(
-          electronApp,
-          `${WORKSPACE_PATH}/Prompts/Hierarchy/Active/_FolderInfo/FolderOrderV2.json`
-        )
-      )
-      .toEqual({
-        categories: [
-          {
-            categoryId: null,
-            entries: [
-              { kind: 'prompt', id: 'subfolders-ui-root-after' },
-              { kind: 'prompt', id: 'subfolders-ui-root-before' }
-            ]
-          },
-          { categoryId: PROMPT_CATEGORY_ID, entries: [] }
-        ]
-      })
-    await expect
-      .poll(() =>
-        readCategoryOrder(
-          electronApp,
-          `${WORKSPACE_PATH}/Prompts/Destination/Active/_FolderInfo/FolderOrderV2.json`
-        )
-      )
-      .toEqual({
-        categories: [
-          {
-            categoryId: null,
-            entries: [
-              { kind: 'prompt', id: 'subfolders-ui-nested-prompt' },
-              { kind: 'prompt', id: 'subfolders-ui-grandchild-prompt' }
-            ]
-          }
-        ]
-      })
-  })
 })

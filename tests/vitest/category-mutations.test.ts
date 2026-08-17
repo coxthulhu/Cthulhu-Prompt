@@ -13,10 +13,12 @@ const runRevisionMutation = vi.hoisted(() => vi.fn())
 
 vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({ runRevisionMutation }))
 
-import { deleteCategory } from '@renderer/data/Mutations/CategoryMutations'
+import { deleteCategory, moveCategory } from '@renderer/data/Mutations/CategoryMutations'
 
 /** Stable category ID referenced across prompt and template content. */
 const CATEGORY_ID = 'category-delete-test'
+/** Second stable category used to verify relative group movement. */
+const SIBLING_CATEGORY_ID = 'category-a'
 /** Stable category owner ID used by the deletion payload. */
 const ROOT_FOLDER_ID = 'category-delete-root'
 /** Stable prompt ID affected by deletion. */
@@ -29,6 +31,7 @@ describe('category mutations', () => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
     categoryCollection.utils.deleteAuthoritative(CATEGORY_ID)
+    categoryCollection.utils.deleteAuthoritative(SIBLING_CATEGORY_ID)
     promptFolderCollection.utils.deleteAuthoritative(ROOT_FOLDER_ID)
     promptCollection.utils.deleteAuthoritative(PROMPT_ID)
     promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
@@ -38,6 +41,11 @@ describe('category mutations', () => {
       revision: 2,
       data: { id: CATEGORY_ID, displayName: 'Shared', description: null }
     })
+    categoryCollection.utils.upsertAuthoritative({
+      id: SIBLING_CATEGORY_ID,
+      revision: 1,
+      data: { id: SIBLING_CATEGORY_ID, displayName: 'Sibling', description: null }
+    })
     promptFolderCollection.utils.upsertAuthoritative({
       id: ROOT_FOLDER_ID,
       revision: 3,
@@ -46,7 +54,6 @@ describe('category mutations', () => {
         kind: 'prompt',
         folderName: 'Root',
         displayName: 'Root',
-        entries: [{ kind: 'prompt', id: PROMPT_ID }],
         completedPromptIds: [],
         categoryOrder: {
           categories: [
@@ -292,5 +299,45 @@ describe('category mutations', () => {
     expect(promptTemplateDraftCollection.get(TEMPLATE_ID)?.modifiedAt).toBe(
       '2026-08-16T12:00:00.000Z'
     )
+  })
+
+  it('reorders a complete category group through one root-folder revision', async () => {
+    promptFolderCollection.utils.upsertAuthoritative({
+      id: ROOT_FOLDER_ID,
+      revision: 4,
+      data: {
+        ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
+        categoryOrder: {
+          categories: [
+            { categoryId: null, entries: [] },
+            { categoryId: SIBLING_CATEGORY_ID, entries: [] },
+            { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+          ]
+        }
+      }
+    })
+
+    await moveCategory(ROOT_FOLDER_ID, CATEGORY_ID, null)
+    /** Revision mutation contract registered by category reorder. */
+    const options = runRevisionMutation.mock.calls[0]?.[0]
+    /** Mutable order used to observe the category-group recipe. */
+    const folderState = structuredClone(promptFolderCollection.get(ROOT_FOLDER_ID)!)
+    options.mutateOptimistically({
+      collections: {
+        promptFolder: {
+          update: (_id: string, update: (draft: typeof folderState) => void) =>
+            update(folderState)
+        }
+      }
+    })
+
+    expect(folderState.categoryOrder.categories.map((group) => group.categoryId)).toEqual([
+      null,
+      CATEGORY_ID,
+      SIBLING_CATEGORY_ID
+    ])
+    expect(folderState.categoryOrder.categories[1]?.entries).toEqual([
+      { kind: 'prompt', id: PROMPT_ID }
+    ])
   })
 })

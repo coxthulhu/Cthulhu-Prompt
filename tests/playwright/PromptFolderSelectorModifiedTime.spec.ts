@@ -24,8 +24,8 @@ describe('Prompt folder selector metadata', () => {
         fileModifiedTimes: {
           '/ws/subfolders-ui/Prompts/Hierarchy/Active/Root Before.prompt.md': daysAgo(5),
           '/ws/subfolders-ui/Prompts/Hierarchy/Active/Root After.prompt.md': daysAgo(4),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Nested/Nested Prompt.prompt.md': daysAgo(3),
-          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Nested/Grandchild/Grandchild Prompt.prompt.md':
+          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Nested Prompt.prompt.md': daysAgo(3),
+          '/ws/subfolders-ui/Prompts/Hierarchy/Active/Grandchild Prompt.prompt.md':
             daysAgo(2),
           '/ws/subfolders-ui/Prompts/Hierarchy/Completed/Root Completed.prompt.md': daysAgo(0)
         }

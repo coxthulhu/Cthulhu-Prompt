@@ -3,18 +3,17 @@ import { readPromptFolderEntryIds } from '../helpers/PromptDragDropHelpers'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
+import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/move-reorder-atomicity'
 const FOLDER_NAME = 'Move Reorder Atomicity'
 const ROOT_ORDER_PATH =
-  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
+  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
 const NESTED_WORKSPACE_PATH = '/ws/subfolders-controls'
 const NESTED_ROOT_ORDER_PATH =
-  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrder.json`
-const NESTED_FOLDER_ORDER_PATH =
-  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Active/Nested/_FolderInfo/FolderOrder.json`
+  `${NESTED_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrderV2.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
 const moveUpSelector = (promptId: string) =>
@@ -146,17 +145,21 @@ const expectFolderOrder = async (
     .toEqual(expectedOrder)
 }
 
-const expectNestedFolderOrders = async (
+const expectCategoryOrders = async (
   electronApp: any,
-  rootOrder: string[],
-  nestedOrder: string[]
+  expectedOrders: string[][]
 ): Promise<void> => {
   await expect
-    .poll(async () => ({
-      root: await readPromptFolderEntryIds(electronApp, NESTED_ROOT_ORDER_PATH),
-      nested: await readPromptFolderEntryIds(electronApp, NESTED_FOLDER_ORDER_PATH)
-    }))
-    .toEqual({ root: rootOrder, nested: nestedOrder })
+    .poll(async () => {
+      /** Current V2 category groups flattened to prompt IDs per owner. */
+      const categoryOrder = JSON.parse(
+        await readTextFile(electronApp, NESTED_ROOT_ORDER_PATH)
+      ) as { categories: Array<{ entries: Array<{ id: string }> }> }
+      return categoryOrder.categories.map((category) =>
+        category.entries.map((entry) => entry.id)
+      )
+    })
+    .toEqual(expectedOrders)
 }
 
 describe('Prompt move reorder atomicity', () => {
@@ -264,7 +267,7 @@ describe('Prompt move reorder atomicity', () => {
     )
   })
 
-  test('keeps nested prompts stationary within and across folder boundaries', async ({
+  test('keeps prompts stationary within and across category boundaries', async ({
     testSetup,
     electronApp
   }) => {
@@ -277,88 +280,59 @@ describe('Prompt move reorder atomicity', () => {
 
     const promptId = 'subfolders-controls-first'
     const secondPromptId = 'subfolders-controls-second'
-    const [nestedFolderId, siblingFolderId] = await readPromptFolderEntryIds(
-      electronApp,
-      NESTED_ROOT_ORDER_PATH
-    )
-
     await runMove(
       mainWindow,
       testHelpers,
-      'move nested prompt up to root',
+      'move category prompt up to Uncategorized',
       promptId,
       'up',
       () =>
-        expectNestedFolderOrders(
-          electronApp,
-          [promptId, nestedFolderId, siblingFolderId],
-          [secondPromptId]
-        )
+        expectCategoryOrders(electronApp, [[promptId], [secondPromptId], []])
     )
     await runMove(
       mainWindow,
       testHelpers,
-      'move root prompt down into subfolder',
+      'move Uncategorized prompt down into category',
       promptId,
       'down',
       () =>
-        expectNestedFolderOrders(
-          electronApp,
-          [nestedFolderId, siblingFolderId],
-          [promptId, secondPromptId]
-        )
+        expectCategoryOrders(electronApp, [[], [promptId, secondPromptId], []])
     )
     await runMove(
       mainWindow,
       testHelpers,
-      'move nested prompt down within subfolder',
+      'move prompt down within category',
       promptId,
       'down',
       () =>
-        expectNestedFolderOrders(
-          electronApp,
-          [nestedFolderId, siblingFolderId],
-          [secondPromptId, promptId]
-        )
+        expectCategoryOrders(electronApp, [[], [secondPromptId, promptId], []])
     )
     await runMove(
       mainWindow,
       testHelpers,
-      'move nested prompt down to root',
+      'move prompt down into next category',
       promptId,
       'down',
       () =>
-        expectNestedFolderOrders(
-          electronApp,
-          [nestedFolderId, promptId, siblingFolderId],
-          [secondPromptId]
-        )
+        expectCategoryOrders(electronApp, [[], [secondPromptId], [promptId]])
     )
     await runMove(
       mainWindow,
       testHelpers,
-      'move root prompt up into subfolder',
+      'move prompt up into previous category',
       promptId,
       'up',
       () =>
-        expectNestedFolderOrders(
-          electronApp,
-          [nestedFolderId, siblingFolderId],
-          [secondPromptId, promptId]
-        )
+        expectCategoryOrders(electronApp, [[], [secondPromptId, promptId], []])
     )
     await runMove(
       mainWindow,
       testHelpers,
-      'move nested prompt up within subfolder',
+      'move prompt up within category',
       promptId,
       'up',
       () =>
-        expectNestedFolderOrders(
-          electronApp,
-          [nestedFolderId, siblingFolderId],
-          [promptId, secondPromptId]
-        )
+        expectCategoryOrders(electronApp, [[], [promptId, secondPromptId], []])
     )
   })
 })

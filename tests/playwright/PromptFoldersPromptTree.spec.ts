@@ -1,9 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import {
-  createWorkspaceWithFolders,
-  getWorkspaceInfoPath,
-  setupWorkspaceScenario
-} from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
@@ -11,11 +7,7 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
-import {
-  readWorkspacePersistence,
-  seedUserPersistence,
-  seedWorkspacePersistence
-} from '../helpers/UserPersistenceHelpers'
+import { readWorkspacePersistence } from '../helpers/UserPersistenceHelpers'
 import {
   focusMonacoEditor,
   moveMonacoCursorToEnd,
@@ -69,10 +61,6 @@ const NESTED_FOLDER_SETTINGS_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="pro
 const NESTED_FOLDER_TITLE_TOGGLE = `${NESTED_FOLDER_EDITOR} [data-testid="prompt-folder-editor-title-toggle"]`
 // Matches the folder-navigation offset requested from the virtual window.
 const PROMPT_FOLDER_NAVIGATION_TOP_OFFSET_PX = 80
-const GRANDCHILD_FOLDER_TOGGLE =
-  '[data-testid="prompt-tree-folder-toggle-button-Grandchild"]'
-const GRANDCHILD_PROMPT = '[data-testid="prompt-tree-prompt-subfolders-ui-grandchild-prompt"]'
-
 function createDeterministicId(seed: string): string {
   let hash = 0
   for (let index = 0; index < seed.length; index += 1) {
@@ -232,46 +220,7 @@ const scrollPromptFolderRowAwayFromViewportCenter = async (
 }
 
 describe('Prompt folder prompt tree', () => {
-  test('keeps an expanded terminal subfolder gutter connected to its first prompt', async ({
-    testSetup
-  }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'subfolders-ui' }
-    })
-
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
-
-    await testHelpers.navigateToPromptFolders('Hierarchy')
-    const grandchildFolder = mainWindow.locator(GRANDCHILD_FOLDER_TOGGLE)
-    const grandchildGutter = grandchildFolder.locator('.sidebarPromptTreeGutter')
-    await expect(grandchildFolder).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator(GRANDCHILD_PROMPT)).toBeVisible()
-    await expect(grandchildGutter).toHaveCount(1)
-    await expect
-      .poll(() =>
-        grandchildGutter.evaluate((gutter) =>
-          getComputedStyle(gutter)
-            .getPropertyValue('--indent-guide-line-bottom-inset')
-            .trim()
-        )
-      )
-      .toBe('-1px')
-
-    await grandchildFolder.click()
-    await expect(grandchildFolder).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(GRANDCHILD_PROMPT)).toHaveCount(0)
-    await expect
-      .poll(() =>
-        grandchildGutter.evaluate((gutter) =>
-          getComputedStyle(gutter)
-            .getPropertyValue('--indent-guide-line-bottom-inset')
-            .trim()
-        )
-      )
-      .toBe('0px')
-  })
-
-  test('renders subfolders and persists prompt tree expansion state', async ({
+  test('renders categories and persists prompt tree expansion state', async ({
     electronApp,
     testSetup
   }) => {
@@ -373,17 +322,17 @@ describe('Prompt folder prompt tree', () => {
       .locator(
         [
           '[data-testid="prompt-tree-prompt-base-before"]',
+          '[data-testid="prompt-tree-prompt-base-after"]',
           '[data-testid="prompt-tree-folder-toggle-button-Nested"]',
-          '[data-testid="prompt-tree-prompt-nested-prompt"]',
-          '[data-testid="prompt-tree-prompt-base-after"]'
+          '[data-testid="prompt-tree-prompt-nested-prompt"]'
         ].join(', ')
       )
       .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
     expect(treeOrder).toEqual([
       'prompt-tree-prompt-base-before',
+      'prompt-tree-prompt-base-after',
       'prompt-tree-folder-toggle-button-Nested',
-      'prompt-tree-prompt-nested-prompt',
-      'prompt-tree-prompt-base-after'
+      'prompt-tree-prompt-nested-prompt'
     ])
 
     const indentation = await mainWindow.evaluate(
@@ -571,46 +520,6 @@ describe('Prompt folder prompt tree', () => {
         { timeout: 15000 }
       )
       .toBe(true)
-  })
-
-  test('restores persisted subfolder collapsed state on startup', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const workspaceId = createDeterministicId(SUBFOLDERS_WORKSPACE_PATH)
-    await testSetup.setupFilesystem(setupWorkspaceScenario(SUBFOLDERS_WORKSPACE_PATH, 'subfolders'))
-    await seedUserPersistence(electronApp, {
-      lastWorkspaceInfoPath: getWorkspaceInfoPath(SUBFOLDERS_WORKSPACE_PATH)
-    })
-    await seedWorkspacePersistence(electronApp, {
-      workspaceId,
-      selectedScreen: 'prompt-folders',
-      selectedScreenData: { promptFolderId: SUBFOLDERS_MAIN_FOLDER_ID },
-      promptFolderPromptTreeEntries: [
-        {
-          promptFolderId: SUBFOLDERS_MAIN_FOLDER_ID,
-          promptTreeEntryId: 'folder-root',
-          promptTreeIsExpanded: true
-        },
-        {
-          promptFolderId: SUBFOLDERS_NESTED_FOLDER_ID,
-          promptTreeEntryId: 'folder-settings',
-          promptTreeIsExpanded: false
-        }
-      ]
-    })
-
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await expect(mainWindow.locator(MAIN_FOLDER_TOGGLE)).toHaveCount(0)
-    await expect(mainWindow.locator(NESTED_FOLDER_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
-    await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-nested-prompt"]')
-    ).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-editor-nested-prompt"]')).toBeAttached()
   })
 
   test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({

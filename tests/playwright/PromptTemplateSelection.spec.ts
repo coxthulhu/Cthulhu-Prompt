@@ -188,17 +188,6 @@ Copy without a template.`,
       },
       null,
       2
-    ),
-    [`${WORKSPACE_PATH}/Templates/First/_FolderInfo/FolderOrder.json`]: JSON.stringify(
-      {
-        entries: [
-          { kind: 'folder', id: NESTED_TEMPLATE_FOLDER_ID },
-          { kind: 'folder', id: UNUSABLE_NESTED_TEMPLATE_FOLDER_ID },
-          { kind: 'template', id: 'template-first' }
-        ]
-      },
-      null,
-      2
     )
   }
 }
@@ -300,8 +289,8 @@ describe('Prompt template selection', () => {
     ])
     await expect(dialog.locator('.sidebarPromptTreeSettingsLabel')).toHaveText([
       'Second Root Template',
-      'Nested Template',
-      'First Root Template'
+      'First Root Template',
+      'Nested Template'
     ])
     await expect(dialog.locator('.sidebarPromptTreeFolderLabel')).toHaveText([
       'Nested Templates'
@@ -311,7 +300,7 @@ describe('Prompt template selection', () => {
     ).toHaveCount(0)
     await expect(
       dialog.locator(
-        `[data-testid="prompt-tree-folder-toggle-button-${UNUSABLE_NESTED_TEMPLATE_FOLDER_ID}"]`
+        '[data-testid="prompt-tree-folder-toggle-button-UnusableNestedTemplates"]'
       )
     ).toHaveCount(0)
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveCSS(
@@ -322,11 +311,11 @@ describe('Prompt template selection', () => {
       dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
     ).toHaveCSS('cursor', 'pointer')
     await expect(
-      dialog.locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      dialog.locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
     ).toHaveCSS('cursor', 'pointer')
     await expect(
       dialog
-        .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+        .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
         .locator('.sidebarPromptTreeFolderIcon')
     ).toBeVisible()
     await expect(
@@ -361,7 +350,7 @@ describe('Prompt template selection', () => {
     const expandedTreeHeight = (await templateTree.boundingBox())!.height
 
     await dialog
-      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
       .click()
     await expect(
       dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
@@ -381,7 +370,7 @@ describe('Prompt template selection', () => {
     ).toBeLessThanOrEqual(2)
 
     await dialog
-      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
       .click()
     await expect(
       dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')
@@ -434,7 +423,7 @@ describe('Prompt template selection', () => {
     ).toEqual([{ id: 'template-nested' }])
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await dialog
-      .locator('[data-testid="prompt-tree-folder-toggle-button-Nested"]')
+      .locator('[data-testid="prompt-tree-folder-toggle-button-NestedTemplates"]')
       .click()
     await expect(
       dialog.locator('[data-testid="prompt-tree-prompt-template-nested"]')

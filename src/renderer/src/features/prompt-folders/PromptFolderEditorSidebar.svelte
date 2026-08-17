@@ -8,15 +8,13 @@
     PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
-  let {
-    dragOptions,
-    contentKind
-  }: {
+  /** Category drag-handle inputs supplied by the folder-style category row. */
+  type Props = {
     dragOptions: DraggableOptions<PromptFolderEntryDragPayload, PromptHandleDropPayload>
-    contentKind: import('@shared/PromptFolder').PromptFolderContentKind
-  } = $props()
+  }
 
-  const folderLabel = $derived(contentKind === 'template' ? 'prompt template folder' : 'prompt folder')
+  /** Draggable options for the category represented by this side rail. */
+  let { dragOptions }: Props = $props()
 
   const preventSidebarButtonMouseFocus = (event: MouseEvent) => {
     if (event.button !== 0) return
@@ -42,7 +40,7 @@
 <div class="prompt-folder-editor-sidebar" data-testid="prompt-folder-editor-sidebar">
   <IconButton
     icon={GripVertical}
-    label={`Drag ${folderLabel}`}
+    label="Drag category"
     size="sidebar-rail"
     baseVariant="dim"
     class="prompt-folder-editor-sidebar-drag-button"

@@ -1,7 +1,7 @@
 import type { PromptPersisted } from '@shared/Prompt'
 import type { CategoryOrder, PromptFolder } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
-import type { EntryRef, FolderEntryRef } from '@shared/OrderContainer'
+import type { FolderEntryRef } from '@shared/OrderContainer'
 import type { RevisionEnvelope } from '@shared/Revision'
 import type { Workspace } from '@shared/Workspace'
 import type { Category } from '@shared/Category'
@@ -98,34 +98,6 @@ export const filterLoadedPromptFolderEntries = (entries: FolderEntryRef[]): Fold
   return entries.filter((entry) => data.promptFolder.committedStore.getEntry(entry.id) !== null)
 }
 
-export const filterLoadedPromptFolderEntriesByKind = (entries: EntryRef[]): EntryRef[] => {
-  return entries.filter((entry) => {
-    if (entry.kind === 'prompt') return data.prompt.committedStore.getEntry(entry.id) !== null
-    if (entry.kind === 'template') {
-      return data.promptTemplate.committedStore.getEntry(entry.id) !== null
-    }
-    return data.promptFolder.committedStore.getEntry(entry.id) !== null
-  })
-}
-
-export const collectLoadedPromptFolderDescendantIds = (promptFolderId: string): string[] => {
-  const promptFolderEntry = data.promptFolder.committedStore.getEntry(promptFolderId)
-
-  if (!promptFolderEntry) {
-    return []
-  }
-
-  const descendantIds: string[] = []
-  for (const entry of promptFolderEntry.committed.entries) {
-    if (entry.kind !== 'folder' || !data.promptFolder.committedStore.getEntry(entry.id)) continue
-
-    descendantIds.push(entry.id)
-    descendantIds.push(...collectLoadedPromptFolderDescendantIds(entry.id))
-  }
-
-  return descendantIds
-}
-
 export const buildWorkspaceSnapshot = (
   workspaceEntry: WorkspaceCommittedEntry
 ): RevisionEnvelope<Workspace> => {
@@ -147,7 +119,6 @@ export const buildPromptFolderSnapshot = (
     revision: promptFolderEntry.revision,
     data: {
       ...promptFolderEntry.committed,
-      entries: filterLoadedPromptFolderEntriesByKind(promptFolderEntry.committed.entries),
       completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds),
       categoryOrder: filterLoadedCategoryOrder(promptFolderEntry.committed.categoryOrder)
     }

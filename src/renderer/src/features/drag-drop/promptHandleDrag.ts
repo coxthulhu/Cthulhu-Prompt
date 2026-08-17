@@ -3,6 +3,7 @@ export const PROMPT_HANDLE_DRAG_TYPE = 'prompt-handle'
 export type PromptHandleDragPayload = {
   fromId: string
   sourceFolderId: string
+  sourceCategoryId?: string | null
   contentKind: import('@shared/PromptFolder').PromptFolderContentKind
 }
 
@@ -18,6 +19,7 @@ export const isPromptHandleDragPayload = (
 
 export type PromptHandleDropPayload = {
   folderId: string
+  categoryId?: string | null
   targetEntryId: string | null
   position: 'before' | 'after'
 }
@@ -26,6 +28,7 @@ export type PromptHandleMove = {
   sourcePromptFolderId: string
   destinationPromptFolderId: string
   promptId: string
+  categoryId: string | null
   previousEntryId: string | null
 }
 
@@ -139,6 +142,7 @@ export const resolvePromptHandleDropMove = (
     sourcePromptFolderId,
     destinationPromptFolderId: dropPayload.folderId,
     promptId,
+    categoryId: dropPayload.categoryId ?? null,
     previousEntryId
   }
 }

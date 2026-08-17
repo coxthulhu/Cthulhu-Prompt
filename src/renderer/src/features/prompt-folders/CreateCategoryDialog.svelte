@@ -11,15 +11,33 @@
   import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
 
-  /** Input contract for the root category creation dialog. */
+  /** Input contract for category creation and rename dialogs. */
   type Props = {
     categories: Category[]
     isWorkspaceReady: boolean
+    excludedCategoryId?: string | null
+    dialogTitle?: string
+    dialogSubtitle?: string
+    submitLabel?: string
+    submittingLabel?: string
+    failureMessage?: string
+    testIdPrefix?: 'create' | 'rename'
     onsubmit: (displayName: string) => Promise<boolean>
   }
 
   /** Reactive inputs supplied by the active root folder screen. */
-  let { categories, isWorkspaceReady, onsubmit }: Props = $props()
+  let {
+    categories,
+    isWorkspaceReady,
+    excludedCategoryId = null,
+    dialogTitle = 'Create Category',
+    dialogSubtitle = 'Add a category to this root folder.',
+    submitLabel = 'Create Category',
+    submittingLabel = 'Creating...',
+    failureMessage = 'Failed to create category. Please try again.',
+    testIdPrefix = 'create',
+    onsubmit
+  }: Props = $props()
   /** Controls whether the modal is currently visible. */
   let isDialogOpen = $state(false)
   /** Editable category display name. */
@@ -38,7 +56,11 @@
   const validationMessage = $derived(
     normalizedDisplayName.length === 0
       ? 'Category name is required'
-      : hasCategoryDisplayNameConflict(categories, normalizedDisplayName)
+      : hasCategoryDisplayNameConflict(
+          categories,
+          normalizedDisplayName,
+          excludedCategoryId
+        )
         ? 'A category with this name already exists'
         : null
   )
@@ -52,9 +74,9 @@
   )
 
   /** Opens the category dialog for the current root folder. */
-  export const openDialog = (): void => {
+  export const openDialog = (initialDisplayName = ''): void => {
     if (!isWorkspaceReady) return
-    displayName = ''
+    displayName = initialDisplayName
     hasInteracted = false
     submissionError = null
     isDialogOpen = true
@@ -75,7 +97,7 @@
     submissionError = null
     const didCreate = await onsubmit(normalizedDisplayName)
     if (didCreate) resetDialog()
-    else submissionError = 'Failed to create category. Please try again.'
+    else submissionError = failureMessage
     isSubmitting = false
   }
 
@@ -99,12 +121,12 @@
   bind:open={isDialogOpen}
   class="w-full max-w-[540px]"
   icon={FolderPlus}
-  title="Create Category"
-  subtitle="Add a category to this root folder."
-  submitText={isSubmitting ? 'Creating...' : 'Create Category'}
+  title={dialogTitle}
+  subtitle={dialogSubtitle}
+  submitText={isSubmitting ? submittingLabel : submitLabel}
   submitDisabled={!isValid}
   cancelDisabled={isSubmitting}
-  submitTestId="create-category-button"
+  submitTestId={`${testIdPrefix}-category-button`}
   submitVariant="accent"
   closeOnOutsideClick={false}
   oncancel={handleCancel}
@@ -115,13 +137,13 @@
       {#snippet control()}
         <FloatingValidationMessage
           message={errorMessage}
-          textTestId="create-category-name-error"
+          textTestId={`${testIdPrefix}-category-name-error`}
         >
           <TextInput
             bind:ref={inputElement}
-            id="create-category-name-input"
+            id={`${testIdPrefix}-category-name-input`}
             class="w-[220px]"
-            data-testid="create-category-name-input"
+            data-testid={`${testIdPrefix}-category-name-input`}
             placeholder="Name..."
             bind:value={displayName}
             aria-label="Category Name"

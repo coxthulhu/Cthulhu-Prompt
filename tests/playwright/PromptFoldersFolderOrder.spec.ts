@@ -3,8 +3,7 @@ import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/Playw
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
-  getWorkspaceInfoPath,
-  setupWorkspaceScenario
+  getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import {
   dragGhostSelector,
@@ -20,7 +19,6 @@ const DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-dra
 const DROPDOWN_SCROLL_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-scroll'
 const DROPDOWN_FOOTER_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-footer'
 const DROPDOWN_NOOP_FOLDER_ORDER_WORKSPACE_PATH = '/ws/folder-order-dropdown-noop'
-const NESTED_REPAIR_WORKSPACE_PATH = '/ws/folder-order-nested-repair'
 const COMBINED_REPAIR_WORKSPACE_PATH = '/ws/folder-order-combined-repair'
 const COMBINED_PERSISTED_WORKSPACE_PATH = '/ws/folder-order-combined-persisted'
 const PROMPT_FOLDER_SELECTOR_MENU = '[data-testid="sidebar-prompt-folder-selector-menu"]'
@@ -129,43 +127,6 @@ const createCombinedFolderWorkspace = (workspacePath: string) => ({
 })
 
 describe('Prompt Folder Order', () => {
-  test('repairs mixed nested entries with exact discriminated kinds', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const filesystem = setupWorkspaceScenario(NESTED_REPAIR_WORKSPACE_PATH, 'subfolders')
-    const nestedInfoPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/Active/Nested/_FolderInfo/FolderInfo.json`
-    const nestedFolderId = (
-      JSON.parse(filesystem[nestedInfoPath] as string) as { folderId: string }
-    ).folderId
-    const orderPath = `${NESTED_REPAIR_WORKSPACE_PATH}/Prompts/Main/Active/_FolderInfo/FolderOrder.json`
-    filesystem[orderPath] = JSON.stringify(
-      {
-        entries: [
-          { kind: 'prompt', id: 'base-before' },
-          { kind: 'prompt', id: nestedFolderId },
-          { kind: 'folder', id: nestedFolderId },
-          { kind: 'prompt', id: 'missing-prompt' }
-        ]
-      },
-      null,
-      2
-    )
-
-    await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(NESTED_REPAIR_WORKSPACE_PATH)])
-    const { testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-
-    expect(JSON.parse(await readTextFile(electronApp, orderPath))).toEqual({
-      entries: [
-        { kind: 'prompt', id: 'base-before' },
-        { kind: 'folder', id: nestedFolderId },
-        { kind: 'prompt', id: 'base-after' }
-      ]
-    })
-  })
-
   test('loads explicitly ordered folders before unordered folders sorted by disk name', async ({
     electronApp,
     testSetup

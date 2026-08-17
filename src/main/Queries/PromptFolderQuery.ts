@@ -13,7 +13,6 @@ import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
   buildCategorySnapshot,
-  collectLoadedPromptFolderDescendantIds,
   getLoadedCategoryEntries,
   type PromptFolderCommittedEntry
 } from '../Data/DataSnapshotHelpers'
@@ -36,10 +35,8 @@ export const loadPromptFolderInitialData = async (
   }
 
   try {
-    const promptFolderIds = [
-      payload.promptFolderId,
-      ...collectLoadedPromptFolderDescendantIds(payload.promptFolderId)
-    ]
+    /** Single root folder loaded by the category-based screen. */
+    const promptFolderIds = [payload.promptFolderId]
     const promptFolderEntries: PromptFolderCommittedEntry[] = []
     for (const promptFolderId of promptFolderIds) {
       const entry = data.promptFolder.committedStore.getEntry(promptFolderId)
