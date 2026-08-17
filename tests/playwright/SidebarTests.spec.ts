@@ -64,4 +64,106 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.navigateToHomeScreen()
     await testHelpers.assertHomeActive()
   })
+
+  test('toggles the sidebar from the Windows title bar without hiding the activity bar', async ({
+    testSetup
+  }) => {
+    const { mainWindow } = await testSetup.setupAndStart({
+      workspace: { scenario: 'minimal' }
+    })
+
+    // The left title-bar action region positions the control immediately before the sidebar edge.
+    const titleBarActions = mainWindow.locator('.titlebar__actions')
+    // The title-bar control exposes the current action and swaps its directional icon.
+    const toggleButton = titleBarActions.locator('[data-testid="app-sidebar-toggle-button"]')
+    // These surfaces distinguish the collapsible sidebar from persistent primary navigation.
+    const sidebar = mainWindow.locator('.appSidebar')
+    const activityBar = mainWindow.locator('[data-testid="app-activity-bar"]')
+    // Inactive and active activity buttons provide the toggle's default and hover glyph colors.
+    const inactiveActivityButton = mainWindow.locator('[data-testid="nav-button-settings"]')
+    const activeActivityButton = mainWindow.locator('[data-testid="nav-button-home"]')
+    // The pane is the layout element removed instantly when the sidebar is collapsed.
+    const sidebarPane = mainWindow.locator('.resizableSidebarPane')
+    // The sidebar frame owns its right separator so the border disappears with the pane.
+    const sidebarFrame = sidebarPane.locator('.sidebarFrameBorder')
+    // The main surface should immediately consume the space released by the sidebar pane.
+    const mainSurface = mainWindow.locator('.mainScreenSurface')
+    // Title-bar geometry verifies the compact button's vertical two-pixel inset.
+    const titleBarActionsBox = (await titleBarActions.boundingBox())!
+    const toggleButtonBox = (await toggleButton.boundingBox())!
+    // Expanded geometry is the exact layout that must be restored after reopening.
+    const expandedSidebarPaneBox = (await sidebarPane.boundingBox())!
+    const expandedMainSurfaceBox = (await mainSurface.boundingBox())!
+    const activityBarBox = (await activityBar.boundingBox())!
+    // Motion styles guard the pane against CSS transitions or animations during either toggle.
+    const sidebarPaneMotion = await sidebarPane.evaluate((element) => {
+      const styles = getComputedStyle(element)
+      return {
+        transitionDuration: styles.transitionDuration,
+        animationName: styles.animationName
+      }
+    })
+    // Effective hit testing proves the button remains clickable inside the draggable title bar.
+    const toggleAppRegion = await toggleButton.evaluate((element) =>
+      getComputedStyle(element).getPropertyValue('-webkit-app-region')
+    )
+    // Activity-button colors are compared directly so both controls stay on the same palette tokens.
+    const inactiveActivityColor = await inactiveActivityButton.evaluate(
+      (element) => getComputedStyle(element).color
+    )
+    const activeActivityColor = await activeActivityButton.evaluate(
+      (element) => getComputedStyle(element).color
+    )
+
+    expect(
+      Math.abs(toggleButtonBox.x + toggleButtonBox.width - expandedSidebarPaneBox.x)
+    ).toBeLessThanOrEqual(1)
+    expect(Math.abs(toggleButtonBox.y - (titleBarActionsBox.y + 2))).toBeLessThanOrEqual(1)
+    expect(sidebarPaneMotion).toEqual({ transitionDuration: '0s', animationName: 'none' })
+    expect(toggleAppRegion).toBe('no-drag')
+
+    await expect(toggleButton).toHaveAttribute('aria-label', 'Collapse sidebar')
+    await expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
+    await expect(toggleButton.locator('[data-testid="app-sidebar-close-icon"]')).toBeVisible()
+    await expect(toggleButton).toHaveCSS('border-top-style', 'none')
+    await expect(toggleButton).toHaveCSS('color', inactiveActivityColor)
+    await expect(sidebarFrame).toHaveCSS('border-right-width', '1px')
+    await expect(mainSurface).toHaveCSS('border-left-width', '0px')
+    await expect(sidebar).toBeVisible()
+    await expect(activityBar).toBeVisible()
+
+    await toggleButton.hover()
+    await expect(toggleButton).toHaveCSS('color', activeActivityColor)
+
+    await toggleButton.click()
+    // Collapsed geometry is sampled before any visibility assertion can wait for motion to finish.
+    const collapsedSidebarPaneBox = await sidebarPane.boundingBox()
+    const collapsedMainSurfaceBox = (await mainSurface.boundingBox())!
+
+    expect(collapsedSidebarPaneBox).toBeNull()
+    expect(
+      Math.abs(collapsedMainSurfaceBox.x - (activityBarBox.x + activityBarBox.width))
+    ).toBeLessThanOrEqual(1)
+    await expect(toggleButton).toHaveAttribute('aria-label', 'Expand sidebar')
+    await expect(toggleButton).toHaveAttribute('aria-expanded', 'false')
+    await expect(toggleButton.locator('[data-testid="app-sidebar-open-icon"]')).toBeVisible()
+    await expect(sidebar).toBeHidden()
+    await expect(mainWindow.locator('[data-testid="app-sidebar-resize-handle"]')).toBeHidden()
+    await expect(activityBar).toBeVisible()
+    await expect(activityBar).toHaveCSS('border-right-width', '1px')
+
+    await toggleButton.click()
+    // Restored geometry is sampled immediately so an in-progress width animation would fail.
+    const restoredSidebarPaneBox = (await sidebarPane.boundingBox())!
+    const restoredMainSurfaceBox = (await mainSurface.boundingBox())!
+
+    expect(Math.abs(restoredSidebarPaneBox.width - expandedSidebarPaneBox.width)).toBeLessThanOrEqual(
+      1
+    )
+    expect(Math.abs(restoredMainSurfaceBox.x - expandedMainSurfaceBox.x)).toBeLessThanOrEqual(1)
+    await expect(toggleButton).toHaveAttribute('aria-label', 'Collapse sidebar')
+    await expect(sidebar).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="app-sidebar-resize-handle"]')).toBeVisible()
+    await expect(activityBar).toBeVisible()
+  })
 })

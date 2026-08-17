@@ -2,6 +2,8 @@
   import { onDestroy, untrack } from 'svelte'
 
   let {
+    /** Controls whether the sidebar surface and resize handle are rendered. */
+    isSidebarVisible,
     defaultWidth,
     minWidth,
     maxWidth,
@@ -16,6 +18,8 @@
     onWidthChange,
     onDesiredWidthChange
   } = $props<{
+    /** Controls whether the sidebar surface and resize handle are rendered. */
+    isSidebarVisible: boolean
     defaultWidth: number
     minWidth: number
     maxWidth: number
@@ -92,7 +96,11 @@
 </script>
 
 <div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
-  <div class="relative flex-shrink-0" style={`width: ${width}px`}>
+  <div
+    class="resizableSidebarPane relative flex-shrink-0"
+    style={`width: ${width}px`}
+    hidden={!isSidebarVisible}
+  >
     <div
       class={`h-full ${sidebarInsetClass}`}
       style={`padding: ${sidebarInsetYPx}px ${sidebarInsetXPx}px;`}

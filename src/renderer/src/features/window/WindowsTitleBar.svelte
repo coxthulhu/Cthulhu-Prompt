@@ -1,7 +1,14 @@
 <script lang="ts">
-  let { title, isDevBuild = false } = $props<{
+  import { PanelLeftClose, PanelLeftOpen } from 'lucide-svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+
+  let { title, isDevBuild = false, isAppSidebarExpanded, onAppSidebarToggle } = $props<{
     title: string
     isDevBuild?: boolean
+    /** Whether the resizable application sidebar is currently visible. */
+    isAppSidebarExpanded: boolean
+    /** Toggles the resizable application sidebar without affecting the activity bar. */
+    onAppSidebarToggle: () => void
   }>()
 
   const windowControls = window.windowControls
@@ -21,7 +28,7 @@
 
   const handleDoubleClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement | null
-    if (target?.closest('[data-window-control]')) {
+    if (target?.closest('button')) {
       return
     }
     void windowControls.toggleMaximize()
@@ -61,8 +68,22 @@
   ondblclick={handleDoubleClick}
   onkeydown={handleKeyDown}
 >
-  <!-- Keep the title centered by matching the left brand width to the control cluster. -->
-  <div class="titlebar__brand" aria-hidden="true"></div>
+  <!-- Keep the title centered by matching the left action width to the control cluster. -->
+  <div class="titlebar__actions">
+    <IconButton
+      icon={isAppSidebarExpanded ? PanelLeftClose : PanelLeftOpen}
+      label={isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+      title={isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
+      size="compact"
+      iconSize={18}
+      borderless
+      ariaExpanded={isAppSidebarExpanded}
+      testId="app-sidebar-toggle-button"
+      iconTestId={isAppSidebarExpanded ? 'app-sidebar-close-icon' : 'app-sidebar-open-icon'}
+      class="titlebar__sidebar-toggle"
+      onclick={onAppSidebarToggle}
+    />
+  </div>
   <div class="titlebar__title" data-dev-build={isDevBuild} {title}>{title}</div>
   <div class="titlebar__controls">
     <button
@@ -113,11 +134,22 @@
     user-select: none;
   }
 
-  .titlebar__brand {
+  .titlebar__actions {
     width: var(--titlebar-controls-width);
     height: 100%;
     display: flex;
     align-items: center;
+    padding-left: 20px;
+  }
+
+  .titlebar__actions :global(.titlebar__sidebar-toggle) {
+    -webkit-app-region: no-drag;
+    color: var(--ui-muted-icon-glyph);
+  }
+
+  .titlebar__actions :global(.titlebar__sidebar-toggle:hover),
+  .titlebar__actions :global(.titlebar__sidebar-toggle:focus-visible) {
+    color: var(--ui-normal-text);
   }
 
   .titlebar__title {

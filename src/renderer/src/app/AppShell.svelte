@@ -99,6 +99,12 @@
   const getUserPersistenceDraft = () =>
     userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
   const appSidebarDefaultWidthPx = getUserPersistenceDraft().appSidebarWidthPx
+  // Session-only visibility starts expanded whenever the application launches.
+  let isAppSidebarExpanded = $state(true)
+  // Toggles only the resizable sidebar while leaving primary navigation visible.
+  const toggleAppSidebar = (): void => {
+    isAppSidebarExpanded = !isAppSidebarExpanded
+  }
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
@@ -578,18 +584,25 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar title={windowTitle} {isDevBuild} />
+    <WindowsTitleBar
+      title={windowTitle}
+      {isDevBuild}
+      {isAppSidebarExpanded}
+      onAppSidebarToggle={toggleAppSidebar}
+    />
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
     <AppActivityBar {activeScreen} {isWorkspaceReady} {isDevMode} onNavigate={navigateToScreen} />
 
     <ResizableSidebar
+      isSidebarVisible={isAppSidebarExpanded}
       defaultWidth={appSidebarDefaultWidthPx}
       minWidth={240}
       maxWidth={400}
       handleTestId="app-sidebar-resize-handle"
       containerClass="min-w-0 flex-1 min-h-0"
+      sidebarBorderClass="sidebarFrameBorder border-r"
       onDesiredWidthChange={(nextDesiredWidth) => {
         setAppSidebarWidthWithAutosave(nextDesiredWidth)
       }}
@@ -611,7 +624,7 @@
 
       {#snippet content()}
         <div
-          class="mainScreenSurface sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-l border-t"
+          class="mainScreenSurface sidebarFrameBorder bg-background relative flex w-full min-h-0 flex-1 flex-col border-t"
         >
           {#if activeScreen === 'home'}
             <HomeScreen
