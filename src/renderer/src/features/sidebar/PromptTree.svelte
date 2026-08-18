@@ -9,13 +9,14 @@
     type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import {
+    CATEGORY_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE,
-    isPromptHandleDragPayload,
+    resolveCategoryDropPreviousCategoryId,
     resolvePromptHandleDropMove,
     type CategoryDragPayload,
+    type CategoryDropPayload,
     type PromptHandleDragPayload,
-    type PromptHandleDropPayload,
-    type PromptTreeEntryDragPayload
+    type PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
   import {
@@ -63,11 +64,14 @@
     type PromptTreeRow
   } from './PromptTreeVirtualList.svelte'
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
+  import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import PromptTreeCategoryRow from './PromptTreeCategoryRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import {
     categoryDropIndicatorTestId,
-    folderPromptDropIndicatorTestId
+    folderPromptDropIndicatorTestId,
+    promptTreeBottomSpacerDropIndicatorTestId,
+    promptTreeBottomSpacerDropTargetTestId
   } from './promptTreeTestIds'
   import { collectCompletedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
   import { moveCategory } from '@renderer/data/Mutations/CategoryMutations'
@@ -215,6 +219,8 @@
   const contentPromptRowId = (contentOwnerId: string, promptId: string): string =>
     `${contentOwnerId}:prompt:${promptId}`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
+  /** Category-only target state keyed by the virtual row that owns each boundary. */
+  const promptTreeCategoryDroppableState = createDroppableStateRegistry<string>()
   const getCategoryTreeExpandedStateKey = (categoryId: string): string =>
     `${workspaceSelection.selectedWorkspaceId ?? 'no-workspace'}:${categoryId}`
 
@@ -289,11 +295,11 @@
     )
   }
 
-  const getPromptTreeDroppableOptions = (
+  const getPromptTreePromptDroppableOptions = (
     rowId: string,
     allowedEdges: DroppableAllowedEdges,
     getDropPayload: (edge: DroppableEdge | null) => PromptHandleDropPayload
-  ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
+  ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges,
     canDrop: (payload, edge) => canDropOnPromptTree(payload, getDropPayload(edge)),
@@ -302,15 +308,11 @@
   })
 
   const canDropOnPromptTree = (
-    payload: PromptTreeEntryDragPayload,
+    payload: PromptHandleDragPayload,
     dropPayload: PromptHandleDropPayload
   ): boolean => {
     const destinationFolder = promptFolderById[dropPayload.folderId]
     if (!destinationFolder) return false
-
-    if (!isPromptHandleDragPayload(payload)) {
-      return Boolean(dropPayload.categoryId && payload.categoryId !== dropPayload.categoryId)
-    }
 
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     if (!sourceFolder) return false
@@ -332,6 +334,23 @@
     )
   }
 
+  /** Builds a category-only target for the boundary before a category or at tree bottom. */
+  const getPromptTreeCategoryDroppableOptions = (
+    rowId: string,
+    nextCategoryId: string | null
+  ): DroppableOptions<CategoryDragPayload, CategoryDropPayload> => ({
+    dragType: CATEGORY_DRAG_TYPE,
+    allowedEdges: 'top',
+    payload: { nextCategoryId },
+    canDrop: (payload) =>
+      resolveCategoryDropPreviousCategoryId(
+        categoryTreeIds,
+        payload.categoryId,
+        nextCategoryId
+      ) !== undefined,
+    indicator: promptTreeCategoryDroppableState.getState(rowId)
+  })
+
   /** Returns active content IDs in one exact FolderOrderV2 group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
     screenRootFolder?.categoryOrder.categories
@@ -345,18 +364,28 @@
       group.entries.some((entry) => entry.id === entryId)
     )?.categoryId ?? null
 
-  const getPromptTreeCategoryDropPayload = (
+  /** Maps a category header edge to either Uncategorized start or category start. */
+  const getPromptTreeCategoryPromptDropPayload = (
     categoryId: string,
+    isFirstTreeRow: boolean,
     edge: DroppableEdge | null
-  ): PromptHandleDropPayload => ({
+  ): PromptHandleDropPayload => {
+    /** Top edge of the first header is the empty Uncategorized start boundary. */
+    const destinationCategoryId = isFirstTreeRow && edge === 'top' ? null : categoryId
+    return {
       folderId: screenRootFolder!.id,
-      categoryId,
+      categoryId: destinationCategoryId,
       targetEntryId: null,
-      position: edge === 'top' ? 'before' : 'after'
-    })
+      position: 'after'
+    }
+  }
 
   const getPromptTreeDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreePromptDroppableState.edge(rowId)
+
+  /** Returns the active category boundary edge for one virtual row. */
+  const getPromptTreeCategoryDropTargetEdge = (rowId: string): DroppableEdge | null =>
+    promptTreeCategoryDroppableState.edge(rowId)
 
   const selectMovedPrompt = (destinationContentOwnerId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
@@ -438,8 +467,8 @@
   const getCategoryRowDragOptions = (
     categoryId: string,
     displayName: string
-  ): DraggableOptions<CategoryDragPayload, PromptHandleDropPayload> => ({
-    dragType: PROMPT_HANDLE_DRAG_TYPE,
+  ): DraggableOptions<CategoryDragPayload, CategoryDropPayload> => ({
+    dragType: CATEGORY_DRAG_TYPE,
     payload: { categoryId },
     createGhost: () => createPromptDragGhost(displayName, 'category'),
     onDragStart: (payload) => {
@@ -447,17 +476,14 @@
     },
     onDragFinish: ({ sourcePayload, dropPayload }) => {
       clearPromptEntryDrag()
-      if (!screenRootFolder || !dropPayload?.categoryId) return
-      /** Ordered category IDs excluding the dragged category. */
-      const categoryIds = categoryTreeIds.filter((id) => id !== sourcePayload.categoryId)
-      /** Destination category index after removal. */
-      const targetIndex = categoryIds.indexOf(dropPayload.categoryId)
-      if (targetIndex === -1) return
-      /** Category predecessor represented by the selected header edge. */
-      const previousCategoryId =
-        dropPayload.position === 'after'
-          ? dropPayload.categoryId
-          : (categoryIds[targetIndex - 1] ?? null)
+      if (!screenRootFolder || !dropPayload) return
+      /** Category predecessor represented by the selected boundary. */
+      const previousCategoryId = resolveCategoryDropPreviousCategoryId(
+        categoryTreeIds,
+        sourcePayload.categoryId,
+        dropPayload.nextCategoryId
+      )
+      if (previousCategoryId === undefined) return
       void runIpcBestEffort(() =>
         moveCategory(screenRootFolder.id, sourcePayload.categoryId, previousCategoryId)
       )
@@ -614,7 +640,8 @@
                 categoryId: null,
                 promptId: completedPrompt.promptId,
                 indentCount: 0,
-                isLastRow: promptIndex === selectedCompletedPrompts.length - 1
+                isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
+                isFirstTreeRow: promptIndex === 0
               }
             })
           }
@@ -638,7 +665,8 @@
               categoryId: null,
               promptId: entry.id,
               indentCount: 0,
-              isLastRow: entryIndex === uncategorizedEntries.length - 1
+              isLastRow: entryIndex === uncategorizedEntries.length - 1,
+              isFirstTreeRow: entryIndex === 0
             }
           })
         }
@@ -654,6 +682,8 @@
                 promptById[entry.id]?.status !== PromptStatus.Completed
           )
           const isExpanded = getPromptTreeCategoryExpandedState(category.id)
+          /** Whether this category header is the first rendered active tree row. */
+          const isFirstTreeRow = items.length === 0
           items.push({
             id: categoryRowId(category.id),
             row: {
@@ -661,6 +691,7 @@
               category,
               rootFolder: screenRootFolder,
               indentCount: 0,
+              isFirstTreeRow,
               endsVisibleBranch: groupIndex === groups.length - 2 &&
                 (!isExpanded || categoryEntries.length === 0)
             }
@@ -675,7 +706,8 @@
                 categoryId: category.id,
                 promptId: entry.id,
                 indentCount: 1,
-                isLastRow: entryIndex === categoryEntries.length - 1
+                isLastRow: entryIndex === categoryEntries.length - 1,
+                isFirstTreeRow: false
               }
             })
           }
@@ -761,30 +793,41 @@
 {#snippet categoryRow(props: PromptTreeCategoryRowProps)}
   {@const isSettingsActive = isTreeEntryActive(props.row.category.id, 'category-details')}
 
-  <PromptTreeCategoryRow
-    category={props.row.category}
-    isActive={isSettingsActive}
-    isDragging={isCategoryRowDragging(props.row.category.id)}
-    {isPromptDragActive}
-    showDropOverHighlight={false}
-    isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
-    indentCount={props.row.indentCount}
-    endsVisibleBranch={props.row.endsVisibleBranch}
-    getCategoryContentDroppableOptions={isCompletedMode
-      ? undefined
-      : () =>
-          getPromptTreeDroppableOptions(
-            props.rowId,
-            'top-and-bottom',
-            (edge) => getPromptTreeCategoryDropPayload(props.row.category.id, edge)
-          )}
-    categoryDragOptions={!isCompletedMode
-      ? getCategoryRowDragOptions(props.row.category.id, props.row.category.displayName)
-      : undefined}
-    onCategoryExpandedChange={handleCategoryExpandedChange}
-    onCategoryOpen={handleCategoryOpen}
-    onCategorySettingsOpen={handleCategorySettingsOpen}
-  />
+  <!-- Recreate edge registrations when virtual row reuse changes which row owns tree start. -->
+  {#key props.row.isFirstTreeRow}
+    <PromptTreeCategoryRow
+      category={props.row.category}
+      isActive={isSettingsActive}
+      isDragging={isCategoryRowDragging(props.row.category.id)}
+      {isPromptDragActive}
+      showDropOverHighlight={false}
+      isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
+      indentCount={props.row.indentCount}
+      endsVisibleBranch={props.row.endsVisibleBranch}
+      getCategoryContentDroppableOptions={isCompletedMode
+        ? undefined
+        : () =>
+            getPromptTreePromptDroppableOptions(
+              props.rowId,
+              props.row.isFirstTreeRow ? 'top-and-bottom' : 'bottom',
+              (edge) =>
+                getPromptTreeCategoryPromptDropPayload(
+                  props.row.category.id,
+                  props.row.isFirstTreeRow,
+                  edge
+                )
+            )}
+      getCategoryOrderDroppableOptions={isCompletedMode
+        ? undefined
+        : () => getPromptTreeCategoryDroppableOptions(props.rowId, props.row.category.id)}
+      categoryDragOptions={!isCompletedMode
+        ? getCategoryRowDragOptions(props.row.category.id, props.row.category.displayName)
+        : undefined}
+      onCategoryExpandedChange={handleCategoryExpandedChange}
+      onCategoryOpen={handleCategoryOpen}
+      onCategorySettingsOpen={handleCategorySettingsOpen}
+    />
+  {/key}
 {/snippet}
 
 {#snippet promptRow(props: PromptTreePromptRowProps)}
@@ -796,62 +839,100 @@
   {@const promptTitle =
     promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}
 
-  <PromptTreePromptRow
-    folderId={props.row.categoryId ?? props.row.folder.id}
-    promptId={props.row.promptId}
-    {promptTitle}
-    status={promptById[props.row.promptId]?.status}
-    isEdited={promptEditedById[props.row.promptId] ?? false}
-    {isActive}
-    {isDragging}
-    {isPromptDragActive}
-    indentCount={props.row.indentCount}
-    isLastRow={props.row.isLastRow}
-    getPromptDroppableOptions={isCompletedMode
-      ? undefined
-      : () =>
-          getPromptTreeDroppableOptions(props.rowId, 'top-and-bottom', (edge) => ({
-            folderId: props.row.folder.id,
-            categoryId: props.row.categoryId,
-            targetEntryId: props.row.promptId,
-            position: edge === 'top' ? 'before' : 'after'
-          }))}
-    promptDragOptions={isCompletedMode
-      ? undefined
-      : getPromptRowDragOptions(
-          props.row.folder.id,
-          props.row.promptId,
-          promptTitle,
-          props.row.folder.kind
-        )}
-    onPromptSelect={handlePromptTreePromptSelect}
-  />
+  <!-- Recreate edge registrations when virtual row reuse changes which row owns tree start. -->
+  {#key props.row.isFirstTreeRow}
+    <PromptTreePromptRow
+      folderId={props.row.categoryId ?? props.row.folder.id}
+      promptId={props.row.promptId}
+      {promptTitle}
+      status={promptById[props.row.promptId]?.status}
+      isEdited={promptEditedById[props.row.promptId] ?? false}
+      {isActive}
+      {isDragging}
+      {isPromptDragActive}
+      indentCount={props.row.indentCount}
+      isLastRow={props.row.isLastRow}
+      isFirstTreeRow={props.row.isFirstTreeRow}
+      getPromptDroppableOptions={isCompletedMode
+        ? undefined
+        : () =>
+            getPromptTreePromptDroppableOptions(
+              props.rowId,
+              props.row.isFirstTreeRow ? 'top-and-bottom' : 'bottom',
+              (edge) => ({
+                folderId: props.row.folder.id,
+                categoryId: props.row.categoryId,
+                targetEntryId: props.row.promptId,
+                position: edge === 'top' ? 'before' : 'after'
+              })
+            )}
+      promptDragOptions={isCompletedMode
+        ? undefined
+        : getPromptRowDragOptions(
+            props.row.folder.id,
+            props.row.promptId,
+            promptTitle,
+            props.row.folder.kind
+          )}
+      onPromptSelect={handlePromptTreePromptSelect}
+    />
+  {/key}
 {/snippet}
 
 {#snippet emptyStateRow()}
-  <div
-    class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
-    data-testid="prompt-tree-empty-state"
-  >
-    <p class="sidebarPromptTreeEmptyTitle">
-      {isCompletedMode
-        ? 'No completed prompts found in this folder'
-        : screenRootFolder?.kind === 'template'
-          ? 'No templates found in this folder.'
-          : 'No prompts found in this folder.'}
-    </p>
-    {#if !isCompletedMode}
-      <p class="mt-2">
-        Click the Add {screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} button to
-        create your first {screenRootFolder?.kind === 'template' ? 'template' : 'prompt'}.
-      </p>
-    {/if}
-  </div>
+  {#if isCompletedMode}
+    <div
+      class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
+      data-testid="prompt-tree-empty-state"
+    >
+      <p class="sidebarPromptTreeEmptyTitle">No completed prompts found in this folder</p>
+    </div>
+  {:else}
+    <PromptDropTarget
+      getOptions={() =>
+        getPromptTreePromptDroppableOptions('empty-state', 'top', () => ({
+          folderId: screenRootFolder!.id,
+          categoryId: null,
+          targetEntryId: null,
+          position: 'after'
+        }))}
+      class="relative h-full"
+    >
+      {#snippet children({ isOver, isBlocked, edge })}
+        <div
+          class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
+          data-testid="prompt-tree-empty-state"
+        >
+          <p class="sidebarPromptTreeEmptyTitle">
+            {screenRootFolder?.kind === 'template'
+              ? 'No templates found in this folder.'
+              : 'No prompts found in this folder.'}
+          </p>
+          <p class="mt-2">
+            Click the Add {screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} button to
+            create your first {screenRootFolder?.kind === 'template' ? 'template' : 'prompt'}.
+          </p>
+        </div>
+        {#if isOver && edge}
+          <DropIndicator
+            testId="prompt-tree-empty-drop-indicator"
+            insetStart={getPromptTreeDropIndicatorInset(0)}
+            {edge}
+            {isBlocked}
+          />
+        {/if}
+      {/snippet}
+    </PromptDropTarget>
+  {/if}
 {/snippet}
 
 {#snippet promptTreeCategoryRowOverlay({ row, rowId }: PromptTreeCategoryRowProps)}
-  {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
-  {@const isBlocked = promptTreePromptDroppableState.isBlocked(rowId)}
+  {@const promptHoveredEdge = getPromptTreeDropTargetEdge(rowId)}
+  {@const categoryHoveredEdge = getPromptTreeCategoryDropTargetEdge(rowId)}
+  {@const hoveredEdge = promptHoveredEdge ?? categoryHoveredEdge}
+  {@const isBlocked = promptHoveredEdge
+    ? promptTreePromptDroppableState.isBlocked(rowId)
+    : promptTreeCategoryDroppableState.isBlocked(rowId)}
 
   {#if hoveredEdge}
     <DropIndicator
@@ -881,7 +962,27 @@
 {/snippet}
 
 {#snippet bottomSpacerRow(props)}
-  <div class="h-full" style={`height:${props.rowHeightPx}px;`} aria-hidden="true"></div>
+  {#if isCompletedMode}
+    <div class="h-full" style={`height:${props.rowHeightPx}px;`} aria-hidden="true"></div>
+  {:else}
+    <PromptDropTarget
+      getOptions={() => getPromptTreeCategoryDroppableOptions('bottom-spacer', null)}
+      class="relative h-full"
+      style={`height:${props.rowHeightPx}px;`}
+      data-testid={promptTreeBottomSpacerDropTargetTestId}
+    >
+      {#snippet children({ isOver, isBlocked, edge })}
+        {#if isOver && edge}
+          <DropIndicator
+            testId={promptTreeBottomSpacerDropIndicatorTestId}
+            insetStart={getPromptTreeDropIndicatorInset(0)}
+            {edge}
+            {isBlocked}
+          />
+        {/if}
+      {/snippet}
+    </PromptDropTarget>
+  {/if}
 {/snippet}
 
       </PromptTreeVirtualList>

@@ -470,7 +470,7 @@ const getVirtualDropGeometry = (
   const top = Math.max(nodeRect.top, viewportRect.top)
   const bottom = Math.min(nodeRect.bottom, viewportRect.bottom)
 
-  if (right <= left || bottom <= top) {
+  if (right <= left || bottom < top) {
     return null
   }
 

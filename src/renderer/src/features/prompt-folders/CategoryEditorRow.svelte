@@ -13,14 +13,11 @@
   import CategoryDescriptionEditorSection from './CategoryDescriptionEditorSection.svelte'
   import CategoryEditorSidebar from './CategoryEditorSidebar.svelte'
   import {
-    droppable,
-    type DraggableOptions,
-    type DroppableOptions
+    type DraggableOptions
   } from '../drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
-    PromptHandleDropPayload,
-    PromptTreeEntryDragPayload
+    CategoryDropPayload
   } from '../drag-drop/promptHandleDrag'
   import {
     CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX
@@ -48,8 +45,7 @@
     isReadOnly?: boolean
     canRename?: boolean
     showSidebar?: boolean
-    dragOptions?: DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
-    dropOptions?: DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
+    dragOptions?: DraggableOptions<CategoryDragPayload, CategoryDropPayload>
     onHydrationChange?: (isHydrated: boolean) => void
     onDetailsSectionToggle: () => void
     onContentSectionToggle: () => void
@@ -81,7 +77,6 @@
     canRename = !isReadOnly,
     showSidebar = false,
     dragOptions,
-    dropOptions,
     onHydrationChange,
     onDetailsSectionToggle,
     onContentSectionToggle,
@@ -109,18 +104,6 @@
   )
   /** Aggregate hydration state reported to the virtual window. */
   const isRowHydrated = $derived(!hasHydratableSection || isDescriptionHydrated)
-  /** Inactive indicator required by the read-only title bar's disabled target. */
-  const disabledDropIndicator = $state({ isOver: false, isBlocked: false, edge: null })
-  /** Effective row drop options, including the disabled fallback. */
-  const effectiveDropOptions = $derived<
-    DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload>
-  >(
-    dropOptions ?? {
-      dragType: 'disabled-prompt-folder-row',
-      canDrop: () => false,
-      indicator: disabledDropIndicator
-    }
-  )
   /** Last aggregate hydration value sent to the parent. */
   let lastReportedHydration = $state<boolean | null>(null)
   /** Requests focus after adding the category description setting. */
@@ -212,7 +195,6 @@
     {/snippet}
 
     <header
-      use:droppable={effectiveDropOptions}
       class="category-editor-title-bar"
       style={`height:${CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX}px; min-height:${CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX}px; max-height:${CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX}px;`}
       data-testid="category-editor-title-bar"

@@ -8,18 +8,18 @@
   import RotatingChevron from '@renderer/common/cthulhu-ui/RotatingChevron.svelte'
   import type { Category } from '@shared/Category'
   import type { Action } from 'svelte/action'
-  import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import type {
-    CategoryDragPayload,
-    PromptHandleDropPayload
-  } from '@renderer/features/drag-drop/promptHandleDrag'
+  import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import {
     categoryOpenTestId,
     categorySettingsTestId,
     categoryToggleTestId
   } from './promptTreeTestIds'
-  import type { PromptRowDropOptions } from './promptTreeRowOptions'
+  import type {
+    CategoryRowDragOptions,
+    CategoryRowDropOptions,
+    PromptRowDropOptions
+  } from './promptTreeRowOptions'
 
   /** Inputs and callbacks for one category in the prompt sidebar tree. */
   type Props = {
@@ -35,7 +35,9 @@
     // Gives picker reuse rounded rows without changing the sidebar tree.
     roundedCorners?: boolean
     getCategoryContentDroppableOptions?: () => PromptRowDropOptions
-    categoryDragOptions?: DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
+    /** Category-only options for the boundary before this header row. */
+    getCategoryOrderDroppableOptions?: () => CategoryRowDropOptions
+    categoryDragOptions?: CategoryRowDragOptions
     onCategoryExpandedChange: (categoryId: string, isExpanded: boolean) => void
     onCategoryOpen: (categoryId: string) => void
     onCategorySettingsOpen: (categoryId: string) => void
@@ -53,6 +55,7 @@
     showActions = true,
     roundedCorners = false,
     getCategoryContentDroppableOptions,
+    getCategoryOrderDroppableOptions,
     categoryDragOptions,
     onCategoryExpandedChange,
     onCategoryOpen,
@@ -150,7 +153,7 @@
   /** Enables category dragging only when drag options are supplied. */
   const optionalCategoryDraggable: Action<
     HTMLButtonElement,
-    DraggableOptions<CategoryDragPayload, PromptHandleDropPayload> | undefined
+    CategoryRowDragOptions | undefined
   > = (node, initialOptions) => {
     let action = initialOptions ? draggable(node, initialOptions) : null
     return {
@@ -255,15 +258,28 @@
   {/if}
 {/snippet}
 
-{#if getCategoryContentDroppableOptions}
+<!-- Nests independent prompt-content and category-order targets over one header row. -->
+{#snippet categoryContentTarget(categoryOrderIsOver = false)}
+  {#if getCategoryContentDroppableOptions}
+    <PromptDropTarget getOptions={getCategoryContentDroppableOptions}>
+      {#snippet children({ isOver })}
+        {@render categoryRowContent(isOver || categoryOrderIsOver)}
+      {/snippet}
+    </PromptDropTarget>
+  {:else}
+    {@render categoryRowContent(categoryOrderIsOver)}
+  {/if}
+{/snippet}
+
+{#if getCategoryOrderDroppableOptions}
   <PromptDropTarget
-    getOptions={getCategoryContentDroppableOptions}
+    getOptions={getCategoryOrderDroppableOptions}
     class="sidebarPromptTreeCategoryRow"
     style={rowStyle}
     data-indented={indentCount > 0 ? 'true' : undefined}
   >
     {#snippet children({ isOver })}
-      {@render categoryRowContent(isOver)}
+      {@render categoryContentTarget(isOver)}
     {/snippet}
   </PromptDropTarget>
 {:else}
@@ -272,7 +288,7 @@
     style={rowStyle}
     data-indented={indentCount > 0 ? 'true' : undefined}
   >
-    {@render categoryRowContent(false)}
+    {@render categoryContentTarget()}
   </div>
 {/if}
 

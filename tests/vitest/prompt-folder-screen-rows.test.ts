@@ -97,7 +97,11 @@ describe('buildPromptFolderScreenRows', () => {
     expect(rows).toContainEqual(
       expect.objectContaining({ kind: 'prompt-divider', categoryId: 'category-a' })
     )
-    expect(rows.at(-1)).toEqual({ kind: 'category-separator', categoryId: 'category-a' })
+    expect(rows.at(-1)).toEqual({
+      kind: 'category-separator',
+      categoryId: 'category-a',
+      nextCategoryId: null
+    })
   })
 
   it('replaces a collapsed category contents with its prompt summary', () => {
@@ -121,7 +125,42 @@ describe('buildPromptFolderScreenRows', () => {
     expect(rows).not.toContainEqual(
       expect.objectContaining({ kind: 'prompt-editor', categoryId: 'category-a' })
     )
-    expect(rows.at(-1)).toEqual({ kind: 'category-separator', categoryId: 'category-a' })
+    expect(rows.at(-1)).toEqual({
+      kind: 'category-separator',
+      categoryId: 'category-a',
+      nextCategoryId: null
+    })
+  })
+
+  it('assigns category targets to the divider before each header and at the bottom', () => {
+    /** Projected rows containing one populated Uncategorized group and two categories. */
+    const rows = buildRows(
+      createFolder([
+        { categoryId: null, promptIds: ['root-prompt'] },
+        { categoryId: 'category-a', promptIds: [] },
+        { categoryId: 'category-b', promptIds: [] }
+      ]),
+      [category('category-a'), category('category-b')],
+      ['root-prompt']
+    )
+    /** Final Uncategorized divider immediately before the first category header. */
+    const firstCategoryDivider = rows.find(
+      (row) => row.kind === 'prompt-divider' && row.previousEntryId === 'root-prompt'
+    )
+    /** Category separator immediately before the second category header. */
+    const secondCategoryDivider = rows.find(
+      (row) => row.kind === 'category-separator' && row.categoryId === 'category-a'
+    )
+    /** Final category separator representing the bottom boundary. */
+    const bottomCategoryDivider = rows.find(
+      (row) => row.kind === 'category-separator' && row.categoryId === 'category-b'
+    )
+
+    expect(firstCategoryDivider).toMatchObject({
+      categoryDropNextCategoryId: 'category-a'
+    })
+    expect(secondCategoryDivider).toMatchObject({ nextCategoryId: 'category-b' })
+    expect(bottomCategoryDivider).toMatchObject({ nextCategoryId: null })
   })
 
   it('ignores category groups whose metadata is not loaded', () => {

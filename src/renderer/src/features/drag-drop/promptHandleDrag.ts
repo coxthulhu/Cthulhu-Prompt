@@ -1,4 +1,6 @@
 export const PROMPT_HANDLE_DRAG_TYPE = 'prompt-handle'
+/** Drag type reserved for category reordering targets. */
+export const CATEGORY_DRAG_TYPE = 'category'
 
 export type PromptHandleDragPayload = {
   fromId: string
@@ -12,12 +14,10 @@ export type CategoryDragPayload = {
   categoryId: string
 }
 
-/** Every drag payload accepted by prompt tree and prompt-folder screen targets. */
-export type PromptTreeEntryDragPayload = PromptHandleDragPayload | CategoryDragPayload
-
-export const isPromptHandleDragPayload = (
-  payload: PromptTreeEntryDragPayload
-): payload is PromptHandleDragPayload => 'sourceFolderId' in payload
+/** Category boundary selected by a category-only drop target. */
+export type CategoryDropPayload = {
+  nextCategoryId: string | null
+}
 
 export type PromptHandleDropPayload = {
   folderId: string
@@ -36,6 +36,32 @@ export type PromptHandleMove = {
 
 const areEntryIdOrdersEqual = (left: string[], right: string[]): boolean => {
   return left.length === right.length && left.every((entryId, index) => entryId === right[index])
+}
+
+/** Resolves a category boundary to its predecessor and rejects no-op placements. */
+export const resolveCategoryDropPreviousCategoryId = (
+  categoryIds: string[],
+  draggedCategoryId: string,
+  nextCategoryId: string | null
+): string | null | undefined => {
+  /** Ordered categories after removing the dragged group. */
+  const remainingCategoryIds = categoryIds.filter(
+    (categoryId) => categoryId !== draggedCategoryId
+  )
+  /** Insertion index represented by the selected boundary. */
+  const insertionIndex =
+    nextCategoryId === null
+      ? remainingCategoryIds.length
+      : remainingCategoryIds.indexOf(nextCategoryId)
+  if (insertionIndex === -1) return undefined
+
+  /** Category predecessor persisted by the category move mutation. */
+  const previousCategoryId = remainingCategoryIds[insertionIndex - 1] ?? null
+  /** Category sequence produced by inserting at the selected boundary. */
+  const reorderedCategoryIds = [...remainingCategoryIds]
+  reorderedCategoryIds.splice(insertionIndex, 0, draggedCategoryId)
+
+  return areEntryIdOrdersEqual(categoryIds, reorderedCategoryIds) ? undefined : previousCategoryId
 }
 
 export const resolveEntryDropPreviousEntryId = (

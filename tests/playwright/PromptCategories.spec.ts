@@ -4,7 +4,10 @@ import {
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  promptEditorSelector
+} from '../helpers/PromptFolderSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
@@ -142,6 +145,30 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
   )
 })
 
+/** Adds an empty second prompt category and returns the root order path. */
+const addSecondPromptCategory = (filesystem: Record<string, string | null>): string => {
+  /** Metadata path for the added category. */
+  const categoryPath = `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Second.category.json`
+  /** FolderOrderV2 path updated with the added category group. */
+  const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+  /** Existing categorized order extended for multi-category drag tests. */
+  const categoryOrder = JSON.parse(filesystem[orderPath]!) as {
+    categories: Array<{
+      categoryId: string | null
+      entries: Array<{ kind: 'prompt'; id: string }>
+    }>
+  }
+
+  filesystem[categoryPath] = JSON.stringify(
+    { id: SECOND_PROMPT_CATEGORY_ID, displayName: 'Second', description: null },
+    null,
+    2
+  )
+  categoryOrder.categories.push({ categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] })
+  filesystem[orderPath] = JSON.stringify(categoryOrder, null, 2)
+  return orderPath
+}
+
 /** Starts the app with a caller-provided category workspace. */
 const startCategoryWorkspace = async (
   testSetup: any,
@@ -261,29 +288,10 @@ describe('Prompt categories', () => {
   }) => {
     /** Categorized workspace extended with an empty reorder destination. */
     const filesystem = createCategorizedWorkspace()
-    filesystem[
-      `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Second.category.json`
-    ] = JSON.stringify(
-      {
-        id: SECOND_PROMPT_CATEGORY_ID,
-        displayName: 'Second',
-        description: null
-      },
-      null,
-      2
-    )
     /** Root FolderOrderV2 path observed after every drag operation. */
-    const orderPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
-    /** Initial order gains the empty second category after Code Review. */
-    const initialOrder = JSON.parse(filesystem[orderPath]!) as {
-      categories: Array<{
-        categoryId: string | null
-        entries: Array<{ kind: 'prompt'; id: string }>
-      }>
-    }
-    initialOrder.categories.push({ categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] })
-    filesystem[orderPath] = JSON.stringify(initialOrder, null, 2)
+    const orderPath = addSecondPromptCategory(filesystem)
+    /** Initial order used to prove prompt-only and blocked targets preserve persistence. */
+    const initialOrder = JSON.parse(filesystem[orderPath]!)
 
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptFolders('Prompts')
@@ -330,28 +338,45 @@ describe('Prompt categories', () => {
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toEqual(initialOrder)
 
-    /** Category title bar accepts the formerly uncategorized prompt at its start. */
+    /** Category title bar is no longer registered as a prompt drop target. */
     const categoryTitleBar =
       `[data-testid="category-editor-${PROMPT_CATEGORY_ID}"] ` +
       '[data-testid="category-editor-title-bar"]'
-    /** First category divider owns the expanded title target's indicator. */
+    /** First category divider receives nearby snapping without highlighting the title bar. */
     const firstCategoryDividerRow = mainWindow
       .locator(`[data-testid="prompt-folder-divider-${PROMPT_CATEGORY_ID}-initial"]`)
       .locator('.promptDividerRow')
     await beginPromptHandleDrag(mainWindow, 'categorized-prompt')
     await moveActiveDragToTarget(mainWindow, categoryTitleBar, 'bottom')
+    await expect(mainWindow.locator(categoryTitleBar)).not.toHaveAttribute(
+      'data-drop-indicator-active',
+      'true'
+    )
     await expect(firstCategoryDividerRow).toHaveAttribute('data-drop-over', 'true')
     await expect(firstCategoryDividerRow).toHaveAttribute('data-drop-blocked', 'true')
     await finishActiveDrag(mainWindow)
 
     await categoryEditor.locator('[data-testid="category-editor-content-toggle"]').click()
-    /** Collapsed summary row replaces its text with the title target's indicator. */
+    /** Collapsed summary row owns its full prompt-only target and replaces its text. */
     const collapsedCategorySummary = mainWindow.locator(
       `[data-testid="category-collapsed-summary-${PROMPT_CATEGORY_ID}"]`
     )
     await expect(collapsedCategorySummary).toContainText('1 prompt hidden')
+    /** Category drags cannot activate the prompt-only collapsed summary target. */
+    await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
+    await moveActiveDragToTarget(
+      mainWindow,
+      `[data-testid="category-collapsed-summary-${PROMPT_CATEGORY_ID}"]`
+    )
+    await expect(collapsedCategorySummary).toContainText('1 prompt hidden')
+    await expect(collapsedCategorySummary.locator('.promptDividerRow')).toHaveCount(0)
+    await finishActiveDrag(mainWindow)
+
     await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
-    await moveActiveDragToTarget(mainWindow, categoryTitleBar, 'bottom')
+    await moveActiveDragToTarget(
+      mainWindow,
+      `[data-testid="category-collapsed-summary-${PROMPT_CATEGORY_ID}"]`
+    )
     await expect(
       collapsedCategorySummary.locator(
         `[data-testid="category-collapsed-drop-indicator-${PROMPT_CATEGORY_ID}"]`
@@ -394,8 +419,17 @@ describe('Prompt categories', () => {
     /** Top edge of an Uncategorized prompt places content before it at root level. */
     const uncategorizedStartDivider =
       '[data-testid="prompt-tree-prompt-unknown-category-prompt"]'
+    await expect(mainWindow.locator(uncategorizedStartDivider).locator('xpath=..')).toHaveAttribute(
+      'data-first-tree-row',
+      'true'
+    )
     await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
     await moveActiveDragToTarget(mainWindow, uncategorizedStartDivider, 'top')
+    await expect(
+      mainWindow.locator(
+        '[data-testid="prompt-tree-drop-indicator-prompt-unknown-category-prompt"]'
+      )
+    ).toHaveAttribute('data-edge', 'top')
     await finishActiveDrag(mainWindow)
     await expect
       .poll(() => readCategoryOrder(electronApp, orderPath))
@@ -416,10 +450,14 @@ describe('Prompt categories', () => {
         ]
       })
 
-    /** Dragging the first category after the second retains its prompt as one group. */
-    const secondCategoryTitleBar = '[data-testid="prompt-tree-category-toggle-button-Second"]'
-    await beginPromptTreeCategoryRowDrag(mainWindow, 'Code Review')
-    await moveActiveDragToTarget(mainWindow, secondCategoryTitleBar, 'bottom')
+    /** Shared final Uncategorized divider accepts a category before the first header. */
+    const firstCategoryBoundary =
+      `[data-testid="prompt-folder-divider-${PROMPT_ROOT_ID}-unknown-category-prompt"]`
+    await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
+    await moveActiveDragToTarget(mainWindow, firstCategoryBoundary)
+    await expect(mainWindow.locator(firstCategoryBoundary).locator('.promptDividerRow')).toHaveText(
+      /Move Here/
+    )
     await finishActiveDrag(mainWindow)
     await expect
       .poll(async () =>
@@ -428,14 +466,297 @@ describe('Prompt categories', () => {
         )
       )
       .toEqual([null, SECOND_PROMPT_CATEGORY_ID, PROMPT_CATEGORY_ID])
+
+    /** Final folder-screen divider accepts the first category at the list bottom. */
+    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 10_000)
+    await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
+    await moveActiveDragToTarget(
+      mainWindow,
+      `[data-testid="category-divider-drop-${PROMPT_CATEGORY_ID}-category-drop-target"]`
+    )
+    await expect(
+      mainWindow.locator(
+        `[data-testid="category-divider-drop-${PROMPT_CATEGORY_ID}-category-drop-target"]`
+      )
+    ).toHaveAttribute('data-drop-indicator-active', 'true')
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () =>
+        (await readCategoryOrder(electronApp, orderPath)).categories.map(
+          (category) => category.categoryId
+        )
+      )
+      .toEqual([null, PROMPT_CATEGORY_ID, SECOND_PROMPT_CATEGORY_ID])
+
     await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
       categories: [
         { categoryId: null },
-        { categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] },
         {
           categoryId: PROMPT_CATEGORY_ID,
           entries: [{ kind: 'prompt', id: 'categorized-prompt' }]
+        },
+        { categoryId: SECOND_PROMPT_CATEGORY_ID, entries: [] }
+      ]
+    })
+  })
+
+  test('reorders categories before prompt-tree headers and at the tree bottom', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Two-category workspace used by the isolated prompt-tree reorder flow. */
+    const filesystem = createCategorizedWorkspace()
+    /** Root order path observed after each prompt-tree category drop. */
+    const orderPath = addSecondPromptCategory(filesystem)
+    /** Started category workspace exposing both prompt-tree category rows. */
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+    await testHelpers.navigateToPromptFolders('Prompts')
+
+    await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      'top'
+    )
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () =>
+        (await readCategoryOrder(electronApp, orderPath)).categories.map(
+          (category) => category.categoryId
+        )
+      )
+      .toEqual([null, SECOND_PROMPT_CATEGORY_ID, PROMPT_CATEGORY_ID])
+
+    await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
+    )
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () =>
+        (await readCategoryOrder(electronApp, orderPath)).categories.map(
+          (category) => category.categoryId
+        )
+      )
+      .toEqual([null, PROMPT_CATEGORY_ID, SECOND_PROMPT_CATEGORY_ID])
+  })
+
+  test('drops a prompt at the start of a collapsed prompt-tree category', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Categorized workspace used by the collapsed sidebar target flow. */
+    const filesystem = createCategorizedWorkspace()
+    /** Root order path observed after the prompt changes category. */
+    const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+    /** Started prompt workspace exposing the editor handle and sidebar category. */
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+    await testHelpers.navigateToPromptFolders('Prompts')
+
+    /** Sidebar category header that remains a target while collapsed. */
+    const categoryHeader = mainWindow.locator(
+      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]'
+    )
+    await categoryHeader.click()
+    await expect(categoryHeader).toHaveAttribute('aria-expanded', 'false')
+
+    await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      'bottom'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-drop-indicator-category-CodeReview"]')
+    ).toHaveAttribute('data-edge', 'bottom')
+    await finishActiveDrag(mainWindow)
+
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
+      categories: [
+        {
+          categoryId: null,
+          entries: [{ kind: 'prompt', id: 'unknown-category-prompt' }]
+        },
+        {
+          categoryId: PROMPT_CATEGORY_ID,
+          entries: [
+            { kind: 'prompt', id: 'uncategorized-prompt' },
+            { kind: 'prompt', id: 'categorized-prompt' }
+          ]
         }
+      ]
+    })
+  })
+
+  test('uses the same collapsed prompt-tree target behavior for templates', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Template root ID used by the isolated parity scenario. */
+    const templateRootId = 'template-target-root'
+    /** Template workspace with one Uncategorized and one categorized template. */
+    const filesystem = createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [
+      {
+        folderName: 'TemplateTargets',
+        displayName: 'Template Targets',
+        folderId: templateRootId,
+        templates: [
+          {
+            id: 'uncategorized-target-template',
+            title: 'Uncategorized Target Template',
+            templateText: 'Move this template into Writing.'
+          }
+        ],
+        categories: [
+          {
+            categoryId: TEMPLATE_CATEGORY_ID,
+            categoryName: 'Writing',
+            displayName: 'Writing',
+            templates: [
+              {
+                id: 'categorized-target-template',
+                title: 'Categorized Target Template',
+                templateText: 'Existing categorized template.'
+              }
+            ]
+          }
+        ]
+      }
+    ])
+    /** Template order path observed after the category drop. */
+    const orderPath =
+      `${WORKSPACE_PATH}/Templates/TemplateTargets/_FolderInfo/FolderOrderV2.json`
+    /** Started template workspace exposing the shared editor and tree drag behavior. */
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+    await testHelpers.navigateToPromptFolders('Template Targets')
+
+    /** Collapsed template category header that owns the category-start target. */
+    const categoryHeader = mainWindow.locator(
+      '[data-testid="prompt-tree-category-toggle-button-Writing"]'
+    )
+    await categoryHeader.click()
+    await expect(categoryHeader).toHaveAttribute('aria-expanded', 'false')
+
+    await beginPromptHandleDrag(mainWindow, 'uncategorized-target-template')
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-category-toggle-button-Writing"]',
+      'bottom'
+    )
+    await finishActiveDrag(mainWindow)
+
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
+      categories: [
+        { categoryId: null, entries: [] },
+        {
+          categoryId: TEMPLATE_CATEGORY_ID,
+          entries: [
+            { kind: 'template', id: 'uncategorized-target-template' },
+            { kind: 'template', id: 'categorized-target-template' }
+          ]
+        }
+      ]
+    })
+  })
+
+  test('drops into empty Uncategorized at the tree and folder-screen top targets', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Root ID for the isolated empty-Uncategorized scenario. */
+    const rootId = 'empty-uncategorized-root'
+    /** Categorized-only workspace with no initial Uncategorized entries. */
+    const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [
+      {
+        folderName: 'CategoryOnly',
+        displayName: 'Category Only',
+        promptFolderId: rootId,
+        prompts: [
+          {
+            id: 'category-only-prompt',
+            title: 'Category Only Prompt',
+            promptText: 'Move this prompt through both top targets.',
+            category: PROMPT_CATEGORY_ID
+          }
+        ]
+      }
+    ])
+    /** Category metadata path required by the categorized-only root. */
+    const categoryPath =
+      `${WORKSPACE_PATH}/Prompts/CategoryOnly/Categories/Code Review.category.json`
+    /** Root order path observed after each top-target drop. */
+    const orderPath =
+      `${WORKSPACE_PATH}/Prompts/CategoryOnly/Active/_FolderInfo/FolderOrderV2.json`
+    filesystem[categoryPath] = JSON.stringify(
+      { id: PROMPT_CATEGORY_ID, displayName: 'Code Review', description: null },
+      null,
+      2
+    )
+    filesystem[orderPath] = JSON.stringify(
+      {
+        categories: [
+          { categoryId: null, entries: [] },
+          {
+            categoryId: PROMPT_CATEGORY_ID,
+            entries: [{ kind: 'prompt', id: 'category-only-prompt' }]
+          }
+        ]
+      },
+      null,
+      2
+    )
+    /** Started categorized-only workspace exposing both top targets. */
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+    await testHelpers.navigateToPromptFolders('Category Only')
+
+    await beginPromptHandleDrag(mainWindow, 'category-only-prompt')
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      'top'
+    )
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
+      categories: [
+        {
+          categoryId: null,
+          entries: [{ kind: 'prompt', id: 'category-only-prompt' }]
+        },
+        { categoryId: PROMPT_CATEGORY_ID, entries: [] }
+      ]
+    })
+
+    await beginPromptHandleDrag(mainWindow, 'category-only-prompt')
+    await moveActiveDragToTarget(
+      mainWindow,
+      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      'bottom'
+    )
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
+      categories: [
+        { categoryId: null, entries: [] },
+        {
+          categoryId: PROMPT_CATEGORY_ID,
+          entries: [{ kind: 'prompt', id: 'category-only-prompt' }]
+        }
+      ]
+    })
+
+    await beginPromptHandleDrag(mainWindow, 'category-only-prompt')
+    await moveActiveDragToTarget(
+      mainWindow,
+      `[data-testid="prompt-folder-divider-${rootId}-initial"]`
+    )
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCategoryOrder(electronApp, orderPath)).toMatchObject({
+      categories: [
+        {
+          categoryId: null,
+          entries: [{ kind: 'prompt', id: 'category-only-prompt' }]
+        },
+        { categoryId: PROMPT_CATEGORY_ID, entries: [] }
       ]
     })
   })

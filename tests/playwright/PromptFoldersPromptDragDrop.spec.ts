@@ -514,10 +514,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await moveActiveDragToTarget(mainWindow, promptTreePromptSelector(DEV_2_ID), 'top')
     await expect(
       mainWindow.locator(
-        [
-          `${promptTreePromptDropIndicatorSelector(DEV_1_ID)}[data-edge="bottom"]`,
-          `${promptTreePromptDropIndicatorSelector(DEV_2_ID)}[data-edge="top"]`
-        ].join(', ')
+        `${promptTreePromptDropIndicatorSelector(DEV_1_ID)}[data-edge="bottom"]`
       )
     ).toHaveAttribute('data-blocked', 'true')
     await finishActiveDrag(mainWindow)
@@ -1171,10 +1168,7 @@ describe('Prompt folder prompt drag-drop', () => {
     })
 
     const indicator = mainWindow.locator(
-      [
-        `${promptTreePromptDropIndicatorSelector('short-1')}[data-edge="bottom"]`,
-        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="top"]`
-      ].join(', ')
+      `${promptTreePromptDropIndicatorSelector('short-1')}[data-edge="bottom"]`
     )
     await expect(indicator).toHaveCount(1)
     await expect(indicator).toBeVisible()
@@ -1235,10 +1229,7 @@ describe('Prompt folder prompt drag-drop', () => {
     )
 
     const indicator = mainWindow.locator(
-      [
-        `${promptTreePromptDropIndicatorSelector('short-1')}[data-edge="bottom"]`,
-        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="top"]`
-      ].join(', ')
+      `${promptTreePromptDropIndicatorSelector('short-1')}[data-edge="bottom"]`
     )
     await expect(indicator).toHaveCount(1)
     await expect(indicator).toBeVisible()
@@ -1265,7 +1256,7 @@ describe('Prompt folder prompt drag-drop', () => {
       .toEqual(['short-1', 'short-3', 'short-2'])
   })
 
-  test('moves the prompt-tree indicator between the top and bottom edges of a prompt row', async ({
+  test('uses the preceding prompt target at a row top and its own target at the bottom', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -1278,12 +1269,9 @@ describe('Prompt folder prompt drag-drop', () => {
     await beginPromptHandleDrag(mainWindow, 'short-1')
 
     const promptRow = mainWindow.locator(promptTreePromptSelector('short-3'))
-    /** Shared top-boundary indicator selected from the two equivalent row edges. */
+    /** Single preceding-row target representing the boundary above the tested row. */
     const topIndicator = mainWindow.locator(
-      [
-        `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="bottom"]`,
-        `${promptTreePromptDropIndicatorSelector('short-3')}[data-edge="top"]`
-      ].join(', ')
+      `${promptTreePromptDropIndicatorSelector('short-2')}[data-edge="bottom"]`
     )
     /** Bottom-edge indicator owned unambiguously by the tested row. */
     const bottomIndicator = mainWindow.locator(
@@ -1327,7 +1315,9 @@ describe('Prompt folder prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
   })
 
-  test('preserves registration order when nearest target edges tie', async ({ testSetup }) => {
+  test('registers one prompt target at each boundary between prompt rows', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -1335,9 +1325,9 @@ describe('Prompt folder prompt drag-drop', () => {
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await beginPromptTreeRowDrag(mainWindow, 'short-1')
 
-    /** Earlier registered row whose bottom edge must win the exact tie. */
+    /** Preceding row that exclusively owns the shared prompt boundary. */
     const earlierRow = mainWindow.locator(promptTreePromptSelector('short-2'))
-    /** Earlier row geometry used to address the exact shared boundary. */
+    /** Preceding row geometry used to address the exact shared boundary. */
     const earlierRowBox = await earlierRow.boundingBox()
     if (!earlierRowBox) throw new Error('Missing earlier prompt row geometry for tie assertion')
 

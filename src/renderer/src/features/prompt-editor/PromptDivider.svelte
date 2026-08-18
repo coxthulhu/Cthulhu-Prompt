@@ -1,12 +1,16 @@
 <script lang="ts">
   import { Plus } from 'lucide-svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
+  import PromptDropTarget, {
+    type PromptDropTargetState
+  } from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type {
     DroppableOptions,
     DroppableState
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
+    CategoryDragPayload,
+    CategoryDropPayload,
     PromptHandleDragPayload,
     PromptHandleDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
@@ -19,6 +23,7 @@
     disabled = false,
     testId,
     getDropOptions,
+    getCategoryDropOptions,
     indicatorState
   }: {
     onAddPrompt?: () => void
@@ -27,6 +32,8 @@
     disabled?: boolean
     testId?: string
     getDropOptions?: () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
+    /** Category-only options sharing this entire visual divider row. */
+    getCategoryDropOptions?: () => DroppableOptions<CategoryDragPayload, CategoryDropPayload>
     indicatorState?: DroppableState
   } = $props()
 </script>
@@ -40,11 +47,11 @@
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
   >
     <div
-      class={mode === 'separator' || (isOver && isBlocked)
+      class={(mode === 'separator' && !isOver) || (isOver && isBlocked)
         ? 'grid h-full grid-cols-1 items-center'
         : 'promptDividerContent grid h-full items-center'}
     >
-      {#if mode === 'separator' || (isOver && isBlocked)}
+      {#if (mode === 'separator' && !isOver) || (isOver && isBlocked)}
         <!-- Completed rows and blocked drops use one uninterrupted separator. -->
         <Separator
           data-testid={isOver && isBlocked ? testId : undefined}
@@ -116,16 +123,33 @@
   </div>
 {/snippet}
 
-{#if getDropOptions}
-  <PromptDropTarget getOptions={getDropOptions}>
-    {#snippet children(targetState)}
-      <!-- The closest active target wins over a category title's external indicator. -->
-      {@const resolvedState = targetState.isOver ? targetState : indicatorState}
-      {@render dividerContent(resolvedState)}
+<!-- Prompt and category actions use nested registrations because their drag types never overlap. -->
+{#snippet promptDropTarget(categoryTargetState?: PromptDropTargetState)}
+  {#if getDropOptions}
+    <PromptDropTarget getOptions={getDropOptions}>
+      {#snippet children(promptTargetState)}
+        {@const resolvedState = promptTargetState.isOver
+          ? promptTargetState
+          : (categoryTargetState ?? indicatorState)}
+        {@render dividerContent(resolvedState)}
+      {/snippet}
+    </PromptDropTarget>
+  {:else}
+    {@render dividerContent(categoryTargetState ?? indicatorState)}
+  {/if}
+{/snippet}
+
+{#if getCategoryDropOptions}
+  <PromptDropTarget
+    getOptions={getCategoryDropOptions}
+    data-testid={testId ? `${testId}-category-drop-target` : undefined}
+  >
+    {#snippet children(categoryTargetState)}
+      {@render promptDropTarget(categoryTargetState)}
     {/snippet}
   </PromptDropTarget>
 {:else}
-  {@render dividerContent(indicatorState)}
+  {@render promptDropTarget()}
 {/if}
 
 <style>

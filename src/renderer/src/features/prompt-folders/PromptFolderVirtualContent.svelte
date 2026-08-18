@@ -66,12 +66,14 @@
     type DroppableOptions
   } from '../drag-drop/dragDrop.svelte.ts'
   import {
+    CATEGORY_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE,
-    isPromptHandleDragPayload,
+    resolveCategoryDropPreviousCategoryId,
     resolvePromptHandleDropMove,
     type CategoryDragPayload,
-    type PromptHandleDropPayload,
-    type PromptTreeEntryDragPayload
+    type CategoryDropPayload,
+    type PromptHandleDragPayload,
+    type PromptHandleDropPayload
   } from '../drag-drop/promptHandleDrag'
   import { createPromptDragGhost } from '../drag-drop/promptDragGhost'
   import {
@@ -80,6 +82,7 @@
   } from '../drag-drop/promptEntryDragState.svelte.ts'
   import type { ActivePromptScreenRow } from './promptFolderScreenController.svelte.ts'
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
+  import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import type {
     PromptFolderDividerTarget,
@@ -238,8 +241,8 @@
   let templateSelectionTarget = $state<PromptFolderPromptTarget | null>(null)
   let templateSelectionMode = $state<'select' | 'select-and-copy'>('select')
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
-  /** Indicator state for category title targets rendered at their content destination. */
-  const categoryDroppableState = createDroppableStateRegistry<string>()
+  /** Category-only divider target state keyed by virtual row ID. */
+  const categoryDividerDroppableState = createDroppableStateRegistry<string>()
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
     status: PromptStatus.Todo,
@@ -265,6 +268,12 @@
       string,
       Category
     >
+  )
+  /** Authoritative category order used to resolve every category boundary. */
+  const orderedCategoryIds = $derived(
+    promptFolderById[screenRootFolderId]?.categoryOrder.categories.flatMap((group) =>
+      group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
+    ) ?? []
   )
   // Side effect: expose the virtual window band-scroll API to the controller.
   $effect(() => {
@@ -626,13 +635,11 @@
   const canDropOnPromptDivider = (
     categoryId: string | null,
     previousEntryId: string | null,
-    payload: PromptTreeEntryDragPayload
+    payload: PromptHandleDragPayload
   ): boolean => {
     const destinationFolder = promptFolderById[screenRootFolderId]
     if (!destinationFolder) return false
     const dropPayload = getPromptDividerDropPayload(categoryId, previousEntryId)
-
-    if (!isPromptHandleDragPayload(payload)) return false
 
     const sourceFolder = promptFolderById[payload.sourceFolderId]
     if (!sourceFolder) return false
@@ -657,7 +664,7 @@
     rowId: string,
     categoryId: string | null,
     previousPromptId: string | null
-  ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
+  ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
     payload: () => getPromptDividerDropPayload(categoryId, previousPromptId),
@@ -678,30 +685,28 @@
       group.entries.some((entry) => entry.id === entryId)
     )?.categoryId ?? null
 
-  /** Builds a shared category-header target for prompt placement and category ordering. */
-  const getCategoryDropOptions = (
-    categoryId: string
-  ): DroppableOptions<PromptTreeEntryDragPayload, PromptHandleDropPayload> => ({
-    dragType: PROMPT_HANDLE_DRAG_TYPE,
-    allowedEdges: 'top-and-bottom',
-    payload: (edge) => ({
-      folderId: screenRootFolderId,
-      categoryId,
-      targetEntryId: null,
-      position: edge === 'top' ? 'before' : 'after'
-    }),
+  /** Builds a category-only target for a full-width divider boundary. */
+  const getCategoryDividerDropOptions = (
+    rowId: string,
+    nextCategoryId: string | null
+  ): DroppableOptions<CategoryDragPayload, CategoryDropPayload> => ({
+    dragType: CATEGORY_DRAG_TYPE,
+    allowedEdges: 'none',
+    payload: { nextCategoryId },
     canDrop: (payload) =>
-      isPromptHandleDragPayload(payload)
-        ? canDropOnPromptDivider(categoryId, null, payload)
-        : payload.categoryId !== categoryId,
-    indicator: categoryDroppableState.getState(categoryId)
+      resolveCategoryDropPreviousCategoryId(
+        orderedCategoryIds,
+        payload.categoryId,
+        nextCategoryId
+      ) !== undefined,
+    indicator: categoryDividerDroppableState.getState(rowId)
   })
 
   /** Builds the draggable category handle while preserving the existing ghost icon. */
   const getCategoryDragOptions = (
     category: Category
-  ): DraggableOptions<CategoryDragPayload, PromptHandleDropPayload> => ({
-    dragType: PROMPT_HANDLE_DRAG_TYPE,
+  ): DraggableOptions<CategoryDragPayload, CategoryDropPayload> => ({
+    dragType: CATEGORY_DRAG_TYPE,
     payload: { categoryId: category.id },
     createGhost: () => createPromptDragGhost(category.displayName, 'category'),
     onDragStart: () => {
@@ -710,21 +715,16 @@
     onDragFinish: ({
       sourcePayload,
       dropPayload
-    }: DragFinishResult<CategoryDragPayload, PromptHandleDropPayload>) => {
+    }: DragFinishResult<CategoryDragPayload, CategoryDropPayload>) => {
       clearPromptEntryDrag()
-      if (!dropPayload?.categoryId || dropPayload.categoryId === sourcePayload.categoryId) return
-      /** Ordered categories excluding the dragged category. */
-      const remainingCategoryIds = categories
-        .map((candidate) => candidate.id)
-        .filter((candidateId) => candidateId !== sourcePayload.categoryId)
-      /** Target category index after removing the dragged category. */
-      const targetIndex = remainingCategoryIds.indexOf(dropPayload.categoryId)
-      if (targetIndex === -1) return
-      /** Category that should precede the dragged group after this drop. */
-      const previousCategoryId =
-        dropPayload.position === 'after'
-          ? dropPayload.categoryId
-          : (remainingCategoryIds[targetIndex - 1] ?? null)
+      if (!dropPayload) return
+      /** Category predecessor represented by the selected divider boundary. */
+      const previousCategoryId = resolveCategoryDropPreviousCategoryId(
+        orderedCategoryIds,
+        sourcePayload.categoryId,
+        dropPayload.nextCategoryId
+      )
+      if (previousCategoryId === undefined) return
       onMoveCategory(sourcePayload.categoryId, previousCategoryId)
     }
   })
@@ -814,7 +814,6 @@
         canRename={!isCompletedMode}
         showSidebar
         dragOptions={!isCompletedMode ? getCategoryDragOptions(category) : undefined}
-        dropOptions={!isCompletedMode ? getCategoryDropOptions(category.id) : undefined}
         onDetailsSectionToggle={() => onDetailsSectionToggle(category.id)}
         onContentSectionToggle={() => onContentSectionToggle(category.id)}
         onDescriptionChange={(text, measurement) =>
@@ -849,7 +848,7 @@
   </PromptFolderSectionRow>
 {/snippet}
 
-{#snippet collapsedSummaryRow({ row, rowHeightPx })}
+{#snippet collapsedSummaryRow({ row, rowId, rowHeightPx })}
   {@const summaryText = `${row.promptCount} ${
     row.promptCount === 1
       ? isTemplateFolder
@@ -859,30 +858,35 @@
         ? 'templates'
         : 'prompts'
   } hidden. Click to expand...`}
-  <!-- Category title indicator state is shared with this collapsed destination row. -->
-  {@const categoryIndicatorState = categoryDroppableState.getState(row.categoryId)}
-  <PromptFolderSectionRow
-    {rowHeightPx}
-    indentLevel={row.indentLevel}
-    contentClass="flex items-center justify-center text-center"
-    testId={`category-collapsed-summary-${row.categoryId}`}
+  <PromptDropTarget
+    getOptions={() => getPromptDividerDropOptions(rowId, row.categoryId, null)}
+    class="h-full"
   >
-    {#if categoryIndicatorState.isOver}
-      <PromptDivider
-        mode="add"
-        contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
-        indicatorState={categoryIndicatorState}
-        testId={`category-collapsed-drop-indicator-${row.categoryId}`}
-      />
-    {:else}
-      <InlineTextButton
-        text={summaryText}
-        size="default"
-        baseVariant="secondary"
-        onclick={() => onContentSectionToggle(row.contentOwnerId)}
-      />
-    {/if}
-  </PromptFolderSectionRow>
+    {#snippet children(targetState)}
+      <PromptFolderSectionRow
+        {rowHeightPx}
+        indentLevel={row.indentLevel}
+        contentClass="flex items-center justify-center text-center"
+        testId={`category-collapsed-summary-${row.categoryId}`}
+      >
+        {#if targetState.isOver}
+          <PromptDivider
+            mode="add"
+            contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
+            indicatorState={targetState}
+            testId={`category-collapsed-drop-indicator-${row.categoryId}`}
+          />
+        {:else}
+          <InlineTextButton
+            text={summaryText}
+            size="default"
+            baseVariant="secondary"
+            onclick={() => onContentSectionToggle(row.contentOwnerId)}
+          />
+        {/if}
+      </PromptFolderSectionRow>
+    {/snippet}
+  </PromptDropTarget>
 {/snippet}
 
 {#snippet categoryBottomCapRow({ row, rowHeightPx })}
@@ -895,13 +899,22 @@
 {/snippet}
 
 <!-- Renders the category boundary without add controls or a drag/drop target. -->
-{#snippet categorySeparatorRow({ row, rowHeightPx })}
+{#snippet categorySeparatorRow({ row, rowId, rowHeightPx })}
   <PromptFolderSectionRow
     {rowHeightPx}
     indentLevel={0}
     testId={`prompt-folder-category-separator-${row.categoryId}`}
   >
-    <PromptDivider mode="separator" />
+    <!-- Recreate the category action when reordering changes this divider's next category. -->
+    {#key row.nextCategoryId}
+      <PromptDivider
+        mode="separator"
+        contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
+        getCategoryDropOptions={() =>
+          getCategoryDividerDropOptions(rowId, row.nextCategoryId)}
+        testId={`category-divider-drop-${row.categoryId}`}
+      />
+    {/key}
   </PromptFolderSectionRow>
 {/snippet}
 
@@ -917,23 +930,27 @@
     indentLevel={row.indentLevel}
     testId={`prompt-folder-divider-${row.contentOwnerId}-${row.previousEntryId ?? 'initial'}`}
   >
-    <PromptDivider
-      disabled={isCreatingPrompt}
-      mode={showsActions ? 'add' : 'separator'}
-      contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
-      onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
-      getDropOptions={!showsActions
-        ? undefined
-        : () => getPromptDividerDropOptions(rowId, row.categoryId, row.previousEntryId)}
-      testId={showsActions
-        ? row.previousEntryId
-          ? `prompt-divider-add-after-${row.previousEntryId}`
-          : 'prompt-divider-add-initial'
-        : undefined}
-      indicatorState={row.categoryId !== null && row.previousEntryId === null
-        ? categoryDroppableState.getState(row.categoryId)
-        : undefined}
-    />
+    <!-- Recreate the shared action when category reordering changes this divider's boundary. -->
+    {#key row.categoryDropNextCategoryId}
+      <PromptDivider
+        disabled={isCreatingPrompt}
+        mode={showsActions ? 'add' : 'separator'}
+        contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
+        onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
+        getDropOptions={!showsActions
+          ? undefined
+          : () => getPromptDividerDropOptions(rowId, row.categoryId, row.previousEntryId)}
+        getCategoryDropOptions={!showsActions || row.categoryDropNextCategoryId === undefined
+          ? undefined
+          : () =>
+              getCategoryDividerDropOptions(rowId, row.categoryDropNextCategoryId ?? null)}
+        testId={showsActions
+          ? row.previousEntryId
+            ? `prompt-divider-add-after-${row.previousEntryId}`
+            : 'prompt-divider-add-initial'
+          : undefined}
+      />
+    {/key}
   </PromptFolderSectionRow>
 {/snippet}
 

@@ -5,12 +5,12 @@
   import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
-    PromptHandleDropPayload
+    CategoryDropPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
 
   /** Category drag-handle inputs supplied by the folder-style category row. */
   type Props = {
-    dragOptions: DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
+    dragOptions: DraggableOptions<CategoryDragPayload, CategoryDropPayload>
   }
 
   /** Draggable options for the category represented by this side rail. */
@@ -26,12 +26,12 @@
   const dragHandleAction: Action<HTMLButtonElement, unknown> = (node, options) => {
     const action = draggable(
       node,
-      options as DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
+      options as DraggableOptions<CategoryDragPayload, CategoryDropPayload>
     )
     return {
       update(nextOptions) {
         action.update(
-          nextOptions as DraggableOptions<CategoryDragPayload, PromptHandleDropPayload>
+          nextOptions as DraggableOptions<CategoryDragPayload, CategoryDropPayload>
         )
       },
       destroy: action.destroy

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { insertCategoryOrderEntry, moveCategoryOrderGroup } from '@shared/PromptFolder'
-import { resolvePromptHandleDropMove } from '@renderer/features/drag-drop/promptHandleDrag'
+import {
+  resolveCategoryDropPreviousCategoryId,
+  resolvePromptHandleDropMove
+} from '@renderer/features/drag-drop/promptHandleDrag'
 
 describe('category ordering and drag placement', () => {
   it('moves content between exact groups and places it at the requested position', () => {
@@ -48,6 +51,33 @@ describe('category ordering and drag placement', () => {
       { categoryId: 'category-b', entries: [{ kind: 'prompt', id: 'b' }] },
       { categoryId: 'category-a', entries: [{ kind: 'prompt', id: 'a' }] }
     ])
+  })
+
+  it('resolves category boundaries before headers and at the bottom', () => {
+    /** Stable category order shared by the boundary assertions. */
+    const categoryIds = ['category-a', 'category-b', 'category-c']
+
+    expect(
+      resolveCategoryDropPreviousCategoryId(categoryIds, 'category-c', 'category-a')
+    ).toBeNull()
+    expect(
+      resolveCategoryDropPreviousCategoryId(categoryIds, 'category-a', 'category-c')
+    ).toBe('category-b')
+    expect(resolveCategoryDropPreviousCategoryId(categoryIds, 'category-a', null)).toBe(
+      'category-c'
+    )
+  })
+
+  it('rejects category boundaries that preserve the current order', () => {
+    /** Stable category order used by the no-op boundary assertions. */
+    const categoryIds = ['category-a', 'category-b', 'category-c']
+
+    expect(
+      resolveCategoryDropPreviousCategoryId(categoryIds, 'category-b', 'category-c')
+    ).toBeUndefined()
+    expect(
+      resolveCategoryDropPreviousCategoryId(categoryIds, 'category-c', null)
+    ).toBeUndefined()
   })
 
   it('resolves a category change but rejects a same-position drop', () => {

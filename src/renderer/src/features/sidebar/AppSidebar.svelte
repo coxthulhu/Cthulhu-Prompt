@@ -13,9 +13,8 @@
   } from '@renderer/features/drag-drop/promptFolderDrag'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
-    isPromptHandleDragPayload,
+    type PromptHandleDragPayload,
     type PromptHandleDropPayload,
-    type PromptTreeEntryDragPayload
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import { resolvePromptHandleDropMove } from '@renderer/features/drag-drop/promptHandleDrag'
   import type { ScreenId } from '@renderer/app/screens'
@@ -627,7 +626,7 @@
       position: 'after'
     }),
     canDrop: (payload) => {
-      const entryPayload = payload as PromptTreeEntryDragPayload
+      const entryPayload = payload as PromptHandleDragPayload
       const allFolders = promptFolderQuery.data
       const destinationFolder = allFolders.find((folder) => folder.id === item.id)
       if (!destinationFolder) return false
@@ -635,9 +634,6 @@
         folderId: item.id,
         targetEntryId: null,
         position: 'after'
-      }
-      if (!isPromptHandleDragPayload(entryPayload)) {
-        return false
       }
       const sourceFolder = allFolders.find(
         (folder) => folder.id === entryPayload.sourceFolderId

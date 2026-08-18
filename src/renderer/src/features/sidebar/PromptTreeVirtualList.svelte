@@ -14,6 +14,8 @@
         rootFolder: PromptFolder
         indentCount: number
         endsVisibleBranch: boolean
+        /** Whether this row owns the unique prompt drop target at tree start. */
+        isFirstTreeRow: boolean
       }
     | {
         kind: 'prompt'
@@ -22,6 +24,8 @@
         promptId: string
         indentCount: number
         isLastRow: boolean
+        /** Whether this row owns the unique prompt drop target at tree start. */
+        isFirstTreeRow: boolean
       }
     | {
         kind: 'empty-state'

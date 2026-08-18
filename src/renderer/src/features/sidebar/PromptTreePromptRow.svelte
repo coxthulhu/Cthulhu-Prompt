@@ -22,6 +22,8 @@
     isPromptDragActive: boolean
     indentCount?: number
     isLastRow?: boolean
+    /** Whether this prompt owns the unique tree-start prompt boundary. */
+    isFirstTreeRow?: boolean
     selectionControl?: SelectionControl
     getPromptDroppableOptions?: () => PromptRowDropOptions
     promptDragOptions?: PromptRowDragOptions
@@ -39,6 +41,7 @@
     isPromptDragActive,
     indentCount = 0,
     isLastRow = false,
+    isFirstTreeRow = false,
     selectionControl,
     getPromptDroppableOptions,
     promptDragOptions,
@@ -123,6 +126,7 @@
     getOptions={getPromptDroppableOptions}
     class="sidebarPromptTreeSettingsRow"
     style={rowStyle}
+    data-first-tree-row={isFirstTreeRow ? 'true' : undefined}
   >
     {@render promptStatusIndicator()}
     <button
@@ -140,7 +144,11 @@
     </button>
   </PromptDropTarget>
 {:else}
-  <div class="sidebarPromptTreeSettingsRow" style={rowStyle}>
+  <div
+    class="sidebarPromptTreeSettingsRow"
+    style={rowStyle}
+    data-first-tree-row={isFirstTreeRow ? 'true' : undefined}
+  >
     {@render promptStatusIndicator()}
     {@render promptButton()}
   </div>

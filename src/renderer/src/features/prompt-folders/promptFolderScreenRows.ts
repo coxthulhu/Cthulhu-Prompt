@@ -29,12 +29,16 @@ export type PromptFolderScreenPromptEditorRow = PromptFolderScreenContentRow & {
 export type PromptFolderScreenDividerRow = PromptFolderScreenContentRow & {
   kind: 'prompt-divider'
   previousEntryId: string | null
+  /** Category boundary shared by the final Uncategorized prompt divider when present. */
+  categoryDropNextCategoryId?: string | null
 }
 
 /** Plain noninteractive divider rendered after one category card. */
 export type PromptFolderScreenCategorySeparatorRow = {
   kind: 'category-separator'
   categoryId: string
+  /** Category immediately after this divider, or null for the bottom boundary. */
+  nextCategoryId: string | null
 }
 
 /** Exact category placement selected by a divider. */
@@ -106,7 +110,7 @@ export const buildPromptFolderScreenRows = ({
   /** Total visible active content used by the empty-root decision. */
   let visiblePromptCount = 0
 
-  for (const group of groups) {
+  for (const [groupIndex, group] of groups.entries()) {
     /** Loaded content IDs retained in this group order. */
     const groupPromptIds = group.entries
       .filter((entry) => promptIdSet.has(entry.id))
@@ -116,6 +120,12 @@ export const buildPromptFolderScreenRows = ({
     const contentOwnerId = group.categoryId ?? rootFolder.id
     /** Whether this group is the unheaded root-level Uncategorized area. */
     const isUncategorized = group.categoryId === null
+    /** Group immediately after the current group in authoritative category order. */
+    const nextGroup = groups[groupIndex + 1]
+    /** First category boundary shared by the final Uncategorized prompt divider. */
+    const categoryDropNextCategoryId = isUncategorized
+      ? (nextGroup?.categoryId ?? undefined)
+      : undefined
 
     if (!isUncategorized) {
       /** Non-null category ID established by the Uncategorized branch. */
@@ -140,7 +150,11 @@ export const buildPromptFolderScreenRows = ({
           categoryId,
           indentLevel: 0
         })
-        rows.push({ kind: 'category-separator', categoryId })
+        rows.push({
+          kind: 'category-separator',
+          categoryId,
+          nextCategoryId: nextGroup?.categoryId ?? null
+        })
         continue
       }
     }
@@ -150,7 +164,10 @@ export const buildPromptFolderScreenRows = ({
       contentOwnerId,
       categoryId: group.categoryId,
       previousEntryId: null,
-      indentLevel: isUncategorized ? 0 : 1
+      indentLevel: isUncategorized ? 0 : 1,
+      ...(categoryDropNextCategoryId && groupPromptIds.length === 0
+        ? { categoryDropNextCategoryId }
+        : {})
     })
     for (const [promptIndex, promptId] of groupPromptIds.entries()) {
       rows.push({
@@ -167,7 +184,10 @@ export const buildPromptFolderScreenRows = ({
         contentOwnerId,
         categoryId: group.categoryId,
         previousEntryId: promptId,
-        indentLevel: isUncategorized ? 0 : 1
+        indentLevel: isUncategorized ? 0 : 1,
+        ...(categoryDropNextCategoryId && promptIndex === groupPromptIds.length - 1
+          ? { categoryDropNextCategoryId }
+          : {})
       })
     }
     if (!isUncategorized) {
@@ -177,7 +197,11 @@ export const buildPromptFolderScreenRows = ({
         categoryId: group.categoryId,
         indentLevel: 0
       })
-      rows.push({ kind: 'category-separator', categoryId: contentOwnerId })
+      rows.push({
+        kind: 'category-separator',
+        categoryId: contentOwnerId,
+        nextCategoryId: nextGroup?.categoryId ?? null
+      })
     }
   }
 
