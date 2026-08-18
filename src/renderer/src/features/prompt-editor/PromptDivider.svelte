@@ -41,7 +41,7 @@
 {#snippet dividerContent({ isOver = false, isBlocked = false } = {})}
   {@const dividerText = isOver ? 'Move Here' : `Add ${contentLabel}`}
   <div
-    class="promptDividerRow grid items-center"
+    class="promptDividerRow grid w-full items-center"
     data-drop-over={isOver ? 'true' : 'false'}
     data-drop-blocked={isBlocked ? 'true' : undefined}
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
