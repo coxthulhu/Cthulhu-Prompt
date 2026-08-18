@@ -7,17 +7,22 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { PromptStatus } from '@shared/Prompt'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
-import { folderEntryRef, promptEntryRef } from '@shared/OrderContainer'
+import { folderEntryRef, promptEntryRef, promptTemplateEntryRef } from '@shared/OrderContainer'
 import { getFs } from '../fs-provider'
-import { serializePromptMarkdown } from '../Persistence/PromptFrontmatter'
+import {
+  serializePromptMarkdown,
+  serializePromptTemplateMarkdown
+} from '../Persistence/PromptFrontmatter'
 import example1PromptSource from '../BundledPrompts/Example1.md?raw'
 import example2PromptSource from '../BundledPrompts/Example2.md?raw'
+import exampleTemplateSource from '../BundledPrompts/ExampleTemplate.md?raw'
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
+  PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolveActivePromptFolderName,
   resolveCategoriesDirectoryPath,
@@ -31,6 +36,8 @@ const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
 // Ordered bundled prompt sources used when initializing a workspace with examples.
 const BUNDLED_PROMPT_SOURCES = [example1PromptSource, example2PromptSource]
+// Ordered bundled template sources used when initializing a workspace with examples.
+const BUNDLED_TEMPLATE_SOURCES = [exampleTemplateSource]
 // Default on-disk directory name for the template folder created with each workspace.
 const DEFAULT_TEMPLATE_FOLDER_NAME = 'MyTemplates'
 // Default display name for the template folder created with each workspace.
@@ -163,8 +170,11 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   return promptFolderId
 }
 
-/** Creates the empty default template folder and returns its persisted folder ID. */
-const writeMyTemplatesFolder = (workspacePath: string): string => {
+/** Creates the default template folder and returns its persisted folder ID. */
+const writeMyTemplatesFolder = (
+  workspacePath: string,
+  includeExampleTemplates: boolean
+): string => {
   // Filesystem used to persist the default template folder.
   const fs = getFs()
   // Root path for the default template folder.
@@ -175,6 +185,21 @@ const writeMyTemplatesFolder = (workspacePath: string): string => {
   )
   // Unique identity persisted for this newly created template folder.
   const templateFolderId = compactGuid(randomUUID())
+  const now = getCurrentIsoSecondTimestamp()
+  const templates = includeExampleTemplates
+    ? BUNDLED_TEMPLATE_SOURCES.map((source) => {
+        const bundledTemplate = matter(source, {})
+
+        return {
+          id: compactGuid(randomUUID()),
+          title: bundledTemplate.data.title as string,
+          fallbackTitle: '',
+          createdAt: now,
+          modifiedAt: now,
+          templateText: bundledTemplate.content.replace(/\r?\n$/, '')
+        }
+      })
+    : []
 
   fs.mkdirSync(path.join(templateFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), {
     recursive: true
@@ -200,6 +225,19 @@ const writeMyTemplatesFolder = (workspacePath: string): string => {
     ),
     'utf8'
   )
+
+  for (const template of templates) {
+    const templateStem = buildPromptStem(template.title, template.id, false)
+    fs.writeFileSync(
+      path.join(
+        templateFolderPath,
+        `${templateStem}${PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX}`
+      ),
+      serializePromptTemplateMarkdown(template),
+      'utf8'
+    )
+  }
+
   // Side effect: initialize template category-view ordering at the template root.
   fs.writeFileSync(
     resolvePromptFolderCategoryOrderPath(
@@ -207,7 +245,18 @@ const writeMyTemplatesFolder = (workspacePath: string): string => {
       DEFAULT_TEMPLATE_FOLDER_NAME,
       'template'
     ),
-    JSON.stringify({ categories: [{ categoryId: null, entries: [] }] }, null, 2),
+    JSON.stringify(
+      {
+        categories: [
+          {
+            categoryId: null,
+            entries: templates.map((template) => promptTemplateEntryRef(template.id))
+          }
+        ]
+      },
+      null,
+      2
+    ),
     'utf8'
   )
 
@@ -260,7 +309,7 @@ export const createWorkspace = async (
 
     rootFolderIds.push(
       writeMyPromptsFolder(workspacePath, includeExamplePrompts),
-      writeMyTemplatesFolder(workspacePath)
+      writeMyTemplatesFolder(workspacePath, includeExamplePrompts)
     )
     writeWorkspaceFolderOrderFile(workspacePath, rootFolderIds)
 

@@ -383,7 +383,9 @@ describe('Home Screen', () => {
       )
     })
 
-    test('adds example prompts when setting up a new workspace', async ({ testSetup }) => {
+    test('adds example prompts and a template when setting up a new workspace', async ({
+      testSetup
+    }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-with-examples', autoSetup: false }
       })
@@ -442,12 +444,14 @@ describe('Home Screen', () => {
       ).toContainText('My Templates')
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
-      ).toContainText('0 templates')
+      ).toContainText('1 template')
       await mainWindow
         .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
         .nth(1)
         .click()
-      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(0)
+      const exampleTemplate = await testHelpers.verifyPromptVisible('Example Template')
+      expect(exampleTemplate.found).toBe(true)
+      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(1)
     })
 
     test('creates a blank My Prompts folder when examples are disabled', async ({ testSetup }) => {
