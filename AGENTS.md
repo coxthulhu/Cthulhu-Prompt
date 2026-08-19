@@ -7,7 +7,8 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Major Application Components
 
 - **App Activity Bar** — The persistent icon rail used to navigate between available screens.
-- **App Sidebar** — The collapsible, resizable workspace panel used to select, create, reorder, and navigate prompt folders, prompt template folders, prompts, and prompt templates.
+- **App Sidebar** — The collapsible, resizable workspace panel used to select root prompt folders or root prompt template folders, then create, reorder, and navigate to the prompts or templates within them.
+- **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a root prompt/template folder.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
 - **Prompt Folders Screen** — Manages and edits prompt folders, categories, prompts, and prompt templates.
 - **Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
@@ -50,25 +51,15 @@ When adding a new major application component or screen, add it to this list wit
 - `tests/playwright/` — End‑to‑end UI tests; helpers/fixtures under `tests/helpers` and `tests/fixtures`.
 - Assets and packaging: `resources/`, `build/`, `electron-builder.yml`.
 
-## Build, Test, and Development Commands
+## Development Scripts
 
-For Codex lint + typecheck, format, Vitest, and Playwright runs, use the WSL wrapper scripts. They run from WSL, change to the repository root, and call Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds).
-Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
+Run these WSL wrappers directly from the repository root. They switch to the repository root and invoke the corresponding Windows command. For Codex tool calls, use `sandbox_permissions="require_escalated"` and a 300000 ms timeout. Invoke the wrapper as the first command; do not run it through `bash`, `sh`, `timeout`, or a compound shell command.
 
-### Windows Command Execution
-
-- When asked to open a file, folder, or workspace in VS Code, do it from Windows so it opens in the user's Windows VS Code instance.
-- Use `./scripts/wsl-vscode.sh [path [line [column]]]` to open VS Code. With no arguments it opens the repository; relative paths resolve from the repository root. Examples: `./scripts/wsl-vscode.sh src/main/index.ts` and `./scripts/wsl-vscode.sh src/main/index.ts 42 5`.
-- Use `./scripts/wsl-vscode.sh --diff left-path right-path` to open two files in VS Code's diff editor. Both paths may be absolute or relative to the repository root.
-- Direct Windows commands that do not have a wrapper must use `cmd.exe` with escalated permissions and a short justification.
-- The WSL wrapper scripts cross into Windows through WSL interoperability and must also run with `sandbox_permissions="require_escalated"`.
-- Invoke each WSL wrapper directly as the first command, for example `./scripts/wsl-playwright.sh ...`. Do not invoke it through `bash`, `sh`, `timeout`, or a compound shell command because those forms can bypass its approved command prefix and leave Windows interoperability blocked by the Linux sandbox.
-
-### Common npm Scripts
-
-- Lint + Typecheck (Windows interop): use `./scripts/wsl-linttypecheck.sh`; keep `timeout_ms` at 300000.
-- Format (Windows interop): use `./scripts/wsl-format.sh`; keep `timeout_ms` at 300000. This applies Prettier styling to the repository.
-- Unit/integration tests: use `./scripts/wsl-vitest.sh`; keep `timeout_ms` at 300000.
+- `./scripts/wsl-format.sh` — Run Prettier across the repository with `npm run format`.
+- `./scripts/wsl-linttypecheck.sh` — Run ESLint and TypeScript checks with `npm run lint` followed by `npm run typecheck`.
+- `./scripts/wsl-vitest.sh [arguments...]` — Run the Vitest suite with `npm run test:vitest`; any arguments are forwarded to Vitest.
+- `./scripts/wsl-playwright.sh [arguments...]` — Run Playwright with `npm run test:playwright`; any arguments are forwarded to Playwright. See the Playwright section below for examples and additional rules.
+- `./scripts/wsl-vscode.sh [path [line [column]]]` — Open the repository, a file, or a specific file position in Windows VS Code. Relative paths resolve from the repository root. Use `./scripts/wsl-vscode.sh --diff left-path right-path` to open two files in the VS Code diff editor.
 
 ### Running Playwright (Windows)
 
