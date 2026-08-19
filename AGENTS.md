@@ -46,6 +46,8 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 ### Windows Command Execution
 
 - When asked to open a file, folder, or workspace in VS Code, do it from Windows so it opens in the user's Windows VS Code instance.
+- Use `./scripts/wsl-vscode.sh [path [line [column]]]` to open VS Code. With no arguments it opens the repository; relative paths resolve from the repository root. Examples: `./scripts/wsl-vscode.sh src/main/index.ts` and `./scripts/wsl-vscode.sh src/main/index.ts 42 5`.
+- Use `./scripts/wsl-vscode.sh --diff left-path right-path` to open two files in VS Code's diff editor. Both paths may be absolute or relative to the repository root.
 - Direct Windows commands that do not have a wrapper must use `cmd.exe` with escalated permissions and a short justification.
 - The WSL wrapper scripts cross into Windows through WSL interoperability and must also run with `sandbox_permissions="require_escalated"`.
 - Invoke each WSL wrapper directly as the first command, for example `./scripts/wsl-playwright.sh ...`. Do not invoke it through `bash`, `sh`, `timeout`, or a compound shell command because those forms can bypass its approved command prefix and leave Windows interoperability blocked by the Linux sandbox.
