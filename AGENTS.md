@@ -40,7 +40,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Build, Test, and Development Commands
 
-For Codex lint + typecheck, Vitest, and Playwright runs, use the WSL wrapper scripts. They run from WSL, change to the repository root, and call Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds).
+For Codex lint + typecheck, format, Vitest, and Playwright runs, use the WSL wrapper scripts. They run from WSL, change to the repository root, and call Windows `cmd.exe` internally. When invoking these commands via the tool, set `timeout_ms` to **300000** (300 seconds).
 Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escalated permissions in the tool call to allow network access.
 
 ### Windows Command Execution
@@ -55,7 +55,7 @@ Git commands that contact a remote (e.g., `git pull`, `git fetch`) require escal
 ### Common npm Scripts
 
 - Lint + Typecheck (Windows interop): use `./scripts/wsl-linttypecheck.sh`; keep `timeout_ms` at 300000.
-- Format: `npm run format` — can run in WSL; applies Prettier styling.
+- Format (Windows interop): use `./scripts/wsl-format.sh`; keep `timeout_ms` at 300000. This applies Prettier styling to the repository.
 - Unit/integration tests: use `./scripts/wsl-vitest.sh`; keep `timeout_ms` at 300000.
 
 ### Running Playwright (Windows)
