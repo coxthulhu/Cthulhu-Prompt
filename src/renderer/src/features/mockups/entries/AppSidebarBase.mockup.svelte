@@ -8,65 +8,65 @@
     ExternalLink,
     Folder,
     MoreHorizontal,
-    Plus
+    Plus,
+    Settings
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
   type MockPrompt = {
     id: string
-    kind: 'prompt'
     title: string
   }
 
-  type MockFolder = {
+  type MockCategory = {
     id: string
-    kind: 'folder'
     title: string
-    entries: MockEntry[]
+    prompts: MockPrompt[]
   }
 
-  type MockEntry = MockPrompt | MockFolder
-
-  const prompt = (id: string, title: string): MockPrompt => ({ id, kind: 'prompt', title })
+  const prompt = (id: string, title: string): MockPrompt => ({ id, title })
   const indentLevels = (indentCount: number): number[] =>
     Array.from({ length: indentCount }, (_, index) => index)
 
-  const entries: MockEntry[] = [
+  const uncategorizedPrompts: MockPrompt[] = [
     prompt('map-implementation', 'Map the current implementation'),
     prompt('clarify-requirements', 'Clarify product requirements'),
     prompt('draft-plan', 'Draft an implementation plan'),
     prompt('identify-edge-cases', 'Identify edge cases'),
     prompt('acceptance-criteria', 'Define acceptance criteria'),
-    prompt('review-data-flow', 'Review the data flow'),
-    {
-      id: 'research',
-      kind: 'folder',
-      title: 'Research',
-      entries: [
-        prompt('compare-patterns', 'Compare sidebar patterns'),
-        {
-          id: 'verification',
-          kind: 'folder',
-          title: 'Verification',
-          entries: [prompt('verify-interactions', 'Verify folder interactions')]
-        }
-      ]
-    },
-    prompt('prepare-ui-copy', 'Prepare the UI copy'),
-    prompt('audit-accessibility', 'Audit accessibility behavior'),
-    prompt('regression-checklist', 'Create a regression checklist'),
-    prompt('performance-risks', 'Inspect performance risks'),
-    prompt('architecture-decisions', 'Document architecture decisions'),
-    prompt('error-handling', 'Review error handling'),
-    prompt('keyboard-navigation', 'Validate keyboard navigation'),
-    prompt('responsive-behavior', 'Check responsive behavior'),
-    prompt('test-coverage', 'Summarize test coverage'),
-    prompt('release-notes', 'Prepare release notes'),
-    prompt('review-diff', 'Review the final diff'),
-    prompt('implementation-handoff', 'Write the implementation handoff')
+    prompt('review-data-flow', 'Review the data flow')
   ]
 
-  let expandedFolderIds = $state<Record<string, boolean>>({
+  const categories: MockCategory[] = [
+    {
+      id: 'research',
+      title: 'Research',
+      prompts: [
+        prompt('compare-patterns', 'Compare sidebar patterns'),
+        prompt('prepare-ui-copy', 'Prepare the UI copy'),
+        prompt('audit-accessibility', 'Audit accessibility behavior')
+      ]
+    },
+    {
+      id: 'verification',
+      title: 'Verification',
+      prompts: [
+        prompt('verify-interactions', 'Verify folder interactions'),
+        prompt('regression-checklist', 'Create a regression checklist'),
+        prompt('performance-risks', 'Inspect performance risks'),
+        prompt('architecture-decisions', 'Document architecture decisions'),
+        prompt('error-handling', 'Review error handling'),
+        prompt('keyboard-navigation', 'Validate keyboard navigation'),
+        prompt('responsive-behavior', 'Check responsive behavior'),
+        prompt('test-coverage', 'Summarize test coverage'),
+        prompt('release-notes', 'Prepare release notes'),
+        prompt('review-diff', 'Review the final diff'),
+        prompt('implementation-handoff', 'Write the implementation handoff')
+      ]
+    }
+  ]
+
+  let expandedCategoryIds = $state<Record<string, boolean>>({
     research: true,
     verification: true
   })
@@ -102,6 +102,9 @@
       : (promptTreeScrollTopPx / promptTreeMaxScrollTopPx) * scrollbarMaxThumbTopPx
   )
   const isScrollbarNeeded = $derived(promptTreeScrollHeightPx > promptTreeViewportHeightPx)
+  const areAllCategoriesCollapsed = $derived(
+    categories.every((category) => expandedCategoryIds[category.id] === false)
+  )
 
   const measurePromptTree = () => {
     if (!promptTreeElement) return
@@ -114,7 +117,7 @@
     promptTreeElement = node
     measurePromptTree()
 
-    // Side effect: keep the cloned overlay scrollbar sized to its local scroll viewport.
+    // Side effect: keep the local overlay scrollbar sized to the mock tree viewport.
     const resizeObserver = new ResizeObserver(measurePromptTree)
     resizeObserver.observe(node)
 
@@ -177,16 +180,16 @@
     isScrollbarDragging = false
   }
 
-  const toggleFolder = (folderId: string) => {
-    expandedFolderIds = {
-      ...expandedFolderIds,
-      [folderId]: !expandedFolderIds[folderId]
-    }
+  const setCategoryExpanded = (categoryId: string, isExpanded: boolean) => {
+    expandedCategoryIds = { ...expandedCategoryIds, [categoryId]: isExpanded }
     window.queueMicrotask(measurePromptTree)
   }
 
-  const expandAllFolders = () => {
-    expandedFolderIds = { research: true, verification: true }
+  const toggleAllCategories = () => {
+    const nextExpanded = areAllCategoriesCollapsed
+    expandedCategoryIds = Object.fromEntries(
+      categories.map((category) => [category.id, nextExpanded])
+    )
     window.queueMicrotask(measurePromptTree)
   }
 </script>
@@ -197,7 +200,7 @@
   onclick: (() => void) | undefined = undefined
 )}
   <button class="icon-action" type="button" aria-label={label} title={label} {onclick}>
-    <Icon size={16} aria-hidden="true" />
+    <Icon size={20} aria-hidden="true" />
   </button>
 {/snippet}
 
@@ -209,63 +212,63 @@
   </span>
 {/snippet}
 
-{#snippet TreeEntries(treeEntries: MockEntry[], indentCount: number)}
-  {#each treeEntries as entry, entryIndex (entry.id)}
-    {@const isLastRow = entryIndex === treeEntries.length - 1}
-    {#if entry.kind === 'folder'}
-      <div
-        class="tree-folder-row"
-        style={`--tree-indent-count:${indentCount};`}
-        data-indented={indentCount > 0 ? 'true' : undefined}
+{#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean)}
+  <div class="tree-prompt-row" style={`--tree-indent-count:${indentCount};`}>
+    <button
+      class="tree-prompt-button"
+      data-active={selectedPromptId === promptEntry.id ? 'true' : 'false'}
+      type="button"
+      aria-current={selectedPromptId === promptEntry.id ? 'true' : undefined}
+      onclick={() => {
+        selectedPromptId = promptEntry.id
+      }}
+    >
+      {@render TreeGutter(indentCount, isLastRow)}
+      <span class="tree-label">{promptEntry.title}</span>
+    </button>
+  </div>
+{/snippet}
+
+{#snippet CategoryRow(category: MockCategory, isLastCategory: boolean)}
+  <div class="tree-category-row">
+    <div class="tree-category-content">
+      <button
+        class="tree-category-toggle"
+        type="button"
+        aria-label={`${expandedCategoryIds[category.id] ? 'Collapse' : 'Expand'} category ${category.title}`}
+        aria-expanded={expandedCategoryIds[category.id]}
+        onclick={() => setCategoryExpanded(category.id, !expandedCategoryIds[category.id])}
       >
-        <div class="tree-folder-content">
-          <button
-            class="tree-folder-toggle"
-            type="button"
-            aria-label={`${expandedFolderIds[entry.id] ? 'Collapse' : 'Expand'} ${entry.title}`}
-            aria-expanded={expandedFolderIds[entry.id]}
-            onclick={() => toggleFolder(entry.id)}
-          >
-            {#if indentCount > 0}
-              {@render TreeGutter(indentCount, isLastRow)}
-            {/if}
-            <span class="tree-chevron">
-              {#if expandedFolderIds[entry.id]}
-                <ChevronDown size={20} aria-hidden="true" />
-              {:else}
-                <ChevronRight size={20} aria-hidden="true" />
-              {/if}
-            </span>
-            <span class="tree-label">{entry.title}</span>
-          </button>
-
-          <div class="tree-folder-actions">
-            {@render IconAction(MoreHorizontal, `Folder options for ${entry.title}`)}
-            {@render IconAction(ArrowRight, `Open ${entry.title}`)}
-          </div>
-        </div>
-      </div>
-
-      {#if expandedFolderIds[entry.id]}
-        {@render TreeEntries(entry.entries, indentCount + 1)}
-      {/if}
-    {:else}
-      <div class="tree-prompt-row" style={`--tree-indent-count:${indentCount};`}>
-        <button
-          class="tree-prompt-button"
-          data-active={selectedPromptId === entry.id ? 'true' : 'false'}
-          type="button"
-          aria-current={selectedPromptId === entry.id ? 'true' : undefined}
-          onclick={() => {
-            selectedPromptId = entry.id
-          }}
+        <span
+          class="tree-chevron"
+          data-expanded={expandedCategoryIds[category.id] ? 'true' : 'false'}
         >
-          {@render TreeGutter(indentCount, isLastRow)}
-          <span class="tree-label">{entry.title}</span>
+          <ChevronRight size={20} aria-hidden="true" />
+        </span>
+        <Folder class="tree-category-icon" size={16} aria-hidden="true" />
+        <span class="tree-label">{category.title}</span>
+      </button>
+
+      <div class="tree-category-actions">
+        <button
+          class="tree-category-action"
+          type="button"
+          aria-label={`Open category ${category.title}`}
+          title={`Open category ${category.title}`}
+        >
+          <ArrowRight size={16} aria-hidden="true" />
         </button>
       </div>
-    {/if}
-  {/each}
+    </div>
+  </div>
+
+  {#if expandedCategoryIds[category.id]}
+    {#each category.prompts as promptEntry, promptIndex (promptEntry.id)}
+      {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1)}
+    {/each}
+  {:else if isLastCategory}
+    <span class="collapsed-last-category-marker" aria-hidden="true"></span>
+  {/if}
 {/snippet}
 
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
@@ -277,6 +280,7 @@
           alt="Cthulhu Prompt icon"
           title="Made in R'lyeh"
           draggable="false"
+          ondragstart={(event) => event.preventDefault()}
         />
       </div>
       <div class="workspace-copy">
@@ -316,69 +320,77 @@
 
     <div class="separator"></div>
 
-    <section class="prompts-section" aria-labelledby="mock-sidebar-prompts-title">
-      <header class="prompts-header">
-        <h2 id="mock-sidebar-prompts-title">Prompts</h2>
-        <div class="prompts-actions">
-          {@render IconAction(Plus, 'Add Prompt')}
-          {@render IconAction(Check, 'Show Completed Prompts')}
-          {@render IconAction(ChevronsDownUp, 'Expand All Prompt Folders', expandAllFolders)}
-          {@render IconAction(MoreHorizontal, 'Selected Prompt Folder Actions')}
-        </div>
-      </header>
+    <div class="prompts-header">
+      <div class="prompts-actions">
+        {@render IconAction(Settings, 'Show Folder Overview')}
+        {@render IconAction(Check, 'Show Completed Prompts')}
+        {@render IconAction(
+          ChevronsDownUp,
+          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories',
+          toggleAllCategories
+        )}
+        {@render IconAction(Plus, 'Add Prompt')}
+        {@render IconAction(MoreHorizontal, 'Selected Prompt Folder Actions')}
+      </div>
+    </div>
+
+    <div
+      class="prompt-tree-shell"
+      role="presentation"
+      style={`--mock-scrollbar-width:${SCROLLBAR_WIDTH_PX}px;`}
+      onmouseenter={() => {
+        isPromptTreeHovered = true
+      }}
+      onmouseleave={() => {
+        isPromptTreeHovered = false
+      }}
+    >
+      <div
+        class="prompt-tree"
+        bind:this={promptTreeElement}
+        use:observePromptTree
+        onscroll={measurePromptTree}
+      >
+        {#each uncategorizedPrompts as promptEntry, promptIndex (promptEntry.id)}
+          {@render PromptRow(
+            promptEntry,
+            0,
+            promptIndex === uncategorizedPrompts.length - 1
+          )}
+        {/each}
+        {#each categories as category, categoryIndex (category.id)}
+          {@render CategoryRow(category, categoryIndex === categories.length - 1)}
+        {/each}
+        <div class="tree-bottom-spacer" aria-hidden="true"></div>
+      </div>
 
       <div
-        class="prompt-tree-shell"
-        role="presentation"
-        style={`--mock-scrollbar-width:${SCROLLBAR_WIDTH_PX}px;`}
-        onmouseenter={() => {
-          isPromptTreeHovered = true
-        }}
-        onmouseleave={() => {
-          isPromptTreeHovered = false
-        }}
+        class="mock-overlay-scrollbar"
+        data-visible={isScrollbarNeeded && (isPromptTreeHovered || isScrollbarDragging)
+          ? 'true'
+          : 'false'}
+        aria-hidden="true"
       >
         <div
-          class="prompt-tree"
-          bind:this={promptTreeElement}
-          use:observePromptTree
-          onscroll={measurePromptTree}
-        >
-          <div class="root-folder-row">
-            <button type="button">Product Work</button>
-          </div>
-          {@render TreeEntries(entries, 0)}
-          <div class="tree-bottom-spacer" aria-hidden="true"></div>
-        </div>
-
-        <div
-          class="mock-overlay-scrollbar"
-          data-visible={isScrollbarNeeded && (isPromptTreeHovered || isScrollbarDragging)
-            ? 'true'
-            : 'false'}
-          aria-hidden="true"
+          class="mock-scrollbar-track"
+          role="button"
+          tabindex="-1"
+          onpointerdown={handleScrollbarTrackPointerDown}
         >
           <div
-            class="mock-scrollbar-track"
+            class="mock-scrollbar-thumb"
+            class:active={isScrollbarDragging}
             role="button"
             tabindex="-1"
-            onpointerdown={handleScrollbarTrackPointerDown}
-          >
-            <div
-              class="mock-scrollbar-thumb"
-              class:active={isScrollbarDragging}
-              role="button"
-              tabindex="-1"
-              style={`height:${scrollbarThumbHeightPx}px; transform:translate3d(0, ${scrollbarThumbTopPx}px, 0);`}
-              onpointerdown={handleScrollbarThumbPointerDown}
-              onpointermove={handleScrollbarThumbPointerMove}
-              onpointerup={handleScrollbarThumbPointerUp}
-              onpointercancel={handleScrollbarThumbPointerUp}
-            ></div>
-          </div>
+            style={`height:${scrollbarThumbHeightPx}px; transform:translate3d(0, ${scrollbarThumbTopPx}px, 0);`}
+            onpointerdown={handleScrollbarThumbPointerDown}
+            onpointermove={handleScrollbarThumbPointerMove}
+            onpointerup={handleScrollbarThumbPointerUp}
+            onpointercancel={handleScrollbarThumbPointerUp}
+          ></div>
         </div>
       </div>
-    </section>
+    </div>
 
     <div class="resize-handle" aria-hidden="true"></div>
   </aside>
@@ -485,6 +497,7 @@
     flex: 0 0 18px;
     height: 18px;
     justify-content: center;
+    margin-left: 2px;
     padding: 0;
     width: 18px;
   }
@@ -495,7 +508,8 @@
   }
 
   .separator {
-    background: var(--ui-neutral-muted-border);
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    box-sizing: border-box;
     flex: 0 0 1px;
     height: 1px;
     width: 100%;
@@ -577,29 +591,13 @@
     justify-content: center;
   }
 
-  .prompts-section {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    min-height: 0;
-  }
-
   .prompts-header {
     align-items: center;
     display: flex;
-    flex: 0 0 40px;
-    gap: 8px;
-    justify-content: space-between;
+    flex: 0 0 auto;
+    justify-content: center;
     min-height: 40px;
-    padding: 4px 8px 0 12px;
-  }
-
-  .prompts-header h2 {
-    color: var(--ui-normal-text);
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 20px;
-    margin: 0;
+    padding: 8px;
   }
 
   .prompts-actions {
@@ -617,11 +615,11 @@
     color: var(--ui-secondary-icon-glyph);
     cursor: pointer;
     display: inline-flex;
-    flex: 0 0 28px;
-    height: 28px;
+    flex: 0 0 36px;
+    height: 36px;
     justify-content: center;
     padding: 0;
-    width: 28px;
+    width: 36px;
   }
 
   .icon-action:hover,
@@ -649,42 +647,47 @@
     display: none;
   }
 
-  .root-folder-row,
   .tree-prompt-row,
-  .tree-folder-row {
+  .tree-category-row {
     box-sizing: border-box;
     padding-block: 1px;
     width: 100%;
   }
 
-  .root-folder-row button,
   .tree-prompt-button {
+    align-items: center;
     background: transparent;
     border: 0;
     box-sizing: border-box;
     color: var(--ui-hoverable-text);
     cursor: pointer;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: calc(5px + 12px * var(--tree-indent-count)) minmax(0, 1fr);
     height: 30px;
     min-width: 0;
+    padding: 0 22px 0 0;
     text-align: left;
     width: 100%;
   }
 
-  .root-folder-row button {
-    font-size: 14px;
-    font-weight: 600;
-    padding: 0 22px 0 13px;
-  }
-
-  .root-folder-row button:hover,
   .tree-prompt-button:hover,
   .tree-prompt-button:focus-visible,
-  .tree-folder-content:hover {
+  .tree-category-content:hover {
     background: var(--ui-neutral-normal-surface);
     color: var(--ui-normal-text);
   }
 
-  .tree-folder-content {
+  .tree-prompt-button[data-active='true'] {
+    background: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .tree-prompt-button[data-active='true']:hover {
+    background: var(--ui-neutral-selection-surface);
+  }
+
+  .tree-category-content {
     align-items: center;
     background: transparent;
     color: var(--ui-hoverable-text);
@@ -694,14 +697,15 @@
     width: 100%;
   }
 
-  .tree-folder-toggle {
+  .tree-category-toggle {
     align-items: center;
     background: transparent;
     border: 0;
     color: inherit;
     cursor: pointer;
-    display: flex;
+    display: grid;
     gap: 8px;
+    grid-template-columns: 24px 18px minmax(0, 1fr);
     height: 100%;
     inset: 0;
     min-width: 0;
@@ -711,22 +715,25 @@
     width: 100%;
   }
 
-  .tree-folder-row[data-indented='true'] .tree-folder-toggle {
-    display: grid;
-    grid-template-columns:
-      calc(5px + 12px * var(--tree-indent-count)) 20px minmax(0, 1fr);
-    padding-left: 0;
-  }
-
   .tree-chevron {
     align-items: center;
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-icon-glyph);
     display: flex;
-    flex: 0 0 20px;
     height: 24px;
     justify-content: center;
-    width: 20px;
+    transform: rotate(0deg);
+    transition: transform var(--ui-animation-duration-fast) ease-out;
+    width: 24px;
+  }
+
+  .tree-chevron[data-expanded='true'] {
+    transform: rotate(90deg);
+  }
+
+  .tree-category-toggle :global(.tree-category-icon) {
+    color: var(--ui-secondary-icon-glyph);
+    justify-self: center;
   }
 
   .tree-label {
@@ -737,48 +744,45 @@
     white-space: nowrap;
   }
 
-  .tree-folder-toggle .tree-label {
-    font-weight: 500;
+  .tree-category-toggle .tree-label {
+    font-weight: 400;
   }
 
-  .tree-folder-actions {
+  .tree-category-actions {
     display: none;
-    gap: 2px;
     margin-left: auto;
-    margin-right: 20px;
+    margin-right: 14px;
     position: relative;
     z-index: 1;
   }
 
-  .tree-folder-content:hover .tree-folder-actions,
-  .tree-folder-content:focus-within .tree-folder-actions {
+  .tree-category-content:hover .tree-category-actions,
+  .tree-category-content:focus-within .tree-category-actions {
     display: flex;
   }
 
-  .tree-folder-content:hover .tree-folder-toggle,
-  .tree-folder-content:focus-within .tree-folder-toggle {
-    padding-right: 92px;
+  .tree-category-content:hover .tree-category-toggle,
+  .tree-category-content:focus-within .tree-category-toggle {
+    padding-right: 56px;
   }
 
-  .tree-folder-actions .icon-action {
-    color: var(--ui-normal-text);
-  }
-
-  .tree-prompt-button {
+  .tree-category-action {
     align-items: center;
-    display: grid;
-    gap: 8px;
-    grid-template-columns: calc(5px + 12px * var(--tree-indent-count)) minmax(0, 1fr);
-    padding: 0 22px 0 0;
-  }
-
-  .tree-prompt-button[data-active='true'] {
-    background: var(--ui-neutral-emphasis-surface);
+    background: transparent;
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-normal-text);
+    cursor: pointer;
+    display: flex;
+    height: 28px;
+    justify-content: center;
+    padding: 0;
+    width: 28px;
   }
 
-  .tree-prompt-button[data-active='true']:hover {
-    background: var(--ui-neutral-selection-surface);
+  .tree-category-action:hover,
+  .tree-category-action:focus-visible {
+    background: var(--ui-neutral-normal-surface);
   }
 
   .tree-gutter {
@@ -808,6 +812,10 @@
   .prompt-tree-shell:hover .tree-guide,
   .prompt-tree-shell:focus-within .tree-guide {
     opacity: 1;
+  }
+
+  .collapsed-last-category-marker {
+    display: none;
   }
 
   .mock-overlay-scrollbar {
