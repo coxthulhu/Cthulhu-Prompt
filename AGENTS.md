@@ -4,6 +4,18 @@
 
 This repository contains Cthulhu Prompt, an Electron application that stores and helps the user to handle their AI prompts. These prompts are typically used for coding, and can be created, formatted, and organized. Ultimately, these prompts are copied out of the Cthulhu Prompt into an AI coding application like Claude Code, Codex CLI, or other online or on-device AI interfaces.
 
+## Major Application Components
+
+- **App Activity Bar** — The persistent icon rail used to navigate between available screens.
+- **App Sidebar** — The collapsible, resizable workspace panel used to select, create, reorder, and navigate prompt folders, prompt template folders, prompts, and prompt templates.
+- **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
+- **Prompt Folders Screen** — Manages and edits prompt folders, categories, prompts, and prompt templates.
+- **Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
+- **Mockups Screen** — Provides a development-only interface for previewing UI mockups.
+- **Test Screen** — Provides a development-only interactive gallery for shared UI components.
+
+When adding a new major application component or screen, add it to this list with a one-sentence description.
+
 ## Response Guidelines
 
 - I do not ask rhetorical questions. Answer my questions before proceeding.
@@ -78,13 +90,6 @@ Console/page errors captured during Playwright runs are written to `temp/test-re
 - Svelte components in PascalCase (`MyComponent.svelte`); shared stores/actions/utilities in `camelCase.ts`.
 - Respect path alias `@renderer` → `src/renderer/src`.
 - Renderer must call main only through preload APIs; keep IPC channels typed and minimal.
-
-## Testing Guidelines
-
-- Frameworks: Vitest (logic/integration), Playwright (E2E UI).
-- Name tests `*.test.ts` under `tests/vitest` or `tests/playwright`.
-- Prefer fast unit tests; mock FS with `memfs` where applicable.
-- E2E changes should include selectors and user flows to reproduce.
 
 ### Writing Playwright Tests
 
