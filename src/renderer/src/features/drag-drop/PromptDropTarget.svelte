@@ -26,7 +26,7 @@
 
   type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
     getOptions: () => AnyDroppableOptions
-    children: Snippet<[PromptDropTargetState]>
+    children?: Snippet<[PromptDropTargetState]>
   }
 
   let { getOptions, children, class: className, ...restProps }: Props = $props()
@@ -64,5 +64,7 @@
 </script>
 
 <div use:promptDroppable={getOptions} class={className} {...restProps}>
-  {@render children(targetState)}
+  {#if children}
+    {@render children(targetState)}
+  {/if}
 </div>

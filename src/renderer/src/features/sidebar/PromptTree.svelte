@@ -59,6 +59,7 @@
     type VirtualWindowViewportMetrics
   } from '../virtualizer/virtualWindowTypes'
   import PromptTreeVirtualList, {
+    type PromptTreeBottomSpacerRowProps,
     type PromptTreeCategoryRowProps,
     type PromptTreePromptRowProps,
     type PromptTreeRow
@@ -970,18 +971,20 @@
       class="relative h-full"
       style={`height:${props.rowHeightPx}px;`}
       data-testid={promptTreeBottomSpacerDropTargetTestId}
-    >
-      {#snippet children({ isOver, isBlocked, edge })}
-        {#if isOver && edge}
-          <DropIndicator
-            testId={promptTreeBottomSpacerDropIndicatorTestId}
-            insetStart={getPromptTreeDropIndicatorInset(0)}
-            {edge}
-            {isBlocked}
-          />
-        {/if}
-      {/snippet}
-    </PromptDropTarget>
+    />
+  {/if}
+{/snippet}
+
+{#snippet promptTreeBottomSpacerRowOverlay({ rowId }: PromptTreeBottomSpacerRowProps)}
+  {@const edge = getPromptTreeCategoryDropTargetEdge(rowId)}
+
+  {#if edge}
+    <DropIndicator
+      testId={promptTreeBottomSpacerDropIndicatorTestId}
+      insetStart={getPromptTreeDropIndicatorInset(0)}
+      {edge}
+      isBlocked={promptTreeCategoryDroppableState.isBlocked(rowId)}
+    />
   {/if}
 {/snippet}
 

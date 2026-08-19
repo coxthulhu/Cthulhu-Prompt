@@ -246,7 +246,7 @@
 >
   <div
     bind:this={viewportFrame}
-    class="flex h-full w-full"
+    class="relative flex h-full w-full"
     onwheel={(event) => {
       event.preventDefault()
       handleWheel(event)
@@ -275,25 +275,27 @@
           </div>
         {/each}
       </div>
+    </div>
 
-      <div style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
-        {#each visibleRows as row (row.id)}
-          {#if rowNeedsOverlay(row)}
-            {@const overlayRowElement = overlayRowElements.get(row.id) ?? null}
-            {@const overlaySnippet = getOverlaySnippet(row.rowData)}
-            <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
-              <div
-                use:registerOverlayRow={row.id}
-                style={`width:100%; height:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
-              >
-                {#if overlaySnippet}
-                  {@render overlaySnippet(getRowSnippetProps(row, overlayRowElement))}
-                {/if}
-              </div>
+    <div
+      style={`position:absolute; top:0; right:${reservedScrollbarWidthPx}px; bottom:0; left:0; overflow:visible; pointer-events:none;`}
+    >
+      {#each visibleRows as row (row.id)}
+        {#if rowNeedsOverlay(row)}
+          {@const overlayRowElement = overlayRowElements.get(row.id) ?? null}
+          {@const overlaySnippet = getOverlaySnippet(row.rowData)}
+          <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
+            <div
+              use:registerOverlayRow={row.id}
+              style={`width:100%; height:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
+            >
+              {#if overlaySnippet}
+                {@render overlaySnippet(getRowSnippetProps(row, overlayRowElement))}
+              {/if}
             </div>
-          {/if}
-        {/each}
-      </div>
+          </div>
+        {/if}
+      {/each}
     </div>
 
     <VirtualWindowScrollbar

@@ -839,9 +839,7 @@
     {/if}
   </div>
 
-  <div
-    class="flex min-h-0 flex-1 flex-col overflow-hidden group-data-[collapsible=icon]:overflow-hidden"
-  >
+  <div class="flex min-h-0 flex-1 flex-col overflow-visible">
     <PromptTree
       promptFolders={promptTreePromptFolders}
       {folderListState}
