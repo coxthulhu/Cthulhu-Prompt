@@ -2,7 +2,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/SimpleSelectorButtonWithIntegratedButton.svelte'
   import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import { CheckCheck, CheckCircle2, CircleDashed, Play, Undo2 } from 'lucide-svelte'
+  import { CheckCheck, CircleDashed, Play, Undo2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
 
   type Props = {
@@ -38,7 +38,7 @@
       label: 'Complete',
       selectedLabel: 'Completed',
       detail: 'Move this prompt to completed',
-      icon: CheckCircle2,
+      icon: CheckCheck,
       iconClass: 'prompt-editor-status-option-icon-completed',
       tone: 'success',
       variant: 'completed',
