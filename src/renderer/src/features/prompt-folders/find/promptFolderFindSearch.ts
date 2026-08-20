@@ -19,7 +19,7 @@ export type SearchInputs = {
 
 type BuildMatchCountsArgs = {
   items: PromptFolderFindItem[]
-  trimmedQuery: string
+  query: string
   hydratedEntityIds: Set<string>
   sectionMatchCountsByEntityId: Map<string, Map<string, { query: string; count: number }>>
   countMatchesInText: (text: string, query: string) => number
@@ -46,19 +46,19 @@ export const hasSearchInputsChanged = (next: SearchInputs, prev: SearchInputs) =
 
 export const buildPromptFolderFindCounts = ({
   items,
-  trimmedQuery,
+  query,
   hydratedEntityIds,
   sectionMatchCountsByEntityId,
   countMatchesInText
 }: BuildMatchCountsArgs): PromptFolderFindCounts[] => {
-  if (trimmedQuery.length === 0) return []
+  if (query.length === 0) return []
 
   return items.map((item) => {
     const sectionCounts = item.sections.map((section) => {
       const tracked = sectionMatchCountsByEntityId.get(item.entityId)?.get(section.key)
       const useTrackedCount =
-        hydratedEntityIds.has(item.entityId) && tracked?.query === trimmedQuery
-      const count = useTrackedCount ? tracked.count : countMatchesInText(section.text, trimmedQuery)
+        hydratedEntityIds.has(item.entityId) && tracked?.query === query
+      const count = useTrackedCount ? tracked.count : countMatchesInText(section.text, query)
       return {
         sectionKey: section.key,
         count
@@ -94,15 +94,15 @@ export const getPromptFolderFindMatchForIndex = (
 
 export const getMatchTextForCurrentMatch = (
   match: PromptFolderFindMatch | null,
-  trimmedQuery: string,
+  query: string,
   getSectionText: (entityId: string, sectionKey: string) => string
 ) => {
   if (!match) return null
-  if (trimmedQuery.length === 0) return null
+  if (query.length === 0) return null
 
   const targetText = getSectionText(match.entityId, match.sectionKey)
 
-  const matchRange = findMatchRange(targetText, trimmedQuery, match.sectionMatchIndex)
+  const matchRange = findMatchRange(targetText, query, match.sectionMatchIndex)
   if (!matchRange) return null
 
   return targetText.slice(matchRange.start, matchRange.end)

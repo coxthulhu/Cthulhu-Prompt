@@ -243,21 +243,21 @@
   }
 
   const syncFindState = (
-    trimmedQuery: string,
+    query: string,
     options: { shouldClearSelection?: boolean } = {}
   ): boolean => {
     const controller = getFindController()
     if (!editor || !controller) return false
 
-    const queryChanged = trimmedQuery !== lastFindQuery
+    const queryChanged = query !== lastFindQuery
     if (queryChanged) {
-      lastFindQuery = trimmedQuery
+      lastFindQuery = query
       lastActiveMatchIndex = null
     }
 
     controller.getState().change(
       {
-        searchString: trimmedQuery,
+        searchString: query,
         isRegex: false,
         matchCase: false,
         wholeWord: false,
@@ -272,15 +272,14 @@
     }
 
     findModel?.research(false)
-    reportFindMatches(trimmedQuery, controller.getState().matchesCount)
+    reportFindMatches(query, controller.getState().matchesCount)
     return true
   }
 
   const revealFindMatch = (query: string, matchIndex: number): number | null => {
-    const trimmedQuery = query.trim()
-    if (trimmedQuery.length === 0) return null
+    if (query.length === 0) return null
 
-    if (!syncFindState(trimmedQuery)) return null
+    if (!syncFindState(query)) return null
 
     if (matchIndex >= 0) {
       findModel?.moveToMatch(matchIndex)
@@ -347,10 +346,10 @@
     pendingCursorPosition = null
   }
 
-  // Mirror Monaco find anchor updates from explicit/undo/redo cursor moves.
-  const reportSelectionAnchorFromCursorChange = (
+  // Mirror Monaco find anchor updates from explicit/undo/redo selection changes.
+  const reportSelectionAnchorFromSelectionChange = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
-    event: monaco.editor.ICursorPositionChangedEvent
+    event: monaco.editor.ICursorSelectionChangedEvent
   ) => {
     if (!onSelectionChange) return
     if (
@@ -362,8 +361,8 @@
     }
 
     const model = targetEditor.getModel()
-    const selection = targetEditor.getSelection()
-    if (!model || !selection) return
+    const selection = event.selection
+    if (!model) return
     const startOffset = model.getOffsetAt(selection.getStartPosition())
     const endOffset = model.getOffsetAt(selection.getEndPosition())
     onSelectionChange(startOffset, endOffset)
@@ -429,9 +428,9 @@
       const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
       const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
       const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
-      const cursorDisposable = nextEditor.onDidChangeCursorPosition((event) => {
-        handleCursorChange(event)
-        reportSelectionAnchorFromCursorChange(nextEditor, event)
+      const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
+      const selectionDisposable = nextEditor.onDidChangeCursorSelection((event) => {
+        reportSelectionAnchorFromSelectionChange(nextEditor, event)
       })
       const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
 
@@ -450,6 +449,7 @@
         blurDisposable.dispose()
         focusDisposable.dispose()
         cursorDisposable.dispose()
+        selectionDisposable.dispose()
         scrollDisposable.dispose()
         suppressCursorAutoScrollDuringRestore = false
         if (viewStateCaptureKey) {
@@ -524,8 +524,8 @@
   // Side effect: sync Monaco find highlights + match reporting with the external find widget state.
   $effect(() => {
     if (!isEditorReady || !editor) return
-    const trimmedQuery = findRequest?.query.trim() ?? ''
-    if (!findRequest?.isOpen || trimmedQuery.length === 0) {
+    const query = findRequest?.query ?? ''
+    if (!findRequest?.isOpen || query.length === 0) {
       clearFindState()
       return
     }
@@ -534,7 +534,7 @@
       findRequest.activeSectionKey === findSectionKey ? findRequest.activeSectionMatchIndex : null
     const shouldClearSelection = activeSectionMatchIndex == null && lastActiveMatchIndex != null
 
-    if (!syncFindState(trimmedQuery, { shouldClearSelection })) return
+    if (!syncFindState(query, { shouldClearSelection })) return
 
     if (activeSectionMatchIndex != null && activeSectionMatchIndex >= 0) {
       const didActiveMatchChange = lastActiveMatchIndex !== activeSectionMatchIndex

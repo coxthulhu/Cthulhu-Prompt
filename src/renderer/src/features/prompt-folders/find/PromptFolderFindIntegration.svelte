@@ -61,8 +61,8 @@
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
-  const trimmedQuery = $derived(matchText.trim())
-  const normalizedQuery = $derived(trimmedQuery.toLowerCase())
+  const query = $derived(matchText)
+  const normalizedQuery = $derived(query.toLowerCase())
 
   const hydratedEntityIds = new SvelteSet<string>()
   const sectionMatchCountsByEntityId = new SvelteMap<
@@ -105,7 +105,7 @@
     revealRequests.clear()
     const matchToFocus = currentMatch ?? lastNavigatedMatch
     if (matchToFocus) {
-      const focusQuery = currentMatch ? trimmedQuery : lastNavigatedQuery
+      const focusQuery = currentMatch ? query : lastNavigatedQuery
       focusRequests.request({
         match: matchToFocus,
         query: focusQuery
@@ -115,7 +115,7 @@
 
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (resetSelection: boolean) => {
-    if (trimmedQuery.length === 0) {
+    if (query.length === 0) {
       revealRequests.clear()
       matchCountsByEntity = []
       totalMatches = 0
@@ -125,7 +125,7 @@
 
     const nextCounts = buildPromptFolderFindCounts({
       items,
-      trimmedQuery,
+      query,
       hydratedEntityIds,
       sectionMatchCountsByEntityId,
       countMatchesInText: searchModel.countMatchesInText
@@ -183,7 +183,7 @@
 
   const requestMatchReveal = (match: PromptFolderFindMatch) => {
     onRevealMatch?.(match)
-    revealRequests.request({ match, query: trimmedQuery })
+    revealRequests.request({ match, query })
   }
 
   const recordSelectionAnchor = (anchor: PromptFolderFindAnchor) => {
@@ -260,7 +260,7 @@
     currentMatchIndex = nextIndex
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
     lastNavigatedMatch = match
-    lastNavigatedQuery = trimmedQuery
+    lastNavigatedQuery = query
     requestMatchReveal(match)
   }
 
@@ -322,8 +322,8 @@
     direction: TraversalDirection
   ) =>
     direction === 1
-      ? findMatchIndexAtOrAfter(sectionText, trimmedQuery, offset)
-      : findMatchIndexBefore(sectionText, trimmedQuery, offset)
+      ? findMatchIndexAtOrAfter(sectionText, query, offset)
+      : findMatchIndexBefore(sectionText, query, offset)
 
   const findMatchInItemFromSection = (
     item: PromptFolderFindItem,
@@ -362,7 +362,7 @@
   }
 
   const getSelectedMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
-    if (trimmedQuery.length === 0 || totalMatches <= 0) return null
+    if (query.length === 0 || totalMatches <= 0) return null
     const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
     const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
     if (endOffset <= startOffset) return null
@@ -371,12 +371,12 @@
     if (sectionText.length === 0) return null
 
     const selectedText = sectionText.slice(startOffset, endOffset)
-    if (selectedText.toLowerCase() !== trimmedQuery.toLowerCase()) return null
+    if (selectedText.toLowerCase() !== query.toLowerCase()) return null
 
-    const sectionMatchIndex = findMatchIndexAtOrAfter(sectionText, trimmedQuery, startOffset)
+    const sectionMatchIndex = findMatchIndexAtOrAfter(sectionText, query, startOffset)
     if (sectionMatchIndex == null) return null
 
-    const matchRange = findMatchRange(sectionText, trimmedQuery, sectionMatchIndex)
+    const matchRange = findMatchRange(sectionText, query, sectionMatchIndex)
     if (!matchRange) return null
     if (matchRange.start !== startOffset || matchRange.end !== endOffset) return null
 
@@ -387,7 +387,7 @@
     anchor: PromptFolderFindAnchor,
     direction: TraversalDirection
   ) => {
-    if (trimmedQuery.length === 0 || totalMatches === 0) return null
+    if (query.length === 0 || totalMatches === 0) return null
     const startIndex = itemIndexByEntityId.get(anchor.entityId)
     if (startIndex == null) return null
 
@@ -515,16 +515,16 @@
   const reportSectionMatchCount = (
     entityId: string,
     sectionKey: string,
-    query: string,
+    reportedQuery: string,
     count: number
   ) => {
-    if (query !== trimmedQuery) return
+    if (reportedQuery !== query) return
     let sectionCountsBySectionKey = sectionMatchCountsByEntityId.get(entityId)
     if (!sectionCountsBySectionKey) {
       sectionCountsBySectionKey = new SvelteMap<string, { query: string; count: number }>()
       sectionMatchCountsByEntityId.set(entityId, sectionCountsBySectionKey)
     }
-    sectionCountsBySectionKey.set(sectionKey, { query, count })
+    sectionCountsBySectionKey.set(sectionKey, { query: reportedQuery, count })
 
     if (!isFindOpen) return
     // Update just the affected entity section count instead of rescanning everything.
@@ -552,12 +552,12 @@
   }
 
   const reportSectionTextChange = (entityId: string, sectionKey: string, text: string) => {
-    if (!isFindOpen || trimmedQuery.length === 0) return
+    if (!isFindOpen || query.length === 0) return
     reportSectionMatchCount(
       entityId,
       sectionKey,
-      trimmedQuery,
-      searchModel.countMatchesInText(text, trimmedQuery)
+      query,
+      searchModel.countMatchesInText(text, query)
     )
   }
 
