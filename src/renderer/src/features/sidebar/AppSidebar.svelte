@@ -21,7 +21,7 @@
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import {
-    CheckCheck,
+    Check,
     ChevronsDownUp,
     ExternalLink,
     Folder,
@@ -770,7 +770,7 @@
         />
         {#if !isTemplateFolder}
           <IconButton
-            icon={CheckCheck}
+            icon={Check}
             label="Show Completed Prompts"
             title="Show Completed Prompts"
             borderless

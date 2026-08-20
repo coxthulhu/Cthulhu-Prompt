@@ -2,7 +2,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/SimpleSelectorButtonWithIntegratedButton.svelte'
   import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import { CheckCheck, CircleDashed, Play, Undo2 } from 'lucide-svelte'
+  import { Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
 
   type Props = {
@@ -38,7 +38,7 @@
       label: 'Complete',
       selectedLabel: 'Completed',
       detail: 'Move this prompt to completed',
-      icon: CheckCheck,
+      icon: Check,
       iconClass: 'prompt-editor-status-option-icon-completed',
       tone: 'success',
       variant: 'completed',
@@ -49,7 +49,7 @@
   const selectedStatusItem = $derived(statusItems.find((item) => item.id === status)!)
   // A quick status action describes one optional outer segment of the status control.
   type QuickStatusAction = {
-    icon: typeof CheckCheck
+    icon: typeof Check
     label: string
     hoverVariant: 'neutral' | 'success'
     testId: string
@@ -60,7 +60,7 @@
     status === PromptStatus.Completed
       ? null
       : {
-          icon: CheckCheck,
+          icon: Check,
           label: 'Complete prompt',
           hoverVariant: 'success',
           testId: 'prompt-complete-button',
