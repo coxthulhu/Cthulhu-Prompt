@@ -15,7 +15,7 @@
   const statusItems: SimpleSelectorButtonItem[] = [
     {
       id: PromptStatus.Todo,
-      label: 'Set to Todo',
+      label: 'Todo',
       selectedLabel: 'Todo',
       detail: 'Move back to active todo status',
       icon: CircleDashed,
