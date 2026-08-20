@@ -27,9 +27,13 @@ export type PromptFolderFindAnchor = {
 export type PromptFolderFindFocusRequest = {
   match: PromptFolderFindMatch
   query: string
+  selectMatch: boolean
 }
 
-export type PromptFolderFindRevealRequest = PromptFolderFindFocusRequest
+export type PromptFolderFindRevealRequest = {
+  match: PromptFolderFindMatch
+  query: string
+}
 
 export type PromptFolderFindRowHandle = {
   entityId: string
@@ -46,6 +50,7 @@ export type PromptFolderFindState = {
   isFindOpen: boolean
   query: string
   currentMatch: PromptFolderFindMatch | null
+  shouldSelectCurrentMatch: boolean
   focusRequests: ConsumableRequestCoordinator<PromptFolderFindFocusRequest>
   reportSelection: (anchor: PromptFolderFindAnchor) => void
   reportHydration: (entityId: string, isHydrated: boolean) => void
@@ -64,4 +69,5 @@ export type PromptFolderFindRequest = {
   query: string
   activeSectionKey: string | null
   activeSectionMatchIndex: number | null
+  shouldSelectActiveMatch: boolean
 }

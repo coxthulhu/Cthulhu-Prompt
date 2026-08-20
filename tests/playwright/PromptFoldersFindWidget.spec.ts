@@ -533,7 +533,7 @@ describe('Prompt folder find dialog', () => {
       .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
   })
 
-  test('starts on the clicked Monaco word match when opening find from a collapsed cursor', async ({
+  test('preserves a collapsed Monaco cursor when opening find from its word', async ({
     testSetup
   }) => {
     const workspacePath = '/ws/find-clicked-word-start-match'
@@ -554,14 +554,37 @@ describe('Prompt folder find dialog', () => {
     await focusMonacoEditor(mainWindow, editorSelector, {
       clickPosition: { x: 28, y: 12 }
     })
+    const selectionBeforeFind = await getMonacoSelectionState(mainWindow, editorSelector)
+    expect(selectionBeforeFind).toMatchObject({ selectedText: '' })
 
     const findInput = mainWindow.locator(FIND_INPUT)
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeVisible()
     await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
     await expect
+      .poll(async () => {
+        return await mainWindow.evaluate((selector) => {
+          const monacoNode = document.querySelector(`${selector} .monaco-editor`)
+          const entry = window.__cthulhuMonacoEditors?.find(
+            (item) => item.container === monacoNode || item.container?.contains(monacoNode)
+          )
+          const controller = (
+            entry?.editor as unknown as {
+              getContribution: (id: string) => {
+                getState: () => { searchString: string; matchesCount: number }
+              } | null
+            }
+          )?.getContribution('editor.contrib.findController')
+          const state = controller?.getState()
+          return state
+            ? { searchString: state.searchString, matchesCount: state.matchesCount }
+            : null
+        }, editorSelector)
+      })
+      .toEqual({ searchString: TYPING_ANCHOR_QUERY, matchesCount: 3 })
+    await expect
       .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
-      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
+      .toEqual(selectionBeforeFind)
   })
 
   test('seeds find input from Monaco word at cursor on Ctrl+F', async ({ testSetup }) => {

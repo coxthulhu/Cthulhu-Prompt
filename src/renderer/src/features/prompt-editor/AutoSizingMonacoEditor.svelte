@@ -539,7 +539,10 @@
     if (activeSectionMatchIndex != null && activeSectionMatchIndex >= 0) {
       const didActiveMatchChange = lastActiveMatchIndex !== activeSectionMatchIndex
       const shouldRefreshUnfocusedMatch = !didActiveMatchChange && !editor.hasTextFocus()
-      if (didActiveMatchChange || shouldRefreshUnfocusedMatch) {
+      if (
+        findRequest.shouldSelectActiveMatch &&
+        (didActiveMatchChange || shouldRefreshUnfocusedMatch)
+      ) {
         findModel?.moveToMatch(activeSectionMatchIndex)
       }
       lastActiveMatchIndex = activeSectionMatchIndex

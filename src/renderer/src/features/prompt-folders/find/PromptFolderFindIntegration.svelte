@@ -60,6 +60,8 @@
   let lastNavigatedQuery = $state('')
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
+  let shouldSelectCurrentMatch = $state(true)
+  let preserveCollapsedSelectionOnNextSearch = false
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
   const query = $derived(matchText)
   const normalizedQuery = $derived(query.toLowerCase())
@@ -108,7 +110,8 @@
       const focusQuery = currentMatch ? query : lastNavigatedQuery
       focusRequests.request({
         match: matchToFocus,
-        query: focusQuery
+        query: focusQuery,
+        selectMatch: currentMatch ? shouldSelectCurrentMatch : true
       })
     }
   }
@@ -116,6 +119,7 @@
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (resetSelection: boolean) => {
     if (query.length === 0) {
+      shouldSelectCurrentMatch = true
       revealRequests.clear()
       matchCountsByEntity = []
       totalMatches = 0
@@ -138,7 +142,10 @@
     )
     if (totalMatches === 0) revealRequests.clear()
     if (resetSelection) {
+      const preserveCollapsedSelection = preserveCollapsedSelectionOnNextSearch
+      preserveCollapsedSelectionOnNextSearch = false
       if (totalMatches <= 0) {
+        shouldSelectCurrentMatch = true
         currentMatchIndex = 0
         return
       }
@@ -149,7 +156,7 @@
         ? getSelectedMatchIndexFromAnchor(effectiveSelectionAnchor)
         : null
       if (selectedAnchorIndex != null) {
-        setCurrentMatchIndex(selectedAnchorIndex)
+        setCurrentMatchIndex(selectedAnchorIndex, !preserveCollapsedSelection)
         return
       }
       const navigationAnchor = effectiveSelectionAnchor ?? lastSelectionAnchor
@@ -238,6 +245,13 @@
 
   const openFindDialogFromSelection = () => {
     const nextMatchText = getSelectionMatchText()
+    const selectionAnchor = lastSelectionAnchor
+    preserveCollapsedSelectionOnNextSearch = Boolean(
+      !isFindOpen &&
+        nextMatchText &&
+        selectionAnchor &&
+        selectionAnchor.startOffset === selectionAnchor.endOffset
+    )
     if (nextMatchText && nextMatchText !== matchText) {
       matchText = nextMatchText
     }
@@ -256,9 +270,11 @@
     toggleFindDialog
   }
 
-  const setCurrentMatchIndex = (nextIndex: number) => {
+  const setCurrentMatchIndex = (nextIndex: number, selectMatch = true) => {
     currentMatchIndex = nextIndex
+    shouldSelectCurrentMatch = selectMatch
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
+    if (!selectMatch) return
     lastNavigatedMatch = match
     lastNavigatedQuery = query
     requestMatchReveal(match)
@@ -575,6 +591,7 @@
     isFindOpen: false,
     query: '',
     currentMatch: null,
+    shouldSelectCurrentMatch: true,
     focusRequests,
     reportSelection: recordSelectionAnchor,
     reportHydration,
@@ -588,6 +605,7 @@
     findState.isFindOpen = isFindOpen
     findState.query = matchText
     findState.currentMatch = currentMatch
+    findState.shouldSelectCurrentMatch = shouldSelectCurrentMatch
   })
 
   setPromptFolderFindContext(findState)

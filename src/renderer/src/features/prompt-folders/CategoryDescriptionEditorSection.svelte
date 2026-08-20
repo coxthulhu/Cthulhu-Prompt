@@ -180,7 +180,8 @@
       isOpen: findContext.isFindOpen,
       query: findContext.query,
       activeSectionKey: activeMatch?.sectionKey ?? null,
-      activeSectionMatchIndex: activeMatch?.sectionMatchIndex ?? null
+      activeSectionMatchIndex: activeMatch?.sectionMatchIndex ?? null,
+      shouldSelectActiveMatch: findContext.shouldSelectCurrentMatch
     }
   })
 

@@ -287,7 +287,8 @@
       isOpen: findContext.isFindOpen,
       query: findContext.query,
       activeSectionKey: activeMatch?.sectionKey ?? null,
-      activeSectionMatchIndex: activeMatch?.sectionMatchIndex ?? null
+      activeSectionMatchIndex: activeMatch?.sectionMatchIndex ?? null,
+      shouldSelectActiveMatch: findContext.shouldSelectCurrentMatch
     }
   })
 
@@ -455,9 +456,9 @@
     if (focusMatch.sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY) {
       const input = titleInputRef
       if (!input) return
-      findContext.focusRequests.consume(request, ({ query }) => {
+      findContext.focusRequests.consume(request, ({ query, selectMatch }) => {
         input.focus({ preventScroll: true })
-        if (query.length === 0) return
+        if (!selectMatch || query.length === 0) return
         const matchRange = findMatchRange(
           promptData.draft.title,
           query,
