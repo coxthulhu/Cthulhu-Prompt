@@ -143,6 +143,7 @@ export const setPromptStatus = async (
     throw new Error('Root prompt folder not loaded')
   }
   const prompt = promptCollection.get(promptId)
+  const isCompletedPrompt = prompt?.status === PromptStatus.Completed
   const promptDraft = promptDraftCollection.get(promptId)
   if (!promptDraft) throw new Error('Prompt draft not loaded')
 
@@ -230,7 +231,7 @@ export const setPromptStatus = async (
           return
         }
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-        if (promptFolderId === rootPromptFolderId) {
+        if (promptFolderId === rootPromptFolderId && isCompletedPrompt) {
           draft.categoryOrder = insertCategoryOrderEntry(
             draft.categoryOrder,
             categoryOrderEntry,
@@ -249,15 +250,19 @@ export const setPromptStatus = async (
           } else if (targetStatus !== PromptStatus.Completed) {
             draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
           }
-          draft.categoryOrder =
-            targetStatus === PromptStatus.Completed
-              ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
-              : insertCategoryOrderEntry(
-                  draft.categoryOrder,
-                  categoryOrderEntry,
-                  nextPrompt.category ?? null,
-                  null
-                )
+          if (targetStatus === PromptStatus.Completed) {
+            draft.categoryOrder = removeCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry
+            )
+          } else if (isCompletedPrompt) {
+            draft.categoryOrder = insertCategoryOrderEntry(
+              draft.categoryOrder,
+              categoryOrderEntry,
+              nextPrompt.category ?? null,
+              null
+            )
+          }
         })
       }
     },

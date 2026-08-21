@@ -211,9 +211,16 @@ const setupPromptStatusMutationHandler = (): void => {
           ).filter((promptId) => promptId !== requestedPrompt.id)
           if (targetStatus === PromptStatus.Completed) completedPromptIds.push(requestedPrompt.id)
           /** Active prompt IDs after the requested status transition. */
-          const activePromptIds = getActiveMarkdownContentIds(rootPromptFolder.committed, 'prompt')
-            .filter((promptId) => promptId !== requestedPrompt.id)
-          if (targetStatus !== PromptStatus.Completed) activePromptIds.unshift(requestedPrompt.id)
+          const currentActivePromptIds = getActiveMarkdownContentIds(
+            rootPromptFolder.committed,
+            'prompt'
+          )
+          const activePromptIds =
+            targetStatus === PromptStatus.Completed
+              ? currentActivePromptIds.filter((promptId) => promptId !== requestedPrompt.id)
+              : isCompletedPrompt
+                ? [requestedPrompt.id, ...currentActivePromptIds]
+                : currentActivePromptIds
           const targetPromptOverride = new Map([
             [requestedPrompt.id, { content: targetPrompt, persistenceFields }]
           ])
@@ -234,15 +241,19 @@ const setupPromptStatusMutationHandler = (): void => {
               expectedRevision: requestedSourcePromptFolder.expectedRevision,
               recipe: (draft) => {
                 draft.completedPromptIds = completedPromptIds
-                draft.categoryOrder =
-                  targetStatus === PromptStatus.Completed
-                    ? removeCategoryOrderEntry(draft.categoryOrder, categoryOrderEntry)
-                    : insertCategoryOrderEntry(
-                        draft.categoryOrder,
-                        categoryOrderEntry,
-                        targetPrompt.category ?? null,
-                        null
-                      )
+                if (targetStatus === PromptStatus.Completed) {
+                  draft.categoryOrder = removeCategoryOrderEntry(
+                    draft.categoryOrder,
+                    categoryOrderEntry
+                  )
+                } else if (isCompletedPrompt) {
+                  draft.categoryOrder = insertCategoryOrderEntry(
+                    draft.categoryOrder,
+                    categoryOrderEntry,
+                    targetPrompt.category ?? null,
+                    null
+                  )
+                }
               }
             }),
             prompt: tx.prompt.update({

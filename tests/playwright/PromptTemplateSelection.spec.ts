@@ -13,6 +13,7 @@ import {
   getMonacoEditorText,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
+import { getPromptEditorIds } from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -27,11 +28,22 @@ const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Select Template.pr
 const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Stale Template.prompt.md`
 const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Multiple Templates.prompt.md`
+const PROMPT_ORDER_PATH =
+  `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'
   | '--ui-secondary-text'
   | '--ui-normal-text'
+
+const readPromptOrderIds = async (electronApp: any): Promise<string[]> => {
+  const order = JSON.parse(await readTextFile(electronApp, PROMPT_ORDER_PATH)) as {
+    categories: Array<{ entries: Array<{ kind: 'prompt' | 'template'; id: string }> }>
+  }
+  return order.categories.flatMap(({ entries }) =>
+    entries.flatMap((entry) => (entry.kind === 'prompt' ? [entry.id] : []))
+  )
+}
 
 const expectTemplateIndicator = async (
   promptEditor: any,
@@ -527,6 +539,15 @@ describe('Prompt template selection', () => {
     await testHelpers.navigateToPromptFolders('Prompts')
     await stubClipboard(mainWindow)
 
+    const initialPromptOrder = [
+      'select-template-prompt',
+      'stale-template-prompt',
+      'no-template-prompt',
+      'multi-template-prompt'
+    ]
+    await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual(initialPromptOrder)
+    await expect.poll(() => readPromptOrderIds(electronApp)).toEqual(initialPromptOrder)
+
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     const noTemplatePromptEditor = mainWindow.locator(
       promptEditorSelector('no-template-prompt')
@@ -559,6 +580,8 @@ describe('Prompt template selection', () => {
       { id: 'template-second' },
       { id: 'template-category' }
     ])
+    await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual(initialPromptOrder)
+    await expect.poll(() => readPromptOrderIds(electronApp)).toEqual(initialPromptOrder)
 
     await noTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
@@ -576,6 +599,8 @@ describe('Prompt template selection', () => {
     await expect.poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH)).toContain(
       'status: InProgress'
     )
+    await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual(initialPromptOrder)
+    await expect.poll(() => readPromptOrderIds(electronApp)).toEqual(initialPromptOrder)
 
     await promptEditor.locator('[data-testid="prompt-template-and-copy-button"]').click()
     const quickDialog = mainWindow.getByRole('dialog', { name: 'Quick Template Selection' })
@@ -615,6 +640,8 @@ describe('Prompt template selection', () => {
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
       .toContain('templates:\n  - id: template-first')
     await expect.poll(() => readTextFile(electronApp, PROMPT_PATH)).toContain('status: InProgress')
+    await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual(initialPromptOrder)
+    await expect.poll(() => readPromptOrderIds(electronApp)).toEqual(initialPromptOrder)
     await expect(promptEditor.locator('[data-testid="prompt-copy-button"]')).toBeVisible()
     await expect(
       promptEditor.locator('[data-testid="prompt-template-and-copy-button"]')
