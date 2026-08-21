@@ -357,9 +357,11 @@
     <div class="prompt-accordion">
       <section class="accordion-section completed-section" aria-label="Completed prompts">
         <button class="accordion-header" type="button" aria-expanded="true">
-          <span class="accordion-chevron"><ChevronDown size={17} aria-hidden="true" /></span>
+          <span class="accordion-chevron tree-chevron" data-expanded="true">
+            <ChevronRight size={20} aria-hidden="true" />
+          </span>
           <CircleCheckBig size={16} aria-hidden="true" />
-          <span class="accordion-title">Completed</span>
+          <span class="accordion-title">COMPLETED</span>
           <span class="accordion-count">5</span>
         </button>
 
@@ -378,9 +380,11 @@
 
       <section class="accordion-section active-section" aria-label="Active prompts">
         <button class="accordion-header" type="button" aria-expanded="true">
-          <span class="accordion-chevron"><ChevronDown size={17} aria-hidden="true" /></span>
+          <span class="accordion-chevron tree-chevron" data-expanded="true">
+            <ChevronRight size={20} aria-hidden="true" />
+          </span>
           <ListTodo size={16} aria-hidden="true" />
-          <span class="accordion-title">Active</span>
+          <span class="accordion-title">ACTIVE</span>
           <span class="accordion-count">20</span>
         </button>
 
@@ -722,16 +726,16 @@
 
   .accordion-header {
     align-items: center;
-    background: var(--ui-neutral-normal-surface);
+    background: var(--ui-ghost-surface);
     border: 0;
-    border-top: 1px solid var(--ui-neutral-emphasis-border);
+    border-top: 1px solid var(--ui-neutral-muted-border);
     color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
-    flex: 0 0 34px;
+    flex: 0 0 36px;
     gap: 7px;
-    grid-template-columns: 18px 18px minmax(0, 1fr) auto;
-    height: 34px;
+    grid-template-columns: 24px 18px minmax(0, 1fr) auto;
+    height: 36px;
     padding: 0 12px 0 9px;
     text-align: left;
     width: 100%;
@@ -739,7 +743,6 @@
 
   .accordion-header:hover,
   .accordion-header:focus-visible {
-    background: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
   }
 
