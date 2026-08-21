@@ -61,7 +61,7 @@
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let shouldSelectCurrentMatch = $state(true)
-  let preserveCollapsedSelectionOnNextSearch = false
+  let preserveSelectionOnNextSearch = false
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
   const query = $derived(matchText)
   const normalizedQuery = $derived(query.toLowerCase())
@@ -142,8 +142,8 @@
     )
     if (totalMatches === 0) revealRequests.clear()
     if (resetSelection) {
-      const preserveCollapsedSelection = preserveCollapsedSelectionOnNextSearch
-      preserveCollapsedSelectionOnNextSearch = false
+      const preserveSelection = preserveSelectionOnNextSearch
+      preserveSelectionOnNextSearch = false
       if (totalMatches <= 0) {
         shouldSelectCurrentMatch = true
         currentMatchIndex = 0
@@ -156,7 +156,7 @@
         ? getSelectedMatchIndexFromAnchor(effectiveSelectionAnchor)
         : null
       if (selectedAnchorIndex != null) {
-        setCurrentMatchIndex(selectedAnchorIndex, !preserveCollapsedSelection)
+        setCurrentMatchIndex(selectedAnchorIndex, !preserveSelection)
         return
       }
       const navigationAnchor = effectiveSelectionAnchor ?? lastSelectionAnchor
@@ -246,12 +246,7 @@
   const openFindDialogFromSelection = () => {
     const nextMatchText = getSelectionMatchText()
     const selectionAnchor = lastSelectionAnchor
-    preserveCollapsedSelectionOnNextSearch = Boolean(
-      !isFindOpen &&
-        nextMatchText &&
-        selectionAnchor &&
-        selectionAnchor.startOffset === selectionAnchor.endOffset
-    )
+    preserveSelectionOnNextSearch = Boolean(!isFindOpen && nextMatchText && selectionAnchor)
     if (nextMatchText && nextMatchText !== matchText) {
       matchText = nextMatchText
     }

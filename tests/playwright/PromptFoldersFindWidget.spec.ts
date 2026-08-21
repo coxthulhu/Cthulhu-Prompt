@@ -122,6 +122,8 @@ const getMonacoSelectionState = async (
   selectedText: string
   startLineNumber: number
   startColumn: number
+  selectionStartColumn: number
+  positionColumn: number
 } | null> => {
   return await mainWindow.evaluate((selector) => {
     const monacoNode = document.querySelector(`${selector} .monaco-editor`)
@@ -155,7 +157,9 @@ const getMonacoSelectionState = async (
     return {
       selectedText: model.getValueInRange(selection),
       startLineNumber: selection.startLineNumber,
-      startColumn: selection.startColumn
+      startColumn: selection.startColumn,
+      selectionStartColumn: selection.selectionStartColumn,
+      positionColumn: selection.positionColumn
     }
   }, editorSelector)
 }
@@ -449,7 +453,9 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveValue(selectedText!)
   })
 
-  test('starts on the currently selected Monaco match when opening find', async ({ testSetup }) => {
+  test('preserves a backward selected Monaco match when opening and closing find', async ({
+    testSetup
+  }) => {
     const workspacePath = '/ws/find-selection-start-match'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -466,16 +472,23 @@ describe('Prompt folder find dialog', () => {
 
     await focusMonacoEditor(mainWindow, editorSelector)
     await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('ArrowRight')
     await mainWindow.keyboard.down('Shift')
-    await mainWindow.keyboard.press('ArrowRight')
-    await mainWindow.keyboard.press('ArrowRight')
-    await mainWindow.keyboard.press('ArrowRight')
-    await mainWindow.keyboard.press('ArrowRight')
-    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('Home')
     await mainWindow.keyboard.up('Shift')
 
-    const selectedText = await getMonacoSelectedText(mainWindow, editorSelector)
-    expect(selectedText).toBe(TYPING_ANCHOR_QUERY)
+    const selectionBeforeFind = await getMonacoSelectionState(mainWindow, editorSelector)
+    expect(selectionBeforeFind).toMatchObject({
+      selectedText: TYPING_ANCHOR_QUERY,
+      startLineNumber: 1,
+      startColumn: 1,
+      selectionStartColumn: 6,
+      positionColumn: 1
+    })
 
     const findInput = mainWindow.locator(FIND_INPUT)
     await mainWindow.keyboard.press('Control+F')
@@ -484,7 +497,13 @@ describe('Prompt folder find dialog', () => {
 
     await expect
       .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
-      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
+      .toEqual(selectionBeforeFind)
+
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toEqual(selectionBeforeFind)
   })
 
   test('starts on the selected match when reopening find with the same persisted query', async ({
