@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 16
+const LATEST_SCHEMA_VERSION = 17
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -459,6 +459,25 @@ const migrateSchemaV15ToV16 = (db: Database.Database): void => {
   migrate()
 }
 
+/** Adds workspace-scoped expansion persistence for reusable accordion instances. */
+const migrateSchemaV16ToV17 = (db: Database.Database): void => {
+  /** Atomic schema update for accordion view state. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE accordion_view_state (
+        workspace_id TEXT NOT NULL,
+        persistence_id TEXT NOT NULL,
+        expanded_section_ids_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, persistence_id)
+      );
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(17)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -562,6 +581,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 15) {
       migrateSchemaV15ToV16(db)
       schemaVersion = 16
+      continue
+    }
+
+    if (schemaVersion === 16) {
+      migrateSchemaV16ToV17(db)
+      schemaVersion = 17
       continue
     }
 

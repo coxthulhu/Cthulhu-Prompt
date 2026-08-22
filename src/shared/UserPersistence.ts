@@ -56,10 +56,17 @@ export type WorkspacePromptFolderViewEntry = {
   categoryDescriptionEditorViewStateJson: string | null
 }
 
+/** Persisted expansion state for one accordion instance in a workspace. */
+export type WorkspaceAccordionViewEntry = {
+  persistenceId: string
+  expandedSectionIds: string[]
+}
+
 export type WorkspacePersistence = WorkspaceScreenSelection & {
   workspaceId: string
   lastPromptFolderId: string | null
   promptFolderViewEntries: WorkspacePromptFolderViewEntry[]
+  accordionViewEntries: WorkspaceAccordionViewEntry[]
 }
 
 export const isWorkspaceScreenSelectionSame = (
@@ -87,7 +94,8 @@ export const createDefaultWorkspacePersistence = (workspaceId: string): Workspac
     selectedScreen: 'home',
     selectedScreenData: null,
     lastPromptFolderId: null,
-    promptFolderViewEntries: []
+    promptFolderViewEntries: [],
+    accordionViewEntries: []
   }
 }
 
@@ -105,6 +113,16 @@ export const cloneWorkspacePromptFolderViewEntries = (
   }))
 }
 
+/** Clones accordion expansion entries for serialization and renderer drafts. */
+export const cloneWorkspaceAccordionViewEntries = (
+  entries: WorkspaceAccordionViewEntry[]
+): WorkspaceAccordionViewEntry[] => {
+  return entries.map((entry) => ({
+    persistenceId: entry.persistenceId,
+    expandedSectionIds: [...entry.expandedSectionIds]
+  }))
+}
+
 export const toSerializableWorkspacePersistence = (
   workspacePersistence: WorkspacePersistence
 ): WorkspacePersistence => {
@@ -115,6 +133,9 @@ export const toSerializableWorkspacePersistence = (
     lastPromptFolderId: workspacePersistence.lastPromptFolderId,
     promptFolderViewEntries: cloneWorkspacePromptFolderViewEntries(
       workspacePersistence.promptFolderViewEntries
+    ),
+    accordionViewEntries: cloneWorkspaceAccordionViewEntries(
+      workspacePersistence.accordionViewEntries
     )
   } as WorkspacePersistence
 }
@@ -326,6 +347,51 @@ const parseWorkspacePromptFolderViewEntries = (
   return parsedEntries
 }
 
+/** Parses one persisted accordion expansion entry. */
+const parseWorkspaceAccordionViewEntry = (
+  value: unknown
+): WorkspaceAccordionViewEntry | null => {
+  if (!isRecord(value) || typeof value.persistenceId !== 'string') {
+    return null
+  }
+
+  if (!Array.isArray(value.expandedSectionIds)) {
+    return null
+  }
+
+  /** Valid section IDs retained from the persisted entry. */
+  const expandedSectionIds = value.expandedSectionIds.filter(
+    (sectionId): sectionId is string => typeof sectionId === 'string'
+  )
+  if (expandedSectionIds.length !== value.expandedSectionIds.length) {
+    return null
+  }
+
+  return {
+    persistenceId: value.persistenceId,
+    expandedSectionIds
+  }
+}
+
+/** Parses the persisted workspace accordion expansion array. */
+const parseWorkspaceAccordionViewEntries = (value: unknown): WorkspaceAccordionViewEntry[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  /** Valid accordion entries retained from persisted workspace state. */
+  const parsedEntries: WorkspaceAccordionViewEntry[] = []
+  for (const entry of value) {
+    /** Validated form of the current persisted accordion entry. */
+    const parsedEntry = parseWorkspaceAccordionViewEntry(entry)
+    if (parsedEntry) {
+      parsedEntries.push(parsedEntry)
+    }
+  }
+
+  return parsedEntries
+}
+
 export const parseWorkspacePersistence = (
   value: unknown,
   workspaceId: string
@@ -345,6 +411,8 @@ export const parseWorkspacePersistence = (
   const promptFolderViewEntries = parseWorkspacePromptFolderViewEntries(
     value.promptFolderViewEntries
   )
+  /** Accordion expansion state defaults empty for workspaces saved before this feature. */
+  const accordionViewEntries = parseWorkspaceAccordionViewEntries(value.accordionViewEntries)
   const lastPromptFolderId = value.lastPromptFolderId ?? null
   if (lastPromptFolderId !== null && typeof lastPromptFolderId !== 'string') {
     return null
@@ -354,6 +422,7 @@ export const parseWorkspacePersistence = (
     workspaceId,
     ...workspaceScreenSelection,
     lastPromptFolderId,
-    promptFolderViewEntries
+    promptFolderViewEntries,
+    accordionViewEntries
   } as WorkspacePersistence
 }

@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 16 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 17 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -101,6 +101,7 @@ describe('Test Infrastructure', () => {
           AND name IN (
             'app_persistence',
             'workspace_ui_state',
+            'accordion_view_state',
             'prompt_folder_view_state',
             'category_description_editor_view_state',
             'markdown_content_ui_state'
@@ -109,7 +110,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(persistenceTablesResult.success).toBe(true)
-      expect(persistenceTablesResult.rows).toHaveLength(5)
+      expect(persistenceTablesResult.rows).toHaveLength(6)
 
       const promptFolderViewStateColumnsResult = await runSqlQuery(
         electronApp,

@@ -1,4 +1,5 @@
 import {
+  cloneWorkspaceAccordionViewEntries,
   cloneWorkspacePromptFolderViewEntries,
   type WorkspacePersistence
 } from '@shared/UserPersistence'
@@ -20,6 +21,9 @@ export const upsertWorkspacePersistenceDraft = (
       lastPromptFolderId: workspacePersistence.lastPromptFolderId,
       promptFolderViewEntries: cloneWorkspacePromptFolderViewEntries(
         workspacePersistence.promptFolderViewEntries
+      ),
+      accordionViewEntries: cloneWorkspaceAccordionViewEntries(
+        workspacePersistence.accordionViewEntries
       )
     } as WorkspacePersistenceDraftRecord)
     return
@@ -33,6 +37,9 @@ export const upsertWorkspacePersistenceDraft = (
     })
     draftRecord.promptFolderViewEntries = cloneWorkspacePromptFolderViewEntries(
       workspacePersistence.promptFolderViewEntries
+    )
+    draftRecord.accordionViewEntries = cloneWorkspaceAccordionViewEntries(
+      workspacePersistence.accordionViewEntries
     )
   })
 }

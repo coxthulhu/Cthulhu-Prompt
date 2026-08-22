@@ -1,4 +1,7 @@
-import type { WorkspacePromptFolderViewEntry } from '@shared/UserPersistence'
+import type {
+  WorkspaceAccordionViewEntry,
+  WorkspacePromptFolderViewEntry
+} from '@shared/UserPersistence'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
@@ -97,6 +100,90 @@ const setPromptFolderViewEntryWithAutosave = (
       })
       collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         applyPromptFolderViewEntry(draft, contentOwnerId, updates)
+      })
+    }
+  })
+}
+
+/** Returns entries with one accordion instance's expanded section IDs updated. */
+const upsertAccordionViewEntry = (
+  entries: WorkspaceAccordionViewEntry[],
+  persistenceId: string,
+  expandedSectionIds: string[]
+): WorkspaceAccordionViewEntry[] => {
+  /** Existing entry position for the target accordion instance. */
+  const existingIndex = entries.findIndex((entry) => entry.persistenceId === persistenceId)
+  if (existingIndex === -1) {
+    return [...entries, { persistenceId, expandedSectionIds: [...expandedSectionIds] }]
+  }
+
+  /** Existing expanded IDs used to avoid redundant persistence writes. */
+  const existingSectionIds = entries[existingIndex]!.expandedSectionIds
+  if (
+    existingSectionIds.length === expandedSectionIds.length &&
+    existingSectionIds.every((sectionId, index) => sectionId === expandedSectionIds[index])
+  ) {
+    return entries
+  }
+
+  /** Updated accordion entries preserving every other persistence ID. */
+  const nextEntries = [...entries]
+  nextEntries[existingIndex] = { persistenceId, expandedSectionIds: [...expandedSectionIds] }
+  return nextEntries
+}
+
+/** Applies one accordion instance's expanded section IDs to a persistence record. */
+const applyAccordionViewEntry = (
+  record: { accordionViewEntries: WorkspaceAccordionViewEntry[] },
+  persistenceId: string,
+  expandedSectionIds: string[]
+): void => {
+  record.accordionViewEntries = upsertAccordionViewEntry(
+    record.accordionViewEntries,
+    persistenceId,
+    expandedSectionIds
+  )
+}
+
+/** Looks up saved expanded section IDs for one workspace accordion instance. */
+export const lookupWorkspacePersistedAccordionExpandedSectionIds = (
+  workspaceId: string,
+  persistenceId: string
+): string[] | null => {
+  /** Saved accordion entry for the requested persistence ID. */
+  const entry = workspacePersistenceDraftCollection
+    .get(workspaceId)
+    ?.accordionViewEntries.find((candidate) => candidate.persistenceId === persistenceId)
+  return entry ? [...entry.expandedSectionIds] : null
+}
+
+/** Persists expanded section IDs for one workspace accordion instance. */
+export const setAccordionExpandedSectionIdsWithAutosave = (
+  workspaceId: string,
+  persistenceId: string,
+  expandedSectionIds: string[]
+): void => {
+  /** Current workspace persistence draft used to detect unchanged expansion state. */
+  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+  if (!draftRecord) return
+
+  /** Next accordion entries after applying the requested expansion state. */
+  const nextEntries = upsertAccordionViewEntry(
+    draftRecord.accordionViewEntries,
+    persistenceId,
+    expandedSectionIds
+  )
+  if (nextEntries === draftRecord.accordionViewEntries) return
+
+  mutatePacedWorkspacePersistenceAutosaveUpdate({
+    workspaceId,
+    debounceMs: AUTOSAVE_MS,
+    mutateOptimistically: ({ collections }) => {
+      collections.workspacePersistence.update(workspaceId, (draft) => {
+        applyAccordionViewEntry(draft, persistenceId, expandedSectionIds)
+      })
+      collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
+        applyAccordionViewEntry(draft, persistenceId, expandedSectionIds)
       })
     }
   })

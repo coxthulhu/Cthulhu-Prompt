@@ -5,6 +5,7 @@
     AlertCircle,
     Archive,
     Check,
+    CircleCheckBig,
     ClipboardList,
     Copy,
     Download,
@@ -13,11 +14,13 @@
     Layers,
     LayoutGrid,
     LibraryBig,
+    ListTodo,
     Loader,
     MoreHorizontal,
     Pencil,
     Pin,
     Plus,
+    Search,
     Settings,
     Shapes,
     Sparkles,
@@ -25,6 +28,9 @@
     Tags,
     Trash2
   } from 'lucide-svelte'
+  import Accordion, {
+    type AccordionSection
+  } from '@renderer/common/cthulhu-ui/Accordion.svelte'
   import CardSurface, {
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
@@ -61,6 +67,21 @@
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
+
+  /** Workspace-scoped persistence key for the Test Screen accordion demo. */
+  const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'
+  /** Weighted section metadata demonstrated by the Test Screen accordion. */
+  const testAccordionSections: AccordionSection[] = [
+    { id: 'research', label: 'RESEARCH', icon: Search, count: 8, weight: 2 },
+    { id: 'active', label: 'ACTIVE', icon: ListTodo, count: 20, weight: 5 },
+    { id: 'completed', label: 'COMPLETED', icon: CircleCheckBig, count: 5, weight: 3 }
+  ]
+  /** Simple prompt-like rows rendered inside each accordion demo section. */
+  const testAccordionContentBySectionId: Record<string, string[]> = {
+    research: ['Compare sidebar patterns', 'Audit interaction requirements', 'Review persistence'],
+    active: ['Map the current implementation', 'Draft the implementation plan', 'Add coverage'],
+    completed: ['Confirm requirements', 'Review the visual mockup', 'Choose section weights']
+  }
 
   const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
   const IconButtonBaseVariants: IconButtonBaseVariant[] = ['normal', 'dim', 'muted']
@@ -752,6 +773,33 @@
           </div>
         </CardSurface>
       </div>
+
+      <div class="component-section" data-testid="accordion-demo-section">
+        <CardSurface>
+          <div class="component-section-content">
+            {@render componentTitle(
+              'Accordion',
+              'Workspace-persisted expansion with weighted space distribution.'
+            )}
+
+            <div class="accordion-demo-shell">
+              <Accordion
+                persistenceId={TEST_ACCORDION_PERSISTENCE_ID}
+                sections={testAccordionSections}
+                testId="test-screen-accordion"
+              >
+                {#snippet children(section)}
+                  <div class="accordion-demo-content">
+                    {#each testAccordionContentBySectionId[section.id] ?? [] as item (item)}
+                      <div class="accordion-demo-row">{item}</div>
+                    {/each}
+                  </div>
+                {/snippet}
+              </Accordion>
+            </div>
+          </div>
+        </CardSurface>
+      </div>
     </section>
   </div>
 
@@ -827,6 +875,28 @@
 
   .icon-candidates-section {
     grid-column: 1 / -1;
+  }
+
+  .accordion-demo-shell {
+    border: 1px solid var(--ui-neutral-muted-border);
+    height: 560px;
+    min-height: 0;
+  }
+
+  .accordion-demo-shell :global(.cthulhuUiAccordion) {
+    height: 100%;
+  }
+
+  .accordion-demo-content {
+    display: grid;
+  }
+
+  .accordion-demo-row {
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    color: var(--ui-hoverable-text);
+    font-size: 13px;
+    line-height: 18px;
+    padding: 8px 16px 8px 58px;
   }
 
   .category-icon-grid {

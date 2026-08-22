@@ -10,6 +10,12 @@ export type WorkspacePersistenceSeedEntry = {
   categoryDescriptionEditorViewStateJson?: string | null
 }
 
+/** Seed values for one workspace-scoped accordion instance. */
+export type WorkspaceAccordionPersistenceSeedEntry = {
+  persistenceId: string
+  expandedSectionIds: string[]
+}
+
 /** Persisted workspace state read directly from the test SQLite database. */
 export type WorkspacePersistenceSnapshot = {
   workspaceId: string
@@ -24,6 +30,7 @@ export type WorkspacePersistenceSnapshot = {
     contentSectionIsExpanded: boolean
     categoryDescriptionEditorViewStateJson: string | null
   }>
+  accordionViewEntries: WorkspaceAccordionPersistenceSeedEntry[]
 }
 
 export const toSqlText = (value: string): string => {
@@ -146,6 +153,7 @@ export const seedWorkspacePersistence = async (
     selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
     lastPromptFolderId?: string | null
     promptFolderViewEntries: WorkspacePersistenceSeedEntry[]
+    accordionViewEntries?: WorkspaceAccordionPersistenceSeedEntry[]
   }
 ): Promise<void> => {
   await runSqlStatement(
@@ -177,6 +185,10 @@ export const seedWorkspacePersistence = async (
   await runSqlStatement(
     electronApp,
     `DELETE FROM category_description_editor_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
+  )
+  await runSqlStatement(
+    electronApp,
+    `DELETE FROM accordion_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
 
   for (const entry of data.promptFolderViewEntries) {
@@ -220,6 +232,24 @@ export const seedWorkspacePersistence = async (
         `
       )
     }
+  }
+
+  for (const entry of data.accordionViewEntries ?? []) {
+    await runSqlStatement(
+      electronApp,
+      `
+      INSERT INTO accordion_view_state (
+        workspace_id,
+        persistence_id,
+        expanded_section_ids_json
+      )
+      VALUES (
+        ${toSqlText(data.workspaceId)},
+        ${toSqlText(entry.persistenceId)},
+        ${toSqlText(JSON.stringify(entry.expandedSectionIds))}
+      )
+      `
+    )
   }
 }
 
@@ -307,6 +337,22 @@ export const readWorkspacePersistence = async (
     )
   }
 
+  /** Accordion expansion rows persisted for this workspace. */
+  const accordionViewStateResult = await runSqlQuery(
+    electronApp,
+    `
+    SELECT
+      persistence_id AS persistenceId,
+      expanded_section_ids_json AS expandedSectionIdsJson
+    FROM accordion_view_state
+    WHERE workspace_id = ${toSqlText(workspaceId)}
+    `
+  )
+
+  if (!accordionViewStateResult.success) {
+    throw new Error(accordionViewStateResult.error ?? 'Failed to read accordion view state')
+  }
+
   /** Category description view-state JSON keyed by category ID. */
   const categoryDescriptionViewStateByCategoryId = new Map(
     (categoryDescriptionViewStateResult.rows ?? []).map((entry) => [
@@ -338,6 +384,10 @@ export const readWorkspacePersistence = async (
       contentSectionIsExpanded: entry.contentSectionIsExpanded !== 0,
       categoryDescriptionEditorViewStateJson:
         categoryDescriptionViewStateByCategoryId.get(String(entry.contentOwnerId)) ?? null
+    })),
+    accordionViewEntries: (accordionViewStateResult.rows ?? []).map((entry) => ({
+      persistenceId: String(entry.persistenceId),
+      expandedSectionIds: JSON.parse(String(entry.expandedSectionIdsJson)) as string[]
     }))
   }
 }
