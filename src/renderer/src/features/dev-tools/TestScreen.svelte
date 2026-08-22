@@ -28,9 +28,8 @@
     Tags,
     Trash2
   } from 'lucide-svelte'
-  import Accordion, {
-    type AccordionSection
-  } from '@renderer/common/cthulhu-ui/Accordion.svelte'
+  import Accordion from '@renderer/common/cthulhu-ui/Accordion.svelte'
+  import AccordionSection from '@renderer/common/cthulhu-ui/AccordionSection.svelte'
   import CardSurface, {
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
@@ -70,18 +69,24 @@
 
   /** Workspace-scoped persistence key for the Test Screen accordion demo. */
   const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'
-  /** Weighted section metadata demonstrated by the Test Screen accordion. */
-  const testAccordionSections: AccordionSection[] = [
-    { id: 'research', label: 'RESEARCH', icon: Search, count: 8, weight: 2 },
-    { id: 'active', label: 'ACTIVE', icon: ListTodo, count: 20, weight: 5 },
-    { id: 'completed', label: 'COMPLETED', icon: CircleCheckBig, count: 5, weight: 3 }
+  /** Prompt-like rows owned by the Research accordion section. */
+  const researchAccordionItems = [
+    'Compare sidebar patterns',
+    'Audit interaction requirements',
+    'Review persistence'
   ]
-  /** Simple prompt-like rows rendered inside each accordion demo section. */
-  const testAccordionContentBySectionId: Record<string, string[]> = {
-    research: ['Compare sidebar patterns', 'Audit interaction requirements', 'Review persistence'],
-    active: ['Map the current implementation', 'Draft the implementation plan', 'Add coverage'],
-    completed: ['Confirm requirements', 'Review the visual mockup', 'Choose section weights']
-  }
+  /** Prompt-like rows owned by the Active accordion section. */
+  const activeAccordionItems = [
+    'Map the current implementation',
+    'Draft the implementation plan',
+    'Add coverage'
+  ]
+  /** Prompt-like rows owned by the Completed accordion section. */
+  const completedAccordionItems = [
+    'Confirm requirements',
+    'Review the visual mockup',
+    'Choose section weights'
+  ]
 
   const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
   const IconButtonBaseVariants: IconButtonBaseVariant[] = ['normal', 'dim', 'muted']
@@ -785,16 +790,49 @@
             <div class="accordion-demo-shell">
               <Accordion
                 persistenceId={TEST_ACCORDION_PERSISTENCE_ID}
-                sections={testAccordionSections}
                 testId="test-screen-accordion"
               >
-                {#snippet children(section)}
+                <AccordionSection
+                  id="research"
+                  label="RESEARCH"
+                  icon={Search}
+                  count={8}
+                  weight={2}
+                >
                   <div class="accordion-demo-content">
-                    {#each testAccordionContentBySectionId[section.id] ?? [] as item (item)}
+                    {#each researchAccordionItems as item (item)}
                       <div class="accordion-demo-row">{item}</div>
                     {/each}
                   </div>
-                {/snippet}
+                </AccordionSection>
+
+                <AccordionSection
+                  id="active"
+                  label="ACTIVE"
+                  icon={ListTodo}
+                  count={20}
+                  weight={5}
+                >
+                  <div class="accordion-demo-content">
+                    {#each activeAccordionItems as item (item)}
+                      <div class="accordion-demo-row">{item}</div>
+                    {/each}
+                  </div>
+                </AccordionSection>
+
+                <AccordionSection
+                  id="completed"
+                  label="COMPLETED"
+                  icon={CircleCheckBig}
+                  count={5}
+                  weight={3}
+                >
+                  <div class="accordion-demo-content">
+                    {#each completedAccordionItems as item (item)}
+                      <div class="accordion-demo-row">{item}</div>
+                    {/each}
+                  </div>
+                </AccordionSection>
               </Accordion>
             </div>
           </div>

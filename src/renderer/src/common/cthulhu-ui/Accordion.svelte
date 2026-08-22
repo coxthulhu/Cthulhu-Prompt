@@ -1,7 +1,6 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { ChevronRight } from 'lucide-svelte'
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { SvelteSet } from 'svelte/reactivity'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
@@ -10,22 +9,13 @@
     type WorkspacePersistenceDraftRecord
   } from '@renderer/data/Collections/WorkspacePersistenceDraftCollection'
   import { setAccordionExpandedSectionIdsWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import { setAccordionContext, type AccordionContext } from './accordionContext'
   import { mergeClasses } from './mergeClasses'
-
-  /** Metadata and default layout weight for one accordion section. */
-  export type AccordionSection = {
-    id: string
-    label: string
-    icon: ComponentType
-    count?: number
-    weight: number
-  }
 
   /** Public properties for the workspace-persisted weighted accordion. */
   type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
     persistenceId: string
-    sections: AccordionSection[]
-    children: Snippet<[AccordionSection]>
+    children: Snippet
     class?: string
     testId?: string
   }
@@ -33,7 +23,6 @@
   /** Component inputs and remaining root element attributes. */
   let {
     persistenceId,
-    sections,
     children,
     class: className,
     testId,
@@ -46,8 +35,10 @@
   const workspacePersistenceQuery = useLiveQuery(workspacePersistenceDraftCollection) as {
     data: WorkspacePersistenceDraftRecord[]
   }
-  /** Saved expanded IDs, or every section ID before this accordion has saved state. */
-  const expandedSectionIds = $derived.by(() => {
+  /** Section IDs registered in rendered order by descendant AccordionSection components. */
+  let sectionIds = $state<string[]>([])
+  /** Saved expanded IDs, or null before this accordion has persisted state. */
+  const persistedExpandedSectionIds = $derived.by(() => {
     /** Currently selected workspace that owns this accordion state. */
     const workspaceId = workspaceSelection.selectedWorkspaceId
     /** Loaded workspace draft containing accordion view entries. */
@@ -58,10 +49,25 @@
     const accordionViewEntry = workspacePersistence?.accordionViewEntries.find(
       (entry) => entry.persistenceId === persistenceId
     )
-    return accordionViewEntry?.expandedSectionIds ?? sections.map((section) => section.id)
+    return accordionViewEntry?.expandedSectionIds ?? null
   })
-  /** Expanded section lookup used by header and layout rendering. */
-  const expandedSectionIdSet = $derived(new SvelteSet(expandedSectionIds))
+
+  /** Registers a rendered section ID once while preserving descendant order. */
+  const registerSection = (sectionId: string): void => {
+    if (!sectionIds.includes(sectionId)) {
+      sectionIds = [...sectionIds, sectionId]
+    }
+  }
+
+  /** Removes a section ID when its owning descendant leaves this accordion. */
+  const unregisterSection = (sectionId: string): void => {
+    sectionIds = sectionIds.filter((candidate) => candidate !== sectionId)
+  }
+
+  /** Returns persisted expansion or the default expanded state for one section. */
+  const isSectionExpanded = (sectionId: string): boolean => {
+    return persistedExpandedSectionIds?.includes(sectionId) ?? true
+  }
 
   /** Toggles one section and queues its workspace-scoped persistence update. */
   const toggleSection = (sectionId: string): void => {
@@ -70,7 +76,7 @@
     if (!workspaceId) return
 
     /** Next expanded ID set after applying the header click. */
-    const nextExpandedSectionIds = new SvelteSet(expandedSectionIds)
+    const nextExpandedSectionIds = new SvelteSet(persistedExpandedSectionIds ?? sectionIds)
     if (nextExpandedSectionIds.has(sectionId)) {
       nextExpandedSectionIds.delete(sectionId)
     } else {
@@ -78,15 +84,31 @@
     }
 
     /** Expanded IDs normalized to the consumer's section order. */
-    const orderedExpandedSectionIds = sections
-      .filter((section) => nextExpandedSectionIds.has(section.id))
-      .map((section) => section.id)
+    const orderedExpandedSectionIds = sectionIds.filter((candidate) =>
+      nextExpandedSectionIds.has(candidate)
+    )
     setAccordionExpandedSectionIdsWithAutosave(
       workspaceId,
       persistenceId,
       orderedExpandedSectionIds
     )
   }
+
+  /** Reactive compound-component API supplied to descendant accordion sections. */
+  const accordionContext: AccordionContext = {
+    get persistenceId() {
+      return persistenceId
+    },
+    get testId() {
+      return testId
+    },
+    registerSection,
+    unregisterSection,
+    isSectionExpanded,
+    toggleSection
+  }
+
+  setAccordionContext(accordionContext)
 </script>
 
 <!-- Workspace-persisted accordion whose expanded sections share space by weight. -->
@@ -95,47 +117,7 @@
   data-testid={testId}
   {...restProps}
 >
-  {#each sections as section (section.id)}
-    <!-- Section state drives both semantic expansion and weighted flex sizing. -->
-    {@const isExpanded = expandedSectionIdSet.has(section.id)}
-    <!-- Stable content ID connects each header to its controlled region. -->
-    {@const contentId = `${persistenceId}-${section.id}-content`}
-    <!-- Section-specific decorative icon supplied by the consumer. -->
-    {@const SectionIcon = section.icon}
-    <section
-      class="cthulhuUiAccordionSection"
-      data-expanded={isExpanded ? 'true' : 'false'}
-      data-testid={testId ? `${testId}-section-${section.id}` : undefined}
-      style={`--cthulhu-ui-accordion-section-weight: ${section.weight};`}
-    >
-      <button
-        type="button"
-        class="cthulhuUiAccordionHeader"
-        aria-controls={contentId}
-        aria-expanded={isExpanded}
-        data-testid={testId ? `${testId}-header-${section.id}` : undefined}
-        onclick={() => toggleSection(section.id)}
-      >
-        <span class="cthulhuUiAccordionChevron">
-          <ChevronRight size={20} aria-hidden="true" />
-        </span>
-        <SectionIcon class="cthulhuUiAccordionIcon" size={16} aria-hidden="true" />
-        <span class="cthulhuUiAccordionLabel">{section.label}</span>
-        {#if section.count !== undefined}
-          <span class="cthulhuUiAccordionCount">{section.count}</span>
-        {/if}
-      </button>
-
-      <div
-        id={contentId}
-        class="cthulhuUiAccordionContent"
-        data-testid={testId ? `${testId}-content-${section.id}` : undefined}
-        hidden={!isExpanded}
-      >
-        {@render children(section)}
-      </div>
-    </section>
-  {/each}
+  {@render children()}
 </div>
 
 <style>
@@ -144,77 +126,5 @@
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
-  }
-
-  .cthulhuUiAccordionSection {
-    display: flex;
-    flex: var(--cthulhu-ui-accordion-section-weight) 1 0;
-    flex-direction: column;
-    min-height: 36px;
-    overflow: hidden;
-  }
-
-  .cthulhuUiAccordionSection[data-expanded='false'] {
-    flex: 0 0 36px;
-  }
-
-  .cthulhuUiAccordionHeader {
-    align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 0;
-    border-top: 1px solid var(--ui-neutral-muted-border);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: grid;
-    flex: 0 0 36px;
-    gap: 7px;
-    grid-template-columns: 24px 18px minmax(0, 1fr) auto;
-    height: 36px;
-    padding: 0 12px 0 9px;
-    text-align: left;
-    width: 100%;
-  }
-
-  .cthulhuUiAccordionHeader:hover,
-  .cthulhuUiAccordionHeader:focus-visible {
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiAccordionChevron {
-    align-items: center;
-    color: var(--ui-secondary-icon-glyph);
-    display: flex;
-    justify-content: center;
-    transform: rotate(0deg);
-  }
-
-  .cthulhuUiAccordionSection[data-expanded='true'] .cthulhuUiAccordionChevron {
-    transform: rotate(90deg);
-  }
-
-  .cthulhuUiAccordionIcon {
-    color: currentColor;
-  }
-
-  .cthulhuUiAccordionLabel {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cthulhuUiAccordionCount {
-    color: var(--ui-muted-text);
-    font-size: 12px;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .cthulhuUiAccordionContent {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
   }
 </style>
