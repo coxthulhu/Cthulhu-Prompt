@@ -3,6 +3,8 @@
   import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
 
   export type PromptEditorTitleRowProps = {
+    /** Prompt or template whose title status line is rendered. */
+    promptId: string
     title: string
     draftText: string
     copyText?: string
@@ -47,8 +49,10 @@
   import { FileText, Layers, Trash2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
 
   let {
+    promptId,
     title,
     draftText,
     copyText,
@@ -79,6 +83,15 @@
     isEdited = false,
     compactLayout = false
   }: PromptEditorTitleRowProps = $props()
+
+  /** Shared navigation state identifies direct tree clicks that should replay this title accent. */
+  const promptNavigation = getPromptNavigationContext()
+  /** Matching click generation remounts the indicator and restarts its CSS animation. */
+  const navigationHighlightGeneration = $derived(
+    promptNavigation.navigationHighlight?.promptId === promptId
+      ? promptNavigation.navigationHighlight.generation
+      : null
+  )
 
   // Delete dialog state keeps confirmation behavior with the isolated delete section.
   let isDeleteDialogOpen = $state(false)
@@ -187,13 +200,17 @@
 
 <div class="prompt-editor-title-row" data-layout={compactLayout ? 'compact' : 'default'}>
   <!-- Reserve the indicator column so Todo titles stay aligned with other statuses. -->
-  <span
-    class="prompt-editor-title-status-indicator"
-    data-status={status}
-    data-edited={isEdited ? 'true' : 'false'}
-    data-testid="prompt-title-status-indicator"
-    aria-hidden="true"
-  ></span>
+  {#key navigationHighlightGeneration}
+    <span
+      class="prompt-editor-title-status-indicator"
+      data-status={status}
+      data-edited={isEdited ? 'true' : 'false'}
+      data-navigation-highlight={navigationHighlightGeneration === null ? undefined : 'true'}
+      data-navigation-highlight-generation={navigationHighlightGeneration ?? undefined}
+      data-testid="prompt-title-status-indicator"
+      aria-hidden="true"
+    ></span>
+  {/key}
 
   <div class="prompt-editor-title-main">
     <IconCell {icon} size="title" />
@@ -319,7 +336,9 @@
   }
 
   .prompt-editor-title-status-indicator {
+    --prompt-status-indicator-color: transparent;
     align-self: stretch;
+    background: var(--prompt-status-indicator-color);
     visibility: hidden;
   }
 
@@ -328,18 +347,38 @@
   }
 
   .prompt-editor-title-status-indicator[data-edited='true'] {
-    background: var(--ui-info-strong-border);
+    --prompt-status-indicator-color: var(--ui-info-strong-border);
     visibility: visible;
   }
 
   .prompt-editor-title-status-indicator[data-status='InProgress'] {
-    background: var(--ui-warning-icon-glyph);
+    --prompt-status-indicator-color: var(--ui-warning-icon-glyph);
     visibility: visible;
   }
 
   .prompt-editor-title-status-indicator[data-status='Completed'] {
-    background: var(--ui-success-normal-text);
+    --prompt-status-indicator-color: var(--ui-success-normal-text);
     visibility: visible;
+  }
+
+  .prompt-editor-title-status-indicator[data-navigation-highlight='true'] {
+    animation: prompt-editor-navigation-highlight 740ms linear;
+  }
+
+  @keyframes prompt-editor-navigation-highlight {
+    0% {
+      background: var(--prompt-status-indicator-color);
+      visibility: visible;
+    }
+    16.2162%,
+    83.7838% {
+      background: var(--ui-accent-strong-border);
+      visibility: visible;
+    }
+    100% {
+      background: var(--prompt-status-indicator-color);
+      visibility: visible;
+    }
   }
 
   .prompt-editor-title-main {

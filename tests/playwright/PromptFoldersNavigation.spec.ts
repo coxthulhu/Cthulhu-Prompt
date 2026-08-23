@@ -9,6 +9,7 @@ import {
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
+import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -111,6 +112,31 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     const templateEditor = mainWindow.locator('[data-testid="prompt-editor-template-1"]')
     await expect(templateEditor).toBeVisible()
+    /** Template tree row uses the same direct-navigation animation path as prompts. */
+    const templateTreeRow = mainWindow.locator('[data-testid="prompt-tree-prompt-template-1"]')
+    /** Template status line rendered beside the clicked tree entry. */
+    const templateTreeIndicator = templateTreeRow
+      .locator('..')
+      .locator('[data-testid="prompt-tree-status-indicator"]')
+    /** Template editor title status line paired with the clicked tree entry. */
+    const templateEditorIndicator = templateEditor.locator(
+      '[data-testid="prompt-title-status-indicator"]'
+    )
+    await templateTreeRow.click()
+    await expect(templateTreeIndicator).toHaveAttribute('data-navigation-highlight', 'true')
+    await expect(templateEditorIndicator).toHaveAttribute('data-navigation-highlight', 'true')
+    /** Template animation snapshot proves templates share the requested timing and accent. */
+    const templateAnimation = await readPromptNavigationHighlightAnimation(
+      templateEditorIndicator
+    )
+    expect(templateAnimation).toEqual({
+      durationMs: 740,
+      keyframeTimesMs: [0, 120, 620, 740],
+      holdColor: templateAnimation.accentColor,
+      accentColor: templateAnimation.accentColor,
+      finalKeyframeColor: templateAnimation.normalColor,
+      normalColor: templateAnimation.normalColor
+    })
     await expect(templateEditor.locator('[data-testid="prompt-move-up"]')).toBeVisible()
     await expect(templateEditor.locator('[data-testid="prompt-drag-handle"]')).toBeVisible()
     await expect(templateEditor.locator('[data-testid="prompt-move-down"]')).toBeVisible()

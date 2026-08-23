@@ -6,6 +6,8 @@ import {
 } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
 
 const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
+/** Full tree-navigation highlight duration: 120ms transition, 500ms hold, and 120ms fade. */
+const PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS = 740
 
 /** Selectable row identities within one root prompt-folder screen. */
 export type PromptNavigationRow = 'root-header' | 'category-details' | `prompt:${string}`
@@ -30,6 +32,16 @@ type PromptNavigationState = {
   contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
+  /** Latest prompt-tree click that should highlight matching tree and editor status lines. */
+  navigationHighlight: PromptNavigationHighlight | null
+}
+
+/** Replay identity for one prompt selected directly from the prompt tree. */
+export type PromptNavigationHighlight = {
+  /** Prompt or template selected by the tree click. */
+  promptId: string
+  /** Generation changed on every click so an active prompt can replay its highlight. */
+  generation: number
 }
 
 export type PromptNavigationTarget = {
@@ -63,6 +75,8 @@ type SelectPromptNavigationOptions = {
   contentOwnerId: string
   row: PromptNavigationRow
   source: PromptNavigationSource
+  /** Prompt clicked in the tree when this exact selection should start a highlight. */
+  navigationHighlightPromptId?: string
   forceRequest?: boolean
   contentReveal?: {
     scrollType: PromptContentRevealScrollType
@@ -81,6 +95,8 @@ export type PromptNavigationContext = {
   contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
+  /** Latest direct tree-click highlight, or null after another navigation source takes over. */
+  navigationHighlight: PromptNavigationHighlight | null
   contentExpansionRequests: ConsumableRequestCoordinator<PromptContentExpansionRequest>
   contentRevealRequests: ConsumableRequestCoordinator<PromptContentRevealRequest>
   promptFocusRequests: ConsumableRequestCoordinator<PromptFocusRequest>
@@ -110,7 +126,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     screenRootFolderId: null,
     contentOwnerId: null,
     selectedRow: null,
-    selectionSource: null
+    selectionSource: null,
+    navigationHighlight: null
   })
   const contentExpansionRequests =
     createConsumableRequestCoordinator<PromptContentExpansionRequest>()
@@ -118,12 +135,15 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
   const promptFocusRequests = createConsumableRequestCoordinator<PromptFocusRequest>()
   const treeExpansionRequests = createConsumableRequestCoordinator<PromptTreeExpansionRequest>()
   const treeRevealRequests = createConsumableRequestCoordinator<PromptNavigationTarget>()
+  /** Timeout that clears the completed highlight so remounted virtual rows do not replay it. */
+  let navigationHighlightTimeoutId: number | null = null
 
   const select = ({
     screenRootFolderId,
     contentOwnerId,
     row,
     source,
+    navigationHighlightPromptId,
     forceRequest = false,
     contentReveal,
     focusPromptId,
@@ -143,6 +163,29 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     state.contentOwnerId = contentOwnerId
     state.selectedRow = row
     state.selectionSource = source
+    if (navigationHighlightPromptId) {
+      if (navigationHighlightTimeoutId !== null) {
+        window.clearTimeout(navigationHighlightTimeoutId)
+      }
+      /** Next click generation restarts both matching CSS animations. */
+      const navigationHighlightGeneration = (state.navigationHighlight?.generation ?? 0) + 1
+      state.navigationHighlight = {
+        promptId: navigationHighlightPromptId,
+        generation: navigationHighlightGeneration
+      }
+      navigationHighlightTimeoutId = window.setTimeout(() => {
+        if (state.navigationHighlight?.generation === navigationHighlightGeneration) {
+          state.navigationHighlight = null
+        }
+        navigationHighlightTimeoutId = null
+      }, PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS)
+    } else if (source !== 'tree-click' || !row.startsWith('prompt:')) {
+      state.navigationHighlight = null
+      if (navigationHighlightTimeoutId !== null) {
+        window.clearTimeout(navigationHighlightTimeoutId)
+        navigationHighlightTimeoutId = null
+      }
+    }
 
     const target: PromptNavigationTarget = {
       screenRootFolderId,
@@ -194,6 +237,9 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     },
     get selectionSource() {
       return state.selectionSource
+    },
+    get navigationHighlight() {
+      return state.navigationHighlight
     },
     contentExpansionRequests,
     contentRevealRequests,

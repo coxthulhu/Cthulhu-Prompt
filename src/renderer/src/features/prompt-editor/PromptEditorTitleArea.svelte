@@ -12,6 +12,7 @@
   }
 
   let {
+    promptId,
     title,
     draftText,
     copyText,
@@ -51,6 +52,7 @@
   style={`height:${titleAreaHeightPx}px; min-height:${titleAreaHeightPx}px; max-height:${titleAreaHeightPx}px;`}
 >
   <PromptEditorTitleRow
+    {promptId}
     {title}
     {draftText}
     {copyText}

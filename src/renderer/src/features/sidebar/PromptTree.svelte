@@ -520,7 +520,8 @@
   const handlePromptTreeEntrySelect = (
     contentOwnerId: string,
     row: PromptNavigationRow,
-    source: 'tree-click' | 'category-open' = 'tree-click'
+    source: 'tree-click' | 'category-open' = 'tree-click',
+    navigationHighlightPromptId?: string
   ) => {
     const rootFolderId = screenRootFolder?.id
     if (!rootFolderId) return
@@ -531,6 +532,7 @@
       contentOwnerId,
       row,
       source,
+      navigationHighlightPromptId,
       forceRequest: true,
       contentReveal: {
         scrollType: row === 'category-details' ? 'align-top' : 'center',
@@ -545,7 +547,12 @@
 
   /** Selects a prompt owned by either the root folder or a category. */
   const handlePromptTreePromptSelect = (contentOwnerId: string, promptId: string) => {
-    handlePromptTreeEntrySelect(contentOwnerId, promptIdToPromptNavigationRow(promptId))
+    handlePromptTreeEntrySelect(
+      contentOwnerId,
+      promptIdToPromptNavigationRow(promptId),
+      'tree-click',
+      promptId
+    )
   }
 
   const handleCategoryExpandedChange = (categoryId: string, isExpanded: boolean) => {

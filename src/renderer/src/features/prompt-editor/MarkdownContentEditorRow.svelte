@@ -545,6 +545,7 @@
   {/snippet}
 
   <PromptEditorTitleArea
+    {promptId}
     title={promptData.draft.title}
     draftText={promptData.draft.text}
     {copyText}

@@ -3,6 +3,7 @@
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type { PromptStatus } from '@shared/Prompt'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
@@ -47,6 +48,15 @@
     promptDragOptions,
     onPromptSelect
   }: Props = $props()
+
+  /** Shared navigation state identifies direct tree clicks that should replay this row's accent. */
+  const promptNavigation = getPromptNavigationContext()
+  /** Matching click generation remounts the indicator and restarts its CSS animation. */
+  const navigationHighlightGeneration = $derived(
+    promptNavigation.navigationHighlight?.promptId === promptId
+      ? promptNavigation.navigationHighlight.generation
+      : null
+  )
 
   const handlePromptSelect = (event: MouseEvent) => {
     onPromptSelect(folderId, promptId)
@@ -97,13 +107,17 @@
 
 {#snippet promptStatusIndicator()}
   <!-- The status accent overlays the row so it does not alter button geometry or interaction. -->
-  <span
-    class="prompt-tree-status-indicator"
-    data-status={status}
-    data-edited={isEdited ? 'true' : 'false'}
-    data-testid="prompt-tree-status-indicator"
-    aria-hidden="true"
-  ></span>
+  {#key navigationHighlightGeneration}
+    <span
+      class="prompt-tree-status-indicator"
+      data-status={status}
+      data-edited={isEdited ? 'true' : 'false'}
+      data-navigation-highlight={navigationHighlightGeneration === null ? undefined : 'true'}
+      data-navigation-highlight-generation={navigationHighlightGeneration ?? undefined}
+      data-testid="prompt-tree-status-indicator"
+      aria-hidden="true"
+    ></span>
+  {/key}
 {/snippet}
 
 {#snippet promptButton()}
@@ -167,6 +181,8 @@
   }
 
   .prompt-tree-status-indicator {
+    --prompt-status-indicator-color: transparent;
+    background: var(--prompt-status-indicator-color);
     bottom: 0;
     left: 0;
     pointer-events: none;
@@ -178,21 +194,41 @@
   }
 
   .prompt-tree-status-indicator[data-edited='true'] {
-    background: var(--ui-info-strong-border);
-    color: var(--ui-info-strong-border);
+    --prompt-status-indicator-color: var(--ui-info-strong-border);
+    color: var(--prompt-status-indicator-color);
     visibility: visible;
   }
 
   .prompt-tree-status-indicator[data-status='InProgress'] {
-    background: var(--ui-warning-icon-glyph);
-    color: var(--ui-warning-icon-glyph);
+    --prompt-status-indicator-color: var(--ui-warning-icon-glyph);
+    color: var(--prompt-status-indicator-color);
     visibility: visible;
   }
 
   .prompt-tree-status-indicator[data-status='Completed'] {
-    background: var(--ui-success-normal-text);
-    color: var(--ui-success-normal-text);
+    --prompt-status-indicator-color: var(--ui-success-normal-text);
+    color: var(--prompt-status-indicator-color);
     visibility: visible;
+  }
+
+  .prompt-tree-status-indicator[data-navigation-highlight='true'] {
+    animation: prompt-tree-navigation-highlight 740ms linear;
+  }
+
+  @keyframes prompt-tree-navigation-highlight {
+    0% {
+      background: var(--prompt-status-indicator-color);
+      visibility: visible;
+    }
+    16.2162%,
+    83.7838% {
+      background: var(--ui-accent-strong-border);
+      visibility: visible;
+    }
+    100% {
+      background: var(--prompt-status-indicator-color);
+      visibility: visible;
+    }
   }
 
   .sidebarPromptTreeSettingsButton[data-selection-control] {

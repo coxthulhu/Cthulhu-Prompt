@@ -14,6 +14,7 @@ import {
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import { PromptStatus } from '../../src/shared/Prompt'
+import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -224,6 +225,101 @@ const scrollPromptFolderRowAwayFromViewportCenter = async (
 }
 
 describe('Prompt folder prompt tree', () => {
+  test('highlights prompt tree and editor status lines on every prompt click', async ({
+    testSetup
+  }) => {
+    /** Sample workspace exposes a Todo prompt with transparent normal indicators. */
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders(SAMPLE_FOLDER_NAME)
+
+    /** Clickable tree row that initiates both synchronized highlights. */
+    const promptTreeRow = mainWindow.locator(samplePromptTreeRowSelector)
+    /** Tree status line overlaid beside the clicked prompt. */
+    const treeIndicator = promptTreeRow
+      .locator('..')
+      .locator('[data-testid="prompt-tree-status-indicator"]')
+    /** Matching status line on the prompt editor title bar. */
+    const editorIndicator = mainWindow.locator(
+      `${promptEditorSelector(SAMPLE_PROMPT_ID)} [data-testid="prompt-title-status-indicator"]`
+    )
+    await expect(promptTreeRow).toBeVisible()
+    await expect(editorIndicator).toHaveCount(1)
+    /** Status selector changes the target to a persistent non-transparent warning line. */
+    const statusPill = mainWindow.locator(
+      `${promptEditorSelector(SAMPLE_PROMPT_ID)} [data-testid="prompt-status-pill"]`
+    )
+    await statusPill.click()
+    await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
+    await expect(treeIndicator).toHaveAttribute('data-status', 'InProgress')
+    await expect(editorIndicator).toHaveAttribute('data-status', 'InProgress')
+
+    await promptTreeRow.click()
+    await expect(treeIndicator).toHaveAttribute('data-navigation-highlight', 'true')
+    await expect(editorIndicator).toHaveAttribute('data-navigation-highlight', 'true')
+    /** First generation shared by the tree and editor animations. */
+    const firstGeneration = await treeIndicator.getAttribute(
+      'data-navigation-highlight-generation'
+    )
+    expect(firstGeneration).toBeTruthy()
+    await expect(editorIndicator).toHaveAttribute(
+      'data-navigation-highlight-generation',
+      firstGeneration!
+    )
+
+    /** Tree animation snapshot verifies the requested 120ms, 500ms, and 120ms phases. */
+    const treeAnimation = await readPromptNavigationHighlightAnimation(treeIndicator)
+    /** Editor animation snapshot verifies the same phase contract and purple color. */
+    const editorAnimation = await readPromptNavigationHighlightAnimation(editorIndicator)
+    expect(treeAnimation).toEqual({
+      durationMs: 740,
+      keyframeTimesMs: [0, 120, 620, 740],
+      holdColor: treeAnimation.accentColor,
+      accentColor: treeAnimation.accentColor,
+      finalKeyframeColor: treeAnimation.normalColor,
+      normalColor: treeAnimation.normalColor
+    })
+    expect(editorAnimation).toEqual({
+      durationMs: 740,
+      keyframeTimesMs: [0, 120, 620, 740],
+      holdColor: editorAnimation.accentColor,
+      accentColor: editorAnimation.accentColor,
+      finalKeyframeColor: editorAnimation.normalColor,
+      normalColor: editorAnimation.normalColor
+    })
+
+    await treeIndicator.evaluate((element) => {
+      element.setAttribute('data-testid-highlight-instance', 'first')
+    })
+    await editorIndicator.evaluate((element) => {
+      element.setAttribute('data-testid-highlight-instance', 'first')
+    })
+    await promptTreeRow.click()
+    await expect
+      .poll(() => treeIndicator.getAttribute('data-navigation-highlight-generation'))
+      .not.toBe(firstGeneration)
+    /** Replayed generation remains synchronized between the matching indicators. */
+    const replayGeneration = await treeIndicator.getAttribute(
+      'data-navigation-highlight-generation'
+    )
+    await expect(editorIndicator).toHaveAttribute(
+      'data-navigation-highlight-generation',
+      replayGeneration!
+    )
+    await expect(treeIndicator).not.toHaveAttribute('data-testid-highlight-instance', 'first')
+    await expect(editorIndicator).not.toHaveAttribute('data-testid-highlight-instance', 'first')
+    /** Replayed snapshot requires a fresh animation on the remounted indicator. */
+    const replayTreeAnimation = await readPromptNavigationHighlightAnimation(treeIndicator)
+    /** Fresh editor snapshot proves its independently keyed animation also replayed. */
+    const replayEditorAnimation = await readPromptNavigationHighlightAnimation(editorIndicator)
+    expect(replayTreeAnimation.durationMs).toBe(740)
+    expect(replayTreeAnimation.holdColor).toBe(replayTreeAnimation.accentColor)
+    expect(replayEditorAnimation.durationMs).toBe(740)
+    expect(replayEditorAnimation.holdColor).toBe(replayEditorAnimation.accentColor)
+  })
+
   test('renders categories and persists prompt tree expansion state', async ({
     electronApp,
     testSetup
