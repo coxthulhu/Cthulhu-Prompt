@@ -90,7 +90,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 17 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 18 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -125,6 +125,20 @@ describe('Test Infrastructure', () => {
       expect(promptFolderViewStateColumnNames).not.toContain(
         'prompt_tree_is_showing_all_prompts'
       )
+
+      /** Current accordion columns after replacing expansion-only persistence. */
+      const accordionViewStateColumnsResult = await runSqlQuery(
+        electronApp,
+        'PRAGMA table_info(accordion_view_state)'
+      )
+      /** Accordion column names used to verify the generic section-state JSON migration. */
+      const accordionViewStateColumnNames = (accordionViewStateColumnsResult.rows ?? []).map(
+        (row) => row.name
+      )
+
+      expect(accordionViewStateColumnsResult.success).toBe(true)
+      expect(accordionViewStateColumnNames).toContain('sections_json')
+      expect(accordionViewStateColumnNames).not.toContain('expanded_section_ids_json')
     })
   })
 

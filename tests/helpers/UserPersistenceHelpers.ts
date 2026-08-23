@@ -13,7 +13,11 @@ export type WorkspacePersistenceSeedEntry = {
 /** Seed values for one workspace-scoped accordion instance. */
 export type WorkspaceAccordionPersistenceSeedEntry = {
   persistenceId: string
-  expandedSectionIds: string[]
+  sections: Array<{
+    id: string
+    isExpanded: boolean
+    configuredExpandedHeightPx: number
+  }>
 }
 
 /** Persisted workspace state read directly from the test SQLite database. */
@@ -241,12 +245,12 @@ export const seedWorkspacePersistence = async (
       INSERT INTO accordion_view_state (
         workspace_id,
         persistence_id,
-        expanded_section_ids_json
+        sections_json
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
         ${toSqlText(entry.persistenceId)},
-        ${toSqlText(JSON.stringify(entry.expandedSectionIds))}
+        ${toSqlText(JSON.stringify(entry.sections))}
       )
       `
     )
@@ -337,13 +341,13 @@ export const readWorkspacePersistence = async (
     )
   }
 
-  /** Accordion expansion rows persisted for this workspace. */
+  /** Complete accordion section rows persisted for this workspace. */
   const accordionViewStateResult = await runSqlQuery(
     electronApp,
     `
     SELECT
       persistence_id AS persistenceId,
-      expanded_section_ids_json AS expandedSectionIdsJson
+      sections_json AS sectionsJson
     FROM accordion_view_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -387,7 +391,9 @@ export const readWorkspacePersistence = async (
     })),
     accordionViewEntries: (accordionViewStateResult.rows ?? []).map((entry) => ({
       persistenceId: String(entry.persistenceId),
-      expandedSectionIds: JSON.parse(String(entry.expandedSectionIdsJson)) as string[]
+      sections: JSON.parse(
+        String(entry.sectionsJson)
+      ) as WorkspaceAccordionPersistenceSeedEntry['sections']
     }))
   }
 }

@@ -85,7 +85,7 @@
   const completedAccordionItems = [
     'Confirm requirements',
     'Review the visual mockup',
-    'Choose section weights'
+    'Choose section heights'
   ]
 
   const CardSurfaceVariants: CardSurfaceVariant[] = ['default', 'overlay']
@@ -784,7 +784,7 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Accordion',
-              'Workspace-persisted expansion with weighted space distribution.'
+              'Workspace-persisted expansion with resizable proportional sections.'
             )}
 
             <div class="accordion-demo-shell">
@@ -797,7 +797,6 @@
                   label="RESEARCH"
                   icon={Search}
                   count={8}
-                  weight={2}
                 >
                   <div class="accordion-demo-content">
                     {#each researchAccordionItems as item (item)}
@@ -811,7 +810,6 @@
                   label="ACTIVE"
                   icon={ListTodo}
                   count={20}
-                  weight={5}
                 >
                   <div class="accordion-demo-content">
                     {#each activeAccordionItems as item (item)}
@@ -825,7 +823,7 @@
                   label="COMPLETED"
                   icon={CircleCheckBig}
                   count={5}
-                  weight={3}
+                  minimumExpandedContentHeightPx={100}
                 >
                   <div class="accordion-demo-content">
                     {#each completedAccordionItems as item (item)}

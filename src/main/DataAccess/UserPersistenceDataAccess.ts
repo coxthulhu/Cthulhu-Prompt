@@ -3,6 +3,7 @@ import {
   createDefaultWorkspacePersistence,
   parseWorkspaceScreenSelection,
   parseWorkspacePersistence,
+  parseWorkspaceAccordionViewEntry,
   toSerializableWorkspacePersistence,
   parseUserPersistence,
   type UserPersistence,
@@ -50,7 +51,7 @@ type CategoryDescriptionEditorViewStateRow = {
 /** SQLite row for one workspace accordion instance. */
 type AccordionViewRow = {
   persistenceId: string
-  expandedSectionIdsJson: string
+  sectionsJson: string
 }
 
 export type WindowPersistence = {
@@ -83,14 +84,10 @@ const parseSelectedScreenDataJson = (value: string | null): unknown => {
   }
 }
 
-/** Parses the section ID array stored for one accordion instance. */
-const parseExpandedSectionIdsJson = (value: string): string[] => {
+/** Parses the complete section array stored for one accordion instance. */
+const parseAccordionSectionsJson = (value: string): unknown => {
   try {
-    /** JSON value read from the accordion view-state row. */
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) && parsed.every((sectionId) => typeof sectionId === 'string')
-      ? parsed
-      : []
+    return JSON.parse(value)
   } catch {
     return []
   }
@@ -265,13 +262,13 @@ export class UserPersistenceDataAccess {
       )
       .all(workspaceId) as CategoryDescriptionEditorViewStateRow[]
 
-    /** Workspace accordion expansion rows loaded from SQLite. */
+    /** Workspace accordion section rows loaded from SQLite. */
     const accordionViewRows = db
       .prepare(
         `
         SELECT
           persistence_id AS persistenceId,
-          expanded_section_ids_json AS expandedSectionIdsJson
+          sections_json AS sectionsJson
         FROM accordion_view_state
         WHERE workspace_id = ?
         `
@@ -298,11 +295,15 @@ export class UserPersistenceDataAccess {
         categoryDescriptionEditorViewStateByCategoryId.get(row.contentOwnerId) ?? null
     }))
 
-    /** Serializable accordion expansion state loaded for the workspace. */
-    const accordionViewEntries = accordionViewRows.map((row) => ({
-      persistenceId: row.persistenceId,
-      expandedSectionIds: parseExpandedSectionIdsJson(row.expandedSectionIdsJson)
-    }))
+    /** Serializable complete accordion state loaded for the workspace. */
+    const accordionViewEntries = accordionViewRows.flatMap((row) => {
+      /** Validated accordion row converted from its JSON section array. */
+      const entry = parseWorkspaceAccordionViewEntry({
+        persistenceId: row.persistenceId,
+        sections: parseAccordionSectionsJson(row.sectionsJson)
+      })
+      return entry ? [entry] : []
+    })
 
     const selectedScreenData = parseSelectedScreenDataJson(workspaceUiState.selectedScreenDataJson)
     const parsedPersistence = parseWorkspacePersistence(
@@ -394,13 +395,13 @@ export class UserPersistenceDataAccess {
         VALUES (?, ?, ?)
         `
       )
-      /** Inserts one workspace accordion expansion entry. */
+      /** Inserts one workspace accordion's complete section state. */
       const insertAccordionView = db.prepare(
         `
         INSERT INTO accordion_view_state (
           workspace_id,
           persistence_id,
-          expanded_section_ids_json
+          sections_json
         )
         VALUES (?, ?, ?)
         `
@@ -429,7 +430,7 @@ export class UserPersistenceDataAccess {
         insertAccordionView.run(
           serializableWorkspacePersistence.workspaceId,
           entry.persistenceId,
-          JSON.stringify(entry.expandedSectionIds)
+          JSON.stringify(entry.sections)
         )
       }
     })

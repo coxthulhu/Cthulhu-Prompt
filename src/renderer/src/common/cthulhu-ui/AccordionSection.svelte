@@ -5,38 +5,53 @@
   import { getAccordionContext } from './accordionContext'
   import { mergeClasses } from './mergeClasses'
 
-  /** Public properties for one weighted accordion section and its owned content. */
+  /** Fixed header height included in every expanded section minimum. */
+  const ACCORDION_HEADER_HEIGHT_PX = 36
+  /** Default total configured height for an expanded section. */
+  const DEFAULT_EXPANDED_HEIGHT_PX = 200
+  /** Default configurable minimum for expanded section content. */
+  const DEFAULT_MINIMUM_EXPANDED_CONTENT_HEIGHT_PX = 64
+
+  /** Public properties for one resizable accordion section and its owned content. */
   type Props = Omit<HTMLAttributes<HTMLElement>, 'children'> & {
     id: string
     label: string
     icon: ComponentType
     count?: number
-    weight: number
+    initialExpandedHeightPx?: number
+    minimumExpandedContentHeightPx?: number
     children: Snippet
     class?: string
   }
 
-  /** Section metadata, owned content, and remaining section element attributes. */
+  /** Section metadata, sizing configuration, content, and remaining element attributes. */
   let {
     id,
     label,
     icon,
     count,
-    weight,
+    initialExpandedHeightPx = DEFAULT_EXPANDED_HEIGHT_PX,
+    minimumExpandedContentHeightPx = DEFAULT_MINIMUM_EXPANDED_CONTENT_HEIGHT_PX,
     children,
     class: className,
     ...restProps
   }: Props = $props()
 
-  /** Nearest accordion controller that owns this section's persisted state. */
+  /** Nearest accordion controller that owns this section's layout and persisted state. */
   const accordionContext = getAccordionContext()
   /** Reactive icon component selected by the section metadata. */
   const SectionIcon = $derived(icon)
   /** Reactive persisted expansion state for this section ID. */
   const isExpanded = $derived(accordionContext.isSectionExpanded(id))
+  /** Explicit total display height calculated by the owning accordion. */
+  const displayedHeightPx = $derived(accordionContext.getSectionHeightPx(id))
+  /** Whether this expanded section has an expanded section above it to resize. */
+  const canResize = $derived(accordionContext.canResizeSection(id))
+  /** Whether this section's sash should show its active blue overlay. */
+  const isSashDragging = $derived(accordionContext.isSectionSashDragging(id))
   /** Stable content ID connecting this section's header and region. */
   const contentId = $derived(`${accordionContext.persistenceId}-${id}-content`)
-  /** Parent-derived test ID preserving consistent accordion selectors. */
+  /** Parent-derived section test ID preserving consistent accordion selectors. */
   const sectionTestId = $derived(
     accordionContext.testId ? `${accordionContext.testId}-section-${id}` : undefined
   )
@@ -48,24 +63,45 @@
   const contentTestId = $derived(
     accordionContext.testId ? `${accordionContext.testId}-content-${id}` : undefined
   )
+  /** Parent-derived sash test ID preserving consistent accordion selectors. */
+  const sashTestId = $derived(
+    accordionContext.testId ? `${accordionContext.testId}-sash-${id}` : undefined
+  )
 
-  // Side effect: register this section's current ID for default state and persistence ordering.
+  // Side effect: register this section's current identity and sizing configuration with its owner.
   $effect(() => {
-    /** Section ID tracked independently from the parent's mutable registration list. */
-    const sectionId = id
-    untrack(() => accordionContext.registerSection(sectionId))
-    return () => untrack(() => accordionContext.unregisterSection(sectionId))
+    /** Section registration isolated from the parent's reactive layout updates. */
+    const section = {
+      id,
+      initialExpandedHeightPx,
+      minimumExpandedHeightPx:
+        ACCORDION_HEADER_HEIGHT_PX + minimumExpandedContentHeightPx
+    }
+    untrack(() => accordionContext.registerSection(section))
+    return () => untrack(() => accordionContext.unregisterSection(section.id))
   })
 </script>
 
-<!-- Independently owned accordion section with header metadata and content snippet. -->
+<!-- Independently owned accordion section with an optional draggable top sash. -->
 <section
   class={mergeClasses('cthulhuUiAccordionSection', className)}
   data-expanded={isExpanded ? 'true' : 'false'}
   data-testid={sectionTestId}
-  style={`--cthulhu-ui-accordion-section-weight: ${weight};`}
+  style={`--cthulhu-ui-accordion-section-height: ${displayedHeightPx}px;`}
   {...restProps}
 >
+  {#if canResize}
+    <button
+      type="button"
+      class="cthulhuUiAccordionSash"
+      data-dragging={isSashDragging ? 'true' : 'false'}
+      data-testid={sashTestId}
+      aria-label={`Resize ${label} section`}
+      tabindex="-1"
+      onpointerdown={(event) => accordionContext.startSectionResize(id, event)}
+    ></button>
+  {/if}
+
   <button
     type="button"
     class="cthulhuUiAccordionHeader"
@@ -97,14 +133,29 @@
 <style>
   .cthulhuUiAccordionSection {
     display: flex;
-    flex: var(--cthulhu-ui-accordion-section-weight) 1 0;
+    flex: 0 0 var(--cthulhu-ui-accordion-section-height);
     flex-direction: column;
-    min-height: 36px;
+    min-height: var(--cthulhu-ui-accordion-section-height);
     overflow: hidden;
+    position: relative;
   }
 
-  .cthulhuUiAccordionSection[data-expanded='false'] {
-    flex: 0 0 36px;
+  .cthulhuUiAccordionSash {
+    background: transparent;
+    border: 0;
+    cursor: ns-resize;
+    height: 4px;
+    left: 0;
+    padding: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    touch-action: none;
+    z-index: 1;
+  }
+
+  .cthulhuUiAccordionSash[data-dragging='true'] {
+    background: var(--ui-info-strong-border);
   }
 
   .cthulhuUiAccordionHeader {

@@ -56,10 +56,17 @@ export type WorkspacePromptFolderViewEntry = {
   categoryDescriptionEditorViewStateJson: string | null
 }
 
-/** Persisted expansion state for one accordion instance in a workspace. */
+/** Persisted collapse and configured sizing state for one accordion section. */
+export type WorkspaceAccordionSectionViewEntry = {
+  id: string
+  isExpanded: boolean
+  configuredExpandedHeightPx: number
+}
+
+/** Persisted section state for one accordion instance in a workspace. */
 export type WorkspaceAccordionViewEntry = {
   persistenceId: string
-  expandedSectionIds: string[]
+  sections: WorkspaceAccordionSectionViewEntry[]
 }
 
 export type WorkspacePersistence = WorkspaceScreenSelection & {
@@ -113,13 +120,13 @@ export const cloneWorkspacePromptFolderViewEntries = (
   }))
 }
 
-/** Clones accordion expansion entries for serialization and renderer drafts. */
+/** Clones accordion section entries for serialization and renderer drafts. */
 export const cloneWorkspaceAccordionViewEntries = (
   entries: WorkspaceAccordionViewEntry[]
 ): WorkspaceAccordionViewEntry[] => {
   return entries.map((entry) => ({
     persistenceId: entry.persistenceId,
-    expandedSectionIds: [...entry.expandedSectionIds]
+    sections: entry.sections.map((section) => ({ ...section }))
   }))
 }
 
@@ -347,33 +354,54 @@ const parseWorkspacePromptFolderViewEntries = (
   return parsedEntries
 }
 
-/** Parses one persisted accordion expansion entry. */
-const parseWorkspaceAccordionViewEntry = (
+/** Parses one persisted accordion section entry. */
+const parseWorkspaceAccordionSectionViewEntry = (
+  value: unknown
+): WorkspaceAccordionSectionViewEntry | null => {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.isExpanded !== 'boolean' ||
+    typeof value.configuredExpandedHeightPx !== 'number'
+  ) {
+    return null
+  }
+
+  return {
+    id: value.id,
+    isExpanded: value.isExpanded,
+    configuredExpandedHeightPx: value.configuredExpandedHeightPx
+  }
+}
+
+/** Parses one persisted accordion entry. */
+export const parseWorkspaceAccordionViewEntry = (
   value: unknown
 ): WorkspaceAccordionViewEntry | null => {
   if (!isRecord(value) || typeof value.persistenceId !== 'string') {
     return null
   }
 
-  if (!Array.isArray(value.expandedSectionIds)) {
+  if (!Array.isArray(value.sections)) {
     return null
   }
 
-  /** Valid section IDs retained from the persisted entry. */
-  const expandedSectionIds = value.expandedSectionIds.filter(
-    (sectionId): sectionId is string => typeof sectionId === 'string'
-  )
-  if (expandedSectionIds.length !== value.expandedSectionIds.length) {
-    return null
+  /** Validated section entries retained in their configured order. */
+  const sections: WorkspaceAccordionSectionViewEntry[] = []
+  for (const section of value.sections) {
+    /** Validated collapse and sizing state for the current section. */
+    const parsedSection = parseWorkspaceAccordionSectionViewEntry(section)
+    if (!parsedSection) return null
+    sections.push(parsedSection)
   }
 
   return {
     persistenceId: value.persistenceId,
-    expandedSectionIds
+    sections
   }
 }
 
-/** Parses the persisted workspace accordion expansion array. */
+/** Parses the persisted workspace accordion array. */
 const parseWorkspaceAccordionViewEntries = (value: unknown): WorkspaceAccordionViewEntry[] => {
   if (!Array.isArray(value)) {
     return []
@@ -411,7 +439,7 @@ export const parseWorkspacePersistence = (
   const promptFolderViewEntries = parseWorkspacePromptFolderViewEntries(
     value.promptFolderViewEntries
   )
-  /** Accordion expansion state defaults empty for workspaces saved before this feature. */
+  /** Accordion section state defaults empty for workspaces without configured accordions. */
   const accordionViewEntries = parseWorkspaceAccordionViewEntries(value.accordionViewEntries)
   const lastPromptFolderId = value.lastPromptFolderId ?? null
   if (lastPromptFolderId !== null && typeof lastPromptFolderId !== 'string') {

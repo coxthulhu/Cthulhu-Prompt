@@ -1,16 +1,19 @@
-import type { Locator } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   readWorkspacePersistence,
   seedUserPersistence,
-  seedWorkspacePersistence
+  seedWorkspacePersistence,
+  type WorkspaceAccordionPersistenceSeedEntry
 } from '../helpers/UserPersistenceHelpers'
 
 /** Playwright fixtures and assertions configured for the Electron application. */
 const { test, describe, expect } = createPlaywrightTestSuite()
 /** Test Screen accordion persistence ID shared with its demo component. */
 const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'
+/** Fixed displayed height for collapsed accordion sections. */
+const COLLAPSED_HEIGHT_PX = 36
 
 /** Creates fixture-stable entity IDs using the workspace fixture algorithm. */
 const createDeterministicId = (seed: string): string => {
@@ -24,7 +27,12 @@ const createDeterministicId = (seed: string): string => {
   return `00000000000000000000${suffix}`
 }
 
-/** Reads a required locator box for weighted layout assertions. */
+/** Creates complete persisted section state with independently configurable expanded heights. */
+const createAccordionSections = (
+  states: Array<{ id: string; isExpanded: boolean; configuredExpandedHeightPx: number }>
+): WorkspaceAccordionPersistenceSeedEntry['sections'] => states
+
+/** Reads a required locator box for section layout and drag assertions. */
 const readBox = async (locator: Locator) => {
   /** Current element box returned by Playwright. */
   const box = await locator.boundingBox()
@@ -32,8 +40,34 @@ const readBox = async (locator: Locator) => {
   return box
 }
 
+/** Asserts geometry using the repository's explicit one- or two-pixel tolerance. */
+const expectWithinPx = (actualPx: number, expectedPx: number, tolerancePx = 2): void => {
+  expect(Math.abs(actualPx - expectedPx)).toBeLessThanOrEqual(tolerancePx)
+}
+
+/** Drags one sash from its center by the requested vertical pointer distance. */
+const dragSashBy = async (
+  mainWindow: Page,
+  sash: Locator,
+  deltaYPx: number,
+  beforeRelease?: () => Promise<void>
+): Promise<void> => {
+  await sash.scrollIntoViewIfNeeded()
+  /** Four-pixel sash hitbox used to choose a stable pointer-down coordinate. */
+  const sashBox = await readBox(sash)
+  /** Horizontal center of the full-width sash. */
+  const pointerX = sashBox.x + sashBox.width / 2
+  /** Vertical center of the four-pixel sash hitbox. */
+  const pointerY = sashBox.y + sashBox.height / 2
+  await mainWindow.mouse.move(pointerX, pointerY)
+  await mainWindow.mouse.down()
+  await mainWindow.mouse.move(pointerX, pointerY + deltaYPx)
+  await beforeRelease?.()
+  await mainWindow.mouse.up()
+}
+
 describe('Accordion', () => {
-  test('distributes expanded space by weight and collapses toward its edge', async ({
+  test('distributes configured heights and renders sashes only between expanded sections', async ({
     testSetup
   }) => {
     /** Running Test Screen with the accordion demo mounted. */
@@ -42,13 +76,13 @@ describe('Accordion', () => {
     })
     await testHelpers.clickNavButton('Test Screen')
 
-    /** Accordion root and ordered weighted sections. */
+    /** Accordion root and ordered resizable sections. */
     const accordion = mainWindow.locator('[data-testid="test-screen-accordion"]')
-    /** Research section with weight two. */
+    /** Research section using the default configured height. */
     const research = mainWindow.locator('[data-testid="test-screen-accordion-section-research"]')
-    /** Active section with weight five. */
+    /** Active section using the default configured height. */
     const active = mainWindow.locator('[data-testid="test-screen-accordion-section-active"]')
-    /** Completed section with weight three. */
+    /** Completed section with a higher configured content minimum. */
     const completed = mainWindow.locator(
       '[data-testid="test-screen-accordion-section-completed"]'
     )
@@ -63,6 +97,12 @@ describe('Accordion', () => {
     /** Clickable completed section header. */
     const completedHeader = mainWindow.locator(
       '[data-testid="test-screen-accordion-header-completed"]'
+    )
+    /** Active-section sash rendered below the first expanded section. */
+    const activeSash = mainWindow.locator('[data-testid="test-screen-accordion-sash-active"]')
+    /** Completed-section sash rendered below another expanded section. */
+    const completedSash = mainWindow.locator(
+      '[data-testid="test-screen-accordion-sash-completed"]'
     )
 
     await expect(researchHeader).toHaveAttribute('aria-expanded', 'true')
@@ -81,67 +121,66 @@ describe('Accordion', () => {
     await expect(activeHeader.locator('.cthulhuUiAccordionCount')).toHaveText('20')
     await expect(completedHeader.locator('.cthulhuUiAccordionCount')).toHaveText('5')
 
-    /** Initially weighted section boxes. */
+    /** Initially equal section boxes produced by the shared 200px configured defaults. */
     const initialBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
-    /** Total accordion section height used for proportional expectations. */
-    const totalHeight = initialBoxes.reduce((sum, box) => sum + box.height, 0)
-    expect(Math.abs(initialBoxes[0]!.height - totalHeight * 0.2)).toBeLessThanOrEqual(2)
-    expect(Math.abs(initialBoxes[1]!.height - totalHeight * 0.5)).toBeLessThanOrEqual(2)
-    expect(Math.abs(initialBoxes[2]!.height - totalHeight * 0.3)).toBeLessThanOrEqual(2)
+    /** Total section height used for equal proportional expectations. */
+    const totalHeightPx = initialBoxes.reduce((sum, box) => sum + box.height, 0)
+    for (const box of initialBoxes) {
+      expect(Math.abs(box.height - totalHeightPx / 3)).toBeLessThanOrEqual(2)
+    }
 
-    await completedHeader.click()
-    await expect(completedHeader).toHaveAttribute('aria-expanded', 'false')
-    /** Root and collapsed bottom boxes proving the last header stays at the bottom edge. */
-    const accordionBox = await readBox(accordion)
-    /** Collapsed completed section box. */
-    const collapsedCompletedBox = await readBox(completed)
-    expect(Math.abs(collapsedCompletedBox.height - 36)).toBeLessThanOrEqual(1)
-    expect(
-      Math.abs(
-        collapsedCompletedBox.y + collapsedCompletedBox.height -
-          (accordionBox.y + accordionBox.height)
-      )
-    ).toBeLessThanOrEqual(1)
-    /** Expanded boxes after the collapsed section's weight is removed. */
-    const redistributedBoxes = await Promise.all([readBox(research), readBox(active)])
-    /** Remaining weighted height after reserving the collapsed header. */
-    const redistributedHeight = accordionBox.height - collapsedCompletedBox.height
-    expect(
-      Math.abs(redistributedBoxes[0]!.height - redistributedHeight * (2 / 7))
-    ).toBeLessThanOrEqual(2)
-    expect(
-      Math.abs(redistributedBoxes[1]!.height - redistributedHeight * (5 / 7))
-    ).toBeLessThanOrEqual(2)
-    await expect(completedHeader.locator('.cthulhuUiAccordionChevron')).toHaveCSS(
-      'transform',
-      'matrix(1, 0, 0, 1, 0, 0)'
-    )
-
-    await researchHeader.click()
-    /** Collapsed research section box proving the first header stays at the top edge. */
-    const collapsedResearchBox = await readBox(research)
-    expect(Math.abs(collapsedResearchBox.height - 36)).toBeLessThanOrEqual(1)
-    expect(Math.abs(collapsedResearchBox.y - accordionBox.y)).toBeLessThanOrEqual(1)
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-accordion-sash-research"]')
+    ).toHaveCount(0)
+    await expect(activeSash).toHaveCSS('height', '4px')
+    await expect(completedSash).toHaveCSS('height', '4px')
 
     await activeHeader.click()
-    /** Fully collapsed section boxes that should collect at the top without gaps. */
+    await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
+    /** Root box used as the fixed section-stack origin. */
+    const accordionBox = await readBox(accordion)
+    /** Collapsed active box fixed between two expanded sections. */
+    const collapsedActiveBox = await readBox(active)
+    expectWithinPx(collapsedActiveBox.height, COLLAPSED_HEIGHT_PX, 1)
+    await expect(activeSash).toHaveCount(0)
+    await expect(completedSash).toHaveCount(1)
+
+    await dragSashBy(mainWindow, completedSash, -20)
+    /** Active box after cross-collapsed-section dragging remains fixed at 36px. */
+    const activeBoxAfterSkippedDrag = await readBox(active)
+    expectWithinPx(activeBoxAfterSkippedDrag.height, COLLAPSED_HEIGHT_PX, 1)
+
+    await researchHeader.click()
+    await expect(researchHeader).toHaveAttribute('aria-expanded', 'false')
+    /** Collapsed research box proving the first header stays at the root's top edge. */
+    const collapsedResearchBox = await readBox(research)
+    expectWithinPx(collapsedResearchBox.height, COLLAPSED_HEIGHT_PX, 1)
+    expectWithinPx(collapsedResearchBox.y, accordionBox.y, 1)
+    await expect(completedSash).toHaveCount(0)
+
+    await completedHeader.click()
+    /** Fully collapsed section boxes that collect at the top without flexible gaps. */
     const collapsedBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
     for (const [index, box] of collapsedBoxes.entries()) {
-      expect(Math.abs(box.height - 36)).toBeLessThanOrEqual(1)
-      expect(Math.abs(box.y - (accordionBox.y + index * 36))).toBeLessThanOrEqual(1)
+      expectWithinPx(box.height, COLLAPSED_HEIGHT_PX, 1)
+      expectWithinPx(box.y, accordionBox.y + index * COLLAPSED_HEIGHT_PX, 1)
     }
   })
 
-  test('persists expansion by workspace and accordion persistence ID', async ({
+  test('cascades sash drags through minimums and saves only actual left-button changes', async ({
     electronApp,
     testSetup
   }) => {
-    /** Primary workspace shown by the application. */
-    const workspacePath = '/ws/accordion-persistence'
-    /** Stable primary workspace persistence ID. */
+    /** Workspace whose seeded configured heights reveal accidental press-only persistence. */
+    const workspacePath = '/ws/accordion-dragging'
+    /** Stable workspace persistence identifier for direct SQLite assertions. */
     const workspaceId = createDeterministicId(workspacePath)
-    /** Separate workspace proving expansion state is workspace-scoped. */
-    const otherWorkspaceId = createDeterministicId('/ws/other-accordion-persistence')
+    /** Original complete accordion entry saved before the component is mounted. */
+    const seededSections = createAccordionSections([
+      { id: 'research', isExpanded: true, configuredExpandedHeightPx: 200 },
+      { id: 'active', isExpanded: true, configuredExpandedHeightPx: 200 },
+      { id: 'completed', isExpanded: true, configuredExpandedHeightPx: 200 }
+    ])
 
     await testSetup.setupFilesystem(setupWorkspaceScenario(workspacePath, 'minimal'))
     await seedUserPersistence(electronApp, {
@@ -153,8 +192,158 @@ describe('Accordion', () => {
       selectedScreenData: null,
       promptFolderViewEntries: [],
       accordionViewEntries: [
-        { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, expandedSectionIds: ['active'] },
-        { persistenceId: 'other-accordion', expandedSectionIds: ['other-section'] }
+        { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, sections: seededSections }
+      ]
+    })
+
+    /** Running seeded workspace with the resizable accordion mounted. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.clickNavButton('Test Screen')
+
+    /** Research section that grows during a downward active-sash drag. */
+    const research = mainWindow.locator('[data-testid="test-screen-accordion-section-research"]')
+    /** Active section that absorbs the first downward shrink. */
+    const active = mainWindow.locator('[data-testid="test-screen-accordion-section-active"]')
+    /** Completed section that receives the remainder after active reaches its minimum. */
+    const completed = mainWindow.locator(
+      '[data-testid="test-screen-accordion-section-completed"]'
+    )
+    /** Sash controlling the boundary above the active section. */
+    const activeSash = mainWindow.locator('[data-testid="test-screen-accordion-sash-active"]')
+    /** Sash controlling the boundary above the completed section. */
+    const completedSash = mainWindow.locator(
+      '[data-testid="test-screen-accordion-sash-completed"]'
+    )
+
+    /** Initial proportional boxes before any user resizing. */
+    const initialBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
+    await activeSash.scrollIntoViewIfNeeded()
+    /** Center coordinate used for a press and release with no movement. */
+    const activeSashBox = await readBox(activeSash)
+    await mainWindow.mouse.click(
+      activeSashBox.x + activeSashBox.width / 2,
+      activeSashBox.y + activeSashBox.height / 2
+    )
+    await testHelpers.navigateToHomeScreen()
+    await mainWindow.waitForTimeout(2200)
+
+    /** SQLite state proving a press without movement did not promote displayed sizes. */
+    const pressOnlyPersistence = await readWorkspacePersistence(electronApp, workspaceId)
+    expect(pressOnlyPersistence.accordionViewEntries[0]?.sections).toEqual(seededSections)
+
+    await testHelpers.clickNavButton('Test Screen')
+    await dragSashBy(mainWindow, activeSash, 200, async () => {
+      await expect(activeSash).toHaveAttribute('data-dragging', 'true')
+      /** Active overlay and blue palette colors resolved by Chromium for exact comparison. */
+      const overlayColors = await activeSash.evaluate((element) => {
+        /** Temporary element that resolves the palette token through the same CSS property. */
+        const expectedElement = document.createElement('div')
+        expectedElement.style.backgroundColor = 'var(--ui-info-strong-border)'
+        document.body.append(expectedElement)
+        /** Browser-normalized active sash and expected palette colors. */
+        const colors = {
+          actual: getComputedStyle(element).backgroundColor,
+          expected: getComputedStyle(expectedElement).backgroundColor
+        }
+        expectedElement.remove()
+        return colors
+      })
+      expect(overlayColors.actual).toBe(overlayColors.expected)
+    })
+
+    /** Total section height preserved throughout every drag cascade. */
+    const initialTotalHeightPx = initialBoxes.reduce((sum, box) => sum + box.height, 0)
+    /** Boxes after downward cascading reaches both active and completed minimums. */
+    const downwardBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
+    expectWithinPx(downwardBoxes[0]!.height, initialTotalHeightPx - 236)
+    expectWithinPx(downwardBoxes[1]!.height, 100)
+    expectWithinPx(downwardBoxes[2]!.height, 136)
+    await expect(activeSash).toHaveAttribute('data-dragging', 'false')
+
+    await dragSashBy(mainWindow, completedSash, -400)
+    /** Boxes after upward cascading skips active at minimum and exhausts research capacity. */
+    const upwardBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
+    expectWithinPx(upwardBoxes[0]!.height, 100)
+    expectWithinPx(upwardBoxes[1]!.height, 100)
+    expectWithinPx(upwardBoxes[2]!.height, initialTotalHeightPx - 200)
+
+    /** Heights before a rejected right-button drag attempt. */
+    const beforeRightDragBoxes = upwardBoxes
+    await completedSash.scrollIntoViewIfNeeded()
+    /** Completed sash hitbox used for the right-button attempt. */
+    const completedSashBox = await readBox(completedSash)
+    /** Horizontal pointer coordinate inside the completed sash. */
+    const rightDragX = completedSashBox.x + completedSashBox.width / 2
+    /** Vertical pointer coordinate inside the completed sash. */
+    const rightDragY = completedSashBox.y + completedSashBox.height / 2
+    await mainWindow.mouse.move(rightDragX, rightDragY)
+    await mainWindow.mouse.down({ button: 'right' })
+    await mainWindow.mouse.move(rightDragX, rightDragY + 80)
+    await mainWindow.mouse.up({ button: 'right' })
+    /** Heights after the right-button attempt proving only left-button dragging is accepted. */
+    const afterRightDragBoxes = await Promise.all([
+      readBox(research),
+      readBox(active),
+      readBox(completed)
+    ])
+    for (const [index, box] of afterRightDragBoxes.entries()) {
+      expectWithinPx(box.height, beforeRightDragBoxes[index]!.height, 1)
+    }
+
+    await testHelpers.navigateToHomeScreen()
+    await expect
+      .poll(async () => {
+        /** Complete accordion entry after the debounced drag autosave flush. */
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        return persisted.accordionViewEntries[0]?.sections.map((section) =>
+          Math.round(section.configuredExpandedHeightPx)
+        )
+      })
+      .toEqual([100, 100, 358])
+  })
+
+  test('persists complete section state by workspace and redistributes without reconfiguring', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Primary workspace shown by the application. */
+    const workspacePath = '/ws/accordion-persistence'
+    /** Stable primary workspace persistence ID. */
+    const workspaceId = createDeterministicId(workspacePath)
+    /** Separate workspace proving accordion state is workspace-scoped. */
+    const otherWorkspaceId = createDeterministicId('/ws/other-accordion-persistence')
+    /** Primary accordion state with one expanded section and retained expanded sizes. */
+    const primarySections = createAccordionSections([
+      { id: 'research', isExpanded: false, configuredExpandedHeightPx: 200 },
+      { id: 'active', isExpanded: true, configuredExpandedHeightPx: 300 },
+      { id: 'completed', isExpanded: false, configuredExpandedHeightPx: 400 }
+    ])
+    /** Same persistence ID under another workspace. */
+    const otherWorkspaceSections = createAccordionSections([
+      { id: 'research', isExpanded: true, configuredExpandedHeightPx: 250 },
+      { id: 'active', isExpanded: false, configuredExpandedHeightPx: 350 },
+      { id: 'completed', isExpanded: false, configuredExpandedHeightPx: 450 }
+    ])
+
+    await testSetup.setupFilesystem(setupWorkspaceScenario(workspacePath, 'minimal'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'home',
+      selectedScreenData: null,
+      promptFolderViewEntries: [],
+      accordionViewEntries: [
+        { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, sections: primarySections },
+        {
+          persistenceId: 'other-accordion',
+          sections: createAccordionSections([
+            { id: 'other-section', isExpanded: true, configuredExpandedHeightPx: 275 }
+          ])
+        }
       ]
     })
     await seedWorkspacePersistence(electronApp, {
@@ -163,7 +352,10 @@ describe('Accordion', () => {
       selectedScreenData: null,
       promptFolderViewEntries: [],
       accordionViewEntries: [
-        { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, expandedSectionIds: ['research'] }
+        {
+          persistenceId: TEST_ACCORDION_PERSISTENCE_ID,
+          sections: otherWorkspaceSections
+        }
       ]
     })
 
@@ -173,47 +365,92 @@ describe('Accordion', () => {
     })
     await testHelpers.clickNavButton('Test Screen')
 
-    /** Research header restored collapsed from the primary workspace database row. */
+    /** Research header restored collapsed from the primary workspace row. */
     const researchHeader = mainWindow.locator(
       '[data-testid="test-screen-accordion-header-research"]'
     )
-    /** Completed header restored collapsed from the primary workspace database row. */
+    /** Completed header restored collapsed from the primary workspace row. */
     const completedHeader = mainWindow.locator(
       '[data-testid="test-screen-accordion-header-completed"]'
     )
-    /** Active header restored expanded from the primary workspace database row. */
+    /** Active header restored expanded from the primary workspace row. */
     const activeHeader = mainWindow.locator('[data-testid="test-screen-accordion-header-active"]')
+    /** Research section measured before and after proportional container resizing. */
+    const research = mainWindow.locator('[data-testid="test-screen-accordion-section-research"]')
+    /** Active section measured before and after proportional container resizing. */
+    const active = mainWindow.locator('[data-testid="test-screen-accordion-section-active"]')
+    /** Accordion root whose shell is resized to emulate available window-height changes. */
+    const accordion = mainWindow.locator('[data-testid="test-screen-accordion"]')
+
     await expect(researchHeader).toHaveAttribute('aria-expanded', 'false')
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'true')
     await expect(completedHeader).toHaveAttribute('aria-expanded', 'false')
 
     await researchHeader.click()
-    await testHelpers.navigateToHomeScreen()
+    /** Expanded boxes sharing available space in their configured 2:3 ratio. */
+    const initialExpandedBoxes = await Promise.all([readBox(research), readBox(active)])
+    /** Accordion viewport before its containing shell changes height. */
+    const initialAccordionBox = await readBox(accordion)
+    /** Initial expanded height remaining after the completed collapsed header. */
+    const initialAvailableHeightPx = initialAccordionBox.height - COLLAPSED_HEIGHT_PX
+    expectWithinPx(initialExpandedBoxes[0]!.height, initialAvailableHeightPx * (2 / 5))
+    expectWithinPx(initialExpandedBoxes[1]!.height, initialAvailableHeightPx * (3 / 5))
 
+    await accordion.evaluate((element) => {
+      /** Demo shell resized to trigger the accordion's ResizeObserver. */
+      const shell = element.parentElement
+      if (shell) shell.style.height = '660px'
+    })
+    /** Resized accordion viewport excluding the shell's two one-pixel borders. */
+    const resizedAccordionHeightPx = 658
+    /** Resized research height expected from its configured two-fifths share. */
+    const resizedResearchHeightPx =
+      (resizedAccordionHeightPx - COLLAPSED_HEIGHT_PX) * (2 / 5)
     await expect
-      .poll(
-        async () => {
-          /** Primary persisted entries after the accordion autosave flush. */
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
-          /** Updated Test Screen accordion entry. */
-          const testAccordion = persisted.accordionViewEntries.find(
-            (entry) => entry.persistenceId === TEST_ACCORDION_PERSISTENCE_ID
-          )
-          /** Same-workspace entry owned by another accordion instance. */
-          const otherAccordion = persisted.accordionViewEntries.find(
-            (entry) => entry.persistenceId === 'other-accordion'
-          )
-          return `${testAccordion?.expandedSectionIds.join(',')}:${otherAccordion?.expandedSectionIds.join(',')}`
-        },
-        { timeout: 15000 }
-      )
-      .toBe('research,active:other-section')
+      .poll(async () => Math.abs((await readBox(research)).height - resizedResearchHeightPx))
+      .toBeLessThanOrEqual(2)
+    /** Resized boxes proving configured proportions survive viewport redistribution. */
+    const resizedBoxes = await Promise.all([readBox(research), readBox(active)])
+    expectWithinPx(resizedBoxes[0]!.height, resizedResearchHeightPx)
+    expectWithinPx(
+      resizedBoxes[1]!.height,
+      (resizedAccordionHeightPx - COLLAPSED_HEIGHT_PX) * (3 / 5)
+    )
+
+    await testHelpers.navigateToHomeScreen()
+    await expect
+      .poll(async () => {
+        /** Primary persisted entries after the whole-accordion autosave flush. */
+        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        /** Updated Test Screen accordion entry. */
+        const testAccordion = persisted.accordionViewEntries.find(
+          (entry) => entry.persistenceId === TEST_ACCORDION_PERSISTENCE_ID
+        )
+        /** Same-workspace entry owned by another accordion instance. */
+        const otherAccordion = persisted.accordionViewEntries.find(
+          (entry) => entry.persistenceId === 'other-accordion'
+        )
+        return {
+          testSections: testAccordion?.sections,
+          otherSections: otherAccordion?.sections
+        }
+      })
+      .toEqual({
+        testSections: [
+          { ...primarySections[0]!, isExpanded: true },
+          primarySections[1],
+          primarySections[2]
+        ],
+        otherSections: createAccordionSections([
+          { id: 'other-section', isExpanded: true, configuredExpandedHeightPx: 275 }
+        ])
+      })
 
     /** State under the same persistence ID in another workspace. */
     const otherWorkspacePersistence = await readWorkspacePersistence(electronApp, otherWorkspaceId)
-    expect(otherWorkspacePersistence.accordionViewEntries[0]?.expandedSectionIds).toEqual([
-      'research'
-    ])
+    expect(otherWorkspacePersistence.accordionViewEntries[0]?.sections).toEqual(
+      otherWorkspaceSections
+    )
 
     await testHelpers.clickNavButton('Test Screen')
     await expect(researchHeader).toHaveAttribute('aria-expanded', 'true')
