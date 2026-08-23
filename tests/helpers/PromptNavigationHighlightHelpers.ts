@@ -21,7 +21,7 @@ export const readPromptNavigationHighlightAnimation = async (
   indicator: Locator
 ): Promise<PromptNavigationHighlightAnimation> =>
   await indicator.evaluate((element) => {
-    /** Fresh highlighted clone removes dependence on how much of the live 740ms animation remains. */
+    /** Fresh highlighted clone removes dependence on how much of the live 670ms animation remains. */
     const animationProbe = element.cloneNode(false) as HTMLElement
     element.parentElement?.append(animationProbe)
     /** CSS animation synchronously attached to the fresh navigation-highlight clone. */
@@ -35,7 +35,7 @@ export const readPromptNavigationHighlightAnimation = async (
     const keyframes = effect.getKeyframes()
 
     animation.pause()
-    animation.currentTime = 500
+    animation.currentTime = 300
 
     /** Temporary probe resolves the semantic palette token in Chromium's color format. */
     const accentProbe = document.createElement('span')

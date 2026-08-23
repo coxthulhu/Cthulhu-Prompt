@@ -6,8 +6,8 @@ import {
 } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
 
 const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
-/** Full tree-navigation highlight duration: 120ms transition, 500ms hold, and 120ms fade. */
-const PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS = 740
+/** Full tree-navigation highlight duration: 50ms transition, 500ms hold, and 120ms fade. */
+const PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS = 670
 
 /** Selectable row identities within one root prompt-folder screen. */
 export type PromptNavigationRow = 'root-header' | 'category-details' | `prompt:${string}`

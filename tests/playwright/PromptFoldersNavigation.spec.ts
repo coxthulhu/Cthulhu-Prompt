@@ -130,8 +130,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       templateEditorIndicator
     )
     expect(templateAnimation).toEqual({
-      durationMs: 740,
-      keyframeTimesMs: [0, 120, 620, 740],
+      durationMs: 670,
+      keyframeTimesMs: [0, 50, 550, 670],
       holdColor: templateAnimation.accentColor,
       accentColor: templateAnimation.accentColor,
       finalKeyframeColor: templateAnimation.normalColor,

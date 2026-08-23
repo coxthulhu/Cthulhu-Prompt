@@ -269,21 +269,21 @@ describe('Prompt folder prompt tree', () => {
       firstGeneration!
     )
 
-    /** Tree animation snapshot verifies the requested 120ms, 500ms, and 120ms phases. */
+    /** Tree animation snapshot verifies the requested 50ms, 500ms, and 120ms phases. */
     const treeAnimation = await readPromptNavigationHighlightAnimation(treeIndicator)
     /** Editor animation snapshot verifies the same phase contract and purple color. */
     const editorAnimation = await readPromptNavigationHighlightAnimation(editorIndicator)
     expect(treeAnimation).toEqual({
-      durationMs: 740,
-      keyframeTimesMs: [0, 120, 620, 740],
+      durationMs: 670,
+      keyframeTimesMs: [0, 50, 550, 670],
       holdColor: treeAnimation.accentColor,
       accentColor: treeAnimation.accentColor,
       finalKeyframeColor: treeAnimation.normalColor,
       normalColor: treeAnimation.normalColor
     })
     expect(editorAnimation).toEqual({
-      durationMs: 740,
-      keyframeTimesMs: [0, 120, 620, 740],
+      durationMs: 670,
+      keyframeTimesMs: [0, 50, 550, 670],
       holdColor: editorAnimation.accentColor,
       accentColor: editorAnimation.accentColor,
       finalKeyframeColor: editorAnimation.normalColor,
@@ -314,9 +314,9 @@ describe('Prompt folder prompt tree', () => {
     const replayTreeAnimation = await readPromptNavigationHighlightAnimation(treeIndicator)
     /** Fresh editor snapshot proves its independently keyed animation also replayed. */
     const replayEditorAnimation = await readPromptNavigationHighlightAnimation(editorIndicator)
-    expect(replayTreeAnimation.durationMs).toBe(740)
+    expect(replayTreeAnimation.durationMs).toBe(670)
     expect(replayTreeAnimation.holdColor).toBe(replayTreeAnimation.accentColor)
-    expect(replayEditorAnimation.durationMs).toBe(740)
+    expect(replayEditorAnimation.durationMs).toBe(670)
     expect(replayEditorAnimation.holdColor).toBe(replayEditorAnimation.accentColor)
   })
 

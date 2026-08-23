@@ -212,7 +212,7 @@
   }
 
   .prompt-tree-status-indicator[data-navigation-highlight='true'] {
-    animation: prompt-tree-navigation-highlight 740ms linear;
+    animation: prompt-tree-navigation-highlight 670ms linear;
   }
 
   @keyframes prompt-tree-navigation-highlight {
@@ -220,8 +220,8 @@
       background: var(--prompt-status-indicator-color);
       visibility: visible;
     }
-    16.2162%,
-    83.7838% {
+    7.4627%,
+    82.0896% {
       background: var(--ui-accent-strong-border);
       visibility: visible;
     }

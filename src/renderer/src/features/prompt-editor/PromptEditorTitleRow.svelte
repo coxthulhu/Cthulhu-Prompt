@@ -362,7 +362,7 @@
   }
 
   .prompt-editor-title-status-indicator[data-navigation-highlight='true'] {
-    animation: prompt-editor-navigation-highlight 740ms linear;
+    animation: prompt-editor-navigation-highlight 670ms linear;
   }
 
   @keyframes prompt-editor-navigation-highlight {
@@ -370,8 +370,8 @@
       background: var(--prompt-status-indicator-color);
       visibility: visible;
     }
-    16.2162%,
-    83.7838% {
+    7.4627%,
+    82.0896% {
       background: var(--ui-accent-strong-border);
       visibility: visible;
     }
