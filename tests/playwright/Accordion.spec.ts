@@ -14,6 +14,8 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'
 /** Fixed displayed height for collapsed accordion sections. */
 const COLLAPSED_HEIGHT_PX = 36
+/** Completed demo section minimum including its fixed header and configured content minimum. */
+const COMPLETED_MINIMUM_EXPANDED_HEIGHT_PX = 136
 
 /** Creates fixture-stable entity IDs using the workspace fixture algorithm. */
 const createDeterministicId = (seed: string): string => {
@@ -128,6 +130,10 @@ describe('Accordion', () => {
     for (const box of initialBoxes) {
       expect(Math.abs(box.height - totalHeightPx / 3)).toBeLessThanOrEqual(2)
     }
+    /** Active header position before toggling its content. */
+    const initialActiveHeaderBox = await readBox(activeHeader)
+    /** Active header offset within the accordion before viewport scrolling caused by its click. */
+    const initialActiveHeaderOffsetPx = initialActiveHeaderBox.y - (await readBox(accordion)).y
 
     await expect(
       mainWindow.locator('[data-testid="test-screen-accordion-sash-research"]')
@@ -141,9 +147,37 @@ describe('Accordion', () => {
     const accordionBox = await readBox(accordion)
     /** Collapsed active box fixed between two expanded sections. */
     const collapsedActiveBox = await readBox(active)
+    /** Research box proving a section above the clicked header did not grow. */
+    const researchBoxAfterActiveCollapse = await readBox(research)
+    /** Completed box receiving all height released by the collapsed active section. */
+    const completedBoxAfterActiveCollapse = await readBox(completed)
+    /** Active header position after collapsing its content. */
+    const collapsedActiveHeaderBox = await readBox(activeHeader)
     expectWithinPx(collapsedActiveBox.height, COLLAPSED_HEIGHT_PX, 1)
+    expectWithinPx(researchBoxAfterActiveCollapse.height, initialBoxes[0]!.height, 1)
+    expectWithinPx(
+      completedBoxAfterActiveCollapse.height,
+      initialBoxes[2]!.height + initialBoxes[1]!.height - COLLAPSED_HEIGHT_PX,
+      1
+    )
+    expectWithinPx(collapsedActiveHeaderBox.y - accordionBox.y, initialActiveHeaderOffsetPx, 1)
     await expect(activeSash).toHaveCount(0)
     await expect(completedSash).toHaveCount(1)
+
+    await activeHeader.click()
+    /** Restored boxes after the bottom section returns the active section's expansion height. */
+    const restoredBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
+    for (const [index, box] of restoredBoxes.entries()) {
+      expectWithinPx(box.height, initialBoxes[index]!.height, 1)
+    }
+    expectWithinPx(
+      (await readBox(activeHeader)).y - (await readBox(accordion)).y,
+      initialActiveHeaderOffsetPx,
+      1
+    )
+
+    await activeHeader.click()
+    await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
 
     await dragSashBy(mainWindow, completedSash, -20)
     /** Active box after cross-collapsed-section dragging remains fixed at 36px. */
@@ -165,6 +199,166 @@ describe('Accordion', () => {
       expectWithinPx(box.height, COLLAPSED_HEIGHT_PX, 1)
       expectWithinPx(box.y, accordionBox.y + index * COLLAPSED_HEIGHT_PX, 1)
     }
+  })
+
+  test('cascades expansion bottom-up before moving the clicked header', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Workspace whose collapsed top section forces a multi-section expansion cascade. */
+    const workspacePath = '/ws/accordion-toggle-cascade'
+    /** Stable workspace persistence identifier for the seeded accordion state. */
+    const workspaceId = createDeterministicId(workspacePath)
+    /** Initial state with both sections below research sharing all expanded space. */
+    const seededSections = createAccordionSections([
+      { id: 'research', isExpanded: false, configuredExpandedHeightPx: 200 },
+      { id: 'active', isExpanded: true, configuredExpandedHeightPx: 200 },
+      { id: 'completed', isExpanded: true, configuredExpandedHeightPx: 200 }
+    ])
+
+    await testSetup.setupFilesystem(setupWorkspaceScenario(workspacePath, 'minimal'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'home',
+      selectedScreenData: null,
+      promptFolderViewEntries: [],
+      accordionViewEntries: [
+        { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, sections: seededSections }
+      ]
+    })
+
+    /** Running seeded accordion used to exercise toggle-only height cascades. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.clickNavButton('Test Screen')
+
+    /** Accordion root whose height remains fixed throughout the toggle sequence. */
+    const accordion = mainWindow.locator('[data-testid="test-screen-accordion"]')
+    /** Research section above the clicked active header. */
+    const research = mainWindow.locator('[data-testid="test-screen-accordion-section-research"]')
+    /** Active section expanded after the bottom section reaches its minimum. */
+    const active = mainWindow.locator('[data-testid="test-screen-accordion-section-active"]')
+    /** Completed section with the larger configured expanded minimum. */
+    const completed = mainWindow.locator(
+      '[data-testid="test-screen-accordion-section-completed"]'
+    )
+    /** Research header expanded to trigger bottom-up shrinking below it. */
+    const researchHeader = mainWindow.locator(
+      '[data-testid="test-screen-accordion-header-research"]'
+    )
+    /** Active header whose fallback movement is measured. */
+    const activeHeader = mainWindow.locator(
+      '[data-testid="test-screen-accordion-header-active"]'
+    )
+
+    await expect(researchHeader).toHaveAttribute('aria-expanded', 'false')
+    /** Fixed section-stack height used for proportional expansion targets. */
+    const accordionHeightPx = (await readBox(accordion)).height
+    /** Initial layout with the two expanded lower sections sharing available height. */
+    const initialBoxes = await Promise.all([readBox(research), readBox(active), readBox(completed)])
+    expectWithinPx(initialBoxes[0]!.height, COLLAPSED_HEIGHT_PX, 1)
+    expectWithinPx(initialBoxes[1]!.height, (accordionHeightPx - COLLAPSED_HEIGHT_PX) / 2)
+    expectWithinPx(initialBoxes[2]!.height, (accordionHeightPx - COLLAPSED_HEIGHT_PX) / 2)
+
+    await researchHeader.click()
+    /** Equal configured-height target for research when all three sections are expanded. */
+    const researchTargetHeightPx = accordionHeightPx / 3
+    /** Capacity supplied by completed before it reaches its configured expanded minimum. */
+    const completedCapacityPx =
+      initialBoxes[2]!.height - COMPLETED_MINIMUM_EXPANDED_HEIGHT_PX
+    /** Remaining expansion supplied by active only after completed reaches its minimum. */
+    const activeContributionPx =
+      researchTargetHeightPx - COLLAPSED_HEIGHT_PX - completedCapacityPx
+    /** Layout proving the bottom section reaches minimum before the nearer section shrinks. */
+    const afterResearchExpansionBoxes = await Promise.all([
+      readBox(research),
+      readBox(active),
+      readBox(completed)
+    ])
+    expectWithinPx(afterResearchExpansionBoxes[0]!.height, researchTargetHeightPx)
+    expectWithinPx(
+      afterResearchExpansionBoxes[1]!.height,
+      initialBoxes[1]!.height - activeContributionPx
+    )
+    expectWithinPx(
+      afterResearchExpansionBoxes[2]!.height,
+      COMPLETED_MINIMUM_EXPANDED_HEIGHT_PX,
+      1
+    )
+
+    await researchHeader.click()
+    /** Layout proving collapse gives all released space to the bottommost expanded section. */
+    const afterResearchCollapseBoxes = await Promise.all([
+      readBox(research),
+      readBox(active),
+      readBox(completed)
+    ])
+    expectWithinPx(afterResearchCollapseBoxes[0]!.height, COLLAPSED_HEIGHT_PX, 1)
+    expectWithinPx(
+      afterResearchCollapseBoxes[1]!.height,
+      afterResearchExpansionBoxes[1]!.height
+    )
+    expectWithinPx(
+      afterResearchCollapseBoxes[2]!.height,
+      afterResearchExpansionBoxes[2]!.height +
+        researchTargetHeightPx -
+        COLLAPSED_HEIGHT_PX
+    )
+
+    await activeHeader.click()
+    await researchHeader.click()
+
+    /** Layout with research and completed expanded before active requests its target height. */
+    const beforeActiveExpansionBoxes = await Promise.all([
+      readBox(research),
+      readBox(active),
+      readBox(completed)
+    ])
+    /** Active header position before the below-section capacity is exhausted. */
+    const beforeActiveHeaderBox = await readBox(activeHeader)
+    /** Active header offset within the accordion before fallback shrinking above it. */
+    const beforeActiveHeaderOffsetPx = beforeActiveHeaderBox.y - (await readBox(accordion)).y
+    expectWithinPx(beforeActiveExpansionBoxes[0]!.height, (accordionHeightPx - 36) / 2)
+    expectWithinPx(beforeActiveExpansionBoxes[1]!.height, COLLAPSED_HEIGHT_PX, 1)
+    expectWithinPx(beforeActiveExpansionBoxes[2]!.height, (accordionHeightPx - 36) / 2)
+
+    await activeHeader.click()
+    /** Layout after completed shrinks first and research supplies only the remaining deficit. */
+    const afterActiveExpansionBoxes = await Promise.all([
+      readBox(research),
+      readBox(active),
+      readBox(completed)
+    ])
+    /** Equal configured-height target for active when all three sections are expanded. */
+    const activeTargetHeightPx = accordionHeightPx / 3
+    /** Capacity supplied by completed before it again reaches its expanded minimum. */
+    const fallbackCompletedCapacityPx =
+      beforeActiveExpansionBoxes[2]!.height - COMPLETED_MINIMUM_EXPANDED_HEIGHT_PX
+    /** Remaining expansion taken from research after below-section capacity is exhausted. */
+    const aboveFallbackPx =
+      activeTargetHeightPx - COLLAPSED_HEIGHT_PX - fallbackCompletedCapacityPx
+    expectWithinPx(
+      afterActiveExpansionBoxes[0]!.height,
+      beforeActiveExpansionBoxes[0]!.height - aboveFallbackPx
+    )
+    expectWithinPx(afterActiveExpansionBoxes[1]!.height, activeTargetHeightPx)
+    expectWithinPx(
+      afterActiveExpansionBoxes[2]!.height,
+      COMPLETED_MINIMUM_EXPANDED_HEIGHT_PX,
+      1
+    )
+    /** Active header offset after fallback shrinking changes the height above it. */
+    const afterActiveHeaderOffsetPx =
+      (await readBox(activeHeader)).y - (await readBox(accordion)).y
+    expectWithinPx(
+      beforeActiveHeaderOffsetPx - afterActiveHeaderOffsetPx,
+      aboveFallbackPx,
+      1
+    )
   })
 
   test('cascades sash drags through minimums and saves only actual left-button changes', async ({

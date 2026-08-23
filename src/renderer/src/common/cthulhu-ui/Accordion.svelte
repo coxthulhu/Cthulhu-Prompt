@@ -67,6 +67,8 @@
   let dragState = $state<AccordionDragState | null>(null)
   /** Explicit section heights shown during the active sash drag. */
   let dragHeightsById = $state<Record<string, number> | null>(null)
+  /** Explicit section heights preserving header positions between toggles and viewport resizing. */
+  let toggledHeightsById = $state<Record<string, number> | null>(null)
 
   /** Complete persisted state for this accordion, or null before its first saved change. */
   const persistedAccordionViewEntry = $derived.by(() => {
@@ -160,9 +162,11 @@
     return heightsById
   }
 
-  /** Section heights displayed either proportionally or from the active drag snapshot. */
+  /** Section heights displayed from an interaction snapshot or proportional allocation. */
   const displayedHeightsById = $derived(
-    dragHeightsById ?? calculateDisplayedHeights(resolvedSections, accordionHeightPx)
+    dragHeightsById ??
+      toggledHeightsById ??
+      calculateDisplayedHeights(resolvedSections, accordionHeightPx)
   )
 
   /** Registers or updates one rendered section without changing descendant order. */
@@ -218,28 +222,18 @@
     setAccordionViewEntryWithAutosave(workspaceId, accordionViewEntry)
   }
 
-  /** Toggles one section while preserving its configured expanded height. */
-  const toggleSection = (sectionId: string): void => {
-    /** Complete next section snapshot with only the requested collapse state changed. */
-    const sections = resolvedSections.map((section) => ({
-      id: section.id,
-      isExpanded: section.id === sectionId ? !section.isExpanded : section.isExpanded,
-      configuredExpandedHeightPx: section.configuredExpandedHeightPx
-    }))
-    persistAccordionSections(sections)
-  }
-
-  /** Shrinks sections in nearest-first order and returns the absorbed drag distance. */
+  /** Shrinks expanded sections in the supplied order and returns the absorbed height. */
   const shrinkSectionHeights = (
+    sections: ResolvedAccordionSection[],
     heightsById: Record<string, number>,
     sectionIndexes: number[],
     requestedHeightPx: number
   ): number => {
-    /** Drag distance that has not yet been absorbed by a shrinking section. */
+    /** Requested height that has not yet been absorbed by a shrinking section. */
     let remainingHeightPx = requestedHeightPx
     for (const sectionIndex of sectionIndexes) {
       /** Expanded section eligible to shrink during this cascade step. */
-      const section = resolvedSections[sectionIndex]!
+      const section = sections[sectionIndex]!
       if (!section.isExpanded) continue
       /** Current section height from the drag-start snapshot. */
       const currentHeightPx = heightsById[section.id]!
@@ -252,6 +246,88 @@
       if (remainingHeightPx === 0) break
     }
     return requestedHeightPx - remainingHeightPx
+  }
+
+  /** Calculates toggle-specific heights while preserving sections above whenever space permits. */
+  const calculateToggledHeights = (sectionId: string): Record<string, number> => {
+    /** Rendered position of the section whose header was clicked. */
+    const sectionIndex = resolvedSections.findIndex((section) => section.id === sectionId)
+    /** Current section state required to determine the toggle direction. */
+    const currentSection = resolvedSections[sectionIndex]!
+    /** Next resolved state used to calculate the clicked section's proportional target height. */
+    const nextSections = resolvedSections.map((section) => ({
+      ...section,
+      isExpanded: section.id === sectionId ? !section.isExpanded : section.isExpanded
+    }))
+    /** Mutable copy of the current displayed layout adjusted only by the toggle cascade. */
+    const nextHeightsById = { ...displayedHeightsById }
+
+    if (currentSection.isExpanded) {
+      /** Height released when the clicked section contracts to its fixed header height. */
+      const releasedHeightPx =
+        nextHeightsById[sectionId]! - COLLAPSED_SECTION_HEIGHT_PX
+      /** Bottommost expanded section below the clicked header that receives released space. */
+      const receivingSection = nextSections.findLast(
+        (section, index) => index > sectionIndex && section.isExpanded
+      )
+      nextHeightsById[sectionId] = COLLAPSED_SECTION_HEIGHT_PX
+      if (receivingSection) nextHeightsById[receivingSection.id]! += releasedHeightPx
+      return nextHeightsById
+    }
+
+    /** Proportional height the clicked section would receive in the next expansion state. */
+    const targetHeightPx = calculateDisplayedHeights(nextSections, accordionHeightPx)[sectionId]!
+    /** Current unused viewport height available before any expanded section must shrink. */
+    const unusedHeightPx = Math.max(
+      0,
+      accordionHeightPx -
+        Object.values(nextHeightsById).reduce((sum, heightPx) => sum + heightPx, 0)
+    )
+    /** Expansion height that must be reclaimed from other expanded sections. */
+    let remainingHeightPx = Math.max(
+      0,
+      targetHeightPx - nextHeightsById[sectionId]! - unusedHeightPx
+    )
+    /** Expanded section indexes below the clicked header in bottom-up order. */
+    const belowSectionIndexes: number[] = []
+    for (let index = nextSections.length - 1; index > sectionIndex; index -= 1) {
+      belowSectionIndexes.push(index)
+    }
+    remainingHeightPx -= shrinkSectionHeights(
+      nextSections,
+      nextHeightsById,
+      belowSectionIndexes,
+      remainingHeightPx
+    )
+
+    if (remainingHeightPx > 0) {
+      /** Expanded section indexes above the clicked header from nearest to farthest. */
+      const aboveSectionIndexes: number[] = []
+      for (let index = sectionIndex - 1; index >= 0; index -= 1) {
+        aboveSectionIndexes.push(index)
+      }
+      shrinkSectionHeights(
+        nextSections,
+        nextHeightsById,
+        aboveSectionIndexes,
+        remainingHeightPx
+      )
+    }
+
+    nextHeightsById[sectionId] = targetHeightPx
+    return nextHeightsById
+  }
+
+  /** Toggles one section without changing any configured expanded height. */
+  const toggleSection = (sectionId: string): void => {
+    toggledHeightsById = calculateToggledHeights(sectionId)
+    /** Complete next section snapshot with only the requested collapse state changed. */
+    const sections = resolvedSections.map((section) => ({
+      id: section.id,
+      isExpanded: section.id === sectionId ? !section.isExpanded : section.isExpanded,
+      configuredExpandedHeightPx: section.configuredExpandedHeightPx
+    }))
+    persistAccordionSections(sections)
   }
 
   /** Recalculates drag heights from the pointer-down snapshot and current pointer position. */
@@ -275,6 +351,7 @@
         shrinkingSectionIndexes.push(index)
       }
       absorbedDeltaPx = shrinkSectionHeights(
+        resolvedSections,
         nextHeightsById,
         shrinkingSectionIndexes,
         requestedDeltaPx
@@ -289,6 +366,7 @@
         shrinkingSectionIndexes.push(index)
       }
       absorbedDeltaPx = shrinkSectionHeights(
+        resolvedSections,
         nextHeightsById,
         shrinkingSectionIndexes,
         -requestedDeltaPx
@@ -334,6 +412,7 @@
       hasSizeChanged: false
     }
     dragHeightsById = { ...displayedHeightsById }
+    toggledHeightsById = null
     document.body.style.cursor = 'ns-resize'
     document.body.style.userSelect = 'none'
   }
@@ -344,6 +423,7 @@
     /** Observer that reports changes to the accordion's available height. */
     const resizeObserver = new ResizeObserver(() => {
       accordionHeightPx = accordionElement?.clientHeight ?? 0
+      toggledHeightsById = null
     })
     accordionHeightPx = accordionElement.clientHeight
     resizeObserver.observe(accordionElement)
