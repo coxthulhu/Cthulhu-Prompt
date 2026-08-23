@@ -192,7 +192,8 @@
     collapsedTemplateFolderIds.clear()
     selectedTemplateIds.clear()
     if (mode === 'select') {
-      for (const templateId of prompt.templateIds) selectedTemplateIds.add(templateId)
+      const selectedTemplateId = prompt.templateIds[0]
+      if (selectedTemplateId) selectedTemplateIds.add(selectedTemplateId)
     }
   }
 
@@ -220,8 +221,8 @@
       return
     }
 
-    if (selectedTemplateIds.has(template.id)) selectedTemplateIds.delete(template.id)
-    else selectedTemplateIds.add(template.id)
+    selectedTemplateIds.clear()
+    selectedTemplateIds.add(template.id)
   }
 
   const confirmTemplateSelections = () => {
@@ -566,13 +567,11 @@
           ></span>
           <span
             class="base-template-selection-mark"
-            data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'checkbox'}
+            data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'radio'}
             aria-hidden="true"
           >
             {#if templateDialogMode === 'select-and-copy'}
               <Copy size={16} />
-            {:else}
-              <Check size={13} />
             {/if}
           </span>
           <span>{template.title}</span>
@@ -955,7 +954,7 @@
       aria-modal="true"
       aria-label={templateDialogMode === 'select-and-copy'
         ? 'Quick Template Selection'
-        : 'Configure Templates'}
+        : 'Select Template'}
     >
       <header class="base-template-dialog-header">
         <div class="base-template-dialog-heading">
@@ -970,12 +969,12 @@
             <h2>
               {templateDialogMode === 'select-and-copy'
                 ? 'Quick Template Selection'
-                : 'Configure Templates'}
+                : 'Select Template'}
             </h2>
             <p>
               {templateDialogMode === 'select-and-copy'
                 ? 'Click a template to apply it and copy this prompt immediately.'
-                : 'Select one or more templates to apply to this prompt.'}
+                : 'Choose one template, or use the prompt exactly as written.'}
             </p>
           </div>
         </div>
@@ -1002,13 +1001,11 @@
             </span>
             <span
               class="base-template-selection-mark"
-              data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'checkbox'}
+              data-control={templateDialogMode === 'select-and-copy' ? 'copy' : 'radio'}
               aria-hidden="true"
             >
               {#if templateDialogMode === 'select-and-copy'}
                 <Copy size={16} />
-              {:else}
-                <Check size={13} />
               {/if}
             </span>
           </button>
@@ -1017,7 +1014,7 @@
         <div class="base-template-tree-label">
           <span>Template Library</span>
           {#if templateDialogMode === 'select'}
-            <span>{selectedTemplateIds.size} selected</span>
+            <span>Choose one</span>
           {/if}
         </div>
         {@render Separator()}
@@ -1058,13 +1055,11 @@
                         class="base-template-selection-mark"
                         data-control={templateDialogMode === 'select-and-copy'
                           ? 'copy'
-                          : 'checkbox'}
+                          : 'radio'}
                         aria-hidden="true"
                       >
                         {#if templateDialogMode === 'select-and-copy'}
                           <Copy size={16} />
-                        {:else}
-                          <Check size={13} />
                         {/if}
                       </span>
                       <span>{template.title}</span>
@@ -1093,7 +1088,7 @@
             onclick={confirmTemplateSelections}
           >
             <Check size={16} aria-hidden="true" />
-            Confirm Selections
+            Confirm Selection
           </button>
         {/if}
       </footer>
@@ -2376,26 +2371,31 @@
     width: 17px;
   }
 
-  .base-template-selection-mark[data-control='checkbox'] {
+  .base-template-selection-mark[data-control='radio'] {
     border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 4px;
-    color: transparent;
-    transition:
-      background-color var(--ui-animation-duration-fast) ease-out,
-      border-color var(--ui-animation-duration-fast) ease-out,
-      color var(--ui-animation-duration-fast) ease-out;
+    border-radius: 50%;
+  }
+
+  .base-template-selection-mark[data-control='radio']::after {
+    background: transparent;
+    border-radius: 50%;
+    content: '';
+    height: 9px;
+    width: 9px;
   }
 
   .base-template-selection-mark[data-control='copy'] {
     color: var(--ui-secondary-icon-glyph);
   }
 
-  .base-template-option-button.active
-    .base-template-selection-mark[data-control='checkbox'],
-  .base-template-root-option.active .base-template-selection-mark[data-control='checkbox'] {
-    background: var(--ui-accent-action-hover-fill);
+  .base-template-option-button.active .base-template-selection-mark[data-control='radio'],
+  .base-template-root-option.active .base-template-selection-mark[data-control='radio'] {
     border-color: var(--ui-accent-normal-border);
-    color: var(--ui-normal-text);
+  }
+
+  .base-template-option-button.active .base-template-selection-mark[data-control='radio']::after,
+  .base-template-root-option.active .base-template-selection-mark[data-control='radio']::after {
+    background: var(--ui-normal-text);
   }
 
   .base-template-tree:hover .base-template-guide,

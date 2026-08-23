@@ -175,16 +175,16 @@
   const dialogIcon = $derived(mode === 'select-and-copy' ? Copy : Layers)
   // Title used for display and the accessible dialog name.
   const dialogTitle = $derived(
-    mode === 'select-and-copy' ? 'Quick Template Selection' : 'Configure Templates'
+    mode === 'select-and-copy' ? 'Quick Template Selection' : 'Select Template'
   )
   // Subtitle explains whether selection is staged or immediate.
   const dialogSubtitle = $derived(
     mode === 'select-and-copy'
       ? 'Click a template to apply it and copy this prompt immediately.'
-      : 'Select one or more templates to apply to this prompt.'
+      : 'Choose one template, or use the prompt exactly as written.'
   )
-  // Shared row control switches from checkboxes to copy glyphs in quick mode.
-  const selectionControl = $derived(mode === 'select-and-copy' ? 'copy' : 'checkbox')
+  // Shared row control switches from single-choice markers to copy glyphs in quick mode.
+  const selectionControl = $derived(mode === 'select-and-copy' ? 'copy' : 'radio')
 
   // Keeps only the first occurrence of each currently available template ID.
   const normalizeTemplateIds = (templateIds: Iterable<string>): string[] => {
@@ -207,7 +207,10 @@
       collapsedCategoryIds.clear()
       stagedTemplateIds =
         mode === 'select'
-          ? normalizeTemplateIds((selectedTemplates ?? []).map((template) => template.id))
+          ? normalizeTemplateIds((selectedTemplates ?? []).map((template) => template.id)).slice(
+              0,
+              1
+            )
           : []
     }
     wasOpen = open
@@ -233,7 +236,7 @@
         (entry) => entry.kind === 'template' && Boolean(templateTitleById[entry.id])
       ) ?? []
 
-  // Applies a quick selection immediately or toggles an ordered staged selection.
+  // Applies a quick selection immediately or replaces the staged single selection.
   const handleTemplateSelect = (templateId: string): void => {
     if (mode === 'select-and-copy') {
       void onselect([{ id: templateId }])
@@ -241,9 +244,7 @@
       return
     }
 
-    stagedTemplateIds = normalizedStagedTemplateIds.includes(templateId)
-      ? normalizedStagedTemplateIds.filter((selectedId) => selectedId !== templateId)
-      : [...normalizedStagedTemplateIds, templateId]
+    stagedTemplateIds = [templateId]
   }
 
   // Selects the explicit no-template option, immediately only in quick mode.
@@ -368,7 +369,7 @@
   icon={dialogIcon}
   title={dialogTitle}
   subtitle={dialogSubtitle}
-  submitText="Confirm Selections"
+  submitText="Confirm Selection"
   submitIcon={Check}
   submitTestId="prompt-template-confirm-button"
   showSubmitButton={mode === 'select'}
@@ -399,9 +400,7 @@
           data-control={selectionControl}
           aria-hidden="true"
         >
-          {#if selectionControl === 'checkbox'}
-            <Check size={13} />
-          {:else}
+          {#if selectionControl === 'copy'}
             <Copy size={16} />
           {/if}
         </span>
@@ -411,7 +410,7 @@
     <div class="prompt-template-tree-label">
       <span>Template Library</span>
       {#if mode === 'select'}
-        <span>{normalizedStagedTemplateIds.length} selected</span>
+        <span>Choose one</span>
       {/if}
     </div>
     <Separator class="mb-2" />
@@ -590,6 +589,29 @@
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: 4px;
     color: transparent;
+  }
+
+  .prompt-template-no-template-control[data-control='radio'] {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 50%;
+  }
+
+  .prompt-template-no-template-control[data-control='radio']::after {
+    background: transparent;
+    border-radius: 50%;
+    content: '';
+    height: 9px;
+    width: 9px;
+  }
+
+  .prompt-template-no-template-option[data-row-state='active']
+    .prompt-template-no-template-control[data-control='radio'] {
+    border-color: var(--ui-accent-normal-border);
+  }
+
+  .prompt-template-no-template-option[data-row-state='active']
+    .prompt-template-no-template-control[data-control='radio']::after {
+    background: var(--ui-normal-text);
   }
 
   .prompt-template-no-template-option[data-row-state='active']

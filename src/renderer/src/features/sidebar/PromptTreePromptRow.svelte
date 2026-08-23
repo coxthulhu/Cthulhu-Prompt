@@ -8,7 +8,7 @@
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
 
   // Optional control displayed before a prompt label when the row is reused by a picker.
-  type SelectionControl = 'checkbox' | 'copy'
+  type SelectionControl = 'checkbox' | 'radio' | 'copy'
 
   type Props = {
     folderId: string
@@ -86,7 +86,7 @@
       >
         {#if selectionControl === 'checkbox'}
           <Check size={13} />
-        {:else}
+        {:else if selectionControl === 'copy'}
           <Copy size={16} />
         {/if}
       </span>
@@ -113,7 +113,7 @@
     data-row-state={rowState}
     data-selection-control={selectionControl}
     aria-current={isActive ? 'true' : undefined}
-    aria-pressed={selectionControl === 'checkbox' ? isActive : undefined}
+    aria-pressed={selectionControl === 'copy' || !selectionControl ? undefined : isActive}
     onclick={handlePromptSelect}
     class="sidebarPromptTreeSettingsButton"
   >
@@ -136,7 +136,7 @@
       data-row-state={rowState}
       data-selection-control={selectionControl}
       aria-current={isActive ? 'true' : undefined}
-      aria-pressed={selectionControl === 'checkbox' ? isActive : undefined}
+      aria-pressed={selectionControl === 'copy' || !selectionControl ? undefined : isActive}
       onclick={handlePromptSelect}
       class="sidebarPromptTreeSettingsButton"
     >
@@ -227,6 +227,29 @@
       background-color var(--ui-animation-duration-fast) ease-out,
       border-color var(--ui-animation-duration-fast) ease-out,
       color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .prompt-tree-selection-control[data-control='radio'] {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 50%;
+  }
+
+  .prompt-tree-selection-control[data-control='radio']::after {
+    background: transparent;
+    border-radius: 50%;
+    content: '';
+    height: 9px;
+    width: 9px;
+  }
+
+  .sidebarPromptTreeSettingsButton[data-row-state='active']
+    .prompt-tree-selection-control[data-control='radio'] {
+    border-color: var(--ui-accent-normal-border);
+  }
+
+  .sidebarPromptTreeSettingsButton[data-row-state='active']
+    .prompt-tree-selection-control[data-control='radio']::after {
+    background: var(--ui-normal-text);
   }
 
   .sidebarPromptTreeSettingsButton[data-row-state='active']

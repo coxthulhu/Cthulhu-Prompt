@@ -205,7 +205,7 @@ Copy without a template.`,
 }
 
 describe('Prompt template selection', () => {
-  test('stages and normalizes ordered template selections', async ({
+  test('stages one template selection while preserving multi-template data', async ({
     electronApp,
     testSetup
   }) => {
@@ -265,11 +265,11 @@ describe('Prompt template selection', () => {
     ).toEqual(['Copy prompt', 'Set Template'])
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
-    const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
+    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
     await expect(dialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
-      'Select one or more templates to apply to this prompt.'
+      'Choose one template, or use the prompt exactly as written.'
     )
     expect(Math.abs((await dialog.boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
     const firstBaseFolderHeader = dialog.locator('.prompt-template-base-folder-header').first()
@@ -346,6 +346,17 @@ describe('Prompt template selection', () => {
       'aria-pressed',
       'true'
     )
+    await expect(
+      dialog.locator(
+        '[data-testid="prompt-template-option-none"] .prompt-template-no-template-control[data-control="radio"]'
+      )
+    ).toBeVisible()
+    await expect(
+      dialog.locator(
+        '[data-testid="prompt-tree-prompt-template-first"] .prompt-tree-selection-control[data-control="radio"]'
+      )
+    ).toBeVisible()
+    await expect(dialog.locator('.prompt-template-tree-label')).toContainText('Choose one')
 
     const templateTree = dialog.locator('[data-testid="prompt-template-selection-tree"]')
     const templateTreeSpacer = dialog.locator(
@@ -425,9 +436,12 @@ describe('Prompt template selection', () => {
       dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
     ).toHaveAttribute('aria-pressed', 'true')
     await dialog.locator('[data-testid="prompt-tree-prompt-template-category"]').click()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
+    ).toHaveAttribute('aria-pressed', 'true')
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
       'aria-pressed',
-      'true'
+      'false'
     )
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     expect(
@@ -490,19 +504,33 @@ describe('Prompt template selection', () => {
     ])
 
     await multiTemplatePromptEditor.locator('[data-testid="prompt-template-button"]').click()
-    await expect(dialog.locator('.prompt-template-tree-label')).toContainText('2 selected')
     await expect(
       dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
     ).toHaveAttribute('aria-pressed', 'true')
     await expect(
       dialog.locator('[data-testid="prompt-tree-prompt-template-category"]')
-    ).toHaveAttribute('aria-pressed', 'true')
+    ).toHaveAttribute('aria-pressed', 'false')
     await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-first"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
+    ).toHaveAttribute('aria-pressed', 'false')
     await dialog.locator('[data-testid="prompt-tree-prompt-template-second"]').click()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-first"]')
+    ).toHaveAttribute('aria-pressed', 'false')
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
+    ).toHaveAttribute('aria-pressed', 'true')
     await dialog.locator('[data-testid="prompt-tree-prompt-template-second"]').click()
+    await expect(
+      dialog.locator('[data-testid="prompt-tree-prompt-template-second"]')
+    ).toHaveAttribute('aria-pressed', 'true')
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'Category Template + 2 More'
+      'Second Root Template'
     )
     await expect
       .poll(
@@ -511,11 +539,7 @@ describe('Prompt template selection', () => {
             await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH)
           )?.templates
       )
-      .toEqual([
-        { id: 'template-category' },
-        { id: 'template-first' },
-        { id: 'template-second' }
-      ])
+      .toEqual([{ id: 'template-second' }])
 
     await testHelpers.navigateToPromptFolders('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
@@ -702,7 +726,7 @@ describe('Prompt template selection', () => {
 
     const promptEditor = mainWindow.locator(promptEditorSelector('virtual-selection-prompt'))
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
-    const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
+    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
     const virtualWindowSelector = '[data-testid="prompt-template-selection-tree"]'
     const spacerSelector = '[data-testid="prompt-template-selection-tree-spacer"]'
     const headerSelector =
@@ -780,7 +804,7 @@ describe('Prompt template selection', () => {
 
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
-    const dialog = mainWindow.getByRole('dialog', { name: 'Configure Templates' })
+    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
     await dialog.locator('[data-testid="prompt-tree-prompt-template-first"]').click()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
 
