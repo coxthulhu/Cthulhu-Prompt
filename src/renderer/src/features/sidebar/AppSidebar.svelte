@@ -23,11 +23,13 @@
   import {
     ArrowUpToLine,
     Check,
+    CircleCheckBig,
     ChevronsDownUp,
     ChevronsUpDown,
     ExternalLink,
     Folder,
     Layers,
+    ListTodo,
     MoreHorizontal,
     Plus,
     Settings
@@ -38,7 +40,7 @@
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
-  import type { Prompt } from '@shared/Prompt'
+  import { PromptStatus, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Workspace } from '@shared/Workspace'
@@ -51,6 +53,8 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import Accordion from '@renderer/common/cthulhu-ui/Accordion.svelte'
+  import AccordionSection from '@renderer/common/cthulhu-ui/AccordionSection.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
@@ -82,7 +86,9 @@
     workspacePath = null,
     screenRootFolderId = null,
     promptFolderScreenMode = PromptFolderScreenMode.Active,
+    isCompletedPromptSectionShown = false,
     onPromptFolderModeChange,
+    onCompletedPromptSectionShownChange,
     onScreenRootFolderSelect
   } = $props<{
     activeScreen: ScreenId
@@ -91,9 +97,14 @@
     workspacePath?: string | null
     screenRootFolderId?: string | null
     promptFolderScreenMode?: PromptFolderScreenMode
+    isCompletedPromptSectionShown?: boolean
     onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
+    onCompletedPromptSectionShownChange: (isShown: boolean) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
+
+  /** Workspace-wide persistence key shared by every prompt folder's status accordion. */
+  const PROMPT_STATUS_ACCORDION_PERSISTENCE_ID = 'sidebar-prompt-statuses'
 
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptNavigation = getPromptNavigationContext()
@@ -320,6 +331,34 @@
       promptNavigation.selectedRow === 'root-header'
   )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
+  /** Active and completed prompt totals displayed in the status accordion headers. */
+  const selectedPromptStatusCounts = $derived.by(() => {
+    if (!screenRootFolder || screenRootFolder.kind === 'template') {
+      return { active: 0, completed: 0 }
+    }
+
+    /** Loaded prompt statuses indexed for entry counting. */
+    const statusByPromptId = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt.status]))
+    /** Number of loaded non-completed prompts in active folder order. */
+    let active = 0
+    for (const group of screenRootFolder.categoryOrder.categories) {
+      for (const entry of group.entries) {
+        if (
+          entry.kind === 'prompt' &&
+          statusByPromptId.has(entry.id) &&
+          statusByPromptId.get(entry.id) !== PromptStatus.Completed
+        ) {
+          active += 1
+        }
+      }
+    }
+
+    /** Number of loaded completed prompts owned by the selected root folder. */
+    const completed = screenRootFolder.completedPromptIds.filter(
+      (promptId) => statusByPromptId.get(promptId) === PromptStatus.Completed
+    ).length
+    return { active, completed }
+  })
   const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
   const selectedFolderActionsLabel = $derived(
     isTemplateFolder ? 'Selected Prompt Template Folder Actions' : 'Selected Prompt Folder Actions'
@@ -373,10 +412,9 @@
     )
   }
 
-  const toggleCompletedPromptMode = () => {
-    onPromptFolderModeChange(
-      isCompletedPromptMode ? PromptFolderScreenMode.Active : PromptFolderScreenMode.Completed
-    )
+  /** Toggles whether the Completed status accordion section is rendered. */
+  const toggleCompletedPromptSection = () => {
+    onCompletedPromptSectionShownChange(!isCompletedPromptSectionShown)
   }
 
   // Selects and reveals the root folder overview formerly represented by the first tree row.
@@ -766,10 +804,10 @@
             title="Show Completed Prompts"
             borderless
             disabled={!screenRootFolder}
-            active={isCompletedPromptMode}
+            active={isCompletedPromptSectionShown}
             testId="toggle-completed-prompts-button"
             class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-            onclick={toggleCompletedPromptMode}
+            onclick={toggleCompletedPromptSection}
           />
         {/if}
         <IconButton
@@ -831,18 +869,77 @@
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col overflow-visible">
-    <PromptTree
-      promptFolders={rootPromptFolders}
-      {folderListState}
-      {screenRootFolderId}
-      screenMode={promptFolderScreenMode}
-      expansionRequests={promptTreeExpansionRequests}
-      isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
-      onAllCategoriesCollapsedChange={(isCollapsed) => {
-        areAllCategoriesCollapsed = isCollapsed
-      }}
-      {onScreenRootFolderSelect}
-    />
+    {#if screenRootFolder?.kind !== 'prompt'}
+      <PromptTree
+        promptFolders={rootPromptFolders}
+        {folderListState}
+        {screenRootFolderId}
+        screenMode={PromptFolderScreenMode.Active}
+        expansionRequests={promptTreeExpansionRequests}
+        isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
+        onAllCategoriesCollapsedChange={(isCollapsed) => {
+          areAllCategoriesCollapsed = isCollapsed
+        }}
+        onScreenModeSelect={onPromptFolderModeChange}
+        {onScreenRootFolderSelect}
+      />
+    {:else}
+      <!-- Recreate the owner so conditionally visible sections register in rendered order. -->
+      {#key isCompletedPromptSectionShown}
+        <Accordion
+          persistenceId={PROMPT_STATUS_ACCORDION_PERSISTENCE_ID}
+          testId="sidebar-prompt-status-accordion"
+          class="flex-1"
+        >
+          {#if isCompletedPromptSectionShown}
+            <AccordionSection
+              id="completed"
+              label="COMPLETED"
+              icon={CircleCheckBig}
+              count={selectedPromptStatusCounts.completed}
+            >
+              <PromptTree
+                promptFolders={rootPromptFolders}
+                {folderListState}
+                {screenRootFolderId}
+                screenMode={PromptFolderScreenMode.Completed}
+                virtualWindowTestId="prompt-tree-completed-virtual-window"
+                expansionRequests={promptTreeExpansionRequests}
+                isPromptFoldersScreenActive={activeScreen === 'prompt-folders' &&
+                  promptFolderScreenMode === PromptFolderScreenMode.Completed}
+                onAllCategoriesCollapsedChange={(isCollapsed) => {
+                  areAllCategoriesCollapsed = isCollapsed
+                }}
+                onScreenModeSelect={onPromptFolderModeChange}
+                {onScreenRootFolderSelect}
+              />
+            </AccordionSection>
+          {/if}
+
+          <AccordionSection
+            id="active"
+            label="ACTIVE"
+            icon={ListTodo}
+            count={selectedPromptStatusCounts.active}
+          >
+            <PromptTree
+              promptFolders={rootPromptFolders}
+              {folderListState}
+              {screenRootFolderId}
+              screenMode={PromptFolderScreenMode.Active}
+              expansionRequests={promptTreeExpansionRequests}
+              isPromptFoldersScreenActive={activeScreen === 'prompt-folders' &&
+                promptFolderScreenMode === PromptFolderScreenMode.Active}
+              onAllCategoriesCollapsedChange={(isCollapsed) => {
+                areAllCategoriesCollapsed = isCollapsed
+              }}
+              onScreenModeSelect={onPromptFolderModeChange}
+              {onScreenRootFolderSelect}
+            />
+          </AccordionSection>
+        </Accordion>
+      {/key}
+    {/if}
   </div>
 </aside>
 

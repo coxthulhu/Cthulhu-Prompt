@@ -93,6 +93,9 @@ const statusPillSelector = (promptId: string) =>
 const statusIndicatorSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
+/** Returns the accordion content selector for one sidebar prompt status. */
+const sidebarPromptStatusContentSelector = (status: 'active' | 'completed') =>
+  `[data-testid="sidebar-prompt-status-accordion-content-${status}"]`
 
 const expectEditedIndicator = async (page: any, promptId: string) => {
   const indicator = page.locator(statusIndicatorSelector(promptId))
@@ -118,13 +121,17 @@ const getPromptEditorIds = async (page: any): Promise<string[]> => {
   }, PROMPT_EDITOR_PREFIX_SELECTOR)
 }
 
-const getPromptTreePromptRowIds = async (page: any): Promise<string[]> => {
-  return await page.evaluate((prefix: string) => {
-    return Array.from(document.querySelectorAll<HTMLElement>('[data-testid]'))
-      .map((element) => element.getAttribute('data-testid') ?? '')
-      .filter((testId) => testId.startsWith(prefix))
-      .map((testId) => testId.replace(prefix, ''))
-  }, PROMPT_TREE_PROMPT_ROW_PREFIX)
+const getPromptTreePromptRowIds = async (
+  page: any,
+  status?: 'active' | 'completed'
+): Promise<string[]> => {
+  /** Optional status-section root that prevents rows from the sibling tree joining the result. */
+  const root = status ? page.locator(sidebarPromptStatusContentSelector(status)) : page
+  return await root.locator(`[data-testid^="${PROMPT_TREE_PROMPT_ROW_PREFIX}"]`).evaluateAll(
+    (elements: HTMLElement[], prefix: string) =>
+      elements.map((element) => element.dataset.testid!.replace(prefix, '')),
+    PROMPT_TREE_PROMPT_ROW_PREFIX
+  )
 }
 
 const waitForPromptCount = async (page: any, count: number) => {
@@ -1986,11 +1993,52 @@ describe('Prompt folder prompt management', () => {
       'aria-pressed',
       'true'
     )
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
+    ).toHaveCount(0)
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-active"]')
+        .locator('.cthulhuUiAccordionCount')
+    ).toHaveText('1')
 
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
     await expect(
       mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
     ).toHaveAttribute('data-active', 'true')
+    /** Rendered status sections in their required Completed-before-Active order. */
+    const statusSections = mainWindow.locator(
+      '[data-testid^="sidebar-prompt-status-accordion-section-"]'
+    )
+    await expect(statusSections).toHaveCount(2)
+    expect(
+      await statusSections.evaluateAll((sections) =>
+        sections.map((section) => section.dataset.testid)
+      )
+    ).toEqual([
+      'sidebar-prompt-status-accordion-section-completed',
+      'sidebar-prompt-status-accordion-section-active'
+    ])
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-completed"]')
+        .locator('.cthulhuUiAccordionCount')
+    ).toHaveText('2')
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-active"]')
+        .locator('.cthulhuUiAccordionCount')
+    ).toHaveText('1')
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-completed"]')
+        .locator('.cthulhuUiAccordionIcon')
+    ).toHaveClass(/lucide-circle-check-big/)
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-active"]')
+        .locator('.cthulhuUiAccordionIcon')
+    ).toHaveClass(/lucide-list-todo/)
     // The selected root folder is not duplicated as a category in completed mode.
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-CompletedMode"]')
@@ -1998,10 +2046,68 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-newest', 'completed-mode-oldest'])
-    expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([
+    expect(await getPromptTreePromptRowIds(mainWindow, 'completed')).toEqual([
       'completed-mode-newest',
       'completed-mode-oldest'
     ])
+    /** Active source row used to verify cross-tree drag blocking and mode navigation. */
+    const activeTreePrompt = mainWindow.locator(
+      `${sidebarPromptStatusContentSelector('active')} [data-testid="prompt-tree-prompt-completed-mode-active"]`
+    )
+    /** Completed destination row that must never register as an Active-tree drop target. */
+    const completedTreePrompt = mainWindow.locator(
+      `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-completed-mode-newest"]`
+    )
+    /** Source geometry for beginning the custom pointer drag. */
+    const activeTreePromptBox = await activeTreePrompt.boundingBox()
+    /** Destination geometry for moving the pointer into the Completed tree. */
+    const completedTreePromptBox = await completedTreePrompt.boundingBox()
+    expect(activeTreePromptBox).not.toBeNull()
+    expect(completedTreePromptBox).not.toBeNull()
+    await mainWindow.mouse.move(
+      activeTreePromptBox!.x + activeTreePromptBox!.width / 2,
+      activeTreePromptBox!.y + activeTreePromptBox!.height / 2
+    )
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(
+      completedTreePromptBox!.x + completedTreePromptBox!.width / 2,
+      completedTreePromptBox!.y + completedTreePromptBox!.height / 2,
+      { steps: 12 }
+    )
+    await expect(mainWindow.locator('[data-testid="drag-ghost"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-drop-indicator-active="true"]')).toHaveCount(0)
+    await mainWindow.mouse.up()
+    expect(await getPromptTreePromptRowIds(mainWindow, 'completed')).toEqual([
+      'completed-mode-newest',
+      'completed-mode-oldest'
+    ])
+    await mainWindow.mouse.move(
+      completedTreePromptBox!.x + completedTreePromptBox!.width / 2,
+      completedTreePromptBox!.y + completedTreePromptBox!.height / 2
+    )
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(
+      activeTreePromptBox!.x + activeTreePromptBox!.width / 2,
+      activeTreePromptBox!.y + activeTreePromptBox!.height / 2,
+      { steps: 12 }
+    )
+    await expect(mainWindow.locator('[data-testid="drag-ghost"]')).toHaveCount(0)
+    await mainWindow.mouse.up()
+
+    await activeTreePrompt.click()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
+    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator('[data-testid][data-row-state="active"]')).toHaveCount(1)
+    await completedTreePrompt.click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await expect(mainWindow.locator('[data-testid][data-row-state="active"]')).toHaveCount(1)
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Completed'
@@ -2104,20 +2210,48 @@ describe('Prompt folder prompt management', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
     ).toHaveText('1')
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-active"]')
+        .locator('.cthulhuUiAccordionCount')
+    ).toHaveText('2')
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-completed"]')
+        .locator('.cthulhuUiAccordionCount')
+    ).toHaveText('1')
 
     await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
     await expect(
       mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
-    ).toHaveAttribute('data-active', 'false')
+    ).toHaveAttribute('data-active', 'true')
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-newest', 'completed-mode-active'])
     await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveText('Todo')
-    expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([
+    expect(await getPromptTreePromptRowIds(mainWindow, 'active')).toEqual([
       'completed-mode-newest',
       'completed-mode-active'
     ])
-
+    await mainWindow
+      .locator(
+        `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-completed-mode-oldest"]`
+      )
+      .click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
+    ).toHaveAttribute('aria-pressed', 'true')
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
+      .toEqual(['completed-mode-newest', 'completed-mode-active'])
     await expect
       .poll(
         async () => {
@@ -2176,9 +2310,20 @@ describe('Prompt folder prompt management', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
     ).toHaveAttribute('aria-pressed', 'true')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toHaveText(
-      'No completed prompts were found in this folder.'
-    )
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-completed-empty-status"]')
+    ).toHaveText('No completed prompts. Click to view.')
+    await expect(
+      mainWindow.locator('[data-testid="prompt-tree-completed-virtual-window"]')
+    ).toHaveCount(0)
+    await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
+    ).toHaveAttribute('data-active', 'true')
+    await mainWindow.locator('[data-testid="prompt-tree-completed-empty-status"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
+    ).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toContainText(
       'No completed prompts were found in this folder.'
     )
@@ -2197,6 +2342,66 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).not.toContainText(
       'Click the Add Prompt button'
     )
+    /** Active sash used to persist a non-default workspace-wide status-tree split. */
+    const activeAccordionSash = mainWindow.locator(
+      '[data-testid="sidebar-prompt-status-accordion-sash-active"]'
+    )
+    /** Completed section height before the workspace-wide split changes. */
+    const initialCompletedHeightPx = await mainWindow
+      .locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
+      .evaluate((section) => section.getBoundingClientRect().height)
+    /** Active section height before the workspace-wide split changes. */
+    const initialActiveHeightPx = await mainWindow
+      .locator('[data-testid="sidebar-prompt-status-accordion-section-active"]')
+      .evaluate((section) => section.getBoundingClientRect().height)
+    /** Sash geometry used to perform a 30px split resize. */
+    const activeAccordionSashBox = await activeAccordionSash.boundingBox()
+    expect(activeAccordionSashBox).not.toBeNull()
+    await mainWindow.mouse.move(
+      activeAccordionSashBox!.x + activeAccordionSashBox!.width / 2,
+      activeAccordionSashBox!.y + activeAccordionSashBox!.height / 2
+    )
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(
+      activeAccordionSashBox!.x + activeAccordionSashBox!.width / 2,
+      activeAccordionSashBox!.y + activeAccordionSashBox!.height / 2 + 30
+    )
+    await mainWindow.mouse.up()
+    /** Completed section height after resizing in the No Completed root folder. */
+    const resizedCompletedHeightPx = await mainWindow
+      .locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
+      .evaluate((section) => section.getBoundingClientRect().height)
+    /** Active section height after resizing in the No Completed root folder. */
+    const resizedActiveHeightPx = await mainWindow
+      .locator('[data-testid="sidebar-prompt-status-accordion-section-active"]')
+      .evaluate((section) => section.getBoundingClientRect().height)
+    expect(Math.abs(resizedCompletedHeightPx - initialCompletedHeightPx - 30)).toBeLessThanOrEqual(
+      2
+    )
+    expect(Math.abs(resizedActiveHeightPx - initialActiveHeightPx + 30)).toBeLessThanOrEqual(2)
+    await testHelpers.navigateToPromptFolders('Completed Mode')
+    /** Status section heights after navigating to another root prompt folder. */
+    const navigatedStatusHeightsPx = await Promise.all([
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
+        .evaluate((section) => section.getBoundingClientRect().height),
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-section-active"]')
+        .evaluate((section) => section.getBoundingClientRect().height)
+    ])
+    expect(Math.abs(navigatedStatusHeightsPx[0] - resizedCompletedHeightPx)).toBeLessThanOrEqual(2)
+    expect(Math.abs(navigatedStatusHeightsPx[1] - resizedActiveHeightPx)).toBeLessThanOrEqual(2)
+
+    /** Completed header whose shared persisted state should survive root-folder navigation. */
+    const completedAccordionHeader = mainWindow.locator(
+      '[data-testid="sidebar-prompt-status-accordion-header-completed"]'
+    )
+    await completedAccordionHeader.click()
+    await expect(completedAccordionHeader).toHaveAttribute('aria-expanded', 'false')
+    await testHelpers.navigateToPromptFolders('No Completed')
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-completed"]')
+    ).toHaveAttribute('aria-expanded', 'false')
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {

@@ -19,6 +19,9 @@ import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigat
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+/** Completed tree viewport rendered alongside the default Active tree viewport. */
+const COMPLETED_PROMPT_TREE_HOST_SELECTOR =
+  '[data-testid="prompt-tree-completed-virtual-window"]'
 const SIDEBAR_FOLDER_ROOT_BUTTON_SELECTOR = '[data-testid="sidebar-folder-root-button"]'
 const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
 const TARGET_INDEX = 30
@@ -107,17 +110,18 @@ const buildCompletedTreeWorkspace = (): Record<string, string | null> => {
 const scrollPromptTreeRowIntoView = async (
   mainWindow: any,
   testHelpers: any,
-  rowSelector: string
+  rowSelector: string,
+  hostSelector = PROMPT_TREE_HOST_SELECTOR
 ) => {
-  const hostHeight = await testHelpers.getPromptRowHeight(PROMPT_TREE_HOST_SELECTOR)
-  const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(PROMPT_TREE_HOST_SELECTOR)
+  const hostHeight = await testHelpers.getPromptRowHeight(hostSelector)
+  const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(hostSelector)
   const maxScrollTop = Math.max(0, scrollHeight - hostHeight)
   const stepPx = Math.max(1, Math.round(hostHeight * 0.8))
 
   for (let scrollTopPx = 0; scrollTopPx <= maxScrollTop; scrollTopPx += stepPx) {
-    await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, scrollTopPx)
+    await testHelpers.scrollVirtualWindowTo(hostSelector, scrollTopPx)
     if ((await mainWindow.locator(rowSelector).count()) > 0) {
-      await testHelpers.scrollVirtualElementIntoView(PROMPT_TREE_HOST_SELECTOR, rowSelector, 20)
+      await testHelpers.scrollVirtualElementIntoView(hostSelector, rowSelector, 20)
       return
     }
   }
@@ -747,10 +751,25 @@ describe('Prompt folder prompt tree', () => {
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptFolders(COMPLETED_TREE_FOLDER_NAME)
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-empty-status"]')).toHaveText(
+      'No active prompts. Click to view.'
+    )
+    await expect(mainWindow.locator(PROMPT_TREE_HOST_SELECTOR)).toHaveCount(0)
+    await mainWindow.locator('[data-testid="prompt-tree-active-empty-status"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
 
     const targetTreeRow = `[data-testid="prompt-tree-prompt-${COMPLETED_TREE_TARGET_PROMPT_ID}"]`
     const targetEditor = promptEditorSelector(COMPLETED_TREE_TARGET_PROMPT_ID)
-    await scrollPromptTreeRowIntoView(mainWindow, testHelpers, targetTreeRow)
+    await scrollPromptTreeRowIntoView(
+      mainWindow,
+      testHelpers,
+      targetTreeRow,
+      COMPLETED_PROMPT_TREE_HOST_SELECTOR
+    )
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
     await expect(mainWindow.locator(targetEditor)).toHaveCount(0)
 
@@ -907,7 +926,7 @@ describe('Prompt folder prompt tree', () => {
     })
 
     expect(categoryRowTreatment).not.toBeNull()
-    expect(Math.abs(categoryRowTreatment!.chevronInsetPx - 9)).toBeLessThanOrEqual(1)
+    expect(Math.abs(categoryRowTreatment!.chevronInsetPx - 6)).toBeLessThanOrEqual(1)
     expect(Math.abs(categoryRowTreatment!.categoryIconOffsetPx - 32)).toBeLessThanOrEqual(1)
     expect(Math.abs(categoryRowTreatment!.labelOffsetPx - 26)).toBeLessThanOrEqual(1)
     expect(Math.abs(categoryRowTreatment!.categoryIconWidthPx - 16)).toBeLessThanOrEqual(1)

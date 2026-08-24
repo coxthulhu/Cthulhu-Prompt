@@ -233,6 +233,8 @@ describe('Prompt folder storage', () => {
       .toEqual([firstPromptId])
 
     // Completing moves the Markdown file from Active to Completed and updates frontmatter.
+    await testHelpers.navigateToPromptFolders(BETA_NAME)
+    await expect(mainWindow.locator(promptEditorSelector(firstPromptId))).toBeVisible()
     const activePromptPath = `${betaPath}/Active/${FIRST_PROMPT_TITLE}.prompt.md`
     const completedPromptPath = `${betaPath}/Completed/${FIRST_PROMPT_TITLE}.prompt.md`
     await mainWindow

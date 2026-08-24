@@ -164,6 +164,8 @@
   )
   let screenRootFolderId = $state<string | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
+  /** Session-only visibility for the sidebar's Completed prompt section. */
+  let isCompletedPromptSectionShown = $state(false)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -572,7 +574,20 @@
       )
       if (folder?.kind === 'template') return
     }
+    if (nextMode === PromptFolderScreenMode.Completed) {
+      isCompletedPromptSectionShown = true
+    }
     promptFolderScreenMode = nextMode
+  }
+
+  /** Shows or hides Completed prompts and leaves Completed mode through the existing Active restore. */
+  const setCompletedPromptSectionShown = (isShown: boolean): void => {
+    isCompletedPromptSectionShown = isShown
+    if (isShown) {
+      setPromptFolderMode(PromptFolderScreenMode.Completed)
+    } else if (promptFolderScreenMode === PromptFolderScreenMode.Completed) {
+      setPromptFolderMode(PromptFolderScreenMode.Active)
+    }
   }
 
   const navigateHomeAfterRootPromptFolderDelete = (): void => {
@@ -615,7 +630,9 @@
           {workspacePath}
           {screenRootFolderId}
           {promptFolderScreenMode}
+          {isCompletedPromptSectionShown}
           onPromptFolderModeChange={setPromptFolderMode}
+          onCompletedPromptSectionShownChange={setCompletedPromptSectionShown}
           onScreenRootFolderSelect={(promptFolderId) => {
             navigateToScreenRootFolder(promptFolderId)
           }}

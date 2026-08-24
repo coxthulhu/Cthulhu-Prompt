@@ -32,7 +32,6 @@
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-  import { getPromptDisplayTitle } from '@renderer/data/UiState/PromptFolderScreenData.svelte.ts'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
   import {
     getPromptNavigationContext,
@@ -91,7 +90,9 @@
     expansionRequests,
     isPromptFoldersScreenActive = false,
     screenMode = PromptFolderScreenMode.Active,
+    virtualWindowTestId = 'prompt-tree-virtual-window',
     onAllCategoriesCollapsedChange,
+    onScreenModeSelect,
     onScreenRootFolderSelect
   } = $props<{
     promptFolders: PromptFolder[]
@@ -100,7 +101,10 @@
     expansionRequests: ConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>
     isPromptFoldersScreenActive?: boolean
     screenMode?: PromptFolderScreenMode
+    /** Test identity for distinguishing concurrently rendered status trees. */
+    virtualWindowTestId?: string
     onAllCategoriesCollapsedChange: (isCollapsed: boolean) => void
+    onScreenModeSelect: (screenMode: PromptFolderScreenMode) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
@@ -207,6 +211,26 @@
       )
     })
   })
+  /** Loaded active prompt count used to replace an empty status tree with its navigation link. */
+  const selectedActivePromptCount = $derived.by(() => {
+    if (!screenRootFolder || screenRootFolder.kind === 'template') return 0
+
+    return screenRootFolder.categoryOrder.categories.reduce(
+      (count, group) =>
+        count +
+        group.entries.filter(
+          (entry) =>
+            entry.kind === 'prompt' &&
+            Boolean(promptById[entry.id]) &&
+            promptById[entry.id]?.status !== PromptStatus.Completed
+        ).length,
+      0
+    )
+  })
+  /** Prompt count for this tree's fixed Active or Completed status. */
+  const selectedStatusPromptCount = $derived(
+    isCompletedMode ? selectedCompletedPrompts.length : selectedActivePromptCount
+  )
   const PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX = 15
   const PROMPT_TREE_INDENT_WIDTH_PX = 12
   const getPromptTreeDropIndicatorInset = (indentCount: number): string =>
@@ -512,6 +536,7 @@
     if (!rootFolderId) return
     const isSameRootActive = isPromptFoldersScreenActive
 
+    onScreenModeSelect(screenMode)
     promptNavigation.select({
       screenRootFolderId: rootFolderId,
       contentOwnerId,
@@ -552,8 +577,14 @@
     handlePromptTreeEntrySelect(categoryId, 'category-details')
   }
 
+  /** Opens this empty tree's status view while retaining the root folder selection. */
+  const handleEmptyStatusSelect = (): void => {
+    onScreenModeSelect(screenMode)
+  }
+
   // Side effect: report the current tree collapse state to the sidebar action button.
   $effect(() => {
+    if (isCompletedMode) return
     const areAllCategoriesCollapsed =
       categoryTreeIds.length > 0 &&
       categoryTreeIds.every(
@@ -567,6 +598,7 @@
   $effect(() => {
     const request = expansionRequests.pending
     if (
+      isCompletedMode ||
       !request ||
       folderListState !== 'ready' ||
       request.payload.screenRootFolderId !== screenRootFolder?.id
@@ -614,30 +646,21 @@
 
     if (screenRootFolder) {
       if (isCompletedMode) {
-        if (selectedCompletedPrompts.length === 0) {
+        for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
+          const ownerFolder = promptFolderById[completedPrompt.contentOwnerId]
+          if (!ownerFolder) continue
           items.push({
-            id: `${screenRootFolder.id}:empty-state`,
+            id: contentPromptRowId(ownerFolder.id, completedPrompt.promptId),
             row: {
-              kind: 'empty-state'
+              kind: 'prompt',
+              folder: ownerFolder,
+              categoryId: null,
+              promptId: completedPrompt.promptId,
+              indentCount: 0,
+              isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
+              isFirstTreeRow: promptIndex === 0
             }
           })
-        } else {
-          for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
-            const ownerFolder = promptFolderById[completedPrompt.contentOwnerId]
-            if (!ownerFolder) continue
-            items.push({
-              id: contentPromptRowId(ownerFolder.id, completedPrompt.promptId),
-              row: {
-                kind: 'prompt',
-                folder: ownerFolder,
-                categoryId: null,
-                promptId: completedPrompt.promptId,
-                indentCount: 0,
-                isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
-                isFirstTreeRow: promptIndex === 0
-              }
-            })
-          }
         }
       } else {
         /** Loaded active entries projected in FolderOrderV2 group order. */
@@ -771,11 +794,21 @@
   {:else if folderListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Folder to Get Started</div>
   {:else if folderListState === 'ready'}
-    <div class="flex min-h-0 flex-1 flex-col">
+    {#if screenRootFolder?.kind === 'prompt' && selectedStatusPromptCount === 0}
+      <button
+        type="button"
+        class="sidebarPromptTreeEmptyStatus"
+        data-testid={`prompt-tree-${screenMode}-empty-status`}
+        onclick={handleEmptyStatusSelect}
+      >
+        No {isCompletedMode ? 'completed' : 'active'} prompts. Click to view.
+      </button>
+    {:else}
+      <div class="flex min-h-0 flex-1 flex-col">
       <PromptTreeVirtualList
         items={virtualItems}
-        testId="prompt-tree-virtual-window"
-        spacerTestId="prompt-tree-virtual-window-spacer"
+        testId={virtualWindowTestId}
+        spacerTestId={`${virtualWindowTestId}-spacer`}
         bind:scrollToWithinWindowBand
         bind:viewportMetrics
       >
@@ -829,8 +862,11 @@
     promptIdToPromptNavigationRow(props.row.promptId)
   )}
   {@const isDragging = isPromptRowDragging(props.row.folder.id, props.row.promptId)}
+  {@const promptContent = props.row.folder.kind === 'template'
+    ? templateById[props.row.promptId]!
+    : promptById[props.row.promptId]!}
   {@const promptTitle =
-    promptTreeTitleById[props.row.promptId] ?? getPromptDisplayTitle(props.row.promptId)}
+    promptTreeTitleById[props.row.promptId] ?? getPromptTitleText(promptContent)}
 
   <!-- Recreate edge registrations when virtual row reuse changes which row owns tree start. -->
   {#key props.row.isFirstTreeRow}
@@ -982,6 +1018,24 @@
 {/snippet}
 
       </PromptTreeVirtualList>
-    </div>
+      </div>
+    {/if}
   {/if}
 </div>
+
+<style>
+  .sidebarPromptTreeEmptyStatus {
+    background: transparent;
+    border: 0;
+    color: var(--ui-muted-text);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 12px 16px;
+    text-align: left;
+  }
+
+  .sidebarPromptTreeEmptyStatus:hover,
+  .sidebarPromptTreeEmptyStatus:focus-visible {
+    color: var(--ui-normal-text);
+  }
+</style>

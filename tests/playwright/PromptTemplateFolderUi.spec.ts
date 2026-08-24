@@ -458,6 +458,9 @@ describe('Prompt template folder UI', () => {
       .toBeLessThanOrEqual(2)
     await testHelpers.navigateToPromptFolders('Empty Templates')
     await expect(mainWindow.locator(TEMPLATE_EDITOR)).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')).toHaveCount(
+      0
+    )
     await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toContainText(
       'No templates found in this folder.'
     )
