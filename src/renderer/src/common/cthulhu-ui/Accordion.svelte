@@ -217,8 +217,23 @@
     /** Selected workspace required by workspace-specific persistence. */
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (!workspaceId) return
+    /** Updated visible sections indexed without discarding temporarily unrendered sections. */
+    const updatedSectionById = new Map(sections.map((section) => [section.id, section]))
+    /** Saved section order with visible values replaced by their latest interaction state. */
+    const mergedSections =
+      persistedAccordionViewEntry?.sections.map(
+        (section) => updatedSectionById.get(section.id) ?? section
+      ) ?? []
+    /** Saved IDs used to append sections that have never been persisted before. */
+    const mergedSectionIds = new Set(mergedSections.map((section) => section.id))
+    for (const section of sections) {
+      if (!mergedSectionIds.has(section.id)) mergedSections.push(section)
+    }
     /** Complete accordion entry written as one optimistic autosave update. */
-    const accordionViewEntry: WorkspaceAccordionViewEntry = { persistenceId, sections }
+    const accordionViewEntry: WorkspaceAccordionViewEntry = {
+      persistenceId,
+      sections: mergedSections
+    }
     setAccordionViewEntryWithAutosave(workspaceId, accordionViewEntry)
   }
 
@@ -477,7 +492,6 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 </style>

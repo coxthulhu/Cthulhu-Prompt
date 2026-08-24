@@ -170,7 +170,7 @@
     gap: 7px;
     grid-template-columns: 24px 18px minmax(0, 1fr) auto;
     height: 36px;
-    padding: 0 12px 0 9px;
+    padding: 0 12px 0 6px;
     text-align: left;
     width: 100%;
   }
@@ -182,7 +182,7 @@
 
   .cthulhuUiAccordionChevron {
     align-items: center;
-    color: var(--ui-secondary-icon-glyph);
+    color: var(--ui-hoverable-icon-glyph);
     display: flex;
     justify-content: center;
     transform: rotate(0deg);
@@ -193,7 +193,7 @@
   }
 
   .cthulhuUiAccordionIcon {
-    color: currentColor;
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .cthulhuUiAccordionLabel {
@@ -207,14 +207,25 @@
   }
 
   .cthulhuUiAccordionCount {
-    color: var(--ui-muted-text);
+    color: var(--ui-secondary-text);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
 
+  .cthulhuUiAccordionHeader:hover .cthulhuUiAccordionChevron,
+  .cthulhuUiAccordionHeader:hover :global(.cthulhuUiAccordionIcon),
+  .cthulhuUiAccordionHeader:hover .cthulhuUiAccordionCount,
+  .cthulhuUiAccordionHeader:focus-visible .cthulhuUiAccordionChevron,
+  .cthulhuUiAccordionHeader:focus-visible :global(.cthulhuUiAccordionIcon),
+  .cthulhuUiAccordionHeader:focus-visible .cthulhuUiAccordionCount {
+    color: var(--ui-normal-text);
+  }
+
   .cthulhuUiAccordionContent {
+    display: flex;
+    flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
+    overflow: hidden;
   }
 </style>
