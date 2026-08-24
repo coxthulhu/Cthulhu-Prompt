@@ -97,7 +97,7 @@
   grid-template-columns: 24px 18px minmax(0, 1fr);
   border: 0;
   background: var(--ui-ghost-surface);
-  padding: 0 12px 0 9px;
+  padding: 0 12px 0 6px;
   color: inherit;
   text-align: left;
 }
