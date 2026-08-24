@@ -38,6 +38,8 @@
     ) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
+    /** Moves focus to the owning title input when backward tabbing from the first cursor position. */
+    onBackwardTabAtStart?: () => void
     class?: string
   }
 
@@ -60,6 +62,7 @@
     onFindMatchReveal,
     onSelectionChange,
     onViewStateCapture,
+    onBackwardTabAtStart,
     class: className
   }: Props = $props()
 
@@ -368,6 +371,34 @@
     onSelectionChange(startOffset, endOffset)
   }
 
+  /** Moves focus backward when Shift+Tab is pressed with one collapsed cursor at the document start. */
+  const handleBackwardTabAtStart = (event: monaco.IKeyboardEvent) => {
+    if (!onBackwardTabAtStart) return
+    if (
+      event.keyCode !== monaco.KeyCode.Tab ||
+      !event.shiftKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      event.metaKey
+    ) {
+      return
+    }
+
+    /** Current Monaco selections determine whether exactly one collapsed cursor is active. */
+    const selections = editor?.getSelections()
+    if (selections?.length !== 1) return
+
+    /** Sole selection must be empty so selected text retains Monaco's native backward-tab action. */
+    const selection = selections[0]
+    /** Active cursor position must be the absolute beginning of the document. */
+    const position = selection.getPosition()
+    if (!selection.isEmpty() || position.lineNumber !== 1 || position.column !== 1) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    onBackwardTabAtStart()
+  }
+
   // Side effect: keep the initial Monaco height aligned with the current font size.
   $effect(() => {
     if (editor) return
@@ -433,6 +464,8 @@
         reportSelectionAnchorFromSelectionChange(nextEditor, event)
       })
       const scrollDisposable = nextEditor.onDidScrollChange(handleEditorScroll)
+      /** Monaco key subscription implements backward focus navigation at the document start. */
+      const keyDownDisposable = nextEditor.onKeyDown(handleBackwardTabAtStart)
 
       layoutEditor()
       restoreEditorViewStateWithScrollSuppression(nextEditor, initialViewStateJson)
@@ -451,6 +484,7 @@
         cursorDisposable.dispose()
         selectionDisposable.dispose()
         scrollDisposable.dispose()
+        keyDownDisposable.dispose()
         suppressCursorAutoScrollDuringRestore = false
         if (viewStateCaptureKey) {
           unregisterMonacoViewStateSaver(viewStateCaptureKey)

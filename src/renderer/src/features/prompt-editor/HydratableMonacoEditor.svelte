@@ -41,6 +41,8 @@
     ) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
+    /** Moves focus to the owning title input when backward tabbing from the first cursor position. */
+    onBackwardTabAtStart?: () => void
     class?: string
   }
 
@@ -68,6 +70,7 @@
     onFindMatchReveal,
     onSelectionChange,
     onViewStateCapture,
+    onBackwardTabAtStart,
     class: className
   }: Props = $props()
 
@@ -190,6 +193,7 @@
     {onFindMatchReveal}
     {onSelectionChange}
     {onViewStateCapture}
+    {onBackwardTabAtStart}
   />
 {:else}
   <MonacoEditorPlaceholder class={className} heightPx={placeholderHeightPx} {sizingConfig} />

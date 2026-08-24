@@ -227,6 +227,14 @@ export type MonacoCursorPosition = {
   column: number
 }
 
+/** Monaco selection shape used to configure cursor and selection boundary cases in tests. */
+export type MonacoTestSelection = {
+  selectionStartLineNumber: number
+  selectionStartColumn: number
+  positionLineNumber: number
+  positionColumn: number
+}
+
 export async function getMonacoCursorPosition(
   page: Page,
   editorSelector: string
@@ -272,6 +280,55 @@ export async function getMonacoCursorPosition(
       column: position.column
     }
   }, editorSelector)
+}
+
+/** Replaces an editor's selections so keyboard tests can exercise exact Monaco cursor states. */
+export async function setMonacoSelections(
+  page: Page,
+  editorSelector: string,
+  selections: readonly MonacoTestSelection[]
+): Promise<void> {
+  /** Successful registry update proves the requested selection state reached Monaco. */
+  const didSetSelections = await page.evaluate(
+    ({ selector, nextSelections }) => {
+      /** Owning editor row scopes registry lookup to the requested prompt or template. */
+      const row = document.querySelector(selector)
+      if (!row) return false
+
+      /** Hydrated Monaco node distinguishes the active editor from any placeholder. */
+      const monacoNode = Array.from(row.querySelectorAll<HTMLElement>('.monaco-editor')).find(
+        (candidate) => candidate.querySelector('.view-lines')
+      )
+      if (!monacoNode) return false
+
+      /** Test registry exposes the Monaco instance associated with the hydrated DOM node. */
+      const registry = (
+        window as unknown as {
+          __cthulhuMonacoEditors?: Array<{
+            container: HTMLElement | null
+            editor: {
+              setSelections: (selections: readonly MonacoTestSelection[]) => void
+            }
+          }>
+        }
+      ).__cthulhuMonacoEditors
+
+      /** Matching registry entry owns the editor whose selections should change. */
+      const entry = registry?.find((item) => {
+        if (!item?.container) return false
+        return item.container === monacoNode || item.container.contains(monacoNode)
+      })
+      if (!entry) return false
+
+      entry.editor.setSelections(nextSelections)
+      return true
+    },
+    { selector: editorSelector, nextSelections: selections }
+  )
+
+  if (!didSetSelections) {
+    throw new Error(`Could not set Monaco selections for selector: ${editorSelector}`)
+  }
 }
 
 export async function moveMonacoCursorToEnd(page: Page, editorSelector: string): Promise<void> {

@@ -5,6 +5,7 @@ import {
   focusMonacoEditor,
   getMonacoEditorText,
   isMonacoEditorFocused,
+  setMonacoSelections,
   typeInMonacoEditor,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
@@ -629,7 +630,9 @@ describe('Prompt folder prompt management', () => {
     )
   })
 
-  test('moves focus from the prompt title to Monaco with Tab or Enter', async ({ testSetup }) => {
+  test('moves focus between the prompt title and Monaco with keyboard shortcuts', async ({
+    testSetup
+  }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -647,6 +650,65 @@ describe('Prompt folder prompt management', () => {
 
     await mainWindow.keyboard.press('Tab')
 
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect(titleInput).toBeFocused()
+
+    await titleInput.evaluate((input: HTMLInputElement) => input.setSelectionRange(2, 2))
+    await mainWindow.keyboard.press('Tab')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect(titleInput).toBeFocused()
+    await expect
+      .poll(async () =>
+        titleInput.evaluate((input) => [input.selectionStart, input.selectionEnd])
+      )
+      .toEqual([2, 2])
+
+    await mainWindow.keyboard.press('Tab')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+    await mainWindow.keyboard.press('ArrowRight')
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+
+    await setMonacoSelections(mainWindow, editorSelector, [
+      {
+        selectionStartLineNumber: 1,
+        selectionStartColumn: 2,
+        positionLineNumber: 1,
+        positionColumn: 1
+      }
+    ])
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
+      .toBe(true)
+
+    await setMonacoSelections(mainWindow, editorSelector, [
+      {
+        selectionStartLineNumber: 1,
+        selectionStartColumn: 1,
+        positionLineNumber: 1,
+        positionColumn: 1
+      },
+      {
+        selectionStartLineNumber: 1,
+        selectionStartColumn: 2,
+        positionLineNumber: 1,
+        positionColumn: 2
+      }
+    ])
+    await mainWindow.keyboard.press('Shift+Tab')
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
       .toBe(true)

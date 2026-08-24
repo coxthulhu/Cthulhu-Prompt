@@ -391,6 +391,11 @@
     editorInstance?.focus()
   }
 
+  /** Returns keyboard focus from Monaco to this row's title without changing its selection. */
+  const focusTitleFromEditorStart = () => {
+    titleInputRef?.focus({ preventScroll: true })
+  }
+
   const focusEditorFromBodyClick = async (event: MouseEvent) => {
     const target = event.target as HTMLElement | null
     if (target?.closest('.monaco-editor')) return
@@ -635,6 +640,7 @@
             findRowHandlers.revealSectionMatch = handler
           }}
           onSelectionChange={reportBodySelection}
+          onBackwardTabAtStart={focusTitleFromEditorStart}
           onImmediateHydrationRequest={(request) => {
             findRowHandlers.requestImmediateHydration = request
           }}
