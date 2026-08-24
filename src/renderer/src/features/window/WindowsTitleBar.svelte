@@ -1,6 +1,8 @@
 <script lang="ts">
   import { PanelLeftClose, PanelLeftOpen } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  // Application artwork shared with the sidebar accent icon.
+  import appIcon from '@renderer/assets/cutethulhu.png'
 
   let { title, isDevBuild = false, isAppSidebarExpanded, onAppSidebarToggle } = $props<{
     title: string
@@ -70,6 +72,14 @@
 >
   <!-- Keep the title centered by matching the left action width to the control cluster. -->
   <div class="titlebar__actions">
+    <!-- The application icon fills the title-bar space directly above the activity bar. -->
+    <img
+      class="titlebar__app-icon"
+      src={appIcon}
+      alt="Cthulhu Prompt icon"
+      draggable="false"
+      ondragstart={(event) => event.preventDefault()}
+    />
     <IconButton
       icon={isAppSidebarExpanded ? PanelLeftClose : PanelLeftOpen}
       label={isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -139,7 +149,13 @@
     height: 100%;
     display: flex;
     align-items: center;
-    padding-left: 20px;
+  }
+
+  .titlebar__app-icon {
+    width: 16px;
+    height: 16px;
+    margin: 0 22px 0 10px;
+    object-fit: contain;
   }
 
   .titlebar__actions :global(.titlebar__sidebar-toggle) {

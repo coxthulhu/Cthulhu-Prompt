@@ -72,8 +72,10 @@ test.describe('Sidebar Tests', () => {
       workspace: { scenario: 'minimal' }
     })
 
-    // The left title-bar action region positions the control immediately before the sidebar edge.
+    // The left title-bar action region aligns the app icon and control with the activity-bar edge.
     const titleBarActions = mainWindow.locator('.titlebar__actions')
+    // The title-bar app icon reuses the application artwork at the requested compact size.
+    const titleBarAppIcon = titleBarActions.locator('.titlebar__app-icon')
     // The title-bar control exposes the current action and swaps its directional icon.
     const toggleButton = titleBarActions.locator('[data-testid="app-sidebar-toggle-button"]')
     // These surfaces distinguish the collapsible sidebar from persistent primary navigation.
@@ -90,6 +92,8 @@ test.describe('Sidebar Tests', () => {
     const mainSurface = mainWindow.locator('.mainScreenSurface')
     // Title-bar geometry verifies the compact button's vertical two-pixel inset.
     const titleBarActionsBox = (await titleBarActions.boundingBox())!
+    // The rendered image box verifies the requested icon size and top-left inset.
+    const titleBarAppIconBox = (await titleBarAppIcon.boundingBox())!
     const toggleButtonBox = (await toggleButton.boundingBox())!
     // Expanded geometry is the exact layout that must be restored after reopening.
     const expandedSidebarPaneBox = (await sidebarPane.boundingBox())!
@@ -115,14 +119,19 @@ test.describe('Sidebar Tests', () => {
       (element) => getComputedStyle(element).color
     )
 
+    expect(titleBarAppIconBox.width).toBe(16)
+    expect(titleBarAppIconBox.height).toBe(16)
+    expect(Math.abs(titleBarAppIconBox.x - (titleBarActionsBox.x + 10))).toBeLessThanOrEqual(1)
+    expect(Math.abs(titleBarAppIconBox.y - (titleBarActionsBox.y + 8))).toBeLessThanOrEqual(1)
     expect(
-      Math.abs(toggleButtonBox.x + toggleButtonBox.width - expandedSidebarPaneBox.x)
+      Math.abs(toggleButtonBox.x - (activityBarBox.x + activityBarBox.width))
     ).toBeLessThanOrEqual(1)
     expect(Math.abs(toggleButtonBox.y - (titleBarActionsBox.y + 2))).toBeLessThanOrEqual(1)
     expect(sidebarPaneMotion).toEqual({ transitionDuration: '0s', animationName: 'none' })
     expect(toggleAppRegion).toBe('no-drag')
 
     await expect(toggleButton).toHaveAttribute('aria-label', 'Collapse sidebar')
+    await expect(titleBarAppIcon).toHaveAttribute('alt', 'Cthulhu Prompt icon')
     await expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
     await expect(toggleButton.locator('[data-testid="app-sidebar-close-icon"]')).toBeVisible()
     await expect(toggleButton).toHaveCSS('border-top-style', 'none')
