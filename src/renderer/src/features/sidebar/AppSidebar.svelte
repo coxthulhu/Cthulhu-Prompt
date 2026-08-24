@@ -24,6 +24,7 @@
     ArrowUpToLine,
     Check,
     ChevronsDownUp,
+    ChevronsUpDown,
     ExternalLink,
     Folder,
     Layers,
@@ -296,7 +297,9 @@
     PROMPT_HANDLE_DRAG_TYPE
   ]
   /** Icon for expanding or collapsing every category in the active root folder. */
-  const categoryExpansionActionIcon = ChevronsDownUp
+  const categoryExpansionActionIcon = $derived(
+    areAllCategoriesCollapsed ? ChevronsUpDown : ChevronsDownUp
+  )
   /** Accessible label for the category expansion action. */
   const categoryExpansionActionLabel = $derived(
     areAllCategoriesCollapsed

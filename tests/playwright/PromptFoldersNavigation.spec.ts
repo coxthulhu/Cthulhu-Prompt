@@ -677,6 +677,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Collapse All Categories'
     )
     await expect(
+      mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).locator('.lucide-chevrons-down-up')
+    ).toHaveCount(1)
+    await expect(
       mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-Category"]')
     ).toHaveAttribute('aria-expanded', 'true')
     await expect(
@@ -691,6 +694,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Expand All Categories'
     )
     await expect(
+      mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).locator('.lucide-chevrons-up-down')
+    ).toHaveCount(1)
+    await expect(
       mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
@@ -701,6 +707,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'aria-label',
       'Collapse All Categories'
     )
+    await expect(
+      mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).locator('.lucide-chevrons-down-up')
+    ).toHaveCount(1)
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toBeVisible()
