@@ -103,9 +103,8 @@ const createCategoryFilenameUpdateHandles = (
       return [
         [
           `categoryFilename:${plan.categoryId}`,
-          tx.category.update({
+          tx.category.updatePersistenceFields({
             id: plan.categoryId,
-            recipe: () => {},
             persistenceFields: plan.persistenceFields
           })
         ]

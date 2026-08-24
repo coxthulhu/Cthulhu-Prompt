@@ -54,8 +54,11 @@ export type DeleteMarkdownContentPayload<TContent extends MarkdownContentPersist
   content: RevisionPayloadEntity<TContent>
 }
 
-export type DeleteMarkdownContentResponsePayload = {
+export type DeleteMarkdownContentResponsePayload<
+  TContent extends MarkdownContentPersisted
+> = {
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
+  content?: RevisionEnvelope<TContent>
 }
 
 export type MoveMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {

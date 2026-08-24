@@ -66,9 +66,8 @@ export const setupPromptTemplateMutationHandlers = (): void => {
         persistenceFields: operation.persistenceFields
       }),
     updateFilename: (tx, templateId, persistenceFields) =>
-      tx.promptTemplate.update({
+      tx.promptTemplate.updatePersistenceFields({
         id: templateId,
-        recipe: () => {},
         persistenceFields
       }),
     deleteContent: (tx, templateId, expectedRevision) =>

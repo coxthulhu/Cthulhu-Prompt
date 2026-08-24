@@ -41,7 +41,7 @@ const mockTransactionState = vi.hoisted(() => {
           persistenceFields
         })
       },
-      commitAfterWrite: (id: string, data: unknown) => {
+      commitAfterWrite: (id: string, data: unknown, persistenceFields?: unknown) => {
         const entry = entriesByStore[store].get(id)
         if (!entry) {
           throw new Error(`Missing entry ${store}:${id}`)
@@ -51,10 +51,17 @@ const mockTransactionState = vi.hoisted(() => {
         entriesByStore[store].set(id, {
           revision: nextRevision,
           committed: data,
-          persistenceFields: entry.persistenceFields
+          persistenceFields: persistenceFields ?? entry.persistenceFields
         })
 
         return nextRevision
+      },
+      updatePersistenceFields: (id: string, persistenceFields: unknown) => {
+        const entry = entriesByStore[store].get(id)
+        if (!entry) {
+          throw new Error(`Missing entry ${store}:${id}`)
+        }
+        entriesByStore[store].set(id, { ...entry, persistenceFields })
       },
       remove: (id: string) => {
         entriesByStore[store].delete(id)
@@ -205,6 +212,43 @@ describe('atomic data transaction', () => {
           promptEditorMaxLines: 30,
           showLineNumbers: true
         }
+      }
+    })
+  })
+
+  it('updates persistence fields without incrementing the entity revision', async () => {
+    mockTransactionState.seedEntry('prompt', PROMPT_ID, {
+      revision: 4,
+      committed: { id: PROMPT_ID, title: 'Duplicate title' },
+      persistenceFields: {
+        promptStem: 'Duplicate title',
+        needsFilenameIdSuffix: false
+      }
+    })
+
+    const outcome = await runAtomicDataTransaction((tx) => ({
+      promptFilename: tx.prompt.updatePersistenceFields({
+        id: PROMPT_ID,
+        persistenceFields: {
+          promptStem: 'Duplicate title-prompt-1',
+          needsFilenameIdSuffix: true
+        }
+      })
+    }))
+
+    expect(outcome.status).toBe('success')
+    if (outcome.status !== 'success') return
+
+    expect(outcome.results.promptFilename).toMatchObject({
+      revision: 4,
+      data: { id: PROMPT_ID, title: 'Duplicate title' }
+    })
+    expect(mockTransactionState.readEntry('prompt', PROMPT_ID)).toEqual({
+      revision: 4,
+      committed: { id: PROMPT_ID, title: 'Duplicate title' },
+      persistenceFields: {
+        promptStem: 'Duplicate title-prompt-1',
+        needsFilenameIdSuffix: true
       }
     })
   })

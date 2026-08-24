@@ -31,6 +31,13 @@ type AtomicDataUpdateOperation = {
   persistenceFields?: unknown
 }
 
+type AtomicDataUpdatePersistenceFieldsOperation = {
+  type: 'updatePersistenceFields'
+  store: DataStoreKey
+  id: string
+  persistenceFields: unknown
+}
+
 type AtomicDataDeleteOperation = {
   type: 'delete'
   store: DataStoreKey
@@ -41,6 +48,7 @@ type AtomicDataDeleteOperation = {
 type AtomicDataOperation =
   | AtomicDataCreateOperation
   | AtomicDataUpdateOperation
+  | AtomicDataUpdatePersistenceFieldsOperation
   | AtomicDataDeleteOperation
 
 export type AtomicDataCommittedResult<
@@ -81,6 +89,10 @@ export type AtomicDataStoreBuilder<TStoreKey extends DataStoreKey> = {
     recipe: DataRecipe<StoreData<TStoreKey>>
     expectedRevision?: number
     persistenceFields?: StorePersistenceFields<TStoreKey>
+  }) => AtomicDataTransactionHandle<TStoreKey, StoreData<TStoreKey>, number>
+  updatePersistenceFields: (params: {
+    id: string
+    persistenceFields: StorePersistenceFields<TStoreKey>
   }) => AtomicDataTransactionHandle<TStoreKey, StoreData<TStoreKey>, number>
   delete: (params: {
     id: string
@@ -234,6 +246,15 @@ const createAtomicDataBuilder = (): {
         }
         return registerOperationHandle(operation, store, id)
       },
+      updatePersistenceFields: ({ id, persistenceFields }) => {
+        const operation: AtomicDataUpdatePersistenceFieldsOperation = {
+          type: 'updatePersistenceFields',
+          store,
+          id,
+          persistenceFields
+        }
+        return registerOperationHandle(operation, store, id)
+      },
       delete: ({ id, expectedRevision }) => {
         const operation: AtomicDataDeleteOperation = {
           type: 'delete',
@@ -296,6 +317,7 @@ const stageAtomicDataOperations = async (
 
       // Side effect: run CAS checks while this transaction is already serialized in the mutation queue.
       if (
+        'expectedRevision' in operation &&
         operation.expectedRevision != null &&
         operation.expectedRevision !== committedEntry.revision
       ) {
@@ -314,13 +336,17 @@ const stageAtomicDataOperations = async (
       }
 
       persistenceFields =
-        operation.type === 'update' && operation.persistenceFields !== undefined
+        operation.type === 'updatePersistenceFields'
+          ? operation.persistenceFields
+          : operation.type === 'update' && operation.persistenceFields !== undefined
           ? operation.persistenceFields
           : committedEntry.persistenceFields
       nextData =
         operation.type === 'update'
           ? produce(committedEntry.committed, operation.recipe as DataRecipe<any>)
-          : null
+          : operation.type === 'updatePersistenceFields'
+            ? committedEntry.committed
+            : null
     }
 
     const change: PersistenceChange<any, any> =
@@ -371,6 +397,20 @@ const applyCommittedInMemoryChanges = (
     }
 
     const nextData = stagedOperation.nextData
+
+    if (operation.type === 'updatePersistenceFields') {
+      revisionData.committedStore.updatePersistenceFields(
+        operation.id,
+        stagedOperation.persistenceFields
+      )
+      results.push({
+        store: operation.store,
+        id: operation.id,
+        revision: revisionData.committedStore.getRevision(operation.id),
+        data: nextData
+      })
+      continue
+    }
 
     if (operation.type === 'create') {
       revisionData.committedStore.setFromDisk(

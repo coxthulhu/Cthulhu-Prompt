@@ -76,9 +76,8 @@ const createPromptFilenameUpdateHandles = (
     ) {
       continue
     }
-    handles[`promptFilename:${plan.contentId}`] = tx.prompt.update({
+    handles[`promptFilename:${plan.contentId}`] = tx.prompt.updatePersistenceFields({
       id: plan.contentId,
-      recipe: () => {},
       persistenceFields: plan.persistenceFields
     })
   }
@@ -375,7 +374,7 @@ export const setupPromptMutationHandlers = (): void => {
         persistenceFields: operation.persistenceFields
       }),
     updateFilename: (tx, promptId, persistenceFields) =>
-      tx.prompt.update({ id: promptId, recipe: () => {}, persistenceFields }),
+      tx.prompt.updatePersistenceFields({ id: promptId, persistenceFields }),
     deleteContent: (tx, promptId, expectedRevision) =>
       tx.prompt.delete({ id: promptId, expectedRevision }),
     onDeleted: (workspaceId, promptId) => {

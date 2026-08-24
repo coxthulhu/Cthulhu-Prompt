@@ -330,7 +330,8 @@ export const setupMarkdownContentMutationHandlers = <
             data.promptFolder.committedStore.getEntry(requestedFolder.id),
             `${config.label} folder not loaded`,
             (latestFolder) => ({
-              promptFolders: [buildPromptFolderSnapshot(latestFolder)]
+              promptFolders: [buildPromptFolderSnapshot(latestFolder)],
+              ...(content ? { content: config.buildSnapshot(content) } : {})
             })
           )
         }
@@ -365,7 +366,8 @@ export const setupMarkdownContentMutationHandlers = <
             data.promptFolder.committedStore.getEntry(requestedFolder.id),
             `${config.label} folder not loaded`,
             () => ({
-              promptFolders: buildPromptFolderSnapshots([requestedFolder.id])
+              promptFolders: buildPromptFolderSnapshots([requestedFolder.id]),
+              content: config.buildSnapshot(config.getContent(contentId)!)
             })
           )
         }

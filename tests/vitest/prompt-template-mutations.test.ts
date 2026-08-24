@@ -199,6 +199,38 @@ describe('prompt template mutations', () => {
     expect(ipcInvokeWithPayload.mock.calls[0]?.[1].content.data).not.toHaveProperty('status')
   })
 
+  it('reconciles the latest template snapshot from a delete conflict', async () => {
+    await deletePromptTemplate('source-folder', 'paced-template')
+    const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
+
+    deleteOptions.handleSuccessOrConflictResponse({
+      promptFolders: [],
+      content: {
+        id: 'paced-template',
+        revision: 4,
+        data: {
+          id: 'paced-template',
+          title: 'Authoritative Template',
+          fallbackTitle: '',
+          createdAt: '2026-07-24T10:00:00.000Z',
+          modifiedAt: '2026-07-24T12:00:00.000Z',
+          templateText: 'Latest server text.'
+        }
+      }
+    })
+
+    expect(promptTemplateCollection.utils.getAuthoritativeRevision('paced-template')).toBe(4)
+    expect(promptTemplateCollection.get('paced-template')).toMatchObject({
+      title: 'Authoritative Template',
+      templateText: 'Latest server text.',
+      loadingState: 'full'
+    })
+    expect(promptTemplateDraftCollection.get('paced-template')).toMatchObject({
+      title: 'Authoritative Template',
+      templateText: 'Latest server text.'
+    })
+  })
+
   it('sends delete and move through their template-specific IPC channels', async () => {
     ipcInvokeWithPayload.mockResolvedValue({ success: false, error: 'stop before commit' })
 

@@ -119,7 +119,7 @@ describe('Prompt persistence filenames', () => {
       })
   })
 
-  test('adds id suffixes to prompts with duplicate sanitized filename stems', async ({
+  test('adds id suffixes for duplicate stems and deletes a renamed sibling', async ({
     testSetup,
     electronApp
   }) => {
@@ -184,6 +184,32 @@ describe('Prompt persistence filenames', () => {
         secondUnsuffixed: false,
         secondSuffixed: true,
         oldSecond: false
+      })
+
+    await mainWindow
+      .locator(
+        `${promptEditorSelector(COLLISION_FIRST_PROMPT_ID)} [data-testid="prompt-delete-button"]`
+      )
+      .click()
+    await mainWindow.locator('[data-testid="prompt-confirm-delete-button"]').click()
+
+    await expect(mainWindow.locator(promptEditorSelector(COLLISION_FIRST_PROMPT_ID))).toHaveCount(0)
+    await expect
+      .poll(
+        async () => {
+          const [firstSuffixed, secondUnsuffixed, secondSuffixed] = await Promise.all([
+            checkFileExists(electronApp, `${folderPath}/CaseName-abcdef12.prompt.md`),
+            checkFileExists(electronApp, `${folderPath}/casename.prompt.md`),
+            checkFileExists(electronApp, `${folderPath}/casename-12345678.prompt.md`)
+          ])
+          return { firstSuffixed, secondUnsuffixed, secondSuffixed }
+        },
+        { timeout: 8000 }
+      )
+      .toEqual({
+        firstSuffixed: false,
+        secondUnsuffixed: true,
+        secondSuffixed: false
       })
   })
 })

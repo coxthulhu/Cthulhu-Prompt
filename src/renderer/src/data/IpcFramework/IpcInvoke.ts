@@ -2,6 +2,8 @@ type SuccessEnvelope = {
   success: boolean
   error?: string
   conflict?: boolean
+  requestId?: string
+  clientId?: string
 }
 
 const isSuccessEnvelope = (value: unknown): value is SuccessEnvelope => {
@@ -42,11 +44,16 @@ const logIpcError = ({
   })
 }
 
-const logIpcConflictWarning = ({ channel, error }: { channel: string; error?: string }): void => {
-  console.warn('IPC conflict response', {
-    channel,
-    error
-  })
+const logIpcConflictWarning = ({
+  channel,
+  requestId,
+  clientId
+}: {
+  channel: string
+  requestId?: string
+  clientId?: string
+}): void => {
+  console.warn('IPC revision conflict', { channel, requestId, clientId })
 }
 
 // Carries IPC context so callers can log channel/payload/response when needed.
@@ -112,7 +119,8 @@ export async function ipcInvoke<TResponse, TPayload = unknown>(
     if (isSuccessEnvelope(result) && !result.success && result.conflict) {
       logIpcConflictWarning({
         channel,
-        error: result.error
+        requestId: result.requestId,
+        clientId: result.clientId
       })
     }
 

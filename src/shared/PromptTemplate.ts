@@ -60,7 +60,8 @@ export type CreatePromptTemplateResponsePayload =
 
 export type DeletePromptTemplatePayload = DeleteMarkdownContentPayload<PromptTemplatePersisted>
 
-export type DeletePromptTemplateResponsePayload = DeleteMarkdownContentResponsePayload
+export type DeletePromptTemplateResponsePayload =
+  DeleteMarkdownContentResponsePayload<PromptTemplatePersisted>
 
 export type MovePromptTemplatePayload = MoveMarkdownContentPayload<PromptTemplatePersisted>
 

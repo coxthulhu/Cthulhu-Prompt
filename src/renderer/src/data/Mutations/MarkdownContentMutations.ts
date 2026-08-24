@@ -212,7 +212,7 @@ export const createMarkdownContentRendererMutations = <
     /** V2 reference removed with the content. */
     const entry = config.createEntryRef(contentId)
 
-    await runRevisionMutation<DeleteMarkdownContentResponsePayload>({
+    await runRevisionMutation<DeleteMarkdownContentResponsePayload<TPersisted>>({
       mutateOptimistically: ({ collections }) => {
         config.deleteOptimistically(collections, contentId)
         collections.promptFolder.update(promptFolderId, (draft) => {
@@ -225,7 +225,7 @@ export const createMarkdownContentRendererMutations = <
       persistMutations: async ({ entities, transaction }) => {
         /** IPC deletion result. */
         const result = await ipcInvokeWithPayload<
-          IpcMutationPayloadResult<DeleteMarkdownContentResponsePayload>,
+          IpcMutationPayloadResult<DeleteMarkdownContentResponsePayload<TPersisted>>,
           DeleteMarkdownContentPayload<TPersisted>
         >(config.channels.delete, {
           promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
@@ -236,6 +236,7 @@ export const createMarkdownContentRendererMutations = <
       },
       handleSuccessOrConflictResponse: (payload) => {
         promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
+        if (payload.content) config.reconcile(payload.content)
       },
       conflictMessage: `${config.label} delete conflict`,
       onSuccess: () => config.deleteAuthoritative(contentId)
