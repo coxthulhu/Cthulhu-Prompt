@@ -21,6 +21,7 @@
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import {
+    ArrowUpToLine,
     Check,
     ChevronsDownUp,
     ExternalLink,
@@ -745,7 +746,7 @@
     {#if isWorkspaceReady}
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
-          icon={Settings}
+          icon={ArrowUpToLine}
           label="Show Folder Overview"
           title="Show Folder Overview"
           borderless
