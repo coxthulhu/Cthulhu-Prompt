@@ -879,7 +879,7 @@
       class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
       data-testid="prompt-tree-empty-state"
     >
-      <p class="sidebarPromptTreeEmptyTitle">No completed prompts found in this folder</p>
+      <p class="sidebarPromptTreeEmptyTitle">No completed prompts were found in this folder.</p>
     </div>
   {:else}
     <PromptDropTarget
@@ -900,7 +900,7 @@
           <p class="sidebarPromptTreeEmptyTitle">
             {screenRootFolder?.kind === 'template'
               ? 'No templates found in this folder.'
-              : 'No prompts found in this folder.'}
+              : 'No active prompts were found in this folder.'}
           </p>
           <p class="mt-2">
             Click the Add {screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} button to

@@ -2177,10 +2177,10 @@ describe('Prompt folder prompt management', () => {
       mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
     ).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toHaveText(
-      'No completed prompts found in this folder'
+      'No completed prompts were found in this folder.'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toContainText(
-      'No completed prompts found in this folder'
+      'No completed prompts were found in this folder.'
     )
     const emptyCompletedFolderTitle = mainWindow.locator(
       '[data-testid="prompt-folder-root-header"]'

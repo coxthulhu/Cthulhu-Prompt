@@ -843,10 +843,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator(PROMPT_TREE_EMPTY_STATE)).toBeVisible()
     await expect(mainWindow.locator(PROMPT_TREE_EMPTY_STATE)).toContainText(
-      'No prompts found in this folder.'
+      'No active prompts were found in this folder.'
     )
     await expect(
-      mainWindow.locator(PROMPT_FOLDER_HOST).getByText('No prompts found in this folder.')
+      mainWindow
+        .locator(PROMPT_FOLDER_HOST)
+        .getByText('No active prompts were found in this folder.')
     ).toBeVisible()
     await expect
       .poll(async () => {
@@ -864,7 +866,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       if (!host) return null
 
       const emptyMessage = Array.from(host.querySelectorAll('p')).find(
-        (paragraph) => paragraph.textContent?.trim() === 'No prompts found in this folder.'
+        (paragraph) =>
+          paragraph.textContent?.trim() === 'No active prompts were found in this folder.'
       )
       const placeholderRow = emptyMessage?.closest('.prompt-folder-section-row')
       return Boolean(placeholderRow?.querySelector('.promptFolderSectionGutter'))

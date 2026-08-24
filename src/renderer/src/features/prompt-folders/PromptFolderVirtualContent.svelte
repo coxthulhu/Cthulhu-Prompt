@@ -834,10 +834,10 @@
   >
     <p>
       {isCompletedMode
-        ? 'No completed prompts found in this folder'
+        ? 'No completed prompts were found in this folder.'
         : isTemplateFolder
           ? 'No templates found in this folder.'
-          : 'No prompts found in this folder.'}
+          : 'No active prompts were found in this folder.'}
     </p>
     {#if !isCompletedMode}
       <p class="text-sm mt-2">
