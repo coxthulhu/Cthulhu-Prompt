@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte'
-  import { SvelteMap, SvelteSet } from 'svelte/reactivity'
+  import { SvelteMap } from 'svelte/reactivity'
   import PromptFolderFindWidget from './PromptFolderFindWidget.svelte'
   import { setPromptFolderFindContext } from './promptFolderFindContext'
   import {
@@ -66,11 +66,6 @@
   const query = $derived(matchText)
   const normalizedQuery = $derived(query.toLowerCase())
 
-  const hydratedEntityIds = new SvelteSet<string>()
-  const sectionMatchCountsByEntityId = new SvelteMap<
-    string,
-    SvelteMap<string, { query: string; count: number }>
-  >()
   const rowHandlesByEntityId = new SvelteMap<string, PromptFolderFindRowHandle>()
   const searchModel = createPromptFolderFindSearchModel()
   const itemByEntityId = $derived.by(() => {
@@ -130,8 +125,6 @@
     const nextCounts = buildPromptFolderFindCounts({
       items,
       query,
-      hydratedEntityIds,
-      sectionMatchCountsByEntityId,
       countMatchesInText: searchModel.countMatchesInText
     })
     matchCountsByEntity = nextCounts
@@ -511,33 +504,9 @@
     })
   })
 
-  // Track which entities are hydrated so we can prefer editor-reported counts.
-  const reportHydration = (entityId: string, isHydrated: boolean) => {
-    if (isHydrated) {
-      hydratedEntityIds.add(entityId)
-    } else {
-      hydratedEntityIds.delete(entityId)
-      sectionMatchCountsByEntityId.delete(entityId)
-    }
-  }
-
-  // Receive match counts from hydrated editors and update totals incrementally.
-  const reportSectionMatchCount = (
-    entityId: string,
-    sectionKey: string,
-    reportedQuery: string,
-    count: number
-  ) => {
-    if (reportedQuery !== query) return
-    let sectionCountsBySectionKey = sectionMatchCountsByEntityId.get(entityId)
-    if (!sectionCountsBySectionKey) {
-      sectionCountsBySectionKey = new SvelteMap<string, { query: string; count: number }>()
-      sectionMatchCountsByEntityId.set(entityId, sectionCountsBySectionKey)
-    }
-    sectionCountsBySectionKey.set(sectionKey, { query: reportedQuery, count })
-
-    if (!isFindOpen) return
-    // Update just the affected entity section count instead of rescanning everything.
+  // Recount one changed section through the same text-search path used by the folder scan.
+  const reportSectionTextChange = (entityId: string, sectionKey: string, text: string) => {
+    if (!isFindOpen || query.length === 0) return
     const groupIndex = matchCountsByEntity.findIndex((group) => group.entityId === entityId)
     if (groupIndex < 0) return
 
@@ -547,6 +516,8 @@
     )
     if (sectionIndex < 0) return
     const section = group.sectionCounts[sectionIndex]
+    /** Match count produced from the changed text rather than the hydrated Monaco model. */
+    const count = searchModel.countMatchesInText(text, query)
     if (section.count === count) return
 
     const nextSectionCounts = group.sectionCounts.slice()
@@ -559,16 +530,6 @@
     if (currentMatchIndex > totalMatches) {
       currentMatchIndex = totalMatches
     }
-  }
-
-  const reportSectionTextChange = (entityId: string, sectionKey: string, text: string) => {
-    if (!isFindOpen || query.length === 0) return
-    reportSectionMatchCount(
-      entityId,
-      sectionKey,
-      query,
-      searchModel.countMatchesInText(text, query)
-    )
   }
 
   const registerRow = (handle: PromptFolderFindRowHandle) => {
@@ -588,9 +549,7 @@
     shouldSelectCurrentMatch: true,
     focusRequests,
     reportSelection: recordSelectionAnchor,
-    reportHydration,
     reportSectionTextChange,
-    reportSectionMatchCount,
     registerRow
   })
 

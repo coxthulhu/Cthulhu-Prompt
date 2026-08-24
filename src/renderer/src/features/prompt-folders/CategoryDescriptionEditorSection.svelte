@@ -195,7 +195,6 @@
   const handleHydrationChange = (nextIsHydrated: boolean) => {
     isHydrated = nextIsHydrated
     onHydrationChange?.(nextIsHydrated)
-    findContext?.reportHydration(categoryFindEntityId, nextIsHydrated)
   }
 
   /** Tracks the active Monaco instance during hydration changes. */
@@ -253,11 +252,10 @@
     if (workspaceId) {
       setCategoryDescriptionEditorViewStateWithAutosave(workspaceId, categoryId, null)
     }
-    findContext?.reportSectionMatchCount(
+    findContext?.reportSectionTextChange(
       categoryFindEntityId,
       section.findSectionKey,
-      findContext.query,
-      0
+      ''
     )
     onDescriptionPresenceChange(false)
   }
@@ -362,14 +360,6 @@
           onEditorLifecycle={handleEditorLifecycle}
           findSectionKey={section.findSectionKey}
           {findRequest}
-          onFindMatches={(query, count) => {
-            findContext?.reportSectionMatchCount(
-              categoryFindEntityId,
-              section.findSectionKey,
-              query,
-              count
-            )
-          }}
           onFindMatchReveal={(handler) => {
             revealSectionMatch = handler
           }}
@@ -392,6 +382,11 @@
               widthPx: virtualWindowWidthPx,
               devicePixelRatio
             })
+            findContext?.reportSectionTextChange(
+              categoryFindEntityId,
+              section.findSectionKey,
+              text
+            )
           }}
         />
       {/key}

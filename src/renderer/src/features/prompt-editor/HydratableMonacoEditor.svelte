@@ -35,7 +35,6 @@
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findSectionKey: string
     findRequest?: PromptFolderFindRequest | null
-    onFindMatches?: (query: string, count: number) => void
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
@@ -66,7 +65,6 @@
     onEditorLifecycle,
     findSectionKey,
     findRequest,
-    onFindMatches,
     onFindMatchReveal,
     onSelectionChange,
     onViewStateCapture,
@@ -189,7 +187,6 @@
     onEditorLifecycle={handleEditorLifecycle}
     {findSectionKey}
     {findRequest}
-    {onFindMatches}
     {onFindMatchReveal}
     {onSelectionChange}
     {onViewStateCapture}

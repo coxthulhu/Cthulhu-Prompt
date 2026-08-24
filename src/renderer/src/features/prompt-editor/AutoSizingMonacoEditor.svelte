@@ -32,7 +32,6 @@
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findSectionKey: string
     findRequest?: PromptFolderFindRequest | null
-    onFindMatches?: (query: string, count: number) => void
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
@@ -58,7 +57,6 @@
     onEditorLifecycle,
     findSectionKey,
     findRequest,
-    onFindMatches,
     onFindMatchReveal,
     onSelectionChange,
     onViewStateCapture,
@@ -81,8 +79,6 @@
   let findModel: FindModelBoundToEditorModel | null = null
   let lastFindQuery = ''
   let lastActiveMatchIndex: number | null = null
-  let lastReportedFindQuery = ''
-  let lastReportedFindCount = -1
   let lastFontSizeEffectEditor: monaco.editor.IStandaloneCodeEditor | null = null
   let lastAppliedPromptFontSize: number | null = null
   let lastAppliedPromptEditorMinLines: number | null = null
@@ -106,15 +102,6 @@
     findModel = null
     lastFindQuery = ''
     lastActiveMatchIndex = null
-    lastReportedFindQuery = ''
-    lastReportedFindCount = -1
-  }
-
-  const reportFindMatches = (query: string, count: number) => {
-    if (query === lastReportedFindQuery && count === lastReportedFindCount) return
-    lastReportedFindQuery = query
-    lastReportedFindCount = count
-    onFindMatches?.(query, count)
   }
 
   const measureContentHeightPx = (): number => {
@@ -275,7 +262,6 @@
     }
 
     findModel?.research(false)
-    reportFindMatches(query, controller.getState().matchesCount)
     return true
   }
 
@@ -555,7 +541,7 @@
     emitChange(editor.getValue(), nextHeightPx !== previousHeightPx, nextHeightPx)
   })
 
-  // Side effect: sync Monaco find highlights + match reporting with the external find widget state.
+  // Side effect: sync Monaco find highlights and active-match reveal with the folder results.
   $effect(() => {
     if (!isEditorReady || !editor) return
     const query = findRequest?.query ?? ''

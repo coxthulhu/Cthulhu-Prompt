@@ -53,14 +53,7 @@ export type PromptFolderFindState = {
   shouldSelectCurrentMatch: boolean
   focusRequests: ConsumableRequestCoordinator<PromptFolderFindFocusRequest>
   reportSelection: (anchor: PromptFolderFindAnchor) => void
-  reportHydration: (entityId: string, isHydrated: boolean) => void
   reportSectionTextChange: (entityId: string, sectionKey: string, text: string) => void
-  reportSectionMatchCount: (
-    entityId: string,
-    sectionKey: string,
-    query: string,
-    count: number
-  ) => void
   registerRow: (handle: PromptFolderFindRowHandle) => () => void
 }
 

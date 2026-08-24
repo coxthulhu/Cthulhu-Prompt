@@ -275,7 +275,6 @@
   const handleHydrationChange = (nextIsHydrated: boolean) => {
     isHydrated = nextIsHydrated
     onHydrationChange?.(nextIsHydrated)
-    findContext?.reportHydration(promptId, nextIsHydrated)
   }
 
   const findRequest = $derived.by<PromptFolderFindRequest | null>(() => {
@@ -291,15 +290,6 @@
       shouldSelectActiveMatch: findContext.shouldSelectCurrentMatch
     }
   })
-
-  const handleFindMatches = (query: string, count: number) => {
-    findContext?.reportSectionMatchCount(
-      promptId,
-      PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-      query,
-      count
-    )
-  }
 
   const handleTitleChange = (title: string) => {
     promptData.setTitle(title)
@@ -635,7 +625,6 @@
           onEditorLifecycle={handleEditorLifecycle}
           findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
           {findRequest}
-          onFindMatches={handleFindMatches}
           onFindMatchReveal={(handler) => {
             findRowHandlers.revealSectionMatch = handler
           }}
@@ -663,6 +652,11 @@
               widthPx: virtualWindowWidthPx,
               devicePixelRatio
             })
+            findContext?.reportSectionTextChange(
+              promptId,
+              PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+              text
+            )
           }}
         />
       {/key}
