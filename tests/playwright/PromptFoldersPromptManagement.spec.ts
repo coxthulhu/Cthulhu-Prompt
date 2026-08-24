@@ -1006,7 +1006,6 @@ describe('Prompt folder prompt management', () => {
     )
     await dividerButton.hover()
     await expect(dividerActions).toHaveCSS('opacity', '1')
-    await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
     const accentSeparatorColor = await dividerRow.evaluate(() => {
       const reference = document.createElement('span')
       reference.style.backgroundColor = 'var(--ui-accent-normal-border)'
@@ -1015,6 +1014,7 @@ describe('Prompt folder prompt management', () => {
       reference.remove()
       return color
     })
+    await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
 
     await dividerSeparators.first().hover()
     await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])

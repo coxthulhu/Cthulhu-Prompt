@@ -250,7 +250,10 @@
     color: var(--ui-accent-normal-text);
   }
 
-  .promptDividerContent:has(.promptDividerSeparatorButton:hover)
+  .promptDividerContent:has(
+      .promptDividerSeparatorButton:hover,
+      .promptDividerActionButton:hover
+    )
     .promptDividerSeparatorButton
     :global(.cthulhuUiSeparator),
   .promptDividerRow:has(
