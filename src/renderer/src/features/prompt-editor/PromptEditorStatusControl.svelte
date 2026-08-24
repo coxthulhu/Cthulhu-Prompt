@@ -47,6 +47,8 @@
   ]
 
   const selectedStatusItem = $derived(statusItems.find((item) => item.id === status)!)
+  // The menu only offers statuses that would change the prompt's current status.
+  const settableStatusItems = $derived(statusItems.filter((item) => item.id !== status))
   // A quick status action describes one optional outer segment of the status control.
   type QuickStatusAction = {
     icon: typeof Check
@@ -87,7 +89,7 @@
   <SimpleSelectorButtonWithIntegratedButton
     class="prompt-editor-status-segmented-control"
     label="Change status"
-    items={statusItems}
+    items={settableStatusItems}
     selectedItem={selectedStatusItem}
     showIcon
     valueWidth="116px"
