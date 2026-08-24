@@ -481,7 +481,6 @@
 
     const shouldResetSelection =
       nextInputs.queryKey !== lastSearchInputs.queryKey ||
-      nextInputs.scopeKey !== lastSearchInputs.scopeKey ||
       nextInputs.searchRevision !== lastSearchInputs.searchRevision
     runSearch(shouldResetSelection)
     lastSearchInputs = nextInputs

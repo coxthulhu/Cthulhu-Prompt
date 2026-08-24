@@ -4,8 +4,13 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
-import { focusMonacoEditor } from '../helpers/MonacoHelpers'
+import {
+  focusMonacoEditor,
+  isMonacoEditorFocused,
+  waitForMonacoEditor
+} from '../helpers/MonacoHelpers'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { getPromptEditorIds } from '../helpers/PromptDragDropHelpers'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,
@@ -378,6 +383,56 @@ describe('Prompt folder find dialog', () => {
     await title.press('End')
     await title.pressSequentially(` ${LIVE_COUNT_QUERY}`)
     await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+  })
+
+  test('keeps a newly created prompt focused while find is open', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    const initialPromptIds = await getPromptEditorIds(mainWindow)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await findInput.fill('best practices')
+    await expect.poll(() => getCurrentFindMatchRowTestId(mainWindow)).toBe('prompt-editor-dev-1')
+
+    const addAfterDevTwoSelector = '[data-testid="prompt-divider-add-after-dev-2"]'
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      addAfterDevTwoSelector,
+      120
+    )
+    await mainWindow.locator(addAfterDevTwoSelector).click()
+
+    const getCreatedPromptId = async () =>
+      (await getPromptEditorIds(mainWindow)).find(
+        (promptId) => !initialPromptIds.includes(promptId)
+      )
+    await expect.poll(getCreatedPromptId).toBeTruthy()
+    const newPromptId = (await getCreatedPromptId())!
+    const newEditorSelector = promptEditorSelector(newPromptId)
+    await waitForMonacoEditor(mainWindow, newEditorSelector)
+    await mainWindow.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        })
+    )
+
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue('best practices')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+    await expect(mainWindow.locator(newEditorSelector)).toBeInViewport()
+    await expect(
+      mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`)
+    ).toHaveAttribute('aria-current', 'true')
+    await expect
+      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
+      .toBe(true)
   })
 
   test('reopens with previous query and selection', async ({ testSetup }) => {
