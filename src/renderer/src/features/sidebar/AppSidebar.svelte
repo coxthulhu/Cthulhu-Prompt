@@ -151,19 +151,6 @@
         (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'template'
       )
   })
-  const promptTreePromptFolders = $derived.by((): PromptFolder[] => {
-    if (!selectedWorkspace) {
-      return []
-    }
-    const selectedRootFolder =
-      rootPromptFolders.find((folder) => folder.id === screenRootFolderId) ??
-      rootPromptFolders[0] ??
-      null
-    if (!selectedRootFolder) return []
-
-    return [selectedRootFolder]
-  })
-
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     isWorkspaceLoading
       ? 'loading'
@@ -297,7 +284,7 @@
   )
   const canToggleCategories = $derived(
     folderListState === 'ready' &&
-      promptTreePromptFolders.length > 0
+      screenRootFolder !== null
   )
   const promptTreeExpansionRequests =
     createConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>()
@@ -841,7 +828,7 @@
 
   <div class="flex min-h-0 flex-1 flex-col overflow-visible">
     <PromptTree
-      promptFolders={promptTreePromptFolders}
+      promptFolders={rootPromptFolders}
       {folderListState}
       {screenRootFolderId}
       screenMode={promptFolderScreenMode}

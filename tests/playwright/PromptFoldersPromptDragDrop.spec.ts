@@ -1,11 +1,7 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import {
-  PROMPT_FOLDER_HOST_SELECTOR,
-  PROMPT_TITLE_SELECTOR,
-  promptEditorSelector
-} from '../helpers/PromptFolderSelectors'
+import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptHandleDrag,
@@ -117,6 +113,13 @@ const promptDividerSelector = (previousPromptId: string | null): string =>
   previousPromptId
     ? `[data-testid="prompt-divider-add-after-${previousPromptId}"]`
     : '[data-testid="prompt-divider-add-initial"]'
+const getPromptTreeStatusIndicator = (page: Page, promptId: string): Locator =>
+  page
+    .locator(promptTreePromptSelector(promptId))
+    .locator('..')
+    .locator('[data-testid="prompt-tree-status-indicator"]')
+const promptEditorStatusIndicatorSelector = (promptId: string): string =>
+  `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
 
 const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locator =>
   page
@@ -388,11 +391,10 @@ describe('Prompt folder prompt drag-drop', () => {
       FALLBACK_DESTINATION_FOLDER_ID
     )
 
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('move-fallback-source'))
-    await expectPromptTreeRowActiveState(mainWindow, 'move-fallback-source', true)
-    await expect(
-      mainWindow.locator(`${promptEditorSelector('move-fallback-source')} ${PROMPT_TITLE_SELECTOR}`)
-    ).toHaveAttribute('placeholder', 'New Prompt 2...')
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      FALLBACK_SOURCE_FOLDER_NAME
+    )
+    await expectCurrentFolderPromptEditors(mainWindow, ['move-fallback-source-existing'])
 
     await expect
       .poll(async () => {
@@ -605,6 +607,10 @@ describe('Prompt folder prompt drag-drop', () => {
     await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
     await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+    await expect(getPromptTreeStatusIndicator(mainWindow, DEV_1_ID)).toHaveAttribute(
+      'data-edited',
+      'false'
+    )
 
     await dragPromptHandleToTarget(
       mainWindow,
@@ -614,6 +620,14 @@ describe('Prompt folder prompt drag-drop', () => {
     )
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
+    await expect(getPromptTreeStatusIndicator(mainWindow, DEV_1_ID)).toHaveAttribute(
+      'data-edited',
+      'true'
+    )
+    await expect(mainWindow.locator(promptEditorStatusIndicatorSelector(DEV_1_ID))).toHaveAttribute(
+      'data-edited',
+      'true'
+    )
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID, DEV_1_ID])
   })
 
@@ -722,7 +736,7 @@ describe('Prompt folder prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
   })
 
-  test('moves a dragged editor prompt while the root page header is mounted', async ({
+  test('moves a dragged editor prompt without navigating while the root page header is mounted', async ({
     testSetup,
     electronApp
   }) => {
@@ -742,8 +756,11 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await dragPromptHandleToFolderSelectorItem(mainWindow, DEV_1_ID, EXAMPLES_FOLDER_ID)
 
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
-    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      DEVELOPMENT_FOLDER_NAME
+    )
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,
@@ -774,7 +791,7 @@ describe('Prompt folder prompt drag-drop', () => {
       })
   })
 
-  test('moves a prompt to the start of another folder when dropped onto that folder row', async ({
+  test('moves a prompt to the start of another folder without navigating to it', async ({
     testSetup,
     electronApp
   }) => {
@@ -788,8 +805,10 @@ describe('Prompt folder prompt drag-drop', () => {
 
     await dragPromptHandleToFolderSelectorItem(mainWindow, DEV_1_ID, EXAMPLES_FOLDER_ID)
 
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
-    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      DEVELOPMENT_FOLDER_NAME
+    )
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,
@@ -820,7 +839,50 @@ describe('Prompt folder prompt drag-drop', () => {
       })
   })
 
-  test('moves an editor prompt to the start of another folder from the selector dropdown', async ({
+  test('moves a prompt-tree row into another folder without navigating to it', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
+
+    await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+    await moveActiveDragToTarget(
+      mainWindow,
+      promptFolderSelectorDropdownItemSelector(EXAMPLES_FOLDER_ID)
+    )
+    await finishActiveDrag(mainWindow)
+
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      DEVELOPMENT_FOLDER_NAME
+    )
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
+      DEV_1_ID,
+      EXAMPLE_1_ID
+    ])
+
+    await testHelpers.navigateToPromptFolders(EXAMPLES_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+    await expect(getPromptTreeStatusIndicator(mainWindow, DEV_1_ID)).toHaveAttribute(
+      'data-edited',
+      'true'
+    )
+    await expect(mainWindow.locator(promptEditorStatusIndicatorSelector(DEV_1_ID))).toHaveAttribute(
+      'data-edited',
+      'true'
+    )
+  })
+
+  test('keeps the current folder open after moving an editor prompt from the selector dropdown', async ({
     testSetup,
     electronApp
   }) => {
@@ -862,13 +924,12 @@ describe('Prompt folder prompt drag-drop', () => {
     await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
     await finishActiveDrag(mainWindow)
 
-    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, EXAMPLE_1_ID])
-    await expectPromptTreeRowActiveState(mainWindow, DEV_1_ID, true)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
-      .toBe(0)
+    await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
+      DEVELOPMENT_FOLDER_NAME
+    )
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_2_ID])
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
-    await expect(mainWindow.locator(promptEditorSelector(DEV_1_ID))).toBeVisible()
+    await expect(mainWindow.locator(promptEditorSelector(DEV_1_ID))).toHaveCount(0)
     await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_2_ID])
     await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [
       DEV_1_ID,

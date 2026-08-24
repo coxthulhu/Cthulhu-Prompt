@@ -22,7 +22,6 @@
   import {
     clearPromptEntryDrag,
     promptEntryDragState,
-    startPromptDrag,
     startCategoryDrag
   } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import {
@@ -76,9 +75,8 @@
   } from './promptTreeTestIds'
   import { collectCompletedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
   import { moveCategory } from '@renderer/data/Mutations/CategoryMutations'
-  import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
-  import { movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { createPromptTreePromptDragController } from './promptTreeDrag'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
   type PromptTreeBulkExpansionRequest = {
@@ -420,8 +418,21 @@
       : contentOwnerId
   }
 
+  const promptDragController = createPromptTreePromptDragController({
+    getPromptFolders: () => promptFolders,
+    onPromptMove: (move, sourceCategoryId) => {
+      if (
+        move.sourcePromptFolderId === move.destinationPromptFolderId &&
+        sourceCategoryId !== move.categoryId
+      ) {
+        selectMovedPrompt(move.categoryId ?? move.destinationPromptFolderId, move.promptId)
+      }
+    }
+  })
+
   const getPromptRowDragOptions = (
     folderId: string,
+    sourceCategoryId: string | null,
     promptId: string,
     title: string,
     contentKind: import('@shared/PromptFolder').PromptFolderContentKind
@@ -430,38 +441,12 @@
     payload: {
       fromId: promptId,
       sourceFolderId: folderId,
+      sourceCategoryId,
       contentKind
     },
     createGhost: () => createPromptDragGhost(title, contentKind),
-    onDragStart: (payload) => startPromptDrag(payload),
-    onDragFinish: ({ sourcePayload, dropPayload }) => {
-      clearPromptEntryDrag()
-      if (!dropPayload || !screenRootFolder) return
-      /** Source category used for exact no-op detection. */
-      const sourceCategoryId = getEntryCategoryId(sourcePayload.fromId)
-      /** Category-aware logical move resolved from the row edge. */
-      const nextMove = resolvePromptHandleDropMove(
-        sourceCategoryId ?? 'uncategorized',
-        getCategoryEntryIds(sourceCategoryId),
-        sourcePayload.fromId,
-        { ...dropPayload, folderId: dropPayload.categoryId ?? 'uncategorized' },
-        getCategoryEntryIds(dropPayload.categoryId ?? null)
-      )
-      if (!nextMove) return
-      void runIpcBestEffort(async () => {
-        const mutation = sourcePayload.contentKind === 'template' ? movePromptTemplate : movePrompt
-        await mutation(
-          screenRootFolder.id,
-          screenRootFolder.id,
-          sourcePayload.fromId,
-          nextMove.previousEntryId,
-          dropPayload.categoryId ?? null
-        )
-        if (sourceCategoryId !== (dropPayload.categoryId ?? null)) {
-          selectMovedPrompt(dropPayload.categoryId ?? screenRootFolder.id, sourcePayload.fromId)
-        }
-      })
-    }
+    onDragStart: promptDragController.handleDragStart,
+    onDragFinish: promptDragController.handleDragFinish
   })
 
   /** Creates drag options for reordering one category. */
@@ -878,6 +863,7 @@
         ? undefined
         : getPromptRowDragOptions(
             props.row.folder.id,
+            props.row.categoryId,
             props.row.promptId,
             promptTitle,
             props.row.folder.kind

@@ -238,7 +238,18 @@ describe('prompt template mutations', () => {
     const sourceAfterMove = templateFolder('source-folder', ['paced-template'])
     const destinationAfterMove = templateFolder('destination-folder')
     const updateTemplate = vi.fn()
-    const updateDraft = vi.fn()
+    const movedDraft = {
+      id: 'paced-template',
+      title: 'Paced Template',
+      fallbackTitle: '',
+      createdAt: '2026-07-24T10:00:00.000Z',
+      modifiedAt: '2026-07-24T11:00:00.000Z',
+      templateText: 'Use {{value}}.',
+      isEdited: false
+    }
+    const updateDraft = vi.fn(
+      (_id: string, update: (draft: typeof movedDraft) => void) => update(movedDraft)
+    )
     moveOptions.mutateOptimistically({
       collections: {
         promptFolder: {
@@ -257,6 +268,7 @@ describe('prompt template mutations', () => {
     ])
     expect(updateTemplate).toHaveBeenCalledWith('paced-template', expect.any(Function))
     expect(updateDraft).toHaveBeenCalledWith('paced-template', expect.any(Function))
+    expect(movedDraft.isEdited).toBe(true)
     await moveOptions.persistMutations({ entities: entityBuilders, transaction: {} })
     expect(ipcInvokeWithPayload).toHaveBeenLastCalledWith(
       'move-prompt-template',

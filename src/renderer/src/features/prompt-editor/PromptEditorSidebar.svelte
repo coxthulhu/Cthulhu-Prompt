@@ -7,10 +7,7 @@
     type DragFinishResult,
     type DraggableOptions
   } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import {
-    clearPromptEntryDrag,
-    startPromptDrag
-  } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
+  import { startPromptDrag } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
@@ -51,7 +48,6 @@
   const handleDragFinish = ({
     dropPayload
   }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
-    clearPromptEntryDrag()
     void onPromptTreeDrop(dropPayload)
   }
 

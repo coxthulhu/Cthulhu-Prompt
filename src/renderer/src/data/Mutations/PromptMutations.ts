@@ -109,7 +109,10 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
   },
   updateContentOptimistically: (collections, promptId, update) => {
     collections.prompt.update(promptId, update)
-    collections.promptDraft.update(promptId, update)
+    collections.promptDraft.update(promptId, (draft) => {
+      update(draft)
+      markPromptDraftEdited(draft)
+    })
   },
   acceptDraftMutations: (transaction) => promptDraftCollection.utils.acceptMutations(transaction),
   reconcile: reconcilePrompt,

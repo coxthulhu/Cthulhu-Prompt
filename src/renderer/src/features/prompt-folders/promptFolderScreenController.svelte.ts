@@ -99,6 +99,7 @@ import {
 } from './promptFolderScreenRows'
 import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
 import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
+import { createPromptTreePromptDragController } from '../sidebar/promptTreeDrag'
 
 /** Virtual prompt-folder row currently aligned with sidebar navigation. */
 export type ActivePromptScreenRow =
@@ -856,6 +857,18 @@ export const createPromptFolderScreenController = ({
     onScreenRootFolderSelect(destinationRootFolderId)
   }
 
+  const promptDragController = createPromptTreePromptDragController({
+    getPromptFolders: () => promptFolderQuery.data,
+    onPromptMove: (move, sourceCategoryId) => {
+      if (
+        move.sourcePromptFolderId === move.destinationPromptFolderId &&
+        sourceCategoryId !== move.categoryId
+      ) {
+        selectMovedPrompt(move.categoryId ?? move.destinationPromptFolderId, move.promptId)
+      }
+    }
+  })
+
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
     rowId,
     offsetPx,
@@ -1323,65 +1336,16 @@ export const createPromptFolderScreenController = ({
   const handlePromptTreeDrop = (
     source: PromptFolderPromptTarget,
     dropPayload: PromptHandleDropPayload | null
-  ) => {
-    const sourcePromptFolder = promptFolderCollection.get(screenRootFolderId)
-    if (!sourcePromptFolder) {
-      return
-    }
-
-    if (dropPayload && dropPayload.folderId !== screenRootFolderId) {
-      /** Different root selected through the sidebar folder dropdown. */
-      const destinationPromptFolder = promptFolderCollection.get(dropPayload.folderId)
-      if (!destinationPromptFolder || destinationPromptFolder.kind !== contentKind) return
-      /** Cross-root placement always targets destination Uncategorized. */
-      const nextMove = resolvePromptHandleDropMove(
-        screenRootFolderId,
-        getCategoryEntryIds(source.categoryId),
-        source.promptId,
-        { ...dropPayload, categoryId: null },
-        getActiveMarkdownContentIds(destinationPromptFolder, contentKind)
-      )
-      if (!nextMove) return
-      void movePromptFromFolder(
-        screenRootFolderId,
-        source.promptId,
-        destinationPromptFolder.id,
-        nextMove.previousEntryId,
-        null
-      )
-      selectMovedPrompt(destinationPromptFolder.id, source.promptId)
-      return
-    }
-
-    const nextMove = resolvePromptHandleDropMove(
-      source.categoryId ?? 'uncategorized',
-      getCategoryEntryIds(source.categoryId),
-      source.promptId,
+  ): void =>
+    promptDragController.handleDragFinish({
+      sourcePayload: {
+        fromId: source.promptId,
+        sourceFolderId: screenRootFolderId,
+        sourceCategoryId: source.categoryId,
+        contentKind
+      },
       dropPayload
-        ? { ...dropPayload, folderId: dropPayload.categoryId ?? 'uncategorized' }
-        : null,
-      dropPayload
-        ? ((): string[] | null => {
-            return getCategoryEntryIds(dropPayload.categoryId ?? null)
-          })()
-        : null
-    )
-    if (!nextMove) {
-      return
-    }
-
-    void movePromptFromFolder(
-      screenRootFolderId,
-      source.promptId,
-      screenRootFolderId,
-      nextMove.previousEntryId,
-      dropPayload?.categoryId ?? null
-    )
-
-    if (source.categoryId !== (dropPayload?.categoryId ?? null)) {
-      selectMovedPrompt(dropPayload?.categoryId ?? screenRootFolderId, source.promptId)
-    }
-  }
+    })
 
   const activeHeaderRowId = 'prompt-header' as const
   /** Sampled category constrained to categories owned by the current root folder. */

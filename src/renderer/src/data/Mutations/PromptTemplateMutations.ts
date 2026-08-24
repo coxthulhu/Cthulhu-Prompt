@@ -70,7 +70,10 @@ const mutations = createMarkdownContentRendererMutations<
   },
   updateContentOptimistically: (collections, templateId, update) => {
     collections.promptTemplate.update(templateId, update)
-    collections.promptTemplateDraft.update(templateId, update)
+    collections.promptTemplateDraft.update(templateId, (draft) => {
+      update(draft)
+      markPromptTemplateDraftEdited(draft)
+    })
   },
   acceptDraftMutations: (transaction) =>
     promptTemplateDraftCollection.utils.acceptMutations(transaction),
