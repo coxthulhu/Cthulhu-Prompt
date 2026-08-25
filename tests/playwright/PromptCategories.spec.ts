@@ -804,7 +804,7 @@ describe('Prompt categories', () => {
       )
     ).toBeVisible()
 
-    await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
+    await mainWindow.locator('[data-testid="sidebar-add-category-button"]').click()
     const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Create Category"]')
     const categoryInput = categoryDialog.locator('[data-testid="create-category-name-input"]')
     await expect(categoryDialog).toBeVisible()

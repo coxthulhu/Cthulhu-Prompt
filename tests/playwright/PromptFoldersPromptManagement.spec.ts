@@ -728,36 +728,33 @@ describe('Prompt folder prompt management', () => {
       .toBe(true)
   })
 
-  test('adds a prompt at the start from the sidebar and focuses it', async ({ testSetup }) => {
+  test('opens category creation from the sidebar without leaving Home', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
-    const initialIds = await getPromptEditorIds(mainWindow)
-
     await testHelpers.navigateToHomeScreen()
-    const addPromptButton = mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')
-    await expect(addPromptButton).toBeEnabled()
-    await addPromptButton.click()
+    const addCategoryButton = mainWindow.locator(
+      '[data-testid="sidebar-add-category-button"]'
+    )
+    await expect(addCategoryButton).toBeEnabled()
+    await expect(addCategoryButton).toHaveAttribute('title', 'Add Category')
+    await expect(addCategoryButton.locator('svg')).toHaveClass(/lucide-folder-plus/)
+    await addCategoryButton.click()
 
-    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
-    await waitForPromptCount(mainWindow, initialIds.length + 1)
+    const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Create Category"]')
+    await expect(categoryDialog).toBeVisible()
+    await categoryDialog
+      .locator('[data-testid="create-category-name-input"]')
+      .fill('Sidebar Category')
+    await categoryDialog.locator('[data-testid="create-category-button"]').click()
 
-    const idsAfterAdd = await getPromptEditorIds(mainWindow)
-    const newPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
-    expect(newPromptId).toBeTruthy()
-    expect(idsAfterAdd).toEqual([newPromptId, ...initialIds])
-
-    const newEditorSelector = promptEditorSelector(newPromptId!)
-    await waitForMonacoEditor(mainWindow, newEditorSelector)
+    await expect(categoryDialog).toBeHidden()
+    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
     await expect(
-      mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`)
-    ).toHaveAttribute('aria-current', 'true')
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
-      .toBe(true)
+      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-SidebarCategory"]')
+    ).toBeVisible()
   })
 
   test('does not refocus a created prompt when its virtual row remounts', async ({
@@ -770,7 +767,7 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Short')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
 
-    await mainWindow.locator('[data-testid="sidebar-add-prompt-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
     await expect
       .poll(async () => (await getPromptEditorIds(mainWindow)).some((id) => !id.startsWith('short-')))
       .toBe(true)
@@ -2302,7 +2299,7 @@ describe('Prompt folder prompt management', () => {
 
     await testHelpers.navigateToPromptFolders('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
-    await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toBeDisabled()
+    await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toBeEnabled()
     // The selected root folder is not duplicated as a category in completed mode.
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-NoCompleted"]')

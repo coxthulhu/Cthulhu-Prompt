@@ -105,9 +105,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toHaveAttribute(
       'title',
-      'Add Template'
+      'Add Category'
     )
     const templateEditor = mainWindow.locator('[data-testid="prompt-editor-template-1"]')
     await expect(templateEditor).toBeVisible()
@@ -925,9 +925,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
       'Templates 0'
     )
-    await expect(mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toHaveAttribute(
       'title',
-      'Add Template'
+      'Add Category'
     )
     await expect
       .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples`))

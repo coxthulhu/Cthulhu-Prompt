@@ -378,7 +378,7 @@ describe('Prompt folder prompt tree', () => {
       'sidebar-folder-root-button',
       'toggle-completed-prompts-button',
       'toggle-all-categories-button',
-      'sidebar-add-prompt-button',
+      'sidebar-add-category-button',
       'selected-prompt-folder-actions-button'
     ])
     const promptSectionAlignment = await mainWindow

@@ -326,7 +326,7 @@ describe('Prompt template folder UI', () => {
     await testHelpers.navigateToPromptFolders('Templates')
     await stubClipboard(mainWindow)
 
-    await mainWindow.locator('[data-testid="sidebar-add-prompt-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
     const editors = mainWindow.locator('[data-testid^="prompt-editor-"]')
     await expect(editors).toHaveCount(2)
     const newEditor = editors.filter({ has: mainWindow.locator('[placeholder="New Template..."]') })

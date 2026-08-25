@@ -24,7 +24,7 @@ const FOLDER_TYPE_MENU = '[data-testid="create-prompt-folder-type-menu"]'
 const FOLDER_NAME_INPUT = '[data-testid="create-prompt-folder-name-input"]'
 const FOLDER_CREATE_BUTTON = '[data-testid="create-prompt-folder-button"]'
 // These selectors target prompt and status controls.
-const ADD_PROMPT_BUTTON = '[data-testid="sidebar-add-prompt-button"]'
+const ADD_PROMPT_BUTTON = '[data-testid="prompt-divider-add-initial"]'
 const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]'
 // These stable names make the persisted canonical paths explicit in the assertions.
 const ALPHA_NAME = 'Alpha'

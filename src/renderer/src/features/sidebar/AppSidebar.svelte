@@ -28,6 +28,7 @@
     ChevronsUpDown,
     ExternalLink,
     Folder,
+    FolderPlus,
     Layers,
     ListTodo,
     MoreHorizontal,
@@ -35,6 +36,7 @@
     Settings
   } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+  import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -42,7 +44,8 @@
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
-  import type { PromptFolder } from '@shared/PromptFolder'
+  import { getCategoryOrderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
+  import type { Category } from '@shared/Category'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
@@ -58,19 +61,18 @@
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { getPromptFolderActiveEntryIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
-  import {
-    getPromptNavigationContext,
-    promptIdToPromptNavigationRow,
-    promptNavigationRowToPersistedEntryId
-  } from '@renderer/app/PromptNavigationContext.svelte.ts'
-  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
-  import { createBlankPromptInFolder } from '@renderer/features/prompt-folders/createBlankPromptInFolder'
-  import { createBlankPromptTemplateInFolder } from '@renderer/features/prompt-folders/createBlankPromptTemplateInFolder'
+  import { createCategory } from '@renderer/data/Mutations/CategoryMutations'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
+  import CreateCategoryDialog from '../prompt-folders/CreateCategoryDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
   type CreatePromptFolderDialogHandle = {
+    openDialog: () => void
+  }
+
+  type CreateCategoryDialogHandle = {
     openDialog: () => void
   }
 
@@ -114,6 +116,7 @@
   const promptFolderQuery = useLiveQuery((q) =>
     q.from({ promptFolder: promptFolderCollection })
   ) as { data: PromptFolder[] }
+  const categoryQuery = useLiveQuery(categoryCollection) as { data: Category[] }
   const promptQuery = useLiveQuery(promptCollection) as { data: Prompt[] }
   const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
     data: PromptTemplate[]
@@ -193,7 +196,7 @@
   let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
   let promptFolderSelectorItemsElement = $state<HTMLElement | null>(null)
   let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
-  let isCreatingPromptFromSidebar = $state(false)
+  let createCategoryDialog = $state<CreateCategoryDialogHandle | null>(null)
   let nowMs = $state(Date.now())
 
   // Side effect: keep folder-selector relative modified labels fresh while the app is open.
@@ -292,6 +295,16 @@
       rootPromptFolders[0]!
     )
   })
+  /** Categories owned by the selected root folder, preserved in folder order. */
+  const selectedRootFolderCategories = $derived.by((): Category[] => {
+    if (!screenRootFolder) return []
+
+    const categoryById = new Map(categoryQuery.data.map((category) => [category.id, category]))
+    return getCategoryOrderCategoryIds(screenRootFolder.categoryOrder).flatMap((categoryId) => {
+      const category = categoryById.get(categoryId)
+      return category ? [category] : []
+    })
+  })
   const promptFolderSelectorState = $derived(
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
@@ -316,11 +329,6 @@
     areAllCategoriesCollapsed
       ? 'Expand All Categories'
       : 'Collapse All Categories'
-  )
-  const isCompletedPromptMode = $derived(
-    screenRootFolder?.kind !== 'template' &&
-      screenRootFolder !== null &&
-      promptFolderScreenMode === PromptFolderScreenMode.Completed
   )
   // Highlights the folder overview action only while its navigation target is active onscreen.
   const isFolderRootActive = $derived(
@@ -359,7 +367,6 @@
     ).length
     return { active, completed }
   })
-  const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
   const selectedFolderActionsLabel = $derived(
     isTemplateFolder ? 'Selected Prompt Template Folder Actions' : 'Selected Prompt Folder Actions'
   )
@@ -437,51 +444,23 @@
     }
   }
 
-  const selectCreatedPrompt = (promptFolderId: string, promptId: string): void => {
-    const row = promptIdToPromptNavigationRow(promptId)
-
-    promptNavigation.select({
-      screenRootFolderId: promptFolderId,
-      contentOwnerId: promptFolderId,
-      row,
-      source: 'prompt-create',
-      forceRequest: true,
-      contentReveal: { scrollType: 'center' },
-      focusPromptId: promptId
-    })
-
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (workspaceId) {
-      setPromptFolderSelectedEntryIdWithAutosave(
-        workspaceId,
-        promptFolderId,
-        promptNavigationRowToPersistedEntryId(row)
-      )
-    }
-
-    onScreenRootFolderSelect(promptFolderId)
+  /** Opens category creation for the currently selected root folder. */
+  const openCreateCategoryDialog = (): void => {
+    createCategoryDialog?.openDialog()
   }
 
-  const addPromptToSelectedFolder = async () => {
+  /** Persists a validated category for the currently selected root folder. */
+  const handleCreateCategory = async (displayName: string): Promise<boolean> => {
     const promptFolder = screenRootFolder
-    if (!promptFolder || isCompletedPromptMode || isCreatingPromptFromSidebar) {
-      return
-    }
+    if (!promptFolder) return false
 
-    isCreatingPromptFromSidebar = true
-    try {
-      if (promptFolder.kind === 'template') {
-        const creation = createBlankPromptTemplateInFolder(promptFolder.id, null)
-        selectCreatedPrompt(promptFolder.id, creation.templateId)
-        await runIpcBestEffort(() => creation.persistence)
-      } else {
-        const creation = createBlankPromptInFolder(promptFolder.id, null)
-        selectCreatedPrompt(promptFolder.id, creation.promptId)
-        await runIpcBestEffort(() => creation.persistence)
-      }
-    } finally {
-      isCreatingPromptFromSidebar = false
-    }
+    return await runIpcBestEffort(
+      async () => {
+        await createCategory(promptFolder.id, displayName)
+        return true
+      },
+      () => false
+    )
   }
 
   // Keep workspace header text aligned with the mockup's simple end-truncation style.
@@ -821,14 +800,14 @@
           onclick={handleCategoryExpansionAction}
         />
         <IconButton
-          icon={Plus}
-          label={`Add ${contentLabel}`}
-          title={`Add ${contentLabel}`}
+          icon={FolderPlus}
+          label="Add Category"
+          title="Add Category"
           borderless
-          disabled={!screenRootFolder || isCompletedPromptMode || isCreatingPromptFromSidebar}
-          testId="sidebar-add-prompt-button"
+          disabled={!screenRootFolder}
+          testId="sidebar-add-category-button"
           class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-          onclick={() => void addPromptToSelectedFolder()}
+          onclick={openCreateCategoryDialog}
         />
         <DropdownPopupSimple
           label={selectedFolderActionsLabel}
@@ -942,6 +921,13 @@
     {/if}
   </div>
 </aside>
+
+<CreateCategoryDialog
+  bind:this={createCategoryDialog}
+  categories={selectedRootFolderCategories}
+  isWorkspaceReady={screenRootFolder !== null}
+  onsubmit={handleCreateCategory}
+/>
 
 <style>
   .cthulhuSidebarPromptSectionHeader {

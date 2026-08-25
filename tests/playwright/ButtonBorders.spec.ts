@@ -171,10 +171,12 @@ describe('Button borders', () => {
       )
     ).toBe(0)
 
-    const sidebarAddPromptButton = mainWindow.locator('[data-testid="sidebar-add-prompt-button"]')
-    await expect(sidebarAddPromptButton).toBeEnabled()
-    await sidebarAddPromptButton.hover()
-    await expect(sidebarAddPromptButton).toHaveCSS('border-top-style', 'none')
+    const sidebarAddCategoryButton = mainWindow.locator(
+      '[data-testid="sidebar-add-category-button"]'
+    )
+    await expect(sidebarAddCategoryButton).toBeEnabled()
+    await sidebarAddCategoryButton.hover()
+    await expect(sidebarAddCategoryButton).toHaveCSS('border-top-style', 'none')
 
     const compoundButton = mainWindow.locator('.cthulhuUiIconButtonWithMoreOptions')
     const compoundMainButton = compoundButton.getByRole('button', {
