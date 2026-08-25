@@ -809,7 +809,9 @@
         data-testid={`prompt-tree-${screenMode}-empty-status`}
         onclick={handleEmptyStatusSelect}
       >
-        No {isCompletedMode ? 'completed' : 'active'} prompts. Click to view.
+        <span class="sidebarPromptTreeEmptyStatusLabel">
+          No {isCompletedMode ? 'completed' : 'active'} prompts. Click to view.
+        </span>
       </button>
     {:else}
       <div class="flex min-h-0 flex-1 flex-col">
@@ -1017,13 +1019,23 @@
 
 <style>
   .sidebarPromptTreeEmptyStatus {
+    align-items: center;
     background: transparent;
     border: 0;
     color: var(--ui-muted-text);
     cursor: pointer;
+    display: flex;
     font-size: 12px;
-    padding: 12px 16px;
+    height: 32px;
+    padding: 0 16px;
     text-align: left;
+  }
+
+  .sidebarPromptTreeEmptyStatusLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .sidebarPromptTreeEmptyStatus:hover,
