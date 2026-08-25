@@ -197,6 +197,14 @@
     focusTarget?.focus(options)
   }
 
+  /** Enables Monaco wheel scrolling only while the editor owns widget focus. */
+  const syncMouseWheelHandling = (
+    targetEditor: monaco.editor.IStandaloneCodeEditor,
+    handleMouseWheel: boolean
+  ): void => {
+    targetEditor.updateOptions({ scrollbar: { handleMouseWheel } })
+  }
+
   const getCursorMetrics = (position: monaco.IPosition) => {
     if (!editor) return null
     const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight)
@@ -446,7 +454,7 @@
         lineNumbers: showLineNumbers ? 'on' : 'off',
         lineNumbersMinChars: 3,
         overviewRulerBorder: false,
-        scrollbar: { alwaysConsumeMouseWheel: false },
+        scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
         revealHorizontalRightPadding: 0,
         cursorSmoothCaretAnimation: 'off',
         smoothScrolling: false,
@@ -468,8 +476,12 @@
       }
 
       const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
-      const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
+      const blurDisposable = nextEditor.onDidBlurEditorWidget(() => {
+        syncMouseWheelHandling(nextEditor, false)
+        onBlur?.()
+      })
       const focusDisposable = nextEditor.onDidFocusEditorWidget(() => {
+        syncMouseWheelHandling(nextEditor, true)
         focusEditor(nextEditor)
         reportSelectionAnchor(nextEditor, nextEditor.getSelection())
       })
