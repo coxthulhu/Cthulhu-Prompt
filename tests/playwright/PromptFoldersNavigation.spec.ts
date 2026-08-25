@@ -1011,7 +1011,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
         eyebrowHeight: eyebrow.getBoundingClientRect().height,
         titleLineHeight: titleLine.getBoundingClientRect().height,
         filterRowHeight: filterRect.height,
-        bottomInset: rowRect.bottom - filterRect.bottom
+        bottomInset: rowRect.bottom - filterRect.bottom,
+        filterLeftInset: filterRect.left - rowRect.left,
+        filterRightInset: rowRect.right - filterRect.right
       }
     })
     expect(rootHeaderGeometry).not.toBeNull()
@@ -1021,6 +1023,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(rootHeaderGeometry!.titleLineHeight).toBe(36)
     expect(rootHeaderGeometry!.filterRowHeight).toBe(44)
     expect(Math.abs(rootHeaderGeometry!.bottomInset - 6)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootHeaderGeometry!.filterLeftInset)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootHeaderGeometry!.filterRightInset)).toBeLessThanOrEqual(1)
     await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
 
     const nameInput = mainWindow.locator('[data-testid="rename-prompt-folder-name-input"]')

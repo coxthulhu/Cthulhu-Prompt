@@ -106,7 +106,7 @@
         ? undefined
         : () => onScreenModeChange(PromptFolderScreenMode.Active)}
     >
-      {isTemplateFolder ? 'Templates' : 'Todo/In Progress'} <span>{activePromptCount}</span>
+      {isTemplateFolder ? 'Templates' : 'Active Prompts'} <span>{activePromptCount}</span>
     </button>
     {#if !isTemplateFolder}
       <button
@@ -129,7 +129,7 @@
     gap: 18px;
     grid-template-rows: 60px 44px;
     min-width: 0;
-    padding: 12px 24px 6px;
+    padding: 12px 0 6px;
   }
 
   .prompt-folder-root-screen-header {
@@ -139,6 +139,7 @@
     height: 60px;
     justify-content: space-between;
     min-width: 0;
+    padding-inline: 24px;
   }
 
   .prompt-folder-root-title-block {
@@ -191,6 +192,7 @@
     display: flex;
     gap: 6px;
     height: 44px;
+    padding-inline: 24px;
   }
 
   .prompt-folder-root-filter-bar button {
@@ -206,11 +208,11 @@
   }
 
   .prompt-folder-root-filter-bar button span {
-    background: var(--ui-neutral-normal-surface);
-    border-radius: 999px;
     font-size: 11px;
     margin-left: 4px;
     padding: 2px 6px;
+    position: relative;
+    top: -1px;
   }
 
   .prompt-folder-root-filter-bar button.active {
