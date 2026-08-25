@@ -97,6 +97,7 @@
   }: Props = $props()
 
   const PROMPT_TREE_ROW_HEIGHT_PX = 32
+  const PROMPT_TREE_BOTTOM_SPACER_HEIGHT_PX = 16
   const rowRegistry = $derived.by(() =>
     defineVirtualWindowRowRegistry<PromptTreeRow>({
       'root-folder': {
@@ -121,7 +122,7 @@
         snippet: emptyStateRow
       },
       'bottom-spacer': {
-        estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
+        estimateHeight: () => PROMPT_TREE_BOTTOM_SPACER_HEIGHT_PX,
         overlayRow: { snippet: promptTreeBottomSpacerRowOverlay },
         snippet: bottomSpacerRow
       }
