@@ -631,17 +631,20 @@
     payload: (): PromptHandleDropPayload => ({
       folderId: item.id,
       targetEntryId: null,
-      position: 'after'
+      position: 'after',
+      statusSection: 'active'
     }),
     canDrop: (payload) => {
       const entryPayload = payload as PromptHandleDragPayload
+      if (entryPayload.statusSection === 'completed') return false
       const allFolders = promptFolderQuery.data
       const destinationFolder = allFolders.find((folder) => folder.id === item.id)
       if (!destinationFolder) return false
       const dropPayload: PromptHandleDropPayload = {
         folderId: item.id,
         targetEntryId: null,
-        position: 'after'
+        position: 'after',
+        statusSection: 'active'
       }
       const sourceFolder = allFolders.find(
         (folder) => folder.id === entryPayload.sourceFolderId
@@ -868,7 +871,7 @@
         <Accordion
           persistenceId={PROMPT_STATUS_ACCORDION_PERSISTENCE_ID}
           testId="sidebar-prompt-status-accordion"
-          class="flex-1"
+          class="sidebarPromptStatusAccordion flex-1"
         >
           {#if isCompletedPromptSectionShown}
             <AccordionSection
@@ -943,6 +946,18 @@
     flex-shrink: 0;
     align-items: center;
     gap: 2px;
+  }
+
+  /* Allow tree-edge drop indicators to overlap adjacent status headers slightly. */
+  .appSidebar :global(.sidebarPromptStatusAccordion.cthulhuUiAccordion),
+  .appSidebar :global(.sidebarPromptStatusAccordion .cthulhuUiAccordionSection),
+  .appSidebar :global(.sidebarPromptStatusAccordion .cthulhuUiAccordionContent) {
+    overflow: visible;
+  }
+
+  .appSidebar :global(.sidebarPromptStatusAccordion .cthulhuUiAccordionContent) {
+    position: relative;
+    z-index: 2;
   }
 
   .cthulhuSidebarWorkspaceName {

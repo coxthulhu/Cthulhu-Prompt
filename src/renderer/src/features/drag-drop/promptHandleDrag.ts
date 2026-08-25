@@ -2,11 +2,16 @@ export const PROMPT_HANDLE_DRAG_TYPE = 'prompt-handle'
 /** Drag type reserved for category reordering targets. */
 export const CATEGORY_DRAG_TYPE = 'category'
 
+/** Sidebar status section that owns a prompt drag source or destination. */
+export type PromptDragStatusSection = 'active' | 'completed'
+
 export type PromptHandleDragPayload = {
   fromId: string
   sourceFolderId: string
   sourceCategoryId?: string | null
   contentKind: import('@shared/PromptFolder').PromptFolderContentKind
+  /** Status section containing the dragged prompt or template. */
+  statusSection: PromptDragStatusSection
 }
 
 /** Drag payload for reordering one category. */
@@ -24,6 +29,8 @@ export type PromptHandleDropPayload = {
   categoryId?: string | null
   targetEntryId: string | null
   position: 'before' | 'after'
+  /** Status section containing the selected drop target. */
+  statusSection: PromptDragStatusSection
 }
 
 export type PromptHandleMove = {

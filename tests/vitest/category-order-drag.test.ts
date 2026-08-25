@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { insertCategoryOrderEntry, moveCategoryOrderGroup } from '@shared/PromptFolder'
+import type { PromptFolder } from '@shared/PromptFolder'
+import { PromptStatus } from '@shared/Prompt'
 import {
   resolveCategoryDropPreviousCategoryId,
   resolvePromptHandleDropMove
 } from '@renderer/features/drag-drop/promptHandleDrag'
+import { resolvePromptTreePromptMove } from '@renderer/features/sidebar/promptTreeDrag'
 
 describe('category ordering and drag placement', () => {
   it('moves content between exact groups and places it at the requested position', () => {
@@ -90,7 +93,8 @@ describe('category ordering and drag placement', () => {
           folderId: 'category-b',
           categoryId: 'category-b',
           targetEntryId: null,
-          position: 'after'
+          position: 'after',
+          statusSection: 'active'
         },
         []
       )
@@ -104,9 +108,114 @@ describe('category ordering and drag placement', () => {
           folderId: 'category-a',
           categoryId: 'category-a',
           targetEntryId: null,
-          position: 'after'
+          position: 'after',
+          statusSection: 'active'
         },
         ['prompt-a']
+      )
+    ).toBeNull()
+  })
+
+  it('resolves cross-status drops without treating completed ordering as active ordering', () => {
+    /** Prompt folder shared by both status sections in the sidebar. */
+    const promptFolder: PromptFolder = {
+      id: 'root-folder',
+      kind: 'prompt',
+      folderName: 'Root',
+      displayName: 'Root',
+      completedPromptIds: ['completed-prompt'],
+      settings: { folderDescription: null },
+      categoryOrder: {
+        categories: [
+          {
+            categoryId: null,
+            entries: [
+              { kind: 'prompt', id: 'active-first' },
+              { kind: 'prompt', id: 'active-second' }
+            ]
+          }
+        ]
+      }
+    }
+
+    expect(
+      resolvePromptTreePromptMove(
+        [promptFolder],
+        {
+          fromId: 'active-first',
+          sourceFolderId: promptFolder.id,
+          sourceCategoryId: null,
+          contentKind: 'prompt',
+          statusSection: 'active'
+        },
+        {
+          folderId: promptFolder.id,
+          categoryId: null,
+          targetEntryId: 'completed-prompt',
+          position: 'after',
+          statusSection: 'completed'
+        }
+      )
+    ).toMatchObject({
+      move: { promptId: 'active-first', categoryId: null, previousEntryId: null },
+      targetStatus: PromptStatus.Completed
+    })
+
+    expect(
+      resolvePromptTreePromptMove(
+        [promptFolder],
+        {
+          fromId: 'completed-prompt',
+          sourceFolderId: promptFolder.id,
+          sourceCategoryId: null,
+          contentKind: 'prompt',
+          statusSection: 'completed'
+        },
+        {
+          folderId: promptFolder.id,
+          categoryId: null,
+          targetEntryId: 'active-second',
+          position: 'before',
+          statusSection: 'active'
+        }
+      )
+    ).toMatchObject({
+      move: {
+        promptId: 'completed-prompt',
+        categoryId: null,
+        previousEntryId: 'active-first'
+      },
+      targetStatus: PromptStatus.Todo
+    })
+  })
+
+  it('rejects same-tree completed drops', () => {
+    /** Minimal prompt folder used to prove Completed ordering never changes. */
+    const promptFolder: PromptFolder = {
+      id: 'root-folder',
+      kind: 'prompt',
+      folderName: 'Root',
+      displayName: 'Root',
+      completedPromptIds: ['completed-first', 'completed-second'],
+      settings: { folderDescription: null },
+      categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
+    }
+
+    expect(
+      resolvePromptTreePromptMove(
+        [promptFolder],
+        {
+          fromId: 'completed-first',
+          sourceFolderId: promptFolder.id,
+          contentKind: 'prompt',
+          statusSection: 'completed'
+        },
+        {
+          folderId: promptFolder.id,
+          targetEntryId: 'completed-second',
+          position: 'after',
+          statusSection: 'completed'
+        }
       )
     ).toBeNull()
   })

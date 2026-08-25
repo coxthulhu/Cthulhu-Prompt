@@ -1,4 +1,10 @@
-import type { PromptFolder, PromptFolderContentKind } from './PromptFolder'
+import {
+  insertCategoryOrderEntry,
+  type CategoryOrder,
+  type CategoryOrderEntryRef,
+  type PromptFolder,
+  type PromptFolderContentKind
+} from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type MarkdownContentPersisted = {
@@ -8,6 +14,35 @@ export type MarkdownContentPersisted = {
   createdAt: string
   modifiedAt: string
   category?: string
+}
+
+/** Places content in one category-order position and synchronizes its category metadata. */
+export const placeMarkdownContentInCategoryOrder = <
+  TContent extends MarkdownContentPersisted
+>(
+  categoryOrder: CategoryOrder,
+  content: TContent,
+  entry: CategoryOrderEntryRef,
+  categoryId: string | null,
+  previousEntryId: string | null
+): { categoryOrder: CategoryOrder; content: TContent } => {
+  if (!categoryOrder.categories.some((category) => category.categoryId === categoryId)) {
+    throw new Error('Category not loaded')
+  }
+  /** Content copy whose category metadata matches its ordered group. */
+  const placedContent = { ...content }
+  if (categoryId === null) delete placedContent.category
+  else placedContent.category = categoryId
+
+  return {
+    categoryOrder: insertCategoryOrderEntry(
+      categoryOrder,
+      entry,
+      categoryId,
+      previousEntryId
+    ),
+    content: placedContent
+  }
 }
 
 export const MARKDOWN_CONTENT_KINDS = ['prompt', 'template'] as const

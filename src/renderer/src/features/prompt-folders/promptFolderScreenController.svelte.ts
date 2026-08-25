@@ -1255,14 +1255,16 @@ export const createPromptFolderScreenController = ({
         folderId: screenRootFolder.id,
         categoryId: group.categoryId,
         targetEntryId: null,
-        position: 'after'
+        position: 'after',
+        statusSection: 'active'
       })
       for (const entry of group.entries) {
         targets.push({
           folderId: screenRootFolder.id,
           categoryId: group.categoryId,
           targetEntryId: entry.id,
-          position: 'after'
+          position: 'after',
+          statusSection: 'active'
         })
       }
     }
@@ -1365,7 +1367,8 @@ export const createPromptFolderScreenController = ({
         fromId: source.promptId,
         sourceFolderId: screenRootFolderId,
         sourceCategoryId: source.categoryId,
-        contentKind
+        contentKind,
+        statusSection: isCompletedMode ? 'completed' : 'active'
       },
       dropPayload
     })

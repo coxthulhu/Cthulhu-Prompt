@@ -24,6 +24,8 @@
     isFirstPrompt,
     isLastPrompt,
     isDragEnabled = true,
+    showMoveButtons = true,
+    statusSection = 'active',
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
@@ -36,6 +38,10 @@
     isFirstPrompt: boolean
     isLastPrompt: boolean
     isDragEnabled?: boolean
+    /** Whether the Active-only move arrow controls are rendered. */
+    showMoveButtons?: boolean
+    /** Status section represented by this editor-card drag source. */
+    statusSection?: import('@renderer/features/drag-drop/promptHandleDrag').PromptDragStatusSection
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
@@ -73,7 +79,8 @@
     payload: {
       fromId: promptId,
       sourceFolderId: promptFolderId,
-      contentKind
+      contentKind,
+      statusSection
     },
     createGhost: () => createPromptDragGhost(title, contentKind),
     onDragStart: handleDragStart,
@@ -100,17 +107,19 @@
 </script>
 
 <div class="prompt-editor-sidebar">
-  <IconButton
-    icon={ChevronUp}
-    label={`Move ${contentLabel} up`}
-    size="sidebar-rail"
-    baseVariant="dim"
-    class="prompt-editor-sidebar-move-button"
-    testId="prompt-move-up"
-    disabled={isFirstPrompt}
-    onclick={handleMoveUpClick}
-    onmousedown={preventSidebarButtonMouseFocus}
-  />
+  {#if showMoveButtons}
+    <IconButton
+      icon={ChevronUp}
+      label={`Move ${contentLabel} up`}
+      size="sidebar-rail"
+      baseVariant="dim"
+      class="prompt-editor-sidebar-move-button"
+      testId="prompt-move-up"
+      disabled={isFirstPrompt}
+      onclick={handleMoveUpClick}
+      onmousedown={preventSidebarButtonMouseFocus}
+    />
+  {/if}
 
   <IconButton
     icon={GripVertical}
@@ -127,17 +136,19 @@
     onmousedown={preventSidebarButtonMouseFocus}
   />
 
-  <IconButton
-    icon={ChevronDown}
-    label={`Move ${contentLabel} down`}
-    size="sidebar-rail"
-    baseVariant="dim"
-    class="prompt-editor-sidebar-move-button"
-    testId="prompt-move-down"
-    disabled={isLastPrompt}
-    onclick={handleMoveDownClick}
-    onmousedown={preventSidebarButtonMouseFocus}
-  />
+  {#if showMoveButtons}
+    <IconButton
+      icon={ChevronDown}
+      label={`Move ${contentLabel} down`}
+      size="sidebar-rail"
+      baseVariant="dim"
+      class="prompt-editor-sidebar-move-button"
+      testId="prompt-move-down"
+      disabled={isLastPrompt}
+      onclick={handleMoveDownClick}
+      onmousedown={preventSidebarButtonMouseFocus}
+    />
+  {/if}
 </div>
 
 <style>

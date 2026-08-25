@@ -3,6 +3,7 @@ import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import {
   getActiveMarkdownContentIds,
   getMarkdownContentIds,
+  placeMarkdownContentInCategoryOrder,
   type CreateMarkdownContentPayload,
   type DeleteMarkdownContentPayload,
   type MarkdownContentPersisted,
@@ -222,12 +223,6 @@ export const setupMarkdownContentMutationHandlers = <
         if (config.getContent(contentId)) {
           return { success: false, error: `${config.label} already exists` }
         }
-        if (
-          !promptFolder.committed.categoryOrder.categories.some(
-            (category) => category.categoryId === categoryId
-          )
-        ) return { success: false, error: 'Category not loaded' }
-
         const titleFields = resolvePromptTitleUpdateForPromptIds({
           promptIds: getActiveMarkdownContentIds(promptFolder.committed, config.kind),
           lookupPrompt: (contentId) => config.getContent(contentId)?.committed ?? null,
@@ -236,18 +231,22 @@ export const setupMarkdownContentMutationHandlers = <
           nextTitle: requestedContent.data.title,
           defaultFallbackTitle: config.defaultFallbackTitle
         })
-        const content = normalizeContentCategory(
+        /** Category-order reference for the new prompt or template. */
+        const categoryOrderEntry = config.createEntryRef(contentId)
+        /** New content and category order synchronized to the requested placement. */
+        const placement = placeMarkdownContentInCategoryOrder(
+          promptFolder.committed.categoryOrder,
           config.createPersisted(
             requestedContent.data,
             titleFields,
             getCurrentIsoSecondTimestamp()
           ),
-          promptFolder.committed
+          categoryOrderEntry,
+          categoryId,
+          previousEntryId
         )
-        if (categoryId === null) delete content.category
-        else content.category = categoryId
-        /** Category-order reference for the new prompt or template. */
-        const categoryOrderEntry = config.createEntryRef(contentId)
+        /** Created content with category metadata synchronized to placement. */
+        const content = placement.content
         const basePersistenceFields: MarkdownPersistenceFields = {
           workspaceId: promptFolder.persistenceFields.workspaceId,
           workspacePath: promptFolder.persistenceFields.workspacePath,
@@ -269,12 +268,13 @@ export const setupMarkdownContentMutationHandlers = <
             id: requestedFolder.id,
             expectedRevision: requestedFolder.expectedRevision,
             recipe: (draft) => {
-              draft.categoryOrder = insertCategoryOrderEntry(
+              draft.categoryOrder = placeMarkdownContentInCategoryOrder(
                 draft.categoryOrder,
+                content,
                 categoryOrderEntry,
                 categoryId,
                 previousEntryId
-              )
+              ).categoryOrder
             }
           }),
           content: config.createContent(tx, {
@@ -528,11 +528,6 @@ export const setupMarkdownContentMutationHandlers = <
             requestedContent.id
           )
         }
-        if (
-          !destination.committed.categoryOrder.categories.some(
-            (category) => category.categoryId === categoryId
-          )
-        ) return { success: false, error: 'Category not loaded' }
         /** Whether persistence transfers the markdown file between root folders. */
         const isSameFolder = requestedSource.id === requestedDestination.id
         const destinationContentIds = getActiveMarkdownContentIds(
@@ -554,12 +549,18 @@ export const setupMarkdownContentMutationHandlers = <
                 }).fallbackTitle
               }
             : content.committed
-        /** Content copy whose front matter matches the destination category. */
-        const movedContent: TContent = { ...contentWithDestinationFallback }
-        if (categoryId === null) delete movedContent.category
-        else movedContent.category = categoryId
         /** Category-order reference transferred between groups or roots. */
         const categoryOrderEntry = config.createEntryRef(requestedContent.id)
+        /** Moved content and destination order synchronized to the requested placement. */
+        const placement = placeMarkdownContentInCategoryOrder(
+          destination.committed.categoryOrder,
+          contentWithDestinationFallback,
+          categoryOrderEntry,
+          categoryId,
+          previousEntryId
+        )
+        /** Content copy whose category metadata matches its destination group. */
+        const movedContent: TContent = placement.content
         /** Markdown persistence fields after an optional cross-root transfer. */
         const movedPersistenceFields: MarkdownPersistenceFields = isSameFolder
           ? content.persistenceFields
@@ -601,12 +602,13 @@ export const setupMarkdownContentMutationHandlers = <
                   id: requestedSource.id,
                   expectedRevision: requestedSource.expectedRevision,
                   recipe: (draft) => {
-                    draft.categoryOrder = insertCategoryOrderEntry(
+                    draft.categoryOrder = placeMarkdownContentInCategoryOrder(
                       draft.categoryOrder,
+                      movedContent,
                       categoryOrderEntry,
                       categoryId,
                       previousEntryId
-                    )
+                    ).categoryOrder
                   }
                 })
               }
@@ -625,12 +627,13 @@ export const setupMarkdownContentMutationHandlers = <
                   id: requestedDestination.id,
                   expectedRevision: requestedDestination.expectedRevision,
                   recipe: (draft) => {
-                    draft.categoryOrder = insertCategoryOrderEntry(
+                    draft.categoryOrder = placeMarkdownContentInCategoryOrder(
                       draft.categoryOrder,
+                      movedContent,
                       categoryOrderEntry,
                       categoryId,
                       previousEntryId
-                    )
+                    ).categoryOrder
                   }
                 })
               }),

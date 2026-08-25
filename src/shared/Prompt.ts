@@ -117,6 +117,12 @@ export type MovePromptPayload = MoveMarkdownContentPayload<PromptPersisted>
 
 export type MovePromptResponsePayload = MoveMarkdownContentResponsePayload<PromptPersisted>
 
+/** Exact category-order placement used when a prompt enters the ordered tree. */
+export type PromptCategoryOrderPlacement = {
+  categoryId: string | null
+  previousEntryId: string | null
+}
+
 export type SetPromptStatusPayload = {
   // Folder that currently owns the prompt shown in the active hierarchy.
   sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
@@ -124,6 +130,8 @@ export type SetPromptStatusPayload = {
   rootPromptFolder: RevisionPayloadEntity<PromptFolder>
   prompt: RevisionPayloadEntity<PromptPersisted>
   status: PromptStatus
+  // Category-order placement retained for ordinary status changes or applied during restoration.
+  categoryOrderPlacement: PromptCategoryOrderPlacement
 }
 
 export type SetPromptStatusResponsePayload = {

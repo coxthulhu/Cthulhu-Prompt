@@ -4,13 +4,13 @@ import {
   type PromptPersisted,
   type SetPromptStatusResponsePayload
 } from '@shared/Prompt'
-import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
+import {
+  getActiveMarkdownContentIds,
+  placeMarkdownContentInCategoryOrder
+} from '@shared/MarkdownContent'
 import { promptEntryRef } from '@shared/OrderContainer'
 import type { PromptFolder } from '@shared/PromptFolder'
-import {
-  insertCategoryOrderEntry,
-  removeCategoryOrderEntry
-} from '@shared/PromptFolder'
+import { removeCategoryOrderEntry } from '@shared/PromptFolder'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { AtomicDataBuilder } from '../Data/AtomicDataTransaction'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
@@ -156,9 +156,17 @@ const setupPromptStatusMutationHandler = (): void => {
             )
           }
 
+          /** Requested category-order placement normalized to a group owned by the root folder. */
+          const categoryOrderPlacement = rootPromptFolder.committed.categoryOrder.categories.some(
+            (category) =>
+              category.categoryId === validatedRequest.payload.categoryOrderPlacement.categoryId
+          )
+            ? validatedRequest.payload.categoryOrderPlacement
+            : { categoryId: null, previousEntryId: null }
           const now = getCurrentIsoSecondTimestamp()
           const { completedAt: _completedAt, ...activePromptBase } = requestedPrompt.data
-          const targetPrompt: PromptPersisted =
+          /** Prompt with its requested status fields before optional Active-tree placement. */
+          const statusPrompt: PromptPersisted =
             targetStatus === PromptStatus.Completed
               ? {
                   ...activePromptBase,
@@ -169,15 +177,17 @@ const setupPromptStatusMutationHandler = (): void => {
               : { ...activePromptBase, status: targetStatus, modifiedAt: now }
           /** Category-order reference removed on completion and restored on activation. */
           const categoryOrderEntry = promptEntryRef(requestedPrompt.id)
-          if (
-            targetStatus !== PromptStatus.Completed &&
-            targetPrompt.category !== undefined &&
-            !rootPromptFolder.committed.categoryOrder.categories.some(
-              (category) => category.categoryId === targetPrompt.category
-            )
-          ) {
-            delete targetPrompt.category
-          }
+          /** Prompt whose category metadata matches its Active-tree placement. */
+          const targetPrompt =
+            targetStatus === PromptStatus.Completed
+              ? statusPrompt
+              : placeMarkdownContentInCategoryOrder(
+                  rootPromptFolder.committed.categoryOrder,
+                  statusPrompt,
+                  categoryOrderEntry,
+                  categoryOrderPlacement.categoryId,
+                  categoryOrderPlacement.previousEntryId
+                ).content
           const sourcePromptFolderPath = sourcePromptFolder.persistenceFields.folderPath
           const rootPromptFolderPath = rootPromptFolder.persistenceFields.folderPath
           const activeFolderPath = resolveActivePromptFolderName(
@@ -204,11 +214,16 @@ const setupPromptStatusMutationHandler = (): void => {
                     promptFolderId: requestedRootPromptFolder.id
                   }
                 : prompt.persistenceFields
-          const completedPromptIds = getPromptFolderPromptIdsByStatus(
+          /** Existing completed IDs excluding the prompt currently changing status. */
+          const remainingCompletedPromptIds = getPromptFolderPromptIdsByStatus(
             rootPromptFolder.committed,
             true
           ).filter((promptId) => promptId !== requestedPrompt.id)
-          if (targetStatus === PromptStatus.Completed) completedPromptIds.push(requestedPrompt.id)
+          /** Completed IDs ordered newest-first to break equal completion-timestamp ties. */
+          const completedPromptIds =
+            targetStatus === PromptStatus.Completed
+              ? [requestedPrompt.id, ...remainingCompletedPromptIds]
+              : remainingCompletedPromptIds
           /** Active prompt IDs after the requested status transition. */
           const currentActivePromptIds = getActiveMarkdownContentIds(
             rootPromptFolder.committed,
@@ -246,12 +261,13 @@ const setupPromptStatusMutationHandler = (): void => {
                     categoryOrderEntry
                   )
                 } else if (isCompletedPrompt) {
-                  draft.categoryOrder = insertCategoryOrderEntry(
+                  draft.categoryOrder = placeMarkdownContentInCategoryOrder(
                     draft.categoryOrder,
+                    targetPrompt,
                     categoryOrderEntry,
-                    targetPrompt.category ?? null,
-                    null
-                  )
+                    categoryOrderPlacement.categoryId,
+                    categoryOrderPlacement.previousEntryId
+                  ).categoryOrder
                 }
               }
             }),

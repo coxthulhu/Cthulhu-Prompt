@@ -659,7 +659,11 @@ const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
   sourcePromptFolder: parsePromptFolderRevisionPayloadEntity,
   rootPromptFolder: parsePromptFolderRevisionPayloadEntity,
   prompt: parsePromptRevisionPayloadEntity,
-  status: parsePromptStatus
+  status: parsePromptStatus,
+  categoryOrderPlacement: parseObject({
+    categoryId: parseNullableString,
+    previousEntryId: parseNullableString
+  })
 })
 
 const parseSetPromptStatusWireRequest: Parser<IpcRequestWithPayload<SetPromptStatusPayload>> =

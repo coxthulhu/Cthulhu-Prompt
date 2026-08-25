@@ -250,12 +250,12 @@ describe('Prompt folder storage', () => {
     ).resolves.toEqual([])
     await expect(readCategoryOrderPromptIds(electronApp, BETA_NAME)).resolves.toEqual([])
 
-    // Completed mode shows the prompt without any movement affordance.
+    // Completed mode shows only the cross-status drag handle without ordering arrows.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
     await expect(mainWindow.locator(promptEditorSelector(firstPromptId))).toBeVisible()
     await expect(
       mainWindow.locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-drag-handle"]`)
-    ).toHaveCount(0)
+    ).toHaveCount(1)
     await expect(
       mainWindow.locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-move-up"]`)
     ).toHaveCount(0)

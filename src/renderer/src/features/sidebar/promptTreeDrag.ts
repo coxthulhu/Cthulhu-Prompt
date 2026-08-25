@@ -9,14 +9,22 @@ import {
   type PromptHandleDragPayload,
   type PromptHandleDropPayload
 } from '@renderer/features/drag-drop/promptHandleDrag'
-import { movePrompt } from '@renderer/data/Mutations/PromptMutations'
+import { movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
 import { movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/PromptFolder'
+import { PromptStatus } from '@shared/Prompt'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
   onPromptMove?: (move: PromptHandleMove, sourceCategoryId: string | null) => void
+}
+
+/** Resolved prompt drop with an optional status transition handled instead of a normal move. */
+type PromptTreePromptDropResult = {
+  move: PromptHandleMove
+  sourceCategoryId: string | null
+  targetStatus: PromptStatus | null
 }
 
 const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): PromptFolder | null => {
@@ -43,7 +51,7 @@ export const resolvePromptTreePromptMove = (
   promptFolders: PromptFolder[],
   sourcePayload: PromptHandleDragPayload,
   dropPayload: PromptHandleDropPayload | null
-): { move: PromptHandleMove; sourceCategoryId: string | null } | null => {
+): PromptTreePromptDropResult | null => {
   if (!dropPayload) return null
 
   const sourcePromptFolder = findPromptFolder(promptFolders, sourcePayload.sourceFolderId)
@@ -55,17 +63,44 @@ export const resolvePromptTreePromptMove = (
   ) {
     return null
   }
+  if (sourcePayload.statusSection === 'completed' && dropPayload.statusSection === 'completed') {
+    return null
+  }
+  if (
+    sourcePayload.statusSection !== dropPayload.statusSection &&
+    sourcePayload.contentKind !== 'prompt'
+  ) {
+    return null
+  }
 
   const sourceCategoryId =
     sourcePayload.sourceCategoryId ??
     findEntryCategoryId(sourcePromptFolder, sourcePayload.fromId)
   const destinationCategoryId = dropPayload.categoryId ?? null
+  if (dropPayload.statusSection === 'completed') {
+    return {
+      move: {
+        sourcePromptFolderId: sourcePromptFolder.id,
+        destinationPromptFolderId: destinationPromptFolder.id,
+        promptId: sourcePayload.fromId,
+        categoryId: sourceCategoryId,
+        previousEntryId: null
+      },
+      sourceCategoryId,
+      targetStatus: PromptStatus.Completed
+    }
+  }
   /** Category IDs act as logical containers for same-root cross-category no-op detection. */
-  const sourceContentOwnerId = sourceCategoryId ?? sourcePromptFolder.id
+  const sourceContentOwnerId =
+    sourcePayload.statusSection === 'completed'
+      ? `${sourcePromptFolder.id}:completed`
+      : (sourceCategoryId ?? sourcePromptFolder.id)
   const destinationContentOwnerId = destinationCategoryId ?? destinationPromptFolder.id
   const resolvedMove = resolvePromptHandleDropMove(
     sourceContentOwnerId,
-    getCategoryEntryIds(sourcePromptFolder, sourceCategoryId),
+    sourcePayload.statusSection === 'completed'
+      ? []
+      : getCategoryEntryIds(sourcePromptFolder, sourceCategoryId),
     sourcePayload.fromId,
     { ...dropPayload, folderId: destinationContentOwnerId },
     getCategoryEntryIds(destinationPromptFolder, destinationCategoryId)
@@ -79,7 +114,9 @@ export const resolvePromptTreePromptMove = (
       destinationPromptFolderId: destinationPromptFolder.id,
       categoryId: destinationCategoryId
     },
-    sourceCategoryId
+    sourceCategoryId,
+    targetStatus:
+      sourcePayload.statusSection === 'completed' ? PromptStatus.Todo : null
   }
 }
 
@@ -101,6 +138,21 @@ export const createPromptTreePromptDragController = ({
     if (!result) return
 
     void runIpcBestEffort(async () => {
+      if (result.targetStatus) {
+        await setPromptStatus(
+          result.move.sourcePromptFolderId,
+          result.move.destinationPromptFolderId,
+          result.move.promptId,
+          result.targetStatus,
+          result.targetStatus === PromptStatus.Todo
+            ? {
+                categoryId: result.move.categoryId,
+                previousEntryId: result.move.previousEntryId
+              }
+            : undefined
+        )
+        return
+      }
       const move = sourcePayload.contentKind === 'template' ? movePromptTemplate : movePrompt
       await move(
         result.move.sourcePromptFolderId,

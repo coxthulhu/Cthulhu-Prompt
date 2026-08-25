@@ -1,14 +1,13 @@
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
+import { placeMarkdownContentInCategoryOrder } from '@shared/MarkdownContent'
 import { promptEntryRef } from '@shared/OrderContainer'
-import {
-  insertCategoryOrderEntry,
-  removeCategoryOrderEntry
-} from '@shared/PromptFolder'
+import { removeCategoryOrderEntry } from '@shared/PromptFolder'
 import {
   createPromptFull,
   isPromptFull,
   PromptStatus,
+  type PromptCategoryOrderPlacement,
   type PromptFull,
   type PromptPersisted,
   type SetPromptStatusPayload,
@@ -131,11 +130,13 @@ export const mutatePacedPromptAutosaveUpdate = (
 export const deletePrompt = mutations.delete
 export const movePrompt = mutations.move
 
+/** Changes prompt status and optionally restores it at an exact category-order placement. */
 export const setPromptStatus = async (
   promptFolderId: string,
   rootPromptFolderId: string,
   promptId: string,
-  targetStatus: PromptStatus
+  targetStatus: PromptStatus,
+  requestedCategoryOrderPlacement?: PromptCategoryOrderPlacement
 ): Promise<void> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder || promptFolder.kind === 'template') {
@@ -166,9 +167,37 @@ export const setPromptStatus = async (
             ? { templates: promptDraft.templates }
             : {})
         }
+  /** Current Active-tree group used when a status-button change does not request a new placement. */
+  const currentCategoryGroup = rootPromptFolder.categoryOrder.categories.find((group) =>
+    group.entries.some((entry) => entry.kind === 'prompt' && entry.id === promptId)
+  )
+  /** Current prompt index used to retain its exact Active-tree predecessor. */
+  const currentEntryIndex =
+    currentCategoryGroup?.entries.findIndex(
+      (entry) => entry.kind === 'prompt' && entry.id === promptId
+    ) ?? -1
+  /** Requested or retained category-order placement normalized against the loaded groups. */
+  const categoryOrderPlacement: PromptCategoryOrderPlacement = (() => {
+    /** Placement supplied by a Completed-to-Active drop or inferred from current prompt ownership. */
+    const placement =
+      requestedCategoryOrderPlacement ??
+      ({
+        categoryId: currentCategoryGroup
+          ? currentCategoryGroup.categoryId
+          : (currentPrompt.category ?? null),
+        previousEntryId:
+          currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
+      } satisfies PromptCategoryOrderPlacement)
+    /** Whether the requested category still belongs to the destination root folder. */
+    const hasCategory = rootPromptFolder.categoryOrder.categories.some(
+      (group) => group.categoryId === placement.categoryId
+    )
+    return hasCategory ? placement : { categoryId: null, previousEntryId: null }
+  })()
   const modifiedAt = getCurrentIsoSecondTimestamp()
   const { completedAt: _completedAt, ...activePromptBase } = currentPrompt
-  const nextPrompt: PromptPersisted =
+  /** Prompt with its requested status fields before optional Active-tree placement. */
+  const statusPrompt: PromptPersisted =
     targetStatus === PromptStatus.Completed
       ? {
           ...activePromptBase,
@@ -189,15 +218,17 @@ export const setPromptStatus = async (
         }
   /** Category-order reference removed on completion and restored on activation. */
   const categoryOrderEntry = promptEntryRef(promptId)
-  if (
-    targetStatus !== PromptStatus.Completed &&
-    nextPrompt.category !== undefined &&
-    !rootPromptFolder.categoryOrder.categories.some(
-      (category) => category.categoryId === nextPrompt.category
-    )
-  ) {
-    delete nextPrompt.category
-  }
+  /** Prompt whose category metadata matches its Active-tree placement. */
+  const nextPrompt =
+    targetStatus === PromptStatus.Completed
+      ? statusPrompt
+      : placeMarkdownContentInCategoryOrder(
+          rootPromptFolder.categoryOrder,
+          statusPrompt,
+          categoryOrderEntry,
+          categoryOrderPlacement.categoryId,
+          categoryOrderPlacement.previousEntryId
+        ).content
 
   await runRevisionMutation<SetPromptStatusResponsePayload>({
     mutateOptimistically: ({ collections }) => {
@@ -223,7 +254,7 @@ export const setPromptStatus = async (
             promptFolderId === rootPromptFolderId &&
             !draft.completedPromptIds.includes(promptId)
           ) {
-            draft.completedPromptIds = [...draft.completedPromptIds, promptId]
+            draft.completedPromptIds = [promptId, ...draft.completedPromptIds]
           }
           if (promptFolderId === rootPromptFolderId) {
             draft.categoryOrder = removeCategoryOrderEntry(
@@ -235,12 +266,13 @@ export const setPromptStatus = async (
         }
         draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
         if (promptFolderId === rootPromptFolderId && isCompletedPrompt) {
-          draft.categoryOrder = insertCategoryOrderEntry(
+          draft.categoryOrder = placeMarkdownContentInCategoryOrder(
             draft.categoryOrder,
+            nextPrompt,
             categoryOrderEntry,
-            nextPrompt.category ?? null,
-            null
-          )
+            categoryOrderPlacement.categoryId,
+            categoryOrderPlacement.previousEntryId
+          ).categoryOrder
         }
       })
       if (promptFolderId !== rootPromptFolderId) {
@@ -249,7 +281,7 @@ export const setPromptStatus = async (
             targetStatus === PromptStatus.Completed &&
             !draft.completedPromptIds.includes(promptId)
           ) {
-            draft.completedPromptIds = [...draft.completedPromptIds, promptId]
+            draft.completedPromptIds = [promptId, ...draft.completedPromptIds]
           } else if (targetStatus !== PromptStatus.Completed) {
             draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
           }
@@ -259,12 +291,13 @@ export const setPromptStatus = async (
               categoryOrderEntry
             )
           } else if (isCompletedPrompt) {
-            draft.categoryOrder = insertCategoryOrderEntry(
+            draft.categoryOrder = placeMarkdownContentInCategoryOrder(
               draft.categoryOrder,
+              nextPrompt,
               categoryOrderEntry,
-              nextPrompt.category ?? null,
-              null
-            )
+              categoryOrderPlacement.categoryId,
+              categoryOrderPlacement.previousEntryId
+            ).categoryOrder
           }
         })
       }
@@ -281,7 +314,8 @@ export const setPromptStatus = async (
           data: rootPromptFolder
         }),
         prompt: { ...promptEntity, data: nextPrompt },
-        status: targetStatus
+        status: targetStatus,
+        categoryOrderPlacement
       })
       if (result.success) promptDraftCollection.utils.acceptMutations(transaction)
       return result

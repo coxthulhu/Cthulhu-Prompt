@@ -41,4 +41,28 @@ describe('collectCompletedPrompts', () => {
       { contentOwnerId: 'root', promptId: 'older' }
     ])
   })
+
+  it('retains completed ID priority when completion timestamps tie', () => {
+    /** Completed-ID order with the newest mutation already placed first. */
+    const root = createFolder('root', ['newest-priority', 'older-priority'])
+    /** Equal persisted timestamp proving ID order is the deterministic tie-breaker. */
+    const completedAt = '2026-07-09T11:00:00.000Z'
+
+    expect(
+      collectCompletedPrompts({
+        rootFolder: root,
+        statusByPromptId: {
+          'newest-priority': PromptStatus.Completed,
+          'older-priority': PromptStatus.Completed
+        },
+        completedAtByPromptId: {
+          'newest-priority': completedAt,
+          'older-priority': completedAt
+        }
+      })
+    ).toEqual([
+      { contentOwnerId: 'root', promptId: 'newest-priority' },
+      { contentOwnerId: 'root', promptId: 'older-priority' }
+    ])
+  })
 })

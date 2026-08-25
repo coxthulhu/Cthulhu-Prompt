@@ -425,7 +425,7 @@
         const cardWidthPx = getPromptFolderSectionContentWidthPx(widthPx, row.indentLevel)
         return estimatePromptEditorHeight(
           promptDraftById[row.promptId]!.text,
-          getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode),
+          getPromptEditorTitleAreaWidthPx(cardWidthPx, true),
           heightPx,
           promptEditorSizingConfig,
           compactLayoutMaxWidthPx,
@@ -441,7 +441,7 @@
         )
         if (measuredRowHeightPx == null) return null
 
-        const titleAreaWidthPx = getPromptEditorTitleAreaWidthPx(cardWidthPx, !isCompletedMode)
+        const titleAreaWidthPx = getPromptEditorTitleAreaWidthPx(cardWidthPx, true)
         return getRowHeightPx(
           clampMonacoHeightPx(
             getMonacoHeightFromRowPx(
@@ -628,7 +628,8 @@
       folderId: screenRootFolderId,
       categoryId,
       targetEntryId: previousEntryId,
-      position: 'after'
+      position: 'after',
+      statusSection: 'active'
     }
   }
 
@@ -1011,7 +1012,6 @@
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
-      isDragEnabled={!isCompletedMode}
       onDelete={() => onDeletePrompt(promptTarget)}
       onTemplateSelect={isTemplateFolder
         ? undefined
@@ -1027,7 +1027,6 @@
       onMoveDown={() =>
         isCompletedMode ? Promise.resolve(false) : onMovePromptDown(promptTarget)}
       onPromptTreeDrop={(dropPayload) => {
-        if (isCompletedMode) return
         return onPromptTreeDrop(promptTarget, dropPayload)
       }}
     />

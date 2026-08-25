@@ -2,6 +2,7 @@ import type { Transaction } from '@tanstack/svelte-db'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import {
   getActiveMarkdownContentIds,
+  placeMarkdownContentInCategoryOrder,
   type CreateMarkdownContentPayload,
   type CreateMarkdownContentResponsePayload,
   type DeleteMarkdownContentPayload,
@@ -13,7 +14,6 @@ import {
   type MoveMarkdownContentResponsePayload
 } from '@shared/MarkdownContent'
 import {
-  insertCategoryOrderEntry,
   removeCategoryOrderEntry,
   type CategoryOrderEntryRef,
   type PromptFolderContentKind
@@ -105,9 +105,6 @@ export const createMarkdownContentRendererMutations = <
     if (!promptFolder || promptFolder.kind !== config.kind) {
       throw new Error(`${config.label} folder not loaded`)
     }
-    if (!promptFolder.categoryOrder.categories.some((group) => group.categoryId === categoryId)) {
-      throw new Error('Category not loaded')
-    }
     /** Collision-free title fields for the new root-owned content. */
     const titleFields = resolvePromptTitleUpdateForPromptIds({
       promptIds: getActiveMarkdownContentIds(promptFolder, config.kind),
@@ -117,23 +114,30 @@ export const createMarkdownContentRendererMutations = <
       nextTitle: content.title,
       defaultFallbackTitle: config.defaultFallbackTitle
     })
-    /** Optimistic content with category front matter synchronized to placement. */
-    const optimisticContent: TFull = { ...content, ...titleFields }
-    if (categoryId === null) delete optimisticContent.category
-    else optimisticContent.category = categoryId
     /** V2 reference inserted with the new content. */
     const entry = config.createEntryRef(content.id)
+    /** New content and category order synchronized to the requested placement. */
+    const placement = placeMarkdownContentInCategoryOrder(
+      promptFolder.categoryOrder,
+      { ...content, ...titleFields },
+      entry,
+      categoryId,
+      previousEntryId
+    )
+    /** Optimistic content with category metadata synchronized to placement. */
+    const optimisticContent: TFull = placement.content
 
     await runRevisionMutation<CreateMarkdownContentResponsePayload<TPersisted>>({
       mutateOptimistically: ({ collections }) => {
         config.insertOptimistically(collections, optimisticContent)
         collections.promptFolder.update(promptFolderId, (draft) => {
-          draft.categoryOrder = insertCategoryOrderEntry(
+          draft.categoryOrder = placeMarkdownContentInCategoryOrder(
             draft.categoryOrder,
+            optimisticContent,
             entry,
             categoryId,
             previousEntryId
-          )
+          ).categoryOrder
         })
       },
       persistMutations: async ({ entities, transaction }) => {
@@ -258,19 +262,22 @@ export const createMarkdownContentRendererMutations = <
     if (!source || !destination || source.kind !== config.kind || destination.kind !== config.kind) {
       throw new Error(`${config.label} folder not loaded`)
     }
-    if (!destination.categoryOrder.categories.some((group) => group.categoryId === categoryId)) {
-      throw new Error('Category not loaded')
-    }
     /** Persisted content moved between category positions. */
     const persistedContent =
       config.getFullPersisted(contentId) ?? config.getDraftPersisted(contentId)
     if (!persistedContent) throw new Error(`${config.label} data not loaded`)
     /** V2 reference transferred between category groups or roots. */
     const entry = config.createEntryRef(contentId)
+    /** Moved content and destination order synchronized to the requested placement. */
+    const placement = placeMarkdownContentInCategoryOrder(
+      destination.categoryOrder,
+      persistedContent,
+      entry,
+      categoryId,
+      previousEntryId
+    )
     /** Content copy whose category matches its destination group. */
-    const contentToMove: TPersisted = { ...persistedContent }
-    if (categoryId === null) delete contentToMove.category
-    else contentToMove.category = categoryId
+    const contentToMove: TPersisted = placement.content
     /** Destination IDs used to resolve blank-title fallback collisions. */
     const destinationContentIds = getActiveMarkdownContentIds(destination, config.kind).filter(
       (id) => id !== contentId
@@ -280,29 +287,31 @@ export const createMarkdownContentRendererMutations = <
       mutateOptimistically: ({ collections }) => {
         if (sourcePromptFolderId === destinationPromptFolderId) {
           collections.promptFolder.update(sourcePromptFolderId, (draft) => {
-            draft.categoryOrder = insertCategoryOrderEntry(
+            draft.categoryOrder = placeMarkdownContentInCategoryOrder(
               draft.categoryOrder,
+              contentToMove,
               entry,
               categoryId,
               previousEntryId
-            )
+            ).categoryOrder
           })
         } else {
           collections.promptFolder.update(sourcePromptFolderId, (draft) => {
             draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
           })
           collections.promptFolder.update(destinationPromptFolderId, (draft) => {
-            draft.categoryOrder = insertCategoryOrderEntry(
+            draft.categoryOrder = placeMarkdownContentInCategoryOrder(
               draft.categoryOrder,
+              contentToMove,
               entry,
               categoryId,
               previousEntryId
-            )
+            ).categoryOrder
           })
         }
         config.updateContentOptimistically(collections, contentId, (draft) => {
-          if (categoryId === null) delete draft.category
-          else draft.category = categoryId
+          if (contentToMove.category === undefined) delete draft.category
+          else draft.category = contentToMove.category
           if (
             sourcePromptFolderId !== destinationPromptFolderId &&
             draft.title.trim().length === 0

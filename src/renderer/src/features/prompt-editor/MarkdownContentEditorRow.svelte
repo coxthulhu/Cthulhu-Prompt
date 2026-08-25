@@ -163,10 +163,13 @@
     maxLines: systemSettings.promptEditorMaxLines
   })
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
-  const sidebarWidthPx = $derived(isCompletedMode ? 0 : PROMPT_EDITOR_SIDEBAR_WIDTH_PX)
+  /** Prompt-card sidebar width retained in both Active and Completed modes. */
+  const sidebarWidthPx = PROMPT_EDITOR_SIDEBAR_WIDTH_PX
   const titleAreaWidthPx = $derived(
-    getPromptEditorTitleAreaWidthPx(virtualWindowWidthPx, !isCompletedMode)
+    getPromptEditorTitleAreaWidthPx(virtualWindowWidthPx, true)
   )
+  /** Status section represented by this prompt editor card. */
+  const dragStatusSection = $derived(isCompletedMode ? 'completed' : 'active')
   const titleAreaHeightPx = $derived(
     getPromptEditorTitleAreaHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
   )
@@ -530,7 +533,7 @@
 
 <EditorCardSurface
   bind:rowElement
-  showSidebar={!isCompletedMode}
+  showSidebar
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
   data-testid={`prompt-editor-${promptId}`}
   data-dragging={isDragging ? 'true' : 'false'}
@@ -546,6 +549,8 @@
       {isFirstPrompt}
       {isLastPrompt}
       {isDragEnabled}
+      showMoveButtons={!isCompletedMode}
+      statusSection={dragStatusSection}
       onMoveUp={handleMoveUp}
       onMoveDown={handleMoveDown}
       {onPromptTreeDrop}
