@@ -121,7 +121,7 @@ const scrollPromptTreeRowIntoView = async (
   for (let scrollTopPx = 0; scrollTopPx <= maxScrollTop; scrollTopPx += stepPx) {
     await testHelpers.scrollVirtualWindowTo(hostSelector, scrollTopPx)
     if ((await mainWindow.locator(rowSelector).count()) > 0) {
-      await testHelpers.scrollVirtualElementIntoView(hostSelector, rowSelector, 20)
+      await testHelpers.scrollVirtualElementIntoView(hostSelector, rowSelector)
       return
     }
   }

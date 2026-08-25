@@ -733,7 +733,11 @@
           }
         }
 
-        if (uncategorizedEntries.length === 0 && groups.length === 1) {
+        if (
+          screenRootFolder.kind === 'template' &&
+          uncategorizedEntries.length === 0 &&
+          groups.length === 1
+        ) {
           items.push({
             id: `${screenRootFolder.id}:empty-state`,
             row: {
@@ -914,50 +918,34 @@
 {/snippet}
 
 {#snippet emptyStateRow()}
-  {#if isCompletedMode}
-    <div
-      class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
-      data-testid="prompt-tree-empty-state"
-    >
-      <p class="sidebarPromptTreeEmptyTitle">No completed prompts were found in this folder.</p>
-    </div>
-  {:else}
-    <PromptDropTarget
-      getOptions={() =>
-        getPromptTreePromptDroppableOptions('empty-state', 'top', () => ({
-          folderId: screenRootFolder!.id,
-          categoryId: null,
-          targetEntryId: null,
-          position: 'after'
-        }))}
-      class="relative h-full"
-    >
-      {#snippet children({ isOver, isBlocked, edge })}
-        <div
-          class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
-          data-testid="prompt-tree-empty-state"
-        >
-          <p class="sidebarPromptTreeEmptyTitle">
-            {screenRootFolder?.kind === 'template'
-              ? 'No templates found in this folder.'
-              : 'No active prompts were found in this folder.'}
-          </p>
-          <p class="mt-2">
-            Click the Add {screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'} button to
-            create your first {screenRootFolder?.kind === 'template' ? 'template' : 'prompt'}.
-          </p>
-        </div>
-        {#if isOver && edge}
-          <DropIndicator
-            testId="prompt-tree-empty-drop-indicator"
-            insetStart={getPromptTreeDropIndicatorInset(0)}
-            {edge}
-            {isBlocked}
-          />
-        {/if}
-      {/snippet}
-    </PromptDropTarget>
-  {/if}
+  <PromptDropTarget
+    getOptions={() =>
+      getPromptTreePromptDroppableOptions('empty-state', 'top', () => ({
+        folderId: screenRootFolder!.id,
+        categoryId: null,
+        targetEntryId: null,
+        position: 'after'
+      }))}
+    class="relative h-full"
+  >
+    {#snippet children({ isOver, isBlocked, edge })}
+      <div
+        class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
+        data-testid="prompt-tree-empty-state"
+      >
+        <p class="sidebarPromptTreeEmptyTitle">No templates found in this folder.</p>
+        <p class="mt-2">Click the Add Template button to create your first template.</p>
+      </div>
+      {#if isOver && edge}
+        <DropIndicator
+          testId="prompt-tree-empty-drop-indicator"
+          insetStart={getPromptTreeDropIndicatorInset(0)}
+          {edge}
+          {isBlocked}
+        />
+      {/if}
+    {/snippet}
+  </PromptDropTarget>
 {/snippet}
 
 {#snippet promptTreeCategoryRowOverlay({ row, rowId }: PromptTreeCategoryRowProps)}
