@@ -10,6 +10,7 @@ import {
 import { readWorkspacePersistence } from '../helpers/UserPersistenceHelpers'
 import {
   focusMonacoEditor,
+  isMonacoEditorFocused,
   moveMonacoCursorToEnd,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
@@ -58,7 +59,12 @@ const CATEGORY_ID = createDeterministicId(
 const MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE =
   '[data-testid="prompt-tree-category-toggle-button-Main"]'
 const CATEGORY_TOGGLE = '[data-testid="prompt-tree-category-toggle-button-Category"]'
-const CATEGORY_OPEN_BUTTON = '[data-testid="prompt-tree-category-open-button-Category"]'
+/** Active-tree action that creates content at the start of Category. */
+const CATEGORY_ADD_TO_TOP_BUTTON =
+  '[data-testid="prompt-tree-category-add-to-top-button-Category"]'
+/** Context-menu action that opens Category without opening its settings. */
+const CATEGORY_OPEN_MENU_ITEM =
+  '[data-testid="prompt-tree-category-open-menu-item-Category"]'
 const CATEGORY_SETTINGS_MENU_ITEM =
   '[data-testid="prompt-tree-category-settings-menu-item-Category"]'
 const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
@@ -527,10 +533,17 @@ describe('Prompt folder prompt tree', () => {
       'aria-expanded',
       'true'
     )
+    await mainWindow.locator(CATEGORY_CONTENT_TOGGLE).click()
+    await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+    await mainWindow.locator(CATEGORY_TOGGLE).click()
+    await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, CATEGORY_EDITOR)
-    await mainWindow.locator(CATEGORY_TOGGLE).hover()
-    await expect(mainWindow.locator(CATEGORY_OPEN_BUTTON)).toBeVisible()
-    await mainWindow.locator(CATEGORY_OPEN_BUTTON).click()
+    await mainWindow.locator(CATEGORY_TOGGLE).click({ button: 'right' })
+    await expect(mainWindow.locator(CATEGORY_OPEN_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(CATEGORY_OPEN_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
     await expectRowToReachPromptFolderViewportTopOffset(mainWindow, CATEGORY_EDITOR)
     await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
@@ -576,7 +589,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(CATEGORY_TOGGLE).focus()
     await mainWindow.keyboard.press('Shift+F10')
     await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toHaveCount(0)
-    await mainWindow.locator(CATEGORY_OPEN_BUTTON).click({ button: 'right' })
+    await mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON).click({ button: 'right' })
     await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
@@ -585,6 +598,45 @@ describe('Prompt folder prompt tree', () => {
       'aria-pressed',
       'true'
     )
+
+    await mainWindow.locator(CATEGORY_TOGGLE).hover()
+    await expect(mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON)).toBeVisible()
+    await expect(mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON).locator('svg')).toHaveClass(
+      /lucide-plus/
+    )
+    await expect(mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON)).toHaveAttribute(
+      'aria-label',
+      'Add Prompt to top of category Category'
+    )
+    await mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON).click()
+    /** Newly centered editor identified by its generated untitled-prompt placeholder. */
+    const createdEditor = mainWindow
+      .locator(PROMPT_EDITOR_PREFIX_SELECTOR)
+      .filter({ has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Prompt"]`) })
+    await expect(createdEditor).toHaveCount(1)
+    /** Stable generated ID used to compare the category's resulting tree order. */
+    const createdPromptId = (await createdEditor.getAttribute('data-testid'))!.replace(
+      'prompt-editor-',
+      ''
+    )
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(createdPromptId)))
+      .toBe(true)
+    await expectRowToReachClosestPromptFolderViewportCenter(
+      mainWindow,
+      testHelpers,
+      promptEditorSelector(createdPromptId)
+    )
+    /** Category prompt IDs in current tree order after adding at its top boundary. */
+    const categoryPromptOrder = await mainWindow
+      .locator(
+        `[data-testid="prompt-tree-prompt-${createdPromptId}"], [data-testid="prompt-tree-prompt-category-prompt"]`
+      )
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
+    expect(categoryPromptOrder).toEqual([
+      `prompt-tree-prompt-${createdPromptId}`,
+      'prompt-tree-prompt-category-prompt'
+    ])
 
     await mainWindow.locator(CATEGORY_TOGGLE).click()
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
@@ -624,6 +676,34 @@ describe('Prompt folder prompt tree', () => {
         { timeout: 15000 }
       )
       .toBe(true)
+  })
+
+  test('shows category add-to-top only in the Active tree', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'categories-ui' }
+    })
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
+
+    /** Active and Completed accordion roots used to scope status-tree actions. */
+    const activeTree = mainWindow.locator(
+      '[data-testid="sidebar-prompt-status-accordion-content-active"]'
+    )
+    const completedTree = mainWindow.locator(
+      '[data-testid="sidebar-prompt-status-accordion-content-completed"]'
+    )
+    /** Primary category add action rendered only by the Active status tree. */
+    const categoryAddSelector =
+      '[data-testid="prompt-tree-category-add-to-top-button-Primary"]'
+
+    await expect(activeTree.locator(categoryAddSelector)).toHaveCount(1)
+    await expect(
+      completedTree.locator('[data-testid="prompt-tree-prompt-categories-ui-root-completed"]')
+    ).toBeVisible()
+    await expect(
+      completedTree.locator('[data-testid^="prompt-tree-category-add-to-top-button-"]')
+    ).toHaveCount(0)
   })
 
   test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({
@@ -947,7 +1027,7 @@ describe('Prompt folder prompt tree', () => {
     const categoryToggle = mainWindow.locator(CATEGORY_TOGGLE)
     const categoryLabel = categoryToggle.locator('.sidebarPromptTreeCategoryLabel')
     const categoryActions = mainWindow.locator(
-      '[data-testid="prompt-tree-category-open-button-Category"]'
+      '[data-testid="prompt-tree-category-add-to-top-button-Category"]'
     )
     const readRoundedLabelWidth = async (): Promise<number> =>
       categoryLabel.evaluate((label) => Math.round(label.getBoundingClientRect().width))

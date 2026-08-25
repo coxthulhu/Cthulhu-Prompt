@@ -7,7 +7,11 @@ import {
   isMonacoEditorFocused,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_TITLE_SELECTOR,
+  promptEditorSelector
+} from '../helpers/PromptFolderSelectors'
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
@@ -135,6 +139,76 @@ const setEditorSelections = async (
 }
 
 describe('Prompt template folder UI', () => {
+  test('adds a template to the top of a category from the prompt tree', async ({
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createTemplateUiWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Templates')
+
+    /** Template-category action that creates content at its first boundary. */
+    const categoryAddToTopButton = mainWindow.locator(
+      '[data-testid="prompt-tree-category-add-to-top-button-CategoryTemplates"]'
+    )
+    await mainWindow
+      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
+      .hover()
+    await categoryAddToTopButton.click()
+
+    /** Newly created template editor identified by its fallback-title placeholder. */
+    const createdEditor = mainWindow
+      .locator('[data-testid^="prompt-editor-"]')
+      .filter({ has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Template"]`) })
+    await expect(createdEditor).toHaveCount(1)
+    /** Stable generated template ID used for navigation and order assertions. */
+    const createdTemplateId = (await createdEditor.getAttribute('data-testid'))!.replace(
+      'prompt-editor-',
+      ''
+    )
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(createdTemplateId)))
+      .toBe(true)
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate(
+          ({ hostSelector, targetSelector }) => {
+            /** Main virtual viewport containing the centered template editor. */
+            const host = document.querySelector<HTMLElement>(hostSelector)
+            /** Newly created template editor targeted by navigation. */
+            const target = document.querySelector<HTMLElement>(targetSelector)
+            if (!host || !target) return false
+
+            /** Viewport and target geometry used for the 1px center-line tolerance. */
+            const hostRect = host.getBoundingClientRect()
+            const targetRect = target.getBoundingClientRect()
+            /** Main viewport center line requested by prompt-tree creation. */
+            const centerLine = hostRect.top + hostRect.height / 2
+            return targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1
+          },
+          {
+            hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+            targetSelector: promptEditorSelector(createdTemplateId)
+          }
+        )
+      })
+      .toBe(true)
+
+    /** Category template IDs in current tree order after adding at its top boundary. */
+    const categoryTemplateOrder = await mainWindow
+      .locator(
+        `[data-testid="prompt-tree-prompt-${createdTemplateId}"], [data-testid="prompt-tree-prompt-template-ui-category-template"]`
+      )
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
+    expect(categoryTemplateOrder).toEqual([
+      `prompt-tree-prompt-${createdTemplateId}`,
+      'prompt-tree-prompt-template-ui-category-template'
+    ])
+  })
+
   test('shows template parameters and inserts Prompt Text at the default position', async ({
     testSetup
   }) => {
@@ -146,6 +220,19 @@ describe('Prompt template folder UI', () => {
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
+
+    /** Category hover action whose label must reflect template-folder content. */
+    const categoryAddToTopButton = mainWindow.locator(
+      '[data-testid="prompt-tree-category-add-to-top-button-CategoryTemplates"]'
+    )
+    await mainWindow
+      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
+      .hover()
+    await expect(categoryAddToTopButton).toHaveAttribute(
+      'aria-label',
+      'Add Template to top of category Category Templates'
+    )
+    await expect(categoryAddToTopButton.locator('svg')).toHaveClass(/lucide-plus/)
 
     const toolbar = mainWindow.locator(
       `${TEMPLATE_EDITOR} [data-testid="prompt-template-parameters-toolbar"]`

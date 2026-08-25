@@ -590,6 +590,7 @@ export const createPromptFolderScreenController = ({
       promptNavigation.selectionSource === 'category-open' ||
       promptNavigation.selectionSource === 'prompt-create' ||
       promptNavigation.selectionSource === 'prompt-divider-create' ||
+      promptNavigation.selectionSource === 'prompt-tree-create' ||
       promptNavigation.selectionSource === 'prompt-move' ||
       promptNavigation.selectionSource === 'category-move' ||
       promptNavigation.selectionSource === 'header' ||
@@ -710,7 +711,12 @@ export const createPromptFolderScreenController = ({
     return categoryById[contentOwnerId] ? [screenRootFolderId, contentOwnerId] : null
   }
 
-  const expandSectionForRow = (row: ActivePromptScreenRow, expandDetails = true): boolean => {
+  /** Expands the main-screen sections required to reveal one navigation row. */
+  const expandSectionForRow = (
+    row: ActivePromptScreenRow,
+    expandDetails = true,
+    expandContent = false
+  ): boolean => {
     let changed = false
     if (isCompletedMode || row.kind === 'root-header') return false
 
@@ -728,6 +734,15 @@ export const createPromptFolderScreenController = ({
       !getIsDetailsSectionExpanded(row.contentOwnerId)
     ) {
       setDetailsSectionExpanded(row.contentOwnerId, true)
+      changed = true
+    }
+
+    if (
+      row.kind === 'category-details' &&
+      expandContent &&
+      !getIsContentSectionExpanded(row.contentOwnerId)
+    ) {
+      setContentSectionExpanded(row.contentOwnerId, true)
       changed = true
     }
 
@@ -1006,18 +1021,22 @@ export const createPromptFolderScreenController = ({
         contentReveal: {
           scrollType: initialRevealScrollType,
           expandDetails:
-            source !== 'category-open' && source !== 'category-move'
+            source !== 'category-open' && source !== 'category-move',
+          expandContent: source === 'category-open'
         },
         focusPromptId:
-          source === 'prompt-create' && initialSelectionTarget.kind === 'prompt'
+          (source === 'prompt-create' || source === 'prompt-tree-create') &&
+          initialSelectionTarget.kind === 'prompt'
             ? initialSelectionTarget.promptId
             : undefined,
         treeExpansion:
           source === 'prompt-move'
             ? 'owner'
-            : source === 'category-move'
-              ? 'ancestors'
-              : undefined
+            : source === 'category-open' || source === 'prompt-tree-create'
+              ? 'owner'
+              : source === 'category-move'
+                ? 'ancestors'
+                : undefined
       })
       initialContentRevealRequestId = result.contentRevealRequest?.id ?? null
     } else if (!currentNavigationTarget) {
@@ -1061,7 +1080,11 @@ export const createPromptFolderScreenController = ({
     if (!isVirtualContentReady) return
 
     promptNavigation.contentExpansionRequests.consume(request, (payload) => {
-      expandSectionForRow(toActivePromptScreenTarget(payload), payload.expandDetails)
+      expandSectionForRow(
+        toActivePromptScreenTarget(payload),
+        payload.expandDetails,
+        payload.expandContent
+      )
     })
   })
 

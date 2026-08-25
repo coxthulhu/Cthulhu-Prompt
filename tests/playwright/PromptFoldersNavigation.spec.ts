@@ -375,8 +375,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, virtualHeightPx)
     await expect(headerSection).toHaveText('Empty')
 
-    await mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-Primary"]').hover()
-    await mainWindow.locator('[data-testid="prompt-tree-category-open-button-Primary"]').click()
+    await mainWindow
+      .locator('[data-testid="prompt-tree-category-toggle-button-Primary"]')
+      .click({ button: 'right' })
+    await mainWindow
+      .locator('[data-testid="prompt-tree-category-open-menu-item-Primary"]')
+      .click()
     await expect(headerSection).toHaveText('Primary')
 
     /** Category content toggle used to verify breadcrumb clicks preserve expansion state. */

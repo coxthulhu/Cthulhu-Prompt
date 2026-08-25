@@ -16,13 +16,17 @@ const getCategoryTestKey = (category: PromptTreeCategoryIdentity): string =>
 export const categorySettingsTestId = (category: PromptTreeCategoryIdentity): string =>
   `prompt-tree-category-settings-menu-item-${getCategoryTestKey(category)}`
 
+/** Returns the open-menu test ID for one category. */
+export const categoryOpenMenuItemTestId = (category: PromptTreeCategoryIdentity): string =>
+  `prompt-tree-category-open-menu-item-${getCategoryTestKey(category)}`
+
 /** Returns the expansion-toggle test ID for one category. */
 export const categoryToggleTestId = (category: PromptTreeCategoryIdentity): string =>
   `prompt-tree-category-toggle-button-${getCategoryTestKey(category)}`
 
-/** Returns the open-button test ID for one category. */
-export const categoryOpenTestId = (category: PromptTreeCategoryIdentity): string =>
-  `prompt-tree-category-open-button-${getCategoryTestKey(category)}`
+/** Returns the add-to-top button test ID for one category. */
+export const categoryAddToTopTestId = (category: PromptTreeCategoryIdentity): string =>
+  `prompt-tree-category-add-to-top-button-${getCategoryTestKey(category)}`
 
 export const folderPromptTestId = (promptId: string): string => `prompt-tree-prompt-${promptId}`
 

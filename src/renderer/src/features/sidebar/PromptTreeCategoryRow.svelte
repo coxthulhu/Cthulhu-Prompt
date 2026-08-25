@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, Folder, Settings } from 'lucide-svelte'
+  import { ArrowRight, Folder, Plus, Settings } from 'lucide-svelte'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -11,7 +11,8 @@
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import {
-    categoryOpenTestId,
+    categoryAddToTopTestId,
+    categoryOpenMenuItemTestId,
     categorySettingsTestId,
     categoryToggleTestId
   } from './promptTreeTestIds'
@@ -32,6 +33,10 @@
     indentCount?: number
     endsVisibleBranch?: boolean
     showActions?: boolean
+    /** Singular content label used by this category's add action. */
+    contentLabel?: 'Prompt' | 'Template'
+    /** Whether the category add action is waiting for persistence. */
+    isAddToTopDisabled?: boolean
     // Gives picker reuse rounded rows without changing the sidebar tree.
     roundedCorners?: boolean
     getCategoryContentDroppableOptions?: () => PromptRowDropOptions
@@ -41,6 +46,8 @@
     onCategoryExpandedChange: (categoryId: string, isExpanded: boolean) => void
     onCategoryOpen: (categoryId: string) => void
     onCategorySettingsOpen: (categoryId: string) => void
+    /** Creates a prompt or template at the start of this category when supplied. */
+    onCategoryAddToTop?: (categoryId: string) => void
   }
 
   let {
@@ -53,13 +60,16 @@
     indentCount = 0,
     endsVisibleBranch = false,
     showActions = true,
+    contentLabel = 'Prompt',
+    isAddToTopDisabled = false,
     roundedCorners = false,
     getCategoryContentDroppableOptions,
     getCategoryOrderDroppableOptions,
     categoryDragOptions,
     onCategoryExpandedChange,
     onCategoryOpen,
-    onCategorySettingsOpen
+    onCategorySettingsOpen,
+    onCategoryAddToTop
   }: Props = $props()
 
   /** Width of one prompt-tree indentation level. */
@@ -84,9 +94,9 @@
     blurButtonAfterMouseClick(event)
   }
 
-  /** Opens the category card without automatically expanding its details. */
-  const handleCategoryOpen = (event: MouseEvent) => {
-    onCategoryOpen(category.id)
+  /** Adds content to the start of this category. */
+  const handleCategoryAddToTop = (event: MouseEvent) => {
+    onCategoryAddToTop?.(category.id)
     blurButtonAfterMouseClick(event)
   }
 
@@ -106,6 +116,12 @@
 
   /** Context-menu actions available for this category. */
   const dropdownItems = $derived.by((): DropdownPopupItem[] => [
+    {
+      id: 'open-category',
+      label: 'Open Category',
+      icon: ArrowRight,
+      testId: categoryOpenMenuItemTestId(category)
+    },
     {
       id: 'category-settings',
       label: 'Open Category Settings',
@@ -136,6 +152,12 @@
 
   /** Handles a category context-menu selection. */
   const handleCategoryOptionsSelect = (item: DropdownPopupItem, event: MouseEvent) => {
+    if (item.id === 'open-category') {
+      onCategoryOpen(category.id)
+      blurButtonAfterMouseClick(event)
+      return
+    }
+
     if (item.id === 'category-settings') {
       onCategorySettingsOpen(category.id)
       blurButtonAfterMouseClick(event)
@@ -197,17 +219,17 @@
     <span class="sidebarPromptTreeCategoryLabel">{category.displayName}</span>
   </button>
 
-  {#if showActions}
+  {#if showActions && onCategoryAddToTop}
     <div class="sidebarPromptTreeActionSlot">
       <div class="sidebarPromptTreeCategoryActions">
         <IconButton
-          icon={ArrowRight}
-          label={`Open category ${category.displayName}`}
+          icon={Plus}
+          label={`Add ${contentLabel} to top of category ${category.displayName}`}
           size="compact"
           borderless
-          onclick={handleCategoryOpen}
-          testId={categoryOpenTestId(category)}
-          active={isActive}
+          disabled={isAddToTopDisabled}
+          onclick={handleCategoryAddToTop}
+          testId={categoryAddToTopTestId(category)}
           class="sidebarPromptTreeActionButton"
         />
       </div>

@@ -24,6 +24,7 @@ export type PromptNavigationSource =
   | 'header'
   | 'prompt-create'
   | 'prompt-divider-create'
+  | 'prompt-tree-create'
   | 'prompt-move'
   | 'category-move'
 
@@ -52,6 +53,8 @@ export type PromptNavigationTarget = {
 
 export type PromptContentExpansionRequest = PromptNavigationTarget & {
   expandDetails: boolean
+  /** Whether category navigation must expose the category's prompt/template content. */
+  expandContent: boolean
 }
 
 // Defines how content navigation positions its target in the prompt-folder viewport.
@@ -81,6 +84,8 @@ type SelectPromptNavigationOptions = {
   contentReveal?: {
     scrollType: PromptContentRevealScrollType
     expandDetails?: boolean
+    /** Whether category navigation must expose the category's prompt/template content. */
+    expandContent?: boolean
   }
   focusPromptId?: string
   treeExpansion?: PromptTreeExpansionRequest['expandPath']
@@ -203,7 +208,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     if (contentReveal) {
       contentExpansionRequests.request({
         ...target,
-        expandDetails: contentReveal.expandDetails ?? true
+        expandDetails: contentReveal.expandDetails ?? true,
+        expandContent: contentReveal.expandContent ?? false
       })
     } else {
       contentExpansionRequests.clear()

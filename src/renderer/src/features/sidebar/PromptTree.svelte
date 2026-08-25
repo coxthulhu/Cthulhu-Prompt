@@ -76,6 +76,8 @@
   import { moveCategory } from '@renderer/data/Mutations/CategoryMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { createPromptTreePromptDragController } from './promptTreeDrag'
+  import { createBlankPromptInFolder } from '../prompt-folders/createBlankPromptInFolder'
+  import { createBlankPromptTemplateInFolder } from '../prompt-folders/createBlankPromptTemplateInFolder'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
   type PromptTreeBulkExpansionRequest = {
@@ -112,6 +114,8 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let categoryTreeExpandedStates = $state<Record<string, boolean>>({})
+  /** Whether a category add-to-top action is waiting for persistence. */
+  let isCreatingCategoryContent = $state(false)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
@@ -550,8 +554,10 @@
       forceRequest: true,
       contentReveal: {
         scrollType: row === 'category-details' ? 'align-top' : 'center',
-        expandDetails: source !== 'category-open'
-      }
+        expandDetails: source !== 'category-open',
+        expandContent: source === 'category-open'
+      },
+      treeExpansion: source === 'category-open' ? 'owner' : undefined
     })
 
     if (!isSameRootActive) {
@@ -579,6 +585,53 @@
 
   const handleCategorySettingsOpen = (categoryId: string) => {
     handlePromptTreeEntrySelect(categoryId, 'category-details')
+  }
+
+  /** Creates content at the start of a category and reveals its editor. */
+  const handleCategoryAddToTop = async (categoryId: string): Promise<void> => {
+    /** Root folder that owns both the category and its new content. */
+    const rootFolder = screenRootFolder
+    if (!rootFolder || isCompletedMode || isCreatingCategoryContent) return
+
+    isCreatingCategoryContent = true
+    /** Optimistic creation and its matching persistence promise. */
+    const creation =
+      rootFolder.kind === 'template'
+        ? createBlankPromptTemplateInFolder(rootFolder.id, null, categoryId)
+        : createBlankPromptInFolder(rootFolder.id, null, categoryId)
+    /** Stable ID generated for the new prompt or template. */
+    const contentId = 'templateId' in creation ? creation.templateId : creation.promptId
+    /** Navigation row that selects the new content. */
+    const row = promptIdToPromptNavigationRow(contentId)
+
+    onScreenModeSelect(screenMode)
+    promptNavigation.select({
+      screenRootFolderId: rootFolder.id,
+      contentOwnerId: categoryId,
+      row,
+      source: 'prompt-tree-create',
+      forceRequest: true,
+      contentReveal: { scrollType: 'center' },
+      focusPromptId: contentId,
+      treeExpansion: 'owner'
+    })
+
+    /** Selected workspace whose category selection is persisted. */
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (workspaceId) {
+      setPromptFolderSelectedEntryIdWithAutosave(
+        workspaceId,
+        categoryId,
+        promptNavigationRowToPersistedEntryId(row)
+      )
+    }
+
+    if (!isPromptFoldersScreenActive) {
+      onScreenRootFolderSelect(rootFolder.id)
+    }
+
+    await runIpcBestEffort(() => creation.persistence)
+    isCreatingCategoryContent = false
   }
 
   /** Opens this empty tree's status view while retaining the root folder selection. */
@@ -840,6 +893,8 @@
       isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
       indentCount={props.row.indentCount}
       endsVisibleBranch={props.row.endsVisibleBranch}
+      contentLabel={screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'}
+      isAddToTopDisabled={isCreatingCategoryContent}
       getCategoryContentDroppableOptions={isCompletedMode
         ? undefined
         : () =>
@@ -862,6 +917,7 @@
       onCategoryExpandedChange={handleCategoryExpandedChange}
       onCategoryOpen={handleCategoryOpen}
       onCategorySettingsOpen={handleCategorySettingsOpen}
+      onCategoryAddToTop={isCompletedMode ? undefined : handleCategoryAddToTop}
     />
   {/key}
 {/snippet}
