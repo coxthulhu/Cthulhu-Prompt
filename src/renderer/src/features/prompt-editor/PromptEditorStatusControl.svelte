@@ -92,8 +92,6 @@
     items={settableStatusItems}
     selectedItem={selectedStatusItem}
     showIcon
-    valueWidth="116px"
-    moreOptionsLabel="Change status More Options"
     menuTestId="prompt-status-more-options-menu"
     testId="prompt-status-pill"
     moreOptionsTestId="prompt-status-more-options-button"

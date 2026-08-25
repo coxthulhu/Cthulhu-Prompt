@@ -110,7 +110,6 @@
           items={folderTypeItems}
           selectedItem={selectedFolderType}
           showIcon
-          valueWidth="190px"
           testId="create-prompt-folder-type-selector"
           menuTestId="create-prompt-folder-type-menu"
           onselect={(item) => {

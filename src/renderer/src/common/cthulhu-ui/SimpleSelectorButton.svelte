@@ -3,7 +3,6 @@
   import { ChevronDown, ChevronUp } from 'lucide-svelte'
   import DropdownPopupMoreOptions from './DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupDetailedItem } from './DropdownPopupDetailed.svelte'
-  import IconButton from './IconButton.svelte'
   import { mergeClasses } from './mergeClasses'
 
   export type SimpleSelectorButtonTone = 'neutral' | 'warning' | 'success'
@@ -21,12 +20,10 @@
     class?: string
     disabled?: boolean
     showIcon?: boolean
-    valueWidth?: string
     testId?: string
     moreOptionsTestId?: string
     menuTestId?: string
     menuWidth?: string
-    moreOptionsLabel?: string
     onselect?: (item: SimpleSelectorButtonItem, event: MouseEvent) => void
   }
 
@@ -37,23 +34,20 @@
     class: className,
     disabled = false,
     showIcon = false,
-    valueWidth = 'auto',
     testId,
     moreOptionsTestId,
     menuTestId,
     menuWidth,
-    moreOptionsLabel = `${label} More Options`,
     onselect
   }: SimpleSelectorButtonProps = $props()
 
   const selectedLabel = $derived(selectedItem.selectedLabel ?? selectedItem.label)
   const selectedItemLabel = $derived(`${label}: ${selectedLabel}`)
   const SelectedIcon = $derived<ComponentType>(selectedItem.icon)
-  const selectorStyle = $derived(`--cthulhu-ui-simple-selector-value-width: ${valueWidth};`)
 </script>
 
 <DropdownPopupMoreOptions
-  label={moreOptionsLabel}
+  label={`${label} More Options`}
   {items}
   {menuWidth}
   testId={menuTestId}
@@ -68,7 +62,6 @@
       data-tone={selectedItem.tone ?? 'neutral'}
       data-open={dropdown.open ? 'true' : 'false'}
       data-disabled={disabled ? 'true' : 'false'}
-      style={selectorStyle}
     >
       <button
         type="button"
@@ -82,23 +75,32 @@
         {disabled}
         onclick={dropdown.toggle}
       >
-        {#if showIcon}
-          <SelectedIcon class={selectedItem.iconClass} size={16} aria-hidden="true" />
-        {/if}
-        <span>{selectedLabel}</span>
+        <span class="cthulhuUiSimpleSelectorButtonValueContent">
+          {#if showIcon}
+            <SelectedIcon class={selectedItem.iconClass} size={16} aria-hidden="true" />
+          {/if}
+          <span>{selectedLabel}</span>
+        </span>
+        <span
+          class="cthulhuUiSimpleSelectorButtonMoreOptions"
+          data-testid={moreOptionsTestId}
+          title="More Options"
+          aria-hidden="true"
+        >
+          <DropdownChevron size={20} />
+        </span>
       </button>
-
-      <IconButton
-        icon={DropdownChevron}
-        label={moreOptionsLabel}
-        title="More Options"
-        ariaHaspopup={dropdown.ariaHaspopup}
-        ariaExpanded={dropdown.ariaExpanded}
-        {disabled}
-        onclick={dropdown.toggle}
-        testId={moreOptionsTestId}
-        class="cthulhuUiSimpleSelectorButtonMoreOptions"
-      />
+      <span class="cthulhuUiSimpleSelectorButtonWidthSizer" aria-hidden="true">
+        {#each [...items, selectedItem] as sizingItem, index (`${sizingItem.id}-${index}`)}
+          {@const SizingIcon = sizingItem.icon}
+          <span class="cthulhuUiSimpleSelectorButtonWidthSizerItem">
+            {#if showIcon}
+              <SizingIcon size={16} />
+            {/if}
+            <span>{sizingItem.selectedLabel ?? sizingItem.label}</span>
+          </span>
+        {/each}
+      </span>
     </span>
   {/snippet}
 </DropdownPopupMoreOptions>
@@ -113,7 +115,7 @@
     border: 1px solid var(--cthulhu-ui-simple-selector-border);
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
-    display: inline-flex;
+    display: inline-grid;
     height: 36px;
     transition:
       background-color var(--ui-animation-duration-standard) ease,
@@ -162,38 +164,65 @@
     color: var(--cthulhu-ui-simple-selector-text);
     cursor: pointer;
     display: inline-flex;
-    flex: 0 0 var(--cthulhu-ui-simple-selector-value-width);
     font-family: inherit;
     font-size: 14px;
     font-weight: 500;
-    gap: 6px;
+    grid-area: 1 / 1;
     height: 34px;
-    justify-content: center;
-    padding: 0 12px;
+    padding: 0;
     white-space: nowrap;
-    width: var(--cthulhu-ui-simple-selector-value-width);
+    width: 100%;
   }
 
   .cthulhuUiSimpleSelectorButtonValue:focus-visible {
     outline: none;
   }
 
-  .cthulhuUiSimpleSelectorButtonValue :global(svg) {
+  .cthulhuUiSimpleSelectorButtonValueContent {
+    align-items: center;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: 1 1 auto;
+    gap: 6px;
+    height: 34px;
+    justify-content: center;
+    min-width: 0;
+    padding-left: 8px;
+  }
+
+  .cthulhuUiSimpleSelectorButtonWidthSizerItem {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .cthulhuUiSimpleSelectorButtonWidthSizer {
+    display: grid;
+    grid-area: 1 / 1;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .cthulhuUiSimpleSelectorButtonWidthSizerItem {
+    grid-area: 1 / 1;
+    padding-left: 8px;
+    padding-right: 32px;
+    width: max-content;
+  }
+
+  .cthulhuUiSimpleSelectorButtonValueContent :global(svg),
+  .cthulhuUiSimpleSelectorButtonWidthSizerItem :global(svg) {
     flex: 0 0 auto;
   }
 
-  :global(.cthulhuUiSimpleSelectorButtonMoreOptions.cthulhuUiIconButton) {
-    background: transparent;
-    border: 0;
-    border-bottom-left-radius: 0;
-    border-top-left-radius: 0;
+  .cthulhuUiSimpleSelectorButtonMoreOptions {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: inline-flex;
+    flex: 0 0 auto;
     height: 34px;
-    width: 23px;
-  }
-
-  :global(.cthulhuUiSimpleSelectorButtonMoreOptions.cthulhuUiIconButton:hover),
-  :global(.cthulhuUiSimpleSelectorButtonMoreOptions.cthulhuUiIconButton:focus-visible) {
-    background: transparent;
-    outline: none;
+    justify-content: center;
+    margin-left: auto;
+    padding: 0 6px;
   }
 </style>
