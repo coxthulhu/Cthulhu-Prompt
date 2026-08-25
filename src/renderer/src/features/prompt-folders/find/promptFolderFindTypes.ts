@@ -25,9 +25,12 @@ export type PromptFolderFindAnchor = {
 }
 
 export type PromptFolderFindFocusRequest = {
-  match: PromptFolderFindMatch
-  query: string
-  selectMatch: boolean
+  entityId: string
+  sectionKey: string
+  selection: {
+    startOffset: number
+    endOffset: number
+  } | null
 }
 
 export type PromptFolderFindRevealRequest = {
@@ -53,7 +56,12 @@ export type PromptFolderFindState = {
   shouldSelectCurrentMatch: boolean
   focusRequests: ConsumableRequestCoordinator<PromptFolderFindFocusRequest>
   reportSelection: (anchor: PromptFolderFindAnchor) => void
-  reportSectionTextChange: (entityId: string, sectionKey: string, text: string) => void
+  reportSectionTextChange: (
+    entityId: string,
+    sectionKey: string,
+    text: string,
+    selection?: { startOffset: number; endOffset: number } | null
+  ) => void
   registerRow: (handle: PromptFolderFindRowHandle) => () => void
 }
 

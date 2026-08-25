@@ -27,9 +27,11 @@
   const isInputEmpty = $derived(matchText.length === 0)
   const hasNoResults = $derived(matchText.length > 0 && totalMatches === 0)
   const isNavigationDisabled = $derived(matchText.length === 0 || totalMatches === 0)
-  const matchesLabel = $derived.by(() =>
-    totalMatches === 0 ? 'No results' : `${currentMatchIndex} of ${totalMatches}`
-  )
+  const matchesLabel = $derived.by(() => {
+    if (totalMatches === 0) return 'No results'
+    const matchPosition = currentMatchIndex <= 0 ? '?' : currentMatchIndex
+    return `${matchPosition} of ${totalMatches}`
+  })
 
   const handleInputKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter') {

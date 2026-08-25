@@ -27,7 +27,14 @@
     rowId: string
     sizingConfig: PromptEditorSizingConfig
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
+    onChange?: (
+      value: string,
+      meta: {
+        didResize: boolean
+        heightPx: number
+        selection: { startOffset: number; endOffset: number } | null
+      }
+    ) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findSectionKey: string
@@ -132,8 +139,13 @@
     }
   }
 
-  const emitChange = (value: string, didResize: boolean, heightPx: number) => {
-    onChange?.(value, { didResize, heightPx })
+  const emitChange = (
+    value: string,
+    didResize: boolean,
+    heightPx: number,
+    selection: { startOffset: number; endOffset: number } | null = null
+  ) => {
+    onChange?.(value, { didResize, heightPx, selection })
   }
 
   const serializeEditorViewState = (
@@ -295,7 +307,10 @@
       scrollCursorIntoBand(editor.getPosition())
     }
 
-    emitChange(nextValue, didResize, monacoHeightPx)
+    const selection = editor.hasTextFocus()
+      ? reportSelectionAnchor(editor, editor.getSelection())
+      : null
+    emitChange(nextValue, didResize, monacoHeightPx, selection)
   }
 
   // Keep the virtual window centered on the primary cursor after Monaco reveals it.
@@ -335,6 +350,21 @@
     pendingCursorPosition = null
   }
 
+  const reportSelectionAnchor = (
+    targetEditor: monaco.editor.IStandaloneCodeEditor,
+    selection: monaco.Selection | null
+  ): { startOffset: number; endOffset: number } | null => {
+    if (!onSelectionChange || !selection) return null
+    const model = targetEditor.getModel()
+    if (!model) return null
+    const offsets = {
+      startOffset: model.getOffsetAt(selection.getStartPosition()),
+      endOffset: model.getOffsetAt(selection.getEndPosition())
+    }
+    onSelectionChange(offsets.startOffset, offsets.endOffset)
+    return offsets
+  }
+
   // Mirror Monaco find anchor updates from explicit/undo/redo selection changes.
   const reportSelectionAnchorFromSelectionChange = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
@@ -349,12 +379,7 @@
       return
     }
 
-    const model = targetEditor.getModel()
-    const selection = event.selection
-    if (!model) return
-    const startOffset = model.getOffsetAt(selection.getStartPosition())
-    const endOffset = model.getOffsetAt(selection.getEndPosition())
-    onSelectionChange(startOffset, endOffset)
+    reportSelectionAnchor(targetEditor, event.selection)
   }
 
   /** Moves focus backward when Shift+Tab is pressed with one collapsed cursor at the document start. */
@@ -444,7 +469,10 @@
 
       const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
       const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
-      const focusDisposable = nextEditor.onDidFocusEditorWidget(() => focusEditor(nextEditor))
+      const focusDisposable = nextEditor.onDidFocusEditorWidget(() => {
+        focusEditor(nextEditor)
+        reportSelectionAnchor(nextEditor, nextEditor.getSelection())
+      })
       const cursorDisposable = nextEditor.onDidChangeCursorPosition(handleCursorChange)
       const selectionDisposable = nextEditor.onDidChangeCursorSelection((event) => {
         reportSelectionAnchorFromSelectionChange(nextEditor, event)

@@ -144,6 +144,7 @@
   const handleTitleFocus = (event: FocusEvent) => {
     const input = event.currentTarget as HTMLInputElement
     input.focus({ preventScroll: true })
+    handleSelectionChange(event)
   }
 
   const handleSelectionChange = (event: Event) => {

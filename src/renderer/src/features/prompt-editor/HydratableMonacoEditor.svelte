@@ -30,7 +30,14 @@
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onImmediateHydrationRequest?: (request: (() => Promise<void>) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
-    onChange?: (value: string, meta: { didResize: boolean; heightPx: number }) => void
+    onChange?: (
+      value: string,
+      meta: {
+        didResize: boolean
+        heightPx: number
+        selection: { startOffset: number; endOffset: number } | null
+      }
+    ) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findSectionKey: string

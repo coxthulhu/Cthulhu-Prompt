@@ -25,7 +25,6 @@
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
-  import { findMatchRange } from '../prompt-folders/find/promptFolderFindText'
   import type {
     PromptFolderFindRequest,
     PromptFolderFindRowHandle
@@ -293,7 +292,14 @@
 
   const handleTitleChange = (title: string) => {
     promptData.setTitle(title)
-    findContext?.reportSectionTextChange(promptId, PROMPT_FOLDER_FIND_TITLE_SECTION_KEY, title)
+    const startOffset = titleInputRef?.selectionStart ?? null
+    const endOffset = titleInputRef?.selectionEnd ?? null
+    findContext?.reportSectionTextChange(
+      promptId,
+      PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
+      title,
+      startOffset == null || endOffset == null ? null : { startOffset, endOffset }
+    )
   }
 
   const handleEditorLifecycle = (
@@ -445,29 +451,36 @@
     if (!findContext) return
     const request = findContext.focusRequests.pending
     if (!request) return
-    const focusMatch = request.payload.match
-    if (focusMatch.entityId !== promptId) return
+    const focusTarget = request.payload
+    if (focusTarget.entityId !== promptId) return
 
-    if (focusMatch.sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY) {
+    if (focusTarget.sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY) {
       const input = titleInputRef
       if (!input) return
-      findContext.focusRequests.consume(request, ({ query, selectMatch }) => {
+      findContext.focusRequests.consume(request, ({ selection }) => {
         input.focus({ preventScroll: true })
-        if (!selectMatch || query.length === 0) return
-        const matchRange = findMatchRange(
-          promptData.draft.title,
-          query,
-          focusMatch.sectionMatchIndex
-        )
-        if (!matchRange) return
-        input.setSelectionRange(matchRange.start, matchRange.end)
+        if (!selection) return
+        input.setSelectionRange(selection.startOffset, selection.endOffset)
       })
       return
     }
 
+    if (focusTarget.sectionKey !== PROMPT_FOLDER_FIND_BODY_SECTION_KEY) return
     if (!editorInstance) return
-    findContext.focusRequests.consume(request, () => {
-      editorInstance!.focus()
+    findContext.focusRequests.consume(request, ({ selection }) => {
+      const editor = editorInstance!
+      const model = editor.getModel()
+      if (selection && model) {
+        const start = model.getPositionAt(selection.startOffset)
+        const end = model.getPositionAt(selection.endOffset)
+        editor.setSelection({
+          startLineNumber: start.lineNumber,
+          startColumn: start.column,
+          endLineNumber: end.lineNumber,
+          endColumn: end.column
+        })
+      }
+      editor.focus()
     })
   })
 
@@ -655,7 +668,8 @@
             findContext?.reportSectionTextChange(
               promptId,
               PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-              text
+              text,
+              meta.selection
             )
           }}
         />

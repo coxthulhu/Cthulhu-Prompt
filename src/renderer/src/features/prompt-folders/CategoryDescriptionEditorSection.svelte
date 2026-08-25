@@ -319,11 +319,28 @@
     if (!findContext) return
     const request = findContext.focusRequests.pending
     if (!request) return
-    const focusMatch = request.payload.match
-    if (focusMatch.entityId !== categoryFindEntityId) return
+    const focusTarget = request.payload
+    if (
+      focusTarget.entityId !== categoryFindEntityId ||
+      focusTarget.sectionKey !== section.findSectionKey
+    ) {
+      return
+    }
     if (!sectionElement || !editor) return
-    findContext.focusRequests.consume(request, () => {
-      editor!.focus()
+    findContext.focusRequests.consume(request, ({ selection }) => {
+      const targetEditor = editor!
+      const model = targetEditor.getModel()
+      if (selection && model) {
+        const start = model.getPositionAt(selection.startOffset)
+        const end = model.getPositionAt(selection.endOffset)
+        targetEditor.setSelection({
+          startLineNumber: start.lineNumber,
+          startColumn: start.column,
+          endLineNumber: end.lineNumber,
+          endColumn: end.column
+        })
+      }
+      targetEditor.focus()
     })
   })
 </script>
@@ -385,7 +402,8 @@
             findContext?.reportSectionTextChange(
               categoryFindEntityId,
               section.findSectionKey,
-              text
+              text,
+              meta.selection
             )
           }}
         />

@@ -31,6 +31,7 @@ const LOOP_MATCH_PROMPT_IDS = Array.from(
 const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 const LIVE_COUNT_QUERY = 'cthulhu-live-find-count-marker'
+const LIVE_POSITION_QUERY = 'cthulhu-live-find-position-marker'
 
 const getMonacoSelectedText = async (
   mainWindow: any,
@@ -377,12 +378,91 @@ describe('Prompt folder find dialog', () => {
 
     await focusMonacoEditor(mainWindow, editorSelector)
     await mainWindow.keyboard.type(LIVE_COUNT_QUERY)
-    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 2')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 2')
 
     await title.click()
     await title.press('End')
     await title.pressSequentially(` ${LIVE_COUNT_QUERY}`)
-    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+  })
+
+  test('moves the current position to a matching word typed in a later prompt', async ({
+    testSetup
+  }) => {
+    const workspacePath = '/ws/find-live-position'
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Live Position',
+          displayName: 'Live Position',
+          promptFolderId: 'find-live-position-folder',
+          prompts: [
+            {
+              id: 'find-live-position-first',
+              title: 'First Prompt',
+              promptText: LIVE_POSITION_QUERY
+            },
+            {
+              id: 'find-live-position-second',
+              title: 'Second Prompt',
+              promptText: 'Later prompt: '
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Live Position')
+    const firstEditorSelector = promptEditorSelector('find-live-position-first')
+    const secondEditorSelector = promptEditorSelector('find-live-position-second')
+    await waitForMonacoEditor(mainWindow, firstEditorSelector)
+    await waitForMonacoEditor(mainWindow, secondEditorSelector)
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await findInput.fill(LIVE_POSITION_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+
+    await focusMonacoEditor(mainWindow, secondEditorSelector)
+    await mainWindow.keyboard.press('End')
+    await mainWindow.keyboard.type(LIVE_POSITION_QUERY)
+
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 2')
+    await expect(findInput).not.toBeFocused()
+    const secondCursorBeforeClose = await getMonacoSelectionState(
+      mainWindow,
+      secondEditorSelector
+    )
+    expect(secondCursorBeforeClose).toMatchObject({ selectedText: '' })
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, secondEditorSelector))
+      .toBe(true)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, secondEditorSelector))
+      .toEqual(secondCursorBeforeClose)
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await focusMonacoEditor(mainWindow, firstEditorSelector)
+    const firstCursorBeforeClose = await getMonacoSelectionState(
+      mainWindow,
+      firstEditorSelector
+    )
+    await mainWindow.locator(FIND_CLOSE).click()
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, firstEditorSelector)).toBe(true)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, firstEditorSelector))
+      .toEqual(firstCursorBeforeClose)
   })
 
   test('keeps a newly created prompt focused while find is open', async ({ testSetup }) => {
@@ -941,6 +1021,66 @@ describe('Prompt folder find dialog', () => {
       'data-row-state',
       'active'
     )
+  })
+
+  test('restores an unmatched Monaco cursor when closing find', async ({ testSetup }) => {
+    const workspacePath = '/ws/find-empty-query-focus-return'
+    await testSetup.setupFilesystem(
+      createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Focus Return',
+          displayName: 'Focus Return',
+          promptFolderId: 'find-focus-return-folder',
+          prompts: [
+            {
+              id: 'find-focus-return-prompt',
+              title: 'Focus Return Prompt',
+              promptText: 'alpha\n'
+            }
+          ]
+        }
+      ])
+    )
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Focus Return')
+    const editorSelector = promptEditorSelector('find-focus-return-prompt')
+    await waitForMonacoEditor(mainWindow, editorSelector)
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+End')
+
+    const cursorBeforeFind = await getMonacoSelectionState(mainWindow, editorSelector)
+    expect(cursorBeforeFind).toMatchObject({
+      selectedText: '',
+      startLineNumber: 2,
+      startColumn: 1
+    })
+
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await expect(findInput).toHaveValue('')
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector))
+      .toEqual(cursorBeforeFind)
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+    await mainWindow.locator(FIND_CLOSE).click()
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector))
+      .toEqual(cursorBeforeFind)
   })
 
   test('restores focus to the last navigated match when closing with no results', async ({

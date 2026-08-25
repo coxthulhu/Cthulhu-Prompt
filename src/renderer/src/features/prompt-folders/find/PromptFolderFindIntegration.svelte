@@ -56,10 +56,9 @@
   const findInputFocusRequests = createConsumableRequestCoordinator<void>()
   const focusRequests = createConsumableRequestCoordinator<PromptFolderFindFocusRequest>()
   const revealRequests = createConsumableRequestCoordinator<PromptFolderFindRevealRequest>()
-  let lastNavigatedMatch = $state<PromptFolderFindMatch | null>(null)
-  let lastNavigatedQuery = $state('')
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
+  let returnFocusTarget = $state<PromptFolderFindFocusRequest | null>(null)
   let shouldSelectCurrentMatch = $state(true)
   let preserveSelectionOnNextSearch = false
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
@@ -95,19 +94,13 @@
     findInputFocusRequests.request(undefined)
   }
 
-  // Close the widget and return focus to the current match.
+  // Close the widget and return focus to the last editor target independently of match state.
   const closeFindDialog = () => {
     isFindOpen = false
     findInputFocusRequests.clear()
     revealRequests.clear()
-    const matchToFocus = currentMatch ?? lastNavigatedMatch
-    if (matchToFocus) {
-      const focusQuery = currentMatch ? query : lastNavigatedQuery
-      focusRequests.request({
-        match: matchToFocus,
-        query: focusQuery,
-        selectMatch: currentMatch ? shouldSelectCurrentMatch : true
-      })
+    if (returnFocusTarget) {
+      focusRequests.request(returnFocusTarget)
     }
   }
 
@@ -190,6 +183,11 @@
     const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
     const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
     lastSelectionAnchor = { ...anchor, startOffset, endOffset }
+    returnFocusTarget = {
+      entityId: anchor.entityId,
+      sectionKey: anchor.sectionKey,
+      selection: null
+    }
   }
 
   const getEffectiveSelectionAnchor = (
@@ -263,8 +261,18 @@
     shouldSelectCurrentMatch = selectMatch
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
     if (!selectMatch) return
-    lastNavigatedMatch = match
-    lastNavigatedQuery = query
+    const matchRange = findMatchRange(
+      getSectionText(match.entityId, match.sectionKey),
+      query,
+      match.sectionMatchIndex
+    )
+    returnFocusTarget = {
+      entityId: match.entityId,
+      sectionKey: match.sectionKey,
+      selection: matchRange
+        ? { startOffset: matchRange.start, endOffset: matchRange.end }
+        : null
+    }
     requestMatchReveal(match)
   }
 
@@ -504,8 +512,43 @@
     })
   })
 
-  // Recount one changed section through the same text-search path used by the folder scan.
-  const reportSectionTextChange = (entityId: string, sectionKey: string, text: string) => {
+  const getMatchIndexAtSelection = (
+    groups: PromptFolderFindCounts[],
+    entityId: string,
+    sectionKey: string,
+    ranges: Array<{ startOffset: number; endOffset: number }>,
+    selection: { startOffset: number; endOffset: number }
+  ) => {
+    let precedingMatches = 0
+    for (const group of groups) {
+      for (const section of group.sectionCounts) {
+        if (group.entityId === entityId && section.sectionKey === sectionKey) {
+          const selectionStart = Math.min(selection.startOffset, selection.endOffset)
+          const selectionEnd = Math.max(selection.startOffset, selection.endOffset)
+          const intersectingIndex = ranges.findIndex((range) =>
+            selectionStart === selectionEnd
+              ? range.startOffset <= selectionStart && range.endOffset >= selectionStart
+              : range.startOffset < selectionEnd && range.endOffset > selectionStart
+          )
+          const localPosition =
+            intersectingIndex >= 0
+              ? intersectingIndex + 1
+              : ranges.filter((range) => range.startOffset < selectionStart).length
+          return precedingMatches + localPosition
+        }
+        precedingMatches += section.count
+      }
+    }
+    return null
+  }
+
+  // Recount one changed section and anchor the current position to the post-edit cursor.
+  const reportSectionTextChange = (
+    entityId: string,
+    sectionKey: string,
+    text: string,
+    selection: { startOffset: number; endOffset: number } | null = null
+  ) => {
     if (!isFindOpen || query.length === 0) return
     const groupIndex = matchCountsByEntity.findIndex((group) => group.entityId === entityId)
     if (groupIndex < 0) return
@@ -516,17 +559,31 @@
     )
     if (sectionIndex < 0) return
     const section = group.sectionCounts[sectionIndex]
-    /** Match count produced from the changed text rather than the hydrated Monaco model. */
-    const count = searchModel.countMatchesInText(text, query)
-    if (section.count === count) return
+    const ranges = searchModel.findMatchesInText(text, query)
+    const count = ranges.length
+    let nextGroups = matchCountsByEntity
+    if (section.count !== count) {
+      const nextSectionCounts = group.sectionCounts.slice()
+      nextSectionCounts[sectionIndex] = { ...section, count }
+      nextGroups = matchCountsByEntity.slice()
+      nextGroups[groupIndex] = { ...group, sectionCounts: nextSectionCounts }
+      matchCountsByEntity = nextGroups
+      totalMatches += count - section.count
+    }
 
-    const nextSectionCounts = group.sectionCounts.slice()
-    nextSectionCounts[sectionIndex] = { ...section, count }
-    const nextGroups = matchCountsByEntity.slice()
-    nextGroups[groupIndex] = { ...group, sectionCounts: nextSectionCounts }
-    matchCountsByEntity = nextGroups
+    if (selection) {
+      recordSelectionAnchor({ entityId, sectionKey, ...selection })
+      currentMatchIndex = getMatchIndexAtSelection(
+        nextGroups,
+        entityId,
+        sectionKey,
+        ranges,
+        selection
+      ) ?? currentMatchIndex
+      shouldSelectCurrentMatch = false
+      return
+    }
 
-    totalMatches = totalMatches + (count - section.count)
     if (currentMatchIndex > totalMatches) {
       currentMatchIndex = totalMatches
     }
