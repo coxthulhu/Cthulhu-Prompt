@@ -288,6 +288,10 @@
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     )
   })
+  /** Empty Active trees still render their category headers as navigable content. */
+  const isSelectedStatusTreeEmpty = $derived(
+    selectedStatusPromptCount === 0 && (isCompletedMode || categoryTreeIds.length === 0)
+  )
 
   const findContentOwnerPath = (
     rootFolder: PromptFolder,
@@ -794,7 +798,7 @@
   {:else if folderListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Folder to Get Started</div>
   {:else if folderListState === 'ready'}
-    {#if screenRootFolder?.kind === 'prompt' && selectedStatusPromptCount === 0}
+    {#if screenRootFolder?.kind === 'prompt' && isSelectedStatusTreeEmpty}
       <button
         type="button"
         class="sidebarPromptTreeEmptyStatus"

@@ -23,6 +23,8 @@ export const computeAnchoredScrollTop = <TRow extends { kind: string }>(
   anchorOffsetPx: number
 ): number => {
   if (didRowsOnlyReorder(previousRows, nextRows)) return scrollTop
+  // A top-anchored viewport stays pinned to the collection start when rows are inserted above it.
+  if (scrollTop === 0 && anchorOffsetPx === 0) return 0
 
   const anchorPositionPx = scrollTop + anchorOffsetPx
   const anchorRow = previousRows[findIndexAtOffset(previousRows, anchorPositionPx)]

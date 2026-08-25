@@ -792,6 +792,18 @@ describe('Prompt categories', () => {
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptFolders('Empty')
 
+    const activeSidebarSection = mainWindow.locator(
+      '[data-testid="sidebar-prompt-status-accordion-content-active"]'
+    )
+    await expect(
+      activeSidebarSection.locator('[data-testid="prompt-tree-active-empty-status"]')
+    ).toHaveCount(0)
+    await expect(
+      activeSidebarSection.locator(
+        '[data-testid="prompt-tree-category-toggle-button-Existing"]'
+      )
+    ).toBeVisible()
+
     await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
     const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Create Category"]')
     const categoryInput = categoryDialog.locator('[data-testid="create-category-name-input"]')
