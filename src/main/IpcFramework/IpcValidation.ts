@@ -27,7 +27,7 @@ import type {
   MarkdownContentUiStateRevisionPayload
 } from '@shared/MarkdownContentUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
-import type { RevisionPayloadEntity } from '@shared/Revision'
+import type { RevisionPayloadEntity, RevisionPayloadReference } from '@shared/Revision'
 import type {
   CreateMarkdownContentPayload,
   DeleteMarkdownContentPayload,
@@ -161,6 +161,11 @@ const parseRevisionPayloadEntity = <TData>(
     data: dataParser
   })
 }
+
+const parseRevisionPayloadReference = parseObject<RevisionPayloadReference>({
+  id: parseString,
+  expectedRevision: parseNumber
+})
 
 const parseWireRequestWithPayload = <TPayload>(
   payloadParser: Parser<TPayload>
@@ -658,7 +663,7 @@ const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePro
 const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
   sourcePromptFolder: parsePromptFolderRevisionPayloadEntity,
   rootPromptFolder: parsePromptFolderRevisionPayloadEntity,
-  prompt: parsePromptRevisionPayloadEntity,
+  prompt: parseRevisionPayloadReference,
   status: parsePromptStatus,
   categoryOrderPlacement: parseObject({
     categoryId: parseNullableString,

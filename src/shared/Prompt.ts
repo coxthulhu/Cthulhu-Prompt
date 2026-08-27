@@ -1,5 +1,9 @@
 import type { PromptFolder } from './PromptFolder'
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type {
+  RevisionEnvelope,
+  RevisionPayloadEntity,
+  RevisionPayloadReference
+} from './Revision'
 import type {
   CreateMarkdownContentPayload,
   CreateMarkdownContentResponsePayload,
@@ -128,7 +132,8 @@ export type SetPromptStatusPayload = {
   sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
   // Root folder that owns completed prompts and restored active prompts.
   rootPromptFolder: RevisionPayloadEntity<PromptFolder>
-  prompt: RevisionPayloadEntity<PromptPersisted>
+  // Prompt content is already persisted by the matching autosave flushed before this mutation.
+  prompt: RevisionPayloadReference
   status: PromptStatus
   // Category-order placement retained for ordinary status changes or applied during restoration.
   categoryOrderPlacement: PromptCategoryOrderPlacement

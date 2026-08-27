@@ -164,7 +164,7 @@ const setupPromptStatusMutationHandler = (): void => {
             ? validatedRequest.payload.categoryOrderPlacement
             : { categoryId: null, previousEntryId: null }
           const now = getCurrentIsoSecondTimestamp()
-          const { completedAt: _completedAt, ...activePromptBase } = requestedPrompt.data
+          const { completedAt: _completedAt, ...activePromptBase } = prompt.committed
           /** Prompt with its requested status fields before optional Active-tree placement. */
           const statusPrompt: PromptPersisted =
             targetStatus === PromptStatus.Completed

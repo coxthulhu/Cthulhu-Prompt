@@ -303,7 +303,6 @@ export const setPromptStatus = async (
       }
     },
     persistMutations: async ({ entities, transaction }) => {
-      const promptEntity = entities.prompt({ id: promptId, data: createPromptFull(nextPrompt) })
       const result = await ipcInvokeWithPayload<
         IpcMutationPayloadResult<SetPromptStatusResponsePayload>,
         SetPromptStatusPayload
@@ -313,7 +312,10 @@ export const setPromptStatus = async (
           id: rootPromptFolderId,
           data: rootPromptFolder
         }),
-        prompt: { ...promptEntity, data: nextPrompt },
+        prompt: {
+          id: promptId,
+          expectedRevision: promptCollection.utils.getAuthoritativeRevision(promptId)
+        },
         status: targetStatus,
         categoryOrderPlacement
       })
