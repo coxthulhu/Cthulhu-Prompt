@@ -1,4 +1,3 @@
-import { flushPromptFolderDraftAutosaves } from './PromptFolderDraftMutations.svelte.ts'
 import { flushPromptDraftAutosaves } from './PromptDraftMutations.svelte.ts'
 import { flushPromptTemplateDraftAutosaves } from './PromptTemplateDraftMutations.svelte.ts'
 import { flushMarkdownContentUiStateAutosaves } from './MarkdownContentUiStateAutosave.svelte.ts'
@@ -9,7 +8,6 @@ import { flushWorkspacePersistenceAutosaves } from './WorkspacePersistenceAutosa
 type AutosaveFlushTask = () => Promise<void>
 
 const workspaceScopedAutosaveFlushTasks: AutosaveFlushTask[] = [
-  flushPromptFolderDraftAutosaves,
   flushPromptDraftAutosaves,
   flushPromptTemplateDraftAutosaves,
   flushMarkdownContentUiStateAutosaves,

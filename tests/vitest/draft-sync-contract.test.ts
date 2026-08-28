@@ -1,9 +1,7 @@
 import { PromptStatus, type PromptFull, type PromptSummaryData } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
 import type { SystemSettings } from '@shared/SystemSettings'
 import { afterEach, describe, expect, it } from 'vitest'
 import { promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
-import { promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
 import {
   SYSTEM_SETTINGS_FORM_DATA_ID,
   systemSettingsFormDataCollection
@@ -12,23 +10,12 @@ import {
   upsertPromptDraft,
   upsertPromptSummaryDrafts
 } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
-import {
-  setPromptFolderDraftSettingsField,
-  upsertPromptFolderDraft
-} from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
 import { upsertSystemSettingsFormData } from '@renderer/data/UiState/SystemSettingsFormDataMutations.svelte.ts'
 
 const clearPromptDraftCollection = (): void => {
   const draftIds = Array.from(promptDraftCollection.keys(), (draftId) => String(draftId))
   if (draftIds.length > 0) {
     promptDraftCollection.delete(draftIds)
-  }
-}
-
-const clearPromptFolderDraftCollection = (): void => {
-  const draftIds = Array.from(promptFolderDraftCollection.keys(), (draftId) => String(draftId))
-  if (draftIds.length > 0) {
-    promptFolderDraftCollection.delete(draftIds)
   }
 }
 
@@ -40,7 +27,6 @@ const clearSystemSettingsFormDataCollection = (): void => {
 
 afterEach(() => {
   clearPromptDraftCollection()
-  clearPromptFolderDraftCollection()
   clearSystemSettingsFormDataCollection()
 })
 
@@ -62,23 +48,6 @@ const createPromptSummary = (overrides: Partial<PromptSummaryData> = {}): Prompt
   fallbackTitle: '',
   modifiedAt: '2026-01-01T00:00:00.000Z',
   status: PromptStatus.Todo,
-  ...overrides
-})
-
-const createPromptFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
-  id: 'folder-1',
-  kind: 'prompt',
-  folderName: 'folder',
-  displayName: 'Folder',
-  entries: [
-    { kind: 'prompt', id: 'prompt-1' },
-    { kind: 'prompt', id: 'prompt-2' }
-  ],
-  completedPromptIds: [],
-  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
-  settings: {
-    folderDescription: 'Original folder description'
-  },
   ...overrides
 })
 
@@ -136,38 +105,6 @@ describe('draft sync contract', () => {
     const draftRecord = promptDraftCollection.get(summaryPrompt.id)!
     expect(draftRecord).toMatchObject({ id: summaryPrompt.id, isEdited: false })
     expect(draftRecord).not.toHaveProperty('title')
-  })
-
-  it('upserts prompt-folder drafts', () => {
-    const promptFolder = createPromptFolder()
-    const updatedPromptFolder = createPromptFolder({
-      settings: {
-        folderDescription: 'Updated folder description'
-      }
-    })
-
-    upsertPromptFolderDraft(promptFolder)
-    upsertPromptFolderDraft(updatedPromptFolder)
-
-    const draftRecord = promptFolderDraftCollection.get(promptFolder.id)!
-    expect(draftRecord.settings.folderDescription).toBe('Updated folder description')
-    expect(draftRecord.hasLoadedInitialData).toBe(false)
-  })
-
-  it('ignores prompt-folder description updates when the draft is missing', () => {
-    expect(() =>
-      setPromptFolderDraftSettingsField(
-        'missing-folder-id',
-        'folderDescription',
-        'Updated folder description',
-        {
-          measuredHeightPx: 144,
-          widthPx: 700,
-          devicePixelRatio: 1
-        }
-      )
-    ).not.toThrow()
-    expect(promptFolderDraftCollection.get('missing-folder-id')).toBeUndefined()
   })
 
   it('upserts the system-settings form data', () => {

@@ -32,7 +32,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   for (const promptFolder of result.promptFolders) {
     promptFolderCollection.utils.upsertAuthoritative(promptFolder)
   }
-  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
+  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.id))
   for (const adapter of markdownContentQueryAdapters) adapter.applyWorkspaceResult(result)
 
   if (!previousGraph) {

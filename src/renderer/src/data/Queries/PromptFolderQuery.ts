@@ -33,7 +33,7 @@ export const loadPromptFolderInitial = async (
   for (const adapter of markdownContentQueryAdapters) adapter.applyFolderResult(result)
   categoryCollection.utils.upsertManyAuthoritative(result.categories)
   promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
-  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
+  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.id))
   markdownContentUiStateCollection.utils.upsertManyAuthoritative(result.markdownContentUiStates)
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
 

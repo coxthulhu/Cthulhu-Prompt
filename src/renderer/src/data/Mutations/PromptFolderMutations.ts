@@ -1,5 +1,4 @@
 import {
-  copyPromptFolderSettings,
   createEmptyPromptFolderSettings,
   createRootCategoryOrder,
   type CreatePromptFolderPayload,
@@ -7,22 +6,16 @@ import {
   type PromptFolder,
   type PromptFolderKind,
   type PromptFolderRevisionResponsePayload,
-  type RenamePromptFolderPayload,
-  type UpdatePromptFolderSettingsPayload
+  type RenamePromptFolderPayload
 } from '@shared/PromptFolder'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { compactGuid } from '@shared/compactGuid'
 import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { folderEntryRef, resolveEntryInsertIndex } from '@shared/OrderContainer'
-import {
-  mutatePacedRevisionUpdateTransaction,
-  runRevisionMutation
-} from '../IpcFramework/RevisionCollections'
+import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 
 const readLatestPromptFolderFromTransaction = (
@@ -35,54 +28,6 @@ const readLatestPromptFolderFromTransaction = (
     promptFolderId,
     () => promptFolderCollection.get(promptFolderId)!
   )
-}
-
-type PacedPromptFolderMutationOptions = Parameters<
-  typeof mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>
->[0]
-
-type PacedPromptFolderSettingsAutosaveUpdateOptions = Pick<
-  PacedPromptFolderMutationOptions,
-  'debounceMs' | 'mutateOptimistically'
-> & {
-  promptFolderId: string
-}
-
-export const mutatePacedPromptFolderSettingsAutosaveUpdate = ({
-  promptFolderId,
-  debounceMs,
-  mutateOptimistically
-}: PacedPromptFolderSettingsAutosaveUpdateOptions): void => {
-  mutatePacedRevisionUpdateTransaction<PromptFolderRevisionResponsePayload>({
-    collectionId: promptFolderCollection.id,
-    elementId: promptFolderId,
-    debounceMs,
-    mutateOptimistically,
-    persistMutations: async ({ transaction }) => {
-      const latestPromptFolder = readLatestPromptFolderFromTransaction(transaction, promptFolderId)
-
-      const mutationResult = await ipcInvokeWithPayload<
-        IpcMutationPayloadResult<PromptFolderRevisionResponsePayload>,
-        UpdatePromptFolderSettingsPayload
-      >('update-prompt-folder-settings', {
-        promptFolder: {
-          id: promptFolderId,
-          expectedRevision: promptFolderCollection.utils.getAuthoritativeRevision(promptFolderId),
-          data: copyPromptFolderSettings(latestPromptFolder.settings)
-        }
-      })
-
-      if (mutationResult.success) {
-        promptFolderDraftCollection.utils.acceptMutations(transaction)
-      }
-
-      return mutationResult
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-    },
-    conflictMessage: 'Prompt folder settings update conflict'
-  })
 }
 
 export const createPromptFolder = async (
@@ -114,7 +59,6 @@ export const createPromptFolder = async (
       collections.promptFolder.insert(optimisticPromptFolder)
       collections.promptFolderDraft.insert({
         id: optimisticPromptFolderId,
-        settings: createEmptyPromptFolderSettings(),
         hasLoadedInitialData: false
       })
       collections.workspace.update(workspaceId, (draft) => {

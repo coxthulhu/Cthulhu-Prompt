@@ -5,6 +5,7 @@ import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
 import { upsertPromptTemplateSummaryDrafts } from '@renderer/data/UiState/PromptTemplateDraftMutations.svelte.ts'
 
 const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
@@ -20,6 +21,9 @@ describe('prompt template renderer loading', () => {
       promptTemplateDraftCollection.delete('renderer-template')
     }
     promptFolderCollection.utils.deleteAuthoritative('renderer-template-folder')
+    if (promptFolderDraftCollection.has('renderer-template-folder')) {
+      promptFolderDraftCollection.delete('renderer-template-folder')
+    }
   })
 
   it('stores full workspace templates and template edit markers in the renderer', async () => {
@@ -95,6 +99,24 @@ describe('prompt template renderer loading', () => {
     expect(promptTemplateDraftCollection.get('renderer-template')).not.toHaveProperty(
       'templateText'
     )
+    expect(promptFolderDraftCollection.get('renderer-template-folder')).toMatchObject({
+      id: 'renderer-template-folder',
+      hasLoadedInitialData: false
+    })
+    expect(promptFolderDraftCollection.get('renderer-template-folder')).not.toHaveProperty(
+      'settings'
+    )
+    expect(promptFolderCollection.get('renderer-template-folder')?.settings.folderDescription).toBe(
+      'Template description'
+    )
+
+    promptFolderDraftCollection.update('renderer-template-folder', (draft) => {
+      draft.hasLoadedInitialData = true
+    })
+    await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt.json')
+    expect(promptFolderDraftCollection.get('renderer-template-folder')).toMatchObject({
+      hasLoadedInitialData: true
+    })
   })
 
   it('replaces a template summary while preserving its edited marker', async () => {
@@ -196,5 +218,9 @@ describe('prompt template renderer loading', () => {
       isEdited: true
     })
     expect(promptTemplateDraftCollection.get('renderer-template')).not.toHaveProperty('title')
+    expect(promptFolderDraftCollection.get('renderer-template-folder')).toMatchObject({
+      id: 'renderer-template-folder',
+      hasLoadedInitialData: true
+    })
   })
 })

@@ -1,117 +1,44 @@
 import {
-  copyPromptFolderSettings,
-  haveSamePromptFolderSettings,
-  type PromptFolder,
-  type PromptFolderSettingsField
-} from '@shared/PromptFolder'
-import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import {
   type PromptFolderDraftRecord,
   promptFolderDraftCollection
 } from '../Collections/PromptFolderDraftCollection'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
-import { mutatePacedPromptFolderSettingsAutosaveUpdate } from '../Mutations/PromptFolderMutations'
 import {
-  clearPromptFolderSettingsFieldRowMeasuredHeight,
   clearPromptFolderSettingsRowMeasuredHeight,
   clearPromptFolderSettingsRowMeasuredHeights,
   clearPromptFolderScrollTop,
-  clearPromptFolderScrollTops,
-  recordPromptFolderSettingsRowMeasuredHeight
+  clearPromptFolderScrollTops
 } from './PromptFolderDraftUiCache.svelte.ts'
 
-export type PromptFolderDraftState = PromptFolderDraftRecord
-export type PromptFolderSettingsDraftField = PromptFolderSettingsField
-
-const createPromptFolderDraftRecord = (promptFolder: PromptFolder): PromptFolderDraftRecord => {
+/** Creates the renderer-session load state for one prompt folder. */
+const createPromptFolderDraftRecord = (promptFolderId: string): PromptFolderDraftRecord => {
   return {
-    id: promptFolder.id,
-    settings: copyPromptFolderSettings(promptFolder.settings),
+    id: promptFolderId,
     hasLoadedInitialData: false
   }
 }
 
-type PromptFolderDraftOptimisticMutationOptions = {
-  mutatePromptFolderDraft: (draft: PromptFolderDraftRecord) => void
-  mutatePromptFolder?: (draft: PromptFolder) => void
-}
-
-const mutatePromptFolderDraftOptimistically = (
-  promptFolderId: string,
-  options: PromptFolderDraftOptimisticMutationOptions
-): void => {
-  const { mutatePromptFolderDraft, mutatePromptFolder } = options
-
-  mutatePacedPromptFolderSettingsAutosaveUpdate({
-    promptFolderId,
-    debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolderDraft.update(promptFolderId, (draftRecord) => {
-        mutatePromptFolderDraft(draftRecord)
-      })
-
-      if (mutatePromptFolder) {
-        collections.promptFolder.update(promptFolderId, mutatePromptFolder)
-      }
-    }
-  })
-}
-
-export const upsertPromptFolderDraft = (promptFolder: PromptFolder): void => {
-  upsertPromptFolderDrafts([promptFolder])
-}
-
-export const upsertPromptFolderDrafts = (promptFolders: PromptFolder[]): void => {
-  if (promptFolders.length === 0) {
+/** Adds missing prompt-folder load-state records without resetting existing state. */
+export const upsertPromptFolderDrafts = (promptFolderIds: string[]): void => {
+  if (promptFolderIds.length === 0) {
     return
   }
 
+  /** Load-state records needed for folders not seen in this renderer session. */
   const draftInserts: PromptFolderDraftRecord[] = []
-  const draftUpdatesById: Record<string, PromptFolder> = {}
-  const draftUpdateIds: string[] = []
 
-  for (const promptFolder of promptFolders) {
-    const existingRecord = promptFolderDraftCollection.get(promptFolder.id)
-
-    if (!existingRecord) {
-      clearPromptFolderSettingsRowMeasuredHeight(promptFolder.id)
-      clearPromptFolderScrollTop(promptFolder.id)
-      draftInserts.push(createPromptFolderDraftRecord(promptFolder))
-      continue
-    }
-
-    if (haveSamePromptFolderSettings(existingRecord.settings, promptFolder.settings)) {
-      continue
-    }
-
-    clearPromptFolderSettingsRowMeasuredHeight(promptFolder.id)
-
-    if (!draftUpdatesById[promptFolder.id]) {
-      draftUpdateIds.push(promptFolder.id)
-    }
-    draftUpdatesById[promptFolder.id] = promptFolder
+  for (const promptFolderId of promptFolderIds) {
+    if (promptFolderDraftCollection.has(promptFolderId)) continue
+    clearPromptFolderSettingsRowMeasuredHeight(promptFolderId)
+    clearPromptFolderScrollTop(promptFolderId)
+    draftInserts.push(createPromptFolderDraftRecord(promptFolderId))
   }
 
   if (draftInserts.length > 0) {
     promptFolderDraftCollection.insert(draftInserts)
   }
-
-  if (draftUpdateIds.length > 0) {
-    promptFolderDraftCollection.update(draftUpdateIds, (draftRecords) => {
-      for (const draftRecord of draftRecords) {
-        const nextPromptFolder = draftUpdatesById[draftRecord.id]
-        if (nextPromptFolder == null) {
-          continue
-        }
-
-        draftRecord.settings = copyPromptFolderSettings(nextPromptFolder.settings)
-      }
-    })
-  }
 }
 
+/** Updates whether one prompt folder has completed its initial screen load. */
 export const setPromptFolderDraftHasLoadedInitialData = (
   promptFolderId: string,
   hasLoadedInitialData: boolean
@@ -126,63 +53,7 @@ export const setPromptFolderDraftHasLoadedInitialData = (
   })
 }
 
-export const getPromptFolderDraftState = (
-  promptFolderId: string
-): PromptFolderDraftState | null => {
-  return promptFolderDraftCollection.get(promptFolderId) ?? null
-}
-
-export const setPromptFolderDraftSettingsField = (
-  promptFolderId: string,
-  field: PromptFolderSettingsDraftField,
-  value: string,
-  measurement: TextMeasurement
-): void => {
-  const draftRecord = getPromptFolderDraftState(promptFolderId)
-  if (!draftRecord) {
-    // Monaco can emit an initial onChange before the folder draft is hydrated.
-    recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, field, measurement, false)
-    return
-  }
-  const textChanged = draftRecord.settings[field] !== value
-  recordPromptFolderSettingsRowMeasuredHeight(promptFolderId, field, measurement, textChanged)
-
-  if (!textChanged) {
-    return
-  }
-
-  mutatePromptFolderDraftOptimistically(promptFolderId, {
-    mutatePromptFolderDraft: (draft) => {
-      draft.settings[field] = value
-    },
-    mutatePromptFolder: (draft) => {
-      draft.settings[field] = value
-    }
-  })
-}
-
-export const setPromptFolderDraftSettingsFieldPresence = (
-  promptFolderId: string,
-  field: PromptFolderSettingsDraftField,
-  isPresent: boolean
-): void => {
-  const draftRecord = getPromptFolderDraftState(promptFolderId)
-  if (!draftRecord) return
-
-  const value = isPresent ? '' : null
-  if (draftRecord.settings[field] === value) return
-
-  clearPromptFolderSettingsFieldRowMeasuredHeight(promptFolderId, field)
-  mutatePromptFolderDraftOptimistically(promptFolderId, {
-    mutatePromptFolderDraft: (draft) => {
-      draft.settings[field] = value
-    },
-    mutatePromptFolder: (draft) => {
-      draft.settings[field] = value
-    }
-  })
-}
-
+/** Removes prompt-folder load state and its session-only UI cache entries. */
 export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {
   if (promptFolderIds.length === 0) {
     return
@@ -193,17 +64,12 @@ export const deletePromptFolderDrafts = (promptFolderIds: string[]): void => {
   promptFolderDraftCollection.delete(promptFolderIds)
 }
 
+/** Removes one prompt folder's load state and session-only UI cache entries. */
 export const removePromptFolderDraft = (promptFolderId: string): void => {
   deletePromptFolderDrafts([promptFolderId])
 }
 
-export const flushPromptFolderDraftAutosaves = async (): Promise<void> => {
-  const tasks = promptFolderDraftCollection.toArray.map(async (draftRecord) => {
-    await submitPacedUpdateTransactionAndWait(promptFolderCollection.id, draftRecord.id)
-  })
-  await Promise.allSettled(tasks)
-}
-
+/** Clears all prompt-folder load state for the current workspace. */
 export const clearPromptFolderDraftStore = (): void => {
   const draftIds = Array.from(promptFolderDraftCollection.keys(), (draftId) => String(draftId))
   deletePromptFolderDrafts(draftIds)
