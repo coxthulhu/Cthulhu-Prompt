@@ -4,7 +4,7 @@ import {
   type SystemSettingsRevisionResponsePayload
 } from '@shared/SystemSettings'
 import type { Transaction } from '@tanstack/svelte-db'
-import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
+import { systemSettingsFormDataCollection } from '../Collections/SystemSettingsFormDataCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
@@ -51,7 +51,7 @@ export const mutatePacedSystemSettingsAutosaveUpdate = ({
       })
 
       if (mutationResult.success) {
-        systemSettingsDraftCollection.utils.acceptMutations(transaction)
+        systemSettingsFormDataCollection.utils.acceptMutations(transaction)
       }
 
       return mutationResult

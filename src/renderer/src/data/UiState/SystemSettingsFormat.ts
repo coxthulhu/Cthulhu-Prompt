@@ -8,7 +8,7 @@ import {
   type SystemSettings
 } from '@shared/SystemSettings'
 
-export type SystemSettingsDraftSnapshot = {
+export type SystemSettingsFormData = {
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
   promptEditorMaxLinesInput: string
@@ -63,9 +63,9 @@ export const normalizePromptEditorMaxLinesInput = (
   return normalizeNumericInput(value)
 }
 
-export const toSystemSettingsDraftSnapshot = (
+export const toSystemSettingsFormData = (
   settings: SystemSettings
-): SystemSettingsDraftSnapshot => ({
+): SystemSettingsFormData => ({
   promptFontSizeInput: formatPromptFontSizeInput(settings.promptFontSize),
   promptEditorMinLinesInput: formatPromptEditorMinLinesInput(settings.promptEditorMinLines),
   promptEditorMaxLinesInput: formatPromptEditorMaxLinesInput(settings.promptEditorMaxLines),
@@ -128,11 +128,11 @@ const validateMaxLines = (value: string): string | null => {
 
 // Keep these messages stable because the settings screen renders them directly.
 export const getSystemSettingsValidation = (
-  draftValues: SystemSettingsDraftSnapshot
+  formData: SystemSettingsFormData
 ): SystemSettingsValidation => {
   return {
-    fontSizeError: validateFontSize(draftValues.promptFontSizeInput),
-    minLinesError: validateMinLines(draftValues.promptEditorMinLinesInput),
-    maxLinesError: validateMaxLines(draftValues.promptEditorMaxLinesInput)
+    fontSizeError: validateFontSize(formData.promptFontSizeInput),
+    minLinesError: validateMinLines(formData.promptEditorMinLinesInput),
+    maxLinesError: validateMaxLines(formData.promptEditorMaxLinesInput)
   }
 }

@@ -10,7 +10,7 @@ import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCol
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
+import { systemSettingsFormDataCollection } from '../Collections/SystemSettingsFormDataCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
@@ -40,7 +40,7 @@ const optimisticCollections = {
   promptDraft: promptDraftCollection,
   promptTemplateDraft: promptTemplateDraftCollection,
   promptFolderDraft: promptFolderDraftCollection,
-  systemSettingsDraft: systemSettingsDraftCollection
+  systemSettingsFormData: systemSettingsFormDataCollection
 }
 
 export const mutatePacedRevisionUpdateTransaction = createPacedRevisionUpdateMutationRunner(

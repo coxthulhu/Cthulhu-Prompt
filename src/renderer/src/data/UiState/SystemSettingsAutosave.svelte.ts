@@ -3,10 +3,10 @@ import type { Transaction } from '@tanstack/svelte-db'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
-  SYSTEM_SETTINGS_DRAFT_ID,
-  type SystemSettingsDraftRecord,
-  systemSettingsDraftCollection
-} from '../Collections/SystemSettingsDraftCollection'
+  SYSTEM_SETTINGS_FORM_DATA_ID,
+  type SystemSettingsFormDataRecord,
+  systemSettingsFormDataCollection
+} from '../Collections/SystemSettingsFormDataCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
@@ -16,7 +16,7 @@ import {
   normalizePromptEditorMaxLinesInput,
   normalizePromptEditorMinLinesInput,
   normalizePromptFontSizeInput,
-  toSystemSettingsDraftSnapshot
+  toSystemSettingsFormData
 } from './SystemSettingsFormat'
 
 type SystemSettingsAutosaveState = {
@@ -27,71 +27,71 @@ const autosaveState = $state<SystemSettingsAutosaveState>({
   saving: false
 })
 
-type SystemSettingsDraftQuery = {
-  data: SystemSettingsDraftRecord[]
+type SystemSettingsFormDataQuery = {
+  data: SystemSettingsFormDataRecord[]
 }
 
-export const getSystemSettingsDraftRecord = (): SystemSettingsDraftRecord => {
-  return systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
+export const getSystemSettingsFormDataRecord = (): SystemSettingsFormDataRecord => {
+  return systemSettingsFormDataCollection.get(SYSTEM_SETTINGS_FORM_DATA_ID)!
 }
 
-export const useSystemSettingsDraftQuery = (): SystemSettingsDraftQuery => {
+export const useSystemSettingsFormDataQuery = (): SystemSettingsFormDataQuery => {
   return useLiveQuery((query) => {
-    return query.from({ systemSettingsDraft: systemSettingsDraftCollection })
-  }) as SystemSettingsDraftQuery
+    return query.from({ systemSettingsFormData: systemSettingsFormDataCollection })
+  }) as SystemSettingsFormDataQuery
 }
 
-export const selectSystemSettingsDraftRecord = (
-  records: SystemSettingsDraftRecord[]
-): SystemSettingsDraftRecord => {
+export const selectSystemSettingsFormDataRecord = (
+  records: SystemSettingsFormDataRecord[]
+): SystemSettingsFormDataRecord => {
   return (
-    records.find((record) => record.id === SYSTEM_SETTINGS_DRAFT_ID) ??
-    getSystemSettingsDraftRecord()
+    records.find((record) => record.id === SYSTEM_SETTINGS_FORM_DATA_ID) ??
+    getSystemSettingsFormDataRecord()
   )
 }
 
-const getSystemSettingsDraftRecordFromTransaction = (
+const getSystemSettingsFormDataRecordFromTransaction = (
   transaction: Transaction<any>
-): SystemSettingsDraftRecord => {
+): SystemSettingsFormDataRecord => {
   return getLatestMutationModifiedRecord(
     transaction,
-    systemSettingsDraftCollection.id,
-    SYSTEM_SETTINGS_DRAFT_ID,
-    getSystemSettingsDraftRecord
+    systemSettingsFormDataCollection.id,
+    SYSTEM_SETTINGS_FORM_DATA_ID,
+    getSystemSettingsFormDataRecord
   )
 }
 
 const readValidatedSystemSettings = (
-  draftRecord: SystemSettingsDraftRecord
+  formDataRecord: SystemSettingsFormDataRecord
 ): SystemSettings | null => {
-  const validation = getSystemSettingsValidation(draftRecord)
+  const validation = getSystemSettingsValidation(formDataRecord)
   if (validation.fontSizeError || validation.minLinesError || validation.maxLinesError) {
     return null
   }
 
   return {
-    promptFontSize: normalizePromptFontSizeInput(draftRecord.promptFontSizeInput).rounded,
-    promptEditorMinLines: normalizePromptEditorMinLinesInput(draftRecord.promptEditorMinLinesInput)
+    promptFontSize: normalizePromptFontSizeInput(formDataRecord.promptFontSizeInput).rounded,
+    promptEditorMinLines: normalizePromptEditorMinLinesInput(formDataRecord.promptEditorMinLinesInput)
       .rounded,
-    promptEditorMaxLines: normalizePromptEditorMaxLinesInput(draftRecord.promptEditorMaxLinesInput)
+    promptEditorMaxLines: normalizePromptEditorMaxLinesInput(formDataRecord.promptEditorMaxLinesInput)
       .rounded,
-    showLineNumbers: draftRecord.showLineNumbers
+    showLineNumbers: formDataRecord.showLineNumbers
   }
 }
 
-export const mutateSystemSettingsDraftWithAutosave = (
-  applyDraftUpdate: (draftRecord: SystemSettingsDraftRecord) => void
+export const mutateSystemSettingsFormDataWithAutosave = (
+  applyFormDataUpdate: (formDataRecord: SystemSettingsFormDataRecord) => void
 ): void => {
   mutatePacedSystemSettingsAutosaveUpdate({
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
-      collections.systemSettingsDraft.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-        applyDraftUpdate(draftRecord)
+      collections.systemSettingsFormData.update(SYSTEM_SETTINGS_FORM_DATA_ID, (formDataRecord) => {
+        applyFormDataUpdate(formDataRecord)
       })
     },
     validateBeforeEnqueue: (transaction) => {
-      const draftRecord = getSystemSettingsDraftRecordFromTransaction(transaction)
-      const validatedSettings = readValidatedSystemSettings(draftRecord)
+      const formDataRecord = getSystemSettingsFormDataRecordFromTransaction(transaction)
+      const validatedSettings = readValidatedSystemSettings(formDataRecord)
       if (!validatedSettings) {
         return false
       }
@@ -103,13 +103,16 @@ export const mutateSystemSettingsDraftWithAutosave = (
           draft.promptEditorMaxLines = validatedSettings.promptEditorMaxLines
           draft.showLineNumbers = validatedSettings.showLineNumbers
         })
-        systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-          const nextDraftSnapshot = toSystemSettingsDraftSnapshot(validatedSettings)
-          draftRecord.promptFontSizeInput = nextDraftSnapshot.promptFontSizeInput
-          draftRecord.promptEditorMinLinesInput = nextDraftSnapshot.promptEditorMinLinesInput
-          draftRecord.promptEditorMaxLinesInput = nextDraftSnapshot.promptEditorMaxLinesInput
-          draftRecord.showLineNumbers = nextDraftSnapshot.showLineNumbers
-        })
+        systemSettingsFormDataCollection.update(
+          SYSTEM_SETTINGS_FORM_DATA_ID,
+          (formDataRecord) => {
+            const nextFormData = toSystemSettingsFormData(validatedSettings)
+            formDataRecord.promptFontSizeInput = nextFormData.promptFontSizeInput
+            formDataRecord.promptEditorMinLinesInput = nextFormData.promptEditorMinLinesInput
+            formDataRecord.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
+            formDataRecord.showLineNumbers = nextFormData.showLineNumbers
+          }
+        )
       })
 
       return true

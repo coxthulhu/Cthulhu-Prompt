@@ -5,9 +5,9 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
 import {
-  SYSTEM_SETTINGS_DRAFT_ID,
-  systemSettingsDraftCollection
-} from '@renderer/data/Collections/SystemSettingsDraftCollection'
+  SYSTEM_SETTINGS_FORM_DATA_ID,
+  systemSettingsFormDataCollection
+} from '@renderer/data/Collections/SystemSettingsFormDataCollection'
 import {
   upsertPromptDraft,
   upsertPromptSummaryDrafts
@@ -16,7 +16,7 @@ import {
   setPromptFolderDraftSettingsField,
   upsertPromptFolderDraft
 } from '@renderer/data/UiState/PromptFolderDraftMutations.svelte.ts'
-import { upsertSystemSettingsDraft } from '@renderer/data/UiState/SystemSettingsDraftMutations.svelte.ts'
+import { upsertSystemSettingsFormData } from '@renderer/data/UiState/SystemSettingsFormDataMutations.svelte.ts'
 
 const clearPromptDraftCollection = (): void => {
   const draftIds = Array.from(promptDraftCollection.keys(), (draftId) => String(draftId))
@@ -32,16 +32,16 @@ const clearPromptFolderDraftCollection = (): void => {
   }
 }
 
-const clearSystemSettingsDraftCollection = (): void => {
-  if (systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)) {
-    systemSettingsDraftCollection.delete(SYSTEM_SETTINGS_DRAFT_ID)
+const clearSystemSettingsFormDataCollection = (): void => {
+  if (systemSettingsFormDataCollection.get(SYSTEM_SETTINGS_FORM_DATA_ID)) {
+    systemSettingsFormDataCollection.delete(SYSTEM_SETTINGS_FORM_DATA_ID)
   }
 }
 
 afterEach(() => {
   clearPromptDraftCollection()
   clearPromptFolderDraftCollection()
-  clearSystemSettingsDraftCollection()
+  clearSystemSettingsFormDataCollection()
 })
 
 const createPrompt = (overrides: Partial<PromptFull> = {}): PromptFull => ({
@@ -170,17 +170,17 @@ describe('draft sync contract', () => {
     expect(promptFolderDraftCollection.get('missing-folder-id')).toBeUndefined()
   })
 
-  it('upserts the system-settings draft', () => {
-    upsertSystemSettingsDraft(createSystemSettings())
+  it('upserts the system-settings form data', () => {
+    upsertSystemSettingsFormData(createSystemSettings())
 
-    systemSettingsDraftCollection.update(SYSTEM_SETTINGS_DRAFT_ID, (draftRecord) => {
-      draftRecord.promptFontSizeInput = '18'
-      draftRecord.promptEditorMinLinesInput = '5'
-      draftRecord.promptEditorMaxLinesInput = '28'
-      draftRecord.showLineNumbers = false
+    systemSettingsFormDataCollection.update(SYSTEM_SETTINGS_FORM_DATA_ID, (formDataRecord) => {
+      formDataRecord.promptFontSizeInput = '18'
+      formDataRecord.promptEditorMinLinesInput = '5'
+      formDataRecord.promptEditorMaxLinesInput = '28'
+      formDataRecord.showLineNumbers = false
     })
 
-    upsertSystemSettingsDraft(
+    upsertSystemSettingsFormData(
       createSystemSettings({
         promptFontSize: 19,
         promptEditorMinLines: 6,
@@ -189,10 +189,10 @@ describe('draft sync contract', () => {
       })
     )
 
-    const draftRecord = systemSettingsDraftCollection.get(SYSTEM_SETTINGS_DRAFT_ID)!
-    expect(draftRecord.promptFontSizeInput).toBe('19')
-    expect(draftRecord.promptEditorMinLinesInput).toBe('6')
-    expect(draftRecord.promptEditorMaxLinesInput).toBe('29')
-    expect(draftRecord.showLineNumbers).toBe(true)
+    const formDataRecord = systemSettingsFormDataCollection.get(SYSTEM_SETTINGS_FORM_DATA_ID)!
+    expect(formDataRecord.promptFontSizeInput).toBe('19')
+    expect(formDataRecord.promptEditorMinLinesInput).toBe('6')
+    expect(formDataRecord.promptEditorMaxLinesInput).toBe('29')
+    expect(formDataRecord.showLineNumbers).toBe(true)
   })
 })
