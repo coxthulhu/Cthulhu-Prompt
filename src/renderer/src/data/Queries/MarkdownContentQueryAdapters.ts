@@ -1,5 +1,9 @@
-import { createPromptFull, createPromptSummary } from '@shared/Prompt'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
+import { createPromptFull, createPromptSummary, isPromptFull, type PromptFull } from '@shared/Prompt'
+import {
+  createPromptTemplateFull,
+  isPromptTemplateFull,
+  type PromptTemplateFull
+} from '@shared/PromptTemplate'
 import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
 import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import type { PromptFolderContentKind } from '@shared/PromptFolder'
@@ -10,6 +14,35 @@ import {
   deletePromptTemplateDrafts,
   upsertPromptTemplateDrafts
 } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
+import { clearPromptEditorMeasuredHeights } from '../UiState/PromptDraftUiCache.svelte.ts'
+
+/** Clears prompt measurements whose canonical full text is changing. */
+const clearChangedPromptMeasurements = (prompts: PromptFull[]): void => {
+  /** Prompt IDs whose cached editor height no longer matches canonical text. */
+  const changedPromptIds = prompts.flatMap((prompt) => {
+    /** Canonical prompt record present before this authoritative load. */
+    const current = promptCollection.get(prompt.id)
+    return !current || !isPromptFull(current) || current.promptText !== prompt.promptText
+      ? [prompt.id]
+      : []
+  })
+  clearPromptEditorMeasuredHeights(changedPromptIds)
+}
+
+/** Clears template measurements whose canonical full text is changing. */
+const clearChangedTemplateMeasurements = (templates: PromptTemplateFull[]): void => {
+  /** Template IDs whose cached editor height no longer matches canonical text. */
+  const changedTemplateIds = templates.flatMap((template) => {
+    /** Canonical template record present before this authoritative load. */
+    const current = promptTemplateCollection.get(template.id)
+    return !current ||
+      !isPromptTemplateFull(current) ||
+      current.templateText !== template.templateText
+      ? [template.id]
+      : []
+  })
+  clearPromptEditorMeasuredHeights(changedTemplateIds)
+}
 
 type MarkdownContentQueryAdapter = {
   kind: PromptFolderContentKind
@@ -34,6 +67,7 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
         ...prompt,
         data: createPromptFull(prompt.data)
       }))
+      clearChangedPromptMeasurements(snapshots.map((prompt) => prompt.data))
       promptCollection.utils.upsertManyAuthoritative(snapshots)
       upsertPromptDrafts(snapshots.map((prompt) => prompt.data))
     },
@@ -50,6 +84,7 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
         ...template,
         data: createPromptTemplateFull(template.data)
       }))
+      clearChangedTemplateMeasurements(snapshots.map((template) => template.data))
       promptTemplateCollection.utils.upsertManyAuthoritative(snapshots)
       upsertPromptTemplateDrafts(snapshots.map((template) => template.data))
     },
@@ -58,6 +93,7 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
         ...template,
         data: createPromptTemplateFull(template.data)
       }))
+      clearChangedTemplateMeasurements(snapshots.map((template) => template.data))
       promptTemplateCollection.utils.upsertManyAuthoritative(snapshots)
       upsertPromptTemplateDrafts(snapshots.map((template) => template.data))
     },

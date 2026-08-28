@@ -35,6 +35,10 @@ describe('category mutations', () => {
     promptFolderCollection.utils.deleteAuthoritative(ROOT_FOLDER_ID)
     promptCollection.utils.deleteAuthoritative(PROMPT_ID)
     promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
+    if (promptDraftCollection.has(PROMPT_ID)) promptDraftCollection.delete(PROMPT_ID)
+    if (promptTemplateDraftCollection.has(TEMPLATE_ID)) {
+      promptTemplateDraftCollection.delete(TEMPLATE_ID)
+    }
 
     categoryCollection.utils.upsertAuthoritative({
       id: CATEGORY_ID,
@@ -112,16 +116,12 @@ describe('category mutations', () => {
       category: CATEGORY_ID,
       modifiedAt: '2026-01-01T00:00:00.000Z'
     }
-    /** Mutable prompt draft state used to observe category and timestamp cleanup. */
-    const promptDraftState = { ...promptState }
     /** Mutable template state used to observe category and timestamp cleanup. */
     const templateState = {
       id: TEMPLATE_ID,
       category: CATEGORY_ID,
       modifiedAt: '2026-01-01T00:00:00.000Z'
     }
-    /** Mutable template draft state used to observe category and timestamp cleanup. */
-    const templateDraftState = { ...templateState }
     /** Category deletion spy verifies optimistic removal. */
     const deleteCategoryOptimistically = vi.fn()
 
@@ -140,22 +140,10 @@ describe('category mutations', () => {
             update(promptState)
           }
         },
-        promptDraft: {
-          update: (id: string, update: (draft: typeof promptDraftState) => void) => {
-            expect(id).toBe(PROMPT_ID)
-            update(promptDraftState)
-          }
-        },
         promptTemplate: {
           update: (id: string, update: (draft: typeof templateState) => void) => {
             expect(id).toBe(TEMPLATE_ID)
             update(templateState)
-          }
-        },
-        promptTemplateDraft: {
-          update: (id: string, update: (draft: typeof templateDraftState) => void) => {
-            expect(id).toBe(TEMPLATE_ID)
-            update(templateDraftState)
           }
         }
       }
@@ -166,13 +154,9 @@ describe('category mutations', () => {
     ])
     expect(deleteCategoryOptimistically).toHaveBeenCalledWith(CATEGORY_ID)
     expect(promptState).not.toHaveProperty('category')
-    expect(promptDraftState).not.toHaveProperty('category')
     expect(templateState).not.toHaveProperty('category')
-    expect(templateDraftState).not.toHaveProperty('category')
     expect(promptState.modifiedAt).not.toBe('2026-01-01T00:00:00.000Z')
-    expect(promptDraftState.modifiedAt).toBe(promptState.modifiedAt)
     expect(templateState.modifiedAt).toBe(promptState.modifiedAt)
-    expect(templateDraftState.modifiedAt).toBe(promptState.modifiedAt)
 
     /** Typed entity builders expose expected revisions in the IPC request. */
     const entities = {
@@ -198,15 +182,9 @@ describe('category mutations', () => {
     })
   })
 
-  it('accepts drafts and reconciles authoritative records after successful deletion', async () => {
-    /** Prompt draft acceptance spy verifies successful local transaction retention. */
-    const acceptPromptDrafts = vi
-      .spyOn(promptDraftCollection.utils, 'acceptMutations')
-      .mockImplementation(() => undefined)
-    /** Template draft acceptance spy verifies successful local transaction retention. */
-    const acceptPromptTemplateDrafts = vi
-      .spyOn(promptTemplateDraftCollection.utils, 'acceptMutations')
-      .mockImplementation(() => undefined)
+  it('reconciles authoritative records and preserves edit markers after deletion', async () => {
+    promptDraftCollection.insert({ id: PROMPT_ID, isEdited: true })
+    promptTemplateDraftCollection.insert({ id: TEMPLATE_ID, isEdited: true })
     await deleteCategory(CATEGORY_ID)
 
     /** Revision mutation options registered by deleteCategory. */
@@ -270,12 +248,7 @@ describe('category mutations', () => {
         data
       })
     }
-    /** Stable transaction identity passed to both draft collections. */
-    const transaction = {}
-
-    await options.persistMutations({ entities, invoke, transaction })
-    expect(acceptPromptDrafts).toHaveBeenCalledWith(transaction)
-    expect(acceptPromptTemplateDrafts).toHaveBeenCalledWith(transaction)
+    await options.persistMutations({ entities, invoke, transaction: {} })
 
     options.handleSuccessOrConflictResponse(payload)
     options.onSuccess()
@@ -283,8 +256,14 @@ describe('category mutations', () => {
     expect(promptFolderCollection.get(ROOT_FOLDER_ID)?.categoryOrder.categories).toEqual([
       { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
     ])
-    expect(promptDraftCollection.get(PROMPT_ID)).not.toHaveProperty('category')
-    expect(promptTemplateDraftCollection.get(TEMPLATE_ID)).not.toHaveProperty('category')
+    expect(promptDraftCollection.get(PROMPT_ID)).toMatchObject({
+      id: PROMPT_ID,
+      isEdited: true
+    })
+    expect(promptTemplateDraftCollection.get(TEMPLATE_ID)).toMatchObject({
+      id: TEMPLATE_ID,
+      isEdited: true
+    })
     expect(promptCollection.get(PROMPT_ID)).toMatchObject({
       loadingState: 'full',
       modifiedAt: '2026-08-16T12:00:00.000Z'
@@ -293,12 +272,6 @@ describe('category mutations', () => {
       loadingState: 'full',
       modifiedAt: '2026-08-16T12:00:00.000Z'
     })
-    expect(promptDraftCollection.get(PROMPT_ID)?.modifiedAt).toBe(
-      '2026-08-16T12:00:00.000Z'
-    )
-    expect(promptTemplateDraftCollection.get(TEMPLATE_ID)?.modifiedAt).toBe(
-      '2026-08-16T12:00:00.000Z'
-    )
   })
 
   it('reorders a complete category group through one root-folder revision', async () => {

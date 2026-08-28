@@ -2,8 +2,8 @@
   import type { ComponentProps } from 'svelte'
   import { createPromptTemplateEditorModelUri } from '@renderer/common/Monaco'
   import {
-    setPromptTemplateDraftText,
-    setPromptTemplateDraftTitle
+    setPromptTemplateText,
+    setPromptTemplateTitle
   } from '@renderer/data/UiState/PromptTemplateDraftMutations.svelte.ts'
   import { PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX } from './promptEditorSizing'
   import MarkdownContentEditorRow from './MarkdownContentEditorRow.svelte'
@@ -41,7 +41,7 @@
   deleteLabel="Delete template"
   deleteDialogTitle="Delete Template"
   deleteDialogDescription="Are you sure you want to delete this template?"
-  onTitleChange={(title) => setPromptTemplateDraftTitle(promptId, title)}
+  onTitleChange={(title) => setPromptTemplateTitle(promptId, title)}
   onTextChange={(text, measurement) =>
-    setPromptTemplateDraftText(promptId, text, measurement)}
+    setPromptTemplateText(promptId, text, measurement)}
 />

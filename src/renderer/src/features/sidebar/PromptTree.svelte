@@ -29,7 +29,6 @@
   } from '@renderer/data/Collections/PromptDraftCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
-  import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
   import {
@@ -129,24 +128,21 @@
   const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
     data: PromptTemplate[]
   }
-  const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
-    data: Array<{ id: string; title: string; fallbackTitle: string }>
-  }
   /** Live category metadata used by the selected root folder's tree projection. */
   const categoryQuery = useLiveQuery(categoryCollection)
 
   const promptTreeTitleById = $derived.by(() => {
     const titlesById: Record<string, string> = {}
 
-    for (const promptDraft of promptDraftQuery.data) {
-      if (!promptDraft) {
+    for (const prompt of promptQuery.data) {
+      if (!prompt) {
         continue
       }
 
-      titlesById[promptDraft.id] = getPromptTitleText(promptDraft)
+      titlesById[prompt.id] = getPromptTitleText(prompt)
     }
-    for (const templateDraft of promptTemplateDraftQuery.data) {
-      titlesById[templateDraft.id] = getPromptTitleText(templateDraft)
+    for (const template of promptTemplateQuery.data) {
+      titlesById[template.id] = getPromptTitleText(template)
     }
 
     return titlesById

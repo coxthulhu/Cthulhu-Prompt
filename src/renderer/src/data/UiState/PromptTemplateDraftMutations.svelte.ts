@@ -1,7 +1,6 @@
 import type {
   PromptTemplate,
-  PromptTemplateFull,
-  PromptTemplateSummaryData
+  PromptTemplateFull
 } from '@shared/PromptTemplate'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
@@ -17,16 +16,12 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { mutatePacedPromptTemplateAutosaveUpdate } from '../Mutations/PromptTemplateMutations'
 import { recordPromptEditorMeasuredHeight } from './PromptDraftUiCache.svelte.ts'
 import {
-  clearPromptEditorMeasuredHeight,
   clearPromptEditorMeasuredHeights
 } from './PromptDraftUiCache.svelte.ts'
 import { createMarkdownContentDraftMutations } from './MarkdownContentDraftMutations'
 
-const draftMutations = createMarkdownContentDraftMutations<
-  PromptTemplateSummaryData,
-  PromptTemplateFull,
-  PromptTemplateDraftRecord
->({
+/** Lifecycle helpers for prompt-template edit markers and editor measurements. */
+const draftMutations = createMarkdownContentDraftMutations<PromptTemplateDraftRecord>({
   authoritativeCollectionId: promptTemplateCollection.id,
   getDraft: (templateId) => promptTemplateDraftCollection.get(templateId),
   getDrafts: () => promptTemplateDraftCollection.toArray,
@@ -34,59 +29,10 @@ const draftMutations = createMarkdownContentDraftMutations<
   insertDrafts: (drafts) => {
     promptTemplateDraftCollection.insert(drafts)
   },
-  updateDrafts: (templateIds, update) => {
-    promptTemplateDraftCollection.update(templateIds, (drafts) => {
-      for (const draft of drafts) update(draft)
-    })
-  },
   deleteDrafts: (templateIds) => {
     promptTemplateDraftCollection.delete(templateIds)
   },
-  toSummaryDraft: (template) => ({
-    id: template.id,
-    title: template.title,
-    fallbackTitle: template.fallbackTitle,
-    createdAt: '',
-    modifiedAt: template.modifiedAt,
-    ...(template.category !== undefined ? { category: template.category } : {}),
-    templateText: '',
-    isEdited: false
-  }),
-  applySummary: (draft, template) => {
-    draft.title = template.title
-    draft.fallbackTitle = template.fallbackTitle
-    draft.modifiedAt = template.modifiedAt
-    draft.category = template.category
-  },
-  hasSameSummary: (draft, template) =>
-    draft.title === template.title &&
-    draft.fallbackTitle === template.fallbackTitle &&
-    draft.modifiedAt === template.modifiedAt &&
-    draft.category === template.category,
-  toFullDraft: (template, isEdited) => ({
-    id: template.id,
-    title: template.title,
-    fallbackTitle: template.fallbackTitle,
-    createdAt: template.createdAt,
-    modifiedAt: template.modifiedAt,
-    ...(template.category !== undefined ? { category: template.category } : {}),
-    templateText: template.templateText,
-    isEdited
-  }),
-  haveSameDraft: (left, right) =>
-    left.id === right.id &&
-    left.title === right.title &&
-    left.fallbackTitle === right.fallbackTitle &&
-    left.createdAt === right.createdAt &&
-    left.modifiedAt === right.modifiedAt &&
-    left.category === right.category &&
-    left.templateText === right.templateText &&
-    left.isEdited === right.isEdited,
-  beforeFullUpsert: (existing, next) => {
-    if (!existing || existing.templateText !== next.templateText) {
-      clearPromptEditorMeasuredHeight(next.id)
-    }
-  },
+  createDraft: (templateId) => ({ id: templateId, isEdited: false }),
   beforeDelete: clearPromptEditorMeasuredHeights
 })
 
@@ -106,72 +52,65 @@ const getSiblingTemplateIds = (templateId: string): string[] => {
   return [templateId]
 }
 
-const mutateTemplateDraft = (
+/** Schedules one authoritative template edit and latches its session marker. */
+const mutatePromptTemplate = (
   templateId: string,
-  mutateDraft: (draft: PromptTemplateDraftRecord) => void,
-  mutateTemplate?: (template: PromptTemplate) => void
+  mutateTemplate: (template: PromptTemplate) => void
 ): void => {
   mutatePacedPromptTemplateAutosaveUpdate({
     templateId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.promptTemplateDraft.update(templateId, (draft) => {
-        mutateDraft(draft)
         draft.isEdited = true
       })
-      if (mutateTemplate) collections.promptTemplate.update(templateId, mutateTemplate)
+      collections.promptTemplate.update(templateId, mutateTemplate)
     }
   })
 }
 
-export const setPromptTemplateDraftTitle = (templateId: string, title: string): void => {
-  const draft = promptTemplateDraftCollection.get(templateId)!
+/** Updates a prompt template title and schedules its autosave. */
+export const setPromptTemplateTitle = (templateId: string, title: string): void => {
+  /** Canonical template receiving the title edit. */
+  const template = promptTemplateCollection.get(templateId)!
   const nextTitleFields = resolvePromptTitleUpdateForPromptIds({
     promptIds: getSiblingTemplateIds(templateId),
     lookupPrompt: (contentId) => promptTemplateCollection.get(contentId),
     promptId: templateId,
-    currentTitle: draft.title,
-    currentFallbackTitle: draft.fallbackTitle,
+    currentTitle: template.title,
+    currentFallbackTitle: template.fallbackTitle,
     nextTitle: title
   })
-  if (draft.title === nextTitleFields.title && draft.fallbackTitle === nextTitleFields.fallbackTitle) {
+  if (
+    template.title === nextTitleFields.title &&
+    template.fallbackTitle === nextTitleFields.fallbackTitle
+  ) {
     return
   }
 
   const modifiedAt = getCurrentIsoSecondTimestamp()
-  mutateTemplateDraft(
-    templateId,
-    (nextDraft) => {
-      Object.assign(nextDraft, nextTitleFields, { modifiedAt })
-    },
-    (template) => {
-      Object.assign(template, nextTitleFields)
-      if (template.loadingState === 'full') template.modifiedAt = modifiedAt
-    }
-  )
+  mutatePromptTemplate(templateId, (draft) => {
+    Object.assign(draft, nextTitleFields)
+    if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
+  })
 }
 
-export const setPromptTemplateDraftText = (
+/** Updates prompt-template text, records its height, and schedules its autosave. */
+export const setPromptTemplateText = (
   templateId: string,
   templateText: string,
   measurement: TextMeasurement
 ): void => {
-  const draft = promptTemplateDraftCollection.get(templateId)!
-  const textChanged = draft.templateText !== templateText
+  /** Canonical full template receiving the text edit. */
+  const template = promptTemplateCollection.get(templateId) as PromptTemplateFull
+  const textChanged = template.templateText !== templateText
   recordPromptEditorMeasuredHeight(templateId, measurement, textChanged)
   if (!textChanged) return
 
   const modifiedAt = getCurrentIsoSecondTimestamp()
-  mutateTemplateDraft(
-    templateId,
-    (nextDraft) => {
-      nextDraft.templateText = templateText
-      nextDraft.modifiedAt = modifiedAt
-    },
-    (template) => {
-      if (template.loadingState === 'summary') return
-      template.templateText = templateText
-      template.modifiedAt = modifiedAt
-    }
-  )
+  mutatePromptTemplate(templateId, (draft) => {
+    if (draft.loadingState === 'summary') return
+    draft.templateText = templateText
+    draft.modifiedAt = modifiedAt
+  })
 }

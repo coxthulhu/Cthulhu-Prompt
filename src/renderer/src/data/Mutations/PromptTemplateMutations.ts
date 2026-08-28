@@ -12,6 +12,7 @@ import {
   promptTemplateDraftCollection
 } from '../Collections/PromptTemplateDraftCollection'
 import { upsertPromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
+import { clearPromptEditorMeasuredHeight } from '../UiState/PromptDraftUiCache.svelte.ts'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => ({
@@ -44,12 +45,8 @@ const mutations = createMarkdownContentRendererMutations<
     const template = promptTemplateCollection.get(templateId)
     return template && isPromptTemplateFull(template) ? toPersisted(template) : null
   },
-  getDraftPersisted: (templateId) => {
-    const draft = promptTemplateDraftCollection.get(templateId)
-    if (!draft) return null
-    const { isEdited: _isEdited, ...persisted } = draft
-    return persisted
-  },
+  getAuthoritativeRevision: (templateId) =>
+    promptTemplateCollection.utils.getAuthoritativeRevision(templateId),
   toPersisted,
   createEntity: (entities, templateId, template) => {
     const entity = entities.promptTemplate({
@@ -61,7 +58,7 @@ const mutations = createMarkdownContentRendererMutations<
   insertOptimistically: (collections, template) => {
     collections.promptTemplate.insert(template)
     collections.promptTemplateDraft.insert(
-      markPromptTemplateDraftEdited({ ...toPersisted(template), isEdited: false })
+      markPromptTemplateDraftEdited({ id: template.id, isEdited: false })
     )
   },
   deleteOptimistically: (collections, templateId) => {
@@ -71,13 +68,21 @@ const mutations = createMarkdownContentRendererMutations<
   updateContentOptimistically: (collections, templateId, update) => {
     collections.promptTemplate.update(templateId, update)
     collections.promptTemplateDraft.update(templateId, (draft) => {
-      update(draft)
       markPromptTemplateDraftEdited(draft)
     })
   },
   acceptDraftMutations: (transaction) =>
     promptTemplateDraftCollection.utils.acceptMutations(transaction),
   reconcile: (snapshot) => {
+    /** Canonical template present before authoritative reconciliation. */
+    const currentTemplate = promptTemplateCollection.get(snapshot.id)
+    if (
+      !currentTemplate ||
+      !isPromptTemplateFull(currentTemplate) ||
+      currentTemplate.templateText !== snapshot.data.templateText
+    ) {
+      clearPromptEditorMeasuredHeight(snapshot.id)
+    }
     const fullSnapshot = { ...snapshot, data: createPromptTemplateFull(snapshot.data) }
     promptTemplateCollection.utils.upsertAuthoritative(fullSnapshot)
     upsertPromptTemplateDrafts([fullSnapshot.data])

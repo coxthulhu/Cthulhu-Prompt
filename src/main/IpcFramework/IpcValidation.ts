@@ -511,7 +511,7 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
     promptFolder: parsePromptFolderRevisionPayloadEntity,
     content: parseContentRevisionPayloadEntity
   })
-  const parseMovePayload: Parser<MoveMarkdownContentPayload<TContent>> = (value) => {
+  const parseMovePayload: Parser<MoveMarkdownContentPayload> = (value) => {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
 
     const record = value as Record<string, unknown>
@@ -530,7 +530,7 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
     const destinationPromptFolder = parsePromptFolderRevisionPayloadEntity(
       record.destinationPromptFolder
     )
-    const content = parseContentRevisionPayloadEntity(record.content)
+    const content = parseRevisionPayloadReference(record.content)
     const previousEntryId = record.previousEntryId
     const categoryId = record.categoryId
     if (

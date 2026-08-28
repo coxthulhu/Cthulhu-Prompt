@@ -36,8 +36,8 @@ type OptimisticCollections = Parameters<MutationOptions<unknown>['mutateOptimist
 ]
 /** Persistence helpers supplied by the revision framework. */
 type PersistHelpers = Parameters<MutationOptions<unknown>['persistMutations']>[0]
-/** Editable content fields shared by prompt and template drafts. */
-type ContentDraft = { id: string; title: string; fallbackTitle: string; category?: string }
+/** Canonical editable fields shared by prompts and prompt templates. */
+type ContentRecord = { id: string; title: string; fallbackTitle: string; category?: string }
 
 /** Entity-specific adapters used by shared renderer content mutations. */
 export type MarkdownContentRendererMutationConfig<
@@ -50,9 +50,10 @@ export type MarkdownContentRendererMutationConfig<
   defaultFallbackTitle?: string
   channels: { create: string; update: string; delete: string; move: string }
   createEntryRef: (contentId: string) => CategoryOrderEntryRef
-  getContent: (contentId: string) => ContentDraft | undefined
+  getContent: (contentId: string) => ContentRecord | undefined
   getFullPersisted: (contentId: string) => TPersisted | null
-  getDraftPersisted: (contentId: string) => TPersisted | null
+  /** Reads the authoritative revision used by reference-only mutation payloads. */
+  getAuthoritativeRevision: (contentId: string) => number
   toPersisted: (content: TFull) => TPersisted
   createEntity: (
     entities: PersistHelpers['entities'],
@@ -64,7 +65,7 @@ export type MarkdownContentRendererMutationConfig<
   updateContentOptimistically: (
     collections: OptimisticCollections,
     contentId: string,
-    update: (draft: ContentDraft) => void
+    update: (draft: ContentRecord) => void
   ) => void
   acceptDraftMutations: (transaction: Transaction<any>) => void
   reconcile: (snapshot: RevisionEnvelope<TPersisted>) => void
@@ -262,22 +263,21 @@ export const createMarkdownContentRendererMutations = <
     if (!source || !destination || source.kind !== config.kind || destination.kind !== config.kind) {
       throw new Error(`${config.label} folder not loaded`)
     }
-    /** Persisted content moved between category positions. */
-    const persistedContent =
-      config.getFullPersisted(contentId) ?? config.getDraftPersisted(contentId)
-    if (!persistedContent) throw new Error(`${config.label} data not loaded`)
+    /** Canonical renderer content moved between category positions. */
+    const content = config.getContent(contentId)
+    if (!content) throw new Error(`${config.label} data not loaded`)
     /** V2 reference transferred between category groups or roots. */
     const entry = config.createEntryRef(contentId)
     /** Moved content and destination order synchronized to the requested placement. */
     const placement = placeMarkdownContentInCategoryOrder(
       destination.categoryOrder,
-      persistedContent,
+      content,
       entry,
       categoryId,
       previousEntryId
     )
     /** Content copy whose category matches its destination group. */
-    const contentToMove: TPersisted = placement.content
+    const contentToMove = placement.content
     /** Destination IDs used to resolve blank-title fallback collisions. */
     const destinationContentIds = getActiveMarkdownContentIds(destination, config.kind).filter(
       (id) => id !== contentId
@@ -332,14 +332,17 @@ export const createMarkdownContentRendererMutations = <
         /** IPC movement result. */
         const result = await ipcInvokeWithPayload<
           IpcMutationPayloadResult<MoveMarkdownContentResponsePayload<TPersisted>>,
-          MoveMarkdownContentPayload<TPersisted>
+          MoveMarkdownContentPayload
         >(config.channels.move, {
           sourcePromptFolder: entities.promptFolder({ id: sourcePromptFolderId, data: source }),
           destinationPromptFolder: entities.promptFolder({
             id: destinationPromptFolderId,
             data: destination
           }),
-          content: config.createEntity(entities, contentId, contentToMove),
+          content: {
+            id: contentId,
+            expectedRevision: config.getAuthoritativeRevision(contentId)
+          },
           categoryId,
           previousEntryId
         })

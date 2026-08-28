@@ -5,7 +5,11 @@ import {
   type PromptFolder,
   type PromptFolderContentKind
 } from './PromptFolder'
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type {
+  RevisionEnvelope,
+  RevisionPayloadEntity,
+  RevisionPayloadReference
+} from './Revision'
 
 export type MarkdownContentPersisted = {
   id: string
@@ -17,9 +21,7 @@ export type MarkdownContentPersisted = {
 }
 
 /** Places content in one category-order position and synchronizes its category metadata. */
-export const placeMarkdownContentInCategoryOrder = <
-  TContent extends MarkdownContentPersisted
->(
+export const placeMarkdownContentInCategoryOrder = <TContent extends { category?: string }>(
   categoryOrder: CategoryOrder,
   content: TContent,
   entry: CategoryOrderEntryRef,
@@ -96,10 +98,10 @@ export type DeleteMarkdownContentResponsePayload<
   content?: RevisionEnvelope<TContent>
 }
 
-export type MoveMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
+export type MoveMarkdownContentPayload = {
   sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
   destinationPromptFolder: RevisionPayloadEntity<PromptFolder>
-  content: RevisionPayloadEntity<TContent>
+  content: RevisionPayloadReference
   categoryId: string | null
   previousEntryId: string | null
 }

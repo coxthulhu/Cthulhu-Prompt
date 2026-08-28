@@ -22,7 +22,7 @@ describe('prompt template renderer loading', () => {
     promptFolderCollection.utils.deleteAuthoritative('renderer-template-folder')
   })
 
-  it('stores full workspace templates and drafts in the renderer', async () => {
+  it('stores full workspace templates and template edit markers in the renderer', async () => {
     ipcInvokeWithPayload.mockResolvedValue({
       success: true,
       workspace: {
@@ -89,13 +89,15 @@ describe('prompt template renderer loading', () => {
       loadingState: 'full'
     })
     expect(promptTemplateDraftCollection.get('renderer-template')).toMatchObject({
-      title: 'Renderer Template',
-      templateText: 'Review [[PROMPT_TEXT]].',
+      id: 'renderer-template',
       isEdited: false
     })
+    expect(promptTemplateDraftCollection.get('renderer-template')).not.toHaveProperty(
+      'templateText'
+    )
   })
 
-  it('replaces a template summary and its draft with full folder-query data', async () => {
+  it('replaces a template summary while preserving its edited marker', async () => {
     promptFolderCollection.utils.upsertAuthoritative({
       id: 'renderer-template-folder',
       revision: 0,
@@ -190,8 +192,9 @@ describe('prompt template renderer loading', () => {
       templateText: 'Review {{change}}.'
     })
     expect(promptTemplateDraftCollection.get('renderer-template')).toMatchObject({
-      templateText: 'Review {{change}}.',
+      id: 'renderer-template',
       isEdited: true
     })
+    expect(promptTemplateDraftCollection.get('renderer-template')).not.toHaveProperty('title')
   })
 })

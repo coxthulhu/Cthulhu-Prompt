@@ -68,7 +68,7 @@ export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersis
     create: MutationParser<CreateMarkdownContentPayload<TContent>>
     update: MutationParser<MarkdownContentRevisionPayload<TContent>>
     delete: MutationParser<DeleteMarkdownContentPayload<TContent>>
-    move: MutationParser<MoveMarkdownContentPayload<TContent>>
+    move: MutationParser<MoveMarkdownContentPayload>
   }
   defaultFallbackTitle?: string
   getContent: (contentId: string) => CommittedEntry<TContent, MarkdownPersistenceFields> | null

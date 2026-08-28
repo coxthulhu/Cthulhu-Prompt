@@ -177,9 +177,8 @@ describe('prompt template mutations', () => {
       title: '',
       fallbackTitle: 'New Template'
     })
-    expect(insertedDrafts[0]).toMatchObject({
+    expect(insertedDrafts[0]).toEqual({
       id: 'new-template',
-      fallbackTitle: 'New Template',
       isEdited: true
     })
     expect(sourceFolder.categoryOrder.categories[0]?.entries).toEqual([
@@ -226,9 +225,10 @@ describe('prompt template mutations', () => {
       loadingState: 'full'
     })
     expect(promptTemplateDraftCollection.get('paced-template')).toMatchObject({
-      title: 'Authoritative Template',
-      templateText: 'Latest server text.'
+      id: 'paced-template',
+      isEdited: false
     })
+    expect(promptTemplateDraftCollection.get('paced-template')).not.toHaveProperty('templateText')
   })
 
   it('sends delete and move through their template-specific IPC channels', async () => {
@@ -272,11 +272,6 @@ describe('prompt template mutations', () => {
     const updateTemplate = vi.fn()
     const movedDraft = {
       id: 'paced-template',
-      title: 'Paced Template',
-      fallbackTitle: '',
-      createdAt: '2026-07-24T10:00:00.000Z',
-      modifiedAt: '2026-07-24T11:00:00.000Z',
-      templateText: 'Use {{value}}.',
       isEdited: false
     }
     const updateDraft = vi.fn(
@@ -307,7 +302,7 @@ describe('prompt template mutations', () => {
       expect.objectContaining({
         sourcePromptFolder: expect.objectContaining({ id: 'source-folder' }),
         destinationPromptFolder: expect.objectContaining({ id: 'destination-folder' }),
-        content: expect.objectContaining({ id: 'paced-template' })
+        content: { id: 'paced-template', expectedRevision: 3 }
       })
     )
   })

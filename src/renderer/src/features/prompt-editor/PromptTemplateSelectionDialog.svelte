@@ -5,13 +5,14 @@
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-  import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
+  import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import type { PromptTemplateReference } from '@shared/Prompt'
   import type { PromptFolder } from '@shared/PromptFolder'
   import type { Category } from '@shared/Category'
   import type { Workspace } from '@shared/Workspace'
+  import type { PromptTemplate } from '@shared/PromptTemplate'
   import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
   import PromptTreeCategoryRow from '../sidebar/PromptTreeCategoryRow.svelte'
   import PromptTreePromptRow from '../sidebar/PromptTreePromptRow.svelte'
@@ -101,9 +102,9 @@
   const workspaceQuery = useLiveQuery(workspaceCollection) as { data: Workspace[] }
   // Reactive root folders provide the complete template-category hierarchy.
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as { data: PromptFolder[] }
-  // Reactive template drafts keep picker titles and token eligibility current.
-  const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
-    data: Array<{ id: string; title: string; fallbackTitle: string; templateText: string }>
+  // Reactive authoritative templates keep picker titles and token eligibility current.
+  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+    data: PromptTemplate[]
   }
   // Reactive category metadata supplies folder-style rows inside each template root.
   const categoryQuery = useLiveQuery(categoryCollection)
@@ -132,8 +133,8 @@
   // Titles for templates that can actually wrap prompt text.
   const templateTitleById = $derived.by(() =>
     Object.fromEntries(
-      promptTemplateDraftQuery.data.flatMap((template) =>
-        hasPromptTextToken(template.templateText)
+      promptTemplateQuery.data.flatMap((template) =>
+        template.loadingState === 'full' && hasPromptTextToken(template.templateText)
           ? [[template.id, getPromptDisplayTitle(template)] as const]
           : []
       )

@@ -3,80 +3,47 @@ import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCol
 type DraftRecord = { id: string; isEdited: boolean }
 type ContentRecord = { id: string }
 
-type MarkdownContentDraftConfig<
-  TSummary extends ContentRecord,
-  TFull extends ContentRecord,
-  TDraft extends DraftRecord
-> = {
+/** Collection adapters shared by prompt and template edit-marker helpers. */
+type MarkdownContentDraftConfig<TDraft extends DraftRecord> = {
   authoritativeCollectionId: string
   getDraft: (contentId: string) => TDraft | undefined
   getDrafts: () => TDraft[]
   getDraftIds: () => string[]
   insertDrafts: (drafts: TDraft[]) => void
-  updateDrafts: (contentIds: string[], update: (draft: TDraft) => void) => void
   deleteDrafts: (contentIds: string[]) => void
-  toSummaryDraft: (content: TSummary) => TDraft
-  applySummary: (draft: TDraft, content: TSummary) => void
-  hasSameSummary: (draft: TDraft, content: TSummary) => boolean
-  toFullDraft: (content: TFull, isEdited: boolean) => TDraft
-  haveSameDraft: (left: TDraft, right: TDraft) => boolean
-  beforeFullUpsert?: (existing: TDraft | undefined, next: TDraft) => void
+  createDraft: (contentId: string) => TDraft
   beforeDelete?: (contentIds: string[]) => void
 }
 
-export const createMarkdownContentDraftMutations = <
-  TSummary extends ContentRecord,
-  TFull extends ContentRecord,
-  TDraft extends DraftRecord
->(
-  config: MarkdownContentDraftConfig<TSummary, TFull, TDraft>
+/** Creates shared lifecycle helpers for local prompt and template edit markers. */
+export const createMarkdownContentDraftMutations = <TDraft extends DraftRecord>(
+  config: MarkdownContentDraftConfig<TDraft>
 ) => {
-  const upsertSummaryDrafts = (contents: TSummary[]): void => {
-    const inserts: TDraft[] = []
-    const updates = new Map<string, TSummary>()
-    for (const content of contents) {
-      const existing = config.getDraft(content.id)
-      if (!existing) {
-        inserts.push(config.toSummaryDraft(content))
-      } else if (!config.hasSameSummary(existing, content)) {
-        updates.set(content.id, content)
-      }
-    }
+  /** Inserts edit markers that do not already exist. */
+  const upsertMarkers = (contents: ContentRecord[]): void => {
+    /** Missing renderer-session markers created by this upsert. */
+    const inserts = contents.flatMap((content) =>
+      config.getDraft(content.id) ? [] : [config.createDraft(content.id)]
+    )
     if (inserts.length > 0) config.insertDrafts(inserts)
-    const updateIds = [...updates.keys()]
-    if (updateIds.length > 0) {
-      config.updateDrafts(updateIds, (draft) => config.applySummary(draft, updates.get(draft.id)!))
-    }
   }
 
-  const upsertDrafts = (contents: TFull[]): void => {
-    const inserts: TDraft[] = []
-    const updates = new Map<string, TDraft>()
-    for (const content of contents) {
-      const existing = config.getDraft(content.id)
-      const next = config.toFullDraft(content, existing?.isEdited ?? false)
-      config.beforeFullUpsert?.(existing, next)
-      if (!existing) {
-        inserts.push(next)
-      } else if (!config.haveSameDraft(existing, next)) {
-        updates.set(content.id, next)
-      }
-    }
-    if (inserts.length > 0) config.insertDrafts(inserts)
-    const updateIds = [...updates.keys()]
-    if (updateIds.length > 0) {
-      config.updateDrafts(updateIds, (draft) => Object.assign(draft, updates.get(draft.id)!))
-    }
+  /** Inserts missing markers for full content loads. */
+  const upsertDrafts = (contents: ContentRecord[]): void => {
+    upsertMarkers(contents)
   }
 
+  /** Deletes edit markers and associated renderer-only UI caches. */
   const deleteDrafts = (contentIds: string[]): void => {
     if (contentIds.length === 0) return
     config.beforeDelete?.(contentIds)
     config.deleteDrafts(contentIds)
   }
 
+  /** Deletes one edit marker. */
   const removeDraft = (contentId: string): void => deleteDrafts([contentId])
 
+  /** Waits for all autosaves represented by the current edit markers to settle. */
   const flushAutosaves = async (): Promise<void> => {
     await Promise.allSettled(
       config
@@ -87,10 +54,11 @@ export const createMarkdownContentDraftMutations = <
     )
   }
 
+  /** Clears every edit marker from this renderer-session collection. */
   const clearDraftStore = (): void => deleteDrafts(config.getDraftIds())
 
   return {
-    upsertSummaryDrafts,
+    upsertSummaryDrafts: upsertMarkers,
     upsertDrafts,
     deleteDrafts,
     removeDraft,

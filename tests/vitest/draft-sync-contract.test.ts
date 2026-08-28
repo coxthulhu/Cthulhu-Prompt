@@ -91,7 +91,7 @@ const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSe
 })
 
 describe('draft sync contract', () => {
-  it('upserts prompt drafts', () => {
+  it('upserts prompt edit markers without resetting the edited latch', () => {
     const prompt = createPrompt()
     const updatedPrompt = createPrompt({
       title: 'Updated title',
@@ -99,34 +99,32 @@ describe('draft sync contract', () => {
     })
 
     upsertPromptDraft(prompt)
+    promptDraftCollection.update(prompt.id, (draft) => {
+      draft.isEdited = true
+    })
     upsertPromptDraft(updatedPrompt)
 
     const draftRecord = promptDraftCollection.get(prompt.id)!
-    const {
-      loadingState: _loadingState,
-      status: _status,
-      completedAt: _completedAt,
-      ...expectedDraftRecord
-    } = updatedPrompt
-    expect(draftRecord).toMatchObject(expectedDraftRecord)
+    expect(draftRecord).toMatchObject({ id: prompt.id, isEdited: true })
+    expect(draftRecord).not.toHaveProperty('title')
   })
 
-  it('upserts prompt summary drafts without clobbering full draft fields', () => {
+  it('preserves prompt edit markers across summary hydration', () => {
     const fullPrompt = createPrompt()
     const summaryPrompt = createPromptSummary({ title: 'Updated summary title' })
 
     upsertPromptDraft(fullPrompt)
+    promptDraftCollection.update(fullPrompt.id, (draft) => {
+      draft.isEdited = true
+    })
     upsertPromptSummaryDrafts([summaryPrompt])
 
     const draftRecord = promptDraftCollection.get(fullPrompt.id)!
-    expect(draftRecord.title).toBe(summaryPrompt.title)
-    expect(draftRecord.fallbackTitle).toBe(summaryPrompt.fallbackTitle)
-    expect(draftRecord.createdAt).toBe(fullPrompt.createdAt)
-    expect(draftRecord.modifiedAt).toBe(fullPrompt.modifiedAt)
-    expect(draftRecord.promptText).toBe(fullPrompt.promptText)
+    expect(draftRecord).toMatchObject({ id: fullPrompt.id, isEdited: true })
+    expect(draftRecord).not.toHaveProperty('promptText')
   })
 
-  it('seeds prompt summary drafts when full prompt data is not loaded yet', () => {
+  it('seeds prompt edit markers from summary data', () => {
     const summaryPrompt = createPromptSummary({
       id: 'prompt-summary-1',
       title: 'Summary title',
@@ -136,14 +134,8 @@ describe('draft sync contract', () => {
     upsertPromptSummaryDrafts([summaryPrompt])
 
     const draftRecord = promptDraftCollection.get(summaryPrompt.id)!
-    expect(draftRecord).toMatchObject({
-      id: summaryPrompt.id,
-      title: summaryPrompt.title,
-      fallbackTitle: summaryPrompt.fallbackTitle,
-      createdAt: '',
-      modifiedAt: summaryPrompt.modifiedAt,
-      promptText: ''
-    })
+    expect(draftRecord).toMatchObject({ id: summaryPrompt.id, isEdited: false })
+    expect(draftRecord).not.toHaveProperty('title')
   })
 
   it('upserts prompt-folder drafts', () => {

@@ -1,9 +1,10 @@
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
+import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { isPromptFull } from '@shared/Prompt'
 import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
 import {
-  getPromptDraftState,
-  setPromptDraftText,
-  setPromptDraftTitle
+  setPromptText,
+  setPromptTitle
 } from './PromptDraftMutations.svelte.ts'
 
 type PromptFolderScreenPromptDraft = {
@@ -20,24 +21,25 @@ type PromptFolderScreenPromptData = {
 }
 
 export const getPromptDisplayTitle = (promptId: string): string => {
-  const promptDraftState = getPromptDraftState(promptId)
-  return getPromptTitleText(promptDraftState)
+  return getPromptTitleText(promptCollection.get(promptId)!)
 }
 
 export const getPromptFolderScreenPromptData = (promptId: string): PromptFolderScreenPromptData => {
-  const promptDraftState = getPromptDraftState(promptId)
+  /** Canonical full prompt projected into the editor's draft-shaped view model. */
+  const prompt = promptCollection.get(promptId)!
+  if (!isPromptFull(prompt)) throw new Error('Full prompt not loaded')
   return {
     draft: {
-      title: promptDraftState.title,
-      text: promptDraftState.promptText
+      title: prompt.title,
+      text: prompt.promptText
     },
-    modifiedAt: promptDraftState.modifiedAt,
-    fallbackTitle: promptDraftState.fallbackTitle,
+    modifiedAt: prompt.modifiedAt,
+    fallbackTitle: prompt.fallbackTitle,
     setTitle: (title: string) => {
-      setPromptDraftTitle(promptId, title)
+      setPromptTitle(promptId, title)
     },
     setText: (text: string, measurement: TextMeasurement) => {
-      setPromptDraftText(promptId, text, measurement)
+      setPromptText(promptId, text, measurement)
     }
   }
 }

@@ -25,10 +25,8 @@ import {
 } from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptCollection } from '../Collections/PromptCollection'
-import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraftCollection'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
@@ -246,23 +244,15 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
           delete draft.category
           draft.modifiedAt = modifiedAt
         })
-        collections.promptDraft.update(promptId, (draft) => {
-          delete draft.category
-          draft.modifiedAt = modifiedAt
-        })
       }
       for (const promptTemplateId of promptTemplateIds) {
         collections.promptTemplate.update(promptTemplateId, (draft) => {
           delete draft.category
           draft.modifiedAt = modifiedAt
         })
-        collections.promptTemplateDraft.update(promptTemplateId, (draft) => {
-          delete draft.category
-          draft.modifiedAt = modifiedAt
-        })
       }
     },
-    persistMutations: async ({ entities, invoke, transaction }) => {
+    persistMutations: async ({ entities, invoke }) => {
       /** Result of the atomic category deletion request. */
       const result = await invoke<{ payload: DeleteCategoryPayload }>('delete-category', {
         payload: {
@@ -270,10 +260,6 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
           category: entities.category({ id: categoryId, data: category })
         }
       })
-      if (result.success) {
-        promptDraftCollection.utils.acceptMutations(transaction)
-        promptTemplateDraftCollection.utils.acceptMutations(transaction)
-      }
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {

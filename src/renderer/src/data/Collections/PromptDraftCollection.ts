@@ -1,25 +1,18 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
-import type { PromptFull } from '@shared/Prompt'
 
+/** Renderer-session edit marker for one prompt. */
 export type PromptDraftRecord = {
-  id: PromptFull['id']
-  title: PromptFull['title']
-  fallbackTitle: PromptFull['fallbackTitle']
-  createdAt: PromptFull['createdAt']
-  modifiedAt: PromptFull['modifiedAt']
-  category?: PromptFull['category']
-  promptText: PromptFull['promptText']
-  templates?: PromptFull['templates']
+  id: string
   isEdited: boolean
 }
 
+/** Latches a prompt's edited marker for the remainder of the renderer session. */
 export const markPromptDraftEdited = (draft: PromptDraftRecord): PromptDraftRecord => {
-  // Latch the marker for the remainder of the renderer session.
   draft.isEdited = true
   return draft
 }
 
-// Local-only UI draft state for prompt editing and its session marker.
+// Local-only renderer-session edit markers for prompts.
 export const promptDraftCollection = createCollection(
   localOnlyCollectionOptions<PromptDraftRecord>({
     id: 'prompt-drafts',

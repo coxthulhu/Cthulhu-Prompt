@@ -162,7 +162,10 @@ describe('Prompt template mutations', () => {
         )
       ),
       destinationPromptFolder: toPayloadEntity(destinationFolder),
-      content: toPayloadEntity(updateResult.payload.content),
+      content: {
+        id: updateResult.payload.content.id,
+        expectedRevision: updateResult.payload.content.revision
+      },
       previousEntryId: null,
       categoryId: null
     })

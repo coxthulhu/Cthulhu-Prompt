@@ -117,7 +117,7 @@ export type DeletePromptPayload = DeleteMarkdownContentPayload<PromptPersisted>
 
 export type DeletePromptResponsePayload = DeleteMarkdownContentResponsePayload<PromptPersisted>
 
-export type MovePromptPayload = MoveMarkdownContentPayload<PromptPersisted>
+export type MovePromptPayload = MoveMarkdownContentPayload
 
 export type MovePromptResponsePayload = MoveMarkdownContentResponsePayload<PromptPersisted>
 

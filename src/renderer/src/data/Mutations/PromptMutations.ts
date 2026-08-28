@@ -8,6 +8,7 @@ import {
   isPromptFull,
   PromptStatus,
   type PromptCategoryOrderPlacement,
+  type Prompt,
   type PromptFull,
   type PromptPersisted,
   type SetPromptStatusPayload,
@@ -22,6 +23,7 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { upsertPromptDraft } from '../UiState/PromptDraftHydration'
+import { clearPromptEditorMeasuredHeight } from '../UiState/PromptDraftUiCache.svelte.ts'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (prompt: PromptFull): PromptPersisted => ({
@@ -44,6 +46,15 @@ const reconcilePrompt = (snapshot: {
   revision: number
   data: PromptPersisted
 }): void => {
+  /** Canonical prompt present before authoritative reconciliation. */
+  const currentPrompt = promptCollection.get(snapshot.id)
+  if (
+    !currentPrompt ||
+    !isPromptFull(currentPrompt) ||
+    currentPrompt.promptText !== snapshot.data.promptText
+  ) {
+    clearPromptEditorMeasuredHeight(snapshot.id)
+  }
   const fullSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
   promptCollection.utils.upsertAuthoritative(fullSnapshot)
   upsertPromptDraft(fullSnapshot.data)
@@ -65,22 +76,8 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
     const prompt = promptCollection.get(promptId)
     return prompt && isPromptFull(prompt) ? toPersisted(prompt) : null
   },
-  getDraftPersisted: (promptId) => {
-    const draft = promptDraftCollection.get(promptId)
-    return draft
-      ? {
-          id: draft.id,
-          title: draft.title,
-          fallbackTitle: draft.fallbackTitle,
-          createdAt: draft.createdAt,
-          modifiedAt: draft.modifiedAt,
-          ...(draft.category !== undefined ? { category: draft.category } : {}),
-          promptText: draft.promptText,
-          ...(draft.templates !== undefined ? { templates: draft.templates } : {}),
-          status: PromptStatus.Todo
-        }
-      : null
-  },
+  getAuthoritativeRevision: (promptId) =>
+    promptCollection.utils.getAuthoritativeRevision(promptId),
   toPersisted,
   createEntity: (entities, promptId, prompt) => {
     const entity = entities.prompt({ id: promptId, data: createPromptFull(prompt) })
@@ -89,17 +86,7 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
   insertOptimistically: (collections, prompt) => {
     collections.prompt.insert(prompt)
     collections.promptDraft.insert(
-      markPromptDraftEdited({
-        id: prompt.id,
-        title: prompt.title,
-        fallbackTitle: prompt.fallbackTitle,
-        createdAt: prompt.createdAt,
-        modifiedAt: prompt.modifiedAt,
-        ...(prompt.category !== undefined ? { category: prompt.category } : {}),
-        promptText: prompt.promptText,
-        ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
-        isEdited: false
-      })
+      markPromptDraftEdited({ id: prompt.id, isEdited: false })
     )
   },
   deleteOptimistically: (collections, promptId) => {
@@ -109,7 +96,6 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
   updateContentOptimistically: (collections, promptId, update) => {
     collections.prompt.update(promptId, update)
     collections.promptDraft.update(promptId, (draft) => {
-      update(draft)
       markPromptDraftEdited(draft)
     })
   },
@@ -146,27 +132,11 @@ export const setPromptStatus = async (
   if (!rootPromptFolder || rootPromptFolder.kind === 'template') {
     throw new Error('Root prompt folder not loaded')
   }
+  /** Canonical renderer prompt used for the optimistic status projection. */
   const prompt = promptCollection.get(promptId)
-  const isCompletedPrompt = prompt?.status === PromptStatus.Completed
-  const promptDraft = promptDraftCollection.get(promptId)
-  if (!promptDraft) throw new Error('Prompt draft not loaded')
-
-  const currentPrompt =
-    prompt && isPromptFull(prompt)
-      ? toPersisted(prompt)
-      : {
-          id: promptDraft.id,
-          title: promptDraft.title,
-          fallbackTitle: promptDraft.fallbackTitle,
-          createdAt: promptDraft.createdAt,
-          modifiedAt: promptDraft.modifiedAt,
-          status: PromptStatus.Todo,
-          promptText: promptDraft.promptText,
-          ...(promptDraft.category !== undefined ? { category: promptDraft.category } : {}),
-          ...(promptDraft.templates !== undefined
-            ? { templates: promptDraft.templates }
-            : {})
-        }
+  if (!prompt) throw new Error('Prompt not loaded')
+  /** Whether the prompt currently belongs to the Completed hierarchy. */
+  const isCompletedPrompt = prompt.status === PromptStatus.Completed
   /** Current Active-tree group used when a status-button change does not request a new placement. */
   const currentCategoryGroup = rootPromptFolder.categoryOrder.categories.find((group) =>
     group.entries.some((entry) => entry.kind === 'prompt' && entry.id === promptId)
@@ -182,9 +152,7 @@ export const setPromptStatus = async (
     const placement =
       requestedCategoryOrderPlacement ??
       ({
-        categoryId: currentCategoryGroup
-          ? currentCategoryGroup.categoryId
-          : (currentPrompt.category ?? null),
+        categoryId: currentCategoryGroup ? currentCategoryGroup.categoryId : (prompt.category ?? null),
         previousEntryId:
           currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
       } satisfies PromptCategoryOrderPlacement)
@@ -195,24 +163,19 @@ export const setPromptStatus = async (
     return hasCategory ? placement : { categoryId: null, previousEntryId: null }
   })()
   const modifiedAt = getCurrentIsoSecondTimestamp()
-  const { completedAt: _completedAt, ...activePromptBase } = currentPrompt
+  /** Current prompt without its status-specific completion timestamp. */
+  const { completedAt: _completedAt, ...activePromptBase } = prompt
   /** Prompt with its requested status fields before optional Active-tree placement. */
-  const statusPrompt: PromptPersisted =
+  const statusPrompt: Prompt =
     targetStatus === PromptStatus.Completed
       ? {
           ...activePromptBase,
-          title: promptDraft.title,
-          fallbackTitle: promptDraft.fallbackTitle,
-          promptText: promptDraft.promptText,
           status: PromptStatus.Completed,
           completedAt: modifiedAt,
           modifiedAt
         }
       : {
           ...activePromptBase,
-          title: promptDraft.title,
-          fallbackTitle: promptDraft.fallbackTitle,
-          promptText: promptDraft.promptText,
           status: targetStatus,
           modifiedAt
         }
@@ -233,19 +196,10 @@ export const setPromptStatus = async (
   await runRevisionMutation<SetPromptStatusResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.prompt.update(promptId, (draft) => {
-        if (draft.loadingState !== 'full') return
         Object.assign(draft, nextPrompt)
         if (targetStatus !== PromptStatus.Completed) delete draft.completedAt
       })
       collections.promptDraft.update(promptId, (draft) => {
-        draft.title = nextPrompt.title
-        draft.fallbackTitle = nextPrompt.fallbackTitle
-        draft.createdAt = nextPrompt.createdAt
-        draft.modifiedAt = nextPrompt.modifiedAt
-        draft.promptText = nextPrompt.promptText
-        draft.templates = nextPrompt.templates
-        if (nextPrompt.category === undefined) delete draft.category
-        else draft.category = nextPrompt.category
         markPromptDraftEdited(draft)
       })
       collections.promptFolder.update(promptFolderId, (draft) => {

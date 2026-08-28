@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ComponentProps } from 'svelte'
   import {
-    setPromptDraftText,
-    setPromptDraftTitle
+    setPromptText,
+    setPromptTitle
   } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import MarkdownContentEditorRow from './MarkdownContentEditorRow.svelte'
 
@@ -33,6 +33,6 @@
   contentLabel="prompt"
   metadataFolderLabel={props.promptDraftRecord.templateName ?? 'Not Selected'}
   metadataFolderState={props.promptDraftRecord.templateState ?? 'not-selected'}
-  onTitleChange={(title) => setPromptDraftTitle(promptId, title)}
-  onTextChange={(text, measurement) => setPromptDraftText(promptId, text, measurement)}
+  onTitleChange={(title) => setPromptTitle(promptId, title)}
+  onTextChange={(text, measurement) => setPromptText(promptId, text, measurement)}
 />

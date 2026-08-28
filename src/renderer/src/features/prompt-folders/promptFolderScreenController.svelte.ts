@@ -186,84 +186,95 @@ export const createPromptFolderScreenController = ({
     screenRootFolder?.kind ?? 'prompt'
   )
   const isTemplateFolder = $derived(contentKind === 'template')
-  const promptDraftById = $derived.by(() => {
-    const draftsById: Record<string, PromptDraftRecord> = {}
-    for (const draft of promptDraftQuery.data) {
-      if (!draft) {
-        continue
-      }
-
-      draftsById[draft.id] = draft
-    }
-    return draftsById
-  })
+  /** Session-latched prompt edit markers indexed by authoritative prompt ID. */
+  const promptEditedById = $derived.by<Record<string, boolean>>(() =>
+    Object.fromEntries(promptDraftQuery.data.map((draft) => [draft.id, draft.isEdited]))
+  )
+  /** Session-latched template edit markers indexed by authoritative template ID. */
+  const promptTemplateEditedById = $derived.by<Record<string, boolean>>(() =>
+    Object.fromEntries(promptTemplateDraftQuery.data.map((draft) => [draft.id, draft.isEdited]))
+  )
+  /** Canonical prompt-template titles used to label prompt template selections. */
   const templateTitleById = $derived.by(() =>
     Object.fromEntries(
-      promptTemplateDraftQuery.data.map((template) => [
+      promptTemplateQuery.data.map((template) => [
         template.id,
         getPromptTitleText(template)
       ])
     )
   )
+  /** Canonical full template text used when applying selected prompt templates. */
   const promptTemplateTextById = $derived.by<Record<string, string>>(() =>
     Object.fromEntries(
-      promptTemplateDraftQuery.data.map((template) => [template.id, template.templateText])
+      promptTemplateQuery.data.flatMap((template) =>
+        isPromptTemplateFull(template) ? [[template.id, template.templateText]] : []
+      )
     )
   )
+  /** Full canonical content projected with its renderer-session edit marker for editor rows. */
   const contentDraftById = $derived.by<Record<string, MarkdownContentDraftRecord>>(() => {
     if (!isTemplateFolder) {
       return Object.fromEntries(
-        Object.values(promptDraftById).map((draft) => {
+        promptQuery.data.flatMap((prompt) => {
+          if (!isPromptFull(prompt)) return []
           // Resolved names drive both the compact label and its additional-template count.
-          const templateNames = (draft.templates ?? []).flatMap((template) => {
+          const templateNames = (prompt.templates ?? []).flatMap((template) => {
             const title = templateTitleById[template.id]
             return title === undefined ? [] : [title]
           })
           // Missing references are skipped so the first available template names the selection.
           const templateName = templateNames[0]
           return [
-            draft.id,
-            {
-            id: draft.id,
-            title: draft.title,
-            fallbackTitle: draft.fallbackTitle,
-            modifiedAt: draft.modifiedAt,
-            text: draft.promptText,
-            ...(draft.templates !== undefined ? { templates: draft.templates } : {}),
-            templateName:
-              draft.templates === undefined
-                ? 'Not Selected'
-                : templateName === undefined
-                  ? 'No Template'
-                  : templateNames.length > 1
-                    ? `${templateName} + ${templateNames.length - 1} More`
-                    : templateName,
-            // Missing template ids use the same indicator treatment as No Template.
-            templateState:
-              draft.templates === undefined
-                ? 'not-selected'
-                : templateName === undefined
-                  ? 'no-template'
-                  : 'selected',
-            isEdited: draft.isEdited
-            }
+            [
+              prompt.id,
+              {
+                id: prompt.id,
+                title: prompt.title,
+                fallbackTitle: prompt.fallbackTitle,
+                modifiedAt: prompt.modifiedAt,
+                text: prompt.promptText,
+                ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
+                templateName:
+                  prompt.templates === undefined
+                    ? 'Not Selected'
+                    : templateName === undefined
+                      ? 'No Template'
+                      : templateNames.length > 1
+                        ? `${templateName} + ${templateNames.length - 1} More`
+                        : templateName,
+                // Missing template ids use the same indicator treatment as No Template.
+                templateState:
+                  prompt.templates === undefined
+                    ? 'not-selected'
+                    : templateName === undefined
+                      ? 'no-template'
+                      : 'selected',
+                isEdited: promptEditedById[prompt.id] ?? false
+              }
+            ] as const
           ]
         })
       )
     }
 
     return Object.fromEntries(
-      promptTemplateDraftQuery.data.map((draft) => [
-        draft.id,
-        {
-          id: draft.id,
-          title: draft.title,
-          fallbackTitle: draft.fallbackTitle,
-          modifiedAt: draft.modifiedAt,
-          text: draft.templateText,
-          isEdited: draft.isEdited
-        }
-      ])
+      promptTemplateQuery.data.flatMap((template) =>
+        isPromptTemplateFull(template)
+          ? [
+              [
+                template.id,
+                {
+                  id: template.id,
+                  title: template.title,
+                  fallbackTitle: template.fallbackTitle,
+                  modifiedAt: template.modifiedAt,
+                  text: template.templateText,
+                  isEdited: promptTemplateEditedById[template.id] ?? false
+                }
+              ] as const
+            ]
+          : []
+      )
     )
   })
   const promptById = $derived.by(() => {

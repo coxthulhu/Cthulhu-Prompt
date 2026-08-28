@@ -13,7 +13,7 @@
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
   import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
-  import { setPromptDraftTemplates } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+  import { setPromptTemplates } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
@@ -320,7 +320,7 @@
 
   const handleTemplateSelect = (templates: PromptTemplateReference[] | null): void => {
     if (!templateSelectionTarget) return
-    setPromptDraftTemplates(templateSelectionTarget.promptId, templates)
+    setPromptTemplates(templateSelectionTarget.promptId, templates)
   }
 
   const handleTemplateSelectAndCopy = async (
@@ -329,7 +329,7 @@
     if (!templateSelectionTarget) return
     const { promptId } = templateSelectionTarget
     const promptDraft = promptDraftById[promptId]!
-    setPromptDraftTemplates(promptId, templates)
+    setPromptTemplates(promptId, templates)
     await window.navigator.clipboard.writeText(
       applyPromptTemplates(
         promptDraft.text,
@@ -343,7 +343,7 @@
 
   const handlePromptCopySuccess = (promptId: string): void => {
     if (promptDraftById[promptId]!.templates === undefined) {
-      setPromptDraftTemplates(promptId, null)
+      setPromptTemplates(promptId, null)
     }
   }
 
