@@ -2,7 +2,7 @@ import { flushWorkspaceScopedAutosaves } from './AutosaveFlushes.svelte.ts'
 import { clearPromptFolderDraftStore } from './PromptFolderDraftMutations.svelte.ts'
 import { clearPromptDraftStore } from './PromptDraftMutations.svelte.ts'
 import { clearPromptTemplateDraftStore } from './PromptTemplateDraftMutations.svelte.ts'
-import { clearMarkdownContentUiStateStore } from './MarkdownContentUiStateDraftMutations.svelte.ts'
+import { clearMarkdownContentUiStateCollection } from './MarkdownContentUiStateAutosave.svelte.ts'
 
 let currentWorkspacePath: string | null = null
 let switchQueue: Promise<void> = Promise.resolve()
@@ -23,7 +23,7 @@ export const switchWorkspaceStoreBridge = async (
     clearPromptFolderDraftStore()
     clearPromptDraftStore()
     clearPromptTemplateDraftStore()
-    clearMarkdownContentUiStateStore()
+    clearMarkdownContentUiStateCollection()
   })
 
   switchQueue = task

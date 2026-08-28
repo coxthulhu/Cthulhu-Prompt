@@ -1,18 +1,15 @@
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { USER_PERSISTENCE_ID } from '@shared/UserPersistence'
-import {
-  USER_PERSISTENCE_DRAFT_ID,
-  userPersistenceDraftCollection
-} from '../Collections/UserPersistenceDraftCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedUserPersistenceAutosaveUpdate } from '../Mutations/UserPersistenceMutations'
 
 const mutateAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void => {
   const roundedWidthPx = Math.round(appSidebarWidthPx)
-  const draftRecord = userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)
+  /** Current user persistence used to skip an unchanged sidebar-width write. */
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)
 
-  if (!draftRecord || draftRecord.appSidebarWidthPx === roundedWidthPx) {
+  if (!userPersistence || userPersistence.appSidebarWidthPx === roundedWidthPx) {
     return
   }
 
@@ -20,9 +17,6 @@ const mutateAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void => {
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.userPersistence.update(USER_PERSISTENCE_ID, (draft) => {
-        draft.appSidebarWidthPx = roundedWidthPx
-      })
-      collections.userPersistenceDraft.update(USER_PERSISTENCE_DRAFT_ID, (draft) => {
         draft.appSidebarWidthPx = roundedWidthPx
       })
     }

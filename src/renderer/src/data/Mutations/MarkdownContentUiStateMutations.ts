@@ -6,7 +6,6 @@ import {
 } from '@shared/MarkdownContentUiState'
 import type { Transaction } from '@tanstack/svelte-db'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
-import { markdownContentUiStateDraftCollection } from '../Collections/MarkdownContentUiStateDraftCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
 
@@ -49,19 +48,10 @@ export const mutatePacedMarkdownContentUiStateAutosaveUpdate = ({
           }
         }
       )
-      if (result.success) markdownContentUiStateDraftCollection.utils.acceptMutations(transaction)
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {
-      const snapshot = payload.markdownContentUiState
-      markdownContentUiStateCollection.utils.upsertAuthoritative(snapshot)
-      if (markdownContentUiStateDraftCollection.has(snapshot.id)) {
-        markdownContentUiStateDraftCollection.update(snapshot.id, (draft) => {
-          Object.assign(draft, snapshot.data)
-        })
-      } else {
-        markdownContentUiStateDraftCollection.insert(snapshot.data)
-      }
+      markdownContentUiStateCollection.utils.upsertAuthoritative(payload.markdownContentUiState)
     },
     conflictMessage: 'Markdown content ui state update conflict'
   })

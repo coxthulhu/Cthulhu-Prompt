@@ -9,13 +9,10 @@ import { promptDraftCollection } from '../Collections/PromptDraftCollection'
 import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
-import { markdownContentUiStateDraftCollection } from '../Collections/MarkdownContentUiStateDraftCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { systemSettingsDraftCollection } from '../Collections/SystemSettingsDraftCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
-import { userPersistenceDraftCollection } from '../Collections/UserPersistenceDraftCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
-import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { categoryCollection } from '../Collections/CategoryCollection'
 
@@ -43,10 +40,7 @@ const optimisticCollections = {
   promptDraft: promptDraftCollection,
   promptTemplateDraft: promptTemplateDraftCollection,
   promptFolderDraft: promptFolderDraftCollection,
-  markdownContentUiStateDraft: markdownContentUiStateDraftCollection,
-  systemSettingsDraft: systemSettingsDraftCollection,
-  userPersistenceDraft: userPersistenceDraftCollection,
-  workspacePersistenceDraft: workspacePersistenceDraftCollection
+  systemSettingsDraft: systemSettingsDraftCollection
 }
 
 export const mutatePacedRevisionUpdateTransaction = createPacedRevisionUpdateMutationRunner(

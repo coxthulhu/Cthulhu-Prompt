@@ -6,14 +6,12 @@ import {
   type WorkspacePersistenceRevisionResponsePayload
 } from '@shared/UserPersistence'
 import type { Transaction } from '@tanstack/svelte-db'
-import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
 } from '../IpcFramework/RevisionCollections'
-import { upsertWorkspacePersistenceDraft } from '../UiState/WorkspacePersistenceDraftMutations.svelte.ts'
 
 const readLatestWorkspacePersistenceFromTransaction = (
   transaction: Transaction<any>,
@@ -31,7 +29,6 @@ const handleWorkspacePersistenceSuccessOrConflictResponse = (
   payload: WorkspacePersistenceRevisionResponsePayload
 ): void => {
   workspacePersistenceCollection.utils.upsertAuthoritative(payload.workspacePersistence)
-  upsertWorkspacePersistenceDraft(payload.workspacePersistence.data)
 }
 
 type PacedWorkspacePersistenceMutationOptions = Parameters<
@@ -66,10 +63,6 @@ const createPersistWorkspacePersistenceMutations = (
       }
     })
 
-    if (mutationResult.success) {
-      workspacePersistenceDraftCollection.utils.acceptMutations(transaction)
-    }
-
     return mutationResult
   }
 }
@@ -102,12 +95,6 @@ export const syncWorkspaceScreenSelection = async (
   await runRevisionMutation<WorkspacePersistenceRevisionResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        Object.assign(draft, workspaceScreenSelection)
-        if (lastPromptFolderId !== undefined) {
-          draft.lastPromptFolderId = lastPromptFolderId
-        }
-      })
-      collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         Object.assign(draft, workspaceScreenSelection)
         if (lastPromptFolderId !== undefined) {
           draft.lastPromptFolderId = lastPromptFolderId

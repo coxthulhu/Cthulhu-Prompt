@@ -22,11 +22,8 @@
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
-  import {
-    USER_PERSISTENCE_DRAFT_ID,
-    userPersistenceDraftCollection
-  } from '@renderer/data/Collections/UserPersistenceDraftCollection'
-  import { workspacePersistenceDraftCollection } from '@renderer/data/Collections/WorkspacePersistenceDraftCollection'
+  import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
+  import { workspacePersistenceCollection } from '@renderer/data/Collections/WorkspacePersistenceCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { getPromptFolderPromptIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -59,6 +56,7 @@
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import {
+    USER_PERSISTENCE_ID,
     isWorkspaceScreenSelectionSame,
     type WorkspaceScreenSelection
   } from '@shared/UserPersistence'
@@ -96,9 +94,9 @@
   }
   const promptNavigation = createPromptNavigationContextValue()
   const windowControls = window.windowControls
-  const getUserPersistenceDraft = () =>
-    userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!
-  const appSidebarDefaultWidthPx = getUserPersistenceDraft().appSidebarWidthPx
+  /** Returns the startup-loaded user persistence singleton. */
+  const getUserPersistence = () => userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  const appSidebarDefaultWidthPx = getUserPersistence().appSidebarWidthPx
   // Session-only visibility starts expanded whenever the application launches.
   let isAppSidebarExpanded = $state(true)
   // Toggles only the resizable sidebar while leaving primary navigation visible.
@@ -211,7 +209,7 @@
   const resolvePromptFolderNavigationId = (): string | null => {
     const workspaceId = getSelectedWorkspaceId()
     const workspacePersistence = workspaceId
-      ? workspacePersistenceDraftCollection.get(workspaceId)
+      ? workspacePersistenceCollection.get(workspaceId)
       : null
     const firstPromptFolderId = selectedWorkspacePromptFolders[0]?.id ?? null
     const persistedLastPromptFolderId = workspacePersistence?.lastPromptFolderId ?? null
@@ -276,9 +274,13 @@
       return
     }
 
-    const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
+    /** Current persistence used to skip an unchanged screen selection write. */
+    const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
 
-    if (draftRecord && isWorkspaceScreenSelectionSame(draftRecord, workspaceScreenSelection)) {
+    if (
+      workspacePersistence &&
+      isWorkspaceScreenSelectionSame(workspacePersistence, workspaceScreenSelection)
+    ) {
       return
     }
 
@@ -300,7 +302,7 @@
       return
     }
 
-    const workspacePersistence = workspacePersistenceDraftCollection.get(workspaceId)
+    const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
     if (!workspacePersistence) {
       return
     }
@@ -373,8 +375,7 @@
   }
 
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
-    const lastWorkspaceInfoPath =
-      userPersistenceDraftCollection.get(USER_PERSISTENCE_DRAFT_ID)!.lastWorkspaceInfoPath
+    const lastWorkspaceInfoPath = getUserPersistence().lastWorkspaceInfoPath
 
     if (!lastWorkspaceInfoPath) {
       return

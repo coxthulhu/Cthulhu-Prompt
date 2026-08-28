@@ -21,7 +21,7 @@
   import {
     lookupMarkdownContentEditorViewStateJson,
     setMarkdownContentEditorViewStateJson
-  } from '@renderer/data/UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
+  } from '@renderer/data/UiState/MarkdownContentUiStateAutosave.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'

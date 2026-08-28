@@ -3,7 +3,7 @@ import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { deletePromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import { deletePromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
-import { deleteMarkdownContentUiStates } from '../UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
+import { deleteMarkdownContentUiStates } from '../UiState/MarkdownContentUiStateAutosave.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { categoryCollection } from '../Collections/CategoryCollection'
 

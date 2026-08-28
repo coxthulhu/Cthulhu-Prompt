@@ -3,14 +3,12 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import {
-    workspacePersistenceDraftCollection,
-    type WorkspacePersistenceDraftRecord
-  } from '@renderer/data/Collections/WorkspacePersistenceDraftCollection'
+  import { workspacePersistenceCollection } from '@renderer/data/Collections/WorkspacePersistenceCollection'
   import { setAccordionViewEntryWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
   import type {
     WorkspaceAccordionSectionViewEntry,
-    WorkspaceAccordionViewEntry
+    WorkspaceAccordionViewEntry,
+    WorkspacePersistence
   } from '@shared/UserPersistence'
   import {
     setAccordionContext,
@@ -53,9 +51,9 @@
 
   /** Reactive workspace owner used to scope persisted accordion state. */
   const workspaceSelection = getWorkspaceSelectionContext()
-  /** Reactive workspace-persistence drafts rendered by this component. */
-  const workspacePersistenceQuery = useLiveQuery(workspacePersistenceDraftCollection) as {
-    data: WorkspacePersistenceDraftRecord[]
+  /** Reactive workspace-persistence records rendered by this component. */
+  const workspacePersistenceQuery = useLiveQuery(workspacePersistenceCollection) as {
+    data: WorkspacePersistence[]
   }
   /** Accordion root measured whenever its available height changes. */
   let accordionElement = $state<HTMLDivElement | null>(null)
@@ -74,9 +72,9 @@
   const persistedAccordionViewEntry = $derived.by(() => {
     /** Currently selected workspace that owns this accordion state. */
     const workspaceId = workspaceSelection.selectedWorkspaceId
-    /** Loaded workspace draft containing accordion view entries. */
+    /** Loaded workspace persistence containing accordion view entries. */
     const workspacePersistence = workspacePersistenceQuery.data.find(
-      (candidate) => candidate.id === workspaceId
+      (candidate) => candidate.workspaceId === workspaceId
     )
     return (
       workspacePersistence?.accordionViewEntries.find(

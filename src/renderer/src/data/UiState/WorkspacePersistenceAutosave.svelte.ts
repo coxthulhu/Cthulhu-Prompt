@@ -3,7 +3,6 @@ import type {
   WorkspacePromptFolderViewEntry
 } from '@shared/UserPersistence'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import { workspacePersistenceDraftCollection } from '../Collections/WorkspacePersistenceDraftCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { mutatePacedWorkspacePersistenceAutosaveUpdate } from '../Mutations/WorkspacePersistenceMutations'
@@ -71,7 +70,7 @@ const lookupPromptFolderViewEntry = (
   workspaceId: string,
   contentOwnerId: string
 ): WorkspacePromptFolderViewEntry | null =>
-  workspacePersistenceDraftCollection
+  workspacePersistenceCollection
     .get(workspaceId)
     ?.promptFolderViewEntries.find((entry) => entry.contentOwnerId === contentOwnerId) ?? null
 
@@ -81,24 +80,22 @@ const setPromptFolderViewEntryWithAutosave = (
   contentOwnerId: string,
   updates: Partial<WorkspacePromptFolderViewEntry>
 ): void => {
-  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
-  if (!draftRecord) return
+  /** Current workspace persistence used to detect an unchanged view entry. */
+  const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
+  if (!workspacePersistence) return
 
   const nextEntries = upsertPromptFolderViewEntry(
-    draftRecord.promptFolderViewEntries,
+    workspacePersistence.promptFolderViewEntries,
     contentOwnerId,
     updates
   )
-  if (nextEntries === draftRecord.promptFolderViewEntries) return
+  if (nextEntries === workspacePersistence.promptFolderViewEntries) return
 
   mutatePacedWorkspacePersistenceAutosaveUpdate({
     workspaceId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        applyPromptFolderViewEntry(draft, contentOwnerId, updates)
-      })
-      collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         applyPromptFolderViewEntry(draft, contentOwnerId, updates)
       })
     }
@@ -152,7 +149,7 @@ export const lookupWorkspacePersistedAccordionViewEntry = (
   persistenceId: string
 ): WorkspaceAccordionViewEntry | null => {
   /** Saved accordion entry for the requested persistence ID. */
-  const entry = workspacePersistenceDraftCollection
+  const entry = workspacePersistenceCollection
     .get(workspaceId)
     ?.accordionViewEntries.find((candidate) => candidate.persistenceId === persistenceId)
   return entry
@@ -168,25 +165,22 @@ export const setAccordionViewEntryWithAutosave = (
   workspaceId: string,
   accordionViewEntry: WorkspaceAccordionViewEntry
 ): void => {
-  /** Current workspace persistence draft used to detect unchanged accordion state. */
-  const draftRecord = workspacePersistenceDraftCollection.get(workspaceId)
-  if (!draftRecord) return
+  /** Current workspace persistence record used to detect unchanged accordion state. */
+  const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
+  if (!workspacePersistence) return
 
   /** Next accordion entries after applying the requested complete state. */
   const nextEntries = upsertAccordionViewEntry(
-    draftRecord.accordionViewEntries,
+    workspacePersistence.accordionViewEntries,
     accordionViewEntry
   )
-  if (nextEntries === draftRecord.accordionViewEntries) return
+  if (nextEntries === workspacePersistence.accordionViewEntries) return
 
   mutatePacedWorkspacePersistenceAutosaveUpdate({
     workspaceId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
-        applyAccordionViewEntry(draft, accordionViewEntry)
-      })
-      collections.workspacePersistenceDraft.update(workspaceId, (draft) => {
         applyAccordionViewEntry(draft, accordionViewEntry)
       })
     }
@@ -280,8 +274,12 @@ export const setCategoryDescriptionEditorViewStateWithAutosave = (
 
 /** Flushes every pending workspace-persistence autosave. */
 export const flushWorkspacePersistenceAutosaves = async (): Promise<void> => {
-  const tasks = workspacePersistenceDraftCollection.toArray.map(async (draftRecord) => {
-    await submitPacedUpdateTransactionAndWait(workspacePersistenceCollection.id, draftRecord.id)
+  /** Flush tasks for each loaded workspace-persistence record. */
+  const tasks = workspacePersistenceCollection.toArray.map(async (workspacePersistence) => {
+    await submitPacedUpdateTransactionAndWait(
+      workspacePersistenceCollection.id,
+      workspacePersistence.workspaceId
+    )
   })
   await Promise.allSettled(tasks)
 }

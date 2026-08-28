@@ -5,17 +5,12 @@ import {
   type UserPersistenceRevisionResponsePayload
 } from '@shared/UserPersistence'
 import type { Transaction } from '@tanstack/svelte-db'
-import {
-  USER_PERSISTENCE_DRAFT_ID,
-  userPersistenceDraftCollection
-} from '../Collections/UserPersistenceDraftCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
 } from '../IpcFramework/RevisionCollections'
-import { upsertUserPersistenceDraft } from '../UiState/UserPersistenceDraftMutations.svelte.ts'
 
 const readLatestUserPersistenceFromTransaction = (
   transaction: Transaction<any>
@@ -50,10 +45,6 @@ const persistUserPersistenceMutations: PacedUserPersistenceMutationOptions['pers
       }
     })
 
-    if (mutationResult.success) {
-      userPersistenceDraftCollection.utils.acceptMutations(transaction)
-    }
-
     return mutationResult
   }
 
@@ -61,7 +52,6 @@ const handleUserPersistenceSuccessOrConflictResponse = (
   payload: UserPersistenceRevisionResponsePayload
 ): void => {
   userPersistenceCollection.utils.upsertAuthoritative(payload.userPersistence)
-  upsertUserPersistenceDraft(payload.userPersistence.data)
 }
 
 export const mutatePacedUserPersistenceAutosaveUpdate = ({
@@ -85,9 +75,6 @@ export const syncLastWorkspaceInfoPath = async (
   await runRevisionMutation<UserPersistenceRevisionResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.userPersistence.update(USER_PERSISTENCE_ID, (draft) => {
-        draft.lastWorkspaceInfoPath = lastWorkspaceInfoPath
-      })
-      collections.userPersistenceDraft.update(USER_PERSISTENCE_DRAFT_ID, (draft) => {
         draft.lastWorkspaceInfoPath = lastWorkspaceInfoPath
       })
     },

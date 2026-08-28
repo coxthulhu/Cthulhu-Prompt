@@ -11,7 +11,6 @@ import {
   setPromptFolderDraftHasLoadedInitialData,
   upsertPromptFolderDrafts
 } from '../UiState/PromptFolderDraftMutations.svelte.ts'
-import { upsertMarkdownContentUiStateDrafts } from '../UiState/MarkdownContentUiStateDraftMutations.svelte.ts'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 import { categoryCollection } from '../Collections/CategoryCollection'
 
@@ -36,9 +35,6 @@ export const loadPromptFolderInitial = async (
   promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
   upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.data))
   markdownContentUiStateCollection.utils.upsertManyAuthoritative(result.markdownContentUiStates)
-  upsertMarkdownContentUiStateDrafts(
-    result.markdownContentUiStates.map((uiState) => uiState.data)
-  )
   setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
 
   // Prune drafts against the reconciled collection state after applying the load result.

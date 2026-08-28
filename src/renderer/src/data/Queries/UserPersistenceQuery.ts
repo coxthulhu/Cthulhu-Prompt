@@ -12,8 +12,6 @@ import { userPersistenceCollection } from '../Collections/UserPersistenceCollect
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvoke, ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { upsertUserPersistenceDraft } from '../UiState/UserPersistenceDraftMutations.svelte.ts'
-import { upsertWorkspacePersistenceDraft } from '../UiState/WorkspacePersistenceDraftMutations.svelte.ts'
 
 export const loadUserPersistence = async (): Promise<void> => {
   const result = await runLoad(() =>
@@ -21,7 +19,6 @@ export const loadUserPersistence = async (): Promise<void> => {
   )
 
   userPersistenceCollection.utils.upsertAuthoritative(result.userPersistence)
-  upsertUserPersistenceDraft(result.userPersistence.data)
 }
 
 export const loadWorkspacePersistence = async (
@@ -35,6 +32,5 @@ export const loadWorkspacePersistence = async (
   )
 
   workspacePersistenceCollection.utils.upsertAuthoritative(result.workspacePersistence)
-  upsertWorkspacePersistenceDraft(result.workspacePersistence.data)
   return result.workspacePersistence.data
 }
