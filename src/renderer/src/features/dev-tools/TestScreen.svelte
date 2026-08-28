@@ -11,21 +11,18 @@
     Download,
     FileText,
     Folder,
-    Layers,
-    LayoutGrid,
-    LibraryBig,
     ListTodo,
     Loader,
     MoreHorizontal,
+    NotebookPen,
+    NotepadText,
     Pencil,
     Pin,
     Plus,
     Search,
     Settings,
-    Shapes,
     Sparkles,
-    Tag,
-    Tags,
+    StickyNote,
     Trash2
   } from 'lucide-svelte'
   import Accordion from '@renderer/common/cthulhu-ui/Accordion.svelte'
@@ -105,34 +102,19 @@
     icon: ComponentType
   }[] = [
     {
-      name: 'Tag',
-      description: 'The clearest match for one category assigned to a prompt.',
-      icon: Tag
+      name: 'NotepadText',
+      description: 'Represents a page of structured or written notes.',
+      icon: NotepadText
     },
     {
-      name: 'Tags',
-      description: 'Suggests the full category collection or category management.',
-      icon: Tags
+      name: 'NotebookPen',
+      description: 'Emphasizes writing or editing notes in a notebook.',
+      icon: NotebookPen
     },
     {
-      name: 'Shapes',
-      description: 'Represents distinct prompt types without implying a hierarchy.',
-      icon: Shapes
-    },
-    {
-      name: 'LayoutGrid',
-      description: 'Feels like browsing a set of equally weighted groups.',
-      icon: LayoutGrid
-    },
-    {
-      name: 'Layers',
-      description: 'Communicates organized sets, but can also suggest stacking.',
-      icon: Layers
-    },
-    {
-      name: 'LibraryBig',
-      description: 'Frames categories as sections within the prompt library.',
-      icon: LibraryBig
+      name: 'StickyNote',
+      description: 'Suggests a quick note or short reference attached to an item.',
+      icon: StickyNote
     }
   ]
   const folderDropdownItems: DropdownPopupItem[] = [
@@ -279,7 +261,7 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Icon Candidates',
-              'Lucide alternatives for category presentation. Tag is the strongest match for a prompt with one category.'
+              'Lucide alternatives for notes presentation.'
             )}
 
             <div class="category-icon-grid">
