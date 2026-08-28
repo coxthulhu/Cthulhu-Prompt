@@ -3,10 +3,10 @@ import { PromptStatus, createPromptSummary } from '@shared/Prompt'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
+import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
-import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
+import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 
 /** Shared revision mutation mock exposes the deletion transaction contract. */
 const runRevisionMutation = vi.hoisted(() => vi.fn())
@@ -35,9 +35,9 @@ describe('category mutations', () => {
     promptFolderCollection.utils.deleteAuthoritative(ROOT_FOLDER_ID)
     promptCollection.utils.deleteAuthoritative(PROMPT_ID)
     promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
-    if (promptDraftCollection.has(PROMPT_ID)) promptDraftCollection.delete(PROMPT_ID)
-    if (promptTemplateDraftCollection.has(TEMPLATE_ID)) {
-      promptTemplateDraftCollection.delete(TEMPLATE_ID)
+    if (promptClientStateCollection.has(PROMPT_ID)) promptClientStateCollection.delete(PROMPT_ID)
+    if (promptTemplateClientStateCollection.has(TEMPLATE_ID)) {
+      promptTemplateClientStateCollection.delete(TEMPLATE_ID)
     }
 
     categoryCollection.utils.upsertAuthoritative({
@@ -183,8 +183,8 @@ describe('category mutations', () => {
   })
 
   it('reconciles authoritative records and preserves edit markers after deletion', async () => {
-    promptDraftCollection.insert({ id: PROMPT_ID, isEdited: true })
-    promptTemplateDraftCollection.insert({ id: TEMPLATE_ID, isEdited: true })
+    promptClientStateCollection.insert({ id: PROMPT_ID, isEdited: true })
+    promptTemplateClientStateCollection.insert({ id: TEMPLATE_ID, isEdited: true })
     await deleteCategory(CATEGORY_ID)
 
     /** Revision mutation options registered by deleteCategory. */
@@ -256,11 +256,11 @@ describe('category mutations', () => {
     expect(promptFolderCollection.get(ROOT_FOLDER_ID)?.categoryOrder.categories).toEqual([
       { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
     ])
-    expect(promptDraftCollection.get(PROMPT_ID)).toMatchObject({
+    expect(promptClientStateCollection.get(PROMPT_ID)).toMatchObject({
       id: PROMPT_ID,
       isEdited: true
     })
-    expect(promptTemplateDraftCollection.get(TEMPLATE_ID)).toMatchObject({
+    expect(promptTemplateClientStateCollection.get(TEMPLATE_ID)).toMatchObject({
       id: TEMPLATE_ID,
       isEdited: true
     })

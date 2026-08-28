@@ -24,9 +24,9 @@
     startCategoryDrag
   } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
   import {
-    type PromptDraftRecord,
-    promptDraftCollection
-  } from '@renderer/data/Collections/PromptDraftCollection'
+    type PromptClientStateRecord,
+    promptClientStateCollection
+  } from '@renderer/data/Collections/PromptClientStateCollection'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
@@ -119,8 +119,8 @@
   let isCreatingCategoryContent = $state(false)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
-  const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
-    data: PromptDraftRecord[]
+  const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
+    data: PromptClientStateRecord[]
   }
   const promptQuery = useLiveQuery(promptCollection) as {
     data: Prompt[]
@@ -150,7 +150,7 @@
   // Maps prompt IDs to the session-latched edited state displayed by prompt-tree accents.
   const promptEditedById = $derived.by(() =>
     Object.fromEntries(
-      promptDraftQuery.data.map((promptDraft) => [promptDraft.id, promptDraft.isEdited])
+      promptClientStateQuery.data.map((clientState) => [clientState.id, clientState.isEdited])
     )
   )
   const promptById = $derived.by(() => {

@@ -9,12 +9,15 @@ import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
 import type { PromptFolderContentKind } from '@shared/PromptFolder'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { deletePromptDrafts, upsertPromptDrafts, upsertPromptSummaryDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
 import {
-  deletePromptTemplateDrafts,
-  upsertPromptTemplateDrafts
-} from '../UiState/PromptTemplateDraftMutations.svelte.ts'
-import { clearPromptEditorMeasuredHeights } from '../UiState/PromptDraftUiCache.svelte.ts'
+  deletePromptClientStates,
+  upsertPromptClientStates
+} from '../UiState/PromptClientStateMutations.svelte.ts'
+import {
+  deletePromptTemplateClientStates,
+  upsertPromptTemplateClientStates
+} from '../UiState/PromptTemplateClientStateMutations.svelte.ts'
+import { clearPromptEditorMeasuredHeights } from '../UiState/PromptEditorUiCache.svelte.ts'
 
 /** Clears prompt measurements whose canonical full text is changing. */
 const clearChangedPromptMeasurements = (prompts: PromptFull[]): void => {
@@ -60,7 +63,7 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
       promptCollection.utils.upsertManyAuthoritative(
         result.prompts.map((prompt) => ({ ...prompt, data: createPromptSummary(prompt.data) }))
       )
-      upsertPromptSummaryDrafts(result.prompts.map((prompt) => prompt.data))
+      upsertPromptClientStates(result.prompts.map((prompt) => prompt.data))
     },
     applyFolderResult: (result) => {
       const snapshots = result.prompts.map((prompt) => ({
@@ -69,11 +72,11 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
       }))
       clearChangedPromptMeasurements(snapshots.map((prompt) => prompt.data))
       promptCollection.utils.upsertManyAuthoritative(snapshots)
-      upsertPromptDrafts(snapshots.map((prompt) => prompt.data))
+      upsertPromptClientStates(snapshots.map((prompt) => prompt.data))
     },
     delete: (promptIds) => {
       promptCollection.utils.deleteManyAuthoritative(promptIds)
-      deletePromptDrafts(promptIds)
+      deletePromptClientStates(promptIds)
     }
   },
   {
@@ -86,7 +89,7 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
       }))
       clearChangedTemplateMeasurements(snapshots.map((template) => template.data))
       promptTemplateCollection.utils.upsertManyAuthoritative(snapshots)
-      upsertPromptTemplateDrafts(snapshots.map((template) => template.data))
+      upsertPromptTemplateClientStates(snapshots.map((template) => template.data))
     },
     applyFolderResult: (result) => {
       const snapshots = result.promptTemplates.map((template) => ({
@@ -95,11 +98,11 @@ export const markdownContentQueryAdapters: readonly MarkdownContentQueryAdapter[
       }))
       clearChangedTemplateMeasurements(snapshots.map((template) => template.data))
       promptTemplateCollection.utils.upsertManyAuthoritative(snapshots)
-      upsertPromptTemplateDrafts(snapshots.map((template) => template.data))
+      upsertPromptTemplateClientStates(snapshots.map((template) => template.data))
     },
     delete: (templateIds) => {
       promptTemplateCollection.utils.deleteManyAuthoritative(templateIds)
-      deletePromptTemplateDrafts(templateIds)
+      deletePromptTemplateClientStates(templateIds)
     }
   }
 ]

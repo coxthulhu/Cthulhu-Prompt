@@ -5,7 +5,7 @@
   } from '@shared/PromptFolder'
   import type { Category } from '@shared/Category'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-  import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptDraftUiCache.svelte.ts'
+  import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptEditorUiCache.svelte.ts'
   import { lookupCategoryDescriptionMeasuredHeight } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
   import { PromptStatus, type PromptTemplateReference } from '@shared/Prompt'
@@ -13,7 +13,7 @@
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
   import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
-  import { setPromptTemplates } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+  import { setPromptTemplates } from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,

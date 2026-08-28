@@ -8,7 +8,8 @@ import {
 const settingsRowMeasuredHeight = createSessionMeasuredHeightCache()
 const scrollTop = createSessionValueCache<number>()
 
-export const promptFolderDraftUiCache = {
+/** Renderer-session measurements and scroll positions for prompt folders. */
+export const promptFolderUiCache = {
   settingsRowMeasuredHeight,
   scrollTop
 }
@@ -24,7 +25,7 @@ export const lookupPromptFolderSettingsRowMeasuredHeight = (
   widthPx: number,
   devicePixelRatio: number
 ): number | null => {
-  return promptFolderDraftUiCache.settingsRowMeasuredHeight.lookup(
+  return promptFolderUiCache.settingsRowMeasuredHeight.lookup(
     promptFolderSettingsRowCacheId(promptFolderId, field),
     widthPx,
     devicePixelRatio
@@ -37,7 +38,7 @@ export const recordPromptFolderSettingsRowMeasuredHeight = (
   measurement: TextMeasurement,
   textChanged: boolean
 ): void => {
-  promptFolderDraftUiCache.settingsRowMeasuredHeight.record(
+  promptFolderUiCache.settingsRowMeasuredHeight.record(
     promptFolderSettingsRowCacheId(promptFolderId, field),
     measurement,
     textChanged
@@ -48,7 +49,7 @@ export const clearPromptFolderSettingsFieldRowMeasuredHeight = (
   promptFolderId: string,
   field: PromptFolderSettingsField
 ): void => {
-  promptFolderDraftUiCache.settingsRowMeasuredHeight.clear(
+  promptFolderUiCache.settingsRowMeasuredHeight.clear(
     promptFolderSettingsRowCacheId(promptFolderId, field)
   )
 }
@@ -66,17 +67,17 @@ export const clearPromptFolderSettingsRowMeasuredHeights = (promptFolderIds: str
 }
 
 export const lookupPromptFolderScrollTop = (promptFolderId: string): number | null => {
-  return promptFolderDraftUiCache.scrollTop.lookup(promptFolderId)
+  return promptFolderUiCache.scrollTop.lookup(promptFolderId)
 }
 
 export const recordPromptFolderScrollTop = (promptFolderId: string, scrollTopPx: number): void => {
-  promptFolderDraftUiCache.scrollTop.record(promptFolderId, scrollTopPx)
+  promptFolderUiCache.scrollTop.record(promptFolderId, scrollTopPx)
 }
 
 export const clearPromptFolderScrollTop = (promptFolderId: string): void => {
-  promptFolderDraftUiCache.scrollTop.clear(promptFolderId)
+  promptFolderUiCache.scrollTop.clear(promptFolderId)
 }
 
 export const clearPromptFolderScrollTops = (promptFolderIds: string[]): void => {
-  promptFolderDraftUiCache.scrollTop.clearMany(promptFolderIds)
+  promptFolderUiCache.scrollTop.clearMany(promptFolderIds)
 }

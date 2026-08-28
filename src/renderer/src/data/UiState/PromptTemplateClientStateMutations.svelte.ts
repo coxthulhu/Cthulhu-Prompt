@@ -8,40 +8,45 @@ import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
-  promptTemplateDraftCollection,
-  type PromptTemplateDraftRecord
-} from '../Collections/PromptTemplateDraftCollection'
+  promptTemplateClientStateCollection,
+  type PromptTemplateClientStateRecord
+} from '../Collections/PromptTemplateClientStateCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { mutatePacedPromptTemplateAutosaveUpdate } from '../Mutations/PromptTemplateMutations'
-import { recordPromptEditorMeasuredHeight } from './PromptDraftUiCache.svelte.ts'
 import {
-  clearPromptEditorMeasuredHeights
-} from './PromptDraftUiCache.svelte.ts'
-import { createMarkdownContentDraftMutations } from './MarkdownContentDraftMutations'
+  clearPromptEditorMeasuredHeights,
+  recordPromptEditorMeasuredHeight
+} from './PromptEditorUiCache.svelte.ts'
+import { createMarkdownContentClientState } from './MarkdownContentClientState'
 
-/** Lifecycle helpers for prompt-template edit markers and editor measurements. */
-const draftMutations = createMarkdownContentDraftMutations<PromptTemplateDraftRecord>({
+/** Lifecycle helpers for prompt-template client state and editor measurements. */
+const clientState = createMarkdownContentClientState<PromptTemplateClientStateRecord>({
   authoritativeCollectionId: promptTemplateCollection.id,
-  getDraft: (templateId) => promptTemplateDraftCollection.get(templateId),
-  getDrafts: () => promptTemplateDraftCollection.toArray,
-  getDraftIds: () => Array.from(promptTemplateDraftCollection.keys(), (id) => String(id)),
-  insertDrafts: (drafts) => {
-    promptTemplateDraftCollection.insert(drafts)
+  getClientState: (templateId) => promptTemplateClientStateCollection.get(templateId),
+  getClientStates: () => promptTemplateClientStateCollection.toArray,
+  getClientStateIds: () =>
+    Array.from(promptTemplateClientStateCollection.keys(), (id) => String(id)),
+  insertClientStates: (clientStates) => {
+    promptTemplateClientStateCollection.insert(clientStates)
   },
-  deleteDrafts: (templateIds) => {
-    promptTemplateDraftCollection.delete(templateIds)
+  deleteClientStates: (templateIds) => {
+    promptTemplateClientStateCollection.delete(templateIds)
   },
-  createDraft: (templateId) => ({ id: templateId, isEdited: false }),
+  createClientState: (templateId) => ({ id: templateId, isEdited: false }),
   beforeDelete: clearPromptEditorMeasuredHeights
 })
 
-export const upsertPromptTemplateSummaryDrafts = draftMutations.upsertSummaryDrafts
-export const upsertPromptTemplateDrafts = draftMutations.upsertDrafts
-export const deletePromptTemplateDrafts = draftMutations.deleteDrafts
-export const removePromptTemplateDraft = draftMutations.removeDraft
-export const flushPromptTemplateDraftAutosaves = draftMutations.flushAutosaves
-export const clearPromptTemplateDraftStore = draftMutations.clearDraftStore
+/** Adds missing client-state records for loaded prompt templates. */
+export const upsertPromptTemplateClientStates = clientState.upsertClientStates
+/** Deletes prompt-template client state and associated UI caches. */
+export const deletePromptTemplateClientStates = clientState.deleteClientStates
+/** Deletes one prompt template's client state and associated UI cache. */
+export const removePromptTemplateClientState = clientState.removeClientState
+/** Flushes autosaves associated with prompt-template client state. */
+export const flushPromptTemplateClientStateAutosaves = clientState.flushAutosaves
+/** Clears all prompt-template client state for the current workspace. */
+export const clearPromptTemplateClientStateCollection = clientState.clearClientStateCollection
 
 const getSiblingTemplateIds = (templateId: string): string[] => {
   for (const folder of promptFolderCollection.values()) {
@@ -52,7 +57,7 @@ const getSiblingTemplateIds = (templateId: string): string[] => {
   return [templateId]
 }
 
-/** Schedules one authoritative template edit and latches its session marker. */
+/** Schedules one authoritative template edit and latches its client-state marker. */
 const mutatePromptTemplate = (
   templateId: string,
   mutateTemplate: (template: PromptTemplate) => void
@@ -61,8 +66,8 @@ const mutatePromptTemplate = (
     templateId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
-      collections.promptTemplateDraft.update(templateId, (draft) => {
-        draft.isEdited = true
+      collections.promptTemplateClientState.update(templateId, (clientStateRecord) => {
+        clientStateRecord.isEdited = true
       })
       collections.promptTemplate.update(templateId, mutateTemplate)
     }

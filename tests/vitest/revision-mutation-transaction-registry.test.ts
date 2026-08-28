@@ -243,20 +243,20 @@ describe('revision mutation transaction registry', () => {
     expect(persistCalled).toBe(1)
   })
 
-  it('queues paced transactions when optimistic updates only touch draft collections', async () => {
+  it('queues paced transactions when optimistic updates only touch client-state collections', async () => {
     vi.useFakeTimers()
 
-    const { collectionId, collection } = createSingleItemRegistryContext('paced-draft-only')
-    const draftCollection = createCollection(
+    const { collectionId, collection } = createSingleItemRegistryContext('paced-client-state-only')
+    const clientStateCollection = createCollection(
       localOnlyCollectionOptions<TestRecord>({
-        id: nextCollectionId('paced-draft-only-local'),
+        id: nextCollectionId('paced-client-state-only-local'),
         getKey: (record) => record.id
       })
     )
-    draftCollection.insert({ id: TEST_ITEM_ID, value: 0 })
+    clientStateCollection.insert({ id: TEST_ITEM_ID, value: 0 })
     const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
-      { draft: draftCollection }
+      { clientState: clientStateCollection }
     )
     let persistCalled = 0
 
@@ -265,7 +265,7 @@ describe('revision mutation transaction registry', () => {
       elementId: TEST_ITEM_ID,
       debounceMs: 200,
       mutateOptimistically: ({ collections }) => {
-        collections.draft.update(TEST_ITEM_ID, (draft) => {
+        collections.clientState.update(TEST_ITEM_ID, (draft) => {
           draft.value = 11
         })
       },
@@ -277,7 +277,7 @@ describe('revision mutation transaction registry', () => {
       conflictMessage: 'Conflict'
     })
 
-    expect(draftCollection.get(TEST_ITEM_ID)!.value).toBe(11)
+    expect(clientStateCollection.get(TEST_ITEM_ID)!.value).toBe(11)
     expect(sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)).toBe(true)
     await submitAllPacedUpdateTransactionsAndWait()
     expect(persistCalled).toBe(1)

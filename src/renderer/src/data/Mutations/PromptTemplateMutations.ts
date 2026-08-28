@@ -8,11 +8,11 @@ import { promptTemplateEntryRef } from '@shared/OrderContainer'
 import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import {
-  markPromptTemplateDraftEdited,
-  promptTemplateDraftCollection
-} from '../Collections/PromptTemplateDraftCollection'
-import { upsertPromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
-import { clearPromptEditorMeasuredHeight } from '../UiState/PromptDraftUiCache.svelte.ts'
+  markPromptTemplateClientStateEdited,
+  promptTemplateClientStateCollection
+} from '../Collections/PromptTemplateClientStateCollection'
+import { upsertPromptTemplateClientStates } from '../UiState/PromptTemplateClientStateMutations.svelte.ts'
+import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => ({
@@ -57,22 +57,22 @@ const mutations = createMarkdownContentRendererMutations<
   },
   insertOptimistically: (collections, template) => {
     collections.promptTemplate.insert(template)
-    collections.promptTemplateDraft.insert(
-      markPromptTemplateDraftEdited({ id: template.id, isEdited: false })
+    collections.promptTemplateClientState.insert(
+      markPromptTemplateClientStateEdited({ id: template.id, isEdited: false })
     )
   },
   deleteOptimistically: (collections, templateId) => {
     collections.promptTemplate.delete(templateId)
-    collections.promptTemplateDraft.delete(templateId)
+    collections.promptTemplateClientState.delete(templateId)
   },
   updateContentOptimistically: (collections, templateId, update) => {
     collections.promptTemplate.update(templateId, update)
-    collections.promptTemplateDraft.update(templateId, (draft) => {
-      markPromptTemplateDraftEdited(draft)
+    collections.promptTemplateClientState.update(templateId, (clientState) => {
+      markPromptTemplateClientStateEdited(clientState)
     })
   },
-  acceptDraftMutations: (transaction) =>
-    promptTemplateDraftCollection.utils.acceptMutations(transaction),
+  acceptClientStateMutations: (transaction) =>
+    promptTemplateClientStateCollection.utils.acceptMutations(transaction),
   reconcile: (snapshot) => {
     /** Canonical template present before authoritative reconciliation. */
     const currentTemplate = promptTemplateCollection.get(snapshot.id)
@@ -85,7 +85,7 @@ const mutations = createMarkdownContentRendererMutations<
     }
     const fullSnapshot = { ...snapshot, data: createPromptTemplateFull(snapshot.data) }
     promptTemplateCollection.utils.upsertAuthoritative(fullSnapshot)
-    upsertPromptTemplateDrafts([fullSnapshot.data])
+    upsertPromptTemplateClientStates([fullSnapshot.data])
   },
   deleteAuthoritative: (templateId) =>
     promptTemplateCollection.utils.deleteAuthoritative(templateId)

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptSummary, PromptStatus } from '@shared/Prompt'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptDraftCollection } from '@renderer/data/Collections/PromptDraftCollection'
+import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 
 /** IPC spy used to inspect reference-only prompt mutation payloads. */
@@ -56,7 +56,7 @@ describe('prompt mutations', () => {
     promptCollection.utils.deleteAuthoritative(PROMPT_ID)
     promptFolderCollection.utils.deleteAuthoritative(SOURCE_FOLDER_ID)
     promptFolderCollection.utils.deleteAuthoritative(DESTINATION_FOLDER_ID)
-    if (promptDraftCollection.has(PROMPT_ID)) promptDraftCollection.delete(PROMPT_ID)
+    if (promptClientStateCollection.has(PROMPT_ID)) promptClientStateCollection.delete(PROMPT_ID)
 
     promptCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
@@ -69,7 +69,7 @@ describe('prompt mutations', () => {
         status: PromptStatus.Todo
       })
     })
-    promptDraftCollection.insert({ id: PROMPT_ID, isEdited: false })
+    promptClientStateCollection.insert({ id: PROMPT_ID, isEdited: false })
     promptFolderCollection.utils.upsertAuthoritative({
       id: SOURCE_FOLDER_ID,
       revision: 2,
@@ -101,8 +101,8 @@ describe('prompt mutations', () => {
     const destination = promptFolder(DESTINATION_FOLDER_ID, [], DESTINATION_CATEGORY_ID)
     /** Mutable canonical prompt receiving move-owned metadata. */
     const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
-    /** Marker-only draft receiving the edited latch. */
-    const promptDraft = { id: PROMPT_ID, isEdited: false }
+    /** Prompt client state receiving the edited latch. */
+    const promptClientState = { id: PROMPT_ID, isEdited: false }
 
     options.mutateOptimistically({
       collections: {
@@ -113,9 +113,9 @@ describe('prompt mutations', () => {
         prompt: {
           update: (_id: string, update: (draft: typeof prompt) => void) => update(prompt)
         },
-        promptDraft: {
-          update: (_id: string, update: (draft: typeof promptDraft) => void) =>
-            update(promptDraft)
+        promptClientState: {
+          update: (_id: string, update: (clientState: typeof promptClientState) => void) =>
+            update(promptClientState)
         }
       }
     })
@@ -125,7 +125,7 @@ describe('prompt mutations', () => {
       { kind: 'prompt', id: PROMPT_ID }
     ])
     expect(prompt.category).toBe(DESTINATION_CATEGORY_ID)
-    expect(promptDraft).toEqual({ id: PROMPT_ID, isEdited: true })
+    expect(promptClientState).toEqual({ id: PROMPT_ID, isEdited: true })
 
     /** Revision-aware entity builders used by the shared move payload. */
     const entities = {
@@ -158,8 +158,8 @@ describe('prompt mutations', () => {
     const folder = promptFolder(SOURCE_FOLDER_ID, [PROMPT_ID])
     /** Mutable canonical prompt receiving status fields. */
     const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
-    /** Marker-only draft receiving the edited latch. */
-    const promptDraft = { id: PROMPT_ID, isEdited: false }
+    /** Prompt client state receiving the edited latch. */
+    const promptClientState = { id: PROMPT_ID, isEdited: false }
 
     options.mutateOptimistically({
       collections: {
@@ -169,16 +169,16 @@ describe('prompt mutations', () => {
         prompt: {
           update: (_id: string, update: (draft: typeof prompt) => void) => update(prompt)
         },
-        promptDraft: {
-          update: (_id: string, update: (draft: typeof promptDraft) => void) =>
-            update(promptDraft)
+        promptClientState: {
+          update: (_id: string, update: (clientState: typeof promptClientState) => void) =>
+            update(promptClientState)
         }
       }
     })
 
     expect(prompt.status).toBe(PromptStatus.Completed)
     expect(prompt).toHaveProperty('completedAt')
-    expect(promptDraft).toEqual({ id: PROMPT_ID, isEdited: true })
+    expect(promptClientState).toEqual({ id: PROMPT_ID, isEdited: true })
 
     /** Root-folder entity builder used by the status request. */
     const entities = {

@@ -3,7 +3,8 @@ import { createSessionMeasuredHeightCache } from './sessionUiCacheFactories.svel
 
 const editorMeasuredHeight = createSessionMeasuredHeightCache()
 
-export const promptDraftUiCache = {
+/** Renderer-session measurements shared by prompt and template editors. */
+export const promptEditorUiCache = {
   editorMeasuredHeight
 }
 
@@ -12,7 +13,7 @@ export const lookupPromptEditorMeasuredHeight = (
   widthPx: number,
   devicePixelRatio: number
 ): number | null => {
-  return promptDraftUiCache.editorMeasuredHeight.lookup(promptId, widthPx, devicePixelRatio)
+  return promptEditorUiCache.editorMeasuredHeight.lookup(promptId, widthPx, devicePixelRatio)
 }
 
 export const recordPromptEditorMeasuredHeight = (
@@ -20,13 +21,13 @@ export const recordPromptEditorMeasuredHeight = (
   measurement: TextMeasurement,
   textChanged: boolean
 ): void => {
-  promptDraftUiCache.editorMeasuredHeight.record(promptId, measurement, textChanged)
+  promptEditorUiCache.editorMeasuredHeight.record(promptId, measurement, textChanged)
 }
 
 export const clearPromptEditorMeasuredHeight = (promptId: string): void => {
-  promptDraftUiCache.editorMeasuredHeight.clear(promptId)
+  promptEditorUiCache.editorMeasuredHeight.clear(promptId)
 }
 
 export const clearPromptEditorMeasuredHeights = (promptIds: string[]): void => {
-  promptDraftUiCache.editorMeasuredHeight.clearMany(promptIds)
+  promptEditorUiCache.editorMeasuredHeight.clearMany(promptIds)
 }

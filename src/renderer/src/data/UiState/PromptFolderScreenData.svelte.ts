@@ -5,7 +5,7 @@ import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallb
 import {
   setPromptText,
   setPromptTitle
-} from './PromptDraftMutations.svelte.ts'
+} from './PromptClientStateMutations.svelte.ts'
 
 type PromptFolderScreenPromptDraft = {
   title: string

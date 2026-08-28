@@ -52,7 +52,7 @@ Keep these operations in Svelte-derived code when they depend on application str
 
 - Preserve workspace and prompt-folder entry order.
 - Traverse nested prompt-folder entries recursively.
-- Merge authoritative entities with local draft records.
+- Merge authoritative entities with local client-state records.
 - Build status, title, completion, and owner lookup objects.
 - Combine TanStack data with component props, navigation context, or local preview state.
 

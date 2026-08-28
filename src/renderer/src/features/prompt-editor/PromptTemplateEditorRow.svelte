@@ -4,7 +4,7 @@
   import {
     setPromptTemplateText,
     setPromptTemplateTitle
-  } from '@renderer/data/UiState/PromptTemplateDraftMutations.svelte.ts'
+  } from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
   import { PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX } from './promptEditorSizing'
   import MarkdownContentEditorRow from './MarkdownContentEditorRow.svelte'
 

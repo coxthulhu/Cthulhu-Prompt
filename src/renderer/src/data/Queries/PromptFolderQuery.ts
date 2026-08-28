@@ -8,9 +8,9 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
 import {
-  setPromptFolderDraftHasLoadedInitialData,
-  upsertPromptFolderDrafts
-} from '../UiState/PromptFolderDraftMutations.svelte.ts'
+  setPromptFolderClientStateHasLoadedInitialData,
+  upsertPromptFolderClientStates
+} from '../UiState/PromptFolderClientState'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 import { categoryCollection } from '../Collections/CategoryCollection'
 
@@ -33,11 +33,11 @@ export const loadPromptFolderInitial = async (
   for (const adapter of markdownContentQueryAdapters) adapter.applyFolderResult(result)
   categoryCollection.utils.upsertManyAuthoritative(result.categories)
   promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
-  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.id))
+  upsertPromptFolderClientStates(result.promptFolders.map((promptFolder) => promptFolder.id))
   markdownContentUiStateCollection.utils.upsertManyAuthoritative(result.markdownContentUiStates)
-  setPromptFolderDraftHasLoadedInitialData(promptFolderId, true)
+  setPromptFolderClientStateHasLoadedInitialData(promptFolderId, true)
 
-  // Prune drafts against the reconciled collection state after applying the load result.
+  // Prune client state against the reconciled collection state after applying the load result.
   if (!promptFolderCollection.get(promptFolderId)) {
     throw new Error('Prompt folder not loaded after initial load')
   }

@@ -4,13 +4,13 @@ import {
 } from './RevisionMutation'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { promptTemplateDraftCollection } from '../Collections/PromptTemplateDraftCollection'
-import { promptDraftCollection } from '../Collections/PromptDraftCollection'
-import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
+import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
+import { promptClientStateCollection } from '../Collections/PromptClientStateCollection'
+import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { systemSettingsFormDataCollection } from '../Collections/SystemSettingsFormDataCollection'
+import { systemSettingsClientStateCollection } from '../Collections/SystemSettingsClientStateCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
@@ -37,10 +37,10 @@ const revisionCollections = {
 
 const optimisticCollections = {
   ...revisionCollections,
-  promptDraft: promptDraftCollection,
-  promptTemplateDraft: promptTemplateDraftCollection,
-  promptFolderDraft: promptFolderDraftCollection,
-  systemSettingsFormData: systemSettingsFormDataCollection
+  promptClientState: promptClientStateCollection,
+  promptTemplateClientState: promptTemplateClientStateCollection,
+  promptFolderClientState: promptFolderClientStateCollection,
+  systemSettingsClientState: systemSettingsClientStateCollection
 }
 
 export const mutatePacedRevisionUpdateTransaction = createPacedRevisionUpdateMutationRunner(

@@ -34,11 +34,11 @@ revisionCollectionOptions<PromptFolder>({
 })
 ```
 
-Local-only collections use renderer-specific draft records:
+Local-only collections use renderer-specific client-state records:
 
 ```ts
-type SystemSettingsDraftRecord = {
-  id: typeof SYSTEM_SETTINGS_DRAFT_ID
+type SystemSettingsClientStateRecord = {
+  id: typeof SYSTEM_SETTINGS_CLIENT_STATE_ID
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
   promptEditorMaxLinesInput: string
@@ -46,7 +46,7 @@ type SystemSettingsDraftRecord = {
 }
 ```
 
-Use input-friendly types in drafts. Keep numeric settings as strings while users edit them, validate with `SystemSettingsFormat`, and convert to the persisted shared type only when the paced transaction is valid.
+Use input-friendly types in client state. Keep numeric settings as strings while users edit them, validate with `SystemSettingsFormat`, and convert to the persisted shared type only when the paced transaction is valid.
 
 ## Normalize at Boundaries
 
@@ -68,4 +68,4 @@ If a schema is adopted, update the custom revision options type, all affected lo
 
 ## Testing
 
-Test domain normalization, invalid form drafts, conversion to persisted values, IPC rejection of invalid payloads, and summary/full replacement behavior at the layer that owns each rule.
+Test domain normalization, invalid client-state form inputs, conversion to persisted values, IPC rejection of invalid payloads, and summary/full replacement behavior at the layer that owns each rule.

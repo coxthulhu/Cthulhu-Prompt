@@ -16,14 +16,14 @@ import {
 } from '@shared/Prompt'
 import { promptCollection } from '../Collections/PromptCollection'
 import {
-  markPromptDraftEdited,
-  promptDraftCollection
-} from '../Collections/PromptDraftCollection'
+  markPromptClientStateEdited,
+  promptClientStateCollection
+} from '../Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
-import { upsertPromptDraft } from '../UiState/PromptDraftHydration'
-import { clearPromptEditorMeasuredHeight } from '../UiState/PromptDraftUiCache.svelte.ts'
+import { upsertPromptClientState } from '../UiState/PromptClientState'
+import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (prompt: PromptFull): PromptPersisted => ({
@@ -57,7 +57,7 @@ const reconcilePrompt = (snapshot: {
   }
   const fullSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
   promptCollection.utils.upsertAuthoritative(fullSnapshot)
-  upsertPromptDraft(fullSnapshot.data)
+  upsertPromptClientState(fullSnapshot.data)
 }
 
 const mutations = createMarkdownContentRendererMutations<PromptPersisted, PromptFull>({
@@ -85,21 +85,22 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
   },
   insertOptimistically: (collections, prompt) => {
     collections.prompt.insert(prompt)
-    collections.promptDraft.insert(
-      markPromptDraftEdited({ id: prompt.id, isEdited: false })
+    collections.promptClientState.insert(
+      markPromptClientStateEdited({ id: prompt.id, isEdited: false })
     )
   },
   deleteOptimistically: (collections, promptId) => {
     collections.prompt.delete(promptId)
-    collections.promptDraft.delete(promptId)
+    collections.promptClientState.delete(promptId)
   },
   updateContentOptimistically: (collections, promptId, update) => {
     collections.prompt.update(promptId, update)
-    collections.promptDraft.update(promptId, (draft) => {
-      markPromptDraftEdited(draft)
+    collections.promptClientState.update(promptId, (clientState) => {
+      markPromptClientStateEdited(clientState)
     })
   },
-  acceptDraftMutations: (transaction) => promptDraftCollection.utils.acceptMutations(transaction),
+  acceptClientStateMutations: (transaction) =>
+    promptClientStateCollection.utils.acceptMutations(transaction),
   reconcile: reconcilePrompt,
   deleteAuthoritative: (promptId) => promptCollection.utils.deleteAuthoritative(promptId)
 })
@@ -199,8 +200,8 @@ export const setPromptStatus = async (
         Object.assign(draft, nextPrompt)
         if (targetStatus !== PromptStatus.Completed) delete draft.completedAt
       })
-      collections.promptDraft.update(promptId, (draft) => {
-        markPromptDraftEdited(draft)
+      collections.promptClientState.update(promptId, (clientState) => {
+        markPromptClientStateEdited(clientState)
       })
       collections.promptFolder.update(promptFolderId, (draft) => {
         if (targetStatus === PromptStatus.Completed) {
@@ -273,7 +274,7 @@ export const setPromptStatus = async (
         status: targetStatus,
         categoryOrderPlacement
       })
-      if (result.success) promptDraftCollection.utils.acceptMutations(transaction)
+      if (result.success) promptClientStateCollection.utils.acceptMutations(transaction)
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {

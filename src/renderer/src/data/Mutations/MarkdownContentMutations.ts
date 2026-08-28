@@ -67,7 +67,7 @@ export type MarkdownContentRendererMutationConfig<
     contentId: string,
     update: (draft: ContentRecord) => void
   ) => void
-  acceptDraftMutations: (transaction: Transaction<any>) => void
+  acceptClientStateMutations: (transaction: Transaction<any>) => void
   reconcile: (snapshot: RevisionEnvelope<TPersisted>) => void
   deleteAuthoritative: (contentId: string) => void
 }
@@ -156,7 +156,7 @@ export const createMarkdownContentRendererMutations = <
           categoryId,
           previousEntryId
         })
-        if (result.success) config.acceptDraftMutations(transaction)
+        if (result.success) config.acceptClientStateMutations(transaction)
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
@@ -173,7 +173,7 @@ export const createMarkdownContentRendererMutations = <
     'mutateOptimistically'
   > & { contentId: string; debounceMs: number }
 
-  /** Persists one paced content draft update. */
+  /** Persists one paced content update. */
   const mutatePacedAutosaveUpdate = ({
     contentId,
     debounceMs,
@@ -194,7 +194,7 @@ export const createMarkdownContentRendererMutations = <
         >(config.channels.update, {
           content: config.createEntity(entities, contentId, latestContent)
         })
-        if (result.success) config.acceptDraftMutations(transaction)
+        if (result.success) config.acceptClientStateMutations(transaction)
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
@@ -236,7 +236,7 @@ export const createMarkdownContentRendererMutations = <
           promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
           content: config.createEntity(entities, contentId, content)
         })
-        if (result.success) config.acceptDraftMutations(transaction)
+        if (result.success) config.acceptClientStateMutations(transaction)
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {
@@ -346,7 +346,7 @@ export const createMarkdownContentRendererMutations = <
           categoryId,
           previousEntryId
         })
-        if (result.success) config.acceptDraftMutations(transaction)
+        if (result.success) config.acceptClientStateMutations(transaction)
         return result
       },
       handleSuccessOrConflictResponse: (payload) => {

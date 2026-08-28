@@ -16,9 +16,9 @@ import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import {
-  deletePromptFolderDrafts,
-  removePromptFolderDraft
-} from '../UiState/PromptFolderDraftMutations.svelte.ts'
+  deletePromptFolderClientStates,
+  removePromptFolderClientState
+} from '../UiState/PromptFolderClientState'
 import {
   getSelectedWorkspaceId,
   setSelectedWorkspaceId
@@ -40,7 +40,7 @@ const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => 
   deletePromptFolderContentRecords(graph)
   for (const promptFolderId of graph.promptFolderIds) {
     promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
-    removePromptFolderDraft(promptFolderId)
+    removePromptFolderClientState(promptFolderId)
   }
   workspaceCollection.utils.deleteAuthoritative(workspaceId)
 }
@@ -110,7 +110,7 @@ export const deletePromptFolder = async (
     onSuccess: () => {
       deletePromptFolderContentRecords(graph)
       promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
-      deletePromptFolderDrafts([promptFolderId])
+      deletePromptFolderClientStates([promptFolderId])
     }
   })
 }

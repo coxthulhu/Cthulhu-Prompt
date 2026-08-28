@@ -33,8 +33,8 @@ import {
 } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { upsertPromptDraft } from '../UiState/PromptDraftHydration'
-import { upsertPromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
+import { upsertPromptClientState } from '../UiState/PromptClientState'
+import { upsertPromptTemplateClientStates } from '../UiState/PromptTemplateClientStateMutations.svelte.ts'
 
 /** Reads the latest optimistic category value captured by a paced transaction. */
 const readLatestCategoryFromTransaction = (
@@ -266,19 +266,19 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
       promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
       if (payload.category) categoryCollection.utils.upsertAuthoritative(payload.category)
       for (const prompt of payload.prompts) {
-        /** Full authoritative prompt shape used by the renderer and its draft. */
+        /** Full authoritative prompt shape used by the renderer and its client state. */
         const fullPrompt = { ...prompt, data: createPromptFull(prompt.data) }
         promptCollection.utils.upsertAuthoritative(fullPrompt)
-        upsertPromptDraft(fullPrompt.data)
+        upsertPromptClientState(fullPrompt.data)
       }
       for (const promptTemplate of payload.promptTemplates) {
-        /** Full authoritative template shape used by the renderer and its draft. */
+        /** Full authoritative template shape used by the renderer and its client state. */
         const fullPromptTemplate = {
           ...promptTemplate,
           data: createPromptTemplateFull(promptTemplate.data)
         }
         promptTemplateCollection.utils.upsertAuthoritative(fullPromptTemplate)
-        upsertPromptTemplateDrafts([fullPromptTemplate.data])
+        upsertPromptTemplateClientStates([fullPromptTemplate.data])
       }
     },
     conflictMessage: 'Category delete conflict',

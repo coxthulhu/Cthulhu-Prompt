@@ -28,19 +28,19 @@ import {
   type PromptNavigationTarget
 } from '@renderer/app/PromptNavigationContext.svelte.ts'
 import {
-  type PromptDraftRecord,
-  promptDraftCollection
-} from '@renderer/data/Collections/PromptDraftCollection'
+  type PromptClientStateRecord,
+  promptClientStateCollection
+} from '@renderer/data/Collections/PromptClientStateCollection'
 import {
-  type PromptFolderDraftRecord,
-  promptFolderDraftCollection
-} from '@renderer/data/Collections/PromptFolderDraftCollection'
+  type PromptFolderClientStateRecord,
+  promptFolderClientStateCollection
+} from '@renderer/data/Collections/PromptFolderClientStateCollection'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import {
-  type PromptTemplateDraftRecord,
-  promptTemplateDraftCollection
-} from '@renderer/data/Collections/PromptTemplateDraftCollection'
+  type PromptTemplateClientStateRecord,
+  promptTemplateClientStateCollection
+} from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import type { Category } from '@shared/Category'
@@ -55,7 +55,7 @@ import {
 import {
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
-} from '@renderer/data/UiState/PromptFolderDraftUiCache.svelte.ts'
+} from '@renderer/data/UiState/PromptFolderUiCache.svelte.ts'
 import {
   lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderContentSectionExpandedState,
@@ -156,8 +156,8 @@ export const createPromptFolderScreenController = ({
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
     data: PromptFolder[]
   }
-  const promptDraftQuery = useLiveQuery(promptDraftCollection) as {
-    data: PromptDraftRecord[]
+  const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
+    data: PromptClientStateRecord[]
   }
   const promptQuery = useLiveQuery(promptCollection) as {
     data: Prompt[]
@@ -165,11 +165,11 @@ export const createPromptFolderScreenController = ({
   const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
     data: PromptTemplate[]
   }
-  const promptTemplateDraftQuery = useLiveQuery(promptTemplateDraftCollection) as {
-    data: PromptTemplateDraftRecord[]
+  const promptTemplateClientStateQuery = useLiveQuery(promptTemplateClientStateCollection) as {
+    data: PromptTemplateClientStateRecord[]
   }
-  const promptFolderDraftQuery = useLiveQuery(promptFolderDraftCollection) as {
-    data: PromptFolderDraftRecord[]
+  const promptFolderClientStateQuery = useLiveQuery(promptFolderClientStateCollection) as {
+    data: PromptFolderClientStateRecord[]
   }
   const categoryQuery = useLiveQuery(categoryCollection) as { data: Category[] }
 
@@ -188,11 +188,15 @@ export const createPromptFolderScreenController = ({
   const isTemplateFolder = $derived(contentKind === 'template')
   /** Session-latched prompt edit markers indexed by authoritative prompt ID. */
   const promptEditedById = $derived.by<Record<string, boolean>>(() =>
-    Object.fromEntries(promptDraftQuery.data.map((draft) => [draft.id, draft.isEdited]))
+    Object.fromEntries(
+      promptClientStateQuery.data.map((clientState) => [clientState.id, clientState.isEdited])
+    )
   )
   /** Session-latched template edit markers indexed by authoritative template ID. */
   const promptTemplateEditedById = $derived.by<Record<string, boolean>>(() =>
-    Object.fromEntries(promptTemplateDraftQuery.data.map((draft) => [draft.id, draft.isEdited]))
+    Object.fromEntries(
+      promptTemplateClientStateQuery.data.map((clientState) => [clientState.id, clientState.isEdited])
+    )
   )
   /** Canonical prompt-template titles used to label prompt template selections. */
   const templateTitleById = $derived.by(() =>
@@ -291,18 +295,20 @@ export const createPromptFolderScreenController = ({
   const templateById = $derived.by(() =>
     Object.fromEntries(promptTemplateQuery.data.map((template) => [template.id, template]))
   )
-  const promptFolderDraftById = $derived.by(() => {
-    const draftsById: Record<string, PromptFolderDraftRecord> = {}
-    for (const draft of promptFolderDraftQuery.data) {
-      if (!draft) {
+  const promptFolderClientStateById = $derived.by(() => {
+    const clientStateById: Record<string, PromptFolderClientStateRecord> = {}
+    for (const clientState of promptFolderClientStateQuery.data) {
+      if (!clientState) {
         continue
       }
 
-      draftsById[draft.id] = draft
+      clientStateById[clientState.id] = clientState
     }
-    return draftsById
+    return clientStateById
   })
-  const screenRootFolderDraft = $derived(promptFolderDraftById[screenRootFolderId] ?? null)
+  const screenRootFolderClientState = $derived(
+    promptFolderClientStateById[screenRootFolderId] ?? null
+  )
   /** Loaded categories indexed by stable ID. */
   const categoryById = $derived.by<Record<string, Category>>(() =>
     Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
@@ -553,7 +559,7 @@ export const createPromptFolderScreenController = ({
     if (errorMessage) return true
     if (isLoading) return false
     if (!screenRootFolder) return false
-    if (!screenRootFolderDraft?.hasLoadedInitialData) return false
+    if (!screenRootFolderClientState?.hasLoadedInitialData) return false
     return renderedPromptIds.every((promptId) => {
       const content = isTemplateFolder ? templateById[promptId] : promptById[promptId]
       return Boolean(
@@ -933,8 +939,8 @@ export const createPromptFolderScreenController = ({
   }
 
   const hasCachedPromptFolderData = (nextPromptFolderId: string): boolean => {
-    const promptFolderDraft = promptFolderDraftCollection.get(nextPromptFolderId)
-    if (!promptFolderDraft?.hasLoadedInitialData) {
+    const promptFolderClientState = promptFolderClientStateCollection.get(nextPromptFolderId)
+    if (!promptFolderClientState?.hasLoadedInitialData) {
       return false
     }
 
@@ -949,12 +955,16 @@ export const createPromptFolderScreenController = ({
     )) {
       if (cachedPromptFolder.kind === 'template') {
         const template = promptTemplateCollection.get(promptId)
-        if (!promptTemplateDraftCollection.get(promptId) || !template || !isPromptTemplateFull(template)) {
+        if (
+          !promptTemplateClientStateCollection.get(promptId) ||
+          !template ||
+          !isPromptTemplateFull(template)
+        ) {
           return false
         }
       } else {
         const prompt = promptCollection.get(promptId)
-        if (!promptDraftCollection.get(promptId) || !prompt || !isPromptFull(prompt)) {
+        if (!promptClientStateCollection.get(promptId) || !prompt || !isPromptFull(prompt)) {
           return false
         }
       }

@@ -1,8 +1,8 @@
 import type { PromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { deletePromptDrafts } from '../UiState/PromptDraftMutations.svelte.ts'
-import { deletePromptTemplateDrafts } from '../UiState/PromptTemplateDraftMutations.svelte.ts'
+import { deletePromptClientStates } from '../UiState/PromptClientStateMutations.svelte.ts'
+import { deletePromptTemplateClientStates } from '../UiState/PromptTemplateClientStateMutations.svelte.ts'
 import { deleteMarkdownContentUiStates } from '../UiState/MarkdownContentUiStateAutosave.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { categoryCollection } from '../Collections/CategoryCollection'
@@ -18,10 +18,13 @@ export const deletePromptFolderContentsOptimistically = (
 ): void => {
   const promptIds = [...graph.contentIds.prompt]
   const templateIds = [...graph.contentIds.template]
-  if (promptIds.length > 0) collections.prompt.delete(promptIds)
+  if (promptIds.length > 0) {
+    collections.prompt.delete(promptIds)
+    collections.promptClientState.delete(promptIds)
+  }
   if (templateIds.length > 0) {
     collections.promptTemplate.delete(templateIds)
-    collections.promptTemplateDraft.delete(templateIds)
+    collections.promptTemplateClientState.delete(templateIds)
   }
   const categoryIds = [...graph.categoryIds]
   if (categoryIds.length > 0) collections.category.delete(categoryIds)
@@ -32,8 +35,8 @@ export const deletePromptFolderContentRecords = (graph: PromptFolderGraphIds): v
   const templateIds = [...graph.contentIds.template]
   promptCollection.utils.deleteManyAuthoritative(promptIds)
   promptTemplateCollection.utils.deleteManyAuthoritative(templateIds)
-  deletePromptDrafts(promptIds)
-  deletePromptTemplateDrafts(templateIds)
+  deletePromptClientStates(promptIds)
+  deletePromptTemplateClientStates(templateIds)
   deleteMarkdownContentUiStates([...promptIds, ...templateIds])
   categoryCollection.utils.deleteManyAuthoritative([...graph.categoryIds])
 }

@@ -1,7 +1,7 @@
 import { flushWorkspaceScopedAutosaves } from './AutosaveFlushes.svelte.ts'
-import { clearPromptFolderDraftStore } from './PromptFolderDraftMutations.svelte.ts'
-import { clearPromptDraftStore } from './PromptDraftMutations.svelte.ts'
-import { clearPromptTemplateDraftStore } from './PromptTemplateDraftMutations.svelte.ts'
+import { clearPromptFolderClientStateCollection } from './PromptFolderClientState'
+import { clearPromptClientStateCollection } from './PromptClientStateMutations.svelte.ts'
+import { clearPromptTemplateClientStateCollection } from './PromptTemplateClientStateMutations.svelte.ts'
 import { clearMarkdownContentUiStateCollection } from './MarkdownContentUiStateAutosave.svelte.ts'
 
 let currentWorkspacePath: string | null = null
@@ -15,14 +15,14 @@ export const switchWorkspaceStoreBridge = async (
       return
     }
 
-    // Side effect: flush active drafts before switching to a different workspace.
+    // Side effect: flush active client state before switching to a different workspace.
     await flushWorkspaceScopedAutosaves()
 
     currentWorkspacePath = nextWorkspacePath
-    // Side effect: reset workspace-scoped draft/screen state after the workspace path changes.
-    clearPromptFolderDraftStore()
-    clearPromptDraftStore()
-    clearPromptTemplateDraftStore()
+    // Side effect: reset workspace-scoped client/screen state after the workspace path changes.
+    clearPromptFolderClientStateCollection()
+    clearPromptClientStateCollection()
+    clearPromptTemplateClientStateCollection()
     clearMarkdownContentUiStateCollection()
   })
 

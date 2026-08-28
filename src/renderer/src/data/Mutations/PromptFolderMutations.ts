@@ -13,7 +13,7 @@ import type { Transaction } from '@tanstack/svelte-db'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { folderEntryRef, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
-import { promptFolderDraftCollection } from '../Collections/PromptFolderDraftCollection'
+import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
@@ -57,7 +57,7 @@ export const createPromptFolder = async (
   await runRevisionMutation<CreatePromptFolderResponsePayload>({
     mutateOptimistically: ({ collections }) => {
       collections.promptFolder.insert(optimisticPromptFolder)
-      collections.promptFolderDraft.insert({
+      collections.promptFolderClientState.insert({
         id: optimisticPromptFolderId,
         hasLoadedInitialData: false
       })
@@ -86,7 +86,7 @@ export const createPromptFolder = async (
       )
 
       if (mutationResult.success) {
-        promptFolderDraftCollection.utils.acceptMutations(transaction)
+        promptFolderClientStateCollection.utils.acceptMutations(transaction)
       }
 
       return mutationResult

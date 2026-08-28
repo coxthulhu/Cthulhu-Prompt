@@ -2,15 +2,13 @@ import type { Prompt, PromptFull, PromptTemplateReference } from '@shared/Prompt
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import {
-  markPromptDraftEdited
-} from '../Collections/PromptDraftCollection'
+import { markPromptClientStateEdited } from '../Collections/PromptClientStateCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
-import { promptDraftMutations, upsertPromptDraft } from './PromptDraftHydration'
-import { recordPromptEditorMeasuredHeight } from './PromptDraftUiCache.svelte.ts'
+import { promptClientState, upsertPromptClientState } from './PromptClientState'
+import { recordPromptEditorMeasuredHeight } from './PromptEditorUiCache.svelte.ts'
 
 /** Optimistic authoritative prompt update paired with its session edit marker. */
 type PromptOptimisticMutationOptions = {
@@ -29,7 +27,7 @@ const getPromptIdsForPrompt = (promptId: string): string[] => {
   return [promptId]
 }
 
-/** Schedules one authoritative prompt edit and latches its session marker. */
+/** Schedules one authoritative prompt edit and latches its client-state marker. */
 const mutatePromptOptimistically = (
   promptId: string,
   { mutatePrompt }: PromptOptimisticMutationOptions
@@ -38,17 +36,17 @@ const mutatePromptOptimistically = (
     promptId,
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
-      collections.promptDraft.update(promptId, (draft) => {
-        markPromptDraftEdited(draft)
+      collections.promptClientState.update(promptId, (clientState) => {
+        markPromptClientStateEdited(clientState)
       })
       collections.prompt.update(promptId, mutatePrompt)
     }
   })
 }
 
-export { upsertPromptDraft }
-export const upsertPromptSummaryDrafts = promptDraftMutations.upsertSummaryDrafts
-export const upsertPromptDrafts = promptDraftMutations.upsertDrafts
+export { upsertPromptClientState }
+/** Adds missing client-state records for loaded prompts. */
+export const upsertPromptClientStates = promptClientState.upsertClientStates
 
 /** Updates a prompt title and schedules its autosave. */
 export const setPromptTitle = (promptId: string, title: string): void => {
@@ -115,7 +113,11 @@ export const setPromptTemplates = (
   })
 }
 
-export const flushPromptDraftAutosaves = promptDraftMutations.flushAutosaves
-export const deletePromptDrafts = promptDraftMutations.deleteDrafts
-export const removePromptDraft = promptDraftMutations.removeDraft
-export const clearPromptDraftStore = promptDraftMutations.clearDraftStore
+/** Flushes autosaves associated with prompt client state. */
+export const flushPromptClientStateAutosaves = promptClientState.flushAutosaves
+/** Deletes prompt client state and associated UI caches. */
+export const deletePromptClientStates = promptClientState.deleteClientStates
+/** Deletes one prompt's client state and associated UI cache. */
+export const removePromptClientState = promptClientState.removeClientState
+/** Clears all prompt client state for the current workspace. */
+export const clearPromptClientStateCollection = promptClientState.clearClientStateCollection

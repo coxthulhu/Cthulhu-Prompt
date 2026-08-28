@@ -1,7 +1,7 @@
 ---
 name: tanstack-db
 description: |
-  Cthulhu Prompt's TanStack DB architecture for the Svelte renderer. Use when changing renderer collections, preload-backed IPC loads, live-query subscriptions, optimistic revision mutations, local draft state, authoritative reconciliation, autosave pacing, or TanStack collection validation boundaries and tests in this repository.
+  Cthulhu Prompt's TanStack DB architecture for the Svelte renderer. Use when changing renderer collections, preload-backed IPC loads, live-query subscriptions, optimistic revision mutations, local client state, authoritative reconciliation, autosave pacing, or TanStack collection validation boundaries and tests in this repository.
 ---
 
 # TanStack DB in Cthulhu Prompt
@@ -16,13 +16,13 @@ Use this data flow:
 preload-backed IPC load with shared TypeScript shapes
   -> authoritative revision snapshot
   -> revision collection sync write
-  -> local-only draft hydration when needed
+  -> local-only client-state hydration when needed
   -> useLiveQuery subscription
   -> Svelte 5 derived view state
 
 user intent
   -> shared manual transaction
-  -> optimistic changes across revision and draft collections
+  -> optimistic changes across revision and client-state collections
   -> serialized IPC mutation with expected revisions
   -> authoritative success/conflict snapshots
   -> commit or automatic rollback
@@ -31,7 +31,7 @@ user intent
 Keep the two collection roles distinct:
 
 - Use revision collections for persisted main-process entities.
-- Use local-only collections for renderer-session drafts, form inputs, and editor UI state.
+- Use client-state collections for renderer-session state such as edit markers, load markers, and form inputs.
 - Keep revisions in the revision collection's side map, not in entity records.
 - Load and persist only through preload-backed IPC helpers and shared request/result types. Require main-process runtime parsers for payload-bearing channels; preserve the established no-payload startup-query exception unless the task changes it.
 
@@ -78,12 +78,12 @@ Inspect the closest existing entity flow and its tests before adding a new patte
 
 ## Implementation Workflow
 
-1. Identify the authoritative entities and renderer-only draft entities involved.
+1. Identify the authoritative entities and renderer-only client-state records involved.
 2. Inspect their collection, query, mutation, UI-state, shared IPC type, applicable main runtime parser, revision owner, handler registration, and persistence files.
 3. Load typed revision envelopes and apply them through authoritative utilities.
 4. Express user-visible changes in `mutateOptimistically` using the provided collection helpers.
 5. Build IPC payload entities from the latest transaction state and authoritative expected revisions.
 6. Apply success or conflict snapshots before allowing the transaction result to settle.
-7. Accept successful local-only mutations explicitly.
+7. Accept successful client-state mutations explicitly.
 8. Throw persistence errors so TanStack DB rolls optimistic state back.
-9. Verify mutation ordering, revision handling, draft synchronization, and user-visible behavior.
+9. Verify mutation ordering, revision handling, client-state synchronization, and user-visible behavior.

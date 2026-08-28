@@ -3,10 +3,10 @@ import { promptTemplateCollection } from '@renderer/data/Collections/PromptTempl
 import { createPromptTemplateSummary } from '@shared/PromptTemplate'
 import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
-import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
+import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { promptFolderDraftCollection } from '@renderer/data/Collections/PromptFolderDraftCollection'
-import { upsertPromptTemplateSummaryDrafts } from '@renderer/data/UiState/PromptTemplateDraftMutations.svelte.ts'
+import { promptFolderClientStateCollection } from '@renderer/data/Collections/PromptFolderClientStateCollection'
+import { upsertPromptTemplateClientStates } from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
 
 const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
 
@@ -17,12 +17,12 @@ vi.mock('@renderer/data/IpcFramework/IpcRequestInvoke', () => ({
 describe('prompt template renderer loading', () => {
   beforeEach(() => {
     promptTemplateCollection.utils.deleteAuthoritative('renderer-template')
-    if (promptTemplateDraftCollection.has('renderer-template')) {
-      promptTemplateDraftCollection.delete('renderer-template')
+    if (promptTemplateClientStateCollection.has('renderer-template')) {
+      promptTemplateClientStateCollection.delete('renderer-template')
     }
     promptFolderCollection.utils.deleteAuthoritative('renderer-template-folder')
-    if (promptFolderDraftCollection.has('renderer-template-folder')) {
-      promptFolderDraftCollection.delete('renderer-template-folder')
+    if (promptFolderClientStateCollection.has('renderer-template-folder')) {
+      promptFolderClientStateCollection.delete('renderer-template-folder')
     }
   })
 
@@ -92,29 +92,29 @@ describe('prompt template renderer loading', () => {
       templateText: 'Review [[PROMPT_TEXT]].',
       loadingState: 'full'
     })
-    expect(promptTemplateDraftCollection.get('renderer-template')).toMatchObject({
+    expect(promptTemplateClientStateCollection.get('renderer-template')).toMatchObject({
       id: 'renderer-template',
       isEdited: false
     })
-    expect(promptTemplateDraftCollection.get('renderer-template')).not.toHaveProperty(
+    expect(promptTemplateClientStateCollection.get('renderer-template')).not.toHaveProperty(
       'templateText'
     )
-    expect(promptFolderDraftCollection.get('renderer-template-folder')).toMatchObject({
+    expect(promptFolderClientStateCollection.get('renderer-template-folder')).toMatchObject({
       id: 'renderer-template-folder',
       hasLoadedInitialData: false
     })
-    expect(promptFolderDraftCollection.get('renderer-template-folder')).not.toHaveProperty(
+    expect(promptFolderClientStateCollection.get('renderer-template-folder')).not.toHaveProperty(
       'settings'
     )
     expect(promptFolderCollection.get('renderer-template-folder')?.settings.folderDescription).toBe(
       'Template description'
     )
 
-    promptFolderDraftCollection.update('renderer-template-folder', (draft) => {
-      draft.hasLoadedInitialData = true
+    promptFolderClientStateCollection.update('renderer-template-folder', (clientState) => {
+      clientState.hasLoadedInitialData = true
     })
     await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt.json')
-    expect(promptFolderDraftCollection.get('renderer-template-folder')).toMatchObject({
+    expect(promptFolderClientStateCollection.get('renderer-template-folder')).toMatchObject({
       hasLoadedInitialData: true
     })
   })
@@ -152,9 +152,9 @@ describe('prompt template renderer loading', () => {
       revision: 0,
       data: createPromptTemplateSummary(summary)
     })
-    upsertPromptTemplateSummaryDrafts([summary])
-    promptTemplateDraftCollection.update(summary.id, (draft) => {
-      draft.isEdited = true
+    upsertPromptTemplateClientStates([summary])
+    promptTemplateClientStateCollection.update(summary.id, (clientState) => {
+      clientState.isEdited = true
     })
     expect(promptTemplateCollection.get(summary.id)?.loadingState).toBe('summary')
 
@@ -213,12 +213,14 @@ describe('prompt template renderer loading', () => {
       loadingState: 'full',
       templateText: 'Review {{change}}.'
     })
-    expect(promptTemplateDraftCollection.get('renderer-template')).toMatchObject({
+    expect(promptTemplateClientStateCollection.get('renderer-template')).toMatchObject({
       id: 'renderer-template',
       isEdited: true
     })
-    expect(promptTemplateDraftCollection.get('renderer-template')).not.toHaveProperty('title')
-    expect(promptFolderDraftCollection.get('renderer-template-folder')).toMatchObject({
+    expect(promptTemplateClientStateCollection.get('renderer-template')).not.toHaveProperty(
+      'title'
+    )
+    expect(promptFolderClientStateCollection.get('renderer-template-folder')).toMatchObject({
       id: 'renderer-template-folder',
       hasLoadedInitialData: true
     })

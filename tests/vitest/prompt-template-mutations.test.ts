@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { promptTemplateDraftCollection } from '@renderer/data/Collections/PromptTemplateDraftCollection'
+import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 
 const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
 const mutatePacedRevisionUpdateTransaction = vi.hoisted(() => vi.fn())
@@ -65,7 +65,9 @@ describe('prompt template mutations', () => {
     latestMutationRecord.value = null
     for (const id of ['paced-template', 'new-template']) {
       promptTemplateCollection.utils.deleteAuthoritative(id)
-      if (promptTemplateDraftCollection.has(id)) promptTemplateDraftCollection.delete(id)
+      if (promptTemplateClientStateCollection.has(id)) {
+        promptTemplateClientStateCollection.delete(id)
+      }
     }
     for (const id of ['source-folder', 'destination-folder']) {
       promptFolderCollection.utils.deleteAuthoritative(id)
@@ -158,12 +160,14 @@ describe('prompt template mutations', () => {
 
     const options = runRevisionMutation.mock.calls[0]?.[0]
     const insertedTemplates: object[] = []
-    const insertedDrafts: object[] = []
+    const insertedClientStates: object[] = []
     const sourceFolder = templateFolder('source-folder', ['paced-template'])
     options.mutateOptimistically({
       collections: {
         promptTemplate: { insert: (value: object) => insertedTemplates.push(value) },
-        promptTemplateDraft: { insert: (value: object) => insertedDrafts.push(value) },
+        promptTemplateClientState: {
+          insert: (value: object) => insertedClientStates.push(value)
+        },
         promptFolder: {
           update: (
             _id: string,
@@ -177,7 +181,7 @@ describe('prompt template mutations', () => {
       title: '',
       fallbackTitle: 'New Template'
     })
-    expect(insertedDrafts[0]).toEqual({
+    expect(insertedClientStates[0]).toEqual({
       id: 'new-template',
       isEdited: true
     })
@@ -224,11 +228,13 @@ describe('prompt template mutations', () => {
       templateText: 'Latest server text.',
       loadingState: 'full'
     })
-    expect(promptTemplateDraftCollection.get('paced-template')).toMatchObject({
+    expect(promptTemplateClientStateCollection.get('paced-template')).toMatchObject({
       id: 'paced-template',
       isEdited: false
     })
-    expect(promptTemplateDraftCollection.get('paced-template')).not.toHaveProperty('templateText')
+    expect(promptTemplateClientStateCollection.get('paced-template')).not.toHaveProperty(
+      'templateText'
+    )
   })
 
   it('sends delete and move through their template-specific IPC channels', async () => {
@@ -238,11 +244,11 @@ describe('prompt template mutations', () => {
     const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
     const sourceAfterDelete = templateFolder('source-folder', ['paced-template'])
     const deleteTemplate = vi.fn()
-    const deleteDraft = vi.fn()
+    const deleteClientState = vi.fn()
     deleteOptions.mutateOptimistically({
       collections: {
         promptTemplate: { delete: deleteTemplate },
-        promptTemplateDraft: { delete: deleteDraft },
+        promptTemplateClientState: { delete: deleteClientState },
         promptFolder: {
           update: (
             _id: string,
@@ -252,7 +258,7 @@ describe('prompt template mutations', () => {
       }
     })
     expect(deleteTemplate).toHaveBeenCalledWith('paced-template')
-    expect(deleteDraft).toHaveBeenCalledWith('paced-template')
+    expect(deleteClientState).toHaveBeenCalledWith('paced-template')
     expect(sourceAfterDelete.categoryOrder.categories[0]?.entries).toEqual([])
     await deleteOptions.persistMutations({ entities: entityBuilders, transaction: {} })
     expect(ipcInvokeWithPayload).toHaveBeenLastCalledWith(
@@ -270,12 +276,13 @@ describe('prompt template mutations', () => {
     const sourceAfterMove = templateFolder('source-folder', ['paced-template'])
     const destinationAfterMove = templateFolder('destination-folder')
     const updateTemplate = vi.fn()
-    const movedDraft = {
+    const movedClientState = {
       id: 'paced-template',
       isEdited: false
     }
-    const updateDraft = vi.fn(
-      (_id: string, update: (draft: typeof movedDraft) => void) => update(movedDraft)
+    const updateClientState = vi.fn(
+      (_id: string, update: (clientState: typeof movedClientState) => void) =>
+        update(movedClientState)
     )
     moveOptions.mutateOptimistically({
       collections: {
@@ -286,7 +293,7 @@ describe('prompt template mutations', () => {
           ) => mutate(id === 'source-folder' ? sourceAfterMove : destinationAfterMove)
         },
         promptTemplate: { update: updateTemplate },
-        promptTemplateDraft: { update: updateDraft }
+        promptTemplateClientState: { update: updateClientState }
       }
     })
     expect(sourceAfterMove.categoryOrder.categories[0]?.entries).toEqual([])
@@ -294,8 +301,8 @@ describe('prompt template mutations', () => {
       { kind: 'template', id: 'paced-template' }
     ])
     expect(updateTemplate).toHaveBeenCalledWith('paced-template', expect.any(Function))
-    expect(updateDraft).toHaveBeenCalledWith('paced-template', expect.any(Function))
-    expect(movedDraft.isEdited).toBe(true)
+    expect(updateClientState).toHaveBeenCalledWith('paced-template', expect.any(Function))
+    expect(movedClientState.isEdited).toBe(true)
     await moveOptions.persistMutations({ entities: entityBuilders, transaction: {} })
     expect(ipcInvokeWithPayload).toHaveBeenLastCalledWith(
       'move-prompt-template',

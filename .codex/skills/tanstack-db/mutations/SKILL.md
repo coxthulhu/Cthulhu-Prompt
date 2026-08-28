@@ -1,7 +1,7 @@
 ---
 name: tanstack-db-mutations
 description: |
-  Cthulhu Prompt revision mutation patterns. Use when adding or changing optimistic insert/update/delete behavior, multi-collection manual transactions, expected revisions, IPC persistence, authoritative success/conflict reconciliation, rollback, local draft acceptance, global ordering, or debounced autosave.
+  Cthulhu Prompt revision mutation patterns. Use when adding or changing optimistic insert/update/delete behavior, multi-collection manual transactions, expected revisions, IPC persistence, authoritative success/conflict reconciliation, rollback, client-state acceptance, global ordering, or debounced autosave.
 ---
 
 # Revision Mutations
@@ -18,8 +18,8 @@ await runRevisionMutation<PromptRevisionResponsePayload>({
     collections.prompt.update(promptId, (draft) => {
       draft.title = nextTitle
     })
-    collections.promptDraft.update(promptId, (draft) => {
-      draft.title = nextTitle
+    collections.promptClientState.update(promptId, (clientState) => {
+      clientState.isEdited = true
     })
   },
   persistMutations: async ({ entities, invoke, transaction }) => {
@@ -37,7 +37,7 @@ await runRevisionMutation<PromptRevisionResponsePayload>({
     })
 
     if (result.success) {
-      promptDraftCollection.utils.acceptMutations(transaction)
+      promptClientStateCollection.utils.acceptMutations(transaction)
     }
 
     return result
@@ -55,7 +55,7 @@ Adapt the payload to the existing shared IPC contract; do not invent a generic m
 
 Put every user-visible immediate change in `mutateOptimistically`. Use only the collection helpers passed into the callback so the framework can collect touched entity keys before replaying the changes into the transaction.
 
-Update every affected authoritative relationship in the same transaction. For example, creating, moving, deleting, or completing a prompt can change the prompt, its draft, and one or two prompt folders.
+Update every affected authoritative relationship in the same transaction. For example, creating, moving, deleting, or completing a prompt can change the prompt, its client state, and one or two prompt folders.
 
 Do not apply authoritative snapshots in `mutateOptimistically`.
 
@@ -75,27 +75,27 @@ Return success only after persistence completes. Throw or return a failed/confli
 
 Run destructive authoritative cleanup, navigation, or cache removal in `onSuccess` when it must occur only after the transaction reaches `completed`.
 
-## Local-Only Collections
+## Client-State Collections
 
-Manual transactions do not automatically retain local-only mutations. After IPC success, explicitly accept each local-only collection changed by the transaction:
+Manual transactions do not automatically retain local-only mutations. After IPC success, explicitly accept each client-state collection changed by the transaction:
 
 ```ts
 if (mutationResult.success) {
-  promptDraftCollection.utils.acceptMutations(transaction)
+  promptClientStateCollection.utils.acceptMutations(transaction)
 }
 ```
 
-Do not accept draft mutations before server success. Failed persistence must roll them back with the authoritative optimistic changes.
+Do not accept client-state mutations before server success. Failed persistence must roll them back with the authoritative optimistic changes.
 
-Direct local-only inserts and updates remain appropriate for initial draft hydration and renderer-session state that does not participate in an authoritative transaction.
+Direct local-only inserts and updates remain appropriate for initial client-state hydration and renderer-session state that does not participate in an authoritative transaction.
 
-Choose draft reconciliation policy per entity by following its closest existing helper:
+Choose client-state reconciliation policy per entity by following its closest existing helper:
 
-- Prompt hydration replaces authoritative fields while preserving the session `isEdited` latch.
+- Prompt and template hydration inserts missing client state without resetting the session `isEdited` latch.
 - System settings hydration replaces the form inputs from authoritative settings.
-- Prompt UI-state success or conflict responses overwrite the matching draft with response truth.
+- Markdown-content UI-state success or conflict responses reconcile the persisted revision collection with response truth.
 
-Do not assume one policy fits every draft. Define and test what happens when authoritative truth arrives while a paced edit is pending.
+Do not assume one policy fits every client-state collection. Define and test what happens when authoritative truth arrives while a paced edit is pending.
 
 ## Creation Contracts
 
@@ -119,11 +119,11 @@ Use `mutatePacedRevisionUpdateTransaction` for prompt, settings, persistence, an
 - matching paced-update flush before immediate mutations
 - commit through the same global queue as immediate mutations
 
-Use `validateBeforeEnqueue` for draft inputs that may temporarily be invalid. When an immediate operation supersedes an invalid paced update, the registry performs a secondary rollback and removes the pending transaction.
+Use `validateBeforeEnqueue` for client-state inputs that may temporarily be invalid. When an immediate operation supersedes an invalid paced update, the registry performs a secondary rollback and removes the pending transaction.
 
-Use the existing flush helpers before workspace changes, navigation that can discard drafts, application teardown, or other boundaries already covered by `AutosaveFlushes.svelte.ts`.
+Use the existing flush helpers before workspace changes, navigation that can discard client state, application teardown, or other boundaries already covered by `AutosaveFlushes.svelte.ts`.
 
-Current aggregate flushes use `Promise.allSettled`. “Flush and wait” therefore means all save tasks settled, not that every save succeeded; workspace switching can continue and clear workspace-scoped drafts after a failed save. Preserve this behavior unless the task explicitly changes failure UX, blocking, retry, or recovery semantics.
+Current aggregate flushes use `Promise.allSettled`. “Flush and wait” therefore means all save tasks settled, not that every save succeeded; workspace switching can continue and clear workspace-scoped client state after a failed save. Preserve this behavior unless the task explicitly changes failure UX, blocking, retry, or recovery semantics.
 
 The current paced setter APIs return `void`, enqueue tracking converts rejection into a settled tracking promise, and aggregate flushes use `allSettled`. Callers therefore cannot currently surface a paced persistence failure by catching a setter or flush. If a task requires user-visible autosave errors, extend the shared mutation framework with an explicit error callback or result channel and test it; do not imply the existing controller can observe the rejection.
 
@@ -134,7 +134,7 @@ Do not catch and swallow errors inside the transaction `mutationFn`, because Tan
 Cover these behaviors when affected:
 
 - optimistic state appears before IPC completion
-- success commits authoritative and draft state
+- success commits authoritative and client state
 - failure rolls both back
 - conflict applies response truth and rejects the transaction
 - same-entity paced edits merge

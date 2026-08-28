@@ -1,7 +1,7 @@
 import type { RevisionEnvelope } from '@shared/Revision'
 import type { LoadSystemSettingsResult, SystemSettings } from '@shared/SystemSettings'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { upsertSystemSettingsFormData } from '../UiState/SystemSettingsFormDataMutations.svelte.ts'
+import { upsertSystemSettingsClientState } from '../UiState/SystemSettingsClientStateMutations.svelte.ts'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvoke } from '../IpcFramework/IpcRequestInvoke'
 
@@ -14,5 +14,5 @@ export const loadSystemSettings = async (): Promise<void> => {
     revision: systemSettingsSnapshot.revision,
     data: systemSettingsSnapshot.data
   })
-  upsertSystemSettingsFormData(systemSettingsSnapshot.data)
+  upsertSystemSettingsClientState(systemSettingsSnapshot.data)
 }

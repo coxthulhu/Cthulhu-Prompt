@@ -4,9 +4,9 @@ import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import {
-  deletePromptFolderDrafts,
-  upsertPromptFolderDrafts
-} from '../UiState/PromptFolderDraftMutations.svelte.ts'
+  deletePromptFolderClientStates,
+  upsertPromptFolderClientStates
+} from '../UiState/PromptFolderClientState'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 import { categoryCollection } from '../Collections/CategoryCollection'
@@ -32,7 +32,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   for (const promptFolder of result.promptFolders) {
     promptFolderCollection.utils.upsertAuthoritative(promptFolder)
   }
-  upsertPromptFolderDrafts(result.promptFolders.map((promptFolder) => promptFolder.id))
+  upsertPromptFolderClientStates(result.promptFolders.map((promptFolder) => promptFolder.id))
   for (const adapter of markdownContentQueryAdapters) adapter.applyWorkspaceResult(result)
 
   if (!previousGraph) {
@@ -48,7 +48,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
       removedPromptFolderIds.push(promptFolderId)
     }
   }
-  deletePromptFolderDrafts(removedPromptFolderIds)
+  deletePromptFolderClientStates(removedPromptFolderIds)
 
   const nextCategoryIds = new Set(result.categories.map((category) => category.id))
   const removedCategoryIds = [...previousGraph.categoryIds].filter(

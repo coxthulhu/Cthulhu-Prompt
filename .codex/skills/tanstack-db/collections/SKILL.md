@@ -1,7 +1,7 @@
 ---
 name: tanstack-db-collections
 description: |
-  Cthulhu Prompt renderer collection patterns. Use when defining or changing revision-backed authoritative collections, local-only draft collections, custom sync utilities, revision acceptance, entity keys, initial hydration, or authoritative deletes.
+  Cthulhu Prompt renderer collection patterns. Use when defining or changing revision-backed authoritative collections, local-only client-state collections, custom sync utilities, revision acceptance, entity keys, initial hydration, or authoritative deletes.
 ---
 
 # Renderer Collections
@@ -13,7 +13,7 @@ Use one of the repository's two established collection types. Do not substitute 
 | Role | Options creator | Examples |
 | --- | --- | --- |
 | Persisted authoritative entity | `revisionCollectionOptions<T>()` | workspace, prompt folder, prompt, settings, persistence |
-| Renderer-session draft or UI state | `localOnlyCollectionOptions<T>()` | prompt drafts, folder drafts, settings inputs, editor view-state drafts |
+| Renderer-session client state | `localOnlyCollectionOptions<T>()` | prompt edit markers, folder load markers, settings inputs |
 
 Create singleton collections in `src/renderer/src/data/Collections`.
 
@@ -59,26 +59,26 @@ Reject equal revisions by default. Add `shouldAcceptEqualRevision` only for a co
 
 ### Bulk Reconciliation
 
-Prefer `upsertManyAuthoritative` and `deleteManyAuthoritative` when applying one IPC response. Compute removed IDs from the previously known graph and the response graph, then delete authoritative records and matching drafts together.
+Prefer `upsertManyAuthoritative` and `deleteManyAuthoritative` when applying one IPC response. Compute removed IDs from the previously known graph and the response graph, then delete authoritative records and matching client state together.
 
-## Local-Only Draft Collections
+## Client-State Collections
 
-Use local-only collections for editable copies and renderer-session markers:
+Use local-only collections for renderer-session client state:
 
 ```ts
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
 
-export const promptDraftCollection = createCollection(
-  localOnlyCollectionOptions<PromptDraftRecord>({
-    id: 'prompt-drafts',
-    getKey: (draft) => draft.id
+export const promptClientStateCollection = createCollection(
+  localOnlyCollectionOptions<PromptClientStateRecord>({
+    id: 'prompt-client-state',
+    getKey: (clientState) => clientState.id
   })
 )
 ```
 
-Keep draft record shapes specific to UI needs. A draft can flatten persisted data, keep string form inputs, or add session-only flags such as `isEdited` and `hasLoadedInitialData`.
+Keep client-state record shapes specific to renderer needs. Client state can keep string form inputs or session-only flags such as `isEdited` and `hasLoadedInitialData`.
 
-Hydrate drafts through functions under `data/UiState`; do not duplicate draft construction in components. Preserve an edited draft when an authoritative refresh must not discard current renderer-session input.
+Hydrate client state through functions under `data/UiState`; do not duplicate record construction in components. Preserve existing session-only state when authoritative refreshes should not reset it.
 
 When a manual transaction changes a local-only collection, call its `utils.acceptMutations(transaction)` only after IPC persistence succeeds.
 
@@ -94,6 +94,6 @@ When a manual transaction changes a local-only collection, call its `utils.accep
 - Keep entity keys aligned with IPC revision envelope IDs.
 - Keep renderer keys and envelope IDs stable even when the main revision store uses a composite scope key such as `workspaceId:promptId`.
 - Add a revision collection to `RevisionCollections.ts` when it participates in shared mutations.
-- Add its local draft collection to the optimistic collection map when one transaction changes both.
+- Add its client-state collection to the optimistic collection map when one transaction changes both.
 - Reconcile authoritative deletes as well as upserts.
 - Test stale, equal, newer, bulk, delete, rollback, and summary-to-full cases that apply.

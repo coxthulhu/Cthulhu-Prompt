@@ -14,16 +14,16 @@
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
-    selectSystemSettingsFormDataRecord,
-    useSystemSettingsFormDataQuery
+    selectSystemSettingsClientStateRecord,
+    useSystemSettingsClientStateQuery
   } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
-    setSystemSettingsFormDataFontSizeInput,
-    setSystemSettingsFormDataPromptEditorMaxLinesInput,
-    setSystemSettingsFormDataPromptEditorMinLinesInput,
-    setSystemSettingsFormDataShowLineNumbers
-  } from '@renderer/data/UiState/SystemSettingsFormDataMutations.svelte.ts'
+    setSystemSettingsClientStateFontSizeInput,
+    setSystemSettingsClientStatePromptEditorMaxLinesInput,
+    setSystemSettingsClientStatePromptEditorMinLinesInput,
+    setSystemSettingsClientStateShowLineNumbers
+  } from '@renderer/data/UiState/SystemSettingsClientStateMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
     formatPromptEditorMaxLinesInput,
@@ -42,9 +42,9 @@
     MIN_PROMPT_FONT_SIZE
   } from '@shared/SystemSettings'
 
-  const systemSettingsFormDataQuery = useSystemSettingsFormDataQuery()
-  const systemSettingsFormData = $derived(
-    selectSystemSettingsFormDataRecord(systemSettingsFormDataQuery.data)
+  const systemSettingsClientStateQuery = useSystemSettingsClientStateQuery()
+  const systemSettingsClientState = $derived(
+    selectSystemSettingsClientStateRecord(systemSettingsClientStateQuery.data)
   )
   const autosaveState = getSystemSettingsAutosaveState()
   const isUpdating = $derived(autosaveState.saving)
@@ -77,53 +77,53 @@
   }
 
   const handleFontSizeReset = async () => {
-    await resetSettingToDefault(defaultFontSizeInput, setSystemSettingsFormDataFontSizeInput)
+    await resetSettingToDefault(defaultFontSizeInput, setSystemSettingsClientStateFontSizeInput)
   }
 
   const handleMinLinesReset = async () => {
     await resetSettingToDefault(
       defaultMinLinesInput,
-      setSystemSettingsFormDataPromptEditorMinLinesInput
+      setSystemSettingsClientStatePromptEditorMinLinesInput
     )
   }
 
   const handleMaxLinesReset = async () => {
     await resetSettingToDefault(
       defaultMaxLinesInput,
-      setSystemSettingsFormDataPromptEditorMaxLinesInput
+      setSystemSettingsClientStatePromptEditorMaxLinesInput
     )
   }
 
   const updateShowLineNumbers = async (value: boolean) => {
     await runIpcBestEffort(async () => {
-      setSystemSettingsFormDataShowLineNumbers(value)
+      setSystemSettingsClientStateShowLineNumbers(value)
       await flushSystemSettingsAutosaves()
     })
   }
 
   const handleShowLineNumbersToggle = async () => {
-    await updateShowLineNumbers(!systemSettingsFormData.showLineNumbers)
+    await updateShowLineNumbers(!systemSettingsClientState.showLineNumbers)
   }
 
   const handleShowLineNumbersReset = async () => {
     await updateShowLineNumbers(defaultShowLineNumbers)
   }
 
-  const validation = $derived(getSystemSettingsValidation(systemSettingsFormData))
+  const validation = $derived(getSystemSettingsValidation(systemSettingsClientState))
   const displayFontSizeError = $derived(validation.fontSizeError)
   const displayMinLinesError = $derived(validation.minLinesError)
   const displayMaxLinesError = $derived(validation.maxLinesError)
   const isFontSizeResetDisabled = $derived(
-    isUpdating || systemSettingsFormData.promptFontSizeInput === defaultFontSizeInput
+    isUpdating || systemSettingsClientState.promptFontSizeInput === defaultFontSizeInput
   )
   const isMinLinesResetDisabled = $derived(
-    isUpdating || systemSettingsFormData.promptEditorMinLinesInput === defaultMinLinesInput
+    isUpdating || systemSettingsClientState.promptEditorMinLinesInput === defaultMinLinesInput
   )
   const isMaxLinesResetDisabled = $derived(
-    isUpdating || systemSettingsFormData.promptEditorMaxLinesInput === defaultMaxLinesInput
+    isUpdating || systemSettingsClientState.promptEditorMaxLinesInput === defaultMaxLinesInput
   )
   const isShowLineNumbersResetDisabled = $derived(
-    isUpdating || systemSettingsFormData.showLineNumbers === defaultShowLineNumbers
+    isUpdating || systemSettingsClientState.showLineNumbers === defaultShowLineNumbers
   )
 
   // Side effect: flush unsaved system settings when leaving the settings screen.
@@ -178,7 +178,7 @@
             <FloatingValidationMessage message={displayFontSizeError} textTestId="font-size-error">
               <NumericStepperInput
                 data-testid="font-size-input"
-                value={systemSettingsFormData.promptFontSizeInput}
+                value={systemSettingsClientState.promptFontSizeInput}
                 min={MIN_PROMPT_FONT_SIZE}
                 max={MAX_PROMPT_FONT_SIZE}
                 helperText="px"
@@ -186,7 +186,7 @@
                 aria-invalid={displayFontSizeError ? 'true' : undefined}
                 decreaseLabel="Decrease font size"
                 increaseLabel="Increase font size"
-                onvaluechange={setSystemSettingsFormDataFontSizeInput}
+                onvaluechange={setSystemSettingsClientStateFontSizeInput}
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
@@ -215,7 +215,7 @@
             <FloatingValidationMessage message={displayMinLinesError} textTestId="min-lines-error">
               <NumericStepperInput
                 data-testid="min-lines-input"
-                value={systemSettingsFormData.promptEditorMinLinesInput}
+                value={systemSettingsClientState.promptEditorMinLinesInput}
                 min={MIN_PROMPT_EDITOR_MIN_LINES}
                 max={MAX_PROMPT_EDITOR_MIN_LINES}
                 helperText="lines"
@@ -223,7 +223,7 @@
                 aria-invalid={displayMinLinesError ? 'true' : undefined}
                 decreaseLabel="Decrease minimum line count"
                 increaseLabel="Increase minimum line count"
-                onvaluechange={setSystemSettingsFormDataPromptEditorMinLinesInput}
+                onvaluechange={setSystemSettingsClientStatePromptEditorMinLinesInput}
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
@@ -252,7 +252,7 @@
             <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
               <NumericStepperInput
                 data-testid="max-lines-input"
-                value={systemSettingsFormData.promptEditorMaxLinesInput}
+                value={systemSettingsClientState.promptEditorMaxLinesInput}
                 min={MIN_PROMPT_EDITOR_MAX_LINES}
                 max={MAX_PROMPT_EDITOR_MAX_LINES}
                 helperText="lines"
@@ -260,7 +260,7 @@
                 aria-invalid={displayMaxLinesError ? 'true' : undefined}
                 decreaseLabel="Decrease maximum line count"
                 increaseLabel="Increase maximum line count"
-                onvaluechange={setSystemSettingsFormDataPromptEditorMaxLinesInput}
+                onvaluechange={setSystemSettingsClientStatePromptEditorMaxLinesInput}
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
@@ -288,7 +288,7 @@
           {#snippet control()}
             <ToggleTextButton
               testId="show-line-numbers-toggle"
-              pressed={systemSettingsFormData.showLineNumbers}
+              pressed={systemSettingsClientState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}
               disabled={isUpdating}
             />

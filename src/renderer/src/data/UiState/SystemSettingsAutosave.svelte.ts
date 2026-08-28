@@ -3,10 +3,10 @@ import type { Transaction } from '@tanstack/svelte-db'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
-  SYSTEM_SETTINGS_FORM_DATA_ID,
-  type SystemSettingsFormDataRecord,
-  systemSettingsFormDataCollection
-} from '../Collections/SystemSettingsFormDataCollection'
+  SYSTEM_SETTINGS_CLIENT_STATE_ID,
+  type SystemSettingsClientStateRecord,
+  systemSettingsClientStateCollection
+} from '../Collections/SystemSettingsClientStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
@@ -27,71 +27,81 @@ const autosaveState = $state<SystemSettingsAutosaveState>({
   saving: false
 })
 
-type SystemSettingsFormDataQuery = {
-  data: SystemSettingsFormDataRecord[]
+/** Live-query result for system-settings client state. */
+type SystemSettingsClientStateQuery = {
+  data: SystemSettingsClientStateRecord[]
 }
 
-export const getSystemSettingsFormDataRecord = (): SystemSettingsFormDataRecord => {
-  return systemSettingsFormDataCollection.get(SYSTEM_SETTINGS_FORM_DATA_ID)!
+/** Returns the singleton system-settings client-state record. */
+export const getSystemSettingsClientStateRecord = (): SystemSettingsClientStateRecord => {
+  return systemSettingsClientStateCollection.get(SYSTEM_SETTINGS_CLIENT_STATE_ID)!
 }
 
-export const useSystemSettingsFormDataQuery = (): SystemSettingsFormDataQuery => {
+/** Subscribes to system-settings client state. */
+export const useSystemSettingsClientStateQuery = (): SystemSettingsClientStateQuery => {
   return useLiveQuery((query) => {
-    return query.from({ systemSettingsFormData: systemSettingsFormDataCollection })
-  }) as SystemSettingsFormDataQuery
+    return query.from({ systemSettingsClientState: systemSettingsClientStateCollection })
+  }) as SystemSettingsClientStateQuery
 }
 
-export const selectSystemSettingsFormDataRecord = (
-  records: SystemSettingsFormDataRecord[]
-): SystemSettingsFormDataRecord => {
+/** Selects the singleton client-state record from a live-query result. */
+export const selectSystemSettingsClientStateRecord = (
+  records: SystemSettingsClientStateRecord[]
+): SystemSettingsClientStateRecord => {
   return (
-    records.find((record) => record.id === SYSTEM_SETTINGS_FORM_DATA_ID) ??
-    getSystemSettingsFormDataRecord()
+    records.find((record) => record.id === SYSTEM_SETTINGS_CLIENT_STATE_ID) ??
+    getSystemSettingsClientStateRecord()
   )
 }
 
-const getSystemSettingsFormDataRecordFromTransaction = (
+/** Reads the latest system-settings client state from one transaction. */
+const getSystemSettingsClientStateFromTransaction = (
   transaction: Transaction<any>
-): SystemSettingsFormDataRecord => {
+): SystemSettingsClientStateRecord => {
   return getLatestMutationModifiedRecord(
     transaction,
-    systemSettingsFormDataCollection.id,
-    SYSTEM_SETTINGS_FORM_DATA_ID,
-    getSystemSettingsFormDataRecord
+    systemSettingsClientStateCollection.id,
+    SYSTEM_SETTINGS_CLIENT_STATE_ID,
+    getSystemSettingsClientStateRecord
   )
 }
 
+/** Converts valid client state to authoritative system settings. */
 const readValidatedSystemSettings = (
-  formDataRecord: SystemSettingsFormDataRecord
+  clientState: SystemSettingsClientStateRecord
 ): SystemSettings | null => {
-  const validation = getSystemSettingsValidation(formDataRecord)
+  const validation = getSystemSettingsValidation(clientState)
   if (validation.fontSizeError || validation.minLinesError || validation.maxLinesError) {
     return null
   }
 
   return {
-    promptFontSize: normalizePromptFontSizeInput(formDataRecord.promptFontSizeInput).rounded,
-    promptEditorMinLines: normalizePromptEditorMinLinesInput(formDataRecord.promptEditorMinLinesInput)
+    promptFontSize: normalizePromptFontSizeInput(clientState.promptFontSizeInput).rounded,
+    promptEditorMinLines: normalizePromptEditorMinLinesInput(clientState.promptEditorMinLinesInput)
       .rounded,
-    promptEditorMaxLines: normalizePromptEditorMaxLinesInput(formDataRecord.promptEditorMaxLinesInput)
+    promptEditorMaxLines: normalizePromptEditorMaxLinesInput(clientState.promptEditorMaxLinesInput)
       .rounded,
-    showLineNumbers: formDataRecord.showLineNumbers
+    showLineNumbers: clientState.showLineNumbers
   }
 }
 
-export const mutateSystemSettingsFormDataWithAutosave = (
-  applyFormDataUpdate: (formDataRecord: SystemSettingsFormDataRecord) => void
+/** Applies client-state input changes through the paced settings autosave. */
+export const mutateSystemSettingsClientStateWithAutosave = (
+  applyClientStateUpdate: (clientState: SystemSettingsClientStateRecord) => void
 ): void => {
   mutatePacedSystemSettingsAutosaveUpdate({
     debounceMs: AUTOSAVE_MS,
     mutateOptimistically: ({ collections }) => {
-      collections.systemSettingsFormData.update(SYSTEM_SETTINGS_FORM_DATA_ID, (formDataRecord) => {
-        applyFormDataUpdate(formDataRecord)
-      })
+      collections.systemSettingsClientState.update(
+        SYSTEM_SETTINGS_CLIENT_STATE_ID,
+        (clientState) => {
+          applyClientStateUpdate(clientState)
+        }
+      )
     },
     validateBeforeEnqueue: (transaction) => {
-      const formDataRecord = getSystemSettingsFormDataRecordFromTransaction(transaction)
-      const validatedSettings = readValidatedSystemSettings(formDataRecord)
+      const clientState = getSystemSettingsClientStateFromTransaction(transaction)
+      const validatedSettings = readValidatedSystemSettings(clientState)
       if (!validatedSettings) {
         return false
       }
@@ -103,14 +113,14 @@ export const mutateSystemSettingsFormDataWithAutosave = (
           draft.promptEditorMaxLines = validatedSettings.promptEditorMaxLines
           draft.showLineNumbers = validatedSettings.showLineNumbers
         })
-        systemSettingsFormDataCollection.update(
-          SYSTEM_SETTINGS_FORM_DATA_ID,
-          (formDataRecord) => {
+        systemSettingsClientStateCollection.update(
+          SYSTEM_SETTINGS_CLIENT_STATE_ID,
+          (nextClientState) => {
             const nextFormData = toSystemSettingsFormData(validatedSettings)
-            formDataRecord.promptFontSizeInput = nextFormData.promptFontSizeInput
-            formDataRecord.promptEditorMinLinesInput = nextFormData.promptEditorMinLinesInput
-            formDataRecord.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
-            formDataRecord.showLineNumbers = nextFormData.showLineNumbers
+            nextClientState.promptFontSizeInput = nextFormData.promptFontSizeInput
+            nextClientState.promptEditorMinLinesInput = nextFormData.promptEditorMinLinesInput
+            nextClientState.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
+            nextClientState.showLineNumbers = nextFormData.showLineNumbers
           }
         )
       })

@@ -1,7 +1,7 @@
 ---
 name: tanstack-db-query
 description: |
-  Cthulhu Prompt renderer IPC load and authoritative reconciliation patterns. Use when adding or changing functions under data/Queries, loading revision envelopes through preload APIs, normalizing prompt representations, hydrating local drafts, pruning removed entities, or coordinating startup and folder-level loading state.
+  Cthulhu Prompt renderer IPC load and authoritative reconciliation patterns. Use when adding or changing functions under data/Queries, loading revision envelopes through preload APIs, normalizing prompt representations, hydrating client state, pruning removed entities, or coordinating startup and folder-level loading state.
 ---
 
 # IPC Loads and Reconciliation
@@ -24,7 +24,7 @@ export const loadPromptFolderInitial = async (
     )
   )
 
-  // Normalize, reconcile authoritative collections, and hydrate drafts.
+  // Normalize, reconcile authoritative collections, and hydrate client state.
 }
 ```
 
@@ -57,19 +57,17 @@ Normalize IPC data before authoritative insertion when the shared domain has dis
 
 Keep normalization in query or mutation boundary code, not in components.
 
-## Hydrate Local Drafts
+## Hydrate Client State
 
-After applying authoritative snapshots, call the appropriate `data/UiState` upsert functions to hydrate or reconcile renderer drafts. Preserve session-only fields and edited-draft rules implemented by those helpers.
+After applying authoritative snapshots, call the appropriate `data/UiState` upsert functions to hydrate or reconcile renderer client state. Preserve session-only fields according to the closest helper.
 
 Examples include:
 
-- prompt summary/full drafts
-- prompt-folder settings drafts
+- prompt and template edit markers
+- prompt-folder load markers
 - system-settings form inputs
-- user/workspace persistence drafts
-- prompt editor UI-state drafts
 
-Do not construct duplicate draft shapes in query modules or components.
+Do not construct duplicate client-state shapes in query modules or components.
 
 ## Prune Removed Entities
 
@@ -79,11 +77,11 @@ For graph or subset reloads:
 2. Apply all newer response snapshots.
 3. Compute IDs absent from the reconciled response graph.
 4. Delete those IDs through authoritative bulk delete utilities.
-5. Delete matching local drafts.
+5. Delete matching client state.
 
-Reconcile only the entities owned by the load contract. For example, the current prompt-folder initial load prunes removed prompts and prompt drafts, while other associated collections have their own lifecycle. Do not infer cross-entity deletes that the response does not establish.
+Reconcile only the entities owned by the load contract. For example, the current prompt-folder initial load prunes removed prompts and prompt client state, while other associated collections have their own lifecycle. Do not infer cross-entity deletes that the response does not establish.
 
-Do not clear whole authoritative singleton collections when switching or reloading a workspace; preserve revision-aware reconciliation and delete only records proven absent. Workspace-scoped local draft collections are cleared through `WorkspaceStoreBridge.ts` after their autosaves flush.
+Do not clear whole authoritative singleton collections when switching or reloading a workspace; preserve revision-aware reconciliation and delete only records proven absent. Workspace-scoped client-state collections are cleared through `WorkspaceStoreBridge.ts` after their autosaves flush.
 
 ## Main-Process Companion Work
 
@@ -108,4 +106,4 @@ In-memory revision keys can include scope, such as `workspaceId:entityId`, while
 
 ## Testing
 
-Test normalization, stale/equal/new revision behavior, pruning, draft preservation, failed `IpcResult` handling, and overlapping load ordering when those paths change.
+Test normalization, stale/equal/new revision behavior, pruning, client-state preservation, failed `IpcResult` handling, and overlapping load ordering when those paths change.

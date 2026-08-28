@@ -3,7 +3,7 @@
   import {
     setPromptText,
     setPromptTitle
-  } from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+  } from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
   import MarkdownContentEditorRow from './MarkdownContentEditorRow.svelte'
 
   type Props = Omit<

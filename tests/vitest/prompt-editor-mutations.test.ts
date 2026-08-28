@@ -17,11 +17,11 @@ import {
   setPromptTemplates,
   setPromptText,
   setPromptTitle
-} from '@renderer/data/UiState/PromptDraftMutations.svelte.ts'
+} from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
 import {
   setPromptTemplateText,
   setPromptTemplateTitle
-} from '@renderer/data/UiState/PromptTemplateDraftMutations.svelte.ts'
+} from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
 
 /** Stable prompt edited through the renamed canonical setter APIs. */
 const PROMPT_ID = 'prompt-editor-mutation'
@@ -62,19 +62,19 @@ describe('prompt editor mutations', () => {
     })
   })
 
-  it('updates canonical prompt fields while keeping the draft marker-only', () => {
+  it('updates canonical prompt fields while keeping client state marker-only', () => {
     /** Mutable canonical prompt receiving the optimistic setter recipes. */
     const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
-    /** Marker-only prompt draft receiving the shared edited latch. */
-    const promptDraft = { id: PROMPT_ID, isEdited: false }
+    /** Marker-only prompt client state receiving the shared edited latch. */
+    const promptClientState = { id: PROMPT_ID, isEdited: false }
     /** Optimistic collections used to apply each registered prompt setter recipe. */
     const collections = {
       prompt: {
         update: (_id: string, update: (draft: typeof prompt) => void) => update(prompt)
       },
-      promptDraft: {
-        update: (_id: string, update: (draft: typeof promptDraft) => void) =>
-          update(promptDraft)
+      promptClientState: {
+        update: (_id: string, update: (clientState: typeof promptClientState) => void) =>
+          update(promptClientState)
       }
     }
 
@@ -96,22 +96,22 @@ describe('prompt editor mutations', () => {
       promptText: 'Updated prompt text.',
       templates: [{ id: TEMPLATE_ID }]
     })
-    expect(promptDraft).toEqual({ id: PROMPT_ID, isEdited: true })
+    expect(promptClientState).toEqual({ id: PROMPT_ID, isEdited: true })
   })
 
-  it('updates canonical template fields while keeping the draft marker-only', () => {
+  it('updates canonical template fields while keeping client state marker-only', () => {
     /** Mutable canonical template receiving the optimistic setter recipes. */
     const template = structuredClone(promptTemplateCollection.get(TEMPLATE_ID)!)
-    /** Marker-only template draft receiving the shared edited latch. */
-    const templateDraft = { id: TEMPLATE_ID, isEdited: false }
+    /** Marker-only template client state receiving the shared edited latch. */
+    const templateClientState = { id: TEMPLATE_ID, isEdited: false }
     /** Optimistic collections used to apply each registered template setter recipe. */
     const collections = {
       promptTemplate: {
         update: (_id: string, update: (draft: typeof template) => void) => update(template)
       },
-      promptTemplateDraft: {
-        update: (_id: string, update: (draft: typeof templateDraft) => void) =>
-          update(templateDraft)
+      promptTemplateClientState: {
+        update: (_id: string, update: (clientState: typeof templateClientState) => void) =>
+          update(templateClientState)
       }
     }
 
@@ -128,6 +128,6 @@ describe('prompt editor mutations', () => {
       title: 'Updated Template',
       templateText: 'Updated template text.'
     })
-    expect(templateDraft).toEqual({ id: TEMPLATE_ID, isEdited: true })
+    expect(templateClientState).toEqual({ id: TEMPLATE_ID, isEdited: true })
   })
 })
