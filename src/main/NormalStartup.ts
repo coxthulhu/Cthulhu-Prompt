@@ -29,6 +29,7 @@ import {
 import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
+import { attachRendererLogging } from './logging'
 
 const WINDOW_DEFAULT_WIDTH = 1366
 const WINDOW_DEFAULT_HEIGHT = 768
@@ -228,6 +229,8 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     }
   })
 
+  attachRendererLogging(mainWindow)
+
   if (windowStartupState.isFullScreen) {
     mainWindow.setFullScreen(true)
   } else if (windowStartupState.isMaximized) {
@@ -297,6 +300,20 @@ export function startupNormally(): void {
     // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
     app.on('browser-window-created', (_, window) => {
       optimizer.watchWindowShortcuts(window)
+
+      if (!is.dev) {
+        window.webContents.on('before-input-event', (event, input) => {
+          if (input.type !== 'keyDown' || input.code !== 'F12') return
+
+          // Side effect: make renderer diagnostics available in production without reloading.
+          if (window.webContents.isDevToolsOpened()) {
+            window.webContents.closeDevTools()
+          } else {
+            window.webContents.openDevTools({ mode: 'undocked' })
+          }
+          event.preventDefault()
+        })
+      }
     })
 
     // Setup workspace dialog IPC handlers used by the home screen.

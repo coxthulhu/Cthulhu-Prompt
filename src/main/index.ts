@@ -3,6 +3,7 @@ import { join } from 'path'
 import { startupNormally } from './NormalStartup'
 import { setupTestStartupListener } from './IntegrationTests/TestStartup'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
+import { initializePersistentLogging } from './logging'
 
 const PRODUCTION_USER_DATA_DIRECTORY_NAME = 'CthulhuPrompt'
 const DEV_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptDev'
@@ -35,6 +36,9 @@ if (shouldUsePlaywrightSetup) {
 } else if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
+  // Side effect: begin persistent diagnostics only in the primary application instance.
+  initializePersistentLogging()
+
   app.on('second-instance', () => {
     const mainWindow = BrowserWindow.getAllWindows()[0]
     if (!mainWindow) return
