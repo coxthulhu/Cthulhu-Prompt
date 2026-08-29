@@ -13,7 +13,11 @@ const runRevisionMutation = vi.hoisted(() => vi.fn())
 
 vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({ runRevisionMutation }))
 
-import { deleteCategory, moveCategory } from '@renderer/data/Mutations/CategoryMutations'
+import {
+  createCategory,
+  deleteCategory,
+  moveCategory
+} from '@renderer/data/Mutations/CategoryMutations'
 
 /** Stable category ID referenced across prompt and template content. */
 const CATEGORY_ID = 'category-delete-test'
@@ -94,6 +98,91 @@ describe('category mutations', () => {
       })
     })
     runRevisionMutation.mockResolvedValue(undefined)
+  })
+
+  it('sends an absent expectation for the optimistic category insertion', async () => {
+    /** Stable category ID returned by the renderer mutation. */
+    const categoryId = await createCategory(ROOT_FOLDER_ID, 'Created')
+    /** Domain mutation options registered by category creation. */
+    const options = runRevisionMutation.mock.calls[0]?.[0]
+    /** Mutable root order used to verify the shared optimistic folder recipe. */
+    const folderState = {
+      categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
+    }
+    /** Optimistic category insertion spy. */
+    const insertCategoryOptimistically = vi.fn()
+    options.mutateOptimistically({
+      collections: {
+        promptFolder: {
+          update: (id: string, update: (draft: typeof folderState) => void) => {
+            expect(id).toBe(ROOT_FOLDER_ID)
+            update(folderState)
+          }
+        },
+        category: { insert: insertCategoryOptimistically }
+      }
+    })
+    expect(folderState.categoryOrder.categories[1]?.categoryId).toBe(categoryId)
+    expect(insertCategoryOptimistically).toHaveBeenCalledWith({
+      id: categoryId,
+      displayName: 'Created',
+      description: null
+    })
+
+    /** IPC invocation spy used to inspect the generic domain request. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'inspect only' })
+    await options.persistMutations({ invoke, transaction: {} })
+    expect(invoke).toHaveBeenCalledWith('create-category', {
+      payload: {
+        command: {
+          categoryId,
+          promptFolderId: ROOT_FOLDER_ID,
+          displayName: 'Created'
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: ROOT_FOLDER_ID,
+            expected: 'revision',
+            revision: 3
+          },
+          {
+            entityType: 'category',
+            id: categoryId,
+            expected: 'absent'
+          }
+        ]
+      }
+    })
+
+    /** Authoritative reconciliation spies kept side-effect free for test isolation. */
+    const upsertFolder = vi
+      .spyOn(promptFolderCollection.utils, 'upsertAuthoritative')
+      .mockImplementation(() => undefined)
+    const upsertCategory = vi
+      .spyOn(categoryCollection.utils, 'upsertAuthoritative')
+      .mockImplementation(() => undefined)
+    options.handleSuccessOrConflictResponse({
+      snapshots: [
+        {
+          entityType: 'promptFolder',
+          id: ROOT_FOLDER_ID,
+          revision: 4,
+          data: {
+            ...promptFolderCollection.get(ROOT_FOLDER_ID),
+            categoryOrder: folderState.categoryOrder
+          }
+        },
+        {
+          entityType: 'category',
+          id: categoryId,
+          revision: 1,
+          data: { id: categoryId, displayName: 'Created', description: null }
+        }
+      ]
+    })
+    expect(upsertFolder).toHaveBeenCalledOnce()
+    expect(upsertCategory).toHaveBeenCalledOnce()
   })
 
   it('clears every matching renderer reference and sends all touched revisions', async () => {

@@ -49,47 +49,27 @@ const mockMainData = vi.hoisted(() => {
 
 vi.mock('../../src/main/Data/Data', () => ({ data: mockMainData.data }))
 
-/** Atomic operation spies used to execute and inspect the real framework builder callback. */
-const atomicOperations = vi.hoisted(() => ({
-  create: vi.fn(() => ({ operationIndex: 0, store: 'category', id: 'created' })),
-  update: vi.fn(() => ({ operationIndex: 0, store: 'promptFolder', id: 'root' })),
-  updatePersistenceFields: vi.fn(() => ({
-    operationIndex: 1,
-    store: 'category',
-    id: 'filename-only'
-  })),
-  delete: vi.fn(() => ({ operationIndex: 0, store: 'category', id: 'deleted' }))
+/** Stable projection returned after main recipes are applied once. */
+const projectedDomainMutation = vi.hoisted(() => ({
+  beforeGraph: {},
+  afterGraph: {},
+  transitions: []
 }))
 
-/** Immediate atomic transaction spy that invokes the production operation builder. */
-const runAtomicDataTransaction = vi.hoisted(() =>
-  vi.fn(async (buildTransaction: (tx: unknown) => unknown) => {
-    /** Store builder shared by test-only entity types. */
-    const storeBuilder = atomicOperations
-    /** Complete atomic builder shape consumed through production dynamic dispatch. */
-    const tx = {
-      systemSettings: storeBuilder,
-      workspace: storeBuilder,
-      promptFolder: storeBuilder,
-      category: storeBuilder,
-      prompt: storeBuilder,
-      promptTemplate: storeBuilder
-    }
-    buildTransaction(tx)
-    return { status: 'success', results: {} }
-  })
+/** Projection spy used to inspect plans and expected revisions. */
+const projectDomainTransitions = vi.hoisted(() => vi.fn(() => projectedDomainMutation))
+
+/** Transition-native atomic execution spy. */
+const runAtomicDomainTransitionTransaction = vi.hoisted(() =>
+  vi.fn(async () => ({ status: 'success' }))
 )
 
-vi.mock('../../src/main/Data/AtomicDataTransaction', () => ({ runAtomicDataTransaction }))
+vi.mock('../../src/main/Data/AtomicDataTransaction', () => ({
+  runAtomicDomainTransitionTransaction
+}))
+vi.mock('../../src/main/Data/DomainTransitions', () => ({ projectDomainTransitions }))
 vi.mock('../../src/main/Data/GlobalMutationQueue', () => ({
   enqueueGlobalMutation: async <TResult>(mutation: () => Promise<TResult>) => await mutation()
-}))
-
-/** Persistence planning spy isolates main target/revision behavior. */
-const planDomainPersistenceChanges = vi.hoisted(() => vi.fn(() => []))
-
-vi.mock('../../src/main/Persistence/DomainPersistence', () => ({
-  planDomainPersistenceChanges
 }))
 
 vi.mock('../../src/main/Data/DataSnapshotHelpers', () => ({
@@ -213,7 +193,7 @@ describe('main domain mutation framework', () => {
         ]
       }
     })
-    expect(runAtomicDataTransaction).not.toHaveBeenCalled()
+    expect(runAtomicDomainTransitionTransaction).not.toHaveBeenCalled()
   })
 
   it('rejects malformed commands through the mutation-specific parser', async () => {
@@ -309,7 +289,7 @@ describe('main domain mutation framework', () => {
     expect(result.payload.snapshots).toEqual([
       { entityType: 'category', id: 'missing', deleted: true }
     ])
-    expect(runAtomicDataTransaction).not.toHaveBeenCalled()
+    expect(runAtomicDomainTransitionTransaction).not.toHaveBeenCalled()
   })
 
   it('returns authoritative snapshots without committing for a stale revision', async () => {
@@ -345,8 +325,8 @@ describe('main domain mutation framework', () => {
       conflict: true,
       payload: { snapshots: [{ entityType: 'promptFolder', id: 'root', revision: 4 }] }
     })
-    expect(planDomainPersistenceChanges).not.toHaveBeenCalled()
-    expect(runAtomicDataTransaction).not.toHaveBeenCalled()
+    expect(projectDomainTransitions).not.toHaveBeenCalled()
+    expect(runAtomicDomainTransitionTransaction).not.toHaveBeenCalled()
   })
 
   it('returns authoritative snapshots when a renderer expects a present target to be absent', async () => {
@@ -379,10 +359,10 @@ describe('main domain mutation framework', () => {
     expect(result.payload.snapshots).toEqual([
       { entityType: 'promptFolder', id: 'root', revision: 4, data: promptFolder }
     ])
-    expect(runAtomicDataTransaction).not.toHaveBeenCalled()
+    expect(runAtomicDomainTransitionTransaction).not.toHaveBeenCalled()
   })
 
-  it('plans persistence and uses immediate atomic mode after revision validation', async () => {
+  it('projects transitions once and uses immediate atomic mode after revision validation', async () => {
     /** Valid folder update planner. */
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
@@ -394,23 +374,6 @@ describe('main domain mutation framework', () => {
         }
       }
     ]
-    /** Target persistence write plus one filename-only category adjustment. */
-    planDomainPersistenceChanges.mockReturnValue([
-      {
-        type: 'upsert',
-        entityType: 'promptFolder',
-        id: 'root',
-        data: promptFolder,
-        persistenceFields: { folderPath: 'Root' }
-      },
-      {
-        type: 'upsert',
-        entityType: 'category',
-        id: 'filename-only',
-        data: { id: 'filename-only', displayName: 'Name', description: null },
-        persistenceFields: { categoryStem: 'Name' }
-      }
-    ])
     /** Successful handler response after matching target and revision validation. */
     const result = await registerHandler(planner)(null, {
       requestId: 'request',
@@ -428,17 +391,16 @@ describe('main domain mutation framework', () => {
       }
     })
     expect(result.success).toBe(true)
-    expect(planDomainPersistenceChanges).toHaveBeenCalledOnce()
-    expect(runAtomicDataTransaction).toHaveBeenCalledWith(expect.any(Function), {
-      mode: 'immediate'
-    })
-    expect(atomicOperations.update).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'root', expectedRevision: 4 })
+    expect(projectDomainTransitions).toHaveBeenCalledWith(
+      expect.any(Array),
+      [{ entityType: 'promptFolder', id: 'root', expected: 'revision', revision: 4 }]
     )
-    expect(atomicOperations.updatePersistenceFields).toHaveBeenCalledWith({
-      id: 'filename-only',
-      persistenceFields: { categoryStem: 'Name' }
-    })
+    expect(runAtomicDomainTransitionTransaction).toHaveBeenCalledWith(
+      projectedDomainMutation,
+      {
+        mode: 'immediate'
+      }
+    )
     expect(result.payload.snapshots).toEqual([
       { entityType: 'promptFolder', id: 'root', revision: 4, data: promptFolder }
     ])
@@ -470,22 +432,6 @@ describe('main domain mutation framework', () => {
         id: 'unchecked-category'
       }
     ]
-    /** Target persistence writes required by both planned atomic operations. */
-    planDomainPersistenceChanges.mockReturnValue([
-      {
-        type: 'upsert',
-        entityType: 'promptFolder',
-        id: 'root',
-        data: promptFolder,
-        persistenceFields: {}
-      },
-      {
-        type: 'remove',
-        entityType: 'category',
-        id: 'unchecked-category',
-        persistenceFields: {}
-      }
-    ])
     /** Registration selector retaining only workspace-like root ownership checks. */
     const selectExpectedTargets: DomainExpectedTargetSelector = (changes) =>
       changes.filter((change) => change.entityType === 'promptFolder')
@@ -507,11 +453,12 @@ describe('main domain mutation framework', () => {
     })
 
     expect(result.success).toBe(true)
-    expect(atomicOperations.update).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'root', expectedRevision: 4 })
-    )
-    expect(atomicOperations.delete).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'unchecked-category', expectedRevision: undefined })
+    expect(projectDomainTransitions).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ entityType: 'promptFolder', id: 'root' }),
+        expect.objectContaining({ entityType: 'category', id: 'unchecked-category' })
+      ]),
+      [{ entityType: 'promptFolder', id: 'root', expected: 'revision', revision: 4 }]
     )
     expect(
       result.payload.snapshots.map((snapshot) => `${snapshot.entityType}:${snapshot.id}`)

@@ -271,8 +271,6 @@ export const setupPromptFolderMutationHandlers = (): void => {
           ) {
             return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
           }
-          /** Previous disk path used by atomic directory rename persistence. */
-          const previousFolderPath = promptFolder.persistenceFields.folderPath
           /** Atomic root-folder rename result. */
           const outcome = await runAtomicDataTransaction((tx) => ({
             promptFolder: tx.promptFolder.update({
@@ -285,8 +283,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
               persistenceFields: {
                 ...promptFolder.persistenceFields,
                 folderName: preparedName.folderName,
-                folderPath: preparedName.folderName,
-                previousFolderPath
+                folderPath: preparedName.folderName
               }
             })
           }))

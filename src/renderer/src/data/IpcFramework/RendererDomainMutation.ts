@@ -212,6 +212,13 @@ const buildRendererDomainExpectations = (
     )!
     /** Renderer revision collection for the planned target. */
     const collection = getRendererRevisionCollection(change.entityType)
+    if (change.type === 'insert') {
+      return {
+        entityType: change.entityType,
+        id: change.id,
+        expected: 'absent' as const
+      }
+    }
     return collection.has(change.id)
       ? {
           entityType: change.entityType,

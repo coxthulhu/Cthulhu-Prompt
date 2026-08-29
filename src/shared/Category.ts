@@ -1,23 +1,11 @@
-import type { PromptFolder } from './PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { PromptFolder } from './PromptFolder'
 
 /** Persisted category metadata owned by one root prompt or template folder. */
 export type Category = {
   id: string
   displayName: string
   description: string | null
-}
-
-/** Payload used to create a category and attach it to its root folder. */
-export type CreateCategoryPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  category: RevisionPayloadEntity<Category>
-}
-
-/** Authoritative snapshots returned after category creation. */
-export type CreateCategoryResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
-  category?: RevisionEnvelope<Category>
 }
 
 /** Payload used to rename one category. */

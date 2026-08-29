@@ -17,7 +17,6 @@ export type MarkdownPersistenceFields = {
   workspaceId: string
   workspacePath: string
   folderPath: string
-  previousFolderPath?: string
   promptFolderId: string
   promptId: string
   promptStem: string
@@ -63,31 +62,44 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
   normalizeLoadedData = (data) => data,
   shouldRewriteNormalizedData = () => false
 }: MarkdownPersistenceOptions<TData>): PersistenceLayer<TData, MarkdownPersistenceFields> => ({
-  stageChanges: async (change) => {
-    const currentFolderPath = resolvePromptFolderPath(
-      change.persistenceFields.workspacePath,
-      change.persistenceFields.previousFolderPath ?? change.persistenceFields.folderPath,
-      kind
-    )
-    const targetFolderPath = resolvePromptFolderPath(
-      change.persistenceFields.workspacePath,
-      change.persistenceFields.folderPath,
-      kind
-    )
-    const currentPaths = resolvePromptPathsFromStem(
-      currentFolderPath,
-      change.persistenceFields.promptStem,
-      kind
-    )
+  stageChanges: async (transition) => {
+    /** Current record whose resolved path is removed or replaced. */
+    const before = transition.before
+    /** Desired record whose data and resolved path are written. */
+    const after = transition.after
+    if (!before && !after) throw new Error('Markdown persistence transition is empty')
+    /** Current markdown folder path when the entity already exists. */
+    const currentFolderPath = before
+      ? resolvePromptFolderPath(
+          before.persistenceFields.workspacePath,
+          before.persistenceFields.folderPath,
+          kind
+        )
+      : null
+    /** Current markdown path when the entity already exists. */
+    const currentMarkdownPath = before
+      ? resolvePromptPathsFromStem(
+          currentFolderPath!,
+          before.persistenceFields.promptStem,
+          kind
+        ).markdownPath
+      : null
 
-    if (change.type === 'remove') {
-      return createPersistenceStageResult([createStagedFileRemove(currentPaths.markdownPath)])
+    if (!after) {
+      return createPersistenceStageResult([createStagedFileRemove(currentMarkdownPath!)])
     }
 
+    /** Desired markdown persistence metadata. */
+    const fields = after.persistenceFields
+    const targetFolderPath = resolvePromptFolderPath(
+      fields.workspacePath,
+      fields.folderPath,
+      kind
+    )
     const stem = buildPromptStem(
-      getDisplayTitle(change.data),
-      change.data.id,
-      change.persistenceFields.needsFilenameIdSuffix
+      getDisplayTitle(after.data),
+      after.data.id,
+      fields.needsFilenameIdSuffix
     )
     const targetPaths = resolvePromptPathsFromStem(targetFolderPath, stem, kind)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)
@@ -95,20 +107,18 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     const targetFolderAlreadyExists = fs.existsSync(targetFolderPath)
     // Side effect: create the target content directory before staging its temp file.
     fs.mkdirSync(targetFolderPath, { recursive: true })
-    fs.writeFileSync(markdownTempPath, serializeMarkdown(change.data), 'utf8')
+    fs.writeFileSync(markdownTempPath, serializeMarkdown(after.data), 'utf8')
 
     const fileChanges: FilePersistenceStagedChange[] = []
-    if (currentPaths.markdownPath !== targetPaths.markdownPath) {
-      fileChanges.push(createStagedFileRemove(currentPaths.markdownPath))
+    if (currentMarkdownPath && currentMarkdownPath !== targetPaths.markdownPath) {
+      fileChanges.push(createStagedFileRemove(currentMarkdownPath))
     }
 
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
     fileChanges.push(createStagedEnsureDirectory(targetFolderPath, !targetFolderAlreadyExists))
 
-    const { previousFolderPath: _previousFolderPath, ...nextPersistenceFields } =
-      change.persistenceFields
     return createPersistenceStageResult(fileChanges, {
-      ...nextPersistenceFields,
+      ...fields,
       promptStem: stem
     })
   },

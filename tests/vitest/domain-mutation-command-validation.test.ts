@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { parseDeleteCategoryDomainCommand } from '@shared/CategoryDomainMutations'
+import {
+  parseCreateCategoryDomainCommand,
+  parseDeleteCategoryDomainCommand
+} from '@shared/CategoryDomainMutations'
 import { parseMoveMarkdownContentDomainCommand } from '@shared/MarkdownContentDomainMutations'
 
 describe('domain mutation command validation', () => {
+  it('accepts a valid category creation command', () => {
+    /** Valid creation command carrying only stable domain intent. */
+    const command = {
+      categoryId: 'category',
+      promptFolderId: 'root',
+      displayName: 'Category'
+    }
+    expect(parseCreateCategoryDomainCommand(command)).toEqual(command)
+  })
+
   it('accepts the channel-independent markdown movement command', () => {
     /** Valid movement command shared by the prompt and template channels. */
     const command = {

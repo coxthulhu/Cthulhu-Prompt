@@ -1,6 +1,9 @@
 import { produce } from 'immer'
-import type { PersistenceWrite } from '../Persistence/PersistenceTypes'
 import type { FilePersistenceStagedChange } from '../Persistence/FilePersistenceHelpers'
+import {
+  planDomainStorageTransitions
+} from '../Persistence/DomainStorageAdapters'
+import type { DomainTransitionProjection } from './DomainTransitions'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
 
@@ -162,22 +165,33 @@ type StageConflict = {
   data: unknown
 }
 
-type StagedOperationEntry = {
-  operation: AtomicDataOperation
+/** One projected atomic transition consumed directly by the staging core. */
+type AtomicDataTransition = {
+  operationIndex: number
+  store: DataStoreKey
+  id: string
+  before: { revision: number; data: unknown; persistenceFields: unknown } | null
+  after: { data: unknown; persistenceFields: unknown } | null
+  expectedRevision?: number
+  incrementsRevision: boolean
+}
+
+/** One transition whose filesystem changes have been staged successfully. */
+type StagedTransitionEntry = {
+  transition: AtomicDataTransition
   revisionData: RevisionData<any, any>
-  nextData: unknown
-  persistenceFields: unknown
+  nextPersistenceFields: unknown
   stagedChange: FilePersistenceStagedChange[]
 }
 
-type StageAtomicDataOperationsResult =
+/** Result of projecting legacy builder operations against current stores. */
+type ProjectAtomicDataOperationsResult =
   | {
       status: 'success'
-      stagedOperations: StagedOperationEntry[]
+      transitions: AtomicDataTransition[]
     }
   | {
       status: 'conflict'
-      stagedOperations: StagedOperationEntry[]
       conflict: StageConflict
     }
 
@@ -280,156 +294,188 @@ const createAtomicDataBuilder = (): {
   }
 }
 
-const revertStagedChanges = async (stagedOperations: StagedOperationEntry[]): Promise<void> => {
+/** Reverts every filesystem transition that reached the staged state. */
+const revertStagedChanges = async (stagedTransitions: StagedTransitionEntry[]): Promise<void> => {
   await Promise.allSettled(
-    stagedOperations.map((stagedOperation) =>
-      stagedOperation.revisionData.persistence.revertChanges(stagedOperation.stagedChange)
+    stagedTransitions.map((stagedTransition) =>
+      stagedTransition.revisionData.persistence.revertChanges(stagedTransition.stagedChange)
     )
   )
 }
 
-const stageAtomicDataOperations = async (
+/** Projects compatibility-builder recipes once into explicit before/after transitions. */
+const projectAtomicDataOperations = (
   operations: AtomicDataOperation[]
-): Promise<StageAtomicDataOperationsResult> => {
-  const stagedOperations: StagedOperationEntry[] = []
+): ProjectAtomicDataOperationsResult => {
+  /** Projected transitions preserving builder registration order. */
+  const transitions: AtomicDataTransition[] = []
 
   for (const [operationIndex, operation] of operations.entries()) {
+    /** Authoritative store selected by the compatibility operation. */
     const revisionData = data[operation.store] as RevisionData<any, any>
-
-    let nextData: unknown
-    let persistenceFields: unknown
+    /** Current committed entry used as the transition's before side. */
+    const committedEntry = revisionData.committedStore.getEntry(operation.id)
 
     if (operation.type === 'create') {
-      if (revisionData.committedStore.getEntry(operation.id)) {
+      if (committedEntry) {
         throw new Error(`Cannot create ${operation.store}:${operation.id}; entry already exists`)
       }
+      transitions.push({
+        operationIndex,
+        store: operation.store,
+        id: operation.id,
+        before: null,
+        after: { data: operation.data, persistenceFields: operation.persistenceFields },
+        expectedRevision: 0,
+        incrementsRevision: true
+      })
+      continue
+    }
 
-      nextData = operation.data
-      persistenceFields = operation.persistenceFields
-    } else {
-      const committedEntry = revisionData.committedStore.getEntry(operation.id)
-
-      if (!committedEntry) {
-        throw new Error(
-          `Cannot ${operation.type} ${operation.store}:${operation.id}; missing entry`
-        )
-      }
-
-      // Side effect: run CAS checks while this transaction is already serialized in the mutation queue.
-      if (
-        'expectedRevision' in operation &&
-        operation.expectedRevision != null &&
-        operation.expectedRevision !== committedEntry.revision
-      ) {
-        return {
-          status: 'conflict',
-          stagedOperations,
-          conflict: {
-            operationIndex,
-            store: operation.store,
-            id: operation.id,
-            expectedRevision: operation.expectedRevision,
-            actualRevision: committedEntry.revision,
-            data: committedEntry.committed
-          }
+    if (!committedEntry) {
+      throw new Error(`Cannot ${operation.type} ${operation.store}:${operation.id}; missing entry`)
+    }
+    if (
+      'expectedRevision' in operation &&
+      operation.expectedRevision != null &&
+      operation.expectedRevision !== committedEntry.revision
+    ) {
+      return {
+        status: 'conflict',
+        conflict: {
+          operationIndex,
+          store: operation.store,
+          id: operation.id,
+          expectedRevision: operation.expectedRevision,
+          actualRevision: committedEntry.revision,
+          data: committedEntry.committed
         }
       }
+    }
 
-      persistenceFields =
-        operation.type === 'updatePersistenceFields'
-          ? operation.persistenceFields
-          : operation.type === 'update' && operation.persistenceFields !== undefined
+    /** Desired persistence metadata supplied by the operation or retained from before. */
+    const persistenceFields =
+      operation.type === 'updatePersistenceFields'
+        ? operation.persistenceFields
+        : operation.type === 'update' && operation.persistenceFields !== undefined
           ? operation.persistenceFields
           : committedEntry.persistenceFields
-      nextData =
-        operation.type === 'update'
-          ? produce(committedEntry.committed, operation.recipe as DataRecipe<any>)
-          : operation.type === 'updatePersistenceFields'
-            ? committedEntry.committed
-            : null
-    }
-
-    const change: PersistenceWrite<any, any> =
-      operation.type === 'delete'
-        ? { type: 'remove', persistenceFields }
-        : { type: 'upsert', persistenceFields, data: nextData }
-
-    const stageResult = await revisionData.persistence.stageChanges(change)
-    const stagedChange = stageResult.stagedChange
-
-    if (stageResult.nextPersistenceFields !== undefined) {
-      persistenceFields = stageResult.nextPersistenceFields
-    }
-
-    stagedOperations.push({
-      operation,
-      revisionData,
-      nextData,
-      persistenceFields,
-      stagedChange
+    /** Desired data after applying a compatibility recipe exactly once. */
+    const nextData =
+      operation.type === 'update'
+        ? produce(committedEntry.committed, operation.recipe as DataRecipe<any>)
+        : operation.type === 'delete'
+          ? null
+          : committedEntry.committed
+    transitions.push({
+      operationIndex,
+      store: operation.store,
+      id: operation.id,
+      before: {
+        revision: committedEntry.revision,
+        data: committedEntry.committed,
+        persistenceFields: committedEntry.persistenceFields
+      },
+      after: nextData === null ? null : { data: nextData, persistenceFields },
+      expectedRevision: 'expectedRevision' in operation ? operation.expectedRevision : undefined,
+      incrementsRevision: operation.type !== 'updatePersistenceFields'
     })
   }
 
-  return {
-    status: 'success',
-    stagedOperations
+  return { status: 'success', transitions }
+}
+
+/** Stages each projected transition through its entity persistence layer. */
+const stageAtomicDataTransitions = async (
+  transitions: AtomicDataTransition[]
+): Promise<StagedTransitionEntry[]> => {
+  /** Successfully staged transitions accumulated for commit or rollback. */
+  const stagedTransitions: StagedTransitionEntry[] = []
+  try {
+    for (const transition of transitions) {
+      /** Revision data and persistence adapter selected by entity type. */
+      const revisionData = data[transition.store] as RevisionData<any, any>
+      /** Filesystem staging result for the explicit before/after records. */
+      const stageResult = await revisionData.persistence.stageChanges({
+        before: transition.before
+          ? {
+              data: transition.before.data,
+              persistenceFields: transition.before.persistenceFields
+            }
+          : null,
+        after: transition.after
+      })
+      stagedTransitions.push({
+        transition,
+        revisionData,
+        nextPersistenceFields:
+          stageResult.nextPersistenceFields ?? transition.after?.persistenceFields,
+        stagedChange: stageResult.stagedChange
+      })
+    }
+    return stagedTransitions
+  } catch (error) {
+    await revertStagedChanges(stagedTransitions)
+    throw error
   }
 }
 
+/** Applies committed transition data and storage metadata to authoritative stores. */
 const applyCommittedInMemoryChanges = (
-  stagedOperations: StagedOperationEntry[]
+  stagedTransitions: StagedTransitionEntry[]
 ): AtomicDataCommittedResultInternal[] => {
+  /** Committed results aligned with transition operation indexes. */
   const results: AtomicDataCommittedResultInternal[] = []
 
-  for (const stagedOperation of stagedOperations) {
-    const { operation, revisionData } = stagedOperation
+  for (const stagedTransition of stagedTransitions) {
+    const { transition, revisionData } = stagedTransition
 
-    if (operation.type === 'delete') {
-      revisionData.committedStore.remove(operation.id)
-      revisionData.emitCommittedRevisionChanged(operation.id)
+    if (!transition.after) {
+      revisionData.committedStore.remove(transition.id)
+      if (transition.incrementsRevision) revisionData.emitCommittedRevisionChanged(transition.id)
       results.push({
-        store: operation.store,
-        id: operation.id,
+        store: transition.store,
+        id: transition.id,
         revision: null,
         data: null
       })
       continue
     }
 
-    const nextData = stagedOperation.nextData
-
-    if (operation.type === 'updatePersistenceFields') {
+    /** Desired committed data for this transition. */
+    const nextData = transition.after.data
+    if (!transition.incrementsRevision) {
       revisionData.committedStore.updatePersistenceFields(
-        operation.id,
-        stagedOperation.persistenceFields
+        transition.id,
+        stagedTransition.nextPersistenceFields
       )
       results.push({
-        store: operation.store,
-        id: operation.id,
-        revision: revisionData.committedStore.getRevision(operation.id),
+        store: transition.store,
+        id: transition.id,
+        revision: revisionData.committedStore.getRevision(transition.id),
         data: nextData
       })
       continue
     }
 
-    if (operation.type === 'create') {
+    if (!transition.before) {
       revisionData.committedStore.setFromDisk(
-        operation.id,
+        transition.id,
         nextData,
-        stagedOperation.persistenceFields
+        stagedTransition.nextPersistenceFields
       )
     }
 
     const revision = revisionData.committedStore.commitAfterWrite(
-      operation.id,
+      transition.id,
       nextData,
-      stagedOperation.persistenceFields
+      stagedTransition.nextPersistenceFields
     )
 
-    revisionData.emitCommittedRevisionChanged(operation.id)
+    revisionData.emitCommittedRevisionChanged(transition.id)
     results.push({
-      store: operation.store,
-      id: operation.id,
+      store: transition.store,
+      id: transition.id,
       revision,
       data: nextData
     })
@@ -452,36 +498,124 @@ const assertNoDuplicateOperationTargets = (operations: AtomicDataOperation[]): v
   }
 }
 
-const runAtomicDataTransactionImmediately = async (
-  operations: AtomicDataOperation[]
-): Promise<AtomicDataImmediateTransactionOutcome> => {
-  assertNoDuplicateOperationTargets(operations)
+/** Converts domain and storage transitions into the atomic core's uniform representation. */
+const buildAtomicTransitionsFromDomainProjection = (
+  projection: DomainTransitionProjection
+): AtomicDataTransition[] => {
+  /** Desired domain writes and filename-only storage moves derived from both graphs. */
+  const storageTransitions = planDomainStorageTransitions(
+    projection.beforeGraph,
+    projection.afterGraph,
+    projection.transitions
+  )
+  /** Domain transitions keyed for expected revisions and revision increment policy. */
+  const domainTransitionsByKey = new Map(
+    projection.transitions.map((transition, operationIndex) => [
+      `${transition.entityType}:${transition.id}`,
+      { transition, operationIndex }
+    ])
+  )
+  /** Next synthetic index assigned only to storage-location sibling transitions. */
+  let nextStorageOperationIndex = projection.transitions.length
 
-  const stageResult = await stageAtomicDataOperations(operations)
-
-  if (stageResult.status === 'conflict') {
-    await revertStagedChanges(stageResult.stagedOperations)
+  return storageTransitions.map((storageTransition) => {
+    /** Optional domain transition sharing this storage target. */
+    const domainTarget = domainTransitionsByKey.get(
+      `${storageTransition.entityType}:${storageTransition.id}`
+    )
+    /** Domain before node supplying the authoritative revision when data changes. */
+    const domainBefore = domainTarget?.transition.before
+    /** Current revision retained for a location-only storage transition. */
+    const currentRevision =
+      domainBefore?.revision ??
+      data[storageTransition.entityType].committedStore.getRevision(storageTransition.id)
     return {
-      status: 'conflict',
-      conflict: stageResult.conflict
+      operationIndex: domainTarget?.operationIndex ?? nextStorageOperationIndex++,
+      store: storageTransition.entityType,
+      id: storageTransition.id,
+      before: storageTransition.before
+        ? {
+            revision: currentRevision,
+            data: storageTransition.before.data,
+            persistenceFields: storageTransition.before.persistenceFields
+          }
+        : null,
+      after: storageTransition.after,
+      expectedRevision: domainTarget?.transition.expectedRevision,
+      incrementsRevision: domainTarget !== undefined
+    }
+  })
+}
+
+/** Checks transition preconditions against stores while the global mutation queue is held. */
+const validateAtomicDataTransitions = (
+  transitions: AtomicDataTransition[]
+): StageConflict | null => {
+  for (const transition of transitions) {
+    /** Latest authoritative entry for one projected transition. */
+    const committedEntry = data[transition.store].committedStore.getEntry(transition.id)
+    if (!transition.before) {
+      if (committedEntry) {
+        throw new Error(`Cannot create ${transition.store}:${transition.id}; entry already exists`)
+      }
+      continue
+    }
+    if (!committedEntry) {
+      throw new Error(`Cannot update ${transition.store}:${transition.id}; missing entry`)
+    }
+    if (
+      transition.expectedRevision !== undefined &&
+      transition.expectedRevision !== committedEntry.revision
+    ) {
+      return {
+        operationIndex: transition.operationIndex,
+        store: transition.store,
+        id: transition.id,
+        expectedRevision: transition.expectedRevision,
+        actualRevision: committedEntry.revision,
+        data: committedEntry.committed
+      }
     }
   }
+  return null
+}
 
-  const stagedOperations = stageResult.stagedOperations
+/** Stages, commits, and applies explicit transitions as one atomic data transaction. */
+const runAtomicDataTransitionsImmediately = async (
+  transitions: AtomicDataTransition[]
+): Promise<AtomicDataImmediateTransactionOutcome> => {
+  /** CAS conflict found before any filesystem work is staged. */
+  const conflict = validateAtomicDataTransitions(transitions)
+  if (conflict) return { status: 'conflict', conflict }
+  /** Filesystem work staged by each entity persistence layer. */
+  const stagedTransitions = await stageAtomicDataTransitions(transitions)
 
   try {
-    for (const stagedOperation of stagedOperations) {
-      await stagedOperation.revisionData.persistence.commitChanges(stagedOperation.stagedChange)
+    for (const stagedTransition of stagedTransitions) {
+      await stagedTransition.revisionData.persistence.commitChanges(
+        stagedTransition.stagedChange
+      )
     }
   } catch (error) {
-    await revertStagedChanges(stagedOperations)
+    await revertStagedChanges(stagedTransitions)
     throw error
   }
 
   return {
     status: 'success',
-    results: applyCommittedInMemoryChanges(stagedOperations)
+    results: applyCommittedInMemoryChanges(stagedTransitions)
   }
+}
+
+const runAtomicDataTransactionImmediately = async (
+  operations: AtomicDataOperation[]
+): Promise<AtomicDataImmediateTransactionOutcome> => {
+  assertNoDuplicateOperationTargets(operations)
+  /** Explicit transitions projected from the legacy builder operations. */
+  const projection = projectAtomicDataOperations(operations)
+  return projection.status === 'conflict'
+    ? { status: 'conflict', conflict: projection.conflict }
+    : await runAtomicDataTransitionsImmediately(projection.transitions)
 }
 
 const assertBuilderResultShape: (
@@ -555,6 +689,30 @@ export type AtomicDataTransactionOptions = {
   mode?: AtomicDataTransactionMode
 }
 
+/** Minimal outcome returned by the transition-native domain transaction path. */
+export type AtomicDomainTransitionOutcome =
+  | { status: 'success' }
+  | { status: 'conflict' }
+
+/** Executes a projected domain transaction directly through the transition atomic core. */
+export const runAtomicDomainTransitionTransaction = async (
+  projection: DomainTransitionProjection,
+  options: AtomicDataTransactionOptions = {}
+): Promise<AtomicDomainTransitionOutcome> => {
+  /** Atomic transitions combining revision changes with storage-location sibling moves. */
+  const transitions = buildAtomicTransitionsFromDomainProjection(projection)
+  /** Immediate or globally queued transition execution result. */
+  const outcome =
+    options.mode === 'immediate'
+      ? await runAtomicDataTransitionsImmediately(transitions)
+      : await enqueueGlobalMutation(async () => {
+          // Side effect: serialize ordinary main-process transactions through one queue.
+          return await runAtomicDataTransitionsImmediately(transitions)
+        })
+  return outcome.status === 'conflict' ? { status: 'conflict' } : { status: 'success' }
+}
+
+/** Compatibility wrapper that projects legacy builder operations into the transition core. */
 export const runAtomicDataTransaction = async <THandles extends AtomicDataTransactionHandles>(
   buildTransaction: (tx: AtomicDataBuilder) => THandles,
   options: AtomicDataTransactionOptions = {}

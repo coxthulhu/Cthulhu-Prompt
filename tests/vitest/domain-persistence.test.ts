@@ -4,6 +4,7 @@ import type {
   DomainState
 } from '@shared/DomainChanges'
 import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
+import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
 import { planPromptMove } from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
@@ -57,7 +58,8 @@ const mockDomainData = vi.hoisted(() => {
 
 vi.mock('../../src/main/Data/Data', () => ({ data: mockDomainData.data }))
 
-import { planDomainPersistenceChanges } from '../../src/main/Persistence/DomainPersistence'
+import { projectDomainTransitions } from '../../src/main/Data/DomainTransitions'
+import { planDomainStorageTransitions } from '../../src/main/Persistence/DomainStorageAdapters'
 
 /** Creates shared domain state over the same entries used by the persistence planner. */
 const createMainLikeDomainState = (): DomainState => ({
@@ -115,6 +117,43 @@ const createMarkdownPersistenceFields = (promptFolderId: string, promptId: strin
 describe('domain persistence planning', () => {
   beforeEach(() => mockDomainData.reset())
 
+  it('applies an update recipe once and retains complete before and after nodes', () => {
+    /** Current category record projected by one recipe-based update. */
+    const category = { id: 'category', displayName: 'Before', description: null }
+    mockDomainData.seed('category', category.id, category, {
+      workspaceId: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      rootPromptFolderId: 'Root',
+      rootFolderName: 'Root',
+      kind: 'prompt',
+      categoryStem: 'Before',
+      needsFilenameIdSuffix: false
+    })
+    /** Recipe invocation count proving main projection does not replay domain changes. */
+    let recipeInvocationCount = 0
+    /** Projection containing the updated category before and after nodes. */
+    const projection = projectDomainTransitions(
+      [
+        {
+          type: 'update',
+          entityType: 'category',
+          id: category.id,
+          recipe: (draft) => {
+            recipeInvocationCount += 1
+            draft.displayName = 'After'
+          }
+        }
+      ],
+      [{ entityType: 'category', id: category.id, expected: 'revision', revision: 1 }]
+    )
+    expect(recipeInvocationCount).toBe(1)
+    expect(projection.transitions[0]).toMatchObject({
+      before: { revision: 1, data: { displayName: 'Before' } },
+      after: { revision: 2, data: { displayName: 'After' } },
+      expectedRevision: 1
+    })
+  })
+
   it('adds persistence-only sibling filename changes during prompt movement', () => {
     /** Source root initially owning the moved prompt. */
     const source = createRootFolder('Source', 'prompt', [{ kind: 'prompt', id: 'moving' }])
@@ -163,26 +202,32 @@ describe('domain persistence planning', () => {
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
-    /** Persistence changes including the non-domain sibling filename adjustment. */
-    const persistenceChanges = planDomainPersistenceChanges(plan)
-    /** Moved prompt persistence change with cross-root path metadata. */
-    const moving = persistenceChanges.find(
+    /** Immutable projection produced by applying each movement recipe once. */
+    const projection = projectDomainTransitions(plan, [])
+    /** Storage transitions including the non-domain sibling filename adjustment. */
+    const storageTransitions = planDomainStorageTransitions(
+      projection.beforeGraph,
+      projection.afterGraph,
+      projection.transitions
+    )
+    /** Moved prompt storage transition with its derived destination metadata. */
+    const moving = storageTransitions.find(
       (change) => change.entityType === 'prompt' && change.id === 'moving'
     )
-    /** Same-title destination sibling adjusted only in persistence metadata. */
-    const sibling = persistenceChanges.find(
+    /** Same-title destination sibling adjusted only by the storage diff. */
+    const sibling = storageTransitions.find(
       (change) => change.entityType === 'prompt' && change.id === 'sibling'
     )
     expect(moving).toMatchObject({
-      type: 'upsert',
-      persistenceFields: {
-        promptFolderId: destination.id,
-        needsFilenameIdSuffix: true
+      after: {
+        persistenceFields: {
+          promptFolderId: destination.id,
+          needsFilenameIdSuffix: true
+        }
       }
     })
     expect(sibling).toMatchObject({
-      type: 'upsert',
-      persistenceFields: { needsFilenameIdSuffix: true }
+      after: { persistenceFields: { needsFilenameIdSuffix: true } }
     })
     expect(plan.some((change) => change.id === 'sibling')).toBe(false)
   })
@@ -218,17 +263,100 @@ describe('domain persistence planning', () => {
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
-    /** Persistence-only update for the surviving category filename. */
-    const survivor = planDomainPersistenceChanges(plan).find(
+    /** Immutable deletion projection used by category storage adapters. */
+    const projection = projectDomainTransitions(plan, [])
+    /** Storage-only transition for the surviving category filename. */
+    const survivor = planDomainStorageTransitions(
+      projection.beforeGraph,
+      projection.afterGraph,
+      projection.transitions
+    ).find(
       (change) => change.entityType === 'category' && change.id === 'survivor'
     )
     expect(survivor).toMatchObject({
-      type: 'upsert',
-      persistenceFields: {
-        categoryStem: 'Same-survivor',
-        needsFilenameIdSuffix: false
+      after: {
+        persistenceFields: {
+          categoryStem: 'Same',
+          needsFilenameIdSuffix: false
+        }
       }
     })
     expect(plan.some((change) => change.id === 'survivor')).toBe(false)
+  })
+
+  it('derives category insertion and colliding sibling storage without placeholders', () => {
+    /** Root that owns one category at the inserted category's sanitized filename boundary. */
+    const root = createRootFolder('Root', 'prompt', [], ['existing'])
+    mockDomainData.seed(
+      'promptFolder',
+      root.id,
+      root,
+      createFolderPersistenceFields(root.id, 'prompt')
+    )
+    mockDomainData.seed(
+      'category',
+      'existing',
+      { id: 'existing', displayName: 'Same?', description: null },
+      {
+        workspaceId: 'workspace',
+        workspacePath: 'C:\\Workspace',
+        rootPromptFolderId: root.id,
+        rootFolderName: root.id,
+        kind: 'prompt',
+        categoryStem: 'Same',
+        needsFilenameIdSuffix: false
+      }
+    )
+    /** Shared category insertion plan projected by the main process. */
+    const plan = planCreateCategoryDomainMutation(createMainLikeDomainState(), {
+      categoryId: 'created',
+      promptFolderId: root.id,
+      displayName: 'Same*'
+    })
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Insert transition whose before side proves authoritative absence. */
+    const projection = projectDomainTransitions(plan, [
+      { entityType: 'promptFolder', id: root.id, expected: 'revision', revision: 1 },
+      { entityType: 'category', id: 'created', expected: 'absent' }
+    ])
+    /** Inserted category domain transition before storage planning. */
+    const insertion = projection.transitions.find(
+      (transition) => transition.entityType === 'category' && transition.id === 'created'
+    )
+    /** Desired storage transitions calculated after complete filename planning. */
+    const storageTransitions = planDomainStorageTransitions(
+      projection.beforeGraph,
+      projection.afterGraph,
+      projection.transitions
+    )
+    /** Inserted category storage transition with its graph-derived filename. */
+    const storage = storageTransitions.find(
+      (transition) => transition.entityType === 'category' && transition.id === 'created'
+    )
+    /** Existing category storage transition caused only by the new collision. */
+    const siblingStorage = storageTransitions.find(
+      (transition) => transition.entityType === 'category' && transition.id === 'existing'
+    )
+    expect(insertion).toMatchObject({ before: null, expectedRevision: 0 })
+    expect(insertion?.after?.persistenceFields).toBeNull()
+    expect(storage).toMatchObject({
+      before: null,
+      after: {
+        persistenceFields: {
+          rootPromptFolderId: root.id,
+          categoryStem: 'Same-created',
+          needsFilenameIdSuffix: true
+        }
+      }
+    })
+    expect(siblingStorage).toMatchObject({
+      after: {
+        persistenceFields: {
+          categoryStem: 'Same-existing',
+          needsFilenameIdSuffix: true
+        }
+      }
+    })
   })
 })

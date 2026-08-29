@@ -55,22 +55,29 @@ export const parseCategoryJson = (fileText: string): Category | null => {
 
 /** Revision-aware persistence layer for root-owned category JSON files. */
 export const categoryPersistence: PersistenceLayer<Category, CategoryPersistenceFields> = {
-  stageChanges: async (change) => {
-    const fields = change.persistenceFields
-    const currentPath = resolveCategoryPathFromStem(
-      fields.workspacePath,
-      fields.rootFolderName,
-      fields.kind,
-      fields.categoryStem
-    )
+  stageChanges: async (transition) => {
+    /** Current category record used to resolve an optional removal path. */
+    const before = transition.before
+    /** Desired category record used to resolve the target path. */
+    const after = transition.after
+    if (!before && !after) throw new Error('Category persistence transition is empty')
+    /** Existing category path when the entity is already persisted. */
+    const currentPath = before
+      ? resolveCategoryPathFromStem(
+          before.persistenceFields.workspacePath,
+          before.persistenceFields.rootFolderName,
+          before.persistenceFields.kind,
+          before.persistenceFields.categoryStem
+        )
+      : null
+    if (!after) return createPersistenceStageResult([createStagedFileRemove(currentPath!)])
 
-    if (change.type === 'remove') {
-      return createPersistenceStageResult([createStagedFileRemove(currentPath)])
-    }
+    /** Desired category persistence metadata. */
+    const fields = after.persistenceFields
 
     const stem = buildPromptStem(
-      change.data.displayName,
-      change.data.id,
+      after.data.displayName,
+      after.data.id,
       fields.needsFilenameIdSuffix
     )
     const categoriesPath = resolveCategoriesDirectoryPath(
@@ -88,10 +95,12 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
     const fs = getFs()
     const directoryAlreadyExists = fs.existsSync(categoriesPath)
     fs.mkdirSync(categoriesPath, { recursive: true })
-    writeJsonFile(tempPath, change.data)
+    writeJsonFile(tempPath, after.data)
 
     const stagedChanges: FilePersistenceStagedChange[] = []
-    if (currentPath !== targetPath) stagedChanges.push(createStagedFileRemove(currentPath))
+    if (currentPath && currentPath !== targetPath) {
+      stagedChanges.push(createStagedFileRemove(currentPath))
+    }
     stagedChanges.push(
       createStagedFileUpsert(targetPath, tempPath),
       createStagedEnsureDirectory(categoriesPath, !directoryAlreadyExists)

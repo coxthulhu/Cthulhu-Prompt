@@ -23,11 +23,18 @@ const toWorkspaceFolderOrderFile = (entries: FolderEntryRef[]): WorkspaceFolderO
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
-  stageChanges: async (change) => {
-    const infoPath = change.persistenceFields.workspaceInfoPath
-    const folderOrderPath = resolveWorkspaceFolderOrderPath(change.persistenceFields.workspacePath)
+  stageChanges: async (transition) => {
+    /** Current workspace record used for deletion paths. */
+    const before = transition.before
+    /** Desired workspace record used for written paths and data. */
+    const after = transition.after
+    if (!before && !after) throw new Error('Workspace persistence transition is empty')
+    /** Persistence metadata selected from the present transition side. */
+    const fields = (after ?? before)!.persistenceFields
+    const infoPath = fields.workspaceInfoPath
+    const folderOrderPath = resolveWorkspaceFolderOrderPath(fields.workspacePath)
 
-    if (change.type === 'remove') {
+    if (!after) {
       return createPersistenceStageResult([
         createStagedFileRemove(infoPath),
         createStagedFileRemove(folderOrderPath)
@@ -36,11 +43,11 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
 
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, {
-      workspaceId: change.data.id,
-      workspaceName: change.data.workspaceName
+      workspaceId: after.data.id,
+      workspaceName: after.data.workspaceName
     })
     const folderOrderTempPath = resolveTempPath(folderOrderPath)
-    writeJsonFile(folderOrderTempPath, toWorkspaceFolderOrderFile(change.data.entries))
+    writeJsonFile(folderOrderTempPath, toWorkspaceFolderOrderFile(after.data.entries))
 
     return createPersistenceStageResult([
       createStagedFileUpsert(infoPath, infoTempPath),

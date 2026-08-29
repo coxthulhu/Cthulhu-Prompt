@@ -16,7 +16,6 @@ import type {
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type {
   Category,
-  CreateCategoryPayload,
   MoveCategoryPayload,
   RenameCategoryPayload,
   SetCategoryDescriptionPayload
@@ -541,16 +540,6 @@ const parseRenamePromptFolderPayload = parseObject<RenamePromptFolderPayload>({
 const parseRenamePromptFolderWireRequest: Parser<IpcRequestWithPayload<RenamePromptFolderPayload>> =
   parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
 
-/** Parser for category creation payloads. */
-const parseCreateCategoryPayload = parseObject<CreateCategoryPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity,
-  category: parseCategoryRevisionPayloadEntity
-})
-
-/** Wire request parser for category creation. */
-const parseCreateCategoryWireRequest: Parser<IpcRequestWithPayload<CreateCategoryPayload>> =
-  parseWireRequestWithPayload<CreateCategoryPayload>(parseCreateCategoryPayload)
-
 /** Parser for category rename payloads. */
 const parseRenameCategoryPayload = parseObject<RenameCategoryPayload>({
   category: parseCategoryRevisionPayloadEntity,
@@ -749,9 +738,6 @@ export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
 export const parseRenamePromptFolderRequest = createRequestParser(
   parseRenamePromptFolderWireRequest
 )
-
-/** Validated request parser for category creation IPC. */
-export const parseCreateCategoryRequest = createRequestParser(parseCreateCategoryWireRequest)
 
 /** Validated request parser for category rename IPC. */
 export const parseRenameCategoryRequest = createRequestParser(parseRenameCategoryWireRequest)

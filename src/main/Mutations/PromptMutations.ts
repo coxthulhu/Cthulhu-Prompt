@@ -202,14 +202,12 @@ const setupPromptStatusMutationHandler = (): void => {
               ? {
                   ...prompt.persistenceFields,
                   folderPath: completedFolderPath,
-                  previousFolderPath: activeFolderPath,
                   promptFolderId: requestedRootPromptFolder.id
                 }
               : targetStatus !== PromptStatus.Completed && isCompletedPrompt
-                ? {
+                  ? {
                     ...prompt.persistenceFields,
                     folderPath: activeFolderPath,
-                    previousFolderPath: completedFolderPath,
                     promptFolderId: requestedRootPromptFolder.id
                   }
                 : prompt.persistenceFields

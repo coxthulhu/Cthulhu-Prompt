@@ -3,16 +3,16 @@ import {
   hasCategoryDisplayNameConflict,
   normalizeCategoryDisplayName,
   type Category,
-  type CategoryRevisionResponsePayload,
-  type CreateCategoryResponsePayload
+  type CategoryRevisionResponsePayload
 } from '@shared/Category'
 import {
+  parseCreateCategoryDomainCommand,
   parseDeleteCategoryDomainCommand,
+  planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation
 } from '@shared/CategoryDomainMutations'
 import {
   getCategoryOrderCategoryIds,
-  insertCategoryOrderGroup,
   moveCategoryOrderGroup
 } from '@shared/PromptFolder'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
@@ -25,7 +25,6 @@ import {
   getLoadedCategoryEntries
 } from '../Data/DataSnapshotHelpers'
 import {
-  parseCreateCategoryRequest,
   parseMoveCategoryRequest,
   parseRenameCategoryRequest,
   parseSetCategoryDescriptionRequest
@@ -112,98 +111,19 @@ const createCategoryFilenameUpdateHandles = (
 /** Registers create, rename, description, and deletion category mutation channels. */
 export const setupCategoryMutationHandlers = (): void => {
   handleMainDomainMutation({
+    ipc: { channel: 'create-category' },
+    mutation: {
+      parseCommand: parseCreateCategoryDomainCommand,
+      plan: planCreateCategoryDomainMutation
+    }
+  })
+
+  handleMainDomainMutation({
     ipc: { channel: 'delete-category' },
     mutation: {
       parseCommand: parseDeleteCategoryDomainCommand,
       plan: planDeleteCategoryDomainMutation
     }
-  })
-
-  ipcMain.handle('create-category', async (_, request: unknown) => {
-    return await runMutationIpcRequest(request, parseCreateCategoryRequest, async (validated) => {
-      try {
-        const requestedFolder = validated.payload.promptFolder
-        const requestedCategory = validated.payload.category
-        const folder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-        if (!folder || /[\\/]/.test(folder.persistenceFields.folderPath)) {
-          return { success: false, error: 'Root prompt folder not loaded' }
-        }
-        const displayName = normalizeCategoryDisplayName(requestedCategory.data.displayName)
-        const categories = getRootCategories(
-          getCategoryOrderCategoryIds(folder.committed.categoryOrder)
-        )
-        if (!displayName) return { success: false, error: 'Category name is required' }
-        if (hasCategoryDisplayNameConflict(categories, displayName)) {
-          return { success: false, error: 'Category name already exists' }
-        }
-        if (data.category.committedStore.getEntry(requestedCategory.id)) {
-          return { success: false, error: 'Category already exists' }
-        }
-
-        const category: Category = {
-          id: requestedCategory.id,
-          displayName,
-          description: null
-        }
-        const persistenceFields: CategoryPersistenceFields = {
-          workspaceId: folder.persistenceFields.workspaceId,
-          workspacePath: folder.persistenceFields.workspacePath,
-          rootPromptFolderId: folder.committed.id,
-          rootFolderName: folder.persistenceFields.folderPath,
-          kind: folder.committed.kind,
-          categoryStem: requestedCategory.id,
-          needsFilenameIdSuffix: false
-        }
-        /** Category IDs after inserting the new group at index 1. */
-        const nextCategoryIds = [
-          category.id,
-          ...getCategoryOrderCategoryIds(folder.committed.categoryOrder)
-        ]
-        const filenamePlans = planCategoryFilenames(
-          nextCategoryIds,
-          new Map([[category.id, { category, persistenceFields }]])
-        )
-        const categoryPlan = filenamePlans.find((plan) => plan.categoryId === category.id)!
-        const outcome = await runAtomicDataTransaction((tx) => ({
-          promptFolder: tx.promptFolder.update({
-            id: folder.committed.id,
-            expectedRevision: requestedFolder.expectedRevision,
-            recipe: (draft) => {
-              draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, category.id)
-            }
-          }),
-          category: tx.category.create({
-            id: category.id,
-            data: category,
-            persistenceFields: categoryPlan.persistenceFields
-          }),
-          ...createCategoryFilenameUpdateHandles(tx, filenamePlans, new Set([category.id]))
-        }))
-        if (outcome.status === 'conflict') {
-          const latestFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-          if (!latestFolder) return { success: false, error: 'Prompt folder not loaded' }
-          return {
-            success: false,
-            conflict: true,
-            payload: { promptFolder: buildPromptFolderSnapshot(latestFolder) }
-          }
-        }
-        const updatedFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-        const createdCategory = data.category.committedStore.getEntry(category.id)
-        if (!updatedFolder || !createdCategory) {
-          return { success: false, error: 'Category create commit did not complete' }
-        }
-        return {
-          success: true,
-          payload: {
-            promptFolder: buildPromptFolderSnapshot(updatedFolder),
-            category: buildCategorySnapshot(createdCategory)
-          } satisfies CreateCategoryResponsePayload
-        }
-      } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
-      }
-    })
   })
 
   ipcMain.handle('rename-category', async (_, request: unknown) => {

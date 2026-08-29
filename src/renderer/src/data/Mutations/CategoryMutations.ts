@@ -1,21 +1,21 @@
 import type {
   Category,
   CategoryRevisionResponsePayload,
-  CreateCategoryPayload,
-  CreateCategoryResponsePayload,
   MoveCategoryPayload,
   RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
 import { normalizeCategoryDisplayName } from '@shared/Category'
 import { compactGuid } from '@shared/compactGuid'
-import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
+import {
+  planCreateCategoryDomainMutation,
+  planDeleteCategoryDomainMutation
+} from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import type { Transaction } from '@tanstack/svelte-db'
 import {
   getCategoryOrderCategoryIds,
-  insertCategoryOrderGroup,
   moveCategoryOrderGroup,
   type PromptFolderRevisionResponsePayload
 } from '@shared/PromptFolder'
@@ -82,30 +82,15 @@ export const createCategory = async (
 ): Promise<string> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) throw new Error('Root prompt folder not loaded')
-  const normalizedDisplayName = normalizeCategoryDisplayName(displayName)
+  /** Stable client-generated identity used by renderer and main insertion projections. */
   const categoryId = compactGuid(crypto.randomUUID())
-  const category: Category = { id: categoryId, displayName: normalizedDisplayName, description: null }
+  /** Shared command projected optimistically and persisted through domain transitions. */
+  const command = { categoryId, promptFolderId, displayName }
 
-  await runRevisionMutation<CreateCategoryResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.category.insert(category)
-      collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, categoryId)
-      })
-    },
-    persistMutations: async ({ entities, invoke }) => {
-      return await invoke<{ payload: CreateCategoryPayload }>('create-category', {
-        payload: {
-          promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
-          category: entities.category({ id: categoryId, data: category })
-        }
-      })
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      if (payload.category) categoryCollection.utils.upsertAuthoritative(payload.category)
-    },
-    conflictMessage: 'Category create conflict'
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planCreateCategoryDomainMutation },
+    ipc: { channel: 'create-category' },
+    renderer: {}
   })
 
   return categoryId

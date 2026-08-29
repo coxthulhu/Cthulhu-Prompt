@@ -6,10 +6,45 @@ import type {
   DomainTarget
 } from './DomainChanges'
 import {
+  hasCategoryDisplayNameConflict,
+  normalizeCategoryDisplayName,
+  type Category
+} from './Category'
+import {
   deleteCategoryOrderGroup,
   getCategoryOrderCategoryIds,
+  insertCategoryOrderGroup,
   type PromptFolder
 } from './PromptFolder'
+
+/** Renderer-authored command for creating one root-owned category. */
+export type CreateCategoryDomainCommand = {
+  categoryId: string
+  promptFolderId: string
+  displayName: string
+}
+
+/** Strict runtime parser for category creation commands. */
+export const parseCreateCategoryDomainCommand = (
+  value: unknown
+): CreateCategoryDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 3 ||
+    typeof record.categoryId !== 'string' ||
+    typeof record.promptFolderId !== 'string' ||
+    typeof record.displayName !== 'string'
+  ) {
+    return null
+  }
+  return {
+    categoryId: record.categoryId,
+    promptFolderId: record.promptFolderId,
+    displayName: record.displayName
+  }
+}
 
 /** Renderer-authored command for deleting one root-owned category. */
 export type DeleteCategoryDomainCommand = {
@@ -54,6 +89,55 @@ const createConflict = (reason: string, targets: DomainTarget[]): DomainMutation
   reason,
   targets
 })
+
+/** Plans category insertion and root ownership against the supplied domain graph. */
+export const planCreateCategoryDomainMutation: DomainPlanner<
+  CreateCategoryDomainCommand
+> = (state, command) => {
+  /** Requested root folder that will own the new category group. */
+  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Existing entity occupying the requested stable category ID. */
+  const existingCategory = state.get('category', command.categoryId)
+  /** Normalized category name persisted by both renderer and main projections. */
+  const displayName = normalizeCategoryDisplayName(command.displayName)
+  /** Authoritative folder and category targets returned for any conflict. */
+  const targets: DomainTarget[] = [
+    { entityType: 'promptFolder', id: command.promptFolderId },
+    { entityType: 'category', id: command.categoryId }
+  ]
+  /** Categories currently owned by the requested root folder. */
+  const categories = promptFolder
+    ? getCategoryOrderCategoryIds(promptFolder.categoryOrder).flatMap((categoryId) => {
+        /** Loaded category associated with one ordered group. */
+        const category = state.get('category', categoryId)
+        return category ? [category] : []
+      })
+    : []
+
+  if (
+    !promptFolder ||
+    /[\\/]/.test(promptFolder.folderName) ||
+    existingCategory ||
+    !displayName ||
+    hasCategoryDisplayNameConflict(categories, displayName)
+  ) {
+    return createConflict('Category creation conflict', targets)
+  }
+
+  /** New category record inserted with its stable client-generated identity. */
+  const category: Category = { id: command.categoryId, displayName, description: null }
+  return [
+    {
+      type: 'update',
+      entityType: 'promptFolder',
+      id: promptFolder.id,
+      recipe: (draft) => {
+        draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, category.id)
+      }
+    },
+    { type: 'insert', entityType: 'category', id: category.id, data: category }
+  ]
+}
 
 /** Returns every domain target affected by deleting one category. */
 const collectCategoryDeletionTargets = (

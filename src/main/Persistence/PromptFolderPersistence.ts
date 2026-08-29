@@ -45,7 +45,6 @@ export type PromptFolderPersistenceFields = {
   workspacePath: string
   folderName: string
   folderPath: string
-  previousFolderPath?: string
   kind: PromptFolder['kind']
 }
 
@@ -99,10 +98,17 @@ export const promptFolderPersistence: PersistenceLayer<
   PromptFolder,
   PromptFolderPersistenceFields
 > = {
-  stageChanges: async (change) => {
-    const { workspacePath, folderPath: targetRelativePath, kind } = change.persistenceFields
-    const previousFolderPath = change.persistenceFields.previousFolderPath
-    const stagingRelativePath = previousFolderPath ?? targetRelativePath
+  stageChanges: async (transition) => {
+    /** Current prompt-folder record used to resolve removals and renames. */
+    const before = transition.before
+    /** Desired prompt-folder record used to resolve target paths and serialized data. */
+    const after = transition.after
+    if (!before && !after) throw new Error('Prompt-folder persistence transition is empty')
+    /** Desired or current fields supplying the workspace and kind. */
+    const fields = (after ?? before)!.persistenceFields
+    const { workspacePath, folderPath: targetRelativePath, kind } = fields
+    /** Existing relative path used while staging an update or removal. */
+    const stagingRelativePath = before?.persistenceFields.folderPath ?? targetRelativePath
     const folderPath = resolvePromptFolderPath(
       workspacePath,
       resolvePromptFolderStorageName(stagingRelativePath, kind),
@@ -124,8 +130,7 @@ export const promptFolderPersistence: PersistenceLayer<
       field,
       path: resolvePromptFolderSettingsTextPath(workspacePath, stagingRelativePath, field, kind)
     }))
-    const isFolderRename =
-      previousFolderPath !== undefined && previousFolderPath !== targetRelativePath
+    const isFolderRename = before !== null && stagingRelativePath !== targetRelativePath
     const targetFolderPath = resolvePromptFolderPath(
       workspacePath,
       resolvePromptFolderStorageName(targetRelativePath, kind),
@@ -159,7 +164,7 @@ export const promptFolderPersistence: PersistenceLayer<
       ? fs.existsSync(categoriesDirectoryPath)
       : true
 
-    if (change.type === 'remove') {
+    if (!after) {
       return createPersistenceStageResult([createStagedDirectoryRemove(folderPath)])
     }
 
@@ -177,14 +182,14 @@ export const promptFolderPersistence: PersistenceLayer<
       ? (() => {
           /** Temporary JSON path committed atomically with the root folder. */
           const tempPath = resolveTempPath(categoryOrderPath)
-          writeJsonFile(tempPath, toPromptFolderCategoryOrderFile(change.data.categoryOrder))
+          writeJsonFile(tempPath, toPromptFolderCategoryOrderFile(after.data.categoryOrder))
           return createStagedFileUpsert(categoryOrderPath, tempPath)
         })()
       : null
     const infoTempPath = resolveTempPath(infoPath)
-    writeJsonFile(infoTempPath, toPromptFolderInfoFile(change.data))
+    writeJsonFile(infoTempPath, toPromptFolderInfoFile(after.data))
     const settingsTextChanges = settingsTextPaths.map(({ field, path }) => {
-      const value = change.data.settings[field]
+      const value = after.data.settings[field]
       if (value === null) {
         return createStagedFileRemove(path)
       }
@@ -225,10 +230,7 @@ export const promptFolderPersistence: PersistenceLayer<
       stagedChanges.push(createStagedDirectoryRename(folderPath, targetFolderPath))
     }
 
-    const { previousFolderPath: _previousFolderPath, ...nextPersistenceFields } =
-      change.persistenceFields
-
-    return createPersistenceStageResult(stagedChanges, nextPersistenceFields)
+    return createPersistenceStageResult(stagedChanges, fields)
   },
   commitChanges: async (stagedChange) => {
     commitStagedFileChanges(stagedChange)

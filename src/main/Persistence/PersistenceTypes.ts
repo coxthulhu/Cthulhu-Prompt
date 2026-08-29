@@ -1,4 +1,3 @@
-import type { DomainEntityMap, DomainEntityType } from '@shared/DomainChanges'
 import type { FilePersistenceStagedChange } from './FilePersistenceHelpers'
 import type { CategoryPersistenceFields } from './CategoryPersistence'
 import type { PromptFolderPersistenceFields } from './PromptFolderPersistence'
@@ -7,17 +6,17 @@ import type { PromptTemplatePersistenceFields } from './PromptTemplatePersistenc
 import type { SystemSettingsPersistenceFields } from './SystemSettingsPersistence'
 import type { WorkspacePersistenceFields } from './WorkspacePersistence'
 
-/** Low-level write supplied to one entity-specific persistence layer. */
-export type PersistenceWrite<TData, TPersistenceFields> =
-  | {
-      type: 'upsert'
-      persistenceFields: TPersistenceFields
-      data: TData
-    }
-  | {
-      type: 'remove'
-      persistenceFields: TPersistenceFields
-    }
+/** One present persisted record on either side of a storage transition. */
+export type PersistenceRecord<TData, TPersistenceFields> = {
+  data: TData
+  persistenceFields: TPersistenceFields
+}
+
+/** Explicit current and desired records supplied to an entity persistence layer. */
+export type PersistenceTransition<TData, TPersistenceFields> = {
+  before: PersistenceRecord<TData, TPersistenceFields> | null
+  after: PersistenceRecord<TData, TPersistenceFields> | null
+}
 
 /** Persistence metadata associated with each authoritative domain entity type. */
 export type DomainPersistenceFieldsMap = {
@@ -29,17 +28,6 @@ export type DomainPersistenceFieldsMap = {
   promptTemplate: PromptTemplatePersistenceFields
 }
 
-/** One typed persistence change associated with an authoritative entity ID. */
-export type PersistenceChangeFor<TEntityType extends DomainEntityType> = {
-  entityType: TEntityType
-  id: string
-} & PersistenceWrite<DomainEntityMap[TEntityType], DomainPersistenceFieldsMap[TEntityType]>
-
-/** Strongly typed persistence change union produced by the main mutation framework. */
-export type PersistenceChange = {
-  [TEntityType in DomainEntityType]: PersistenceChangeFor<TEntityType>
-}[DomainEntityType]
-
 export type PersistenceStageResult<TPersistenceFields> = {
   stagedChange: FilePersistenceStagedChange[]
   nextPersistenceFields?: TPersistenceFields
@@ -47,7 +35,7 @@ export type PersistenceStageResult<TPersistenceFields> = {
 
 export type PersistenceLayer<TData, TPersistenceFields> = {
   stageChanges: (
-    change: PersistenceWrite<TData, TPersistenceFields>
+    transition: PersistenceTransition<TData, TPersistenceFields>
   ) => Promise<PersistenceStageResult<TPersistenceFields>>
   commitChanges: (stagedChange: FilePersistenceStagedChange[]) => Promise<void>
   revertChanges: (stagedChange: FilePersistenceStagedChange[]) => Promise<void>

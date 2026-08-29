@@ -33,19 +33,21 @@ export const systemSettingsPersistence: PersistenceLayer<
   SystemSettings,
   SystemSettingsPersistenceFields
 > = {
-  stageChanges: async (change) => {
+  stageChanges: async (transition) => {
+    /** Desired settings record, or null when settings are being removed. */
+    const after = transition.after
     const targetPath = resolveTargetPath()
 
-    if (change.type === 'remove') {
+    if (!after) {
       return createPersistenceStageResult([createStagedFileRemove(targetPath)])
     }
 
     const tempPath = resolveTempPath(targetPath)
     const normalizedSettings = normalizeSystemSettings({
-      promptFontSize: change.data.promptFontSize,
-      promptEditorMinLines: change.data.promptEditorMinLines,
-      promptEditorMaxLines: change.data.promptEditorMaxLines,
-      showLineNumbers: change.data.showLineNumbers
+      promptFontSize: after.data.promptFontSize,
+      promptEditorMinLines: after.data.promptEditorMinLines,
+      promptEditorMaxLines: after.data.promptEditorMaxLines,
+      showLineNumbers: after.data.showLineNumbers
     })
     writeJsonFile(tempPath, normalizedSettings)
 

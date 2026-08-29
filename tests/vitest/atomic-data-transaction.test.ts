@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { DomainState } from '@shared/DomainChanges'
 
 const mockTransactionState = vi.hoisted(() => {
-  const storeNames = ['systemSettings', 'workspace', 'promptFolder', 'prompt'] as const
+  const storeNames = [
+    'systemSettings',
+    'workspace',
+    'promptFolder',
+    'category',
+    'prompt',
+    'promptTemplate'
+  ] as const
   type StoreName = (typeof storeNames)[number]
   type Entry = {
     revision: number
@@ -13,7 +21,9 @@ const mockTransactionState = vi.hoisted(() => {
     systemSettings: new Map(),
     workspace: new Map(),
     promptFolder: new Map(),
-    prompt: new Map()
+    category: new Map(),
+    prompt: new Map(),
+    promptTemplate: new Map()
   }
 
   const reset = (): void => {
@@ -34,6 +44,7 @@ const mockTransactionState = vi.hoisted(() => {
     return {
       getRevision: (id: string) => entriesByStore[store].get(id)?.revision ?? 0,
       getEntry: (id: string) => entriesByStore[store].get(id) ?? null,
+      getAllEntries: () => [...entriesByStore[store].values()],
       setFromDisk: (id: string, data: unknown, persistenceFields: unknown) => {
         entriesByStore[store].set(id, {
           revision: 0,
@@ -88,7 +99,9 @@ const mockTransactionState = vi.hoisted(() => {
       systemSettings: createRevisionData('systemSettings'),
       workspace: createRevisionData('workspace'),
       promptFolder: createRevisionData('promptFolder'),
-      prompt: createRevisionData('prompt')
+      category: createRevisionData('category'),
+      prompt: createRevisionData('prompt'),
+      promptTemplate: createRevisionData('promptTemplate')
     },
     reset,
     seedEntry,
@@ -111,7 +124,12 @@ vi.mock('../../src/main/Data/GlobalMutationQueue', () => {
   return { enqueueGlobalMutation }
 })
 
-import { runAtomicDataTransaction } from '../../src/main/Data/AtomicDataTransaction'
+import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
+import {
+  runAtomicDataTransaction,
+  runAtomicDomainTransitionTransaction
+} from '../../src/main/Data/AtomicDataTransaction'
+import { projectDomainTransitions } from '../../src/main/Data/DomainTransitions'
 
 const SYSTEM_SETTINGS_ID = 'system-settings'
 const PROMPT_ID = 'prompt-1'
@@ -120,6 +138,103 @@ describe('atomic data transaction', () => {
   beforeEach(() => {
     mockTransactionState.reset()
     enqueueGlobalMutation.mockClear()
+  })
+
+  it('commits a compatibility create through a null-before transition', async () => {
+    /** Created prompt data supplied through the legacy builder wrapper. */
+    const prompt = { id: PROMPT_ID, title: 'Created' }
+    /** Compatibility transaction projected into the transition-native core. */
+    const outcome = await runAtomicDataTransaction((tx) => ({
+      prompt: tx.prompt.create({
+        id: PROMPT_ID,
+        data: prompt,
+        persistenceFields: { promptStem: 'Created' }
+      })
+    }))
+    expect(outcome).toMatchObject({
+      status: 'success',
+      results: { prompt: { id: PROMPT_ID, revision: 1, data: prompt } }
+    })
+    expect(mockTransactionState.readEntry('prompt', PROMPT_ID)).toEqual({
+      revision: 1,
+      committed: prompt,
+      persistenceFields: { promptStem: 'Created' }
+    })
+  })
+
+  it('commits a domain insertion with graph-derived storage metadata', async () => {
+    /** Workspace and root folder graph required to derive category storage. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: 'root' }]
+    }
+    /** Root folder updated to own the inserted category. */
+    const promptFolder = {
+      id: 'root',
+      kind: 'prompt' as const,
+      folderName: 'Root',
+      displayName: 'Root',
+      completedPromptIds: [],
+      categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
+      settings: { folderDescription: null }
+    }
+    mockTransactionState.seedEntry('workspace', workspace.id, {
+      revision: 1,
+      committed: workspace,
+      persistenceFields: {
+        workspacePath: workspace.workspacePath,
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+      }
+    })
+    mockTransactionState.seedEntry('promptFolder', promptFolder.id, {
+      revision: 1,
+      committed: promptFolder,
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        folderName: promptFolder.folderName,
+        folderPath: promptFolder.folderName,
+        kind: promptFolder.kind
+      }
+    })
+    /** Main-like domain state backed by the seeded committed graph. */
+    const state = {
+      get: (entityType: 'promptFolder', id: string) =>
+        entityType === 'promptFolder' && id === promptFolder.id ? promptFolder : undefined,
+      getAll: () => []
+    } as unknown as DomainState
+    /** Shared category creation plan containing one update and one insert. */
+    const plan = planCreateCategoryDomainMutation(state, {
+      categoryId: 'created',
+      promptFolderId: promptFolder.id,
+      displayName: 'Created'
+    })
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Projected transition transaction with explicit present and absent expectations. */
+    const projection = projectDomainTransitions(plan, [
+      { entityType: 'promptFolder', id: promptFolder.id, expected: 'revision', revision: 1 },
+      { entityType: 'category', id: 'created', expected: 'absent' }
+    ])
+    const outcome = await runAtomicDomainTransitionTransaction(projection, {
+      mode: 'immediate'
+    })
+    expect(outcome.status).toBe('success')
+    expect(mockTransactionState.readEntry('category', 'created')).toEqual({
+      revision: 1,
+      committed: { id: 'created', displayName: 'Created', description: null },
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        rootPromptFolderId: promptFolder.id,
+        rootFolderName: promptFolder.folderName,
+        kind: promptFolder.kind,
+        categoryStem: 'Created',
+        needsFilenameIdSuffix: false
+      }
+    })
   })
 
   it('returns labeled committed results with data for updates and deletes', async () => {

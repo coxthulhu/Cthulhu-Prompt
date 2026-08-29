@@ -5,7 +5,10 @@ import type {
   DomainPlannerEntityMap,
   DomainState
 } from '@shared/DomainChanges'
-import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
+import {
+  planCreateCategoryDomainMutation,
+  planDeleteCategoryDomainMutation
+} from '@shared/CategoryDomainMutations'
 import {
   planPromptMove,
   planPromptTemplateMove
@@ -70,6 +73,27 @@ const createRootFolder = (
 })
 
 describe('shared domain mutation planners', () => {
+  it('plans category creation as one root update and one insertion', () => {
+    /** Root that will own the new category group. */
+    const folder = createRootFolder('root', 'prompt', null)
+    /** Shared creation plan produced against an absent stable category ID. */
+    const plan = planCreateCategoryDomainMutation(
+      createDomainState({ promptFolder: [folder] }),
+      { categoryId: 'created', promptFolderId: folder.id, displayName: '  Created  ' }
+    )
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Folder projection after applying the ownership recipe. */
+    const projectedFolder = produce(folder, plan[0]!.recipe!)
+    expect(projectedFolder.categoryOrder.categories[1]?.categoryId).toBe('created')
+    expect(plan[1]).toEqual({
+      type: 'insert',
+      entityType: 'category',
+      id: 'created',
+      data: { id: 'created', displayName: 'Created', description: null }
+    })
+  })
+
   it('plans category deletion from summary projections with one renderer timestamp', () => {
     /** Root owning the category and its prompt reference. */
     const folder = createRootFolder('root', 'prompt', 'category', 'prompt')
