@@ -1,4 +1,5 @@
 import type { Transaction } from '@tanstack/svelte-db'
+import { planMoveMarkdownContentDomainMutation } from '@shared/DomainMutations'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import {
   getActiveMarkdownContentIds,
@@ -9,9 +10,7 @@ import {
   type DeleteMarkdownContentResponsePayload,
   type MarkdownContentPersisted,
   type MarkdownContentRevisionPayload,
-  type MarkdownContentRevisionResponsePayload,
-  type MoveMarkdownContentPayload,
-  type MoveMarkdownContentResponsePayload
+  type MarkdownContentRevisionResponsePayload
 } from '@shared/MarkdownContent'
 import {
   removeCategoryOrderEntry,
@@ -22,6 +21,7 @@ import type { RevisionEnvelope, RevisionPayloadEntity } from '@shared/Revision'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
+import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import {
   mutatePacedRevisionUpdateTransaction,
@@ -52,8 +52,6 @@ export type MarkdownContentRendererMutationConfig<
   createEntryRef: (contentId: string) => CategoryOrderEntryRef
   getContent: (contentId: string) => ContentRecord | undefined
   getFullPersisted: (contentId: string) => TPersisted | null
-  /** Reads the authoritative revision used by reference-only mutation payloads. */
-  getAuthoritativeRevision: (contentId: string) => number
   toPersisted: (content: TFull) => TPersisted
   createEntity: (
     entities: PersistHelpers['entities'],
@@ -62,10 +60,9 @@ export type MarkdownContentRendererMutationConfig<
   ) => RevisionPayloadEntity<TPersisted>
   insertOptimistically: (collections: OptimisticCollections, content: TFull) => void
   deleteOptimistically: (collections: OptimisticCollections, contentId: string) => void
-  updateContentOptimistically: (
+  markMoveClientStateEdited: (
     collections: OptimisticCollections,
-    contentId: string,
-    update: (draft: ContentRecord) => void
+    contentId: string
   ) => void
   acceptClientStateMutations: (transaction: Transaction<any>) => void
   reconcile: (snapshot: RevisionEnvelope<TPersisted>) => void
@@ -266,94 +263,27 @@ export const createMarkdownContentRendererMutations = <
     /** Canonical renderer content moved between category positions. */
     const content = config.getContent(contentId)
     if (!content) throw new Error(`${config.label} data not loaded`)
-    /** V2 reference transferred between category groups or roots. */
-    const entry = config.createEntryRef(contentId)
-    /** Moved content and destination order synchronized to the requested placement. */
-    const placement = placeMarkdownContentInCategoryOrder(
-      destination.categoryOrder,
-      content,
-      entry,
+    /** Shared command used to compute matching renderer and main-process plans. */
+    const command = {
+      kind: config.kind,
+      sourcePromptFolderId,
+      destinationPromptFolderId,
+      contentId,
       categoryId,
       previousEntryId
-    )
-    /** Content copy whose category matches its destination group. */
-    const contentToMove = placement.content
-    /** Destination IDs used to resolve blank-title fallback collisions. */
-    const destinationContentIds = getActiveMarkdownContentIds(destination, config.kind).filter(
-      (id) => id !== contentId
-    )
+    }
 
-    await runRevisionMutation<MoveMarkdownContentResponsePayload<TPersisted>>({
-      mutateOptimistically: ({ collections }) => {
-        if (sourcePromptFolderId === destinationPromptFolderId) {
-          collections.promptFolder.update(sourcePromptFolderId, (draft) => {
-            draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-              draft.categoryOrder,
-              contentToMove,
-              entry,
-              categoryId,
-              previousEntryId
-            ).categoryOrder
-          })
-        } else {
-          collections.promptFolder.update(sourcePromptFolderId, (draft) => {
-            draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-          })
-          collections.promptFolder.update(destinationPromptFolderId, (draft) => {
-            draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-              draft.categoryOrder,
-              contentToMove,
-              entry,
-              categoryId,
-              previousEntryId
-            ).categoryOrder
-          })
-        }
-        config.updateContentOptimistically(collections, contentId, (draft) => {
-          if (contentToMove.category === undefined) delete draft.category
-          else draft.category = contentToMove.category
-          if (
-            sourcePromptFolderId !== destinationPromptFolderId &&
-            draft.title.trim().length === 0
-          ) {
-            draft.fallbackTitle = resolvePromptTitleUpdateForPromptIds({
-              promptIds: destinationContentIds,
-              lookupPrompt: config.getContent,
-              promptId: contentId,
-              currentTitle: draft.title,
-              currentFallbackTitle: draft.fallbackTitle,
-              nextTitle: draft.title,
-              defaultFallbackTitle: config.defaultFallbackTitle
-            }).fallbackTitle
+    await runImmediateRendererDomainMutation({
+      mutation: { command, plan: planMoveMarkdownContentDomainMutation },
+      ipc: { channel: config.channels.move },
+      renderer: {
+        mutate: ({ collections }) => config.markMoveClientStateEdited(collections, contentId),
+        clientStateCollections: [
+          {
+            utils: { acceptMutations: config.acceptClientStateMutations }
           }
-        })
-      },
-      persistMutations: async ({ entities, transaction }) => {
-        /** IPC movement result. */
-        const result = await ipcInvokeWithPayload<
-          IpcMutationPayloadResult<MoveMarkdownContentResponsePayload<TPersisted>>,
-          MoveMarkdownContentPayload
-        >(config.channels.move, {
-          sourcePromptFolder: entities.promptFolder({ id: sourcePromptFolderId, data: source }),
-          destinationPromptFolder: entities.promptFolder({
-            id: destinationPromptFolderId,
-            data: destination
-          }),
-          content: {
-            id: contentId,
-            expectedRevision: config.getAuthoritativeRevision(contentId)
-          },
-          categoryId,
-          previousEntryId
-        })
-        if (result.success) config.acceptClientStateMutations(transaction)
-        return result
-      },
-      handleSuccessOrConflictResponse: (payload) => {
-        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
-        config.reconcile(payload.content)
-      },
-      conflictMessage: `${config.label} move conflict`
+        ]
+      }
     })
   }
 

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   parseCreatePromptRequest,
   parseCreatePromptTemplateRequest,
-  parseMovePromptTemplateRequest,
   parseUpdatePromptFolderSettingsRequest
 } from '../../src/main/IpcFramework/IpcValidation'
 
@@ -89,61 +88,6 @@ describe('prompt template IPC validation', () => {
         })
       ).success
     ).toBe(true)
-  })
-
-  it('accepts a template move reference without template content', () => {
-    expect(
-      parseMovePromptTemplateRequest(
-        request({
-          sourcePromptFolder: {
-            id: templateFolder.id,
-            expectedRevision: 1,
-            data: templateFolder
-          },
-          destinationPromptFolder: {
-            id: templateFolder.id,
-            expectedRevision: 1,
-            data: templateFolder
-          },
-          content: { id: 'template-1', expectedRevision: 3 },
-          categoryId: null,
-          previousEntryId: null
-        })
-      ).success
-    ).toBe(true)
-  })
-
-  it('rejects redundant template content in a move reference', () => {
-    expect(
-      parseMovePromptTemplateRequest(
-        request({
-          sourcePromptFolder: {
-            id: templateFolder.id,
-            expectedRevision: 1,
-            data: templateFolder
-          },
-          destinationPromptFolder: {
-            id: templateFolder.id,
-            expectedRevision: 1,
-            data: templateFolder
-          },
-          content: {
-            id: 'template-1',
-            expectedRevision: 3,
-            data: {
-              id: 'template-1',
-              title: 'Template',
-              fallbackTitle: '',
-              createdAt: '',
-              modifiedAt: '',
-              templateText: ''
-            }
-          },
-          categoryId: null,
-          previousEntryId: null
-        })
-      ).success
-    ).toBe(false)
   })
 
   it('rejects unsupported settings fields on template folders', () => {

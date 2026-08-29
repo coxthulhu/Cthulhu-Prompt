@@ -303,14 +303,40 @@ describe('prompt template mutations', () => {
     expect(updateTemplate).toHaveBeenCalledWith('paced-template', expect.any(Function))
     expect(updateClientState).toHaveBeenCalledWith('paced-template', expect.any(Function))
     expect(movedClientState.isEdited).toBe(true)
-    await moveOptions.persistMutations({ entities: entityBuilders, transaction: {} })
-    expect(ipcInvokeWithPayload).toHaveBeenLastCalledWith(
-      'move-prompt-template',
-      expect.objectContaining({
-        sourcePromptFolder: expect.objectContaining({ id: 'source-folder' }),
-        destinationPromptFolder: expect.objectContaining({ id: 'destination-folder' }),
-        content: { id: 'paced-template', expectedRevision: 3 }
-      })
-    )
+    /** Generic move invoke spy captures the template command and complete target set. */
+    const moveInvoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
+    await moveOptions.persistMutations({ invoke: moveInvoke, transaction: {} })
+    expect(moveInvoke).toHaveBeenCalledWith('move-prompt-template', {
+      payload: {
+        command: {
+          kind: 'template',
+          sourcePromptFolderId: 'source-folder',
+          destinationPromptFolderId: 'destination-folder',
+          contentId: 'paced-template',
+          categoryId: null,
+          previousEntryId: null
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: 'source-folder',
+            expected: 'revision',
+            revision: 1
+          },
+          {
+            entityType: 'promptFolder',
+            id: 'destination-folder',
+            expected: 'revision',
+            revision: 1
+          },
+          {
+            entityType: 'promptTemplate',
+            id: 'paced-template',
+            expected: 'revision',
+            revision: 3
+          }
+        ]
+      }
+    })
   })
 })

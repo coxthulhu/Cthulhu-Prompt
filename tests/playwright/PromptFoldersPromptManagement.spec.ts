@@ -1571,21 +1571,38 @@ describe('Prompt folder prompt management', () => {
         const prompt = sourceLoad.prompts.find(
           (candidate: { id: string }) => candidate.id === promptId
         )
-        const toPayloadEntity = (snapshot: { id: string; revision: number; data: unknown }) => ({
-          id: snapshot.id,
-          expectedRevision: snapshot.revision,
-          data: snapshot.data
-        })
-
         return await window.electron.ipcRenderer.invoke('move-prompt', {
           requestId: `test-move-completed-${Date.now()}`,
           clientId: window.ipcClientId,
           payload: {
-            sourcePromptFolder: toPayloadEntity(sourcePromptFolder),
-            destinationPromptFolder: toPayloadEntity(destinationPromptFolder),
-            content: { id: prompt.id, expectedRevision: prompt.revision },
-            previousEntryId: null,
-            categoryId: null
+            command: {
+              kind: 'prompt',
+              sourcePromptFolderId: sourcePromptFolder.id,
+              destinationPromptFolderId: destinationPromptFolder.id,
+              contentId: prompt.id,
+              previousEntryId: null,
+              categoryId: null
+            },
+            expectations: [
+              {
+                entityType: 'promptFolder',
+                id: sourcePromptFolder.id,
+                expected: 'revision',
+                revision: sourcePromptFolder.revision
+              },
+              {
+                entityType: 'promptFolder',
+                id: destinationPromptFolder.id,
+                expected: 'revision',
+                revision: destinationPromptFolder.revision
+              },
+              {
+                entityType: 'prompt',
+                id: prompt.id,
+                expected: 'revision',
+                revision: prompt.revision
+              }
+            ]
           }
         })
       },
@@ -1599,6 +1616,16 @@ describe('Prompt folder prompt management', () => {
 
     expect(moveResult.success).toBe(false)
     expect(moveResult.conflict).toBe(true)
+    expect(
+      moveResult.payload.snapshots.map(
+        (snapshot: { entityType: string; id: string }) =>
+          `${snapshot.entityType}:${snapshot.id}`
+      )
+    ).toEqual([
+      `promptFolder:${COMPLETED_MODE_FOLDER_ID}`,
+      `promptFolder:${NO_COMPLETED_FOLDER_ID}`,
+      'prompt:completed-mode-newest'
+    ])
     expect(
       await checkPersistedPromptFilesExistByTitle(electronApp, {
         workspacePath: COMPLETED_MODE_WORKSPACE_PATH,

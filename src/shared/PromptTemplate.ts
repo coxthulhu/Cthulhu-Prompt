@@ -63,17 +63,11 @@ export type DeletePromptTemplatePayload = DeleteMarkdownContentPayload<PromptTem
 export type DeletePromptTemplateResponsePayload =
   DeleteMarkdownContentResponsePayload<PromptTemplatePersisted>
 
-export type MovePromptTemplatePayload = MoveMarkdownContentPayload
-
-export type MovePromptTemplateResponsePayload =
-  MoveMarkdownContentResponsePayload<PromptTemplatePersisted>
 import type {
   CreateMarkdownContentPayload,
   CreateMarkdownContentResponsePayload,
   DeleteMarkdownContentPayload,
   DeleteMarkdownContentResponsePayload,
   MarkdownContentRevisionPayload,
-  MarkdownContentRevisionResponsePayload,
-  MoveMarkdownContentPayload,
-  MoveMarkdownContentResponsePayload
+  MarkdownContentRevisionResponsePayload
 } from './MarkdownContent'

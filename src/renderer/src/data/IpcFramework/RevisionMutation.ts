@@ -45,6 +45,9 @@ type MutationRequest<TRevisionCollections extends RevisionCollectionsMap> = {
   }>
 }
 
+/** Minimal typed request shape accepted by revision mutation IPC helpers. */
+type MutationPayloadRequest = { payload: unknown }
+
 type RevisionEntityBuilders<TRevisionCollections extends RevisionCollectionsMap> = {
   [TCollectionKey in keyof TRevisionCollections]: (entity: {
     id: string
@@ -61,7 +64,7 @@ type RevisionMutationOptions<
   persistMutations: (helpers: {
     entities: RevisionEntityBuilders<TRevisionCollections>
     invoke: <
-      TRequest extends MutationRequest<TRevisionCollections> = MutationRequest<TRevisionCollections>
+      TRequest extends MutationPayloadRequest = MutationRequest<TRevisionCollections>
     >(
       channel: string,
       request: TRequest

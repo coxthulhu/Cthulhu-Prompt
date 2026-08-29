@@ -1,7 +1,8 @@
 import type { Category } from './Category'
-import type { PromptPersisted } from './Prompt'
+import type { Draft } from 'immer'
+import type { PromptPersisted, PromptSummaryData } from './Prompt'
 import type { PromptFolder } from './PromptFolder'
-import type { PromptTemplatePersisted } from './PromptTemplate'
+import type { PromptTemplatePersisted, PromptTemplateSummaryData } from './PromptTemplate'
 import type { SystemSettings } from './SystemSettings'
 import type { Workspace } from './Workspace'
 
@@ -16,6 +17,21 @@ export type DomainEntityMap = {
 }
 export type DomainEntityType = keyof DomainEntityMap
 
+/** Entity projections that shared planners may read in either process. */
+export type DomainPlannerEntityMap = Omit<
+  DomainEntityMap,
+  'prompt' | 'promptTemplate'
+> & {
+  prompt: PromptPersisted | PromptSummaryData
+  promptTemplate: PromptTemplatePersisted | PromptTemplateSummaryData
+}
+
+/** Immer recipe applied to either a renderer projection or a full main-process entity. */
+export type DomainUpdateRecipe<TEntityType extends DomainEntityType> = (
+  draft: Draft<DomainPlannerEntityMap[TEntityType]>
+) => void
+
+/** One insert, recipe-based update, or delete for a specific domain entity type. */
 export type DomainChangeFor<TEntityType extends DomainEntityType> =
   | {
       type: 'insert'
@@ -27,7 +43,7 @@ export type DomainChangeFor<TEntityType extends DomainEntityType> =
       type: 'update'
       entityType: TEntityType
       id: string
-      data: DomainEntityMap[TEntityType]
+      recipe: DomainUpdateRecipe<TEntityType>
     }
   | {
       type: 'delete'
@@ -44,17 +60,29 @@ export type DomainState = {
   get: <TEntityType extends DomainEntityType>(
     entityType: TEntityType,
     id: string
-  ) => DomainEntityMap[TEntityType] | undefined
+  ) => DomainPlannerEntityMap[TEntityType] | undefined
   getAll: <TEntityType extends DomainEntityType>(
     entityType: TEntityType
-  ) => ReadonlyArray<DomainEntityMap[TEntityType]>
+  ) => ReadonlyArray<DomainPlannerEntityMap[TEntityType]>
 }
 
+/** Business-invariant conflict found while planning against one authoritative graph. */
+export type DomainMutationConflict = {
+  status: 'conflict'
+  reason: string
+  targets: DomainTarget[]
+}
+
+/** Shared planner result containing executable changes or authoritative conflict targets. */
+export type DomainMutationPlan = DomainChange[] | DomainMutationConflict
+
+/** Mutation-specific shared function run against renderer and main domain state. */
 export type DomainPlanner<TCommand> = (
   state: DomainState,
   command: TCommand
-) => DomainChange[]
+) => DomainMutationPlan
 
+/** Expected authoritative state for one renderer-computed mutation target. */
 export type DomainRevisionExpectation =
   | {
       entityType: DomainEntityType
@@ -68,11 +96,13 @@ export type DomainRevisionExpectation =
       revision: number
     }
 
+/** Generic IPC payload sent for one shared domain mutation command. */
 export type DomainMutationRequest<TCommand> = {
   command: TCommand
   expectations: DomainRevisionExpectation[]
 }
 
+/** Authoritative present or deleted snapshot for one domain entity type. */
 export type DomainSnapshotFor<TEntityType extends DomainEntityType> =
   | {
       entityType: TEntityType
@@ -86,18 +116,27 @@ export type DomainSnapshotFor<TEntityType extends DomainEntityType> =
       deleted: true
     }
 
+/** Authoritative snapshot union shared by every domain mutation channel. */
 export type DomainSnapshot = {
   [TEntityType in DomainEntityType]: DomainSnapshotFor<TEntityType>
 }[DomainEntityType]
 
+/** Generic success or conflict payload returned by every domain mutation channel. */
 export type DomainMutationResponsePayload = {
   snapshots: DomainSnapshot[]
 }
 
+/** Revision-bearing entity targeted by a domain mutation plan. */
 export type DomainTarget = Pick<DomainChange, 'entityType' | 'id'>
 
+/** Builds the stable key used to compare domain target sets. */
 export const buildDomainTargetKey = (target: DomainTarget): string =>
   `${target.entityType}:${target.id}`
+
+/** Reports whether a planner result represents a business-invariant conflict. */
+export const isDomainMutationConflict = (
+  plan: DomainMutationPlan
+): plan is DomainMutationConflict => !Array.isArray(plan)
 
 /** Rejects ambiguous plans before either process interprets their side effects. */
 export const assertValidDomainChanges = (changes: readonly DomainChange[]): void => {
@@ -110,7 +149,7 @@ export const assertValidDomainChanges = (changes: readonly DomainChange[]): void
     }
     targetKeys.add(targetKey)
 
-    if (change.type === 'delete') continue
+    if (change.type !== 'insert') continue
     if ('id' in change.data && change.data.id !== change.id) {
       throw new Error(`Domain change ID does not match its data for ${targetKey}`)
     }

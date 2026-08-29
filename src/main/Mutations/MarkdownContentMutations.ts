@@ -1,5 +1,10 @@
 import { ipcMain } from 'electron'
 import type { IpcRequestWithPayload } from '@shared/IpcRequest'
+import type { DomainMutationRequest } from '@shared/DomainChanges'
+import {
+  planMoveMarkdownContentDomainMutation,
+  type MoveMarkdownContentDomainCommand
+} from '@shared/DomainMutations'
 import {
   getActiveMarkdownContentIds,
   getMarkdownContentIds,
@@ -7,8 +12,7 @@ import {
   type CreateMarkdownContentPayload,
   type DeleteMarkdownContentPayload,
   type MarkdownContentPersisted,
-  type MarkdownContentRevisionPayload,
-  type MoveMarkdownContentPayload
+  type MarkdownContentRevisionPayload
 } from '@shared/MarkdownContent'
 import {
   findCategoryOrderEntryCategoryId,
@@ -35,6 +39,7 @@ import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import type { MarkdownPersistenceFields } from '../Persistence/MarkdownPersistence'
 import { resolveActivePromptFolderName } from '../Persistence/PromptPersistencePaths'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
+import { handleMainDomainMutation } from './DomainMutation'
 import {
   getPlannedMarkdownPersistenceFields,
   planMarkdownFilenamePersistenceFields,
@@ -68,7 +73,7 @@ export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersis
     create: MutationParser<CreateMarkdownContentPayload<TContent>>
     update: MutationParser<MarkdownContentRevisionPayload<TContent>>
     delete: MutationParser<DeleteMarkdownContentPayload<TContent>>
-    move: MutationParser<MoveMarkdownContentPayload>
+    move: MutationParser<DomainMutationRequest<MoveMarkdownContentDomainCommand>>
   }
   defaultFallbackTitle?: string
   getContent: (contentId: string) => CommittedEntry<TContent, MarkdownPersistenceFields> | null
@@ -177,30 +182,6 @@ export const setupMarkdownContentMutationHandlers = <
       )
     }
     return handles
-  }
-
-  const buildMoveConflictResponse = (
-    sourcePromptFolderId: string,
-    destinationPromptFolderId: string,
-    contentId: string
-  ) => {
-    const source = data.promptFolder.committedStore.getEntry(sourcePromptFolderId)
-    const destination = data.promptFolder.committedStore.getEntry(destinationPromptFolderId)
-    const content = config.getContent(contentId)
-    if (!source || !destination || !content) {
-      return { success: false as const, error: `${config.label} move conflict data not loaded` }
-    }
-    return {
-      success: false as const,
-      conflict: true as const,
-      payload: {
-        promptFolders: buildPromptFolderSnapshots([
-          sourcePromptFolderId,
-          destinationPromptFolderId
-        ]),
-        content: config.buildSnapshot(content)
-      }
-    }
   }
 
   ipcMain.handle(config.channels.create, async (_, request: unknown) => {
@@ -500,183 +481,11 @@ export const setupMarkdownContentMutationHandlers = <
     })
   })
 
-  ipcMain.handle(config.channels.move, async (_, request: unknown) => {
-    return await runMutationIpcRequest(request, config.parsers.move, async (validatedRequest) => {
-      try {
-        const {
-          sourcePromptFolder: requestedSource,
-          destinationPromptFolder: requestedDestination,
-          content: requestedContent,
-          categoryId,
-          previousEntryId
-        } = validatedRequest.payload
-        const source = data.promptFolder.committedStore.getEntry(requestedSource.id)
-        const destination = data.promptFolder.committedStore.getEntry(requestedDestination.id)
-        const content = config.getContent(requestedContent.id)
-        if (
-          !source ||
-          !destination ||
-          source.committed.kind !== config.kind ||
-          destination.committed.kind !== config.kind ||
-          !content ||
-          !config.canMove(content.committed) ||
-          !getActiveMarkdownContentIds(source.committed, config.kind).includes(requestedContent.id)
-        ) {
-          return buildMoveConflictResponse(
-            requestedSource.id,
-            requestedDestination.id,
-            requestedContent.id
-          )
-        }
-        /** Whether persistence transfers the markdown file between root folders. */
-        const isSameFolder = requestedSource.id === requestedDestination.id
-        const destinationContentIds = getActiveMarkdownContentIds(
-          destination.committed,
-          config.kind
-        ).filter((id) => id !== requestedContent.id)
-        const contentWithDestinationFallback =
-          !isSameFolder && content.committed.title.trim().length === 0
-            ? {
-                ...content.committed,
-                fallbackTitle: resolvePromptTitleUpdateForPromptIds({
-                  promptIds: destinationContentIds,
-                  lookupPrompt: (contentId) => config.getContent(contentId)?.committed ?? null,
-                  promptId: requestedContent.id,
-                  currentTitle: content.committed.title,
-                  currentFallbackTitle: content.committed.fallbackTitle,
-                  nextTitle: content.committed.title,
-                  defaultFallbackTitle: config.defaultFallbackTitle
-                }).fallbackTitle
-              }
-            : content.committed
-        /** Category-order reference transferred between groups or roots. */
-        const categoryOrderEntry = config.createEntryRef(requestedContent.id)
-        /** Moved content and destination order synchronized to the requested placement. */
-        const placement = placeMarkdownContentInCategoryOrder(
-          destination.committed.categoryOrder,
-          contentWithDestinationFallback,
-          categoryOrderEntry,
-          categoryId,
-          previousEntryId
-        )
-        /** Content copy whose category metadata matches its destination group. */
-        const movedContent: TContent = placement.content
-        /** Markdown persistence fields after an optional cross-root transfer. */
-        const movedPersistenceFields: MarkdownPersistenceFields = isSameFolder
-          ? content.persistenceFields
-          : {
-              ...content.persistenceFields,
-              folderPath: resolveActivePromptFolderName(
-                destination.persistenceFields.folderPath,
-                destination.committed.kind
-              ),
-              previousFolderPath: resolveActivePromptFolderName(
-                source.persistenceFields.folderPath,
-                source.committed.kind
-              ),
-              promptFolderId: requestedDestination.id
-            }
-        const filenamePlans = isSameFolder
-          ? planFilenames(getActiveMarkdownContentIds(source.committed, config.kind))
-          : [
-              ...planFilenames(
-                getActiveMarkdownContentIds(source.committed, config.kind).filter(
-                  (id) => id !== requestedContent.id
-                )
-              ),
-              ...planFilenames(
-                [...destinationContentIds, requestedContent.id],
-                new Map([
-                  [
-                    requestedContent.id,
-                    { content: movedContent, persistenceFields: movedPersistenceFields }
-                  ]
-                ])
-              )
-            ]
-        /** Atomic V2 order, front-matter, and optional file-transfer result. */
-        const outcome = (await runAtomicDataTransaction((tx) => ({
-          ...(isSameFolder
-            ? {
-                promptFolder: tx.promptFolder.update({
-                  id: requestedSource.id,
-                  expectedRevision: requestedSource.expectedRevision,
-                  recipe: (draft) => {
-                    draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-                      draft.categoryOrder,
-                      movedContent,
-                      categoryOrderEntry,
-                      categoryId,
-                      previousEntryId
-                    ).categoryOrder
-                  }
-                })
-              }
-            : {
-                sourcePromptFolder: tx.promptFolder.update({
-                  id: requestedSource.id,
-                  expectedRevision: requestedSource.expectedRevision,
-                  recipe: (draft) => {
-                    draft.categoryOrder = removeCategoryOrderEntry(
-                      draft.categoryOrder,
-                      categoryOrderEntry
-                    )
-                  }
-                }),
-                destinationPromptFolder: tx.promptFolder.update({
-                  id: requestedDestination.id,
-                  expectedRevision: requestedDestination.expectedRevision,
-                  recipe: (draft) => {
-                    draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-                      draft.categoryOrder,
-                      movedContent,
-                      categoryOrderEntry,
-                      categoryId,
-                      previousEntryId
-                    ).categoryOrder
-                  }
-                })
-              }),
-          content: config.updateContent(tx, {
-            id: requestedContent.id,
-            expectedRevision: requestedContent.expectedRevision,
-            data: movedContent,
-            persistenceFields: getPlannedMarkdownPersistenceFields(
-              filenamePlans,
-              requestedContent.id
-            )
-          }),
-          ...createFilenameUpdateHandles(tx, filenamePlans, new Set([requestedContent.id]))
-        })))!
-
-        if (outcome.status === 'conflict') {
-          return buildMoveConflictResponse(
-            requestedSource.id,
-            requestedDestination.id,
-            requestedContent.id
-          )
-        }
-        const updatedSource = data.promptFolder.committedStore.getEntry(requestedSource.id)
-        const updatedDestination = data.promptFolder.committedStore.getEntry(
-          requestedDestination.id
-        )
-        const updatedContent = config.getContent(requestedContent.id)
-        if (!updatedSource || !updatedDestination || !updatedContent) {
-          return { success: false, error: `${config.label} move commit did not complete` }
-        }
-        return {
-          success: true,
-          payload: {
-            promptFolders: buildPromptFolderSnapshots([
-              requestedSource.id,
-              requestedDestination.id
-            ]),
-            content: config.buildSnapshot(updatedContent)
-          }
-        }
-      } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
-      }
-    })
+  handleMainDomainMutation({
+    ipc: {
+      channel: config.channels.move,
+      parseRequest: config.parsers.move
+    },
+    mutation: planMoveMarkdownContentDomainMutation
   })
 }

@@ -7,6 +7,7 @@ export type CommittedEntry<TData, TPersistenceFields> = {
 export type CommittedStore<TData, TPersistenceFields> = {
   getRevision: (id: string) => number
   getEntry: (id: string) => CommittedEntry<TData, TPersistenceFields> | null
+  getAllEntries: () => Array<CommittedEntry<TData, TPersistenceFields>>
   // Use this after initial disk reads.
   setFromDisk: (id: string, data: TData, persistenceFields: TPersistenceFields) => void
   // Use this after disk writes succeed.
@@ -31,6 +32,7 @@ export const createCommittedStore = <TData, TPersistenceFields>(): CommittedStor
   return {
     getRevision: (id) => entriesById[id]?.revision ?? 0,
     getEntry: (id) => entriesById[id] ?? null,
+    getAllEntries: () => Object.values(entriesById),
     setFromDisk: (id, data, persistenceFields) => {
       upsertEntry(id, {
         revision: 0,

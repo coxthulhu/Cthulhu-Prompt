@@ -3,38 +3,31 @@ import type {
   CategoryRevisionResponsePayload,
   CreateCategoryPayload,
   CreateCategoryResponsePayload,
-  DeleteCategoryPayload,
-  DeleteCategoryResponsePayload,
   MoveCategoryPayload,
   RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
 import { normalizeCategoryDisplayName } from '@shared/Category'
 import { compactGuid } from '@shared/compactGuid'
+import { planDeleteCategoryDomainMutation } from '@shared/DomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import type { Transaction } from '@tanstack/svelte-db'
-import { createPromptFull } from '@shared/Prompt'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import {
-  deleteCategoryOrderGroup,
   getCategoryOrderCategoryIds,
   insertCategoryOrderGroup,
   moveCategoryOrderGroup,
   type PromptFolderRevisionResponsePayload
 } from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
-import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
 } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { upsertPromptClientState } from '../UiState/PromptClientState'
-import { upsertPromptTemplateClientStates } from '../UiState/PromptTemplateClientStateMutations.svelte.ts'
+import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 
 /** Reads the latest optimistic category value captured by a paced transaction. */
 const readLatestCategoryFromTransaction = (
@@ -214,76 +207,21 @@ export const moveCategory = async (
 
 /** Deletes a category and clears every matching prompt and template reference. */
 export const deleteCategory = async (categoryId: string): Promise<void> => {
-  /** Authoritative category selected for deletion. */
-  const category = categoryCollection.get(categoryId)
-  if (!category) throw new Error('Category not loaded')
   /** Root folder that currently owns the category. */
   const promptFolder = promptFolderCollection.toArray.find((folder) =>
     getCategoryOrderCategoryIds(folder.categoryOrder).includes(categoryId)
   )
   if (!promptFolder) throw new Error('Category root prompt folder not loaded')
-  /** Every renderer prompt carrying the deleted category ID. */
-  const promptIds = promptCollection.toArray
-    .filter((prompt) => prompt.category === categoryId)
-    .map((prompt) => prompt.id)
-  /** Every renderer template carrying the deleted category ID. */
-  const promptTemplateIds = promptTemplateCollection.toArray
-    .filter((promptTemplate) => promptTemplate.category === categoryId)
-    .map((promptTemplate) => promptTemplate.id)
-  /** One logical timestamp for the optimistic reference cleanup. */
-  const modifiedAt = getCurrentIsoSecondTimestamp()
+  /** Renderer-authored command shared with the main-process planner. */
+  const command = {
+    categoryId,
+    promptFolderId: promptFolder.id,
+    modifiedAt: getCurrentIsoSecondTimestamp()
+  }
 
-  await runRevisionMutation<DeleteCategoryResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.update(promptFolder.id, (draft) => {
-        draft.categoryOrder = deleteCategoryOrderGroup(draft.categoryOrder, categoryId)
-      })
-      collections.category.delete(categoryId)
-      for (const promptId of promptIds) {
-        collections.prompt.update(promptId, (draft) => {
-          delete draft.category
-          draft.modifiedAt = modifiedAt
-        })
-      }
-      for (const promptTemplateId of promptTemplateIds) {
-        collections.promptTemplate.update(promptTemplateId, (draft) => {
-          delete draft.category
-          draft.modifiedAt = modifiedAt
-        })
-      }
-    },
-    persistMutations: async ({ entities, invoke }) => {
-      /** Result of the atomic category deletion request. */
-      const result = await invoke<{ payload: DeleteCategoryPayload }>('delete-category', {
-        payload: {
-          promptFolder: entities.promptFolder({ id: promptFolder.id, data: promptFolder }),
-          category: entities.category({ id: categoryId, data: category })
-        }
-      })
-      return result
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      if (payload.category) categoryCollection.utils.upsertAuthoritative(payload.category)
-      for (const prompt of payload.prompts) {
-        /** Full authoritative prompt shape used by the renderer and its client state. */
-        const fullPrompt = { ...prompt, data: createPromptFull(prompt.data) }
-        promptCollection.utils.upsertAuthoritative(fullPrompt)
-        upsertPromptClientState(fullPrompt.data)
-      }
-      for (const promptTemplate of payload.promptTemplates) {
-        /** Full authoritative template shape used by the renderer and its client state. */
-        const fullPromptTemplate = {
-          ...promptTemplate,
-          data: createPromptTemplateFull(promptTemplate.data)
-        }
-        promptTemplateCollection.utils.upsertAuthoritative(fullPromptTemplate)
-        upsertPromptTemplateClientStates([fullPromptTemplate.data])
-      }
-    },
-    conflictMessage: 'Category delete conflict',
-    onSuccess: () => {
-      categoryCollection.utils.deleteAuthoritative(categoryId)
-    }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planDeleteCategoryDomainMutation },
+    ipc: { channel: 'delete-category' },
+    renderer: {}
   })
 }

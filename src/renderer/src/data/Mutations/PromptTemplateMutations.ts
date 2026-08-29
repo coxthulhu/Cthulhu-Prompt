@@ -45,8 +45,6 @@ const mutations = createMarkdownContentRendererMutations<
     const template = promptTemplateCollection.get(templateId)
     return template && isPromptTemplateFull(template) ? toPersisted(template) : null
   },
-  getAuthoritativeRevision: (templateId) =>
-    promptTemplateCollection.utils.getAuthoritativeRevision(templateId),
   toPersisted,
   createEntity: (entities, templateId, template) => {
     const entity = entities.promptTemplate({
@@ -65,8 +63,7 @@ const mutations = createMarkdownContentRendererMutations<
     collections.promptTemplate.delete(templateId)
     collections.promptTemplateClientState.delete(templateId)
   },
-  updateContentOptimistically: (collections, templateId, update) => {
-    collections.promptTemplate.update(templateId, update)
+  markMoveClientStateEdited: (collections, templateId) => {
     collections.promptTemplateClientState.update(templateId, (clientState) => {
       markPromptTemplateClientStateEdited(clientState)
     })

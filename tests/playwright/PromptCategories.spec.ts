@@ -916,38 +916,31 @@ describe('Prompt categories', () => {
           requestId: 'delete-category-test',
           clientId: (window as any).ipcClientId,
           payload: {
-            promptFolder: {
-              id: rootFolderId,
-              expectedRevision: 0,
-              data: {
-                id: rootFolderId,
-                kind: 'prompt',
-                folderName: 'Prompts',
-                displayName: 'Prompts',
-                completedPromptIds: [],
-                categoryOrder: {
-                  categories: [
-                    {
-                      categoryId: null,
-                      entries: [
-                        { kind: 'prompt', id: 'uncategorized-prompt' },
-                        { kind: 'prompt', id: 'unknown-category-prompt' }
-                      ]
-                    },
-                    {
-                      categoryId,
-                      entries: [{ kind: 'prompt', id: 'categorized-prompt' }]
-                    }
-                  ]
-                },
-                settings: { folderDescription: null }
-              }
+            command: {
+              categoryId,
+              promptFolderId: rootFolderId,
+              modifiedAt: '2026-08-29T12:00:00Z'
             },
-            category: {
-              id: categoryId,
-              expectedRevision: 0,
-              data: { id: categoryId, displayName: 'Code Review', description: null }
-            }
+            expectations: [
+              {
+                entityType: 'promptFolder',
+                id: rootFolderId,
+                expected: 'revision',
+                revision: 0
+              },
+              {
+                entityType: 'category',
+                id: categoryId,
+                expected: 'revision',
+                revision: 0
+              },
+              {
+                entityType: 'prompt',
+                id: 'categorized-prompt',
+                expected: 'revision',
+                revision: 0
+              }
+            ]
           }
         })
       },
@@ -957,29 +950,49 @@ describe('Prompt categories', () => {
     expect(deleteResponse).toMatchObject({
       success: true,
       payload: {
-        promptFolder: {
-          data: {
-            categoryOrder: {
-              categories: [
-                {
-                  categoryId: null,
-                  entries: [
-                    { kind: 'prompt', id: 'uncategorized-prompt' },
-                    { kind: 'prompt', id: 'unknown-category-prompt' },
-                    { kind: 'prompt', id: 'categorized-prompt' }
-                  ]
-                }
-              ]
-            }
-          }
-        },
-        prompts: [{ data: { id: 'categorized-prompt' } }],
-        promptTemplates: []
+        snapshots: expect.arrayContaining([
+          {
+            entityType: 'promptFolder',
+            id: PROMPT_ROOT_ID,
+            revision: 1,
+            data: expect.objectContaining({
+              categoryOrder: {
+                categories: [
+                  {
+                    categoryId: null,
+                    entries: [
+                      { kind: 'prompt', id: 'uncategorized-prompt' },
+                      { kind: 'prompt', id: 'unknown-category-prompt' },
+                      { kind: 'prompt', id: 'categorized-prompt' }
+                    ]
+                  }
+                ]
+              }
+            })
+          },
+          { entityType: 'category', id: PROMPT_CATEGORY_ID, deleted: true },
+          expect.objectContaining({
+            entityType: 'prompt',
+            id: 'categorized-prompt',
+            data: expect.objectContaining({
+              id: 'categorized-prompt'
+            })
+          })
+        ])
       }
     })
-    expect(deleteResponse.payload).not.toHaveProperty('category')
-    expect(deleteResponse.payload.prompts[0].data).not.toHaveProperty('category')
-    expect(deleteResponse.payload.prompts[0].data.modifiedAt).not.toBe(initialModifiedAt)
+    /** Updated prompt snapshot returned by the generic deletion response. */
+    const deletedCategoryPrompt = deleteResponse.payload.snapshots.find(
+      (snapshot: { entityType: string; id: string }) =>
+        snapshot.entityType === 'prompt' && snapshot.id === 'categorized-prompt'
+    )
+    /** Updated root snapshot returned by the generic deletion response. */
+    const deletedCategoryRoot = deleteResponse.payload.snapshots.find(
+      (snapshot: { entityType: string; id: string }) =>
+        snapshot.entityType === 'promptFolder' && snapshot.id === PROMPT_ROOT_ID
+    )
+    expect(deletedCategoryPrompt.data).not.toHaveProperty('category')
+    expect(deletedCategoryPrompt.data.modifiedAt).not.toBe(initialModifiedAt)
     await expect
       .poll(() =>
         checkFileExists(
@@ -997,7 +1010,7 @@ describe('Prompt categories', () => {
           `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
         )
       )
-    ).toEqual(deleteResponse.payload.promptFolder.data.categoryOrder)
+    ).toEqual(deletedCategoryRoot.data.categoryOrder)
   })
 
   test('clears prompt and template categories when moving content to another root', async ({

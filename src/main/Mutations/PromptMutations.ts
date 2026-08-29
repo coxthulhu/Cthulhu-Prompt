@@ -20,7 +20,7 @@ import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentU
 import {
   parseCreatePromptRequest,
   parseDeletePromptRequest,
-  parseMovePromptRequest,
+  parseMovePromptDomainMutationRequest,
   parseSetPromptStatusRequest,
   parseUpdatePromptRevisionRequest
 } from '../IpcFramework/IpcValidation'
@@ -342,7 +342,7 @@ export const setupPromptMutationHandlers = (): void => {
       create: parseCreatePromptRequest,
       update: parseUpdatePromptRevisionRequest,
       delete: parseDeletePromptRequest,
-      move: parseMovePromptRequest
+      move: parseMovePromptDomainMutationRequest
     },
     getContent: (promptId) => data.prompt.committedStore.getEntry(promptId),
     buildSnapshot: buildPromptSnapshot,

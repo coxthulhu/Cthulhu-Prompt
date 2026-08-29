@@ -96,7 +96,7 @@ describe('category mutations', () => {
     runRevisionMutation.mockResolvedValue(undefined)
   })
 
-  it('clears every matching renderer reference and sends category ownership revisions', async () => {
+  it('clears every matching renderer reference and sends all touched revisions', async () => {
     await deleteCategory(CATEGORY_ID)
 
     /** Revision mutation options registered by deleteCategory. */
@@ -158,26 +158,42 @@ describe('category mutations', () => {
     expect(promptState.modifiedAt).not.toBe('2026-01-01T00:00:00.000Z')
     expect(templateState.modifiedAt).toBe(promptState.modifiedAt)
 
-    /** Typed entity builders expose expected revisions in the IPC request. */
-    const entities = {
-      promptFolder: ({ id, data }: { id: string; data: object }) => ({
-        id,
-        expectedRevision: 3,
-        data
-      }),
-      category: ({ id, data }: { id: string; data: object }) => ({
-        id,
-        expectedRevision: 2,
-        data
-      })
-    }
     /** IPC invocation spy returns a persistence failure before reconciliation. */
     const invoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
-    await options.persistMutations({ entities, invoke, transaction: {} })
+    await options.persistMutations({ invoke, transaction: {} })
     expect(invoke).toHaveBeenCalledWith('delete-category', {
       payload: {
-        promptFolder: expect.objectContaining({ id: ROOT_FOLDER_ID, expectedRevision: 3 }),
-        category: expect.objectContaining({ id: CATEGORY_ID, expectedRevision: 2 })
+        command: {
+          categoryId: CATEGORY_ID,
+          promptFolderId: ROOT_FOLDER_ID,
+          modifiedAt: promptState.modifiedAt
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: ROOT_FOLDER_ID,
+            expected: 'revision',
+            revision: 3
+          },
+          {
+            entityType: 'category',
+            id: CATEGORY_ID,
+            expected: 'revision',
+            revision: 2
+          },
+          {
+            entityType: 'prompt',
+            id: PROMPT_ID,
+            expected: 'revision',
+            revision: 4
+          },
+          {
+            entityType: 'promptTemplate',
+            id: TEMPLATE_ID,
+            expected: 'revision',
+            revision: 5
+          }
+        ]
       }
     })
   })
@@ -191,20 +207,23 @@ describe('category mutations', () => {
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Successful authoritative payload returned by category deletion. */
     const payload = {
-      promptFolder: {
-        id: ROOT_FOLDER_ID,
-        revision: 4,
-        data: {
-          ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
-          categoryOrder: {
-            categories: [
-              { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
-            ]
-          }
-        }
-      },
-      prompts: [
+      snapshots: [
         {
+          entityType: 'promptFolder',
+          id: ROOT_FOLDER_ID,
+          revision: 4,
+          data: {
+            ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
+            categoryOrder: {
+              categories: [
+                { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+              ]
+            }
+          }
+        },
+        { entityType: 'category', id: CATEGORY_ID, deleted: true },
+        {
+          entityType: 'prompt',
           id: PROMPT_ID,
           revision: 5,
           data: {
@@ -216,10 +235,9 @@ describe('category mutations', () => {
             promptText: 'Prompt text.',
             status: PromptStatus.Todo
           }
-        }
-      ],
-      promptTemplates: [
+        },
         {
+          entityType: 'promptTemplate',
           id: TEMPLATE_ID,
           revision: 6,
           data: {
@@ -235,23 +253,9 @@ describe('category mutations', () => {
     }
     /** Successful IPC invocation spy returns the authoritative deletion graph. */
     const invoke = vi.fn().mockResolvedValue({ success: true, payload })
-    /** Typed entity builders provide the category ownership request. */
-    const entities = {
-      promptFolder: ({ id, data }: { id: string; data: object }) => ({
-        id,
-        expectedRevision: 3,
-        data
-      }),
-      category: ({ id, data }: { id: string; data: object }) => ({
-        id,
-        expectedRevision: 2,
-        data
-      })
-    }
-    await options.persistMutations({ entities, invoke, transaction: {} })
+    await options.persistMutations({ invoke, transaction: {} })
 
     options.handleSuccessOrConflictResponse(payload)
-    options.onSuccess()
     expect(categoryCollection.get(CATEGORY_ID)).toBeUndefined()
     expect(promptFolderCollection.get(ROOT_FOLDER_ID)?.categoryOrder.categories).toEqual([
       { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }

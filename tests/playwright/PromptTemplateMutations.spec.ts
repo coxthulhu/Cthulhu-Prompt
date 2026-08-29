@@ -156,31 +156,51 @@ describe('Prompt template mutations', () => {
     ).toContain('Updated {{value}}.')
 
     const moveResult = await invoke('move-prompt-template', {
-      sourcePromptFolder: toPayloadEntity(
-        updateResult.payload.promptFolders.find(
-          (folder: { id: string }) => folder.id === SOURCE_FOLDER_ID
-        )
-      ),
-      destinationPromptFolder: toPayloadEntity(destinationFolder),
-      content: {
-        id: updateResult.payload.content.id,
-        expectedRevision: updateResult.payload.content.revision
+      command: {
+        kind: 'template',
+        sourcePromptFolderId: SOURCE_FOLDER_ID,
+        destinationPromptFolderId: DESTINATION_FOLDER_ID,
+        contentId: updateResult.payload.content.id,
+        previousEntryId: null,
+        categoryId: null
       },
-      previousEntryId: null,
-      categoryId: null
+      expectations: [
+        {
+          entityType: 'promptFolder',
+          id: SOURCE_FOLDER_ID,
+          expected: 'revision',
+          revision: updateResult.payload.promptFolders.find(
+            (folder: { id: string }) => folder.id === SOURCE_FOLDER_ID
+          ).revision
+        },
+        {
+          entityType: 'promptFolder',
+          id: DESTINATION_FOLDER_ID,
+          expected: 'revision',
+          revision: destinationFolder.revision
+        },
+        {
+          entityType: 'promptTemplate',
+          id: updateResult.payload.content.id,
+          expected: 'revision',
+          revision: updateResult.payload.content.revision
+        }
+      ]
     })
 
     expect(moveResult).toMatchObject({
       success: true,
       payload: {
-        promptFolders: expect.arrayContaining([
+        snapshots: expect.arrayContaining([
           expect.objectContaining({
+            entityType: 'promptFolder',
             id: SOURCE_FOLDER_ID,
             data: expect.objectContaining({
               categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
             })
           }),
           expect.objectContaining({
+            entityType: 'promptFolder',
             id: DESTINATION_FOLDER_ID,
             data: expect.objectContaining({
               categoryOrder: {
@@ -196,6 +216,16 @@ describe('Prompt template mutations', () => {
         ])
       }
     })
+    /** Destination folder snapshot returned by the generic domain response. */
+    const movedDestinationFolder = moveResult.payload.snapshots.find(
+      (snapshot: { entityType: string; id: string }) =>
+        snapshot.entityType === 'promptFolder' && snapshot.id === DESTINATION_FOLDER_ID
+    )
+    /** Moved template snapshot returned by the generic domain response. */
+    const movedTemplate = moveResult.payload.snapshots.find(
+      (snapshot: { entityType: string; id: string }) =>
+        snapshot.entityType === 'promptTemplate' && snapshot.id === templateId
+    )
     expect(
       await checkFileExists(
         electronApp,
@@ -230,12 +260,8 @@ describe('Prompt template mutations', () => {
     })
 
     const deleteResult = await invoke('delete-prompt-template', {
-      promptFolder: toPayloadEntity(
-        moveResult.payload.promptFolders.find(
-          (folder: { id: string }) => folder.id === DESTINATION_FOLDER_ID
-        )
-      ),
-      content: toPayloadEntity(moveResult.payload.content)
+      promptFolder: toPayloadEntity(movedDestinationFolder),
+      content: toPayloadEntity(movedTemplate)
     })
 
     expect(deleteResult).toMatchObject({

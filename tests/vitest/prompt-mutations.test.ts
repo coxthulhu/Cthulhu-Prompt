@@ -127,21 +127,41 @@ describe('prompt mutations', () => {
     expect(prompt.category).toBe(DESTINATION_CATEGORY_ID)
     expect(promptClientState).toEqual({ id: PROMPT_ID, isEdited: true })
 
-    /** Revision-aware entity builders used by the shared move payload. */
-    const entities = {
-      promptFolder: ({ id, data }: { id: string; data: object }) => ({
-        id,
-        expectedRevision: id === SOURCE_FOLDER_ID ? 2 : 4,
-        data
-      })
-    }
-    await options.persistMutations({ entities, transaction: {} })
-    expect(ipcInvokeWithPayload).toHaveBeenCalledWith(
-      'move-prompt',
-      expect.objectContaining({
-        content: { id: PROMPT_ID, expectedRevision: 3 }
-      })
-    )
+    /** Generic invoke spy captures the command and automatically derived target revisions. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
+    await options.persistMutations({ invoke, transaction: {} })
+    expect(invoke).toHaveBeenCalledWith('move-prompt', {
+      payload: {
+        command: {
+          kind: 'prompt',
+          sourcePromptFolderId: SOURCE_FOLDER_ID,
+          destinationPromptFolderId: DESTINATION_FOLDER_ID,
+          contentId: PROMPT_ID,
+          categoryId: DESTINATION_CATEGORY_ID,
+          previousEntryId: null
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: SOURCE_FOLDER_ID,
+            expected: 'revision',
+            revision: 2
+          },
+          {
+            entityType: 'promptFolder',
+            id: DESTINATION_FOLDER_ID,
+            expected: 'revision',
+            revision: 4
+          },
+          {
+            entityType: 'prompt',
+            id: PROMPT_ID,
+            expected: 'revision',
+            revision: 3
+          }
+        ]
+      }
+    })
   })
 
   it('changes canonical prompt status while latching only the edited marker', async () => {

@@ -96,6 +96,11 @@ const mockTransactionState = vi.hoisted(() => {
   }
 })
 
+/** Main mutation queue spy used to distinguish queued and immediate atomic modes. */
+const enqueueGlobalMutation = vi.hoisted(() =>
+  vi.fn(async <TResult>(mutation: () => Promise<TResult>): Promise<TResult> => await mutation())
+)
+
 vi.mock('../../src/main/Data/Data', () => {
   return {
     data: mockTransactionState.data
@@ -103,11 +108,7 @@ vi.mock('../../src/main/Data/Data', () => {
 })
 
 vi.mock('../../src/main/Data/GlobalMutationQueue', () => {
-  return {
-    enqueueGlobalMutation: async <TResult>(mutation: () => Promise<TResult>): Promise<TResult> => {
-      return await mutation()
-    }
-  }
+  return { enqueueGlobalMutation }
 })
 
 import { runAtomicDataTransaction } from '../../src/main/Data/AtomicDataTransaction'
@@ -118,6 +119,7 @@ const PROMPT_ID = 'prompt-1'
 describe('atomic data transaction', () => {
   beforeEach(() => {
     mockTransactionState.reset()
+    enqueueGlobalMutation.mockClear()
   })
 
   it('returns labeled committed results with data for updates and deletes', async () => {
@@ -250,6 +252,40 @@ describe('atomic data transaction', () => {
         promptStem: 'Duplicate title-prompt-1',
         needsFilenameIdSuffix: true
       }
+    })
+  })
+
+  it('commits immediately without entering the global mutation queue', async () => {
+    mockTransactionState.seedEntry('systemSettings', SYSTEM_SETTINGS_ID, {
+      revision: 1,
+      committed: {
+        promptFontSize: 16,
+        promptEditorMinLines: 2,
+        promptEditorMaxLines: 30,
+        showLineNumbers: true
+      },
+      persistenceFields: {}
+    })
+
+    /** Immediate result committed by a caller that already owns the global queue. */
+    const outcome = await runAtomicDataTransaction(
+      (tx) => ({
+        systemSettings: tx.systemSettings.update({
+          id: SYSTEM_SETTINGS_ID,
+          recipe: (draft) => {
+            draft.promptFontSize = 18
+          }
+        })
+      }),
+      { mode: 'immediate' }
+    )
+
+    expect(outcome.status).toBe('success')
+    expect(enqueueGlobalMutation).not.toHaveBeenCalled()
+    expect(
+      mockTransactionState.readEntry('systemSettings', SYSTEM_SETTINGS_ID)?.committed
+    ).toMatchObject({
+      promptFontSize: 18
     })
   })
 })

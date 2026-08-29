@@ -1,5 +1,5 @@
 import { produce } from 'immer'
-import type { PersistenceChange } from '../Persistence/PersistenceTypes'
+import type { PersistenceWrite } from '../Persistence/PersistenceTypes'
 import type { FilePersistenceStagedChange } from '../Persistence/FilePersistenceHelpers'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
@@ -349,7 +349,7 @@ const stageAtomicDataOperations = async (
             : null
     }
 
-    const change: PersistenceChange<any, any> =
+    const change: PersistenceWrite<any, any> =
       operation.type === 'delete'
         ? { type: 'remove', persistenceFields }
         : { type: 'upsert', persistenceFields, data: nextData }
@@ -547,17 +547,30 @@ const mapStageConflictToConflictOutcome = <THandles extends AtomicDataTransactio
   }
 }
 
+/** Queue behavior selected for one atomic data transaction. */
+export type AtomicDataTransactionMode = 'queued' | 'immediate'
+
+/** Optional execution mode for callers already running inside the global mutation queue. */
+export type AtomicDataTransactionOptions = {
+  mode?: AtomicDataTransactionMode
+}
+
 export const runAtomicDataTransaction = async <THandles extends AtomicDataTransactionHandles>(
-  buildTransaction: (tx: AtomicDataBuilder) => THandles
+  buildTransaction: (tx: AtomicDataBuilder) => THandles,
+  options: AtomicDataTransactionOptions = {}
 ): Promise<AtomicDataTransactionOutcome<THandles>> => {
   const { tx, operations } = createAtomicDataBuilder()
   const handles: THandles = buildTransaction(tx)
   assertBuilderResultShape(handles)
 
-  // Side effect: serialize all main-process mutation transactions through one queue.
-  const outcome = await enqueueGlobalMutation(async () => {
-    return await runAtomicDataTransactionImmediately(operations)
-  })
+  /** Immediate or queued staging and commit result. */
+  const outcome =
+    options.mode === 'immediate'
+      ? await runAtomicDataTransactionImmediately(operations)
+      : await enqueueGlobalMutation(async () => {
+          // Side effect: serialize ordinary main-process transactions through one queue.
+          return await runAtomicDataTransactionImmediately(operations)
+        })
 
   if (outcome.status === 'conflict') {
     return mapStageConflictToConflictOutcome(handles, outcome.conflict)

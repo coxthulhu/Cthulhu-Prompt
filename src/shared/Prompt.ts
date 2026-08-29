@@ -10,9 +10,7 @@ import type {
   DeleteMarkdownContentPayload,
   DeleteMarkdownContentResponsePayload,
   MarkdownContentRevisionPayload,
-  MarkdownContentRevisionResponsePayload,
-  MoveMarkdownContentPayload,
-  MoveMarkdownContentResponsePayload
+  MarkdownContentRevisionResponsePayload
 } from './MarkdownContent'
 
 export enum PromptStatus {
@@ -116,10 +114,6 @@ export type CreatePromptResponsePayload = CreateMarkdownContentResponsePayload<P
 export type DeletePromptPayload = DeleteMarkdownContentPayload<PromptPersisted>
 
 export type DeletePromptResponsePayload = DeleteMarkdownContentResponsePayload<PromptPersisted>
-
-export type MovePromptPayload = MoveMarkdownContentPayload
-
-export type MovePromptResponsePayload = MoveMarkdownContentResponsePayload<PromptPersisted>
 
 /** Exact category-order placement used when a prompt enters the ordered tree. */
 export type PromptCategoryOrderPlacement = {

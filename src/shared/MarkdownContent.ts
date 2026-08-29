@@ -5,11 +5,7 @@ import {
   type PromptFolder,
   type PromptFolderContentKind
 } from './PromptFolder'
-import type {
-  RevisionEnvelope,
-  RevisionPayloadEntity,
-  RevisionPayloadReference
-} from './Revision'
+import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type MarkdownContentPersisted = {
   id: string
@@ -96,17 +92,4 @@ export type DeleteMarkdownContentResponsePayload<
 > = {
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
   content?: RevisionEnvelope<TContent>
-}
-
-export type MoveMarkdownContentPayload = {
-  sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
-  destinationPromptFolder: RevisionPayloadEntity<PromptFolder>
-  content: RevisionPayloadReference
-  categoryId: string | null
-  previousEntryId: string | null
-}
-
-export type MoveMarkdownContentResponsePayload<TContent extends MarkdownContentPersisted> = {
-  promptFolders: Array<RevisionEnvelope<PromptFolder>>
-  content: RevisionEnvelope<TContent>
 }
