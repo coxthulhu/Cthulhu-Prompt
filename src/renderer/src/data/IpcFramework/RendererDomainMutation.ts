@@ -4,6 +4,7 @@ import {
   isDomainMutationConflict,
   type DomainChange,
   type DomainEntityType,
+  type DomainExpectedTargetSelector,
   type DomainMutationRequest,
   type DomainMutationResponsePayload,
   type DomainPlanner,
@@ -46,6 +47,8 @@ type RendererClientStateCollection = {
 type RendererDomainMutationDefinition<TCommand> = {
   command: TCommand
   plan: DomainPlanner<TCommand>
+  /** Optional registration policy narrowing which planned targets require expectations. */
+  selectExpectedTargets?: DomainExpectedTargetSelector
 }
 
 /** Grouped IPC routing inputs for an immediate renderer mutation. */
@@ -198,9 +201,15 @@ const getRendererRevisionCollection = (entityType: DomainEntityType) => {
 
 /** Captures authoritative revision expectations for renderer-computed domain targets. */
 const buildRendererDomainExpectations = (
-  changes: readonly DomainChange[]
+  changes: readonly DomainChange[],
+  selectExpectedTargets?: DomainExpectedTargetSelector
 ): DomainRevisionExpectation[] =>
-  changes.map((change) => {
+  (selectExpectedTargets?.(changes) ?? changes).map((target) => {
+    /** Planned operation selected for one expected entity target. */
+    const change = changes.find(
+      (candidate) =>
+        candidate.entityType === target.entityType && candidate.id === target.id
+    )!
     /** Renderer revision collection for the planned target. */
     const collection = getRendererRevisionCollection(change.entityType)
     return collection.has(change.id)
@@ -285,7 +294,10 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
     },
     persistMutations: async ({ invoke, transaction }) => {
       /** Latest authoritative expectations captured after earlier queued mutations settle. */
-      const expectations = buildRendererDomainExpectations(plan)
+      const expectations = buildRendererDomainExpectations(
+        plan,
+        options.mutation.selectExpectedTargets
+      )
       /** Generic domain IPC response for success or authoritative conflict. */
       const result = await invoke<{
         payload: DomainMutationRequest<TCommand>

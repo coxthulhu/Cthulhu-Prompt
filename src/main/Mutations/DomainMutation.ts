@@ -8,6 +8,7 @@ import {
   type DomainCommandParser,
   type DomainEntityMap,
   type DomainEntityType,
+  type DomainExpectedTargetSelector,
   type DomainMutationRequest,
   type DomainMutationResponsePayload,
   type DomainPlanner,
@@ -91,6 +92,8 @@ type MainDomainMutationIpc = {
 type MainDomainMutationDefinition<TCommand> = {
   parseCommand: DomainCommandParser<TCommand>
   plan: DomainPlanner<TCommand>
+  /** Optional registration policy narrowing which planned targets require expectations. */
+  selectExpectedTargets?: DomainExpectedTargetSelector
 }
 
 /** Inputs used to register one generic main-process domain mutation handler. */
@@ -365,20 +368,22 @@ const createDomainConflictResponse = (
 
 /** Runs a validated command inside the main global queue and immediate atomic transaction. */
 const runMainDomainMutation = async <TCommand>(
-  planner: DomainPlanner<TCommand>,
+  mutation: MainDomainMutationDefinition<TCommand>,
   request: DomainMutationRequest<TCommand>
 ): Promise<IpcMutationPayloadResult<DomainMutationResponsePayload>> =>
   await enqueueGlobalMutation(async () => {
     /** Main-computed shared mutation plan based on latest committed state. */
-    const plan = planner(mainDomainState, request.command)
+    const plan = mutation.plan(mainDomainState, request.command)
     if (isDomainMutationConflict(plan)) {
       return createDomainConflictResponse(plan.targets)
     }
     assertValidDomainChanges(plan)
     /** Correct target set derived exclusively from main-computed domain changes. */
     const targets: DomainTarget[] = plan.map(({ entityType, id }) => ({ entityType, id }))
+    /** Registration-selected targets that require renderer concurrency expectations. */
+    const expectedTargets = mutation.selectExpectedTargets?.(plan) ?? targets
     if (
-      !hasMatchingDomainTargetSet(request.expectations, targets) ||
+      !hasMatchingDomainTargetSet(request.expectations, expectedTargets) ||
       !hasMatchingDomainRevisions(request.expectations)
     ) {
       return createDomainConflictResponse(targets)
@@ -404,7 +409,7 @@ export const handleMainDomainMutation = <TCommand>(
   ipcMain.handle(options.ipc.channel, async (_, request: unknown) => {
     return await runMutationIpcRequest(request, parseRequest, async (validated) => {
       try {
-        return await runMainDomainMutation(options.mutation.plan, validated.payload)
+        return await runMainDomainMutation(options.mutation, validated.payload)
       } catch (error) {
         return {
           success: false,

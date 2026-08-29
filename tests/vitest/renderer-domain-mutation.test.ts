@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
-import type { DomainPlanner } from '@shared/DomainChanges'
+import type {
+  DomainExpectedTargetSelector,
+  DomainPlanner
+} from '@shared/DomainChanges'
 
 /** Stable category and local-state ID used by executable renderer framework tests. */
 const CATEGORY_ID = 'renderer-domain-framework'
@@ -38,9 +41,12 @@ const createSuccessResponse = (revision: number, displayName: string) => ({
 })
 
 /** Runs one category mutation with a renderer-only edited-state change. */
-const runCategoryDomainMutation = async (displayName: string): Promise<void> =>
+const runCategoryDomainMutation = async (
+  displayName: string,
+  selectExpectedTargets?: DomainExpectedTargetSelector
+): Promise<void> =>
   await runImmediateRendererDomainMutation({
-    mutation: { command: { displayName }, plan: planRenameCategory },
+    mutation: { command: { displayName }, plan: planRenameCategory, selectExpectedTargets },
     ipc: { channel: 'test-renderer-domain' },
     renderer: {
       mutate: ({ collections }) => {
@@ -151,5 +157,23 @@ describe('renderer domain mutation framework', () => {
 
     expect(requests.map((request) => request.payload.expectations[0]!.revision)).toEqual([1, 2])
     expect(categoryCollection.get(CATEGORY_ID)?.displayName).toBe('Second')
+  })
+
+  it('uses the registration selector to omit unchecked targets', async () => {
+    /** IPC invocation used to inspect the registration-selected expectation set. */
+    const invoke = vi.fn().mockResolvedValue(createSuccessResponse(2, 'Unchecked'))
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    await runCategoryDomainMutation('Unchecked', () => [])
+
+    expect(invoke).toHaveBeenCalledWith(
+      'test-renderer-domain',
+      expect.objectContaining({
+        payload: expect.objectContaining({ expectations: [] })
+      })
+    )
   })
 })

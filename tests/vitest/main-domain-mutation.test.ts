@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   DomainCommandParser,
+  DomainExpectedTargetSelector,
   DomainPlanner
 } from '@shared/DomainChanges'
 
@@ -154,12 +155,16 @@ const parseTestCommand: DomainCommandParser<TestCommand> = (value) => {
 }
 
 /** Registers a handler and returns the Electron callback captured by the spy. */
-const registerHandler = (planner: DomainPlanner<TestCommand>) => {
+const registerHandler = (
+  planner: DomainPlanner<TestCommand>,
+  selectExpectedTargets?: DomainExpectedTargetSelector
+) => {
   handleMainDomainMutation({
     ipc: { channel: 'test-domain-mutation' },
     mutation: {
       parseCommand: parseTestCommand,
-      plan: planner
+      plan: planner,
+      selectExpectedTargets
     }
   })
   return ipcHandle.mock.calls[0]![1] as (
@@ -437,5 +442,79 @@ describe('main domain mutation framework', () => {
     expect(result.payload.snapshots).toEqual([
       { entityType: 'promptFolder', id: 'root', revision: 4, data: promptFolder }
     ])
+  })
+
+  it('uses the registration selector for the required expectation target set', async () => {
+    mockMainData.entries.category.set('unchecked-category', {
+      revision: 7,
+      committed: {
+        id: 'unchecked-category',
+        displayName: 'Unchecked',
+        description: null
+      },
+      persistenceFields: {}
+    })
+    /** Planner containing one revision-checked folder update and one unchecked child deletion. */
+    const planner: DomainPlanner<TestCommand> = (_state, command) => [
+      {
+        type: 'update',
+        entityType: 'promptFolder',
+        id: command.folderId,
+        recipe: (draft) => {
+          draft.displayName = 'Changed'
+        }
+      },
+      {
+        type: 'delete',
+        entityType: 'category',
+        id: 'unchecked-category'
+      }
+    ]
+    /** Target persistence writes required by both planned atomic operations. */
+    planDomainPersistenceChanges.mockReturnValue([
+      {
+        type: 'upsert',
+        entityType: 'promptFolder',
+        id: 'root',
+        data: promptFolder,
+        persistenceFields: {}
+      },
+      {
+        type: 'remove',
+        entityType: 'category',
+        id: 'unchecked-category',
+        persistenceFields: {}
+      }
+    ])
+    /** Registration selector retaining only workspace-like root ownership checks. */
+    const selectExpectedTargets: DomainExpectedTargetSelector = (changes) =>
+      changes.filter((change) => change.entityType === 'promptFolder')
+    /** Successful request omitting the category's current revision. */
+    const result = await registerHandler(planner, selectExpectedTargets)(null, {
+      requestId: 'request',
+      clientId: 'client',
+      payload: {
+        command: { folderId: 'root' },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: 'root',
+            expected: 'revision',
+            revision: 4
+          }
+        ]
+      }
+    })
+
+    expect(result.success).toBe(true)
+    expect(atomicOperations.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'root', expectedRevision: 4 })
+    )
+    expect(atomicOperations.delete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'unchecked-category', expectedRevision: undefined })
+    )
+    expect(
+      result.payload.snapshots.map((snapshot) => `${snapshot.entityType}:${snapshot.id}`)
+    ).toEqual(['promptFolder:root', 'category:unchecked-category'])
   })
 })
