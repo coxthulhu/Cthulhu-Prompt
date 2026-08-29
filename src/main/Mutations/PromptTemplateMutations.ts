@@ -7,7 +7,6 @@ import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentU
 import {
   parseCreatePromptTemplateRequest,
   parseDeletePromptTemplateRequest,
-  parseMovePromptTemplateDomainMutationRequest,
   parseUpdatePromptTemplateRevisionRequest
 } from '../IpcFramework/IpcValidation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
@@ -25,8 +24,7 @@ export const setupPromptTemplateMutationHandlers = (): void => {
     parsers: {
       create: parseCreatePromptTemplateRequest,
       update: parseUpdatePromptTemplateRevisionRequest,
-      delete: parseDeletePromptTemplateRequest,
-      move: parseMovePromptTemplateDomainMutationRequest
+      delete: parseDeletePromptTemplateRequest
     },
     defaultFallbackTitle: DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE,
     getContent: (templateId) => data.promptTemplate.committedStore.getEntry(templateId),

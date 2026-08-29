@@ -133,7 +133,6 @@ describe('prompt mutations', () => {
     expect(invoke).toHaveBeenCalledWith('move-prompt', {
       payload: {
         command: {
-          kind: 'prompt',
           sourcePromptFolderId: SOURCE_FOLDER_ID,
           destinationPromptFolderId: DESTINATION_FOLDER_ID,
           contentId: PROMPT_ID,

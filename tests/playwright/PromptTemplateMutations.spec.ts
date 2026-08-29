@@ -157,7 +157,6 @@ describe('Prompt template mutations', () => {
 
     const moveResult = await invoke('move-prompt-template', {
       command: {
-        kind: 'template',
         sourcePromptFolderId: SOURCE_FOLDER_ID,
         destinationPromptFolderId: DESTINATION_FOLDER_ID,
         contentId: updateResult.payload.content.id,

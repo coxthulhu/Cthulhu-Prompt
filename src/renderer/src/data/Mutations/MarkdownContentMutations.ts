@@ -1,5 +1,8 @@
 import type { Transaction } from '@tanstack/svelte-db'
-import { planMoveMarkdownContentDomainMutation } from '@shared/DomainMutations'
+import {
+  planPromptMove,
+  planPromptTemplateMove
+} from '@shared/MarkdownContentDomainMutations'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import {
   getActiveMarkdownContentIds,
@@ -76,6 +79,8 @@ export const createMarkdownContentRendererMutations = <
 >(
   config: MarkdownContentRendererMutationConfig<TPersisted, TFull>
 ) => {
+  /** Move planner selected by the renderer channel's configured markdown-content kind. */
+  const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
   /** Reads the latest content record represented by a merged paced transaction. */
   const readLatestFromTransaction = (
     transaction: Transaction<any>,
@@ -265,7 +270,6 @@ export const createMarkdownContentRendererMutations = <
     if (!content) throw new Error(`${config.label} data not loaded`)
     /** Shared command used to compute matching renderer and main-process plans. */
     const command = {
-      kind: config.kind,
       sourcePromptFolderId,
       destinationPromptFolderId,
       contentId,
@@ -274,7 +278,7 @@ export const createMarkdownContentRendererMutations = <
     }
 
     await runImmediateRendererDomainMutation({
-      mutation: { command, plan: planMoveMarkdownContentDomainMutation },
+      mutation: { command, plan: movePlanner },
       ipc: { channel: config.channels.move },
       renderer: {
         mutate: ({ collections }) => config.markMoveClientStateEdited(collections, contentId),

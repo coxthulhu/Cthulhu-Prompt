@@ -82,6 +82,9 @@ export type DomainPlanner<TCommand> = (
   command: TCommand
 ) => DomainMutationPlan
 
+/** Runtime parser for one mutation-specific command carried by a domain request. */
+export type DomainCommandParser<TCommand> = (value: unknown) => TCommand | null
+
 /** Expected authoritative state for one renderer-computed mutation target. */
 export type DomainRevisionExpectation =
   | {

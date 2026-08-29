@@ -6,36 +6,54 @@ import type {
   DomainTarget
 } from './DomainChanges'
 import {
-  deleteCategoryOrderGroup,
-  getCategoryOrderCategoryIds,
-  removeCategoryOrderEntry,
-  type CategoryOrderEntryRef,
-  type PromptFolder,
-  type PromptFolderContentKind
-} from './PromptFolder'
-import { getActiveMarkdownContentIds, placeMarkdownContentInCategoryOrder } from './MarkdownContent'
+  getActiveMarkdownContentIds,
+  placeMarkdownContentInCategoryOrder
+} from './MarkdownContent'
 import { promptEntryRef, promptTemplateEntryRef } from './OrderContainer'
 import { PromptStatus } from './Prompt'
+import {
+  removeCategoryOrderEntry,
+  type CategoryOrderEntryRef,
+  type PromptFolderContentKind
+} from './PromptFolder'
 import {
   DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE,
   resolvePromptTitleUpdateForPromptIds
 } from './promptFallbackTitle'
 
-/** Renderer-authored command for deleting one root-owned category. */
-export type DeleteCategoryDomainCommand = {
-  categoryId: string
-  promptFolderId: string
-  modifiedAt: string
-}
-
-/** Command for moving one prompt or template to an exact category-order position. */
+/** Channel-scoped command for moving markdown content to an exact category-order position. */
 export type MoveMarkdownContentDomainCommand = {
-  kind: PromptFolderContentKind
   sourcePromptFolderId: string
   destinationPromptFolderId: string
   contentId: string
   categoryId: string | null
   previousEntryId: string | null
+}
+
+/** Strict runtime parser for prompt or template movement commands. */
+export const parseMoveMarkdownContentDomainCommand = (
+  value: unknown
+): MoveMarkdownContentDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 5 ||
+    typeof record.sourcePromptFolderId !== 'string' ||
+    typeof record.destinationPromptFolderId !== 'string' ||
+    typeof record.contentId !== 'string' ||
+    (record.categoryId !== null && typeof record.categoryId !== 'string') ||
+    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
+  ) {
+    return null
+  }
+  return {
+    sourcePromptFolderId: record.sourcePromptFolderId,
+    destinationPromptFolderId: record.destinationPromptFolderId,
+    contentId: record.contentId,
+    categoryId: record.categoryId,
+    previousEntryId: record.previousEntryId
+  }
 }
 
 /** Adds a target once while preserving the caller's meaningful order. */
@@ -53,102 +71,7 @@ const createConflict = (reason: string, targets: DomainTarget[]): DomainMutation
   targets
 })
 
-/** Returns every domain target affected by deleting one category. */
-const collectCategoryDeletionTargets = (
-  state: DomainState,
-  categoryId: string,
-  owningFolder: PromptFolder | undefined,
-  fallbackFolderId: string
-): DomainTarget[] => {
-  /** Correct authoritative target set for the deletion attempt. */
-  const targets: DomainTarget[] = []
-  addUniqueTarget(targets, {
-    entityType: 'promptFolder',
-    id: owningFolder?.id ?? fallbackFolderId
-  })
-  addUniqueTarget(targets, { entityType: 'category', id: categoryId })
-  for (const prompt of state.getAll('prompt')) {
-    if (prompt.category === categoryId) {
-      addUniqueTarget(targets, { entityType: 'prompt', id: prompt.id })
-    }
-  }
-  for (const promptTemplate of state.getAll('promptTemplate')) {
-    if (promptTemplate.category === categoryId) {
-      addUniqueTarget(targets, { entityType: 'promptTemplate', id: promptTemplate.id })
-    }
-  }
-  return targets
-}
-
-/** Plans category deletion and reference cleanup against the supplied domain graph. */
-export const planDeleteCategoryDomainMutation: DomainPlanner<
-  DeleteCategoryDomainCommand
-> = (state, command) => {
-  /** Category selected by the renderer-authored command. */
-  const category = state.get('category', command.categoryId)
-  /** Authoritative root currently owning the category group. */
-  const owningFolder = state
-    .getAll('promptFolder')
-    .find((folder) =>
-      getCategoryOrderCategoryIds(folder.categoryOrder).includes(command.categoryId)
-    )
-  /** Correct target set used by successful planning and invariant conflicts. */
-  const targets = collectCategoryDeletionTargets(
-    state,
-    command.categoryId,
-    owningFolder,
-    command.promptFolderId
-  )
-
-  if (!category || !owningFolder || owningFolder.id !== command.promptFolderId) {
-    return createConflict('Category ownership conflict', targets)
-  }
-
-  /** Shared domain changes for ownership, deletion, and reference cleanup. */
-  const changes: DomainChange[] = [
-    {
-      type: 'update',
-      entityType: 'promptFolder',
-      id: owningFolder.id,
-      recipe: (draft) => {
-        draft.categoryOrder = deleteCategoryOrderGroup(
-          draft.categoryOrder,
-          command.categoryId
-        )
-      }
-    },
-    { type: 'delete', entityType: 'category', id: command.categoryId }
-  ]
-
-  for (const target of targets) {
-    if (target.entityType === 'prompt') {
-      changes.push({
-        type: 'update',
-        entityType: 'prompt',
-        id: target.id,
-        recipe: (draft) => {
-          delete draft.category
-          draft.modifiedAt = command.modifiedAt
-        }
-      })
-    }
-    if (target.entityType === 'promptTemplate') {
-      changes.push({
-        type: 'update',
-        entityType: 'promptTemplate',
-        id: target.id,
-        recipe: (draft) => {
-          delete draft.category
-          draft.modifiedAt = command.modifiedAt
-        }
-      })
-    }
-  }
-
-  return changes
-}
-
-/** Returns the ordered reference corresponding to a prompt or template command. */
+/** Returns the ordered reference corresponding to a prompt or template channel. */
 const createContentEntryRef = (
   kind: PromptFolderContentKind,
   contentId: string
@@ -193,23 +116,23 @@ const collectMoveTargets = (
   return targets
 }
 
-/** Plans prompt or template movement against renderer or main authoritative state. */
-export const planMoveMarkdownContentDomainMutation: DomainPlanner<
-  MoveMarkdownContentDomainCommand
-> = (state, command) => {
+/** Creates a channel-specific movement planner without placing kind on the command wire shape. */
+const createMovePlanner = (
+  kind: PromptFolderContentKind
+): DomainPlanner<MoveMarkdownContentDomainCommand> => (state, command) => {
   /** Requested source folder from the movement command. */
   const requestedSource = state.get('promptFolder', command.sourcePromptFolderId)
   /** Requested destination folder from the movement command. */
   const destination = state.get('promptFolder', command.destinationPromptFolderId)
-  /** Canonical content projection selected for movement. */
-  const content = getMarkdownContent(state, command.kind, command.contentId)
+  /** Canonical content projection selected by the registered movement channel. */
+  const content = getMarkdownContent(state, kind, command.contentId)
   /** Actual root containing the requested active content reference. */
   const actualSource = state
     .getAll('promptFolder')
     .find(
       (folder) =>
-        folder.kind === command.kind &&
-        getActiveMarkdownContentIds(folder, command.kind).includes(command.contentId)
+        folder.kind === kind &&
+        getActiveMarkdownContentIds(folder, kind).includes(command.contentId)
     )
   /** Correct source used for invariant-conflict reconciliation. */
   const conflictSourceId = actualSource?.id ?? requestedSource?.id ?? command.sourcePromptFolderId
@@ -218,17 +141,16 @@ export const planMoveMarkdownContentDomainMutation: DomainPlanner<
     conflictSourceId,
     command.destinationPromptFolderId,
     command.contentId,
-    command.kind
+    kind
   )
-  /** Whether a prompt is active and therefore eligible for movement. */
-  const canMoveContent =
-    command.kind === 'template' || content?.status !== PromptStatus.Completed
+  /** Whether channel-selected content is active and therefore eligible for movement. */
+  const canMoveContent = kind === 'template' || content?.status !== PromptStatus.Completed
 
   if (
     !requestedSource ||
     !destination ||
-    requestedSource.kind !== command.kind ||
-    destination.kind !== command.kind ||
+    requestedSource.kind !== kind ||
+    destination.kind !== kind ||
     !content ||
     !actualSource ||
     actualSource.id !== requestedSource.id ||
@@ -238,9 +160,9 @@ export const planMoveMarkdownContentDomainMutation: DomainPlanner<
   }
 
   /** Entry reference transferred between category groups or root folders. */
-  const entry = createContentEntryRef(command.kind, command.contentId)
+  const entry = createContentEntryRef(kind, command.contentId)
   /** Destination IDs used to resolve blank-title fallback collisions. */
-  const destinationContentIds = getActiveMarkdownContentIds(destination, command.kind).filter(
+  const destinationContentIds = getActiveMarkdownContentIds(destination, kind).filter(
     (contentId) => contentId !== command.contentId
   )
   /** Cross-root content projection with a destination-safe fallback title. */
@@ -250,15 +172,13 @@ export const planMoveMarkdownContentDomainMutation: DomainPlanner<
           ...content,
           fallbackTitle: resolvePromptTitleUpdateForPromptIds({
             promptIds: destinationContentIds,
-            lookupPrompt: (contentId) => getMarkdownContent(state, command.kind, contentId),
+            lookupPrompt: (contentId) => getMarkdownContent(state, kind, contentId),
             promptId: command.contentId,
             currentTitle: content.title,
             currentFallbackTitle: content.fallbackTitle,
             nextTitle: content.title,
             defaultFallbackTitle:
-              command.kind === 'template'
-                ? DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE
-                : undefined
+              kind === 'template' ? DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE : undefined
           }).fallbackTitle
         }
       : content
@@ -319,7 +239,7 @@ export const planMoveMarkdownContentDomainMutation: DomainPlanner<
 
     changes.push({
       type: 'update',
-      entityType: command.kind === 'prompt' ? 'prompt' : 'promptTemplate',
+      entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
       id: command.contentId,
       recipe: (draft) => {
         if (placement.content.category === undefined) delete draft.category
@@ -333,3 +253,9 @@ export const planMoveMarkdownContentDomainMutation: DomainPlanner<
     return createConflict('Markdown content placement conflict', targets)
   }
 }
+
+/** Plans prompt movement for the prompt-specific move channel. */
+export const planPromptMove = createMovePlanner('prompt')
+
+/** Plans prompt-template movement for the prompt-template-specific move channel. */
+export const planPromptTemplateMove = createMovePlanner('template')

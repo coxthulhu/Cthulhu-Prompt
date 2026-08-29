@@ -9,7 +9,7 @@ import type {
 } from '@shared/Category'
 import { normalizeCategoryDisplayName } from '@shared/Category'
 import { compactGuid } from '@shared/compactGuid'
-import { planDeleteCategoryDomainMutation } from '@shared/DomainMutations'
+import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import type { Transaction } from '@tanstack/svelte-db'

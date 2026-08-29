@@ -5,10 +5,11 @@ import type {
   DomainPlannerEntityMap,
   DomainState
 } from '@shared/DomainChanges'
+import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
 import {
-  planDeleteCategoryDomainMutation,
-  planMoveMarkdownContentDomainMutation
-} from '@shared/DomainMutations'
+  planPromptMove,
+  planPromptTemplateMove
+} from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 
@@ -129,7 +130,7 @@ describe('shared domain mutation planners', () => {
     /** Valid destination for the attempted movement. */
     const destination = createRootFolder('destination', 'prompt', 'destination-category')
     /** Planner conflict produced from authoritative ownership. */
-    const conflict = planMoveMarkdownContentDomainMutation(
+    const conflict = planPromptMove(
       createDomainState({
         promptFolder: [actualSource, claimedSource, destination],
         prompt: [
@@ -143,7 +144,6 @@ describe('shared domain mutation planners', () => {
         ]
       }),
       {
-        kind: 'prompt',
         sourcePromptFolderId: 'claimed-source',
         destinationPromptFolderId: 'destination',
         contentId: 'prompt',
@@ -170,7 +170,7 @@ describe('shared domain mutation planners', () => {
     const destination = createRootFolder('destination', 'template', null)
     destination.categoryOrder.categories[0]!.entries.push({ kind: 'template', id: 'existing' })
     /** Shared template movement plan. */
-    const plan = planMoveMarkdownContentDomainMutation(
+    const plan = planPromptTemplateMove(
       createDomainState({
         promptFolder: [source, destination],
         promptTemplate: [
@@ -189,7 +189,6 @@ describe('shared domain mutation planners', () => {
         ]
       }),
       {
-        kind: 'template',
         sourcePromptFolderId: 'source',
         destinationPromptFolderId: 'destination',
         contentId: 'moving',

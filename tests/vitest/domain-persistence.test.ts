@@ -3,10 +3,8 @@ import type {
   DomainPlannerEntityMap,
   DomainState
 } from '@shared/DomainChanges'
-import {
-  planDeleteCategoryDomainMutation,
-  planMoveMarkdownContentDomainMutation
-} from '@shared/DomainMutations'
+import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
+import { planPromptMove } from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
 
@@ -156,8 +154,7 @@ describe('domain persistence planning', () => {
     }
 
     /** Shared movement changes projected into main persistence writes. */
-    const plan = planMoveMarkdownContentDomainMutation(createMainLikeDomainState(), {
-      kind: 'prompt',
+    const plan = planPromptMove(createMainLikeDomainState(), {
       sourcePromptFolderId: source.id,
       destinationPromptFolderId: destination.id,
       contentId: 'moving',

@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
-import type { IpcRequestWithPayload } from '@shared/IpcRequest'
-import type { DomainMutationRequest } from '@shared/DomainChanges'
 import {
-  planMoveMarkdownContentDomainMutation,
-  type MoveMarkdownContentDomainCommand
-} from '@shared/DomainMutations'
+  parseMoveMarkdownContentDomainCommand,
+  planPromptMove,
+  planPromptTemplateMove
+} from '@shared/MarkdownContentDomainMutations'
+import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import {
   getActiveMarkdownContentIds,
   getMarkdownContentIds,
@@ -73,7 +73,6 @@ export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersis
     create: MutationParser<CreateMarkdownContentPayload<TContent>>
     update: MutationParser<MarkdownContentRevisionPayload<TContent>>
     delete: MutationParser<DeleteMarkdownContentPayload<TContent>>
-    move: MutationParser<DomainMutationRequest<MoveMarkdownContentDomainCommand>>
   }
   defaultFallbackTitle?: string
   getContent: (contentId: string) => CommittedEntry<TContent, MarkdownPersistenceFields> | null
@@ -120,6 +119,8 @@ export const setupMarkdownContentMutationHandlers = <
 >(
   config: MarkdownContentMutationConfig<TContent>
 ): void => {
+  /** Move planner selected by the IPC channel's configured markdown-content kind. */
+  const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
   type FilenameTarget = MarkdownFilenameTarget<TContent, MarkdownPersistenceFields>
 
   /** Returns unique authoritative folder snapshots for one mutation response. */
@@ -482,10 +483,10 @@ export const setupMarkdownContentMutationHandlers = <
   })
 
   handleMainDomainMutation({
-    ipc: {
-      channel: config.channels.move,
-      parseRequest: config.parsers.move
-    },
-    mutation: planMoveMarkdownContentDomainMutation
+    ipc: { channel: config.channels.move },
+    mutation: {
+      parseCommand: parseMoveMarkdownContentDomainCommand,
+      plan: movePlanner
+    }
   })
 }

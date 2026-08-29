@@ -6,7 +6,10 @@ import {
   type CategoryRevisionResponsePayload,
   type CreateCategoryResponsePayload
 } from '@shared/Category'
-import { planDeleteCategoryDomainMutation } from '@shared/DomainMutations'
+import {
+  parseDeleteCategoryDomainCommand,
+  planDeleteCategoryDomainMutation
+} from '@shared/CategoryDomainMutations'
 import {
   getCategoryOrderCategoryIds,
   insertCategoryOrderGroup,
@@ -23,7 +26,6 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import {
   parseCreateCategoryRequest,
-  parseDeleteCategoryDomainMutationRequest,
   parseMoveCategoryRequest,
   parseRenameCategoryRequest,
   parseSetCategoryDescriptionRequest
@@ -110,11 +112,11 @@ const createCategoryFilenameUpdateHandles = (
 /** Registers create, rename, description, and deletion category mutation channels. */
 export const setupCategoryMutationHandlers = (): void => {
   handleMainDomainMutation({
-    ipc: {
-      channel: 'delete-category',
-      parseRequest: parseDeleteCategoryDomainMutationRequest
-    },
-    mutation: planDeleteCategoryDomainMutation
+    ipc: { channel: 'delete-category' },
+    mutation: {
+      parseCommand: parseDeleteCategoryDomainCommand,
+      plan: planDeleteCategoryDomainMutation
+    }
   })
 
   ipcMain.handle('create-category', async (_, request: unknown) => {

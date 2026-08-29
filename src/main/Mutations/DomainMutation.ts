@@ -5,6 +5,7 @@ import {
   isDomainMutationConflict,
   type DomainChange,
   type DomainChangeFor,
+  type DomainCommandParser,
   type DomainEntityMap,
   type DomainEntityType,
   type DomainMutationRequest,
@@ -34,7 +35,16 @@ import {
   buildWorkspaceSnapshot
 } from '../Data/DataSnapshotHelpers'
 import { enqueueGlobalMutation } from '../Data/GlobalMutationQueue'
-import type { ParsedRequest } from '../IpcFramework/IpcValidation'
+import {
+  createRequestParser,
+  parseArray,
+  parseNumber,
+  parseObject,
+  parseString,
+  parseWireRequestWithPayload,
+  type ParsedRequest,
+  type Parser
+} from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import {
   planDomainPersistenceChanges
@@ -72,19 +82,68 @@ type DomainAtomicStoreBuilder<TEntityType extends DomainEntityType> = {
   delete: (params: { id: string; expectedRevision?: number }) => DomainAtomicHandle
 }
 
-/** Grouped IPC channel and runtime request parser for a main domain mutation. */
-type MainDomainMutationIpc<TCommand> = {
+/** IPC channel registered for one main domain mutation. */
+type MainDomainMutationIpc = {
   channel: string
-  parseRequest: (
-    request: unknown
-  ) => ParsedRequest<IpcRequestWithPayload<DomainMutationRequest<TCommand>>>
+}
+
+/** Colocated command behavior used by one main domain mutation channel. */
+type MainDomainMutationDefinition<TCommand> = {
+  parseCommand: DomainCommandParser<TCommand>
+  plan: DomainPlanner<TCommand>
 }
 
 /** Inputs used to register one generic main-process domain mutation handler. */
 export type MainDomainMutationOptions<TCommand> = {
-  ipc: MainDomainMutationIpc<TCommand>
-  mutation: DomainPlanner<TCommand>
+  ipc: MainDomainMutationIpc
+  mutation: MainDomainMutationDefinition<TCommand>
 }
+
+/** Complete parsed IPC request contract for one domain mutation command. */
+type MainDomainMutationRequestParser<TCommand> = (
+  request: unknown
+) => ParsedRequest<IpcRequestWithPayload<DomainMutationRequest<TCommand>>>
+
+/** Parses one present or absent revision expectation from a domain mutation request. */
+const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw expectation fields inspected according to their discriminant. */
+  const record = value as Record<string, unknown>
+  /** Runtime-validated domain entity type. */
+  const entityType =
+    record.entityType === 'systemSettings' ||
+    record.entityType === 'workspace' ||
+    record.entityType === 'promptFolder' ||
+    record.entityType === 'category' ||
+    record.entityType === 'prompt' ||
+    record.entityType === 'promptTemplate'
+      ? record.entityType
+      : null
+  /** Runtime-validated target ID. */
+  const id = parseString(record.id)
+  if (!entityType || id === null) return null
+  if (record.expected === 'absent' && Object.keys(record).length === 3) {
+    return { entityType, id, expected: 'absent' }
+  }
+  /** Runtime-validated expected revision for a present target. */
+  const revision = parseNumber(record.revision)
+  return record.expected === 'revision' && revision !== null && Object.keys(record).length === 4
+    ? { entityType, id, expected: 'revision', revision }
+    : null
+}
+
+/** Constructs the complete IPC request parser around one mutation-specific command parser. */
+const createDomainMutationRequestParser = <TCommand>(
+  commandParser: DomainCommandParser<TCommand>
+): MainDomainMutationRequestParser<TCommand> =>
+  createRequestParser(
+    parseWireRequestWithPayload(
+      parseObject<DomainMutationRequest<TCommand>>({
+        command: commandParser,
+        expectations: parseArray(parseDomainRevisionExpectation)
+      })
+    )
+  )
 
 /** Reads one main-process committed entity through the shared domain-state contract. */
 const getMainDomainEntity = <TEntityType extends DomainEntityType>(
@@ -340,10 +399,12 @@ const runMainDomainMutation = async <TCommand>(
 export const handleMainDomainMutation = <TCommand>(
   options: MainDomainMutationOptions<TCommand>
 ): void => {
+  /** Complete request parser constructed from the channel's colocated command parser. */
+  const parseRequest = createDomainMutationRequestParser(options.mutation.parseCommand)
   ipcMain.handle(options.ipc.channel, async (_, request: unknown) => {
-    return await runMutationIpcRequest(request, options.ipc.parseRequest, async (validated) => {
+    return await runMutationIpcRequest(request, parseRequest, async (validated) => {
       try {
-        return await runMainDomainMutation(options.mutation, validated.payload)
+        return await runMainDomainMutation(options.mutation.plan, validated.payload)
       } catch (error) {
         return {
           success: false,

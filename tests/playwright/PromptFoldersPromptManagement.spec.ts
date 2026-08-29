@@ -1576,7 +1576,6 @@ describe('Prompt folder prompt management', () => {
           clientId: window.ipcClientId,
           payload: {
             command: {
-              kind: 'prompt',
               sourcePromptFolderId: sourcePromptFolder.id,
               destinationPromptFolderId: destinationPromptFolder.id,
               contentId: prompt.id,

@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DomainMutationRequest, DomainPlanner } from '@shared/DomainChanges'
-import type { IpcRequestWithPayload } from '@shared/IpcRequest'
+import type {
+  DomainCommandParser,
+  DomainPlanner
+} from '@shared/DomainChanges'
 
 /** Minimal committed entry accepted by mocked snapshot normalizers. */
 type MockSnapshotEntry = { revision: number; committed: { id: string } }
@@ -126,6 +128,7 @@ type TestCommand = { folderId: string }
 type TestHandlerResponse = {
   success: boolean
   conflict?: boolean
+  error?: string
   payload: { snapshots: Array<Record<string, unknown>> }
 }
 
@@ -140,17 +143,24 @@ const promptFolder = {
   settings: { folderDescription: null }
 }
 
+/** Strict runtime parser supplied by the test mutation definition. */
+const parseTestCommand: DomainCommandParser<TestCommand> = (value) => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw test command fields validated as an exact object. */
+  const record = value as Record<string, unknown>
+  return Object.keys(record).length === 1 && typeof record.folderId === 'string'
+    ? { folderId: record.folderId }
+    : null
+}
+
 /** Registers a handler and returns the Electron callback captured by the spy. */
 const registerHandler = (planner: DomainPlanner<TestCommand>) => {
   handleMainDomainMutation({
-    ipc: {
-      channel: 'test-domain-mutation',
-      parseRequest: (request) => ({
-        success: true,
-        value: request as IpcRequestWithPayload<DomainMutationRequest<TestCommand>>
-      })
-    },
-    mutation: planner
+    ipc: { channel: 'test-domain-mutation' },
+    mutation: {
+      parseCommand: parseTestCommand,
+      plan: planner
+    }
   })
   return ipcHandle.mock.calls[0]![1] as (
     _event: unknown,
@@ -199,6 +209,83 @@ describe('main domain mutation framework', () => {
       }
     })
     expect(runAtomicDataTransaction).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed commands through the mutation-specific parser', async () => {
+    /** Planner spy that must not receive an invalid command. */
+    const planner = vi.fn<DomainPlanner<TestCommand>>(() => [])
+    /** Invalid request carrying an extra command property. */
+    const result = await registerHandler(planner)(null, {
+      requestId: 'request',
+      clientId: 'client',
+      payload: {
+        command: { folderId: 'root', extra: true },
+        expectations: []
+      }
+    })
+    expect(result).toMatchObject({ success: false, error: 'Invalid request payload' })
+    expect(planner).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed revision expectations in the generic domain envelope', async () => {
+    /** Planner spy that must not receive invalid generic expectations. */
+    const planner = vi.fn<DomainPlanner<TestCommand>>(() => [])
+    /** Invalid request whose revision expectation omits its revision. */
+    const result = await registerHandler(planner)(null, {
+      requestId: 'request',
+      clientId: 'client',
+      payload: {
+        command: { folderId: 'root' },
+        expectations: [
+          { entityType: 'promptFolder', id: 'root', expected: 'revision' }
+        ]
+      }
+    })
+    expect(result).toMatchObject({ success: false, error: 'Invalid request payload' })
+    expect(planner).not.toHaveBeenCalled()
+  })
+
+  it('rejects extra fields on both generic revision expectation variants', async () => {
+    /** Planner spy that must not receive expectations with legacy fields. */
+    const planner = vi.fn<DomainPlanner<TestCommand>>(() => [])
+    /** Registered handler used to validate both discriminated expectation shapes. */
+    const handler = registerHandler(planner)
+    /** Invalid absent expectation carrying the revision field reserved for present targets. */
+    const absentResult = await handler(null, {
+      requestId: 'absent-request',
+      clientId: 'client',
+      payload: {
+        command: { folderId: 'root' },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: 'root',
+            expected: 'absent',
+            revision: 0
+          }
+        ]
+      }
+    })
+    /** Invalid revision expectation carrying legacy full entity data. */
+    const revisionResult = await handler(null, {
+      requestId: 'revision-request',
+      clientId: 'client',
+      payload: {
+        command: { folderId: 'root' },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: 'root',
+            expected: 'revision',
+            revision: 4,
+            data: { id: 'root' }
+          }
+        ]
+      }
+    })
+    expect(absentResult).toMatchObject({ success: false, error: 'Invalid request payload' })
+    expect(revisionResult).toMatchObject({ success: false, error: 'Invalid request payload' })
+    expect(planner).not.toHaveBeenCalled()
   })
 
   it('returns planner conflict targets with authoritative deleted snapshots', async () => {

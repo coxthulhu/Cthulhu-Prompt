@@ -1,13 +1,5 @@
 import { PromptStatus } from '@shared/Prompt'
 import type {
-  DomainMutationRequest,
-  DomainRevisionExpectation
-} from '@shared/DomainChanges'
-import type {
-  DeleteCategoryDomainCommand,
-  MoveMarkdownContentDomainCommand
-} from '@shared/DomainMutations'
-import type {
   PromptPersisted,
   PromptTemplateReference,
   SetPromptStatusPayload
@@ -58,17 +50,17 @@ import type {
   Workspace
 } from '@shared/Workspace'
 
-type Parser<T> = (value: unknown) => T | null
+export type Parser<T> = (value: unknown) => T | null
 
 export type ParsedRequest<TRequest> =
   | { success: true; value: TRequest }
   | ({ success: false } & IpcRequestContext)
 
-const parseString: Parser<string> = (value) => {
+export const parseString: Parser<string> = (value) => {
   return typeof value === 'string' ? value : null
 }
 
-const parseClientId: Parser<string> = (value) => {
+export const parseClientId: Parser<string> = (value) => {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
@@ -76,7 +68,7 @@ const parseBoolean: Parser<boolean> = (value) => {
   return typeof value === 'boolean' ? value : null
 }
 
-const parseNumber: Parser<number> = (value) => {
+export const parseNumber: Parser<number> = (value) => {
   return typeof value === 'number' ? value : null
 }
 
@@ -92,7 +84,7 @@ const parseNullableString: Parser<string | null> = (value) => {
   return value === null || typeof value === 'string' ? value : null
 }
 
-const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
+export const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
   return (value) => {
     if (!Array.isArray(value)) {
       return null
@@ -114,7 +106,7 @@ const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
   }
 }
 
-const parseObject = <TValue extends object>(shape: {
+export const parseObject = <TValue extends object>(shape: {
   [TKey in keyof TValue]: Parser<TValue[TKey]>
 }): Parser<TValue> => {
   return (value) => {
@@ -173,58 +165,7 @@ const parseRevisionPayloadReference = parseObject<RevisionPayloadReference>({
   expectedRevision: parseNumber
 })
 
-/** Parses one present or absent revision expectation from a domain mutation request. */
-const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw expectation fields inspected according to their discriminant. */
-  const record = value as Record<string, unknown>
-  /** Runtime-validated domain entity type. */
-  const entityType =
-    record.entityType === 'systemSettings' ||
-    record.entityType === 'workspace' ||
-    record.entityType === 'promptFolder' ||
-    record.entityType === 'category' ||
-    record.entityType === 'prompt' ||
-    record.entityType === 'promptTemplate'
-      ? record.entityType
-      : null
-  /** Runtime-validated target ID. */
-  const id = parseString(record.id)
-  if (!entityType || id === null) return null
-  if (
-    record.expected === 'absent' &&
-    Object.keys(record).length === 3
-  ) {
-    return { entityType, id, expected: 'absent' }
-  }
-  /** Runtime-validated expected revision for a present target. */
-  const revision = parseNumber(record.revision)
-  return record.expected === 'revision' && revision !== null && Object.keys(record).length === 4
-    ? { entityType, id, expected: 'revision', revision }
-    : null
-}
-
-/** Runtime parser for renderer-authored category deletion commands. */
-const parseDeleteCategoryDomainCommand = parseObject<DeleteCategoryDomainCommand>({
-  categoryId: parseString,
-  promptFolderId: parseString,
-  modifiedAt: parseString
-})
-
-/** Creates a runtime parser for a prompt- or template-specific movement command. */
-const createMoveMarkdownContentDomainCommandParser = (
-  kind: MoveMarkdownContentDomainCommand['kind']
-): Parser<MoveMarkdownContentDomainCommand> =>
-  parseObject<MoveMarkdownContentDomainCommand>({
-    kind: (value) => (value === kind ? kind : null),
-    sourcePromptFolderId: parseString,
-    destinationPromptFolderId: parseString,
-    contentId: parseString,
-    categoryId: parseNullableString,
-    previousEntryId: parseNullableString
-  })
-
-const parseWireRequestWithPayload = <TPayload>(
+export const parseWireRequestWithPayload = <TPayload>(
   payloadParser: Parser<TPayload>
 ): Parser<IpcRequestWithPayload<TPayload>> => {
   return parseObject({
@@ -233,17 +174,6 @@ const parseWireRequestWithPayload = <TPayload>(
     payload: payloadParser
   })
 }
-
-/** Creates a full IPC request parser around one mutation-specific command parser. */
-const createDomainMutationWireRequestParser = <TCommand>(
-  commandParser: Parser<TCommand>
-): Parser<IpcRequestWithPayload<DomainMutationRequest<TCommand>>> =>
-  parseWireRequestWithPayload(
-    parseObject<DomainMutationRequest<TCommand>>({
-      command: commandParser,
-      expectations: parseArray(parseDomainRevisionExpectation)
-    })
-  )
 
 const extractRequestId = (request: unknown): string => {
   if (typeof request !== 'object' || request === null || Array.isArray(request)) {
@@ -279,7 +209,7 @@ const toParsedRequest = <TRequest>(
   return { success: true, value }
 }
 
-const createRequestParser = <TRequest>(requestParser: Parser<TRequest>) => {
+export const createRequestParser = <TRequest>(requestParser: Parser<TRequest>) => {
   return (request: unknown): ParsedRequest<TRequest> => {
     return toParsedRequest(
       requestParser(request),
@@ -831,11 +761,6 @@ export const parseSetCategoryDescriptionRequest = createRequestParser(
   parseSetCategoryDescriptionWireRequest
 )
 
-/** Validated generic domain request parser for category deletion IPC. */
-export const parseDeleteCategoryDomainMutationRequest = createRequestParser(
-  createDomainMutationWireRequestParser(parseDeleteCategoryDomainCommand)
-)
-
 /** Validated request parser for category reordering IPC. */
 export const parseMoveCategoryRequest = createRequestParser(parseMoveCategoryWireRequest)
 
@@ -844,13 +769,6 @@ export const parseDeletePromptFolderRequest = createRequestParser(
 )
 
 export const parseDeletePromptRequest = createRequestParser(promptContentPayloadParsers.delete)
-
-/** Validated generic domain request parser for prompt movement IPC. */
-export const parseMovePromptDomainMutationRequest = createRequestParser(
-  createDomainMutationWireRequestParser(
-    createMoveMarkdownContentDomainCommandParser('prompt')
-  )
-)
 
 export const parseCreatePromptTemplateRequest = createRequestParser(
   promptTemplateContentPayloadParsers.create
@@ -862,13 +780,6 @@ export const parseUpdatePromptTemplateRevisionRequest = createRequestParser(
 
 export const parseDeletePromptTemplateRequest = createRequestParser(
   promptTemplateContentPayloadParsers.delete
-)
-
-/** Validated generic domain request parser for prompt-template movement IPC. */
-export const parseMovePromptTemplateDomainMutationRequest = createRequestParser(
-  createDomainMutationWireRequestParser(
-    createMoveMarkdownContentDomainCommandParser('template')
-  )
 )
 
 export const parseSetPromptStatusRequest = createRequestParser(parseSetPromptStatusWireRequest)

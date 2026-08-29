@@ -309,7 +309,6 @@ describe('prompt template mutations', () => {
     expect(moveInvoke).toHaveBeenCalledWith('move-prompt-template', {
       payload: {
         command: {
-          kind: 'template',
           sourcePromptFolderId: 'source-folder',
           destinationPromptFolderId: 'destination-folder',
           contentId: 'paced-template',
