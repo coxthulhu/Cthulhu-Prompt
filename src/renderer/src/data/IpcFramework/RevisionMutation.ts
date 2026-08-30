@@ -260,7 +260,7 @@ export const createPacedRevisionUpdateMutationRunner = <
       TOptimisticCollections,
       TPayload
     >
-  ): void => {
+  ): Transaction<any> => {
     const {
       collectionId,
       elementId,
@@ -270,7 +270,7 @@ export const createPacedRevisionUpdateMutationRunner = <
       onSuccess
     } = options
 
-    mutatePacedUpdateTransaction({
+    return mutatePacedUpdateTransaction({
       collectionId,
       elementId,
       debounceMs,

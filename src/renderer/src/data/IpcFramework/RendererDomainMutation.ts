@@ -1,6 +1,7 @@
 import type { Transaction } from '@tanstack/svelte-db'
 import {
   assertValidDomainChanges,
+  buildDomainTargetKey,
   isDomainMutationConflict,
   type DomainChange,
   type DomainEntityType,
@@ -11,7 +12,8 @@ import {
   type DomainPlannerEntityMap,
   type DomainRevisionExpectation,
   type DomainSnapshot,
-  type DomainState
+  type DomainState,
+  type DomainTarget
 } from '@shared/DomainChanges'
 import { createPromptFull, type Prompt, type PromptSummaryData } from '@shared/Prompt'
 import {
@@ -28,7 +30,10 @@ import { promptTemplateCollection } from '../Collections/PromptTemplateCollectio
 import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { runRevisionMutation } from './RevisionCollections'
+import {
+  mutatePacedRevisionUpdateTransaction,
+  runRevisionMutation
+} from './RevisionCollections'
 
 /** Revision mutation options used to expose the existing optimistic helper map. */
 type DomainRevisionMutationOptions = Parameters<
@@ -68,6 +73,39 @@ export type ImmediateRendererDomainMutationOptions<TCommand> = {
   ipc: RendererDomainMutationIpc
   renderer: RendererDomainMutationState
 }
+
+/** Dispatch configuration for one single-target paced domain mutation. */
+type RendererDomainMutationPacing = {
+  /** Authoritative entity that exclusively owns the pending paced transaction. */
+  target: DomainTarget
+  /** Inactivity window restarted after every same-target mutation call. */
+  debounceMs: number
+  /** Optional input validation performed immediately before queueing persistence. */
+  validateBeforeEnqueue?: (transaction: Transaction<any>) => boolean
+}
+
+/** Inputs accepted by the paced renderer domain mutation framework. */
+export type PacedRendererDomainMutationOptions<TCommand> = {
+  mutation: RendererDomainMutationDefinition<TCommand>
+  ipc: RendererDomainMutationIpc
+  renderer: RendererDomainMutationState
+  pacing: RendererDomainMutationPacing
+}
+
+/** Latest replacement command and plan owned by one pending paced transaction. */
+type LatestPacedRendererDomainMutation = {
+  command: unknown
+  plan: DomainChange[]
+  selectExpectedTargets?: DomainExpectedTargetSelector
+  ipcChannel: string
+  clientStateCollections?: RendererClientStateCollection[]
+}
+
+/** Weak transaction metadata used to replace the command persisted by merged edits. */
+const latestPacedRendererDomainMutationByTransaction = new WeakMap<
+  Transaction<any>,
+  LatestPacedRendererDomainMutation
+>()
 
 /** Removes the renderer-only loading discriminator from a prompt projection. */
 const toPromptDomainProjection = (prompt: Prompt): DomainPlannerEntityMap['prompt'] => {
@@ -233,6 +271,21 @@ const buildRendererDomainExpectations = (
         }
   })
 
+/** Enforces the documented single-target replacement contract for paced domain plans. */
+const assertPacedDomainPlanTargetsOnly = (
+  changes: readonly DomainChange[],
+  target: DomainTarget
+): void => {
+  if (
+    changes.length !== 1 ||
+    buildDomainTargetKey(changes[0]!) !== buildDomainTargetKey(target)
+  ) {
+    throw new Error(
+      `Paced domain mutation must modify exactly its declared target ${buildDomainTargetKey(target)}`
+    )
+  }
+}
+
 /** Reconciles one generic authoritative snapshot into renderer revision state. */
 const reconcileRendererDomainSnapshot = (snapshot: DomainSnapshot): void => {
   if ('deleted' in snapshot) {
@@ -325,5 +378,70 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
       for (const snapshot of payload.snapshots) reconcileRendererDomainSnapshot(snapshot)
     },
     conflictMessage: `Domain mutation conflict on ${options.ipc.channel}`
+  })
+}
+
+/**
+ * Applies one optimistic single-entity replacement plan and debounces its latest command.
+ * Paced callers must use set-style commands, declare the plan's only authoritative target,
+ * and keep the planner, IPC channel, renderer configuration, and validation stable while that
+ * target has a pending transaction.
+ */
+export const mutatePacedRendererDomainMutation = <TCommand>(
+  options: PacedRendererDomainMutationOptions<TCommand>
+): void => {
+  /** Shared single-target plan computed against the latest optimistic renderer state. */
+  const plan = options.mutation.plan(rendererDomainState, options.mutation.command)
+  if (isDomainMutationConflict(plan)) throw new Error(plan.reason)
+  assertValidDomainChanges(plan)
+  assertPacedDomainPlanTargetsOnly(plan, options.pacing.target)
+
+  /** Existing paced revision transaction used to merge optimism and serialize persistence. */
+  const transaction = mutatePacedRevisionUpdateTransaction<DomainMutationResponsePayload>({
+    collectionId: getRendererRevisionCollection(options.pacing.target.entityType).id,
+    elementId: options.pacing.target.id,
+    debounceMs: options.pacing.debounceMs,
+    validateBeforeEnqueue: options.pacing.validateBeforeEnqueue,
+    mutateOptimistically: (helpers) => {
+      applyRendererDomainChange(helpers.collections, plan[0]!)
+      options.renderer.mutate?.(helpers)
+    },
+    persistMutations: async ({ invoke, transaction }) => {
+      /** Latest same-target invocation replacing earlier commands in this transaction. */
+      const latestMutation = latestPacedRendererDomainMutationByTransaction.get(transaction)!
+      /** Authoritative expectations captured after earlier globally queued mutations settle. */
+      const expectations = buildRendererDomainExpectations(
+        latestMutation.plan,
+        latestMutation.selectExpectedTargets
+      )
+      /** Generic response produced by persisting only the latest replacement command. */
+      const result = (await invoke<{ payload: DomainMutationRequest<TCommand> }>(
+        latestMutation.ipcChannel,
+        {
+          payload: {
+            command: latestMutation.command as TCommand,
+            expectations
+          }
+        }
+      )) as IpcMutationPayloadResult<DomainMutationResponsePayload>
+      if (result.success) {
+        for (const collection of latestMutation.clientStateCollections ?? []) {
+          collection.utils.acceptMutations(transaction)
+        }
+      }
+      return result
+    },
+    handleSuccessOrConflictResponse: (payload) => {
+      for (const snapshot of payload.snapshots) reconcileRendererDomainSnapshot(snapshot)
+    },
+    conflictMessage: `Domain mutation conflict on ${options.ipc.channel}`
+  })
+
+  latestPacedRendererDomainMutationByTransaction.set(transaction, {
+    command: options.mutation.command,
+    plan,
+    selectExpectedTargets: options.mutation.selectExpectedTargets,
+    ipcChannel: options.ipc.channel,
+    clientStateCollections: options.renderer.clientStateCollections
   })
 }

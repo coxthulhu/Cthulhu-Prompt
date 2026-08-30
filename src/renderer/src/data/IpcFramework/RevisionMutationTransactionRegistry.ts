@@ -163,7 +163,7 @@ export const mutatePacedUpdateTransaction = ({
   debounceMs,
   createTransaction,
   mutateTransaction
-}: MutatePacedUpdateTransactionOptions): void => {
+}: MutatePacedUpdateTransactionOptions): Transaction<any> => {
   const globalElementKey = buildGlobalElementKey(collectionId, elementId)
   const elementState = getOrCreateElementState(globalElementKey)
   let pacedUpdateTransaction = elementState.pacedUpdateTransaction
@@ -185,6 +185,8 @@ export const mutatePacedUpdateTransaction = ({
   pacedUpdateTransaction.debounceTimeoutId = globalThis.setTimeout(() => {
     sendPacedUpdateTransactionIfPresent(collectionId, elementId, 'debounce')
   }, debounceMs)
+
+  return pacedUpdateTransaction.transaction
 }
 
 // Fire-and-forget send of a per-element paced update transaction, if one exists.
