@@ -1,16 +1,9 @@
-import {
-  createEmptyPromptFolderSettings,
-  createRootCategoryOrder,
-  type CreatePromptFolderPayload,
-  type CreatePromptFolderResponsePayload,
-  type PromptFolder,
-  type PromptFolderKind
-} from '@shared/PromptFolder'
+import type { PromptFolderKind } from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
-import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
-import { preparePromptFolderName } from '@shared/promptFolderName'
-import { folderEntryRef, resolveEntryInsertIndex } from '@shared/OrderContainer'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import {
+  planCreatePromptFolderDomainMutation,
+  planRenamePromptFolderDomainMutation
+} from '@shared/PromptFolderDomainMutations'
 import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
@@ -28,67 +21,29 @@ export const createPromptFolder = async (
     throw new Error('Workspace not loaded')
   }
 
-  const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
+  /** Stable client-generated folder identity shared by both process projections. */
   const optimisticPromptFolderId = compactGuid(crypto.randomUUID())
-  const optimisticPromptFolder: PromptFolder = {
-    id: optimisticPromptFolderId,
-    kind,
-    folderName,
-    displayName: normalizedDisplayName,
-    completedPromptIds: [],
-    categoryOrder: createRootCategoryOrder(),
-    settings: createEmptyPromptFolderSettings()
-  } as PromptFolder
+  /** Shared root-folder creation command projected in both processes. */
+  const command = {
+    workspaceId,
+    promptFolderId: optimisticPromptFolderId,
+    displayName,
+    previousEntryId,
+    kind
+  }
 
-  await runRevisionMutation<CreatePromptFolderResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.insert(optimisticPromptFolder)
-      collections.promptFolderClientState.insert({
-        id: optimisticPromptFolderId,
-        hasLoadedInitialData: false
-      })
-      collections.workspace.update(workspaceId, (draft) => {
-        const insertIndex = resolveEntryInsertIndex(draft.entries, previousEntryId)!
-        const entries = [...draft.entries]
-        entries.splice(insertIndex, 0, folderEntryRef(optimisticPromptFolderId))
-        draft.entries = entries
-      })
-    },
-    persistMutations: async ({ entities, invoke, transaction }) => {
-      const mutationResult = await invoke<{ payload: CreatePromptFolderPayload }>(
-        'create-prompt-folder',
-        {
-          payload: {
-            workspace: entities.workspace({
-              id: workspaceId,
-              data: workspace
-            }),
-            promptFolderId: optimisticPromptFolderId,
-            kind,
-            displayName: normalizedDisplayName,
-            previousEntryId
-          }
-        }
-      )
-
-      if (mutationResult.success) {
-        promptFolderClientStateCollection.utils.acceptMutations(transaction)
-      }
-
-      return mutationResult
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      if (payload.workspace) {
-        workspaceCollection.utils.upsertAuthoritative(payload.workspace)
-      }
-
-      if (!payload.promptFolder) {
-        return
-      }
-
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-    },
-    conflictMessage: 'Prompt folder create conflict'
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planCreatePromptFolderDomainMutation },
+    ipc: { channel: 'create-prompt-folder' },
+    renderer: {
+      mutate: ({ collections }) => {
+        collections.promptFolderClientState.insert({
+          id: optimisticPromptFolderId,
+          hasLoadedInitialData: false
+        })
+      },
+      clientStateCollections: [promptFolderClientStateCollection]
+    }
   })
 
   return optimisticPromptFolderId

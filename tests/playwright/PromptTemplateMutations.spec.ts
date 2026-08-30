@@ -68,36 +68,54 @@ describe('Prompt template mutations', () => {
     )
     const templateId = 'ipc-template'
     const createResult = await invoke('create-prompt-template', {
-      promptFolder: toPayloadEntity(sourceFolder),
-      content: {
-        id: templateId,
-        expectedRevision: 0,
-        data: {
-          id: templateId,
-          title: '',
-          fallbackTitle: '',
-          createdAt: '',
-          modifiedAt: '',
-          templateText: 'Initial {{value}}.'
-        }
+      command: {
+        promptFolderId: SOURCE_FOLDER_ID,
+        contentId: templateId,
+        title: '',
+        fallbackTitle: '',
+        templateText: 'Initial {{value}}.',
+        createdAt: '2026-08-30T12:00:00Z',
+        previousEntryId: null,
+        categoryId: null
       },
-      previousEntryId: null,
-      categoryId: null
+      expectations: [
+        {
+          entityType: 'promptFolder',
+          id: SOURCE_FOLDER_ID,
+          expected: 'revision',
+          revision: sourceFolder.revision
+        },
+        {
+          entityType: 'promptTemplate',
+          id: templateId,
+          expected: 'absent'
+        }
+      ]
     })
 
     expect(createResult).toMatchObject({
       success: true,
       payload: {
-        content: {
-          data: {
-            title: '',
-            fallbackTitle: 'New Template',
-            templateText: 'Initial {{value}}.'
-          }
-        }
+        snapshots: expect.arrayContaining([
+          expect.objectContaining({ entityType: 'promptFolder', id: SOURCE_FOLDER_ID }),
+          expect.objectContaining({
+            entityType: 'promptTemplate',
+            id: templateId,
+            data: expect.objectContaining({
+              title: '',
+              fallbackTitle: 'New Template',
+              templateText: 'Initial {{value}}.'
+            })
+          })
+        ])
       }
     })
-    expect(createResult.payload.content.data).not.toHaveProperty('status')
+    /** Created template snapshot returned by the generic domain response. */
+    const createdTemplate = createResult.payload.snapshots.find(
+      (snapshot: { entityType: string; id: string }) =>
+        snapshot.entityType === 'promptTemplate' && snapshot.id === templateId
+    )
+    expect(createdTemplate.data).not.toHaveProperty('status')
     expect(
       await readTextFile(
         electronApp,
@@ -119,9 +137,9 @@ describe('Prompt template mutations', () => {
 
     const updateResult = await invoke('update-prompt-template', {
       content: {
-        ...toPayloadEntity(createResult.payload.content),
+        ...toPayloadEntity(createdTemplate),
         data: {
-          ...createResult.payload.content.data,
+          ...createdTemplate.data,
           title: 'Renamed Template',
           fallbackTitle: '',
           modifiedAt: '2026-07-24T12:00:00.000Z',

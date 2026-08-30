@@ -1,31 +1,16 @@
 import { ipcMain } from 'electron'
+import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
+import { removeEntry } from '@shared/OrderContainer'
 import {
-  copyPromptFolderSettings,
-  createEmptyPromptFolderSettings,
-  createRootCategoryOrder,
-  getCategoryOrderCategoryIds,
-  type PromptFolder,
-  type PromptFolderKind
-} from '@shared/PromptFolder'
-import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
-import {
+  parseCreatePromptFolderDomainCommand,
   parseRenamePromptFolderDomainCommand,
+  planCreatePromptFolderDomainMutation,
   planRenamePromptFolderDomainMutation
 } from '@shared/PromptFolderDomainMutations'
-import {
-  hasPromptFolderNameConflict,
-  preparePromptFolderName,
-  PROMPT_FOLDER_NAME_CONFLICT_ERROR,
-  type PromptFolderNameCandidate
-} from '@shared/promptFolderName'
 import { runAtomicDataTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
-import { buildPromptFolderSnapshot, buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
-import {
-  parseCreatePromptFolderRequest,
-  parseDeletePromptFolderRequest,
-  parseUpdatePromptFolderSettingsRequest
-} from '../IpcFramework/IpcValidation'
+import { buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
+import { parseDeletePromptFolderRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
@@ -36,18 +21,7 @@ import {
 } from './PromptFolderContentMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
-/** Returns root-folder name candidates of one content kind from workspace ordering. */
-const getPromptFolderNameCandidates = (
-  workspaceEntries: readonly { id: string }[],
-  kind: PromptFolderKind
-): PromptFolderNameCandidate[] =>
-  workspaceEntries.flatMap((entry) => {
-    /** Loaded root folder referenced by the workspace entry. */
-    const promptFolder = data.promptFolder.committedStore.getEntry(entry.id)?.committed
-    return promptFolder && promptFolder.kind === kind ? [promptFolder] : []
-  })
-
-/** Registers root prompt-folder creation, deletion, rename, and settings mutations. */
+/** Registers root prompt-folder creation, deletion, and rename mutations. */
 export const setupPromptFolderMutationHandlers = (): void => {
   handleMainDomainMutation({
     ipc: { channel: 'rename-prompt-folder' },
@@ -57,107 +31,12 @@ export const setupPromptFolderMutationHandlers = (): void => {
     }
   })
 
-  ipcMain.handle('create-prompt-folder', async (_, request: unknown) => {
-    return await runMutationIpcRequest(
-      request,
-      parseCreatePromptFolderRequest,
-      async (validatedRequest) => {
-        try {
-          /** Validated root-folder creation command. */
-          const payload = validatedRequest.payload
-          /** Workspace that will own the new root folder. */
-          const workspace = data.workspace.committedStore.getEntry(payload.workspace.id)
-          if (!workspace) return { success: false, error: 'Workspace not loaded' }
-          if (
-            payload.previousEntryId !== null &&
-            !workspace.committed.entries.some((entry) => entry.id === payload.previousEntryId)
-          ) {
-            return { success: false, error: 'Previous entry not found' }
-          }
-
-          /** Validated display and disk names for the new root folder. */
-          const preparedName = preparePromptFolderName(payload.displayName)
-          if (!preparedName.validation.isValid) {
-            return {
-              success: false,
-              error: preparedName.validation.errorMessage ?? 'Invalid prompt folder name'
-            }
-          }
-          if (
-            hasPromptFolderNameConflict(
-              getPromptFolderNameCandidates(workspace.committed.entries, payload.kind),
-              preparedName.folderName
-            )
-          ) {
-            return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
-          }
-
-          /** Workspace insertion index for the new root folder. */
-          const insertIndex = resolveEntryInsertIndex(
-            workspace.committed.entries,
-            payload.previousEntryId
-          )!
-          /** Initial persisted root-folder record. */
-          const promptFolder: PromptFolder = {
-            id: payload.promptFolderId,
-            kind: payload.kind,
-            folderName: preparedName.folderName,
-            displayName: preparedName.displayName,
-            completedPromptIds: [],
-            categoryOrder: createRootCategoryOrder(),
-            settings: createEmptyPromptFolderSettings()
-          } as PromptFolder
-          /** Atomic workspace-order and folder-create result. */
-          const outcome = await runAtomicDataTransaction((tx) => ({
-            workspace: tx.workspace.update({
-              id: payload.workspace.id,
-              expectedRevision: payload.workspace.expectedRevision,
-              recipe: (draft) => {
-                /** Updated root-folder order. */
-                const entries = [...draft.entries]
-                entries.splice(insertIndex, 0, folderEntryRef(payload.promptFolderId))
-                draft.entries = entries
-              }
-            }),
-            promptFolder: tx.promptFolder.create({
-              id: payload.promptFolderId,
-              data: promptFolder,
-              persistenceFields: {
-                workspaceId: payload.workspace.id,
-                workspacePath: workspace.committed.workspacePath,
-                folderName: preparedName.folderName,
-                folderPath: preparedName.folderName,
-                kind: payload.kind
-              }
-            })
-          }))
-
-          if (outcome.status === 'conflict') {
-            return buildConflictResponseFromLatest(
-              data.workspace.committedStore.getEntry(payload.workspace.id),
-              'Workspace not loaded',
-              (latestWorkspace) => ({ workspace: buildWorkspaceSnapshot(latestWorkspace) })
-            )
-          }
-          /** Authoritative workspace after creation. */
-          const updatedWorkspace = data.workspace.committedStore.getEntry(payload.workspace.id)
-          /** Authoritative new prompt folder. */
-          const createdFolder = data.promptFolder.committedStore.getEntry(payload.promptFolderId)
-          if (!updatedWorkspace || !createdFolder) {
-            return { success: false, error: 'Prompt folder create commit did not complete' }
-          }
-          return {
-            success: true,
-            payload: {
-              workspace: buildWorkspaceSnapshot(updatedWorkspace),
-              promptFolder: buildPromptFolderSnapshot(createdFolder)
-            }
-          }
-        } catch (error) {
-          return { success: false, error: error instanceof Error ? error.message : String(error) }
-        }
-      }
-    )
+  handleMainDomainMutation({
+    ipc: { channel: 'create-prompt-folder' },
+    mutation: {
+      parseCommand: parseCreatePromptFolderDomainCommand,
+      plan: planCreatePromptFolderDomainMutation
+    }
   })
 
   ipcMain.handle('delete-prompt-folder', async (_, request: unknown) => {
@@ -243,46 +122,6 @@ export const setupPromptFolderMutationHandlers = (): void => {
             remainingCategoryIds
           )
           return { success: true, payload: { workspace: buildWorkspaceSnapshot(updatedWorkspace) } }
-        } catch (error) {
-          return { success: false, error: error instanceof Error ? error.message : String(error) }
-        }
-      }
-    )
-  })
-
-  ipcMain.handle('update-prompt-folder-settings', async (_, request: unknown) => {
-    return await runMutationIpcRequest(
-      request,
-      parseUpdatePromptFolderSettingsRequest,
-      async (validatedRequest) => {
-        try {
-          /** Revision-bearing root-folder settings update. */
-          const requestedFolder = validatedRequest.payload.promptFolder
-          /** Loaded root folder selected for settings persistence. */
-          const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-          if (!promptFolder) return { success: false, error: 'Prompt folder not loaded' }
-          /** Atomic folder-settings update result. */
-          const outcome = await runAtomicDataTransaction((tx) => ({
-            promptFolder: tx.promptFolder.update({
-              id: requestedFolder.id,
-              expectedRevision: requestedFolder.expectedRevision,
-              recipe: (draft) => {
-                draft.settings = copyPromptFolderSettings(requestedFolder.data)
-              }
-            })
-          }))
-          if (outcome.status === 'conflict') {
-            return buildConflictResponseFromLatest(
-              data.promptFolder.committedStore.getEntry(requestedFolder.id),
-              'Prompt folder not loaded',
-              (latestFolder) => ({ promptFolder: buildPromptFolderSnapshot(latestFolder) })
-            )
-          }
-          /** Authoritative folder after settings persistence. */
-          const updatedFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-          return updatedFolder
-            ? { success: true, payload: { promptFolder: buildPromptFolderSnapshot(updatedFolder) } }
-            : { success: false, error: 'Prompt folder update commit did not complete' }
         } catch (error) {
           return { success: false, error: error instanceof Error ? error.message : String(error) }
         }

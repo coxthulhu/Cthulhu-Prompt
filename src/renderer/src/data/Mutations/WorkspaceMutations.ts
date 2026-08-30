@@ -1,11 +1,10 @@
 import type {
   CloseWorkspacePayload,
-  CreateWorkspacePayload,
-  MovePromptFolderPayload,
-  MovePromptFolderResponsePayload
+  CreateWorkspacePayload
 } from '@shared/Workspace'
 import type { IpcMutationActionResponse, IpcMutationPayloadResult } from '@shared/IpcResult'
-import { removeEntry, resolveEntryInsertIndex, folderEntryRef } from '@shared/OrderContainer'
+import { removeEntry } from '@shared/OrderContainer'
+import { planMovePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 import type {
   DeletePromptFolderPayload,
   DeletePromptFolderResponsePayload
@@ -24,6 +23,7 @@ import {
   setSelectedWorkspaceId
 } from '../UiState/WorkspaceSelection.svelte.ts'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 import {
   deletePromptFolderContentRecords,
   deletePromptFolderContentsOptimistically
@@ -124,30 +124,11 @@ export const movePromptFolder = async (
   /** Workspace whose root order changes. */
   const workspace = workspaceCollection.get(workspaceId)
   if (!workspace) throw new Error('Workspace not loaded')
-  /** Root order after removing the dragged folder. */
-  const entries = removeEntry(workspace.entries, 'folder', promptFolderId)
-  /** Insertion index following the requested root predecessor. */
-  const insertIndex = resolveEntryInsertIndex(entries, previousEntryId)
-  if (insertIndex === null) throw new Error('Previous entry not found')
-  entries.splice(insertIndex, 0, folderEntryRef(promptFolderId))
-
-  await runRevisionMutation<MovePromptFolderResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.workspace.update(workspaceId, (draft) => {
-        draft.entries = entries
-      })
-    },
-    persistMutations: async ({ entities, invoke }) =>
-      await invoke<{ payload: MovePromptFolderPayload }>('move-prompt-folder', {
-        payload: {
-          workspace: entities.workspace({ id: workspaceId, data: workspace }),
-          promptFolderId,
-          previousEntryId
-        }
-      }),
-    handleSuccessOrConflictResponse: (payload) => {
-      workspaceCollection.utils.upsertAuthoritative(payload.workspace)
-    },
-    conflictMessage: 'Prompt folder move conflict'
+  /** Shared root-folder reorder command projected in both processes. */
+  const command = { workspaceId, promptFolderId, previousEntryId }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planMovePromptFolderDomainMutation },
+    ipc: { channel: 'move-prompt-folder' },
+    renderer: {}
   })
 }

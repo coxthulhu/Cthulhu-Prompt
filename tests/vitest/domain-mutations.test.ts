@@ -7,15 +7,24 @@ import type {
 } from '@shared/DomainChanges'
 import {
   planCreateCategoryDomainMutation,
-  planDeleteCategoryDomainMutation
+  planDeleteCategoryDomainMutation,
+  planMoveCategoryDomainMutation,
+  planRenameCategoryDomainMutation
 } from '@shared/CategoryDomainMutations'
 import {
+  planCreatePromptDomainMutation,
+  planCreatePromptTemplateDomainMutation,
   planPromptMove,
   planPromptTemplateMove
 } from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
-import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
+import {
+  planCreatePromptFolderDomainMutation,
+  planMovePromptFolderDomainMutation,
+  planRenamePromptFolderDomainMutation
+} from '@shared/PromptFolderDomainMutations'
+import { planSetPromptStatusDomainMutation } from '@shared/PromptDomainMutations'
 
 /** Complete in-memory entity graph used by shared planner tests. */
 type TestDomainEntities = {
@@ -101,6 +110,67 @@ describe('shared domain mutation planners', () => {
     })
   })
 
+  it('plans root-folder creation and exact workspace reordering', () => {
+    /** Existing sibling root used as the creation predecessor. */
+    const sibling = createRootFolder('sibling', 'prompt', null)
+    /** Workspace receiving the new root after its sibling. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: sibling.id }]
+    }
+    /** Root creation plan shared by renderer and main. */
+    const createPlan = planCreatePromptFolderDomainMutation(
+      createDomainState({ workspace: [workspace], promptFolder: [sibling] }),
+      {
+        workspaceId: workspace.id,
+        promptFolderId: 'created',
+        displayName: ' Created Root ',
+        previousEntryId: sibling.id,
+        kind: 'prompt'
+      }
+    )
+    expect(Array.isArray(createPlan)).toBe(true)
+    if (!Array.isArray(createPlan)) return
+    /** Workspace projection after the creation placement recipe. */
+    const workspaceAfterCreate = produce(workspace, createPlan[0]!.recipe!)
+    expect(workspaceAfterCreate.entries.map((entry) => entry.id)).toEqual([
+      sibling.id,
+      'created'
+    ])
+    expect(createPlan[1]).toMatchObject({
+      type: 'insert',
+      entityType: 'promptFolder',
+      id: 'created',
+      data: { displayName: 'Created Root', folderName: 'CreatedRoot' }
+    })
+
+    /** Workspace containing both roots for the reorder plan. */
+    const populatedWorkspace = {
+      ...workspace,
+      entries: [
+        { kind: 'folder' as const, id: sibling.id },
+        { kind: 'folder' as const, id: 'created' }
+      ]
+    }
+    /** Created root projected from the insertion plan. */
+    const createdRoot = createPlan[1]!.data as PromptFolder
+    /** Root reorder plan moving the created root to the beginning. */
+    const movePlan = planMovePromptFolderDomainMutation(
+      createDomainState({
+        workspace: [populatedWorkspace],
+        promptFolder: [sibling, createdRoot]
+      }),
+      { workspaceId: workspace.id, promptFolderId: 'created', previousEntryId: null }
+    )
+    expect(Array.isArray(movePlan)).toBe(true)
+    if (!Array.isArray(movePlan)) return
+    expect(
+      produce(populatedWorkspace, movePlan[0]!.recipe!).entries.map((entry) => entry.id)
+    ).toEqual(['created', sibling.id])
+  })
+
   it('plans category creation as one root update and one insertion', () => {
     /** Root that will own the new category group. */
     const folder = createRootFolder('root', 'prompt', null)
@@ -172,6 +242,212 @@ describe('shared domain mutation planners', () => {
     expect(template).not.toHaveProperty('category')
     expect(prompt.modifiedAt).toBe('renderer-time')
     expect(template.modifiedAt).toBe('renderer-time')
+  })
+
+  it('plans category rename and group reordering', () => {
+    /** Root containing two categorized groups. */
+    const folder = createRootFolder('root', 'prompt', 'category-a')
+    folder.categoryOrder.categories.push({ categoryId: 'category-b', entries: [] })
+    /** Categories participating in rename collision validation. */
+    const categories = [
+      { id: 'category-a', displayName: 'A', description: null },
+      { id: 'category-b', displayName: 'B', description: null }
+    ]
+    /** Shared category rename plan. */
+    const renamePlan = planRenameCategoryDomainMutation(
+      createDomainState({ promptFolder: [folder], category: categories }),
+      { categoryId: 'category-b', displayName: ' Renamed ' }
+    )
+    expect(Array.isArray(renamePlan)).toBe(true)
+    if (!Array.isArray(renamePlan)) return
+    expect(produce(categories[1]!, renamePlan[0]!.recipe!).displayName).toBe('Renamed')
+
+    /** Shared category reorder plan moving B before A. */
+    const movePlan = planMoveCategoryDomainMutation(
+      createDomainState({ promptFolder: [folder], category: categories }),
+      { promptFolderId: folder.id, categoryId: 'category-b', previousCategoryId: null }
+    )
+    expect(Array.isArray(movePlan)).toBe(true)
+    if (!Array.isArray(movePlan)) return
+    expect(
+      produce(folder, movePlan[0]!.recipe!).categoryOrder.categories.map(
+        (group) => group.categoryId
+      )
+    ).toEqual([null, 'category-b', 'category-a'])
+  })
+
+  it('plans prompt and template creation with synchronized root placement', () => {
+    /** Prompt root receiving one newly created prompt. */
+    const promptRoot = createRootFolder('prompts', 'prompt', null)
+    /** Template root receiving one newly created template. */
+    const templateRoot = createRootFolder('templates', 'template', null)
+    /** Shared prompt creation plan. */
+    const promptPlan = planCreatePromptDomainMutation(
+      createDomainState({ promptFolder: [promptRoot] }),
+      {
+        promptFolderId: promptRoot.id,
+        contentId: 'prompt',
+        title: '',
+        fallbackTitle: 'New Prompt',
+        promptText: 'Text',
+        createdAt: '2026-08-30T12:00:00Z',
+        categoryId: null,
+        previousEntryId: null
+      }
+    )
+    expect(Array.isArray(promptPlan)).toBe(true)
+    if (!Array.isArray(promptPlan)) return
+    expect(promptPlan[1]).toMatchObject({
+      type: 'insert',
+      entityType: 'prompt',
+      id: 'prompt',
+      data: { status: PromptStatus.Todo, promptText: 'Text' }
+    })
+    expect(
+      produce(promptRoot, promptPlan[0]!.recipe!).categoryOrder.categories[0]?.entries
+    ).toEqual([{ kind: 'prompt', id: 'prompt' }])
+
+    /** Shared template creation plan. */
+    const templatePlan = planCreatePromptTemplateDomainMutation(
+      createDomainState({ promptFolder: [templateRoot] }),
+      {
+        promptFolderId: templateRoot.id,
+        contentId: 'template',
+        title: '',
+        fallbackTitle: '',
+        templateText: 'Template',
+        createdAt: '2026-08-30T12:00:00Z',
+        categoryId: null,
+        previousEntryId: null
+      }
+    )
+    expect(Array.isArray(templatePlan)).toBe(true)
+    if (!Array.isArray(templatePlan)) return
+    expect(templatePlan[1]).toMatchObject({
+      type: 'insert',
+      entityType: 'promptTemplate',
+      id: 'template',
+      data: { fallbackTitle: 'New Template', templateText: 'Template' }
+    })
+  })
+
+  it('plans prompt completion from a summary projection', () => {
+    /** Active prompt root containing the status target. */
+    const folder = createRootFolder('root', 'prompt', null)
+    folder.categoryOrder.categories[0]!.entries.push({ kind: 'prompt', id: 'prompt' })
+    /** Summary-compatible prompt selected for completion. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: 'old',
+      status: PromptStatus.Todo
+    }
+    /** Shared status plan moving the prompt into Completed. */
+    const plan = planSetPromptStatusDomainMutation(
+      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      {
+        sourcePromptFolderId: folder.id,
+        destinationPromptFolderId: folder.id,
+        promptId: prompt.id,
+        status: PromptStatus.Completed,
+        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        modifiedAt: '2026-08-30T12:00:00Z'
+      }
+    )
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Root projection after completion ownership changes. */
+    const completedFolder = produce(folder, plan[0]!.recipe!)
+    /** Prompt projection after completion fields are applied. */
+    const completedPrompt = produce(prompt, plan[1]!.recipe!)
+    expect(completedFolder.completedPromptIds).toEqual([prompt.id])
+    expect(completedFolder.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(completedPrompt).toMatchObject({
+      status: PromptStatus.Completed,
+      completedAt: '2026-08-30T12:00:00Z',
+      modifiedAt: '2026-08-30T12:00:00Z'
+    })
+  })
+
+  it('transfers prompt status ownership across root folders', () => {
+    /** Source root currently owning the active prompt. */
+    const source = createRootFolder('source', 'prompt', null)
+    source.categoryOrder.categories[0]!.entries.push({ kind: 'prompt', id: 'prompt' })
+    /** Destination root receiving the completed prompt. */
+    const destination = createRootFolder('destination', 'prompt', null)
+    /** Summary-compatible prompt selected for cross-root completion. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: 'old',
+      status: PromptStatus.Todo
+    }
+    /** Shared status plan transferring ownership into the destination Completed hierarchy. */
+    const plan = planSetPromptStatusDomainMutation(
+      createDomainState({ promptFolder: [source, destination], prompt: [prompt] }),
+      {
+        sourcePromptFolderId: source.id,
+        destinationPromptFolderId: destination.id,
+        promptId: prompt.id,
+        status: PromptStatus.Completed,
+        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        modifiedAt: '2026-08-30T12:00:00Z'
+      }
+    )
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
+      'promptFolder:source',
+      'promptFolder:destination',
+      'prompt:prompt'
+    ])
+    /** Source projection after active ownership is removed. */
+    const projectedSource = produce(source, plan[0]!.recipe!)
+    /** Destination projection after completed ownership is inserted. */
+    const projectedDestination = produce(destination, plan[1]!.recipe!)
+    expect(projectedSource.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(projectedDestination.completedPromptIds).toEqual([prompt.id])
+  })
+
+  it('clears stale category metadata when restoring a prompt to Uncategorized', () => {
+    /** Root whose completed prompt retains its former category metadata. */
+    const folder = createRootFolder('root', 'prompt', 'category')
+    folder.completedPromptIds = ['prompt']
+    /** Completed prompt being restored to the Uncategorized group. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: 'old',
+      category: 'category',
+      status: PromptStatus.Completed,
+      completedAt: 'old'
+    }
+    /** Shared restoration plan targeting the Uncategorized group. */
+    const plan = planSetPromptStatusDomainMutation(
+      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      {
+        sourcePromptFolderId: folder.id,
+        destinationPromptFolderId: folder.id,
+        promptId: prompt.id,
+        status: PromptStatus.Todo,
+        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        modifiedAt: '2026-08-30T12:00:00Z'
+      }
+    )
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Restored prompt projection after applying the shared recipe. */
+    const restoredPrompt = produce(prompt, plan[1]!.recipe!)
+    /** Root projection after restoring Active-tree ownership. */
+    const restoredFolder = produce(folder, plan[0]!.recipe!)
+    expect(restoredPrompt).not.toHaveProperty('category')
+    expect(restoredPrompt).not.toHaveProperty('completedAt')
+    expect(restoredFolder.categoryOrder.categories[0]?.entries).toEqual([
+      { kind: 'prompt', id: prompt.id }
+    ])
   })
 
   it('returns the actual source in movement conflict targets', () => {

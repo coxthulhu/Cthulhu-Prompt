@@ -4,12 +4,9 @@ import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 
-/** IPC spy used to inspect reference-only prompt mutation payloads. */
-const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
 /** Revision runner spy exposing optimistic prompt mutation contracts. */
 const runRevisionMutation = vi.hoisted(() => vi.fn())
 
-vi.mock('@renderer/data/IpcFramework/IpcRequestInvoke', () => ({ ipcInvokeWithPayload }))
 vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({
   runRevisionMutation,
   mutatePacedRevisionUpdateTransaction: vi.fn(),
@@ -81,7 +78,6 @@ describe('prompt mutations', () => {
       data: promptFolder(DESTINATION_FOLDER_ID, [], DESTINATION_CATEGORY_ID)
     })
     runRevisionMutation.mockResolvedValue(undefined)
-    ipcInvokeWithPayload.mockResolvedValue({ success: false, error: 'stop before commit' })
   })
 
   it('moves canonical prompt state while sending only its revision reference', async () => {
@@ -163,18 +159,20 @@ describe('prompt mutations', () => {
     })
   })
 
-  it('changes canonical prompt status while latching only the edited marker', async () => {
+  it('transfers canonical prompt status across roots while latching the edited marker', async () => {
     await setPromptStatus(
       SOURCE_FOLDER_ID,
-      SOURCE_FOLDER_ID,
+      DESTINATION_FOLDER_ID,
       PROMPT_ID,
       PromptStatus.Completed
     )
 
     /** Revision mutation options registered by the prompt status change. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
-    /** Mutable root folder receiving optimistic status ownership changes. */
-    const folder = promptFolder(SOURCE_FOLDER_ID, [PROMPT_ID])
+    /** Mutable source root losing active ownership. */
+    const source = promptFolder(SOURCE_FOLDER_ID, [PROMPT_ID])
+    /** Mutable destination root receiving completed ownership. */
+    const destination = promptFolder(DESTINATION_FOLDER_ID, [], DESTINATION_CATEGORY_ID)
     /** Mutable canonical prompt receiving status fields. */
     const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
     /** Prompt client state receiving the edited latch. */
@@ -183,7 +181,8 @@ describe('prompt mutations', () => {
     options.mutateOptimistically({
       collections: {
         promptFolder: {
-          update: (_id: string, update: (draft: typeof folder) => void) => update(folder)
+          update: (id: string, update: (draft: typeof source) => void) =>
+            update(id === SOURCE_FOLDER_ID ? source : destination)
         },
         prompt: {
           update: (_id: string, update: (draft: typeof prompt) => void) => update(prompt)
@@ -197,23 +196,44 @@ describe('prompt mutations', () => {
 
     expect(prompt.status).toBe(PromptStatus.Completed)
     expect(prompt).toHaveProperty('completedAt')
+    expect(source.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(destination.completedPromptIds).toEqual([PROMPT_ID])
     expect(promptClientState).toEqual({ id: PROMPT_ID, isEdited: true })
 
-    /** Root-folder entity builder used by the status request. */
-    const entities = {
-      promptFolder: ({ id, data }: { id: string; data: object }) => ({
-        id,
-        expectedRevision: 2,
-        data
-      })
-    }
-    await options.persistMutations({ entities, transaction: {} })
-    expect(ipcInvokeWithPayload).toHaveBeenCalledWith(
-      'set-prompt-status',
-      expect.objectContaining({
-        prompt: { id: PROMPT_ID, expectedRevision: 3 },
-        status: PromptStatus.Completed
-      })
-    )
+    /** Generic invoke spy captures the status command and derived revisions. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
+    await options.persistMutations({ invoke, transaction: {} })
+    expect(invoke).toHaveBeenCalledWith('set-prompt-status', {
+      payload: {
+        command: {
+          sourcePromptFolderId: SOURCE_FOLDER_ID,
+          destinationPromptFolderId: DESTINATION_FOLDER_ID,
+          promptId: PROMPT_ID,
+          status: PromptStatus.Completed,
+          categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+          modifiedAt: prompt.modifiedAt
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: SOURCE_FOLDER_ID,
+            expected: 'revision',
+            revision: 2
+          },
+          {
+            entityType: 'promptFolder',
+            id: DESTINATION_FOLDER_ID,
+            expected: 'revision',
+            revision: 4
+          },
+          {
+            entityType: 'prompt',
+            id: PROMPT_ID,
+            expected: 'revision',
+            revision: 3
+          }
+        ]
+      }
+    })
   })
 })

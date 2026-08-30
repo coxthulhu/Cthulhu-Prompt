@@ -1,30 +1,22 @@
 import type {
   Category,
   CategoryRevisionResponsePayload,
-  MoveCategoryPayload,
-  RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
-import { normalizeCategoryDisplayName } from '@shared/Category'
 import { compactGuid } from '@shared/compactGuid'
 import {
   planCreateCategoryDomainMutation,
-  planDeleteCategoryDomainMutation
+  planDeleteCategoryDomainMutation,
+  planMoveCategoryDomainMutation,
+  planRenameCategoryDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import type { Transaction } from '@tanstack/svelte-db'
-import {
-  getCategoryOrderCategoryIds,
-  moveCategoryOrderGroup,
-  type PromptFolderRevisionResponsePayload
-} from '@shared/PromptFolder'
+import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import {
-  mutatePacedRevisionUpdateTransaction,
-  runRevisionMutation
-} from '../IpcFramework/RevisionCollections'
+import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
 import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
@@ -100,58 +92,13 @@ export const createCategory = async (
 export const renameCategory = async (categoryId: string, displayName: string): Promise<void> => {
   const category = categoryCollection.get(categoryId)
   if (!category) throw new Error('Category not loaded')
-  const normalizedDisplayName = normalizeCategoryDisplayName(displayName)
 
-  await runRevisionMutation<CategoryRevisionResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.category.update(categoryId, (draft) => {
-        draft.displayName = normalizedDisplayName
-      })
-    },
-    persistMutations: async ({ entities, invoke }) => {
-      return await invoke<{ payload: RenameCategoryPayload }>('rename-category', {
-        payload: {
-          category: entities.category({ id: categoryId, data: category }),
-          displayName: normalizedDisplayName
-        }
-      })
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      categoryCollection.utils.upsertAuthoritative(payload.category)
-    },
-    conflictMessage: 'Category rename conflict'
-  })
-}
-
-/** Sets a category description, preserving empty strings separately from null. */
-export const setCategoryDescription = async (
-  categoryId: string,
-  description: string | null
-): Promise<void> => {
-  const category = categoryCollection.get(categoryId)
-  if (!category) throw new Error('Category not loaded')
-
-  await runRevisionMutation<CategoryRevisionResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.category.update(categoryId, (draft) => {
-        draft.description = description
-      })
-    },
-    persistMutations: async ({ entities, invoke }) => {
-      return await invoke<{ payload: SetCategoryDescriptionPayload }>(
-        'set-category-description',
-        {
-          payload: {
-            category: entities.category({ id: categoryId, data: category }),
-            description
-          }
-        }
-      )
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      categoryCollection.utils.upsertAuthoritative(payload.category)
-    },
-    conflictMessage: 'Category description update conflict'
+  /** Shared category rename command projected in both processes. */
+  const command = { categoryId, displayName }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planRenameCategoryDomainMutation },
+    ipc: { channel: 'rename-category' },
+    renderer: {}
   })
 }
 
@@ -165,28 +112,12 @@ export const moveCategory = async (
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) throw new Error('Root prompt folder not loaded')
 
-  await runRevisionMutation<PromptFolderRevisionResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.categoryOrder = moveCategoryOrderGroup(
-          draft.categoryOrder,
-          categoryId,
-          previousCategoryId
-        )
-      })
-    },
-    persistMutations: async ({ entities, invoke }) =>
-      await invoke<{ payload: MoveCategoryPayload }>('move-category', {
-        payload: {
-          promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
-          categoryId,
-          previousCategoryId
-        }
-      }),
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-    },
-    conflictMessage: 'Category move conflict'
+  /** Shared category reorder command projected in both processes. */
+  const command = { promptFolderId, categoryId, previousCategoryId }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planMoveCategoryDomainMutation },
+    ipc: { channel: 'move-category' },
+    renderer: {}
   })
 }
 

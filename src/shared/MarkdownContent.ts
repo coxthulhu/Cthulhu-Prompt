@@ -70,18 +70,6 @@ export type MarkdownContentRevisionResponsePayload<TContent extends MarkdownCont
   promptFolders: Array<RevisionEnvelope<PromptFolder>>
 }
 
-export type CreateMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  content: RevisionPayloadEntity<TContent>
-  categoryId: string | null
-  previousEntryId: string | null
-}
-
-export type CreateMarkdownContentResponsePayload<TContent extends MarkdownContentPersisted> = {
-  promptFolders: Array<RevisionEnvelope<PromptFolder>>
-  content?: RevisionEnvelope<TContent>
-}
-
 export type DeleteMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
   content: RevisionPayloadEntity<TContent>

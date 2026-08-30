@@ -1,13 +1,62 @@
 import type { DomainPlanner, DomainTarget } from './DomainChanges'
+import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from './OrderContainer'
+import {
+  createEmptyPromptFolderSettings,
+  createRootCategoryOrder,
+  type PromptFolder,
+  type PromptFolderKind
+} from './PromptFolder'
 import {
   hasPromptFolderNameConflict,
   preparePromptFolderName
 } from './promptFolderName'
 
+/** Renderer-authored command for creating one root prompt or template folder. */
+export type CreatePromptFolderDomainCommand = {
+  workspaceId: string
+  promptFolderId: string
+  displayName: string
+  previousEntryId: string | null
+  kind: PromptFolderKind
+}
+
 /** Renderer-authored command for renaming one root prompt or template folder. */
 export type RenamePromptFolderDomainCommand = {
   promptFolderId: string
   displayName: string
+}
+
+/** Renderer-authored command for reordering one root folder. */
+export type MovePromptFolderDomainCommand = {
+  workspaceId: string
+  promptFolderId: string
+  previousEntryId: string | null
+}
+
+/** Strict runtime parser for root-folder creation commands. */
+export const parseCreatePromptFolderDomainCommand = (
+  value: unknown
+): CreatePromptFolderDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 5 ||
+    typeof record.workspaceId !== 'string' ||
+    typeof record.promptFolderId !== 'string' ||
+    typeof record.displayName !== 'string' ||
+    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string') ||
+    (record.kind !== 'prompt' && record.kind !== 'template')
+  ) {
+    return null
+  }
+  return {
+    workspaceId: record.workspaceId,
+    promptFolderId: record.promptFolderId,
+    displayName: record.displayName,
+    previousEntryId: record.previousEntryId,
+    kind: record.kind
+  }
 }
 
 /** Strict runtime parser for root-folder rename commands. */
@@ -28,6 +77,97 @@ export const parseRenamePromptFolderDomainCommand = (
     promptFolderId: record.promptFolderId,
     displayName: record.displayName
   }
+}
+
+/** Strict runtime parser for root-folder reorder commands. */
+export const parseMovePromptFolderDomainCommand = (
+  value: unknown
+): MovePromptFolderDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 3 ||
+    typeof record.workspaceId !== 'string' ||
+    typeof record.promptFolderId !== 'string' ||
+    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
+  ) {
+    return null
+  }
+  return {
+    workspaceId: record.workspaceId,
+    promptFolderId: record.promptFolderId,
+    previousEntryId: record.previousEntryId
+  }
+}
+
+/** Plans root-folder creation and exact workspace placement. */
+export const planCreatePromptFolderDomainMutation: DomainPlanner<
+  CreatePromptFolderDomainCommand
+> = (state, command) => {
+  /** Workspace that will own the new root folder. */
+  const workspace = state.get('workspace', command.workspaceId)
+  /** Existing entity occupying the requested stable folder ID. */
+  const existingPromptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Authoritative targets returned for creation conflicts. */
+  const targets: DomainTarget[] = [
+    { entityType: 'workspace', id: command.workspaceId },
+    { entityType: 'promptFolder', id: command.promptFolderId }
+  ]
+  /** Validated and normalized root-folder names. */
+  const preparedName = preparePromptFolderName(command.displayName)
+  /** Same-kind sibling folders participating in name-conflict validation. */
+  const siblings = workspace
+    ? workspace.entries.flatMap((entry) => {
+        /** Loaded sibling referenced by one workspace entry. */
+        const sibling = state.get('promptFolder', entry.id)
+        return sibling && sibling.kind === command.kind ? [sibling] : []
+      })
+    : []
+  /** Requested insertion index after validating its predecessor. */
+  const insertIndex = workspace
+    ? resolveEntryInsertIndex(workspace.entries, command.previousEntryId)
+    : null
+
+  if (
+    !workspace ||
+    existingPromptFolder ||
+    !preparedName.validation.isValid ||
+    hasPromptFolderNameConflict(siblings, preparedName.folderName) ||
+    insertIndex === null
+  ) {
+    return { status: 'conflict', reason: 'Prompt folder creation conflict', targets }
+  }
+
+  /** Initial root-folder entity inserted by both renderer and main projections. */
+  const promptFolder: PromptFolder = {
+    id: command.promptFolderId,
+    kind: command.kind,
+    folderName: preparedName.folderName,
+    displayName: preparedName.displayName,
+    completedPromptIds: [],
+    categoryOrder: createRootCategoryOrder(),
+    settings: createEmptyPromptFolderSettings()
+  } as PromptFolder
+  return [
+    {
+      type: 'update',
+      entityType: 'workspace',
+      id: command.workspaceId,
+      recipe: (draft) => {
+        /** Workspace entries receiving the new root at its exact position. */
+        const entries = [...draft.entries]
+        entries.splice(insertIndex, 0, folderEntryRef(command.promptFolderId))
+        draft.entries = entries
+      }
+    },
+    {
+      type: 'insert',
+      entityType: 'promptFolder',
+      id: command.promptFolderId,
+      data: promptFolder
+    }
+  ]
 }
 
 /** Plans one root-folder display-name and physical-directory rename. */
@@ -75,6 +215,45 @@ export const planRenamePromptFolderDomainMutation: DomainPlanner<
       recipe: (draft) => {
         draft.displayName = preparedName.displayName
         draft.folderName = preparedName.folderName
+      }
+    }
+  ]
+}
+
+/** Plans one root-folder reorder within its owning workspace. */
+export const planMovePromptFolderDomainMutation: DomainPlanner<
+  MovePromptFolderDomainCommand
+> = (state, command) => {
+  /** Workspace whose root-folder order is changing. */
+  const workspace = state.get('workspace', command.workspaceId)
+  /** Root folder being repositioned. */
+  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Stable workspace target returned for ordering conflicts. */
+  const targets: DomainTarget[] = [{ entityType: 'workspace', id: command.workspaceId }]
+  /** Workspace entries after removing the moved root. */
+  const entries = workspace
+    ? removeEntry(workspace.entries, 'folder', command.promptFolderId)
+    : []
+  /** Requested reinsertion index after predecessor validation. */
+  const insertIndex = resolveEntryInsertIndex(entries, command.previousEntryId)
+
+  if (
+    !workspace ||
+    !promptFolder ||
+    !workspace.entries.some((entry) => entry.id === command.promptFolderId) ||
+    insertIndex === null
+  ) {
+    return { status: 'conflict', reason: 'Prompt folder move conflict', targets }
+  }
+
+  entries.splice(insertIndex, 0, folderEntryRef(command.promptFolderId))
+  return [
+    {
+      type: 'update',
+      entityType: 'workspace',
+      id: command.workspaceId,
+      recipe: (draft) => {
+        draft.entries = entries
       }
     }
   ]

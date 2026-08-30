@@ -1,27 +1,25 @@
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
-import { placeMarkdownContentInCategoryOrder } from '@shared/MarkdownContent'
+import {
+  planCreatePromptDomainMutation,
+  type CreatePromptDomainCommand
+} from '@shared/MarkdownContentDomainMutations'
 import { promptEntryRef } from '@shared/OrderContainer'
-import { removeCategoryOrderEntry } from '@shared/PromptFolder'
 import {
   createPromptFull,
   isPromptFull,
   PromptStatus,
   type PromptCategoryOrderPlacement,
-  type Prompt,
   type PromptFull,
-  type PromptPersisted,
-  type SetPromptStatusPayload,
-  type SetPromptStatusResponsePayload
+  type PromptPersisted
 } from '@shared/Prompt'
+import { planSetPromptStatusDomainMutation } from '@shared/PromptDomainMutations'
 import { promptCollection } from '../Collections/PromptCollection'
 import {
   markPromptClientStateEdited,
   promptClientStateCollection
 } from '../Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 import { upsertPromptClientState } from '../UiState/PromptClientState'
 import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
@@ -60,7 +58,11 @@ const reconcilePrompt = (snapshot: {
   upsertPromptClientState(fullSnapshot.data)
 }
 
-const mutations = createMarkdownContentRendererMutations<PromptPersisted, PromptFull>({
+const mutations = createMarkdownContentRendererMutations<
+  PromptPersisted,
+  PromptFull,
+  CreatePromptDomainCommand
+>({
   kind: 'prompt',
   label: 'Prompt',
   collectionId: promptCollection.id,
@@ -81,10 +83,24 @@ const mutations = createMarkdownContentRendererMutations<PromptPersisted, Prompt
     const entity = entities.prompt({ id: promptId, data: createPromptFull(prompt) })
     return { ...entity, data: prompt }
   },
-  insertOptimistically: (collections, prompt) => {
-    collections.prompt.insert(prompt)
+  createDomain: {
+    plan: planCreatePromptDomainMutation,
+    /** Builds the deterministic prompt-creation command sent through generic IPC. */
+    createCommand: (promptFolderId, prompt, previousEntryId, categoryId) => ({
+      promptFolderId,
+      contentId: prompt.id,
+      title: prompt.title,
+      fallbackTitle: prompt.fallbackTitle,
+      promptText: prompt.promptText,
+      createdAt: getCurrentIsoSecondTimestamp(),
+      categoryId,
+      previousEntryId,
+      ...(prompt.templates !== undefined ? { templates: prompt.templates } : {})
+    })
+  },
+  insertClientStateOptimistically: (collections, promptId) => {
     collections.promptClientState.insert(
-      markPromptClientStateEdited({ id: prompt.id, isEdited: false })
+      markPromptClientStateEdited({ id: promptId, isEdited: false })
     )
   },
   deleteOptimistically: (collections, promptId) => {
@@ -116,27 +132,26 @@ export const movePrompt = mutations.move
 
 /** Changes prompt status and optionally restores it at an exact category-order placement. */
 export const setPromptStatus = async (
-  promptFolderId: string,
-  rootPromptFolderId: string,
+  sourcePromptFolderId: string,
+  destinationPromptFolderId: string,
   promptId: string,
   targetStatus: PromptStatus,
   requestedCategoryOrderPlacement?: PromptCategoryOrderPlacement
 ): Promise<void> => {
-  const promptFolder = promptFolderCollection.get(promptFolderId)
-  if (!promptFolder || promptFolder.kind === 'template') {
-    throw new Error('Prompt folder not loaded')
+  const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
+  if (!sourcePromptFolder || sourcePromptFolder.kind === 'template') {
+    throw new Error('Source prompt folder not loaded')
   }
-  const rootPromptFolder = promptFolderCollection.get(rootPromptFolderId)
-  if (!rootPromptFolder || rootPromptFolder.kind === 'template') {
-    throw new Error('Root prompt folder not loaded')
+  /** Loaded destination root used for category placement and ownership transfer. */
+  const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
+  if (!destinationPromptFolder || destinationPromptFolder.kind === 'template') {
+    throw new Error('Destination prompt folder not loaded')
   }
   /** Canonical renderer prompt used for the optimistic status projection. */
   const prompt = promptCollection.get(promptId)
   if (!prompt) throw new Error('Prompt not loaded')
-  /** Whether the prompt currently belongs to the Completed hierarchy. */
-  const isCompletedPrompt = prompt.status === PromptStatus.Completed
   /** Current Active-tree group used when a status-button change does not request a new placement. */
-  const currentCategoryGroup = rootPromptFolder.categoryOrder.categories.find((group) =>
+  const currentCategoryGroup = sourcePromptFolder.categoryOrder.categories.find((group) =>
     group.entries.some((entry) => entry.kind === 'prompt' && entry.id === promptId)
   )
   /** Current prompt index used to retain its exact Active-tree predecessor. */
@@ -155,129 +170,30 @@ export const setPromptStatus = async (
           currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
       } satisfies PromptCategoryOrderPlacement)
     /** Whether the requested category still belongs to the destination root folder. */
-    const hasCategory = rootPromptFolder.categoryOrder.categories.some(
+    const hasCategory = destinationPromptFolder.categoryOrder.categories.some(
       (group) => group.categoryId === placement.categoryId
     )
     return hasCategory ? placement : { categoryId: null, previousEntryId: null }
   })()
-  const modifiedAt = getCurrentIsoSecondTimestamp()
-  /** Current prompt without its status-specific completion timestamp. */
-  const { completedAt: _completedAt, ...activePromptBase } = prompt
-  /** Prompt with its requested status fields before optional Active-tree placement. */
-  const statusPrompt: Prompt =
-    targetStatus === PromptStatus.Completed
-      ? {
-          ...activePromptBase,
-          status: PromptStatus.Completed,
-          completedAt: modifiedAt,
-          modifiedAt
-        }
-      : {
-          ...activePromptBase,
-          status: targetStatus,
-          modifiedAt
-        }
-  /** Category-order reference removed on completion and restored on activation. */
-  const categoryOrderEntry = promptEntryRef(promptId)
-  /** Prompt whose category metadata matches its Active-tree placement. */
-  const nextPrompt =
-    targetStatus === PromptStatus.Completed
-      ? statusPrompt
-      : placeMarkdownContentInCategoryOrder(
-          rootPromptFolder.categoryOrder,
-          statusPrompt,
-          categoryOrderEntry,
-          categoryOrderPlacement.categoryId,
-          categoryOrderPlacement.previousEntryId
-        ).content
-
-  await runRevisionMutation<SetPromptStatusResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.prompt.update(promptId, (draft) => {
-        Object.assign(draft, nextPrompt)
-        if (targetStatus !== PromptStatus.Completed) delete draft.completedAt
-      })
-      collections.promptClientState.update(promptId, (clientState) => {
-        markPromptClientStateEdited(clientState)
-      })
-      collections.promptFolder.update(promptFolderId, (draft) => {
-        if (targetStatus === PromptStatus.Completed) {
-          if (
-            promptFolderId === rootPromptFolderId &&
-            !draft.completedPromptIds.includes(promptId)
-          ) {
-            draft.completedPromptIds = [promptId, ...draft.completedPromptIds]
-          }
-          if (promptFolderId === rootPromptFolderId) {
-            draft.categoryOrder = removeCategoryOrderEntry(
-              draft.categoryOrder,
-              categoryOrderEntry
-            )
-          }
-          return
-        }
-        draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-        if (promptFolderId === rootPromptFolderId && isCompletedPrompt) {
-          draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-            draft.categoryOrder,
-            nextPrompt,
-            categoryOrderEntry,
-            categoryOrderPlacement.categoryId,
-            categoryOrderPlacement.previousEntryId
-          ).categoryOrder
-        }
-      })
-      if (promptFolderId !== rootPromptFolderId) {
-        collections.promptFolder.update(rootPromptFolderId, (draft) => {
-          if (
-            targetStatus === PromptStatus.Completed &&
-            !draft.completedPromptIds.includes(promptId)
-          ) {
-            draft.completedPromptIds = [promptId, ...draft.completedPromptIds]
-          } else if (targetStatus !== PromptStatus.Completed) {
-            draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== promptId)
-          }
-          if (targetStatus === PromptStatus.Completed) {
-            draft.categoryOrder = removeCategoryOrderEntry(
-              draft.categoryOrder,
-              categoryOrderEntry
-            )
-          } else if (isCompletedPrompt) {
-            draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-              draft.categoryOrder,
-              nextPrompt,
-              categoryOrderEntry,
-              categoryOrderPlacement.categoryId,
-              categoryOrderPlacement.previousEntryId
-            ).categoryOrder
-          }
+  /** Shared prompt-status command projected in both processes. */
+  const command = {
+    sourcePromptFolderId,
+    destinationPromptFolderId,
+    promptId,
+    status: targetStatus,
+    categoryOrderPlacement,
+    modifiedAt: getCurrentIsoSecondTimestamp()
+  }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planSetPromptStatusDomainMutation },
+    ipc: { channel: 'set-prompt-status' },
+    renderer: {
+      mutate: ({ collections }) => {
+        collections.promptClientState.update(promptId, (clientState) => {
+          markPromptClientStateEdited(clientState)
         })
-      }
-    },
-    persistMutations: async ({ entities, transaction }) => {
-      const result = await ipcInvokeWithPayload<
-        IpcMutationPayloadResult<SetPromptStatusResponsePayload>,
-        SetPromptStatusPayload
-      >('set-prompt-status', {
-        sourcePromptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
-        rootPromptFolder: entities.promptFolder({
-          id: rootPromptFolderId,
-          data: rootPromptFolder
-        }),
-        prompt: {
-          id: promptId,
-          expectedRevision: promptCollection.utils.getAuthoritativeRevision(promptId)
-        },
-        status: targetStatus,
-        categoryOrderPlacement
-      })
-      if (result.success) promptClientStateCollection.utils.acceptMutations(transaction)
-      return result
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
-      reconcilePrompt(payload.prompt)
-    },
-    conflictMessage: 'Prompt status conflict'
+      },
+      clientStateCollections: [promptClientStateCollection]
+    }
   })
 }

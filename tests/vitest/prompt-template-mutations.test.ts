@@ -145,8 +145,7 @@ describe('prompt template mutations', () => {
     })
   })
 
-  it('creates a New Template through the create IPC contract', async () => {
-    ipcInvokeWithPayload.mockResolvedValue({ success: false, error: 'stop before commit' })
+  it('creates a New Template through the domain mutation contract', async () => {
     const template = createPromptTemplateFull({
       id: 'new-template',
       title: '',
@@ -190,16 +189,36 @@ describe('prompt template mutations', () => {
       { kind: 'template', id: 'paced-template' }
     ])
 
-    await options.persistMutations({ entities: entityBuilders, transaction: {} })
-    expect(ipcInvokeWithPayload).toHaveBeenCalledWith(
-      'create-prompt-template',
-      expect.objectContaining({
-        content: expect.objectContaining({
-          data: expect.objectContaining({ fallbackTitle: 'New Template' })
-        })
-      })
-    )
-    expect(ipcInvokeWithPayload.mock.calls[0]?.[1].content.data).not.toHaveProperty('status')
+    /** Generic invoke spy captures the template command and absent insertion expectation. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
+    await options.persistMutations({ invoke, transaction: {} })
+    expect(invoke).toHaveBeenCalledWith('create-prompt-template', {
+      payload: {
+        command: {
+          promptFolderId: 'source-folder',
+          contentId: 'new-template',
+          title: '',
+          fallbackTitle: '',
+          templateText: '',
+          createdAt: expect.any(String),
+          categoryId: null,
+          previousEntryId: null
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: 'source-folder',
+            expected: 'revision',
+            revision: 1
+          },
+          {
+            entityType: 'promptTemplate',
+            id: 'new-template',
+            expected: 'absent'
+          }
+        ]
+      }
+    })
   })
 
   it('reconciles the latest template snapshot from a delete conflict', async () => {

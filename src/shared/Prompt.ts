@@ -1,12 +1,4 @@
-import type { PromptFolder } from './PromptFolder'
 import type {
-  RevisionEnvelope,
-  RevisionPayloadEntity,
-  RevisionPayloadReference
-} from './Revision'
-import type {
-  CreateMarkdownContentPayload,
-  CreateMarkdownContentResponsePayload,
   DeleteMarkdownContentPayload,
   DeleteMarkdownContentResponsePayload,
   MarkdownContentRevisionPayload,
@@ -107,10 +99,6 @@ export type PromptRevisionPayload = MarkdownContentRevisionPayload<PromptPersist
 export type PromptRevisionResponsePayload =
   MarkdownContentRevisionResponsePayload<PromptPersisted>
 
-export type CreatePromptPayload = CreateMarkdownContentPayload<PromptPersisted>
-
-export type CreatePromptResponsePayload = CreateMarkdownContentResponsePayload<PromptPersisted>
-
 export type DeletePromptPayload = DeleteMarkdownContentPayload<PromptPersisted>
 
 export type DeletePromptResponsePayload = DeleteMarkdownContentResponsePayload<PromptPersisted>
@@ -119,22 +107,4 @@ export type DeletePromptResponsePayload = DeleteMarkdownContentResponsePayload<P
 export type PromptCategoryOrderPlacement = {
   categoryId: string | null
   previousEntryId: string | null
-}
-
-export type SetPromptStatusPayload = {
-  // Folder that currently owns the prompt shown in the active hierarchy.
-  sourcePromptFolder: RevisionPayloadEntity<PromptFolder>
-  // Root folder that owns completed prompts and restored active prompts.
-  rootPromptFolder: RevisionPayloadEntity<PromptFolder>
-  // Prompt content is already persisted by the matching autosave flushed before this mutation.
-  prompt: RevisionPayloadReference
-  status: PromptStatus
-  // Category-order placement retained for ordinary status changes or applied during restoration.
-  categoryOrderPlacement: PromptCategoryOrderPlacement
-}
-
-export type SetPromptStatusResponsePayload = {
-  // Authoritative source/root snapshots reconcile both sides of an ownership transfer.
-  promptFolders: Array<RevisionEnvelope<PromptFolder>>
-  prompt: RevisionEnvelope<PromptPersisted>
 }

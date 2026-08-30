@@ -1,5 +1,4 @@
 import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
-import type { PromptFolder } from './PromptFolder'
 
 /** Persisted category metadata owned by one root prompt or template folder. */
 export type Category = {
@@ -8,23 +7,10 @@ export type Category = {
   description: string | null
 }
 
-/** Payload used to rename one category. */
-export type RenameCategoryPayload = {
-  category: RevisionPayloadEntity<Category>
-  displayName: string
-}
-
 /** Payload used to set or remove one category description. */
 export type SetCategoryDescriptionPayload = {
   category: RevisionPayloadEntity<Category>
   description: string | null
-}
-
-/** Payload used to reorder one category within its owning root folder. */
-export type MoveCategoryPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  categoryId: string
-  previousCategoryId: string | null
 }
 
 /** Authoritative category snapshot returned by category updates. */

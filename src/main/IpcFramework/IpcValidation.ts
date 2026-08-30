@@ -1,22 +1,14 @@
 import { PromptStatus } from '@shared/Prompt'
+import type { PromptPersisted, PromptTemplateReference } from '@shared/Prompt'
 import type {
-  PromptPersisted,
-  PromptTemplateReference,
-  SetPromptStatusPayload
-} from '@shared/Prompt'
-import type {
-  CreatePromptFolderPayload,
   DeletePromptFolderPayload,
   LoadPromptFolderInitialPayload,
   PromptFolder,
-  PromptFolderSettings,
-  UpdatePromptFolderSettingsPayload
+  PromptFolderSettings
 } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type {
   Category,
-  MoveCategoryPayload,
-  RenameCategoryPayload,
   SetCategoryDescriptionPayload
 } from '@shared/Category'
 import type {
@@ -24,9 +16,8 @@ import type {
   MarkdownContentUiStateRevisionPayload
 } from '@shared/MarkdownContentUiState'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
-import type { RevisionPayloadEntity, RevisionPayloadReference } from '@shared/Revision'
+import type { RevisionPayloadEntity } from '@shared/Revision'
 import type {
-  CreateMarkdownContentPayload,
   DeleteMarkdownContentPayload,
   MarkdownContentPersisted,
   MarkdownContentRevisionPayload
@@ -44,7 +35,6 @@ import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
   LoadWorkspaceByPathRequest,
-  MovePromptFolderPayload,
   Workspace
 } from '@shared/Workspace'
 
@@ -158,11 +148,6 @@ const parseRevisionPayloadEntity = <TData>(
   })
 }
 
-const parseRevisionPayloadReference = parseObject<RevisionPayloadReference>({
-  id: parseString,
-  expectedRevision: parseNumber
-})
-
 export const parseWireRequestWithPayload = <TPayload>(
   payloadParser: Parser<TPayload>
 ): Parser<IpcRequestWithPayload<TPayload>> => {
@@ -269,9 +254,6 @@ const parsePromptFolder: Parser<PromptFolder> = (value) => {
 
 const parsePromptFolderRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
-
-const parsePromptFolderSettingsPayloadEntity =
-  parseRevisionPayloadEntity<PromptFolderSettings>(parsePromptFolderSettings)
 
 const parseSystemSettings = parseObject<SystemSettings>({
   promptFontSize: parseNumber,
@@ -426,80 +408,9 @@ const parseCloseWorkspacePayload = parseObject<CloseWorkspacePayload>({})
 const parseCloseWorkspaceWireRequest: Parser<IpcRequestWithPayload<CloseWorkspacePayload>> =
   parseWireRequestWithPayload<CloseWorkspacePayload>(parseCloseWorkspacePayload)
 
-const parseCreatePromptFolderPayload: Parser<CreatePromptFolderPayload> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const valueKeys = Object.keys(record)
-
-  if (
-    valueKeys.length !== 5 ||
-    !('workspace' in record) ||
-    !('promptFolderId' in record) ||
-    !('kind' in record) ||
-    !('displayName' in record) ||
-    !('previousEntryId' in record)
-  ) {
-    return null
-  }
-
-  const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
-  const promptFolderId = parseString(record.promptFolderId)
-  const kind = record.kind === 'prompt' || record.kind === 'template' ? record.kind : null
-  const displayName = parseString(record.displayName)
-
-  if (
-    !workspace ||
-    promptFolderId === null ||
-    kind === null ||
-    displayName === null ||
-    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
-  ) {
-    return null
-  }
-
-  return {
-    workspace,
-    promptFolderId,
-    kind,
-    displayName,
-    previousEntryId: record.previousEntryId
-  }
-}
-
-const parseCreatePromptFolderWireRequest: Parser<IpcRequestWithPayload<CreatePromptFolderPayload>> =
-  parseWireRequestWithPayload<CreatePromptFolderPayload>(parseCreatePromptFolderPayload)
-
 const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPersisted>(
   parseContentRevisionPayloadEntity: Parser<RevisionPayloadEntity<TContent>>
 ) => {
-  const parseCreatePayload: Parser<CreateMarkdownContentPayload<TContent>> = (value) => {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-
-    const record = value as Record<string, unknown>
-    if (
-      Object.keys(record).length !== 4 ||
-      !('promptFolder' in record) ||
-      !('content' in record) ||
-      !('categoryId' in record) ||
-      !('previousEntryId' in record)
-    ) {
-      return null
-    }
-
-    const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
-    const content = parseContentRevisionPayloadEntity(record.content)
-    const previousEntryId = record.previousEntryId
-    const categoryId = record.categoryId
-    if (!promptFolder || !content || (categoryId !== null && typeof categoryId !== 'string') || (previousEntryId !== null && typeof previousEntryId !== 'string')) {
-      return null
-    }
-
-    return { promptFolder, content, categoryId, previousEntryId }
-  }
-
   const parseRevisionPayload = parseObject<MarkdownContentRevisionPayload<TContent>>({
     content: parseContentRevisionPayloadEntity
   })
@@ -508,7 +419,6 @@ const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPer
     content: parseContentRevisionPayloadEntity
   })
   return {
-    create: parseWireRequestWithPayload(parseCreatePayload),
     update: parseWireRequestWithPayload(parseRevisionPayload),
     delete: parseWireRequestWithPayload(parseDeletePayload)
   }
@@ -520,26 +430,6 @@ const promptContentPayloadParsers = createMarkdownContentPayloadParsers(
 const promptTemplateContentPayloadParsers = createMarkdownContentPayloadParsers(
   parsePromptTemplateRevisionPayloadEntity
 )
-
-const parseUpdatePromptFolderSettingsPayload = parseObject<UpdatePromptFolderSettingsPayload>({
-  promptFolder: parsePromptFolderSettingsPayloadEntity
-})
-
-const parseUpdatePromptFolderSettingsWireRequest: Parser<
-  IpcRequestWithPayload<UpdatePromptFolderSettingsPayload>
-> = parseWireRequestWithPayload<UpdatePromptFolderSettingsPayload>(
-  parseUpdatePromptFolderSettingsPayload
-)
-
-/** Parser for category rename payloads. */
-const parseRenameCategoryPayload = parseObject<RenameCategoryPayload>({
-  category: parseCategoryRevisionPayloadEntity,
-  displayName: parseString
-})
-
-/** Wire request parser for category renames. */
-const parseRenameCategoryWireRequest: Parser<IpcRequestWithPayload<RenameCategoryPayload>> =
-  parseWireRequestWithPayload<RenameCategoryPayload>(parseRenameCategoryPayload)
 
 /** Parser for category description payloads. */
 const parseSetCategoryDescriptionPayload = parseObject<SetCategoryDescriptionPayload>({
@@ -553,17 +443,6 @@ const parseSetCategoryDescriptionWireRequest: Parser<
 > = parseWireRequestWithPayload<SetCategoryDescriptionPayload>(
   parseSetCategoryDescriptionPayload
 )
-
-/** Parser for category reordering payloads. */
-const parseMoveCategoryPayload = parseObject<MoveCategoryPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity,
-  categoryId: parseString,
-  previousCategoryId: parseNullableString
-})
-
-/** Wire request parser for category reordering. */
-const parseMoveCategoryWireRequest: Parser<IpcRequestWithPayload<MoveCategoryPayload>> =
-  parseWireRequestWithPayload<MoveCategoryPayload>(parseMoveCategoryPayload)
 
 const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -591,58 +470,6 @@ const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value
 
 const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePromptFolderPayload>> =
   parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
-
-const parseSetPromptStatusPayload = parseObject<SetPromptStatusPayload>({
-  sourcePromptFolder: parsePromptFolderRevisionPayloadEntity,
-  rootPromptFolder: parsePromptFolderRevisionPayloadEntity,
-  prompt: parseRevisionPayloadReference,
-  status: parsePromptStatus,
-  categoryOrderPlacement: parseObject({
-    categoryId: parseNullableString,
-    previousEntryId: parseNullableString
-  })
-})
-
-const parseSetPromptStatusWireRequest: Parser<IpcRequestWithPayload<SetPromptStatusPayload>> =
-  parseWireRequestWithPayload<SetPromptStatusPayload>(parseSetPromptStatusPayload)
-
-const parseMovePromptFolderPayload: Parser<MovePromptFolderPayload> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const valueKeys = Object.keys(record)
-
-  if (
-    valueKeys.length !== 3 ||
-    !('workspace' in record) ||
-    !('promptFolderId' in record) ||
-    !('previousEntryId' in record)
-  ) {
-    return null
-  }
-
-  const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
-  const promptFolderId = parseString(record.promptFolderId)
-
-  if (
-    !workspace ||
-    promptFolderId === null ||
-    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
-  ) {
-    return null
-  }
-
-  return {
-    workspace,
-    promptFolderId,
-    previousEntryId: record.previousEntryId
-  }
-}
-
-const parseMovePromptFolderWireRequest: Parser<IpcRequestWithPayload<MovePromptFolderPayload>> =
-  parseWireRequestWithPayload<MovePromptFolderPayload>(parseMovePromptFolderPayload)
 
 const parseSystemSettingsRevisionPayload = parseObject<SystemSettingsRevisionPayload>({
   systemSettings: parseSystemSettingsRevisionPayloadEntity
@@ -712,40 +539,20 @@ export const parseCreateWorkspaceRequest = createRequestParser(parseCreateWorksp
 
 export const parseCloseWorkspaceRequest = createRequestParser(parseCloseWorkspaceWireRequest)
 
-export const parseCreatePromptFolderRequest = createRequestParser(
-  parseCreatePromptFolderWireRequest
-)
-
-export const parseCreatePromptRequest = createRequestParser(promptContentPayloadParsers.create)
-
 export const parseUpdatePromptRevisionRequest = createRequestParser(
   promptContentPayloadParsers.update
 )
-
-export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
-  parseUpdatePromptFolderSettingsWireRequest
-)
-
-/** Validated request parser for category rename IPC. */
-export const parseRenameCategoryRequest = createRequestParser(parseRenameCategoryWireRequest)
 
 /** Validated request parser for category description IPC. */
 export const parseSetCategoryDescriptionRequest = createRequestParser(
   parseSetCategoryDescriptionWireRequest
 )
 
-/** Validated request parser for category reordering IPC. */
-export const parseMoveCategoryRequest = createRequestParser(parseMoveCategoryWireRequest)
-
 export const parseDeletePromptFolderRequest = createRequestParser(
   parseDeletePromptFolderWireRequest
 )
 
 export const parseDeletePromptRequest = createRequestParser(promptContentPayloadParsers.delete)
-
-export const parseCreatePromptTemplateRequest = createRequestParser(
-  promptTemplateContentPayloadParsers.create
-)
 
 export const parseUpdatePromptTemplateRevisionRequest = createRequestParser(
   promptTemplateContentPayloadParsers.update
@@ -754,10 +561,6 @@ export const parseUpdatePromptTemplateRevisionRequest = createRequestParser(
 export const parseDeletePromptTemplateRequest = createRequestParser(
   promptTemplateContentPayloadParsers.delete
 )
-
-export const parseSetPromptStatusRequest = createRequestParser(parseSetPromptStatusWireRequest)
-
-export const parseMovePromptFolderRequest = createRequestParser(parseMovePromptFolderWireRequest)
 
 export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
   parseUpdateSystemSettingsRevisionWireRequest

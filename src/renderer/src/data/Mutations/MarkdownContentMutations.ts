@@ -1,14 +1,13 @@
 import type { Transaction } from '@tanstack/svelte-db'
 import {
   planPromptMove,
-  planPromptTemplateMove
+  planPromptTemplateMove,
+  type CreatePromptDomainCommand,
+  type CreatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
+import type { DomainPlanner } from '@shared/DomainChanges'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import {
-  getActiveMarkdownContentIds,
-  placeMarkdownContentInCategoryOrder,
-  type CreateMarkdownContentPayload,
-  type CreateMarkdownContentResponsePayload,
   type DeleteMarkdownContentPayload,
   type DeleteMarkdownContentResponsePayload,
   type MarkdownContentPersisted,
@@ -21,7 +20,6 @@ import {
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
 import type { RevisionEnvelope, RevisionPayloadEntity } from '@shared/Revision'
-import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
@@ -45,12 +43,12 @@ type ContentRecord = { id: string; title: string; fallbackTitle: string; categor
 /** Entity-specific adapters used by shared renderer content mutations. */
 export type MarkdownContentRendererMutationConfig<
   TPersisted extends MarkdownContentPersisted,
-  TFull extends TPersisted
+  TFull extends TPersisted,
+  TCreateCommand
 > = {
   kind: PromptFolderContentKind
   label: string
   collectionId: string
-  defaultFallbackTitle?: string
   channels: { create: string; update: string; delete: string; move: string }
   createEntryRef: (contentId: string) => CategoryOrderEntryRef
   getContent: (contentId: string) => ContentRecord | undefined
@@ -61,7 +59,19 @@ export type MarkdownContentRendererMutationConfig<
     contentId: string,
     content: TPersisted
   ) => RevisionPayloadEntity<TPersisted>
-  insertOptimistically: (collections: OptimisticCollections, content: TFull) => void
+  createDomain: {
+    plan: DomainPlanner<TCreateCommand>
+    createCommand: (
+      promptFolderId: string,
+      content: TFull,
+      previousEntryId: string | null,
+      categoryId: string | null
+    ) => TCreateCommand
+  }
+  insertClientStateOptimistically: (
+    collections: OptimisticCollections,
+    contentId: string
+  ) => void
   deleteOptimistically: (collections: OptimisticCollections, contentId: string) => void
   markMoveClientStateEdited: (
     collections: OptimisticCollections,
@@ -75,9 +85,10 @@ export type MarkdownContentRendererMutationConfig<
 /** Creates category-aware prompt or template renderer mutations. */
 export const createMarkdownContentRendererMutations = <
   TPersisted extends MarkdownContentPersisted,
-  TFull extends TPersisted
+  TFull extends TPersisted,
+  TCreateCommand extends CreatePromptDomainCommand | CreatePromptTemplateDomainCommand
 >(
-  config: MarkdownContentRendererMutationConfig<TPersisted, TFull>
+  config: MarkdownContentRendererMutationConfig<TPersisted, TFull, TCreateCommand>
 ) => {
   /** Move planner selected by the renderer channel's configured markdown-content kind. */
   const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
@@ -108,64 +119,24 @@ export const createMarkdownContentRendererMutations = <
     if (!promptFolder || promptFolder.kind !== config.kind) {
       throw new Error(`${config.label} folder not loaded`)
     }
-    /** Collision-free title fields for the new root-owned content. */
-    const titleFields = resolvePromptTitleUpdateForPromptIds({
-      promptIds: getActiveMarkdownContentIds(promptFolder, config.kind),
-      lookupPrompt: config.getContent,
-      promptId: content.id,
-      currentFallbackTitle: content.fallbackTitle,
-      nextTitle: content.title,
-      defaultFallbackTitle: config.defaultFallbackTitle
-    })
-    /** Folder-order reference inserted with the new content. */
-    const entry = config.createEntryRef(content.id)
-    /** New content and category order synchronized to the requested placement. */
-    const placement = placeMarkdownContentInCategoryOrder(
-      promptFolder.categoryOrder,
-      { ...content, ...titleFields },
-      entry,
-      categoryId,
-      previousEntryId
+    /** Shared content-creation command projected in both processes. */
+    const command = config.createDomain.createCommand(
+      promptFolderId,
+      content,
+      previousEntryId,
+      categoryId
     )
-    /** Optimistic content with category metadata synchronized to placement. */
-    const optimisticContent: TFull = placement.content
-
-    await runRevisionMutation<CreateMarkdownContentResponsePayload<TPersisted>>({
-      mutateOptimistically: ({ collections }) => {
-        config.insertOptimistically(collections, optimisticContent)
-        collections.promptFolder.update(promptFolderId, (draft) => {
-          draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-            draft.categoryOrder,
-            optimisticContent,
-            entry,
-            categoryId,
-            previousEntryId
-          ).categoryOrder
-        })
-      },
-      persistMutations: async ({ entities, transaction }) => {
-        /** IPC creation result. */
-        const result = await ipcInvokeWithPayload<
-          IpcMutationPayloadResult<CreateMarkdownContentResponsePayload<TPersisted>>,
-          CreateMarkdownContentPayload<TPersisted>
-        >(config.channels.create, {
-          promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
-          content: config.createEntity(
-            entities,
-            content.id,
-            config.toPersisted(optimisticContent)
-          ),
-          categoryId,
-          previousEntryId
-        })
-        if (result.success) config.acceptClientStateMutations(transaction)
-        return result
-      },
-      handleSuccessOrConflictResponse: (payload) => {
-        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
-        if (payload.content) config.reconcile(payload.content)
-      },
-      conflictMessage: `${config.label} create conflict`
+    await runImmediateRendererDomainMutation({
+      mutation: { command, plan: config.createDomain.plan },
+      ipc: { channel: config.channels.create },
+      renderer: {
+        mutate: ({ collections }) => {
+          config.insertClientStateOptimistically(collections, content.id)
+        },
+        clientStateCollections: [
+          { utils: { acceptMutations: config.acceptClientStateMutations } }
+        ]
+      }
     })
   }
 

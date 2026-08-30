@@ -250,27 +250,6 @@ export const haveSamePromptFolderSettings = (
   right: PromptFolderSettings
 ): boolean => left.folderDescription === right.folderDescription
 
-export type UpdatePromptFolderSettingsPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolderSettings>
-}
-
-export type PromptFolderRevisionResponsePayload = {
-  promptFolder: RevisionEnvelope<PromptFolder>
-}
-
-export type CreatePromptFolderPayload = {
-  workspace: RevisionPayloadEntity<Workspace>
-  promptFolderId: string
-  kind: PromptFolderKind
-  displayName: string
-  previousEntryId: string | null
-}
-
-export type CreatePromptFolderResponsePayload = {
-  workspace?: RevisionEnvelope<Workspace>
-  promptFolder?: RevisionEnvelope<PromptFolder>
-}
-
 export type DeletePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
   promptFolder: RevisionPayloadEntity<PromptFolder>

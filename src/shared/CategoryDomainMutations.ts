@@ -14,6 +14,7 @@ import {
   deleteCategoryOrderGroup,
   getCategoryOrderCategoryIds,
   insertCategoryOrderGroup,
+  moveCategoryOrderGroup,
   type PromptFolder
 } from './PromptFolder'
 
@@ -53,6 +54,19 @@ export type DeleteCategoryDomainCommand = {
   modifiedAt: string
 }
 
+/** Renderer-authored command for renaming one root-owned category. */
+export type RenameCategoryDomainCommand = {
+  categoryId: string
+  displayName: string
+}
+
+/** Renderer-authored command for reordering one category group. */
+export type MoveCategoryDomainCommand = {
+  promptFolderId: string
+  categoryId: string
+  previousCategoryId: string | null
+}
+
 /** Strict runtime parser for renderer-authored category deletion commands. */
 export const parseDeleteCategoryDomainCommand = (
   value: unknown
@@ -72,6 +86,45 @@ export const parseDeleteCategoryDomainCommand = (
     categoryId: record.categoryId,
     promptFolderId: record.promptFolderId,
     modifiedAt: record.modifiedAt
+  }
+}
+
+/** Strict runtime parser for category rename commands. */
+export const parseRenameCategoryDomainCommand = (
+  value: unknown
+): RenameCategoryDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 2 ||
+    typeof record.categoryId !== 'string' ||
+    typeof record.displayName !== 'string'
+  ) {
+    return null
+  }
+  return { categoryId: record.categoryId, displayName: record.displayName }
+}
+
+/** Strict runtime parser for category reorder commands. */
+export const parseMoveCategoryDomainCommand = (
+  value: unknown
+): MoveCategoryDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 3 ||
+    typeof record.promptFolderId !== 'string' ||
+    typeof record.categoryId !== 'string' ||
+    (record.previousCategoryId !== null && typeof record.previousCategoryId !== 'string')
+  ) {
+    return null
+  }
+  return {
+    promptFolderId: record.promptFolderId,
+    categoryId: record.categoryId,
+    previousCategoryId: record.previousCategoryId
   }
 }
 
@@ -232,4 +285,83 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   }
 
   return changes
+}
+
+/** Plans a collision-free category display-name and filename update. */
+export const planRenameCategoryDomainMutation: DomainPlanner<
+  RenameCategoryDomainCommand
+> = (state, command) => {
+  /** Category selected by the rename command. */
+  const category = state.get('category', command.categoryId)
+  /** Root folder currently owning the selected category. */
+  const owningFolder = state
+    .getAll('promptFolder')
+    .find((folder) => getCategoryOrderCategoryIds(folder.categoryOrder).includes(command.categoryId))
+  /** Stable target returned for any rename conflict. */
+  const targets: DomainTarget[] = [{ entityType: 'category', id: command.categoryId }]
+  /** Normalized display name shared by renderer and main projections. */
+  const displayName = normalizeCategoryDisplayName(command.displayName)
+  /** Loaded sibling categories participating in name-conflict validation. */
+  const siblings = owningFolder
+    ? getCategoryOrderCategoryIds(owningFolder.categoryOrder).flatMap((categoryId) => {
+        /** Loaded category referenced by one sibling group. */
+        const sibling = state.get('category', categoryId)
+        return sibling ? [sibling] : []
+      })
+    : []
+
+  if (
+    !category ||
+    !owningFolder ||
+    !displayName ||
+    hasCategoryDisplayNameConflict(siblings, displayName, command.categoryId)
+  ) {
+    return createConflict('Category rename conflict', targets)
+  }
+
+  return [
+    {
+      type: 'update',
+      entityType: 'category',
+      id: command.categoryId,
+      recipe: (draft) => {
+        draft.displayName = displayName
+      }
+    }
+  ]
+}
+
+/** Plans one category-group reorder inside its owning root folder. */
+export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCommand> = (
+  state,
+  command
+) => {
+  /** Root folder whose category order is changing. */
+  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Stable folder target returned for ordering conflicts. */
+  const targets: DomainTarget[] = [
+    { entityType: 'promptFolder', id: command.promptFolderId }
+  ]
+  if (!promptFolder) return createConflict('Category move conflict', targets)
+
+  try {
+    /** Validated category order projected before constructing the shared recipe. */
+    const categoryOrder = moveCategoryOrderGroup(
+      promptFolder.categoryOrder,
+      command.categoryId,
+      command.previousCategoryId
+    )
+    return [
+      {
+        type: 'update',
+        entityType: 'promptFolder',
+        id: command.promptFolderId,
+        recipe: (draft) => {
+          draft.categoryOrder = categoryOrder
+        }
+      }
+    ]
+  } catch {
+    return createConflict('Category move conflict', targets)
+  }
 }

@@ -2,14 +2,15 @@ import { ipcMain } from 'electron'
 import {
   parseMoveMarkdownContentDomainCommand,
   planPromptMove,
-  planPromptTemplateMove
+  planPromptTemplateMove,
+  type CreatePromptDomainCommand,
+  type CreatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
+import type { DomainCommandParser, DomainPlanner } from '@shared/DomainChanges'
 import type { IpcRequestWithPayload } from '@shared/IpcRequest'
 import {
   getActiveMarkdownContentIds,
   getMarkdownContentIds,
-  placeMarkdownContentInCategoryOrder,
-  type CreateMarkdownContentPayload,
   type DeleteMarkdownContentPayload,
   type MarkdownContentPersisted,
   type MarkdownContentRevisionPayload
@@ -22,7 +23,6 @@ import {
   type PromptFolder,
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { RevisionEnvelope } from '@shared/Revision'
 import type {
@@ -37,7 +37,6 @@ import { buildPromptFolderSnapshot } from '../Data/DataSnapshotHelpers'
 import type { ParsedRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import type { MarkdownPersistenceFields } from '../Persistence/MarkdownPersistence'
-import { resolveActivePromptFolderName } from '../Persistence/PromptPersistencePaths'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
 import { handleMainDomainMutation } from './DomainMutation'
 import {
@@ -60,7 +59,10 @@ type ContentOperation<TContent extends MarkdownContentPersisted> = {
   persistenceFields: MarkdownPersistenceFields
 }
 
-export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersisted> = {
+export type MarkdownContentMutationConfig<
+  TContent extends MarkdownContentPersisted,
+  TCreateCommand extends CreatePromptDomainCommand | CreatePromptTemplateDomainCommand
+> = {
   kind: PromptFolderContentKind
   label: string
   channels: {
@@ -69,8 +71,11 @@ export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersis
     delete: string
     move: string
   }
+  createDomain: {
+    parseCommand: DomainCommandParser<TCreateCommand>
+    plan: DomainPlanner<TCreateCommand>
+  }
   parsers: {
-    create: MutationParser<CreateMarkdownContentPayload<TContent>>
     update: MutationParser<MarkdownContentRevisionPayload<TContent>>
     delete: MutationParser<DeleteMarkdownContentPayload<TContent>>
   }
@@ -80,18 +85,12 @@ export type MarkdownContentMutationConfig<TContent extends MarkdownContentPersis
     content: CommittedEntry<TContent, MarkdownPersistenceFields>
   ) => RevisionEnvelope<TContent>
   createEntryRef: (contentId: string) => CategoryOrderEntryRef
-  createPersisted: (
-    requested: TContent,
-    titleFields: Pick<TContent, 'title' | 'fallbackTitle'>,
-    now: string
-  ) => TContent
   updatePersisted: (
     requested: TContent,
     current: TContent,
     titleFields: Pick<TContent, 'title' | 'fallbackTitle'>
   ) => TContent
   canMove: (content: TContent) => boolean
-  createContent: (tx: AtomicDataBuilder, operation: ContentOperation<TContent>) => AtomicHandle
   updateContent: (tx: AtomicDataBuilder, operation: ContentOperation<TContent>) => AtomicHandle
   updateFilename: (
     tx: AtomicDataBuilder,
@@ -115,9 +114,10 @@ const getFilenameGroups = (
 ]
 
 export const setupMarkdownContentMutationHandlers = <
-  TContent extends MarkdownContentPersisted
+  TContent extends MarkdownContentPersisted,
+  TCreateCommand extends CreatePromptDomainCommand | CreatePromptTemplateDomainCommand
 >(
-  config: MarkdownContentMutationConfig<TContent>
+  config: MarkdownContentMutationConfig<TContent, TCreateCommand>
 ): void => {
   /** Move planner selected by the IPC channel's configured markdown-content kind. */
   const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
@@ -185,113 +185,9 @@ export const setupMarkdownContentMutationHandlers = <
     return handles
   }
 
-  ipcMain.handle(config.channels.create, async (_, request: unknown) => {
-    return await runMutationIpcRequest(request, config.parsers.create, async (validatedRequest) => {
-      try {
-        const {
-          promptFolder: requestedFolder,
-          content: requestedContent,
-          categoryId,
-          previousEntryId
-        } = validatedRequest.payload
-        const promptFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-        const contentId = requestedContent.data.id
-        if (
-          !promptFolder ||
-          promptFolder.committed.kind !== config.kind
-        ) {
-          return { success: false, error: `${config.label} folder not loaded` }
-        }
-        if (config.getContent(contentId)) {
-          return { success: false, error: `${config.label} already exists` }
-        }
-        const titleFields = resolvePromptTitleUpdateForPromptIds({
-          promptIds: getActiveMarkdownContentIds(promptFolder.committed, config.kind),
-          lookupPrompt: (contentId) => config.getContent(contentId)?.committed ?? null,
-          promptId: contentId,
-          currentFallbackTitle: requestedContent.data.fallbackTitle,
-          nextTitle: requestedContent.data.title,
-          defaultFallbackTitle: config.defaultFallbackTitle
-        })
-        /** Category-order reference for the new prompt or template. */
-        const categoryOrderEntry = config.createEntryRef(contentId)
-        /** New content and category order synchronized to the requested placement. */
-        const placement = placeMarkdownContentInCategoryOrder(
-          promptFolder.committed.categoryOrder,
-          config.createPersisted(
-            requestedContent.data,
-            titleFields,
-            getCurrentIsoSecondTimestamp()
-          ),
-          categoryOrderEntry,
-          categoryId,
-          previousEntryId
-        )
-        /** Created content with category metadata synchronized to placement. */
-        const content = placement.content
-        const basePersistenceFields: MarkdownPersistenceFields = {
-          workspaceId: promptFolder.persistenceFields.workspaceId,
-          workspacePath: promptFolder.persistenceFields.workspacePath,
-          folderPath: resolveActivePromptFolderName(
-            promptFolder.persistenceFields.folderPath,
-            promptFolder.committed.kind
-          ),
-          promptFolderId: requestedFolder.id,
-          promptId: contentId,
-          promptStem: contentId,
-          needsFilenameIdSuffix: false
-        }
-        const filenamePlans = planFilenames(
-          [...getActiveMarkdownContentIds(promptFolder.committed, config.kind), contentId],
-          new Map([[contentId, { content, persistenceFields: basePersistenceFields }]])
-        )
-        const outcome = (await runAtomicDataTransaction((tx) => ({
-          promptFolder: tx.promptFolder.update({
-            id: requestedFolder.id,
-            expectedRevision: requestedFolder.expectedRevision,
-            recipe: (draft) => {
-              draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-                draft.categoryOrder,
-                content,
-                categoryOrderEntry,
-                categoryId,
-                previousEntryId
-              ).categoryOrder
-            }
-          }),
-          content: config.createContent(tx, {
-            id: contentId,
-            data: content,
-            persistenceFields: getPlannedMarkdownPersistenceFields(filenamePlans, contentId)
-          }),
-          ...createFilenameUpdateHandles(tx, filenamePlans, new Set([contentId]))
-        })))!
-
-        if (outcome.status === 'conflict') {
-          return buildConflictResponseFromLatest(
-            data.promptFolder.committedStore.getEntry(requestedFolder.id),
-            `${config.label} folder not loaded`,
-            () => ({
-              promptFolders: buildPromptFolderSnapshots([requestedFolder.id])
-            })
-          )
-        }
-        const updatedFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
-        const createdContent = config.getContent(contentId)
-        if (!updatedFolder || !createdContent) {
-          return { success: false, error: `${config.label} create commit did not complete` }
-        }
-        return {
-          success: true,
-          payload: {
-            promptFolders: buildPromptFolderSnapshots([requestedFolder.id]),
-            content: config.buildSnapshot(createdContent)
-          }
-        }
-      } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : String(error) }
-      }
-    })
+  handleMainDomainMutation({
+    ipc: { channel: config.channels.create },
+    mutation: config.createDomain
   })
 
   ipcMain.handle(config.channels.delete, async (_, request: unknown) => {

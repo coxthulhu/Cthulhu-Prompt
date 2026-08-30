@@ -855,8 +855,15 @@ describe('Prompt categories', () => {
         requestId: 'rename-category-test',
         clientId: (window as any).ipcClientId,
         payload: {
-          category: { id: category.id, expectedRevision: 1, data: category },
-          displayName: 'Review Work'
+          command: { categoryId: category.id, displayName: 'Review Work' },
+          expectations: [
+            {
+              entityType: 'category',
+              id: category.id,
+              expected: 'revision',
+              revision: 1
+            }
+          ]
         }
       })
     }, createdCategory)

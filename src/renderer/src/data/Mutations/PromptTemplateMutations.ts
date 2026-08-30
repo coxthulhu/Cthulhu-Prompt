@@ -5,7 +5,11 @@ import {
   type PromptTemplatePersisted
 } from '@shared/PromptTemplate'
 import { promptTemplateEntryRef } from '@shared/OrderContainer'
-import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import {
+  planCreatePromptTemplateDomainMutation,
+  type CreatePromptTemplateDomainCommand
+} from '@shared/MarkdownContentDomainMutations'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import {
   markPromptTemplateClientStateEdited,
@@ -27,12 +31,12 @@ const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => (
 
 const mutations = createMarkdownContentRendererMutations<
   PromptTemplatePersisted,
-  PromptTemplateFull
+  PromptTemplateFull,
+  CreatePromptTemplateDomainCommand
 >({
   kind: 'template',
   label: 'Prompt template',
   collectionId: promptTemplateCollection.id,
-  defaultFallbackTitle: DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE,
   channels: {
     create: 'create-prompt-template',
     update: 'update-prompt-template',
@@ -53,10 +57,23 @@ const mutations = createMarkdownContentRendererMutations<
     })
     return { ...entity, data: template }
   },
-  insertOptimistically: (collections, template) => {
-    collections.promptTemplate.insert(template)
+  createDomain: {
+    plan: planCreatePromptTemplateDomainMutation,
+    /** Builds the deterministic template-creation command sent through generic IPC. */
+    createCommand: (promptFolderId, template, previousEntryId, categoryId) => ({
+      promptFolderId,
+      contentId: template.id,
+      title: template.title,
+      fallbackTitle: template.fallbackTitle,
+      templateText: template.templateText,
+      createdAt: getCurrentIsoSecondTimestamp(),
+      categoryId,
+      previousEntryId
+    })
+  },
+  insertClientStateOptimistically: (collections, templateId) => {
     collections.promptTemplateClientState.insert(
-      markPromptTemplateClientStateEdited({ id: template.id, isEdited: false })
+      markPromptTemplateClientStateEdited({ id: templateId, isEdited: false })
     )
   },
   deleteOptimistically: (collections, templateId) => {
