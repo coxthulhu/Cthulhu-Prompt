@@ -8,6 +8,7 @@ import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutation
 import { planPromptMove } from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
+import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 
 /** Hoisted authoritative stores used by the main persistence planner. */
 const mockDomainData = vi.hoisted(() => {
@@ -116,6 +117,133 @@ const createMarkdownPersistenceFields = (promptFolderId: string, promptId: strin
 
 describe('domain persistence planning', () => {
   beforeEach(() => mockDomainData.reset())
+
+  it.each([
+    ['active prompt', 'prompt', 'prompt', 'active'],
+    ['completed prompt', 'prompt', 'prompt', 'completed'],
+    ['template', 'template', 'promptTemplate', 'active']
+  ] as const)(
+    'treats %s root descendant relocation as metadata-only storage',
+    (_caseName, kind, contentEntityType, location) => {
+      /** Root folder whose directory and loaded descendants will move together. */
+      const root = createRootFolder(
+        'Root',
+        kind,
+        [{ kind, id: 'content' }],
+        ['category']
+      )
+      if (location === 'completed') {
+        root.categoryOrder.categories[0]!.entries = []
+        root.completedPromptIds = ['content']
+      }
+      /** Workspace establishing root ownership for canonical storage derivation. */
+      const workspace = {
+        id: 'workspace',
+        workspacePath: 'C:\\Workspace',
+        workspaceName: 'Workspace',
+        entries: [{ kind: 'folder' as const, id: root.id }]
+      }
+      /** Loaded category physically contained by the renamed root. */
+      const category = { id: 'category', displayName: 'Category', description: null }
+      /** Loaded prompt or template physically contained by the renamed root. */
+      const content =
+        kind === 'prompt'
+          ? {
+              id: 'content',
+              title: 'Content',
+              fallbackTitle: '',
+              createdAt: 'created',
+              modifiedAt: 'modified',
+              promptText: 'content',
+              status: PromptStatus.Todo
+            }
+          : {
+              id: 'content',
+              title: 'Content',
+              fallbackTitle: '',
+              createdAt: 'created',
+              modifiedAt: 'modified',
+              promptText: 'content'
+            }
+      mockDomainData.seed('workspace', workspace.id, workspace, {
+        workspacePath: workspace.workspacePath,
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+      })
+      mockDomainData.seed(
+        'promptFolder',
+        root.id,
+        root,
+        createFolderPersistenceFields(root.folderName, kind)
+      )
+      mockDomainData.seed('category', category.id, category, {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        rootPromptFolderId: root.id,
+        rootFolderName: root.folderName,
+        kind,
+        categoryStem: category.displayName,
+        needsFilenameIdSuffix: false
+      })
+      mockDomainData.seed(contentEntityType, content.id, content, {
+        ...createMarkdownPersistenceFields(root.id, content.id),
+        promptStem: content.title,
+        folderPath:
+          kind === 'template'
+            ? root.folderName
+            : `${root.folderName}\\${location === 'completed' ? 'Completed' : 'Active'}`
+      })
+
+      /** Shared rename plan projected into root and descendant storage transitions. */
+      const plan = planRenamePromptFolderDomainMutation(createMainLikeDomainState(), {
+        promptFolderId: root.id,
+        displayName: 'Renamed Root'
+      })
+      expect(Array.isArray(plan)).toBe(true)
+      if (!Array.isArray(plan)) return
+      /** Complete storage plan after deriving every loaded descendant's new path. */
+      const projection = projectDomainTransitions(plan, [
+        { entityType: 'promptFolder', id: root.id, expected: 'revision', revision: 1 }
+      ])
+      /** Root and descendant persistence transitions classified by physical work. */
+      const storageTransitions = planDomainStorageTransitions(
+        projection.beforeGraph,
+        projection.afterGraph,
+        projection.transitions
+      )
+      /** Revision-bearing root transition that performs the directory rename. */
+      const rootTransition = storageTransitions.find(
+        (transition) => transition.entityType === 'promptFolder' && transition.id === root.id
+      )
+      /** Category transition updating only its in-memory root path. */
+      const categoryTransition = storageTransitions.find(
+        (transition) => transition.entityType === 'category' && transition.id === category.id
+      )
+      /** Markdown transition updating only its in-memory content path. */
+      const contentTransition = storageTransitions.find(
+        (transition) =>
+          transition.entityType === contentEntityType && transition.id === content.id
+      )
+      expect(rootTransition).toMatchObject({
+        persistenceMode: 'stage',
+        after: { persistenceFields: { folderPath: 'RenamedRoot' } }
+      })
+      expect(categoryTransition).toMatchObject({
+        persistenceMode: 'metadataOnly',
+        after: { persistenceFields: { rootFolderName: 'RenamedRoot' } }
+      })
+      expect(contentTransition).toMatchObject({
+        persistenceMode: 'metadataOnly',
+        after: {
+          persistenceFields: {
+            folderPath:
+              kind === 'template'
+                ? 'RenamedRoot'
+                : `RenamedRoot\\${location === 'completed' ? 'Completed' : 'Active'}`
+          }
+        }
+      })
+    }
+  )
 
   it('applies an update recipe once and retains complete before and after nodes', () => {
     /** Current category record projected by one recipe-based update. */

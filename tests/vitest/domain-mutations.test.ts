@@ -15,6 +15,7 @@ import {
 } from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
 import type { PromptFolder } from '@shared/PromptFolder'
+import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 
 /** Complete in-memory entity graph used by shared planner tests. */
 type TestDomainEntities = {
@@ -73,6 +74,33 @@ const createRootFolder = (
 })
 
 describe('shared domain mutation planners', () => {
+  it('plans a normalized root-folder rename as one folder update', () => {
+    /** Root folder selected for the rename. */
+    const folder = createRootFolder('root', 'prompt', null)
+    /** Workspace establishing the folder's sibling scope. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: folder.id }]
+    }
+    /** Shared rename plan applied in renderer and main process. */
+    const plan = planRenamePromptFolderDomainMutation(
+      createDomainState({ workspace: [workspace], promptFolder: [folder] }),
+      { promptFolderId: folder.id, displayName: '  Renamed Root  ' }
+    )
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    expect(plan).toHaveLength(1)
+    /** Folder projection after applying the shared rename recipe. */
+    const renamedFolder = produce(folder, plan[0]!.recipe!)
+    expect(renamedFolder).toMatchObject({
+      id: folder.id,
+      displayName: 'Renamed Root',
+      folderName: 'RenamedRoot'
+    })
+  })
+
   it('plans category creation as one root update and one insertion', () => {
     /** Root that will own the new category group. */
     const folder = createRootFolder('root', 'prompt', null)

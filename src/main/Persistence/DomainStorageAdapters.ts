@@ -27,6 +27,8 @@ import type { WorkspacePersistenceFields } from './WorkspacePersistence'
 export type DomainStorageTransitionFor<TEntityType extends DomainEntityType> = {
   entityType: TEntityType
   id: string
+  /** Whether this transition needs its entity persistence adapter or only an in-memory metadata update. */
+  persistenceMode: 'stage' | 'metadataOnly'
   before: PersistenceRecord<
     DomainEntityMap[TEntityType],
     DomainPersistenceFieldsMap[TEntityType]
@@ -49,6 +51,14 @@ type DomainStorageAdapter<TEntityType extends DomainEntityType> = {
     id: string,
     entry: DomainGraphEntryFor<TEntityType>
   ) => DomainPersistenceFieldsMap[TEntityType]
+}
+
+/** One root directory rename that physically relocates every descendant file. */
+type RootDirectoryRename = {
+  promptFolderId: string
+  kind: PromptFolderContentKind
+  beforeFolderName: string
+  afterFolderName: string
 }
 
 /** Finds the workspace graph node that owns one root prompt folder. */
@@ -283,6 +293,103 @@ const hasEqualPersistenceFields = (
   desired: DomainPersistenceFieldsMap[DomainEntityType]
 ): boolean => isDeepStrictEqual(current, desired)
 
+/** Collects root directory renames from revision-bearing prompt-folder transitions. */
+const collectRootDirectoryRenames = (
+  domainTransitions: readonly DomainTransition[]
+): RootDirectoryRename[] =>
+  domainTransitions.flatMap((transition) => {
+    if (
+      transition.entityType !== 'promptFolder' ||
+      !transition.before ||
+      !transition.after ||
+      transition.before.data.kind !== transition.after.data.kind ||
+      transition.before.data.folderName === transition.after.data.folderName
+    ) {
+      return []
+    }
+    return [
+      {
+        promptFolderId: transition.id,
+        kind: transition.after.data.kind,
+        beforeFolderName: transition.before.data.folderName,
+        afterFolderName: transition.after.data.folderName
+      }
+    ]
+  })
+
+/** Reports whether category metadata changed only because its owning root directory moved. */
+const isCategoryRelocatedByRootRename = (
+  transition: DomainStorageTransitionFor<'category'>,
+  rename: RootDirectoryRename
+): boolean => {
+  if (!transition.before || !transition.after) return false
+  /** Current category persistence fields before the root rename. */
+  const beforeFields = transition.before.persistenceFields
+  /** Desired category persistence fields after the root rename. */
+  const afterFields = transition.after.persistenceFields
+  /** Current fields excluding the root directory segment. */
+  const { rootFolderName: _beforeRootFolderName, ...beforeRest } = beforeFields
+  /** Desired fields excluding the root directory segment. */
+  const { rootFolderName: _afterRootFolderName, ...afterRest } = afterFields
+  return (
+    isDeepStrictEqual(transition.before.data, transition.after.data) &&
+    beforeFields.rootPromptFolderId === rename.promptFolderId &&
+    afterFields.rootPromptFolderId === rename.promptFolderId &&
+    beforeFields.kind === rename.kind &&
+    beforeFields.rootFolderName === rename.beforeFolderName &&
+    afterFields.rootFolderName === rename.afterFolderName &&
+    isDeepStrictEqual(beforeRest, afterRest)
+  )
+}
+
+/** Reports whether one markdown path changed only because its owning root directory moved. */
+const isMarkdownRelocatedByRootRename = (
+  transition: DomainStorageTransitionFor<'prompt'> | DomainStorageTransitionFor<'promptTemplate'>,
+  rename: RootDirectoryRename
+): boolean => {
+  if (!transition.before || !transition.after) return false
+  /** Current markdown persistence fields before the root rename. */
+  const beforeFields = transition.before.persistenceFields
+  /** Desired markdown persistence fields after the root rename. */
+  const afterFields = transition.after.persistenceFields
+  /** Current fields excluding the root-relative content directory. */
+  const { folderPath: _beforeFolderPath, ...beforeRest } = beforeFields
+  /** Desired fields excluding the root-relative content directory. */
+  const { folderPath: _afterFolderPath, ...afterRest } = afterFields
+  /** Whether the content follows the root's active directory. */
+  const followsActiveDirectory =
+    beforeFields.folderPath === resolveActivePromptFolderName(rename.beforeFolderName, rename.kind) &&
+    afterFields.folderPath === resolveActivePromptFolderName(rename.afterFolderName, rename.kind)
+  /** Whether the content follows the root's completed directory. */
+  const followsCompletedDirectory =
+    beforeFields.folderPath ===
+      resolveCompletedPromptFolderName(rename.beforeFolderName, rename.kind) &&
+    afterFields.folderPath ===
+      resolveCompletedPromptFolderName(rename.afterFolderName, rename.kind)
+  return (
+    isDeepStrictEqual(transition.before.data, transition.after.data) &&
+    beforeFields.promptFolderId === rename.promptFolderId &&
+    afterFields.promptFolderId === rename.promptFolderId &&
+    (followsActiveDirectory || followsCompletedDirectory) &&
+    isDeepStrictEqual(beforeRest, afterRest)
+  )
+}
+
+/** Reports whether an ancestor root rename already performs this descendant's disk move. */
+const isRelocatedByRootDirectoryRename = (
+  transition: DomainStorageTransition,
+  renames: readonly RootDirectoryRename[]
+): boolean =>
+  renames.some((rename) => {
+    if (transition.entityType === 'category') {
+      return isCategoryRelocatedByRootRename(transition, rename)
+    }
+    if (transition.entityType === 'prompt' || transition.entityType === 'promptTemplate') {
+      return isMarkdownRelocatedByRootRename(transition, rename)
+    }
+    return false
+  })
+
 /** Calculates desired storage first, then diffs it against every current entity location. */
 export const planDomainStorageTransitions = (
   beforeGraph: DomainGraph,
@@ -295,6 +402,8 @@ export const planDomainStorageTransitions = (
   )
   /** Storage transitions containing domain writes and location-only sibling moves. */
   const storageTransitions: DomainStorageTransition[] = []
+  /** Root directory moves that cover their descendants' physical relocation. */
+  const rootDirectoryRenames = collectRootDirectoryRenames(domainTransitions)
   /** Domain entity types dispatched through their storage adapters. */
   const entityTypes: DomainEntityType[] = [
     'systemSettings',
@@ -323,6 +432,7 @@ export const planDomainStorageTransitions = (
         storageTransitions.push({
           entityType,
           id,
+          persistenceMode: 'stage',
           before: toPersistenceRecord(beforeEntry, beforeEntry.persistenceFields),
           after: null
         } as DomainStorageTransition)
@@ -347,12 +457,21 @@ export const planDomainStorageTransitions = (
       ) {
         continue
       }
-      storageTransitions.push({
+      /** Candidate transition used to determine whether an ancestor already moves its files. */
+      const storageTransition = {
         entityType,
         id,
+        persistenceMode: 'stage' as const,
         before: beforeRecord,
         after: toPersistenceRecord(afterEntry, desiredFields)
-      } as DomainStorageTransition)
+      } as DomainStorageTransition
+      storageTransition.persistenceMode = isRelocatedByRootDirectoryRename(
+        storageTransition,
+        rootDirectoryRenames
+      )
+        ? 'metadataOnly'
+        : 'stage'
+      storageTransitions.push(storageTransition)
     }
   }
 

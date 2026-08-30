@@ -258,11 +258,6 @@ export type PromptFolderRevisionResponsePayload = {
   promptFolder: RevisionEnvelope<PromptFolder>
 }
 
-export type RenamePromptFolderPayload = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  displayName: string
-}
-
 export type CreatePromptFolderPayload = {
   workspace: RevisionPayloadEntity<Workspace>
   promptFolderId: string

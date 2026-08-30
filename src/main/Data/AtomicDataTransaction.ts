@@ -3,6 +3,7 @@ import type { FilePersistenceStagedChange } from '../Persistence/FilePersistence
 import {
   planDomainStorageTransitions
 } from '../Persistence/DomainStorageAdapters'
+import type { DomainStorageTransition } from '../Persistence/DomainStorageAdapters'
 import type { DomainTransitionProjection } from './DomainTransitions'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
@@ -174,6 +175,8 @@ type AtomicDataTransition = {
   after: { data: unknown; persistenceFields: unknown } | null
   expectedRevision?: number
   incrementsRevision: boolean
+  /** Storage-planner mode controlling filesystem staging versus metadata-only application. */
+  persistenceMode: DomainStorageTransition['persistenceMode']
 }
 
 /** One transition whose filesystem changes have been staged successfully. */
@@ -297,8 +300,10 @@ const createAtomicDataBuilder = (): {
 /** Reverts every filesystem transition that reached the staged state. */
 const revertStagedChanges = async (stagedTransitions: StagedTransitionEntry[]): Promise<void> => {
   await Promise.allSettled(
-    stagedTransitions.map((stagedTransition) =>
-      stagedTransition.revisionData.persistence.revertChanges(stagedTransition.stagedChange)
+    stagedTransitions.flatMap((stagedTransition) =>
+      stagedTransition.transition.persistenceMode === 'stage'
+        ? [stagedTransition.revisionData.persistence.revertChanges(stagedTransition.stagedChange)]
+        : []
     )
   )
 }
@@ -327,7 +332,8 @@ const projectAtomicDataOperations = (
         before: null,
         after: { data: operation.data, persistenceFields: operation.persistenceFields },
         expectedRevision: 0,
-        incrementsRevision: true
+        incrementsRevision: true,
+        persistenceMode: 'stage'
       })
       continue
     }
@@ -378,7 +384,8 @@ const projectAtomicDataOperations = (
       },
       after: nextData === null ? null : { data: nextData, persistenceFields },
       expectedRevision: 'expectedRevision' in operation ? operation.expectedRevision : undefined,
-      incrementsRevision: operation.type !== 'updatePersistenceFields'
+      incrementsRevision: operation.type !== 'updatePersistenceFields',
+      persistenceMode: 'stage'
     })
   }
 
@@ -395,6 +402,15 @@ const stageAtomicDataTransitions = async (
     for (const transition of transitions) {
       /** Revision data and persistence adapter selected by entity type. */
       const revisionData = data[transition.store] as RevisionData<any, any>
+      if (transition.persistenceMode === 'metadataOnly') {
+        stagedTransitions.push({
+          transition,
+          revisionData,
+          nextPersistenceFields: transition.after?.persistenceFields,
+          stagedChange: []
+        })
+        continue
+      }
       /** Filesystem staging result for the explicit before/after records. */
       const stageResult = await revisionData.persistence.stageChanges({
         before: transition.before
@@ -542,7 +558,8 @@ const buildAtomicTransitionsFromDomainProjection = (
         : null,
       after: storageTransition.after,
       expectedRevision: domainTarget?.transition.expectedRevision,
-      incrementsRevision: domainTarget !== undefined
+      incrementsRevision: domainTarget !== undefined,
+      persistenceMode: storageTransition.persistenceMode
     }
   })
 }
@@ -592,6 +609,7 @@ const runAtomicDataTransitionsImmediately = async (
 
   try {
     for (const stagedTransition of stagedTransitions) {
+      if (stagedTransition.transition.persistenceMode === 'metadataOnly') continue
       await stagedTransition.revisionData.persistence.commitChanges(
         stagedTransition.stagedChange
       )

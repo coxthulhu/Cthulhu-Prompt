@@ -4,8 +4,21 @@ import {
   parseDeleteCategoryDomainCommand
 } from '@shared/CategoryDomainMutations'
 import { parseMoveMarkdownContentDomainCommand } from '@shared/MarkdownContentDomainMutations'
+import { parseRenamePromptFolderDomainCommand } from '@shared/PromptFolderDomainMutations'
 
 describe('domain mutation command validation', () => {
+  it('accepts a root-folder rename command and rejects legacy payload fields', () => {
+    /** Valid root-folder rename command containing domain intent only. */
+    const command = { promptFolderId: 'root', displayName: 'Renamed Root' }
+    expect(parseRenamePromptFolderDomainCommand(command)).toEqual(command)
+    expect(
+      parseRenamePromptFolderDomainCommand({
+        ...command,
+        promptFolder: { id: 'legacy', expectedRevision: 1 }
+      })
+    ).toBeNull()
+  })
+
   it('accepts a valid category creation command', () => {
     /** Valid creation command carrying only stable domain intent. */
     const command = {

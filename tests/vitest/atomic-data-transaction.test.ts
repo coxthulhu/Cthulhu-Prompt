@@ -25,10 +25,15 @@ const mockTransactionState = vi.hoisted(() => {
     prompt: new Map(),
     promptTemplate: new Map()
   }
+  /** Persistence staging counts recorded independently for each authoritative store. */
+  const stageCounts = Object.fromEntries(
+    storeNames.map((storeName) => [storeName, 0])
+  ) as Record<StoreName, number>
 
   const reset = (): void => {
     for (const storeName of storeNames) {
       entriesByStore[storeName].clear()
+      stageCounts[storeName] = 0
     }
   }
 
@@ -39,6 +44,9 @@ const mockTransactionState = vi.hoisted(() => {
   const readEntry = (store: StoreName, id: string): Entry | null => {
     return entriesByStore[store].get(id) ?? null
   }
+
+  /** Reads every committed test entry for one authoritative store. */
+  const readEntries = (store: StoreName): Entry[] => [...entriesByStore[store].values()]
 
   const createCommittedStore = (store: StoreName) => {
     return {
@@ -84,7 +92,10 @@ const mockTransactionState = vi.hoisted(() => {
     return {
       committedStore: createCommittedStore(store),
       persistence: {
-        stageChanges: async (change: unknown) => ({ stagedChange: change }),
+        stageChanges: async (_change: unknown) => {
+          stageCounts[store] += 1
+          return { stagedChange: [] }
+        },
         commitChanges: async (_stagedChange: unknown) => undefined,
         revertChanges: async (_stagedChange: unknown) => undefined,
         loadData: async (_persistenceFields: unknown) => null
@@ -105,7 +116,9 @@ const mockTransactionState = vi.hoisted(() => {
     },
     reset,
     seedEntry,
-    readEntry
+    readEntry,
+    readEntries,
+    stageCounts
   }
 })
 
@@ -125,6 +138,7 @@ vi.mock('../../src/main/Data/GlobalMutationQueue', () => {
 })
 
 import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
+import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 import {
   runAtomicDataTransaction,
   runAtomicDomainTransitionTransaction
@@ -234,6 +248,241 @@ describe('atomic data transaction', () => {
         categoryStem: 'Created',
         needsFilenameIdSuffix: false
       }
+    })
+  })
+
+  it('renames one root directory while retaining descendant revisions', async () => {
+    /** Workspace owning the renamed prompt root. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: 'root' }]
+    }
+    /** Prompt root containing one category and one active prompt. */
+    const promptFolder = {
+      id: 'root',
+      kind: 'prompt' as const,
+      folderName: 'Root',
+      displayName: 'Root',
+      completedPromptIds: [],
+      categoryOrder: {
+        categories: [
+          { categoryId: null, entries: [] },
+          { categoryId: 'category', entries: [{ kind: 'prompt' as const, id: 'prompt' }] }
+        ]
+      },
+      settings: { folderDescription: null }
+    }
+    /** Category stored beneath the renamed root. */
+    const category = { id: 'category', displayName: 'Category', description: null }
+    /** Prompt markdown stored beneath the renamed root's active directory. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      createdAt: 'created',
+      modifiedAt: 'modified',
+      promptText: 'content',
+      status: 'todo'
+    }
+    mockTransactionState.seedEntry('workspace', workspace.id, {
+      revision: 1,
+      committed: workspace,
+      persistenceFields: {
+        workspacePath: workspace.workspacePath,
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+      }
+    })
+    mockTransactionState.seedEntry('promptFolder', promptFolder.id, {
+      revision: 4,
+      committed: promptFolder,
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        folderName: promptFolder.folderName,
+        folderPath: promptFolder.folderName,
+        kind: promptFolder.kind
+      }
+    })
+    mockTransactionState.seedEntry('category', category.id, {
+      revision: 7,
+      committed: category,
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        rootPromptFolderId: promptFolder.id,
+        rootFolderName: promptFolder.folderName,
+        kind: promptFolder.kind,
+        categoryStem: category.displayName,
+        needsFilenameIdSuffix: false
+      }
+    })
+    mockTransactionState.seedEntry('prompt', prompt.id, {
+      revision: 9,
+      committed: prompt,
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        folderPath: 'Root\\Active',
+        promptFolderId: promptFolder.id,
+        promptId: prompt.id,
+        promptStem: prompt.title,
+        needsFilenameIdSuffix: false
+      }
+    })
+    /** Domain state backed by the same committed entries used by the atomic transaction. */
+    const state: DomainState = {
+      get: (entityType, id) =>
+        mockTransactionState.readEntry(entityType, id)?.committed as never,
+      getAll: (entityType) =>
+        mockTransactionState.readEntries(entityType).map((entry) => entry.committed) as never
+    }
+    /** Shared rename plan whose descendants are storage-only transitions. */
+    const plan = planRenamePromptFolderDomainMutation(state, {
+      promptFolderId: promptFolder.id,
+      displayName: 'Renamed Root'
+    })
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Projected rename with concurrency protection only on the root folder. */
+    const projection = projectDomainTransitions(plan, [
+      { entityType: 'promptFolder', id: promptFolder.id, expected: 'revision', revision: 4 }
+    ])
+    /** Atomic result after one physical root write and metadata-only descendant updates. */
+    const outcome = await runAtomicDomainTransitionTransaction(projection, {
+      mode: 'immediate'
+    })
+    expect(outcome.status).toBe('success')
+    expect(mockTransactionState.readEntry('promptFolder', promptFolder.id)).toMatchObject({
+      revision: 5,
+      committed: { displayName: 'Renamed Root', folderName: 'RenamedRoot' },
+      persistenceFields: { folderPath: 'RenamedRoot' }
+    })
+    expect(mockTransactionState.readEntry('category', category.id)).toMatchObject({
+      revision: 7,
+      persistenceFields: { rootFolderName: 'RenamedRoot' }
+    })
+    expect(mockTransactionState.readEntry('prompt', prompt.id)).toMatchObject({
+      revision: 9,
+      persistenceFields: { folderPath: 'RenamedRoot\\Active' }
+    })
+    expect(mockTransactionState.stageCounts).toEqual({
+      systemSettings: 0,
+      workspace: 0,
+      promptFolder: 1,
+      category: 0,
+      prompt: 0,
+      promptTemplate: 0
+    })
+  })
+
+  it('retains a template revision while renaming its root directory', async () => {
+    /** Workspace owning the renamed template root. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: 'templates' }]
+    }
+    /** Template root containing one active template. */
+    const promptFolder = {
+      id: 'templates',
+      kind: 'template' as const,
+      folderName: 'Templates',
+      displayName: 'Templates',
+      completedPromptIds: [],
+      categoryOrder: {
+        categories: [
+          {
+            categoryId: null,
+            entries: [{ kind: 'template' as const, id: 'template' }]
+          }
+        ]
+      },
+      settings: { folderDescription: null }
+    }
+    /** Template markdown stored directly beneath its root directory. */
+    const promptTemplate = {
+      id: 'template',
+      title: 'Template',
+      fallbackTitle: '',
+      createdAt: 'created',
+      modifiedAt: 'modified',
+      promptText: 'content'
+    }
+    mockTransactionState.seedEntry('workspace', workspace.id, {
+      revision: 1,
+      committed: workspace,
+      persistenceFields: {
+        workspacePath: workspace.workspacePath,
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+      }
+    })
+    mockTransactionState.seedEntry('promptFolder', promptFolder.id, {
+      revision: 2,
+      committed: promptFolder,
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        folderName: promptFolder.folderName,
+        folderPath: promptFolder.folderName,
+        kind: promptFolder.kind
+      }
+    })
+    mockTransactionState.seedEntry('promptTemplate', promptTemplate.id, {
+      revision: 6,
+      committed: promptTemplate,
+      persistenceFields: {
+        workspaceId: workspace.id,
+        workspacePath: workspace.workspacePath,
+        folderPath: promptFolder.folderName,
+        promptFolderId: promptFolder.id,
+        promptId: promptTemplate.id,
+        promptStem: promptTemplate.title,
+        needsFilenameIdSuffix: false
+      }
+    })
+    /** Domain state backed by the seeded template-root graph. */
+    const state: DomainState = {
+      get: (entityType, id) =>
+        mockTransactionState.readEntry(entityType, id)?.committed as never,
+      getAll: (entityType) =>
+        mockTransactionState.readEntries(entityType).map((entry) => entry.committed) as never
+    }
+    /** Shared template-root rename plan. */
+    const plan = planRenamePromptFolderDomainMutation(state, {
+      promptFolderId: promptFolder.id,
+      displayName: 'Renamed Templates'
+    })
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Projected rename carrying a revision expectation only for the root. */
+    const projection = projectDomainTransitions(plan, [
+      { entityType: 'promptFolder', id: promptFolder.id, expected: 'revision', revision: 2 }
+    ])
+    /** Atomic template-root rename result. */
+    const outcome = await runAtomicDomainTransitionTransaction(projection, {
+      mode: 'immediate'
+    })
+    expect(outcome.status).toBe('success')
+    expect(mockTransactionState.readEntry('promptFolder', promptFolder.id)).toMatchObject({
+      revision: 3,
+      persistenceFields: { folderPath: 'RenamedTemplates' }
+    })
+    expect(
+      mockTransactionState.readEntry('promptTemplate', promptTemplate.id)
+    ).toMatchObject({
+      revision: 6,
+      persistenceFields: { folderPath: 'RenamedTemplates' }
+    })
+    expect(mockTransactionState.stageCounts).toEqual({
+      systemSettings: 0,
+      workspace: 0,
+      promptFolder: 1,
+      category: 0,
+      prompt: 0,
+      promptTemplate: 0
     })
   })
 

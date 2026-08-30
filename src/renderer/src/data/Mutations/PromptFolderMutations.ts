@@ -4,31 +4,17 @@ import {
   type CreatePromptFolderPayload,
   type CreatePromptFolderResponsePayload,
   type PromptFolder,
-  type PromptFolderKind,
-  type PromptFolderRevisionResponsePayload,
-  type RenamePromptFolderPayload
+  type PromptFolderKind
 } from '@shared/PromptFolder'
 import { compactGuid } from '@shared/compactGuid'
-import type { Transaction } from '@tanstack/svelte-db'
+import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { folderEntryRef, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
-
-const readLatestPromptFolderFromTransaction = (
-  transaction: Transaction<any>,
-  promptFolderId: string
-): PromptFolder => {
-  return getLatestMutationModifiedRecord(
-    transaction,
-    promptFolderCollection.id,
-    promptFolderId,
-    () => promptFolderCollection.get(promptFolderId)!
-  )
-}
+import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 
 export const createPromptFolder = async (
   workspaceId: string,
@@ -118,31 +104,11 @@ export const renamePromptFolder = async (
     throw new Error('Prompt folder not loaded')
   }
 
-  const { displayName: normalizedDisplayName, folderName } = preparePromptFolderName(displayName)
-
-  await runRevisionMutation<PromptFolderRevisionResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.promptFolder.update(promptFolderId, (draft) => {
-        draft.displayName = normalizedDisplayName
-        draft.folderName = folderName
-      })
-    },
-    persistMutations: async ({ entities, invoke, transaction }) => {
-      const latestPromptFolder = readLatestPromptFolderFromTransaction(transaction, promptFolderId)
-
-      return await invoke<{ payload: RenamePromptFolderPayload }>('rename-prompt-folder', {
-        payload: {
-          promptFolder: entities.promptFolder({
-            id: promptFolderId,
-            data: latestPromptFolder
-          }),
-          displayName: normalizedDisplayName
-        }
-      })
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-    },
-    conflictMessage: 'Prompt folder rename conflict'
+  /** Shared rename command projected optimistically and authoritatively. */
+  const command = { promptFolderId, displayName }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planRenamePromptFolderDomainMutation },
+    ipc: { channel: 'rename-prompt-folder' },
+    renderer: {}
   })
 }

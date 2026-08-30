@@ -9,6 +9,10 @@ import {
 } from '@shared/PromptFolder'
 import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from '@shared/OrderContainer'
 import {
+  parseRenamePromptFolderDomainCommand,
+  planRenamePromptFolderDomainMutation
+} from '@shared/PromptFolderDomainMutations'
+import {
   hasPromptFolderNameConflict,
   preparePromptFolderName,
   PROMPT_FOLDER_NAME_CONFLICT_ERROR,
@@ -20,7 +24,6 @@ import { buildPromptFolderSnapshot, buildWorkspaceSnapshot } from '../Data/DataS
 import {
   parseCreatePromptFolderRequest,
   parseDeletePromptFolderRequest,
-  parseRenamePromptFolderRequest,
   parseUpdatePromptFolderSettingsRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
@@ -31,6 +34,7 @@ import {
   collectPromptFolderContentIds,
   createPromptFolderContentDeleteHandles
 } from './PromptFolderContentMutations'
+import { handleMainDomainMutation } from './DomainMutation'
 
 /** Returns root-folder name candidates of one content kind from workspace ordering. */
 const getPromptFolderNameCandidates = (
@@ -45,6 +49,14 @@ const getPromptFolderNameCandidates = (
 
 /** Registers root prompt-folder creation, deletion, rename, and settings mutations. */
 export const setupPromptFolderMutationHandlers = (): void => {
+  handleMainDomainMutation({
+    ipc: { channel: 'rename-prompt-folder' },
+    mutation: {
+      parseCommand: parseRenamePromptFolderDomainCommand,
+      plan: planRenamePromptFolderDomainMutation
+    }
+  })
+
   ipcMain.handle('create-prompt-folder', async (_, request: unknown) => {
     return await runMutationIpcRequest(
       request,
@@ -231,74 +243,6 @@ export const setupPromptFolderMutationHandlers = (): void => {
             remainingCategoryIds
           )
           return { success: true, payload: { workspace: buildWorkspaceSnapshot(updatedWorkspace) } }
-        } catch (error) {
-          return { success: false, error: error instanceof Error ? error.message : String(error) }
-        }
-      }
-    )
-  })
-
-  ipcMain.handle('rename-prompt-folder', async (_, request: unknown) => {
-    return await runMutationIpcRequest(
-      request,
-      parseRenamePromptFolderRequest,
-      async (validatedRequest) => {
-        try {
-          /** Validated root-folder rename command. */
-          const payload = validatedRequest.payload
-          /** Root folder being renamed. */
-          const promptFolder = data.promptFolder.committedStore.getEntry(payload.promptFolder.id)
-          if (!promptFolder) return { success: false, error: 'Prompt folder not loaded' }
-          /** Workspace that owns the root folder. */
-          const workspace = data.workspace.committedStore.getEntry(
-            promptFolder.persistenceFields.workspaceId
-          )
-          if (!workspace) return { success: false, error: 'Workspace not loaded' }
-          /** Validated display and disk names. */
-          const preparedName = preparePromptFolderName(payload.displayName)
-          if (!preparedName.validation.isValid) {
-            return {
-              success: false,
-              error: preparedName.validation.errorMessage ?? 'Invalid prompt folder name'
-            }
-          }
-          if (
-            hasPromptFolderNameConflict(
-              getPromptFolderNameCandidates(workspace.committed.entries, promptFolder.committed.kind),
-              preparedName.folderName,
-              promptFolder.committed.id
-            )
-          ) {
-            return { success: false, error: PROMPT_FOLDER_NAME_CONFLICT_ERROR }
-          }
-          /** Atomic root-folder rename result. */
-          const outcome = await runAtomicDataTransaction((tx) => ({
-            promptFolder: tx.promptFolder.update({
-              id: promptFolder.committed.id,
-              expectedRevision: payload.promptFolder.expectedRevision,
-              recipe: (draft) => {
-                draft.displayName = preparedName.displayName
-                draft.folderName = preparedName.folderName
-              },
-              persistenceFields: {
-                ...promptFolder.persistenceFields,
-                folderName: preparedName.folderName,
-                folderPath: preparedName.folderName
-              }
-            })
-          }))
-          if (outcome.status === 'conflict') {
-            return buildConflictResponseFromLatest(
-              data.promptFolder.committedStore.getEntry(promptFolder.committed.id),
-              'Prompt folder not loaded',
-              (latestFolder) => ({ promptFolder: buildPromptFolderSnapshot(latestFolder) })
-            )
-          }
-          /** Authoritative renamed root folder. */
-          const updatedFolder = data.promptFolder.committedStore.getEntry(promptFolder.committed.id)
-          return updatedFolder
-            ? { success: true, payload: { promptFolder: buildPromptFolderSnapshot(updatedFolder) } }
-            : { success: false, error: 'Prompt folder rename commit did not complete' }
         } catch (error) {
           return { success: false, error: error instanceof Error ? error.message : String(error) }
         }

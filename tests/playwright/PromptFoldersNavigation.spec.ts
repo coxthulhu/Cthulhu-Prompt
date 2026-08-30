@@ -10,6 +10,7 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
+import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -980,7 +981,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="create-prompt-folder-button"]')).toBeDisabled()
   })
 
-  test('renames a prompt folder from the root page title without changing its id', async ({
+  test('renames a prompt folder and persists descendant edits at the new path', async ({
     electronApp,
     testSetup
   }) => {
@@ -1071,6 +1072,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(rootHeader).toContainText('Renamed Development')
 
     const renamedFolderInfoPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/_FolderInfo/FolderInfo.json`
+    /** Descendant prompt path expected to remain authoritative after the root rename. */
+    const renamedPromptPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/Active/Code Review.prompt.md`
     const renamedFolderInfo = JSON.parse(
       await readTextFile(electronApp, renamedFolderInfoPath)
     ) as {
@@ -1104,6 +1107,26 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
           })
       )
       .toEqual({ markdownExists: true })
+    await expect
+      .poll(
+        async () =>
+          await checkPersistedPromptFilesExistByTitle(electronApp, {
+            workspacePath: SAMPLE_WORKSPACE_PATH,
+            folderName: 'Development',
+            promptId: 'dev-1',
+            promptTitle: 'Code Review'
+          })
+      )
+      .toEqual({ markdownExists: false })
+
+    /** Renamed root's loaded descendant editor used to verify its in-memory persistence path. */
+    const promptEditorSelector = '[data-testid="prompt-editor-dev-1"]'
+    /** Unique body text proving the post-rename edit reached the renamed directory. */
+    const editMarker = 'post-rename descendant edit'
+    await typeInMonacoEditor(mainWindow, promptEditorSelector, editMarker)
+    await expect
+      .poll(async () => await readTextFile(electronApp, renamedPromptPath))
+      .toContain(editMarker)
     await expect
       .poll(
         async () =>

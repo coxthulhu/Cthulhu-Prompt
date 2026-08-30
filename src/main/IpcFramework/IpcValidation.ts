@@ -10,7 +10,6 @@ import type {
   LoadPromptFolderInitialPayload,
   PromptFolder,
   PromptFolderSettings,
-  RenamePromptFolderPayload,
   UpdatePromptFolderSettingsPayload
 } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
@@ -532,14 +531,6 @@ const parseUpdatePromptFolderSettingsWireRequest: Parser<
   parseUpdatePromptFolderSettingsPayload
 )
 
-const parseRenamePromptFolderPayload = parseObject<RenamePromptFolderPayload>({
-  promptFolder: parsePromptFolderRevisionPayloadEntity,
-  displayName: parseString
-})
-
-const parseRenamePromptFolderWireRequest: Parser<IpcRequestWithPayload<RenamePromptFolderPayload>> =
-  parseWireRequestWithPayload<RenamePromptFolderPayload>(parseRenamePromptFolderPayload)
-
 /** Parser for category rename payloads. */
 const parseRenameCategoryPayload = parseObject<RenameCategoryPayload>({
   category: parseCategoryRevisionPayloadEntity,
@@ -733,10 +724,6 @@ export const parseUpdatePromptRevisionRequest = createRequestParser(
 
 export const parseUpdatePromptFolderSettingsRequest = createRequestParser(
   parseUpdatePromptFolderSettingsWireRequest
-)
-
-export const parseRenamePromptFolderRequest = createRequestParser(
-  parseRenamePromptFolderWireRequest
 )
 
 /** Validated request parser for category rename IPC. */
