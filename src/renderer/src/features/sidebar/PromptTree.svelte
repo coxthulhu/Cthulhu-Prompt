@@ -398,48 +398,8 @@
   const getPromptTreeCategoryDropTargetEdge = (rowId: string): DroppableEdge | null =>
     promptTreeCategoryDroppableState.edge(rowId)
 
-  const selectMovedPrompt = (destinationContentOwnerId: string, promptId: string): void => {
-    const row = promptIdToPromptNavigationRow(promptId)
-    const containingRootFolderId = findContainingRootFolderId(destinationContentOwnerId)
-
-    promptNavigation.select({
-      screenRootFolderId: containingRootFolderId,
-      contentOwnerId: destinationContentOwnerId,
-      row,
-      source: 'prompt-move',
-      forceRequest: true,
-      contentReveal: { scrollType: 'center' },
-      treeExpansion: 'owner'
-    })
-
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (workspaceId) {
-      setPromptFolderSelectedEntryIdWithAutosave(
-        workspaceId,
-        destinationContentOwnerId,
-        promptNavigationRowToPersistedEntryId(row)
-      )
-    }
-
-    onScreenRootFolderSelect(containingRootFolderId)
-  }
-
-  const findContainingRootFolderId = (contentOwnerId: string): string => {
-    return categoryById[contentOwnerId]
-      ? screenRootFolder?.id ?? contentOwnerId
-      : contentOwnerId
-  }
-
   const promptDragController = createPromptTreePromptDragController({
-    getPromptFolders: () => promptFolders,
-    onPromptMove: (move, sourceCategoryId) => {
-      if (
-        move.sourcePromptFolderId === move.destinationPromptFolderId &&
-        sourceCategoryId !== move.categoryId
-      ) {
-        selectMovedPrompt(move.categoryId ?? move.destinationPromptFolderId, move.promptId)
-      }
-    }
+    getPromptFolders: () => promptFolders
   })
 
   const getPromptRowDragOptions = (

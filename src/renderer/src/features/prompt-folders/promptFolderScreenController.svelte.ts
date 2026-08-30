@@ -890,15 +890,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const promptDragController = createPromptTreePromptDragController({
-    getPromptFolders: () => promptFolderQuery.data,
-    onPromptMove: (move, sourceCategoryId) => {
-      if (
-        move.sourcePromptFolderId === move.destinationPromptFolderId &&
-        sourceCategoryId !== move.categoryId
-      ) {
-        selectMovedPrompt(move.categoryId ?? move.destinationPromptFolderId, move.promptId)
-      }
-    }
+    getPromptFolders: () => promptFolderQuery.data
   })
 
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (

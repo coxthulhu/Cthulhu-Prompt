@@ -415,6 +415,11 @@ describe('Prompt categories', () => {
         )
       )
       .toMatchObject({ category: PROMPT_CATEGORY_ID })
+    await expect(collapsedCategorySummary).toContainText('2 prompts hidden')
+
+    /** Reopen the destination category before continuing with editor-handle coverage. */
+    await categoryEditor.locator('[data-testid="category-editor-content-toggle"]').click()
+    await expect(mainWindow.locator(promptEditorSelector('uncategorized-prompt'))).toBeVisible()
 
     /** Top edge of an Uncategorized prompt places content before it at root level. */
     const uncategorizedStartDivider =

@@ -16,6 +16,7 @@ import {
   expectPromptTreeRowDraggingState,
   expectPromptTreeRowActiveState,
   finishActiveDrag,
+  getRowViewportOffsets,
   moveActiveDragToTarget,
   promptFolderSelectorDropdownItemSelector,
   promptFolderSelectorMenuSelector,
@@ -63,10 +64,19 @@ const DEV_2_ID = 'dev-2'
 const EXAMPLE_1_ID = 'simple-1'
 const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
 const MOVE_FALLBACK_WORKSPACE_PATH = '/ws/drag-fallback-title'
+const CATEGORY_SCROLL_WORKSPACE_PATH = '/ws/drag-category-scroll'
 const ANCHORING_FOLDER_NAME = 'Anchoring'
 const DESTINATION_FOLDER_NAME = 'Destination'
 const FALLBACK_SOURCE_FOLDER_NAME = 'FallbackSource'
 const FALLBACK_DESTINATION_FOLDER_NAME = 'FallbackDestination'
+const CATEGORY_SCROLL_FOLDER_NAME = 'Cross Category'
+const CATEGORY_SCROLL_FOLDER_PATH = promptFolderOrderPath(
+  CATEGORY_SCROLL_WORKSPACE_PATH,
+  CATEGORY_SCROLL_FOLDER_NAME
+)
+const CATEGORY_SCROLL_CATEGORY_ID = 'drag-category-scroll-destination'
+const CATEGORY_SCROLL_SOURCE_ID = 'drag-category-scroll-source'
+const CATEGORY_SCROLL_DESTINATION_ID = 'drag-category-scroll-destination-prompt'
 const ANCHORING_FOLDER_PATH = promptFolderOrderPath(
   DRAG_SCROLL_WORKSPACE_PATH,
   ANCHORING_FOLDER_NAME
@@ -336,6 +346,48 @@ const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
       ]
     }
   ])
+}
+
+const buildCategoryScrollWorkspace = (): Record<string, string | null> => {
+  const rootPrompts = [
+    {
+      id: CATEGORY_SCROLL_SOURCE_ID,
+      title: 'Move Between Categories',
+      promptText: 'This prompt starts at the top of the root group.'
+    },
+    ...Array.from({ length: 18 }, (_, index) => ({
+      id: `drag-category-scroll-filler-${index + 1}`,
+      title: `Root Prompt ${index + 1}`,
+      promptText: 'Keeps the destination category outside both initial viewports.'
+    }))
+  ]
+  const filesystem = createWorkspaceWithFolders(CATEGORY_SCROLL_WORKSPACE_PATH, [
+    {
+      folderName: CATEGORY_SCROLL_FOLDER_NAME,
+      displayName: CATEGORY_SCROLL_FOLDER_NAME,
+      prompts: [
+        ...rootPrompts,
+        {
+          id: CATEGORY_SCROLL_DESTINATION_ID,
+          title: 'Destination Prompt',
+          promptText: 'Existing categorized prompt.',
+          category: CATEGORY_SCROLL_CATEGORY_ID
+        }
+      ]
+    }
+  ])
+  filesystem[
+    `${CATEGORY_SCROLL_WORKSPACE_PATH}/Prompts/${CATEGORY_SCROLL_FOLDER_NAME}/Categories/Destination.category.json`
+  ] = JSON.stringify(
+    {
+      id: CATEGORY_SCROLL_CATEGORY_ID,
+      displayName: 'Destination',
+      description: null
+    },
+    null,
+    2
+  )
+  return filesystem
 }
 
 const buildMoveFallbackWorkspace = () =>
@@ -1045,6 +1097,65 @@ describe('Prompt folder prompt drag-drop', () => {
       )
       .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
   })
+
+  for (const dragSource of ['prompt folder screen', 'sidebar'] as const) {
+    test(`does not reveal a prompt after moving it between categories from the ${dragSource}`, async ({
+      testSetup,
+      electronApp
+    }) => {
+      await testSetup.setupFilesystem(buildCategoryScrollWorkspace())
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(CATEGORY_SCROLL_WORKSPACE_PATH)])
+
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders(CATEGORY_SCROLL_FOLDER_NAME)
+      await waitForMonacoEditor(mainWindow, promptEditorSelector(CATEGORY_SCROLL_SOURCE_ID))
+
+      if (dragSource === 'prompt folder screen') {
+        await beginPromptHandleDrag(mainWindow, CATEGORY_SCROLL_SOURCE_ID)
+      } else {
+        await beginPromptTreeRowDrag(mainWindow, CATEGORY_SCROLL_SOURCE_ID)
+      }
+
+      await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 100_000)
+      const destinationCategorySelector =
+        '[data-testid="prompt-tree-category-toggle-button-Destination"]'
+      await expect(mainWindow.locator(destinationCategorySelector)).toBeVisible()
+      await moveActiveDragToTarget(mainWindow, destinationCategorySelector, 'bottom')
+
+      const contentScrollTopBefore = await testHelpers.getElementScrollTop(
+        PROMPT_FOLDER_HOST_SELECTOR
+      )
+      const treeTargetOffsetBefore = await getRowViewportOffsets(
+        mainWindow,
+        destinationCategorySelector
+      )
+      if (!treeTargetOffsetBefore) {
+        throw new Error('Missing destination category viewport offset before drop')
+      }
+      await finishActiveDrag(mainWindow)
+
+      await expect
+        .poll(async () =>
+          (await readPromptFolderEntryIds(electronApp, CATEGORY_SCROLL_FOLDER_PATH)).slice(-2)
+        )
+        .toEqual([CATEGORY_SCROLL_SOURCE_ID, CATEGORY_SCROLL_DESTINATION_ID])
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)) -
+              contentScrollTopBefore
+          )
+        )
+        .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
+      await expect
+        .poll(async () => {
+          const offset = await getRowViewportOffsets(mainWindow, destinationCategorySelector)
+          return offset ? Math.abs(offset.top - treeTargetOffsetBefore.top) : Number.POSITIVE_INFINITY
+        })
+        .toBeLessThanOrEqual(PROMPT_MOVE_SCROLL_TOLERANCE_PX)
+    })
+  }
 
   test('moves a prompt before a different prompt when dropped on the top half of that prompt row', async ({
     testSetup,

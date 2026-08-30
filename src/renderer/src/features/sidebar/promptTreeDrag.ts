@@ -17,13 +17,11 @@ import { PromptStatus } from '@shared/Prompt'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
-  onPromptMove?: (move: PromptHandleMove, sourceCategoryId: string | null) => void
 }
 
 /** Resolved prompt drop with an optional status transition handled instead of a normal move. */
 type PromptTreePromptDropResult = {
   move: PromptHandleMove
-  sourceCategoryId: string | null
   targetStatus: PromptStatus | null
 }
 
@@ -86,7 +84,6 @@ export const resolvePromptTreePromptMove = (
         categoryId: sourceCategoryId,
         previousEntryId: null
       },
-      sourceCategoryId,
       targetStatus: PromptStatus.Completed
     }
   }
@@ -114,15 +111,13 @@ export const resolvePromptTreePromptMove = (
       destinationPromptFolderId: destinationPromptFolder.id,
       categoryId: destinationCategoryId
     },
-    sourceCategoryId,
     targetStatus:
       sourcePayload.statusSection === 'completed' ? PromptStatus.Todo : null
   }
 }
 
 export const createPromptTreePromptDragController = ({
-  getPromptFolders,
-  onPromptMove
+  getPromptFolders
 }: PromptTreePromptDragControllerOptions) => {
   const handleDragStart = (sourcePayload: PromptHandleDragPayload): void => {
     startPromptDrag(sourcePayload)
@@ -161,7 +156,6 @@ export const createPromptTreePromptDragController = ({
         result.move.previousEntryId,
         result.move.categoryId
       )
-      onPromptMove?.(result.move, result.sourceCategoryId)
     })
   }
 
