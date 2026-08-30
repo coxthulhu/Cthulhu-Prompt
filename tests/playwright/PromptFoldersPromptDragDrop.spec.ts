@@ -41,9 +41,9 @@ const VIRTUAL_WORKSPACE_PATH = '/ws/virtual'
 const DEVELOPMENT_FOLDER_NAME = 'Development'
 const EXAMPLES_FOLDER_NAME = 'Examples'
 const promptFolderOrderPath = (workspacePath: string, folderName: string): string => {
-  // FolderOrderV2 belongs only to the selected root's flat Active directory.
+  // FolderOrder belongs only to the selected root's flat Active directory.
   const [rootFolderName] = folderName.split('/')
-  return `${workspacePath}/Prompts/${rootFolderName}/Active/_FolderInfo/FolderOrderV2.json`
+  return `${workspacePath}/Prompts/${rootFolderName}/Active/_FolderInfo/FolderOrder.json`
 }
 const DEVELOPMENT_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, DEVELOPMENT_FOLDER_NAME)
 const EXAMPLES_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, EXAMPLES_FOLDER_NAME)

@@ -10,10 +10,10 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const WORKSPACE_PATH = '/ws/move-reorder-atomicity'
 const FOLDER_NAME = 'Move Reorder Atomicity'
 const ROOT_ORDER_PATH =
-  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
+  `${WORKSPACE_PATH}/Prompts/${FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
 const CATEGORY_WORKSPACE_PATH = '/ws/categories-controls'
 const CATEGORY_ROOT_ORDER_PATH =
-  `${CATEGORY_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrderV2.json`
+  `${CATEGORY_WORKSPACE_PATH}/Prompts/Controls/Active/_FolderInfo/FolderOrder.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
 const moveUpSelector = (promptId: string) =>
@@ -151,7 +151,7 @@ const expectCategoryOrders = async (
 ): Promise<void> => {
   await expect
     .poll(async () => {
-      /** Current V2 category groups flattened to prompt IDs per owner. */
+      /** Current folder-order category groups flattened to prompt IDs per owner. */
       const categoryOrder = JSON.parse(
         await readTextFile(electronApp, CATEGORY_ROOT_ORDER_PATH)
       ) as { categories: Array<{ entries: Array<{ id: string }> }> }

@@ -114,7 +114,7 @@ export const promptFolderPersistence: PersistenceLayer<
       resolvePromptFolderStorageName(stagingRelativePath, kind),
       kind
     )
-    /** Target root's FolderOrderV2 path, used only by root prompt or template folders. */
+    /** Target root's FolderOrder path, used only by root prompt or template folders. */
     const categoryOrderPath = resolvePromptFolderCategoryOrderPath(
       workspacePath,
       stagingRelativePath,
@@ -177,7 +177,7 @@ export const promptFolderPersistence: PersistenceLayer<
     if (completedDirectoryPath) fs.mkdirSync(completedDirectoryPath, { recursive: true })
     if (categoriesDirectoryPath) fs.mkdirSync(categoriesDirectoryPath, { recursive: true })
 
-    /** Staged FolderOrderV2 update for a target root folder. */
+    /** Staged FolderOrder update for a target root folder. */
     const categoryOrderChange = isTargetRoot
       ? (() => {
           /** Temporary JSON path committed atomically with the root folder. */

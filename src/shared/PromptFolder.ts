@@ -19,7 +19,7 @@ export type CategoryOrderGroup = {
   entries: CategoryOrderEntryRef[]
 }
 
-/** Root-folder category ordering persisted in FolderOrderV2.json. */
+/** Root-folder category ordering persisted in FolderOrder.json. */
 export type CategoryOrder = {
   categories: CategoryOrderGroup[]
 }

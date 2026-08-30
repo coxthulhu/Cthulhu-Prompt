@@ -11,18 +11,18 @@ import {
   serializePromptMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
 
-/** Workspace root used by FolderOrderV2 repair tests. */
-const WORKSPACE_PATH = '/ws/folder-order-v2'
+/** Workspace root used by FolderOrder repair tests. */
+const WORKSPACE_PATH = '/ws/folder-order'
 /** Prompt root whose Active hierarchy owns the repaired file. */
 const ROOT_FOLDER_NAME = 'Root'
 /** Active directory containing every test prompt. */
 const ACTIVE_PATH = `${WORKSPACE_PATH}/Prompts/${ROOT_FOLDER_NAME}/Active`
 /** Canonical category-order file path under the Active metadata directory. */
-const CATEGORY_ORDER_PATH = `${ACTIVE_PATH}/_FolderInfo/FolderOrderV2.json`
+const CATEGORY_ORDER_PATH = `${ACTIVE_PATH}/_FolderInfo/FolderOrder.json`
 /** Template root containing direct and categorized templates for repair coverage. */
 const TEMPLATE_ROOT_PATH = `${WORKSPACE_PATH}/Templates/Templates`
 /** Canonical template category-order file stored at the template root. */
-const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/_FolderInfo/FolderOrderV2.json`
+const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/_FolderInfo/FolderOrder.json`
 
 /** Creates one serializable active prompt with optional category front matter. */
 const createPrompt = (
@@ -59,7 +59,7 @@ const createTemplate = (
   ...(category === undefined ? {} : { category })
 })
 
-describe('FolderOrderV2 repair', () => {
+describe('FolderOrder repair', () => {
   beforeEach(() => {
     // Side effect: isolate each repair scenario in a fresh in-memory filesystem.
     vol.reset()
@@ -118,7 +118,7 @@ describe('FolderOrderV2 repair', () => {
     expect(readPrompt('Beta.prompt.md')).not.toHaveProperty('category')
   })
 
-  it('preserves valid order, inserts new categories at index 1, and makes V2 win front matter', () => {
+  it('preserves valid order, inserts new categories at index 1, and makes folder order win front matter', () => {
     /** Existing category retained after newly discovered categories. */
     const retainedCategoryId = 'category-retained'
     /** Newly discovered category inserted immediately after Uncategorized. */
@@ -226,7 +226,7 @@ describe('FolderOrderV2 repair', () => {
         { categoryId: retainedCategoryId, entries: [] }
       ]
     })
-    /** Direct template repaired according to its first accepted V2 reference. */
+    /** Direct template repaired according to its first accepted folder-order reference. */
     const directTemplate = parsePromptTemplateMarkdown(
       vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Direct.template.md`, 'utf8').toString()
     )!

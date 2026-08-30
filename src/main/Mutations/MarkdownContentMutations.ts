@@ -399,12 +399,12 @@ export const setupMarkdownContentMutationHandlers = <
         )
         /** Category-order reference for the updated prompt or template. */
         const categoryOrderEntry = config.createEntryRef(requestedContent.id)
-        /** Current V2 category assignment, or undefined when the entry is absent. */
+        /** Current folder-order category assignment, or undefined when the entry is absent. */
         const currentCategoryId = findCategoryOrderEntryCategoryId(
           promptFolder.committed.categoryOrder,
           categoryOrderEntry
         )
-        /** Whether active-status ownership requires a V2 category-order update. */
+        /** Whether active-status ownership requires a folder-order update. */
         const shouldUpdateCategoryOrder = config.canMove(updatedContent)
           ? currentCategoryId === undefined ||
             currentCategoryId !== (updatedContent.category ?? null)

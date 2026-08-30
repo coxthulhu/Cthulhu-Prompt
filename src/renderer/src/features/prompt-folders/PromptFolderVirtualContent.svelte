@@ -673,7 +673,7 @@
     indicator: promptDividerDroppableState.getState(rowId)
   })
 
-  /** Returns active content IDs from one exact FolderOrderV2 category group. */
+  /** Returns active content IDs from one exact FolderOrder category group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
     promptFolderById[screenRootFolderId]?.categoryOrder.categories
       .find((group) => group.categoryId === categoryId)

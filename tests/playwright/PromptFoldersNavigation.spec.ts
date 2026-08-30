@@ -959,7 +959,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderOrderV2.json`
+          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

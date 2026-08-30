@@ -108,7 +108,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({
@@ -241,7 +241,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
@@ -249,7 +249,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({
@@ -286,7 +286,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

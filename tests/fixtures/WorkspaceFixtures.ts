@@ -29,9 +29,9 @@ const createPromptFolderInfo = (
   return { displayName, folderId, kind }
 }
 
-/** Returns the FolderOrderV2 path owned by one prompt or template root. */
+/** Returns the FolderOrder path owned by one prompt or template root. */
 const getPromptFolderCategoryOrderPath = (folderPath: string): string =>
-  `${folderPath}/_FolderInfo/FolderOrderV2.json`
+  `${folderPath}/_FolderInfo/FolderOrder.json`
 
 const folderOrderFile = (promptFolderIds: string[]) => ({
   entries: promptFolderIds.map((id) => ({ kind: 'folder' as const, id }))

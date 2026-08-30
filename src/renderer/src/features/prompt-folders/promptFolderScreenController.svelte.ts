@@ -313,7 +313,7 @@ export const createPromptFolderScreenController = ({
   const categoryById = $derived.by<Record<string, Category>>(() =>
     Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
   )
-  /** Root-owned categories in FolderOrderV2 order. */
+  /** Root-owned categories in FolderOrder order. */
   const categories = $derived.by(() =>
     screenRootFolder
       ? getCategoryOrderCategoryIds(screenRootFolder.categoryOrder).flatMap((categoryId) => {

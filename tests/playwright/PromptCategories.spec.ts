@@ -101,7 +101,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`]: JSON.stringify(
     {
       categories: [
         {
@@ -120,7 +120,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Templates/Templates/_FolderInfo/FolderOrderV2.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/Templates/Templates/_FolderInfo/FolderOrder.json`]: JSON.stringify(
     {
       categories: [
         { categoryId: null, entries: [] },
@@ -149,8 +149,8 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
 const addSecondPromptCategory = (filesystem: Record<string, string | null>): string => {
   /** Metadata path for the added category. */
   const categoryPath = `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Second.category.json`
-  /** FolderOrderV2 path updated with the added category group. */
-  const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+  /** FolderOrder path updated with the added category group. */
+  const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
   /** Existing categorized order extended for multi-category drag tests. */
   const categoryOrder = JSON.parse(filesystem[orderPath]!) as {
     categories: Array<{
@@ -185,7 +185,7 @@ const startCategoryWorkspace = async (
 }
 
 describe('Prompt categories', () => {
-  test('omits categories from prompt metadata while V2 repairs category front matter', async ({
+  test('omits categories from prompt metadata while folder order repairs category front matter', async ({
     electronApp,
     testSetup
   }) => {
@@ -219,13 +219,13 @@ describe('Prompt categories', () => {
       testSetup,
       createCategorizedWorkspace()
     )
-    /** Persisted V2 order whose category group owns the active prompt. */
+    /** Persisted folder order whose category group owns the active prompt. */
     const categoryOrderPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+      `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
     /** Active categorized prompt path before completion. */
     const activePromptPath =
       `${WORKSPACE_PATH}/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
-    /** Completed categorized prompt path while it is excluded from V2. */
+    /** Completed categorized prompt path while it is excluded from folder order. */
     const completedPromptPath =
       `${WORKSPACE_PATH}/Prompts/Prompts/Completed/Categorized Prompt.prompt.md`
 
@@ -288,7 +288,7 @@ describe('Prompt categories', () => {
   }) => {
     /** Categorized workspace extended with an empty reorder destination. */
     const filesystem = createCategorizedWorkspace()
-    /** Root FolderOrderV2 path observed after every drag operation. */
+    /** Root FolderOrder path observed after every drag operation. */
     const orderPath = addSecondPromptCategory(filesystem)
     /** Initial order used to prove prompt-only and blocked targets preserve persistence. */
     const initialOrder = JSON.parse(filesystem[orderPath]!)
@@ -549,7 +549,7 @@ describe('Prompt categories', () => {
     /** Categorized workspace used by the collapsed sidebar target flow. */
     const filesystem = createCategorizedWorkspace()
     /** Root order path observed after the prompt changes category. */
-    const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+    const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
     /** Started prompt workspace exposing the editor handle and sidebar category. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptFolders('Prompts')
@@ -626,7 +626,7 @@ describe('Prompt categories', () => {
     ])
     /** Template order path observed after the category drop. */
     const orderPath =
-      `${WORKSPACE_PATH}/Templates/TemplateTargets/_FolderInfo/FolderOrderV2.json`
+      `${WORKSPACE_PATH}/Templates/TemplateTargets/_FolderInfo/FolderOrder.json`
     /** Started template workspace exposing the shared editor and tree drag behavior. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptFolders('Template Targets')
@@ -687,7 +687,7 @@ describe('Prompt categories', () => {
       `${WORKSPACE_PATH}/Prompts/CategoryOnly/Categories/Code Review.category.json`
     /** Root order path observed after each top-target drop. */
     const orderPath =
-      `${WORKSPACE_PATH}/Prompts/CategoryOnly/Active/_FolderInfo/FolderOrderV2.json`
+      `${WORKSPACE_PATH}/Prompts/CategoryOnly/Active/_FolderInfo/FolderOrder.json`
     filesystem[categoryPath] = JSON.stringify(
       { id: PROMPT_CATEGORY_ID, displayName: 'Code Review', description: null },
       null,
@@ -778,7 +778,7 @@ describe('Prompt categories', () => {
         null,
         2
       )
-    filesystem[`${WORKSPACE_PATH}/Prompts/Empty/Active/_FolderInfo/FolderOrderV2.json`] =
+    filesystem[`${WORKSPACE_PATH}/Prompts/Empty/Active/_FolderInfo/FolderOrder.json`] =
       JSON.stringify(
         {
           categories: [
@@ -832,7 +832,7 @@ describe('Prompt categories', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Empty/Active/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Prompts/Empty/Active/_FolderInfo/FolderOrder.json`
         )
       ).categories.map((category: { categoryId: string | null }) => category.categoryId)
     ).toEqual([null, createdCategory.id, EXISTING_CATEGORY_ID])
@@ -892,7 +892,7 @@ describe('Prompt categories', () => {
     electronApp,
     testSetup
   }) => {
-    /** Category workspace with authoritative prompt and template V2 ownership. */
+    /** Category workspace with authoritative prompt and template folder-order ownership. */
     const filesystem = createCategorizedWorkspace()
     /** Known initial file timestamp used to verify deletion changes modifiedAt. */
     const initialModifiedAt = '2020-01-01T00:00:00.000Z'
@@ -1007,7 +1007,7 @@ describe('Prompt categories', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual(deletedCategoryRoot.data.categoryOrder)
@@ -1081,7 +1081,7 @@ describe('Prompt categories', () => {
         null,
         2
       )
-    filesystem[`${WORKSPACE_PATH}/Prompts/Source/Active/_FolderInfo/FolderOrderV2.json`] =
+    filesystem[`${WORKSPACE_PATH}/Prompts/Source/Active/_FolderInfo/FolderOrder.json`] =
       JSON.stringify(
         {
           categories: [
@@ -1103,7 +1103,7 @@ describe('Prompt categories', () => {
       2
     )
     filesystem[
-      `${WORKSPACE_PATH}/Templates/TemplateSource/_FolderInfo/FolderOrderV2.json`
+      `${WORKSPACE_PATH}/Templates/TemplateSource/_FolderInfo/FolderOrder.json`
     ] = JSON.stringify(
       {
         categories: [
@@ -1137,7 +1137,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Source/Active/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Prompts/Source/Active/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual({
@@ -1150,7 +1150,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Destination/Active/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Prompts/Destination/Active/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual({
@@ -1181,7 +1181,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/TemplateSource/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Templates/TemplateSource/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual({
@@ -1194,7 +1194,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/TemplateDestination/_FolderInfo/FolderOrderV2.json`
+          `${WORKSPACE_PATH}/Templates/TemplateDestination/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual({

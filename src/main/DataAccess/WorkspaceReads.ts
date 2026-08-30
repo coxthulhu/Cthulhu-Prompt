@@ -275,7 +275,7 @@ const isCategoryOrderEntry = (
   return entry.kind === kind && typeof entry.id === 'string'
 }
 
-/** Reads and validates one existing FolderOrderV2 file. */
+/** Reads and validates one existing FolderOrder file. */
 const readCategoryOrderFile = (
   orderPath: string,
   kind: PromptFolderContentKind
@@ -369,7 +369,7 @@ export const readPromptFolderCategoryOrder = (
   rootFolderName: string,
   kind: PromptFolderContentKind
 ): CategoryOrder => {
-  /** Canonical FolderOrderV2 path for the root. */
+  /** Canonical FolderOrder path for the root. */
   const orderPath = resolvePromptFolderCategoryOrderPath(workspacePath, rootFolderName, kind)
   /** Filesystem used to read and repair category ordering. */
   const fs = getFs()
@@ -438,16 +438,16 @@ export const readPromptFolderCategoryOrder = (
     fs.writeFileSync(orderPath, JSON.stringify(categoryOrder, null, 2), 'utf8')
   }
 
-  /** Authoritative category membership assigned by the repaired V2 order. */
+  /** Authoritative category membership assigned by the repaired folder order. */
   const categoryIdByContentId = new Map<string, string | null>()
   for (const category of categoryOrder.categories) {
     for (const entry of category.entries) categoryIdByContentId.set(entry.id, category.categoryId)
   }
   for (const discoveredContent of discoveredContents) {
-    /** Category ID that FolderOrderV2 assigns to this content. */
+    /** Category ID that FolderOrder assigns to this content. */
     const categoryId = categoryIdByContentId.get(discoveredContent.entry.id) ?? null
     if ((discoveredContent.content.category ?? null) === categoryId) continue
-    /** Content copy whose front matter is synchronized to the V2 owner. */
+    /** Content copy whose front matter is synchronized to the folder order. */
     const synchronizedContent = { ...discoveredContent.content }
     if (categoryId === null) delete synchronizedContent.category
     else synchronizedContent.category = categoryId

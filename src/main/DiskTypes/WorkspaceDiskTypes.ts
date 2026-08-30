@@ -11,7 +11,7 @@ export type PromptFolderInfoFile = {
 
 export type PromptFolderOrderFile = OrderContainer<EntryRef>
 
-/** Root prompt or template category ordering stored in FolderOrderV2.json. */
+/** Root prompt or template category ordering stored in FolderOrder.json. */
 export type PromptFolderCategoryOrderFile = import('@shared/PromptFolder').CategoryOrder
 
 export type WorkspaceFolderOrderFile = OrderContainer<FolderEntryRef>

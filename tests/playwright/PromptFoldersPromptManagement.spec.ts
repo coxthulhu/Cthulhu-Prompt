@@ -365,7 +365,7 @@ const buildCompletedFallbackGapWorkspace = () => {
   }).markdownPath
 
   workspace[
-    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
+    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
   ] = JSON.stringify(
     {
       categories: [
@@ -437,7 +437,7 @@ const buildCompletedSelfHealingWorkspace = () => {
 
   return {
     ...workspace,
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrderV2.json`]:
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`]:
       JSON.stringify(
         {
           categories: [
@@ -533,7 +533,7 @@ const buildCompletedModeWorkspace = () => {
     promptTitle: oldestCompletedPrompt.title
   }).markdownPath
 
-  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrderV2.json`] =
+  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`] =
     JSON.stringify(
       {
         categories: [
@@ -1476,7 +1476,7 @@ describe('Prompt folder prompt management', () => {
     expect(
       await readPromptFolderEntries(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/Active/_FolderInfo/FolderOrderV2.json`
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_FOLDER_NAME}/Active/_FolderInfo/FolderOrder.json`
       )
     ).toEqual([{ kind: 'prompt', id: 'dev-2' }])
 
@@ -1525,7 +1525,7 @@ describe('Prompt folder prompt management', () => {
         async () =>
           await readPromptFolderEntries(
             electronApp,
-            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrderV2.json`
+            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`
           )
       )
       .toEqual([{ kind: 'prompt', id: activePromptId }])
@@ -2108,7 +2108,7 @@ describe('Prompt folder prompt management', () => {
     await finishActiveDrag(mainWindow)
 
     /** Persisted category order used to verify both ownership and exact predecessor placement. */
-    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_FolderInfo/FolderOrderV2.json`
+    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_FolderInfo/FolderOrder.json`
     await expect
       .poll(async () => {
         /** Current persisted groups after the Completed-to-Active transaction settles. */
@@ -2246,7 +2246,7 @@ describe('Prompt folder prompt management', () => {
       .poll(async () =>
         await readPromptFolderEntries(
           electronApp,
-          `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrderV2.json`
+          `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual([
@@ -2596,7 +2596,7 @@ describe('Prompt folder prompt management', () => {
         async () =>
           await readPromptFolderEntries(
             electronApp,
-            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrderV2.json`
+            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_FolderInfo/FolderOrder.json`
           )
       )
       .toEqual([

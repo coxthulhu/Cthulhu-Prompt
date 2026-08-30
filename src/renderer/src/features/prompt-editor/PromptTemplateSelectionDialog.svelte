@@ -126,7 +126,7 @@
   const promptFolderById = $derived.by(() =>
     Object.fromEntries(promptFolderQuery.data.map((folder) => [folder.id, folder]))
   )
-  // Constant-time category lookup resolves FolderOrderV2 groups into display rows.
+  // Constant-time category lookup resolves FolderOrder groups into display rows.
   const categoryById = $derived.by(() =>
     Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
   )

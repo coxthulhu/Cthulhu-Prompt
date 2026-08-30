@@ -117,7 +117,7 @@ export const createMarkdownContentRendererMutations = <
       nextTitle: content.title,
       defaultFallbackTitle: config.defaultFallbackTitle
     })
-    /** V2 reference inserted with the new content. */
+    /** Folder-order reference inserted with the new content. */
     const entry = config.createEntryRef(content.id)
     /** New content and category order synchronized to the requested placement. */
     const placement = placeMarkdownContentInCategoryOrder(
@@ -216,7 +216,7 @@ export const createMarkdownContentRendererMutations = <
     if (!promptFolder || promptFolder.kind !== config.kind || !content) {
       throw new Error(`${config.label} not loaded`)
     }
-    /** V2 reference removed with the content. */
+    /** Folder-order reference removed with the content. */
     const entry = config.createEntryRef(contentId)
 
     await runRevisionMutation<DeleteMarkdownContentResponsePayload<TPersisted>>({

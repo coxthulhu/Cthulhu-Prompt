@@ -44,7 +44,7 @@ const buildRows = (
 }
 
 describe('buildPromptFolderScreenRows', () => {
-  it('shows Uncategorized first without a header and categories in V2 order', () => {
+  it('shows Uncategorized first without a header and categories in folder order', () => {
     const rows = buildRows(
       createFolder([
         { categoryId: null, promptIds: ['root-prompt'] },

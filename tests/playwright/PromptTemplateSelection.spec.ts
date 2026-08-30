@@ -29,7 +29,7 @@ const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Explic
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Stale Template.prompt.md`
 const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Multiple Templates.prompt.md`
 const PROMPT_ORDER_PATH =
-  `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrderV2.json`
+  `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'

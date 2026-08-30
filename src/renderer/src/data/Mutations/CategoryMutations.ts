@@ -161,7 +161,7 @@ export const moveCategory = async (
   categoryId: string,
   previousCategoryId: string | null
 ): Promise<void> => {
-  /** Root folder whose FolderOrderV2 category sequence changes. */
+  /** Root folder whose FolderOrder category sequence changes. */
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) throw new Error('Root prompt folder not loaded')
 

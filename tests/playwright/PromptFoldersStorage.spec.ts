@@ -38,11 +38,11 @@ const folderPath = (folderName: string): string =>
 
 // Returns the persisted category ordering file used by a prompt folder root.
 const activeOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrderV2.json`
+  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrder.json`
 
 // Returns the persisted category-view ordering file owned by a prompt root.
 const activeCategoryOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrderV2.json`
+  `${folderPath(folderName)}/Active/_FolderInfo/FolderOrder.json`
 
 // Reads every prompt ID across the persisted category groups in UI order.
 const readCategoryOrderPromptIds = async (
@@ -148,7 +148,6 @@ describe('Prompt folder storage', () => {
     // The canonical layout omits root ordering and status metadata not explicitly required.
     const omittedPaths = [
       `${alphaPath}/_FolderInfo/FolderOrder.json`,
-      `${alphaPath}/Active/_FolderInfo/FolderOrder.json`,
       `${alphaPath}/Active/_FolderInfo/FolderInfo.json`,
       `${alphaPath}/Active/_FolderInfo/Description.md`,
       `${alphaPath}/Completed/_FolderInfo/FolderInfo.json`,

@@ -701,7 +701,7 @@
           })
         }
       } else {
-        /** Loaded active entries projected in FolderOrderV2 group order. */
+        /** Loaded active entries projected in FolderOrder group order. */
         const groups = screenRootFolder.categoryOrder.categories
         /** Uncategorized content shown without a category header. */
         const uncategorizedEntries = groups[0]?.entries.filter((entry) =>

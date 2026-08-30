@@ -82,7 +82,7 @@ export type PromptFolderScreenRow =
   | PromptFolderScreenCategoryBottomCapRow
   | PromptFolderScreenPlaceholderRow
 
-/** Inputs used to project FolderOrderV2 into screen rows. */
+/** Inputs used to project FolderOrder into screen rows. */
 type BuildPromptFolderScreenRowsOptions = {
   rootFolder: PromptFolder
   categories: readonly Category[]
@@ -103,7 +103,7 @@ export const buildPromptFolderScreenRows = ({
   const promptIdSet = new Set(promptIds)
   /** Loaded category metadata indexed by stable ID. */
   const categoryById = new Map(categories.map((category) => [category.id, category]))
-  /** Valid V2 groups retained in authoritative order. */
+  /** Valid folder-order groups retained in authoritative order. */
   const groups = rootFolder.categoryOrder.categories.filter(
     (group) => group.categoryId === null || categoryById.has(group.categoryId)
   )
