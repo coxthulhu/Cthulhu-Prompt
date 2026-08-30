@@ -155,13 +155,13 @@
 <style>
   .promptDividerMoveIndicator {
     align-items: center;
-    background: var(--ui-info-hover-surface);
+    background: transparent;
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
     height: 26px;
     justify-content: center;
@@ -169,10 +169,6 @@
     min-width: 96px;
     padding: 0 10px;
     white-space: nowrap;
-  }
-
-  .promptDividerRow[data-drop-blocked='true'] .promptDividerMoveIndicator {
-    background: var(--ui-neutral-emphasis-surface);
   }
 
   .promptDividerContent {

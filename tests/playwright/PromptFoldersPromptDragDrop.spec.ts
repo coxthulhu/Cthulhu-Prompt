@@ -86,6 +86,7 @@ const FALLBACK_DESTINATION_FOLDER_ID = createDeterministicId(
 type PromptDividerHighlightStyles = {
   indicatorBackgroundColor: string
   buttonBorderWidth: string
+  fontSize: string
   separatorColors: string[]
 }
 
@@ -152,6 +153,7 @@ const getPromptDividerHighlightStyles = async (
     return {
       indicatorBackgroundColor: buttonStyle.backgroundColor,
       buttonBorderWidth: buttonStyle.borderWidth,
+      fontSize: buttonStyle.fontSize,
       separatorColors: separators.map((separator) => {
         // Read the border for normal separators and the fill for thick drop indicators.
         const style = getComputedStyle(separator)
@@ -724,9 +726,10 @@ describe('Prompt folder prompt drag-drop', () => {
 
     const dropStyles = await getPromptDividerHighlightStyles(dividerButton)
 
-    expect(dropStyles.indicatorBackgroundColor).not.toBe(defaultStyles.indicatorBackgroundColor)
+    expect(dropStyles.indicatorBackgroundColor).toBe('rgba(0, 0, 0, 0)')
     expect(dropStyles.buttonBorderWidth).toBe(defaultStyles.buttonBorderWidth)
     expect(dropStyles.buttonBorderWidth).toBe('0px')
+    expect(dropStyles.fontSize).toBe('14px')
     expect(defaultStyles.separatorColors).toHaveLength(2)
     expect(defaultStyles.separatorColors[1]).toBe(defaultStyles.separatorColors[0])
     expect(dropStyles.separatorColors).toHaveLength(2)
