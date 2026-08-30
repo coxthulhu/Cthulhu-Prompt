@@ -1,21 +1,8 @@
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
-
 /** Persisted category metadata owned by one root prompt or template folder. */
 export type Category = {
   id: string
   displayName: string
   description: string | null
-}
-
-/** Payload used to set or remove one category description. */
-export type SetCategoryDescriptionPayload = {
-  category: RevisionPayloadEntity<Category>
-  description: string | null
-}
-
-/** Authoritative category snapshot returned by category updates. */
-export type CategoryRevisionResponsePayload = {
-  category: RevisionEnvelope<Category>
 }
 
 /** Trims a category display name before validation or persistence. */

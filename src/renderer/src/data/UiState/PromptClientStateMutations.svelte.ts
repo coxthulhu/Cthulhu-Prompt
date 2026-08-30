@@ -1,8 +1,9 @@
-import type { Prompt, PromptFull, PromptTemplateReference } from '@shared/Prompt'
+import type { PromptFull, PromptPersisted, PromptTemplateReference } from '@shared/Prompt'
+import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import type { Draft } from 'immer'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import { markPromptClientStateEdited } from '../Collections/PromptClientStateCollection'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
@@ -12,11 +13,11 @@ import { recordPromptEditorMeasuredHeight } from './PromptEditorUiCache.svelte.t
 
 /** Optimistic authoritative prompt update paired with its session edit marker. */
 type PromptOptimisticMutationOptions = {
-  mutatePrompt: (draft: Prompt) => void
+  mutatePrompt: (draft: Draft<PromptPersisted>) => void
 }
 
 /** Returns the timestamp applied to one prompt edit. */
-const getPromptModifiedAt = (): string => new Date().toISOString()
+const getPromptModifiedAt = (): string => getCurrentIsoSecondTimestamp()
 
 /** Returns active sibling prompt IDs used to resolve fallback-title collisions. */
 const getPromptIdsForPrompt = (promptId: string): string[] => {
@@ -35,12 +36,7 @@ const mutatePromptOptimistically = (
   mutatePacedPromptAutosaveUpdate({
     promptId,
     debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
-      collections.promptClientState.update(promptId, (clientState) => {
-        markPromptClientStateEdited(clientState)
-      })
-      collections.prompt.update(promptId, mutatePrompt)
-    }
+    mutateContent: mutatePrompt
   })
 }
 
@@ -72,7 +68,7 @@ export const setPromptTitle = (promptId: string, title: string): void => {
     mutatePrompt: (draft) => {
       draft.title = nextTitleFields.title
       draft.fallbackTitle = nextTitleFields.fallbackTitle
-      if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
+      draft.modifiedAt = modifiedAt
     }
   })
 }
@@ -92,14 +88,13 @@ export const setPromptText = (
   const modifiedAt = getPromptModifiedAt()
   mutatePromptOptimistically(promptId, {
     mutatePrompt: (draft) => {
-      if (draft.loadingState === 'summary') return
       draft.promptText = promptText
       draft.modifiedAt = modifiedAt
     }
   })
 }
 
-// Replaces a prompt's ordered template selection and schedules its autosave.
+/** Replaces a prompt's ordered template selection and schedules its autosave. */
 export const setPromptTemplates = (
   promptId: string,
   templates: PromptTemplateReference[] | null
@@ -108,7 +103,7 @@ export const setPromptTemplates = (
   mutatePromptOptimistically(promptId, {
     mutatePrompt: (draft) => {
       draft.templates = templates
-      if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
+      draft.modifiedAt = modifiedAt
     }
   })
 }

@@ -115,6 +115,11 @@ describe('Prompt template mutations', () => {
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'promptTemplate' && snapshot.id === templateId
     )
+    /** Source folder snapshot after template creation. */
+    const createdSourceFolder = createResult.payload.snapshots.find(
+      (snapshot: { entityType: string; id: string }) =>
+        snapshot.entityType === 'promptFolder' && snapshot.id === SOURCE_FOLDER_ID
+    )
     expect(createdTemplate.data).not.toHaveProperty('status')
     expect(
       await readTextFile(
@@ -136,30 +141,41 @@ describe('Prompt template mutations', () => {
     })
 
     const updateResult = await invoke('update-prompt-template', {
-      content: {
-        ...toPayloadEntity(createdTemplate),
-        data: {
-          ...createdTemplate.data,
-          title: 'Renamed Template',
-          fallbackTitle: '',
-          modifiedAt: '2026-07-24T12:00:00.000Z',
-          templateText: 'Updated {{value}}.'
+      command: {
+        contentId: createdTemplate.id,
+        title: 'Renamed Template',
+        fallbackTitle: '',
+        modifiedAt: '2026-07-24T12:00:00Z',
+        templateText: 'Updated {{value}}.'
+      },
+      expectations: [
+        {
+          entityType: 'promptTemplate',
+          id: createdTemplate.id,
+          expected: 'revision',
+          revision: createdTemplate.revision
         }
-      }
+      ]
     })
 
     expect(updateResult).toMatchObject({
       success: true,
       payload: {
-        content: {
-          data: {
-            title: 'Renamed Template',
-            fallbackTitle: '',
-            templateText: 'Updated {{value}}.'
+        snapshots: [
+          {
+            entityType: 'promptTemplate',
+            id: createdTemplate.id,
+            data: {
+              title: 'Renamed Template',
+              fallbackTitle: '',
+              templateText: 'Updated {{value}}.'
+            }
           }
-        }
+        ]
       }
     })
+    /** Updated template snapshot returned by the single-target domain response. */
+    const updatedTemplate = updateResult.payload.snapshots[0]
     expect(
       await checkFileExists(
         electronApp,
@@ -177,7 +193,7 @@ describe('Prompt template mutations', () => {
       command: {
         sourcePromptFolderId: SOURCE_FOLDER_ID,
         destinationPromptFolderId: DESTINATION_FOLDER_ID,
-        contentId: updateResult.payload.content.id,
+        contentId: updatedTemplate.id,
         previousEntryId: null,
         categoryId: null
       },
@@ -186,9 +202,7 @@ describe('Prompt template mutations', () => {
           entityType: 'promptFolder',
           id: SOURCE_FOLDER_ID,
           expected: 'revision',
-          revision: updateResult.payload.promptFolders.find(
-            (folder: { id: string }) => folder.id === SOURCE_FOLDER_ID
-          ).revision
+          revision: createdSourceFolder.revision
         },
         {
           entityType: 'promptFolder',
@@ -198,9 +212,9 @@ describe('Prompt template mutations', () => {
         },
         {
           entityType: 'promptTemplate',
-          id: updateResult.payload.content.id,
+          id: updatedTemplate.id,
           expected: 'revision',
-          revision: updateResult.payload.content.revision
+          revision: updatedTemplate.revision
         }
       ]
     })

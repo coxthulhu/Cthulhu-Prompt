@@ -2,23 +2,23 @@ import { promptTemplateEntryRef } from '@shared/OrderContainer'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import {
   parseCreatePromptTemplateDomainCommand,
+  parseUpdatePromptTemplateDomainCommand,
   planCreatePromptTemplateDomainMutation,
-  type CreatePromptTemplateDomainCommand
+  planPromptTemplateUpdate,
+  type CreatePromptTemplateDomainCommand,
+  type UpdatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
-import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
 import { data } from '../Data/Data'
 import { buildPromptTemplateSnapshot } from '../Data/DataSnapshotHelpers'
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
-import {
-  parseDeletePromptTemplateRequest,
-  parseUpdatePromptTemplateRevisionRequest
-} from '../IpcFramework/IpcValidation'
+import { parseDeletePromptTemplateRequest } from '../IpcFramework/IpcValidation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 
 export const setupPromptTemplateMutationHandlers = (): void => {
   setupMarkdownContentMutationHandlers<
     PromptTemplatePersisted,
-    CreatePromptTemplateDomainCommand
+    CreatePromptTemplateDomainCommand,
+    UpdatePromptTemplateDomainCommand
   >({
     kind: 'template',
     label: 'Prompt template',
@@ -32,33 +32,16 @@ export const setupPromptTemplateMutationHandlers = (): void => {
       parseCommand: parseCreatePromptTemplateDomainCommand,
       plan: planCreatePromptTemplateDomainMutation
     },
+    updateDomain: {
+      parseCommand: parseUpdatePromptTemplateDomainCommand,
+      plan: planPromptTemplateUpdate
+    },
     parsers: {
-      update: parseUpdatePromptTemplateRevisionRequest,
       delete: parseDeletePromptTemplateRequest
     },
-    defaultFallbackTitle: DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE,
     getContent: (templateId) => data.promptTemplate.committedStore.getEntry(templateId),
     buildSnapshot: buildPromptTemplateSnapshot,
     createEntryRef: promptTemplateEntryRef,
-    updatePersisted: (requested, _current, titleFields) => ({
-      id: requested.id,
-      ...titleFields,
-      createdAt: requested.createdAt,
-      modifiedAt: requested.modifiedAt,
-      templateText: requested.templateText,
-      ...(requested.category !== undefined ? { category: requested.category } : {})
-    }),
-    canMove: () => true,
-    updateContent: (tx, operation) =>
-      tx.promptTemplate.update({
-        id: operation.id,
-        expectedRevision: operation.expectedRevision,
-        recipe: (draft) => {
-          Object.assign(draft, operation.data)
-          if (operation.data.category === undefined) delete draft.category
-        },
-        persistenceFields: operation.persistenceFields
-      }),
     updateFilename: (tx, templateId, persistenceFields) =>
       tx.promptTemplate.updatePersistenceFields({
         id: templateId,

@@ -9,12 +9,15 @@ import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
-  planRenameCategoryDomainMutation
+  planRenameCategoryDomainMutation,
+  planSetCategoryDescriptionDomainMutation
 } from '@shared/CategoryDomainMutations'
 import {
   planCreatePromptDomainMutation,
   planCreatePromptTemplateDomainMutation,
   planPromptMove,
+  planPromptTemplateUpdate,
+  planPromptUpdate,
   planPromptTemplateMove
 } from '@shared/MarkdownContentDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
@@ -25,6 +28,8 @@ import {
   planRenamePromptFolderDomainMutation
 } from '@shared/PromptFolderDomainMutations'
 import { planSetPromptStatusDomainMutation } from '@shared/PromptDomainMutations'
+import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import { planSetSystemSettingsDomainMutation } from '@shared/SystemSettingsDomainMutations'
 
 /** Complete in-memory entity graph used by shared planner tests. */
 type TestDomainEntities = {
@@ -47,7 +52,9 @@ const createDomainState = (
   } as TestDomainEntities
   return {
     get: (entityType, id) =>
-      entities[entityType].find((entity) => 'id' in entity && entity.id === id) as
+      entities[entityType].find((entity) =>
+        entityType === 'systemSettings' ? id === SYSTEM_SETTINGS_ID : 'id' in entity && entity.id === id
+      ) as
         | DomainPlannerEntityMap[typeof entityType]
         | undefined,
     getAll: (entityType) => entities[entityType]
@@ -276,6 +283,47 @@ describe('shared domain mutation planners', () => {
     ).toEqual([null, 'category-b', 'category-a'])
   })
 
+  it('plans category descriptions and normalized system settings as single targets', () => {
+    /** Category receiving a paced description replacement. */
+    const category = { id: 'category', displayName: 'Category', description: null }
+    /** Loaded singleton settings receiving a paced replacement. */
+    const settings = {
+      promptFontSize: 16,
+      promptEditorMinLines: 2,
+      promptEditorMaxLines: 35,
+      showLineNumbers: true
+    }
+    /** Single-category description plan. */
+    const categoryPlan = planSetCategoryDescriptionDomainMutation(
+      createDomainState({ category: [category] }),
+      { categoryId: category.id, description: 'Updated description.' }
+    )
+    expect(Array.isArray(categoryPlan)).toBe(true)
+    if (!Array.isArray(categoryPlan)) return
+    expect(categoryPlan).toHaveLength(1)
+    expect(produce(category, categoryPlan[0]!.recipe!).description).toBe('Updated description.')
+
+    /** Single-settings plan normalized through the shared bounds. */
+    const settingsPlan = planSetSystemSettingsDomainMutation(
+      createDomainState({ systemSettings: [settings] }),
+      {
+        promptFontSize: 100,
+        promptEditorMinLines: 3,
+        promptEditorMaxLines: 30,
+        showLineNumbers: false
+      }
+    )
+    expect(Array.isArray(settingsPlan)).toBe(true)
+    if (!Array.isArray(settingsPlan)) return
+    expect(settingsPlan).toHaveLength(1)
+    expect(produce(settings, settingsPlan[0]!.recipe!)).toEqual({
+      promptFontSize: 32,
+      promptEditorMinLines: 3,
+      promptEditorMaxLines: 30,
+      showLineNumbers: false
+    })
+  })
+
   it('plans prompt and template creation with synchronized root placement', () => {
     /** Prompt root receiving one newly created prompt. */
     const promptRoot = createRootFolder('prompts', 'prompt', null)
@@ -328,6 +376,77 @@ describe('shared domain mutation planners', () => {
       entityType: 'promptTemplate',
       id: 'template',
       data: { fallbackTitle: 'New Template', templateText: 'Template' }
+    })
+  })
+
+  it('plans prompt and template autosaves as single content targets', () => {
+    /** Prompt root owning the full prompt update target. */
+    const promptRoot = createRootFolder('prompts', 'prompt', null)
+    promptRoot.categoryOrder.categories[0]!.entries.push({ kind: 'prompt', id: 'prompt' })
+    /** Template root owning the full template update target. */
+    const templateRoot = createRootFolder('templates', 'template', null)
+    templateRoot.categoryOrder.categories[0]!.entries.push({ kind: 'template', id: 'template' })
+    /** Full prompt whose immutable ownership and workflow fields must survive autosave. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Old Prompt',
+      fallbackTitle: '',
+      createdAt: 'created',
+      modifiedAt: 'old',
+      promptText: 'Old prompt.',
+      status: PromptStatus.Todo
+    }
+    /** Full template whose immutable creation data must survive autosave. */
+    const template = {
+      id: 'template',
+      title: 'Old Template',
+      fallbackTitle: '',
+      createdAt: 'created',
+      modifiedAt: 'old',
+      templateText: 'Old template.'
+    }
+    /** Shared prompt autosave plan. */
+    const promptPlan = planPromptUpdate(
+      createDomainState({ promptFolder: [promptRoot], prompt: [prompt] }),
+      {
+        contentId: prompt.id,
+        title: 'Updated Prompt',
+        fallbackTitle: '',
+        modifiedAt: '2026-08-30T12:00:00Z',
+        promptText: 'Updated prompt.',
+        templates: [{ id: 'template' }]
+      }
+    )
+    expect(Array.isArray(promptPlan)).toBe(true)
+    if (!Array.isArray(promptPlan)) return
+    expect(promptPlan).toHaveLength(1)
+    expect(produce(prompt, promptPlan[0]!.recipe!)).toEqual({
+      ...prompt,
+      title: 'Updated Prompt',
+      modifiedAt: '2026-08-30T12:00:00Z',
+      promptText: 'Updated prompt.',
+      templates: [{ id: 'template' }]
+    })
+
+    /** Shared prompt-template autosave plan. */
+    const templatePlan = planPromptTemplateUpdate(
+      createDomainState({ promptFolder: [templateRoot], promptTemplate: [template] }),
+      {
+        contentId: template.id,
+        title: 'Updated Template',
+        fallbackTitle: '',
+        modifiedAt: '2026-08-30T12:00:00Z',
+        templateText: 'Updated template.'
+      }
+    )
+    expect(Array.isArray(templatePlan)).toBe(true)
+    if (!Array.isArray(templatePlan)) return
+    expect(templatePlan).toHaveLength(1)
+    expect(produce(template, templatePlan[0]!.recipe!)).toEqual({
+      ...template,
+      title: 'Updated Template',
+      modifiedAt: '2026-08-30T12:00:00Z',
+      templateText: 'Updated template.'
     })
   })
 

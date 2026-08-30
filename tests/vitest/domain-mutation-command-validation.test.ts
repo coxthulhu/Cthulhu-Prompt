@@ -3,12 +3,15 @@ import {
   parseCreateCategoryDomainCommand,
   parseDeleteCategoryDomainCommand,
   parseMoveCategoryDomainCommand,
-  parseRenameCategoryDomainCommand
+  parseRenameCategoryDomainCommand,
+  parseSetCategoryDescriptionDomainCommand
 } from '@shared/CategoryDomainMutations'
 import {
   parseCreatePromptDomainCommand,
   parseCreatePromptTemplateDomainCommand,
-  parseMoveMarkdownContentDomainCommand
+  parseMoveMarkdownContentDomainCommand,
+  parseUpdatePromptDomainCommand,
+  parseUpdatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
 import {
   parseCreatePromptFolderDomainCommand,
@@ -17,6 +20,7 @@ import {
 } from '@shared/PromptFolderDomainMutations'
 import { parseSetPromptStatusDomainCommand } from '@shared/PromptDomainMutations'
 import { PromptStatus } from '@shared/Prompt'
+import { parseSetSystemSettingsDomainCommand } from '@shared/SystemSettingsDomainMutations'
 
 describe('domain mutation command validation', () => {
   it('accepts a root-folder rename command and rejects legacy payload fields', () => {
@@ -71,6 +75,15 @@ describe('domain mutation command validation', () => {
     }
     expect(parseRenameCategoryDomainCommand(renameCommand)).toEqual(renameCommand)
     expect(parseMoveCategoryDomainCommand(moveCommand)).toEqual(moveCommand)
+  })
+
+  it('accepts nullable category-description commands and rejects legacy entities', () => {
+    /** Valid category-description removal command. */
+    const command = { categoryId: 'category', description: null }
+    expect(parseSetCategoryDescriptionDomainCommand(command)).toEqual(command)
+    expect(
+      parseSetCategoryDescriptionDomainCommand({ ...command, category: { id: 'legacy' } })
+    ).toBeNull()
   })
 
   it('accepts prompt and template creation commands with exact timestamps', () => {
@@ -137,6 +150,52 @@ describe('domain mutation command validation', () => {
       previousEntryId: null
     }
     expect(parseMoveMarkdownContentDomainCommand(command)).toEqual(command)
+  })
+
+  it('accepts exact prompt and template update commands', () => {
+    /** Valid prompt replacement command with explicit template selection. */
+    const promptCommand = {
+      contentId: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: '2026-08-30T12:00:00Z',
+      promptText: 'Updated prompt.',
+      templates: [{ id: 'template' }]
+    }
+    /** Valid template replacement command without prompt-only fields. */
+    const templateCommand = {
+      contentId: 'template',
+      title: 'Template',
+      fallbackTitle: '',
+      modifiedAt: '2026-08-30T12:00:00Z',
+      templateText: 'Updated template.'
+    }
+    expect(parseUpdatePromptDomainCommand(promptCommand)).toEqual(promptCommand)
+    expect(parseUpdatePromptTemplateDomainCommand(templateCommand)).toEqual(templateCommand)
+    /** Valid five-field prompt command used to expose unknown sixth-field acceptance. */
+    const { templates: _templates, ...promptWithoutTemplates } = promptCommand
+    expect(
+      parseUpdatePromptDomainCommand({ ...promptWithoutTemplates, status: PromptStatus.Todo })
+    ).toBeNull()
+    expect(
+      parseUpdatePromptTemplateDomainCommand({
+        ...templateCommand,
+        modifiedAt: '2026-08-30T12:00:00.000Z'
+      })
+    ).toBeNull()
+  })
+
+  it('accepts complete finite system-settings commands', () => {
+    /** Valid complete system-settings replacement command. */
+    const command = {
+      promptFontSize: 18,
+      promptEditorMinLines: 3,
+      promptEditorMaxLines: 30,
+      showLineNumbers: false
+    }
+    expect(parseSetSystemSettingsDomainCommand(command)).toEqual(command)
+    expect(parseSetSystemSettingsDomainCommand({ ...command, promptFontSize: NaN })).toBeNull()
+    expect(parseSetSystemSettingsDomainCommand({ ...command, legacy: true })).toBeNull()
   })
 
   it('rejects legacy kind and other extra movement fields', () => {

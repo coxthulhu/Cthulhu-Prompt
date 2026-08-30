@@ -1,18 +1,63 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
+import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
+import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import {
+  SYSTEM_SETTINGS_CLIENT_STATE_ID,
+  systemSettingsClientStateCollection
+} from '@renderer/data/Collections/SystemSettingsClientStateCollection'
+import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
 } from '@renderer/data/IpcFramework/RendererDomainMutation'
 import { submitAllPacedUpdateTransactionsAndWait } from '@renderer/data/IpcFramework/RevisionCollections'
+import {
+  setPromptTemplates,
+  setPromptText,
+  setPromptTitle
+} from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
+import {
+  setPromptTemplateText,
+  setPromptTemplateTitle
+} from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
+import { mutateSystemSettingsClientStateWithAutosave } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
 import type {
   DomainExpectedTargetSelector,
   DomainPlanner
 } from '@shared/DomainChanges'
+import type {
+  UpdatePromptDomainCommand,
+  UpdatePromptTemplateDomainCommand
+} from '@shared/MarkdownContentDomainMutations'
+import { createPromptFull, PromptStatus } from '@shared/Prompt'
+import { createPromptTemplateFull } from '@shared/PromptTemplate'
+import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import {
+  clearPromptEditorMeasuredHeight,
+  lookupPromptEditorMeasuredHeight,
+  recordPromptEditorMeasuredHeight
+} from '@renderer/data/UiState/PromptEditorUiCache.svelte.ts'
 
 /** Stable category and local-state ID used by executable renderer framework tests. */
 const CATEGORY_ID = 'renderer-domain-framework'
+/** Stable prompt ID used to verify authoritative editor cache reconciliation. */
+const PROMPT_ID = 'renderer-domain-prompt'
+/** Stable template ID used by autosave and reconciliation framework tests. */
+const TEMPLATE_ID = 'renderer-domain-template'
+/** Prompt-folder ID establishing prompt ownership for shared update planning. */
+const PROMPT_FOLDER_ID = 'renderer-domain-prompt-folder'
+/** Template-folder ID establishing template ownership for shared update planning. */
+const TEMPLATE_FOLDER_ID = 'renderer-domain-template-folder'
+/** Editor measurement reused for prompt and template autosave assertions. */
+const EDITOR_MEASUREMENT = {
+  measuredHeightPx: 100,
+  widthPx: 500,
+  devicePixelRatio: 1
+}
 
 /** Command that assigns one category display name. */
 type RenameTestCommand = { displayName: string }
@@ -92,6 +137,22 @@ describe('renderer domain mutation framework', () => {
     if (promptClientStateCollection.has(CATEGORY_ID)) {
       promptClientStateCollection.delete(CATEGORY_ID)
     }
+    if (promptClientStateCollection.has(PROMPT_ID)) {
+      promptClientStateCollection.delete(PROMPT_ID)
+    }
+    if (promptTemplateClientStateCollection.has(TEMPLATE_ID)) {
+      promptTemplateClientStateCollection.delete(TEMPLATE_ID)
+    }
+    if (systemSettingsClientStateCollection.has(SYSTEM_SETTINGS_CLIENT_STATE_ID)) {
+      systemSettingsClientStateCollection.delete(SYSTEM_SETTINGS_CLIENT_STATE_ID)
+    }
+    promptCollection.utils.deleteAuthoritative(PROMPT_ID)
+    promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
+    promptFolderCollection.utils.deleteAuthoritative(PROMPT_FOLDER_ID)
+    promptFolderCollection.utils.deleteAuthoritative(TEMPLATE_FOLDER_ID)
+    systemSettingsCollection.utils.deleteAuthoritative(SYSTEM_SETTINGS_ID)
+    clearPromptEditorMeasuredHeight(PROMPT_ID)
+    clearPromptEditorMeasuredHeight(TEMPLATE_ID)
     categoryCollection.utils.upsertAuthoritative({
       id: CATEGORY_ID,
       revision: 1,
@@ -152,6 +213,397 @@ describe('renderer domain mutation framework', () => {
     )
     expect(categoryCollection.get(CATEGORY_ID)?.displayName).toBe('Server')
     expect(promptClientStateCollection.get(CATEGORY_ID)?.isEdited).toBe(false)
+  })
+
+  it('clears cached editor measurements when authoritative prompt text differs', async () => {
+    promptCollection.utils.upsertAuthoritative({
+      id: PROMPT_ID,
+      revision: 1,
+      data: createPromptFull({
+        id: PROMPT_ID,
+        title: 'Prompt',
+        fallbackTitle: '',
+        createdAt: '2026-08-30T10:00:00Z',
+        modifiedAt: '2026-08-30T11:00:00Z',
+        promptText: 'Local text.',
+        status: PromptStatus.Todo
+      })
+    })
+    recordPromptEditorMeasuredHeight(
+      PROMPT_ID,
+      { measuredHeightPx: 100, widthPx: 500, devicePixelRatio: 1 },
+      true
+    )
+    /** Prompt update planner used to route one authoritative text snapshot. */
+    const planPromptText: DomainPlanner<{ promptText: string }> = (_state, command) => [
+      {
+        type: 'update',
+        entityType: 'prompt',
+        id: PROMPT_ID,
+        recipe: (draft) => {
+          Object.assign(draft, { promptText: command.promptText })
+        }
+      }
+    ]
+    /** IPC response whose authoritative text differs from the optimistic command. */
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      payload: {
+        snapshots: [
+          {
+            entityType: 'prompt',
+            id: PROMPT_ID,
+            revision: 2,
+            data: {
+              id: PROMPT_ID,
+              title: 'Prompt',
+              fallbackTitle: '',
+              createdAt: '2026-08-30T10:00:00Z',
+              modifiedAt: '2026-08-30T12:00:00Z',
+              promptText: 'Server text.',
+              status: PromptStatus.Todo
+            }
+          }
+        ]
+      }
+    })
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    await runImmediateRendererDomainMutation({
+      mutation: { command: { promptText: 'Optimistic text.' }, plan: planPromptText },
+      ipc: { channel: 'test-renderer-prompt-reconcile' },
+      renderer: {}
+    })
+
+    expect(lookupPromptEditorMeasuredHeight(PROMPT_ID, 500, 1)).toBeNull()
+    expect(promptCollection.get(PROMPT_ID)).toMatchObject({ promptText: 'Server text.' })
+  })
+
+  it('merges prompt and template editor fields into their latest paced commands', async () => {
+    promptCollection.utils.upsertAuthoritative({
+      id: PROMPT_ID,
+      revision: 1,
+      data: createPromptFull({
+        id: PROMPT_ID,
+        title: 'Original Prompt',
+        fallbackTitle: '',
+        createdAt: '2026-08-30T10:00:00Z',
+        modifiedAt: '2026-08-30T11:00:00Z',
+        promptText: 'Original prompt text.',
+        status: PromptStatus.Todo
+      })
+    })
+    promptTemplateCollection.utils.upsertAuthoritative({
+      id: TEMPLATE_ID,
+      revision: 1,
+      data: createPromptTemplateFull({
+        id: TEMPLATE_ID,
+        title: 'Original Template',
+        fallbackTitle: '',
+        createdAt: '2026-08-30T10:00:00Z',
+        modifiedAt: '2026-08-30T11:00:00Z',
+        templateText: 'Original template text.'
+      })
+    })
+    promptFolderCollection.utils.upsertAuthoritative({
+      id: PROMPT_FOLDER_ID,
+      revision: 1,
+      data: {
+        id: PROMPT_FOLDER_ID,
+        kind: 'prompt',
+        folderName: 'Prompts',
+        displayName: 'Prompts',
+        completedPromptIds: [],
+        categoryOrder: {
+          categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }]
+        },
+        settings: { folderDescription: null }
+      }
+    })
+    promptFolderCollection.utils.upsertAuthoritative({
+      id: TEMPLATE_FOLDER_ID,
+      revision: 1,
+      data: {
+        id: TEMPLATE_FOLDER_ID,
+        kind: 'template',
+        folderName: 'Templates',
+        displayName: 'Templates',
+        completedPromptIds: [],
+        categoryOrder: {
+          categories: [
+            { categoryId: null, entries: [{ kind: 'template', id: TEMPLATE_ID }] }
+          ]
+        },
+        settings: { folderDescription: null }
+      }
+    })
+    promptClientStateCollection.insert({ id: PROMPT_ID, isEdited: false })
+    promptTemplateClientStateCollection.insert({ id: TEMPLATE_ID, isEdited: false })
+    /** IPC implementation echoing each complete editor replacement as authoritative truth. */
+    const invoke = vi.fn(
+      async (
+        channel: string,
+        request: { payload: { command: UpdatePromptDomainCommand | UpdatePromptTemplateDomainCommand } }
+      ) => {
+        if (channel === 'update-prompt') {
+          /** Latest merged prompt command persisted by the paced transaction. */
+          const command = request.payload.command as UpdatePromptDomainCommand
+          return {
+            success: true,
+            payload: {
+              snapshots: [
+                {
+                  entityType: 'prompt',
+                  id: PROMPT_ID,
+                  revision: 2,
+                  data: {
+                    id: PROMPT_ID,
+                    title: command.title,
+                    fallbackTitle: command.fallbackTitle,
+                    createdAt: '2026-08-30T10:00:00Z',
+                    modifiedAt: command.modifiedAt,
+                    promptText: command.promptText,
+                    ...(command.templates !== undefined ? { templates: command.templates } : {}),
+                    status: PromptStatus.Todo
+                  }
+                }
+              ]
+            }
+          }
+        }
+        /** Latest merged template command persisted by the paced transaction. */
+        const command = request.payload.command as UpdatePromptTemplateDomainCommand
+        return {
+          success: true,
+          payload: {
+            snapshots: [
+              {
+                entityType: 'promptTemplate',
+                id: TEMPLATE_ID,
+                revision: 2,
+                data: {
+                  id: TEMPLATE_ID,
+                  title: command.title,
+                  fallbackTitle: command.fallbackTitle,
+                  createdAt: '2026-08-30T10:00:00Z',
+                  modifiedAt: command.modifiedAt,
+                  templateText: command.templateText
+                }
+              }
+            ]
+          }
+        }
+      }
+    )
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    setPromptTitle(PROMPT_ID, 'Updated Prompt')
+    setPromptText(PROMPT_ID, 'Updated prompt text.', EDITOR_MEASUREMENT)
+    setPromptTemplates(PROMPT_ID, [{ id: TEMPLATE_ID }])
+    setPromptTemplateTitle(TEMPLATE_ID, 'Updated Template')
+    setPromptTemplateText(TEMPLATE_ID, 'Updated template text.', EDITOR_MEASUREMENT)
+    await submitAllPacedUpdateTransactionsAndWait()
+
+    expect(invoke).toHaveBeenCalledTimes(2)
+    expect(invoke).toHaveBeenCalledWith(
+      'update-prompt',
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          command: expect.objectContaining({
+            contentId: PROMPT_ID,
+            title: 'Updated Prompt',
+            promptText: 'Updated prompt text.',
+            templates: [{ id: TEMPLATE_ID }]
+          }),
+          expectations: [
+            {
+              entityType: 'prompt',
+              id: PROMPT_ID,
+              expected: 'revision',
+              revision: 1
+            }
+          ]
+        })
+      })
+    )
+    expect(invoke).toHaveBeenCalledWith(
+      'update-prompt-template',
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          command: expect.objectContaining({
+            contentId: TEMPLATE_ID,
+            title: 'Updated Template',
+            templateText: 'Updated template text.'
+          }),
+          expectations: [
+            {
+              entityType: 'promptTemplate',
+              id: TEMPLATE_ID,
+              expected: 'revision',
+              revision: 1
+            }
+          ]
+        })
+      })
+    )
+    expect(promptClientStateCollection.get(PROMPT_ID)?.isEdited).toBe(true)
+    expect(promptTemplateClientStateCollection.get(TEMPLATE_ID)?.isEdited).toBe(true)
+    expect(lookupPromptEditorMeasuredHeight(PROMPT_ID, 500, 1)).toBe(100)
+    expect(lookupPromptEditorMeasuredHeight(TEMPLATE_ID, 500, 1)).toBe(100)
+  })
+
+  it('clears cached editor measurements when authoritative template text differs', async () => {
+    promptTemplateCollection.utils.upsertAuthoritative({
+      id: TEMPLATE_ID,
+      revision: 1,
+      data: createPromptTemplateFull({
+        id: TEMPLATE_ID,
+        title: 'Template',
+        fallbackTitle: '',
+        createdAt: '2026-08-30T10:00:00Z',
+        modifiedAt: '2026-08-30T11:00:00Z',
+        templateText: 'Local text.'
+      })
+    })
+    recordPromptEditorMeasuredHeight(TEMPLATE_ID, EDITOR_MEASUREMENT, true)
+    /** Template update planner used to route one authoritative text snapshot. */
+    const planTemplateText: DomainPlanner<{ templateText: string }> = (_state, command) => [
+      {
+        type: 'update',
+        entityType: 'promptTemplate',
+        id: TEMPLATE_ID,
+        recipe: (draft) => {
+          Object.assign(draft, { templateText: command.templateText })
+        }
+      }
+    ]
+    /** IPC response whose authoritative template text differs from the optimistic command. */
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      payload: {
+        snapshots: [
+          {
+            entityType: 'promptTemplate',
+            id: TEMPLATE_ID,
+            revision: 2,
+            data: {
+              id: TEMPLATE_ID,
+              title: 'Template',
+              fallbackTitle: '',
+              createdAt: '2026-08-30T10:00:00Z',
+              modifiedAt: '2026-08-30T12:00:00Z',
+              templateText: 'Server text.'
+            }
+          }
+        ]
+      }
+    })
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    await runImmediateRendererDomainMutation({
+      mutation: { command: { templateText: 'Optimistic text.' }, plan: planTemplateText },
+      ipc: { channel: 'test-renderer-template-reconcile' },
+      renderer: {}
+    })
+
+    expect(lookupPromptEditorMeasuredHeight(TEMPLATE_ID, 500, 1)).toBeNull()
+    expect(promptTemplateCollection.get(TEMPLATE_ID)).toMatchObject({
+      templateText: 'Server text.'
+    })
+  })
+
+  it('persists the latest valid system-settings form through one paced command', async () => {
+    systemSettingsCollection.utils.upsertAuthoritative({
+      id: SYSTEM_SETTINGS_ID,
+      revision: 1,
+      data: { ...DEFAULT_SYSTEM_SETTINGS }
+    })
+    systemSettingsClientStateCollection.insert({
+      id: SYSTEM_SETTINGS_CLIENT_STATE_ID,
+      promptFontSizeInput: '16',
+      promptEditorMinLinesInput: '2',
+      promptEditorMaxLinesInput: '35',
+      showLineNumbers: true
+    })
+    /** IPC implementation returning the latest valid settings command as authoritative truth. */
+    const invoke = vi.fn(
+      async (_channel: string, request: { payload: { command: typeof DEFAULT_SYSTEM_SETTINGS } }) => ({
+        success: true,
+        payload: {
+          snapshots: [
+            {
+              entityType: 'systemSettings',
+              id: SYSTEM_SETTINGS_ID,
+              revision: 2,
+              data: request.payload.command
+            }
+          ]
+        }
+      })
+    )
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    mutateSystemSettingsClientStateWithAutosave((clientState) => {
+      clientState.promptFontSizeInput = 'invalid'
+    })
+    await submitAllPacedUpdateTransactionsAndWait()
+    expect(invoke).not.toHaveBeenCalled()
+
+    mutateSystemSettingsClientStateWithAutosave((clientState) => {
+      clientState.promptFontSizeInput = '20'
+    })
+    mutateSystemSettingsClientStateWithAutosave((clientState) => {
+      clientState.showLineNumbers = false
+    })
+    await submitAllPacedUpdateTransactionsAndWait()
+
+    expect(invoke).toHaveBeenCalledTimes(1)
+    expect(invoke).toHaveBeenCalledWith(
+      'update-system-settings',
+      expect.objectContaining({
+        payload: {
+          command: {
+            promptFontSize: 20,
+            promptEditorMinLines: 2,
+            promptEditorMaxLines: 35,
+            showLineNumbers: false
+          },
+          expectations: [
+            {
+              entityType: 'systemSettings',
+              id: SYSTEM_SETTINGS_ID,
+              expected: 'revision',
+              revision: 1
+            }
+          ]
+        }
+      })
+    )
+    expect(systemSettingsCollection.get(SYSTEM_SETTINGS_ID)).toMatchObject({
+      promptFontSize: 20,
+      promptEditorMinLines: 2,
+      promptEditorMaxLines: 35,
+      showLineNumbers: false
+    })
+    expect(systemSettingsClientStateCollection.get(SYSTEM_SETTINGS_CLIENT_STATE_ID)).toMatchObject({
+      id: SYSTEM_SETTINGS_CLIENT_STATE_ID,
+      promptFontSizeInput: '20',
+      promptEditorMinLinesInput: '2',
+      promptEditorMaxLinesInput: '35',
+      showLineNumbers: false
+    })
   })
 
   it('captures expectations after earlier queued mutations settle', async () => {

@@ -1,34 +1,19 @@
-import type {
-  Category,
-  CategoryRevisionResponsePayload,
-  SetCategoryDescriptionPayload
-} from '@shared/Category'
 import { compactGuid } from '@shared/compactGuid'
 import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
-  planRenameCategoryDomainMutation
+  planRenameCategoryDomainMutation,
+  planSetCategoryDescriptionDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
-import type { Transaction } from '@tanstack/svelte-db'
 import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
-import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
-
-/** Reads the latest optimistic category value captured by a paced transaction. */
-const readLatestCategoryFromTransaction = (
-  transaction: Transaction<any>,
-  categoryId: string
-): Category =>
-  getLatestMutationModifiedRecord(transaction, categoryCollection.id, categoryId, () =>
-    categoryCollection.get(categoryId)!
-  )
+import {
+  mutatePacedRendererDomainMutation,
+  runImmediateRendererDomainMutation
+} from '../IpcFramework/RendererDomainMutation'
 
 /** Queues a debounced category-description update using the latest optimistic value. */
 export const setCategoryDescriptionWithAutosave = (
@@ -36,34 +21,17 @@ export const setCategoryDescriptionWithAutosave = (
   description: string | null,
   debounceMs: number
 ): void => {
-  mutatePacedRevisionUpdateTransaction<CategoryRevisionResponsePayload>({
-    collectionId: categoryCollection.id,
-    elementId: categoryId,
-    debounceMs,
-    mutateOptimistically: ({ collections }) => {
-      collections.category.update(categoryId, (draft) => {
-        draft.description = description
-      })
+  mutatePacedRendererDomainMutation({
+    mutation: {
+      command: { categoryId, description },
+      plan: planSetCategoryDescriptionDomainMutation
     },
-    persistMutations: async ({ transaction }) => {
-      /** Latest category containing all edits merged into this autosave transaction. */
-      const latestCategory = readLatestCategoryFromTransaction(transaction, categoryId)
-      return await ipcInvokeWithPayload<
-        IpcMutationPayloadResult<CategoryRevisionResponsePayload>,
-        SetCategoryDescriptionPayload
-      >('set-category-description', {
-        category: {
-          id: categoryId,
-          expectedRevision: categoryCollection.utils.getAuthoritativeRevision(categoryId),
-          data: latestCategory
-        },
-        description: latestCategory.description
-      })
-    },
-    handleSuccessOrConflictResponse: (payload) => {
-      categoryCollection.utils.upsertAuthoritative(payload.category)
-    },
-    conflictMessage: 'Category description update conflict'
+    ipc: { channel: 'set-category-description' },
+    renderer: {},
+    pacing: {
+      target: { entityType: 'category', id: categoryId },
+      debounceMs
+    }
   })
 }
 

@@ -8,7 +8,9 @@ import { promptTemplateEntryRef } from '@shared/OrderContainer'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
   planCreatePromptTemplateDomainMutation,
-  type CreatePromptTemplateDomainCommand
+  planPromptTemplateUpdate,
+  type CreatePromptTemplateDomainCommand,
+  type UpdatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import {
@@ -32,11 +34,11 @@ const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => (
 const mutations = createMarkdownContentRendererMutations<
   PromptTemplatePersisted,
   PromptTemplateFull,
-  CreatePromptTemplateDomainCommand
+  CreatePromptTemplateDomainCommand,
+  UpdatePromptTemplateDomainCommand
 >({
   kind: 'template',
   label: 'Prompt template',
-  collectionId: promptTemplateCollection.id,
   channels: {
     create: 'create-prompt-template',
     update: 'update-prompt-template',
@@ -49,7 +51,6 @@ const mutations = createMarkdownContentRendererMutations<
     const template = promptTemplateCollection.get(templateId)
     return template && isPromptTemplateFull(template) ? toPersisted(template) : null
   },
-  toPersisted,
   createEntity: (entities, templateId, template) => {
     const entity = entities.promptTemplate({
       id: templateId,
@@ -71,6 +72,17 @@ const mutations = createMarkdownContentRendererMutations<
       previousEntryId
     })
   },
+  updateDomain: {
+    plan: planPromptTemplateUpdate,
+    /** Builds the complete editable template replacement command. */
+    createCommand: (template) => ({
+      contentId: template.id,
+      title: template.title,
+      fallbackTitle: template.fallbackTitle,
+      modifiedAt: template.modifiedAt,
+      templateText: template.templateText
+    })
+  },
   insertClientStateOptimistically: (collections, templateId) => {
     collections.promptTemplateClientState.insert(
       markPromptTemplateClientStateEdited({ id: templateId, isEdited: false })
@@ -80,7 +92,7 @@ const mutations = createMarkdownContentRendererMutations<
     collections.promptTemplate.delete(templateId)
     collections.promptTemplateClientState.delete(templateId)
   },
-  markMoveClientStateEdited: (collections, templateId) => {
+  markClientStateEdited: (collections, templateId) => {
     collections.promptTemplateClientState.update(templateId, (clientState) => {
       markPromptTemplateClientStateEdited(clientState)
     })

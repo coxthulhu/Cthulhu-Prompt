@@ -1,8 +1,6 @@
 import type {
   DeleteMarkdownContentPayload,
-  DeleteMarkdownContentResponsePayload,
-  MarkdownContentRevisionPayload,
-  MarkdownContentRevisionResponsePayload
+  DeleteMarkdownContentResponsePayload
 } from './MarkdownContent'
 
 export enum PromptStatus {
@@ -93,11 +91,6 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
 export const isPromptFull = (prompt: Prompt): prompt is PromptFull => {
   return prompt.loadingState === 'full'
 }
-
-export type PromptRevisionPayload = MarkdownContentRevisionPayload<PromptPersisted>
-
-export type PromptRevisionResponsePayload =
-  MarkdownContentRevisionResponsePayload<PromptPersisted>
 
 export type DeletePromptPayload = DeleteMarkdownContentPayload<PromptPersisted>
 

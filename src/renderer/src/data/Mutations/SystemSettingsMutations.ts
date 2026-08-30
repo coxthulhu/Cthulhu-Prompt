@@ -1,64 +1,43 @@
 import {
   SYSTEM_SETTINGS_ID,
-  type SystemSettings,
-  type SystemSettingsRevisionResponsePayload
+  type SystemSettings
 } from '@shared/SystemSettings'
-import type { Transaction } from '@tanstack/svelte-db'
+import { planSetSystemSettingsDomainMutation } from '@shared/SystemSettingsDomainMutations'
 import { systemSettingsClientStateCollection } from '../Collections/SystemSettingsClientStateCollection'
-import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { getLatestMutationModifiedRecord } from '../IpcFramework/RevisionMutationLookup'
-import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCollections'
+import { mutatePacedRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 
-const readLatestSystemSettingsFromTransaction = (transaction: Transaction<any>): SystemSettings => {
-  return getLatestMutationModifiedRecord(
-    transaction,
-    systemSettingsCollection.id,
-    SYSTEM_SETTINGS_ID,
-    () => systemSettingsCollection.get(SYSTEM_SETTINGS_ID)!
-  )
+/** Inputs used to enqueue one paced system-settings replacement. */
+type PacedSystemSettingsUpdateOptions = Pick<
+  Parameters<typeof mutatePacedRendererDomainMutation<SystemSettings>>[0]['pacing'],
+  'debounceMs' | 'validateBeforeEnqueue'
+> & {
+  systemSettings: SystemSettings
+  mutateClientState: Parameters<
+    typeof mutatePacedRendererDomainMutation<SystemSettings>
+  >[0]['renderer']['mutate']
 }
 
-type PacedSystemSettingsMutationOptions = Parameters<
-  typeof mutatePacedRevisionUpdateTransaction<SystemSettingsRevisionResponsePayload>
->[0]
-
-type PacedSystemSettingsUpdateOptions = Pick<
-  PacedSystemSettingsMutationOptions,
-  'debounceMs' | 'mutateOptimistically' | 'validateBeforeEnqueue'
->
-
+/** Enqueues a validated system-settings command and its renderer-only form changes. */
 export const mutatePacedSystemSettingsAutosaveUpdate = ({
+  systemSettings,
   debounceMs,
-  mutateOptimistically,
+  mutateClientState,
   validateBeforeEnqueue
 }: PacedSystemSettingsUpdateOptions): void => {
-  mutatePacedRevisionUpdateTransaction<SystemSettingsRevisionResponsePayload>({
-    collectionId: systemSettingsCollection.id,
-    elementId: SYSTEM_SETTINGS_ID,
-    debounceMs,
-    mutateOptimistically,
-    validateBeforeEnqueue,
-    persistMutations: async ({ entities, invoke, transaction }) => {
-      const latestSettings = readLatestSystemSettingsFromTransaction(transaction)
-
-      const mutationResult = await invoke('update-system-settings', {
-        payload: {
-          systemSettings: entities.systemSettings({
-            id: SYSTEM_SETTINGS_ID,
-            data: latestSettings
-          })
-        }
-      })
-
-      if (mutationResult.success) {
-        systemSettingsClientStateCollection.utils.acceptMutations(transaction)
-      }
-
-      return mutationResult
+  mutatePacedRendererDomainMutation({
+    mutation: {
+      command: systemSettings,
+      plan: planSetSystemSettingsDomainMutation
     },
-    handleSuccessOrConflictResponse: (payload) => {
-      systemSettingsCollection.utils.upsertAuthoritative(payload.systemSettings)
+    ipc: { channel: 'update-system-settings' },
+    renderer: {
+      mutate: mutateClientState,
+      clientStateCollections: [systemSettingsClientStateCollection]
     },
-    conflictMessage: 'System settings update conflict'
+    pacing: {
+      target: { entityType: 'systemSettings', id: SYSTEM_SETTINGS_ID },
+      debounceMs,
+      validateBeforeEnqueue
+    }
   })
 }

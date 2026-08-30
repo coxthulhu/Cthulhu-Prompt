@@ -8,10 +8,6 @@ import type {
 } from '@shared/PromptFolder'
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import type {
-  Category,
-  SetCategoryDescriptionPayload
-} from '@shared/Category'
-import type {
   MarkdownContentUiState,
   MarkdownContentUiStateRevisionPayload
 } from '@shared/MarkdownContentUiState'
@@ -19,10 +15,8 @@ import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcReques
 import type { RevisionPayloadEntity } from '@shared/Revision'
 import type {
   DeleteMarkdownContentPayload,
-  MarkdownContentPersisted,
-  MarkdownContentRevisionPayload
+  MarkdownContentPersisted
 } from '@shared/MarkdownContent'
-import type { SystemSettings, SystemSettingsRevisionPayload } from '@shared/SystemSettings'
 import type {
   LoadWorkspacePersistenceRequest,
   UserPersistence,
@@ -255,16 +249,6 @@ const parsePromptFolder: Parser<PromptFolder> = (value) => {
 const parsePromptFolderRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
 
-const parseSystemSettings = parseObject<SystemSettings>({
-  promptFontSize: parseNumber,
-  promptEditorMinLines: parseNumber,
-  promptEditorMaxLines: parseNumber,
-  showLineNumbers: parseBoolean
-})
-
-const parseSystemSettingsRevisionPayloadEntity =
-  parseRevisionPayloadEntity<SystemSettings>(parseSystemSettings)
-
 const parseUserPersistence = parseObject<UserPersistence>({
   lastWorkspaceInfoPath: parseNullableString,
   appSidebarWidthPx: parseNumber
@@ -375,16 +359,6 @@ const parsePromptTemplate: Parser<PromptTemplatePersisted> = (value) => {
 const parsePromptTemplateRevisionPayloadEntity =
   parseRevisionPayloadEntity<PromptTemplatePersisted>(parsePromptTemplate)
 
-/** Exact parser for category records sent over mutation IPC. */
-const parseCategory = parseObject<Category>({
-  id: parseString,
-  displayName: parseString,
-  description: parseNullableString
-})
-
-/** Revision payload parser for category mutations. */
-const parseCategoryRevisionPayloadEntity = parseRevisionPayloadEntity<Category>(parseCategory)
-
 const parseMarkdownContentUiState = parseObject<MarkdownContentUiState>({
   workspaceId: parseString,
   contentId: parseString,
@@ -408,40 +382,22 @@ const parseCloseWorkspacePayload = parseObject<CloseWorkspacePayload>({})
 const parseCloseWorkspaceWireRequest: Parser<IpcRequestWithPayload<CloseWorkspacePayload>> =
   parseWireRequestWithPayload<CloseWorkspacePayload>(parseCloseWorkspacePayload)
 
-const createMarkdownContentPayloadParsers = <TContent extends MarkdownContentPersisted>(
+const createDeleteMarkdownContentPayloadParser = <TContent extends MarkdownContentPersisted>(
   parseContentRevisionPayloadEntity: Parser<RevisionPayloadEntity<TContent>>
 ) => {
-  const parseRevisionPayload = parseObject<MarkdownContentRevisionPayload<TContent>>({
-    content: parseContentRevisionPayloadEntity
-  })
+  /** Exact legacy deletion payload retained for SQLite cleanup paths. */
   const parseDeletePayload = parseObject<DeleteMarkdownContentPayload<TContent>>({
     promptFolder: parsePromptFolderRevisionPayloadEntity,
     content: parseContentRevisionPayloadEntity
   })
-  return {
-    update: parseWireRequestWithPayload(parseRevisionPayload),
-    delete: parseWireRequestWithPayload(parseDeletePayload)
-  }
+  return parseWireRequestWithPayload(parseDeletePayload)
 }
 
-const promptContentPayloadParsers = createMarkdownContentPayloadParsers(
+const parseDeletePromptWireRequest = createDeleteMarkdownContentPayloadParser(
   parsePromptRevisionPayloadEntity
 )
-const promptTemplateContentPayloadParsers = createMarkdownContentPayloadParsers(
+const parseDeletePromptTemplateWireRequest = createDeleteMarkdownContentPayloadParser(
   parsePromptTemplateRevisionPayloadEntity
-)
-
-/** Parser for category description payloads. */
-const parseSetCategoryDescriptionPayload = parseObject<SetCategoryDescriptionPayload>({
-  category: parseCategoryRevisionPayloadEntity,
-  description: parseNullableString
-})
-
-/** Wire request parser for category description updates. */
-const parseSetCategoryDescriptionWireRequest: Parser<
-  IpcRequestWithPayload<SetCategoryDescriptionPayload>
-> = parseWireRequestWithPayload<SetCategoryDescriptionPayload>(
-  parseSetCategoryDescriptionPayload
 )
 
 const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
@@ -470,14 +426,6 @@ const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value
 
 const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePromptFolderPayload>> =
   parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
-
-const parseSystemSettingsRevisionPayload = parseObject<SystemSettingsRevisionPayload>({
-  systemSettings: parseSystemSettingsRevisionPayloadEntity
-})
-
-const parseUpdateSystemSettingsRevisionWireRequest: Parser<
-  IpcRequestWithPayload<SystemSettingsRevisionPayload>
-> = parseWireRequestWithPayload<SystemSettingsRevisionPayload>(parseSystemSettingsRevisionPayload)
 
 const parseUserPersistenceRevisionPayload = parseObject<UserPersistenceRevisionPayload>({
   userPersistence: parseUserPersistenceRevisionPayloadEntity
@@ -539,31 +487,14 @@ export const parseCreateWorkspaceRequest = createRequestParser(parseCreateWorksp
 
 export const parseCloseWorkspaceRequest = createRequestParser(parseCloseWorkspaceWireRequest)
 
-export const parseUpdatePromptRevisionRequest = createRequestParser(
-  promptContentPayloadParsers.update
-)
-
-/** Validated request parser for category description IPC. */
-export const parseSetCategoryDescriptionRequest = createRequestParser(
-  parseSetCategoryDescriptionWireRequest
-)
-
 export const parseDeletePromptFolderRequest = createRequestParser(
   parseDeletePromptFolderWireRequest
 )
 
-export const parseDeletePromptRequest = createRequestParser(promptContentPayloadParsers.delete)
-
-export const parseUpdatePromptTemplateRevisionRequest = createRequestParser(
-  promptTemplateContentPayloadParsers.update
-)
+export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
 
 export const parseDeletePromptTemplateRequest = createRequestParser(
-  promptTemplateContentPayloadParsers.delete
-)
-
-export const parseUpdateSystemSettingsRevisionRequest = createRequestParser(
-  parseUpdateSystemSettingsRevisionWireRequest
+  parseDeletePromptTemplateWireRequest
 )
 
 export const parseUpdateUserPersistenceRevisionRequest = createRequestParser(

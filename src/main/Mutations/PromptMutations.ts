@@ -1,9 +1,12 @@
 import { promptEntryRef } from '@shared/OrderContainer'
-import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
+import type { PromptPersisted } from '@shared/Prompt'
 import {
   parseCreatePromptDomainCommand,
+  parseUpdatePromptDomainCommand,
   planCreatePromptDomainMutation,
-  type CreatePromptDomainCommand
+  planPromptUpdate,
+  type CreatePromptDomainCommand,
+  type UpdatePromptDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
 import {
   parseSetPromptStatusDomainCommand,
@@ -12,16 +15,17 @@ import {
 import { data } from '../Data/Data'
 import { buildPromptSnapshot } from '../Data/DataSnapshotHelpers'
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
-import {
-  parseDeletePromptRequest,
-  parseUpdatePromptRevisionRequest
-} from '../IpcFramework/IpcValidation'
+import { parseDeletePromptRequest } from '../IpcFramework/IpcValidation'
 import { handleMainDomainMutation } from './DomainMutation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 
 /** Registers prompt creation, update, deletion, movement, and status mutations. */
 export const setupPromptMutationHandlers = (): void => {
-  setupMarkdownContentMutationHandlers<PromptPersisted, CreatePromptDomainCommand>({
+  setupMarkdownContentMutationHandlers<
+    PromptPersisted,
+    CreatePromptDomainCommand,
+    UpdatePromptDomainCommand
+  >({
     kind: 'prompt',
     label: 'Prompt',
     channels: {
@@ -34,39 +38,16 @@ export const setupPromptMutationHandlers = (): void => {
       parseCommand: parseCreatePromptDomainCommand,
       plan: planCreatePromptDomainMutation
     },
+    updateDomain: {
+      parseCommand: parseUpdatePromptDomainCommand,
+      plan: planPromptUpdate
+    },
     parsers: {
-      update: parseUpdatePromptRevisionRequest,
       delete: parseDeletePromptRequest
     },
     getContent: (promptId) => data.prompt.committedStore.getEntry(promptId),
     buildSnapshot: buildPromptSnapshot,
     createEntryRef: promptEntryRef,
-    updatePersisted: (requested, _current, titleFields) => ({
-      id: requested.id,
-      ...titleFields,
-      createdAt: requested.createdAt,
-      modifiedAt: requested.modifiedAt,
-      promptText: requested.promptText,
-      ...(requested.category !== undefined ? { category: requested.category } : {}),
-      ...(requested.templates !== undefined ? { templates: requested.templates } : {}),
-      status: requested.status,
-      ...(requested.status === PromptStatus.Completed && requested.completedAt
-        ? { completedAt: requested.completedAt }
-        : {})
-    }),
-    canMove: (prompt) => prompt.status !== PromptStatus.Completed,
-    updateContent: (tx, operation) =>
-      tx.prompt.update({
-        id: operation.id,
-        expectedRevision: operation.expectedRevision,
-        recipe: (draft) => {
-          Object.assign(draft, operation.data)
-          if (!operation.data.completedAt) delete draft.completedAt
-          if (operation.data.templates === undefined) delete draft.templates
-          if (operation.data.category === undefined) delete draft.category
-        },
-        persistenceFields: operation.persistenceFields
-      }),
     updateFilename: (tx, promptId, persistenceFields) =>
       tx.prompt.updatePersistenceFields({ id: promptId, persistenceFields }),
     deleteContent: (tx, promptId, expectedRevision) =>

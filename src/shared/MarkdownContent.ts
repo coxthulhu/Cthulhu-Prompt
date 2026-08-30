@@ -61,15 +61,6 @@ export const getMarkdownContentIds = (
   ...(kind === 'prompt' ? promptFolder.completedPromptIds : [])
 ]
 
-export type MarkdownContentRevisionPayload<TContent extends MarkdownContentPersisted> = {
-  content: RevisionPayloadEntity<TContent>
-}
-
-export type MarkdownContentRevisionResponsePayload<TContent extends MarkdownContentPersisted> = {
-  content: RevisionEnvelope<TContent>
-  promptFolders: Array<RevisionEnvelope<PromptFolder>>
-}
-
 export type DeleteMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
   promptFolder: RevisionPayloadEntity<PromptFolder>
   content: RevisionPayloadEntity<TContent>

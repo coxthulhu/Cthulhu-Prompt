@@ -15,9 +15,15 @@ import {
   type DomainState,
   type DomainTarget
 } from '@shared/DomainChanges'
-import { createPromptFull, type Prompt, type PromptSummaryData } from '@shared/Prompt'
+import {
+  createPromptFull,
+  isPromptFull,
+  type Prompt,
+  type PromptSummaryData
+} from '@shared/Prompt'
 import {
   createPromptTemplateFull,
+  isPromptTemplateFull,
   type PromptTemplate,
   type PromptTemplateSummaryData
 } from '@shared/PromptTemplate'
@@ -30,6 +36,7 @@ import { promptTemplateCollection } from '../Collections/PromptTemplateCollectio
 import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
@@ -316,6 +323,15 @@ const reconcileRendererDomainSnapshot = (snapshot: DomainSnapshot): void => {
       categoryCollection.utils.upsertAuthoritative(snapshot)
       return
     case 'prompt': {
+      /** Current renderer prompt inspected before authoritative text reconciliation. */
+      const currentPrompt = promptCollection.get(snapshot.id)
+      if (
+        !currentPrompt ||
+        !isPromptFull(currentPrompt) ||
+        currentPrompt.promptText !== snapshot.data.promptText
+      ) {
+        clearPromptEditorMeasuredHeight(snapshot.id)
+      }
       /** Full prompt snapshot normalized for the renderer collection and client state. */
       const promptSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
       promptCollection.utils.upsertAuthoritative(promptSnapshot)
@@ -325,6 +341,15 @@ const reconcileRendererDomainSnapshot = (snapshot: DomainSnapshot): void => {
       return
     }
     case 'promptTemplate': {
+      /** Current renderer template inspected before authoritative text reconciliation. */
+      const currentTemplate = promptTemplateCollection.get(snapshot.id)
+      if (
+        !currentTemplate ||
+        !isPromptTemplateFull(currentTemplate) ||
+        currentTemplate.templateText !== snapshot.data.templateText
+      ) {
+        clearPromptEditorMeasuredHeight(snapshot.id)
+      }
       /** Full template snapshot normalized for the renderer collection and client state. */
       const promptTemplateSnapshot = {
         ...snapshot,

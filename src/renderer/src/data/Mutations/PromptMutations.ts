@@ -1,7 +1,9 @@
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import {
   planCreatePromptDomainMutation,
-  type CreatePromptDomainCommand
+  planPromptUpdate,
+  type CreatePromptDomainCommand,
+  type UpdatePromptDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
 import { promptEntryRef } from '@shared/OrderContainer'
 import {
@@ -61,11 +63,11 @@ const reconcilePrompt = (snapshot: {
 const mutations = createMarkdownContentRendererMutations<
   PromptPersisted,
   PromptFull,
-  CreatePromptDomainCommand
+  CreatePromptDomainCommand,
+  UpdatePromptDomainCommand
 >({
   kind: 'prompt',
   label: 'Prompt',
-  collectionId: promptCollection.id,
   channels: {
     create: 'create-prompt',
     update: 'update-prompt',
@@ -78,7 +80,6 @@ const mutations = createMarkdownContentRendererMutations<
     const prompt = promptCollection.get(promptId)
     return prompt && isPromptFull(prompt) ? toPersisted(prompt) : null
   },
-  toPersisted,
   createEntity: (entities, promptId, prompt) => {
     const entity = entities.prompt({ id: promptId, data: createPromptFull(prompt) })
     return { ...entity, data: prompt }
@@ -98,6 +99,18 @@ const mutations = createMarkdownContentRendererMutations<
       ...(prompt.templates !== undefined ? { templates: prompt.templates } : {})
     })
   },
+  updateDomain: {
+    plan: planPromptUpdate,
+    /** Builds the complete editable prompt replacement command. */
+    createCommand: (prompt) => ({
+      contentId: prompt.id,
+      title: prompt.title,
+      fallbackTitle: prompt.fallbackTitle,
+      modifiedAt: prompt.modifiedAt,
+      promptText: prompt.promptText,
+      ...(prompt.templates !== undefined ? { templates: prompt.templates } : {})
+    })
+  },
   insertClientStateOptimistically: (collections, promptId) => {
     collections.promptClientState.insert(
       markPromptClientStateEdited({ id: promptId, isEdited: false })
@@ -107,7 +120,7 @@ const mutations = createMarkdownContentRendererMutations<
     collections.prompt.delete(promptId)
     collections.promptClientState.delete(promptId)
   },
-  markMoveClientStateEdited: (collections, promptId) => {
+  markClientStateEdited: (collections, promptId) => {
     collections.promptClientState.update(promptId, (clientState) => {
       markPromptClientStateEdited(clientState)
     })

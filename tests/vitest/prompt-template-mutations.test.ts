@@ -7,15 +7,10 @@ import { promptTemplateClientStateCollection } from '@renderer/data/Collections/
 const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
 const mutatePacedRevisionUpdateTransaction = vi.hoisted(() => vi.fn())
 const runRevisionMutation = vi.hoisted(() => vi.fn())
-const latestMutationRecord = vi.hoisted(() => ({ value: null as object | null }))
+/** Stable transaction identity returned by the paced mutation mock. */
+const pacedTransaction = {}
 
 vi.mock('@renderer/data/IpcFramework/IpcRequestInvoke', () => ({ ipcInvokeWithPayload }))
-vi.mock('@renderer/data/IpcFramework/RevisionMutationLookup', () => ({
-  getLatestMutationModifiedRecord: vi.fn(
-    (_transaction, _collectionId, _elementId, fallback: () => unknown) =>
-      latestMutationRecord.value ?? fallback()
-  )
-}))
 vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation,
@@ -62,7 +57,7 @@ const entityBuilders = {
 describe('prompt template mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    latestMutationRecord.value = null
+    mutatePacedRevisionUpdateTransaction.mockReturnValue(pacedTransaction)
     for (const id of ['paced-template', 'new-template']) {
       promptTemplateCollection.utils.deleteAuthoritative(id)
       if (promptTemplateClientStateCollection.has(id)) {
@@ -96,51 +91,48 @@ describe('prompt template mutations', () => {
     })
   })
 
-  it('registers a paced update that sends the template IPC payload without prompt status', async () => {
-    ipcInvokeWithPayload.mockResolvedValue({ success: false, error: 'stop before commit' })
-    const mutateOptimistically = vi.fn()
-
+  it('registers a paced update that sends a single-target template domain command', async () => {
     mutatePacedPromptTemplateAutosaveUpdate({
       templateId: 'paced-template',
       debounceMs: 2000,
-      mutateOptimistically
-    })
-    latestMutationRecord.value = createPromptTemplateFull({
-      id: 'paced-template',
-      title: 'Latest Paced Template',
-      fallbackTitle: '',
-      createdAt: '2026-07-24T10:00:00.000Z',
-      modifiedAt: '2026-07-24T11:30:00.000Z',
-      templateText: 'Use the latest {{value}}.'
+      mutateContent: (template) => {
+        template.title = 'Latest Paced Template'
+        template.modifiedAt = '2026-07-24T11:30:00Z'
+        template.templateText = 'Use the latest {{value}}.'
+      }
     })
 
     const options = mutatePacedRevisionUpdateTransaction.mock.calls[0]?.[0]
     expect(options).toMatchObject({
       collectionId: 'prompt-templates',
       elementId: 'paced-template',
-      debounceMs: 2000,
-      mutateOptimistically
+      debounceMs: 2000
     })
 
+    /** Generic invoke spy captures the latest replacement command. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'inspect only' })
     await options.persistMutations({
-      entities: {
-        promptTemplate: entityBuilders.promptTemplate
-      },
-      transaction: {}
+      invoke,
+      transaction: pacedTransaction
     })
 
-    expect(ipcInvokeWithPayload).toHaveBeenCalledWith('update-prompt-template', {
-      content: {
-        id: 'paced-template',
-        expectedRevision: 3,
-        data: {
-          id: 'paced-template',
+    expect(invoke).toHaveBeenCalledWith('update-prompt-template', {
+      payload: {
+        command: {
+          contentId: 'paced-template',
           title: 'Latest Paced Template',
           fallbackTitle: '',
-          createdAt: '2026-07-24T10:00:00.000Z',
-          modifiedAt: '2026-07-24T11:30:00.000Z',
+          modifiedAt: '2026-07-24T11:30:00Z',
           templateText: 'Use the latest {{value}}.'
-        }
+        },
+        expectations: [
+          {
+            entityType: 'promptTemplate',
+            id: 'paced-template',
+            expected: 'revision',
+            revision: 3
+          }
+        ]
       }
     })
   })

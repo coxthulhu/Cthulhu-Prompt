@@ -881,12 +881,34 @@ describe('Prompt categories', () => {
         requestId: 'set-category-description-test',
         clientId: (window as any).ipcClientId,
         payload: {
-          category: { id: category.id, expectedRevision: 2, data: category },
-          description: 'Prompts for reviewing changes.'
+          command: {
+            categoryId: category.id,
+            description: 'Prompts for reviewing changes.'
+          },
+          expectations: [
+            {
+              entityType: 'category',
+              id: category.id,
+              expected: 'revision',
+              revision: 2
+            }
+          ]
         }
       })
     }, renamedCategory)
-    expect(descriptionResponse).toMatchObject({ success: true })
+    expect(descriptionResponse).toMatchObject({
+      success: true,
+      payload: {
+        snapshots: [
+          {
+            entityType: 'category',
+            id: createdCategory.id,
+            revision: 3,
+            data: { description: 'Prompts for reviewing changes.' }
+          }
+        ]
+      }
+    })
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, renamedCategoryPath)))
       .toMatchObject({
         id: createdCategory.id,

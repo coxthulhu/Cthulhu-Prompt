@@ -1,6 +1,7 @@
 import { SYSTEM_SETTINGS_ID, type SystemSettings } from '@shared/SystemSettings'
 import type { Transaction } from '@tanstack/svelte-db'
 import { useLiveQuery } from '@tanstack/svelte-db'
+import { produce } from 'immer'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
   SYSTEM_SETTINGS_CLIENT_STATE_ID,
@@ -89,13 +90,22 @@ const readValidatedSystemSettings = (
 export const mutateSystemSettingsClientStateWithAutosave = (
   applyClientStateUpdate: (clientState: SystemSettingsClientStateRecord) => void
 ): void => {
+  /** Current optimistic form state used as the next edit base. */
+  const currentClientState = getSystemSettingsClientStateRecord()
+  /** Complete desired form state after applying this input change. */
+  const nextClientState = produce(currentClientState, applyClientStateUpdate)
+  /** Valid desired settings, or the current settings while form input is invalid. */
+  const nextSystemSettings =
+    readValidatedSystemSettings(nextClientState) ??
+    systemSettingsCollection.get(SYSTEM_SETTINGS_ID)!
   mutatePacedSystemSettingsAutosaveUpdate({
+    systemSettings: nextSystemSettings,
     debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
+    mutateClientState: ({ collections }) => {
       collections.systemSettingsClientState.update(
         SYSTEM_SETTINGS_CLIENT_STATE_ID,
         (clientState) => {
-          applyClientStateUpdate(clientState)
+          Object.assign(clientState, nextClientState)
         }
       )
     },
@@ -107,12 +117,6 @@ export const mutateSystemSettingsClientStateWithAutosave = (
       }
 
       transaction.mutate(() => {
-        systemSettingsCollection.update(SYSTEM_SETTINGS_ID, (draft) => {
-          draft.promptFontSize = validatedSettings.promptFontSize
-          draft.promptEditorMinLines = validatedSettings.promptEditorMinLines
-          draft.promptEditorMaxLines = validatedSettings.promptEditorMaxLines
-          draft.showLineNumbers = validatedSettings.showLineNumbers
-        })
         systemSettingsClientStateCollection.update(
           SYSTEM_SETTINGS_CLIENT_STATE_ID,
           (nextClientState) => {

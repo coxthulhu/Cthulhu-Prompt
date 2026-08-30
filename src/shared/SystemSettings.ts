@@ -1,4 +1,4 @@
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { RevisionEnvelope } from './Revision'
 import type { IpcResult } from './IpcResult'
 
 export interface SystemSettings {
@@ -78,11 +78,3 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
 export type LoadSystemSettingsResult = IpcResult<{
   systemSettings: RevisionEnvelope<SystemSettings>
 }>
-
-export type SystemSettingsRevisionPayload = {
-  systemSettings: RevisionPayloadEntity<SystemSettings>
-}
-
-export type SystemSettingsRevisionResponsePayload = {
-  systemSettings: RevisionEnvelope<SystemSettings>
-}

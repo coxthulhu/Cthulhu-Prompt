@@ -1,7 +1,8 @@
 import type {
-  PromptTemplate,
-  PromptTemplateFull
+  PromptTemplateFull,
+  PromptTemplatePersisted
 } from '@shared/PromptTemplate'
+import type { Draft } from 'immer'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
@@ -60,17 +61,12 @@ const getSiblingTemplateIds = (templateId: string): string[] => {
 /** Schedules one authoritative template edit and latches its client-state marker. */
 const mutatePromptTemplate = (
   templateId: string,
-  mutateTemplate: (template: PromptTemplate) => void
+  mutateTemplate: (template: Draft<PromptTemplatePersisted>) => void
 ): void => {
   mutatePacedPromptTemplateAutosaveUpdate({
     templateId,
     debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
-      collections.promptTemplateClientState.update(templateId, (clientStateRecord) => {
-        clientStateRecord.isEdited = true
-      })
-      collections.promptTemplate.update(templateId, mutateTemplate)
-    }
+    mutateContent: mutateTemplate
   })
 }
 
@@ -96,7 +92,7 @@ export const setPromptTemplateTitle = (templateId: string, title: string): void 
   const modifiedAt = getCurrentIsoSecondTimestamp()
   mutatePromptTemplate(templateId, (draft) => {
     Object.assign(draft, nextTitleFields)
-    if (draft.loadingState === 'full') draft.modifiedAt = modifiedAt
+    draft.modifiedAt = modifiedAt
   })
 }
 
@@ -114,7 +110,6 @@ export const setPromptTemplateText = (
 
   const modifiedAt = getCurrentIsoSecondTimestamp()
   mutatePromptTemplate(templateId, (draft) => {
-    if (draft.loadingState === 'summary') return
     draft.templateText = templateText
     draft.modifiedAt = modifiedAt
   })

@@ -7,6 +7,7 @@ import type {
 } from './DomainChanges'
 import {
   getActiveMarkdownContentIds,
+  getMarkdownContentIds,
   placeMarkdownContentInCategoryOrder
 } from './MarkdownContent'
 import { parseIsoSecondTimestamp } from './isoTimestamp'
@@ -59,6 +60,25 @@ export type MoveMarkdownContentDomainCommand = {
   contentId: string
   categoryId: string | null
   previousEntryId: string | null
+}
+
+/** Renderer-authored command for replacing editable prompt fields. */
+export type UpdatePromptDomainCommand = {
+  contentId: string
+  title: string
+  fallbackTitle: string
+  modifiedAt: string
+  promptText: string
+  templates?: PromptTemplateReference[] | null
+}
+
+/** Renderer-authored command for replacing editable prompt-template fields. */
+export type UpdatePromptTemplateDomainCommand = {
+  contentId: string
+  title: string
+  fallbackTitle: string
+  modifiedAt: string
+  templateText: string
 }
 
 /** Parses one ordered prompt-template reference array. */
@@ -193,6 +213,77 @@ export const parseMoveMarkdownContentDomainCommand = (
     contentId: record.contentId,
     categoryId: record.categoryId,
     previousEntryId: record.previousEntryId
+  }
+}
+
+/** Strict runtime parser for prompt update commands. */
+export const parseUpdatePromptDomainCommand = (
+  value: unknown
+): UpdatePromptDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  /** Optional template references retaining undefined versus explicit null. */
+  const templates = parsePromptTemplateReferences(record.templates)
+  /** Whether a present templates field failed strict reference parsing. */
+  const hasInvalidTemplates = 'templates' in record && templates === undefined
+  /** Whether the command contains a field outside the exact prompt update contract. */
+  const hasUnknownField = Object.keys(record).some(
+    (key) =>
+      ![
+        'contentId',
+        'title',
+        'fallbackTitle',
+        'modifiedAt',
+        'promptText',
+        'templates'
+      ].includes(key)
+  )
+  if (
+    (Object.keys(record).length !== 5 && Object.keys(record).length !== 6) ||
+    hasUnknownField ||
+    typeof record.contentId !== 'string' ||
+    typeof record.title !== 'string' ||
+    typeof record.fallbackTitle !== 'string' ||
+    parseIsoSecondTimestamp(record.modifiedAt) === null ||
+    typeof record.promptText !== 'string' ||
+    hasInvalidTemplates
+  ) {
+    return null
+  }
+  return {
+    contentId: record.contentId,
+    title: record.title,
+    fallbackTitle: record.fallbackTitle,
+    modifiedAt: record.modifiedAt as string,
+    promptText: record.promptText,
+    ...(templates !== undefined ? { templates } : {})
+  }
+}
+
+/** Strict runtime parser for prompt-template update commands. */
+export const parseUpdatePromptTemplateDomainCommand = (
+  value: unknown
+): UpdatePromptTemplateDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 5 ||
+    typeof record.contentId !== 'string' ||
+    typeof record.title !== 'string' ||
+    typeof record.fallbackTitle !== 'string' ||
+    parseIsoSecondTimestamp(record.modifiedAt) === null ||
+    typeof record.templateText !== 'string'
+  ) {
+    return null
+  }
+  return {
+    contentId: record.contentId,
+    title: record.title,
+    fallbackTitle: record.fallbackTitle,
+    modifiedAt: record.modifiedAt as string,
+    templateText: record.templateText
   }
 }
 
@@ -369,6 +460,102 @@ const getMarkdownContent = (
   kind === 'prompt'
     ? state.get('prompt', contentId)
     : state.get('promptTemplate', contentId)
+
+/** Finds the root folder that owns one prompt or template. */
+const findMarkdownContentOwner = (
+  state: DomainState,
+  kind: PromptFolderContentKind,
+  contentId: string
+) =>
+  state
+    .getAll('promptFolder')
+    .find(
+      (folder) =>
+        folder.kind === kind && getMarkdownContentIds(folder, kind).includes(contentId)
+    )
+
+/** Plans one complete editable prompt replacement. */
+export const planPromptUpdate: DomainPlanner<UpdatePromptDomainCommand> = (
+  state,
+  command
+) => {
+  /** Prompt selected by the update command. */
+  const prompt = state.get('prompt', command.contentId)
+  /** Root folder owning the prompt and its filename-collision group. */
+  const owner = findMarkdownContentOwner(state, 'prompt', command.contentId)
+  /** Stable prompt target returned for missing-content conflicts. */
+  const targets: DomainTarget[] = [{ entityType: 'prompt', id: command.contentId }]
+  if (!prompt || !owner || !('promptText' in prompt)) {
+    return createConflict('Prompt update conflict', targets)
+  }
+  /** Collision-free title fields resolved against authoritative sibling state. */
+  const titleFields = resolvePromptTitleUpdateForPromptIds({
+    promptIds: getActiveMarkdownContentIds(owner, 'prompt'),
+    lookupPrompt: (promptId) => state.get('prompt', promptId),
+    promptId: command.contentId,
+    currentTitle: prompt.title,
+    currentFallbackTitle: command.fallbackTitle,
+    nextTitle: command.title
+  })
+  return [
+    {
+      type: 'update',
+      entityType: 'prompt',
+      id: command.contentId,
+      recipe: (draft) => {
+        Object.assign(draft, {
+          ...titleFields,
+          modifiedAt: command.modifiedAt,
+          promptText: command.promptText
+        })
+        if (command.templates === undefined) delete draft.templates
+        else draft.templates = command.templates
+      }
+    }
+  ]
+}
+
+/** Plans one complete editable prompt-template replacement. */
+export const planPromptTemplateUpdate: DomainPlanner<UpdatePromptTemplateDomainCommand> = (
+  state,
+  command
+) => {
+  /** Prompt template selected by the update command. */
+  const template = state.get('promptTemplate', command.contentId)
+  /** Root folder owning the template and its filename-collision group. */
+  const owner = findMarkdownContentOwner(state, 'template', command.contentId)
+  /** Stable template target returned for missing-content conflicts. */
+  const targets: DomainTarget[] = [
+    { entityType: 'promptTemplate', id: command.contentId }
+  ]
+  if (!template || !owner || !('templateText' in template)) {
+    return createConflict('Prompt template update conflict', targets)
+  }
+  /** Collision-free title fields resolved against authoritative sibling state. */
+  const titleFields = resolvePromptTitleUpdateForPromptIds({
+    promptIds: getActiveMarkdownContentIds(owner, 'template'),
+    lookupPrompt: (templateId) => state.get('promptTemplate', templateId),
+    promptId: command.contentId,
+    currentTitle: template.title,
+    currentFallbackTitle: command.fallbackTitle,
+    nextTitle: command.title,
+    defaultFallbackTitle: DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE
+  })
+  return [
+    {
+      type: 'update',
+      entityType: 'promptTemplate',
+      id: command.contentId,
+      recipe: (draft) => {
+        Object.assign(draft, {
+          ...titleFields,
+          modifiedAt: command.modifiedAt,
+          templateText: command.templateText
+        })
+      }
+    }
+  ]
+}
 
 /** Returns the authoritative targets relevant to one content movement attempt. */
 const collectMoveTargets = (

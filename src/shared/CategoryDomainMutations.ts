@@ -60,6 +60,12 @@ export type RenameCategoryDomainCommand = {
   displayName: string
 }
 
+/** Renderer-authored command for replacing one category description. */
+export type SetCategoryDescriptionDomainCommand = {
+  categoryId: string
+  description: string | null
+}
+
 /** Renderer-authored command for reordering one category group. */
 export type MoveCategoryDomainCommand = {
   promptFolderId: string
@@ -104,6 +110,23 @@ export const parseRenameCategoryDomainCommand = (
     return null
   }
   return { categoryId: record.categoryId, displayName: record.displayName }
+}
+
+/** Strict runtime parser for category-description replacement commands. */
+export const parseSetCategoryDescriptionDomainCommand = (
+  value: unknown
+): SetCategoryDescriptionDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 2 ||
+    typeof record.categoryId !== 'string' ||
+    (record.description !== null && typeof record.description !== 'string')
+  ) {
+    return null
+  }
+  return { categoryId: record.categoryId, description: record.description }
 }
 
 /** Strict runtime parser for category reorder commands. */
@@ -326,6 +349,28 @@ export const planRenameCategoryDomainMutation: DomainPlanner<
       id: command.categoryId,
       recipe: (draft) => {
         draft.displayName = displayName
+      }
+    }
+  ]
+}
+
+/** Plans one category-description replacement as a single paced target update. */
+export const planSetCategoryDescriptionDomainMutation: DomainPlanner<
+  SetCategoryDescriptionDomainCommand
+> = (state, command) => {
+  /** Category selected by the description command. */
+  const category = state.get('category', command.categoryId)
+  /** Stable target returned when the category is unavailable. */
+  const targets: DomainTarget[] = [{ entityType: 'category', id: command.categoryId }]
+  if (!category) return createConflict('Category description conflict', targets)
+
+  return [
+    {
+      type: 'update',
+      entityType: 'category',
+      id: command.categoryId,
+      recipe: (draft) => {
+        draft.description = command.description
       }
     }
   ]
