@@ -74,11 +74,12 @@ const lookupPromptFolderViewEntry = (
     .get(workspaceId)
     ?.promptFolderViewEntries.find((entry) => entry.contentOwnerId === contentOwnerId) ?? null
 
-/** Queues one content owner's persisted view-state update. */
+/** Queues one content owner's view-state update and optionally marks it active for a root folder. */
 const setPromptFolderViewEntryWithAutosave = (
   workspaceId: string,
   contentOwnerId: string,
-  updates: Partial<WorkspacePromptFolderViewEntry>
+  updates: Partial<WorkspacePromptFolderViewEntry>,
+  selectedPromptFolderId?: string
 ): void => {
   /** Current workspace persistence used to detect an unchanged view entry. */
   const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
@@ -89,7 +90,18 @@ const setPromptFolderViewEntryWithAutosave = (
     contentOwnerId,
     updates
   )
-  if (nextEntries === workspacePersistence.promptFolderViewEntries) return
+  /** Whether this selection changes only the root folder's active-owner pointer. */
+  const selectedContentOwnerHasChanged =
+    Boolean(selectedPromptFolderId) &&
+    workspacePersistence.selectedScreen === 'prompt-folders' &&
+    workspacePersistence.selectedScreenData.promptFolderId === selectedPromptFolderId &&
+    workspacePersistence.selectedScreenData.contentOwnerId !== contentOwnerId
+  if (
+    nextEntries === workspacePersistence.promptFolderViewEntries &&
+    !selectedContentOwnerHasChanged
+  ) {
+    return
+  }
 
   mutatePacedWorkspacePersistenceAutosaveUpdate({
     workspaceId,
@@ -97,6 +109,13 @@ const setPromptFolderViewEntryWithAutosave = (
     mutateOptimistically: ({ collections }) => {
       collections.workspacePersistence.update(workspaceId, (draft) => {
         applyPromptFolderViewEntry(draft, contentOwnerId, updates)
+        if (
+          selectedPromptFolderId &&
+          draft.selectedScreen === 'prompt-folders' &&
+          draft.selectedScreenData.promptFolderId === selectedPromptFolderId
+        ) {
+          draft.selectedScreenData.contentOwnerId = contentOwnerId
+        }
       })
     }
   })
@@ -187,11 +206,34 @@ export const setAccordionViewEntryWithAutosave = (
   })
 }
 
-/** Looks up the selected screen entry for one content owner. */
-export const lookupWorkspacePersistedPromptFolderSelectedEntryId = (
-  workspaceId: string,
+/** Persisted row selection and its root-folder or category owner. */
+export type WorkspacePersistedPromptFolderSelection = {
   contentOwnerId: string
-): string | null => lookupPromptFolderViewEntry(workspaceId, contentOwnerId)?.selectedEntryId ?? null
+  selectedEntryId: string
+}
+
+/** Looks up the selected prompt-folder screen row and its persisted content owner. */
+export const lookupWorkspacePersistedPromptFolderSelection = (
+  workspaceId: string,
+  promptFolderId: string
+): WorkspacePersistedPromptFolderSelection | null => {
+  /** Workspace screen state containing the active content-owner pointer. */
+  const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
+  if (
+    workspacePersistence?.selectedScreen !== 'prompt-folders' ||
+    workspacePersistence.selectedScreenData.promptFolderId !== promptFolderId
+  ) {
+    return null
+  }
+
+  /** Persisted owner whose selected row should be restored. */
+  const contentOwnerId = workspacePersistence.selectedScreenData.contentOwnerId
+  if (!contentOwnerId) return null
+
+  /** Per-owner view entry containing the selected category or prompt row. */
+  const entry = lookupPromptFolderViewEntry(workspaceId, contentOwnerId)
+  return entry ? { contentOwnerId, selectedEntryId: entry.selectedEntryId } : null
+}
 
 /** Looks up whether one category is expanded in the sidebar tree. */
 export const lookupWorkspacePersistedCategoryTreeExpandedState = (
@@ -221,13 +263,19 @@ export const lookupWorkspacePersistedPromptFolderContentSectionExpandedState = (
 ): boolean | null =>
   lookupPromptFolderViewEntry(workspaceId, contentOwnerId)?.contentSectionIsExpanded ?? null
 
-/** Persists the selected screen entry for one content owner. */
+/** Persists the selected row and active owner for one root prompt-folder screen. */
 export const setPromptFolderSelectedEntryIdWithAutosave = (
   workspaceId: string,
+  promptFolderId: string,
   contentOwnerId: string,
   selectedEntryId: string
 ): void => {
-  setPromptFolderViewEntryWithAutosave(workspaceId, contentOwnerId, { selectedEntryId })
+  setPromptFolderViewEntryWithAutosave(
+    workspaceId,
+    contentOwnerId,
+    { selectedEntryId },
+    promptFolderId
+  )
 }
 
 /** Persists whether one category is expanded in the sidebar tree. */

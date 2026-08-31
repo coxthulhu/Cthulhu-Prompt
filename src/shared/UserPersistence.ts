@@ -43,6 +43,8 @@ export type WorkspaceScreenSelection =
       selectedScreen: 'prompt-folders'
       selectedScreenData: {
         promptFolderId: string | null
+        /** Root-folder or category owner containing the selected prompt-folder screen row. */
+        contentOwnerId: string | null
       }
     }
 
@@ -85,7 +87,10 @@ export const isWorkspaceScreenSelectionSame = (
   }
 
   if (left.selectedScreen === 'prompt-folders' && right.selectedScreen === 'prompt-folders') {
-    return left.selectedScreenData.promptFolderId === right.selectedScreenData.promptFolderId
+    return (
+      left.selectedScreenData.promptFolderId === right.selectedScreenData.promptFolderId &&
+      left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId
+    )
   }
 
   if (left.selectedScreen === 'mockups' && right.selectedScreen === 'mockups') {
@@ -263,10 +268,17 @@ export const parseWorkspaceScreenSelection = (
     return null
   }
 
+  /** Selected content owner, defaulting old persisted data to the root prompt folder. */
+  const contentOwnerId = selectedScreenData.contentOwnerId ?? promptFolderId
+  if (contentOwnerId !== null && typeof contentOwnerId !== 'string') {
+    return null
+  }
+
   return {
     selectedScreen,
     selectedScreenData: {
-      promptFolderId
+      promptFolderId,
+      contentOwnerId
     }
   }
 }

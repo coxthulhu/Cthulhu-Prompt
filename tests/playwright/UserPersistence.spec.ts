@@ -12,6 +12,8 @@ import {
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+/** Main prompt-folder virtual viewport used to verify restored reveal positions. */
+const PROMPT_FOLDER_HOST_SELECTOR = '[data-testid="prompt-folder-virtual-window"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 
@@ -406,7 +408,7 @@ describe('User Persistence', () => {
         ].join(':')
       })
       .toBe(
-        `prompt-folders:{"promptFolderId":"${developmentPromptFolderId}"}:${developmentPromptFolderId}`
+        `prompt-folders:{"promptFolderId":"${developmentPromptFolderId}","contentOwnerId":"${developmentPromptFolderId}"}:${developmentPromptFolderId}`
       )
 
     await testHelpers.navigateToSettingsScreen()
@@ -489,6 +491,71 @@ describe('User Persistence', () => {
         { timeout: 15000 }
       )
       .toBe('dev-2')
+  })
+
+  test('flushes the selected category owner before closing', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Workspace path used by the categories fixture. */
+    const workspacePath = '/ws/categories'
+    /** Stable workspace identity derived by the categories fixture. */
+    const workspaceId = createDeterministicId(workspacePath)
+    /** Root prompt-folder identity derived by the categories fixture. */
+    const promptFolderId = createDeterministicId(`${workspacePath}:Main`)
+    /** Category identity derived by the categories fixture. */
+    const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'categories' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Main')
+    /** Category toggle used to open the row's context menu. */
+    const categoryToggle = mainWindow.locator(
+      '[data-testid="prompt-tree-category-toggle-button-Category"]'
+    )
+    await categoryToggle.click({ button: 'right' })
+    await mainWindow.locator('[data-testid="prompt-tree-category-open-menu-item-Category"]').click()
+
+    await testHelpers.pauseIpcChannel('window-confirm-close')
+    /** Whether the final close gate has already been released successfully. */
+    let didReleaseCloseGate = false
+    try {
+      await mainWindow.evaluate(() => window.windowControls.close())
+
+      await expect
+        .poll(
+          async () => {
+            /** Workspace persistence flushed while final window confirmation remains gated. */
+            const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+            /** Category view entry written by the close-time selection flush. */
+            const categoryEntry = persisted.promptFolderViewEntries.find(
+              (entry) => entry.contentOwnerId === categoryId
+            )
+            /** Prompt-folder screen data containing the newly persisted owner pointer. */
+            const selectedScreenData =
+              persisted.selectedScreen === 'prompt-folders'
+                ? (persisted.selectedScreenData as {
+                    promptFolderId: string | null
+                    contentOwnerId?: string | null
+                  })
+                : null
+            return `${selectedScreenData?.promptFolderId ?? 'none'}:${selectedScreenData?.contentOwnerId ?? 'none'}:${categoryEntry?.selectedEntryId ?? 'none'}`
+          },
+          { timeout: 15000 }
+        )
+        .toBe(`${promptFolderId}:${categoryId}:category-details`)
+
+      /** Window-close completion observed after releasing the held confirmation IPC. */
+      const windowClosed = mainWindow.waitForEvent('close')
+      await testHelpers.resumeIpcChannel('window-confirm-close')
+      didReleaseCloseGate = true
+      await windowClosed
+    } finally {
+      if (!didReleaseCloseGate) {
+        await testHelpers.resumeIpcChannel('window-confirm-close')
+      }
+    }
   })
 
   test('autosaves prompt tree entries for multiple folders', async ({ electronApp, testSetup }) => {
@@ -631,6 +698,84 @@ describe('User Persistence', () => {
       'Development Tools'
     )
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')
+  })
+
+  test('restores a persisted category selection on startup', async ({ electronApp, testSetup }) => {
+    /** Workspace path isolated from the other persistence startup cases. */
+    const persistedWorkspacePath = '/ws/persisted-category-selection'
+    /** Stable workspace identity derived by the categories fixture. */
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    /** Root prompt-folder identity derived by the categories fixture. */
+    const promptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main`)
+    /** Category identity derived by the categories fixture. */
+    const categoryId = createDeterministicId(`${persistedWorkspacePath}:Main/Category`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'categories'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId, contentOwnerId: categoryId },
+      promptFolderViewEntries: [
+        {
+          contentOwnerId: categoryId,
+          selectedEntryId: 'category-details'
+        }
+      ]
+    })
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    /** Sidebar category row whose active state proves owner-aware restoration. */
+    const categoryRow = mainWindow
+      .locator('[data-testid="prompt-tree-category-toggle-button-Category"]')
+      .locator('..')
+    await expect(categoryRow).toHaveAttribute('data-row-state', 'active')
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBeGreaterThan(0)
+  })
+
+  test('restores a persisted categorized prompt on startup', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Workspace path isolated from the category-row startup case. */
+    const persistedWorkspacePath = '/ws/persisted-categorized-prompt-selection'
+    /** Stable workspace identity derived by the categories fixture. */
+    const workspaceId = createDeterministicId(persistedWorkspacePath)
+    /** Root prompt-folder identity derived by the categories fixture. */
+    const promptFolderId = createDeterministicId(`${persistedWorkspacePath}:Main`)
+    /** Category identity derived by the categories fixture. */
+    const categoryId = createDeterministicId(`${persistedWorkspacePath}:Main/Category`)
+    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'categories'))
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
+    })
+    await seedWorkspacePersistence(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: { promptFolderId, contentOwnerId: categoryId },
+      promptFolderViewEntries: [
+        {
+          contentOwnerId: categoryId,
+          selectedEntryId: 'category-prompt'
+        }
+      ]
+    })
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+
+    await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Category Prompt')
+    await expect(mainWindow.locator('[data-testid="prompt-editor-category-prompt"]')).toBeVisible()
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBeGreaterThan(0)
   })
 
   test('restores and auto-scrolls prompt tree to persisted entry on startup', async ({

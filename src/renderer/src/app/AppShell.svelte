@@ -223,10 +223,16 @@
 
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
     if (screen === 'prompt-folders') {
+      /** Current owner retained when rebuilding persistence for the already-selected root. */
+      const contentOwnerId =
+        promptNavigation.screenRootFolderId === screenRootFolderId
+          ? (promptNavigation.contentOwnerId ?? screenRootFolderId)
+          : screenRootFolderId
       return {
         selectedScreen: screen,
         selectedScreenData: {
-          promptFolderId: screenRootFolderId
+          promptFolderId: screenRootFolderId,
+          contentOwnerId
         }
       }
     }
@@ -327,7 +333,8 @@
           await syncWorkspaceScreenSelection(workspaceId, {
             selectedScreen: 'prompt-folders',
             selectedScreenData: {
-              promptFolderId: persistedPromptFolderId
+              promptFolderId: persistedPromptFolderId,
+              contentOwnerId: workspacePersistence.selectedScreenData.contentOwnerId
             }
           })
         }
@@ -361,14 +368,17 @@
 
   const persistPromptNavigationSelection = () => {
     const workspaceId = getSelectedWorkspaceId()
+    /** Root prompt folder containing the current navigation selection. */
+    const promptFolderId = promptNavigation.screenRootFolderId
     const contentOwnerId = promptNavigation.contentOwnerId
     const selectedRow = promptNavigation.selectedRow
-    if (!workspaceId || !contentOwnerId || !selectedRow) {
+    if (!workspaceId || !promptFolderId || !contentOwnerId || !selectedRow) {
       return
     }
 
     setPromptFolderSelectedEntryIdWithAutosave(
       workspaceId,
+      promptFolderId,
       contentOwnerId,
       promptNavigationRowToPersistedEntryId(selectedRow)
     )

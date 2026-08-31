@@ -562,6 +562,7 @@
     if (workspaceId) {
       setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
+        rootFolder.id,
         categoryId,
         promptNavigationRowToPersistedEntryId(row)
       )

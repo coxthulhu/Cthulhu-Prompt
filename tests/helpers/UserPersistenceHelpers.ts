@@ -24,7 +24,14 @@ export type WorkspaceAccordionPersistenceSeedEntry = {
 export type WorkspacePersistenceSnapshot = {
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
-  selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
+  selectedScreenData:
+    | null
+    | { mockupId: string | null }
+    | {
+        promptFolderId: string | null
+        /** Root-folder or category owner containing the selected row. */
+        contentOwnerId?: string | null
+      }
   lastPromptFolderId: string | null
   promptFolderViewEntries: Array<{
     contentOwnerId: string
@@ -154,7 +161,14 @@ export const seedWorkspacePersistence = async (
   data: {
     workspaceId: string
     selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
-    selectedScreenData: null | { mockupId: string | null } | { promptFolderId: string | null }
+    selectedScreenData:
+      | null
+      | { mockupId: string | null }
+      | {
+          promptFolderId: string | null
+          /** Root-folder or category owner containing the selected row. */
+          contentOwnerId?: string | null
+        }
     lastPromptFolderId?: string | null
     promptFolderViewEntries: WorkspacePersistenceSeedEntry[]
     accordionViewEntries?: WorkspaceAccordionPersistenceSeedEntry[]

@@ -59,7 +59,7 @@ import {
 import {
   lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderContentSectionExpandedState,
-  lookupWorkspacePersistedPromptFolderSelectedEntryId,
+  lookupWorkspacePersistedPromptFolderSelection,
   setPromptFolderDetailsSectionExpandedStateWithAutosave,
   setPromptFolderContentSectionExpandedStateWithAutosave,
   setPromptFolderSelectedEntryIdWithAutosave
@@ -831,6 +831,7 @@ export const createPromptFolderScreenController = ({
 
     setPromptFolderSelectedEntryIdWithAutosave(
       workspaceId,
+      screenRootFolderId,
       selectedTarget.contentOwnerId,
       promptNavigationRowToPersistedEntryId(toPromptNavigationRow(selectedTarget))
     )
@@ -853,6 +854,7 @@ export const createPromptFolderScreenController = ({
     if (workspaceId) {
       setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
+        screenRootFolderId,
         contentOwnerId,
         promptNavigationRowToPersistedEntryId(row)
       )
@@ -881,6 +883,7 @@ export const createPromptFolderScreenController = ({
     if (workspaceId) {
       setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
+        destinationRootFolderId,
         destinationPromptFolderId,
         promptNavigationRowToPersistedEntryId(row)
       )
@@ -981,14 +984,14 @@ export const createPromptFolderScreenController = ({
     const hasExplicitSelection =
       currentNavigationTarget !== null && promptNavigation.selectionSource !== 'scroll-follow'
     const explicitSelectionTarget = hasExplicitSelection ? currentNavigationTarget : null
-    const persistedSelectedEntryId =
+    const persistedSelection =
       !explicitSelectionTarget && !canUseCachedData
-        ? lookupWorkspacePersistedPromptFolderSelectedEntryId(workspaceId, screenRootFolderId)
+        ? lookupWorkspacePersistedPromptFolderSelection(workspaceId, screenRootFolderId)
         : null
-    const persistedSelectionTarget = persistedSelectedEntryId
+    const persistedSelectionTarget = persistedSelection
       ? toActivePromptScreenRow(
-          screenRootFolderId,
-          persistedPromptTreeEntryIdToPromptNavigationRow(persistedSelectedEntryId)
+          persistedSelection.contentOwnerId,
+          persistedPromptTreeEntryIdToPromptNavigationRow(persistedSelection.selectedEntryId)
         )
       : null
     const initialSelectionTarget = explicitSelectionTarget ??
