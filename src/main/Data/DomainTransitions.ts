@@ -6,6 +6,13 @@ import type {
   DomainRevisionExpectation
 } from '@shared/DomainChanges'
 import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import { USER_PERSISTENCE_ID } from '@shared/UserPersistence'
+import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
+import {
+  createAccordionUiStateKey,
+  createCategoryDescriptionEditorUiStateKey,
+  createWorkspacePromptFolderUiStateKey
+} from '@shared/UiState'
 import { data } from './Data'
 import type { DomainPersistenceFieldsMap } from '../Persistence/PersistenceTypes'
 
@@ -61,7 +68,14 @@ const createEmptyGraphEntries = (): DomainGraphEntries => ({
   promptFolder: new Map(),
   category: new Map(),
   prompt: new Map(),
-  promptTemplate: new Map()
+  promptTemplate: new Map(),
+  userPersistence: new Map(),
+  workspacePersistence: new Map(),
+  markdownContentUiState: new Map(),
+  workspaceUiState: new Map(),
+  workspacePromptFolderUiState: new Map(),
+  accordionUiState: new Map(),
+  categoryDescriptionEditorUiState: new Map()
 })
 
 /** Wraps typed entity maps with uniform graph lookup helpers. */
@@ -75,9 +89,48 @@ const createDomainGraph = (entries: DomainGraphEntries): DomainGraph => ({
   >
 })
 
+/** Resolves one committed record's authoritative ID for projected graph capture. */
+const getDomainEntityId = <TEntityType extends DomainEntityType>(
+  entityType: TEntityType,
+  entity: DomainEntityMap[TEntityType]
+): string => {
+  switch (entityType) {
+    case 'systemSettings':
+      return SYSTEM_SETTINGS_ID
+    case 'userPersistence':
+      return USER_PERSISTENCE_ID
+    case 'workspacePersistence':
+      return (entity as DomainEntityMap['workspacePersistence']).workspaceId
+    case 'workspaceUiState':
+      return (entity as DomainEntityMap['workspaceUiState']).workspaceId
+    case 'markdownContentUiState': {
+      /** Markdown UI state whose workspace and content IDs form its authoritative key. */
+      const uiState = entity as DomainEntityMap['markdownContentUiState']
+      return createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId)
+    }
+    case 'workspacePromptFolderUiState': {
+      /** Prompt-folder UI state whose workspace and owner IDs form its authoritative key. */
+      const uiState = entity as DomainEntityMap['workspacePromptFolderUiState']
+      return createWorkspacePromptFolderUiStateKey(uiState.workspaceId, uiState.contentOwnerId)
+    }
+    case 'accordionUiState': {
+      /** Accordion UI state whose workspace and persistence IDs form its authoritative key. */
+      const uiState = entity as DomainEntityMap['accordionUiState']
+      return createAccordionUiStateKey(uiState.workspaceId, uiState.persistenceId)
+    }
+    case 'categoryDescriptionEditorUiState': {
+      /** Category editor UI state whose workspace and category IDs form its authoritative key. */
+      const uiState = entity as DomainEntityMap['categoryDescriptionEditorUiState']
+      return createCategoryDescriptionEditorUiStateKey(uiState.workspaceId, uiState.categoryId)
+    }
+    default:
+      return (entity as { id: string }).id
+  }
+}
+
 /** Captures every current committed store entry as the immutable before graph. */
 const captureCommittedDomainGraph = (): DomainGraph => {
-  /** Typed maps populated from the six authoritative committed stores. */
+  /** Typed maps populated from every authoritative committed store. */
   const entries = createEmptyGraphEntries()
   /** Domain entity types copied into the projected graph. */
   const entityTypes: DomainEntityType[] = [
@@ -86,21 +139,20 @@ const captureCommittedDomainGraph = (): DomainGraph => {
     'promptFolder',
     'category',
     'prompt',
-    'promptTemplate'
+    'promptTemplate',
+    'userPersistence',
+    'workspacePersistence',
+    'markdownContentUiState',
+    'workspaceUiState',
+    'workspacePromptFolderUiState',
+    'accordionUiState',
+    'categoryDescriptionEditorUiState'
   ]
 
   for (const entityType of entityTypes) {
     for (const entry of data[entityType].committedStore.getAllEntries()) {
       /** Domain ID read from the authoritative record. */
-      const id =
-        entityType === 'systemSettings'
-          ? SYSTEM_SETTINGS_ID
-          : (
-              entry.committed as Exclude<
-                DomainEntityMap[typeof entityType],
-                DomainEntityMap['systemSettings']
-              >
-            ).id
+      const id = getDomainEntityId(entityType, entry.committed)
       /** Dynamically selected graph map hidden behind this entity-type dispatch boundary. */
       const targetEntries = entries[entityType] as Map<
         string,
@@ -125,7 +177,16 @@ const copyDomainGraph = (graph: DomainGraph): DomainGraph =>
     promptFolder: new Map(graph.entries.promptFolder),
     category: new Map(graph.entries.category),
     prompt: new Map(graph.entries.prompt),
-    promptTemplate: new Map(graph.entries.promptTemplate)
+    promptTemplate: new Map(graph.entries.promptTemplate),
+    userPersistence: new Map(graph.entries.userPersistence),
+    workspacePersistence: new Map(graph.entries.workspacePersistence),
+    markdownContentUiState: new Map(graph.entries.markdownContentUiState),
+    workspaceUiState: new Map(graph.entries.workspaceUiState),
+    workspacePromptFolderUiState: new Map(graph.entries.workspacePromptFolderUiState),
+    accordionUiState: new Map(graph.entries.accordionUiState),
+    categoryDescriptionEditorUiState: new Map(
+      graph.entries.categoryDescriptionEditorUiState
+    )
   })
 
 /** Finds the optional renderer expectation associated with one planned target. */
@@ -182,7 +243,22 @@ export const projectDomainTransitions = (
       continue
     }
 
-    if (!before) throw new Error(`Domain transition target not loaded: ${change.entityType}:${change.id}`)
+    if (!before) {
+      if (
+        change.type === 'delete' &&
+        data[change.entityType].targetPolicy === 'deleteIfPresent'
+      ) {
+        transitions.push({
+          entityType: change.entityType,
+          id: change.id,
+          before: null,
+          after: null,
+          expectedRevision: undefined
+        } as DomainTransition)
+        continue
+      }
+      throw new Error(`Domain transition target not loaded: ${change.entityType}:${change.id}`)
+    }
     if (change.type === 'delete') {
       afterGraph.entries[change.entityType].delete(change.id)
       transitions.push({

@@ -14,7 +14,6 @@ import {
 } from '@shared/PromptDomainMutations'
 import { data } from '../Data/Data'
 import { buildPromptSnapshot } from '../Data/DataSnapshotHelpers'
-import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { parseDeletePromptRequest } from '../IpcFramework/IpcValidation'
 import { handleMainDomainMutation } from './DomainMutation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
@@ -51,11 +50,7 @@ export const setupPromptMutationHandlers = (): void => {
     updateFilename: (tx, promptId, persistenceFields) =>
       tx.prompt.updatePersistenceFields({ id: promptId, persistenceFields }),
     deleteContent: (tx, promptId, expectedRevision) =>
-      tx.prompt.delete({ id: promptId, expectedRevision }),
-    onDeleted: (workspaceId, promptId) => {
-      // Side effect: remove persisted Monaco view state for deleted prompts.
-      MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(workspaceId, promptId)
-    }
+      tx.prompt.delete({ id: promptId, expectedRevision })
   })
 
   handleMainDomainMutation({

@@ -36,6 +36,13 @@ import { promptTemplateCollection } from '../Collections/PromptTemplateCollectio
 import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
+import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
+import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
+import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
+import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
+import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
+import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
 import {
   mutatePacedRevisionUpdateTransaction,
@@ -158,6 +165,32 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
         | DomainPlannerEntityMap[TEntityType]
         | undefined
     }
+    case 'userPersistence':
+      return userPersistenceCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
+    case 'workspacePersistence':
+      return workspacePersistenceCollection.get(id) as
+        | DomainPlannerEntityMap[TEntityType]
+        | undefined
+    case 'markdownContentUiState':
+      return markdownContentUiStateCollection.get(id) as
+        | DomainPlannerEntityMap[TEntityType]
+        | undefined
+    case 'workspaceUiState':
+      return workspaceUiStateCollection.get(id) as
+        | DomainPlannerEntityMap[TEntityType]
+        | undefined
+    case 'workspacePromptFolderUiState':
+      return workspacePromptFolderUiStateCollection.get(id) as
+        | DomainPlannerEntityMap[TEntityType]
+        | undefined
+    case 'accordionUiState':
+      return accordionUiStateCollection.get(id) as
+        | DomainPlannerEntityMap[TEntityType]
+        | undefined
+    case 'categoryDescriptionEditorUiState':
+      return categoryDescriptionEditorUiStateCollection.get(id) as
+        | DomainPlannerEntityMap[TEntityType]
+        | undefined
   }
 }
 
@@ -188,6 +221,34 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
       >
     case 'promptTemplate':
       return promptTemplateCollection.toArray.map(toPromptTemplateDomainProjection) as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'userPersistence':
+      return userPersistenceCollection.toArray as unknown as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'workspacePersistence':
+      return workspacePersistenceCollection.toArray as unknown as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'markdownContentUiState':
+      return markdownContentUiStateCollection.toArray as unknown as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'workspaceUiState':
+      return workspaceUiStateCollection.toArray as unknown as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'workspacePromptFolderUiState':
+      return workspacePromptFolderUiStateCollection.toArray as unknown as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'accordionUiState':
+      return accordionUiStateCollection.toArray as unknown as Array<
+        DomainPlannerEntityMap[TEntityType]
+      >
+    case 'categoryDescriptionEditorUiState':
+      return categoryDescriptionEditorUiStateCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
   }
@@ -241,6 +302,20 @@ const getRendererRevisionCollection = (entityType: DomainEntityType) => {
       return promptCollection
     case 'promptTemplate':
       return promptTemplateCollection
+    case 'userPersistence':
+      return userPersistenceCollection
+    case 'workspacePersistence':
+      return workspacePersistenceCollection
+    case 'markdownContentUiState':
+      return markdownContentUiStateCollection
+    case 'workspaceUiState':
+      return workspaceUiStateCollection
+    case 'workspacePromptFolderUiState':
+      return workspacePromptFolderUiStateCollection
+    case 'accordionUiState':
+      return accordionUiStateCollection
+    case 'categoryDescriptionEditorUiState':
+      return categoryDescriptionEditorUiStateCollection
   }
 }
 
@@ -359,7 +434,29 @@ const reconcileRendererDomainSnapshot = (snapshot: DomainSnapshot): void => {
       if (!promptTemplateClientStateCollection.has(snapshot.id)) {
         promptTemplateClientStateCollection.insert({ id: snapshot.id, isEdited: false })
       }
+      return
     }
+    case 'userPersistence':
+      userPersistenceCollection.utils.upsertAuthoritative(snapshot)
+      return
+    case 'workspacePersistence':
+      workspacePersistenceCollection.utils.upsertAuthoritative(snapshot)
+      return
+    case 'markdownContentUiState':
+      markdownContentUiStateCollection.utils.upsertAuthoritative(snapshot)
+      return
+    case 'workspaceUiState':
+      workspaceUiStateCollection.utils.upsertAuthoritative(snapshot)
+      return
+    case 'workspacePromptFolderUiState':
+      workspacePromptFolderUiStateCollection.utils.upsertAuthoritative(snapshot)
+      return
+    case 'accordionUiState':
+      accordionUiStateCollection.utils.upsertAuthoritative(snapshot)
+      return
+    case 'categoryDescriptionEditorUiState':
+      categoryDescriptionEditorUiStateCollection.utils.upsertAuthoritative(snapshot)
+      return
   }
 }
 

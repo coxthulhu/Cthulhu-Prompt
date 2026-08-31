@@ -33,6 +33,7 @@ export const systemSettingsPersistence: PersistenceLayer<
   SystemSettings,
   SystemSettingsPersistenceFields
 > = {
+  kind: 'filesystem',
   stageChanges: async (transition) => {
     /** Desired settings record, or null when settings are being removed. */
     const after = transition.after
@@ -53,10 +54,10 @@ export const systemSettingsPersistence: PersistenceLayer<
 
     return createPersistenceStageResult([createStagedFileUpsert(targetPath, tempPath)])
   },
-  commitChanges: async (stagedChange) => {
+  commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)
   },
-  revertChanges: async (stagedChange) => {
+  revertChanges: (stagedChange) => {
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (_persistenceFields) => {

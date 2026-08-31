@@ -55,6 +55,7 @@ export const parseCategoryJson = (fileText: string): Category | null => {
 
 /** Revision-aware persistence layer for root-owned category JSON files. */
 export const categoryPersistence: PersistenceLayer<Category, CategoryPersistenceFields> = {
+  kind: 'filesystem',
   stageChanges: async (transition) => {
     /** Current category record used to resolve an optional removal path. */
     const before = transition.before
@@ -111,10 +112,10 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
       categoryStem: stem
     })
   },
-  commitChanges: async (stagedChange) => {
+  commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)
   },
-  revertChanges: async (stagedChange) => {
+  revertChanges: (stagedChange) => {
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (fields) => {

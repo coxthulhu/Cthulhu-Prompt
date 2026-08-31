@@ -1,4 +1,5 @@
 import {
+  createMarkdownContentUiStateKey,
   UPDATE_MARKDOWN_CONTENT_UI_STATE_CHANNEL,
   type MarkdownContentUiState,
   type MarkdownContentUiStateRevisionPayload,
@@ -11,13 +12,13 @@ import { mutatePacedRevisionUpdateTransaction } from '../IpcFramework/RevisionCo
 
 const readLatestUiState = (
   transaction: Transaction<any>,
-  contentId: string
+  uiStateId: string
 ): MarkdownContentUiState =>
   getLatestMutationModifiedRecord(
     transaction,
     markdownContentUiStateCollection.id,
-    contentId,
-    () => markdownContentUiStateCollection.get(contentId)!
+    uiStateId,
+    () => markdownContentUiStateCollection.get(uiStateId)!
   )
 
 type MutationOptions = Parameters<
@@ -25,15 +26,19 @@ type MutationOptions = Parameters<
 >[0]
 
 export const mutatePacedMarkdownContentUiStateAutosaveUpdate = ({
+  workspaceId,
   contentId,
   debounceMs,
   mutateOptimistically
 }: Pick<MutationOptions, 'debounceMs' | 'mutateOptimistically'> & {
+  workspaceId: string
   contentId: string
 }): void => {
+  /** Composite authoritative ID shared by the renderer, IPC envelope, and main revision store. */
+  const uiStateId = createMarkdownContentUiStateKey(workspaceId, contentId)
   mutatePacedRevisionUpdateTransaction<MarkdownContentUiStateRevisionResponsePayload>({
     collectionId: markdownContentUiStateCollection.id,
-    elementId: contentId,
+    elementId: uiStateId,
     debounceMs,
     mutateOptimistically,
     persistMutations: async ({ entities, invoke, transaction }) => {
@@ -42,8 +47,8 @@ export const mutatePacedMarkdownContentUiStateAutosaveUpdate = ({
         {
           payload: {
             markdownContentUiState: entities.markdownContentUiState({
-              id: contentId,
-              data: readLatestUiState(transaction, contentId)
+              id: uiStateId,
+              data: readLatestUiState(transaction, uiStateId)
             })
           }
         }

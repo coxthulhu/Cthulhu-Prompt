@@ -13,8 +13,11 @@ import { buildWorkspaceSnapshot } from '../Data/DataSnapshotHelpers'
 import { parseDeletePromptFolderRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { buildConflictResponseFromLatest } from './MutationResponseHelpers'
-import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
-import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
+import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
+import {
+  createCategoryDescriptionEditorUiStateKey,
+  createWorkspacePromptFolderUiStateKey
+} from '@shared/UiState'
 import {
   collectPromptFolderContentIds,
   createPromptFolderContentDeleteHandles
@@ -62,8 +65,14 @@ export const setupPromptFolderMutationHandlers = (): void => {
           const contentIds = collectPromptFolderContentIds([promptFolder.committed.id])
           /** Category IDs owned by the deleted root. */
           const categoryIds = getCategoryOrderCategoryIds(promptFolder.committed.categoryOrder)
+          // Side effect: query workspace UI state before grouping its possible update with deletion.
+          await data.workspaceUiState.loadDataFromPersistence(payload.workspace.id, {})
+          /** Current workspace UI state when SQLite contains a row for this workspace. */
+          const workspaceUiState = data.workspaceUiState.committedStore.getEntry(
+            payload.workspace.id
+          )
           /** Atomic graph deletion result. */
-          const outcome = await runAtomicDataTransaction((tx) => ({
+          const outcome = (await runAtomicDataTransaction((tx) => ({
             workspace: tx.workspace.update({
               id: workspace.committed.id,
               expectedRevision: payload.workspace.expectedRevision,
@@ -81,8 +90,59 @@ export const setupPromptFolderMutationHandlers = (): void => {
             promptFolder: tx.promptFolder.delete({
               id: promptFolder.committed.id,
               expectedRevision: payload.promptFolder.expectedRevision
-            })
-          }))
+            }),
+            ...Object.fromEntries(
+              [...contentIds.prompt, ...contentIds.template].map((contentId) => [
+                `markdownContentUiState:${contentId}`,
+                tx.markdownContentUiState.delete({
+                  id: createMarkdownContentUiStateKey(payload.workspace.id, contentId)
+                })
+              ])
+            ),
+            ...Object.fromEntries(
+              [promptFolder.committed.id, ...categoryIds].map((contentOwnerId) => [
+                `workspacePromptFolderUiState:${contentOwnerId}`,
+                tx.workspacePromptFolderUiState.delete({
+                  id: createWorkspacePromptFolderUiStateKey(
+                    payload.workspace.id,
+                    contentOwnerId
+                  )
+                })
+              ])
+            ),
+            ...Object.fromEntries(
+              categoryIds.map((categoryId) => [
+                `categoryDescriptionEditorUiState:${categoryId}`,
+                tx.categoryDescriptionEditorUiState.delete({
+                  id: createCategoryDescriptionEditorUiStateKey(
+                    payload.workspace.id,
+                    categoryId
+                  )
+                })
+              ])
+            ),
+            ...(workspaceUiState
+              ? {
+                  workspaceUiState: tx.workspaceUiState.update({
+                    id: payload.workspace.id,
+                    recipe: (draft) => {
+                      if (
+                        draft.selectedScreen === 'prompt-folders' &&
+                        draft.selectedScreenData.promptFolderId === promptFolder.committed.id
+                      ) {
+                        Object.assign(draft, {
+                          selectedScreen: 'home',
+                          selectedScreenData: null,
+                          lastPromptFolderId: null
+                        })
+                      } else if (draft.lastPromptFolderId === promptFolder.committed.id) {
+                        draft.lastPromptFolderId = null
+                      }
+                    }
+                  })
+                }
+              : {})
+          })))!
 
           if (outcome.status === 'conflict') {
             return buildConflictResponseFromLatest(
@@ -91,36 +151,11 @@ export const setupPromptFolderMutationHandlers = (): void => {
               (latestWorkspace) => ({ workspace: buildWorkspaceSnapshot(latestWorkspace) })
             )
           }
-          for (const contentId of [...contentIds.prompt, ...contentIds.template]) {
-            // Side effect: remove Monaco state owned by deleted content.
-            MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(
-              payload.workspace.id,
-              contentId
-            )
-          }
           /** Authoritative workspace after deletion. */
           const updatedWorkspace = data.workspace.committedStore.getEntry(payload.workspace.id)
           if (!updatedWorkspace) {
             return { success: false, error: 'Prompt folder delete commit did not complete' }
           }
-          /** Root folders remaining after the delete commit. */
-          const remainingPromptFolderIds = updatedWorkspace.committed.entries.map(
-            (entry) => entry.id
-          )
-          /** Categories remaining across those root folders. */
-          const remainingCategoryIds = remainingPromptFolderIds.flatMap((promptFolderId) => {
-            const remainingPromptFolder =
-              data.promptFolder.committedStore.getEntry(promptFolderId)?.committed
-            return remainingPromptFolder
-              ? getCategoryOrderCategoryIds(remainingPromptFolder.categoryOrder)
-              : []
-          })
-          // Side effect: prune UI state for the deleted root folder and its categories.
-          UserPersistenceDataAccess.cleanupWorkspacePromptFolderViewState(
-            payload.workspace.id,
-            remainingPromptFolderIds,
-            remainingCategoryIds
-          )
           return { success: true, payload: { workspace: buildWorkspaceSnapshot(updatedWorkspace) } }
         } catch (error) {
           return { success: false, error: error instanceof Error ? error.message : String(error) }

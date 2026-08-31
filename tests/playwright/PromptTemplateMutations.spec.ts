@@ -4,6 +4,7 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -290,6 +291,22 @@ describe('Prompt template mutations', () => {
       ]
     })
 
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
+       VALUES ('${WORKSPACE_ID}', '${templateId}', '{}'),
+              ('${WORKSPACE_ID}', 'sibling-template', '{}')`
+    )
+    expect(
+      (
+        await runSqlQuery(
+          electronApp,
+          `SELECT content_id AS contentId FROM markdown_content_ui_state
+           WHERE workspace_id = '${WORKSPACE_ID}'
+           ORDER BY content_id`
+        )
+      ).rows
+    ).toEqual([{ contentId: templateId }, { contentId: 'sibling-template' }])
     const deleteResult = await invoke('delete-prompt-template', {
       promptFolder: toPayloadEntity(movedDestinationFolder),
       content: toPayloadEntity(movedTemplate)
@@ -322,5 +339,16 @@ describe('Prompt template mutations', () => {
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
+    expect(
+      (
+        await runSqlQuery(
+          electronApp,
+          `SELECT content_id FROM markdown_content_ui_state
+           WHERE workspace_id = '${WORKSPACE_ID}'
+             AND content_id IN ('${templateId}', 'sibling-template')
+           ORDER BY content_id`
+        )
+      ).rows
+    ).toEqual([{ content_id: 'sibling-template' }])
   })
 })

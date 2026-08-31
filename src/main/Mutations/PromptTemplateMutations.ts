@@ -10,7 +10,6 @@ import {
 } from '@shared/MarkdownContentDomainMutations'
 import { data } from '../Data/Data'
 import { buildPromptTemplateSnapshot } from '../Data/DataSnapshotHelpers'
-import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { parseDeletePromptTemplateRequest } from '../IpcFramework/IpcValidation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 
@@ -48,9 +47,6 @@ export const setupPromptTemplateMutationHandlers = (): void => {
         persistenceFields
       }),
     deleteContent: (tx, templateId, expectedRevision) =>
-      tx.promptTemplate.delete({ id: templateId, expectedRevision }),
-    onDeleted: (workspaceId, templateId) => {
-      MarkdownContentUiStateDataAccess.deleteMarkdownContentUiState(workspaceId, templateId)
-    }
+      tx.promptTemplate.delete({ id: templateId, expectedRevision })
   })
 }

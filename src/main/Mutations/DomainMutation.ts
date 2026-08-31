@@ -76,7 +76,14 @@ const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value
     record.entityType === 'promptFolder' ||
     record.entityType === 'category' ||
     record.entityType === 'prompt' ||
-    record.entityType === 'promptTemplate'
+    record.entityType === 'promptTemplate' ||
+    record.entityType === 'userPersistence' ||
+    record.entityType === 'workspacePersistence' ||
+    record.entityType === 'markdownContentUiState' ||
+    record.entityType === 'workspaceUiState' ||
+    record.entityType === 'workspacePromptFolderUiState' ||
+    record.entityType === 'accordionUiState' ||
+    record.entityType === 'categoryDescriptionEditorUiState'
       ? record.entityType
       : null
   /** Runtime-validated target ID. */
@@ -177,6 +184,24 @@ const buildMainDomainSnapshot = (target: DomainTarget): DomainSnapshot => {
       return entry
         ? { entityType: 'promptTemplate', ...buildPromptTemplateSnapshot(entry) }
         : { entityType: 'promptTemplate', id: target.id, deleted: true }
+    }
+    case 'userPersistence':
+    case 'workspacePersistence':
+    case 'markdownContentUiState':
+    case 'workspaceUiState':
+    case 'workspacePromptFolderUiState':
+    case 'accordionUiState':
+    case 'categoryDescriptionEditorUiState': {
+      /** Current SQLite-backed entry selected by its authoritative target ID. */
+      const entry = data[target.entityType].committedStore.getEntry(target.id)
+      return entry
+        ? {
+            entityType: target.entityType,
+            id: target.id,
+            revision: entry.revision,
+            data: entry.committed
+          } as DomainSnapshot
+        : { entityType: target.entityType, id: target.id, deleted: true } as DomainSnapshot
     }
   }
 }

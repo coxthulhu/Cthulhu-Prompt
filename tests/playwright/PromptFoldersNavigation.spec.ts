@@ -11,6 +11,7 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
+import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -46,6 +47,186 @@ const createDeterministicId = (seed: string): string => {
 }
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
+  test('deletes root-owned SQLite UI state with a prompt folder', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'categories' }
+    })
+    await testHelpers.navigateToPromptFolders('Main')
+
+    /** Root category order used to identify one category-owned cached UI-state row. */
+    const categoryOrder = JSON.parse(
+      await readTextFile(
+        electronApp,
+        '/ws/categories/Prompts/Main/Active/_FolderInfo/FolderOrder.json'
+      )
+    )
+    /** Category ID deleted with the root prompt folder. */
+    const categoryId = categoryOrder.categories.find(
+      (category: { categoryId: string | null }) => category.categoryId !== null
+    ).categoryId as string
+    /** Persisted workspace selection identifying the active workspace and root folder. */
+    const workspaceRow = (
+      await runSqlQuery(
+        electronApp,
+        `SELECT workspace_id AS workspaceId, selected_screen_data_json AS selectedScreenDataJson
+         FROM workspace_ui_state LIMIT 1`
+      )
+    ).rows?.[0] as { workspaceId: string; selectedScreenDataJson: string }
+    /** Root prompt-folder ID selected in the persisted workspace screen state. */
+    const promptFolderId = JSON.parse(workspaceRow.selectedScreenDataJson).promptFolderId as string
+    /** Current authoritative snapshots used to invoke the existing deletion IPC directly. */
+    const workspaceLoadResult = await mainWindow.evaluate(async () => {
+      return await window.electron.ipcRenderer.invoke('load-workspace-by-path', {
+        requestId: `root-delete-load-${Date.now()}`,
+        clientId: window.ipcClientId,
+        payload: { workspaceInfoPath: '/ws/categories/categories.cthulhuprompt.json' }
+      })
+    })
+    /** Authoritative workspace revision payload required by root deletion. */
+    const workspaceSnapshot = workspaceLoadResult.workspace as {
+      id: string
+      revision: number
+      data: unknown
+    }
+    /** Authoritative root-folder revision payload required by root deletion. */
+    const promptFolderSnapshot = workspaceLoadResult.promptFolders.find(
+      (snapshot: { id: string }) => snapshot.id === promptFolderId
+    ) as { id: string; revision: number; data: unknown }
+
+    for (const contentOwnerId of [promptFolderId, categoryId]) {
+      await runSqlStatement(
+        electronApp,
+        `INSERT INTO prompt_folder_view_state (
+           workspace_id, content_owner_id, selected_entry_id,
+           tree_is_expanded, details_section_is_expanded, content_section_is_expanded
+         ) VALUES ('${workspaceRow.workspaceId}', '${contentOwnerId}', 'folder-settings', 1, 0, 1)
+         ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
+           selected_entry_id = excluded.selected_entry_id`
+      )
+    }
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO category_description_editor_view_state (
+         workspace_id, category_id, editor_view_state_json
+       ) VALUES ('${workspaceRow.workspaceId}', '${categoryId}', '{}')
+       ON CONFLICT(workspace_id, category_id) DO UPDATE SET editor_view_state_json = '{}'`
+    )
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
+       VALUES ('${workspaceRow.workspaceId}', 'base-before', '{}')
+       ON CONFLICT(workspace_id, content_id) DO UPDATE SET editor_view_state_json = '{}'`
+    )
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO prompt_folder_view_state (
+         workspace_id, content_owner_id, selected_entry_id,
+         tree_is_expanded, details_section_is_expanded, content_section_is_expanded
+       ) VALUES ('${workspaceRow.workspaceId}', 'sibling-owner', 'folder-settings', 1, 0, 1)`
+    )
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO category_description_editor_view_state (
+         workspace_id, category_id, editor_view_state_json
+       ) VALUES ('${workspaceRow.workspaceId}', 'sibling-category', '{}')`
+    )
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
+       VALUES ('${workspaceRow.workspaceId}', 'sibling-content', '{}')`
+    )
+    /** Seed verification proving every target and sibling row exists before deletion. */
+    const seededRow = (
+      await runSqlQuery(
+        electronApp,
+        `SELECT
+           (SELECT COUNT(*) FROM prompt_folder_view_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND content_owner_id IN (
+                '${promptFolderId}', '${categoryId}', 'sibling-owner'
+              )) AS promptFolderCount,
+           (SELECT COUNT(*) FROM category_description_editor_view_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND category_id IN ('${categoryId}', 'sibling-category')) AS categoryEditorCount,
+           (SELECT COUNT(*) FROM markdown_content_ui_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND content_id IN ('base-before', 'sibling-content')) AS markdownCount`
+      )
+    ).rows?.[0]
+    expect(seededRow).toEqual({
+      promptFolderCount: 3,
+      categoryEditorCount: 2,
+      markdownCount: 2
+    })
+
+    /** Direct handler response isolated from the legacy renderer aggregate autosave. */
+    const deleteResult = await mainWindow.evaluate(
+      async ({ workspace, promptFolder }) => {
+        return await window.electron.ipcRenderer.invoke('delete-prompt-folder', {
+          requestId: `root-delete-${Date.now()}`,
+          clientId: window.ipcClientId,
+          payload: {
+            workspace: {
+              id: workspace.id,
+              expectedRevision: workspace.revision,
+              data: workspace.data
+            },
+            promptFolder: {
+              id: promptFolder.id,
+              expectedRevision: promptFolder.revision,
+              data: promptFolder.data
+            }
+          }
+        })
+      },
+      { workspace: workspaceSnapshot, promptFolder: promptFolderSnapshot }
+    )
+    expect(deleteResult).toMatchObject({ success: true })
+
+    /** Counts and workspace selection left after the root-folder logical commit. */
+    const cleanupRow = (
+      await runSqlQuery(
+        electronApp,
+        `SELECT
+           (SELECT COUNT(*) FROM prompt_folder_view_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND content_owner_id IN ('${promptFolderId}', '${categoryId}')) AS promptFolderCount,
+           (SELECT COUNT(*) FROM category_description_editor_view_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND category_id = '${categoryId}') AS categoryEditorCount,
+           (SELECT COUNT(*) FROM markdown_content_ui_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND content_id = 'base-before') AS markdownCount,
+           (SELECT COUNT(*) FROM prompt_folder_view_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND content_owner_id = 'sibling-owner') AS siblingPromptFolderCount,
+           (SELECT COUNT(*) FROM category_description_editor_view_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND category_id = 'sibling-category') AS siblingCategoryEditorCount,
+           (SELECT COUNT(*) FROM markdown_content_ui_state
+            WHERE workspace_id = '${workspaceRow.workspaceId}'
+              AND content_id = 'sibling-content') AS siblingMarkdownCount,
+           selected_screen AS selectedScreen,
+           last_prompt_folder_id AS lastPromptFolderId
+         FROM workspace_ui_state
+         WHERE workspace_id = '${workspaceRow.workspaceId}'`
+      )
+    ).rows?.[0]
+    expect(cleanupRow).toEqual({
+      promptFolderCount: 0,
+      categoryEditorCount: 0,
+      markdownCount: 0,
+      siblingPromptFolderCount: 1,
+      siblingCategoryEditorCount: 1,
+      siblingMarkdownCount: 1,
+      selectedScreen: 'home',
+      lastPromptFolderId: null
+    })
+  })
+
   test('opens template folders and renders template-specific controls', async ({ testSetup }) => {
     await testSetup.setupFilesystem(
       createWorkspaceWithTemplateFolders(TEMPLATE_WORKSPACE_PATH, [

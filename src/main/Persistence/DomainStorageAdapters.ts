@@ -275,7 +275,14 @@ const domainStorageAdapters: {
   promptFolder: { deriveDesiredFields: derivePromptFolderFields },
   category: { deriveDesiredFields: deriveCategoryFields },
   prompt: createMarkdownStorageAdapter('prompt', 'prompt'),
-  promptTemplate: createMarkdownStorageAdapter('promptTemplate', 'template')
+  promptTemplate: createMarkdownStorageAdapter('promptTemplate', 'template'),
+  userPersistence: { deriveDesiredFields: () => ({}) },
+  workspacePersistence: { deriveDesiredFields: () => ({}) },
+  markdownContentUiState: { deriveDesiredFields: () => ({}) },
+  workspaceUiState: { deriveDesiredFields: () => ({}) },
+  workspacePromptFolderUiState: { deriveDesiredFields: () => ({}) },
+  accordionUiState: { deriveDesiredFields: () => ({}) },
+  categoryDescriptionEditorUiState: { deriveDesiredFields: () => ({}) }
 }
 
 /** Converts one graph entry into the persistence record used during staging. */
@@ -411,14 +418,24 @@ export const planDomainStorageTransitions = (
     'promptFolder',
     'category',
     'prompt',
-    'promptTemplate'
+    'promptTemplate',
+    'userPersistence',
+    'workspacePersistence',
+    'markdownContentUiState',
+    'workspaceUiState',
+    'workspacePromptFolderUiState',
+    'accordionUiState',
+    'categoryDescriptionEditorUiState'
   ]
 
   for (const entityType of entityTypes) {
     /** IDs present before, after, or on a deleted domain transition. */
     const ids = new Set([
       ...beforeGraph.entries[entityType].keys(),
-      ...afterGraph.entries[entityType].keys()
+      ...afterGraph.entries[entityType].keys(),
+      ...domainTransitions
+        .filter((transition) => transition.entityType === entityType)
+        .map((transition) => transition.id)
     ])
     for (const id of ids) {
       /** Current projected node and physical metadata. */
@@ -428,7 +445,18 @@ export const planDomainStorageTransitions = (
       /** Stable entity target key shared with domain transitions. */
       const targetKey = `${entityType}:${id}`
       if (!afterEntry) {
-        if (!domainTargetKeys.has(targetKey) || !beforeEntry?.persistenceFields) continue
+        if (!domainTargetKeys.has(targetKey)) continue
+        if (!beforeEntry) {
+          storageTransitions.push({
+            entityType,
+            id,
+            persistenceMode: 'stage',
+            before: null,
+            after: null
+          } as DomainStorageTransition)
+          continue
+        }
+        if (!beforeEntry.persistenceFields) continue
         storageTransitions.push({
           entityType,
           id,

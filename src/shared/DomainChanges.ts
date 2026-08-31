@@ -5,6 +5,17 @@ import type { PromptFolder } from './PromptFolder'
 import type { PromptTemplatePersisted, PromptTemplateSummaryData } from './PromptTemplate'
 import type { SystemSettings } from './SystemSettings'
 import type { Workspace } from './Workspace'
+import type { MarkdownContentUiState } from './MarkdownContentUiState'
+import type { UserPersistence, WorkspacePersistence } from './UserPersistence'
+import type {
+  AccordionUiState,
+  CategoryDescriptionEditorUiState,
+  WorkspacePromptFolderUiState,
+  WorkspaceUiState
+} from './UiState'
+
+/** Missing-target behavior applied when an authoritative domain entity is deleted. */
+export type DomainTargetPolicy = 'requirePresent' | 'deleteIfPresent'
 
 /** Authoritative entity records supported by the shared domain-planning framework. */
 export type DomainEntityMap = {
@@ -14,6 +25,13 @@ export type DomainEntityMap = {
   category: Category
   prompt: PromptPersisted
   promptTemplate: PromptTemplatePersisted
+  userPersistence: UserPersistence
+  workspacePersistence: WorkspacePersistence
+  markdownContentUiState: MarkdownContentUiState
+  workspaceUiState: WorkspaceUiState
+  workspacePromptFolderUiState: WorkspacePromptFolderUiState
+  accordionUiState: AccordionUiState
+  categoryDescriptionEditorUiState: CategoryDescriptionEditorUiState
 }
 export type DomainEntityType = keyof DomainEntityMap
 

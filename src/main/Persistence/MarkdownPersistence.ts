@@ -62,6 +62,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
   normalizeLoadedData = (data) => data,
   shouldRewriteNormalizedData = () => false
 }: MarkdownPersistenceOptions<TData>): PersistenceLayer<TData, MarkdownPersistenceFields> => ({
+  kind: 'filesystem',
   stageChanges: async (transition) => {
     /** Current record whose resolved path is removed or replaced. */
     const before = transition.before
@@ -122,10 +123,10 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
       promptStem: stem
     })
   },
-  commitChanges: async (stagedChange) => {
+  commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)
   },
-  revertChanges: async (stagedChange) => {
+  revertChanges: (stagedChange) => {
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {

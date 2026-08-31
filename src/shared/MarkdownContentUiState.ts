@@ -8,6 +8,12 @@ export type MarkdownContentUiState = {
   editorViewStateJson: string
 }
 
+/** Builds the authoritative key for one workspace-scoped markdown UI-state record. */
+export const createMarkdownContentUiStateKey = (
+  workspaceId: string,
+  contentId: string
+): string => `${workspaceId}:${contentId}`
+
 export const UPDATE_MARKDOWN_CONTENT_UI_STATE_CHANNEL = 'update-markdown-content-ui-state'
 
 export type MarkdownContentUiStateRevisionPayload = {

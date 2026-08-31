@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DomainState } from '@shared/DomainChanges'
 
+/** Ordered persistence events shared by filesystem and SQLite transaction mocks. */
+const persistenceEvents = vi.hoisted(() => [] as string[])
+
 const mockTransactionState = vi.hoisted(() => {
   const storeNames = [
     'systemSettings',
@@ -8,7 +11,14 @@ const mockTransactionState = vi.hoisted(() => {
     'promptFolder',
     'category',
     'prompt',
-    'promptTemplate'
+    'promptTemplate',
+    'userPersistence',
+    'workspacePersistence',
+    'markdownContentUiState',
+    'workspaceUiState',
+    'workspacePromptFolderUiState',
+    'accordionUiState',
+    'categoryDescriptionEditorUiState'
   ] as const
   type StoreName = (typeof storeNames)[number]
   type Entry = {
@@ -23,18 +33,32 @@ const mockTransactionState = vi.hoisted(() => {
     promptFolder: new Map(),
     category: new Map(),
     prompt: new Map(),
-    promptTemplate: new Map()
+    promptTemplate: new Map(),
+    userPersistence: new Map(),
+    workspacePersistence: new Map(),
+    markdownContentUiState: new Map(),
+    workspaceUiState: new Map(),
+    workspacePromptFolderUiState: new Map(),
+    accordionUiState: new Map(),
+    categoryDescriptionEditorUiState: new Map()
   }
   /** Persistence staging counts recorded independently for each authoritative store. */
   const stageCounts = Object.fromEntries(
     storeNames.map((storeName) => [storeName, 0])
   ) as Record<StoreName, number>
+  /** SQLite commands recorded with their target and explicit before/after transition. */
+  const sqliteCommands: Array<{ store: StoreName; id: string; transition: unknown }> = []
+  /** Optional filesystem commit error injected by logical-boundary failure tests. */
+  let filesystemCommitError: Error | null = null
 
   const reset = (): void => {
     for (const storeName of storeNames) {
       entriesByStore[storeName].clear()
       stageCounts[storeName] = 0
     }
+    sqliteCommands.length = 0
+    persistenceEvents.length = 0
+    filesystemCommitError = null
   }
 
   const seedEntry = (store: StoreName, id: string, entry: Entry): void => {
@@ -89,19 +113,52 @@ const mockTransactionState = vi.hoisted(() => {
   }
 
   const createRevisionData = (store: StoreName) => {
+    /** Whether this test store exercises the SQLite persistence path. */
+    const isSqliteStore =
+      store === 'userPersistence' ||
+      store === 'workspacePersistence' ||
+      store === 'markdownContentUiState' ||
+      store === 'workspaceUiState' ||
+      store === 'workspacePromptFolderUiState' ||
+      store === 'accordionUiState' ||
+      store === 'categoryDescriptionEditorUiState'
     return {
       committedStore: createCommittedStore(store),
-      persistence: {
-        stageChanges: async (_change: unknown) => {
-          stageCounts[store] += 1
-          return { stagedChange: [] }
-        },
-        commitChanges: async (_stagedChange: unknown) => undefined,
-        revertChanges: async (_stagedChange: unknown) => undefined,
-        loadData: async (_persistenceFields: unknown) => null
-      },
+      persistence: isSqliteStore
+        ? {
+            kind: 'sqlite' as const,
+            query: (_id: string, _persistenceFields: unknown) => null,
+            command: (id: string, transition: unknown) => {
+              persistenceEvents.push(`sqlite:${store}`)
+              sqliteCommands.push({ store, id, transition })
+            }
+          }
+        : {
+            kind: 'filesystem' as const,
+            stageChanges: async (_change: unknown) => {
+              persistenceEvents.push(`stage:${store}`)
+              stageCounts[store] += 1
+              return { stagedChange: [] }
+            },
+            commitChanges: (_stagedChange: unknown) => {
+              persistenceEvents.push(`commit:${store}`)
+              if (filesystemCommitError) throw filesystemCommitError
+            },
+            revertChanges: (_stagedChange: unknown) => {
+              persistenceEvents.push(`revert:${store}`)
+            },
+            loadData: async (_persistenceFields: unknown) => null
+          },
       loadDataFromPersistence: async (_id: string, _persistenceFields: unknown) => undefined,
-      emitCommittedRevisionChanged: (_id: string) => undefined
+      emitCommittedRevisionChanged: (_id: string) => undefined,
+      targetPolicy:
+        store === 'markdownContentUiState' ||
+        store === 'workspaceUiState' ||
+        store === 'workspacePromptFolderUiState' ||
+        store === 'accordionUiState' ||
+        store === 'categoryDescriptionEditorUiState'
+          ? ('deleteIfPresent' as const)
+          : ('requirePresent' as const)
     }
   }
 
@@ -112,15 +169,45 @@ const mockTransactionState = vi.hoisted(() => {
       promptFolder: createRevisionData('promptFolder'),
       category: createRevisionData('category'),
       prompt: createRevisionData('prompt'),
-      promptTemplate: createRevisionData('promptTemplate')
+      promptTemplate: createRevisionData('promptTemplate'),
+      userPersistence: createRevisionData('userPersistence'),
+      workspacePersistence: createRevisionData('workspacePersistence'),
+      markdownContentUiState: createRevisionData('markdownContentUiState'),
+      workspaceUiState: createRevisionData('workspaceUiState'),
+      workspacePromptFolderUiState: createRevisionData('workspacePromptFolderUiState'),
+      accordionUiState: createRevisionData('accordionUiState'),
+      categoryDescriptionEditorUiState: createRevisionData(
+        'categoryDescriptionEditorUiState'
+      )
     },
     reset,
     seedEntry,
     readEntry,
     readEntries,
-    stageCounts
+    stageCounts,
+    sqliteCommands,
+    /** Configures the next filesystem commit to fail with the supplied error. */
+    failFilesystemCommit: (error: Error) => {
+      filesystemCommitError = error
+    }
   }
 })
+
+/** SQLite transaction spy that executes its synchronous command body immediately. */
+const runSqliteTransaction = vi.hoisted(() =>
+  vi.fn(<TResult>(commands: () => TResult): TResult => {
+    persistenceEvents.push('sqlite:begin')
+    try {
+      /** Result committed by the synchronous SQLite transaction callback. */
+      const result = commands()
+      persistenceEvents.push('sqlite:commit')
+      return result
+    } catch (error) {
+      persistenceEvents.push('sqlite:rollback')
+      throw error
+    }
+  })
+)
 
 /** Main mutation queue spy used to distinguish queued and immediate atomic modes. */
 const enqueueGlobalMutation = vi.hoisted(() =>
@@ -137,6 +224,10 @@ vi.mock('../../src/main/Data/GlobalMutationQueue', () => {
   return { enqueueGlobalMutation }
 })
 
+vi.mock('../../src/main/DataAccess/SqliteDataAccess', () => ({
+  SqliteDataAccess: { runTransaction: runSqliteTransaction }
+}))
+
 import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
 import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 import {
@@ -152,6 +243,128 @@ describe('atomic data transaction', () => {
   beforeEach(() => {
     mockTransactionState.reset()
     enqueueGlobalMutation.mockClear()
+    runSqliteTransaction.mockClear()
+  })
+
+  it('commits a missing SQLite delete with filesystem changes through one logical boundary', async () => {
+    /** Existing prompt updated in the same logical commit as cached SQLite cleanup. */
+    const prompt = { id: PROMPT_ID, title: 'Before' }
+    mockTransactionState.seedEntry('prompt', PROMPT_ID, {
+      revision: 2,
+      committed: prompt,
+      persistenceFields: { promptStem: 'Before' }
+    })
+    /** Composite cached UI-state key intentionally absent from the authoritative store. */
+    const uiStateId = 'workspace:prompt-1'
+
+    /** Mixed filesystem and SQLite transaction outcome. */
+    const outcome = await runAtomicDataTransaction((tx) => ({
+      prompt: tx.prompt.update({
+        id: PROMPT_ID,
+        expectedRevision: 2,
+        recipe: (draft) => {
+          draft.title = 'After'
+        }
+      }),
+      markdownContentUiState: tx.markdownContentUiState.delete({ id: uiStateId })
+    }))
+
+    expect(outcome).toMatchObject({ status: 'success' })
+    expect(runSqliteTransaction).toHaveBeenCalledTimes(1)
+    expect(persistenceEvents).toEqual([
+      'stage:prompt',
+      'sqlite:begin',
+      'sqlite:markdownContentUiState',
+      'commit:prompt',
+      'sqlite:commit'
+    ])
+    expect(mockTransactionState.sqliteCommands).toEqual([
+      {
+        store: 'markdownContentUiState',
+        id: uiStateId,
+        transition: { before: null, after: null }
+      }
+    ])
+    expect(mockTransactionState.readEntry('prompt', PROMPT_ID)).toMatchObject({
+      revision: 3,
+      committed: { title: 'After' }
+    })
+  })
+
+  it('rolls back the logical boundary when filesystem commit fails', async () => {
+    /** Existing prompt that must remain authoritative after persistence fails. */
+    const prompt = { id: PROMPT_ID, title: 'Before' }
+    mockTransactionState.seedEntry('prompt', PROMPT_ID, {
+      revision: 2,
+      committed: prompt,
+      persistenceFields: { promptStem: 'Before' }
+    })
+    mockTransactionState.failFilesystemCommit(new Error('filesystem commit failed'))
+
+    await expect(
+      runAtomicDataTransaction((tx) => ({
+        prompt: tx.prompt.update({
+          id: PROMPT_ID,
+          expectedRevision: 2,
+          recipe: (draft) => {
+            draft.title = 'After'
+          }
+        }),
+        markdownContentUiState: tx.markdownContentUiState.delete({
+          id: 'workspace:prompt-1'
+        })
+      }))
+    ).rejects.toThrow('filesystem commit failed')
+
+    expect(persistenceEvents).toEqual([
+      'stage:prompt',
+      'sqlite:begin',
+      'sqlite:markdownContentUiState',
+      'commit:prompt',
+      'sqlite:rollback',
+      'revert:prompt'
+    ])
+    expect(mockTransactionState.readEntry('prompt', PROMPT_ID)).toEqual({
+      revision: 2,
+      committed: prompt,
+      persistenceFields: { promptStem: 'Before' }
+    })
+  })
+
+  it('projects a delete-if-present domain target when cached UI state is not loaded', async () => {
+    /** Composite authoritative key for a cached row absent from the committed store. */
+    const uiStateId = 'workspace:missing-content'
+    /** Delete-only domain projection allowed by the collection target policy. */
+    const projection = projectDomainTransitions(
+      [{ type: 'delete', entityType: 'markdownContentUiState', id: uiStateId }],
+      [
+        {
+          entityType: 'markdownContentUiState',
+          id: uiStateId,
+          expected: 'absent'
+        }
+      ]
+    )
+
+    expect(projection.transitions).toEqual([
+      {
+        entityType: 'markdownContentUiState',
+        id: uiStateId,
+        before: null,
+        after: null,
+        expectedRevision: undefined
+      }
+    ])
+    await expect(runAtomicDomainTransitionTransaction(projection)).resolves.toEqual({
+      status: 'success'
+    })
+    expect(mockTransactionState.sqliteCommands).toEqual([
+      {
+        store: 'markdownContentUiState',
+        id: uiStateId,
+        transition: { before: null, after: null }
+      }
+    ])
   })
 
   it('commits a compatibility create through a null-before transition', async () => {
@@ -373,7 +586,14 @@ describe('atomic data transaction', () => {
       promptFolder: 1,
       category: 0,
       prompt: 0,
-      promptTemplate: 0
+      promptTemplate: 0,
+      userPersistence: 0,
+      workspacePersistence: 0,
+      markdownContentUiState: 0,
+      workspaceUiState: 0,
+      workspacePromptFolderUiState: 0,
+      accordionUiState: 0,
+      categoryDescriptionEditorUiState: 0
     })
   })
 
@@ -482,7 +702,14 @@ describe('atomic data transaction', () => {
       promptFolder: 1,
       category: 0,
       prompt: 0,
-      promptTemplate: 0
+      promptTemplate: 0,
+      userPersistence: 0,
+      workspacePersistence: 0,
+      markdownContentUiState: 0,
+      workspaceUiState: 0,
+      workspacePromptFolderUiState: 0,
+      accordionUiState: 0,
+      categoryDescriptionEditorUiState: 0
     })
   })
 

@@ -7,6 +7,7 @@ import type { DomainStorageTransition } from '../Persistence/DomainStorageAdapte
 import type { DomainTransitionProjection } from './DomainTransitions'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
+import { SqliteDataAccess } from '../DataAccess/SqliteDataAccess'
 
 export type DataStoreKey = keyof typeof data
 
@@ -292,7 +293,16 @@ const createAtomicDataBuilder = (): {
       promptFolder: createStoreBuilder('promptFolder'),
       category: createStoreBuilder('category'),
       prompt: createStoreBuilder('prompt'),
-      promptTemplate: createStoreBuilder('promptTemplate')
+      promptTemplate: createStoreBuilder('promptTemplate'),
+      userPersistence: createStoreBuilder('userPersistence'),
+      workspacePersistence: createStoreBuilder('workspacePersistence'),
+      markdownContentUiState: createStoreBuilder('markdownContentUiState'),
+      workspaceUiState: createStoreBuilder('workspaceUiState'),
+      workspacePromptFolderUiState: createStoreBuilder('workspacePromptFolderUiState'),
+      accordionUiState: createStoreBuilder('accordionUiState'),
+      categoryDescriptionEditorUiState: createStoreBuilder(
+        'categoryDescriptionEditorUiState'
+      )
     }
   }
 }
@@ -301,7 +311,8 @@ const createAtomicDataBuilder = (): {
 const revertStagedChanges = async (stagedTransitions: StagedTransitionEntry[]): Promise<void> => {
   await Promise.allSettled(
     stagedTransitions.flatMap((stagedTransition) =>
-      stagedTransition.transition.persistenceMode === 'stage'
+      stagedTransition.transition.persistenceMode === 'stage' &&
+      stagedTransition.revisionData.persistence.kind === 'filesystem'
         ? [stagedTransition.revisionData.persistence.revertChanges(stagedTransition.stagedChange)]
         : []
     )
@@ -339,6 +350,22 @@ const projectAtomicDataOperations = (
     }
 
     if (!committedEntry) {
+      if (
+        operation.type === 'delete' &&
+        revisionData.targetPolicy === 'deleteIfPresent'
+      ) {
+        transitions.push({
+          operationIndex,
+          store: operation.store,
+          id: operation.id,
+          before: null,
+          after: null,
+          expectedRevision: operation.expectedRevision,
+          incrementsRevision: true,
+          persistenceMode: 'stage'
+        })
+        continue
+      }
       throw new Error(`Cannot ${operation.type} ${operation.store}:${operation.id}; missing entry`)
     }
     if (
@@ -403,6 +430,15 @@ const stageAtomicDataTransitions = async (
       /** Revision data and persistence adapter selected by entity type. */
       const revisionData = data[transition.store] as RevisionData<any, any>
       if (transition.persistenceMode === 'metadataOnly') {
+        stagedTransitions.push({
+          transition,
+          revisionData,
+          nextPersistenceFields: transition.after?.persistenceFields,
+          stagedChange: []
+        })
+        continue
+      }
+      if (revisionData.persistence.kind === 'sqlite') {
         stagedTransitions.push({
           transition,
           revisionData,
@@ -572,6 +608,12 @@ const validateAtomicDataTransitions = (
     /** Latest authoritative entry for one projected transition. */
     const committedEntry = data[transition.store].committedStore.getEntry(transition.id)
     if (!transition.before) {
+      if (
+        !transition.after &&
+        data[transition.store].targetPolicy === 'deleteIfPresent'
+      ) {
+        continue
+      }
       if (committedEntry) {
         throw new Error(`Cannot create ${transition.store}:${transition.id}; entry already exists`)
       }
@@ -608,11 +650,48 @@ const runAtomicDataTransitionsImmediately = async (
   const stagedTransitions = await stageAtomicDataTransitions(transitions)
 
   try {
-    for (const stagedTransition of stagedTransitions) {
-      if (stagedTransition.transition.persistenceMode === 'metadataOnly') continue
-      await stagedTransition.revisionData.persistence.commitChanges(
-        stagedTransition.stagedChange
-      )
+    /** Commits every SQLite command before synchronously committing staged filesystem changes. */
+    const commitPersistenceChanges = (): void => {
+      for (const stagedTransition of stagedTransitions) {
+        if (
+          stagedTransition.transition.persistenceMode === 'metadataOnly' ||
+          stagedTransition.revisionData.persistence.kind !== 'sqlite'
+        ) {
+          continue
+        }
+        stagedTransition.revisionData.persistence.command(
+          stagedTransition.transition.id,
+          {
+            before: stagedTransition.transition.before
+              ? {
+                  data: stagedTransition.transition.before.data,
+                  persistenceFields: stagedTransition.transition.before.persistenceFields
+                }
+              : null,
+            after: stagedTransition.transition.after
+          }
+        )
+      }
+      for (const stagedTransition of stagedTransitions) {
+        if (
+          stagedTransition.transition.persistenceMode === 'metadataOnly' ||
+          stagedTransition.revisionData.persistence.kind !== 'filesystem'
+        ) {
+          continue
+        }
+        stagedTransition.revisionData.persistence.commitChanges(stagedTransition.stagedChange)
+      }
+    }
+    /** Whether the logical commit needs a SQLite transaction boundary. */
+    const hasSqliteChanges = stagedTransitions.some(
+      (stagedTransition) =>
+        stagedTransition.transition.persistenceMode === 'stage' &&
+        stagedTransition.revisionData.persistence.kind === 'sqlite'
+    )
+    if (hasSqliteChanges) {
+      SqliteDataAccess.runTransaction(commitPersistenceChanges)
+    } else {
+      commitPersistenceChanges()
     }
   } catch (error) {
     await revertStagedChanges(stagedTransitions)

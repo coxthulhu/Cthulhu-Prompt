@@ -15,6 +15,10 @@ import { userPersistenceCollection } from '../Collections/UserPersistenceCollect
 import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { categoryCollection } from '../Collections/CategoryCollection'
+import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
+import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
+import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
+import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 
 export {
   mutatePacedUpdateTransaction,
@@ -32,7 +36,11 @@ const revisionCollections = {
   category: categoryCollection,
   prompt: promptCollection,
   promptTemplate: promptTemplateCollection,
-  markdownContentUiState: markdownContentUiStateCollection
+  markdownContentUiState: markdownContentUiStateCollection,
+  workspaceUiState: workspaceUiStateCollection,
+  workspacePromptFolderUiState: workspacePromptFolderUiStateCollection,
+  accordionUiState: accordionUiStateCollection,
+  categoryDescriptionEditorUiState: categoryDescriptionEditorUiStateCollection
 }
 
 const optimisticCollections = {

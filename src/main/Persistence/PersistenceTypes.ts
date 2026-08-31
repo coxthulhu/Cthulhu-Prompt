@@ -26,6 +26,13 @@ export type DomainPersistenceFieldsMap = {
   category: CategoryPersistenceFields
   prompt: PromptPersistenceFields
   promptTemplate: PromptTemplatePersistenceFields
+  userPersistence: Record<string, never>
+  workspacePersistence: Record<string, never>
+  markdownContentUiState: Record<string, never>
+  workspaceUiState: Record<string, never>
+  workspacePromptFolderUiState: Record<string, never>
+  accordionUiState: Record<string, never>
+  categoryDescriptionEditorUiState: Record<string, never>
 }
 
 export type PersistenceStageResult<TPersistenceFields> = {
@@ -33,14 +40,31 @@ export type PersistenceStageResult<TPersistenceFields> = {
   nextPersistenceFields?: TPersistenceFields
 }
 
-export type PersistenceLayer<TData, TPersistenceFields> = {
+/** Filesystem persistence staged before its synchronous logical commit. */
+export type FilePersistenceLayer<TData, TPersistenceFields> = {
+  kind: 'filesystem'
   stageChanges: (
     transition: PersistenceTransition<TData, TPersistenceFields>
   ) => Promise<PersistenceStageResult<TPersistenceFields>>
-  commitChanges: (stagedChange: FilePersistenceStagedChange[]) => Promise<void>
-  revertChanges: (stagedChange: FilePersistenceStagedChange[]) => Promise<void>
+  commitChanges: (stagedChange: FilePersistenceStagedChange[]) => void
+  revertChanges: (stagedChange: FilePersistenceStagedChange[]) => void
   loadData: (persistenceFields: TPersistenceFields) => Promise<TData | null>
 }
+
+/** SQLite persistence queried by authoritative ID and changed through one database command. */
+export type SqlitePersistenceLayer<TData, TPersistenceFields> = {
+  kind: 'sqlite'
+  query: (id: string, persistenceFields: TPersistenceFields) => TData | null
+  command: (
+    id: string,
+    transition: PersistenceTransition<TData, TPersistenceFields>
+  ) => void
+}
+
+/** Persistence implementation used by one authoritative revision collection. */
+export type PersistenceLayer<TData, TPersistenceFields> =
+  | FilePersistenceLayer<TData, TPersistenceFields>
+  | SqlitePersistenceLayer<TData, TPersistenceFields>
 
 export const createPersistenceStageResult = <TPersistenceFields>(
   stagedChange: FilePersistenceStagedChange[],

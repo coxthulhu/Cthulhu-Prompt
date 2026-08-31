@@ -25,7 +25,14 @@ const mockDomainData = vi.hoisted(() => {
     promptFolder: new Map<string, Entry>(),
     category: new Map<string, Entry>(),
     prompt: new Map<string, Entry>(),
-    promptTemplate: new Map<string, Entry>()
+    promptTemplate: new Map<string, Entry>(),
+    userPersistence: new Map<string, Entry>(),
+    workspacePersistence: new Map<string, Entry>(),
+    markdownContentUiState: new Map<string, Entry>(),
+    workspaceUiState: new Map<string, Entry>(),
+    workspacePromptFolderUiState: new Map<string, Entry>(),
+    accordionUiState: new Map<string, Entry>(),
+    categoryDescriptionEditorUiState: new Map<string, Entry>()
   }
   /** Creates the committed-store reads used by domain persistence planning. */
   const createStore = (entityType: keyof typeof entries) => ({
@@ -39,7 +46,18 @@ const mockDomainData = vi.hoisted(() => {
     promptFolder: { committedStore: createStore('promptFolder') },
     category: { committedStore: createStore('category') },
     prompt: { committedStore: createStore('prompt') },
-    promptTemplate: { committedStore: createStore('promptTemplate') }
+    promptTemplate: { committedStore: createStore('promptTemplate') },
+    userPersistence: { committedStore: createStore('userPersistence') },
+    workspacePersistence: { committedStore: createStore('workspacePersistence') },
+    markdownContentUiState: { committedStore: createStore('markdownContentUiState') },
+    workspaceUiState: { committedStore: createStore('workspaceUiState') },
+    workspacePromptFolderUiState: {
+      committedStore: createStore('workspacePromptFolderUiState')
+    },
+    accordionUiState: { committedStore: createStore('accordionUiState') },
+    categoryDescriptionEditorUiState: {
+      committedStore: createStore('categoryDescriptionEditorUiState')
+    }
   }
   /** Clears authoritative entries between persistence-planning tests. */
   const reset = (): void => {

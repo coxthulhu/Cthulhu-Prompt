@@ -21,6 +21,7 @@ import {
   type PromptFolderContentKind
 } from '@shared/PromptFolder'
 import type { RevisionEnvelope } from '@shared/Revision'
+import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
 import type {
   AtomicDataBuilder,
   AtomicDataTransactionHandle,
@@ -86,7 +87,6 @@ export type MarkdownContentMutationConfig<
     contentId: string,
     expectedRevision?: number
   ) => AtomicHandle
-  onDeleted?: (workspaceId: string, contentId: string) => void
 }
 
 const getFilenameGroups = (
@@ -202,6 +202,12 @@ export const setupMarkdownContentMutationHandlers = <
             }
           }),
           content: config.deleteContent(tx, contentId, requestedContent.expectedRevision),
+          markdownContentUiState: tx.markdownContentUiState.delete({
+            id: createMarkdownContentUiStateKey(
+              promptFolder.persistenceFields.workspaceId,
+              contentId
+            )
+          }),
           ...createFilenameUpdateHandles(tx, filenamePlans, new Set([contentId]))
         })))!
 
@@ -215,7 +221,6 @@ export const setupMarkdownContentMutationHandlers = <
             })
           )
         }
-        config.onDeleted?.(promptFolder.persistenceFields.workspaceId, contentId)
         const updatedFolder = data.promptFolder.committedStore.getEntry(requestedFolder.id)
         return updatedFolder
           ? {

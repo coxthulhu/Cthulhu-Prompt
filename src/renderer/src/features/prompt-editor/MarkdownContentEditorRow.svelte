@@ -180,7 +180,9 @@
   const subtitleBarHeightPx = $derived(
     contentKind === 'template' ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
   )
-  const initialEditorViewStateJson = $derived(lookupMarkdownContentEditorViewStateJson(promptId))
+  const initialEditorViewStateJson = $derived(
+    lookupMarkdownContentEditorViewStateJson(workspaceId, promptId)
+  )
   // Derived content state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
     return {

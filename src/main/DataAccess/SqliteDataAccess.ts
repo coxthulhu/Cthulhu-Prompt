@@ -661,6 +661,11 @@ export class SqliteDataAccess {
     return {}
   }
 
+  /** Runs synchronous SQLite commands inside one database transaction. */
+  static runTransaction<TResult>(commands: () => TResult): TResult {
+    return this.getDatabase().transaction(commands)()
+  }
+
   static isUsingInMemoryDatabase(): boolean {
     return inMemoryDatabase
   }

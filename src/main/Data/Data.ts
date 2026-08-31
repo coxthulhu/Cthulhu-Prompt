@@ -7,6 +7,16 @@ import { promptTemplateData } from './PromptTemplateData'
 import { systemSettingsData } from './SystemSettingsData'
 import { workspaceData } from './WorkspaceData'
 import { categoryData } from './CategoryData'
+import type { DomainTargetPolicy } from '@shared/DomainChanges'
+import {
+  accordionUiStateData,
+  categoryDescriptionEditorUiStateData,
+  markdownContentUiStateData,
+  userPersistenceData,
+  workspacePersistenceData,
+  workspacePromptFolderUiStateData,
+  workspaceUiStateData
+} from './UiStateData'
 
 export type DataRecipe<TData> = (draft: Draft<TData>) => void
 
@@ -15,6 +25,8 @@ export type RevisionData<TData, TPersistenceFields> = {
   persistence: PersistenceLayer<TData, TPersistenceFields>
   loadDataFromPersistence: (id: string, persistenceFields: TPersistenceFields) => Promise<void>
   emitCommittedRevisionChanged: (id: string) => void
+  /** Missing-target deletion behavior for this authoritative collection. */
+  targetPolicy: DomainTargetPolicy
 }
 
 export const data = {
@@ -23,5 +35,12 @@ export const data = {
   promptFolder: promptFolderData,
   category: categoryData,
   prompt: promptData,
-  promptTemplate: promptTemplateData
+  promptTemplate: promptTemplateData,
+  userPersistence: userPersistenceData,
+  workspacePersistence: workspacePersistenceData,
+  markdownContentUiState: markdownContentUiStateData,
+  workspaceUiState: workspaceUiStateData,
+  workspacePromptFolderUiState: workspacePromptFolderUiStateData,
+  accordionUiState: accordionUiStateData,
+  categoryDescriptionEditorUiState: categoryDescriptionEditorUiStateData
 }

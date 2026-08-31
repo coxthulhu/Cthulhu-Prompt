@@ -7,11 +7,6 @@ type MarkdownContentUiStateRow = {
   editorViewStateJson: string
 }
 
-export const createMarkdownContentUiStateRevisionKey = (
-  workspaceId: string,
-  contentId: string
-): string => `${workspaceId}:${contentId}`
-
 export class MarkdownContentUiStateDataAccess {
   static readMarkdownContentUiState(
     workspaceId: string,

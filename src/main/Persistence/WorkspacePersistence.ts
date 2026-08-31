@@ -23,6 +23,7 @@ const toWorkspaceFolderOrderFile = (entries: FolderEntryRef[]): WorkspaceFolderO
 }
 
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
+  kind: 'filesystem',
   stageChanges: async (transition) => {
     /** Current workspace record used for deletion paths. */
     const before = transition.before
@@ -54,10 +55,10 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
       createStagedFileUpsert(folderOrderPath, folderOrderTempPath)
     ])
   },
-  commitChanges: async (stagedChange) => {
+  commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)
   },
-  revertChanges: async (stagedChange) => {
+  revertChanges: (stagedChange) => {
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {

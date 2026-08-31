@@ -34,6 +34,7 @@ import {
   readPromptFolderEntries
 } from '../helpers/PromptDragDropHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
+import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -2708,7 +2709,10 @@ describe('Prompt folder prompt management', () => {
     ).toHaveAttribute('aria-expanded', 'false')
   })
 
-  test('deletes prompts and keeps deletion after navigation', async ({ testSetup }) => {
+  test('deletes prompts and keeps deletion after navigation', async ({
+    electronApp,
+    testSetup
+  }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -2716,6 +2720,29 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-1'))
     await waitForMonacoEditor(mainWindow, promptEditorSelector('dev-2'))
+    /** Workspace ID owning the SQLite editor state inserted for delete-handler coverage. */
+    const workspaceId = (
+      await runSqlQuery(
+        electronApp,
+        'SELECT workspace_id AS workspaceId FROM workspace_ui_state LIMIT 1'
+      )
+    ).rows?.[0]?.workspaceId as string
+    await runSqlStatement(
+      electronApp,
+      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
+       VALUES ('${workspaceId}', 'dev-1', '{}'), ('${workspaceId}', 'dev-2', '{}')
+       ON CONFLICT(workspace_id, content_id) DO UPDATE SET editor_view_state_json = excluded.editor_view_state_json`
+    )
+    expect(
+      (
+        await runSqlQuery(
+          electronApp,
+          `SELECT content_id AS contentId FROM markdown_content_ui_state
+           WHERE workspace_id = '${workspaceId}' AND content_id IN ('dev-1', 'dev-2')
+           ORDER BY content_id`
+        )
+      ).rows
+    ).toEqual([{ contentId: 'dev-1' }, { contentId: 'dev-2' }])
 
     // Create an empty prompt, then delete it without the confirmation dialog.
     const initialIds = await getPromptEditorIds(mainWindow)
@@ -2747,6 +2774,16 @@ describe('Prompt folder prompt management', () => {
     await dialog.locator('button:has-text("Delete")').click()
     await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toHaveCount(0)
     await waitForPromptCount(mainWindow, 1)
+    expect(
+      (
+        await runSqlQuery(
+          electronApp,
+          `SELECT content_id FROM markdown_content_ui_state
+           WHERE workspace_id = '${workspaceId}' AND content_id IN ('dev-1', 'dev-2')
+           ORDER BY content_id`
+        )
+      ).rows
+    ).toEqual([{ content_id: 'dev-2' }])
 
     // Navigate away and back to ensure deletions persist.
     await testHelpers.navigateToHomeScreen()

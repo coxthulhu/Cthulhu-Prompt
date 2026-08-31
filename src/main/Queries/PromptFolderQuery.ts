@@ -6,9 +6,9 @@ import type {
 import { PromptStatus } from '@shared/Prompt'
 import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import {
-  createMarkdownContentUiStateRevisionKey,
   MarkdownContentUiStateDataAccess
 } from '../DataAccess/MarkdownContentUiStateDataAccess'
+import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,
@@ -70,9 +70,9 @@ export const loadPromptFolderInitialData = async (
       prompts,
       promptTemplates,
       markdownContentUiStates: markdownContentUiStates.map((uiState) => ({
-        id: uiState.contentId,
+        id: createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId),
         revision: revisions.markdownContentUiState.get(
-          createMarkdownContentUiStateRevisionKey(uiState.workspaceId, uiState.contentId)
+          createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId)
         ),
         data: uiState
       }))

@@ -1,22 +1,20 @@
 import { ipcMain } from 'electron'
 import {
+  createMarkdownContentUiStateKey,
   UPDATE_MARKDOWN_CONTENT_UI_STATE_CHANNEL,
   type MarkdownContentUiStateRevisionResponsePayload
 } from '@shared/MarkdownContentUiState'
-import {
-  createMarkdownContentUiStateRevisionKey,
-  MarkdownContentUiStateDataAccess
-} from '../DataAccess/MarkdownContentUiStateDataAccess'
+import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { parseUpdateMarkdownContentUiStateRevisionRequest } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { revisions } from '../Registries/Revisions'
 
 const buildRevisionPayload = (
-  contentId: string,
+  uiStateId: string,
   data: MarkdownContentUiStateRevisionResponsePayload['markdownContentUiState']['data'],
   revision: number
 ): MarkdownContentUiStateRevisionResponsePayload['markdownContentUiState'] => ({
-  id: contentId,
+  id: uiStateId,
   revision,
   data
 })
@@ -29,26 +27,30 @@ export const setupMarkdownContentUiStateMutationHandlers = (): void => {
       async (validatedRequest) => {
         try {
           const entity = validatedRequest.payload.markdownContentUiState
-          const contentId = entity.id
-          const nextUiState = { ...entity.data, contentId }
-          const revisionKey = createMarkdownContentUiStateRevisionKey(
-            nextUiState.workspaceId,
-            contentId
+          /** Composite authoritative ID derived from the validated UI-state data. */
+          const uiStateId = createMarkdownContentUiStateKey(
+            entity.data.workspaceId,
+            entity.data.contentId
           )
-          const currentRevision = revisions.markdownContentUiState.get(revisionKey)
+          if (entity.id !== uiStateId) {
+            throw new Error('Markdown content UI-state ID does not match its data')
+          }
+          /** Authoritative UI-state data persisted without replacing either key component. */
+          const nextUiState = entity.data
+          const currentRevision = revisions.markdownContentUiState.get(uiStateId)
 
           if (entity.expectedRevision !== currentRevision) {
             const currentUiState =
               MarkdownContentUiStateDataAccess.readMarkdownContentUiState(
                 nextUiState.workspaceId,
-                contentId
+                nextUiState.contentId
               )
             return {
               success: false,
               conflict: true,
               payload: {
                 markdownContentUiState: buildRevisionPayload(
-                  contentId,
+                  uiStateId,
                   currentUiState ?? nextUiState,
                   currentRevision
                 )
@@ -57,11 +59,11 @@ export const setupMarkdownContentUiStateMutationHandlers = (): void => {
           }
 
           const uiState = MarkdownContentUiStateDataAccess.upsertMarkdownContentUiState(nextUiState)
-          const revision = revisions.markdownContentUiState.bump(revisionKey)
+          const revision = revisions.markdownContentUiState.bump(uiStateId)
           return {
             success: true,
             payload: {
-              markdownContentUiState: buildRevisionPayload(contentId, uiState, revision)
+              markdownContentUiState: buildRevisionPayload(uiStateId, uiState, revision)
             }
           }
         } catch (error) {

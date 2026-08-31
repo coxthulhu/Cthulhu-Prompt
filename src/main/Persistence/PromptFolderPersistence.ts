@@ -98,6 +98,7 @@ export const promptFolderPersistence: PersistenceLayer<
   PromptFolder,
   PromptFolderPersistenceFields
 > = {
+  kind: 'filesystem',
   stageChanges: async (transition) => {
     /** Current prompt-folder record used to resolve removals and renames. */
     const before = transition.before
@@ -232,10 +233,10 @@ export const promptFolderPersistence: PersistenceLayer<
 
     return createPersistenceStageResult(stagedChanges, fields)
   },
-  commitChanges: async (stagedChange) => {
+  commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)
   },
-  revertChanges: async (stagedChange) => {
+  revertChanges: (stagedChange) => {
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
