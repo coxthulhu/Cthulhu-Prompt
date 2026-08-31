@@ -163,7 +163,7 @@
     background: var(--ui-ghost-surface);
     border: 0;
     border-top: 1px solid var(--ui-neutral-muted-border);
-    color: var(--ui-hoverable-text);
+    color: var(--ui-muted-text);
     cursor: pointer;
     display: grid;
     flex: 0 0 36px;
@@ -182,7 +182,7 @@
 
   .cthulhuUiAccordionChevron {
     align-items: center;
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-muted-icon-glyph);
     display: flex;
     justify-content: center;
     transform: rotate(0deg);
@@ -207,7 +207,7 @@
   }
 
   .cthulhuUiAccordionCount {
-    color: var(--ui-secondary-text);
+    color: var(--ui-muted-text);
     font-size: 12px;
     font-variant-numeric: tabular-nums;
   }
