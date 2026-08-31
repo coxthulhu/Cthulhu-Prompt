@@ -217,6 +217,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     minWidth: WINDOW_MIN_WIDTH,
     minHeight: WINDOW_MIN_HEIGHT,
     show: false,
+    backgroundColor: '#0a0a0a',
     autoHideMenuBar: true,
     title: 'Cthulhu Prompt',
     frame: process.platform !== 'win32',
