@@ -1,5 +1,6 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
+  MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_FOLDER_HOST_SELECTOR,
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
@@ -32,6 +33,32 @@ const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 const LIVE_COUNT_QUERY = 'cthulhu-live-find-count-marker'
 const LIVE_POSITION_QUERY = 'cthulhu-live-find-position-marker'
+const TRACKED_ROW_TOP_PADDING_PX = 100
+const CENTER_TRACKING_CASES = [
+  {
+    key: 'fits',
+    testName: 'keeps a fully fitting prompt row centered while its placeholder hydrates',
+    query: 'cthulhu-centered-row-fits-marker',
+    promptText: 'W'.repeat(1500),
+    expectedPlacement: 'centered'
+  },
+  {
+    key: 'padding-overflow',
+    testName: 'top-aligns a prompt row whose padding would overflow the viewport',
+    query: 'cthulhu-centered-row-padding-overflow-marker',
+    promptText: 'W'.repeat(2600),
+    expectedPlacement: 'top-padded-fits'
+  },
+  {
+    key: 'row-overflow',
+    testName: 'top-aligns a prompt row taller than the viewport',
+    query: 'cthulhu-centered-row-overflow-marker',
+    promptText: 'W'.repeat(10000),
+    expectedPlacement: 'top-padded-overflow'
+  }
+] as const
+
+type CenterTrackingCase = (typeof CENTER_TRACKING_CASES)[number]
 
 const getMonacoSelectedText = async (
   mainWindow: any,
@@ -234,6 +261,36 @@ const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, s
   filesystem[folderDescriptionPath] = `Rapid loop marker in folder description: ${RAPID_LOOP_QUERY}`
 
   return filesystem
+}
+
+/** Builds a virtualized folder with one title match on a configured height-changing row. */
+const buildCenteredRowHydrationWorkspace = (
+  workspacePath: string,
+  trackingCase: CenterTrackingCase
+): Record<string, string | null> => {
+  /** Prompts surrounding the target so centered placement is not document-boundary clamped. */
+  const prompts = Array.from({ length: 60 }, (_, index) => {
+    /** Stable prompt identity used by the virtual row and find result. */
+    const promptId = `center-tracking-${trackingCase.key}-${index + 1}`
+    const targetPromptId = `center-tracking-${trackingCase.key}-30`
+    return {
+      id: promptId,
+      title:
+        promptId === targetPromptId
+          ? `Tracked ${trackingCase.query}`
+          : `Center Tracking ${trackingCase.key} Prompt ${index + 1}`,
+      promptText: promptId === targetPromptId ? trackingCase.promptText : 'one line'
+    }
+  })
+
+  return createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: `Center Tracking ${trackingCase.key}`,
+      displayName: `Center Tracking ${trackingCase.key}`,
+      promptFolderId: `center-tracking-${trackingCase.key}-folder`,
+      prompts
+    }
+  ])
 }
 
 const buildTypingAnchorWorkspace = (workspacePath: string): Record<string, string | null> => {
@@ -1158,6 +1215,124 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(async () => getMonacoSelectionInfo(), { timeout: 2000 })
       .toEqual({ text: bodyQuery, hasDomFocus: true })
+  })
+
+  CENTER_TRACKING_CASES.forEach((trackingCase) => {
+    test(trackingCase.testName, async ({ testSetup }) => {
+      /** Isolated workspace path for this centered-row hydration geometry. */
+      const workspacePath = `/ws/find-centered-row-${trackingCase.key}`
+      await testSetup.setupFilesystem(
+        buildCenteredRowHydrationWorkspace(workspacePath, trackingCase)
+      )
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+
+      await mainWindow.waitForFunction(() => Boolean(window.svelteVirtualWindowTestControls))
+      await mainWindow.evaluate(() => {
+        window.svelteVirtualWindowTestControls?.pauseMonacoHydration()
+      })
+
+      try {
+        await testHelpers.navigateToPromptFolders(`Center Tracking ${trackingCase.key}`)
+
+        /** Find input that reveals the distant title match while its body remains a placeholder. */
+        const findInput = mainWindow.locator(FIND_INPUT)
+        await mainWindow.keyboard.press('Control+F')
+        await expect(findInput).toBeVisible()
+        await findInput.fill(trackingCase.query)
+        await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+
+        /** Prompt row whose wrapped body changes its height during hydration. */
+        const targetSelector = promptEditorSelector(`center-tracking-${trackingCase.key}-30`)
+        await mainWindow.waitForSelector(targetSelector, { state: 'attached' })
+        await expect(
+          mainWindow.locator(`${targetSelector} ${MONACO_PLACEHOLDER_SELECTOR}`)
+        ).toHaveCount(1)
+        const placeholderHeightPx = await mainWindow
+          .locator(targetSelector)
+          .evaluate((row) => row.getBoundingClientRect().height)
+
+        /** Every estimated placeholder is small enough to begin centered. */
+        await expect
+          .poll(() =>
+            mainWindow.evaluate(
+              ({ hostSelector, targetSelector }) => {
+                const host = document.querySelector<HTMLElement>(hostSelector)
+                const target = document.querySelector<HTMLElement>(targetSelector)
+                if (!host || !target) return Number.POSITIVE_INFINITY
+                const hostRect = host.getBoundingClientRect()
+                const targetRect = target.getBoundingClientRect()
+                return Math.abs(
+                  targetRect.top + targetRect.height / 2 - (hostRect.top + hostRect.height / 2)
+                )
+              },
+              {
+                hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+                targetSelector
+              }
+            )
+          )
+          .toBeLessThanOrEqual(1)
+
+        await mainWindow.evaluate(() => {
+          window.svelteVirtualWindowTestControls?.resumeMonacoHydration()
+        })
+        await expect
+          .poll(() =>
+            mainWindow.locator(`${targetSelector} ${MONACO_PLACEHOLDER_SELECTOR}`).count()
+          )
+          .toBe(0)
+
+        const hydratedGeometry = await mainWindow
+          .locator(targetSelector)
+          .evaluate((row, hostSelector) => {
+            const host = document.querySelector<HTMLElement>(hostSelector)
+            if (!host) return null
+            const hostRect = host.getBoundingClientRect()
+            const rowRect = row.getBoundingClientRect()
+            return {
+              centerDeltaPx:
+                rowRect.top + rowRect.height / 2 - (hostRect.top + hostRect.height / 2),
+              topOffsetPx: rowRect.top - hostRect.top,
+              bottomOverflowPx: rowRect.bottom - hostRect.bottom,
+              rowHeightPx: rowRect.height,
+              viewportHeightPx: hostRect.height
+            }
+          }, PROMPT_FOLDER_HOST_SELECTOR)
+        expect(hydratedGeometry).not.toBeNull()
+        expect(hydratedGeometry!.rowHeightPx).toBeGreaterThan(placeholderHeightPx)
+
+        const remainingViewportHeightPx =
+          hydratedGeometry!.viewportHeightPx - hydratedGeometry!.rowHeightPx
+        if (trackingCase.expectedPlacement === 'centered') {
+          expect(remainingViewportHeightPx).toBeGreaterThanOrEqual(TRACKED_ROW_TOP_PADDING_PX)
+          expect(Math.abs(hydratedGeometry!.centerDeltaPx)).toBeLessThanOrEqual(1)
+        } else if (trackingCase.expectedPlacement === 'top-padded-fits') {
+          expect(remainingViewportHeightPx).toBeGreaterThanOrEqual(0)
+          expect(remainingViewportHeightPx).toBeLessThan(TRACKED_ROW_TOP_PADDING_PX)
+          expect(hydratedGeometry!.bottomOverflowPx).toBeGreaterThan(0)
+          expect(
+            Math.abs(hydratedGeometry!.topOffsetPx - TRACKED_ROW_TOP_PADDING_PX)
+          ).toBeLessThanOrEqual(1)
+        } else {
+          expect(remainingViewportHeightPx).toBeLessThan(0)
+          expect(hydratedGeometry!.bottomOverflowPx).toBeGreaterThan(0)
+          expect(
+            Math.abs(hydratedGeometry!.topOffsetPx - TRACKED_ROW_TOP_PADDING_PX)
+          ).toBeLessThanOrEqual(1)
+        }
+      } finally {
+        if (!mainWindow.isClosed()) {
+          await mainWindow.evaluate(() => {
+            window.svelteVirtualWindowTestControls?.resumeMonacoHydration()
+          })
+        }
+      }
+    })
   })
 
   test('scrolls to a virtualized match and highlights it immediately', async ({ testSetup }) => {
