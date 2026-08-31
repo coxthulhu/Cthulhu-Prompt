@@ -22,7 +22,7 @@ import {
   persistedPromptTreeEntryIdToPromptNavigationRow,
   promptIdToPromptNavigationRow,
   promptNavigationRowToPersistedEntryId,
-  type PromptContentRevealScrollType,
+  type PromptContentRevealPlacement,
   type PromptNavigationRow,
   type PromptNavigationSource,
   type PromptNavigationTarget
@@ -66,7 +66,7 @@ import {
 } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
-  ScrollToAndTrackRowCentered,
+  ScrollToAndTrackRow,
   ScrollToWithinWindowBand,
   VirtualWindowScrollApi,
   VirtualWindowViewportMetrics
@@ -100,6 +100,10 @@ import {
 import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
 import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
 import { createPromptTreePromptDragController } from '../sidebar/promptTreeDrag'
+import {
+  PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX,
+  PROMPT_FOLDER_VERTICAL_BIAS_PX
+} from './promptFolderScrollOffsets'
 
 /** Virtual prompt-folder row currently aligned with sidebar navigation. */
 export type ActivePromptScreenRow =
@@ -107,10 +111,8 @@ export type ActivePromptScreenRow =
   | { kind: 'category-details'; contentOwnerId: string }
   | { kind: 'prompt'; contentOwnerId: string; promptId: string }
 
-// Leaves navigated folder headers comfortably below the virtual viewport edge.
-const NAVIGATED_FOLDER_TOP_OFFSET_PX = 80
-/** Samples breadcrumb ownership just below align-top placement so navigation updates immediately. */
-const BREADCRUMB_SAMPLE_OFFSET_PX = NAVIGATED_FOLDER_TOP_OFFSET_PX + 4
+/** Samples breadcrumb ownership just below category-bias placement so navigation updates immediately. */
+const BREADCRUMB_SAMPLE_OFFSET_PX = PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX + 4
 
 type PromptMetadata = {
   status: PromptStatus
@@ -366,7 +368,8 @@ export const createPromptFolderScreenController = ({
   let errorMessage = $state<string | null>(null)
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
-  let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
+  /** Tracked-row scroll function provided by the active virtual window. */
+  let scrollToAndTrackRow = $state<ScrollToAndTrackRow | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const getRestoredPromptFolderScrollTop = (): number =>
@@ -790,8 +793,7 @@ export const createPromptFolderScreenController = ({
     source: PromptNavigationSource,
     options: {
       forceRequest?: boolean
-      contentReveal?: {
-        scrollType: PromptContentRevealScrollType
+      contentReveal?: PromptContentRevealPlacement & {
         expandDetails?: boolean
       }
       focusPromptId?: string
@@ -875,7 +877,14 @@ export const createPromptFolderScreenController = ({
       row,
       source: 'prompt-move',
       forceRequest: true,
-      ...(shouldRevealContent ? { contentReveal: { scrollType: 'center' as const } } : {}),
+      ...(shouldRevealContent
+        ? {
+            contentReveal: {
+              scrollType: 'vertical-bias' as const,
+              verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+            }
+          }
+        : {}),
       treeExpansion: 'owner'
     })
 
@@ -1023,11 +1032,17 @@ export const createPromptFolderScreenController = ({
         ? promptNavigation.selectionSource!
         : restoreSelectionSource
       // Preserves sidebar category alignment when navigation also opens the prompt-folder screen.
-      const initialRevealScrollType: PromptContentRevealScrollType =
-        explicitSelectionTarget?.kind === 'category-details' &&
-        (source === 'tree-click' || source === 'category-open')
-          ? 'align-top'
-          : 'center'
+      /** Startup placement preserving category alignment while biasing prompt restoration. */
+      const initialRevealPlacement: PromptContentRevealPlacement =
+        initialSelectionTarget.kind === 'category-details'
+          ? {
+              scrollType: 'vertical-bias',
+              verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
+            }
+          : {
+              scrollType: 'vertical-bias',
+              verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+            }
       const result = promptNavigation.select({
         screenRootFolderId,
         contentOwnerId: initialSelectionTarget.contentOwnerId,
@@ -1035,7 +1050,7 @@ export const createPromptFolderScreenController = ({
         source,
         forceRequest: true,
         contentReveal: {
-          scrollType: initialRevealScrollType,
+          ...initialRevealPlacement,
           expandDetails:
             source !== 'category-open' && source !== 'category-move',
           expandContent: source === 'category-open'
@@ -1122,20 +1137,23 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    if (request.payload.scrollType === 'center' && !scrollToAndTrackRowCentered) return
-    if (request.payload.scrollType !== 'center' && !scrollToWithinWindowBand) return
+    /** Whether this request must retain its placement while row measurements settle. */
+    const shouldTrackRow =
+      request.payload.scrollType === 'center' || request.payload.scrollType === 'vertical-bias'
+    if (shouldTrackRow && !scrollToAndTrackRow) return
+    if (!shouldTrackRow && !scrollToWithinWindowBand) return
 
     promptNavigation.contentRevealRequests.consume(request, (payload) => {
       const rowId = toPromptFolderRowId(toActivePromptScreenTarget(payload))
       if (payload.scrollType === 'center') {
-        scrollToAndTrackRowCentered!(rowId)
+        scrollToAndTrackRow!(rowId, { type: 'center' })
+      } else if (payload.scrollType === 'vertical-bias') {
+        scrollToAndTrackRow!(rowId, {
+          type: 'vertical-bias',
+          verticalBiasPx: payload.verticalBiasPx
+        })
       } else {
-        scrollToWithinWindowBand!(
-          rowId,
-          0,
-          payload.scrollType,
-          payload.scrollType === 'align-top' ? NAVIGATED_FOLDER_TOP_OFFSET_PX : undefined
-        )
+        scrollToWithinWindowBand!(rowId, 0, payload.scrollType)
       }
     })
   })
@@ -1413,7 +1431,7 @@ export const createPromptFolderScreenController = ({
 
   /** Aligns the active content breadcrumb without expanding categories or selecting an editor. */
   const handleHeaderSegmentClick = () => {
-    if (!scrollToWithinWindowBand) return
+    if (!scrollToAndTrackRow) return
     /** Navigation selection representing the category or root content segment. */
     const targetRow: ActivePromptScreenRow = activeBreadcrumbCategory
       ? { kind: 'category-details', contentOwnerId: activeBreadcrumbCategory.id }
@@ -1425,28 +1443,24 @@ export const createPromptFolderScreenController = ({
     const targetRowId = activeBreadcrumbCategory
       ? categoryEditorRowId(activeBreadcrumbCategory.id)
       : promptFolderDividerRowId(screenRootFolderId, screenRootFolderId, null)
-    scrollToWithinWindowBand(
-      targetRowId,
-      0,
-      'align-top',
-      NAVIGATED_FOLDER_TOP_OFFSET_PX
-    )
+    scrollToAndTrackRow(targetRowId, {
+      type: 'vertical-bias',
+      verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
+    })
   }
 
   /** Aligns the root-folder breadcrumb at the top without changing category expansion state. */
   const handleHeaderFolderClick = () => {
-    if (!scrollToWithinWindowBand) return
+    if (!scrollToAndTrackRow) return
     setCurrentFolderSelection(
       { kind: 'root-header', contentOwnerId: screenRootFolderId },
       'header',
       { forceRequest: true }
     )
-    scrollToWithinWindowBand(
-      PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
-      0,
-      'align-top',
-      NAVIGATED_FOLDER_TOP_OFFSET_PX
-    )
+    scrollToAndTrackRow(PROMPT_FOLDER_ROOT_HEADER_ROW_ID, {
+      type: 'vertical-bias',
+      verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
+    })
   }
 
   /** Updates the category owning the breadcrumb's padded viewport sample point. */
@@ -1473,10 +1487,9 @@ export const createPromptFolderScreenController = ({
     scrollToWithinWindowBand = nextScrollToWithinWindowBand
   }
 
-  const setScrollToAndTrackRowCentered = (
-    nextScrollToAndTrackRowCentered: ScrollToAndTrackRowCentered | null
-  ) => {
-    scrollToAndTrackRowCentered = nextScrollToAndTrackRowCentered
+  /** Stores the tracked-row scroll function exposed by the virtual window. */
+  const setScrollToAndTrackRow = (nextScrollToAndTrackRow: ScrollToAndTrackRow | null) => {
+    scrollToAndTrackRow = nextScrollToAndTrackRow
   }
 
   const setScrollApi = (nextScrollApi: VirtualWindowScrollApi | null) => {
@@ -1617,7 +1630,7 @@ export const createPromptFolderScreenController = ({
     canMovePrompt,
     handlePromptTreeDrop,
     setScrollToWithinWindowBand,
-    setScrollToAndTrackRowCentered,
+    setScrollToAndTrackRow,
     setScrollApi,
     setViewportMetrics,
     handleVirtualScrollTopChange,

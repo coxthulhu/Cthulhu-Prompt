@@ -73,8 +73,12 @@ const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
 const CATEGORY_EDITOR = `[data-testid="category-editor-${CATEGORY_ID}"]`
 const CATEGORY_SETTINGS_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-settings-toggle"]`
 const CATEGORY_CONTENT_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-content-toggle"]`
-// Matches the folder-navigation offset requested from the virtual window.
-const PROMPT_FOLDER_NAVIGATION_TOP_OFFSET_PX = 80
+// Matches the category-navigation bias requested from the virtual window.
+const PROMPT_FOLDER_CATEGORY_VERTICAL_BIAS_PX = 80
+/** Preferred viewport-top offset for prompt and template navigation. */
+const PROMPT_FOLDER_VERTICAL_BIAS_PX = 300
+/** Minimum viewport-top offset retained when a complete editor is too tall for symmetric space. */
+const PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX = 20
 function createDeterministicId(seed: string): string {
   let hash = 0
   for (let index = 0; index < seed.length; index += 1) {
@@ -135,14 +139,16 @@ const scrollPromptTreeRowIntoView = async (
   throw new Error(`Missing prompt tree row: ${rowSelector}`)
 }
 
-const expectRowToReachClosestPromptFolderViewportCenter = async (
+/** Verifies tracked prompt navigation applies its bias, fit reduction, and document clamping. */
+const expectRowToReachPromptFolderVerticalBias = async (
   mainWindow: any,
   testHelpers: any,
-  rowSelector: string
+  rowSelector: string,
+  verticalBiasPx = PROMPT_FOLDER_VERTICAL_BIAS_PX
 ) => {
   await expect
     .poll(async () => {
-      const [geometry, scrollTop, scrollHeight, hostHeight] = await Promise.all([
+      const [geometry, scrollTop, scrollHeight] = await Promise.all([
         mainWindow.evaluate(
           ({ hostSelector, targetSelector }) => {
             const host = document.querySelector<HTMLElement>(hostSelector)
@@ -151,57 +157,55 @@ const expectRowToReachClosestPromptFolderViewportCenter = async (
 
             const hostRect = host.getBoundingClientRect()
             const targetRect = target.getBoundingClientRect()
-            const centerLine = hostRect.top + hostRect.height / 2
             return {
-              crossesCenter:
-                targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1,
-              isFullyVisible:
-                targetRect.top >= hostRect.top - 1 && targetRect.bottom <= hostRect.bottom + 1,
-              targetCenter: targetRect.top + targetRect.height / 2,
-              centerLine
+              topOffsetPx: targetRect.top - hostRect.top,
+              rowHeightPx: targetRect.height,
+              viewportHeightPx: hostRect.height
             }
           },
           { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
         ),
         testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR),
-        testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST_SELECTOR),
-        testHelpers.getPromptRowHeight(PROMPT_FOLDER_HOST_SELECTOR)
+        testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST_SELECTOR)
       ])
-      if (!geometry) return false
-      if (geometry.crossesCenter) return true
+      if (!geometry) return Number.POSITIVE_INFINITY
 
-      const maxScrollTop = Math.max(0, scrollHeight - hostHeight)
-      const isAtTopBoundary = scrollTop <= 1 && geometry.targetCenter <= geometry.centerLine + 1
-      const isAtBottomBoundary =
-        scrollTop >= maxScrollTop - 1 && geometry.targetCenter >= geometry.centerLine - 1
-      return geometry.isFullyVisible && (isAtTopBoundary || isAtBottomBoundary)
+      /** Symmetric bias available after fitting the complete measured editor row. */
+      const availableSymmetricBiasPx =
+        (geometry.viewportHeightPx - geometry.rowHeightPx) / 2
+      /** Effective bias after applying the configured preference and minimum top offset. */
+      const effectiveBiasPx = Math.max(
+        PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX,
+        Math.min(verticalBiasPx, availableSymmetricBiasPx)
+      )
+      /** Absolute row offset reconstructed from its current viewport geometry. */
+      const rowOffsetPx = scrollTop + geometry.topOffsetPx
+      /** Maximum virtual scroll position used by document-boundary clamping. */
+      const maxScrollTopPx = Math.max(0, scrollHeight - geometry.viewportHeightPx)
+      /** Expected clamped scroll position for the configured vertical bias. */
+      const expectedScrollTopPx = Math.min(
+        Math.max(0, rowOffsetPx - effectiveBiasPx),
+        maxScrollTopPx
+      )
+      /** Expected viewport-relative row top after boundary clamping. */
+      const expectedTopOffsetPx = rowOffsetPx - expectedScrollTopPx
+      return Math.abs(geometry.topOffsetPx - expectedTopOffsetPx)
     })
-    .toBe(true)
+    .toBeLessThanOrEqual(2)
 }
 
-// Verifies folder navigation aligns the row below the virtual viewport's top edge.
-const expectRowToReachPromptFolderViewportTopOffset = async (
+/** Verifies category navigation uses the shared tracked-bias fit behavior at 80px. */
+const expectRowToReachPromptFolderCategoryBias = async (
   mainWindow: any,
+  testHelpers: any,
   rowSelector: string
 ) => {
-  await expect
-    .poll(async () => {
-      // Measures the rendered folder row from the scrollable viewport edge.
-      const topOffsetPx = await mainWindow.evaluate(
-        ({ hostSelector, targetSelector }) => {
-          const host = document.querySelector<HTMLElement>(hostSelector)
-          const target = document.querySelector<HTMLElement>(targetSelector)
-          if (!host || !target) return null
-
-          return target.getBoundingClientRect().top - host.getBoundingClientRect().top
-        },
-        { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
-      )
-      return topOffsetPx == null
-        ? null
-        : Math.abs(topOffsetPx - PROMPT_FOLDER_NAVIGATION_TOP_OFFSET_PX)
-    })
-    .toBeLessThanOrEqual(1)
+  await expectRowToReachPromptFolderVerticalBias(
+    mainWindow,
+    testHelpers,
+    rowSelector,
+    PROMPT_FOLDER_CATEGORY_VERTICAL_BIAS_PX
+  )
 }
 
 const scrollPromptFolderRowAwayFromViewportCenter = async (
@@ -445,6 +449,22 @@ describe('Prompt folder prompt tree', () => {
       'prompt-tree-prompt-category-prompt'
     ])
 
+    /** Full virtual height used to move the root header away before sidebar navigation. */
+    const promptFolderScrollHeightPx = await testHelpers.getVirtualWindowScrollHeight(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+    await testHelpers.scrollVirtualWindowTo(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      promptFolderScrollHeightPx
+    )
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBeGreaterThan(0)
+    await folderRootButton.click()
+    await expect
+      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+      .toBe(0)
+
     const indentation = await mainWindow.evaluate(
       ({ categorySelector, categoryPromptSelector }) => {
         const basePromptLabel = document
@@ -491,7 +511,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
     ).toHaveAttribute('data-row-state', 'active')
-    await expectRowToReachClosestPromptFolderViewportCenter(
+    await expectRowToReachPromptFolderVerticalBias(
       mainWindow,
       testHelpers,
       '[data-testid="prompt-editor-category-prompt"]'
@@ -519,7 +539,7 @@ describe('Prompt folder prompt tree', () => {
       )
       .toBe('category-prompt')
     await testHelpers.navigateToPromptFolders('Main')
-    await expectRowToReachClosestPromptFolderViewportCenter(
+    await expectRowToReachPromptFolderVerticalBias(
       mainWindow,
       testHelpers,
       '[data-testid="prompt-editor-category-prompt"]'
@@ -545,7 +565,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(CATEGORY_OPEN_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(CATEGORY_OPEN_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, CATEGORY_EDITOR)
+    await expectRowToReachPromptFolderCategoryBias(mainWindow, testHelpers, CATEGORY_EDITOR)
     await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -593,7 +613,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachPromptFolderViewportTopOffset(mainWindow, CATEGORY_EDITOR)
+    await expectRowToReachPromptFolderCategoryBias(mainWindow, testHelpers, CATEGORY_EDITOR)
     await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -609,7 +629,7 @@ describe('Prompt folder prompt tree', () => {
       'Add Prompt to top of category Category'
     )
     await mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON).click()
-    /** Newly centered editor identified by its generated untitled-prompt placeholder. */
+    /** Newly biased editor identified by its generated untitled-prompt placeholder. */
     const createdEditor = mainWindow
       .locator(PROMPT_EDITOR_PREFIX_SELECTOR)
       .filter({ has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Prompt"]`) })
@@ -622,7 +642,7 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(createdPromptId)))
       .toBe(true)
-    await expectRowToReachClosestPromptFolderViewportCenter(
+    await expectRowToReachPromptFolderVerticalBias(
       mainWindow,
       testHelpers,
       promptEditorSelector(createdPromptId)
@@ -706,7 +726,7 @@ describe('Prompt folder prompt tree', () => {
     ).toHaveCount(0)
   })
 
-  test('keeps selected prompt centered after hydration for long wrapped singles prompt-tree jump', async ({
+  test('reduces prompt navigation bias to 20px after a tall editor hydrates', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -742,29 +762,46 @@ describe('Prompt folder prompt tree', () => {
       }
     )
 
-    const centeredRowId = await mainWindow.evaluate(
-      ({ hostSelector, rowSelector }) => {
-        const host = document.querySelector<HTMLElement>(hostSelector)
-        if (!host) return null
-        const hostRect = host.getBoundingClientRect()
-        const centerLine = Math.round(hostRect.top + hostRect.height / 2)
-        const rows = Array.from(host.querySelectorAll<HTMLElement>(rowSelector))
-        const centeredRow = rows.find((row) => {
-          const rect = row.getBoundingClientRect()
-          return rect.top <= centerLine && rect.bottom >= centerLine
-        })
-        return centeredRow?.getAttribute('data-testid') ?? null
-      },
-      { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, rowSelector: PROMPT_EDITOR_PREFIX_SELECTOR }
+    await expectRowToReachPromptFolderVerticalBias(
+      mainWindow,
+      testHelpers,
+      promptEditorSelector(TARGET_PROMPT_ID)
     )
-
-    const expectedCenteredRowId = `prompt-editor-${TARGET_PROMPT_ID}`
-    expect(centeredRowId).toBe(expectedCenteredRowId)
+    /** Hydrated target whose maximum editor height exceeds the available viewport. */
+    const targetEditor = mainWindow.locator(promptEditorSelector(TARGET_PROMPT_ID))
+    await expect
+      .poll(async () => {
+        /** Settled viewport and row geometry for the minimum-offset overflow case. */
+        const targetGeometry = await targetEditor.evaluate((row, hostSelector) => {
+          const host = document.querySelector<HTMLElement>(hostSelector)
+          if (!host) return null
+          const hostRect = host.getBoundingClientRect()
+          const rowRect = row.getBoundingClientRect()
+          return {
+            topOffsetPx: rowRect.top - hostRect.top,
+            bottomOverflowPx: rowRect.bottom - hostRect.bottom,
+            rowHeightPx: rowRect.height,
+            viewportHeightPx: hostRect.height
+          }
+        }, PROMPT_FOLDER_HOST_SELECTOR)
+        if (
+          !targetGeometry ||
+          targetGeometry.rowHeightPx <=
+            targetGeometry.viewportHeightPx - PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX * 2 ||
+          targetGeometry.bottomOverflowPx <= 0
+        ) {
+          return Number.POSITIVE_INFINITY
+        }
+        return Math.abs(
+          targetGeometry.topOffsetPx - PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX
+        )
+      })
+      .toBeLessThanOrEqual(2)
 
     await expect(promptTreeButton).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('stops tracking a centered prompt after hydration beside collapsed folder settings', async ({
+  test('stops tracking a biased prompt after hydration beside collapsed folder settings', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -785,7 +822,7 @@ describe('Prompt folder prompt tree', () => {
     )
     await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, promptEditor)
     await promptTreeRow.click()
-    await expectRowToReachClosestPromptFolderViewportCenter(
+    await expectRowToReachPromptFolderVerticalBias(
       mainWindow,
       testHelpers,
       promptEditor
@@ -821,7 +858,7 @@ describe('Prompt folder prompt tree', () => {
     expect(Math.abs(afterEdit!.y - beforeEdit!.y)).toBeLessThanOrEqual(2)
   })
 
-  test('centers a completed prompt when clicking its prompt tree row', async ({ testSetup }) => {
+  test('biases a completed prompt when clicking its prompt tree row', async ({ testSetup }) => {
     await testSetup.setupFilesystem(buildCompletedTreeWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH)])
 
@@ -856,7 +893,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(targetTreeRow).click()
 
     await expect(mainWindow.locator(targetTreeRow)).toHaveAttribute('data-row-state', 'active')
-    await expectRowToReachClosestPromptFolderViewportCenter(
+    await expectRowToReachPromptFolderVerticalBias(
       mainWindow,
       testHelpers,
       targetEditor

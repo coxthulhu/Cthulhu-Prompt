@@ -40,6 +40,8 @@ const EMPTY_TEMPLATE_FOLDER_ID = 'template-empty-folder'
 const TEMPLATE_ID = 'template-ui-existing'
 const TEMPLATE_EDITOR = promptEditorSelector(TEMPLATE_ID)
 const FIND_MATCH = 'template-folder-find-marker'
+/** Preferred viewport-top offset used for sidebar template creation. */
+const TEMPLATE_CREATION_VERTICAL_BIAS_PX = 300
 
 const createTemplateUiWorkspace = () =>
   createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [
@@ -140,6 +142,7 @@ const setEditorSelections = async (
 
 describe('Prompt template folder UI', () => {
   test('adds a template to the top of a category from the prompt tree', async ({
+    electronApp,
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
@@ -149,6 +152,16 @@ describe('Prompt template folder UI', () => {
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Templates')
+
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      /** Active window enlarged enough to leave 300px above and below a short template row. */
+      const window = BrowserWindow.getAllWindows()[0]
+      if (!window) throw new Error('Missing main window')
+      window.setSize(window.getBounds().width, 1000)
+    })
+    await expect
+      .poll(async () => await mainWindow.evaluate(() => window.innerHeight))
+      .toBeGreaterThan(900)
 
     /** Template-category action that creates content at its first boundary. */
     const categoryAddToTopButton = mainWindow.locator(
@@ -175,27 +188,31 @@ describe('Prompt template folder UI', () => {
     await expect
       .poll(async () => {
         return await mainWindow.evaluate(
-          ({ hostSelector, targetSelector }) => {
-            /** Main virtual viewport containing the centered template editor. */
+          ({ hostSelector, targetSelector, verticalBiasPx }) => {
+            /** Main virtual viewport containing the biased template editor. */
             const host = document.querySelector<HTMLElement>(hostSelector)
             /** Newly created template editor targeted by navigation. */
             const target = document.querySelector<HTMLElement>(targetSelector)
-            if (!host || !target) return false
+            if (!host || !target) return Number.POSITIVE_INFINITY
 
-            /** Viewport and target geometry used for the 1px center-line tolerance. */
+            /** Viewport and target geometry proving the full 300px bias can fit. */
             const hostRect = host.getBoundingClientRect()
             const targetRect = target.getBoundingClientRect()
-            /** Main viewport center line requested by prompt-tree creation. */
-            const centerLine = hostRect.top + hostRect.height / 2
-            return targetRect.top <= centerLine + 1 && targetRect.bottom >= centerLine - 1
+            /** Symmetric space remaining around the complete template row. */
+            const availableSymmetricBiasPx = (hostRect.height - targetRect.height) / 2
+            if (availableSymmetricBiasPx < verticalBiasPx) {
+              return Number.POSITIVE_INFINITY
+            }
+            return Math.abs(targetRect.top - hostRect.top - verticalBiasPx)
           },
           {
             hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
-            targetSelector: promptEditorSelector(createdTemplateId)
+            targetSelector: promptEditorSelector(createdTemplateId),
+            verticalBiasPx: TEMPLATE_CREATION_VERTICAL_BIAS_PX
           }
         )
       })
-      .toBe(true)
+      .toBeLessThanOrEqual(2)
 
     /** Category template IDs in current tree order after adding at its top boundary. */
     const categoryTemplateOrder = await mainWindow

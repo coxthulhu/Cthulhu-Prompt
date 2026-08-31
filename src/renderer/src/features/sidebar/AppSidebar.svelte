@@ -42,6 +42,7 @@
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
+  import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import { getCategoryOrderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
@@ -436,7 +437,10 @@
       row: 'root-header',
       source: 'tree-click',
       forceRequest: true,
-      contentReveal: { scrollType: 'center' }
+      contentReveal: {
+        scrollType: 'vertical-bias',
+        verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+      }
     })
 
     if (activeScreen !== 'prompt-folders') {

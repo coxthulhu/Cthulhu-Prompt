@@ -57,12 +57,15 @@ export type PromptContentExpansionRequest = PromptNavigationTarget & {
   expandContent: boolean
 }
 
-// Defines how content navigation positions its target in the prompt-folder viewport.
-export type PromptContentRevealScrollType = 'align-top' | 'center' | 'minimal'
+// Defines non-biased placement modes for content navigation in the prompt-folder viewport.
+export type PromptContentRevealScrollType = 'center' | 'minimal'
 
-export type PromptContentRevealRequest = PromptNavigationTarget & {
-  scrollType: PromptContentRevealScrollType
-}
+/** Configurable placement requested for one prompt-folder content reveal. */
+export type PromptContentRevealPlacement =
+  | { scrollType: PromptContentRevealScrollType }
+  | { scrollType: 'vertical-bias'; verticalBiasPx: number }
+
+export type PromptContentRevealRequest = PromptNavigationTarget & PromptContentRevealPlacement
 
 export type PromptFocusRequest = {
   screenRootFolderId: string
@@ -81,8 +84,7 @@ type SelectPromptNavigationOptions = {
   /** Prompt clicked in the tree when this exact selection should start a highlight. */
   navigationHighlightPromptId?: string
   forceRequest?: boolean
-  contentReveal?: {
-    scrollType: PromptContentRevealScrollType
+  contentReveal?: PromptContentRevealPlacement & {
     expandDetails?: boolean
     /** Whether category navigation must expose the category's prompt/template content. */
     expandContent?: boolean
@@ -216,10 +218,15 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
       contentRevealRequests.clear()
     }
     const contentRevealRequest = contentReveal
-      ? contentRevealRequests.request({
-          ...target,
-          scrollType: contentReveal.scrollType
-        })
+      ? contentRevealRequests.request(
+          contentReveal.scrollType === 'vertical-bias'
+            ? {
+                ...target,
+                scrollType: contentReveal.scrollType,
+                verticalBiasPx: contentReveal.verticalBiasPx
+              }
+            : { ...target, scrollType: contentReveal.scrollType }
+        )
       : null
 
     if (focusPromptId) {

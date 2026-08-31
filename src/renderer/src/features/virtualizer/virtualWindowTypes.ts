@@ -18,14 +18,14 @@ export type VirtualWindowRowComponentProps<TRow> = {
   shouldDehydrate: boolean
   overlayRowElement?: HTMLDivElement | null
   scrollToWithinWindowBand?: ScrollToWithinWindowBand
-  scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered
+  scrollToAndTrackRow?: ScrollToAndTrackRow
   onHydrationChange?: (isHydrated: boolean) => void
 }
 
 export type VirtualWindowRowSnippet<TRow> = Snippet<[VirtualWindowRowComponentProps<TRow>]>
 
 // Defines how a requested row position is placed within the virtual viewport.
-export type ScrollToWithinWindowBandType = 'align-top' | 'center' | 'minimal'
+export type ScrollToWithinWindowBandType = 'center' | 'minimal'
 
 export type ScrollToWithinWindowBand = (
   rowId: string,
@@ -34,7 +34,16 @@ export type ScrollToWithinWindowBand = (
   scrollPaddingPx?: number
 ) => void
 
-export type ScrollToAndTrackRowCentered = (rowId: string) => void
+/** Placement retained while a tracked virtual row finishes measuring. */
+export type TrackedRowScrollPlacement =
+  | { type: 'center' }
+  | { type: 'vertical-bias'; verticalBiasPx: number }
+
+/** Scrolls to one row and retains its requested placement while measurements change. */
+export type ScrollToAndTrackRow = (
+  rowId: string,
+  placement: TrackedRowScrollPlacement
+) => void
 
 export type VirtualWindowScrollApi = {
   scrollTo: (scrollTopPx: number) => void

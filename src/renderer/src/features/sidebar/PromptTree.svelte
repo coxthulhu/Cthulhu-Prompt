@@ -79,6 +79,10 @@
   } from './promptTreeDrag'
   import { createBlankPromptInFolder } from '../prompt-folders/createBlankPromptInFolder'
   import { createBlankPromptTemplateInFolder } from '../prompt-folders/createBlankPromptTemplateInFolder'
+  import {
+    PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX,
+    PROMPT_FOLDER_VERTICAL_BIAS_PX
+  } from '../prompt-folders/promptFolderScrollOffsets'
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
   type PromptTreeBulkExpansionRequest = {
@@ -494,7 +498,15 @@
       navigationHighlightPromptId,
       forceRequest: true,
       contentReveal: {
-        scrollType: row === 'category-details' ? 'align-top' : 'center',
+        ...(row === 'category-details'
+          ? {
+              scrollType: 'vertical-bias' as const,
+              verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
+            }
+          : {
+              scrollType: 'vertical-bias' as const,
+              verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+            }),
         expandDetails: source !== 'category-open',
         expandContent: source === 'category-open'
       },
@@ -552,7 +564,10 @@
       row,
       source: 'prompt-tree-create',
       forceRequest: true,
-      contentReveal: { scrollType: 'center' },
+      contentReveal: {
+        scrollType: 'vertical-bias',
+        verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+      },
       focusPromptId: contentId,
       treeExpansion: 'owner'
     })

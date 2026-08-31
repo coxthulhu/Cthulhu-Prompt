@@ -30,7 +30,7 @@
   import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
-    type ScrollToAndTrackRowCentered,
+    type ScrollToAndTrackRow,
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
     type VirtualWindowRowComponentProps,
@@ -169,7 +169,7 @@
     onDeleteCategory: (categoryId: string) => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
-    onScrollToAndTrackRowCenteredChange: (next: ScrollToAndTrackRowCentered | null) => void
+    onScrollToAndTrackRowChange: (next: ScrollToAndTrackRow | null) => void
     onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
     onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
     onScrollTopChange: (nextScrollTop: number) => void
@@ -221,7 +221,7 @@
     onDeleteCategory,
     onScreenModeChange,
     onScrollToWithinWindowBandChange,
-    onScrollToAndTrackRowCenteredChange,
+    onScrollToAndTrackRowChange,
     onScrollApiChange,
     onViewportMetricsChange,
     onScrollTopChange,
@@ -234,7 +234,8 @@
   }: PromptFolderVirtualContentProps = $props()
 
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
-  let scrollToAndTrackRowCentered = $state<ScrollToAndTrackRowCentered | null>(null)
+  /** Tracked-row scroll function exposed by the virtual window. */
+  let scrollToAndTrackRow = $state<ScrollToAndTrackRow | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let isTemplateSelectionDialogOpen = $state(false)
@@ -280,9 +281,9 @@
     onScrollToWithinWindowBandChange(scrollToWithinWindowBand)
   })
 
-  // Side effect: expose the center-row tracking API to the controller.
+  // Side effect: expose the tracked-row scroll API to the controller.
   $effect(() => {
-    onScrollToAndTrackRowCenteredChange(scrollToAndTrackRowCentered)
+    onScrollToAndTrackRowChange(scrollToAndTrackRow)
   })
 
   // Side effect: expose the virtual window scroll API to the controller.
@@ -748,7 +749,7 @@
   testId="prompt-folder-virtual-window"
   spacerTestId="prompt-folder-virtual-window-spacer"
   bind:scrollToWithinWindowBand
-  bind:scrollToAndTrackRowCentered
+  bind:scrollToAndTrackRow
   bind:scrollApi
   bind:viewportMetrics
   {onScrollTopChange}

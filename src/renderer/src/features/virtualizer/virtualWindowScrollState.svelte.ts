@@ -3,7 +3,8 @@ import type { VirtualRowState } from './virtualWindowRows'
 import type {
   ScrollToWithinWindowBand,
   ScrollToWithinWindowBandType,
-  ScrollToAndTrackRowCentered
+  ScrollToAndTrackRow,
+  TrackedRowScrollPlacement
 } from './virtualWindowTypes'
 
 type VirtualWindowScrollStateOptions<TRow extends { kind: string }> = {
@@ -35,7 +36,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   let previousRowStates = $state<VirtualRowState<TRow>[]>([])
   let scrollbarRevealVersion = $state(0)
   let lastScrollTop = 0
-  let trackedRowId = $state<string | null>(null)
+  /** Single row placement retained while virtual measurements settle. */
+  let trackedRow = $state<{ rowId: string; placement: TrackedRowScrollPlacement } | null>(null)
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
   const scrollShadowActive = $derived(scrollTopPx > 0)
@@ -57,7 +59,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   }
 
   const applyUserScrollTop = (nextScrollTop: number) => {
-    trackedRowId = null
+    trackedRow = null
     const didScroll = applyScrollTop(nextScrollTop, true)
     if (didScroll) {
       getOnUserScroll()?.(scrollTopPx)
@@ -150,19 +152,13 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     const bandTopPx = scrollTopPx + bandPaddingPx
     const bandBottomPx = scrollTopPx + viewportHeight - bandPaddingPx
 
-    if (
-      scrollType !== 'align-top' &&
-      targetOffsetPx >= bandTopPx &&
-      targetOffsetPx <= bandBottomPx
-    ) {
+    if (targetOffsetPx >= bandTopPx && targetOffsetPx <= bandBottomPx) {
       return
     }
 
     let nextScrollTop = scrollTopPx
 
-    if (scrollType === 'align-top') {
-      nextScrollTop = targetOffsetPx - scrollPaddingPx
-    } else if (scrollType === 'center') {
+    if (scrollType === 'center') {
       nextScrollTop = targetOffsetPx - viewportHeight / 2
     } else if (targetOffsetPx < bandTopPx) {
       nextScrollTop = targetOffsetPx - bandPaddingPx
@@ -171,9 +167,6 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     }
 
     nextScrollTop = clampScrollTop(nextScrollTop)
-    if (scrollType === 'align-top') {
-      scrollAnchorMode = 'top'
-    }
     if (nextScrollTop === scrollTopPx) return
 
     applyProgrammaticScrollTop(nextScrollTop)
@@ -184,15 +177,34 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   }
 
   const TRACKED_ROW_TOP_PADDING_PX = 100
+  /** Minimum viewport-top offset retained by vertical-bias placement. */
+  const MINIMUM_TRACKED_ROW_TOP_OFFSET_PX = 20
 
-  const getTrackedRowScrollTop = (row: VirtualRowState<TRow>, viewportHeight: number): number => {
+  /** Resolves the scroll top for the tracked row's current measured height. */
+  const getTrackedRowScrollTop = (
+    row: VirtualRowState<TRow>,
+    viewportHeight: number,
+    placement: TrackedRowScrollPlacement
+  ): number => {
+    if (placement.type === 'vertical-bias') {
+      /** Largest symmetric top and bottom offset available around the complete row. */
+      const availableSymmetricOffsetPx = (viewportHeight - row.height) / 2
+      /** Bias reduced symmetrically as needed, while keeping the row at least 20px from the top. */
+      const effectiveVerticalBiasPx = Math.max(
+        MINIMUM_TRACKED_ROW_TOP_OFFSET_PX,
+        Math.min(placement.verticalBiasPx, availableSymmetricOffsetPx)
+      )
+      return row.offset - effectiveVerticalBiasPx
+    }
+
     if (row.height + TRACKED_ROW_TOP_PADDING_PX > viewportHeight) {
       return row.offset - TRACKED_ROW_TOP_PADDING_PX
     }
     return row.offset + row.height / 2 - viewportHeight / 2
   }
 
-  const scrollToAndTrackRowCentered: ScrollToAndTrackRowCentered = (rowId: string) => {
+  /** Starts the one active tracked-row placement. */
+  const scrollToAndTrackRow: ScrollToAndTrackRow = (rowId, placement) => {
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
 
@@ -200,20 +212,21 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     const row = rowStates.find((candidate) => candidate.id === rowId)
     if (!row) return
 
-    trackedRowId = rowId
-    const nextScrollTop = clampScrollTop(getTrackedRowScrollTop(row, viewportHeight))
+    trackedRow = { rowId, placement }
+    const nextScrollTop = clampScrollTop(
+      getTrackedRowScrollTop(row, viewportHeight, placement)
+    )
+    scrollAnchorMode = 'center'
     if (nextScrollTop === scrollTopPx) return
 
     applyProgrammaticScrollTop(nextScrollTop)
-
-    scrollAnchorMode = 'center'
   }
 
   // Side effect: stop tracking once we leave center anchoring (e.g., after hydration completes).
   $effect(() => {
-    if (!trackedRowId) return
+    if (!trackedRow) return
     if (scrollAnchorMode === 'center') return
-    trackedRowId = null
+    trackedRow = null
   })
 
   // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
@@ -231,15 +244,17 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   // Side effect: keep the tracked row aligned as measurements change.
   $effect(() => {
-    const rowId = trackedRowId
-    if (!rowId) return
+    const tracked = trackedRow
+    if (!tracked) return
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
 
-    const row = getRowStates().find((candidate) => candidate.id === rowId)
+    const row = getRowStates().find((candidate) => candidate.id === tracked.rowId)
     if (!row) return
 
-    const nextScrollTop = clampScrollTop(getTrackedRowScrollTop(row, viewportHeight))
+    const nextScrollTop = clampScrollTop(
+      getTrackedRowScrollTop(row, viewportHeight, tracked.placement)
+    )
     if (nextScrollTop === scrollTopPx) return
     applyProgrammaticScrollTop(nextScrollTop)
   })
@@ -264,7 +279,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getScrollShadowActive: () => scrollShadowActive,
     getScrollbarRevealVersion: () => scrollbarRevealVersion,
     scrollToWithinWindowBand,
-    scrollToAndTrackRowCentered,
+    scrollToAndTrackRow,
     compensateForRowMove
   }
 }

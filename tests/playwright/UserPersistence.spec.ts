@@ -16,6 +16,66 @@ const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
 const PROMPT_FOLDER_HOST_SELECTOR = '[data-testid="prompt-folder-virtual-window"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+/** Preferred viewport-top offset used when restoring a prompt selection. */
+const PROMPT_FOLDER_VERTICAL_BIAS_PX = 300
+/** Retained viewport-top offset used when restoring a category selection. */
+const PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX = 80
+/** Minimum viewport-top offset used when a restored prompt row is too tall. */
+const PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX = 20
+
+/** Verifies a restored row uses measured vertical-bias placement and boundary clamping. */
+const expectRestoredRowVerticalBias = async (
+  mainWindow: any,
+  testHelpers: any,
+  rowSelector: string,
+  verticalBiasPx: number
+): Promise<void> => {
+  await expect
+    .poll(async () => {
+      const [geometry, scrollTopPx, scrollHeightPx] = await Promise.all([
+        mainWindow.evaluate(
+          ({ hostSelector, targetSelector }) => {
+            const host = document.querySelector<HTMLElement>(hostSelector)
+            const target = document.querySelector<HTMLElement>(targetSelector)
+            if (!host || !target) return null
+            const hostRect = host.getBoundingClientRect()
+            const targetRect = target.getBoundingClientRect()
+            return {
+              topOffsetPx: targetRect.top - hostRect.top,
+              rowHeightPx: targetRect.height,
+              viewportHeightPx: hostRect.height
+            }
+          },
+          { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, targetSelector: rowSelector }
+        ),
+        testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR),
+        testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST_SELECTOR)
+      ])
+      if (!geometry) return Number.POSITIVE_INFINITY
+
+      /** Symmetric space available around the complete restored row. */
+      const availableSymmetricBiasPx =
+        (geometry.viewportHeightPx - geometry.rowHeightPx) / 2
+      /** Bias expected after fitting the row and enforcing the minimum top offset. */
+      const effectiveBiasPx = Math.max(
+        PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX,
+        Math.min(verticalBiasPx, availableSymmetricBiasPx)
+      )
+      /** Stable row offset reconstructed from the current virtual scroll position. */
+      const rowOffsetPx = scrollTopPx + geometry.topOffsetPx
+      /** Maximum scroll position used to reproduce document-boundary clamping. */
+      const maxScrollTopPx = Math.max(0, scrollHeightPx - geometry.viewportHeightPx)
+      /** Expected scroll position for this row and bias. */
+      const expectedScrollTopPx = Math.min(
+        Math.max(0, rowOffsetPx - effectiveBiasPx),
+        maxScrollTopPx
+      )
+      /** Expected row inset after the scroll position is clamped. */
+      const expectedTopOffsetPx = rowOffsetPx - expectedScrollTopPx
+      return Math.abs(geometry.topOffsetPx - expectedTopOffsetPx)
+    })
+    .toBeLessThanOrEqual(2)
+}
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -734,9 +794,14 @@ describe('User Persistence', () => {
       .locator('[data-testid="prompt-tree-category-toggle-button-Category"]')
       .locator('..')
     await expect(categoryRow).toHaveAttribute('data-row-state', 'active')
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
-      .toBeGreaterThan(0)
+    /** Main category row restored at the retained category-navigation offset. */
+    const categoryEditorSelector = `[data-testid="category-editor-${categoryId}"]`
+    await expectRestoredRowVerticalBias(
+      mainWindow,
+      testHelpers,
+      categoryEditorSelector,
+      PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
+    )
   })
 
   test('restores a persisted categorized prompt on startup', async ({
@@ -773,9 +838,12 @@ describe('User Persistence', () => {
 
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Category Prompt')
     await expect(mainWindow.locator('[data-testid="prompt-editor-category-prompt"]')).toBeVisible()
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
-      .toBeGreaterThan(0)
+    await expectRestoredRowVerticalBias(
+      mainWindow,
+      testHelpers,
+      '[data-testid="prompt-editor-category-prompt"]',
+      PROMPT_FOLDER_VERTICAL_BIAS_PX
+    )
   })
 
   test('restores and auto-scrolls prompt tree to persisted entry on startup', async ({

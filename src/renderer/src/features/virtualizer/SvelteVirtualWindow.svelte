@@ -5,7 +5,7 @@
     type VirtualWindowRowSnippet,
     type VirtualWindowRowTypeRegistry,
     type ScrollToWithinWindowBand,
-    type ScrollToAndTrackRowCentered,
+    type ScrollToAndTrackRow,
     type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from './virtualWindowTypes'
@@ -26,7 +26,7 @@
     overlayScrollbar?: boolean
     initialScrollTopPx?: number | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
-    scrollToAndTrackRowCentered?: ScrollToAndTrackRowCentered | null
+    scrollToAndTrackRow?: ScrollToAndTrackRow | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
     /** Offset below the viewport top used to sample the current virtual row. */
     sampleRowOffsetPx?: number
@@ -57,7 +57,7 @@
     overlayScrollbar = false,
     initialScrollTopPx = null,
     scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
-    scrollToAndTrackRowCentered = $bindable<ScrollToAndTrackRowCentered | null>(null),
+    scrollToAndTrackRow = $bindable<ScrollToAndTrackRow | null>(null),
     onCenterRowChange,
     sampleRowOffsetPx = 0,
     onSampleRowChange,
@@ -111,7 +111,7 @@
     getScrollShadowActive,
     getScrollbarRevealVersion,
     scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
-    scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
+    scrollToAndTrackRow: scrollToAndTrackRowInternal,
     compensateForRowMove
   } = createVirtualWindowScrollState({
     getRowStates,
@@ -180,7 +180,7 @@
   }
 
   scrollToWithinWindowBand = scrollToWithinWindowBandInternal
-  scrollToAndTrackRowCentered = scrollToAndTrackRowCenteredInternal
+  scrollToAndTrackRow = scrollToAndTrackRowInternal
   scrollApi = scrollApiInternal
 
   useVirtualWindowCallbacks({
@@ -221,7 +221,7 @@
     shouldDehydrate: shouldDehydrateRow(row),
     overlayRowElement,
     scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
-    scrollToAndTrackRowCentered: scrollToAndTrackRowCenteredInternal,
+    scrollToAndTrackRow: scrollToAndTrackRowInternal,
     onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
   })
 

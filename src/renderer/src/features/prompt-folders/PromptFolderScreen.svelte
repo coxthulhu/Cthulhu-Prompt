@@ -323,7 +323,7 @@
             onCategoryDescriptionChange={handleCategoryDescriptionChange}
             onCategoryDescriptionPresenceChange={handleCategoryDescriptionPresenceChange}
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
-            onScrollToAndTrackRowCenteredChange={controller.setScrollToAndTrackRowCentered}
+            onScrollToAndTrackRowChange={controller.setScrollToAndTrackRow}
             onScrollApiChange={controller.setScrollApi}
             onViewportMetricsChange={controller.setViewportMetrics}
             onScrollTopChange={controller.handleVirtualScrollTopChange}
