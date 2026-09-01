@@ -86,7 +86,8 @@
       title={isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
       size="compact"
       iconSize={18}
-      borderless
+      baseVariant="muted"
+      hoverVariant="glyph"
       ariaExpanded={isAppSidebarExpanded}
       testId="app-sidebar-toggle-button"
       iconTestId={isAppSidebarExpanded ? 'app-sidebar-close-icon' : 'app-sidebar-open-icon'}
@@ -160,12 +161,6 @@
 
   .titlebar__actions :global(.titlebar__sidebar-toggle) {
     -webkit-app-region: no-drag;
-    color: var(--ui-muted-icon-glyph);
-  }
-
-  .titlebar__actions :global(.titlebar__sidebar-toggle:hover),
-  .titlebar__actions :global(.titlebar__sidebar-toggle:focus-visible) {
-    color: var(--ui-normal-text);
   }
 
   .titlebar__title {
