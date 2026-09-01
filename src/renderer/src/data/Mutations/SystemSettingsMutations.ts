@@ -3,7 +3,6 @@ import {
   type SystemSettings
 } from '@shared/SystemSettings'
 import { planSetSystemSettingsDomainMutation } from '@shared/SystemSettingsDomainMutations'
-import { systemSettingsClientStateCollection } from '../Collections/SystemSettingsClientStateCollection'
 import { mutatePacedRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 
 /** Inputs used to enqueue one paced system-settings replacement. */
@@ -31,8 +30,7 @@ export const mutatePacedSystemSettingsAutosaveUpdate = ({
     },
     ipc: { channel: 'update-system-settings' },
     renderer: {
-      mutate: mutateClientState,
-      clientStateCollections: [systemSettingsClientStateCollection]
+      mutate: mutateClientState
     },
     pacing: {
       target: { entityType: 'systemSettings', id: SYSTEM_SETTINGS_ID },

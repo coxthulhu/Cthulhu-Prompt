@@ -41,20 +41,26 @@ const revisionCollections = {
   categoryDescriptionEditorUiState: categoryDescriptionEditorUiStateCollection
 }
 
-const optimisticCollections = {
-  ...revisionCollections,
+const clientStateCollections = {
   promptClientState: promptClientStateCollection,
   promptTemplateClientState: promptTemplateClientStateCollection,
   promptFolderClientState: promptFolderClientStateCollection,
   systemSettingsClientState: systemSettingsClientStateCollection
 }
 
+const optimisticCollections = {
+  ...revisionCollections,
+  ...clientStateCollections
+}
+
 export const mutatePacedRevisionUpdateTransaction = createPacedRevisionUpdateMutationRunner(
   revisionCollections,
-  optimisticCollections
+  optimisticCollections,
+  clientStateCollections
 )
 
 export const runRevisionMutation = createRevisionMutationRunner(
   revisionCollections,
-  optimisticCollections
+  optimisticCollections,
+  clientStateCollections
 )

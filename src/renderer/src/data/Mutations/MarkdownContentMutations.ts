@@ -1,4 +1,3 @@
-import type { Transaction } from '@tanstack/svelte-db'
 import { produce, type Draft } from 'immer'
 import {
   planPromptDelete,
@@ -57,11 +56,7 @@ export type MarkdownContentRendererMutationConfig<
     collections: OptimisticCollections,
     contentId: string
   ) => void
-  markClientStateEdited: (
-    collections: OptimisticCollections,
-    contentId: string
-  ) => void
-  acceptClientStateMutations: (transaction: Transaction<any>) => void
+  markClientStateEdited: (collections: OptimisticCollections, contentId: string) => void
 }
 
 /** Creates category-aware prompt or template renderer mutations. */
@@ -110,10 +105,7 @@ export const createMarkdownContentRendererMutations = <
       renderer: {
         mutate: ({ collections }) => {
           config.insertClientStateOptimistically(collections, content.id)
-        },
-        clientStateCollections: [
-          { utils: { acceptMutations: config.acceptClientStateMutations } }
-        ]
+        }
       }
     })
   }
@@ -143,10 +135,7 @@ export const createMarkdownContentRendererMutations = <
       },
       ipc: { channel: config.channels.update },
       renderer: {
-        mutate: ({ collections }) => config.markClientStateEdited(collections, contentId),
-        clientStateCollections: [
-          { utils: { acceptMutations: config.acceptClientStateMutations } }
-        ]
+        mutate: ({ collections }) => config.markClientStateEdited(collections, contentId)
       },
       pacing: {
         target: { entityType, id: contentId },
@@ -184,10 +173,7 @@ export const createMarkdownContentRendererMutations = <
           } else {
             collections.promptTemplateClientState.delete(contentId)
           }
-        },
-        clientStateCollections: [
-          { utils: { acceptMutations: config.acceptClientStateMutations } }
-        ]
+        }
       }
     })
   }
@@ -223,12 +209,7 @@ export const createMarkdownContentRendererMutations = <
       mutation: { command, plan: movePlanner },
       ipc: { channel: config.channels.move },
       renderer: {
-        mutate: ({ collections }) => config.markClientStateEdited(collections, contentId),
-        clientStateCollections: [
-          {
-            utils: { acceptMutations: config.acceptClientStateMutations }
-          }
-        ]
+        mutate: ({ collections }) => config.markClientStateEdited(collections, contentId)
       }
     })
   }

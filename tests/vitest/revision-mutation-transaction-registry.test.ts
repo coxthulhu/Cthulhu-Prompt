@@ -256,6 +256,7 @@ describe('revision mutation transaction registry', () => {
     clientStateCollection.insert({ id: TEST_ITEM_ID, value: 0 })
     const mutatePacedUpdate = createPacedRevisionUpdateMutationRunner(
       { test: collection },
+      { clientState: clientStateCollection },
       { clientState: clientStateCollection }
     )
     let persistCalled = 0
@@ -281,6 +282,7 @@ describe('revision mutation transaction registry', () => {
     expect(sendPacedUpdateTransactionIfPresent(collectionId, TEST_ITEM_ID)).toBe(true)
     await submitAllPacedUpdateTransactionsAndWait()
     expect(persistCalled).toBe(1)
+    expect(clientStateCollection.get(TEST_ITEM_ID)!.value).toBe(11)
   })
 
   it('waits for the targeted paced update transaction when it is already in flight', async () => {

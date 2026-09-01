@@ -15,8 +15,7 @@ import {
 import { planSetPromptStatusDomainMutation } from '@shared/PromptDomainMutations'
 import { promptCollection } from '../Collections/PromptCollection'
 import {
-  markPromptClientStateEdited,
-  promptClientStateCollection
+  markPromptClientStateEdited
 } from '../Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
@@ -92,9 +91,7 @@ const mutations = createMarkdownContentRendererMutations<
     collections.promptClientState.update(promptId, (clientState) => {
       markPromptClientStateEdited(clientState)
     })
-  },
-  acceptClientStateMutations: (transaction) =>
-    promptClientStateCollection.utils.acceptMutations(transaction),
+  }
 })
 
 export const createPrompt = mutations.create
@@ -171,8 +168,7 @@ export const setPromptStatus = async (
         collections.promptClientState.update(promptId, (clientState) => {
           markPromptClientStateEdited(clientState)
         })
-      },
-      clientStateCollections: [promptClientStateCollection]
+      }
     }
   })
 }

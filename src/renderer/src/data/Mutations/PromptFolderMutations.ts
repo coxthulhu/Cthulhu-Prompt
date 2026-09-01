@@ -4,7 +4,6 @@ import {
   planCreatePromptFolderDomainMutation,
   planRenamePromptFolderDomainMutation
 } from '@shared/PromptFolderDomainMutations'
-import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
@@ -41,8 +40,7 @@ export const createPromptFolder = async (
           id: optimisticPromptFolderId,
           hasLoadedInitialData: false
         })
-      },
-      clientStateCollections: [promptFolderClientStateCollection]
+      }
     }
   })
 

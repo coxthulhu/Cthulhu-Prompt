@@ -132,8 +132,7 @@ const runCategoryDomainMutation = async (displayName: string): Promise<void> =>
         collections.promptClientState.update(CATEGORY_ID, (draft) => {
           draft.isEdited = true
         })
-      },
-      clientStateCollections: [promptClientStateCollection]
+      }
     }
   })
 
@@ -151,8 +150,7 @@ const mutatePacedCategoryDomainMutation = (
         collections.promptClientState.update(CATEGORY_ID, (draft) => {
           draft.isEdited = true
         })
-      },
-      clientStateCollections: [promptClientStateCollection]
+      }
     },
     pacing: {
       target: { entityType: 'category', id: CATEGORY_ID },
@@ -193,11 +191,19 @@ describe('renderer domain mutation framework', () => {
 
   afterEach(async () => {
     await submitAllPacedUpdateTransactionsAndWait()
+    vi.restoreAllMocks()
     vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
   it('accepts renderer-only state after success and sends current target revisions', async () => {
+    /** Touched client-state acceptance performed automatically by the revision framework. */
+    const touchedAcceptSpy = vi.spyOn(promptClientStateCollection.utils, 'acceptMutations')
+    /** Untouched client-state collection that must not be accepted speculatively. */
+    const untouchedAcceptSpy = vi.spyOn(
+      promptTemplateClientStateCollection.utils,
+      'acceptMutations'
+    )
     /** IPC invoke spy returning authoritative success. */
     const invoke = vi.fn().mockResolvedValue(createSuccessResponse(2, 'Successful'))
     vi.stubGlobal('window', {
@@ -209,6 +215,8 @@ describe('renderer domain mutation framework', () => {
 
     expect(categoryCollection.get(CATEGORY_ID)?.displayName).toBe('Successful')
     expect(promptClientStateCollection.get(CATEGORY_ID)?.isEdited).toBe(true)
+    expect(touchedAcceptSpy).toHaveBeenCalledOnce()
+    expect(untouchedAcceptSpy).not.toHaveBeenCalled()
     expect(invoke).toHaveBeenCalledWith(
       'test-renderer-domain',
       expect.objectContaining({

@@ -12,8 +12,7 @@ import {
 } from '@shared/MarkdownContentDomainMutations'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
 import {
-  markPromptTemplateClientStateEdited,
-  promptTemplateClientStateCollection
+  markPromptTemplateClientStateEdited
 } from '../Collections/PromptTemplateClientStateCollection'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
@@ -80,9 +79,7 @@ const mutations = createMarkdownContentRendererMutations<
     collections.promptTemplateClientState.update(templateId, (clientState) => {
       markPromptTemplateClientStateEdited(clientState)
     })
-  },
-  acceptClientStateMutations: (transaction) =>
-    promptTemplateClientStateCollection.utils.acceptMutations(transaction),
+  }
 })
 
 export const createPromptTemplate = mutations.create

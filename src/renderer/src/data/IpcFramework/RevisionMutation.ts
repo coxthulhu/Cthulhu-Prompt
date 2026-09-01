@@ -34,6 +34,13 @@ type AnyRevisionCollection = Collection<any, string, RevisionCollectionUtils<any
 
 type RevisionCollectionsMap = Record<string, AnyRevisionCollection>
 
+type ClientStateCollection = {
+  id: string
+  utils: { acceptMutations: (transaction: Transaction<any>) => void }
+}
+
+type ClientStateCollectionsMap = Record<string, ClientStateCollection>
+
 type CollectionRecord<TCollection> =
   TCollection extends Collection<infer TRecord, string, infer _TUtils> ? TRecord : never
 
@@ -102,12 +109,29 @@ const stripCollectionVirtualProps = <TRecord extends object>(record: TRecord): T
   ) as TRecord
 }
 
+/** Confirms every local-only collection actually changed by a successful manual transaction. */
+const acceptTouchedClientStateMutations = (
+  transaction: Transaction<any>,
+  clientStateCollections: ClientStateCollectionsMap
+): void => {
+  /** Collection IDs represented by at least one mutation in the successful transaction. */
+  const touchedCollectionIds = new Set(
+    transaction.mutations.map((mutation) => mutation.collection.id)
+  )
+  for (const collection of Object.values(clientStateCollections)) {
+    if (touchedCollectionIds.has(collection.id)) {
+      collection.utils.acceptMutations(transaction)
+    }
+  }
+}
+
 // Create a manual-commit transaction using the shared revision mutation contract.
 const createRevisionMutationTransaction = <
   TRevisionCollections extends RevisionCollectionsMap,
   TPayload
 >(
   revisionCollections: TRevisionCollections,
+  clientStateCollections: ClientStateCollectionsMap,
   {
     persistMutations,
     handleSuccessOrConflictResponse,
@@ -138,6 +162,10 @@ const createRevisionMutationTransaction = <
         invoke: (channel, request) => ipcInvokeWithPayload(channel, request.payload),
         transaction
       })
+
+      if (mutationResult.success) {
+        acceptTouchedClientStateMutations(transaction, clientStateCollections)
+      }
 
       if ('payload' in mutationResult) {
         handleSuccessOrConflictResponse(mutationResult.payload)
@@ -209,7 +237,8 @@ export const createRevisionMutationRunner = <
   TOptimisticCollections extends OptimisticCollectionsMap
 >(
   revisionCollections: TRevisionCollections,
-  optimisticCollections: TOptimisticCollections
+  optimisticCollections: TOptimisticCollections,
+  clientStateCollections: ClientStateCollectionsMap = {}
 ) => {
   return async <TPayload>(
     options: RevisionMutationOptions<TRevisionCollections, TOptimisticCollections, TPayload>
@@ -217,6 +246,7 @@ export const createRevisionMutationRunner = <
     const { onSuccess, queueImmediately = true } = options
     const transaction = createRevisionMutationTransaction<TRevisionCollections, TPayload>(
       revisionCollections,
+      clientStateCollections,
       options
     )
 
@@ -252,7 +282,8 @@ export const createPacedRevisionUpdateMutationRunner = <
   TOptimisticCollections extends OptimisticCollectionsMap
 >(
   revisionCollections: TRevisionCollections,
-  optimisticCollections: TOptimisticCollections
+  optimisticCollections: TOptimisticCollections,
+  clientStateCollections: ClientStateCollectionsMap = {}
 ) => {
   return <TPayload>(
     options: PacedRevisionUpdateMutationOptions<
@@ -277,6 +308,7 @@ export const createPacedRevisionUpdateMutationRunner = <
       createTransaction: () => {
         const transaction = createRevisionMutationTransaction<TRevisionCollections, TPayload>(
           revisionCollections,
+          clientStateCollections,
           options
         )
 

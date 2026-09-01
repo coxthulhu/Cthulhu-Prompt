@@ -109,12 +109,7 @@ export const deletePromptFolder = async (
         if (hasPromptFolderClientState) {
           collections.promptFolderClientState.delete(promptFolderId)
         }
-      },
-      clientStateCollections: [
-        promptClientStateCollection,
-        promptTemplateClientStateCollection,
-        promptFolderClientStateCollection
-      ]
+      }
     }
   })
 }

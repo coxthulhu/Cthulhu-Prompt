@@ -55,11 +55,6 @@ type DomainRevisionMutationOptions = Parameters<
 /** Renderer-only optimistic changes applied alongside shared domain changes. */
 type RendererOnlyMutation = DomainRevisionMutationOptions['mutateOptimistically']
 
-/** Local-only collection whose transaction changes are accepted after IPC success. */
-type RendererClientStateCollection = {
-  utils: { acceptMutations: (transaction: Transaction<any>) => void }
-}
-
 /** Grouped shared command and planner inputs for an immediate renderer mutation. */
 type RendererDomainMutationDefinition<TCommand> = {
   command: TCommand
@@ -71,10 +66,9 @@ type RendererDomainMutationIpc = {
   channel: string
 }
 
-/** Grouped renderer-only changes and client-state acceptance configuration. */
+/** Renderer-only optimistic changes applied alongside shared domain changes. */
 type RendererDomainMutationState = {
   mutate?: RendererOnlyMutation
-  clientStateCollections?: RendererClientStateCollection[]
 }
 
 /** Inputs accepted by the immediate renderer domain mutation framework. */
@@ -107,7 +101,6 @@ type LatestPacedRendererDomainMutation = {
   command: unknown
   plan: DomainChange[]
   ipcChannel: string
-  clientStateCollections?: RendererClientStateCollection[]
 }
 
 /** Weak transaction metadata used to replace the command persisted by merged edits. */
@@ -467,7 +460,7 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
       for (const change of plan) applyRendererDomainChange(helpers.collections, change)
       options.renderer.mutate?.(helpers)
     },
-    persistMutations: async ({ invoke, transaction }) => {
+    persistMutations: async ({ invoke }) => {
       /** Latest authoritative expectations captured after earlier queued mutations settle. */
       const expectations = buildRendererDomainExpectations(plan)
       /** Generic domain IPC response for success or authoritative conflict. */
@@ -479,11 +472,6 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
           expectations
         }
       }) as IpcMutationPayloadResult<DomainMutationResponsePayload>
-      if (result.success) {
-        for (const collection of options.renderer.clientStateCollections ?? []) {
-          collection.utils.acceptMutations(transaction)
-        }
-      }
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {
@@ -535,11 +523,6 @@ export const mutatePacedRendererDomainMutation = <TCommand>(
           }
         }
       )) as IpcMutationPayloadResult<DomainMutationResponsePayload>
-      if (result.success) {
-        for (const collection of latestMutation.clientStateCollections ?? []) {
-          collection.utils.acceptMutations(transaction)
-        }
-      }
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {
@@ -551,7 +534,6 @@ export const mutatePacedRendererDomainMutation = <TCommand>(
   latestPacedRendererDomainMutationByTransaction.set(transaction, {
     command: options.mutation.command,
     plan,
-    ipcChannel: options.ipc.channel,
-    clientStateCollections: options.renderer.clientStateCollections
+    ipcChannel: options.ipc.channel
   })
 }
