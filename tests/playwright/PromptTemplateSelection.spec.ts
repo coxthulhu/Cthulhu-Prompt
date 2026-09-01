@@ -762,6 +762,60 @@ describe('Prompt template selection', () => {
     ).toBeLessThanOrEqual(2)
     expect(metrics?.spacerHeight).toBeGreaterThan(metrics?.viewportHeight ?? 0)
 
+    let overscannedTemplateButtonTestId: string | null = null
+    await expect
+      .poll(async () => {
+        overscannedTemplateButtonTestId = await mainWindow.evaluate((virtualWindowSelector) => {
+          const virtualWindow = document.querySelector<HTMLElement>(virtualWindowSelector)
+          if (!virtualWindow) return null
+          const viewportBottom = virtualWindow.getBoundingClientRect().bottom
+          const overscannedButton = Array.from(
+            virtualWindow.querySelectorAll<HTMLButtonElement>(
+              '[data-testid^="prompt-tree-prompt-virtual-template-"]'
+            )
+          ).find((button) => button.getBoundingClientRect().top > viewportBottom)
+          return overscannedButton?.dataset.testid ?? null
+        }, virtualWindowSelector)
+        return overscannedTemplateButtonTestId
+      })
+      .not.toBeNull()
+
+    if (typeof overscannedTemplateButtonTestId !== 'string') {
+      throw new Error('Failed to resolve the lower template-tree overscan row')
+    }
+
+    const dialogGeometryBeforeOverscanFocus = await mainWindow.evaluate(() => {
+      const dialogLayer = document.querySelector<HTMLElement>('.cthulhuUiDialogLayer')!
+      const dialog = document.querySelector<HTMLElement>('.promptTemplateSelectionDialog')!
+      const mainSurface = document.querySelector<HTMLElement>('.mainScreenSurface')!
+      return {
+        dialogLayerTop: dialogLayer.getBoundingClientRect().top,
+        dialogTop: dialog.getBoundingClientRect().top,
+        mainSurfaceTop: mainSurface.getBoundingClientRect().top,
+        documentScrollTop: document.scrollingElement?.scrollTop ?? null
+      }
+    })
+
+    await dialog
+      .locator(`[data-testid="${overscannedTemplateButtonTestId}"]`)
+      .focus()
+
+    await expect
+      .poll(async () => {
+        return await mainWindow.evaluate(() => {
+          const dialogLayer = document.querySelector<HTMLElement>('.cthulhuUiDialogLayer')!
+          const dialog = document.querySelector<HTMLElement>('.promptTemplateSelectionDialog')!
+          const mainSurface = document.querySelector<HTMLElement>('.mainScreenSurface')!
+          return {
+            dialogLayerTop: dialogLayer.getBoundingClientRect().top,
+            dialogTop: dialog.getBoundingClientRect().top,
+            mainSurfaceTop: mainSurface.getBoundingClientRect().top,
+            documentScrollTop: document.scrollingElement?.scrollTop ?? null
+          }
+        })
+      })
+      .toEqual(dialogGeometryBeforeOverscanFocus)
+
     await electronApp.evaluate(({ BrowserWindow }) => {
       const window = BrowserWindow.getAllWindows()[0]
       if (!window) throw new Error('Missing main window')

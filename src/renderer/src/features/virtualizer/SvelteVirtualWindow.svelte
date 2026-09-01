@@ -1,3 +1,9 @@
+<!--
+  Focus-containment invariant: overscan rows remain mounted outside the visible viewport. Chromium
+  can scroll an `overflow: hidden` ancestor to reveal a focused overscan row, shifting the entire
+  surrounding layout. This component and any non-scrolling ancestor used to clip it must use
+  `overflow: clip`; intentional scroll containers must be separate.
+-->
 <script lang="ts" generics="TRow extends { kind: string }">
   import {
     type VirtualWindowItem,
@@ -252,6 +258,12 @@
       handleWheel(event)
     }}
   >
+    <!--
+      Focus-containment invariant: overscan rows remain mounted outside the visible viewport.
+      Chromium can scroll an `overflow: hidden` ancestor to reveal a focused overscan row, shifting
+      the entire surrounding layout. This viewport and any non-scrolling ancestor used to clip a
+      SvelteVirtualWindow must use `overflow: clip`; intentional scroll containers must be separate.
+    -->
     <div
       class="h-full flex-1 min-w-0"
       style="overflow-anchor: none; overflow: clip; position: relative;"

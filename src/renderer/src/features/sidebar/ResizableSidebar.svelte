@@ -95,7 +95,7 @@
   })
 </script>
 
-<div class={`flex w-full overflow-hidden ${containerClass}`} style={`--sidebar-width: ${width}px`}>
+<div class={`flex w-full overflow-clip ${containerClass}`} style={`--sidebar-width: ${width}px`}>
   <div
     class="resizableSidebarPane relative flex-shrink-0"
     style={`width: ${width}px`}
