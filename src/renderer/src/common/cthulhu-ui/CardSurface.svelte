@@ -41,7 +41,7 @@
   }
 
   .cthulhuUiCardSurface[data-variant='overlay'] {
-    background: var(--ui-card-solid-surface);
+    background: var(--ui-card-overlay-surface);
     border: 1px solid var(--ui-card-normal-border);
     box-shadow: 0 8px 12px var(--ui-card-normal-shadow);
   }

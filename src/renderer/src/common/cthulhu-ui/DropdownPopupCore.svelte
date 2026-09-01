@@ -340,6 +340,8 @@
 
 <style>
   .cthulhuUiDropdownPopupLayer {
+    border-radius: var(--cthulhu-ui-radius-card);
+    box-shadow: 0 0 12px var(--ui-shadow-raised);
     color: var(--ui-normal-text);
     max-height: calc(100vh - 32px);
     overflow-y: auto;
@@ -347,5 +349,9 @@
     position: fixed;
     width: var(--cthulhu-ui-dropdown-popup-menu-width);
     z-index: 60;
+  }
+
+  .cthulhuUiDropdownPopupLayer :global(.cthulhuUiCardSurface) {
+    box-shadow: none;
   }
 </style>
