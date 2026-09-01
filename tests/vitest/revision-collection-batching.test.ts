@@ -38,6 +38,18 @@ const createTestCollection = (label: string) => {
 }
 
 describe('revision collection batching', () => {
+  it('tracks authoritative presence across snapshot reconciliation', () => {
+    /** Revision collection whose authoritative presence map is exercised directly. */
+    const collection = createTestCollection('authoritative-presence')
+    expect(collection.utils.hasAuthoritative('prompt-1')).toBe(false)
+
+    collection.utils.upsertAuthoritative(createSnapshot('prompt-1', 1, 10))
+    expect(collection.utils.hasAuthoritative('prompt-1')).toBe(true)
+
+    collection.utils.deleteAuthoritative('prompt-1')
+    expect(collection.utils.hasAuthoritative('prompt-1')).toBe(false)
+  })
+
   it('applies authoritative batch upserts', () => {
     const collection = createTestCollection('upsert-many')
 

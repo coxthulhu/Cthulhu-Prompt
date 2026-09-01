@@ -162,27 +162,100 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       markdownCount: 2
     })
 
-    /** Direct handler response isolated from the legacy renderer aggregate autosave. */
+    /** Split UI-state load that hydrates the newly seeded SQLite records authoritatively. */
+    const uiStateLoadResult = await mainWindow.evaluate(async (workspaceId) => {
+      return await window.electron.ipcRenderer.invoke('load-workspace-ui-state', {
+        requestId: `root-delete-ui-state-${Date.now()}`,
+        clientId: window.ipcClientId,
+        payload: { workspaceId }
+      })
+    }, workspaceRow.workspaceId)
+    /** Root folder data used to derive every non-optional deletion target. */
+    const promptFolderData = promptFolderSnapshot.data as {
+      kind: 'prompt' | 'template'
+      completedPromptIds: string[]
+      categoryOrder: {
+        categories: Array<{
+          categoryId: string | null
+          entries: Array<{ kind: 'prompt' | 'template'; id: string }>
+        }>
+      }
+    }
+    /** Active and completed content IDs owned by the deleted root. */
+    const contentIds = [
+      ...promptFolderData.categoryOrder.categories.flatMap((category) =>
+        category.entries.map((entry) => entry.id)
+      ),
+      ...promptFolderData.completedPromptIds
+    ]
+    /** Category IDs whose files and editor state are deleted with the root. */
+    const categoryIds = promptFolderData.categoryOrder.categories.flatMap((category) =>
+      category.categoryId ? [category.categoryId] : []
+    )
+    /** Required generic domain expectations; optional SQLite deletes are excluded by policy. */
+    const deletionExpectations = [
+      {
+        entityType: 'workspace',
+        id: workspaceSnapshot.id,
+        expected: 'revision',
+        revision: workspaceSnapshot.revision
+      },
+      ...contentIds.map((contentId) => {
+        /** Workspace-load snapshot supplying the current content revision. */
+        const snapshot = (
+          promptFolderData.kind === 'prompt'
+            ? workspaceLoadResult.prompts
+            : workspaceLoadResult.promptTemplates
+        ).find((candidate: { id: string }) => candidate.id === contentId)
+        return {
+          entityType: promptFolderData.kind === 'prompt' ? 'prompt' : 'promptTemplate',
+          id: contentId,
+          expected: 'revision',
+          revision: snapshot.revision
+        }
+      }),
+      ...categoryIds.map((ownedCategoryId) => {
+        /** Workspace-load category snapshot supplying the current category revision. */
+        const snapshot = workspaceLoadResult.categories.find(
+          (candidate: { id: string }) => candidate.id === ownedCategoryId
+        )
+        return {
+          entityType: 'category',
+          id: ownedCategoryId,
+          expected: 'revision',
+          revision: snapshot.revision
+        }
+      }),
+      {
+        entityType: 'promptFolder',
+        id: promptFolderSnapshot.id,
+        expected: 'revision',
+        revision: promptFolderSnapshot.revision
+      },
+      {
+        entityType: 'workspaceUiState',
+        id: workspaceRow.workspaceId,
+        expected: 'revision',
+        revision: uiStateLoadResult.workspaceUiState.revision
+      }
+    ]
+    /** Direct generic-domain handler response for root deletion. */
     const deleteResult = await mainWindow.evaluate(
-      async ({ workspace, promptFolder }) => {
+      async ({ workspaceId, promptFolderId, expectations }) => {
         return await window.electron.ipcRenderer.invoke('delete-prompt-folder', {
           requestId: `root-delete-${Date.now()}`,
           clientId: window.ipcClientId,
           payload: {
-            workspace: {
-              id: workspace.id,
-              expectedRevision: workspace.revision,
-              data: workspace.data
-            },
-            promptFolder: {
-              id: promptFolder.id,
-              expectedRevision: promptFolder.revision,
-              data: promptFolder.data
-            }
+            command: { workspaceId, promptFolderId },
+            expectations
           }
         })
       },
-      { workspace: workspaceSnapshot, promptFolder: promptFolderSnapshot }
+      {
+        workspaceId: workspaceRow.workspaceId,
+        promptFolderId,
+        expectations: deletionExpectations
+      }
     )
     expect(deleteResult).toMatchObject({ success: true })
 

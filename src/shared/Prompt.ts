@@ -1,8 +1,3 @@
-import type {
-  DeleteMarkdownContentPayload,
-  DeleteMarkdownContentResponsePayload
-} from './MarkdownContent'
-
 export enum PromptStatus {
   Todo = 'Todo',
   InProgress = 'InProgress',
@@ -91,10 +86,6 @@ export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
 export const isPromptFull = (prompt: Prompt): prompt is PromptFull => {
   return prompt.loadingState === 'full'
 }
-
-export type DeletePromptPayload = DeleteMarkdownContentPayload<PromptPersisted>
-
-export type DeletePromptResponsePayload = DeleteMarkdownContentResponsePayload<PromptPersisted>
 
 /** Exact category-order placement used when a prompt enters the ordered tree. */
 export type PromptCategoryOrderPlacement = {

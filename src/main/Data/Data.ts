@@ -13,7 +13,6 @@ import {
   categoryDescriptionEditorUiStateData,
   markdownContentUiStateData,
   userPersistenceData,
-  workspacePersistenceData,
   workspacePromptFolderUiStateData,
   workspaceUiStateData
 } from './UiStateData'
@@ -37,7 +36,6 @@ export const data = {
   prompt: promptData,
   promptTemplate: promptTemplateData,
   userPersistence: userPersistenceData,
-  workspacePersistence: workspacePersistenceData,
   markdownContentUiState: markdownContentUiStateData,
   workspaceUiState: workspaceUiStateData,
   workspacePromptFolderUiState: workspacePromptFolderUiStateData,

@@ -1,6 +1,7 @@
 import type {
   DomainChange,
   DomainMutationConflict,
+  DomainExpectedTargetSelector,
   DomainPlanner,
   DomainState,
   DomainTarget
@@ -17,6 +18,11 @@ import {
   moveCategoryOrderGroup,
   type PromptFolder
 } from './PromptFolder'
+import {
+  createCategoryDescriptionEditorUiStateKey,
+  createWorkspacePromptFolderUiStateKey,
+  type WorkspacePromptFolderUiState
+} from './UiState'
 
 /** Renderer-authored command for creating one root-owned category. */
 export type CreateCategoryDomainCommand = {
@@ -51,6 +57,7 @@ export const parseCreateCategoryDomainCommand = (
 export type DeleteCategoryDomainCommand = {
   categoryId: string
   promptFolderId: string
+  workspaceId: string
   modifiedAt: string
 }
 
@@ -81,9 +88,10 @@ export const parseDeleteCategoryDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 3 ||
+    Object.keys(record).length !== 4 ||
     typeof record.categoryId !== 'string' ||
     typeof record.promptFolderId !== 'string' ||
+    typeof record.workspaceId !== 'string' ||
     typeof record.modifiedAt !== 'string'
   ) {
     return null
@@ -91,6 +99,7 @@ export const parseDeleteCategoryDomainCommand = (
   return {
     categoryId: record.categoryId,
     promptFolderId: record.promptFolderId,
+    workspaceId: record.workspaceId,
     modifiedAt: record.modifiedAt
   }
 }
@@ -242,6 +251,19 @@ const collectCategoryDeletionTargets = (
   return targets
 }
 
+/** Excludes best-effort SQLite cleanup deletes from concurrency expectations. */
+export const selectCategoryDeletionExpectedTargets: DomainExpectedTargetSelector = (
+  changes
+) =>
+  changes.filter(
+    (change) =>
+      !(
+        change.type === 'delete' &&
+        (change.entityType === 'workspacePromptFolderUiState' ||
+          change.entityType === 'categoryDescriptionEditorUiState')
+      )
+  )
+
 /** Plans category deletion and reference cleanup against the supplied domain graph. */
 export const planDeleteCategoryDomainMutation: DomainPlanner<
   DeleteCategoryDomainCommand
@@ -254,6 +276,10 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
     .find((folder) =>
       getCategoryOrderCategoryIds(folder.categoryOrder).includes(command.categoryId)
     )
+  /** Workspace that owns the category's root prompt folder. */
+  const workspace = state
+    .getAll('workspace')
+    .find((candidate) => candidate.entries.some((entry) => entry.id === owningFolder?.id))
   /** Correct target set used by successful planning and invariant conflicts. */
   const targets = collectCategoryDeletionTargets(
     state,
@@ -262,7 +288,13 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
     command.promptFolderId
   )
 
-  if (!category || !owningFolder || owningFolder.id !== command.promptFolderId) {
+  if (
+    !category ||
+    !owningFolder ||
+    owningFolder.id !== command.promptFolderId ||
+    !workspace ||
+    workspace.id !== command.workspaceId
+  ) {
     return createConflict('Category ownership conflict', targets)
   }
 
@@ -306,6 +338,85 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       })
     }
   }
+
+  /** Workspace-level navigation state used to identify an actively selected category. */
+  const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
+  /** Whether the deleted category currently owns the visible prompt-folder selection. */
+  const isActiveCategory =
+    workspaceUiState?.selectedScreen === 'prompt-folders' &&
+    workspaceUiState.selectedScreenData.promptFolderId === command.promptFolderId &&
+    workspaceUiState.selectedScreenData.contentOwnerId === command.categoryId
+  /** Composite key for the deleted category's prompt-folder view state. */
+  const categoryUiStateId = createWorkspacePromptFolderUiStateKey(
+    command.workspaceId,
+    command.categoryId
+  )
+  /** Persisted row selection last owned by the deleted category. */
+  const categoryUiState = state.get('workspacePromptFolderUiState', categoryUiStateId)
+
+  if (isActiveCategory && workspaceUiState) {
+    /** Root owner state receiving the transferred selected prompt or template. */
+    const rootUiStateId = createWorkspacePromptFolderUiStateKey(
+      command.workspaceId,
+      command.promptFolderId
+    )
+    /** Existing root expansion state preserved while its selection changes. */
+    const rootUiState = state.get('workspacePromptFolderUiState', rootUiStateId)
+    /** Selected entry normalized from category-only details to the root header. */
+    const selectedEntryId =
+      !categoryUiState ||
+      categoryUiState.selectedEntryId === 'category-details' ||
+      categoryUiState.selectedEntryId === 'root-header'
+        ? 'root-header'
+        : categoryUiState.selectedEntryId
+    changes.push({
+      type: 'update',
+      entityType: 'workspaceUiState',
+      id: command.workspaceId,
+      recipe: (draft) => {
+        if (draft.selectedScreen === 'prompt-folders') {
+          draft.selectedScreenData.contentOwnerId = command.promptFolderId
+        }
+      }
+    })
+    if (rootUiState) {
+      changes.push({
+        type: 'update',
+        entityType: 'workspacePromptFolderUiState',
+        id: rootUiStateId,
+        recipe: (draft) => {
+          draft.selectedEntryId = selectedEntryId
+        }
+      })
+    } else {
+      /** Default root state created only when an active category selection must transfer. */
+      const nextRootUiState: WorkspacePromptFolderUiState = {
+        workspaceId: command.workspaceId,
+        contentOwnerId: command.promptFolderId,
+        selectedEntryId,
+        treeIsExpanded: true,
+        detailsSectionIsExpanded: false,
+        contentSectionIsExpanded: true
+      }
+      changes.push({
+        type: 'insert',
+        entityType: 'workspacePromptFolderUiState',
+        id: rootUiStateId,
+        data: nextRootUiState
+      })
+    }
+  }
+
+  changes.push({
+    type: 'delete',
+    entityType: 'workspacePromptFolderUiState',
+    id: categoryUiStateId
+  })
+  changes.push({
+    type: 'delete',
+    entityType: 'categoryDescriptionEditorUiState',
+    id: createCategoryDescriptionEditorUiStateKey(command.workspaceId, command.categoryId)
+  })
 
   return changes
 }

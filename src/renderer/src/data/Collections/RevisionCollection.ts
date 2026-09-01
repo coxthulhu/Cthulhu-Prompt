@@ -12,6 +12,8 @@ export interface RevisionCollectionUtils<TRecord extends object> extends UtilsRe
   upsertManyAuthoritative: (snapshots: Array<RevisionEnvelope<TRecord>>) => void
   deleteAuthoritative: (key: string) => void
   deleteManyAuthoritative: (keys: Array<string>) => void
+  /** Reports whether the latest authoritative snapshot contains the key. */
+  hasAuthoritative: (key: string) => boolean
   getAuthoritativeRevision: (key: string) => number
 }
 
@@ -178,6 +180,7 @@ export const revisionCollectionOptions = <TRecord extends object>(
       deleteManyAuthoritative: (keys) => {
         writeManyAuthoritative(collectDeleteMessages(keys))
       },
+      hasAuthoritative: (key) => authoritativeRevisions.has(key),
       getAuthoritativeRevision
     },
     startSync: true,

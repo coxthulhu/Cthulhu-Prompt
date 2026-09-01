@@ -3,14 +3,13 @@ import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 
-const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
 const mutatePacedRevisionUpdateTransaction = vi.hoisted(() => vi.fn())
 const runRevisionMutation = vi.hoisted(() => vi.fn())
 /** Stable transaction identity returned by the paced mutation mock. */
 const pacedTransaction = {}
 
-vi.mock('@renderer/data/IpcFramework/IpcRequestInvoke', () => ({ ipcInvokeWithPayload }))
 vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation,
@@ -41,19 +40,6 @@ const templateFolder = (id: string, templateIds: string[] = []) => ({
   settings: { folderDescription: null }
 })
 
-const entityBuilders = {
-  promptFolder: ({ id, data }: { id: string; data: object }) => ({
-    id,
-    expectedRevision: 1,
-    data
-  }),
-  promptTemplate: ({ id, data }: { id: string; data: object }) => ({
-    id,
-    expectedRevision: 3,
-    data
-  })
-}
-
 describe('prompt template mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -67,10 +53,24 @@ describe('prompt template mutations', () => {
     for (const id of ['source-folder', 'destination-folder']) {
       promptFolderCollection.utils.deleteAuthoritative(id)
     }
+    workspaceCollection.utils.deleteAuthoritative('template-workspace')
     promptFolderCollection.utils.upsertAuthoritative({
       id: 'source-folder',
       revision: 1,
       data: templateFolder('source-folder', ['paced-template'])
+    })
+    workspaceCollection.utils.upsertAuthoritative({
+      id: 'template-workspace',
+      revision: 1,
+      data: {
+        id: 'template-workspace',
+        workspacePath: 'C:\\Workspace',
+        workspaceName: 'Workspace',
+        entries: [
+          { kind: 'folder', id: 'source-folder' },
+          { kind: 'folder', id: 'destination-folder' }
+        ]
+      }
     })
     promptFolderCollection.utils.upsertAuthoritative({
       id: 'destination-folder',
@@ -218,19 +218,21 @@ describe('prompt template mutations', () => {
     const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
 
     deleteOptions.handleSuccessOrConflictResponse({
-      promptFolders: [],
-      content: {
-        id: 'paced-template',
-        revision: 4,
-        data: {
+      snapshots: [
+        {
+          entityType: 'promptTemplate',
           id: 'paced-template',
-          title: 'Authoritative Template',
-          fallbackTitle: '',
-          createdAt: '2026-07-24T10:00:00.000Z',
-          modifiedAt: '2026-07-24T12:00:00.000Z',
-          templateText: 'Latest server text.'
+          revision: 4,
+          data: {
+            id: 'paced-template',
+            title: 'Authoritative Template',
+            fallbackTitle: '',
+            createdAt: '2026-07-24T10:00:00.000Z',
+            modifiedAt: '2026-07-24T12:00:00.000Z',
+            templateText: 'Latest server text.'
+          }
         }
-      }
+      ]
     })
 
     expect(promptTemplateCollection.utils.getAuthoritativeRevision('paced-template')).toBe(4)
@@ -249,8 +251,6 @@ describe('prompt template mutations', () => {
   })
 
   it('sends delete and move through their template-specific IPC channels', async () => {
-    ipcInvokeWithPayload.mockResolvedValue({ success: false, error: 'stop before commit' })
-
     await deletePromptTemplate('source-folder', 'paced-template')
     const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
     const sourceAfterDelete = templateFolder('source-folder', ['paced-template'])
@@ -271,11 +271,32 @@ describe('prompt template mutations', () => {
     expect(deleteTemplate).toHaveBeenCalledWith('paced-template')
     expect(deleteClientState).toHaveBeenCalledWith('paced-template')
     expect(sourceAfterDelete.categoryOrder.categories[0]?.entries).toEqual([])
-    await deleteOptions.persistMutations({ entities: entityBuilders, transaction: {} })
-    expect(ipcInvokeWithPayload).toHaveBeenLastCalledWith(
-      'delete-prompt-template',
-      expect.objectContaining({ content: expect.objectContaining({ id: 'paced-template' }) })
-    )
+    /** Generic delete invoke spy captures the workspace-scoped deletion command. */
+    const deleteInvoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
+    await deleteOptions.persistMutations({ invoke: deleteInvoke, transaction: {} })
+    expect(deleteInvoke).toHaveBeenCalledWith('delete-prompt-template', {
+      payload: {
+        command: {
+          workspaceId: 'template-workspace',
+          promptFolderId: 'source-folder',
+          contentId: 'paced-template'
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: 'source-folder',
+            expected: 'revision',
+            revision: 1
+          },
+          {
+            entityType: 'promptTemplate',
+            id: 'paced-template',
+            expected: 'revision',
+            revision: 3
+          }
+        ]
+      }
+    })
 
     await movePromptTemplate(
       'source-folder',

@@ -2,10 +2,10 @@ import type { Locator, Page } from '@playwright/test'
 import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  readWorkspacePersistence,
+  readWorkspaceUiState,
   seedUserPersistence,
-  seedWorkspacePersistence,
-  type WorkspaceAccordionPersistenceSeedEntry
+  seedWorkspaceUiState,
+  type AccordionUiStateSeedEntry
 } from '../helpers/UserPersistenceHelpers'
 
 /** Playwright fixtures and assertions configured for the Electron application. */
@@ -32,7 +32,7 @@ const createDeterministicId = (seed: string): string => {
 /** Creates complete persisted section state with independently configurable expanded heights. */
 const createAccordionSections = (
   states: Array<{ id: string; isExpanded: boolean; configuredExpandedHeightPx: number }>
-): WorkspaceAccordionPersistenceSeedEntry['sections'] => states
+): AccordionUiStateSeedEntry['sections'] => states
 
 /** Reads a required locator box for section layout and drag assertions. */
 const readBox = async (locator: Locator) => {
@@ -220,7 +220,7 @@ describe('Accordion', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
@@ -380,7 +380,7 @@ describe('Accordion', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
@@ -424,8 +424,8 @@ describe('Accordion', () => {
     await mainWindow.waitForTimeout(2200)
 
     /** SQLite state proving a press without movement did not promote displayed sizes. */
-    const pressOnlyPersistence = await readWorkspacePersistence(electronApp, workspaceId)
-    expect(pressOnlyPersistence.accordionViewEntries[0]?.sections).toEqual(seededSections)
+    const pressOnlyUiState = await readWorkspaceUiState(electronApp, workspaceId)
+    expect(pressOnlyUiState.accordionViewEntries[0]?.sections).toEqual(seededSections)
 
     await testHelpers.clickNavButton('Test Screen')
     await dragSashBy(mainWindow, activeSash, 200, async () => {
@@ -490,7 +490,7 @@ describe('Accordion', () => {
     await expect
       .poll(async () => {
         /** Complete accordion entry after the debounced drag autosave flush. */
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return persisted.accordionViewEntries[0]?.sections.map((section) =>
           Math.round(section.configuredExpandedHeightPx)
         )
@@ -525,7 +525,7 @@ describe('Accordion', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
@@ -540,7 +540,7 @@ describe('Accordion', () => {
         }
       ]
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId: otherWorkspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
@@ -615,7 +615,7 @@ describe('Accordion', () => {
     await expect
       .poll(async () => {
         /** Primary persisted entries after the whole-accordion autosave flush. */
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         /** Updated Test Screen accordion entry. */
         const testAccordion = persisted.accordionViewEntries.find(
           (entry) => entry.persistenceId === TEST_ACCORDION_PERSISTENCE_ID
@@ -641,8 +641,8 @@ describe('Accordion', () => {
       })
 
     /** State under the same persistence ID in another workspace. */
-    const otherWorkspacePersistence = await readWorkspacePersistence(electronApp, otherWorkspaceId)
-    expect(otherWorkspacePersistence.accordionViewEntries[0]?.sections).toEqual(
+    const otherWorkspaceUiState = await readWorkspaceUiState(electronApp, otherWorkspaceId)
+    expect(otherWorkspaceUiState.accordionViewEntries[0]?.sections).toEqual(
       otherWorkspaceSections
     )
 

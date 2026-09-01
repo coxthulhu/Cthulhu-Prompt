@@ -1,5 +1,5 @@
 import type { IpcResult } from './IpcResult'
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { RevisionEnvelope } from './Revision'
 
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
@@ -48,34 +48,11 @@ export type WorkspaceScreenSelection =
       }
     }
 
-/** Persisted view state for one root-content or category owner on the prompt-folder screen. */
-export type WorkspacePromptFolderViewEntry = {
-  contentOwnerId: string
-  selectedEntryId: string
-  treeIsExpanded: boolean
-  detailsSectionIsExpanded: boolean
-  contentSectionIsExpanded: boolean
-  categoryDescriptionEditorViewStateJson: string | null
-}
-
 /** Persisted collapse and configured sizing state for one accordion section. */
 export type WorkspaceAccordionSectionViewEntry = {
   id: string
   isExpanded: boolean
   configuredExpandedHeightPx: number
-}
-
-/** Persisted section state for one accordion instance in a workspace. */
-export type WorkspaceAccordionViewEntry = {
-  persistenceId: string
-  sections: WorkspaceAccordionSectionViewEntry[]
-}
-
-export type WorkspacePersistence = WorkspaceScreenSelection & {
-  workspaceId: string
-  lastPromptFolderId: string | null
-  promptFolderViewEntries: WorkspacePromptFolderViewEntry[]
-  accordionViewEntries: WorkspaceAccordionViewEntry[]
 }
 
 export const isWorkspaceScreenSelectionSame = (
@@ -100,90 +77,13 @@ export const isWorkspaceScreenSelectionSame = (
   return true
 }
 
-export const createDefaultWorkspacePersistence = (workspaceId: string): WorkspacePersistence => {
-  return {
-    workspaceId,
-    selectedScreen: 'home',
-    selectedScreenData: null,
-    lastPromptFolderId: null,
-    promptFolderViewEntries: [],
-    accordionViewEntries: []
-  }
-}
-
-/** Clones prompt-folder screen view entries for serialization. */
-export const cloneWorkspacePromptFolderViewEntries = (
-  entries: WorkspacePromptFolderViewEntry[]
-): WorkspacePromptFolderViewEntry[] => {
-  return entries.map((entry) => ({
-    contentOwnerId: entry.contentOwnerId,
-    selectedEntryId: entry.selectedEntryId,
-    treeIsExpanded: entry.treeIsExpanded,
-    detailsSectionIsExpanded: entry.detailsSectionIsExpanded,
-    contentSectionIsExpanded: entry.contentSectionIsExpanded,
-    categoryDescriptionEditorViewStateJson: entry.categoryDescriptionEditorViewStateJson
-  }))
-}
-
-/** Clones accordion section entries for serialization and renderer drafts. */
-export const cloneWorkspaceAccordionViewEntries = (
-  entries: WorkspaceAccordionViewEntry[]
-): WorkspaceAccordionViewEntry[] => {
-  return entries.map((entry) => ({
-    persistenceId: entry.persistenceId,
-    sections: entry.sections.map((section) => ({ ...section }))
-  }))
-}
-
-export const toSerializableWorkspacePersistence = (
-  workspacePersistence: WorkspacePersistence
-): WorkspacePersistence => {
-  return {
-    workspaceId: workspacePersistence.workspaceId,
-    selectedScreen: workspacePersistence.selectedScreen,
-    selectedScreenData: workspacePersistence.selectedScreenData,
-    lastPromptFolderId: workspacePersistence.lastPromptFolderId,
-    promptFolderViewEntries: cloneWorkspacePromptFolderViewEntries(
-      workspacePersistence.promptFolderViewEntries
-    ),
-    accordionViewEntries: cloneWorkspaceAccordionViewEntries(
-      workspacePersistence.accordionViewEntries
-    )
-  } as WorkspacePersistence
-}
-
 export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
-export const LOAD_WORKSPACE_PERSISTENCE_CHANNEL = 'load-workspace-persistence'
 export const UPDATE_USER_PERSISTENCE_CHANNEL = 'update-user-persistence'
-export const UPDATE_WORKSPACE_PERSISTENCE_CHANNEL = 'update-workspace-persistence'
-
-export type LoadWorkspacePersistenceRequest = {
-  workspaceId: string
-}
 
 export type LoadUserPersistenceResult = IpcResult<{
   userPersistence: RevisionEnvelope<UserPersistence>
 }>
 
-export type UserPersistenceRevisionPayload = {
-  userPersistence: RevisionPayloadEntity<UserPersistence>
-}
-
-export type UserPersistenceRevisionResponsePayload = {
-  userPersistence: RevisionEnvelope<UserPersistence>
-}
-
-export type WorkspacePersistenceRevisionPayload = {
-  workspacePersistence: RevisionPayloadEntity<WorkspacePersistence>
-}
-
-export type WorkspacePersistenceRevisionResponsePayload = {
-  workspacePersistence: RevisionEnvelope<WorkspacePersistence>
-}
-
-export type LoadWorkspacePersistenceResult = IpcResult<{
-  workspacePersistence: RevisionEnvelope<WorkspacePersistence>
-}>
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -283,89 +183,6 @@ export const parseWorkspaceScreenSelection = (
   }
 }
 
-/** Parses one persisted prompt-folder screen view entry. */
-const parseWorkspacePromptFolderViewEntry = (
-  value: unknown
-): WorkspacePromptFolderViewEntry | null => {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  if (typeof value.contentOwnerId !== 'string' || typeof value.selectedEntryId !== 'string') {
-    return null
-  }
-
-  const categoryDescriptionEditorViewStateJson =
-    value.categoryDescriptionEditorViewStateJson ?? null
-  if (
-    categoryDescriptionEditorViewStateJson !== null &&
-    typeof categoryDescriptionEditorViewStateJson !== 'string'
-  ) {
-    return null
-  }
-
-  const detailsSectionIsExpanded =
-    value.detailsSectionIsExpanded === undefined
-      ? false
-      : typeof value.detailsSectionIsExpanded === 'boolean'
-        ? value.detailsSectionIsExpanded
-        : null
-  if (detailsSectionIsExpanded === null) {
-    return null
-  }
-
-  const treeIsExpanded =
-    value.treeIsExpanded === undefined
-      ? true
-      : typeof value.treeIsExpanded === 'boolean'
-        ? value.treeIsExpanded
-        : null
-  if (treeIsExpanded === null) {
-    return null
-  }
-
-  const contentSectionIsExpanded =
-    value.contentSectionIsExpanded === undefined
-      ? true
-      : typeof value.contentSectionIsExpanded === 'boolean'
-        ? value.contentSectionIsExpanded
-        : null
-  if (contentSectionIsExpanded === null) {
-    return null
-  }
-
-  return {
-    contentOwnerId: value.contentOwnerId,
-    selectedEntryId: value.selectedEntryId,
-    treeIsExpanded,
-    detailsSectionIsExpanded,
-    contentSectionIsExpanded,
-    categoryDescriptionEditorViewStateJson
-  }
-}
-
-/** Parses the persisted prompt-folder screen view-entry array. */
-const parseWorkspacePromptFolderViewEntries = (
-  value: unknown
-): WorkspacePromptFolderViewEntry[] => {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  const parsedEntries: WorkspacePromptFolderViewEntry[] = []
-
-  for (const entry of value) {
-    const parsedEntry = parseWorkspacePromptFolderViewEntry(entry)
-    if (!parsedEntry) {
-      continue
-    }
-
-    parsedEntries.push(parsedEntry)
-  }
-
-  return parsedEntries
-}
-
 /** Parses one persisted accordion section entry. */
 const parseWorkspaceAccordionSectionViewEntry = (
   value: unknown
@@ -386,83 +203,22 @@ const parseWorkspaceAccordionSectionViewEntry = (
   }
 }
 
-/** Parses one persisted accordion entry. */
-export const parseWorkspaceAccordionViewEntry = (
+/** Parses one persisted accordion section array. */
+export const parseWorkspaceAccordionSections = (
   value: unknown
-): WorkspaceAccordionViewEntry | null => {
-  if (!isRecord(value) || typeof value.persistenceId !== 'string') {
-    return null
-  }
-
-  if (!Array.isArray(value.sections)) {
+): WorkspaceAccordionSectionViewEntry[] | null => {
+  if (!Array.isArray(value)) {
     return null
   }
 
   /** Validated section entries retained in their configured order. */
   const sections: WorkspaceAccordionSectionViewEntry[] = []
-  for (const section of value.sections) {
+  for (const section of value) {
     /** Validated collapse and sizing state for the current section. */
     const parsedSection = parseWorkspaceAccordionSectionViewEntry(section)
     if (!parsedSection) return null
     sections.push(parsedSection)
   }
 
-  return {
-    persistenceId: value.persistenceId,
-    sections
-  }
-}
-
-/** Parses the persisted workspace accordion array. */
-const parseWorkspaceAccordionViewEntries = (value: unknown): WorkspaceAccordionViewEntry[] => {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  /** Valid accordion entries retained from persisted workspace state. */
-  const parsedEntries: WorkspaceAccordionViewEntry[] = []
-  for (const entry of value) {
-    /** Validated form of the current persisted accordion entry. */
-    const parsedEntry = parseWorkspaceAccordionViewEntry(entry)
-    if (parsedEntry) {
-      parsedEntries.push(parsedEntry)
-    }
-  }
-
-  return parsedEntries
-}
-
-export const parseWorkspacePersistence = (
-  value: unknown,
-  workspaceId: string
-): WorkspacePersistence | null => {
-  if (!isRecord(value)) {
-    return null
-  }
-
-  const workspaceScreenSelection = parseWorkspaceScreenSelection(
-    value.selectedScreen,
-    value.selectedScreenData
-  )
-  if (!workspaceScreenSelection) {
-    return null
-  }
-
-  const promptFolderViewEntries = parseWorkspacePromptFolderViewEntries(
-    value.promptFolderViewEntries
-  )
-  /** Accordion section state defaults empty for workspaces without configured accordions. */
-  const accordionViewEntries = parseWorkspaceAccordionViewEntries(value.accordionViewEntries)
-  const lastPromptFolderId = value.lastPromptFolderId ?? null
-  if (lastPromptFolderId !== null && typeof lastPromptFolderId !== 'string') {
-    return null
-  }
-
-  return {
-    workspaceId,
-    ...workspaceScreenSelection,
-    lastPromptFolderId,
-    promptFolderViewEntries,
-    accordionViewEntries
-  } as WorkspacePersistence
+  return sections
 }

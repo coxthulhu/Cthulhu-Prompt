@@ -3,7 +3,6 @@ import {
   categoryDescriptionEditorUiStateSqlitePersistence,
   markdownContentUiStateSqlitePersistence,
   userPersistenceSqlitePersistence,
-  workspacePersistenceSqlitePersistence,
   workspacePromptFolderUiStateSqlitePersistence,
   workspaceUiStateSqlitePersistence
 } from '../Persistence/UiStateSqlitePersistence'
@@ -17,12 +16,6 @@ const emitCommittedRevisionChanged = (_id: string): void => {
 /** Authoritative singleton user persistence backed by SQLite. */
 export const userPersistenceData = createRevisionData({
   persistence: userPersistenceSqlitePersistence,
-  emitCommittedRevisionChanged
-})
-
-/** Authoritative legacy aggregate workspace persistence backed by SQLite. */
-export const workspacePersistenceData = createRevisionData({
-  persistence: workspacePersistenceSqlitePersistence,
   emitCommittedRevisionChanged
 })
 

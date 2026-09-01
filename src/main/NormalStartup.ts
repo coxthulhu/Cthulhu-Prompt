@@ -12,10 +12,12 @@ import { setupCategoryMutationHandlers } from './Mutations/CategoryMutations'
 import { setupMarkdownContentUiStateMutationHandlers } from './Mutations/MarkdownContentUiStateMutations'
 import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsMutations'
 import { setupUserPersistenceMutationHandlers } from './Mutations/UserPersistenceMutations'
+import { setupUiStateMutationHandlers } from './Mutations/UiStateMutations'
 import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
 import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
 import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
 import { setupUserPersistenceQueryHandlers } from './Queries/UserPersistenceQuery'
+import { setupUiStateQueryHandlers } from './Queries/UiStateQuery'
 import { SqliteDataAccess } from './DataAccess/SqliteDataAccess'
 import {
   UserPersistenceDataAccess,
@@ -325,8 +327,10 @@ export function startupNormally(): void {
     await systemSettingsData.loadDataFromPersistence(SYSTEM_SETTINGS_ID, {})
     setupSystemSettingsQueryHandlers()
     setupUserPersistenceQueryHandlers()
+    setupUiStateQueryHandlers()
     setupSystemSettingsMutationHandlers()
     setupUserPersistenceMutationHandlers()
+    setupUiStateMutationHandlers()
     setupWorkspaceQueryHandlers()
     setupWorkspaceMutationHandlers()
     setupPromptFolderQueryHandlers()

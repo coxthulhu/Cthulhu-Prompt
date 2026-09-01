@@ -4,12 +4,14 @@ import {
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
   planRenameCategoryDomainMutation,
-  planSetCategoryDescriptionDomainMutation
+  planSetCategoryDescriptionDomainMutation,
+  selectCategoryDeletionExpectedTargets
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
+import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
@@ -96,15 +98,25 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
     getCategoryOrderCategoryIds(folder.categoryOrder).includes(categoryId)
   )
   if (!promptFolder) throw new Error('Category root prompt folder not loaded')
+  /** Workspace that directly owns the category root folder. */
+  const workspace = workspaceCollection.toArray.find((candidate) =>
+    candidate.entries.some((entry) => entry.id === promptFolder.id)
+  )
+  if (!workspace) throw new Error('Category workspace not loaded')
   /** Renderer-authored command shared with the main-process planner. */
   const command = {
     categoryId,
     promptFolderId: promptFolder.id,
+    workspaceId: workspace.id,
     modifiedAt: getCurrentIsoSecondTimestamp()
   }
 
   await runImmediateRendererDomainMutation({
-    mutation: { command, plan: planDeleteCategoryDomainMutation },
+    mutation: {
+      command,
+      plan: planDeleteCategoryDomainMutation,
+      selectExpectedTargets: selectCategoryDeletionExpectedTargets
+    },
     ipc: { channel: 'delete-category' },
     renderer: {}
   })

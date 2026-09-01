@@ -13,7 +13,6 @@ const mockTransactionState = vi.hoisted(() => {
     'prompt',
     'promptTemplate',
     'userPersistence',
-    'workspacePersistence',
     'markdownContentUiState',
     'workspaceUiState',
     'workspacePromptFolderUiState',
@@ -35,7 +34,6 @@ const mockTransactionState = vi.hoisted(() => {
     prompt: new Map(),
     promptTemplate: new Map(),
     userPersistence: new Map(),
-    workspacePersistence: new Map(),
     markdownContentUiState: new Map(),
     workspaceUiState: new Map(),
     workspacePromptFolderUiState: new Map(),
@@ -116,7 +114,6 @@ const mockTransactionState = vi.hoisted(() => {
     /** Whether this test store exercises the SQLite persistence path. */
     const isSqliteStore =
       store === 'userPersistence' ||
-      store === 'workspacePersistence' ||
       store === 'markdownContentUiState' ||
       store === 'workspaceUiState' ||
       store === 'workspacePromptFolderUiState' ||
@@ -171,7 +168,6 @@ const mockTransactionState = vi.hoisted(() => {
       prompt: createRevisionData('prompt'),
       promptTemplate: createRevisionData('promptTemplate'),
       userPersistence: createRevisionData('userPersistence'),
-      workspacePersistence: createRevisionData('workspacePersistence'),
       markdownContentUiState: createRevisionData('markdownContentUiState'),
       workspaceUiState: createRevisionData('workspaceUiState'),
       workspacePromptFolderUiState: createRevisionData('workspacePromptFolderUiState'),
@@ -588,7 +584,6 @@ describe('atomic data transaction', () => {
       prompt: 0,
       promptTemplate: 0,
       userPersistence: 0,
-      workspacePersistence: 0,
       markdownContentUiState: 0,
       workspaceUiState: 0,
       workspacePromptFolderUiState: 0,
@@ -704,7 +699,6 @@ describe('atomic data transaction', () => {
       prompt: 0,
       promptTemplate: 0,
       userPersistence: 0,
-      workspacePersistence: 0,
       markdownContentUiState: 0,
       workspaceUiState: 0,
       workspacePromptFolderUiState: 0,

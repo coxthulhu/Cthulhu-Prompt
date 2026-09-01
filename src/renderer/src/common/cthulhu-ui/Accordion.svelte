@@ -3,13 +3,10 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import { workspacePersistenceCollection } from '@renderer/data/Collections/WorkspacePersistenceCollection'
-  import { setAccordionViewEntryWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
-  import type {
-    WorkspaceAccordionSectionViewEntry,
-    WorkspaceAccordionViewEntry,
-    WorkspacePersistence
-  } from '@shared/UserPersistence'
+  import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
+  import { setAccordionViewEntryWithAutosave } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
+  import type { WorkspaceAccordionSectionViewEntry } from '@shared/UserPersistence'
+  import type { AccordionUiState } from '@shared/UiState'
   import {
     setAccordionContext,
     type AccordionContext,
@@ -51,9 +48,9 @@
 
   /** Reactive workspace owner used to scope persisted accordion state. */
   const workspaceSelection = getWorkspaceSelectionContext()
-  /** Reactive workspace-persistence records rendered by this component. */
-  const workspacePersistenceQuery = useLiveQuery(workspacePersistenceCollection) as {
-    data: WorkspacePersistence[]
+  /** Reactive accordion UI-state records rendered by this component. */
+  const accordionUiStateQuery = useLiveQuery(accordionUiStateCollection) as {
+    data: AccordionUiState[]
   }
   /** Accordion root measured whenever its available height changes. */
   let accordionElement = $state<HTMLDivElement | null>(null)
@@ -72,15 +69,9 @@
   const persistedAccordionViewEntry = $derived.by(() => {
     /** Currently selected workspace that owns this accordion state. */
     const workspaceId = workspaceSelection.selectedWorkspaceId
-    /** Loaded workspace persistence containing accordion view entries. */
-    const workspacePersistence = workspacePersistenceQuery.data.find(
-      (candidate) => candidate.workspaceId === workspaceId
-    )
-    return (
-      workspacePersistence?.accordionViewEntries.find(
-        (entry) => entry.persistenceId === persistenceId
-      ) ?? null
-    )
+    return accordionUiStateQuery.data.find(
+      (entry) => entry.workspaceId === workspaceId && entry.persistenceId === persistenceId
+    ) ?? null
   })
 
   /** Registered sections merged with their saved state or component defaults. */
@@ -228,7 +219,7 @@
       if (!mergedSectionIds.has(section.id)) mergedSections.push(section)
     }
     /** Complete accordion entry written as one optimistic autosave update. */
-    const accordionViewEntry: WorkspaceAccordionViewEntry = {
+    const accordionViewEntry: Pick<AccordionUiState, 'persistenceId' | 'sections'> = {
       persistenceId,
       sections: mergedSections
     }

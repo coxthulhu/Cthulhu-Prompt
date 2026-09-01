@@ -2,11 +2,11 @@ import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/Worksp
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import {
   readUserPersistence,
-  readWorkspacePersistence,
+  readWorkspaceUiState,
   runSqlStatement,
   seedUserPersistence,
   seedWindowPersistence,
-  seedWorkspacePersistence,
+  seedWorkspaceUiState,
   toSqlText
 } from '../helpers/UserPersistenceHelpers'
 
@@ -326,7 +326,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: persistedPromptFolderId },
@@ -353,7 +353,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: 'missing-folder-id' },
@@ -368,7 +368,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
       .toBe('home:null')
@@ -384,7 +384,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'mockups',
       selectedScreenData: { mockupId: 'missing-mockup-id' },
@@ -399,7 +399,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
       .toBe('home:null')
@@ -439,7 +439,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
       })
       .toBe('home:null')
@@ -460,7 +460,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return [
           persisted.selectedScreen,
           JSON.stringify(persisted.selectedScreenData),
@@ -475,7 +475,7 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return [
           persisted.selectedScreen,
           JSON.stringify(persisted.selectedScreenData),
@@ -496,7 +496,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
@@ -541,7 +541,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           const entries = persisted.promptFolderViewEntries
           const viewEntry = entries.find(
             (entry) => entry.contentOwnerId === developmentPromptFolderId
@@ -587,7 +587,7 @@ describe('User Persistence', () => {
         .poll(
           async () => {
             /** Workspace persistence flushed while final window confirmation remains gated. */
-            const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+            const persisted = await readWorkspaceUiState(electronApp, workspaceId)
             /** Category view entry written by the close-time selection flush. */
             const categoryEntry = persisted.promptFolderViewEntries.find(
               (entry) => entry.contentOwnerId === categoryId
@@ -641,7 +641,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           const entries = persisted.promptFolderViewEntries
           const examplesEntry = entries.find(
             (entry) => entry.contentOwnerId === examplesPromptFolderId
@@ -681,7 +681,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           const entry = persisted.promptFolderViewEntries.find(
             (viewEntry) => viewEntry.contentOwnerId === categoryId
           )
@@ -718,7 +718,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           const entry = persisted.promptFolderViewEntries.find(
             (viewEntry) => viewEntry.contentOwnerId === categoryId
           )
@@ -737,7 +737,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: developmentPromptFolderId },
@@ -773,7 +773,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId, contentOwnerId: categoryId },
@@ -820,7 +820,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId, contentOwnerId: categoryId },
@@ -858,7 +858,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: longPromptFolderId },
@@ -892,7 +892,7 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'prompt-folders',
       selectedScreenData: { promptFolderId: developmentPromptFolderId },

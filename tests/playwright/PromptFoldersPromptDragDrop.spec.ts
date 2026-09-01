@@ -33,7 +33,7 @@ import {
   setupWorkspaceScenario
 } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
-import { seedWorkspacePersistence } from '../helpers/UserPersistenceHelpers'
+import { seedWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -943,7 +943,7 @@ describe('Prompt folder prompt drag-drop', () => {
   }) => {
     await testSetup.setupFilesystem(setupWorkspaceScenario(WORKSPACE_PATH, 'sample'))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
-    await seedWorkspacePersistence(electronApp, {
+    await seedWorkspaceUiState(electronApp, {
       workspaceId: WORKSPACE_ID,
       selectedScreen: 'home',
       selectedScreenData: null,

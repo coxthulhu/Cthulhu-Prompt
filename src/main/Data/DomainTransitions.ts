@@ -70,7 +70,6 @@ const createEmptyGraphEntries = (): DomainGraphEntries => ({
   prompt: new Map(),
   promptTemplate: new Map(),
   userPersistence: new Map(),
-  workspacePersistence: new Map(),
   markdownContentUiState: new Map(),
   workspaceUiState: new Map(),
   workspacePromptFolderUiState: new Map(),
@@ -99,8 +98,6 @@ const getDomainEntityId = <TEntityType extends DomainEntityType>(
       return SYSTEM_SETTINGS_ID
     case 'userPersistence':
       return USER_PERSISTENCE_ID
-    case 'workspacePersistence':
-      return (entity as DomainEntityMap['workspacePersistence']).workspaceId
     case 'workspaceUiState':
       return (entity as DomainEntityMap['workspaceUiState']).workspaceId
     case 'markdownContentUiState': {
@@ -141,7 +138,6 @@ const captureCommittedDomainGraph = (): DomainGraph => {
     'prompt',
     'promptTemplate',
     'userPersistence',
-    'workspacePersistence',
     'markdownContentUiState',
     'workspaceUiState',
     'workspacePromptFolderUiState',
@@ -179,7 +175,6 @@ const copyDomainGraph = (graph: DomainGraph): DomainGraph =>
     prompt: new Map(graph.entries.prompt),
     promptTemplate: new Map(graph.entries.promptTemplate),
     userPersistence: new Map(graph.entries.userPersistence),
-    workspacePersistence: new Map(graph.entries.workspacePersistence),
     markdownContentUiState: new Map(graph.entries.markdownContentUiState),
     workspaceUiState: new Map(graph.entries.workspaceUiState),
     workspacePromptFolderUiState: new Map(graph.entries.workspacePromptFolderUiState),

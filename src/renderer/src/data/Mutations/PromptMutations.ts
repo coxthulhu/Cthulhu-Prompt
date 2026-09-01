@@ -5,9 +5,7 @@ import {
   type CreatePromptDomainCommand,
   type UpdatePromptDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
-import { promptEntryRef } from '@shared/OrderContainer'
 import {
-  createPromptFull,
   isPromptFull,
   PromptStatus,
   type PromptCategoryOrderPlacement,
@@ -22,8 +20,6 @@ import {
 } from '../Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
-import { upsertPromptClientState } from '../UiState/PromptClientState'
-import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (prompt: PromptFull): PromptPersisted => ({
@@ -41,25 +37,6 @@ const toPersisted = (prompt: PromptFull): PromptPersisted => ({
     : {})
 })
 
-const reconcilePrompt = (snapshot: {
-  id: string
-  revision: number
-  data: PromptPersisted
-}): void => {
-  /** Canonical prompt present before authoritative reconciliation. */
-  const currentPrompt = promptCollection.get(snapshot.id)
-  if (
-    !currentPrompt ||
-    !isPromptFull(currentPrompt) ||
-    currentPrompt.promptText !== snapshot.data.promptText
-  ) {
-    clearPromptEditorMeasuredHeight(snapshot.id)
-  }
-  const fullSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
-  promptCollection.utils.upsertAuthoritative(fullSnapshot)
-  upsertPromptClientState(fullSnapshot.data)
-}
-
 const mutations = createMarkdownContentRendererMutations<
   PromptPersisted,
   PromptFull,
@@ -74,15 +51,10 @@ const mutations = createMarkdownContentRendererMutations<
     delete: 'delete-prompt',
     move: 'move-prompt'
   },
-  createEntryRef: promptEntryRef,
   getContent: (promptId) => promptCollection.get(promptId),
   getFullPersisted: (promptId) => {
     const prompt = promptCollection.get(promptId)
     return prompt && isPromptFull(prompt) ? toPersisted(prompt) : null
-  },
-  createEntity: (entities, promptId, prompt) => {
-    const entity = entities.prompt({ id: promptId, data: createPromptFull(prompt) })
-    return { ...entity, data: prompt }
   },
   createDomain: {
     plan: planCreatePromptDomainMutation,
@@ -116,10 +88,6 @@ const mutations = createMarkdownContentRendererMutations<
       markPromptClientStateEdited({ id: promptId, isEdited: false })
     )
   },
-  deleteOptimistically: (collections, promptId) => {
-    collections.prompt.delete(promptId)
-    collections.promptClientState.delete(promptId)
-  },
   markClientStateEdited: (collections, promptId) => {
     collections.promptClientState.update(promptId, (clientState) => {
       markPromptClientStateEdited(clientState)
@@ -127,8 +95,6 @@ const mutations = createMarkdownContentRendererMutations<
   },
   acceptClientStateMutations: (transaction) =>
     promptClientStateCollection.utils.acceptMutations(transaction),
-  reconcile: reconcilePrompt,
-  deleteAuthoritative: (promptId) => promptCollection.utils.deleteAuthoritative(promptId)
 })
 
 export const createPrompt = mutations.create

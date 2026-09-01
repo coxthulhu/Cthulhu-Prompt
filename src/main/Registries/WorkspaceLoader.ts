@@ -11,7 +11,7 @@ import {
   readPromptTemplateStemById,
   readWorkspaceInfo
 } from '../DataAccess/WorkspaceReads'
-import { UserPersistenceDataAccess } from '../DataAccess/UserPersistenceDataAccess'
+import { WorkspaceUiStateDataAccess } from '../DataAccess/WorkspaceUiStateDataAccess'
 import { MarkdownContentUiStateDataAccess } from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { data } from '../Data/Data'
 import {
@@ -133,7 +133,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   }
 
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
-  UserPersistenceDataAccess.cleanupWorkspacePromptFolderViewState(
+  WorkspaceUiStateDataAccess.cleanupWorkspacePromptFolderUiState(
     workspaceId,
     loadedPromptFolderIds,
     categories.map((category) => category.data.id)

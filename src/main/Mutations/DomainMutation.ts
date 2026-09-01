@@ -78,7 +78,6 @@ const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value
     record.entityType === 'prompt' ||
     record.entityType === 'promptTemplate' ||
     record.entityType === 'userPersistence' ||
-    record.entityType === 'workspacePersistence' ||
     record.entityType === 'markdownContentUiState' ||
     record.entityType === 'workspaceUiState' ||
     record.entityType === 'workspacePromptFolderUiState' ||
@@ -186,7 +185,6 @@ const buildMainDomainSnapshot = (target: DomainTarget): DomainSnapshot => {
         : { entityType: 'promptTemplate', id: target.id, deleted: true }
     }
     case 'userPersistence':
-    case 'workspacePersistence':
     case 'markdownContentUiState':
     case 'workspaceUiState':
     case 'workspacePromptFolderUiState':

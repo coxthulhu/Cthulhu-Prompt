@@ -1,17 +1,10 @@
 import {
-  LOAD_USER_PERSISTENCE_CHANNEL,
-  LOAD_WORKSPACE_PERSISTENCE_CHANNEL
+  LOAD_USER_PERSISTENCE_CHANNEL
 } from '@shared/UserPersistence'
-import type {
-  LoadUserPersistenceResult,
-  LoadWorkspacePersistenceRequest,
-  LoadWorkspacePersistenceResult,
-  WorkspacePersistence
-} from '@shared/UserPersistence'
+import type { LoadUserPersistenceResult } from '@shared/UserPersistence'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
-import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { runLoad } from '../IpcFramework/Load'
-import { ipcInvoke, ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
+import { ipcInvoke } from '../IpcFramework/IpcRequestInvoke'
 
 export const loadUserPersistence = async (): Promise<void> => {
   const result = await runLoad(() =>
@@ -19,18 +12,4 @@ export const loadUserPersistence = async (): Promise<void> => {
   )
 
   userPersistenceCollection.utils.upsertAuthoritative(result.userPersistence)
-}
-
-export const loadWorkspacePersistence = async (
-  workspaceId: string
-): Promise<WorkspacePersistence> => {
-  const result = await runLoad(() =>
-    ipcInvokeWithPayload<LoadWorkspacePersistenceResult, LoadWorkspacePersistenceRequest>(
-      LOAD_WORKSPACE_PERSISTENCE_CHANNEL,
-      { workspaceId }
-    )
-  )
-
-  workspacePersistenceCollection.utils.upsertAuthoritative(result.workspacePersistence)
-  return result.workspacePersistence.data
 }

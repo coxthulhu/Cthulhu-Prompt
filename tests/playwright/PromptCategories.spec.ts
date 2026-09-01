@@ -11,6 +11,10 @@ import {
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
+  readWorkspaceUiState,
+  seedWorkspaceUiState
+} from '../helpers/UserPersistenceHelpers'
+import {
   beginPromptHandleDrag,
   beginPromptTreeCategoryRowDrag,
   finishActiveDrag,
@@ -36,6 +40,17 @@ const PROMPT_ROOT_ID = 'prompt-category-root'
 const TEMPLATE_ROOT_ID = 'template-category-root'
 // Selector toggles the prompt root between active and completed modes.
 const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]'
+
+/** Reproduces the application's deterministic workspace ID for a fixture path. */
+const createDeterministicId = (seed: string): string => {
+  let hash = 0
+  for (let index = 0; index < seed.length; index += 1) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
+  }
+  /** Twelve-character suffix used by deterministic fixture IDs. */
+  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
+  return `00000000000000000000${suffix}`
+}
 
 /** Reads the full persisted category order so tests retain ownership information. */
 const readCategoryOrder = async (
@@ -928,6 +943,8 @@ describe('Prompt categories', () => {
   }) => {
     /** Category workspace with authoritative prompt and template folder-order ownership. */
     const filesystem = createCategorizedWorkspace()
+    /** Deterministic workspace ID used to seed split startup UI-state collections. */
+    const workspaceId = createDeterministicId(WORKSPACE_PATH)
     /** Known initial file timestamp used to verify deletion changes modifiedAt. */
     const initialModifiedAt = '2020-01-01T00:00:00.000Z'
     /** Template path whose separately owned category must remain unchanged. */
@@ -936,16 +953,44 @@ describe('Prompt categories', () => {
     /** Prompt path expected to be rewritten during category deletion. */
     const promptPath =
       `${WORKSPACE_PATH}/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
-    /** Running category workspace used for direct non-UI IPC coverage. */
-    const { mainWindow } = await startCategoryWorkspace(testSetup, filesystem, {
-      [promptPath]: initialModifiedAt
+    await testSetup.setupFilesystem(filesystem, {
+      fileModifiedTimes: { [promptPath]: initialModifiedAt }
     })
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    await seedWorkspaceUiState(electronApp, {
+      workspaceId,
+      selectedScreen: 'prompt-folders',
+      selectedScreenData: {
+        promptFolderId: PROMPT_ROOT_ID,
+        contentOwnerId: PROMPT_CATEGORY_ID
+      },
+      lastPromptFolderId: PROMPT_ROOT_ID,
+      promptFolderViewEntries: [
+        {
+          contentOwnerId: PROMPT_ROOT_ID,
+          selectedEntryId: 'root-header',
+          treeIsExpanded: false,
+          detailsSectionIsExpanded: true,
+          contentSectionIsExpanded: false
+        },
+        {
+          contentOwnerId: PROMPT_CATEGORY_ID,
+          selectedEntryId: 'categorized-prompt',
+          categoryDescriptionEditorViewStateJson: '{}'
+        }
+      ]
+    })
+    /** Running category workspace hydrated from the split SQLite UI-state records. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
     expect(await readTextFile(electronApp, promptPath)).toContain(PROMPT_CATEGORY_ID)
     expect(await readTextFile(electronApp, templatePath)).toContain(TEMPLATE_CATEGORY_ID)
 
     /** Atomic deletion response returned by the main-process IPC handler. */
     const deleteResponse = await mainWindow.evaluate(
-      async ({ categoryId, rootFolderId }) => {
+      async ({ categoryId, rootFolderId, workspaceId }) => {
         return await (window as any).electron.ipcRenderer.invoke('delete-category', {
           requestId: 'delete-category-test',
           clientId: (window as any).ipcClientId,
@@ -953,6 +998,7 @@ describe('Prompt categories', () => {
             command: {
               categoryId,
               promptFolderId: rootFolderId,
+              workspaceId,
               modifiedAt: '2026-08-29T12:00:00Z'
             },
             expectations: [
@@ -973,12 +1019,24 @@ describe('Prompt categories', () => {
                 id: 'categorized-prompt',
                 expected: 'revision',
                 revision: 0
+              },
+              {
+                entityType: 'workspaceUiState',
+                id: workspaceId,
+                expected: 'revision',
+                revision: 0
+              },
+              {
+                entityType: 'workspacePromptFolderUiState',
+                id: `${workspaceId}:${rootFolderId}`,
+                expected: 'revision',
+                revision: 0
               }
             ]
           }
         })
       },
-      { categoryId: PROMPT_CATEGORY_ID, rootFolderId: PROMPT_ROOT_ID }
+      { categoryId: PROMPT_CATEGORY_ID, rootFolderId: PROMPT_ROOT_ID, workspaceId }
     )
 
     expect(deleteResponse).toMatchObject({
@@ -1005,12 +1063,44 @@ describe('Prompt categories', () => {
             })
           },
           { entityType: 'category', id: PROMPT_CATEGORY_ID, deleted: true },
+          {
+            entityType: 'workspacePromptFolderUiState',
+            id: `${workspaceId}:${PROMPT_CATEGORY_ID}`,
+            deleted: true
+          },
+          {
+            entityType: 'categoryDescriptionEditorUiState',
+            id: `${workspaceId}:${PROMPT_CATEGORY_ID}`,
+            deleted: true
+          },
           expect.objectContaining({
             entityType: 'prompt',
             id: 'categorized-prompt',
             data: expect.objectContaining({
               id: 'categorized-prompt'
             })
+          }),
+          expect.objectContaining({
+            entityType: 'workspaceUiState',
+            id: workspaceId,
+            data: expect.objectContaining({
+              selectedScreenData: {
+                promptFolderId: PROMPT_ROOT_ID,
+                contentOwnerId: PROMPT_ROOT_ID
+              }
+            })
+          }),
+          expect.objectContaining({
+            entityType: 'workspacePromptFolderUiState',
+            id: `${workspaceId}:${PROMPT_ROOT_ID}`,
+            data: {
+              workspaceId,
+              contentOwnerId: PROMPT_ROOT_ID,
+              selectedEntryId: 'categorized-prompt',
+              treeIsExpanded: false,
+              detailsSectionIsExpanded: true,
+              contentSectionIsExpanded: false
+            }
           })
         ])
       }
@@ -1027,6 +1117,37 @@ describe('Prompt categories', () => {
     )
     expect(deletedCategoryPrompt.data).not.toHaveProperty('category')
     expect(deletedCategoryPrompt.data.modifiedAt).not.toBe(initialModifiedAt)
+    await expect
+      .poll(async () => {
+        /** Persisted split UI state after category ownership is transferred to the root. */
+        const uiState = await readWorkspaceUiState(electronApp, workspaceId)
+        /** Root owner row whose selection changes without replacing expansion fields. */
+        const rootState = uiState.promptFolderViewEntries.find(
+          (entry) => entry.contentOwnerId === PROMPT_ROOT_ID
+        )
+        return {
+          contentOwnerId:
+            uiState.selectedScreen === 'prompt-folders'
+              ? uiState.selectedScreenData?.contentOwnerId
+              : null,
+          categoryPresent: uiState.promptFolderViewEntries.some(
+            (entry) => entry.contentOwnerId === PROMPT_CATEGORY_ID
+          ),
+          rootState
+        }
+      })
+      .toEqual({
+        contentOwnerId: PROMPT_ROOT_ID,
+        categoryPresent: false,
+        rootState: {
+          contentOwnerId: PROMPT_ROOT_ID,
+          selectedEntryId: 'categorized-prompt',
+          treeIsExpanded: false,
+          detailsSectionIsExpanded: true,
+          contentSectionIsExpanded: false,
+          categoryDescriptionEditorViewStateJson: null
+        }
+      })
     await expect
       .poll(() =>
         checkFileExists(

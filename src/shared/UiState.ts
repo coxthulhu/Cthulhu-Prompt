@@ -2,6 +2,8 @@ import type {
   WorkspaceAccordionSectionViewEntry,
   WorkspaceScreenSelection
 } from './UserPersistence'
+import type { IpcResult } from './IpcResult'
+import type { RevisionEnvelope } from './Revision'
 
 /** Persisted screen selection and last-root state for one workspace. */
 export type WorkspaceUiState = WorkspaceScreenSelection & {
@@ -32,6 +34,30 @@ export type CategoryDescriptionEditorUiState = {
   categoryId: string
   editorViewStateJson: string
 }
+
+/** Creates the default workspace-level state used before SQLite contains a row. */
+export const createDefaultWorkspaceUiState = (workspaceId: string): WorkspaceUiState => ({
+  workspaceId,
+  selectedScreen: 'home',
+  selectedScreenData: null,
+  lastPromptFolderId: null
+})
+
+/** IPC channel that loads every split UI-state collection for one workspace. */
+export const LOAD_WORKSPACE_UI_STATE_CHANNEL = 'load-workspace-ui-state'
+
+/** Workspace identity supplied to the split UI-state startup query. */
+export type LoadWorkspaceUiStateRequest = {
+  workspaceId: string
+}
+
+/** Authoritative split UI-state snapshots loaded when a workspace is selected. */
+export type LoadWorkspaceUiStateResult = IpcResult<{
+  workspaceUiState: RevisionEnvelope<WorkspaceUiState>
+  workspacePromptFolderUiStates: RevisionEnvelope<WorkspacePromptFolderUiState>[]
+  accordionUiStates: RevisionEnvelope<AccordionUiState>[]
+  categoryDescriptionEditorUiStates: RevisionEnvelope<CategoryDescriptionEditorUiState>[]
+}>
 
 /** Builds the authoritative key for one workspace prompt-folder UI-state record. */
 export const createWorkspacePromptFolderUiStateKey = (

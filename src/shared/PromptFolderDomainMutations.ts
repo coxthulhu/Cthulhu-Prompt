@@ -1,8 +1,14 @@
-import type { DomainPlanner, DomainTarget } from './DomainChanges'
+import type {
+  DomainChange,
+  DomainExpectedTargetSelector,
+  DomainPlanner,
+  DomainTarget
+} from './DomainChanges'
 import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from './OrderContainer'
 import {
   createEmptyPromptFolderSettings,
   createRootCategoryOrder,
+  getCategoryOrderCategoryIds,
   type PromptFolder,
   type PromptFolderKind
 } from './PromptFolder'
@@ -10,6 +16,12 @@ import {
   hasPromptFolderNameConflict,
   preparePromptFolderName
 } from './promptFolderName'
+import { getMarkdownContentIds } from './MarkdownContent'
+import { createMarkdownContentUiStateKey } from './MarkdownContentUiState'
+import {
+  createCategoryDescriptionEditorUiStateKey,
+  createWorkspacePromptFolderUiStateKey
+} from './UiState'
 
 /** Renderer-authored command for creating one root prompt or template folder. */
 export type CreatePromptFolderDomainCommand = {
@@ -32,6 +44,43 @@ export type MovePromptFolderDomainCommand = {
   promptFolderId: string
   previousEntryId: string | null
 }
+
+/** Renderer-authored command for deleting one root folder and its owned graph. */
+export type DeletePromptFolderDomainCommand = {
+  workspaceId: string
+  promptFolderId: string
+}
+
+/** Strict runtime parser for root-folder deletion commands. */
+export const parseDeletePromptFolderDomainCommand = (
+  value: unknown
+): DeletePromptFolderDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 2 ||
+    typeof record.workspaceId !== 'string' ||
+    typeof record.promptFolderId !== 'string'
+  ) {
+    return null
+  }
+  return record as DeletePromptFolderDomainCommand
+}
+
+/** Excludes optional SQLite cleanup deletes from root-deletion expectations. */
+export const selectPromptFolderDeletionExpectedTargets: DomainExpectedTargetSelector = (
+  changes
+) =>
+  changes.filter(
+    (change) =>
+      !(
+        change.type === 'delete' &&
+        (change.entityType === 'markdownContentUiState' ||
+          change.entityType === 'workspacePromptFolderUiState' ||
+          change.entityType === 'categoryDescriptionEditorUiState')
+      )
+  )
 
 /** Strict runtime parser for root-folder creation commands. */
 export const parseCreatePromptFolderDomainCommand = (
@@ -218,6 +267,112 @@ export const planRenamePromptFolderDomainMutation: DomainPlanner<
       }
     }
   ]
+}
+
+/** Plans root-folder deletion and every filesystem or SQLite record it owns. */
+export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFolderDomainCommand> = (
+  state,
+  command
+) => {
+  /** Workspace expected to own the deleted root folder. */
+  const workspace = state.get('workspace', command.workspaceId)
+  /** Root folder whose complete graph will be removed. */
+  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Required workspace and root targets returned for ownership conflicts. */
+  const targets: DomainTarget[] = [
+    { entityType: 'workspace', id: command.workspaceId },
+    { entityType: 'promptFolder', id: command.promptFolderId }
+  ]
+  if (
+    !workspace ||
+    !promptFolder ||
+    !workspace.entries.some((entry) => entry.id === command.promptFolderId)
+  ) {
+    return {
+      status: 'conflict',
+      reason: 'Prompt folder deletion conflict',
+      targets
+    }
+  }
+  /** Prompt or template IDs owned by the deleted root folder. */
+  const contentIds = getMarkdownContentIds(promptFolder, promptFolder.kind)
+  /** Category IDs owned by the deleted root folder. */
+  const categoryIds = getCategoryOrderCategoryIds(promptFolder.categoryOrder)
+  /** Complete domain changes applied atomically in meaningful ownership order. */
+  const changes: DomainChange[] = [
+    {
+      type: 'update',
+      entityType: 'workspace',
+      id: command.workspaceId,
+      recipe: (draft) => {
+        draft.entries = removeEntry(draft.entries, 'folder', command.promptFolderId)
+      }
+    },
+    ...contentIds.map(
+      (contentId): DomainChange => ({
+        type: 'delete',
+        entityType: promptFolder.kind === 'prompt' ? 'prompt' : 'promptTemplate',
+        id: contentId
+      }) as DomainChange
+    ),
+    ...categoryIds.map(
+      (categoryId): DomainChange => ({
+        type: 'delete',
+        entityType: 'category',
+        id: categoryId
+      })
+    ),
+    {
+      type: 'delete',
+      entityType: 'promptFolder',
+      id: command.promptFolderId
+    }
+  ]
+  for (const contentId of contentIds) {
+    changes.push({
+      type: 'delete',
+      entityType: 'markdownContentUiState',
+      id: createMarkdownContentUiStateKey(command.workspaceId, contentId)
+    })
+  }
+  for (const contentOwnerId of [command.promptFolderId, ...categoryIds]) {
+    changes.push({
+      type: 'delete',
+      entityType: 'workspacePromptFolderUiState',
+      id: createWorkspacePromptFolderUiStateKey(command.workspaceId, contentOwnerId)
+    })
+  }
+  for (const categoryId of categoryIds) {
+    changes.push({
+      type: 'delete',
+      entityType: 'categoryDescriptionEditorUiState',
+      id: createCategoryDescriptionEditorUiStateKey(command.workspaceId, categoryId)
+    })
+  }
+  /** Existing workspace screen state adjusted when it references the deleted root. */
+  const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
+  if (workspaceUiState) {
+    changes.push({
+      type: 'update',
+      entityType: 'workspaceUiState',
+      id: command.workspaceId,
+      recipe: (draft) => {
+        if (
+          draft.selectedScreen === 'prompt-folders' &&
+          draft.selectedScreenData.promptFolderId === command.promptFolderId
+        ) {
+          Object.assign(draft, {
+            selectedScreen: 'home',
+            selectedScreenData: null,
+            lastPromptFolderId: null
+          })
+        } else if (draft.lastPromptFolderId === command.promptFolderId) {
+          draft.lastPromptFolderId = null
+        }
+      }
+    })
+  }
+  return changes
 }
 
 /** Plans one root-folder reorder within its owning workspace. */

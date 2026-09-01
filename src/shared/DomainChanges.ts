@@ -6,7 +6,7 @@ import type { PromptTemplatePersisted, PromptTemplateSummaryData } from './Promp
 import type { SystemSettings } from './SystemSettings'
 import type { Workspace } from './Workspace'
 import type { MarkdownContentUiState } from './MarkdownContentUiState'
-import type { UserPersistence, WorkspacePersistence } from './UserPersistence'
+import type { UserPersistence } from './UserPersistence'
 import type {
   AccordionUiState,
   CategoryDescriptionEditorUiState,
@@ -26,7 +26,6 @@ export type DomainEntityMap = {
   prompt: PromptPersisted
   promptTemplate: PromptTemplatePersisted
   userPersistence: UserPersistence
-  workspacePersistence: WorkspacePersistence
   markdownContentUiState: MarkdownContentUiState
   workspaceUiState: WorkspaceUiState
   workspacePromptFolderUiState: WorkspacePromptFolderUiState

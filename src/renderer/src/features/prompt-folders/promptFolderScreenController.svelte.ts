@@ -64,7 +64,7 @@ import {
   setPromptFolderDetailsSectionExpandedStateWithAutosave,
   setPromptFolderContentSectionExpandedStateWithAutosave,
   setPromptFolderSelectedEntryIdWithAutosave
-} from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+} from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
   ScrollToAndTrackRow,

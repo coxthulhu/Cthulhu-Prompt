@@ -1,6 +1,5 @@
 import {
-  createMarkdownContentUiStateKey,
-  type MarkdownContentUiState
+  createMarkdownContentUiStateKey
 } from '@shared/MarkdownContentUiState'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
@@ -34,20 +33,8 @@ export const setMarkdownContentEditorViewStateJson = (
   }
 
   mutatePacedMarkdownContentUiStateAutosaveUpdate({
-    workspaceId,
-    contentId,
-    debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
-      /** Complete UI-state record applied by the optimistic transaction. */
-      const next: MarkdownContentUiState = { workspaceId, contentId, editorViewStateJson }
-      if (markdownContentUiStateCollection.has(uiStateId)) {
-        collections.markdownContentUiState.update(uiStateId, (draft) =>
-          Object.assign(draft, next)
-        )
-      } else {
-        collections.markdownContentUiState.insert(next)
-      }
-    }
+    uiState: { workspaceId, contentId, editorViewStateJson },
+    debounceMs: AUTOSAVE_MS
   })
 }
 

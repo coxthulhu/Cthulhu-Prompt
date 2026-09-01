@@ -1,26 +1,19 @@
 import type { Transaction } from '@tanstack/svelte-db'
 import { produce, type Draft } from 'immer'
 import {
+  planPromptDelete,
   planPromptMove,
+  planPromptTemplateDelete,
   planPromptTemplateMove,
+  selectMarkdownContentDeletionExpectedTargets,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
 import type { DomainPlanner } from '@shared/DomainChanges'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
-import {
-  type DeleteMarkdownContentPayload,
-  type DeleteMarkdownContentResponsePayload,
-  type MarkdownContentPersisted
-} from '@shared/MarkdownContent'
-import {
-  removeCategoryOrderEntry,
-  type CategoryOrderEntryRef,
-  type PromptFolderContentKind
-} from '@shared/PromptFolder'
-import type { RevisionEnvelope, RevisionPayloadEntity } from '@shared/Revision'
+import { type MarkdownContentPersisted } from '@shared/MarkdownContent'
+import { type PromptFolderContentKind } from '@shared/PromptFolder'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
+import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
@@ -33,8 +26,6 @@ type MutationOptions<TPayload> = Parameters<typeof runRevisionMutation<TPayload>
 type OptimisticCollections = Parameters<MutationOptions<unknown>['mutateOptimistically']>[0][
   'collections'
 ]
-/** Persistence helpers supplied by the revision framework. */
-type PersistHelpers = Parameters<MutationOptions<unknown>['persistMutations']>[0]
 /** Canonical editable fields shared by prompts and prompt templates. */
 type ContentRecord = { id: string; title: string; fallbackTitle: string; category?: string }
 
@@ -48,14 +39,8 @@ export type MarkdownContentRendererMutationConfig<
   kind: PromptFolderContentKind
   label: string
   channels: { create: string; update: string; delete: string; move: string }
-  createEntryRef: (contentId: string) => CategoryOrderEntryRef
   getContent: (contentId: string) => ContentRecord | undefined
   getFullPersisted: (contentId: string) => TPersisted | null
-  createEntity: (
-    entities: PersistHelpers['entities'],
-    contentId: string,
-    content: TPersisted
-  ) => RevisionPayloadEntity<TPersisted>
   createDomain: {
     plan: DomainPlanner<TCreateCommand>
     createCommand: (
@@ -73,14 +58,11 @@ export type MarkdownContentRendererMutationConfig<
     collections: OptimisticCollections,
     contentId: string
   ) => void
-  deleteOptimistically: (collections: OptimisticCollections, contentId: string) => void
   markClientStateEdited: (
     collections: OptimisticCollections,
     contentId: string
   ) => void
   acceptClientStateMutations: (transaction: Transaction<any>) => void
-  reconcile: (snapshot: RevisionEnvelope<TPersisted>) => void
-  deleteAuthoritative: (contentId: string) => void
 }
 
 /** Creates category-aware prompt or template renderer mutations. */
@@ -99,6 +81,8 @@ export const createMarkdownContentRendererMutations = <
 ) => {
   /** Move planner selected by the renderer channel's configured markdown-content kind. */
   const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
+  /** Delete planner selected by the renderer channel's configured markdown-content kind. */
+  const deletePlanner = config.kind === 'prompt' ? planPromptDelete : planPromptTemplateDelete
   /** Domain entity type selected by the configured content kind. */
   const entityType = config.kind === 'prompt' ? 'prompt' : 'promptTemplate'
 
@@ -181,37 +165,32 @@ export const createMarkdownContentRendererMutations = <
     if (!promptFolder || promptFolder.kind !== config.kind || !content) {
       throw new Error(`${config.label} not loaded`)
     }
-    /** Folder-order reference removed with the content. */
-    const entry = config.createEntryRef(contentId)
-
-    await runRevisionMutation<DeleteMarkdownContentResponsePayload<TPersisted>>({
-      mutateOptimistically: ({ collections }) => {
-        config.deleteOptimistically(collections, contentId)
-        collections.promptFolder.update(promptFolderId, (draft) => {
-          draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+    /** Workspace that owns the deleted content's root folder. */
+    const workspace = workspaceCollection.toArray.find((candidate) =>
+      candidate.entries.some((entry) => entry.id === promptFolderId)
+    )
+    if (!workspace) throw new Error(`${config.label} workspace not loaded`)
+    /** Shared deletion command projected by renderer and main process. */
+    const command = { workspaceId: workspace.id, promptFolderId, contentId }
+    await runImmediateRendererDomainMutation({
+      mutation: {
+        command,
+        plan: deletePlanner,
+        selectExpectedTargets: selectMarkdownContentDeletionExpectedTargets
+      },
+      ipc: { channel: config.channels.delete },
+      renderer: {
+        mutate: ({ collections }) => {
           if (config.kind === 'prompt') {
-            draft.completedPromptIds = draft.completedPromptIds.filter((id) => id !== contentId)
+            collections.promptClientState.delete(contentId)
+          } else {
+            collections.promptTemplateClientState.delete(contentId)
           }
-        })
-      },
-      persistMutations: async ({ entities, transaction }) => {
-        /** IPC deletion result. */
-        const result = await ipcInvokeWithPayload<
-          IpcMutationPayloadResult<DeleteMarkdownContentResponsePayload<TPersisted>>,
-          DeleteMarkdownContentPayload<TPersisted>
-        >(config.channels.delete, {
-          promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder }),
-          content: config.createEntity(entities, contentId, content)
-        })
-        if (result.success) config.acceptClientStateMutations(transaction)
-        return result
-      },
-      handleSuccessOrConflictResponse: (payload) => {
-        promptFolderCollection.utils.upsertManyAuthoritative(payload.promptFolders)
-        if (payload.content) config.reconcile(payload.content)
-      },
-      conflictMessage: `${config.label} delete conflict`,
-      onSuccess: () => config.deleteAuthoritative(contentId)
+        },
+        clientStateCollections: [
+          { utils: { acceptMutations: config.acceptClientStateMutations } }
+        ]
+      }
     })
   }
 

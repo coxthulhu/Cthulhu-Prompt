@@ -1,5 +1,6 @@
 import type {
   DomainChange,
+  DomainExpectedTargetSelector,
   DomainMutationConflict,
   DomainPlanner,
   DomainState,
@@ -27,6 +28,7 @@ import {
   resolvePromptTitleUpdateForPromptIds
 } from './promptFallbackTitle'
 import type { PromptTemplatePersisted } from './PromptTemplate'
+import { createMarkdownContentUiStateKey } from './MarkdownContentUiState'
 
 /** Renderer-authored command for creating one prompt at an exact root position. */
 export type CreatePromptDomainCommand = {
@@ -61,6 +63,42 @@ export type MoveMarkdownContentDomainCommand = {
   categoryId: string | null
   previousEntryId: string | null
 }
+
+/** Renderer-authored command for deleting one prompt or template and its editor state. */
+export type DeleteMarkdownContentDomainCommand = {
+  workspaceId: string
+  promptFolderId: string
+  contentId: string
+}
+
+/** Strict runtime parser for prompt or template deletion commands. */
+export const parseDeleteMarkdownContentDomainCommand = (
+  value: unknown
+): DeleteMarkdownContentDomainCommand | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+  /** Raw command fields validated without allowing additional properties. */
+  const record = value as Record<string, unknown>
+  if (
+    Object.keys(record).length !== 3 ||
+    typeof record.workspaceId !== 'string' ||
+    typeof record.promptFolderId !== 'string' ||
+    typeof record.contentId !== 'string'
+  ) {
+    return null
+  }
+  return record as DeleteMarkdownContentDomainCommand
+}
+
+/** Excludes best-effort editor UI-state deletion from concurrency expectations. */
+export const selectMarkdownContentDeletionExpectedTargets: DomainExpectedTargetSelector = (
+  changes
+) =>
+  changes.filter(
+    (change) =>
+      !(
+        change.type === 'delete' && change.entityType === 'markdownContentUiState'
+      )
+  )
 
 /** Renderer-authored command for replacing editable prompt fields. */
 export type UpdatePromptDomainCommand = {
@@ -473,6 +511,71 @@ const findMarkdownContentOwner = (
       (folder) =>
         folder.kind === kind && getMarkdownContentIds(folder, kind).includes(contentId)
     )
+
+/** Creates a prompt- or template-specific shared deletion planner. */
+const createDeletePlanner = (
+  kind: PromptFolderContentKind
+): DomainPlanner<DeleteMarkdownContentDomainCommand> => (state, command) => {
+  /** Requested root folder that should own the deleted content. */
+  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Requested prompt or template projection. */
+  const content = getMarkdownContent(state, kind, command.contentId)
+  /** Workspace expected to own the requested root folder. */
+  const workspace = state
+    .getAll('workspace')
+    .find((candidate) => candidate.entries.some((entry) => entry.id === command.promptFolderId))
+  /** Required folder and content targets returned for ownership conflicts. */
+  const targets: DomainTarget[] = [
+    { entityType: 'promptFolder', id: command.promptFolderId },
+    {
+      entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
+      id: command.contentId
+    }
+  ]
+  if (
+    !promptFolder ||
+    promptFolder.kind !== kind ||
+    !content ||
+    !getMarkdownContentIds(promptFolder, kind).includes(command.contentId) ||
+    !workspace ||
+    workspace.id !== command.workspaceId
+  ) {
+    return createConflict('Markdown content deletion conflict', targets)
+  }
+  /** Category-order reference removed with the deleted content. */
+  const entry = createContentEntryRef(kind, command.contentId)
+  return [
+    {
+      type: 'update',
+      entityType: 'promptFolder',
+      id: command.promptFolderId,
+      recipe: (draft) => {
+        draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+        if (kind === 'prompt') {
+          draft.completedPromptIds = draft.completedPromptIds.filter(
+            (id) => id !== command.contentId
+          )
+        }
+      }
+    },
+    {
+      type: 'delete',
+      entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
+      id: command.contentId
+    } as DomainChange,
+    {
+      type: 'delete',
+      entityType: 'markdownContentUiState',
+      id: createMarkdownContentUiStateKey(command.workspaceId, command.contentId)
+    }
+  ]
+}
+
+/** Plans prompt deletion and optional editor UI-state cleanup. */
+export const planPromptDelete = createDeletePlanner('prompt')
+
+/** Plans prompt-template deletion and optional editor UI-state cleanup. */
+export const planPromptTemplateDelete = createDeletePlanner('template')
 
 /** Plans one complete editable prompt replacement. */
 export const planPromptUpdate: DomainPlanner<UpdatePromptDomainCommand> = (

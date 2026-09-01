@@ -27,7 +27,6 @@ export type DomainPersistenceFieldsMap = {
   prompt: PromptPersistenceFields
   promptTemplate: PromptTemplatePersistenceFields
   userPersistence: Record<string, never>
-  workspacePersistence: Record<string, never>
   markdownContentUiState: Record<string, never>
   workspaceUiState: Record<string, never>
   workspacePromptFolderUiState: Record<string, never>

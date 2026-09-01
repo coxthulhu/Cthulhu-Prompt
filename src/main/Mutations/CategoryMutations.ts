@@ -8,7 +8,8 @@ import {
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
   planRenameCategoryDomainMutation,
-  planSetCategoryDescriptionDomainMutation
+  planSetCategoryDescriptionDomainMutation,
+  selectCategoryDeletionExpectedTargets
 } from '@shared/CategoryDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
@@ -26,7 +27,8 @@ export const setupCategoryMutationHandlers = (): void => {
     ipc: { channel: 'delete-category' },
     mutation: {
       parseCommand: parseDeleteCategoryDomainCommand,
-      plan: planDeleteCategoryDomainMutation
+      plan: planDeleteCategoryDomainMutation,
+      selectExpectedTargets: selectCategoryDeletionExpectedTargets
     }
   })
 

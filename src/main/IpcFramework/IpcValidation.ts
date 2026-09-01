@@ -1,35 +1,10 @@
-import { PromptStatus } from '@shared/Prompt'
-import type { PromptPersisted, PromptTemplateReference } from '@shared/Prompt'
-import type {
-  DeletePromptFolderPayload,
-  LoadPromptFolderInitialPayload,
-  PromptFolder,
-  PromptFolderSettings
-} from '@shared/PromptFolder'
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
-import type {
-  MarkdownContentUiState,
-  MarkdownContentUiStateRevisionPayload
-} from '@shared/MarkdownContentUiState'
+import type { LoadPromptFolderInitialPayload } from '@shared/PromptFolder'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
-import type { RevisionPayloadEntity } from '@shared/Revision'
-import type {
-  DeleteMarkdownContentPayload,
-  MarkdownContentPersisted
-} from '@shared/MarkdownContent'
-import type {
-  LoadWorkspacePersistenceRequest,
-  UserPersistence,
-  UserPersistenceRevisionPayload,
-  WorkspacePersistence,
-  WorkspacePersistenceRevisionPayload
-} from '@shared/UserPersistence'
-import { parseWorkspacePersistence as parseSharedWorkspacePersistence } from '@shared/UserPersistence'
+import type { LoadWorkspaceUiStateRequest } from '@shared/UiState'
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
-  LoadWorkspaceByPathRequest,
-  Workspace
+  LoadWorkspaceByPathRequest
 } from '@shared/Workspace'
 
 export type Parser<T> = (value: unknown) => T | null
@@ -52,18 +27,6 @@ const parseBoolean: Parser<boolean> = (value) => {
 
 export const parseNumber: Parser<number> = (value) => {
   return typeof value === 'number' ? value : null
-}
-
-const parsePromptStatus: Parser<PromptStatus> = (value) => {
-  return value === PromptStatus.Todo ||
-    value === PromptStatus.InProgress ||
-    value === PromptStatus.Completed
-    ? value
-    : null
-}
-
-const parseNullableString: Parser<string | null> = (value) => {
-  return value === null || typeof value === 'string' ? value : null
 }
 
 export const parseArray = <TItem>(itemParser: Parser<TItem>): Parser<TItem[]> => {
@@ -117,11 +80,6 @@ export const parseObject = <TValue extends object>(shape: {
       const parsedField = parser(record[key])
 
       if (parsedField === null) {
-        if (record[key] === null && parser === parseNullableString) {
-          parsedObject[key] = null as TValue[typeof key]
-          continue
-        }
-
         return null
       }
 
@@ -130,16 +88,6 @@ export const parseObject = <TValue extends object>(shape: {
 
     return parsedObject
   }
-}
-
-const parseRevisionPayloadEntity = <TData>(
-  dataParser: Parser<TData>
-): Parser<RevisionPayloadEntity<TData>> => {
-  return parseObject({
-    id: parseString,
-    expectedRevision: parseNumber,
-    data: dataParser
-  })
 }
 
 export const parseWireRequestWithPayload = <TPayload>(
@@ -196,178 +144,6 @@ export const createRequestParser = <TRequest>(requestParser: Parser<TRequest>) =
   }
 }
 
-const parseWorkspace = parseObject<Workspace>({
-  id: parseString,
-  workspacePath: parseString,
-  workspaceName: parseString,
-  entries: parseArray(
-    parseObject({
-      kind: (value) => (value === 'folder' ? 'folder' : null),
-      id: parseString
-    })
-  )
-})
-
-const parseWorkspaceRevisionPayloadEntity = parseRevisionPayloadEntity<Workspace>(parseWorkspace)
-
-const parsePromptFolderSettings = parseObject<PromptFolderSettings>({
-  folderDescription: parseNullableString
-})
-
-type ParsedPromptFolder = Omit<PromptFolder, 'kind' | 'settings'> & {
-  kind: PromptFolder['kind']
-  settings: PromptFolderSettings
-}
-
-const parsePromptFolderBase = parseObject<ParsedPromptFolder>({
-  id: parseString,
-  kind: (value) => (value === 'prompt' || value === 'template' ? value : null),
-  folderName: parseString,
-  displayName: parseString,
-  completedPromptIds: parseArray(parseString),
-  categoryOrder: parseObject({
-    categories: parseArray(
-      parseObject({
-        categoryId: parseNullableString,
-        entries: parseArray(
-          parseObject({
-            kind: (value) =>
-              value === 'prompt' || value === 'template' ? value : null,
-            id: parseString
-          })
-        )
-      })
-    )
-  }),
-  settings: parsePromptFolderSettings
-})
-
-const parsePromptFolder: Parser<PromptFolder> = (value) => {
-  return parsePromptFolderBase(value) as PromptFolder | null
-}
-
-const parsePromptFolderRevisionPayloadEntity =
-  parseRevisionPayloadEntity<PromptFolder>(parsePromptFolder)
-
-const parseUserPersistence = parseObject<UserPersistence>({
-  lastWorkspaceInfoPath: parseNullableString,
-  appSidebarWidthPx: parseNumber
-})
-
-const parseUserPersistenceRevisionPayloadEntity =
-  parseRevisionPayloadEntity<UserPersistence>(parseUserPersistence)
-
-const parseWorkspacePersistence: Parser<WorkspacePersistence> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const workspaceId = parseString(record.workspaceId)
-  return workspaceId ? parseSharedWorkspacePersistence(record, workspaceId) : null
-}
-
-const parseWorkspacePersistenceRevisionPayloadEntity =
-  parseRevisionPayloadEntity<WorkspacePersistence>(parseWorkspacePersistence)
-
-const parsePrompt: Parser<PromptPersisted> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const keys = Object.keys(record)
-  const hasStatus = keys.includes('status')
-  const hasCompletedAt = keys.includes('completedAt')
-  const hasTemplates = keys.includes('templates')
-  const hasCategory = keys.includes('category')
-  const allowedKeys = new Set([
-    'id',
-    'title',
-    'fallbackTitle',
-    'createdAt',
-    'modifiedAt',
-    'promptText',
-    ...(hasCategory ? ['category'] : []),
-    ...(hasTemplates ? ['templates'] : []),
-    'status',
-    ...(hasCompletedAt ? ['completedAt'] : [])
-  ])
-
-  if (keys.length !== allowedKeys.size) {
-    return null
-  }
-
-  if (!hasStatus || keys.some((key) => !allowedKeys.has(key))) {
-    return null
-  }
-
-  const hasCompletedStatus = record.status === PromptStatus.Completed
-  if (hasCompletedStatus !== hasCompletedAt) {
-    return null
-  }
-
-  // Template references are parsed separately because null is a valid selection value.
-  const { templates: templateReferences, ...recordWithoutTemplates } = record
-  const prompt = parseObject<Omit<PromptPersisted, 'templates'>>({
-    id: parseString,
-    title: parseString,
-    fallbackTitle: parseString,
-    createdAt: parseString,
-    modifiedAt: parseString,
-    promptText: parseString,
-    ...(hasCategory ? { category: parseString } : {}),
-    status: parsePromptStatus,
-    ...(hasCompletedAt
-      ? {
-          completedAt: parseString
-        }
-      : {})
-  } as {
-    [TKey in keyof Omit<PromptPersisted, 'templates'>]: Parser<
-      Omit<PromptPersisted, 'templates'>[TKey]
-    >
-  })(recordWithoutTemplates)
-
-  if (!prompt || !hasTemplates) return prompt
-  if (templateReferences === null) return { ...prompt, templates: null }
-
-  // Strict reference parser keeps the current on-wire object shape exact.
-  const parsedTemplateReferences = parseArray(
-    parseObject<PromptTemplateReference>({ id: parseString })
-  )(templateReferences)
-  return parsedTemplateReferences ? { ...prompt, templates: parsedTemplateReferences } : null
-}
-
-const parsePromptRevisionPayloadEntity = parseRevisionPayloadEntity<PromptPersisted>(parsePrompt)
-
-const parsePromptTemplate: Parser<PromptTemplatePersisted> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  const record = value as Record<string, unknown>
-  const hasCategory = Object.keys(record).includes('category')
-  return parseObject<PromptTemplatePersisted>({
-    id: parseString,
-    title: parseString,
-    fallbackTitle: parseString,
-    createdAt: parseString,
-    modifiedAt: parseString,
-    templateText: parseString,
-    ...(hasCategory ? { category: parseString } : {})
-  } as { [TKey in keyof PromptTemplatePersisted]: Parser<PromptTemplatePersisted[TKey]> })(record)
-}
-
-const parsePromptTemplateRevisionPayloadEntity =
-  parseRevisionPayloadEntity<PromptTemplatePersisted>(parsePromptTemplate)
-
-const parseMarkdownContentUiState = parseObject<MarkdownContentUiState>({
-  workspaceId: parseString,
-  contentId: parseString,
-  editorViewStateJson: parseString
-})
-
-const parseMarkdownContentUiStateRevisionPayloadEntity =
-  parseRevisionPayloadEntity<MarkdownContentUiState>(parseMarkdownContentUiState)
-
 const parseCreateWorkspacePayload = parseObject<CreateWorkspacePayload>({
   workspacePath: parseString,
   workspaceName: parseString,
@@ -382,80 +158,6 @@ const parseCloseWorkspacePayload = parseObject<CloseWorkspacePayload>({})
 const parseCloseWorkspaceWireRequest: Parser<IpcRequestWithPayload<CloseWorkspacePayload>> =
   parseWireRequestWithPayload<CloseWorkspacePayload>(parseCloseWorkspacePayload)
 
-const createDeleteMarkdownContentPayloadParser = <TContent extends MarkdownContentPersisted>(
-  parseContentRevisionPayloadEntity: Parser<RevisionPayloadEntity<TContent>>
-) => {
-  /** Exact legacy deletion payload retained for SQLite cleanup paths. */
-  const parseDeletePayload = parseObject<DeleteMarkdownContentPayload<TContent>>({
-    promptFolder: parsePromptFolderRevisionPayloadEntity,
-    content: parseContentRevisionPayloadEntity
-  })
-  return parseWireRequestWithPayload(parseDeletePayload)
-}
-
-const parseDeletePromptWireRequest = createDeleteMarkdownContentPayloadParser(
-  parsePromptRevisionPayloadEntity
-)
-const parseDeletePromptTemplateWireRequest = createDeleteMarkdownContentPayloadParser(
-  parsePromptTemplateRevisionPayloadEntity
-)
-
-const parseDeletePromptFolderPayload: Parser<DeletePromptFolderPayload> = (value) => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  if (
-    Object.keys(record).length !== 2 ||
-    !('workspace' in record) ||
-    !('promptFolder' in record)
-  ) {
-    return null
-  }
-
-  const workspace = parseWorkspaceRevisionPayloadEntity(record.workspace)
-  const promptFolder = parsePromptFolderRevisionPayloadEntity(record.promptFolder)
-
-  if (!workspace || !promptFolder) {
-    return null
-  }
-
-  return { workspace, promptFolder }
-}
-
-const parseDeletePromptFolderWireRequest: Parser<IpcRequestWithPayload<DeletePromptFolderPayload>> =
-  parseWireRequestWithPayload<DeletePromptFolderPayload>(parseDeletePromptFolderPayload)
-
-const parseUserPersistenceRevisionPayload = parseObject<UserPersistenceRevisionPayload>({
-  userPersistence: parseUserPersistenceRevisionPayloadEntity
-})
-
-const parseUpdateUserPersistenceRevisionWireRequest: Parser<
-  IpcRequestWithPayload<UserPersistenceRevisionPayload>
-> = parseWireRequestWithPayload<UserPersistenceRevisionPayload>(parseUserPersistenceRevisionPayload)
-
-const parseWorkspacePersistenceRevisionPayload = parseObject<WorkspacePersistenceRevisionPayload>({
-  workspacePersistence: parseWorkspacePersistenceRevisionPayloadEntity
-})
-
-const parseUpdateWorkspacePersistenceRevisionWireRequest: Parser<
-  IpcRequestWithPayload<WorkspacePersistenceRevisionPayload>
-> = parseWireRequestWithPayload<WorkspacePersistenceRevisionPayload>(
-  parseWorkspacePersistenceRevisionPayload
-)
-
-const parseMarkdownContentUiStateRevisionPayload =
-  parseObject<MarkdownContentUiStateRevisionPayload>({
-    markdownContentUiState: parseMarkdownContentUiStateRevisionPayloadEntity
-  })
-
-const parseUpdateMarkdownContentUiStateRevisionWireRequest: Parser<
-  IpcRequestWithPayload<MarkdownContentUiStateRevisionPayload>
-> = parseWireRequestWithPayload<MarkdownContentUiStateRevisionPayload>(
-  parseMarkdownContentUiStateRevisionPayload
-)
-
 const parseLoadWorkspaceByPathPayload = parseObject<LoadWorkspaceByPathRequest>({
   workspaceInfoPath: parseString
 })
@@ -464,14 +166,14 @@ const parseLoadWorkspaceByPathWireRequest: Parser<
   IpcRequestWithPayload<LoadWorkspaceByPathRequest>
 > = parseWireRequestWithPayload<LoadWorkspaceByPathRequest>(parseLoadWorkspaceByPathPayload)
 
-const parseLoadWorkspacePersistencePayload = parseObject<LoadWorkspacePersistenceRequest>({
+const parseLoadWorkspaceUiStatePayload = parseObject<LoadWorkspaceUiStateRequest>({
   workspaceId: parseString
 })
 
-const parseLoadWorkspacePersistenceWireRequest: Parser<
-  IpcRequestWithPayload<LoadWorkspacePersistenceRequest>
-> = parseWireRequestWithPayload<LoadWorkspacePersistenceRequest>(
-  parseLoadWorkspacePersistencePayload
+const parseLoadWorkspaceUiStateWireRequest: Parser<
+  IpcRequestWithPayload<LoadWorkspaceUiStateRequest>
+> = parseWireRequestWithPayload<LoadWorkspaceUiStateRequest>(
+  parseLoadWorkspaceUiStatePayload
 )
 
 const parseLoadPromptFolderInitialPayload = parseObject<LoadPromptFolderInitialPayload>({
@@ -487,34 +189,12 @@ export const parseCreateWorkspaceRequest = createRequestParser(parseCreateWorksp
 
 export const parseCloseWorkspaceRequest = createRequestParser(parseCloseWorkspaceWireRequest)
 
-export const parseDeletePromptFolderRequest = createRequestParser(
-  parseDeletePromptFolderWireRequest
-)
-
-export const parseDeletePromptRequest = createRequestParser(parseDeletePromptWireRequest)
-
-export const parseDeletePromptTemplateRequest = createRequestParser(
-  parseDeletePromptTemplateWireRequest
-)
-
-export const parseUpdateUserPersistenceRevisionRequest = createRequestParser(
-  parseUpdateUserPersistenceRevisionWireRequest
-)
-
-export const parseUpdateWorkspacePersistenceRevisionRequest = createRequestParser(
-  parseUpdateWorkspacePersistenceRevisionWireRequest
-)
-
-export const parseUpdateMarkdownContentUiStateRevisionRequest = createRequestParser(
-  parseUpdateMarkdownContentUiStateRevisionWireRequest
-)
-
 export const parseLoadWorkspaceByPathRequest = createRequestParser(
   parseLoadWorkspaceByPathWireRequest
 )
 
-export const parseLoadWorkspacePersistenceRequest = createRequestParser(
-  parseLoadWorkspacePersistenceWireRequest
+export const parseLoadWorkspaceUiStateRequest = createRequestParser(
+  parseLoadWorkspaceUiStateWireRequest
 )
 
 export const parseLoadPromptFolderInitialRequest = createRequestParser(

@@ -1,23 +1,20 @@
 import {
   DEFAULT_USER_PERSISTENCE,
-  createDefaultWorkspacePersistence,
-  parseWorkspaceScreenSelection,
-  parseWorkspacePersistence,
-  parseWorkspaceAccordionViewEntry,
-  toSerializableWorkspacePersistence,
   parseUserPersistence,
-  type UserPersistence,
-  type WorkspacePersistence
+  type UserPersistence
 } from '@shared/UserPersistence'
 import { SqliteDataAccess } from './SqliteDataAccess'
 
+/** Singleton SQLite row ID used by application and window persistence. */
 const APP_PERSISTENCE_ID = 1
 
+/** SQLite projection for renderer-owned user persistence. */
 type UserPersistenceRow = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
 }
 
+/** SQLite projection for main-process window persistence. */
 type WindowPersistenceRow = {
   windowXPx: number | null
   windowYPx: number | null
@@ -27,33 +24,7 @@ type WindowPersistenceRow = {
   windowIsFullScreen: number | null
 }
 
-type WorkspaceUiStateRow = {
-  selectedScreen: string
-  selectedScreenDataJson: string | null
-  lastPromptFolderId: string | null
-}
-
-/** Persisted prompt-folder screen state for one root or category content owner. */
-type PromptFolderViewRow = {
-  contentOwnerId: string
-  selectedEntryId: string
-  treeIsExpanded: number
-  detailsSectionIsExpanded: number
-  contentSectionIsExpanded: number
-}
-
-/** Persisted category description editor state. */
-type CategoryDescriptionEditorViewStateRow = {
-  contentOwnerId: string
-  categoryDescriptionEditorViewStateJson: string
-}
-
-/** SQLite row for one workspace accordion instance. */
-type AccordionViewRow = {
-  persistenceId: string
-  sectionsJson: string
-}
-
+/** Main-process window geometry and display-mode persistence. */
 export type WindowPersistence = {
   x: number | null
   y: number | null
@@ -63,6 +34,7 @@ export type WindowPersistence = {
   isFullScreen: boolean | null
 }
 
+/** Default window persistence used before SQLite contains saved bounds. */
 const DEFAULT_WINDOW_PERSISTENCE: WindowPersistence = {
   x: null,
   y: null,
@@ -72,117 +44,77 @@ const DEFAULT_WINDOW_PERSISTENCE: WindowPersistence = {
   isFullScreen: null
 }
 
-const parseSelectedScreenDataJson = (value: string | null): unknown => {
-  if (value === null) {
-    return null
-  }
-
-  try {
-    return JSON.parse(value)
-  } catch {
-    return undefined
-  }
-}
-
-/** Parses the complete section array stored for one accordion instance. */
-const parseAccordionSectionsJson = (value: string): unknown => {
-  try {
-    return JSON.parse(value)
-  } catch {
-    return []
-  }
-}
-
+/** SQLite access for renderer user persistence and main window persistence. */
 export class UserPersistenceDataAccess {
+  /** Reads the renderer-owned user-persistence singleton. */
   static readUserPersistence(): UserPersistence {
+    /** SQLite database containing the singleton application row. */
     const db = SqliteDataAccess.getDatabase()
+    /** Stored renderer persistence fields when the singleton row exists. */
     const persistenceRow = db
       .prepare(
-        `
-        SELECT
-          last_workspace_info_path AS lastWorkspaceInfoPath,
-          app_sidebar_width_px AS appSidebarWidthPx
-        FROM app_persistence
-        WHERE id = ?
-        `
+        `SELECT last_workspace_info_path AS lastWorkspaceInfoPath,
+                app_sidebar_width_px AS appSidebarWidthPx
+         FROM app_persistence WHERE id = ?`
       )
       .get(APP_PERSISTENCE_ID) as UserPersistenceRow | undefined
+    /** Validated persistence or the stable defaults. */
     const parsedPersistence = parseUserPersistence(persistenceRow)
-
     return parsedPersistence ?? DEFAULT_USER_PERSISTENCE
   }
 
+  /** Writes and returns normalized renderer user persistence. */
   static updateUserPersistence(userPersistence: UserPersistence): UserPersistence {
+    /** SQLite database receiving the singleton upsert. */
     const db = SqliteDataAccess.getDatabase()
+    /** Normalized values persisted by the domain mutation. */
     const nextUserPersistence = {
       lastWorkspaceInfoPath: userPersistence.lastWorkspaceInfoPath,
       appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx)
     }
-
     db.prepare(
-      `
-      INSERT INTO app_persistence (
-        id,
-        last_workspace_info_path,
-        app_sidebar_width_px
-      )
-      VALUES (?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        last_workspace_info_path = excluded.last_workspace_info_path,
-        app_sidebar_width_px = excluded.app_sidebar_width_px
-      `
+      `INSERT INTO app_persistence (id, last_workspace_info_path, app_sidebar_width_px)
+       VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         last_workspace_info_path = excluded.last_workspace_info_path,
+         app_sidebar_width_px = excluded.app_sidebar_width_px`
     ).run(
       APP_PERSISTENCE_ID,
       nextUserPersistence.lastWorkspaceInfoPath,
       nextUserPersistence.appSidebarWidthPx
     )
-
     return nextUserPersistence
   }
 
+  /** Reads persisted window geometry and display modes. */
   static readWindowPersistence(): WindowPersistence {
-    const db = SqliteDataAccess.getDatabase()
-    const persistenceRow = db
+    /** Stored window fields when the singleton row exists. */
+    const row = SqliteDataAccess.getDatabase()
       .prepare(
-        `
-        SELECT
-          window_x_px AS windowXPx,
-          window_y_px AS windowYPx,
-          window_width_px AS windowWidthPx,
-          window_height_px AS windowHeightPx,
-          window_is_maximized AS windowIsMaximized,
-          window_is_fullscreen AS windowIsFullScreen
-        FROM app_persistence
-        WHERE id = ?
-        `
+        `SELECT window_x_px AS windowXPx,
+                window_y_px AS windowYPx,
+                window_width_px AS windowWidthPx,
+                window_height_px AS windowHeightPx,
+                window_is_maximized AS windowIsMaximized,
+                window_is_fullscreen AS windowIsFullScreen
+         FROM app_persistence WHERE id = ?`
       )
       .get(APP_PERSISTENCE_ID) as WindowPersistenceRow | undefined
-
-    if (!persistenceRow) {
-      return DEFAULT_WINDOW_PERSISTENCE
-    }
-
+    if (!row) return DEFAULT_WINDOW_PERSISTENCE
     return {
-      x: persistenceRow.windowXPx === null ? null : Math.round(persistenceRow.windowXPx),
-      y: persistenceRow.windowYPx === null ? null : Math.round(persistenceRow.windowYPx),
-      width:
-        persistenceRow.windowWidthPx === null ? null : Math.round(persistenceRow.windowWidthPx),
-      height:
-        persistenceRow.windowHeightPx === null ? null : Math.round(persistenceRow.windowHeightPx),
-      isMaximized:
-        persistenceRow.windowIsMaximized === null
-          ? null
-          : Boolean(persistenceRow.windowIsMaximized),
-      isFullScreen:
-        persistenceRow.windowIsFullScreen === null
-          ? null
-          : Boolean(persistenceRow.windowIsFullScreen)
+      x: row.windowXPx === null ? null : Math.round(row.windowXPx),
+      y: row.windowYPx === null ? null : Math.round(row.windowYPx),
+      width: row.windowWidthPx === null ? null : Math.round(row.windowWidthPx),
+      height: row.windowHeightPx === null ? null : Math.round(row.windowHeightPx),
+      isMaximized: row.windowIsMaximized === null ? null : Boolean(row.windowIsMaximized),
+      isFullScreen: row.windowIsFullScreen === null ? null : Boolean(row.windowIsFullScreen)
     }
   }
 
+  /** Writes normalized window geometry and display modes. */
   static updateWindowPersistence(windowPersistence: WindowPersistence): void {
-    const db = SqliteDataAccess.getDatabase()
-    const nextWindowPersistence = {
+    /** Normalized SQLite-compatible window values. */
+    const next = {
       x: windowPersistence.x === null ? null : Math.round(windowPersistence.x),
       y: windowPersistence.y === null ? null : Math.round(windowPersistence.y),
       width: windowPersistence.width === null ? null : Math.round(windowPersistence.width),
@@ -192,418 +124,21 @@ export class UserPersistenceDataAccess {
       isFullScreen:
         windowPersistence.isFullScreen === null ? null : windowPersistence.isFullScreen ? 1 : 0
     }
-
-    db.prepare(
-      `
-      UPDATE app_persistence
-      SET
-        window_x_px = ?,
-        window_y_px = ?,
-        window_width_px = ?,
-        window_height_px = ?,
-        window_is_maximized = ?,
-        window_is_fullscreen = ?
-      WHERE id = ?
-      `
-    ).run(
-      nextWindowPersistence.x,
-      nextWindowPersistence.y,
-      nextWindowPersistence.width,
-      nextWindowPersistence.height,
-      nextWindowPersistence.isMaximized,
-      nextWindowPersistence.isFullScreen,
-      APP_PERSISTENCE_ID
-    )
-  }
-
-  static readWorkspacePersistence(workspaceId: string): WorkspacePersistence {
-    const db = SqliteDataAccess.getDatabase()
-    const workspaceUiState = db
+    SqliteDataAccess.getDatabase()
       .prepare(
-        `
-        SELECT
-          selected_screen AS selectedScreen,
-          selected_screen_data_json AS selectedScreenDataJson,
-          last_prompt_folder_id AS lastPromptFolderId
-        FROM workspace_ui_state
-        WHERE workspace_id = ?
-        `
+        `UPDATE app_persistence SET
+           window_x_px = ?, window_y_px = ?, window_width_px = ?, window_height_px = ?,
+           window_is_maximized = ?, window_is_fullscreen = ?
+         WHERE id = ?`
       )
-      .get(workspaceId) as WorkspaceUiStateRow | undefined
-
-    if (!workspaceUiState) {
-      return createDefaultWorkspacePersistence(workspaceId)
-    }
-
-    const promptFolderViewRows = db
-      .prepare(
-        `
-        SELECT
-          content_owner_id AS contentOwnerId,
-          selected_entry_id AS selectedEntryId,
-          tree_is_expanded AS treeIsExpanded,
-          details_section_is_expanded AS detailsSectionIsExpanded,
-          content_section_is_expanded AS contentSectionIsExpanded
-        FROM prompt_folder_view_state
-        WHERE workspace_id = ?
-        `
+      .run(
+        next.x,
+        next.y,
+        next.width,
+        next.height,
+        next.isMaximized,
+        next.isFullScreen,
+        APP_PERSISTENCE_ID
       )
-      .all(workspaceId) as PromptFolderViewRow[]
-
-    const categoryDescriptionEditorViewStateRows = db
-      .prepare(
-        `
-        SELECT
-          category_id AS contentOwnerId,
-          editor_view_state_json AS categoryDescriptionEditorViewStateJson
-        FROM category_description_editor_view_state
-        WHERE workspace_id = ?
-        `
-      )
-      .all(workspaceId) as CategoryDescriptionEditorViewStateRow[]
-
-    /** Workspace accordion section rows loaded from SQLite. */
-    const accordionViewRows = db
-      .prepare(
-        `
-        SELECT
-          persistence_id AS persistenceId,
-          sections_json AS sectionsJson
-        FROM accordion_view_state
-        WHERE workspace_id = ?
-        `
-      )
-      .all(workspaceId) as AccordionViewRow[]
-
-    /** Category description editor state keyed by category ID. */
-    const categoryDescriptionEditorViewStateByCategoryId = new Map<string, string>()
-    for (const row of categoryDescriptionEditorViewStateRows) {
-      categoryDescriptionEditorViewStateByCategoryId.set(
-        row.contentOwnerId,
-        row.categoryDescriptionEditorViewStateJson
-      )
-    }
-
-    /** Serializable prompt-folder screen state loaded from SQLite. */
-    const serializablePromptFolderViewEntries = promptFolderViewRows.map((row) => ({
-      contentOwnerId: row.contentOwnerId,
-      selectedEntryId: row.selectedEntryId,
-      treeIsExpanded: row.treeIsExpanded !== 0,
-      detailsSectionIsExpanded: row.detailsSectionIsExpanded !== 0,
-      contentSectionIsExpanded: row.contentSectionIsExpanded !== 0,
-      categoryDescriptionEditorViewStateJson:
-        categoryDescriptionEditorViewStateByCategoryId.get(row.contentOwnerId) ?? null
-    }))
-
-    /** Serializable complete accordion state loaded for the workspace. */
-    const accordionViewEntries = accordionViewRows.flatMap((row) => {
-      /** Validated accordion row converted from its JSON section array. */
-      const entry = parseWorkspaceAccordionViewEntry({
-        persistenceId: row.persistenceId,
-        sections: parseAccordionSectionsJson(row.sectionsJson)
-      })
-      return entry ? [entry] : []
-    })
-
-    const selectedScreenData = parseSelectedScreenDataJson(workspaceUiState.selectedScreenDataJson)
-    const parsedPersistence = parseWorkspacePersistence(
-      {
-        selectedScreen: workspaceUiState.selectedScreen,
-        selectedScreenData,
-        lastPromptFolderId: workspaceUiState.lastPromptFolderId,
-        promptFolderViewEntries: serializablePromptFolderViewEntries,
-        accordionViewEntries
-      },
-      workspaceId
-    )
-
-    if (parsedPersistence) {
-      return parsedPersistence
-    }
-
-    this.resetWorkspaceScreenSelection(workspaceId)
-    return {
-      ...createDefaultWorkspacePersistence(workspaceId),
-      promptFolderViewEntries: serializablePromptFolderViewEntries,
-      accordionViewEntries
-    }
-  }
-
-  static updateWorkspacePersistence(
-    workspacePersistence: WorkspacePersistence
-  ): WorkspacePersistence {
-    const db = SqliteDataAccess.getDatabase()
-    const serializableWorkspacePersistence =
-      toSerializableWorkspacePersistence(workspacePersistence)
-
-    const updateWorkspace = db.transaction(() => {
-      db.prepare(
-        `
-        INSERT INTO workspace_ui_state (
-          workspace_id,
-          selected_screen,
-          selected_screen_data_json,
-          last_prompt_folder_id
-        )
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(workspace_id) DO UPDATE SET
-          selected_screen = excluded.selected_screen,
-          selected_screen_data_json = excluded.selected_screen_data_json,
-          last_prompt_folder_id = excluded.last_prompt_folder_id
-        `
-      ).run(
-        serializableWorkspacePersistence.workspaceId,
-        serializableWorkspacePersistence.selectedScreen,
-        serializableWorkspacePersistence.selectedScreenData === null
-          ? null
-          : JSON.stringify(serializableWorkspacePersistence.selectedScreenData),
-        serializableWorkspacePersistence.lastPromptFolderId
-      )
-
-      db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(
-        serializableWorkspacePersistence.workspaceId
-      )
-      db.prepare('DELETE FROM category_description_editor_view_state WHERE workspace_id = ?').run(
-        serializableWorkspacePersistence.workspaceId
-      )
-      db.prepare('DELETE FROM accordion_view_state WHERE workspace_id = ?').run(
-        serializableWorkspacePersistence.workspaceId
-      )
-
-      /** Inserts one prompt-folder screen view entry. */
-      const insertPromptFolderView = db.prepare(
-        `
-        INSERT INTO prompt_folder_view_state (
-          workspace_id,
-          content_owner_id,
-          selected_entry_id,
-          tree_is_expanded,
-          details_section_is_expanded,
-          content_section_is_expanded
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-        `
-      )
-      /** Inserts one category description editor view state. */
-      const insertCategoryDescriptionEditorViewState = db.prepare(
-        `
-        INSERT INTO category_description_editor_view_state (
-          workspace_id,
-          category_id,
-          editor_view_state_json
-        )
-        VALUES (?, ?, ?)
-        `
-      )
-      /** Inserts one workspace accordion's complete section state. */
-      const insertAccordionView = db.prepare(
-        `
-        INSERT INTO accordion_view_state (
-          workspace_id,
-          persistence_id,
-          sections_json
-        )
-        VALUES (?, ?, ?)
-        `
-      )
-
-      for (const entry of serializableWorkspacePersistence.promptFolderViewEntries) {
-        insertPromptFolderView.run(
-          serializableWorkspacePersistence.workspaceId,
-          entry.contentOwnerId,
-          entry.selectedEntryId,
-          entry.treeIsExpanded ? 1 : 0,
-          entry.detailsSectionIsExpanded ? 1 : 0,
-          entry.contentSectionIsExpanded ? 1 : 0
-        )
-
-        if (entry.categoryDescriptionEditorViewStateJson !== null) {
-          insertCategoryDescriptionEditorViewState.run(
-            serializableWorkspacePersistence.workspaceId,
-            entry.contentOwnerId,
-            entry.categoryDescriptionEditorViewStateJson
-          )
-        }
-      }
-
-      for (const entry of serializableWorkspacePersistence.accordionViewEntries) {
-        insertAccordionView.run(
-          serializableWorkspacePersistence.workspaceId,
-          entry.persistenceId,
-          JSON.stringify(entry.sections)
-        )
-      }
-    })
-
-    updateWorkspace()
-
-    return serializableWorkspacePersistence
-  }
-
-  /** Removes workspace view state whose root-folder or category owner no longer exists. */
-  static cleanupWorkspacePromptFolderViewState(
-    workspaceId: string,
-    workspacePromptFolderIds: string[],
-    workspaceCategoryIds: string[]
-  ): void {
-    const db = SqliteDataAccess.getDatabase()
-    const validPromptFolderIds = new Set(workspacePromptFolderIds)
-    /** Valid root-folder and category owners for prompt-folder screen view entries. */
-    const validContentOwnerIds = new Set([...workspacePromptFolderIds, ...workspaceCategoryIds])
-
-    const cleanupWorkspaceState = db.transaction(() => {
-      /** Existing prompt-folder view entries retained for valid content owners. */
-      const existingPromptFolderViewEntries = db
-        .prepare(
-          `
-          SELECT
-            content_owner_id AS contentOwnerId,
-            selected_entry_id AS selectedEntryId,
-            tree_is_expanded AS treeIsExpanded,
-            details_section_is_expanded AS detailsSectionIsExpanded,
-            content_section_is_expanded AS contentSectionIsExpanded
-          FROM prompt_folder_view_state
-          WHERE workspace_id = ?
-          `
-        )
-        .all(workspaceId) as PromptFolderViewRow[]
-
-      /** Existing category description editor states retained for valid categories. */
-      const existingCategoryDescriptionEditorViewStates = db
-        .prepare(
-          `
-          SELECT
-            category_id AS contentOwnerId,
-            editor_view_state_json AS categoryDescriptionEditorViewStateJson
-          FROM category_description_editor_view_state
-          WHERE workspace_id = ?
-          `
-        )
-        .all(workspaceId) as CategoryDescriptionEditorViewStateRow[]
-
-      db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(workspaceId)
-      db.prepare('DELETE FROM category_description_editor_view_state WHERE workspace_id = ?').run(
-        workspaceId
-      )
-
-      /** Reinserts one retained prompt-folder view entry. */
-      const insertPromptFolderView = db.prepare(
-        `
-        INSERT INTO prompt_folder_view_state (
-          workspace_id,
-          content_owner_id,
-          selected_entry_id,
-          tree_is_expanded,
-          details_section_is_expanded,
-          content_section_is_expanded
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-        `
-      )
-      /** Reinserts one retained category description editor state. */
-      const insertCategoryDescriptionEditorViewState = db.prepare(
-        `
-        INSERT INTO category_description_editor_view_state (
-          workspace_id,
-          category_id,
-          editor_view_state_json
-        )
-        VALUES (?, ?, ?)
-        `
-      )
-
-      for (const entry of existingPromptFolderViewEntries) {
-        if (!validContentOwnerIds.has(entry.contentOwnerId)) {
-          continue
-        }
-
-        insertPromptFolderView.run(
-          workspaceId,
-          entry.contentOwnerId,
-          entry.selectedEntryId,
-          entry.treeIsExpanded,
-          entry.detailsSectionIsExpanded,
-          entry.contentSectionIsExpanded
-        )
-      }
-
-      for (const entry of existingCategoryDescriptionEditorViewStates) {
-        if (!validContentOwnerIds.has(entry.contentOwnerId)) {
-          continue
-        }
-
-        insertCategoryDescriptionEditorViewState.run(
-          workspaceId,
-          entry.contentOwnerId,
-          entry.categoryDescriptionEditorViewStateJson
-        )
-      }
-
-      const selectedWorkspaceState = db
-        .prepare(
-          `
-          SELECT
-            selected_screen AS selectedScreen,
-            selected_screen_data_json AS selectedScreenDataJson,
-            last_prompt_folder_id AS lastPromptFolderId
-          FROM workspace_ui_state
-          WHERE workspace_id = ?
-          `
-        )
-        .get(workspaceId) as WorkspaceUiStateRow | undefined
-
-      if (!selectedWorkspaceState) {
-        return
-      }
-
-      const selectedScreenData = parseSelectedScreenDataJson(
-        selectedWorkspaceState.selectedScreenDataJson
-      )
-      const selectedWorkspaceScreen = parseWorkspaceScreenSelection(
-        selectedWorkspaceState.selectedScreen,
-        selectedScreenData
-      )
-
-      if (!selectedWorkspaceScreen) {
-        UserPersistenceDataAccess.resetWorkspaceScreenSelection(workspaceId)
-        return
-      }
-
-      if (
-        selectedWorkspaceScreen.selectedScreen === 'prompt-folders' &&
-        selectedWorkspaceScreen.selectedScreenData.promptFolderId &&
-        !validPromptFolderIds.has(selectedWorkspaceScreen.selectedScreenData.promptFolderId)
-      ) {
-        UserPersistenceDataAccess.resetWorkspaceScreenSelection(workspaceId)
-      }
-
-      if (
-        selectedWorkspaceState.lastPromptFolderId &&
-        !validPromptFolderIds.has(selectedWorkspaceState.lastPromptFolderId)
-      ) {
-        db.prepare(
-          `
-          UPDATE workspace_ui_state
-          SET last_prompt_folder_id = NULL
-          WHERE workspace_id = ?
-          `
-        ).run(workspaceId)
-      }
-    })
-
-    cleanupWorkspaceState()
-  }
-
-  private static resetWorkspaceScreenSelection(workspaceId: string): void {
-    const db = SqliteDataAccess.getDatabase()
-    db.prepare(
-      `
-      UPDATE workspace_ui_state
-      SET selected_screen = 'home',
-          selected_screen_data_json = NULL,
-          last_prompt_folder_id = NULL
-      WHERE workspace_id = ?
-      `
-    ).run(workspaceId)
   }
 }

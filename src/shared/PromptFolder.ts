@@ -1,9 +1,8 @@
 import type { PromptPersisted } from './Prompt'
 import type { PromptTemplatePersisted } from './PromptTemplate'
 import type { PromptEntryRef, PromptTemplateEntryRef } from './OrderContainer'
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
+import type { RevisionEnvelope } from './Revision'
 import type { IpcResult } from './IpcResult'
-import type { Workspace } from './Workspace'
 import type { MarkdownContentUiState } from './MarkdownContentUiState'
 
 export type PromptFolderKind = 'prompt' | 'template'
@@ -249,16 +248,6 @@ export const haveSamePromptFolderSettings = (
   left: PromptFolderSettings,
   right: PromptFolderSettings
 ): boolean => left.folderDescription === right.folderDescription
-
-export type DeletePromptFolderPayload = {
-  workspace: RevisionPayloadEntity<Workspace>
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-}
-
-export type DeletePromptFolderResponsePayload = {
-  workspace?: RevisionEnvelope<Workspace>
-  promptFolder?: RevisionEnvelope<PromptFolder>
-}
 
 export type LoadPromptFolderInitialPayload = {
   workspaceId: string

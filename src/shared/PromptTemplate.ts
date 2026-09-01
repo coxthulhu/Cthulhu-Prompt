@@ -46,13 +46,3 @@ export const createPromptTemplateFull = (
 export const isPromptTemplateFull = (
   template: PromptTemplate
 ): template is PromptTemplateFull => template.loadingState === 'full'
-
-export type DeletePromptTemplatePayload = DeleteMarkdownContentPayload<PromptTemplatePersisted>
-
-export type DeletePromptTemplateResponsePayload =
-  DeleteMarkdownContentResponsePayload<PromptTemplatePersisted>
-
-import type {
-  DeleteMarkdownContentPayload,
-  DeleteMarkdownContentResponsePayload
-} from './MarkdownContent'

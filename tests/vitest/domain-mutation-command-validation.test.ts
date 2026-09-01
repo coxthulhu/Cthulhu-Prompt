@@ -9,12 +9,14 @@ import {
 import {
   parseCreatePromptDomainCommand,
   parseCreatePromptTemplateDomainCommand,
+  parseDeleteMarkdownContentDomainCommand,
   parseMoveMarkdownContentDomainCommand,
   parseUpdatePromptDomainCommand,
   parseUpdatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
 import {
   parseCreatePromptFolderDomainCommand,
+  parseDeletePromptFolderDomainCommand,
   parseMovePromptFolderDomainCommand,
   parseRenamePromptFolderDomainCommand
 } from '@shared/PromptFolderDomainMutations'
@@ -52,6 +54,31 @@ describe('domain mutation command validation', () => {
     }
     expect(parseCreatePromptFolderDomainCommand(createCommand)).toEqual(createCommand)
     expect(parseMovePromptFolderDomainCommand(moveCommand)).toEqual(moveCommand)
+  })
+
+  it('accepts root and markdown deletion commands and rejects legacy entity payloads', () => {
+    /** Valid root deletion command carrying only workspace ownership intent. */
+    const rootCommand = { workspaceId: 'workspace', promptFolderId: 'root' }
+    /** Valid prompt or template deletion command carrying its exact owner. */
+    const contentCommand = {
+      workspaceId: 'workspace',
+      promptFolderId: 'root',
+      contentId: 'content'
+    }
+    expect(parseDeletePromptFolderDomainCommand(rootCommand)).toEqual(rootCommand)
+    expect(parseDeleteMarkdownContentDomainCommand(contentCommand)).toEqual(contentCommand)
+    expect(
+      parseDeletePromptFolderDomainCommand({
+        ...rootCommand,
+        workspace: { id: 'legacy', expectedRevision: 1 }
+      })
+    ).toBeNull()
+    expect(
+      parseDeleteMarkdownContentDomainCommand({
+        ...contentCommand,
+        content: { id: 'legacy', expectedRevision: 1 }
+      })
+    ).toBeNull()
   })
 
   it('accepts a valid category creation command', () => {
@@ -216,6 +243,7 @@ describe('domain mutation command validation', () => {
     const command = {
       categoryId: 'category',
       promptFolderId: 'root',
+      workspaceId: 'workspace',
       modifiedAt: 'timestamp'
     }
     expect(parseDeleteCategoryDomainCommand(command)).toEqual(command)
@@ -226,6 +254,7 @@ describe('domain mutation command validation', () => {
     const command = {
       categoryId: 'category',
       promptFolderId: 'root',
+      workspaceId: 'workspace',
       modifiedAt: 'timestamp',
       category: { id: 'legacy' }
     }

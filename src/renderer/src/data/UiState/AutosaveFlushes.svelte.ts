@@ -3,7 +3,7 @@ import { flushPromptTemplateClientStateAutosaves } from './PromptTemplateClientS
 import { flushMarkdownContentUiStateAutosaves } from './MarkdownContentUiStateAutosave.svelte.ts'
 import { flushSystemSettingsAutosaves } from './SystemSettingsAutosave.svelte.ts'
 import { flushUserPersistenceAutosaves } from './UserPersistenceAutosave.svelte.ts'
-import { flushWorkspacePersistenceAutosaves } from './WorkspacePersistenceAutosave.svelte.ts'
+import { flushWorkspaceUiStateAutosaves } from './WorkspaceUiStateAutosave.svelte.ts'
 
 type AutosaveFlushTask = () => Promise<void>
 
@@ -12,7 +12,7 @@ const workspaceScopedAutosaveFlushTasks: AutosaveFlushTask[] = [
   flushPromptTemplateClientStateAutosaves,
   flushMarkdownContentUiStateAutosaves,
   flushSystemSettingsAutosaves,
-  flushWorkspacePersistenceAutosaves
+  flushWorkspaceUiStateAutosaves
 ]
 
 const flushAutosaveTasks = async (tasks: AutosaveFlushTask[]): Promise<void> => {

@@ -7,6 +7,7 @@ import { promptClientStateCollection } from '@renderer/data/Collections/PromptCl
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 
 /** Shared revision mutation mock exposes the deletion transaction contract. */
 const runRevisionMutation = vi.hoisted(() => vi.fn())
@@ -29,6 +30,8 @@ const ROOT_FOLDER_ID = 'category-delete-root'
 const PROMPT_ID = 'category-delete-prompt'
 /** Stable template ID affected by deletion. */
 const TEMPLATE_ID = 'category-delete-template'
+/** Stable workspace ID owning the category root. */
+const WORKSPACE_ID = 'category-delete-workspace'
 
 describe('category mutations', () => {
   beforeEach(() => {
@@ -39,6 +42,7 @@ describe('category mutations', () => {
     promptFolderCollection.utils.deleteAuthoritative(ROOT_FOLDER_ID)
     promptCollection.utils.deleteAuthoritative(PROMPT_ID)
     promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
+    workspaceCollection.utils.deleteAuthoritative(WORKSPACE_ID)
     if (promptClientStateCollection.has(PROMPT_ID)) promptClientStateCollection.delete(PROMPT_ID)
     if (promptTemplateClientStateCollection.has(TEMPLATE_ID)) {
       promptTemplateClientStateCollection.delete(TEMPLATE_ID)
@@ -70,6 +74,16 @@ describe('category mutations', () => {
           ]
         },
         settings: { folderDescription: null }
+      }
+    })
+    workspaceCollection.utils.upsertAuthoritative({
+      id: WORKSPACE_ID,
+      revision: 1,
+      data: {
+        id: WORKSPACE_ID,
+        workspacePath: 'C:\\Workspace',
+        workspaceName: 'Workspace',
+        entries: [{ kind: 'folder', id: ROOT_FOLDER_ID }]
       }
     })
     promptCollection.utils.upsertAuthoritative({
@@ -255,6 +269,7 @@ describe('category mutations', () => {
         command: {
           categoryId: CATEGORY_ID,
           promptFolderId: ROOT_FOLDER_ID,
+          workspaceId: WORKSPACE_ID,
           modifiedAt: promptState.modifiedAt
         },
         expectations: [
@@ -337,6 +352,16 @@ describe('category mutations', () => {
             modifiedAt: '2026-08-16T12:00:00.000Z',
             templateText: 'Template text.'
           }
+        },
+        {
+          entityType: 'workspacePromptFolderUiState',
+          id: `${WORKSPACE_ID}:${CATEGORY_ID}`,
+          deleted: true
+        },
+        {
+          entityType: 'categoryDescriptionEditorUiState',
+          id: `${WORKSPACE_ID}:${CATEGORY_ID}`,
+          deleted: true
         }
       ]
     }

@@ -48,11 +48,6 @@ describe('Prompt template mutations', () => {
           }),
         { ipcChannel: channel, ipcPayload: payload }
       )
-    const toPayloadEntity = (snapshot: { id: string; revision: number; data: unknown }) => ({
-      id: snapshot.id,
-      expectedRevision: snapshot.revision,
-      data: snapshot.data
-    })
     const loadFolder = async (promptFolderId: string) =>
       await invoke('load-prompt-folder-initial', {
         workspaceId: WORKSPACE_ID,
@@ -308,20 +303,44 @@ describe('Prompt template mutations', () => {
       ).rows
     ).toEqual([{ contentId: templateId }, { contentId: 'sibling-template' }])
     const deleteResult = await invoke('delete-prompt-template', {
-      promptFolder: toPayloadEntity(movedDestinationFolder),
-      content: toPayloadEntity(movedTemplate)
+      command: {
+        workspaceId: WORKSPACE_ID,
+        promptFolderId: DESTINATION_FOLDER_ID,
+        contentId: templateId
+      },
+      expectations: [
+        {
+          entityType: 'promptFolder',
+          id: DESTINATION_FOLDER_ID,
+          expected: 'revision',
+          revision: movedDestinationFolder.revision
+        },
+        {
+          entityType: 'promptTemplate',
+          id: templateId,
+          expected: 'revision',
+          revision: movedTemplate.revision
+        }
+      ]
     })
 
     expect(deleteResult).toMatchObject({
       success: true,
       payload: {
-        promptFolders: expect.arrayContaining([
+        snapshots: expect.arrayContaining([
           expect.objectContaining({
+            entityType: 'promptFolder',
             id: DESTINATION_FOLDER_ID,
             data: expect.objectContaining({
               categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
             })
-          })
+          }),
+          { entityType: 'promptTemplate', id: templateId, deleted: true },
+          {
+            entityType: 'markdownContentUiState',
+            id: `${WORKSPACE_ID}:${templateId}`,
+            deleted: true
+          }
         ])
       }
     })

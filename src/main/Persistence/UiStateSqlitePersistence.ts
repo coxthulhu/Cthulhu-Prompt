@@ -4,10 +4,9 @@ import {
 } from '@shared/MarkdownContentUiState'
 import {
   USER_PERSISTENCE_ID,
-  parseWorkspaceAccordionViewEntry,
+  parseWorkspaceAccordionSections,
   parseWorkspaceScreenSelection,
-  type UserPersistence,
-  type WorkspacePersistence
+  type UserPersistence
 } from '@shared/UserPersistence'
 import type {
   AccordionUiState,
@@ -90,32 +89,6 @@ export const userPersistenceSqlitePersistence: SqlitePersistenceLayer<
   command: (_id, transition) => {
     if (!transition.after) throw new Error('User persistence cannot be deleted')
     UserPersistenceDataAccess.updateUserPersistence(transition.after.data)
-  }
-}
-
-/** SQLite query/command adapter for the legacy aggregate workspace persistence record. */
-export const workspacePersistenceSqlitePersistence: SqlitePersistenceLayer<
-  WorkspacePersistence,
-  SqlitePersistenceFields
-> = {
-  kind: 'sqlite',
-  query: (workspaceId) => UserPersistenceDataAccess.readWorkspacePersistence(workspaceId),
-  command: (workspaceId, transition) => {
-    if (!transition.after) {
-      /** Database owning the four legacy aggregate workspace tables. */
-      const db = SqliteDataAccess.getDatabase()
-      db.prepare('DELETE FROM workspace_ui_state WHERE workspace_id = ?').run(workspaceId)
-      db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(workspaceId)
-      db.prepare('DELETE FROM category_description_editor_view_state WHERE workspace_id = ?').run(
-        workspaceId
-      )
-      db.prepare('DELETE FROM accordion_view_state WHERE workspace_id = ?').run(workspaceId)
-      return
-    }
-    UserPersistenceDataAccess.updateWorkspacePersistence({
-      ...transition.after.data,
-      workspaceId
-    })
   }
 }
 
@@ -282,11 +255,10 @@ export const accordionUiStateSqlitePersistence: SqlitePersistenceLayer<
       .get(workspaceId, persistenceId) as AccordionUiStateRow | undefined
     if (!row) return null
     /** Validated accordion section state decoded from SQLite JSON. */
-    const parsed = parseWorkspaceAccordionViewEntry({
-      persistenceId: row.persistenceId,
-      sections: parseJson(row.sectionsJson)
-    })
-    return parsed ? { workspaceId: row.workspaceId, ...parsed } : null
+    const sections = parseWorkspaceAccordionSections(parseJson(row.sectionsJson))
+    return sections
+      ? { workspaceId: row.workspaceId, persistenceId: row.persistenceId, sections }
+      : null
   },
   command: (id, transition) => {
     /** Composite workspace and persistence key decoded for the SQL command. */

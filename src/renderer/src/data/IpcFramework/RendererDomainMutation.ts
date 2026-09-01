@@ -37,7 +37,6 @@ import { promptTemplateClientStateCollection } from '../Collections/PromptTempla
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
-import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
 import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
@@ -121,6 +120,14 @@ const latestPacedRendererDomainMutationByTransaction = new WeakMap<
   LatestPacedRendererDomainMutation
 >()
 
+/** Removes enumerable TanStack virtual fields before strict command IPC validation. */
+const stripRendererDomainCommandVirtualProps = <TCommand>(command: TCommand): TCommand => {
+  if (typeof command !== 'object' || command === null || Array.isArray(command)) return command
+  /** Exact command entries excluding renderer-only collection metadata. */
+  const entries = Object.entries(command).filter(([key]) => !key.startsWith('$'))
+  return Object.fromEntries(entries) as TCommand
+}
+
 /** Removes the renderer-only loading discriminator from a prompt projection. */
 const toPromptDomainProjection = (prompt: Prompt): DomainPlannerEntityMap['prompt'] => {
   /** Loading discriminator excluded from shared domain planning. */
@@ -167,10 +174,6 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
     }
     case 'userPersistence':
       return userPersistenceCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
-    case 'workspacePersistence':
-      return workspacePersistenceCollection.get(id) as
-        | DomainPlannerEntityMap[TEntityType]
-        | undefined
     case 'markdownContentUiState':
       return markdownContentUiStateCollection.get(id) as
         | DomainPlannerEntityMap[TEntityType]
@@ -227,10 +230,6 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
       return userPersistenceCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
-    case 'workspacePersistence':
-      return workspacePersistenceCollection.toArray as unknown as Array<
-        DomainPlannerEntityMap[TEntityType]
-      >
     case 'markdownContentUiState':
       return markdownContentUiStateCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
@@ -266,6 +265,9 @@ const applyRendererDomainChange = (
   change: DomainChange
 ): void => {
   if (change.type === 'delete') {
+    /** Revision collection whose optimistic record may be absent for an optional delete. */
+    const collection = getRendererRevisionCollection(change.entityType)
+    if (!collection.has(change.id)) return
     collections[change.entityType].delete(change.id)
     return
   }
@@ -304,8 +306,6 @@ const getRendererRevisionCollection = (entityType: DomainEntityType) => {
       return promptTemplateCollection
     case 'userPersistence':
       return userPersistenceCollection
-    case 'workspacePersistence':
-      return workspacePersistenceCollection
     case 'markdownContentUiState':
       return markdownContentUiStateCollection
     case 'workspaceUiState':
@@ -339,7 +339,7 @@ const buildRendererDomainExpectations = (
         expected: 'absent' as const
       }
     }
-    return collection.has(change.id)
+    return collection.utils.hasAuthoritative(change.id)
       ? {
           entityType: change.entityType,
           id: change.id,
@@ -439,9 +439,6 @@ const reconcileRendererDomainSnapshot = (snapshot: DomainSnapshot): void => {
     case 'userPersistence':
       userPersistenceCollection.utils.upsertAuthoritative(snapshot)
       return
-    case 'workspacePersistence':
-      workspacePersistenceCollection.utils.upsertAuthoritative(snapshot)
-      return
     case 'markdownContentUiState':
       markdownContentUiStateCollection.utils.upsertAuthoritative(snapshot)
       return
@@ -485,7 +482,7 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
         payload: DomainMutationRequest<TCommand>
       }>(options.ipc.channel, {
         payload: {
-          command: options.mutation.command,
+          command: stripRendererDomainCommandVirtualProps(options.mutation.command),
           expectations
         }
       }) as IpcMutationPayloadResult<DomainMutationResponsePayload>
@@ -541,7 +538,9 @@ export const mutatePacedRendererDomainMutation = <TCommand>(
         latestMutation.ipcChannel,
         {
           payload: {
-            command: latestMutation.command as TCommand,
+            command: stripRendererDomainCommandVirtualProps(
+              latestMutation.command as TCommand
+            ),
             expectations
           }
         }

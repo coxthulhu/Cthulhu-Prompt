@@ -8,15 +8,16 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
-vi.mock('../../src/main/DataAccess/UserPersistenceDataAccess', () => ({
-  UserPersistenceDataAccess: {
-    cleanupWorkspacePromptFolderViewState: vi.fn()
+vi.mock('../../src/main/DataAccess/WorkspaceUiStateDataAccess', () => ({
+  WorkspaceUiStateDataAccess: {
+    cleanupWorkspacePromptFolderUiState: vi.fn()
   }
 }))
 
 vi.mock('../../src/main/DataAccess/MarkdownContentUiStateDataAccess', () => ({
   MarkdownContentUiStateDataAccess: {
     cleanupWorkspaceMarkdownContentUiState: vi.fn(),
+    readMarkdownContentUiState: vi.fn(() => null),
     readMarkdownContentUiStates: vi.fn(() => [])
   }
 }))

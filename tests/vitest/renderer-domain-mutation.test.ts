@@ -52,6 +52,8 @@ const TEMPLATE_ID = 'renderer-domain-template'
 const PROMPT_FOLDER_ID = 'renderer-domain-prompt-folder'
 /** Template-folder ID establishing template ownership for shared update planning. */
 const TEMPLATE_FOLDER_ID = 'renderer-domain-template-folder'
+/** Absent category-editor UI-state ID used to verify optional renderer deletion. */
+const OPTIONAL_UI_STATE_ID = 'renderer-domain-workspace:absent-category'
 /** Editor measurement reused for prompt and template autosave assertions. */
 const EDITOR_MEASUREMENT = {
   measuredHeightPx: 100,
@@ -71,6 +73,20 @@ const planRenameCategory: DomainPlanner<RenameTestCommand> = (_state, command) =
     recipe: (draft) => {
       draft.displayName = command.displayName
     }
+  }
+]
+
+/** Shared test planner deleting the category while its optimistic record disappears. */
+const planDeleteCategory: DomainPlanner<Record<string, never>> = () => [
+  { type: 'delete', entityType: 'category', id: CATEGORY_ID }
+]
+
+/** Shared test planner deleting an optional UI-state record that is not loaded. */
+const planDeleteAbsentUiState: DomainPlanner<Record<string, never>> = () => [
+  {
+    type: 'delete',
+    entityType: 'categoryDescriptionEditorUiState',
+    id: OPTIONAL_UI_STATE_ID
   }
 ]
 
@@ -194,6 +210,74 @@ describe('renderer domain mutation framework', () => {
         })
       })
     )
+  })
+
+  it('builds delete expectations from authoritative presence after optimistic removal', async () => {
+    /** IPC invoke spy returning authoritative category deletion. */
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      payload: {
+        snapshots: [{ entityType: 'category', id: CATEGORY_ID, deleted: true }]
+      }
+    })
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    await runImmediateRendererDomainMutation({
+      mutation: { command: {}, plan: planDeleteCategory },
+      ipc: { channel: 'test-authoritative-delete-expectation' },
+      renderer: {}
+    })
+
+    expect(invoke).toHaveBeenCalledWith(
+      'test-authoritative-delete-expectation',
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          expectations: [
+            {
+              entityType: 'category',
+              id: CATEGORY_ID,
+              expected: 'revision',
+              revision: 1
+            }
+          ]
+        })
+      })
+    )
+  })
+
+  it('skips absent renderer records for optional domain deletes', async () => {
+    /** IPC invoke spy returning authoritative absence for the optional record. */
+    const invoke = vi.fn().mockResolvedValue({
+      success: true,
+      payload: {
+        snapshots: [
+          {
+            entityType: 'categoryDescriptionEditorUiState',
+            id: OPTIONAL_UI_STATE_ID,
+            deleted: true
+          }
+        ]
+      }
+    })
+    vi.stubGlobal('window', {
+      ipcClientId: 'renderer-domain-client',
+      electron: { ipcRenderer: { invoke } }
+    })
+
+    await runImmediateRendererDomainMutation({
+      mutation: {
+        command: {},
+        plan: planDeleteAbsentUiState,
+        selectExpectedTargets: () => []
+      },
+      ipc: { channel: 'test-optional-renderer-delete' },
+      renderer: {}
+    })
+
+    expect(invoke).not.toHaveBeenCalled()
   })
 
   it('applies conflict truth and rolls back renderer-only state', async () => {

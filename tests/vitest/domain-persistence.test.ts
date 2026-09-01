@@ -27,7 +27,6 @@ const mockDomainData = vi.hoisted(() => {
     prompt: new Map<string, Entry>(),
     promptTemplate: new Map<string, Entry>(),
     userPersistence: new Map<string, Entry>(),
-    workspacePersistence: new Map<string, Entry>(),
     markdownContentUiState: new Map<string, Entry>(),
     workspaceUiState: new Map<string, Entry>(),
     workspacePromptFolderUiState: new Map<string, Entry>(),
@@ -48,15 +47,16 @@ const mockDomainData = vi.hoisted(() => {
     prompt: { committedStore: createStore('prompt') },
     promptTemplate: { committedStore: createStore('promptTemplate') },
     userPersistence: { committedStore: createStore('userPersistence') },
-    workspacePersistence: { committedStore: createStore('workspacePersistence') },
     markdownContentUiState: { committedStore: createStore('markdownContentUiState') },
     workspaceUiState: { committedStore: createStore('workspaceUiState') },
     workspacePromptFolderUiState: {
-      committedStore: createStore('workspacePromptFolderUiState')
+      committedStore: createStore('workspacePromptFolderUiState'),
+      targetPolicy: 'deleteIfPresent'
     },
     accordionUiState: { committedStore: createStore('accordionUiState') },
     categoryDescriptionEditorUiState: {
-      committedStore: createStore('categoryDescriptionEditorUiState')
+      committedStore: createStore('categoryDescriptionEditorUiState'),
+      targetPolicy: 'deleteIfPresent'
     }
   }
   /** Clears authoritative entries between persistence-planning tests. */
@@ -381,6 +381,17 @@ describe('domain persistence planning', () => {
   it('removes the surviving category filename suffix after deleting its duplicate', () => {
     /** Root containing two duplicate-named category groups. */
     const root = createRootFolder('Root', 'prompt', [], ['delete', 'survivor'])
+    /** Workspace establishing ownership required by category deletion. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: root.id }]
+    }
+    mockDomainData.seed('workspace', workspace.id, workspace, {
+      workspacePath: workspace.workspacePath,
+      workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+    })
     mockDomainData.seed(
       'promptFolder',
       root.id,
@@ -405,6 +416,7 @@ describe('domain persistence planning', () => {
     const plan = planDeleteCategoryDomainMutation(createMainLikeDomainState(), {
       categoryId: 'delete',
       promptFolderId: root.id,
+      workspaceId: workspace.id,
       modifiedAt: 'renderer-time'
     })
     expect(Array.isArray(plan)).toBe(true)

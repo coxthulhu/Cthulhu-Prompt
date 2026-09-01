@@ -5,7 +5,6 @@ import {
   type PromptFolder,
   type PromptFolderContentKind
 } from './PromptFolder'
-import type { RevisionEnvelope, RevisionPayloadEntity } from './Revision'
 
 export type MarkdownContentPersisted = {
   id: string
@@ -60,15 +59,3 @@ export const getMarkdownContentIds = (
   ...getActiveMarkdownContentIds(promptFolder, kind),
   ...(kind === 'prompt' ? promptFolder.completedPromptIds : [])
 ]
-
-export type DeleteMarkdownContentPayload<TContent extends MarkdownContentPersisted> = {
-  promptFolder: RevisionPayloadEntity<PromptFolder>
-  content: RevisionPayloadEntity<TContent>
-}
-
-export type DeleteMarkdownContentResponsePayload<
-  TContent extends MarkdownContentPersisted
-> = {
-  promptFolders: Array<RevisionEnvelope<PromptFolder>>
-  content?: RevisionEnvelope<TContent>
-}

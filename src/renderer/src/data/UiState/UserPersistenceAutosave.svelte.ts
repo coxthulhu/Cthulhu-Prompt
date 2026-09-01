@@ -14,12 +14,8 @@ const mutateAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void => {
   }
 
   mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, appSidebarWidthPx: roundedWidthPx },
     debounceMs: AUTOSAVE_MS,
-    mutateOptimistically: ({ collections }) => {
-      collections.userPersistence.update(USER_PERSISTENCE_ID, (draft) => {
-        draft.appSidebarWidthPx = roundedWidthPx
-      })
-    }
   })
 }
 

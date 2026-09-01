@@ -1,7 +1,7 @@
 import { createTestRequestId } from './PlaywrightTestFramework'
 
 /** Seed values for one root-folder or category view-state entry. */
-export type WorkspacePersistenceSeedEntry = {
+export type WorkspacePromptFolderUiStateSeedEntry = {
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded?: boolean
@@ -11,7 +11,7 @@ export type WorkspacePersistenceSeedEntry = {
 }
 
 /** Seed values for one workspace-scoped accordion instance. */
-export type WorkspaceAccordionPersistenceSeedEntry = {
+export type AccordionUiStateSeedEntry = {
   persistenceId: string
   sections: Array<{
     id: string
@@ -21,7 +21,7 @@ export type WorkspaceAccordionPersistenceSeedEntry = {
 }
 
 /** Persisted workspace state read directly from the test SQLite database. */
-export type WorkspacePersistenceSnapshot = {
+export type WorkspaceUiStateSnapshot = {
   workspaceId: string
   selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
   selectedScreenData:
@@ -41,7 +41,7 @@ export type WorkspacePersistenceSnapshot = {
     contentSectionIsExpanded: boolean
     categoryDescriptionEditorViewStateJson: string | null
   }>
-  accordionViewEntries: WorkspaceAccordionPersistenceSeedEntry[]
+  accordionViewEntries: AccordionUiStateSeedEntry[]
 }
 
 export const toSqlText = (value: string): string => {
@@ -156,7 +156,7 @@ export const seedWindowPersistence = async (
   )
 }
 
-export const seedWorkspacePersistence = async (
+export const seedWorkspaceUiState = async (
   electronApp: any,
   data: {
     workspaceId: string
@@ -170,8 +170,8 @@ export const seedWorkspacePersistence = async (
           contentOwnerId?: string | null
         }
     lastPromptFolderId?: string | null
-    promptFolderViewEntries: WorkspacePersistenceSeedEntry[]
-    accordionViewEntries?: WorkspaceAccordionPersistenceSeedEntry[]
+    promptFolderViewEntries: WorkspacePromptFolderUiStateSeedEntry[]
+    accordionViewEntries?: AccordionUiStateSeedEntry[]
   }
 ): Promise<void> => {
   await runSqlStatement(
@@ -298,10 +298,10 @@ export const readUserPersistence = async (
   }
 }
 
-export const readWorkspacePersistence = async (
+export const readWorkspaceUiState = async (
   electronApp: any,
   workspaceId: string
-): Promise<WorkspacePersistenceSnapshot> => {
+): Promise<WorkspaceUiStateSnapshot> => {
   const workspaceStateResult = await runSqlQuery(
     electronApp,
     `
@@ -381,7 +381,7 @@ export const readWorkspacePersistence = async (
 
   const workspaceRow = workspaceStateResult.rows?.[0] as
     | {
-        selectedScreen: WorkspacePersistenceSnapshot['selectedScreen']
+        selectedScreen: WorkspaceUiStateSnapshot['selectedScreen']
         selectedScreenDataJson: string | null
         lastPromptFolderId: string | null
       }
@@ -407,7 +407,7 @@ export const readWorkspacePersistence = async (
       persistenceId: String(entry.persistenceId),
       sections: JSON.parse(
         String(entry.sectionsJson)
-      ) as WorkspaceAccordionPersistenceSeedEntry['sections']
+      ) as AccordionUiStateSeedEntry['sections']
     }))
   }
 }

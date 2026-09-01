@@ -8,7 +8,7 @@
   import {
     lookupWorkspacePersistedCategoryDescriptionEditorViewStateJson,
     setCategoryDescriptionEditorViewStateWithAutosave
-  } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import EditorCardSection from '../prompt-editor/EditorCardSection.svelte'
   import HydratableMonacoEditor from '../prompt-editor/HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from '../prompt-editor/MonacoEditorPlaceholder.svelte'

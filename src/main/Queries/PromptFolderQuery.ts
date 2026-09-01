@@ -5,9 +5,6 @@ import type {
 } from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
 import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
-import {
-  MarkdownContentUiStateDataAccess
-} from '../DataAccess/MarkdownContentUiStateDataAccess'
 import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
 import { data } from '../Data/Data'
 import {
@@ -18,7 +15,6 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import { parseLoadPromptFolderInitialRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
-import { revisions } from '../Registries/Revisions'
 import { loadPromptFolderMarkdownContents } from './MarkdownContentQueries'
 
 export const loadPromptFolderInitialData = async (
@@ -56,26 +52,30 @@ export const loadPromptFolderInitialData = async (
       ),
       ...promptTemplateIds
     ]
-    const markdownContentUiStates =
-      contentIds.length === 0
-        ? []
-        : MarkdownContentUiStateDataAccess.readMarkdownContentUiStates(
-            payload.workspaceId,
-            contentIds
-          )
+    // Side effect: hydrate SQLite-backed editor state into the shared committed stores.
+    await Promise.all(
+      contentIds.map((contentId) =>
+        data.markdownContentUiState.loadDataFromPersistence(
+          createMarkdownContentUiStateKey(payload.workspaceId, contentId),
+          {}
+        )
+      )
+    )
+    /** Loaded editor UI-state entries returned through revision envelopes. */
+    const markdownContentUiStates = contentIds.flatMap((contentId) => {
+      /** Composite authoritative key for the current content record. */
+      const id = createMarkdownContentUiStateKey(payload.workspaceId, contentId)
+      /** Committed SQLite entry when this content has saved editor state. */
+      const entry = data.markdownContentUiState.committedStore.getEntry(id)
+      return entry ? [{ id, revision: entry.revision, data: entry.committed }] : []
+    })
     return {
       success: true,
       promptFolders,
       categories,
       prompts,
       promptTemplates,
-      markdownContentUiStates: markdownContentUiStates.map((uiState) => ({
-        id: createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId),
-        revision: revisions.markdownContentUiState.get(
-          createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId)
-        ),
-        data: uiState
-      }))
+      markdownContentUiStates
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

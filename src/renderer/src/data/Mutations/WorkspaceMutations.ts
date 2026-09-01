@@ -2,32 +2,29 @@ import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload
 } from '@shared/Workspace'
-import type { IpcMutationActionResponse, IpcMutationPayloadResult } from '@shared/IpcResult'
-import { removeEntry } from '@shared/OrderContainer'
-import { planMovePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
-import type {
-  DeletePromptFolderPayload,
-  DeletePromptFolderResponsePayload
-} from '@shared/PromptFolder'
+import type { IpcMutationActionResponse } from '@shared/IpcResult'
+import {
+  planDeletePromptFolderDomainMutation,
+  planMovePromptFolderDomainMutation,
+  selectPromptFolderDeletionExpectedTargets
+} from '@shared/PromptFolderDomainMutations'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import {
-  deletePromptFolderClientStates,
-  removePromptFolderClientState
-} from '../UiState/PromptFolderClientState'
+import { removePromptFolderClientState } from '../UiState/PromptFolderClientState'
 import {
   getSelectedWorkspaceId,
   setSelectedWorkspaceId
 } from '../UiState/WorkspaceSelection.svelte.ts'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
 import {
-  deletePromptFolderContentRecords,
-  deletePromptFolderContentsOptimistically
+  deletePromptFolderContentRecords
 } from './PromptFolderContentMutations'
+import { promptClientStateCollection } from '../Collections/PromptClientStateCollection'
+import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
+import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
 
 /** Clears every renderer record owned by one closed workspace. */
 const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => {
@@ -84,33 +81,42 @@ export const deletePromptFolder = async (
   /** Renderer graph removed with the root folder. */
   const graph = collectPromptFolderGraphIds([promptFolderId])
 
-  await runRevisionMutation<DeletePromptFolderResponsePayload>({
-    mutateOptimistically: ({ collections }) => {
-      collections.workspace.update(workspaceId, (draft) => {
-        draft.entries = removeEntry(draft.entries, 'folder', promptFolderId)
-      })
-      deletePromptFolderContentsOptimistically(collections, graph)
-      collections.promptFolder.delete(promptFolderId)
+  /** Loaded client-state IDs removed alongside authoritative root ownership. */
+  const promptClientStateIds = [...graph.contentIds.prompt].filter((id) =>
+    promptClientStateCollection.has(id)
+  )
+  /** Loaded template client-state IDs removed alongside authoritative root ownership. */
+  const templateClientStateIds = [...graph.contentIds.template].filter((id) =>
+    promptTemplateClientStateCollection.has(id)
+  )
+  /** Loaded root client-state ID removed after the folder mutation succeeds. */
+  const hasPromptFolderClientState = promptFolderClientStateCollection.has(promptFolderId)
+  /** Shared root deletion command projected by renderer and main process. */
+  const command = { workspaceId, promptFolderId }
+  await runImmediateRendererDomainMutation({
+    mutation: {
+      command,
+      plan: planDeletePromptFolderDomainMutation,
+      selectExpectedTargets: selectPromptFolderDeletionExpectedTargets
     },
-    persistMutations: async ({ entities }) =>
-      await ipcInvokeWithPayload<
-        IpcMutationPayloadResult<DeletePromptFolderResponsePayload>,
-        DeletePromptFolderPayload
-      >('delete-prompt-folder', {
-        workspace: entities.workspace({ id: workspaceId, data: workspace }),
-        promptFolder: entities.promptFolder({ id: promptFolderId, data: promptFolder })
-      }),
-    handleSuccessOrConflictResponse: (payload) => {
-      if (payload.workspace) workspaceCollection.utils.upsertAuthoritative(payload.workspace)
-      if (payload.promptFolder) {
-        promptFolderCollection.utils.upsertAuthoritative(payload.promptFolder)
-      }
-    },
-    conflictMessage: 'Prompt folder delete conflict',
-    onSuccess: () => {
-      deletePromptFolderContentRecords(graph)
-      promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
-      deletePromptFolderClientStates([promptFolderId])
+    ipc: { channel: 'delete-prompt-folder' },
+    renderer: {
+      mutate: ({ collections }) => {
+        if (promptClientStateIds.length > 0) {
+          collections.promptClientState.delete(promptClientStateIds)
+        }
+        if (templateClientStateIds.length > 0) {
+          collections.promptTemplateClientState.delete(templateClientStateIds)
+        }
+        if (hasPromptFolderClientState) {
+          collections.promptFolderClientState.delete(promptFolderId)
+        }
+      },
+      clientStateCollections: [
+        promptClientStateCollection,
+        promptTemplateClientStateCollection,
+        promptFolderClientStateCollection
+      ]
     }
   })
 }

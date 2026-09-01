@@ -44,7 +44,7 @@
     lookupWorkspacePersistedCategoryTreeExpandedState,
     setCategoryTreeExpandedStateWithAutosave,
     setPromptFolderSelectedEntryIdWithAutosave
-  } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'

@@ -36,6 +36,31 @@ type TestDomainEntities = {
   [TEntityType in DomainEntityType]: Array<DomainPlannerEntityMap[TEntityType]>
 }
 
+/** Reports whether one test entity owns the requested framework target ID. */
+const hasTestDomainEntityId = (
+  entityType: DomainEntityType,
+  entity: DomainPlannerEntityMap[DomainEntityType],
+  id: string
+): boolean => {
+  /** Uniform record view used to derive singleton and composite UI-state keys. */
+  const record = entity as unknown as Record<string, unknown>
+  if (entityType === 'systemSettings') return id === SYSTEM_SETTINGS_ID
+  if (entityType === 'workspaceUiState') return record.workspaceId === id
+  if (entityType === 'markdownContentUiState') {
+    return `${record.workspaceId}:${record.contentId}` === id
+  }
+  if (entityType === 'workspacePromptFolderUiState') {
+    return `${record.workspaceId}:${record.contentOwnerId}` === id
+  }
+  if (entityType === 'accordionUiState') {
+    return `${record.workspaceId}:${record.persistenceId}` === id
+  }
+  if (entityType === 'categoryDescriptionEditorUiState') {
+    return `${record.workspaceId}:${record.categoryId}` === id
+  }
+  return record.id === id
+}
+
 /** Creates shared domain state from test-specific entity arrays. */
 const createDomainState = (
   overrides: Partial<TestDomainEntities>
@@ -48,12 +73,18 @@ const createDomainState = (
     category: [],
     prompt: [],
     promptTemplate: [],
+    userPersistence: [],
+    markdownContentUiState: [],
+    workspaceUiState: [],
+    workspacePromptFolderUiState: [],
+    accordionUiState: [],
+    categoryDescriptionEditorUiState: [],
     ...overrides
   } as TestDomainEntities
   return {
     get: (entityType, id) =>
       entities[entityType].find((entity) =>
-        entityType === 'systemSettings' ? id === SYSTEM_SETTINGS_ID : 'id' in entity && entity.id === id
+        hasTestDomainEntityId(entityType, entity, id)
       ) as
         | DomainPlannerEntityMap[typeof entityType]
         | undefined,
@@ -202,8 +233,16 @@ describe('shared domain mutation planners', () => {
   it('plans category deletion from summary projections with one renderer timestamp', () => {
     /** Root owning the category and its prompt reference. */
     const folder = createRootFolder('root', 'prompt', 'category', 'prompt')
+    /** Workspace establishing ownership of the deleted category's root. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: folder.id }]
+    }
     /** Planner state containing summary-compatible prompt and template projections. */
     const state = createDomainState({
+      workspace: [workspace],
       promptFolder: [folder],
       category: [{ id: 'category', displayName: 'Shared', description: null }],
       prompt: [
@@ -230,6 +269,7 @@ describe('shared domain mutation planners', () => {
     const plan = planDeleteCategoryDomainMutation(state, {
       categoryId: 'category',
       promptFolderId: 'root',
+      workspaceId: workspace.id,
       modifiedAt: 'renderer-time'
     })
     expect(Array.isArray(plan)).toBe(true)
@@ -238,7 +278,9 @@ describe('shared domain mutation planners', () => {
       'promptFolder:root',
       'category:category',
       'prompt:prompt',
-      'promptTemplate:template'
+      'promptTemplate:template',
+      'workspacePromptFolderUiState:workspace:category',
+      'categoryDescriptionEditorUiState:workspace:category'
     ])
 
     /** Prompt projection after applying the shared cleanup recipe. */
@@ -249,6 +291,105 @@ describe('shared domain mutation planners', () => {
     expect(template).not.toHaveProperty('category')
     expect(prompt.modifiedAt).toBe('renderer-time')
     expect(template.modifiedAt).toBe('renderer-time')
+  })
+
+  it('maps active category details to the root and preserves inactive root selection', () => {
+    /** Root owning the category whose view state is deleted. */
+    const folder = createRootFolder('root', 'prompt', 'category')
+    /** Workspace establishing root ownership for both deletion plans. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      entries: [{ kind: 'folder' as const, id: folder.id }]
+    }
+    /** Existing root state whose expansion fields must survive selection transfer. */
+    const rootUiState = {
+      workspaceId: workspace.id,
+      contentOwnerId: folder.id,
+      selectedEntryId: 'existing-root-selection',
+      treeIsExpanded: false,
+      detailsSectionIsExpanded: true,
+      contentSectionIsExpanded: false
+    }
+    /** Category state selecting its category-only details row. */
+    const categoryUiState = {
+      workspaceId: workspace.id,
+      contentOwnerId: 'category',
+      selectedEntryId: 'category-details',
+      treeIsExpanded: true,
+      detailsSectionIsExpanded: false,
+      contentSectionIsExpanded: true
+    }
+    /** Active workspace navigation pointing at the deleted category owner. */
+    const activeWorkspaceUiState = {
+      workspaceId: workspace.id,
+      selectedScreen: 'prompt-folders' as const,
+      selectedScreenData: { promptFolderId: folder.id, contentOwnerId: 'category' },
+      lastPromptFolderId: folder.id
+    }
+    /** Shared planner state containing active split UI-state records. */
+    const activeState = createDomainState({
+      workspace: [workspace],
+      promptFolder: [folder],
+      category: [{ id: 'category', displayName: 'Category', description: null }],
+      workspaceUiState: [activeWorkspaceUiState],
+      workspacePromptFolderUiState: [rootUiState, categoryUiState]
+    })
+    /** Active-category deletion plan containing workspace and root selection updates. */
+    const activePlan = planDeleteCategoryDomainMutation(activeState, {
+      categoryId: 'category',
+      promptFolderId: folder.id,
+      workspaceId: workspace.id,
+      modifiedAt: 'renderer-time'
+    })
+    expect(Array.isArray(activePlan)).toBe(true)
+    if (!Array.isArray(activePlan)) return
+    /** Root UI-state update selected from the complete deletion plan. */
+    const rootUpdate = activePlan.find(
+      (change) =>
+        change.type === 'update' &&
+        change.entityType === 'workspacePromptFolderUiState' &&
+        change.id === `${workspace.id}:${folder.id}`
+    )
+    expect(rootUpdate?.type).toBe('update')
+    if (rootUpdate?.type !== 'update') return
+    expect(produce(rootUiState, rootUpdate.recipe)).toEqual({
+      ...rootUiState,
+      selectedEntryId: 'root-header'
+    })
+
+    /** Inactive navigation already owned by the root and retaining its selection. */
+    const inactiveWorkspaceUiState = {
+      ...activeWorkspaceUiState,
+      selectedScreenData: { promptFolderId: folder.id, contentOwnerId: folder.id }
+    }
+    /** Inactive-category plan that must not update workspace or root UI state. */
+    const inactivePlan = planDeleteCategoryDomainMutation(
+      createDomainState({
+        workspace: [workspace],
+        promptFolder: [folder],
+        category: [{ id: 'category', displayName: 'Category', description: null }],
+        workspaceUiState: [inactiveWorkspaceUiState],
+        workspacePromptFolderUiState: [rootUiState, categoryUiState]
+      }),
+      {
+        categoryId: 'category',
+        promptFolderId: folder.id,
+        workspaceId: workspace.id,
+        modifiedAt: 'renderer-time'
+      }
+    )
+    expect(Array.isArray(inactivePlan)).toBe(true)
+    if (!Array.isArray(inactivePlan)) return
+    expect(
+      inactivePlan.some(
+        (change) =>
+          change.type === 'update' &&
+          (change.entityType === 'workspaceUiState' ||
+            change.entityType === 'workspacePromptFolderUiState')
+      )
+    ).toBe(false)
   })
 
   it('plans category rename and group reordering', () => {

@@ -24,7 +24,7 @@
   } from '@renderer/features/workspace/types'
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
-  import { workspacePersistenceCollection } from '@renderer/data/Collections/WorkspacePersistenceCollection'
+  import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { getPromptFolderPromptIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -35,9 +35,9 @@
     setSelectedWorkspaceId
   } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
   import { syncLastWorkspaceInfoPath } from '@renderer/data/Mutations/UserPersistenceMutations'
-  import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspacePersistenceMutations'
+  import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
   import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
-  import { loadWorkspacePersistence } from '@renderer/data/Queries/UserPersistenceQuery'
+  import { loadWorkspaceUiState } from '@renderer/data/Queries/WorkspaceUiStateQuery'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
     closeWorkspace as closeWorkspaceMutation,
@@ -55,7 +55,7 @@
   } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
-  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspacePersistenceAutosave.svelte.ts'
+  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
     isWorkspaceScreenSelectionSame,
@@ -215,11 +215,11 @@
 
   const resolvePromptFolderNavigationId = (): string | null => {
     const workspaceId = getSelectedWorkspaceId()
-    const workspacePersistence = workspaceId
-      ? workspacePersistenceCollection.get(workspaceId)
+    const workspaceUiState = workspaceId
+      ? workspaceUiStateCollection.get(workspaceId)
       : null
     const firstPromptFolderId = selectedWorkspacePromptFolders[0]?.id ?? null
-    const persistedLastPromptFolderId = workspacePersistence?.lastPromptFolderId ?? null
+    const persistedLastPromptFolderId = workspaceUiState?.lastPromptFolderId ?? null
 
     return hasWorkspacePromptFolder(screenRootFolderId)
       ? screenRootFolderId
@@ -273,7 +273,7 @@
   const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {
     await switchWorkspaceStoreBridge(workspaceInfoPath)
     const workspaceId = await loadWorkspaceByPath(workspaceInfoPath)
-    await loadWorkspacePersistence(workspaceId)
+    await loadWorkspaceUiState(workspaceId)
     setSelectedWorkspaceId(workspaceId)
     await syncLastWorkspaceInfoPath(workspaceInfoPath)
   }
@@ -288,11 +288,11 @@
     }
 
     /** Current persistence used to skip an unchanged screen selection write. */
-    const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
+    const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
 
     if (
-      workspacePersistence &&
-      isWorkspaceScreenSelectionSame(workspacePersistence, workspaceScreenSelection)
+      workspaceUiState &&
+      isWorkspaceScreenSelectionSame(workspaceUiState, workspaceScreenSelection)
     ) {
       return
     }
@@ -315,20 +315,20 @@
       return
     }
 
-    const workspacePersistence = workspacePersistenceCollection.get(workspaceId)
-    if (!workspacePersistence) {
+    const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
+    if (!workspaceUiState) {
       return
     }
 
-    const persistedScreenConfig = screens[workspacePersistence.selectedScreen]
+    const persistedScreenConfig = screens[workspaceUiState.selectedScreen]
     if (persistedScreenConfig.devOnly && !isDevMode) {
       await restoreWorkspaceHomeScreen(workspaceId)
       return
     }
 
-    if (workspacePersistence.selectedScreen === 'prompt-folders') {
+    if (workspaceUiState.selectedScreen === 'prompt-folders') {
       const workspaceRecord = workspaceCollection.get(workspaceId)
-      const persistedPromptFolderId = workspacePersistence.selectedScreenData.promptFolderId
+      const persistedPromptFolderId = workspaceUiState.selectedScreenData.promptFolderId
       const hasPromptFolder =
         persistedPromptFolderId !== null &&
         Boolean(workspaceRecord?.entries.some((entry) => entry.id === persistedPromptFolderId))
@@ -336,12 +336,12 @@
       if (hasPromptFolder && persistedPromptFolderId) {
         screenRootFolderId = persistedPromptFolderId
         activeScreen = 'prompt-folders'
-        if (workspacePersistence.lastPromptFolderId !== persistedPromptFolderId) {
+        if (workspaceUiState.lastPromptFolderId !== persistedPromptFolderId) {
           await syncWorkspaceScreenSelection(workspaceId, {
             selectedScreen: 'prompt-folders',
             selectedScreenData: {
               promptFolderId: persistedPromptFolderId,
-              contentOwnerId: workspacePersistence.selectedScreenData.contentOwnerId
+              contentOwnerId: workspaceUiState.selectedScreenData.contentOwnerId
             }
           })
         }
@@ -352,8 +352,8 @@
       return
     }
 
-    if (workspacePersistence.selectedScreen === 'mockups') {
-      const persistedMockupId = workspacePersistence.selectedScreenData.mockupId
+    if (workspaceUiState.selectedScreen === 'mockups') {
+      const persistedMockupId = workspaceUiState.selectedScreenData.mockupId
       if (persistedMockupId === null || hasMockup(persistedMockupId)) {
         clearPromptFolderSelection()
         selectedMockupId = persistedMockupId
@@ -366,7 +366,7 @@
     }
 
     clearPromptFolderSelection()
-    activeScreen = workspacePersistence.selectedScreen
+    activeScreen = workspaceUiState.selectedScreen
   }
 
   const isWorkspaceMissingError = (message?: string): boolean => {

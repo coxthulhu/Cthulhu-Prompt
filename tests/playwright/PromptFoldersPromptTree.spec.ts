@@ -7,7 +7,7 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
-import { readWorkspacePersistence } from '../helpers/UserPersistenceHelpers'
+import { readWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
 import {
   focusMonacoEditor,
   isMonacoEditorFocused,
@@ -519,7 +519,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
     await expect
       .poll(async () => {
-        const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return persisted.selectedScreen === 'prompt-folders'
           ? persisted.selectedScreenData.promptFolderId
           : null
@@ -530,7 +530,7 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           return persisted.promptFolderViewEntries.find(
             (entry) => entry.contentOwnerId === CATEGORY_ID
           )?.selectedEntryId
@@ -666,7 +666,7 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           return persisted.promptFolderViewEntries.find(
             (entry) => entry.contentOwnerId === CATEGORY_ID
           )?.treeIsExpanded
@@ -687,7 +687,7 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspacePersistence(electronApp, workspaceId)
+          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
           const categoryEntry = persisted.promptFolderViewEntries.find(
             (entry) => entry.contentOwnerId === CATEGORY_ID
           )

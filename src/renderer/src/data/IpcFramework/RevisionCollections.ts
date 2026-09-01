@@ -12,7 +12,6 @@ import { markdownContentUiStateCollection } from '../Collections/MarkdownContent
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { systemSettingsClientStateCollection } from '../Collections/SystemSettingsClientStateCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
-import { workspacePersistenceCollection } from '../Collections/WorkspacePersistenceCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
@@ -29,7 +28,6 @@ export {
 
 const revisionCollections = {
   userPersistence: userPersistenceCollection,
-  workspacePersistence: workspacePersistenceCollection,
   systemSettings: systemSettingsCollection,
   workspace: workspaceCollection,
   promptFolder: promptFolderCollection,
