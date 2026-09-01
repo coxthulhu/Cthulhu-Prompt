@@ -33,6 +33,10 @@ const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 const LIVE_COUNT_QUERY = 'cthulhu-live-find-count-marker'
 const LIVE_POSITION_QUERY = 'cthulhu-live-find-position-marker'
+/** Unique query present only in the category-description find fixture. */
+const CATEGORY_DESCRIPTION_FIND_QUERY = 'cthulhu-category-description-find-marker'
+/** Stable category identity used by the category-description find fixture. */
+const CATEGORY_DESCRIPTION_FIND_ID = 'find-category-description-category'
 const TRACKED_ROW_TOP_PADDING_PX = 100
 const CENTER_TRACKING_CASES = [
   {
@@ -354,6 +358,47 @@ const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, str
   ])
 }
 
+/** Builds one category whose description is the only source of its find query. */
+const buildCategoryDescriptionFindWorkspace = (
+  workspacePath: string
+): Record<string, string | null> => {
+  /** Uncategorized prompts that place the category outside the initial virtual window. */
+  const precedingPrompts = Array.from({ length: 40 }, (_, index) => ({
+    id: `category-description-preceding-${index + 1}`,
+    title: `Preceding Prompt ${index + 1}`,
+    promptText: 'Ordinary prompt text.'
+  }))
+  /** Base prompt-folder fixture with one categorized prompt. */
+  const filesystem = createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Category Find',
+      displayName: 'Category Find',
+      promptFolderId: 'category-description-find-folder',
+      prompts: [
+        ...precedingPrompts,
+        {
+          id: 'category-description-find-prompt',
+          title: 'Ordinary Prompt',
+          promptText: 'This prompt does not contain the category description query.',
+          category: CATEGORY_DESCRIPTION_FIND_ID
+        }
+      ]
+    }
+  ])
+  /** Persisted category metadata containing the unique query. */
+  const categoryPath = `${workspacePath}/Prompts/Category Find/Categories/Searchable.category.json`
+  filesystem[categoryPath] = JSON.stringify(
+    {
+      id: CATEGORY_DESCRIPTION_FIND_ID,
+      displayName: 'Searchable',
+      description: `Expanded description: ${CATEGORY_DESCRIPTION_FIND_QUERY}`
+    },
+    null,
+    2
+  )
+  return filesystem
+}
+
 describe('Prompt folder find dialog', () => {
   test('opens with Ctrl+F and closes with Escape or the close button', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -544,6 +589,68 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(() => getMonacoSelectionState(mainWindow, firstEditorSelector))
       .toEqual(firstCursorBeforeClose)
+  })
+
+  test('searches category descriptions only while their settings are expanded', async ({
+    testSetup
+  }) => {
+    test.setTimeout(120000)
+    /** Isolated workspace path for category-description scope changes. */
+    const workspacePath = '/ws/find-category-description'
+    await testSetup.setupFilesystem(buildCategoryDescriptionFindWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    /** Application window and helpers for the isolated workspace. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    /** Workspace setup result confirms the folder is ready for navigation. */
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Category Find')
+
+    /** Category row containing the collapsible description editor. */
+    const categorySelector = `[data-testid="category-editor-${CATEGORY_DESCRIPTION_FIND_ID}"]`
+    /** Settings toggle that controls category-description find scope. */
+    const settingsToggle = mainWindow.locator(
+      `${categorySelector} [data-testid="category-editor-settings-toggle"]`
+    )
+    /** Folder-level find input whose query persists across scope changes. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+
+    await expect(mainWindow.locator(categorySelector)).toHaveCount(0)
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 1_000_000)
+    await mainWindow.waitForSelector(categorySelector, { state: 'attached' })
+    await testHelpers.scrollVirtualElementIntoView(
+      PROMPT_FOLDER_HOST_SELECTOR,
+      categorySelector,
+      120
+    )
+    await settingsToggle.click()
+    await waitForMonacoEditor(mainWindow, categorySelector)
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await expect(mainWindow.locator(categorySelector)).toHaveCount(0)
+
+    await mainWindow.keyboard.press('Control+F')
+    await findInput.fill(CATEGORY_DESCRIPTION_FIND_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+    await expect.poll(() => getCurrentFindMatchRowTestId(mainWindow)).toBe(
+      `category-editor-${CATEGORY_DESCRIPTION_FIND_ID}`
+    )
+
+    await settingsToggle.click()
+    await expect(mainWindow.locator(`${categorySelector} .monaco-editor`)).toHaveCount(0)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('No results')
+
+    await settingsToggle.click()
+    await waitForMonacoEditor(mainWindow, categorySelector)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+    await mainWindow.locator(FIND_CLOSE).click()
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, categorySelector)).toBe(true)
+    await expect.poll(() => getMonacoSelectedText(mainWindow, categorySelector)).toBe(
+      CATEGORY_DESCRIPTION_FIND_QUERY
+    )
   })
 
   test('keeps a newly created prompt focused while find is open', async ({ testSetup }) => {

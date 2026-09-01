@@ -165,6 +165,10 @@
     if (currentMatchIndex > totalMatches) {
       currentMatchIndex = totalMatches
     }
+    if (currentMatchIndex <= 0 && totalMatches > 0) {
+      setCurrentMatchIndex(1)
+      return
+    }
     if (currentMatchIndex < 0) {
       currentMatchIndex = 0
     }

@@ -1,4 +1,5 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
+import { SvelteSet } from 'svelte/reactivity'
 import {
   isPromptFull,
   type Prompt,
@@ -73,11 +74,13 @@ import type {
 } from '../virtualizer/virtualWindowTypes'
 import {
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+  PROMPT_FOLDER_FIND_CATEGORY_DESCRIPTION_SECTION_KEY,
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
 } from './find/promptFolderFindSectionKeys'
 import type { PromptFolderFindItem, PromptFolderFindMatch } from './find/promptFolderFindTypes'
 import {
   PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
+  categoryDescriptionFindEntityId,
   promptEditorRowId,
   promptFolderDividerRowId,
   categoryEditorRowId
@@ -578,9 +581,10 @@ export const createPromptFolderScreenController = ({
   const findItems = $derived.by((): PromptFolderFindItem[] => {
     const nextItems: PromptFolderFindItem[] = []
 
-    for (const currentPromptId of visiblePromptIds) {
+    /** Appends one loaded prompt's title and body in screen order. */
+    const appendPromptFindItem = (currentPromptId: string): void => {
       const promptDraft = contentDraftById[currentPromptId]
-      if (!promptDraft) continue
+      if (!promptDraft) return
       nextItems.push({
         entityId: currentPromptId,
         rowId: promptEditorRowId(currentPromptId),
@@ -592,6 +596,42 @@ export const createPromptFolderScreenController = ({
           {
             key: PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
             text: promptDraft.text
+          }
+        ]
+      })
+    }
+
+    if (errorMessage || isCompletedMode) {
+      for (const currentPromptId of visiblePromptIds) {
+        appendPromptFindItem(currentPromptId)
+      }
+      return nextItems
+    }
+
+    /** Loaded visible prompt IDs exclude unresolved screen rows from find. */
+    const visiblePromptIdSet = new SvelteSet(visiblePromptIds)
+    for (const row of activePromptFolderScreenRows) {
+      if (row.kind === 'prompt-editor') {
+        if (visiblePromptIdSet.has(row.promptId)) appendPromptFindItem(row.promptId)
+        continue
+      }
+      if (row.kind !== 'category-editor') continue
+
+      const category = categoryById[row.categoryId]
+      if (
+        !detailsSectionExpandedByOwnerId[row.categoryId] ||
+        category?.description === null ||
+        category?.description === undefined
+      ) {
+        continue
+      }
+      nextItems.push({
+        entityId: categoryDescriptionFindEntityId(row.categoryId),
+        rowId: categoryEditorRowId(row.categoryId),
+        sections: [
+          {
+            key: PROMPT_FOLDER_FIND_CATEGORY_DESCRIPTION_SECTION_KEY,
+            text: category.description
           }
         ]
       })
@@ -1468,13 +1508,21 @@ export const createPromptFolderScreenController = ({
     breadcrumbCategoryId = categoryId
   }
 
+  /** Selects and reveals the screen row that owns one folder-level find match. */
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
-    const targetRow: ActivePromptScreenRow = {
-      kind: 'prompt',
-      contentOwnerId:
-        findRenderedPromptRow(match.entityId)?.contentOwnerId ?? screenRootFolderId,
-      promptId: match.entityId
-    }
+    /** Category description whose find identity matches the requested entity. */
+    const matchedCategory = categories.find(
+      (category) => categoryDescriptionFindEntityId(category.id) === match.entityId
+    )
+    /** Navigation target for either a category description or prompt match. */
+    const targetRow: ActivePromptScreenRow = matchedCategory
+      ? { kind: 'category-details', contentOwnerId: matchedCategory.id }
+      : {
+          kind: 'prompt',
+          contentOwnerId:
+            findRenderedPromptRow(match.entityId)?.contentOwnerId ?? screenRootFolderId,
+          promptId: match.entityId
+        }
     setCurrentFolderSelection(targetRow, 'find', {
       forceRequest: true,
       contentReveal: { scrollType: 'center' }

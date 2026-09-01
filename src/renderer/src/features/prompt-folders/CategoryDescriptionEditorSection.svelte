@@ -24,6 +24,7 @@
     PromptFolderFindRowHandle
   } from './find/promptFolderFindTypes'
   import { categoryDescriptionFindEntityId } from './promptFolderRowIds'
+  import { PROMPT_FOLDER_FIND_CATEGORY_DESCRIPTION_SECTION_KEY } from './find/promptFolderFindSectionKeys'
   import {
     SETTINGS_EDITOR_SECTION_PADDING_BOTTOM_PX,
     SETTINGS_EDITOR_SECTION_PADDING_LEFT_PX,
@@ -91,7 +92,7 @@
     description:
       'A general description of this category and the types of prompts that are within it. For informational use only.',
     deleteLabel: 'category description',
-    findSectionKey: 'category-description',
+    findSectionKey: PROMPT_FOLDER_FIND_CATEGORY_DESCRIPTION_SECTION_KEY,
     value,
     modelUri: createCategoryDescriptionModelUri(categoryId),
     initialViewStateJson: workspaceId
