@@ -60,6 +60,7 @@
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let returnFocusTarget = $state<PromptFolderFindFocusRequest | null>(null)
   let shouldSelectCurrentMatch = $state(true)
+  // Preserve the editor anchor while reopening performs its required full rescan.
   let preserveSelectionOnNextSearch = false
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
   const query = $derived(matchText)
@@ -107,6 +108,7 @@
   // Run a full search pass and update derived counts/indexes.
   const runSearch = (resetSelection: boolean) => {
     if (query.length === 0) {
+      preserveSelectionOnNextSearch = false
       shouldSelectCurrentMatch = true
       revealRequests.clear()
       matchCountsByEntity = []
@@ -135,6 +137,15 @@
         currentMatchIndex = 0
         return
       }
+      if (preserveSelection) {
+        // Passive match position mirrors Monaco without selecting or revealing a result.
+        const anchoredMatchIndex = lastSelectionAnchor
+          ? getMatchIndexAtAnchor(lastSelectionAnchor, nextCounts)
+          : null
+        currentMatchIndex = anchoredMatchIndex ?? Math.min(currentMatchIndex, totalMatches)
+        shouldSelectCurrentMatch = false
+        return
+      }
       const effectiveSelectionAnchor = lastSelectionAnchor
         ? getEffectiveSelectionAnchor(lastSelectionAnchor)
         : null
@@ -142,7 +153,7 @@
         ? getSelectedMatchIndexFromAnchor(effectiveSelectionAnchor)
         : null
       if (selectedAnchorIndex != null) {
-        setCurrentMatchIndex(selectedAnchorIndex, !preserveSelection)
+        setCurrentMatchIndex(selectedAnchorIndex)
         return
       }
       const navigationAnchor = effectiveSelectionAnchor ?? lastSelectionAnchor
@@ -236,8 +247,7 @@
 
   const openFindDialogFromSelection = () => {
     const nextMatchText = getSelectionMatchText()
-    const selectionAnchor = lastSelectionAnchor
-    preserveSelectionOnNextSearch = Boolean(!isFindOpen && nextMatchText && selectionAnchor)
+    preserveSelectionOnNextSearch = !isFindOpen
     if (nextMatchText && nextMatchText !== matchText) {
       matchText = nextMatchText
     }
@@ -448,7 +458,7 @@
   const handlePrevious = () => {
     if (totalMatches === 0) return
     const anchorIndex =
-      currentMatchIndex <= 0 && lastSelectionAnchor
+      !shouldSelectCurrentMatch && lastSelectionAnchor
         ? getPreviousMatchIndexFromAnchor(lastSelectionAnchor)
         : null
     const nextIndex =
@@ -460,7 +470,7 @@
   const handleNext = () => {
     if (totalMatches === 0) return
     const anchorIndex =
-      currentMatchIndex <= 0 && lastSelectionAnchor
+      !shouldSelectCurrentMatch && lastSelectionAnchor
         ? getNextMatchIndexFromAnchor(lastSelectionAnchor)
         : null
     const nextIndex =
@@ -540,6 +550,20 @@
       }
     }
     return null
+  }
+
+  // Report Monaco's passive current position for an unchanged editor anchor.
+  const getMatchIndexAtAnchor = (
+    anchor: PromptFolderFindAnchor,
+    groups: PromptFolderFindCounts[]
+  ): number | null => {
+    return getMatchIndexAtSelection(
+      groups,
+      anchor.entityId,
+      anchor.sectionKey,
+      searchModel.findMatchesInText(getSectionText(anchor.entityId, anchor.sectionKey), query),
+      anchor
+    )
   }
 
   // Recount one changed section and anchor the current position to the post-edit cursor.

@@ -313,6 +313,30 @@ hello third marker`
   ])
 }
 
+/** Builds separated matches with blank-line anchors for persisted-query reopen coverage. */
+const buildPersistedQueryReopenWorkspace = (
+  workspacePath: string
+): Record<string, string | null> => {
+  return createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Reopen',
+      displayName: 'Reopen',
+      promptFolderId: 'persisted-query-reopen-folder',
+      prompts: [
+        {
+          id: 'persisted-query-reopen-prompt',
+          title: 'Persisted Query Reopen Prompt',
+          promptText: `hello first marker
+
+hello second marker
+
+hello third marker`
+        }
+      ]
+    }
+  ])
+}
+
 const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, string | null> => {
   return createWorkspaceWithFolders(workspacePath, [
     {
@@ -741,6 +765,93 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
     await expect
       .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
+  })
+
+  test('preserves a nonmatching cursor and navigates from it when reopening a persisted query', async ({
+    testSetup
+  }) => {
+    /** Isolated workspace containing matches on both sides of blank cursor anchors. */
+    const workspacePath = '/ws/find-persisted-query-reopen'
+    await testSetup.setupFilesystem(buildPersistedQueryReopenWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    /** Started application and helpers for the isolated reopen workspace. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    /** Workspace setup result confirms the prompt folder is available for navigation. */
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Reopen')
+    /** Prompt body whose blank lines provide nonmatching persisted-query anchors. */
+    const editorSelector = promptEditorSelector('persisted-query-reopen-prompt')
+    await waitForMonacoEditor(mainWindow, editorSelector)
+    /** Folder find input used for reopen and directional navigation assertions. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowDown')
+    /** Original blank-line cursor that reopening and closing must preserve. */
+    const cursorBeforeReopen = await getMonacoSelectionState(mainWindow, editorSelector)
+    expect(cursorBeforeReopen).toMatchObject({
+      selectedText: '',
+      startLineNumber: 2,
+      startColumn: 1
+    })
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(
+      cursorBeforeReopen
+    )
+    await mainWindow.keyboard.press('Escape')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(
+      cursorBeforeReopen
+    )
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(
+      cursorBeforeReopen
+    )
+    await findInput.press('Enter')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector))
+      .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 3, startColumn: 1 })
+    await mainWindow.keyboard.press('Escape')
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.keyboard.press('ArrowUp')
+    /** Restored blank-line cursor used to verify first backward navigation. */
+    const cursorBeforePrevious = await getMonacoSelectionState(mainWindow, editorSelector)
+    expect(cursorBeforePrevious).toMatchObject({
+      selectedText: '',
+      startLineNumber: 2,
+      startColumn: 1
+    })
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(
+      cursorBeforePrevious
+    )
+    await findInput.press('Shift+Enter')
+    await expect
+      .poll(() => getMonacoSelectionState(mainWindow, editorSelector))
       .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 1, startColumn: 1 })
   })
 
