@@ -5,7 +5,6 @@ import {
   planPromptMove,
   planPromptTemplateDelete,
   planPromptTemplateMove,
-  selectMarkdownContentDeletionExpectedTargets,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
@@ -175,8 +174,7 @@ export const createMarkdownContentRendererMutations = <
     await runImmediateRendererDomainMutation({
       mutation: {
         command,
-        plan: deletePlanner,
-        selectExpectedTargets: selectMarkdownContentDeletionExpectedTargets
+        plan: deletePlanner
       },
       ipc: { channel: config.channels.delete },
       renderer: {

@@ -1,6 +1,5 @@
 import type {
   DomainChange,
-  DomainExpectedTargetSelector,
   DomainMutationConflict,
   DomainPlanner,
   DomainState,
@@ -88,17 +87,6 @@ export const parseDeleteMarkdownContentDomainCommand = (
   }
   return record as DeleteMarkdownContentDomainCommand
 }
-
-/** Excludes best-effort editor UI-state deletion from concurrency expectations. */
-export const selectMarkdownContentDeletionExpectedTargets: DomainExpectedTargetSelector = (
-  changes
-) =>
-  changes.filter(
-    (change) =>
-      !(
-        change.type === 'delete' && change.entityType === 'markdownContentUiState'
-      )
-  )
 
 /** Renderer-authored command for replacing editable prompt fields. */
 export type UpdatePromptDomainCommand = {

@@ -8,6 +8,7 @@ import { revisionCollectionOptions } from './RevisionCollection'
 export const markdownContentUiStateCollection = createCollection(
   revisionCollectionOptions<MarkdownContentUiState>({
     id: 'markdown-content-ui-state',
-    getKey: (uiState) => createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId)
+    getKey: (uiState) => createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId),
+    targetPolicy: 'deleteIfPresent'
   })
 )

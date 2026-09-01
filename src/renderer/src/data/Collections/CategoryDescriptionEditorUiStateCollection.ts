@@ -10,6 +10,7 @@ export const categoryDescriptionEditorUiStateCollection = createCollection(
   revisionCollectionOptions<CategoryDescriptionEditorUiState>({
     id: 'category-description-editor-ui-state',
     getKey: (uiState) =>
-      createCategoryDescriptionEditorUiStateKey(uiState.workspaceId, uiState.categoryId)
+      createCategoryDescriptionEditorUiStateKey(uiState.workspaceId, uiState.categoryId),
+    targetPolicy: 'deleteIfPresent'
   })
 )

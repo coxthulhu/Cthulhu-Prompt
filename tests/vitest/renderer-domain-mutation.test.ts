@@ -25,10 +25,7 @@ import {
   setPromptTemplateTitle
 } from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
 import { mutateSystemSettingsClientStateWithAutosave } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
-import type {
-  DomainExpectedTargetSelector,
-  DomainPlanner
-} from '@shared/DomainChanges'
+import type { DomainPlanner } from '@shared/DomainChanges'
 import type {
   UpdatePromptDomainCommand,
   UpdatePromptTemplateDomainCommand
@@ -76,6 +73,26 @@ const planRenameCategory: DomainPlanner<RenameTestCommand> = (_state, command) =
   }
 ]
 
+/** Shared test planner combining a required update with idempotent UI-state cleanup. */
+const planRenameCategoryWithOptionalDelete: DomainPlanner<RenameTestCommand> = (
+  _state,
+  command
+) => [
+  {
+    type: 'update',
+    entityType: 'category',
+    id: CATEGORY_ID,
+    recipe: (draft) => {
+      draft.displayName = command.displayName
+    }
+  },
+  {
+    type: 'delete',
+    entityType: 'categoryDescriptionEditorUiState',
+    id: OPTIONAL_UI_STATE_ID
+  }
+]
+
 /** Shared test planner deleting the category while its optimistic record disappears. */
 const planDeleteCategory: DomainPlanner<Record<string, never>> = () => [
   { type: 'delete', entityType: 'category', id: CATEGORY_ID }
@@ -106,12 +123,9 @@ const createSuccessResponse = (revision: number, displayName: string) => ({
 })
 
 /** Runs one category mutation with a renderer-only edited-state change. */
-const runCategoryDomainMutation = async (
-  displayName: string,
-  selectExpectedTargets?: DomainExpectedTargetSelector
-): Promise<void> =>
+const runCategoryDomainMutation = async (displayName: string): Promise<void> =>
   await runImmediateRendererDomainMutation({
-    mutation: { command: { displayName }, plan: planRenameCategory, selectExpectedTargets },
+    mutation: { command: { displayName }, plan: planRenameCategory },
     ipc: { channel: 'test-renderer-domain' },
     renderer: {
       mutate: ({ collections }) => {
@@ -270,8 +284,7 @@ describe('renderer domain mutation framework', () => {
     await runImmediateRendererDomainMutation({
       mutation: {
         command: {},
-        plan: planDeleteAbsentUiState,
-        selectExpectedTargets: () => []
+        plan: planDeleteAbsentUiState
       },
       ipc: { channel: 'test-optional-renderer-delete' },
       renderer: {}
@@ -725,20 +738,36 @@ describe('renderer domain mutation framework', () => {
     expect(categoryCollection.get(CATEGORY_ID)?.displayName).toBe('Second')
   })
 
-  it('uses the registration selector to omit unchecked targets', async () => {
-    /** IPC invocation used to inspect the registration-selected expectation set. */
+  it('uses collection policy to omit idempotent delete expectations', async () => {
+    /** IPC invocation used to inspect collection-derived expectations. */
     const invoke = vi.fn().mockResolvedValue(createSuccessResponse(2, 'Unchecked'))
     vi.stubGlobal('window', {
       ipcClientId: 'renderer-domain-client',
       electron: { ipcRenderer: { invoke } }
     })
 
-    await runCategoryDomainMutation('Unchecked', () => [])
+    await runImmediateRendererDomainMutation({
+      mutation: {
+        command: { displayName: 'Unchecked' },
+        plan: planRenameCategoryWithOptionalDelete
+      },
+      ipc: { channel: 'test-renderer-domain' },
+      renderer: {}
+    })
 
     expect(invoke).toHaveBeenCalledWith(
       'test-renderer-domain',
       expect.objectContaining({
-        payload: expect.objectContaining({ expectations: [] })
+        payload: expect.objectContaining({
+          expectations: [
+            {
+              entityType: 'category',
+              id: CATEGORY_ID,
+              expected: 'revision',
+              revision: 1
+            }
+          ]
+        })
       })
     )
   })

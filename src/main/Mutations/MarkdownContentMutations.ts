@@ -5,7 +5,6 @@ import {
   planPromptMove,
   planPromptTemplateDelete,
   planPromptTemplateMove,
-  selectMarkdownContentDeletionExpectedTargets,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
@@ -56,8 +55,7 @@ export const setupMarkdownContentMutationHandlers = <
     ipc: { channel: config.channels.delete },
     mutation: {
       parseCommand: parseDeleteMarkdownContentDomainCommand,
-      plan: deletePlanner,
-      selectExpectedTargets: selectMarkdownContentDeletionExpectedTargets
+      plan: deletePlanner
     }
   })
   handleMainDomainMutation({

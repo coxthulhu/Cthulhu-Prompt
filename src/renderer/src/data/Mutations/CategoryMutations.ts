@@ -4,8 +4,7 @@ import {
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
   planRenameCategoryDomainMutation,
-  planSetCategoryDescriptionDomainMutation,
-  selectCategoryDeletionExpectedTargets
+  planSetCategoryDescriptionDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
@@ -114,8 +113,7 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   await runImmediateRendererDomainMutation({
     mutation: {
       command,
-      plan: planDeleteCategoryDomainMutation,
-      selectExpectedTargets: selectCategoryDeletionExpectedTargets
+      plan: planDeleteCategoryDomainMutation
     },
     ipc: { channel: 'delete-category' },
     renderer: {}

@@ -10,6 +10,7 @@ export const workspacePromptFolderUiStateCollection = createCollection(
   revisionCollectionOptions<WorkspacePromptFolderUiState>({
     id: 'workspace-prompt-folder-ui-state',
     getKey: (uiState) =>
-      createWorkspacePromptFolderUiStateKey(uiState.workspaceId, uiState.contentOwnerId)
+      createWorkspacePromptFolderUiStateKey(uiState.workspaceId, uiState.contentOwnerId),
+    targetPolicy: 'deleteIfPresent'
   })
 )

@@ -6,6 +6,7 @@ import { revisionCollectionOptions } from './RevisionCollection'
 export const accordionUiStateCollection = createCollection(
   revisionCollectionOptions<AccordionUiState>({
     id: 'accordion-ui-state',
-    getKey: (uiState) => createAccordionUiStateKey(uiState.workspaceId, uiState.persistenceId)
+    getKey: (uiState) => createAccordionUiStateKey(uiState.workspaceId, uiState.persistenceId),
+    targetPolicy: 'deleteIfPresent'
   })
 )

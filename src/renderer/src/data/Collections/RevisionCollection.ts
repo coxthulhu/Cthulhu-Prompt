@@ -6,6 +6,7 @@ import type {
   UtilsRecord
 } from '@tanstack/svelte-db'
 import type { RevisionEnvelope } from '@shared/Revision'
+import type { DomainTargetPolicy } from '@shared/DomainChanges'
 
 export interface RevisionCollectionUtils<TRecord extends object> extends UtilsRecord {
   upsertAuthoritative: (snapshot: RevisionEnvelope<TRecord>) => void
@@ -15,6 +16,8 @@ export interface RevisionCollectionUtils<TRecord extends object> extends UtilsRe
   /** Reports whether the latest authoritative snapshot contains the key. */
   hasAuthoritative: (key: string) => boolean
   getAuthoritativeRevision: (key: string) => number
+  /** Missing-target behavior used when domain mutations delete this collection's records. */
+  targetPolicy: DomainTargetPolicy
 }
 
 type RevisionCollectionConfig<TRecord extends object> = {
@@ -22,6 +25,7 @@ type RevisionCollectionConfig<TRecord extends object> = {
   getKey: (record: TRecord) => string
   initialData?: Array<RevisionEnvelope<TRecord>>
   shouldAcceptEqualRevision?: (params: { currentRecord: TRecord; nextRecord: TRecord }) => boolean
+  targetPolicy?: DomainTargetPolicy
 }
 
 type RevisionCollectionOptionsResult<TRecord extends object> = CollectionConfig<
@@ -36,7 +40,13 @@ type RevisionCollectionOptionsResult<TRecord extends object> = CollectionConfig<
 export const revisionCollectionOptions = <TRecord extends object>(
   config: RevisionCollectionConfig<TRecord>
 ): RevisionCollectionOptionsResult<TRecord> => {
-  const { id, getKey, initialData = [], shouldAcceptEqualRevision } = config
+  const {
+    id,
+    getKey,
+    initialData = [],
+    shouldAcceptEqualRevision,
+    targetPolicy = 'requirePresent'
+  } = config
   const authoritativeRevisions = new Map<string, number>()
 
   let syncBegin: ((options?: { immediate?: boolean }) => void) | null = null
@@ -181,7 +191,8 @@ export const revisionCollectionOptions = <TRecord extends object>(
         writeManyAuthoritative(collectDeleteMessages(keys))
       },
       hasAuthoritative: (key) => authoritativeRevisions.has(key),
-      getAuthoritativeRevision
+      getAuthoritativeRevision,
+      targetPolicy
     },
     startSync: true,
     gcTime: 0

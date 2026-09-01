@@ -1,7 +1,6 @@
 import type {
   DomainChange,
   DomainMutationConflict,
-  DomainExpectedTargetSelector,
   DomainPlanner,
   DomainState,
   DomainTarget
@@ -250,19 +249,6 @@ const collectCategoryDeletionTargets = (
   }
   return targets
 }
-
-/** Excludes best-effort SQLite cleanup deletes from concurrency expectations. */
-export const selectCategoryDeletionExpectedTargets: DomainExpectedTargetSelector = (
-  changes
-) =>
-  changes.filter(
-    (change) =>
-      !(
-        change.type === 'delete' &&
-        (change.entityType === 'workspacePromptFolderUiState' ||
-          change.entityType === 'categoryDescriptionEditorUiState')
-      )
-  )
 
 /** Plans category deletion and reference cleanup against the supplied domain graph. */
 export const planDeleteCategoryDomainMutation: DomainPlanner<

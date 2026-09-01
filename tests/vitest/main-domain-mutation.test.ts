@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   DomainCommandParser,
-  DomainExpectedTargetSelector,
   DomainPlanner
 } from '@shared/DomainChanges'
 
@@ -24,7 +23,8 @@ const mockMainData = vi.hoisted(() => {
     promptFolder: new Map<string, Entry>(),
     category: new Map<string, Entry>(),
     prompt: new Map<string, Entry>(),
-    promptTemplate: new Map<string, Entry>()
+    promptTemplate: new Map<string, Entry>(),
+    categoryDescriptionEditorUiState: new Map<string, Entry>()
   }
   /** Creates committed reads required by the generic main framework. */
   const createStore = (entityType: keyof typeof entries) => ({
@@ -33,12 +33,16 @@ const mockMainData = vi.hoisted(() => {
   })
   /** Mock main data registry. */
   const data = {
-    systemSettings: { committedStore: createStore('systemSettings') },
-    workspace: { committedStore: createStore('workspace') },
-    promptFolder: { committedStore: createStore('promptFolder') },
-    category: { committedStore: createStore('category') },
-    prompt: { committedStore: createStore('prompt') },
-    promptTemplate: { committedStore: createStore('promptTemplate') }
+    systemSettings: { committedStore: createStore('systemSettings'), targetPolicy: 'requirePresent' },
+    workspace: { committedStore: createStore('workspace'), targetPolicy: 'requirePresent' },
+    promptFolder: { committedStore: createStore('promptFolder'), targetPolicy: 'requirePresent' },
+    category: { committedStore: createStore('category'), targetPolicy: 'requirePresent' },
+    prompt: { committedStore: createStore('prompt'), targetPolicy: 'requirePresent' },
+    promptTemplate: { committedStore: createStore('promptTemplate'), targetPolicy: 'requirePresent' },
+    categoryDescriptionEditorUiState: {
+      committedStore: createStore('categoryDescriptionEditorUiState'),
+      targetPolicy: 'deleteIfPresent'
+    }
   }
   /** Clears all committed entries between handler tests. */
   const reset = (): void => {
@@ -135,16 +139,12 @@ const parseTestCommand: DomainCommandParser<TestCommand> = (value) => {
 }
 
 /** Registers a handler and returns the Electron callback captured by the spy. */
-const registerHandler = (
-  planner: DomainPlanner<TestCommand>,
-  selectExpectedTargets?: DomainExpectedTargetSelector
-) => {
+const registerHandler = (planner: DomainPlanner<TestCommand>) => {
   handleMainDomainMutation({
     ipc: { channel: 'test-domain-mutation' },
     mutation: {
       parseCommand: parseTestCommand,
-      plan: planner,
-      selectExpectedTargets
+      plan: planner
     }
   })
   return ipcHandle.mock.calls[0]![1] as (
@@ -406,17 +406,18 @@ describe('main domain mutation framework', () => {
     ])
   })
 
-  it('uses the registration selector for the required expectation target set', async () => {
-    mockMainData.entries.category.set('unchecked-category', {
+  it('uses collection delete policy for the required expectation target set', async () => {
+    const optionalUiStateId = 'workspace:category'
+    mockMainData.entries.categoryDescriptionEditorUiState.set(optionalUiStateId, {
       revision: 7,
       committed: {
-        id: 'unchecked-category',
-        displayName: 'Unchecked',
-        description: null
+        workspaceId: 'workspace',
+        categoryId: 'category',
+        editorViewStateJson: '{}'
       },
       persistenceFields: {}
     })
-    /** Planner containing one revision-checked folder update and one unchecked child deletion. */
+    /** Planner containing one revision-checked update and one idempotent collection deletion. */
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
         type: 'update',
@@ -428,15 +429,12 @@ describe('main domain mutation framework', () => {
       },
       {
         type: 'delete',
-        entityType: 'category',
-        id: 'unchecked-category'
+        entityType: 'categoryDescriptionEditorUiState',
+        id: optionalUiStateId
       }
     ]
-    /** Registration selector retaining only workspace-like root ownership checks. */
-    const selectExpectedTargets: DomainExpectedTargetSelector = (changes) =>
-      changes.filter((change) => change.entityType === 'promptFolder')
-    /** Successful request omitting the category's current revision. */
-    const result = await registerHandler(planner, selectExpectedTargets)(null, {
+    /** Successful request omitting the idempotently deleted UI-state revision. */
+    const result = await registerHandler(planner)(null, {
       requestId: 'request',
       clientId: 'client',
       payload: {
@@ -456,12 +454,18 @@ describe('main domain mutation framework', () => {
     expect(projectDomainTransitions).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ entityType: 'promptFolder', id: 'root' }),
-        expect.objectContaining({ entityType: 'category', id: 'unchecked-category' })
+        expect.objectContaining({
+          entityType: 'categoryDescriptionEditorUiState',
+          id: optionalUiStateId
+        })
       ]),
       [{ entityType: 'promptFolder', id: 'root', expected: 'revision', revision: 4 }]
     )
     expect(
       result.payload.snapshots.map((snapshot) => `${snapshot.entityType}:${snapshot.id}`)
-    ).toEqual(['promptFolder:root', 'category:unchecked-category'])
+    ).toEqual([
+      'promptFolder:root',
+      `categoryDescriptionEditorUiState:${optionalUiStateId}`
+    ])
   })
 })

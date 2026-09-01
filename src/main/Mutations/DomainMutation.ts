@@ -5,7 +5,6 @@ import {
   isDomainMutationConflict,
   type DomainCommandParser,
   type DomainEntityType,
-  type DomainExpectedTargetSelector,
   type DomainMutationRequest,
   type DomainMutationResponsePayload,
   type DomainPlanner,
@@ -49,8 +48,6 @@ type MainDomainMutationIpc = {
 type MainDomainMutationDefinition<TCommand> = {
   parseCommand: DomainCommandParser<TCommand>
   plan: DomainPlanner<TCommand>
-  /** Optional registration policy narrowing which planned targets require expectations. */
-  selectExpectedTargets?: DomainExpectedTargetSelector
 }
 
 /** Inputs used to register one generic main-process domain mutation handler. */
@@ -260,8 +257,12 @@ const runMainDomainMutation = async <TCommand>(
     assertValidDomainChanges(plan)
     /** Correct target set derived exclusively from main-computed domain changes. */
     const targets: DomainTarget[] = plan.map(({ entityType, id }) => ({ entityType, id }))
-    /** Registration-selected targets that require renderer concurrency expectations. */
-    const expectedTargets = mutation.selectExpectedTargets?.(plan) ?? targets
+    /** Planned targets whose collection policy requires renderer concurrency expectations. */
+    const expectedTargets = plan.filter(
+      (change) =>
+        change.type !== 'delete' ||
+        data[change.entityType].targetPolicy !== 'deleteIfPresent'
+    )
     if (
       !hasMatchingDomainTargetSet(request.expectations, expectedTargets) ||
       !hasMatchingDomainRevisions(request.expectations)

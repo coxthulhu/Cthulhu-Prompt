@@ -6,6 +6,7 @@ import { revisionCollectionOptions } from './RevisionCollection'
 export const workspaceUiStateCollection = createCollection(
   revisionCollectionOptions<WorkspaceUiState>({
     id: 'workspace-ui-state',
-    getKey: (uiState) => uiState.workspaceId
+    getKey: (uiState) => uiState.workspaceId,
+    targetPolicy: 'deleteIfPresent'
   })
 )

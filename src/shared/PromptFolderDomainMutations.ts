@@ -1,6 +1,5 @@
 import type {
   DomainChange,
-  DomainExpectedTargetSelector,
   DomainPlanner,
   DomainTarget
 } from './DomainChanges'
@@ -67,20 +66,6 @@ export const parseDeletePromptFolderDomainCommand = (
   }
   return record as DeletePromptFolderDomainCommand
 }
-
-/** Excludes optional SQLite cleanup deletes from root-deletion expectations. */
-export const selectPromptFolderDeletionExpectedTargets: DomainExpectedTargetSelector = (
-  changes
-) =>
-  changes.filter(
-    (change) =>
-      !(
-        change.type === 'delete' &&
-        (change.entityType === 'markdownContentUiState' ||
-          change.entityType === 'workspacePromptFolderUiState' ||
-          change.entityType === 'categoryDescriptionEditorUiState')
-      )
-  )
 
 /** Strict runtime parser for root-folder creation commands. */
 export const parseCreatePromptFolderDomainCommand = (

@@ -4,8 +4,7 @@ import {
   parseRenamePromptFolderDomainCommand,
   planCreatePromptFolderDomainMutation,
   planDeletePromptFolderDomainMutation,
-  planRenamePromptFolderDomainMutation,
-  selectPromptFolderDeletionExpectedTargets
+  planRenamePromptFolderDomainMutation
 } from '@shared/PromptFolderDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
@@ -29,8 +28,7 @@ export const setupPromptFolderMutationHandlers = (): void => {
     ipc: { channel: 'delete-prompt-folder' },
     mutation: {
       parseCommand: parseDeletePromptFolderDomainCommand,
-      plan: planDeletePromptFolderDomainMutation,
-      selectExpectedTargets: selectPromptFolderDeletionExpectedTargets
+      plan: planDeletePromptFolderDomainMutation
     }
   })
 }

@@ -5,8 +5,7 @@ import type {
 import type { IpcMutationActionResponse } from '@shared/IpcResult'
 import {
   planDeletePromptFolderDomainMutation,
-  planMovePromptFolderDomainMutation,
-  selectPromptFolderDeletionExpectedTargets
+  planMovePromptFolderDomainMutation
 } from '@shared/PromptFolderDomainMutations'
 import { runLoad } from '../IpcFramework/Load'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
@@ -96,8 +95,7 @@ export const deletePromptFolder = async (
   await runImmediateRendererDomainMutation({
     mutation: {
       command,
-      plan: planDeletePromptFolderDomainMutation,
-      selectExpectedTargets: selectPromptFolderDeletionExpectedTargets
+      plan: planDeletePromptFolderDomainMutation
     },
     ipc: { channel: 'delete-prompt-folder' },
     renderer: {

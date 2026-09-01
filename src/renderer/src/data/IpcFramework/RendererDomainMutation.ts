@@ -5,7 +5,6 @@ import {
   isDomainMutationConflict,
   type DomainChange,
   type DomainEntityType,
-  type DomainExpectedTargetSelector,
   type DomainMutationRequest,
   type DomainMutationResponsePayload,
   type DomainPlanner,
@@ -65,8 +64,6 @@ type RendererClientStateCollection = {
 type RendererDomainMutationDefinition<TCommand> = {
   command: TCommand
   plan: DomainPlanner<TCommand>
-  /** Optional registration policy narrowing which planned targets require expectations. */
-  selectExpectedTargets?: DomainExpectedTargetSelector
 }
 
 /** Grouped IPC routing inputs for an immediate renderer mutation. */
@@ -109,7 +106,6 @@ export type PacedRendererDomainMutationOptions<TCommand> = {
 type LatestPacedRendererDomainMutation = {
   command: unknown
   plan: DomainChange[]
-  selectExpectedTargets?: DomainExpectedTargetSelector
   ipcChannel: string
   clientStateCollections?: RendererClientStateCollection[]
 }
@@ -321,25 +317,25 @@ const getRendererRevisionCollection = (entityType: DomainEntityType) => {
 
 /** Captures authoritative revision expectations for renderer-computed domain targets. */
 const buildRendererDomainExpectations = (
-  changes: readonly DomainChange[],
-  selectExpectedTargets?: DomainExpectedTargetSelector
+  changes: readonly DomainChange[]
 ): DomainRevisionExpectation[] =>
-  (selectExpectedTargets?.(changes) ?? changes).map((target) => {
-    /** Planned operation selected for one expected entity target. */
-    const change = changes.find(
-      (candidate) =>
-        candidate.entityType === target.entityType && candidate.id === target.id
-    )!
+  changes.flatMap((change) => {
     /** Renderer revision collection for the planned target. */
     const collection = getRendererRevisionCollection(change.entityType)
+    if (
+      change.type === 'delete' &&
+      collection.utils.targetPolicy === 'deleteIfPresent'
+    ) {
+      return []
+    }
     if (change.type === 'insert') {
-      return {
+      return [{
         entityType: change.entityType,
         id: change.id,
         expected: 'absent' as const
-      }
+      }]
     }
-    return collection.utils.hasAuthoritative(change.id)
+    return [collection.utils.hasAuthoritative(change.id)
       ? {
           entityType: change.entityType,
           id: change.id,
@@ -350,7 +346,7 @@ const buildRendererDomainExpectations = (
           entityType: change.entityType,
           id: change.id,
           expected: 'absent' as const
-        }
+        }]
   })
 
 /** Enforces the documented single-target replacement contract for paced domain plans. */
@@ -473,10 +469,7 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
     },
     persistMutations: async ({ invoke, transaction }) => {
       /** Latest authoritative expectations captured after earlier queued mutations settle. */
-      const expectations = buildRendererDomainExpectations(
-        plan,
-        options.mutation.selectExpectedTargets
-      )
+      const expectations = buildRendererDomainExpectations(plan)
       /** Generic domain IPC response for success or authoritative conflict. */
       const result = await invoke<{
         payload: DomainMutationRequest<TCommand>
@@ -529,10 +522,7 @@ export const mutatePacedRendererDomainMutation = <TCommand>(
       /** Latest same-target invocation replacing earlier commands in this transaction. */
       const latestMutation = latestPacedRendererDomainMutationByTransaction.get(transaction)!
       /** Authoritative expectations captured after earlier globally queued mutations settle. */
-      const expectations = buildRendererDomainExpectations(
-        latestMutation.plan,
-        latestMutation.selectExpectedTargets
-      )
+      const expectations = buildRendererDomainExpectations(latestMutation.plan)
       /** Generic response produced by persisting only the latest replacement command. */
       const result = (await invoke<{ payload: DomainMutationRequest<TCommand> }>(
         latestMutation.ipcChannel,
@@ -561,7 +551,6 @@ export const mutatePacedRendererDomainMutation = <TCommand>(
   latestPacedRendererDomainMutationByTransaction.set(transaction, {
     command: options.mutation.command,
     plan,
-    selectExpectedTargets: options.mutation.selectExpectedTargets,
     ipcChannel: options.ipc.channel,
     clientStateCollections: options.renderer.clientStateCollections
   })

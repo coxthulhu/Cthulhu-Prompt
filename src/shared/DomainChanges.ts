@@ -99,11 +99,6 @@ export type DomainPlanner<TCommand> = (
   command: TCommand
 ) => DomainMutationPlan
 
-/** Registration callback selecting the planned entities that require concurrency expectations. */
-export type DomainExpectedTargetSelector = (
-  changes: readonly DomainChange[]
-) => readonly DomainTarget[]
-
 /** Runtime parser for one mutation-specific command carried by a domain request. */
 export type DomainCommandParser<TCommand> = (value: unknown) => TCommand | null
 
