@@ -1,143 +1,157 @@
 ---
 name: tanstack-db-mutations
 description: |
-  Cthulhu Prompt revision mutation patterns. Use when adding or changing optimistic insert/update/delete behavior, multi-collection manual transactions, expected revisions, IPC persistence, authoritative success/conflict reconciliation, rollback, client-state acceptance, global ordering, or debounced autosave.
+  Cthulhu Prompt shared domain mutation patterns. Use when adding or changing mutation commands, shared planners, strict command parsers, optimistic domain changes, renderer-only client state, main atomic transitions, conflicts, rollback, global ordering, or paced autosave.
 ---
 
-# Revision Mutations
+# Shared Domain Mutations
 
-Persist renderer changes through the shared revision mutation framework. Do not add collection-level persistence handlers, `createOptimisticAction`, or `createPacedMutations` to existing authoritative entity flows.
+Use the shared domain mutation framework for persisted feature changes. Feature modules dispatch mutation-specific commands through `RendererDomainMutation.ts`; `RevisionMutation.ts` and its manual TanStack transactions are the internal optimistic/ordering substrate, not the ordinary feature API.
 
-## Standard Mutation Flow
+Do not add collection-level persistence handlers, `createOptimisticAction`, built-in paced strategies, or feature-specific expected-revision payloads.
 
-Use `runRevisionMutation` from `data/IpcFramework/RevisionCollections`:
+## Standard Feature Shape
+
+Colocate a serializable command type, strict runtime parser, and shared `DomainPlanner` under `src/shared/*DomainMutations.ts`. Dispatch the command in the renderer:
 
 ```ts
-await runRevisionMutation<PromptRevisionResponsePayload>({
-  mutateOptimistically: ({ collections }) => {
-    collections.prompt.update(promptId, (draft) => {
-      draft.title = nextTitle
-    })
-    collections.promptClientState.update(promptId, (clientState) => {
-      clientState.isEdited = true
-    })
-  },
-  persistMutations: async ({ entities, invoke, transaction }) => {
-    const latestPrompt = getLatestMutationModifiedRecord(
-      transaction,
-      promptCollection.id,
-      promptId,
-      () => promptCollection.get(promptId)!
-    )
+const command = { categoryId, displayName }
 
-    const result = await invoke('update-prompt', {
-      payload: {
-        prompt: entities.prompt({ id: promptId, data: latestPrompt })
-      }
-    })
-
-    if (result.success) {
-      promptClientStateCollection.utils.acceptMutations(transaction)
-    }
-
-    return result
-  },
-  handleSuccessOrConflictResponse: (payload) => {
-    promptCollection.utils.upsertAuthoritative(payload.prompt)
-  },
-  conflictMessage: 'Prompt update conflict'
+await runImmediateRendererDomainMutation({
+  mutation: { command, plan: planRenameCategoryDomainMutation },
+  ipc: { channel: 'rename-category' },
+  renderer: {}
 })
 ```
 
-Adapt the payload to the existing shared IPC contract; do not invent a generic mutation endpoint.
-
-## Optimistic Changes
-
-Put every user-visible immediate change in `mutateOptimistically`. Use only the collection helpers passed into the callback so the framework can collect touched entity keys before replaying the changes into the transaction.
-
-Update every affected authoritative relationship in the same transaction. For example, creating, moving, deleting, or completing a prompt can change the prompt, its client state, and one or two prompt folders.
-
-Do not apply authoritative snapshots in `mutateOptimistically`.
-
-## Persistence Payloads
-
-Use the `entities` builders supplied to `persistMutations`. They add the collection's current authoritative `expectedRevision` and remove TanStack virtual properties before IPC serialization.
-
-When paced transactions can merge multiple edits, read the most recent `mutation.modified` record with `getLatestMutationModifiedRecord`; do not persist a stale value captured before the transaction changed.
-
-Use `invoke` for the normal typed payload path. Follow the nearest mutation when a channel uses a specialized shared request type.
-
-## Success, Conflict, and Rollback
-
-Apply response payloads in `handleSuccessOrConflictResponse` through authoritative collection utilities. The framework invokes this handler for both success and conflict payloads so server truth is available before a failed transaction rolls its optimistic layer back.
-
-Return success only after persistence completes. Throw or return a failed/conflict result so `RevisionMutation.ts` throws and TanStack DB rolls back optimistic state.
-
-Run destructive authoritative cleanup, navigation, or cache removal in `onSuccess` when it must occur only after the transaction reaches `completed`.
-
-## Client-State Collections
-
-Manual transactions do not automatically retain local-only mutations. After IPC success, explicitly accept each client-state collection changed by the transaction:
+Register the same parser and planner in the main process:
 
 ```ts
-if (mutationResult.success) {
-  promptClientStateCollection.utils.acceptMutations(transaction)
+handleMainDomainMutation({
+  ipc: { channel: 'rename-category' },
+  mutation: {
+    parseCommand: parseRenameCategoryDomainCommand,
+    plan: planRenameCategoryDomainMutation
+  }
+})
+```
+
+Keep a mutation-specific IPC channel. The framework supplies the generic request, target/revision expectations, atomic execution, and authoritative response snapshots; it does not replace explicit command contracts.
+
+## Shared Commands and Planners
+
+Commands contain intent and every input both processes need. Generate stable IDs, timestamps, and other nondeterministic values in renderer feature code and put them in the command. For paced editing, use a set-style command containing the latest complete desired value rather than an incremental delta.
+
+Strict command parsers must reject missing, mistyped, and additional properties. Keep command types serializable and free of TanStack virtual fields, renderer-only client state, functions, and process-specific objects.
+
+The shared planner runs against a `DomainState` backed by renderer collections and again against main committed stores. It should:
+
+- read entities through `state.get` and `state.getAll`
+- normalize and enforce business invariants without process-specific APIs
+- return all authoritative inserts, Immer-recipe updates, and deletes as `DomainChange[]`
+- return a `DomainMutationConflict` with authoritative targets when the command cannot apply
+- produce at most one change for each `entityType:id` target
+- keep inserted `change.id` and `change.data.id` aligned when the record has an ID
+
+Do not put renderer-only changes, navigation, cache cleanup, filesystem operations, or IPC calls in a planner. Prompt and template planner recipes must work against the summary/full projections allowed by `DomainPlannerEntityMap`.
+
+## Renderer Dispatch
+
+Use `runImmediateRendererDomainMutation` for an operation that should enter the global queue immediately. The renderer bridge runs the shared planner against current optimistic collection state, validates the plan, and applies every domain change through the transaction's collection helpers.
+
+Put transaction-coupled renderer-session changes under `renderer.mutate`:
+
+```ts
+renderer: {
+  mutate: ({ collections }) => {
+    collections.promptClientState.update(promptId, (state) => {
+      state.isEdited = true
+    })
+  }
 }
 ```
 
-Do not accept client-state mutations before server success. Failed persistence must roll them back with the authoritative optimistic changes.
+Registered client-state collections touched by a successful transaction are detected and accepted automatically by `RevisionMutation.ts`. Do not call `acceptMutations`, pass client-state collection lists, or accept local state before persistence succeeds. A failed or conflicting mutation must roll authoritative and client-state optimism back together.
 
-Direct local-only inserts and updates remain appropriate for initial client-state hydration and renderer-session state that does not participate in an authoritative transaction.
+Direct client-state inserts and updates remain appropriate for query hydration and renderer-session changes that do not participate in a persisted domain mutation.
 
-Choose client-state reconciliation policy per entity by following its closest existing helper:
+## Expectations, Main Execution, and Reconciliation
 
-- Prompt and template hydration inserts missing client state without resetting the session `isEdited` latch.
-- System settings hydration replaces the form inputs from authoritative settings.
-- Markdown-content UI-state success or conflict responses reconcile the persisted revision collection with response truth.
+The renderer framework derives expectations from the already-computed domain plan only when persistence reaches the front of the global queue:
 
-Do not assume one policy fits every client-state collection. Define and test what happens when authoritative truth arrives while a paced edit is pending.
+- inserts expect the target to be absent
+- required updates and deletes expect the latest authoritative revision, or absence when the renderer has no authoritative record
+- `deleteIfPresent` deletes omit a concurrency expectation
 
-## Creation Contracts
+Feature code must not capture revisions or construct expectations. The main handler parses the complete wire request, reruns the same planner against current committed stores, and requires the renderer expectations to match the main-computed required target set exactly. It then verifies committed revisions, projects immutable before/after domain graphs, and runs the transitions atomically while already holding the main global mutation queue.
 
-For a new keyed entity, use a client-generated stable ID and an `expectedRevision` of `0` through the normal entity builder. Follow prompt UI state for optimistic insert-or-update behavior. For required singleton entities such as system settings, load the existing record before allowing updates rather than treating absence as an implicit create.
+Business conflicts, target-set mismatches, revision mismatches, and atomic transition conflicts return current authoritative snapshots. The renderer reconciles success and conflict snapshots before the low-level transaction completes or rejects, so a rejected transaction rolls its optimistic layer back onto current server truth.
 
-## Global Ordering
+Keep persistence rules in `DomainStorageAdapters.ts` and the applicable persistence layer. Do not duplicate filesystem or SQLite behavior in planners or IPC registrations. Lifecycle actions that are not edits to an existing renderer domain graph, such as creating or closing a workspace, may retain their dedicated validated handlers; follow the closest existing operation instead of forcing them through domain planning.
 
-Preserve the single global mutation queue in `RevisionMutation.ts`. It ensures expected revisions and authoritative responses settle in renderer intent order across entity types.
+## Creation and Deletion Contracts
 
-Before an immediate mutation touches an entity with a pending paced update, flush the matching paced transaction. Do not allow an immediate operation to overtake unsaved edits to the same collection ID and element ID.
+For a new keyed entity, generate a stable client ID before dispatch and return an insert from the shared planner. The framework converts that target to an `absent` expectation and the transition layer enforces creation against a missing committed entry. Required singletons such as system settings must already be loaded; absence should produce a planner conflict rather than an implicit create.
+
+`targetPolicy` defaults to `requirePresent`. Use `deleteIfPresent` only for records whose deletion is intentionally idempotent when missing, currently optional persisted UI state. Mirror the policy in the renderer revision collection and main `RevisionData`. The planner still returns the delete, main still includes the target in conflict/success snapshots, and the framework derives the expectation omission from policy rather than a caller-supplied target selector.
+
+Authoritative deleted snapshots are reconciled through revision collection utilities. Entity-specific renderer reconciliation may also remove associated client state or clear caches; extend `RendererDomainMutation.ts` when a new entity needs such behavior.
 
 ## Paced Autosave
 
-Use `mutatePacedRevisionUpdateTransaction` for prompt, settings, persistence, and UI-state autosave. The custom registry provides behavior the generic TanStack pacing helpers do not encode for this application:
+Use `mutatePacedRendererDomainMutation` for debounced persisted edits. A paced mutation must:
 
-- one pending transaction per global collection/element key
-- debounce restart after each edit
-- mutation merging within that transaction
-- optional validation before enqueue
-- explicit per-element and global flush-and-wait operations
-- matching paced-update flush before immediate mutations
-- commit through the same global queue as immediate mutations
+- declare exactly one authoritative `pacing.target`
+- return exactly one shared domain change for that target
+- use a replacement/set-style command so the latest invocation can supersede earlier commands
+- keep its planner, IPC channel, renderer mutation shape, pacing target, and validation behavior stable while that target has a pending transaction
 
-Use `validateBeforeEnqueue` for client-state inputs that may temporarily be invalid. When an immediate operation supersedes an invalid paced update, the registry performs a secondary rollback and removes the pending transaction.
+The underlying registry keeps one pending transaction per global collection/element key, restarts debounce after every edit, merges optimism into that transaction, and stores the latest command and plan for eventual persistence. Expectations are derived after earlier global work settles.
 
-Use the existing flush helpers before workspace changes, navigation that can discard client state, application teardown, or other boundaries already covered by `AutosaveFlushes.svelte.ts`.
+Use `validateBeforeEnqueue` when client-state inputs may temporarily be invalid. It receives the current merged transaction, so use the established transaction lookup helper when validation needs the latest client-state record. When an immediate operation supersedes an invalid matching paced transaction, the registry rolls the invalid transaction back, removes it, and replays the immediate optimism.
 
-Current aggregate flushes use `Promise.allSettled`. “Flush and wait” therefore means all save tasks settled, not that every save succeeded; workspace switching can continue and clear workspace-scoped client state after a failed save. Preserve this behavior unless the task explicitly changes failure UX, blocking, retry, or recovery semantics.
+Before an immediate mutation applies optimism, the framework flushes paced work for every touched collection ID/element ID. All immediate and paced commits then serialize through the same renderer global queue, while the main domain handler also serializes atomic persistence through its global queue.
 
-The current paced setter APIs return `void`, enqueue tracking converts rejection into a settled tracking promise, and aggregate flushes use `allSettled`. Callers therefore cannot currently surface a paced persistence failure by catching a setter or flush. If a task requires user-visible autosave errors, extend the shared mutation framework with an explicit error callback or result channel and test it; do not imply the existing controller can observe the rejection.
+Use existing flush helpers before workspace changes, navigation that can discard client state, application teardown, or boundaries already covered by `AutosaveFlushes.svelte.ts`.
 
-Do not catch and swallow errors inside the transaction `mutationFn`, because TanStack rollback depends on rejection.
+Current paced setter APIs return `void`. Aggregate flushes use `Promise.allSettled`, and enqueue tracking converts rejection to settled tracking promises. A flush therefore waits for work to settle but does not report that every save succeeded. If a task requires user-visible autosave failures, extend the shared framework with an explicit result/error channel and tests; do not imply callers can catch the current setter or aggregate flush.
+
+Do not catch and swallow errors inside the low-level transaction `mutationFn`; TanStack rollback depends on rejection.
+
+## Adding an Authoritative Entity
+
+Update the complete dispatch surface when a new entity participates in domain mutations:
+
+- `DomainEntityMap`, `DomainPlannerEntityMap` when a renderer projection is needed, and the relevant shared command/parser/planner module
+- renderer revision collection plus `RevisionCollections.ts`
+- renderer domain `get`, `getAll`, optimistic change, revision collection, and snapshot reconciliation dispatch
+- main `data`/`RevisionData`, committed graph capture and entity ID resolution, snapshot construction, transition/persistence adapters, and loading
+- matching renderer/main `targetPolicy` when nondefault
+- main mutation registration and `NormalStartup.ts` setup when needed
+
+Use the nearest existing entity flow. Missing one of these registrations commonly appears as an exhaustive switch failure or as renderer/main plans that cannot observe the same graph.
+
+## Framework Boundaries
+
+Call `runRevisionMutation` or `mutatePacedRevisionUpdateTransaction` directly only when changing the domain mutation bridge or low-level transaction framework, or when an existing exceptional flow demonstrably cannot be represented as a shared domain command. Do not copy their `persistMutations`, entity-builder, expectation, reconciliation, or manual-acceptance patterns into new feature code.
+
+Preserve the low-level invariants:
+
+- one global renderer commit queue
+- matching paced work flushes before immediate optimism
+- authoritative responses reconcile before a failed transaction rolls back
+- only registered client-state collections actually touched are accepted after success
+- errors and conflicts reject the manual transaction
 
 ## Testing
 
-Cover these behaviors when affected:
+Cover the affected layers rather than mocking only the feature wrapper:
 
-- optimistic state appears before IPC completion
-- success commits authoritative and client state
-- failure rolls both back
-- conflict applies response truth and rejects the transaction
-- same-entity paced edits merge
-- immediate mutations flush matching paced edits first
-- unrelated entity keys remain independent until the global commit queue
-- flush helpers await active and already in-flight work
+- shared planner changes and business conflicts in `domain-mutations.test.ts`
+- strict command parsing and main target/revision checks in `main-domain-mutation.test.ts`
+- renderer optimism, generic snapshots, rollback, client-state acceptance, and paced replacement in `renderer-domain-mutation.test.ts`
+- storage projection and atomicity in `domain-persistence.test.ts` and `atomic-data-transaction.test.ts`
+- thin feature wiring where command construction or renderer-only changes are specific to that feature
+- low-level registry tests only when queueing, replay, validation, or flush mechanics change
+
+When applicable, verify optimistic state before IPC completion, authoritative success, conflict truth followed by rollback, insert absence, optional deletes, same-target paced merging, matching-target flushes, unrelated target independence before the global queue, and flushes that await pending and already in-flight work.

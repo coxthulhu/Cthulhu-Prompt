@@ -37,6 +37,7 @@ export const promptFolderCollection = createCollection(
 The adapter owns these responsibilities:
 
 - Store the latest authoritative revision separately from entity data.
+- Expose whether authoritative state contains a key and the collection's domain deletion `targetPolicy`.
 - Ignore stale snapshots.
 - Apply external truth through `begin({ immediate: true })`, `write`, and `commit`.
 - Expose bulk and single authoritative upsert/delete utilities.
@@ -48,10 +49,12 @@ Use the utilities for IPC results:
 ```ts
 promptCollection.utils.upsertManyAuthoritative(promptSnapshots)
 promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
-const expectedRevision = promptCollection.utils.getAuthoritativeRevision(promptId)
+const hasAuthoritativePrompt = promptCollection.utils.hasAuthoritative(promptId)
 ```
 
 Do not use ordinary `insert`, `update`, or `delete` to apply server truth. Those methods are for optimistic transaction changes.
+
+Feature mutations do not read revisions or build expectations themselves. `RendererDomainMutation.ts` derives required `revision` or `absent` expectations from the shared plan after earlier queued work settles.
 
 ### Equal Revisions
 
@@ -60,6 +63,10 @@ Reject equal revisions by default. Add `shouldAcceptEqualRevision` only for a co
 ### Bulk Reconciliation
 
 Prefer `upsertManyAuthoritative` and `deleteManyAuthoritative` when applying one IPC response. Compute removed IDs from the previously known graph and the response graph, then delete authoritative records and matching client state together.
+
+### Domain Delete Policy
+
+`targetPolicy` defaults to `requirePresent`. Set `deleteIfPresent` only when deleting a missing record is an intentional successful no-op, as with optional persisted UI-state cleanup. Mirror the same policy in the corresponding main `RevisionData`; the domain framework omits renderer concurrency expectations for those deletes and the main transition layer still includes their authoritative target/snapshot. Do not use this policy to weaken update, insert, or required-delete conflicts.
 
 ## Client-State Collections
 
@@ -80,7 +87,7 @@ Keep client-state record shapes specific to renderer needs. Client state can kee
 
 Hydrate client state through functions under `data/UiState`; do not duplicate record construction in components. Preserve existing session-only state when authoritative refreshes should not reset it.
 
-When a manual transaction changes a local-only collection, call its `utils.acceptMutations(transaction)` only after IPC persistence succeeds.
+Register client-state collections in `RevisionCollections.ts`. After IPC success, the low-level revision runner detects which registered client-state collections the transaction actually touched and accepts them automatically. Feature mutation code must not call `acceptMutations` or list client-state collections manually.
 
 ## Reads
 
@@ -94,6 +101,8 @@ When a manual transaction changes a local-only collection, call its `utils.accep
 - Keep entity keys aligned with IPC revision envelope IDs.
 - Keep renderer keys and envelope IDs stable even when the main revision store uses a composite scope key such as `workspaceId:promptId`.
 - Add a revision collection to `RevisionCollections.ts` when it participates in shared mutations.
-- Add its client-state collection to the optimistic collection map when one transaction changes both.
+- Add a client-state collection to both the optimistic and client-state maps when a domain transaction may change it.
+- For a new authoritative domain entity, also update `DomainChanges.ts`, renderer domain state/change/reconciliation dispatch, main `data`, domain graph/snapshot dispatch, and persistence adapters.
+- Mirror a nondefault `targetPolicy` in renderer collection and main revision data definitions.
 - Reconcile authoritative deletes as well as upserts.
 - Test stale, equal, newer, bulk, delete, rollback, and summary-to-full cases that apply.

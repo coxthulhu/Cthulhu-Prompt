@@ -84,8 +84,8 @@ Prefer the established full-collection-plus-derived pattern for hierarchical scr
 Use `collection.get`, `has`, or `toArray` instead of `useLiveQuery` inside:
 
 - IPC load reconciliation
-- mutation precondition checks
-- optimistic payload preparation
+- feature mutation precondition checks and command construction
+- shared domain-state adapters and planner execution
 - autosave flushes
 - event handlers that only need a current snapshot
 

@@ -85,16 +85,17 @@ Do not clear whole authoritative singleton collections when switching or reloadi
 
 ## Main-Process Companion Work
 
-When adding a new loadable or mutable entity, inspect and update the applicable main-process pieces:
+When adding a new loadable entity, inspect and update the applicable main-process pieces:
 
-- persistence or data-access storage, including a SQLite migration when required
-- the revision owner appropriate to that storage: use `Registries/Revisions.ts` for SQLite-backed renderer persistence such as user/workspace persistence and prompt UI state; use committed-store entries and atomic transaction results for file-backed `RevisionData` entities such as system settings, workspaces, folders, and prompts
-- exact-shape runtime parsers in `IpcFramework/IpcValidation.ts` for payload-bearing channels
-- a payload-bearing query or mutation handler that consumes `validatedRequest`, or the established direct handler pattern for a no-payload startup query
+- persistence and its `RevisionData`/committed-store definition, including a SQLite migration when required
+- load code that places persisted data in the committed store before building revision snapshots
+- exact-shape query request parsers in `IpcFramework/IpcValidation.ts` for payload-bearing channels
+- a query handler that consumes the validated request, or the established direct handler pattern for a no-payload startup query
 - handler setup registration in `NormalStartup.ts`
-- conflict handling that returns current authoritative truth, either from an atomic transaction's conflict snapshot or from a data-access reread for registry-backed persistence
 
-In-memory revision keys can include scope, such as `workspaceId:entityId`, while renderer collection keys and revision envelope IDs remain the entity ID expected by that collection. Do not add an unused in-memory revision store for an entity whose committed store already owns revisions.
+The committed store owns the authoritative in-memory revision used by query snapshots and domain mutations, regardless of whether persistence is file-backed or SQLite-backed. Do not add a parallel entry to `Registries/Revisions.ts`.
+
+For mutation command/parser/planner registration, target/revision conflicts, atomic persistence, and generic snapshots, use the mutation skill rather than adding mutation-specific query reconciliation.
 
 ## Loading Boundaries
 
