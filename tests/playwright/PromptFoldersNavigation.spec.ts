@@ -20,8 +20,8 @@ const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
 const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
-const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM =
-  '[data-testid="open-selected-prompt-folder-settings-menu-item"]'
+const DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM =
+  '[data-testid="delete-selected-prompt-folder-menu-item"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folder-dropdown-item-"]'
@@ -900,7 +900,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeVisible()
   })
 
-  test('leaves selected root folder settings as a no-op', async ({ testSetup }) => {
+  test('opens root prompt folder deletion from the sidebar actions', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -916,16 +916,55 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await expect(mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON)).toBeEnabled()
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
-    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
-    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
+    const deleteMenuItem = mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)
+    await expect(deleteMenuItem).toBeVisible()
+    await expect(deleteMenuItem).toHaveText('Delete Prompt Folder')
+    await expect(deleteMenuItem).toHaveAttribute('data-variant', 'danger')
+    const dangerHoverColor = await deleteMenuItem.evaluate((element) => {
+      const probe = document.createElement('div')
+      probe.style.backgroundColor = 'var(--ui-danger-action-hover-fill)'
+      element.ownerDocument.body.append(probe)
+      const color = getComputedStyle(probe).backgroundColor
+      probe.remove()
+      return color
+    })
+    await deleteMenuItem.hover()
+    await expect(deleteMenuItem).toHaveCSS('background-color', dangerHoverColor)
+    await deleteMenuItem.click()
+    const deleteDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+    )
+    await expect(deleteDialog).toBeVisible()
+    await expect(deleteDialog).toContainText(
+      'Are you sure you want to permanently delete “Development Tools” and all of its contents?'
+    )
     await expect
       .poll(async () =>
         Math.abs((await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)) - scrollTopBefore)
       )
       .toBeLessThanOrEqual(1)
-    await expect(
-      mainWindow.locator('[data-testid^="category-description-section"]')
-    ).toHaveCount(0)
+    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
+  })
+
+  test('opens selected folder deletion after navigating from Home', async ({ testSetup }) => {
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToHomeScreen()
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
+    const deleteDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+    )
+    await expect(deleteDialog).toBeVisible()
+    await expect(deleteDialog).toContainText('Development Tools')
+    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {
@@ -944,7 +983,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
   })
 
-  test('disables selected folder settings when no prompt folder exists', async ({ testSetup }) => {
+  test('disables selected folder actions when no prompt folder exists', async ({ testSetup }) => {
     const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'minimal' }
     })
@@ -1343,7 +1382,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('selects the root folder target at the top and keeps root settings action inert', async ({
+  test('selects the root folder target at the top and opens its delete action', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1367,13 +1406,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'true'
     )
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
-    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
-    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
+    await expect(mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+    const deleteDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+    )
+    await expect(deleteDialog).toBeVisible()
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toBeVisible()
-    await expect(
-      mainWindow.locator('[data-testid^="category-description-section"]')
-    ).toHaveCount(0)
+    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
   test('maps prompt header navigation to the folder root target', async ({ testSetup }) => {

@@ -36,8 +36,8 @@ const SHORT_ROOT_DUPLICATE_CATEGORY_TOGGLE =
 const SHORT_SCROLL_TARGET_PX = 2000
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
-const OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM =
-  '[data-testid="open-selected-prompt-folder-settings-menu-item"]'
+const DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM =
+  '[data-testid="delete-selected-prompt-folder-menu-item"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
 const samplePromptTreeRowSelector = `[data-testid="prompt-tree-prompt-${SAMPLE_PROMPT_ID}"]`
@@ -604,7 +604,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).focus()
     await mainWindow.keyboard.press('Enter')
     await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toHaveCount(0)
-    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
+    await expect(mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)).toBeVisible()
     await mainWindow.keyboard.press('Escape')
     await mainWindow.locator(CATEGORY_TOGGLE).focus()
     await mainWindow.keyboard.press('Shift+F10')
@@ -900,7 +900,7 @@ describe('Prompt folder prompt tree', () => {
     )
   })
 
-  test('keeps selected root folder settings action inert', async ({ testSetup }) => {
+  test('opens selected root folder deletion from a scrolled prompt tree', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'virtual' }
     })
@@ -917,13 +917,18 @@ describe('Prompt folder prompt tree', () => {
       .toBeGreaterThan(0)
 
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
-    await expect(mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM)).toBeVisible()
-    await mainWindow.locator(OPEN_SELECTED_PROMPT_FOLDER_SETTINGS_MENU_ITEM).click()
+    await expect(mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)).toBeVisible()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+    const deleteDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+    )
+    await expect(deleteDialog).toBeVisible()
 
     await expect
       .poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
       .toBeGreaterThan(0)
     await expect(mainWindow.locator(SHORT_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
+    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
   test('expands collapsed prompts section when selecting a prompt in the prompt tree', async ({

@@ -224,6 +224,12 @@
     deletePromptFolderId = promptFolderId
   }
 
+  /** Opens deletion through the root header's existing handler for a matching mounted folder. */
+  export const openDeletePromptFolderDialog = (promptFolderId: string): void => {
+    if (promptFolderId !== screenRootFolderId) return
+    handleDeletePromptFolder(promptFolderId)
+  }
+
   const deletePromptFolderTarget = $derived(
     controller.promptFolders.find((folder) => folder.id === deletePromptFolderId) ?? null
   )

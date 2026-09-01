@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
@@ -64,6 +65,10 @@
   import type { SystemSettings } from '@shared/SystemSettings'
   import type { Workspace } from '@shared/Workspace'
   import { preparePromptFolderName } from '@shared/promptFolderName'
+
+  type PromptFolderScreenHandle = {
+    openDeletePromptFolderDialog: (promptFolderId: string) => void
+  }
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
@@ -161,6 +166,8 @@
     selectedWorkspacePromptFolders.filter((folder) => folder.kind !== 'template').length
   )
   let screenRootFolderId = $state<string | null>(null)
+  /** Mounted prompt-folder screen used for sidebar actions owned by that screen. */
+  let promptFolderScreen = $state<PromptFolderScreenHandle | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
   /** Session-only visibility for the sidebar's Completed prompt section. */
   let isCompletedPromptSectionShown = $state(false)
@@ -606,6 +613,17 @@
     activeScreen = 'home'
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('home'))
   }
+
+  /** Navigates to the selected folder and opens its screen-owned deletion flow after it mounts. */
+  const requestSelectedPromptFolderDelete = (promptFolderId: string): void => {
+    if (!selectedWorkspacePromptFolders.some((folder) => folder.id === promptFolderId)) return
+    navigateToScreenRootFolder(promptFolderId)
+    // Side effect: wait for navigation to mount the selected folder screen before opening its dialog.
+    void (async () => {
+      await tick()
+      promptFolderScreen?.openDeletePromptFolderDialog(promptFolderId)
+    })()
+  }
 </script>
 
 <div class="flex h-screen w-full flex-col">
@@ -647,6 +665,7 @@
           onScreenRootFolderSelect={(promptFolderId) => {
             navigateToScreenRootFolder(promptFolderId)
           }}
+          onDeleteSelectedPromptFolder={requestSelectedPromptFolderDelete}
         />
       {/snippet}
 
@@ -673,6 +692,7 @@
             {#if screenRootFolderId && workspacePath}
               {#key `${screenRootFolderId}:${promptFolderScreenMode}`}
                 <PromptFolderScreen
+                  bind:this={promptFolderScreen}
                   {screenRootFolderId}
                   screenMode={promptFolderScreenMode}
                   onScreenModeChange={setPromptFolderMode}

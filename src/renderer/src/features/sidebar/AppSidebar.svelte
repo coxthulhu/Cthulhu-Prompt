@@ -33,7 +33,7 @@
     ListTodo,
     MoreHorizontal,
     Plus,
-    Settings
+    Trash2
   } from 'lucide-svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
@@ -92,7 +92,8 @@
     isCompletedPromptSectionShown = false,
     onPromptFolderModeChange,
     onCompletedPromptSectionShownChange,
-    onScreenRootFolderSelect
+    onScreenRootFolderSelect,
+    onDeleteSelectedPromptFolder
   } = $props<{
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
@@ -104,6 +105,7 @@
     onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
     onCompletedPromptSectionShownChange: (isShown: boolean) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
+    onDeleteSelectedPromptFolder: (screenRootFolderId: string) => void
   }>()
 
   /** Workspace-wide persistence key shared by every prompt folder's status accordion. */
@@ -372,14 +374,15 @@
     isTemplateFolder ? 'Selected Prompt Template Folder Actions' : 'Selected Prompt Folder Actions'
   )
   // Keep selected-folder overflow actions together as the toolbar gets tighter.
-  const selectedPromptFolderActionsItems: DropdownPopupItem[] = [
+  const selectedPromptFolderActionsItems = $derived.by((): DropdownPopupItem[] => [
     {
-      id: 'folder-settings',
-      label: 'Open Folder Settings',
-      icon: Settings,
-      testId: 'open-selected-prompt-folder-settings-menu-item'
+      id: 'delete-folder',
+      label: isTemplateFolder ? 'Delete Prompt Template Folder' : 'Delete Prompt Folder',
+      icon: Trash2,
+      testId: 'delete-selected-prompt-folder-menu-item',
+      variant: 'danger'
     }
-  ]
+  ])
 
   /** Expands or collapses every category under the selected root folder. */
   const handleCategoryExpansionAction = () => {
@@ -400,13 +403,9 @@
     })
   }
 
-  const openSelectedPromptFolderSettings = () => {
-    // Root prompt folders no longer expose a settings destination.
-  }
-
   const handleSelectedPromptFolderActionsSelect = (item: DropdownPopupItem) => {
-    if (item.id === 'folder-settings') {
-      openSelectedPromptFolderSettings()
+    if (item.id === 'delete-folder' && screenRootFolder) {
+      onDeleteSelectedPromptFolder(screenRootFolder.id)
     }
   }
 
