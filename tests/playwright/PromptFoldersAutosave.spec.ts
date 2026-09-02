@@ -125,4 +125,32 @@ describe('Prompt Folders Autosave (Svelte)', () => {
       })
       .toContain(marker)
   })
+
+  test('flushes pending prompt autosave before closing the workspace', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    const marker = '[autosave-close-immediate]'
+    await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+    await mainWindow.keyboard.insertText(marker)
+    await expect.poll(() => getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR)).toContain(marker)
+
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.clearWorkspaceViaUI()
+
+    const persistedPrompt = await readPersistedPromptTextById(electronApp, {
+      workspacePath: '/ws/sample',
+      folderName: 'Development',
+      promptId: 'dev-1',
+      promptTitle: 'Code Review'
+    })
+    expect(persistedPrompt).toContain(marker)
+  })
 })

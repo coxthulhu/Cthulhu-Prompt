@@ -53,7 +53,10 @@
     promptNavigationRowToPersistedEntryId,
     setPromptNavigationContext
   } from './PromptNavigationContext.svelte.ts'
-  import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
+  import {
+    flushAllAutosaves,
+    flushWorkspaceScopedAutosaves
+  } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import {
@@ -486,6 +489,7 @@
     beginWorkspaceAction()
 
     try {
+      await flushWorkspaceScopedAutosaves()
       await runIpcBestEffort(closeWorkspaceMutation)
       await runIpcBestEffort(() => syncLastWorkspaceInfoPath(null))
     } finally {
