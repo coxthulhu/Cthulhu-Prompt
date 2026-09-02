@@ -10,7 +10,6 @@ import {
   type DomainPlanner,
   type DomainPlannerEntityMap,
   type DomainRevisionExpectation,
-  type DomainSnapshot,
   type DomainState,
   type DomainTarget
 } from '@shared/DomainChanges'
@@ -19,14 +18,8 @@ import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { runAtomicDomainTransitionTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import { projectDomainTransitions } from '../Data/DomainTransitions'
-import {
-  buildCategorySnapshot,
-  buildPromptFolderSnapshot,
-  buildPromptSnapshot,
-  buildPromptTemplateSnapshot,
-  buildWorkspaceSnapshot
-} from '../Data/DataSnapshotHelpers'
 import { enqueueGlobalMutation } from '../Data/GlobalMutationQueue'
+import { buildMainAuthoritativeSnapshots } from '../IpcFramework/AuthoritativeSnapshots'
 import {
   createRequestParser,
   parseArray,
@@ -131,80 +124,6 @@ const mainDomainState: DomainState = {
   getAll: getAllMainDomainEntities
 }
 
-/** Builds a present or deleted generic snapshot for one authoritative target. */
-const buildMainDomainSnapshot = (target: DomainTarget): DomainSnapshot => {
-  switch (target.entityType) {
-    case 'systemSettings': {
-      /** Current system-settings entry selected by its singleton target ID. */
-      const entry = data.systemSettings.committedStore.getEntry(target.id)
-      return entry
-        ? {
-            entityType: 'systemSettings',
-            id: target.id,
-            revision: entry.revision,
-            data: entry.committed
-          }
-        : { entityType: 'systemSettings', id: target.id, deleted: true }
-    }
-    case 'workspace': {
-      /** Current workspace entry used by the established snapshot normalizer. */
-      const entry = data.workspace.committedStore.getEntry(target.id)
-      return entry
-        ? { entityType: 'workspace', ...buildWorkspaceSnapshot(entry) }
-        : { entityType: 'workspace', id: target.id, deleted: true }
-    }
-    case 'promptFolder': {
-      /** Current prompt-folder entry used by the established graph filter. */
-      const entry = data.promptFolder.committedStore.getEntry(target.id)
-      return entry
-        ? { entityType: 'promptFolder', ...buildPromptFolderSnapshot(entry) }
-        : { entityType: 'promptFolder', id: target.id, deleted: true }
-    }
-    case 'category': {
-      /** Current category entry selected for generic reconciliation. */
-      const entry = data.category.committedStore.getEntry(target.id)
-      return entry
-        ? { entityType: 'category', ...buildCategorySnapshot(entry) }
-        : { entityType: 'category', id: target.id, deleted: true }
-    }
-    case 'prompt': {
-      /** Current prompt entry used by the established modified-time snapshot adapter. */
-      const entry = data.prompt.committedStore.getEntry(target.id)
-      return entry
-        ? { entityType: 'prompt', ...buildPromptSnapshot(entry) }
-        : { entityType: 'prompt', id: target.id, deleted: true }
-    }
-    case 'promptTemplate': {
-      /** Current template entry used by the established modified-time snapshot adapter. */
-      const entry = data.promptTemplate.committedStore.getEntry(target.id)
-      return entry
-        ? { entityType: 'promptTemplate', ...buildPromptTemplateSnapshot(entry) }
-        : { entityType: 'promptTemplate', id: target.id, deleted: true }
-    }
-    case 'userPersistence':
-    case 'markdownContentUiState':
-    case 'workspaceUiState':
-    case 'workspacePromptFolderUiState':
-    case 'accordionUiState':
-    case 'categoryDescriptionEditorUiState': {
-      /** Current SQLite-backed entry selected by its authoritative target ID. */
-      const entry = data[target.entityType].committedStore.getEntry(target.id)
-      return entry
-        ? {
-            entityType: target.entityType,
-            id: target.id,
-            revision: entry.revision,
-            data: entry.committed
-          } as DomainSnapshot
-        : { entityType: target.entityType, id: target.id, deleted: true } as DomainSnapshot
-    }
-  }
-}
-
-/** Builds generic authoritative snapshots for a complete unique target set. */
-const buildMainDomainSnapshots = (targets: readonly DomainTarget[]): DomainSnapshot[] =>
-  targets.map(buildMainDomainSnapshot)
-
 /** Reports whether renderer expectations exactly match main-computed target keys. */
 const hasMatchingDomainTargetSet = (
   expectations: readonly DomainRevisionExpectation[],
@@ -240,7 +159,7 @@ const createDomainConflictResponse = (
 ): IpcMutationPayloadResult<DomainMutationResponsePayload> => ({
   success: false,
   conflict: true,
-  payload: { snapshots: buildMainDomainSnapshots(targets) }
+  payload: { snapshots: buildMainAuthoritativeSnapshots(targets) }
 })
 
 /** Runs a validated command inside the main global queue and immediate atomic transaction. */
@@ -277,7 +196,10 @@ const runMainDomainMutation = async <TCommand>(
       mode: 'immediate'
     })
     if (outcome.status === 'conflict') return createDomainConflictResponse(targets)
-    return { success: true, payload: { snapshots: buildMainDomainSnapshots(targets) } }
+    return {
+      success: true,
+      payload: { snapshots: buildMainAuthoritativeSnapshots(targets) }
+    }
   })
 
 /** Registers one mutation-specific shared planner behind a generic main IPC handler. */

@@ -1,4 +1,4 @@
-import type { RevisionEnvelope } from './Revision'
+import type { AuthoritativeSnapshotPayload } from './AuthoritativeSnapshot'
 import type { IpcResult } from './IpcResult'
 
 export interface SystemSettings {
@@ -75,6 +75,5 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
   }
 }
 
-export type LoadSystemSettingsResult = IpcResult<{
-  systemSettings: RevisionEnvelope<SystemSettings>
-}>
+/** Startup query result containing authoritative snapshots for system settings. */
+export type LoadSystemSettingsResult = IpcResult<AuthoritativeSnapshotPayload>

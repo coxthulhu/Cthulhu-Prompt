@@ -10,29 +10,24 @@ import {
   type DomainPlanner,
   type DomainPlannerEntityMap,
   type DomainRevisionExpectation,
-  type DomainSnapshot,
   type DomainState,
   type DomainTarget
 } from '@shared/DomainChanges'
 import {
   createPromptFull,
-  isPromptFull,
   type Prompt,
   type PromptSummaryData
 } from '@shared/Prompt'
 import {
   createPromptTemplateFull,
-  isPromptTemplateFull,
   type PromptTemplate,
   type PromptTemplateSummaryData
 } from '@shared/PromptTemplate'
 import type { IpcMutationPayloadResult } from '@shared/IpcResult'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptCollection } from '../Collections/PromptCollection'
-import { promptClientStateCollection } from '../Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
 import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
 import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
@@ -41,7 +36,10 @@ import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateColle
 import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
 import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
 import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
-import { clearPromptEditorMeasuredHeight } from '../UiState/PromptEditorUiCache.svelte.ts'
+import {
+  getRendererRevisionCollection,
+  reconcileRendererAuthoritativeSnapshots
+} from './AuthoritativeSnapshots'
 import {
   mutatePacedRevisionUpdateTransaction,
   runRevisionMutation
@@ -278,36 +276,6 @@ const applyRendererDomainChange = (
   }
 }
 
-/** Returns the renderer collection owning one domain entity's authoritative revision. */
-const getRendererRevisionCollection = (entityType: DomainEntityType) => {
-  switch (entityType) {
-    case 'systemSettings':
-      return systemSettingsCollection
-    case 'workspace':
-      return workspaceCollection
-    case 'promptFolder':
-      return promptFolderCollection
-    case 'category':
-      return categoryCollection
-    case 'prompt':
-      return promptCollection
-    case 'promptTemplate':
-      return promptTemplateCollection
-    case 'userPersistence':
-      return userPersistenceCollection
-    case 'markdownContentUiState':
-      return markdownContentUiStateCollection
-    case 'workspaceUiState':
-      return workspaceUiStateCollection
-    case 'workspacePromptFolderUiState':
-      return workspacePromptFolderUiStateCollection
-    case 'accordionUiState':
-      return accordionUiStateCollection
-    case 'categoryDescriptionEditorUiState':
-      return categoryDescriptionEditorUiStateCollection
-  }
-}
-
 /** Captures authoritative revision expectations for renderer-computed domain targets. */
 const buildRendererDomainExpectations = (
   changes: readonly DomainChange[]
@@ -357,95 +325,6 @@ const assertPacedDomainPlanTargetsOnly = (
   }
 }
 
-/** Reconciles one generic authoritative snapshot into renderer revision state. */
-const reconcileRendererDomainSnapshot = (snapshot: DomainSnapshot): void => {
-  if ('deleted' in snapshot) {
-    getRendererRevisionCollection(snapshot.entityType).utils.deleteAuthoritative(snapshot.id)
-    if (snapshot.entityType === 'prompt' && promptClientStateCollection.has(snapshot.id)) {
-      promptClientStateCollection.delete(snapshot.id)
-    }
-    if (
-      snapshot.entityType === 'promptTemplate' &&
-      promptTemplateClientStateCollection.has(snapshot.id)
-    ) {
-      promptTemplateClientStateCollection.delete(snapshot.id)
-    }
-    return
-  }
-
-  switch (snapshot.entityType) {
-    case 'systemSettings':
-      systemSettingsCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'workspace':
-      workspaceCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'promptFolder':
-      promptFolderCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'category':
-      categoryCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'prompt': {
-      /** Current renderer prompt inspected before authoritative text reconciliation. */
-      const currentPrompt = promptCollection.get(snapshot.id)
-      if (
-        !currentPrompt ||
-        !isPromptFull(currentPrompt) ||
-        currentPrompt.promptText !== snapshot.data.promptText
-      ) {
-        clearPromptEditorMeasuredHeight(snapshot.id)
-      }
-      /** Full prompt snapshot normalized for the renderer collection and client state. */
-      const promptSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
-      promptCollection.utils.upsertAuthoritative(promptSnapshot)
-      if (!promptClientStateCollection.has(snapshot.id)) {
-        promptClientStateCollection.insert({ id: snapshot.id, isEdited: false })
-      }
-      return
-    }
-    case 'promptTemplate': {
-      /** Current renderer template inspected before authoritative text reconciliation. */
-      const currentTemplate = promptTemplateCollection.get(snapshot.id)
-      if (
-        !currentTemplate ||
-        !isPromptTemplateFull(currentTemplate) ||
-        currentTemplate.templateText !== snapshot.data.templateText
-      ) {
-        clearPromptEditorMeasuredHeight(snapshot.id)
-      }
-      /** Full template snapshot normalized for the renderer collection and client state. */
-      const promptTemplateSnapshot = {
-        ...snapshot,
-        data: createPromptTemplateFull(snapshot.data)
-      }
-      promptTemplateCollection.utils.upsertAuthoritative(promptTemplateSnapshot)
-      if (!promptTemplateClientStateCollection.has(snapshot.id)) {
-        promptTemplateClientStateCollection.insert({ id: snapshot.id, isEdited: false })
-      }
-      return
-    }
-    case 'userPersistence':
-      userPersistenceCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'markdownContentUiState':
-      markdownContentUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'workspaceUiState':
-      workspaceUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'workspacePromptFolderUiState':
-      workspacePromptFolderUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'accordionUiState':
-      accordionUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'categoryDescriptionEditorUiState':
-      categoryDescriptionEditorUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-  }
-}
-
 /** Runs one optimistic shared domain plan through the existing immediate mutation queue. */
 export const runImmediateRendererDomainMutation = async <TCommand>(
   options: ImmediateRendererDomainMutationOptions<TCommand>
@@ -475,7 +354,7 @@ export const runImmediateRendererDomainMutation = async <TCommand>(
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {
-      for (const snapshot of payload.snapshots) reconcileRendererDomainSnapshot(snapshot)
+      reconcileRendererAuthoritativeSnapshots(payload.snapshots)
     },
     conflictMessage: `Domain mutation conflict on ${options.ipc.channel}`
   })
@@ -526,7 +405,7 @@ export const mutatePacedRendererDomainMutation = <TCommand>(
       return result
     },
     handleSuccessOrConflictResponse: (payload) => {
-      for (const snapshot of payload.snapshots) reconcileRendererDomainSnapshot(snapshot)
+      reconcileRendererAuthoritativeSnapshots(payload.snapshots)
     },
     conflictMessage: `Domain mutation conflict on ${options.ipc.channel}`
   })

@@ -1,4 +1,8 @@
 import { test as playwrightTest, expect as playwrightExpect } from '@playwright/test'
+import type { LoadSystemSettingsResult } from '@shared/SystemSettings'
+import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import type { LoadUserPersistenceResult } from '@shared/UserPersistence'
+import { USER_PERSISTENCE_ID } from '@shared/UserPersistence'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -28,6 +32,42 @@ const runSqlQuery = async (
 
 describe('Test Infrastructure', () => {
   describe('Controlled Startup Framework', () => {
+    /** Verifies both migrated startup queries expose the shared authoritative snapshot contract. */
+    test('returns startup settings and persistence as authoritative snapshots', async ({
+      testSetup
+    }) => {
+      /** Running renderer used to invoke the registered startup queries directly. */
+      const { mainWindow } = await testSetup.setupAndStart()
+      /** Successful raw query responses inspected independently of renderer reconciliation. */
+      const [systemSettingsResult, userPersistenceResult] = (await mainWindow.evaluate(
+        async () =>
+          await Promise.all([
+            window.electron.ipcRenderer.invoke('load-system-settings'),
+            window.electron.ipcRenderer.invoke('load-user-persistence')
+          ])
+      )) as [LoadSystemSettingsResult, LoadUserPersistenceResult]
+
+      if (!systemSettingsResult.success) throw new Error(systemSettingsResult.error)
+      if (!userPersistenceResult.success) throw new Error(userPersistenceResult.error)
+
+      expect(systemSettingsResult.snapshots).toEqual([
+        expect.objectContaining({
+          entityType: 'systemSettings',
+          id: SYSTEM_SETTINGS_ID,
+          revision: expect.any(Number),
+          data: expect.any(Object)
+        })
+      ])
+      expect(userPersistenceResult.snapshots).toEqual([
+        expect.objectContaining({
+          entityType: 'userPersistence',
+          id: USER_PERSISTENCE_ID,
+          revision: expect.any(Number),
+          data: expect.any(Object)
+        })
+      ])
+    })
+
     test('should perform custom test setup with filesystem data', async ({
       testSetup,
       electronApp

@@ -1,5 +1,5 @@
+import type { AuthoritativeSnapshotPayload } from './AuthoritativeSnapshot'
 import type { IpcResult } from './IpcResult'
-import type { RevisionEnvelope } from './Revision'
 
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
@@ -80,9 +80,8 @@ export const isWorkspaceScreenSelectionSame = (
 export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
 export const UPDATE_USER_PERSISTENCE_CHANNEL = 'update-user-persistence'
 
-export type LoadUserPersistenceResult = IpcResult<{
-  userPersistence: RevisionEnvelope<UserPersistence>
-}>
+/** Startup query result containing authoritative snapshots for user persistence. */
+export type LoadUserPersistenceResult = IpcResult<AuthoritativeSnapshotPayload>
 
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {

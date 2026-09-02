@@ -1,3 +1,4 @@
+import type { AuthoritativeSnapshot } from '@shared/AuthoritativeSnapshot'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
@@ -13,7 +14,10 @@ async function waitForStoredPromptFontSize(mainWindow: any, value: number): Prom
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
     return ipc.invoke('load-system-settings').then((result) => {
-      return result?.systemSettings?.data?.promptFontSize === expected
+      /** System-settings snapshot selected without relying on response order. */
+      return result?.snapshots?.find(
+        (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
+      )?.data?.promptFontSize === expected
     })
   }, value)
 }
@@ -23,7 +27,10 @@ async function waitForStoredShowLineNumbers(mainWindow: any, value: boolean): Pr
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
     return ipc.invoke('load-system-settings').then((result) => {
-      return result?.systemSettings?.data?.showLineNumbers === expected
+      /** System-settings snapshot selected without relying on response order. */
+      return result?.snapshots?.find(
+        (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
+      )?.data?.showLineNumbers === expected
     })
   }, value)
 }
@@ -33,7 +40,10 @@ async function waitForStoredPromptMaxLines(mainWindow: any, value: number): Prom
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
     return ipc.invoke('load-system-settings').then((result) => {
-      return result?.systemSettings?.data?.promptEditorMaxLines === expected
+      /** System-settings snapshot selected without relying on response order. */
+      return result?.snapshots?.find(
+        (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
+      )?.data?.promptEditorMaxLines === expected
     })
   }, value)
 }

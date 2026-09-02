@@ -13,6 +13,7 @@ import type {
   WorkspacePromptFolderUiState,
   WorkspaceUiState
 } from './UiState'
+import type { AuthoritativeSnapshotPayload } from './AuthoritativeSnapshot'
 
 /** Missing-target behavior applied when an authoritative domain entity is deleted. */
 export type DomainTargetPolicy = 'requirePresent' | 'deleteIfPresent'
@@ -122,29 +123,8 @@ export type DomainMutationRequest<TCommand> = {
   expectations: DomainRevisionExpectation[]
 }
 
-/** Authoritative present or deleted snapshot for one domain entity type. */
-export type DomainSnapshotFor<TEntityType extends DomainEntityType> =
-  | {
-      entityType: TEntityType
-      id: string
-      revision: number
-      data: DomainEntityMap[TEntityType]
-    }
-  | {
-      entityType: TEntityType
-      id: string
-      deleted: true
-    }
-
-/** Authoritative snapshot union shared by every domain mutation channel. */
-export type DomainSnapshot = {
-  [TEntityType in DomainEntityType]: DomainSnapshotFor<TEntityType>
-}[DomainEntityType]
-
 /** Generic success or conflict payload returned by every domain mutation channel. */
-export type DomainMutationResponsePayload = {
-  snapshots: DomainSnapshot[]
-}
+export type DomainMutationResponsePayload = AuthoritativeSnapshotPayload
 
 /** Revision-bearing entity targeted by a domain mutation plan. */
 export type DomainTarget = Pick<DomainChange, 'entityType' | 'id'>

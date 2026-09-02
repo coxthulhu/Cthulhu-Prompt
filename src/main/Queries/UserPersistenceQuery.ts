@@ -5,6 +5,7 @@ import {
 } from '@shared/UserPersistence'
 import type { LoadUserPersistenceResult } from '@shared/UserPersistence'
 import { data } from '../Data/Data'
+import { buildMainAuthoritativeSnapshots } from '../IpcFramework/AuthoritativeSnapshots'
 
 export const setupUserPersistenceQueryHandlers = (): void => {
   ipcMain.handle(LOAD_USER_PERSISTENCE_CHANNEL, async (): Promise<LoadUserPersistenceResult> => {
@@ -16,11 +17,9 @@ export const setupUserPersistenceQueryHandlers = (): void => {
       if (!entry) throw new Error('User persistence not loaded')
       return {
         success: true,
-        userPersistence: {
-          id: USER_PERSISTENCE_ID,
-          revision: entry.revision,
-          data: entry.committed
-        }
+        snapshots: buildMainAuthoritativeSnapshots([
+          { entityType: 'userPersistence', id: USER_PERSISTENCE_ID }
+        ])
       }
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) }
