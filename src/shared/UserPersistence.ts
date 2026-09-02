@@ -1,5 +1,4 @@
-import type { AuthoritativeSnapshotPayload } from './AuthoritativeSnapshot'
-import type { IpcResult } from './IpcResult'
+import type { AuthoritativeSnapshotQueryResult } from './AuthoritativeSnapshot'
 
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
@@ -81,7 +80,7 @@ export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
 export const UPDATE_USER_PERSISTENCE_CHANNEL = 'update-user-persistence'
 
 /** Startup query result containing authoritative snapshots for user persistence. */
-export type LoadUserPersistenceResult = IpcResult<AuthoritativeSnapshotPayload>
+export type LoadUserPersistenceResult = AuthoritativeSnapshotQueryResult
 
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {

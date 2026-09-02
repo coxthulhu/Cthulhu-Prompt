@@ -1,5 +1,4 @@
-import type { AuthoritativeSnapshotPayload } from './AuthoritativeSnapshot'
-import type { IpcResult } from './IpcResult'
+import type { AuthoritativeSnapshotQueryResult } from './AuthoritativeSnapshot'
 
 export interface SystemSettings {
   promptFontSize: number
@@ -9,6 +8,8 @@ export interface SystemSettings {
 }
 
 export const SYSTEM_SETTINGS_ID = 'system-settings'
+/** IPC channel used to load the authoritative system-settings singleton. */
+export const LOAD_SYSTEM_SETTINGS_CHANNEL = 'load-system-settings'
 
 export const MIN_PROMPT_FONT_SIZE = 10
 export const MAX_PROMPT_FONT_SIZE = 32
@@ -76,4 +77,4 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
 }
 
 /** Startup query result containing authoritative snapshots for system settings. */
-export type LoadSystemSettingsResult = IpcResult<AuthoritativeSnapshotPayload>
+export type LoadSystemSettingsResult = AuthoritativeSnapshotQueryResult

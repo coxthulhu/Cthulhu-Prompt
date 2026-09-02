@@ -1,4 +1,5 @@
 import type { DomainEntityMap, DomainEntityType } from './DomainChanges'
+import type { IpcResult } from './IpcResult'
 
 /** Authoritative present or deleted snapshot for one registered domain entity type. */
 export type AuthoritativeSnapshotFor<TEntityType extends DomainEntityType> =
@@ -23,3 +24,6 @@ export type AuthoritativeSnapshot = {
 export type AuthoritativeSnapshotPayload = {
   snapshots: AuthoritativeSnapshot[]
 }
+
+/** No-payload query result containing authoritative snapshots. */
+export type AuthoritativeSnapshotQueryResult = IpcResult<AuthoritativeSnapshotPayload>

@@ -1,21 +1,14 @@
-import { ipcMain } from 'electron'
-import { SYSTEM_SETTINGS_ID, type LoadSystemSettingsResult } from '@shared/SystemSettings'
+import { LOAD_SYSTEM_SETTINGS_CHANNEL, SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import { getRequiredSystemSettingsEntry } from '../Data/SystemSettingsData'
-import { buildMainAuthoritativeSnapshots } from '../IpcFramework/AuthoritativeSnapshots'
+import { handleMainAuthoritativeQuery } from '../IpcFramework/AuthoritativeQuery'
 
 export const setupSystemSettingsQueryHandlers = (): void => {
-  ipcMain.handle('load-system-settings', async (): Promise<LoadSystemSettingsResult> => {
-    try {
+  handleMainAuthoritativeQuery({
+    channel: LOAD_SYSTEM_SETTINGS_CHANNEL,
+    /** Verifies the required singleton is loaded before selecting its snapshot target. */
+    query: () => {
       getRequiredSystemSettingsEntry()
-      return {
-        success: true,
-        snapshots: buildMainAuthoritativeSnapshots([
-          { entityType: 'systemSettings', id: SYSTEM_SETTINGS_ID }
-        ])
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      return { success: false, error: message || 'Failed to load system settings' }
+      return [{ entityType: 'systemSettings', id: SYSTEM_SETTINGS_ID }]
     }
   })
 }
