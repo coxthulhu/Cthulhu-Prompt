@@ -1,5 +1,6 @@
 ---
 title: "Example: Define Example Prompts in Files"
+category: "Improvements"
 ---
 Today, we want to change the way we define our example prompts.
 1. Rather than have these be defined in the code, we want to define them in a static folder.

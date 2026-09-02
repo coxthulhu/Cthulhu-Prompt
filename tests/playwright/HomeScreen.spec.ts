@@ -432,6 +432,30 @@ describe('Home Screen', () => {
       const screenInfo = await testHelpers.getPromptFolderScreenInfo()
       expect(screenInfo.promptCount).toBe(2)
 
+      const categoryToggles = mainWindow.locator(
+        '[data-testid^="prompt-tree-category-toggle-button-"]'
+      )
+      await expect(categoryToggles).toHaveCount(3)
+      await expect(categoryToggles.nth(0)).toContainText('New Features')
+      await expect(categoryToggles.nth(1)).toContainText('Improvements')
+      await expect(categoryToggles.nth(2)).toContainText('Bug Fixes')
+
+      const birthdayPromptTreeRow = mainWindow.locator('[data-testid^="prompt-tree-prompt-"]', {
+        hasText: 'Example: Add Birthday Date to Settings Page'
+      })
+      const bundledFilesPromptTreeRow = mainWindow.locator(
+        '[data-testid^="prompt-tree-prompt-"]',
+        { hasText: 'Example: Define Example Prompts in Files' }
+      )
+      await expect(birthdayPromptTreeRow).toBeVisible()
+      await expect(bundledFilesPromptTreeRow).toBeVisible()
+      await categoryToggles.nth(0).click()
+      await expect(birthdayPromptTreeRow).toHaveCount(0)
+      await expect(bundledFilesPromptTreeRow).toBeVisible()
+      await categoryToggles.nth(1).click()
+      await expect(bundledFilesPromptTreeRow).toHaveCount(0)
+      await expect(mainWindow.locator('[data-testid^="prompt-tree-prompt-"]')).toHaveCount(0)
+
       await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')

@@ -1,5 +1,6 @@
 ---
 title: "Example: Add Birthday Date to Settings Page"
+category: "New Features"
 ---
 Today, we want to display the user's birthday date on our settings page.
 1. Display this immediately below the user's name as a label, within the user info card.

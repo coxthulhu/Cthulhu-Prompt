@@ -26,6 +26,7 @@ import {
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolveActivePromptFolderName,
   resolveCategoriesDirectoryPath,
+  resolveCategoryPathFromStem,
   resolveCompletedPromptFolderName,
   resolvePromptFolderCategoryOrderPath,
   resolvePromptFolderPath,
@@ -34,6 +35,12 @@ import {
 
 const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
+// Ordered categories created with the bundled example prompts.
+const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
+  'New Features',
+  'Improvements',
+  'Bug Fixes'
+] as const
 // Ordered bundled prompt sources used when initializing a workspace with examples.
 const BUNDLED_PROMPT_SOURCES = [example1PromptSource, example2PromptSource]
 // Ordered bundled template sources used when initializing a workspace with examples.
@@ -106,10 +113,24 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   )
   const now = getCurrentIsoSecondTimestamp()
   const promptFolderId = compactGuid(randomUUID())
+  const exampleCategories = includeExamplePrompts
+    ? BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES.map((displayName) => ({
+        id: compactGuid(randomUUID()),
+        displayName,
+        description: null
+      }))
+    : []
+  const categoryIdByDisplayName = new Map(
+    exampleCategories.map((category) => [category.displayName, category.id])
+  )
   const examplePrompts = includeExamplePrompts
     ? BUNDLED_PROMPT_SOURCES.map((source) => {
         // Parsed bundled document that supplies the prompt's title and body.
         const bundledPrompt = matter(source, {})
+        const categoryId = categoryIdByDisplayName.get(bundledPrompt.data.category)
+        if (!categoryId) {
+          throw new Error(`Unknown bundled prompt category: ${bundledPrompt.data.category}`)
+        }
 
         return {
           id: compactGuid(randomUUID()),
@@ -118,11 +139,11 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
           createdAt: now,
           modifiedAt: now,
           status: PromptStatus.Todo,
+          category: categoryId,
           promptText: bundledPrompt.content.replace(/\r?\n$/, '')
         }
       })
     : []
-  const promptIds: string[] = []
   const duplicateTitleStems = getDuplicateTitleStems(examplePrompts)
 
   fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
@@ -131,6 +152,20 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
   fs.mkdirSync(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'), {
     recursive: true
   })
+
+  for (const category of exampleCategories) {
+    const categoryStem = buildPromptStem(category.displayName, category.id, false)
+    fs.writeFileSync(
+      resolveCategoryPathFromStem(
+        workspacePath,
+        EXAMPLE_FOLDER_NAME,
+        'prompt',
+        categoryStem
+      ),
+      JSON.stringify(category, null, 2),
+      'utf8'
+    )
+  }
 
   for (const prompt of examplePrompts) {
     const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
@@ -141,7 +176,6 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     )
 
     fs.writeFileSync(markdownPath, serializePromptMarkdown(prompt), 'utf8')
-    promptIds.push(prompt.id)
   }
 
   fs.writeFileSync(
@@ -157,11 +191,21 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     ),
     'utf8'
   )
-  // Side effect: initialize category-view ordering with every bundled prompt uncategorized.
+  // Side effect: initialize the bundled category order and assign each example prompt.
   fs.writeFileSync(
     resolvePromptFolderCategoryOrderPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'),
     JSON.stringify(
-      { categories: [{ categoryId: null, entries: promptIds.map(promptEntryRef) }] },
+      {
+        categories: [
+          { categoryId: null, entries: [] },
+          ...exampleCategories.map((category) => ({
+            categoryId: category.id,
+            entries: examplePrompts
+              .filter((prompt) => prompt.category === category.id)
+              .map((prompt) => promptEntryRef(prompt.id))
+          }))
+        ]
+      },
       null,
       2
     ),
