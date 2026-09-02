@@ -1,8 +1,16 @@
 import type { Category } from '@shared/Category'
 import { isDeepStrictEqual } from 'node:util'
 import type { DomainEntityMap, DomainEntityType } from '@shared/DomainChanges'
-import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
-import type { PromptFolder, PromptFolderContentKind } from '@shared/PromptFolder'
+import { getOrderedMarkdownContentIds } from '@shared/MarkdownContent'
+import {
+  getPromptFolderCategoryIds,
+  type PromptFolder,
+  type PromptFolderContentKind
+} from '@shared/PromptFolder'
+import {
+  PROMPT_STATUS_FOLDERS,
+  type PromptStatusFolderId
+} from '@shared/Prompt'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import type {
@@ -17,8 +25,7 @@ import type {
 } from './PersistenceTypes'
 import type { PromptFolderPersistenceFields } from './PromptFolderPersistence'
 import {
-  resolveActivePromptFolderName,
-  resolveCompletedPromptFolderName,
+  resolvePromptStatusFolderName,
   resolveWorkspaceInfoPath
 } from './PromptPersistencePaths'
 import type { WorkspacePersistenceFields } from './WorkspacePersistence'
@@ -97,9 +104,7 @@ const findCategoryOwner = (graph: DomainGraph, categoryId: string): PromptFolder
   graph
     .getAll('promptFolder')
     .map((entry) => entry.data)
-    .find((folder) =>
-      folder.categoryOrder.categories.some((group) => group.categoryId === categoryId)
-    )
+    .find((folder) => getPromptFolderCategoryIds(folder).includes(categoryId))
 
 /** Calculates the collision suffix required by one category in its projected root. */
 const needsCategoryFilenameIdSuffix = (
@@ -110,10 +115,9 @@ const needsCategoryFilenameIdSuffix = (
   /** Case-insensitive sanitized boundary shared by colliding category filenames. */
   const boundary = sanitizePromptTitleForFilename(category.displayName).toLocaleLowerCase()
   /** Projected categories with the same filename boundary in this root. */
-  const collisionCount = owner.categoryOrder.categories.filter((group) => {
-    if (group.categoryId === null) return false
-    /** Projected category associated with one ordered root group. */
-    const candidate = graph.get('category', group.categoryId)?.data
+  const collisionCount = getPromptFolderCategoryIds(owner).filter((categoryId) => {
+    /** Projected category associated with one root-owned category identity. */
+    const candidate = graph.get('category', categoryId)?.data
     return (
       candidate !== undefined &&
       sanitizePromptTitleForFilename(candidate.displayName).toLocaleLowerCase() === boundary
@@ -163,20 +167,35 @@ const findMarkdownOwner = (
     /** Projected root inspected for channel-specific content ownership. */
     const folder = entry.data
     if (folder.kind !== kind) continue
-    /** Active content IDs sharing one collision-aware filename group. */
-    const activeIds = getActiveMarkdownContentIds(folder, kind)
-    if (activeIds.includes(contentId)) {
+    if (folder.kind === 'template') {
+      /** Template IDs sharing the root's collision-aware filename group. */
+      const templateIds = getOrderedMarkdownContentIds(folder, 'template')
+      if (!templateIds.includes(contentId)) continue
       return {
         folder,
-        contentIds: activeIds,
-        folderPath: resolveActivePromptFolderName(folder.folderName, kind)
+        contentIds: templateIds,
+        folderPath: folder.folderName
       }
     }
-    if (kind === 'prompt' && folder.completedPromptIds.includes(contentId)) {
-      return {
-        folder,
-        contentIds: [...folder.completedPromptIds],
-        folderPath: resolveCompletedPromptFolderName(folder.folderName, kind)
+    for (const [statusFolderId, layout] of Object.entries(folder.statusFolders)) {
+      /** Prompt IDs sharing this exact physical status-folder filename group. */
+      const promptIds =
+        layout.ordering === 'category'
+          ? layout.categoryOrder.categories.flatMap((category) =>
+              category.entries.flatMap((entry) =>
+                entry.kind === 'prompt' ? [entry.id] : []
+              )
+            )
+          : layout.promptIds
+      if (promptIds.includes(contentId)) {
+        return {
+          folder,
+          contentIds: promptIds,
+          folderPath: resolvePromptStatusFolderName(
+            folder.folderName,
+            statusFolderId as PromptStatusFolderId
+          )
+        }
       }
     }
   }
@@ -362,21 +381,26 @@ const isMarkdownRelocatedByRootRename = (
   const { folderPath: _beforeFolderPath, ...beforeRest } = beforeFields
   /** Desired fields excluding the root-relative content directory. */
   const { folderPath: _afterFolderPath, ...afterRest } = afterFields
-  /** Whether the content follows the root's active directory. */
-  const followsActiveDirectory =
-    beforeFields.folderPath === resolveActivePromptFolderName(rename.beforeFolderName, rename.kind) &&
-    afterFields.folderPath === resolveActivePromptFolderName(rename.afterFolderName, rename.kind)
-  /** Whether the content follows the root's completed directory. */
-  const followsCompletedDirectory =
-    beforeFields.folderPath ===
-      resolveCompletedPromptFolderName(rename.beforeFolderName, rename.kind) &&
-    afterFields.folderPath ===
-      resolveCompletedPromptFolderName(rename.afterFolderName, rename.kind)
+  /** Whether prompt content follows the same registry-backed status directory through the rename. */
+  const followsPromptStatusDirectory =
+    rename.kind === 'prompt' &&
+    PROMPT_STATUS_FOLDERS.some(
+      (statusFolder) =>
+        beforeFields.folderPath ===
+          resolvePromptStatusFolderName(rename.beforeFolderName, statusFolder.id) &&
+        afterFields.folderPath ===
+          resolvePromptStatusFolderName(rename.afterFolderName, statusFolder.id)
+    )
+  /** Whether template content follows its direct root directory through the rename. */
+  const followsTemplateRoot =
+    rename.kind === 'template' &&
+    beforeFields.folderPath === rename.beforeFolderName &&
+    afterFields.folderPath === rename.afterFolderName
   return (
     isDeepStrictEqual(transition.before.data, transition.after.data) &&
     beforeFields.promptFolderId === rename.promptFolderId &&
     afterFields.promptFolderId === rename.promptFolderId &&
-    (followsActiveDirectory || followsCompletedDirectory) &&
+    (followsPromptStatusDirectory || followsTemplateRoot) &&
     isDeepStrictEqual(beforeRest, afterRest)
   )
 }

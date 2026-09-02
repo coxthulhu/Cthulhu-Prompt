@@ -1,5 +1,6 @@
 import type { Category } from '@shared/Category'
 import type { PromptFolder } from '@shared/PromptFolder'
+import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
 
 /** Placement identity shared by category-screen rows. */
 type PromptFolderScreenContentRow = {
@@ -104,7 +105,7 @@ export const buildPromptFolderScreenRows = ({
   /** Loaded category metadata indexed by stable ID. */
   const categoryById = new Map(categories.map((category) => [category.id, category]))
   /** Valid folder-order groups retained in authoritative order. */
-  const groups = rootFolder.categoryOrder.categories.filter(
+  const groups = getMarkdownContentCategoryOrder(rootFolder).categories.filter(
     (group) => group.categoryId === null || categoryById.has(group.categoryId)
   )
   /** Total visible active content used by the empty-root decision. */

@@ -1,12 +1,13 @@
 import * as path from 'path'
 import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
-  copyPromptFolderSettings,
   type CategoryOrder,
   type PromptFolder,
-  type PromptFolderSettings,
-  type PromptTemplateFolderSettings
 } from '@shared/PromptFolder'
+import {
+  PROMPT_STATUS_FOLDERS,
+  type PromptStatusFolderId
+} from '@shared/Prompt'
 import type {
   PromptFolderCategoryOrderFile,
   PromptFolderInfoFile
@@ -19,26 +20,22 @@ import {
   createStagedEnsureDirectory,
   createStagedFileRemove,
   createStagedFileUpsert,
-  readJsonFile,
   revertStagedFileChanges,
   resolveTempPath,
   writeJsonFile
 } from './FilePersistenceHelpers'
 import {
-  resolveCompletedPromptFolderName,
   resolveCategoriesDirectoryPath,
   resolvePromptFolderCategoryOrderPath,
   resolvePromptFolderInfoDirectoryPath,
   resolvePromptFolderInfoPath,
   resolvePromptFolderPath,
   resolvePromptFolderSettingsTextPath,
-  resolvePromptFolderStorageName
+  resolvePromptFolderStorageName,
+  resolvePromptStatusFolderName
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
-import {
-  readPromptFolderCategoryOrder,
-  readPromptStemByPromptId
-} from '../DataAccess/WorkspaceReads'
+import { readPromptFolder } from '../DataAccess/WorkspaceReads'
 
 export type PromptFolderPersistenceFields = {
   workspaceId: string
@@ -61,39 +58,6 @@ const toPromptFolderCategoryOrderFile = (
   categoryOrder: CategoryOrder
 ): PromptFolderCategoryOrderFile => categoryOrder
 
-const fromPromptFolderInfoFile = (
-  persistedInfo: PromptFolderInfoFile,
-  folderName: string,
-  completedPromptIds: string[],
-  categoryOrder: CategoryOrder,
-  settings: PromptFolderSettings
-): PromptFolder => {
-  const baseFolder = {
-    id: persistedInfo.folderId,
-    folderName,
-    displayName: persistedInfo.displayName,
-    completedPromptIds,
-    categoryOrder
-  }
-
-  return persistedInfo.kind === 'template'
-    ? {
-        ...baseFolder,
-        kind: 'template',
-        settings: settings as PromptTemplateFolderSettings
-      }
-    : {
-        ...baseFolder,
-        kind: 'prompt',
-        settings
-      }
-}
-
-const readOptionalTextFile = (filePath: string): string | null => {
-  const fs = getFs()
-  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null
-}
-
 export const promptFolderPersistence: PersistenceLayer<
   PromptFolder,
   PromptFolderPersistenceFields
@@ -115,12 +79,6 @@ export const promptFolderPersistence: PersistenceLayer<
       resolvePromptFolderStorageName(stagingRelativePath, kind),
       kind
     )
-    /** Target root's FolderOrder path, used only by root prompt or template folders. */
-    const categoryOrderPath = resolvePromptFolderCategoryOrderPath(
-      workspacePath,
-      stagingRelativePath,
-      kind
-    )
     const infoDirectoryPath = resolvePromptFolderInfoDirectoryPath(
       workspacePath,
       stagingRelativePath,
@@ -138,29 +96,28 @@ export const promptFolderPersistence: PersistenceLayer<
       kind
     )
     const fs = getFs()
-    // Root prompt folders own the Active order metadata and the shared Completed directory.
+    // Root prompt folders own every code-defined status directory.
     const isPromptRoot = kind === 'prompt' && !/[\\/]/.test(stagingRelativePath)
-    const activeInfoDirectoryPath = isPromptRoot
-      ? path.dirname(categoryOrderPath)
-      : null
-    const completedDirectoryPath = isPromptRoot
-      ? resolvePromptFolderPath(
-          workspacePath,
-          resolveCompletedPromptFolderName(stagingRelativePath, kind),
-          kind
-        )
-      : null
+    /** Existing status-directory paths and creation state for a prompt root. */
+    const statusDirectories = isPromptRoot
+      ? PROMPT_STATUS_FOLDERS.map((statusFolder) => {
+          /** Physical directory owned by one registry entry. */
+          const directoryPath = resolvePromptFolderPath(
+            workspacePath,
+            resolvePromptStatusFolderName(stagingRelativePath, statusFolder.id),
+            kind
+          )
+          return {
+            path: directoryPath,
+            alreadyExists: fs.existsSync(directoryPath)
+          }
+        })
+      : []
     /** Whether the committed target owns root-only category persistence. */
     const isTargetRoot = !/[\\/]/.test(targetRelativePath)
     const categoriesDirectoryPath = isTargetRoot
       ? resolveCategoriesDirectoryPath(workspacePath, stagingRelativePath, kind)
       : null
-    const activeInfoDirectoryAlreadyExists = activeInfoDirectoryPath
-      ? fs.existsSync(activeInfoDirectoryPath)
-      : true
-    const completedDirectoryAlreadyExists = completedDirectoryPath
-      ? fs.existsSync(completedDirectoryPath)
-      : true
     const categoriesDirectoryAlreadyExists = categoriesDirectoryPath
       ? fs.existsSync(categoriesDirectoryPath)
       : true
@@ -174,19 +131,46 @@ export const promptFolderPersistence: PersistenceLayer<
     // Side effect: create prompt folder metadata directories before staging writes.
     fs.mkdirSync(folderPath, { recursive: true })
     fs.mkdirSync(infoDirectoryPath, { recursive: true })
-    if (activeInfoDirectoryPath) fs.mkdirSync(activeInfoDirectoryPath, { recursive: true })
-    if (completedDirectoryPath) fs.mkdirSync(completedDirectoryPath, { recursive: true })
+    for (const statusDirectory of statusDirectories) {
+      fs.mkdirSync(statusDirectory.path, { recursive: true })
+    }
     if (categoriesDirectoryPath) fs.mkdirSync(categoriesDirectoryPath, { recursive: true })
 
-    /** Staged FolderOrder update for a target root folder. */
-    const categoryOrderChange = isTargetRoot
-      ? (() => {
+    /** Staged FolderOrder updates for every independently ordered target layout. */
+    const categoryOrderChanges = isTargetRoot
+      ? (after.data.kind === 'template'
+          ? [
+              {
+                statusFolderId: undefined,
+                categoryOrder: after.data.categoryOrder
+              }
+            ]
+          : Object.entries(after.data.statusFolders).flatMap(
+              ([statusFolderId, layout]) =>
+                layout.ordering === 'category'
+                  ? [
+                      {
+                        statusFolderId: statusFolderId as PromptStatusFolderId,
+                        categoryOrder: layout.categoryOrder
+                      }
+                    ]
+                  : []
+            )
+        ).map(({ statusFolderId, categoryOrder }) => {
+          /** Canonical order path for one template root or prompt status folder. */
+          const categoryOrderPath = resolvePromptFolderCategoryOrderPath(
+            workspacePath,
+            stagingRelativePath,
+            kind,
+            statusFolderId
+          )
           /** Temporary JSON path committed atomically with the root folder. */
           const tempPath = resolveTempPath(categoryOrderPath)
-          writeJsonFile(tempPath, toPromptFolderCategoryOrderFile(after.data.categoryOrder))
+          fs.mkdirSync(path.dirname(categoryOrderPath), { recursive: true })
+          writeJsonFile(tempPath, toPromptFolderCategoryOrderFile(categoryOrder))
           return createStagedFileUpsert(categoryOrderPath, tempPath)
-        })()
-      : null
+        })
+      : []
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, toPromptFolderInfoFile(after.data))
     const settingsTextChanges = settingsTextPaths.map(({ field, path }) => {
@@ -201,24 +185,16 @@ export const promptFolderPersistence: PersistenceLayer<
     })
 
     const stagedChanges = [
-      ...(categoryOrderChange ? [categoryOrderChange] : []),
+      ...categoryOrderChanges,
       createStagedFileUpsert(infoPath, infoTempPath),
       ...settingsTextChanges,
       createStagedEnsureDirectory(folderPath, !folderAlreadyExists),
       createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
     ]
 
-    if (activeInfoDirectoryPath) {
+    for (const statusDirectory of statusDirectories) {
       stagedChanges.push(
-        createStagedEnsureDirectory(
-          activeInfoDirectoryPath,
-          !activeInfoDirectoryAlreadyExists
-        )
-      )
-    }
-    if (completedDirectoryPath) {
-      stagedChanges.push(
-        createStagedEnsureDirectory(completedDirectoryPath, !completedDirectoryAlreadyExists)
+        createStagedEnsureDirectory(statusDirectory.path, !statusDirectory.alreadyExists)
       )
     }
     if (categoriesDirectoryPath) {
@@ -248,29 +224,6 @@ export const promptFolderPersistence: PersistenceLayer<
       return null
     }
 
-    const persistedInfo = readJsonFile<PromptFolderInfoFile>(infoPath)
-    const completedPromptIds =
-      kind === 'prompt' && folderName === folderPath
-        ? [
-            ...readPromptStemByPromptId(
-              workspacePath,
-              resolveCompletedPromptFolderName(folderPath, kind)
-            ).keys()
-          ]
-        : []
-    /** Root-owned repaired category order. */
-    const categoryOrder = readPromptFolderCategoryOrder(workspacePath, folderPath, kind)
-    const folderDescription = readOptionalTextFile(
-      resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
-    )
-    const folderSettings: PromptFolderSettings = { folderDescription }
-
-    return fromPromptFolderInfoFile(
-      persistedInfo,
-      folderName,
-      completedPromptIds,
-      categoryOrder,
-      copyPromptFolderSettings(folderSettings)
-    )
+    return readPromptFolder(workspacePath, folderPath, folderName, kind)
   }
 }

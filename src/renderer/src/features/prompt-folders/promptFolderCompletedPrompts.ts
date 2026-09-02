@@ -1,5 +1,5 @@
-import type { PromptFolder } from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
+import type { PromptContentFolder } from '@shared/PromptFolder'
+import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
 
 /** Completed prompt paired with the root-content owner used by navigation. */
 export type CompletedPromptWithOwner = {
@@ -8,25 +8,27 @@ export type CompletedPromptWithOwner = {
 }
 
 type CollectCompletedPromptIdsOptions = {
-  rootFolder: PromptFolder
+  rootFolder: PromptContentFolder
   statusByPromptId: Readonly<Record<string, PromptStatus | undefined>>
-  completedAtByPromptId: Readonly<Record<string, string | null | undefined>>
+  finalizedAtByPromptId: Readonly<Record<string, string | null | undefined>>
 }
 
 export const collectCompletedPrompts = ({
   rootFolder,
   statusByPromptId,
-  completedAtByPromptId
+  finalizedAtByPromptId
 }: CollectCompletedPromptIdsOptions): CompletedPromptWithOwner[] => {
-  const completedPrompts = rootFolder.completedPromptIds.flatMap((promptId) =>
+  const completedPrompts = rootFolder.statusFolders[
+    PromptStatusFolderId.Completed
+  ].promptIds.flatMap((promptId) =>
     statusByPromptId[promptId] === PromptStatus.Completed
       ? [{ contentOwnerId: rootFolder.id, promptId }]
       : []
   )
 
   return completedPrompts.sort((left, right) => {
-    const leftCompletedAt = completedAtByPromptId[left.promptId] ?? ''
-    const rightCompletedAt = completedAtByPromptId[right.promptId] ?? ''
-    return rightCompletedAt.localeCompare(leftCompletedAt)
+    const leftFinalizedAt = finalizedAtByPromptId[left.promptId] ?? ''
+    const rightFinalizedAt = finalizedAtByPromptId[right.promptId] ?? ''
+    return rightFinalizedAt.localeCompare(leftFinalizedAt)
   })
 }

@@ -1,5 +1,9 @@
 import { isPromptFolderEmpty } from '@renderer/data/Collections/PromptFolderEntries'
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  createPromptStatusFolderLayouts,
+  type PromptFolder
+} from '@shared/PromptFolder'
+import { PROMPT_STATUS_FOLDERS, PromptStatusFolderId } from '@shared/Prompt'
 import { describe, expect, it } from 'vitest'
 
 const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
@@ -7,8 +11,7 @@ const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({
   kind: 'prompt',
   folderName: 'Folder',
   displayName: 'Folder',
-  completedPromptIds: [],
-  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
+  statusFolders: createPromptStatusFolderLayouts(),
   settings: {
     folderDescription: ''
   },
@@ -21,15 +24,27 @@ describe('isPromptFolderEmpty', () => {
     expect(
       isPromptFolderEmpty(
         createFolder({
-          categoryOrder: {
-            categories: [
-              { categoryId: null, entries: [{ kind: 'prompt', id: 'prompt' }] }
-            ]
-          }
+          statusFolders: createPromptStatusFolderLayouts({
+            categoryOrders: {
+              [PromptStatusFolderId.Active]: {
+                categories: [
+                  { categoryId: null, entries: [{ kind: 'prompt', id: 'prompt' }] }
+                ]
+              }
+            }
+          })
         })
       )
     ).toBe(false)
-    expect(isPromptFolderEmpty(createFolder({ completedPromptIds: ['completed'] }))).toBe(false)
+    expect(
+      isPromptFolderEmpty(
+        createFolder({
+          statusFolders: createPromptStatusFolderLayouts({
+            promptIds: { [PromptStatusFolderId.Completed]: ['completed'] }
+          })
+        })
+      )
+    ).toBe(false)
     expect(
       isPromptFolderEmpty(
         createFolder({
@@ -39,5 +54,17 @@ describe('isPromptFolderEmpty', () => {
         })
       )
     ).toBe(false)
+  })
+})
+
+describe('prompt status-folder layouts', () => {
+  it('creates one correctly ordered layout for every registry entry', () => {
+    /** Default layouts created solely from the code-defined status-folder registry. */
+    const layouts = createPromptStatusFolderLayouts()
+
+    expect(Object.keys(layouts)).toEqual(PROMPT_STATUS_FOLDERS.map(({ id }) => id))
+    expect(
+      PROMPT_STATUS_FOLDERS.map(({ id }) => [id, layouts[id].ordering])
+    ).toEqual(PROMPT_STATUS_FOLDERS.map(({ id, ordering }) => [id, ordering]))
   })
 })

@@ -343,7 +343,7 @@ const buildCompletedFallbackGapWorkspace = () => {
     createdAt: '2023-01-02T00:00:00.000Z',
     modifiedAt: '2023-01-03T00:00:00.000Z',
     status: PromptStatus.Completed,
-    completedAt: '2023-01-03T00:00:00.000Z',
+    finalizedAt: '2023-01-03T00:00:00.000Z',
     promptText: 'Completed prompts do not reserve active fallback titles.'
   }
   const workspace = createWorkspaceWithFolders(COMPLETED_FALLBACK_GAP_WORKSPACE_PATH, [
@@ -398,7 +398,7 @@ const buildCompletedSelfHealingWorkspace = () => {
     modifiedAt: '2023-01-01T00:00:00.000Z',
     promptText: 'This regular prompt should keep rendering.',
     status: PromptStatus.Completed,
-    completedAt: '2023-01-02T00:00:00Z'
+    finalizedAt: '2023-01-02T00:00:00Z'
   }
   const completedPrompt: PromptPersisted = {
     id: 'completed-without-flags',
@@ -406,7 +406,8 @@ const buildCompletedSelfHealingWorkspace = () => {
     fallbackTitle: '',
     createdAt: '2023-01-03T00:00:00.000Z',
     modifiedAt: '2023-01-03T00:00:00.000Z',
-    status: PromptStatus.Todo,
+    status: PromptStatus.Completed,
+    finalizedAt: '2023-01-04T00:00:00Z',
     promptText: 'This completed prompt should stay hidden.'
   }
   const workspace = createWorkspaceWithFolders(SELF_HEALING_WORKSPACE_PATH, [
@@ -452,8 +453,11 @@ const buildCompletedSelfHealingWorkspace = () => {
         2
       ),
     [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
-    [activePath]: serializePromptMarkdown(activePrompt),
-    [completedPath]: serializePromptMarkdown(completedPrompt)
+    [activePath]: serializePromptMarkdown(activePrompt).replace('finalizedAt:', 'completedAt:'),
+    [completedPath]: serializePromptMarkdown(completedPrompt).replace(
+      'finalizedAt:',
+      'completedAt:'
+    )
   }
 }
 
@@ -476,7 +480,7 @@ const buildCompletedModeWorkspace = () => {
     modifiedAt: '2023-01-05T00:00:00.000Z',
     promptText: 'Newest completed body marker.',
     status: PromptStatus.Completed,
-    completedAt: '2023-01-05T00:00:00.000Z'
+    finalizedAt: '2023-01-05T00:00:00.000Z'
   }
   const oldestCompletedPrompt: PromptPersisted = {
     id: 'completed-mode-oldest',
@@ -486,7 +490,7 @@ const buildCompletedModeWorkspace = () => {
     modifiedAt: '2023-01-04T00:00:00.000Z',
     promptText: 'Oldest completed body marker.',
     status: PromptStatus.Completed,
-    completedAt: '2023-01-04T00:00:00.000Z'
+    finalizedAt: '2023-01-04T00:00:00.000Z'
   }
   const workspace = createWorkspaceWithFolders(
     COMPLETED_MODE_WORKSPACE_PATH,
@@ -587,7 +591,7 @@ const buildStatusDragCategoryWorkspace = () => {
           title: 'Categorized Completed',
           promptText: 'Completed prompt moved into Secondary.',
           status: PromptStatus.Completed,
-          completedAt: '2023-01-05T00:00:00.000Z',
+          finalizedAt: '2023-01-05T00:00:00.000Z',
           category: STATUS_DRAG_PRIMARY_CATEGORY_ID
         }
       ]
@@ -1472,7 +1476,7 @@ describe('Prompt folder prompt management', () => {
       promptTitle: COMPLETION_PROMPT_TITLE
     })
     expect(completedMarkdown).toContain('status: Completed')
-    expect(completedMarkdown).toContain('completedAt:')
+    expect(completedMarkdown).toContain('finalizedAt:')
     expect(completedMarkdown).toContain(completedText)
     expect(
       await readPromptFolderEntries(
@@ -1487,7 +1491,7 @@ describe('Prompt folder prompt management', () => {
     expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2'])
   })
 
-  test('self-heals completed frontmatter based on folder location', async ({
+  test('self-heals status and migrates completion metadata based on folder location', async ({
     testSetup,
     electronApp
   }) => {
@@ -1520,6 +1524,7 @@ describe('Prompt folder prompt management', () => {
       promptTitle: activePromptTitle
     })
     expect(activeMarkdown).toContain('status: Todo')
+    expect(activeMarkdown).not.toContain('finalizedAt:')
     expect(activeMarkdown).not.toContain('completedAt:')
     await expect
       .poll(
@@ -1539,7 +1544,9 @@ describe('Prompt folder prompt management', () => {
       promptTitle: completedPromptTitle
     })
     expect(completedMarkdown).toContain('status: Completed')
-    expect(completedMarkdown).toContain('completedAt:')
+    expect(completedMarkdown).toContain('finalizedAt:')
+    expect(completedMarkdown).toContain('2023-01-04T00:00:00Z')
+    expect(completedMarkdown).not.toContain('completedAt:')
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
   })
 
@@ -1985,7 +1992,7 @@ describe('Prompt folder prompt management', () => {
       promptTitle: 'Active Prompt'
     })
     expect(completedFromMenuMarkdown).toContain('status: Completed')
-    expect(completedFromMenuMarkdown).toContain('completedAt:')
+    expect(completedFromMenuMarkdown).toContain('finalizedAt:')
 
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await expect
@@ -2061,7 +2068,7 @@ describe('Prompt folder prompt management', () => {
       promptId: 'completed-mode-active',
       promptTitle: 'Active Prompt'
     })
-    expect(inProgressMarkdown).not.toContain('completedAt:')
+    expect(inProgressMarkdown).not.toContain('finalizedAt:')
   })
 
   test('persists category and exact order changes across status-tree drops', async ({
@@ -2591,7 +2598,7 @@ describe('Prompt folder prompt management', () => {
       promptTitle: 'Newest Completed'
     })
     expect(activeMarkdown).toContain('status: Todo')
-    expect(activeMarkdown).not.toContain('completedAt:')
+    expect(activeMarkdown).not.toContain('finalizedAt:')
     await expect
       .poll(
         async () =>

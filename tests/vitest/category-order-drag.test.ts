@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { insertCategoryOrderEntry, moveCategoryOrderGroup } from '@shared/PromptFolder'
+import {
+  createPromptStatusFolderLayouts,
+  insertCategoryOrderEntry,
+  moveCategoryOrderGroup
+} from '@shared/PromptFolder'
 import type { PromptFolder } from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
+import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
 import {
   resolveCategoryDropPreviousCategoryId,
   resolvePromptHandleDropMove
@@ -123,19 +127,23 @@ describe('category ordering and drag placement', () => {
       kind: 'prompt',
       folderName: 'Root',
       displayName: 'Root',
-      completedPromptIds: ['completed-prompt'],
       settings: { folderDescription: null },
-      categoryOrder: {
-        categories: [
-          {
-            categoryId: null,
-            entries: [
-              { kind: 'prompt', id: 'active-first' },
-              { kind: 'prompt', id: 'active-second' }
+      statusFolders: createPromptStatusFolderLayouts({
+        categoryOrders: {
+          [PromptStatusFolderId.Active]: {
+            categories: [
+              {
+                categoryId: null,
+                entries: [
+                  { kind: 'prompt', id: 'active-first' },
+                  { kind: 'prompt', id: 'active-second' }
+                ]
+              }
             ]
           }
-        ]
-      }
+        },
+        promptIds: { [PromptStatusFolderId.Completed]: ['completed-prompt'] }
+      })
     }
 
     expect(
@@ -196,9 +204,15 @@ describe('category ordering and drag placement', () => {
       kind: 'prompt',
       folderName: 'Root',
       displayName: 'Root',
-      completedPromptIds: ['completed-first', 'completed-second'],
       settings: { folderDescription: null },
-      categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
+      statusFolders: createPromptStatusFolderLayouts({
+        categoryOrders: {
+          [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
+        },
+        promptIds: {
+          [PromptStatusFolderId.Completed]: ['completed-first', 'completed-second']
+        }
+      })
     }
 
     expect(

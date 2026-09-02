@@ -3,6 +3,8 @@ import type {
   DomainCommandParser,
   DomainPlanner
 } from '@shared/DomainChanges'
+import { PromptStatusFolderId } from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 
 /** Minimal committed entry accepted by mocked snapshot normalizers. */
 type MockSnapshotEntry = { revision: number; committed: { id: string } }
@@ -123,8 +125,11 @@ const promptFolder = {
   kind: 'prompt' as const,
   folderName: 'Root',
   displayName: 'Root',
-  completedPromptIds: [],
-  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
+  statusFolders: createPromptStatusFolderLayouts({
+    categoryOrders: {
+      [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
+    }
+  }),
   settings: { folderDescription: null }
 }
 

@@ -114,14 +114,34 @@ export const buildWorkspaceSnapshot = (
 export const buildPromptFolderSnapshot = (
   promptFolderEntry: PromptFolderCommittedEntry
 ): RevisionEnvelope<PromptFolder> => {
+  /** Authoritative folder data filtered to entities currently loaded in committed stores. */
+  const promptFolder = promptFolderEntry.committed
   return {
-    id: promptFolderEntry.committed.id,
+    id: promptFolder.id,
     revision: promptFolderEntry.revision,
-    data: {
-      ...promptFolderEntry.committed,
-      completedPromptIds: filterLoadedPromptIds(promptFolderEntry.committed.completedPromptIds),
-      categoryOrder: filterLoadedCategoryOrder(promptFolderEntry.committed.categoryOrder)
-    }
+    data:
+      promptFolder.kind === 'template'
+        ? {
+            ...promptFolder,
+            categoryOrder: filterLoadedCategoryOrder(promptFolder.categoryOrder)
+          }
+        : {
+            ...promptFolder,
+            statusFolders: Object.fromEntries(
+              Object.entries(promptFolder.statusFolders).map(([statusFolderId, layout]) => [
+                statusFolderId,
+                layout.ordering === 'category'
+                  ? {
+                      ...layout,
+                      categoryOrder: filterLoadedCategoryOrder(layout.categoryOrder)
+                    }
+                  : {
+                      ...layout,
+                      promptIds: filterLoadedPromptIds(layout.promptIds)
+                    }
+              ])
+            ) as typeof promptFolder.statusFolders
+          }
   }
 }
 

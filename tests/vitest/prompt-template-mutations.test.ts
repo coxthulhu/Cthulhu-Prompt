@@ -28,7 +28,6 @@ const templateFolder = (id: string, templateIds: string[] = []) => ({
   kind: 'template' as const,
   folderName: id,
   displayName: id,
-  completedPromptIds: [],
   categoryOrder: {
     categories: [
       {

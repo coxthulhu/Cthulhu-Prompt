@@ -88,7 +88,7 @@ export interface PromptFolderConfig {
     promptText: string
     createdAt?: string
     status?: PromptStatus
-    completedAt?: string
+    finalizedAt?: string
     templates?: PromptTemplateReference[] | null
     category?: string
   }>
@@ -228,8 +228,8 @@ const createPromptFiles = (
       promptText: prompt.promptText,
       ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
       ...(prompt.category !== undefined ? { category: prompt.category } : {}),
-      ...(prompt.status === PromptStatus.Completed && prompt.completedAt
-        ? { completedAt: prompt.completedAt }
+      ...(prompt.status === PromptStatus.Completed && prompt.finalizedAt
+        ? { finalizedAt: prompt.finalizedAt }
         : {})
     }
     const displayTitle = getPromptDisplayTitle(promptData)
@@ -631,14 +631,14 @@ export function setupWorkspaceScenario(
               title: 'Root Completed',
               promptText: 'Completed prompt directly inside the root folder.',
               status: PromptStatus.Completed,
-              completedAt: '2026-07-09T10:00:00.000Z'
+              finalizedAt: '2026-07-09T10:00:00.000Z'
             },
             {
               id: 'categories-ui-category-completed-1',
               title: 'Category Completed One',
               promptText: 'First completed prompt owned by the category.',
               status: PromptStatus.Completed,
-              completedAt: '2026-07-09T11:00:00.000Z',
+              finalizedAt: '2026-07-09T11:00:00.000Z',
               category: primaryCategoryId
             },
             {
@@ -646,7 +646,7 @@ export function setupWorkspaceScenario(
               title: 'Category Completed Two',
               promptText: 'Second completed prompt owned by the category.',
               status: PromptStatus.Completed,
-              completedAt: '2026-07-09T12:00:00.000Z',
+              finalizedAt: '2026-07-09T12:00:00.000Z',
               category: primaryCategoryId
             }
           ]

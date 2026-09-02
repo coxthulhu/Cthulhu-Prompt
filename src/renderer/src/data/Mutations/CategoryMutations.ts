@@ -7,7 +7,8 @@ import {
   planSetCategoryDescriptionDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
+import { getPromptFolderCategoryIds } from '@shared/PromptFolder'
+import { PromptStatusFolderId } from '@shared/Prompt'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
@@ -75,14 +76,22 @@ export const renameCategory = async (categoryId: string, displayName: string): P
 export const moveCategory = async (
   promptFolderId: string,
   categoryId: string,
-  previousCategoryId: string | null
+  previousCategoryId: string | null,
+  statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): Promise<void> => {
   /** Root folder whose FolderOrder category sequence changes. */
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) throw new Error('Root prompt folder not loaded')
 
-  /** Shared category reorder command projected in both processes. */
-  const command = { promptFolderId, categoryId, previousCategoryId }
+  /** Ordered status-folder identity, omitted only for status-free template roots. */
+  const resolvedStatusFolderId = promptFolder.kind === 'prompt' ? statusFolderId : null
+  /** Shared category movement command scoped to one independent category order. */
+  const command = {
+    promptFolderId,
+    statusFolderId: resolvedStatusFolderId,
+    categoryId,
+    previousCategoryId
+  }
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planMoveCategoryDomainMutation },
     ipc: { channel: 'move-category' },
@@ -94,7 +103,7 @@ export const moveCategory = async (
 export const deleteCategory = async (categoryId: string): Promise<void> => {
   /** Root folder that currently owns the category. */
   const promptFolder = promptFolderCollection.toArray.find((folder) =>
-    getCategoryOrderCategoryIds(folder.categoryOrder).includes(categoryId)
+    getPromptFolderCategoryIds(folder).includes(categoryId)
   )
   if (!promptFolder) throw new Error('Category root prompt folder not loaded')
   /** Workspace that directly owns the category root folder. */

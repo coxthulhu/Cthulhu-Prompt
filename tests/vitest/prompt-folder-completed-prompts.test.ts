@@ -1,19 +1,22 @@
-import type { PromptFolder } from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
+import {
+  createPromptStatusFolderLayouts,
+  type PromptContentFolder
+} from '@shared/PromptFolder'
+import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
 import { collectCompletedPrompts } from '@renderer/features/prompt-folders/promptFolderCompletedPrompts'
 import { describe, expect, it } from 'vitest'
 
 const createFolder = (
   id: string,
-  completedPromptIds: string[] = []
-): PromptFolder => ({
+  finalizedPromptIds: string[] = []
+): PromptContentFolder => ({
   id,
   kind: 'prompt',
   folderName: id,
   displayName: id,
-  entries: [],
-  completedPromptIds,
-  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
+  statusFolders: createPromptStatusFolderLayouts({
+    promptIds: { [PromptStatusFolderId.Completed]: finalizedPromptIds }
+  }),
   settings: {
     folderDescription: ''
   }
@@ -31,7 +34,7 @@ describe('collectCompletedPrompts', () => {
           active: PromptStatus.Todo,
           newer: PromptStatus.Completed
         },
-        completedAtByPromptId: {
+        finalizedAtByPromptId: {
           older: '2026-07-09T10:00:00.000Z',
           newer: '2026-07-09T11:00:00.000Z'
         }
@@ -46,7 +49,7 @@ describe('collectCompletedPrompts', () => {
     /** Completed-ID order with the newest mutation already placed first. */
     const root = createFolder('root', ['newest-priority', 'older-priority'])
     /** Equal persisted timestamp proving ID order is the deterministic tie-breaker. */
-    const completedAt = '2026-07-09T11:00:00.000Z'
+    const finalizedAt = '2026-07-09T11:00:00.000Z'
 
     expect(
       collectCompletedPrompts({
@@ -55,9 +58,9 @@ describe('collectCompletedPrompts', () => {
           'newest-priority': PromptStatus.Completed,
           'older-priority': PromptStatus.Completed
         },
-        completedAtByPromptId: {
-          'newest-priority': completedAt,
-          'older-priority': completedAt
+        finalizedAtByPromptId: {
+          'newest-priority': finalizedAt,
+          'older-priority': finalizedAt
         }
       })
     ).toEqual([

@@ -12,6 +12,8 @@ import {
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
 import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
+import { getMarkdownContentIds } from '@shared/MarkdownContent'
+import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -171,27 +173,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       })
     }, workspaceRow.workspaceId)
     /** Root folder data used to derive every non-optional deletion target. */
-    const promptFolderData = promptFolderSnapshot.data as {
-      kind: 'prompt' | 'template'
-      completedPromptIds: string[]
-      categoryOrder: {
-        categories: Array<{
-          categoryId: string | null
-          entries: Array<{ kind: 'prompt' | 'template'; id: string }>
-        }>
-      }
-    }
-    /** Active and completed content IDs owned by the deleted root. */
-    const contentIds = [
-      ...promptFolderData.categoryOrder.categories.flatMap((category) =>
-        category.entries.map((entry) => entry.id)
-      ),
-      ...promptFolderData.completedPromptIds
-    ]
+    const promptFolderData = promptFolderSnapshot.data as PromptFolder
+    /** Content IDs across every status folder owned by the deleted root. */
+    const contentIds = getMarkdownContentIds(promptFolderData, promptFolderData.kind)
     /** Category IDs whose files and editor state are deleted with the root. */
-    const categoryIds = promptFolderData.categoryOrder.categories.flatMap((category) =>
-      category.categoryId ? [category.categoryId] : []
-    )
+    const categoryIds = getPromptFolderCategoryIds(promptFolderData)
     /** Required generic domain expectations; optional SQLite deletes are excluded by policy. */
     const deletionExpectations = [
       {

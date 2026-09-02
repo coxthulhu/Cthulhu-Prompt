@@ -6,8 +6,9 @@ import type {
 import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from './OrderContainer'
 import {
   createEmptyPromptFolderSettings,
+  createPromptStatusFolderLayouts,
   createRootCategoryOrder,
-  getCategoryOrderCategoryIds,
+  getPromptFolderCategoryIds,
   type PromptFolder,
   type PromptFolderKind
 } from './PromptFolder'
@@ -174,15 +175,24 @@ export const planCreatePromptFolderDomainMutation: DomainPlanner<
   }
 
   /** Initial root-folder entity inserted by both renderer and main projections. */
-  const promptFolder: PromptFolder = {
-    id: command.promptFolderId,
-    kind: command.kind,
-    folderName: preparedName.folderName,
-    displayName: preparedName.displayName,
-    completedPromptIds: [],
-    categoryOrder: createRootCategoryOrder(),
-    settings: createEmptyPromptFolderSettings()
-  } as PromptFolder
+  const promptFolder: PromptFolder =
+    command.kind === 'prompt'
+      ? {
+          id: command.promptFolderId,
+          kind: 'prompt',
+          folderName: preparedName.folderName,
+          displayName: preparedName.displayName,
+          statusFolders: createPromptStatusFolderLayouts(),
+          settings: createEmptyPromptFolderSettings()
+        }
+      : {
+          id: command.promptFolderId,
+          kind: 'template',
+          folderName: preparedName.folderName,
+          displayName: preparedName.displayName,
+          categoryOrder: createRootCategoryOrder(),
+          settings: createEmptyPromptFolderSettings()
+        }
   return [
     {
       type: 'update',
@@ -282,7 +292,7 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
   /** Prompt or template IDs owned by the deleted root folder. */
   const contentIds = getMarkdownContentIds(promptFolder, promptFolder.kind)
   /** Category IDs owned by the deleted root folder. */
-  const categoryIds = getCategoryOrderCategoryIds(promptFolder.categoryOrder)
+  const categoryIds = getPromptFolderCategoryIds(promptFolder)
   /** Complete domain changes applied atomically in meaningful ownership order. */
   const changes: DomainChange[] = [
     {

@@ -1,5 +1,9 @@
 import type { Category } from '@shared/Category'
-import type { PromptFolder } from '@shared/PromptFolder'
+import {
+  createPromptStatusFolderLayouts,
+  type PromptFolder
+} from '@shared/PromptFolder'
+import { PromptStatusFolderId } from '@shared/Prompt'
 import {
   buildPromptFolderScreenRows,
   type PromptFolderScreenRow
@@ -14,13 +18,16 @@ const createFolder = (
   kind: 'prompt',
   folderName: 'Root',
   displayName: 'Root',
-  completedPromptIds: [],
-  categoryOrder: {
-    categories: groups.map((group) => ({
-      categoryId: group.categoryId,
-      entries: group.promptIds.map((id) => ({ kind: 'prompt', id }))
-    }))
-  },
+  statusFolders: createPromptStatusFolderLayouts({
+    categoryOrders: {
+      [PromptStatusFolderId.Active]: {
+        categories: groups.map((group) => ({
+          categoryId: group.categoryId,
+          entries: group.promptIds.map((id) => ({ kind: 'prompt', id }))
+        }))
+      }
+    }
+  }),
   settings: { folderDescription: null }
 })
 

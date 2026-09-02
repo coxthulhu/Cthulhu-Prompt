@@ -1,12 +1,16 @@
-import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
+import {
+  getPromptStatusFolderDefinition,
+  PROMPT_STATUS_FOLDERS,
+  PromptStatus,
+  type PromptPersisted
+} from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import {
   parsePromptMarkdown,
-  promptMarkdownHasLegacyTemplateId,
+  promptMarkdownNeedsStartupMigration,
   serializePromptMarkdown
 } from './PromptFrontmatter'
-import { COMPLETED_PROMPTS_FOLDER_NAME } from './PromptPersistencePaths'
 import {
   createMarkdownPersistence,
   readMarkdownModifiedAt,
@@ -15,44 +19,53 @@ import {
 
 export type PromptPersistenceFields = MarkdownPersistenceFields
 
-const isCompletedPromptFolderName = (folderName: string): boolean => {
+const getPromptStatusFolderForDirectory = (folderName: string) => {
   const folderNameParts = folderName.split(/[\\/]/)
   const finalFolderName = folderNameParts[folderNameParts.length - 1]
-  return finalFolderName === COMPLETED_PROMPTS_FOLDER_NAME
+  /** Registry definition whose directory name matches the persisted parent folder. */
+  const statusFolder = PROMPT_STATUS_FOLDERS.find(
+    (candidate) => candidate.directoryName === finalFolderName
+  )
+  return statusFolder ?? getPromptStatusFolderDefinition(PromptStatus.Todo)
 }
 
-const normalizePromptCompletionForFolder = (
+const normalizePromptStatusForFolder = (
   prompt: PromptPersisted,
-  isCompletedFolder: boolean
+  folderName: string
 ): PromptPersisted => {
-  if (isCompletedFolder) {
-    if (prompt.status === PromptStatus.Completed && prompt.completedAt) {
+  /** Registry definition owning the physical directory being loaded. */
+  const statusFolder = getPromptStatusFolderForDirectory(folderName)
+  if (statusFolder.isFinal) {
+    if (
+      (statusFolder.statuses as readonly PromptStatus[]).includes(prompt.status) &&
+      prompt.finalizedAt
+    ) {
       return prompt
     }
 
     return {
       ...prompt,
-      status: PromptStatus.Completed,
-      completedAt: getCurrentIsoSecondTimestamp()
+      status: statusFolder.statuses[0]!,
+      finalizedAt: getCurrentIsoSecondTimestamp()
     }
   }
 
   if (
-    (prompt.status === PromptStatus.Todo || prompt.status === PromptStatus.InProgress) &&
-    !prompt.completedAt
+    (statusFolder.statuses as readonly PromptStatus[]).includes(prompt.status) &&
+    !prompt.finalizedAt
   ) {
     return prompt
   }
 
-  const { completedAt: _completedAt, ...activePrompt } = prompt
+  const { finalizedAt: _finalizedAt, ...activePrompt } = prompt
   return {
     ...activePrompt,
-    status: PromptStatus.Todo
+    status: statusFolder.statuses[0]!
   }
 }
 
-const hasSameCompletionMetadata = (left: PromptPersisted, right: PromptPersisted): boolean => {
-  return left.status === right.status && left.completedAt === right.completedAt
+const hasSameStatusMetadata = (left: PromptPersisted, right: PromptPersisted): boolean => {
+  return left.status === right.status && left.finalizedAt === right.finalizedAt
 }
 
 export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {
@@ -65,8 +78,8 @@ export const promptPersistence = createMarkdownPersistence<PromptPersisted>({
   parseMarkdown: parsePromptMarkdown,
   serializeMarkdown: serializePromptMarkdown,
   normalizeLoadedData: (prompt, folderPath) =>
-    normalizePromptCompletionForFolder(prompt, isCompletedPromptFolderName(folderPath)),
+    normalizePromptStatusForFolder(prompt, folderPath),
   shouldRewriteNormalizedData: (loaded, normalized, fileText) =>
-    !hasSameCompletionMetadata(loaded, normalized) ||
-    promptMarkdownHasLegacyTemplateId(fileText)
+    !hasSameStatusMetadata(loaded, normalized) ||
+    promptMarkdownNeedsStartupMigration(fileText)
 })

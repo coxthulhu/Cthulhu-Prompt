@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptFolderClientStateCollection } from '@renderer/data/Collections/PromptFolderClientStateCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { PromptStatusFolderId } from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 
 /** Revision runner spy exposing root-folder domain mutation contracts. */
 const runRevisionMutation = vi.hoisted(() => vi.fn())
@@ -28,8 +30,11 @@ const createRootFolder = (id: string) => ({
   kind: 'prompt' as const,
   folderName: id,
   displayName: id,
-  completedPromptIds: [],
-  categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
+  statusFolders: createPromptStatusFolderLayouts({
+    categoryOrders: {
+      [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
+    }
+  }),
   settings: { folderDescription: null }
 })
 

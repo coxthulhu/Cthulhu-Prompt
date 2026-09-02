@@ -84,6 +84,7 @@
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
+  import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type {
     PromptFolderDividerTarget,
     PromptFolderPromptTarget,
@@ -118,7 +119,7 @@
 
   type PromptMetadata = {
     status: PromptStatus
-    completedAt: string | null
+    finalizedAt: string | null
   }
 
   type PromptFolderVirtualContentProps = {
@@ -247,7 +248,7 @@
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
   const todoPromptMetadata: PromptMetadata = {
     status: PromptStatus.Todo,
-    completedAt: null
+    finalizedAt: null
   }
   const isTemplateFolder = $derived(contentKind === 'template')
   const compactLayoutMaxWidthPx = $derived(
@@ -272,7 +273,9 @@
   )
   /** Authoritative category order used to resolve every category boundary. */
   const orderedCategoryIds = $derived(
-    promptFolderById[screenRootFolderId]?.categoryOrder.categories.flatMap((group) =>
+    (promptFolderById[screenRootFolderId]
+      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId]).categories
+      : []).flatMap((group) =>
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     ) ?? []
   )
@@ -676,14 +679,18 @@
 
   /** Returns active content IDs from one exact FolderOrder category group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
-    promptFolderById[screenRootFolderId]?.categoryOrder.categories
+    (promptFolderById[screenRootFolderId]
+      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId]).categories
+      : [])
       .find((group) => group.categoryId === categoryId)
       ?.entries.filter((entry) => entry.kind === contentKind)
       .map((entry) => entry.id) ?? []
 
   /** Finds the current category placement of one active content ID. */
   const getEntryCategoryId = (entryId: string): string | null =>
-    promptFolderById[screenRootFolderId]?.categoryOrder.categories.find((group) =>
+    (promptFolderById[screenRootFolderId]
+      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId]).categories
+      : []).find((group) =>
       group.entries.some((entry) => entry.id === entryId)
     )?.categoryId ?? null
 
@@ -1009,7 +1016,7 @@
       copyTemplateTexts={getCopyTemplateTexts(promptDraftById[row.promptId]!.templates)}
       {screenMode}
       status={promptMetadata.status}
-      completedAt={promptMetadata.completedAt}
+      finalizedAt={promptMetadata.finalizedAt}
       scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}

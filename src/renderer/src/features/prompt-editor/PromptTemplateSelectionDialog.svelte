@@ -23,6 +23,7 @@
     type VirtualWindowRowComponentProps
   } from '../virtualizer/virtualWindowTypes'
   import { hasPromptTextToken } from './promptTemplatingEngine'
+  import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
 
   // Dialog behavior selected by the prompt editor action that opened it.
   type TemplateDialogMode = 'select' | 'select-and-copy'
@@ -147,7 +148,7 @@
     const countAvailableTemplates = (folder: PromptFolder): number => {
       if (counts[folder.id] !== undefined) return counts[folder.id]
 
-      const count = folder.categoryOrder.categories
+      const count = getMarkdownContentCategoryOrder(folder).categories
         .flatMap((group) => group.entries)
         .reduce(
           (total, entry) =>
@@ -231,7 +232,7 @@
 
   // Filters one category group to usable template drafts.
   const getAvailableEntries = (folder: PromptFolder, categoryId: string | null) =>
-    folder.categoryOrder.categories
+    getMarkdownContentCategoryOrder(folder).categories
       .find((group) => group.categoryId === categoryId)
       ?.entries.filter(
         (entry) => entry.kind === 'template' && Boolean(templateTitleById[entry.id])
@@ -298,7 +299,7 @@
         })
       }
 
-      for (const [groupIndex, group] of rootFolder.categoryOrder.categories.slice(1).entries()) {
+      for (const [groupIndex, group] of getMarkdownContentCategoryOrder(rootFolder).categories.slice(1).entries()) {
         if (!group.categoryId) continue
         const category = categoryById[group.categoryId]
         const categoryEntries = getAvailableEntries(rootFolder, group.categoryId)
@@ -311,7 +312,7 @@
             category,
             indentCount: 0,
             endsVisibleBranch:
-              groupIndex === rootFolder.categoryOrder.categories.length - 2 &&
+              groupIndex === getMarkdownContentCategoryOrder(rootFolder).categories.length - 2 &&
               (!isExpanded || categoryEntries.length === 0)
           }
         })

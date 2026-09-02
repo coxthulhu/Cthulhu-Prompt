@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPromptFull, PromptStatus } from '@shared/Prompt'
+import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
@@ -74,10 +75,13 @@ describe('prompt editor mutations', () => {
         kind: 'prompt',
         folderName: 'Prompts',
         displayName: 'Prompts',
-        completedPromptIds: [],
-        categoryOrder: {
-          categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }]
-        },
+        statusFolders: createPromptStatusFolderLayouts({
+          categoryOrders: {
+            [PromptStatusFolderId.Active]: {
+              categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }]
+            }
+          }
+        }),
         settings: { folderDescription: null }
       }
     })
@@ -89,7 +93,6 @@ describe('prompt editor mutations', () => {
         kind: 'template',
         folderName: 'Templates',
         displayName: 'Templates',
-        completedPromptIds: [],
         categoryOrder: {
           categories: [
             { categoryId: null, entries: [{ kind: 'template', id: TEMPLATE_ID }] }

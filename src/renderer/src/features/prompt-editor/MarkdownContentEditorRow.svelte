@@ -90,7 +90,7 @@
     deleteDialogDescription,
     screenMode = PromptFolderScreenMode.Active,
     status = PromptStatus.Todo,
-    completedAt = null,
+    finalizedAt = null,
     scrollToWithinWindowBand,
     isFirstPrompt,
     isLastPrompt,
@@ -143,7 +143,7 @@
     deleteDialogDescription?: string
     screenMode?: PromptFolderScreenMode
     status?: PromptStatus
-    completedAt?: string | null
+    finalizedAt?: string | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     isFirstPrompt: boolean
     isLastPrompt: boolean
@@ -565,7 +565,7 @@
     draftText={promptData.draft.text}
     {copyText}
     modifiedAt={promptData.modifiedAt}
-    {completedAt}
+    {finalizedAt}
     fallbackTitle={promptData.fallbackTitle}
     {tokenCount}
     onTitleChange={handleTitleChange}

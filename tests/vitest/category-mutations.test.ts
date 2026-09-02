@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { PromptStatus, createPromptSummary } from '@shared/Prompt'
+import {
+  PromptStatus,
+  PromptStatusFolderId,
+  createPromptSummary
+} from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
@@ -66,13 +71,16 @@ describe('category mutations', () => {
         kind: 'prompt',
         folderName: 'Root',
         displayName: 'Root',
-        completedPromptIds: [],
-        categoryOrder: {
-          categories: [
-            { categoryId: null, entries: [] },
-            { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
-          ]
-        },
+        statusFolders: createPromptStatusFolderLayouts({
+          categoryOrders: {
+            [PromptStatusFolderId.Active]: {
+              categories: [
+                { categoryId: null, entries: [] },
+                { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+              ]
+            }
+          }
+        }),
         settings: { folderDescription: null }
       }
     })
@@ -120,9 +128,7 @@ describe('category mutations', () => {
     /** Domain mutation options registered by category creation. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Mutable root order used to verify the shared optimistic folder recipe. */
-    const folderState = {
-      categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
-    }
+    const folderState = structuredClone(promptFolderCollection.get(ROOT_FOLDER_ID)!)
     /** Optimistic category insertion spy. */
     const insertCategoryOptimistically = vi.fn()
     options.mutateOptimistically({
@@ -136,7 +142,10 @@ describe('category mutations', () => {
         category: { insert: insertCategoryOptimistically }
       }
     })
-    expect(folderState.categoryOrder.categories[1]?.categoryId).toBe(categoryId)
+    expect(
+      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
+        ?.categoryId
+    ).toBe(categoryId)
     expect(insertCategoryOptimistically).toHaveBeenCalledWith({
       id: categoryId,
       displayName: 'Created',
@@ -184,7 +193,7 @@ describe('category mutations', () => {
           revision: 4,
           data: {
             ...promptFolderCollection.get(ROOT_FOLDER_ID),
-            categoryOrder: folderState.categoryOrder
+            statusFolders: folderState.statusFolders
           }
         },
         {
@@ -205,14 +214,7 @@ describe('category mutations', () => {
     /** Revision mutation options registered by deleteCategory. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Mutable folder state used to observe the optimistic recipe. */
-    const folderState = {
-      categoryOrder: {
-        categories: [
-          { categoryId: null, entries: [] },
-          { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt' as const, id: PROMPT_ID }] }
-        ]
-      }
-    }
+    const folderState = structuredClone(promptFolderCollection.get(ROOT_FOLDER_ID)!)
     /** Mutable prompt state used to observe category and timestamp cleanup. */
     const promptState = {
       id: PROMPT_ID,
@@ -252,7 +254,9 @@ describe('category mutations', () => {
       }
     })
 
-    expect(folderState.categoryOrder.categories).toEqual([
+    expect(
+      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories
+    ).toEqual([
       { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
     ])
     expect(deleteCategoryOptimistically).toHaveBeenCalledWith(CATEGORY_ID)
@@ -318,11 +322,15 @@ describe('category mutations', () => {
           revision: 4,
           data: {
             ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
-            categoryOrder: {
-              categories: [
-                { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
-              ]
-            }
+            statusFolders: createPromptStatusFolderLayouts({
+              categoryOrders: {
+                [PromptStatusFolderId.Active]: {
+                  categories: [
+                    { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+                  ]
+                }
+              }
+            })
           }
         },
         { entityType: 'category', id: CATEGORY_ID, deleted: true },
@@ -371,7 +379,13 @@ describe('category mutations', () => {
 
     options.handleSuccessOrConflictResponse(payload)
     expect(categoryCollection.get(CATEGORY_ID)).toBeUndefined()
-    expect(promptFolderCollection.get(ROOT_FOLDER_ID)?.categoryOrder.categories).toEqual([
+    expect(
+      promptFolderCollection.get(ROOT_FOLDER_ID)?.kind === 'prompt'
+        ? promptFolderCollection.get(ROOT_FOLDER_ID)?.statusFolders[
+            PromptStatusFolderId.Active
+          ].categoryOrder.categories
+        : undefined
+    ).toEqual([
       { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
     ])
     expect(promptClientStateCollection.get(PROMPT_ID)).toMatchObject({
@@ -398,13 +412,17 @@ describe('category mutations', () => {
       revision: 4,
       data: {
         ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
-        categoryOrder: {
-          categories: [
-            { categoryId: null, entries: [] },
-            { categoryId: SIBLING_CATEGORY_ID, entries: [] },
-            { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
-          ]
-        }
+        statusFolders: createPromptStatusFolderLayouts({
+          categoryOrders: {
+            [PromptStatusFolderId.Active]: {
+              categories: [
+                { categoryId: null, entries: [] },
+                { categoryId: SIBLING_CATEGORY_ID, entries: [] },
+                { categoryId: CATEGORY_ID, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
+              ]
+            }
+          }
+        })
       }
     })
 
@@ -422,12 +440,19 @@ describe('category mutations', () => {
       }
     })
 
-    expect(folderState.categoryOrder.categories.map((group) => group.categoryId)).toEqual([
+    expect(
+      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories.map(
+        (group) => group.categoryId
+      )
+    ).toEqual([
       null,
       CATEGORY_ID,
       SIBLING_CATEGORY_ID
     ])
-    expect(folderState.categoryOrder.categories[1]?.entries).toEqual([
+    expect(
+      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
+        ?.entries
+    ).toEqual([
       { kind: 'prompt', id: PROMPT_ID }
     ])
   })

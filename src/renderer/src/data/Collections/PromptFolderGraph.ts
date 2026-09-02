@@ -2,10 +2,7 @@ import {
   MARKDOWN_CONTENT_KINDS,
   getMarkdownContentIds
 } from '@shared/MarkdownContent'
-import {
-  getCategoryOrderCategoryIds,
-  type PromptFolderContentKind
-} from '@shared/PromptFolder'
+import { getPromptFolderCategoryIds, type PromptFolderContentKind } from '@shared/PromptFolder'
 import { promptFolderCollection } from './PromptFolderCollection'
 
 export type PromptFolderGraphIds = {
@@ -27,7 +24,7 @@ export const collectPromptFolderGraphIds = (
     graph.promptFolderIds.add(promptFolderId)
     const promptFolder = promptFolderCollection.get(promptFolderId)
     if (!promptFolder) return
-    for (const categoryId of getCategoryOrderCategoryIds(promptFolder.categoryOrder)) {
+    for (const categoryId of getPromptFolderCategoryIds(promptFolder)) {
       graph.categoryIds.add(categoryId)
     }
 

@@ -3,11 +3,13 @@ import { parseIsoSecondTimestamp } from './isoTimestamp'
 import { placeMarkdownContentInCategoryOrder } from './MarkdownContent'
 import { promptEntryRef } from './OrderContainer'
 import {
+  getPromptStatusFolderDefinition,
+  isFinalPromptStatus,
+  isPromptStatus,
   PromptStatus,
   type PromptCategoryOrderPlacement,
   type PromptPersisted
 } from './Prompt'
-import { getActiveMarkdownContentIds } from './MarkdownContent'
 import { removeCategoryOrderEntry } from './PromptFolder'
 
 /** Renderer-authored command for changing one prompt's workflow status. */
@@ -44,7 +46,7 @@ export const parseSetPromptStatusDomainCommand = (
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
-  /** Validated Active-tree placement carried by the command. */
+  /** Validated destination placement carried by the command. */
   const categoryOrderPlacement = parsePromptCategoryOrderPlacement(
     record.categoryOrderPlacement
   )
@@ -53,9 +55,7 @@ export const parseSetPromptStatusDomainCommand = (
     typeof record.sourcePromptFolderId !== 'string' ||
     typeof record.destinationPromptFolderId !== 'string' ||
     typeof record.promptId !== 'string' ||
-    (record.status !== PromptStatus.Todo &&
-      record.status !== PromptStatus.InProgress &&
-      record.status !== PromptStatus.Completed) ||
+    !isPromptStatus(record.status) ||
     !categoryOrderPlacement ||
     parseIsoSecondTimestamp(record.modifiedAt) === null
   ) {
@@ -71,7 +71,7 @@ export const parseSetPromptStatusDomainCommand = (
   }
 }
 
-/** Plans prompt status, completion ownership, and Active-tree placement together. */
+/** Plans prompt status metadata and any required root-scoped status-folder transfer. */
 export const planSetPromptStatusDomainMutation: DomainPlanner<
   SetPromptStatusDomainCommand
 > = (state, command) => {
@@ -84,19 +84,6 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
   )
   /** Prompt receiving the requested workflow status. */
   const prompt = state.get('prompt', command.promptId)
-  /** Folder and prompt targets returned for status conflicts. */
-  const targets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.sourcePromptFolderId },
-    ...(command.destinationPromptFolderId === command.sourcePromptFolderId
-      ? []
-      : [
-          {
-            entityType: 'promptFolder' as const,
-            id: command.destinationPromptFolderId
-          }
-        ]),
-    { entityType: 'prompt', id: command.promptId }
-  ]
   if (
     !sourcePromptFolder ||
     sourcePromptFolder.kind !== 'prompt' ||
@@ -104,79 +91,142 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
     destinationPromptFolder.kind !== 'prompt' ||
     !prompt
   ) {
+    /** Stable conflict targets available before status-folder ownership can be resolved. */
+    const targets: DomainTarget[] = [
+      { entityType: 'promptFolder', id: command.sourcePromptFolderId },
+      ...(command.destinationPromptFolderId === command.sourcePromptFolderId
+        ? []
+        : [
+            {
+              entityType: 'promptFolder' as const,
+              id: command.destinationPromptFolderId
+            }
+          ]),
+      { entityType: 'prompt', id: command.promptId }
+    ]
     return { status: 'conflict', reason: 'Prompt status conflict', targets }
   }
 
-  /** Whether the prompt is currently represented by the Completed hierarchy. */
-  const isCompletedPrompt = prompt.status === PromptStatus.Completed
-  /** Whether root ordering agrees with the prompt's current status. */
-  const hasExpectedOwnership = isCompletedPrompt
-    ? sourcePromptFolder.completedPromptIds.includes(command.promptId)
-    : getActiveMarkdownContentIds(sourcePromptFolder, 'prompt').includes(command.promptId)
+  /** Status-folder definition owning the prompt before this status change. */
+  const sourceStatusFolder = getPromptStatusFolderDefinition(prompt.status)
+  /** Status-folder definition owning the requested target status. */
+  const destinationStatusFolder = getPromptStatusFolderDefinition(command.status)
+  /** Whether root-scoped physical status-folder ownership actually changes. */
+  const movesStatusFolder =
+    sourcePromptFolder.id !== destinationPromptFolder.id ||
+    sourceStatusFolder.id !== destinationStatusFolder.id
+  /** Folder and prompt targets required by the exact planned mutation. */
+  const targets: DomainTarget[] = [
+    ...(movesStatusFolder
+      ? [
+          { entityType: 'promptFolder' as const, id: sourcePromptFolder.id },
+          ...(destinationPromptFolder.id === sourcePromptFolder.id
+            ? []
+            : [
+                {
+                  entityType: 'promptFolder' as const,
+                  id: destinationPromptFolder.id
+                }
+              ])
+        ]
+      : []),
+    { entityType: 'prompt', id: command.promptId }
+  ]
+  /** Source layout that must contain the prompt before the mutation can apply. */
+  const sourceLayout = sourcePromptFolder.statusFolders[sourceStatusFolder.id]
+  /** Whether source status-folder data agrees with the prompt's current status. */
+  const hasExpectedOwnership =
+    sourceLayout.ordering === 'category'
+      ? sourceLayout.categoryOrder.categories.some((group) =>
+          group.entries.some(
+            (entry) => entry.kind === 'prompt' && entry.id === command.promptId
+          )
+        )
+      : sourceLayout.promptIds.includes(command.promptId)
   if (!hasExpectedOwnership) {
     return { status: 'conflict', reason: 'Prompt status ownership conflict', targets }
   }
 
-  /** Requested placement normalized to an existing category group. */
-  const categoryOrderPlacement = destinationPromptFolder.categoryOrder.categories.some(
-    (group) => group.categoryId === command.categoryOrderPlacement.categoryId
-  )
-    ? command.categoryOrderPlacement
-    : { categoryId: null, previousEntryId: null }
-  /** Current prompt without its status-specific completion timestamp. */
-  const { completedAt: _completedAt, ...activePromptBase } = prompt
-  /** Prompt fields after applying the requested status and timestamp. */
-  const statusPrompt: PromptPersisted =
-    command.status === PromptStatus.Completed
-      ? {
-          ...(activePromptBase as PromptPersisted),
-          status: PromptStatus.Completed,
-          completedAt: command.modifiedAt,
-          modifiedAt: command.modifiedAt
-        }
-      : {
-          ...(activePromptBase as PromptPersisted),
-          status: command.status,
-          modifiedAt: command.modifiedAt
-        }
-  /** Category-order reference removed on completion and restored on activation. */
+  /** Destination layout selected by the target status-folder registry entry. */
+  const destinationLayout = destinationPromptFolder.statusFolders[destinationStatusFolder.id]
+  /** Requested placement normalized only for a destination that is manually ordered. */
+  const categoryOrderPlacement =
+    destinationLayout.ordering === 'category' &&
+    destinationLayout.categoryOrder.categories.some(
+      (group) => group.categoryId === command.categoryOrderPlacement.categoryId
+    )
+      ? command.categoryOrderPlacement
+      : { categoryId: null, previousEntryId: null }
+  /** Prompt data without the final-status timestamp controlled by this mutation. */
+  const { finalizedAt: previousFinalizedAt, ...statusPromptBase } = prompt
+  /** Timestamp retained between final statuses or initialized upon first finalization. */
+  const finalizedAt =
+    isFinalPromptStatus(command.status)
+      ? isFinalPromptStatus(prompt.status) && previousFinalizedAt
+        ? previousFinalizedAt
+        : command.modifiedAt
+      : undefined
+  /** Prompt fields after applying status and finalization metadata. */
+  const statusPrompt: PromptPersisted = {
+    ...(statusPromptBase as PromptPersisted),
+    status: command.status,
+    modifiedAt: command.modifiedAt,
+    ...(finalizedAt ? { finalizedAt } : {})
+  }
+  /** Ordered reference transferred only when physical status-folder ownership changes. */
   const entry = promptEntryRef(command.promptId)
 
   try {
-    /** Prompt whose category metadata matches its requested Active-tree placement. */
+    /** Prompt whose category metadata follows an ordered destination transfer. */
     const nextPrompt =
-      command.status === PromptStatus.Completed
-        ? statusPrompt
-        : placeMarkdownContentInCategoryOrder(
-            destinationPromptFolder.categoryOrder,
+      movesStatusFolder && destinationLayout.ordering === 'category'
+        ? placeMarkdownContentInCategoryOrder(
+            destinationLayout.categoryOrder,
             statusPrompt,
             entry,
             categoryOrderPlacement.categoryId,
             categoryOrderPlacement.previousEntryId
           ).content
-    /** Root-folder changes that transfer ownership or update it in place. */
-    const promptFolderChanges: DomainChange[] =
-      command.sourcePromptFolderId === command.destinationPromptFolderId
+        : statusPrompt
+    /** Status-folder transfer changes omitted for same-root, same-status-folder updates. */
+    const promptFolderChanges: DomainChange[] = movesStatusFolder
+      ? sourcePromptFolder.id === destinationPromptFolder.id
         ? [
             {
               type: 'update',
               entityType: 'promptFolder',
-              id: command.sourcePromptFolderId,
+              id: sourcePromptFolder.id,
               recipe: (draft) => {
-                draft.completedPromptIds = draft.completedPromptIds.filter(
-                  (promptId) => promptId !== command.promptId
-                )
-                draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-                if (command.status === PromptStatus.Completed) {
-                  draft.completedPromptIds = [command.promptId, ...draft.completedPromptIds]
+                if (draft.kind !== 'prompt') return
+                /** Draft source layout losing the prompt reference. */
+                const draftSource = draft.statusFolders[sourceStatusFolder.id]
+                if (draftSource.ordering === 'category') {
+                  draftSource.categoryOrder = removeCategoryOrderEntry(
+                    draftSource.categoryOrder,
+                    entry
+                  )
                 } else {
-                  draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-                    draft.categoryOrder,
+                  draftSource.promptIds = draftSource.promptIds.filter(
+                    (promptId) => promptId !== command.promptId
+                  )
+                }
+                /** Draft destination layout receiving the prompt reference. */
+                const draftDestination = draft.statusFolders[destinationStatusFolder.id]
+                if (draftDestination.ordering === 'category') {
+                  draftDestination.categoryOrder = placeMarkdownContentInCategoryOrder(
+                    draftDestination.categoryOrder,
                     nextPrompt,
                     entry,
                     categoryOrderPlacement.categoryId,
                     categoryOrderPlacement.previousEntryId
                   ).categoryOrder
+                } else {
+                  draftDestination.promptIds = [
+                    command.promptId,
+                    ...draftDestination.promptIds.filter(
+                      (promptId) => promptId !== command.promptId
+                    )
+                  ]
                 }
               }
             }
@@ -185,33 +235,48 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
             {
               type: 'update',
               entityType: 'promptFolder',
-              id: command.sourcePromptFolderId,
+              id: sourcePromptFolder.id,
               recipe: (draft) => {
-                draft.completedPromptIds = draft.completedPromptIds.filter(
-                  (promptId) => promptId !== command.promptId
-                )
-                draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+                if (draft.kind !== 'prompt') return
+                /** Draft source layout losing cross-root ownership. */
+                const layout = draft.statusFolders[sourceStatusFolder.id]
+                if (layout.ordering === 'category') {
+                  layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
+                } else {
+                  layout.promptIds = layout.promptIds.filter(
+                    (promptId) => promptId !== command.promptId
+                  )
+                }
               }
             },
             {
               type: 'update',
               entityType: 'promptFolder',
-              id: command.destinationPromptFolderId,
+              id: destinationPromptFolder.id,
               recipe: (draft) => {
-                if (command.status === PromptStatus.Completed) {
-                  draft.completedPromptIds = [command.promptId, ...draft.completedPromptIds]
-                } else {
-                  draft.categoryOrder = placeMarkdownContentInCategoryOrder(
-                    draft.categoryOrder,
+                if (draft.kind !== 'prompt') return
+                /** Draft destination layout receiving cross-root ownership. */
+                const layout = draft.statusFolders[destinationStatusFolder.id]
+                if (layout.ordering === 'category') {
+                  layout.categoryOrder = placeMarkdownContentInCategoryOrder(
+                    layout.categoryOrder,
                     nextPrompt,
                     entry,
                     categoryOrderPlacement.categoryId,
                     categoryOrderPlacement.previousEntryId
                   ).categoryOrder
+                } else {
+                  layout.promptIds = [
+                    command.promptId,
+                    ...layout.promptIds.filter(
+                      (promptId) => promptId !== command.promptId
+                    )
+                  ]
                 }
               }
             }
           ]
+      : []
     return [
       ...promptFolderChanges,
       {
@@ -220,7 +285,7 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
         id: command.promptId,
         recipe: (draft) => {
           Object.assign(draft, nextPrompt)
-          if (command.status !== PromptStatus.Completed) delete draft.completedAt
+          if (!finalizedAt) delete draft.finalizedAt
           if (nextPrompt.category === undefined) delete draft.category
         }
       }

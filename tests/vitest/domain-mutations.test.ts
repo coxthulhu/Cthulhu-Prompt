@@ -20,8 +20,12 @@ import {
   planPromptUpdate,
   planPromptTemplateMove
 } from '@shared/MarkdownContentDomainMutations'
-import { PromptStatus } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
+import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
+import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import {
+  createPromptStatusFolderLayouts,
+  type PromptFolder
+} from '@shared/PromptFolder'
 import {
   planCreatePromptFolderDomainMutation,
   planMovePromptFolderDomainMutation,
@@ -98,13 +102,9 @@ const createRootFolder = (
   kind: PromptFolder['kind'],
   categoryId: string | null,
   entryId?: string
-): PromptFolder => ({
-  id,
-  kind,
-  folderName: id,
-  displayName: id,
-  completedPromptIds: [],
-  categoryOrder: {
+): PromptFolder => {
+  /** Category order shared by the selected prompt status folder or template root. */
+  const categoryOrder = {
     categories: [
       { categoryId: null, entries: [] },
       ...(categoryId === null
@@ -116,9 +116,24 @@ const createRootFolder = (
             }
           ])
     ]
-  },
-  settings: { folderDescription: null }
-})
+  }
+  /** Common root fields shared across the prompt/template union. */
+  const baseFolder = {
+    id,
+    folderName: id,
+    displayName: id,
+    settings: { folderDescription: null }
+  }
+  return kind === 'prompt'
+    ? {
+        ...baseFolder,
+        kind,
+        statusFolders: createPromptStatusFolderLayouts({
+          categoryOrders: { [PromptStatusFolderId.Active]: categoryOrder }
+        })
+      }
+    : { ...baseFolder, kind, categoryOrder }
+}
 
 describe('shared domain mutation planners', () => {
   it('plans a normalized root-folder rename as one folder update', () => {
@@ -221,7 +236,9 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(plan)) return
     /** Folder projection after applying the ownership recipe. */
     const projectedFolder = produce(folder, plan[0]!.recipe!)
-    expect(projectedFolder.categoryOrder.categories[1]?.categoryId).toBe('created')
+    expect(getMarkdownContentCategoryOrder(projectedFolder).categories[1]?.categoryId).toBe(
+      'created'
+    )
     expect(plan[1]).toEqual({
       type: 'insert',
       entityType: 'category',
@@ -395,7 +412,10 @@ describe('shared domain mutation planners', () => {
   it('plans category rename and group reordering', () => {
     /** Root containing two categorized groups. */
     const folder = createRootFolder('root', 'prompt', 'category-a')
-    folder.categoryOrder.categories.push({ categoryId: 'category-b', entries: [] })
+    getMarkdownContentCategoryOrder(folder).categories.push({
+      categoryId: 'category-b',
+      entries: []
+    })
     /** Categories participating in rename collision validation. */
     const categories = [
       { id: 'category-a', displayName: 'A', description: null },
@@ -413,14 +433,43 @@ describe('shared domain mutation planners', () => {
     /** Shared category reorder plan moving B before A. */
     const movePlan = planMoveCategoryDomainMutation(
       createDomainState({ promptFolder: [folder], category: categories }),
-      { promptFolderId: folder.id, categoryId: 'category-b', previousCategoryId: null }
+      {
+        promptFolderId: folder.id,
+        statusFolderId: PromptStatusFolderId.Active,
+        categoryId: 'category-b',
+        previousCategoryId: null
+      }
     )
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      produce(folder, movePlan[0]!.recipe!).categoryOrder.categories.map(
+      getMarkdownContentCategoryOrder(produce(folder, movePlan[0]!.recipe!)).categories.map(
         (group) => group.categoryId
       )
+    ).toEqual([null, 'category-b', 'category-a'])
+
+    /** Template root proving status-free roots use the same category reorder planner. */
+    const templateFolder = createRootFolder('templates', 'template', 'category-a')
+    getMarkdownContentCategoryOrder(templateFolder).categories.push({
+      categoryId: 'category-b',
+      entries: []
+    })
+    /** Shared template category reorder plan using its null status-folder identity. */
+    const templateMovePlan = planMoveCategoryDomainMutation(
+      createDomainState({ promptFolder: [templateFolder], category: categories }),
+      {
+        promptFolderId: templateFolder.id,
+        statusFolderId: null,
+        categoryId: 'category-b',
+        previousCategoryId: null
+      }
+    )
+    expect(Array.isArray(templateMovePlan)).toBe(true)
+    if (!Array.isArray(templateMovePlan)) return
+    expect(
+      getMarkdownContentCategoryOrder(
+        produce(templateFolder, templateMovePlan[0]!.recipe!)
+      ).categories.map((group) => group.categoryId)
     ).toEqual([null, 'category-b', 'category-a'])
   })
 
@@ -493,7 +542,9 @@ describe('shared domain mutation planners', () => {
       data: { status: PromptStatus.Todo, promptText: 'Text' }
     })
     expect(
-      produce(promptRoot, promptPlan[0]!.recipe!).categoryOrder.categories[0]?.entries
+      getMarkdownContentCategoryOrder(
+        produce(promptRoot, promptPlan[0]!.recipe!)
+      ).categories[0]?.entries
     ).toEqual([{ kind: 'prompt', id: 'prompt' }])
 
     /** Shared template creation plan. */
@@ -523,10 +574,16 @@ describe('shared domain mutation planners', () => {
   it('plans prompt and template autosaves as single content targets', () => {
     /** Prompt root owning the full prompt update target. */
     const promptRoot = createRootFolder('prompts', 'prompt', null)
-    promptRoot.categoryOrder.categories[0]!.entries.push({ kind: 'prompt', id: 'prompt' })
+    getMarkdownContentCategoryOrder(promptRoot).categories[0]!.entries.push({
+      kind: 'prompt',
+      id: 'prompt'
+    })
     /** Template root owning the full template update target. */
     const templateRoot = createRootFolder('templates', 'template', null)
-    templateRoot.categoryOrder.categories[0]!.entries.push({ kind: 'template', id: 'template' })
+    getMarkdownContentCategoryOrder(templateRoot).categories[0]!.entries.push({
+      kind: 'template',
+      id: 'template'
+    })
     /** Full prompt whose immutable ownership and workflow fields must survive autosave. */
     const prompt = {
       id: 'prompt',
@@ -594,7 +651,10 @@ describe('shared domain mutation planners', () => {
   it('plans prompt completion from a summary projection', () => {
     /** Active prompt root containing the status target. */
     const folder = createRootFolder('root', 'prompt', null)
-    folder.categoryOrder.categories[0]!.entries.push({ kind: 'prompt', id: 'prompt' })
+    getMarkdownContentCategoryOrder(folder).categories[0]!.entries.push({
+      kind: 'prompt',
+      id: 'prompt'
+    })
     /** Summary-compatible prompt selected for completion. */
     const prompt = {
       id: 'prompt',
@@ -621,19 +681,113 @@ describe('shared domain mutation planners', () => {
     const completedFolder = produce(folder, plan[0]!.recipe!)
     /** Prompt projection after completion fields are applied. */
     const completedPrompt = produce(prompt, plan[1]!.recipe!)
-    expect(completedFolder.completedPromptIds).toEqual([prompt.id])
-    expect(completedFolder.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(
+      completedFolder.statusFolders[PromptStatusFolderId.Completed].promptIds
+    ).toEqual([prompt.id])
+    expect(
+      completedFolder.statusFolders[PromptStatusFolderId.Active].categoryOrder
+        .categories[0]?.entries
+    ).toEqual([])
     expect(completedPrompt).toMatchObject({
       status: PromptStatus.Completed,
-      completedAt: '2026-08-30T12:00:00Z',
+      finalizedAt: '2026-08-30T12:00:00Z',
       modifiedAt: '2026-08-30T12:00:00Z'
     })
+  })
+
+  it('preserves ordering when a status changes within one status folder', () => {
+    /** Active prompt root whose ordering must not be targeted by the status update. */
+    const folder = createRootFolder('root', 'prompt', null)
+    getMarkdownContentCategoryOrder(folder).categories[0]!.entries.push({
+      kind: 'prompt',
+      id: 'prompt'
+    })
+    /** Todo prompt moving to In Progress inside the same Active status folder. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: 'old',
+      status: PromptStatus.Todo
+    }
+    /** Shared status plan expected to update only the prompt entity. */
+    const plan = planSetPromptStatusDomainMutation(
+      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      {
+        sourcePromptFolderId: folder.id,
+        destinationPromptFolderId: folder.id,
+        promptId: prompt.id,
+        status: PromptStatus.InProgress,
+        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        modifiedAt: '2026-08-30T12:00:00Z'
+      }
+    )
+
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
+      'prompt:prompt'
+    ])
+    expect(produce(prompt, plan[0]!.recipe!)).toMatchObject({
+      status: PromptStatus.InProgress,
+      modifiedAt: '2026-08-30T12:00:00Z'
+    })
+  })
+
+  it('transfers ordering when the root changes within one status folder', () => {
+    /** Source root owning the prompt in its Active status folder. */
+    const source = createRootFolder('source', 'prompt', null)
+    getMarkdownContentCategoryOrder(source).categories[0]!.entries.push({
+      kind: 'prompt',
+      id: 'prompt'
+    })
+    /** Destination root receiving the prompt in its own Active status folder. */
+    const destination = createRootFolder('destination', 'prompt', null)
+    /** Todo prompt changing roots while remaining inside the Active status-folder identity. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: 'old',
+      status: PromptStatus.Todo
+    }
+    /** Shared status plan expected to transfer both root orderings and update the prompt. */
+    const plan = planSetPromptStatusDomainMutation(
+      createDomainState({ promptFolder: [source, destination], prompt: [prompt] }),
+      {
+        sourcePromptFolderId: source.id,
+        destinationPromptFolderId: destination.id,
+        promptId: prompt.id,
+        status: PromptStatus.InProgress,
+        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        modifiedAt: '2026-08-30T12:00:00Z'
+      }
+    )
+
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
+      'promptFolder:source',
+      'promptFolder:destination',
+      'prompt:prompt'
+    ])
+    /** Source root after its Active ordering loses the prompt. */
+    const projectedSource = produce(source, plan[0]!.recipe!)
+    /** Destination root after its Active ordering receives the prompt. */
+    const projectedDestination = produce(destination, plan[1]!.recipe!)
+    expect(getMarkdownContentCategoryOrder(projectedSource).categories[0]?.entries).toEqual([])
+    expect(getMarkdownContentCategoryOrder(projectedDestination).categories[0]?.entries).toEqual([
+      { kind: 'prompt', id: prompt.id }
+    ])
   })
 
   it('transfers prompt status ownership across root folders', () => {
     /** Source root currently owning the active prompt. */
     const source = createRootFolder('source', 'prompt', null)
-    source.categoryOrder.categories[0]!.entries.push({ kind: 'prompt', id: 'prompt' })
+    getMarkdownContentCategoryOrder(source).categories[0]!.entries.push({
+      kind: 'prompt',
+      id: 'prompt'
+    })
     /** Destination root receiving the completed prompt. */
     const destination = createRootFolder('destination', 'prompt', null)
     /** Summary-compatible prompt selected for cross-root completion. */
@@ -667,14 +821,16 @@ describe('shared domain mutation planners', () => {
     const projectedSource = produce(source, plan[0]!.recipe!)
     /** Destination projection after completed ownership is inserted. */
     const projectedDestination = produce(destination, plan[1]!.recipe!)
-    expect(projectedSource.categoryOrder.categories[0]?.entries).toEqual([])
-    expect(projectedDestination.completedPromptIds).toEqual([prompt.id])
+    expect(getMarkdownContentCategoryOrder(projectedSource).categories[0]?.entries).toEqual([])
+    expect(
+      projectedDestination.statusFolders[PromptStatusFolderId.Completed].promptIds
+    ).toEqual([prompt.id])
   })
 
   it('clears stale category metadata when restoring a prompt to Uncategorized', () => {
     /** Root whose completed prompt retains its former category metadata. */
     const folder = createRootFolder('root', 'prompt', 'category')
-    folder.completedPromptIds = ['prompt']
+    folder.statusFolders[PromptStatusFolderId.Completed].promptIds = ['prompt']
     /** Completed prompt being restored to the Uncategorized group. */
     const prompt = {
       id: 'prompt',
@@ -683,7 +839,7 @@ describe('shared domain mutation planners', () => {
       modifiedAt: 'old',
       category: 'category',
       status: PromptStatus.Completed,
-      completedAt: 'old'
+      finalizedAt: 'old'
     }
     /** Shared restoration plan targeting the Uncategorized group. */
     const plan = planSetPromptStatusDomainMutation(
@@ -704,8 +860,11 @@ describe('shared domain mutation planners', () => {
     /** Root projection after restoring Active-tree ownership. */
     const restoredFolder = produce(folder, plan[0]!.recipe!)
     expect(restoredPrompt).not.toHaveProperty('category')
-    expect(restoredPrompt).not.toHaveProperty('completedAt')
-    expect(restoredFolder.categoryOrder.categories[0]?.entries).toEqual([
+    expect(restoredPrompt).not.toHaveProperty('finalizedAt')
+    expect(
+      restoredFolder.statusFolders[PromptStatusFolderId.Active].categoryOrder
+        .categories[0]?.entries
+    ).toEqual([
       { kind: 'prompt', id: prompt.id }
     ])
   })
@@ -753,10 +912,16 @@ describe('shared domain mutation planners', () => {
   it('plans cross-root template movement and destination fallback resolution', () => {
     /** Source template root containing the blank-title template. */
     const source = createRootFolder('source', 'template', null)
-    source.categoryOrder.categories[0]!.entries.push({ kind: 'template', id: 'moving' })
+    getMarkdownContentCategoryOrder(source).categories[0]!.entries.push({
+      kind: 'template',
+      id: 'moving'
+    })
     /** Destination template root already containing the preferred fallback title. */
     const destination = createRootFolder('destination', 'template', null)
-    destination.categoryOrder.categories[0]!.entries.push({ kind: 'template', id: 'existing' })
+    getMarkdownContentCategoryOrder(destination).categories[0]!.entries.push({
+      kind: 'template',
+      id: 'existing'
+    })
     /** Shared template movement plan. */
     const plan = planPromptTemplateMove(
       createDomainState({

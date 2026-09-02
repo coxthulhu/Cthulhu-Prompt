@@ -5,7 +5,7 @@ import type {
 import type { Draft } from 'immer'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/promptFallbackTitle'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
+import { getOrderedMarkdownContentIds } from '@shared/MarkdownContent'
 import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import {
@@ -52,7 +52,7 @@ export const clearPromptTemplateClientStateCollection = clientState.clearClientS
 const getSiblingTemplateIds = (templateId: string): string[] => {
   for (const folder of promptFolderCollection.values()) {
     if (folder.kind !== 'template') continue
-    const templateIds = getActiveMarkdownContentIds(folder, 'template')
+    const templateIds = getOrderedMarkdownContentIds(folder, 'template')
     if (templateIds.includes(templateId)) return templateIds
   }
   return [templateId]

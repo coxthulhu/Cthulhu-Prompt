@@ -1048,18 +1048,23 @@ describe('Prompt categories', () => {
             id: PROMPT_ROOT_ID,
             revision: 1,
             data: expect.objectContaining({
-              categoryOrder: {
-                categories: [
-                  {
-                    categoryId: null,
-                    entries: [
-                      { kind: 'prompt', id: 'uncategorized-prompt' },
-                      { kind: 'prompt', id: 'unknown-category-prompt' },
-                      { kind: 'prompt', id: 'categorized-prompt' }
+              statusFolders: expect.objectContaining({
+                active: {
+                  ordering: 'category',
+                  categoryOrder: {
+                    categories: [
+                      {
+                        categoryId: null,
+                        entries: [
+                          { kind: 'prompt', id: 'uncategorized-prompt' },
+                          { kind: 'prompt', id: 'unknown-category-prompt' },
+                          { kind: 'prompt', id: 'categorized-prompt' }
+                        ]
+                      }
                     ]
                   }
-                ]
-              }
+                }
+              })
             })
           },
           { entityType: 'category', id: PROMPT_CATEGORY_ID, deleted: true },
@@ -1165,7 +1170,7 @@ describe('Prompt categories', () => {
           `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
         )
       )
-    ).toEqual(deletedCategoryRoot.data.categoryOrder)
+    ).toEqual(deletedCategoryRoot.data.statusFolders.active.categoryOrder)
   })
 
   test('clears prompt and template categories when moving content to another root', async ({

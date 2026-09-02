@@ -4,6 +4,10 @@ import type { PromptEntryRef, PromptTemplateEntryRef } from './OrderContainer'
 import type { RevisionEnvelope } from './Revision'
 import type { IpcResult } from './IpcResult'
 import type { MarkdownContentUiState } from './MarkdownContentUiState'
+import {
+  PROMPT_STATUS_FOLDERS,
+  PromptStatusFolderId
+} from './Prompt'
 
 export type PromptFolderKind = 'prompt' | 'template'
 
@@ -23,10 +27,54 @@ export type CategoryOrder = {
   categories: CategoryOrderGroup[]
 }
 
+/** Manually ordered prompt status-folder layout with independent category ordering. */
+export type OrderedPromptStatusFolderLayout = {
+  ordering: 'category'
+  categoryOrder: CategoryOrder
+}
+
+/** Automatically ordered prompt status-folder layout backed by discovered prompt IDs. */
+export type UnorderedPromptStatusFolderLayout = {
+  ordering: 'finalizedAt'
+  promptIds: string[]
+}
+
+/** Root prompt-folder layouts keyed by stable status-folder identity. */
+export type PromptStatusFolderLayouts = {
+  [PromptStatusFolderId.Active]: OrderedPromptStatusFolderLayout
+  [PromptStatusFolderId.Completed]: UnorderedPromptStatusFolderLayout
+}
+
+/** Optional initial data supplied when constructing registry-backed status-folder layouts. */
+export type PromptStatusFolderLayoutInitialData = {
+  categoryOrders?: Partial<Record<PromptStatusFolderId, CategoryOrder>>
+  promptIds?: Partial<Record<PromptStatusFolderId, string[]>>
+}
+
 /** Creates category ordering for a root folder with Uncategorized first. */
 export const createRootCategoryOrder = (): CategoryOrder => ({
   categories: [{ categoryId: null, entries: [] }]
 })
+
+/** Creates prompt status-folder layouts from the code-defined registry. */
+export const createPromptStatusFolderLayouts = ({
+  categoryOrders = {},
+  promptIds = {}
+}: PromptStatusFolderLayoutInitialData = {}): PromptStatusFolderLayouts =>
+  Object.fromEntries(
+    PROMPT_STATUS_FOLDERS.map((statusFolder) => [
+      statusFolder.id,
+      statusFolder.ordering === 'category'
+        ? {
+            ordering: 'category',
+            categoryOrder: categoryOrders[statusFolder.id] ?? createRootCategoryOrder()
+          }
+        : {
+            ordering: 'finalizedAt',
+            promptIds: promptIds[statusFolder.id] ?? []
+          }
+    ])
+  ) as PromptStatusFolderLayouts
 
 /** Returns the ordered category IDs owned by one root folder. */
 export const getCategoryOrderCategoryIds = (categoryOrder: CategoryOrder): string[] =>
@@ -181,21 +229,36 @@ interface PromptFolderBase {
   id: string
   folderName: string
   displayName: string
-  completedPromptIds: string[]
-  categoryOrder: CategoryOrder
 }
 
 export interface PromptContentFolder extends PromptFolderBase {
   kind: 'prompt'
   settings: PromptFolderSettings
+  statusFolders: PromptStatusFolderLayouts
 }
 
 export interface PromptTemplateFolder extends PromptFolderBase {
   kind: 'template'
   settings: PromptTemplateFolderSettings
+  categoryOrder: CategoryOrder
 }
 
 export type PromptFolder = PromptContentFolder | PromptTemplateFolder
+
+/** Returns every independently ordered category layout owned by one root folder. */
+export const getPromptFolderCategoryOrders = (promptFolder: PromptFolder): CategoryOrder[] =>
+  promptFolder.kind === 'template'
+    ? [promptFolder.categoryOrder]
+    : Object.values(promptFolder.statusFolders).flatMap((layout) =>
+        layout.ordering === 'category' ? [layout.categoryOrder] : []
+      )
+
+/** Returns unique root-owned category IDs across every ordered status folder. */
+export const getPromptFolderCategoryIds = (promptFolder: PromptFolder): string[] => [
+  ...new Set(
+    getPromptFolderCategoryOrders(promptFolder).flatMap(getCategoryOrderCategoryIds)
+  )
+]
 
 export const PROMPT_FOLDER_SETTINGS_FIELDS = ['folderDescription'] as const
 

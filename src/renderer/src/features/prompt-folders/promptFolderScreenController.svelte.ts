@@ -45,7 +45,10 @@ import {
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import type { Category } from '@shared/Category'
-import { getActiveMarkdownContentIds } from '@shared/MarkdownContent'
+import {
+  getMarkdownContentCategoryOrder,
+  getOrderedMarkdownContentIds
+} from '@shared/MarkdownContent'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
@@ -119,7 +122,7 @@ const BREADCRUMB_SAMPLE_OFFSET_PX = PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX + 4
 
 type PromptMetadata = {
   status: PromptStatus
-  completedAt: string | null
+  finalizedAt: string | null
 }
 
 export type MarkdownContentDraftRecord = {
@@ -321,7 +324,9 @@ export const createPromptFolderScreenController = ({
   /** Root-owned categories in FolderOrder order. */
   const categories = $derived.by(() =>
     screenRootFolder
-      ? getCategoryOrderCategoryIds(screenRootFolder.categoryOrder).flatMap((categoryId) => {
+      ? getCategoryOrderCategoryIds(
+          getMarkdownContentCategoryOrder(screenRootFolder)
+        ).flatMap((categoryId) => {
           const category = categoryById[categoryId]
           return category ? [category] : []
         })
@@ -331,16 +336,16 @@ export const createPromptFolderScreenController = ({
   const findContainingRootFolderId = (contentOwnerId: string): string =>
     categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
   const completedPrompts = $derived.by(() => {
-    if (!screenRootFolder || isTemplateFolder) return []
+    if (!screenRootFolder || screenRootFolder.kind === 'template') return []
 
     return collectCompletedPrompts({
       rootFolder: screenRootFolder,
       statusByPromptId: Object.fromEntries(
         promptQuery.data.flatMap((prompt) => (prompt ? [[prompt.id, prompt.status]] : []))
       ),
-      completedAtByPromptId: Object.fromEntries(
+      finalizedAtByPromptId: Object.fromEntries(
         promptQuery.data.flatMap((prompt) =>
-          prompt ? [[prompt.id, prompt.completedAt ?? null] as const] : []
+          prompt ? [[prompt.id, prompt.finalizedAt ?? null] as const] : []
         )
       )
     })
@@ -508,14 +513,14 @@ export const createPromptFolderScreenController = ({
       if (!prompt) continue
       metadataById[prompt.id] = {
         status: prompt.status,
-        completedAt: prompt.completedAt ?? null
+        finalizedAt: prompt.finalizedAt ?? null
       }
     }
     if (isTemplateFolder) {
       for (const template of promptTemplateQuery.data) {
         metadataById[template.id] = {
           status: PromptStatus.Todo,
-          completedAt: null
+          finalizedAt: null
         }
       }
     }
@@ -993,7 +998,7 @@ export const createPromptFolderScreenController = ({
       return false
     }
 
-    for (const promptId of getActiveMarkdownContentIds(
+    for (const promptId of getOrderedMarkdownContentIds(
       cachedPromptFolder,
       cachedPromptFolder.kind
     )) {
@@ -1324,7 +1329,7 @@ export const createPromptFolderScreenController = ({
     if (!screenRootFolder) return []
     /** Linear placement targets spanning Uncategorized and every category. */
     const targets: PromptHandleDropPayload[] = []
-    for (const group of screenRootFolder.categoryOrder.categories) {
+    for (const group of getMarkdownContentCategoryOrder(screenRootFolder).categories) {
       targets.push({
         folderId: screenRootFolder.id,
         categoryId: group.categoryId,
@@ -1347,7 +1352,9 @@ export const createPromptFolderScreenController = ({
 
   /** Returns active content IDs for one exact category group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
-    screenRootFolder?.categoryOrder.categories
+    (screenRootFolder
+      ? getMarkdownContentCategoryOrder(screenRootFolder).categories
+      : [])
       .find((group) => group.categoryId === categoryId)
       ?.entries.map((entry) => entry.id) ?? []
 

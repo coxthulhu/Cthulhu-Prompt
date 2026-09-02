@@ -1,5 +1,10 @@
 import * as path from 'path'
-import type { PromptPersisted, PromptSummaryData } from '@shared/Prompt'
+import {
+  PROMPT_STATUS_FOLDERS,
+  PromptStatusFolderId,
+  type PromptPersisted,
+  type PromptSummaryData
+} from '@shared/Prompt'
 import type {
   PromptTemplatePersisted,
   PromptTemplateSummaryData
@@ -18,7 +23,8 @@ import {
   type PromptFolder,
   type PromptFolderContentKind,
   type PromptFolderKind,
-  type PromptFolderSettings
+  type PromptFolderSettings,
+  type PromptStatusFolderLayouts
 } from '@shared/PromptFolder'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import type { PromptFolderInfoFile, WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
@@ -33,12 +39,11 @@ import {
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
-  resolveActivePromptFolderName,
+  resolvePromptStatusFolderName,
   resolvePromptFolderPath,
   resolvePromptRootDirectoryName,
   resolvePromptFolderInfoPath,
   resolvePromptFolderCategoryOrderPath,
-  resolveCompletedPromptFolderName,
   resolvePromptFolderSettingsTextPath,
   resolvePromptPathsFromStem,
   resolveCategoriesDirectoryPath,
@@ -81,12 +86,20 @@ const readOptionalTextFile = (filePath: string): string | null => {
 const readContentIds = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind
+  kind: PromptFolderKind,
+  statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): string[] => {
   const contentKind = kind
-  const activeFolderName = resolveActivePromptFolderName(folderName, kind)
-  const contentStemById = readContentStemById(workspacePath, activeFolderName, contentKind)
-  return readPromptFolderCategoryOrder(workspacePath, folderName, kind).categories
+  /** Physical ordered directory selected for prompts or the direct template root. */
+  const orderedFolderName =
+    kind === 'prompt' ? resolvePromptStatusFolderName(folderName, statusFolderId) : folderName
+  const contentStemById = readContentStemById(workspacePath, orderedFolderName, contentKind)
+  return readPromptFolderCategoryOrder(
+    workspacePath,
+    folderName,
+    kind,
+    statusFolderId
+  ).categories
     .flatMap((category) => category.entries)
     .filter((entry) => entry.kind === contentKind && contentStemById.has(entry.id))
     .map((entry) => entry.id)
@@ -257,7 +270,7 @@ export const readCategoryStemById = (
   return categoryStemById
 }
 
-/** Parsed active content used to repair category ordering and front matter together. */
+/** Parsed ordered content used to repair category ordering and front matter together. */
 type CategoryOrderContent = {
   entry: CategoryOrderEntryRef
   content: PromptPersisted | PromptTemplatePersisted
@@ -314,18 +327,21 @@ const readCategoryOrderFile = (
   return { categories }
 }
 
-/** Discovers all active content in the root's flat active directory. */
+/** Discovers all content in one ordered prompt status folder or template root. */
 const readRootCategoryOrderContents = (
   workspacePath: string,
   rootFolderName: string,
-  kind: PromptFolderContentKind
+  kind: PromptFolderContentKind,
+  statusFolderId: PromptStatusFolderId
 ): CategoryOrderContent[] => {
-  /** Filesystem used for active-content discovery. */
+  /** Filesystem used for ordered-content discovery. */
   const fs = getFs()
-  /** Physical root containing every active item covered by the category order. */
-  const activeRootPath = resolvePromptFolderPath(
+  /** Physical root containing every item covered by the category order. */
+  const orderedRootPath = resolvePromptFolderPath(
     workspacePath,
-    resolveActivePromptFolderName(rootFolderName, kind),
+    kind === 'prompt'
+      ? resolvePromptStatusFolderName(rootFolderName, statusFolderId)
+      : rootFolderName,
     kind
   )
   /** Filename suffix identifying the root's content kind. */
@@ -334,13 +350,13 @@ const readRootCategoryOrderContents = (
   /** First valid discovered record for each stable content ID. */
   const contentById = new Map<string, CategoryOrderContent>()
 
-  if (fs.existsSync(activeRootPath)) {
+  if (fs.existsSync(orderedRootPath)) {
     for (const entry of fs
-      .readdirSync(activeRootPath, { withFileTypes: true })
+      .readdirSync(orderedRootPath, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))) {
       if (!entry.isFile() || !entry.name.endsWith(filenameSuffix)) continue
-      /** Full path of one active prompt or template markdown file. */
-      const entryPath = path.join(activeRootPath, entry.name)
+      /** Full path of one ordered prompt or template markdown file. */
+      const entryPath = path.join(orderedRootPath, entry.name)
       /** Parsed content whose stable ID participates in category ordering. */
       const content =
         kind === 'prompt'
@@ -367,10 +383,16 @@ const readRootCategoryOrderContents = (
 export const readPromptFolderCategoryOrder = (
   workspacePath: string,
   rootFolderName: string,
-  kind: PromptFolderContentKind
+  kind: PromptFolderContentKind,
+  statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): CategoryOrder => {
   /** Canonical FolderOrder path for the root. */
-  const orderPath = resolvePromptFolderCategoryOrderPath(workspacePath, rootFolderName, kind)
+  const orderPath = resolvePromptFolderCategoryOrderPath(
+    workspacePath,
+    rootFolderName,
+    kind,
+    statusFolderId
+  )
   /** Filesystem used to read and repair category ordering. */
   const fs = getFs()
   /** Existing category order, or an empty starting point for first-time creation. */
@@ -381,8 +403,13 @@ export const readPromptFolderCategoryOrder = (
   const discoveredCategoryIds = [
     ...readCategoryStemById(workspacePath, rootFolderName, kind).keys()
   ]
-  /** Valid active content sorted by displayed name and stable ID. */
-  const discoveredContents = readRootCategoryOrderContents(workspacePath, rootFolderName, kind)
+  /** Valid ordered content sorted by displayed name and stable ID. */
+  const discoveredContents = readRootCategoryOrderContents(
+    workspacePath,
+    rootFolderName,
+    kind,
+    statusFolderId
+  )
   /** Discovered content lookup used to remove stale references. */
   const contentById = new Map(discoveredContents.map((content) => [content.entry.id, content]))
   /** Valid category membership lookup used to remove deleted groups. */
@@ -424,7 +451,7 @@ export const readPromptFolderCategoryOrder = (
   const newCategories = discoveredCategoryIds
     .filter((categoryId) => !retainedCategoryById.has(categoryId))
     .map((categoryId) => ({ categoryId, entries: [] as CategoryOrderEntryRef[] }))
-  /** Active content absent from the persisted file and appended alphabetically to Uncategorized. */
+  /** Ordered content absent from the persisted file and appended alphabetically to Uncategorized. */
   const missingEntries = discoveredContents
     .filter((content) => !acceptedContentIds.has(content.entry.id))
     .map((content) => content.entry)
@@ -473,39 +500,52 @@ export const readPromptFolder = (
   const folderDescription = readOptionalTextFile(
     resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
   )
-  const completedPromptIds =
-    kind === 'prompt' && folderName === folderPath
-      ? [
-          ...readPromptStemByPromptId(
-            workspacePath,
-            resolveCompletedPromptFolderName(folderPath, kind)
-          ).keys()
-        ]
-      : []
-  /** Root-owned category ordering. */
-  const categoryOrder = readPromptFolderCategoryOrder(workspacePath, folderPath, kind)
-
   const baseFolder = {
     id: info.folderId,
     folderName,
-    displayName: info.displayName,
-    completedPromptIds,
-    categoryOrder
+    displayName: info.displayName
   }
 
   if (kind === 'template') {
     return {
       ...baseFolder,
       kind,
+      categoryOrder: readPromptFolderCategoryOrder(workspacePath, folderPath, kind),
       settings: { folderDescription }
     }
   }
 
   const folderSettings: PromptFolderSettings = { folderDescription }
+  /** Registry-backed prompt status-folder layouts loaded from their physical directories. */
+  const statusFolders = Object.fromEntries(
+    PROMPT_STATUS_FOLDERS.map((statusFolder) => [
+      statusFolder.id,
+      statusFolder.ordering === 'category'
+        ? {
+            ordering: 'category' as const,
+            categoryOrder: readPromptFolderCategoryOrder(
+              workspacePath,
+              folderPath,
+              kind,
+              statusFolder.id
+            )
+          }
+        : {
+            ordering: 'finalizedAt' as const,
+            promptIds: [
+              ...readPromptStemByPromptId(
+                workspacePath,
+                resolvePromptStatusFolderName(folderPath, statusFolder.id)
+              ).keys()
+            ]
+          }
+    ])
+  ) as PromptStatusFolderLayouts
 
   return {
     ...baseFolder,
     kind,
+    statusFolders,
     settings: copyPromptFolderSettings(folderSettings)
   }
 }
@@ -518,10 +558,14 @@ const readMarkdownContents = <TContent>(
 ): TContent[] => {
   const fs = getFs()
   const contentKind = folderKind
-  const activeFolderName = resolveActivePromptFolderName(folderName, folderKind)
+  /** Ordered source directory used by this active-compatible reader. */
+  const orderedFolderName =
+    folderKind === 'prompt'
+      ? resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
+      : folderName
   const contentIds = readContentIds(workspacePath, folderName, folderKind)
-  const contentStemById = readContentStemById(workspacePath, activeFolderName, contentKind)
-  const folderPath = resolvePromptFolderPath(workspacePath, activeFolderName, folderKind)
+  const contentStemById = readContentStemById(workspacePath, orderedFolderName, contentKind)
+  const folderPath = resolvePromptFolderPath(workspacePath, orderedFolderName, folderKind)
   const contents: TContent[] = []
   for (const contentId of contentIds) {
     const contentStem = contentStemById.get(contentId)
@@ -562,7 +606,7 @@ export const readPromptSummaries = (
     fallbackTitle: prompt.fallbackTitle,
     modifiedAt: prompt.modifiedAt,
     status: prompt.status,
-    ...(prompt.completedAt ? { completedAt: prompt.completedAt } : {})
+    ...(prompt.finalizedAt ? { finalizedAt: prompt.finalizedAt } : {})
   }))
 }
 

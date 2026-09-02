@@ -14,6 +14,7 @@ import { movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutat
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { PromptStatus } from '@shared/Prompt'
+import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptFolders: () => PromptFolder[]
@@ -31,7 +32,7 @@ const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): Prom
 
 /** Finds the exact category group containing an active prompt or template. */
 const findEntryCategoryId = (promptFolder: PromptFolder, entryId: string): string | null =>
-  promptFolder.categoryOrder.categories.find((group) =>
+  getMarkdownContentCategoryOrder(promptFolder).categories.find((group) =>
     group.entries.some((entry) => entry.id === entryId)
   )?.categoryId ?? null
 
@@ -40,7 +41,7 @@ const getCategoryEntryIds = (
   promptFolder: PromptFolder,
   categoryId: string | null
 ): string[] =>
-  promptFolder.categoryOrder.categories
+  getMarkdownContentCategoryOrder(promptFolder).categories
     .find((group) => group.categoryId === categoryId)
     ?.entries.filter((entry) => entry.kind === promptFolder.kind)
     .map((entry) => entry.id) ?? []

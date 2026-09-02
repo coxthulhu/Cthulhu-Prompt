@@ -1,34 +1,37 @@
+import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
+import { isFinalPromptStatus, PromptStatusFolderId } from '@shared/Prompt'
 import {
-  getCategoryOrderCategoryIds,
-  type PromptFolder
-} from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
+  getMarkdownContentIds,
+  getOrderedMarkdownContentIds
+} from '@shared/MarkdownContent'
 import { promptCollection } from './PromptCollection'
 
-export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] => [
-  ...promptFolder.categoryOrder.categories.flatMap((category) =>
-    category.entries.filter((entry) => entry.kind === 'prompt').map((entry) => entry.id)
-  ),
-  ...promptFolder.completedPromptIds
-]
+export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] =>
+  promptFolder.kind === 'prompt' ? getMarkdownContentIds(promptFolder, 'prompt') : []
 
 export const isPromptFolderEmpty = (promptFolder: PromptFolder): boolean =>
-  promptFolder.categoryOrder.categories.every((category) => category.entries.length === 0) &&
-  promptFolder.completedPromptIds.length === 0 &&
-  getCategoryOrderCategoryIds(promptFolder.categoryOrder).length === 0 &&
+  getMarkdownContentIds(promptFolder, promptFolder.kind).length === 0 &&
+  getPromptFolderCategoryIds(promptFolder).length === 0 &&
   Object.values(promptFolder.settings).every((value) => (value ?? '').trim().length === 0)
 
 export const getPromptFolderPromptIds = (promptFolder: PromptFolder): string[] => {
   return getPromptFolderAllPromptIds(promptFolder).filter(
-    (promptId) => promptCollection.get(promptId)?.status !== PromptStatus.Completed
+    (promptId) => {
+      /** Loaded prompt used to exclude registry-defined final statuses. */
+      const prompt = promptCollection.get(promptId)
+      return prompt ? !isFinalPromptStatus(prompt.status) : false
+    }
   )
 }
 
-export const getPromptFolderCompletedPromptIds = (promptFolder: PromptFolder): string[] => [
-  ...promptFolder.completedPromptIds
-]
-
 export const getPromptFolderActiveEntryIds = (promptFolder: PromptFolder): string[] =>
-  promptFolder.categoryOrder.categories.flatMap((category) => category.entries).flatMap((entry) => {
-    return promptCollection.get(entry.id)?.status === PromptStatus.Completed ? [] : [entry.id]
+  getOrderedMarkdownContentIds(
+    promptFolder,
+    promptFolder.kind,
+    PromptStatusFolderId.Active
+  ).flatMap((entryId) => {
+    if (promptFolder.kind === 'template') return [entryId]
+    /** Loaded prompt used to exclude registry-defined final statuses. */
+    const prompt = promptCollection.get(entryId)
+    return prompt && isFinalPromptStatus(prompt.status) ? [] : [entryId]
   })

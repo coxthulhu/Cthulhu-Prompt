@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DomainState } from '@shared/DomainChanges'
+import { PromptStatusFolderId } from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 
 /** Ordered persistence events shared by filesystem and SQLite transaction mocks. */
 const persistenceEvents = vi.hoisted(() => [] as string[])
@@ -399,8 +401,11 @@ describe('atomic data transaction', () => {
       kind: 'prompt' as const,
       folderName: 'Root',
       displayName: 'Root',
-      completedPromptIds: [],
-      categoryOrder: { categories: [{ categoryId: null, entries: [] }] },
+      statusFolders: createPromptStatusFolderLayouts({
+        categoryOrders: {
+          [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
+        }
+      }),
       settings: { folderDescription: null }
     }
     mockTransactionState.seedEntry('workspace', workspace.id, {
@@ -474,13 +479,16 @@ describe('atomic data transaction', () => {
       kind: 'prompt' as const,
       folderName: 'Root',
       displayName: 'Root',
-      completedPromptIds: [],
-      categoryOrder: {
-        categories: [
-          { categoryId: null, entries: [] },
-          { categoryId: 'category', entries: [{ kind: 'prompt' as const, id: 'prompt' }] }
-        ]
-      },
+      statusFolders: createPromptStatusFolderLayouts({
+        categoryOrders: {
+          [PromptStatusFolderId.Active]: {
+            categories: [
+              { categoryId: null, entries: [] },
+              { categoryId: 'category', entries: [{ kind: 'prompt' as const, id: 'prompt' }] }
+            ]
+          }
+        }
+      }),
       settings: { folderDescription: null }
     }
     /** Category stored beneath the renamed root. */
@@ -606,7 +614,6 @@ describe('atomic data transaction', () => {
       kind: 'template' as const,
       folderName: 'Templates',
       displayName: 'Templates',
-      completedPromptIds: [],
       categoryOrder: {
         categories: [
           {

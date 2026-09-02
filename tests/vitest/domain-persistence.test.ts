@@ -6,8 +6,11 @@ import type {
 import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
 import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
 import { planPromptMove } from '@shared/MarkdownContentDomainMutations'
-import { PromptStatus } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
+import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import {
+  createPromptStatusFolderLayouts,
+  type PromptFolder
+} from '@shared/PromptFolder'
 import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
 
 /** Hoisted authoritative stores used by the main persistence planner. */
@@ -98,20 +101,31 @@ const createRootFolder = (
   kind: PromptFolder['kind'],
   entries: Array<{ kind: PromptFolder['kind']; id: string }>,
   categoryIds: string[] = []
-): PromptFolder => ({
-  id,
-  kind,
-  folderName: id,
-  displayName: id,
-  completedPromptIds: [],
-  categoryOrder: {
+): PromptFolder => {
+  /** Category order shared by the selected prompt status folder or template root. */
+  const categoryOrder = {
     categories: [
       { categoryId: null, entries },
       ...categoryIds.map((categoryId) => ({ categoryId, entries: [] }))
     ]
-  },
-  settings: { folderDescription: null }
-})
+  }
+  /** Common root fields shared across the prompt/template union. */
+  const baseFolder = {
+    id,
+    folderName: id,
+    displayName: id,
+    settings: { folderDescription: null }
+  }
+  return kind === 'prompt'
+    ? {
+        ...baseFolder,
+        kind,
+        statusFolders: createPromptStatusFolderLayouts({
+          categoryOrders: { [PromptStatusFolderId.Active]: categoryOrder }
+        })
+      }
+    : { ...baseFolder, kind, categoryOrder }
+}
 
 /** Creates persistence fields for one root folder. */
 const createFolderPersistenceFields = (folderPath: string, kind: PromptFolder['kind']) => ({
@@ -151,8 +165,9 @@ describe('domain persistence planning', () => {
         ['category']
       )
       if (location === 'completed') {
-        root.categoryOrder.categories[0]!.entries = []
-        root.completedPromptIds = ['content']
+        if (root.kind !== 'prompt') throw new Error('Expected prompt root')
+        root.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[0]!.entries = []
+        root.statusFolders[PromptStatusFolderId.Completed].promptIds = ['content']
       }
       /** Workspace establishing root ownership for canonical storage derivation. */
       const workspace = {
@@ -173,7 +188,9 @@ describe('domain persistence planning', () => {
               createdAt: 'created',
               modifiedAt: 'modified',
               promptText: 'content',
-              status: PromptStatus.Todo
+              status:
+                location === 'completed' ? PromptStatus.Completed : PromptStatus.Todo,
+              ...(location === 'completed' ? { finalizedAt: 'finalized' } : {})
             }
           : {
               id: 'content',

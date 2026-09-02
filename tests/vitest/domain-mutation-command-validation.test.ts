@@ -21,7 +21,7 @@ import {
   parseRenamePromptFolderDomainCommand
 } from '@shared/PromptFolderDomainMutations'
 import { parseSetPromptStatusDomainCommand } from '@shared/PromptDomainMutations'
-import { PromptStatus } from '@shared/Prompt'
+import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
 import { parseSetSystemSettingsDomainCommand } from '@shared/SystemSettingsDomainMutations'
 
 describe('domain mutation command validation', () => {
@@ -98,6 +98,7 @@ describe('domain mutation command validation', () => {
     const moveCommand = {
       promptFolderId: 'root',
       categoryId: 'category',
+      statusFolderId: PromptStatusFolderId.Active,
       previousCategoryId: null
     }
     expect(parseRenameCategoryDomainCommand(renameCommand)).toEqual(renameCommand)

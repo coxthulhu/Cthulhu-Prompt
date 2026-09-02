@@ -38,7 +38,7 @@
     deleteLabel,
     deleteDialogTitle,
     deleteDialogDescription,
-    completedAt,
+    finalizedAt,
     status = PromptStatus.Todo,
     isEdited = false,
     titleAreaHeightPx,
@@ -78,7 +78,7 @@
     {deleteLabel}
     {deleteDialogTitle}
     {deleteDialogDescription}
-    {completedAt}
+    {finalizedAt}
     {status}
     {isEdited}
     {compactLayout}

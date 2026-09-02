@@ -30,7 +30,7 @@
     deleteLabel?: string
     deleteDialogTitle?: string
     deleteDialogDescription?: string
-    completedAt?: string | null
+    finalizedAt?: string | null
     status?: import('@shared/Prompt').PromptStatus
     isEdited?: boolean
     compactLayout?: boolean
@@ -78,7 +78,7 @@
     deleteLabel = 'Delete prompt',
     deleteDialogTitle = 'Delete Prompt',
     deleteDialogDescription = 'Are you sure you want to delete this prompt?',
-    completedAt = null,
+    finalizedAt = null,
     status = PromptStatus.Todo,
     isEdited = false,
     compactLayout = false
@@ -109,12 +109,12 @@
   )
   const modifiedFullLabel = $derived(modifiedAt ? formatPromptModifiedFull(modifiedAt) : '')
   const completedRelativeLabel = $derived(
-    completedAt ? formatPromptModifiedRelative(completedAt, nowMs) : ''
+    finalizedAt ? formatPromptModifiedRelative(finalizedAt, nowMs) : ''
   )
   const completedLabel = $derived(
     completedRelativeLabel ? `Completed ${completedRelativeLabel}` : ''
   )
-  const completedFullLabel = $derived(completedAt ? formatPromptModifiedFull(completedAt) : '')
+  const completedFullLabel = $derived(finalizedAt ? formatPromptModifiedFull(finalizedAt) : '')
   // Side effect: keep the relative modified label fresh while the prompt folder stays open.
   onMount(() => {
     const intervalId = window.setInterval(() => {
@@ -261,7 +261,7 @@
           <SeparatorDot />
         {/if}
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
-        {#if completedAt}
+        {#if finalizedAt}
           <SeparatorDot />
           <span data-testid="prompt-completed-time" title={completedFullLabel}>
             {completedLabel}

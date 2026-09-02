@@ -43,9 +43,10 @@
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
-  import { PromptStatus, type Prompt } from '@shared/Prompt'
+  import { PromptStatus, PromptStatusFolderId, type Prompt } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import { getCategoryOrderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
+  import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type { Category } from '@shared/Category'
   import type { Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
@@ -242,7 +243,7 @@
       let promptCount = 0
       let newestModifiedAt: string | null = null
 
-      for (const entry of promptFolder.categoryOrder.categories.flatMap((group) => group.entries)) {
+      for (const entry of getMarkdownContentCategoryOrder(promptFolder).categories.flatMap((group) => group.entries)) {
 
         promptCount += 1
         const modifiedAt =
@@ -303,7 +304,9 @@
     if (!screenRootFolder) return []
 
     const categoryById = new Map(categoryQuery.data.map((category) => [category.id, category]))
-    return getCategoryOrderCategoryIds(screenRootFolder.categoryOrder).flatMap((categoryId) => {
+    return getCategoryOrderCategoryIds(
+      getMarkdownContentCategoryOrder(screenRootFolder)
+    ).flatMap((categoryId) => {
       const category = categoryById.get(categoryId)
       return category ? [category] : []
     })
@@ -352,7 +355,7 @@
     const statusByPromptId = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt.status]))
     /** Number of loaded non-completed prompts in active folder order. */
     let active = 0
-    for (const group of screenRootFolder.categoryOrder.categories) {
+    for (const group of getMarkdownContentCategoryOrder(screenRootFolder).categories) {
       for (const entry of group.entries) {
         if (
           entry.kind === 'prompt' &&
@@ -365,7 +368,9 @@
     }
 
     /** Number of loaded completed prompts owned by the selected root folder. */
-    const completed = screenRootFolder.completedPromptIds.filter(
+    const completed = screenRootFolder.statusFolders[
+      PromptStatusFolderId.Completed
+    ].promptIds.filter(
       (promptId) => statusByPromptId.get(promptId) === PromptStatus.Completed
     ).length
     return { active, completed }

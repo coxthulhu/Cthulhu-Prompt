@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPromptSummary, PromptStatus } from '@shared/Prompt'
+import { createPromptSummary, PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
@@ -34,16 +35,19 @@ const promptFolder = (
   kind: 'prompt' as const,
   folderName: id,
   displayName: id,
-  completedPromptIds: [],
-  categoryOrder: {
-    categories: [
-      {
-        categoryId: null,
-        entries: promptIds.map((promptId) => ({ kind: 'prompt' as const, id: promptId }))
-      },
-      ...(categoryId === null ? [] : [{ categoryId, entries: [] }])
-    ]
-  },
+  statusFolders: createPromptStatusFolderLayouts({
+    categoryOrders: {
+      [PromptStatusFolderId.Active]: {
+        categories: [
+          {
+            categoryId: null,
+            entries: promptIds.map((promptId) => ({ kind: 'prompt' as const, id: promptId }))
+          },
+          ...(categoryId === null ? [] : [{ categoryId, entries: [] }])
+        ]
+      }
+    }
+  }),
   settings: { folderDescription: null }
 })
 
@@ -116,8 +120,13 @@ describe('prompt mutations', () => {
       }
     })
 
-    expect(source.categoryOrder.categories[0]?.entries).toEqual([])
-    expect(destination.categoryOrder.categories[1]?.entries).toEqual([
+    expect(
+      source.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[0]?.entries
+    ).toEqual([])
+    expect(
+      destination.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
+        ?.entries
+    ).toEqual([
       { kind: 'prompt', id: PROMPT_ID }
     ])
     expect(prompt.category).toBe(DESTINATION_CATEGORY_ID)
@@ -195,9 +204,14 @@ describe('prompt mutations', () => {
     })
 
     expect(prompt.status).toBe(PromptStatus.Completed)
-    expect(prompt).toHaveProperty('completedAt')
-    expect(source.categoryOrder.categories[0]?.entries).toEqual([])
-    expect(destination.completedPromptIds).toEqual([PROMPT_ID])
+    expect(prompt).toHaveProperty('finalizedAt')
+    expect(
+      source.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[0]
+        ?.entries
+    ).toEqual([])
+    expect(destination.statusFolders[PromptStatusFolderId.Completed].promptIds).toEqual([
+      PROMPT_ID
+    ])
     expect(promptClientState).toEqual({ id: PROMPT_ID, isEdited: true })
 
     /** Generic invoke spy captures the status command and derived revisions. */

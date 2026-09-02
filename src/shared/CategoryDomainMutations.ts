@@ -12,11 +12,12 @@ import {
 } from './Category'
 import {
   deleteCategoryOrderGroup,
-  getCategoryOrderCategoryIds,
+  getPromptFolderCategoryIds,
   insertCategoryOrderGroup,
   moveCategoryOrderGroup,
   type PromptFolder
 } from './PromptFolder'
+import { isPromptStatusFolderId, PromptStatusFolderId } from './Prompt'
 import {
   createCategoryDescriptionEditorUiStateKey,
   createWorkspacePromptFolderUiStateKey,
@@ -75,6 +76,7 @@ export type SetCategoryDescriptionDomainCommand = {
 /** Renderer-authored command for reordering one category group. */
 export type MoveCategoryDomainCommand = {
   promptFolderId: string
+  statusFolderId: PromptStatusFolderId | null
   categoryId: string
   previousCategoryId: string | null
 }
@@ -145,8 +147,9 @@ export const parseMoveCategoryDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 3 ||
+    Object.keys(record).length !== 4 ||
     typeof record.promptFolderId !== 'string' ||
+    (record.statusFolderId !== null && !isPromptStatusFolderId(record.statusFolderId)) ||
     typeof record.categoryId !== 'string' ||
     (record.previousCategoryId !== null && typeof record.previousCategoryId !== 'string')
   ) {
@@ -154,6 +157,7 @@ export const parseMoveCategoryDomainCommand = (
   }
   return {
     promptFolderId: record.promptFolderId,
+    statusFolderId: record.statusFolderId,
     categoryId: record.categoryId,
     previousCategoryId: record.previousCategoryId
   }
@@ -191,7 +195,7 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
   ]
   /** Categories currently owned by the requested root folder. */
   const categories = promptFolder
-    ? getCategoryOrderCategoryIds(promptFolder.categoryOrder).flatMap((categoryId) => {
+    ? getPromptFolderCategoryIds(promptFolder).flatMap((categoryId) => {
         /** Loaded category associated with one ordered group. */
         const category = state.get('category', categoryId)
         return category ? [category] : []
@@ -216,7 +220,18 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
       entityType: 'promptFolder',
       id: promptFolder.id,
       recipe: (draft) => {
-        draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, category.id)
+        if (draft.kind === 'template') {
+          draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, category.id)
+          return
+        }
+        for (const layout of Object.values(draft.statusFolders)) {
+          if (layout.ordering === 'category') {
+            layout.categoryOrder = insertCategoryOrderGroup(
+              layout.categoryOrder,
+              category.id
+            )
+          }
+        }
       }
     },
     { type: 'insert', entityType: 'category', id: category.id, data: category }
@@ -260,7 +275,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   const owningFolder = state
     .getAll('promptFolder')
     .find((folder) =>
-      getCategoryOrderCategoryIds(folder.categoryOrder).includes(command.categoryId)
+      getPromptFolderCategoryIds(folder).includes(command.categoryId)
     )
   /** Workspace that owns the category's root prompt folder. */
   const workspace = state
@@ -291,10 +306,21 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       entityType: 'promptFolder',
       id: owningFolder.id,
       recipe: (draft) => {
-        draft.categoryOrder = deleteCategoryOrderGroup(
-          draft.categoryOrder,
-          command.categoryId
-        )
+        if (draft.kind === 'template') {
+          draft.categoryOrder = deleteCategoryOrderGroup(
+            draft.categoryOrder,
+            command.categoryId
+          )
+          return
+        }
+        for (const layout of Object.values(draft.statusFolders)) {
+          if (layout.ordering === 'category') {
+            layout.categoryOrder = deleteCategoryOrderGroup(
+              layout.categoryOrder,
+              command.categoryId
+            )
+          }
+        }
       }
     },
     { type: 'delete', entityType: 'category', id: command.categoryId }
@@ -416,14 +442,14 @@ export const planRenameCategoryDomainMutation: DomainPlanner<
   /** Root folder currently owning the selected category. */
   const owningFolder = state
     .getAll('promptFolder')
-    .find((folder) => getCategoryOrderCategoryIds(folder.categoryOrder).includes(command.categoryId))
+    .find((folder) => getPromptFolderCategoryIds(folder).includes(command.categoryId))
   /** Stable target returned for any rename conflict. */
   const targets: DomainTarget[] = [{ entityType: 'category', id: command.categoryId }]
   /** Normalized display name shared by renderer and main projections. */
   const displayName = normalizeCategoryDisplayName(command.displayName)
   /** Loaded sibling categories participating in name-conflict validation. */
   const siblings = owningFolder
-    ? getCategoryOrderCategoryIds(owningFolder.categoryOrder).flatMap((categoryId) => {
+    ? getPromptFolderCategoryIds(owningFolder).flatMap((categoryId) => {
         /** Loaded category referenced by one sibling group. */
         const sibling = state.get('category', categoryId)
         return sibling ? [sibling] : []
@@ -486,10 +512,25 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
   ]
   if (!promptFolder) return createConflict('Category move conflict', targets)
 
+  /** Category order selected by the template root or prompt status-folder identity. */
+  const currentCategoryOrder =
+    promptFolder.kind === 'template'
+      ? command.statusFolderId === null
+        ? promptFolder.categoryOrder
+        : null
+      : command.statusFolderId === null
+        ? null
+        : (() => {
+            /** Prompt status-folder layout selected for category movement. */
+            const layout = promptFolder.statusFolders[command.statusFolderId]
+            return layout.ordering === 'category' ? layout.categoryOrder : null
+          })()
+  if (!currentCategoryOrder) return createConflict('Category move conflict', targets)
+
   try {
     /** Validated category order projected before constructing the shared recipe. */
     const categoryOrder = moveCategoryOrderGroup(
-      promptFolder.categoryOrder,
+      currentCategoryOrder,
       command.categoryId,
       command.previousCategoryId
     )
@@ -499,7 +540,13 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
         entityType: 'promptFolder',
         id: command.promptFolderId,
         recipe: (draft) => {
-          draft.categoryOrder = categoryOrder
+          if (draft.kind === 'template') {
+            draft.categoryOrder = categoryOrder
+          } else if (command.statusFolderId !== null) {
+            /** Ordered draft layout selected by the validated command identity. */
+            const layout = draft.statusFolders[command.statusFolderId]
+            if (layout.ordering === 'category') layout.categoryOrder = categoryOrder
+          }
         }
       }
     ]

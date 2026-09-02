@@ -7,6 +7,8 @@ import {
 } from '@shared/MarkdownContentDomainMutations'
 import {
   isPromptFull,
+  getPromptStatusFolderDefinition,
+  isFinalPromptStatus,
   PromptStatus,
   type PromptCategoryOrderPlacement,
   type PromptFull,
@@ -31,8 +33,8 @@ const toPersisted = (prompt: PromptFull): PromptPersisted => ({
   promptText: prompt.promptText,
   ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
   status: prompt.status,
-  ...(prompt.status === PromptStatus.Completed && prompt.completedAt
-    ? { completedAt: prompt.completedAt }
+  ...(isFinalPromptStatus(prompt.status) && prompt.finalizedAt
+    ? { finalizedAt: prompt.finalizedAt }
     : {})
 })
 
@@ -126,11 +128,17 @@ export const setPromptStatus = async (
   /** Canonical renderer prompt used for the optimistic status projection. */
   const prompt = promptCollection.get(promptId)
   if (!prompt) throw new Error('Prompt not loaded')
-  /** Current Active-tree group used when a status-button change does not request a new placement. */
-  const currentCategoryGroup = sourcePromptFolder.categoryOrder.categories.find((group) =>
-    group.entries.some((entry) => entry.kind === 'prompt' && entry.id === promptId)
-  )
-  /** Current prompt index used to retain its exact Active-tree predecessor. */
+  /** Source status-folder layout selected from the prompt's canonical current status. */
+  const sourceStatusLayout =
+    sourcePromptFolder.statusFolders[getPromptStatusFolderDefinition(prompt.status).id]
+  /** Current ordered group used when a status change does not request a new placement. */
+  const currentCategoryGroup =
+    sourceStatusLayout.ordering === 'category'
+      ? sourceStatusLayout.categoryOrder.categories.find((group) =>
+          group.entries.some((entry) => entry.kind === 'prompt' && entry.id === promptId)
+        )
+      : undefined
+  /** Current prompt index used to retain its exact ordered predecessor. */
   const currentEntryIndex =
     currentCategoryGroup?.entries.findIndex(
       (entry) => entry.kind === 'prompt' && entry.id === promptId
@@ -145,10 +153,15 @@ export const setPromptStatus = async (
         previousEntryId:
           currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
       } satisfies PromptCategoryOrderPlacement)
-    /** Whether the requested category still belongs to the destination root folder. */
-    const hasCategory = destinationPromptFolder.categoryOrder.categories.some(
-      (group) => group.categoryId === placement.categoryId
-    )
+    /** Destination status-folder layout selected from the requested status. */
+    const destinationStatusLayout =
+      destinationPromptFolder.statusFolders[getPromptStatusFolderDefinition(targetStatus).id]
+    /** Whether the requested category still belongs to the ordered destination folder. */
+    const hasCategory =
+      destinationStatusLayout.ordering === 'category' &&
+      destinationStatusLayout.categoryOrder.categories.some(
+        (group) => group.categoryId === placement.categoryId
+      )
     return hasCategory ? placement : { categoryId: null, previousEntryId: null }
   })()
   /** Shared prompt-status command projected in both processes. */

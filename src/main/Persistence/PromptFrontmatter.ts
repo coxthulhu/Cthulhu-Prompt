@@ -1,5 +1,7 @@
 import matter from 'gray-matter'
 import {
+  isFinalPromptStatus,
+  isPromptStatus,
   PromptStatus,
   type PromptPersisted,
   type PromptTemplateReference
@@ -15,10 +17,11 @@ type PromptSelectionFrontmatterData =
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'category'> &
   PromptSelectionFrontmatterData &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
-  (
-    | { status: PromptStatus.Completed; completedAt: string }
-    | { status: PromptStatus.Todo | PromptStatus.InProgress; completedAt?: never }
-  )
+  {
+    status: PromptStatus
+    finalizedAt?: string
+    completedAt?: string
+  }
 
 type PromptTemplateFrontmatterData = Pick<
   PromptTemplatePersisted,
@@ -36,6 +39,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   const hasTitle = keys.includes('title')
   const hasFallbackTitle = keys.includes('fallbackTitle')
   const hasStatus = keys.includes('status')
+  const hasFinalizedAt = keys.includes('finalizedAt')
   const hasCompletedAt = keys.includes('completedAt')
   const hasTemplates = keys.includes('templates')
   const hasLegacyTemplateId = keys.includes('templateId')
@@ -48,6 +52,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     ...(hasLegacyTemplateId ? ['templateId'] : []),
     ...(hasCategory ? ['category'] : []),
     'status',
+    ...(hasFinalizedAt ? ['finalizedAt'] : []),
     ...(hasCompletedAt ? ['completedAt'] : [])
   ])
   if (
@@ -65,8 +70,9 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     return false
   }
 
-  const hasCompletedStatus = frontmatter.status === PromptStatus.Completed
-  if (hasCompletedStatus !== hasCompletedAt) {
+  if (!isPromptStatus(frontmatter.status)) return false
+  const hasFinalStatus = isFinalPromptStatus(frontmatter.status)
+  if (hasFinalStatus !== (hasFinalizedAt || hasCompletedAt) || (hasFinalizedAt && hasCompletedAt)) {
     return false
   }
 
@@ -91,9 +97,9 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
-    (frontmatter.status === PromptStatus.Todo ||
-      frontmatter.status === PromptStatus.InProgress ||
-      (hasCompletedStatus && typeof frontmatter.completedAt === 'string'))
+    (!hasFinalStatus ||
+      typeof frontmatter.finalizedAt === 'string' ||
+      typeof frontmatter.completedAt === 'string')
   )
 }
 
@@ -193,39 +199,36 @@ export const parsePromptMarkdown = (
         ? { templates: data.templateId === null ? null : [{ id: data.templateId }] }
         : {}),
     status: data.status,
-    ...(data.status === PromptStatus.Completed ? { completedAt: data.completedAt } : {})
+    ...(isFinalPromptStatus(data.status)
+      ? { finalizedAt: data.finalizedAt ?? data.completedAt }
+      : {})
   }))
 
 export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
   const baseMetadata = createTitleMetadata(prompt)
-  const metadata: PromptFrontmatterData =
-    prompt.status === PromptStatus.Completed && prompt.completedAt
-      ? {
-          ...baseMetadata,
-          ...(prompt.category !== undefined ? { category: prompt.category } : {}),
-          ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
-          status: PromptStatus.Completed,
-          completedAt: prompt.completedAt
-        }
-      : {
-          ...baseMetadata,
-          ...(prompt.category !== undefined ? { category: prompt.category } : {}),
-          ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
-          status:
-            prompt.status === PromptStatus.InProgress ? PromptStatus.InProgress : PromptStatus.Todo
-        }
+  /** Registry-compatible metadata preserving the exact current prompt status. */
+  const metadata: PromptFrontmatterData = {
+    ...baseMetadata,
+    ...(prompt.category !== undefined ? { category: prompt.category } : {}),
+    ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
+    status: prompt.status,
+    ...(isFinalPromptStatus(prompt.status) && prompt.finalizedAt
+      ? { finalizedAt: prompt.finalizedAt }
+      : {})
+  }
   return serializeMarkdownContent(metadata, prompt.promptText)
 }
 
-// Detects legacy prompt template metadata so startup rewrites only files that need migration.
-export const promptMarkdownHasLegacyTemplateId = (fileText: string): boolean => {
+// Detects legacy prompt metadata so startup rewrites only files that need migration.
+export const promptMarkdownNeedsStartupMigration = (fileText: string): boolean => {
   try {
     const parsed = matter(fileText, {})
     return (
       typeof parsed.data === 'object' &&
       parsed.data !== null &&
       !Array.isArray(parsed.data) &&
-      Object.keys(parsed.data).includes('templateId')
+      (Object.keys(parsed.data).includes('templateId') ||
+        Object.keys(parsed.data).includes('completedAt'))
     )
   } catch {
     return false

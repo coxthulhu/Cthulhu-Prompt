@@ -98,7 +98,7 @@ const buildCompletedTreeWorkspace = (): Record<string, string | null> => {
         title: `Completed Tree Prompt ${index}`,
         promptText: `Completed prompt body ${index}.`,
         status: PromptStatus.Completed,
-        completedAt: `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`
+        finalizedAt: `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`
       }))
     }
   ])

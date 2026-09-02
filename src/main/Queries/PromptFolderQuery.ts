@@ -3,8 +3,8 @@ import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
 } from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
-import { getCategoryOrderCategoryIds } from '@shared/PromptFolder'
+import { isFinalPromptStatus, PromptStatus } from '@shared/Prompt'
+import { getPromptFolderCategoryIds } from '@shared/PromptFolder'
 import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
 import { data } from '../Data/Data'
 import {
@@ -41,14 +41,17 @@ export const loadPromptFolderInitialData = async (
     const promptFolders = promptFolderEntries.map(buildPromptFolderSnapshot)
     /** Root-owned category snapshots needed by prompt and template metadata rows. */
     const categories = getLoadedCategoryEntries(
-      getCategoryOrderCategoryIds(promptFolderEntry.committed.categoryOrder)
+      getPromptFolderCategoryIds(promptFolderEntry.committed)
     ).map(buildCategorySnapshot)
     const { promptIds, promptTemplateIds, prompts, promptTemplates } =
       loadPromptFolderMarkdownContents(promptFolders)
     const contentIds = [
       ...promptIds.filter(
         (promptId) =>
-          data.prompt.committedStore.getEntry(promptId)?.committed.status !== PromptStatus.Completed
+          !isFinalPromptStatus(
+            data.prompt.committedStore.getEntry(promptId)?.committed.status ??
+              PromptStatus.Todo
+          )
       ),
       ...promptTemplateIds
     ]

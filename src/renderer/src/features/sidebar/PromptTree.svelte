@@ -47,6 +47,7 @@
   } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
   import { PromptStatus, type Prompt } from '@shared/Prompt'
+  import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import {
@@ -214,8 +215,8 @@
       statusByPromptId: Object.fromEntries(
         Object.values(promptById).map((prompt) => [prompt.id, prompt.status])
       ),
-      completedAtByPromptId: Object.fromEntries(
-        Object.values(promptById).map((prompt) => [prompt.id, prompt.completedAt ?? null])
+      finalizedAtByPromptId: Object.fromEntries(
+        Object.values(promptById).map((prompt) => [prompt.id, prompt.finalizedAt ?? null])
       )
     })
   })
@@ -223,7 +224,7 @@
   const selectedActivePromptCount = $derived.by(() => {
     if (!screenRootFolder || screenRootFolder.kind === 'template') return 0
 
-    return screenRootFolder.categoryOrder.categories.reduce(
+    return getMarkdownContentCategoryOrder(screenRootFolder).categories.reduce(
       (count, group) =>
         count +
         group.entries.filter(
@@ -292,7 +293,7 @@
 
   const categoryTreeIds = $derived.by((): string[] => {
     if (!screenRootFolder) return []
-    return screenRootFolder.categoryOrder.categories.flatMap((group) =>
+    return getMarkdownContentCategoryOrder(screenRootFolder).categories.flatMap((group) =>
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     )
   })
@@ -678,7 +679,7 @@
         }
       } else {
         /** Loaded active entries projected in FolderOrder group order. */
-        const groups = screenRootFolder.categoryOrder.categories
+        const groups = getMarkdownContentCategoryOrder(screenRootFolder).categories
         /** Uncategorized content shown without a category header. */
         const uncategorizedEntries = groups[0]?.entries.filter((entry) =>
           entry.kind === 'template'

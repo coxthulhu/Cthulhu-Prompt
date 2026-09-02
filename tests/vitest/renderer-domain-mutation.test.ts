@@ -30,7 +30,8 @@ import type {
   UpdatePromptDomainCommand,
   UpdatePromptTemplateDomainCommand
 } from '@shared/MarkdownContentDomainMutations'
-import { createPromptFull, PromptStatus } from '@shared/Prompt'
+import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
 import { createPromptTemplateFull } from '@shared/PromptTemplate'
 import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
 import {
@@ -421,10 +422,13 @@ describe('renderer domain mutation framework', () => {
         kind: 'prompt',
         folderName: 'Prompts',
         displayName: 'Prompts',
-        completedPromptIds: [],
-        categoryOrder: {
-          categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }]
-        },
+        statusFolders: createPromptStatusFolderLayouts({
+          categoryOrders: {
+            [PromptStatusFolderId.Active]: {
+              categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }]
+            }
+          }
+        }),
         settings: { folderDescription: null }
       }
     })
@@ -436,7 +440,6 @@ describe('renderer domain mutation framework', () => {
         kind: 'template',
         folderName: 'Templates',
         displayName: 'Templates',
-        completedPromptIds: [],
         categoryOrder: {
           categories: [
             { categoryId: null, entries: [{ kind: 'template', id: TEMPLATE_ID }] }
