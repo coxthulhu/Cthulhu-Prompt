@@ -1682,6 +1682,156 @@ describe('Prompt folder find dialog', () => {
       .toBe(true)
   })
 
+  test('restores offscreen focus without scrolling and skips it after virtualization', async ({
+    testSetup
+  }) => {
+    /** Application window and helpers for the long virtualized prompt fixture. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'virtual' }
+    })
+
+    await testHelpers.navigateToPromptFolders('Long')
+    /** First prompt row that will unmount after scrolling to the end. */
+    const firstPromptSelector = promptEditorSelector(VIRTUAL_FIND_FIRST_PROMPT_ID)
+    await focusMonacoEditor(mainWindow, firstPromptSelector)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.down('Shift')
+    await mainWindow.keyboard.press('End')
+    await mainWindow.keyboard.up('Shift')
+    await expect.poll(() => getMonacoSelectedText(mainWindow, firstPromptSelector)).toBe(
+      VIRTUAL_FIND_MARKER
+    )
+
+    /** Folder find input seeded from the selected Monaco text. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toHaveValue(VIRTUAL_FIND_MARKER)
+
+    /** Current virtual scroll position used to calculate an absolute overscan destination. */
+    const scrollTopBeforeOverscanMove = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+    /** Scroll position that leaves the hydrated first editor just above the viewport. */
+    const overscanScrollTop = await mainWindow.evaluate(
+      ({ currentScrollTop, hostSelector, rowSelector }) => {
+        /** Virtual window whose visible boundary the target must cross. */
+        const host = document.querySelector<HTMLElement>(hostSelector)
+        /** Mounted first prompt row being moved into upper overscan. */
+        const row = document.querySelector<HTMLElement>(rowSelector)
+        if (!host || !row) throw new Error('Missing virtual window or first prompt row')
+        return (
+          currentScrollTop +
+          row.getBoundingClientRect().bottom -
+          host.getBoundingClientRect().top +
+          20
+        )
+      },
+      {
+        currentScrollTop: scrollTopBeforeOverscanMove,
+        hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+        rowSelector: firstPromptSelector
+      }
+    )
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, overscanScrollTop)
+    await expect(mainWindow.locator(firstPromptSelector)).toBeAttached()
+    await expect(mainWindow.locator(`${firstPromptSelector} .monaco-editor`)).toHaveCount(1)
+
+    /** Geometry proving the mounted Monaco editor is outside the clipped viewport. */
+    const geometryBeforeOverscanClose = await mainWindow.evaluate(
+      ({ hostSelector, rowSelector }) => {
+        /** Virtual window providing the clipped viewport boundary. */
+        const host = document.querySelector<HTMLElement>(hostSelector)!
+        /** Mounted overscan row containing the return-focus Monaco editor. */
+        const row = document.querySelector<HTMLElement>(rowSelector)!
+        return {
+          hostTop: host.getBoundingClientRect().top,
+          rowBottom: row.getBoundingClientRect().bottom
+        }
+      },
+      { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, rowSelector: firstPromptSelector }
+    )
+    expect(geometryBeforeOverscanClose.rowBottom).toBeLessThan(
+      geometryBeforeOverscanClose.hostTop - 1
+    )
+    /** Virtual scroll position that offscreen focus restoration must preserve. */
+    const scrollTopBeforeOverscanClose = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+
+    await mainWindow.locator(FIND_CLOSE).click()
+    await expect(findInput).toHaveCount(0)
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, firstPromptSelector)).toBe(true)
+    await mainWindow.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        })
+    )
+    /** Stabilized virtual scroll position after restoring offscreen Monaco focus. */
+    const scrollTopAfterOverscanClose = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+    expect(
+      Math.abs(scrollTopAfterOverscanClose - scrollTopBeforeOverscanClose)
+    ).toBeLessThanOrEqual(1)
+    /** Geometry after focus restoration, which must remain physically unchanged. */
+    const geometryAfterOverscanClose = await mainWindow.evaluate(
+      ({ hostSelector, rowSelector }) => {
+        /** Virtual window whose physical position must remain unchanged. */
+        const host = document.querySelector<HTMLElement>(hostSelector)!
+        /** Focused overscan row whose physical position must remain unchanged. */
+        const row = document.querySelector<HTMLElement>(rowSelector)!
+        return {
+          hostTop: host.getBoundingClientRect().top,
+          rowBottom: row.getBoundingClientRect().bottom
+        }
+      },
+      { hostSelector: PROMPT_FOLDER_HOST_SELECTOR, rowSelector: firstPromptSelector }
+    )
+    expect(
+      Math.abs(geometryAfterOverscanClose.hostTop - geometryBeforeOverscanClose.hostTop)
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(geometryAfterOverscanClose.rowBottom - geometryBeforeOverscanClose.rowBottom)
+    ).toBeLessThanOrEqual(1)
+
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toHaveValue(VIRTUAL_FIND_MARKER)
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 1_000_000)
+    await expect(mainWindow.locator(firstPromptSelector)).toHaveCount(0)
+    /** Bottom scroll position that closing Find must preserve. */
+    const scrollTopBeforeClose = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+
+    await mainWindow.locator(FIND_CLOSE).click()
+    await expect(findInput).toHaveCount(0)
+    await mainWindow.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        })
+    )
+    await expect(mainWindow.locator(firstPromptSelector)).toHaveCount(0)
+    /** Stabilized scroll position after closing Find without a ready return target. */
+    const scrollTopAfterClose = await testHelpers.getElementScrollTop(
+      PROMPT_FOLDER_HOST_SELECTOR
+    )
+    expect(Math.abs(scrollTopAfterClose - scrollTopBeforeClose)).toBeLessThanOrEqual(1)
+
+    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+    await expect(mainWindow.locator(firstPromptSelector)).toBeAttached()
+    await waitForMonacoEditor(mainWindow, firstPromptSelector)
+    await mainWindow.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        })
+    )
+    expect(await isMonacoEditorFocused(mainWindow, firstPromptSelector)).toBe(false)
+  })
+
   test('cycles correctly across prompt matches including two-digit counters', async ({
     testSetup
   }) => {

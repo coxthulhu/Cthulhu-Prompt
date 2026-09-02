@@ -95,14 +95,17 @@
     findInputFocusRequests.request(undefined)
   }
 
-  // Close the widget and return focus to the last editor target independently of match state.
+  // Close the widget and return focus only while the last editor target remains mounted.
   const closeFindDialog = () => {
     isFindOpen = false
     findInputFocusRequests.clear()
     revealRequests.clear()
-    if (returnFocusTarget) {
-      focusRequests.request(returnFocusTarget)
-    }
+    focusRequests.clear()
+    if (!returnFocusTarget) return
+    /** Mounted row whose target section must already be ready to receive focus. */
+    const rowHandle = rowHandlesByEntityId.get(returnFocusTarget.entityId)
+    if (!rowHandle?.isSectionReady(returnFocusTarget.sectionKey)) return
+    focusRequests.request(returnFocusTarget)
   }
 
   // Run a full search pass and update derived counts/indexes.
