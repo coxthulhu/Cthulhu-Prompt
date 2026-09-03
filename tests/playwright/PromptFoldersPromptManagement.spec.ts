@@ -406,8 +406,7 @@ const buildCompletedSelfHealingWorkspace = () => {
     fallbackTitle: '',
     createdAt: '2023-01-03T00:00:00.000Z',
     modifiedAt: '2023-01-03T00:00:00.000Z',
-    status: PromptStatus.Completed,
-    finalizedAt: '2023-01-04T00:00:00Z',
+    status: PromptStatus.Todo,
     promptText: 'This completed prompt should stay hidden.'
   }
   const workspace = createWorkspaceWithFolders(SELF_HEALING_WORKSPACE_PATH, [
@@ -453,11 +452,8 @@ const buildCompletedSelfHealingWorkspace = () => {
         2
       ),
     [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
-    [activePath]: serializePromptMarkdown(activePrompt).replace('finalizedAt:', 'completedAt:'),
-    [completedPath]: serializePromptMarkdown(completedPrompt).replace(
-      'finalizedAt:',
-      'completedAt:'
-    )
+    [activePath]: serializePromptMarkdown(activePrompt),
+    [completedPath]: serializePromptMarkdown(completedPrompt)
   }
 }
 
@@ -1491,7 +1487,7 @@ describe('Prompt folder prompt management', () => {
     expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2'])
   })
 
-  test('self-heals status and migrates completion metadata based on folder location', async ({
+  test('self-heals status metadata based on folder location', async ({
     testSetup,
     electronApp
   }) => {
@@ -1525,7 +1521,6 @@ describe('Prompt folder prompt management', () => {
     })
     expect(activeMarkdown).toContain('status: Todo')
     expect(activeMarkdown).not.toContain('finalizedAt:')
-    expect(activeMarkdown).not.toContain('completedAt:')
     await expect
       .poll(
         async () =>
@@ -1545,8 +1540,6 @@ describe('Prompt folder prompt management', () => {
     })
     expect(completedMarkdown).toContain('status: Completed')
     expect(completedMarkdown).toContain('finalizedAt:')
-    expect(completedMarkdown).toContain('2023-01-04T00:00:00Z')
-    expect(completedMarkdown).not.toContain('completedAt:')
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
   })
 

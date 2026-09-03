@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { PromptStatus } from '@shared/Prompt'
 import {
   parsePromptMarkdown,
-  promptMarkdownNeedsStartupMigration,
+  promptMarkdownHasLegacyTemplateId,
   serializePromptMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
 
@@ -81,34 +81,24 @@ Legacy text`
     expect(parsePromptMarkdown(legacyMarkdown)).toMatchObject({
       templates: [{ id: 'template-1' }]
     })
-    expect(promptMarkdownNeedsStartupMigration(legacyMarkdown)).toBe(true)
+    expect(promptMarkdownHasLegacyTemplateId(legacyMarkdown)).toBe(true)
     expect(
-      promptMarkdownNeedsStartupMigration(
+      promptMarkdownHasLegacyTemplateId(
         serializePromptMarkdown(parsePromptMarkdown(legacyMarkdown)!)
       )
     ).toBe(false)
   })
 
-  it('migrates legacy completion timestamps to finalized timestamps', () => {
-    /** Legacy completed prompt markdown rewritten during startup. */
-    const legacyMarkdown = `---
+  it('rejects obsolete completion timestamp metadata', () => {
+    const obsoleteMarkdown = `---
 id: prompt-5
 createdAt: '2026-07-26T12:00:00.000Z'
-title: Legacy Completed Prompt
+title: Obsolete Completed Prompt
 status: Completed
 completedAt: '2026-07-27T12:00:00.000Z'
 ---
-Legacy completed text`
-    /** Current markdown serialized from the migrated prompt model. */
-    const migratedMarkdown = serializePromptMarkdown(parsePromptMarkdown(legacyMarkdown)!)
+Obsolete completed text`
 
-    expect(parsePromptMarkdown(legacyMarkdown)).toMatchObject({
-      status: PromptStatus.Completed,
-      finalizedAt: '2026-07-27T12:00:00.000Z'
-    })
-    expect(promptMarkdownNeedsStartupMigration(legacyMarkdown)).toBe(true)
-    expect(migratedMarkdown).toContain('finalizedAt:')
-    expect(migratedMarkdown).not.toContain('completedAt:')
-    expect(promptMarkdownNeedsStartupMigration(migratedMarkdown)).toBe(false)
+    expect(parsePromptMarkdown(obsoleteMarkdown)).toBeNull()
   })
 })

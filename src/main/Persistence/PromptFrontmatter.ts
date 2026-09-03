@@ -20,7 +20,6 @@ type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'categor
   {
     status: PromptStatus
     finalizedAt?: string
-    completedAt?: string
   }
 
 type PromptTemplateFrontmatterData = Pick<
@@ -40,7 +39,6 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   const hasFallbackTitle = keys.includes('fallbackTitle')
   const hasStatus = keys.includes('status')
   const hasFinalizedAt = keys.includes('finalizedAt')
-  const hasCompletedAt = keys.includes('completedAt')
   const hasTemplates = keys.includes('templates')
   const hasLegacyTemplateId = keys.includes('templateId')
   const hasCategory = keys.includes('category')
@@ -52,8 +50,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     ...(hasLegacyTemplateId ? ['templateId'] : []),
     ...(hasCategory ? ['category'] : []),
     'status',
-    ...(hasFinalizedAt ? ['finalizedAt'] : []),
-    ...(hasCompletedAt ? ['completedAt'] : [])
+    ...(hasFinalizedAt ? ['finalizedAt'] : [])
   ])
   if (
     keys.length !== allowedKeys.size ||
@@ -72,9 +69,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
 
   if (!isPromptStatus(frontmatter.status)) return false
   const hasFinalStatus = isFinalPromptStatus(frontmatter.status)
-  if (hasFinalStatus !== (hasFinalizedAt || hasCompletedAt) || (hasFinalizedAt && hasCompletedAt)) {
-    return false
-  }
+  if (hasFinalStatus !== hasFinalizedAt) return false
 
   return (
     typeof frontmatter.id === 'string' &&
@@ -97,9 +92,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
-    (!hasFinalStatus ||
-      typeof frontmatter.finalizedAt === 'string' ||
-      typeof frontmatter.completedAt === 'string')
+    (!hasFinalStatus || typeof frontmatter.finalizedAt === 'string')
   )
 }
 
@@ -199,9 +192,7 @@ export const parsePromptMarkdown = (
         ? { templates: data.templateId === null ? null : [{ id: data.templateId }] }
         : {}),
     status: data.status,
-    ...(isFinalPromptStatus(data.status)
-      ? { finalizedAt: data.finalizedAt ?? data.completedAt }
-      : {})
+    ...(isFinalPromptStatus(data.status) ? { finalizedAt: data.finalizedAt } : {})
   }))
 
 export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
@@ -219,16 +210,15 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
   return serializeMarkdownContent(metadata, prompt.promptText)
 }
 
-// Detects legacy prompt metadata so startup rewrites only files that need migration.
-export const promptMarkdownNeedsStartupMigration = (fileText: string): boolean => {
+// Detects legacy prompt template metadata so startup rewrites only files that need migration.
+export const promptMarkdownHasLegacyTemplateId = (fileText: string): boolean => {
   try {
     const parsed = matter(fileText, {})
     return (
       typeof parsed.data === 'object' &&
       parsed.data !== null &&
       !Array.isArray(parsed.data) &&
-      (Object.keys(parsed.data).includes('templateId') ||
-        Object.keys(parsed.data).includes('completedAt'))
+      Object.keys(parsed.data).includes('templateId')
     )
   } catch {
     return false
