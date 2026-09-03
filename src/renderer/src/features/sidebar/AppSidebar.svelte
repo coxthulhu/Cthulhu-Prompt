@@ -22,6 +22,7 @@
   import appIcon from '@renderer/assets/cutethulhu.png'
   import {
     ArrowUpToLine,
+    Archive,
     Check,
     CircleCheckBig,
     ChevronsDownUp,
@@ -43,7 +44,12 @@
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
-  import { PromptStatus, PromptStatusFolderId, type Prompt } from '@shared/Prompt'
+  import {
+    isFinalPromptStatus,
+    PromptStatus,
+    PromptStatusFolderId,
+    type Prompt
+  } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import { getCategoryOrderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
   import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
@@ -91,8 +97,10 @@
     screenRootFolderId = null,
     promptFolderScreenMode = PromptFolderScreenMode.Active,
     isCompletedPromptSectionShown = false,
+    isArchivedPromptSectionShown = false,
     onPromptFolderModeChange,
     onCompletedPromptSectionShownChange,
+    onArchivedPromptSectionShownChange,
     onScreenRootFolderSelect,
     onDeleteSelectedPromptFolder
   } = $props<{
@@ -103,8 +111,10 @@
     screenRootFolderId?: string | null
     promptFolderScreenMode?: PromptFolderScreenMode
     isCompletedPromptSectionShown?: boolean
+    isArchivedPromptSectionShown?: boolean
     onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
     onCompletedPromptSectionShownChange: (isShown: boolean) => void
+    onArchivedPromptSectionShownChange: (isShown: boolean) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
     onDeleteSelectedPromptFolder: (screenRootFolderId: string) => void
   }>()
@@ -345,10 +355,10 @@
       promptNavigation.selectedRow === 'root-header'
   )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
-  /** Active and completed prompt totals displayed in the status accordion headers. */
+  /** Active and final-status prompt totals displayed in the status accordion headers. */
   const selectedPromptStatusCounts = $derived.by(() => {
     if (!screenRootFolder || screenRootFolder.kind === 'template') {
-      return { active: 0, completed: 0 }
+      return { active: 0, completed: 0, archived: 0 }
     }
 
     /** Loaded prompt statuses indexed for entry counting. */
@@ -360,7 +370,7 @@
         if (
           entry.kind === 'prompt' &&
           statusByPromptId.has(entry.id) &&
-          statusByPromptId.get(entry.id) !== PromptStatus.Completed
+          !isFinalPromptStatus(statusByPromptId.get(entry.id)!)
         ) {
           active += 1
         }
@@ -373,7 +383,13 @@
     ].promptIds.filter(
       (promptId) => statusByPromptId.get(promptId) === PromptStatus.Completed
     ).length
-    return { active, completed }
+    /** Number of loaded archived prompts owned by the selected root folder. */
+    const archived = screenRootFolder.statusFolders[
+      PromptStatusFolderId.Archived
+    ].promptIds.filter(
+      (promptId) => statusByPromptId.get(promptId) === PromptStatus.Archived
+    ).length
+    return { active, completed, archived }
   })
   const selectedFolderActionsLabel = $derived(
     isTemplateFolder ? 'Selected Prompt Template Folder Actions' : 'Selected Prompt Folder Actions'
@@ -427,6 +443,11 @@
   /** Toggles whether the Completed status accordion section is rendered. */
   const toggleCompletedPromptSection = () => {
     onCompletedPromptSectionShownChange(!isCompletedPromptSectionShown)
+  }
+
+  /** Toggles whether the Archived status accordion section is rendered. */
+  const toggleArchivedPromptSection = () => {
+    onArchivedPromptSectionShownChange(!isArchivedPromptSectionShown)
   }
 
   // Selects and reveals the root folder overview formerly represented by the first tree row.
@@ -644,7 +665,7 @@
     }),
     canDrop: (payload) => {
       const entryPayload = payload as PromptHandleDragPayload
-      if (entryPayload.statusSection === 'completed') return false
+      if (entryPayload.statusSection !== 'active') return false
       const allFolders = promptFolderQuery.data
       const destinationFolder = allFolders.find((folder) => folder.id === item.id)
       if (!destinationFolder) return false
@@ -799,6 +820,17 @@
             class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
             onclick={toggleCompletedPromptSection}
           />
+          <IconButton
+            icon={Archive}
+            label="Show Archived Prompts"
+            title="Show Archived Prompts"
+            borderless
+            disabled={!screenRootFolder}
+            active={isArchivedPromptSectionShown}
+            testId="toggle-archived-prompts-button"
+            class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
+            onclick={toggleArchivedPromptSection}
+          />
         {/if}
         <IconButton
           icon={categoryExpansionActionIcon}
@@ -875,7 +907,7 @@
       />
     {:else}
       <!-- Recreate the owner so conditionally visible sections register in rendered order. -->
-      {#key isCompletedPromptSectionShown}
+      {#key `${isCompletedPromptSectionShown}:${isArchivedPromptSectionShown}`}
         <Accordion
           persistenceId={PROMPT_STATUS_ACCORDION_PERSISTENCE_ID}
           testId="sidebar-prompt-status-accordion"
@@ -897,6 +929,31 @@
                 expansionRequests={promptTreeExpansionRequests}
                 isPromptFoldersScreenActive={activeScreen === 'prompt-folders' &&
                   promptFolderScreenMode === PromptFolderScreenMode.Completed}
+                onAllCategoriesCollapsedChange={(isCollapsed) => {
+                  areAllCategoriesCollapsed = isCollapsed
+                }}
+                onScreenModeSelect={onPromptFolderModeChange}
+                {onScreenRootFolderSelect}
+              />
+            </AccordionSection>
+          {/if}
+
+          {#if isArchivedPromptSectionShown}
+            <AccordionSection
+              id="archived"
+              label="ARCHIVED"
+              icon={Archive}
+              count={selectedPromptStatusCounts.archived}
+            >
+              <PromptTree
+                promptFolders={rootPromptFolders}
+                {folderListState}
+                {screenRootFolderId}
+                screenMode={PromptFolderScreenMode.Archived}
+                virtualWindowTestId="prompt-tree-archived-virtual-window"
+                expansionRequests={promptTreeExpansionRequests}
+                isPromptFoldersScreenActive={activeScreen === 'prompt-folders' &&
+                  promptFolderScreenMode === PromptFolderScreenMode.Archived}
                 onAllCategoriesCollapsedChange={(isCollapsed) => {
                   areAllCategoriesCollapsed = isCollapsed
                 }}

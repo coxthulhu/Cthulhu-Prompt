@@ -157,7 +157,7 @@ type MarkdownOwner = {
   folderPath: string
 }
 
-/** Finds the projected active or completed group that owns markdown content. */
+/** Finds the projected active or final-status group that owns markdown content. */
 const findMarkdownOwner = (
   graph: DomainGraph,
   kind: PromptFolderContentKind,

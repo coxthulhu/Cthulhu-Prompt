@@ -159,10 +159,10 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
       : { categoryId: null, previousEntryId: null }
   /** Prompt data without the final-status timestamp controlled by this mutation. */
   const { finalizedAt: previousFinalizedAt, ...statusPromptBase } = prompt
-  /** Timestamp retained between final statuses or initialized upon first finalization. */
+  /** Timestamp retained only within the same final status and reset for every final-status entry. */
   const finalizedAt =
     isFinalPromptStatus(command.status)
-      ? isFinalPromptStatus(prompt.status) && previousFinalizedAt
+      ? prompt.status === command.status && previousFinalizedAt
         ? previousFinalizedAt
         : command.modifiedAt
       : undefined

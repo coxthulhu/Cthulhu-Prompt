@@ -3,7 +3,7 @@ export const PROMPT_HANDLE_DRAG_TYPE = 'prompt-handle'
 export const CATEGORY_DRAG_TYPE = 'category'
 
 /** Sidebar status section that owns a prompt drag source or destination. */
-export type PromptDragStatusSection = 'active' | 'completed'
+export type PromptDragStatusSection = 'active' | 'completed' | 'archived'
 
 export type PromptHandleDragPayload = {
   fromId: string

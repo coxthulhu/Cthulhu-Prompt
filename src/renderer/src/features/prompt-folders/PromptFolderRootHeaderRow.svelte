@@ -11,6 +11,7 @@
     folderDisplayName,
     activePromptCount,
     completedPromptCount,
+    archivedPromptCount,
     contentKind,
     screenMode,
     onDeletePromptFolder,
@@ -21,6 +22,7 @@
     folderDisplayName: string
     activePromptCount: number
     completedPromptCount: number
+    archivedPromptCount: number
     contentKind: import('@shared/PromptFolder').PromptFolderContentKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
@@ -30,6 +32,10 @@
   }>()
 
   const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  /** Whether the root filter currently selects archived prompts. */
+  const isArchivedMode = $derived(screenMode === PromptFolderScreenMode.Archived)
+  /** Whether the root filter currently selects active prompts. */
+  const isActiveMode = $derived(screenMode === PromptFolderScreenMode.Active)
   const isTemplateFolder = $derived(contentKind === 'template')
   const folderLabel = $derived(isTemplateFolder ? 'prompt template folder' : 'prompt folder')
 </script>
@@ -98,9 +104,9 @@
     aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
   >
     <button
-      class:active={isTemplateFolder || !isCompletedMode}
+      class:active={isTemplateFolder || isActiveMode}
       type="button"
-      aria-pressed={isTemplateFolder || !isCompletedMode}
+      aria-pressed={isTemplateFolder || isActiveMode}
       data-testid="prompt-folder-active-filter"
       onclick={isTemplateFolder
         ? undefined
@@ -117,6 +123,15 @@
         onclick={() => onScreenModeChange(PromptFolderScreenMode.Completed)}
       >
         Completed <span>{completedPromptCount}</span>
+      </button>
+      <button
+        class:active={isArchivedMode}
+        type="button"
+        aria-pressed={isArchivedMode}
+        data-testid="prompt-folder-archived-filter"
+        onclick={() => onScreenModeChange(PromptFolderScreenMode.Archived)}
+      >
+        Archived <span>{archivedPromptCount}</span>
       </button>
     {/if}
   </div>

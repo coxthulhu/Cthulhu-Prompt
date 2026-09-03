@@ -1,6 +1,7 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
 import {
+  isFinalPromptStatus,
   isPromptFull,
   type Prompt,
   PromptStatus,
@@ -93,7 +94,10 @@ import {
   type PromptHandleDropPayload
 } from '../drag-drop/promptHandleDrag'
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
-import { PromptFolderScreenMode } from './promptFolderScreenMode'
+import {
+  getFinalPromptFolderScreenModeDefinition,
+  PromptFolderScreenMode
+} from './promptFolderScreenMode'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
 import { createBlankPromptTemplateInFolder } from './createBlankPromptTemplateInFolder'
 import {
@@ -103,7 +107,7 @@ import {
   type PromptFolderScreenPromptEditorRow,
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
-import { collectCompletedPrompts } from './promptFolderCompletedPrompts'
+import { collectFinalizedPrompts } from './promptFolderCompletedPrompts'
 import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
 import { createPromptTreePromptDragController } from '../sidebar/promptTreeDrag'
 import {
@@ -158,7 +162,10 @@ export const createPromptFolderScreenController = ({
   })
   const screenRootFolderId = $derived(getScreenRootFolderId())
   const screenMode = $derived(getScreenMode())
-  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  /** Final-status metadata for the selected screen mode, or null for Active. */
+  const finalModeDefinition = $derived(getFinalPromptFolderScreenModeDefinition(screenMode))
+  /** Whether the screen renders a final-status prompt list. */
+  const isFinalMode = $derived(finalModeDefinition !== null)
   const workspaceId = $derived(workspaceSelection.selectedWorkspaceId)
 
   const promptFolderQuery = useLiveQuery(promptFolderCollection) as {
@@ -335,26 +342,56 @@ export const createPromptFolderScreenController = ({
   // Categories belong to the current root while root-folder destinations own themselves.
   const findContainingRootFolderId = (contentOwnerId: string): string =>
     categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
-  const completedPrompts = $derived.by(() => {
-    if (!screenRootFolder || screenRootFolder.kind === 'template') return []
-
-    return collectCompletedPrompts({
-      rootFolder: screenRootFolder,
-      statusByPromptId: Object.fromEntries(
-        promptQuery.data.flatMap((prompt) => (prompt ? [[prompt.id, prompt.status]] : []))
-      ),
-      finalizedAtByPromptId: Object.fromEntries(
-        promptQuery.data.flatMap((prompt) =>
-          prompt ? [[prompt.id, prompt.finalizedAt ?? null] as const] : []
-        )
+  /** Finalized prompts grouped by their exact final status. */
+  const finalizedPromptsByStatus = $derived.by(() => {
+    if (!screenRootFolder || screenRootFolder.kind === 'template') {
+      return { completed: [], archived: [] }
+    }
+    /** Loaded prompt statuses used to validate status-folder ownership. */
+    const statusByPromptId = Object.fromEntries(
+      promptQuery.data.flatMap((prompt) => (prompt ? [[prompt.id, prompt.status]] : []))
+    )
+    /** Loaded finalization timestamps used for newest-first ordering. */
+    const finalizedAtByPromptId = Object.fromEntries(
+      promptQuery.data.flatMap((prompt) =>
+        prompt ? [[prompt.id, prompt.finalizedAt ?? null] as const] : []
       )
-    })
+    )
+    return {
+      completed: collectFinalizedPrompts({
+        rootFolder: screenRootFolder,
+        status: PromptStatus.Completed,
+        statusByPromptId,
+        finalizedAtByPromptId
+      }),
+      archived: collectFinalizedPrompts({
+        rootFolder: screenRootFolder,
+        status: PromptStatus.Archived,
+        statusByPromptId,
+        finalizedAtByPromptId
+      })
+    }
   })
-  const completedPromptCount = $derived(completedPrompts.length)
-  const orderedCompletedPromptIds = $derived(completedPrompts.map(({ promptId }) => promptId))
-  const completedPromptContentOwnerByPromptId = $derived.by<Record<string, string>>(() =>
+  /** Completed prompt total displayed in the root filter. */
+  const completedPromptCount = $derived(finalizedPromptsByStatus.completed.length)
+  /** Archived prompt total displayed in the root filter. */
+  const archivedPromptCount = $derived(finalizedPromptsByStatus.archived.length)
+  /** Finalized prompts belonging to the currently selected final-status screen. */
+  const selectedFinalizedPrompts = $derived(
+    finalModeDefinition?.status === PromptStatus.Completed
+      ? finalizedPromptsByStatus.completed
+      : finalModeDefinition?.status === PromptStatus.Archived
+        ? finalizedPromptsByStatus.archived
+        : []
+  )
+  /** Newest-first prompt IDs for the currently selected final status. */
+  const orderedFinalizedPromptIds = $derived(
+    selectedFinalizedPrompts.map(({ promptId }) => promptId)
+  )
+  /** Navigation owner indexed for prompts in the currently selected final status. */
+  const finalizedPromptContentOwnerByPromptId = $derived.by<Record<string, string>>(() =>
     Object.fromEntries(
-      completedPrompts.map(({ contentOwnerId, promptId }) => [promptId, contentOwnerId])
+      selectedFinalizedPrompts.map(({ contentOwnerId, promptId }) => [promptId, contentOwnerId])
     )
   )
   const folderDisplayName = $derived(screenRootFolder?.displayName ?? 'Prompt Folder')
@@ -381,7 +418,7 @@ export const createPromptFolderScreenController = ({
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   const getRestoredPromptFolderScrollTop = (): number =>
-    isCompletedMode ? 0 : (lookupPromptFolderScrollTop(screenRootFolderId) ?? 0)
+    isFinalMode ? 0 : (lookupPromptFolderScrollTop(screenRootFolderId) ?? 0)
 
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
   let latestCenteredPromptScreenRow = $state<ActivePromptScreenRow | null>(null)
@@ -397,7 +434,7 @@ export const createPromptFolderScreenController = ({
     `${workspaceId ?? 'no-workspace'}:${contentOwnerId}:${screenMode}`
 
   const lookupPersistedDetailsSectionExpandedState = (contentOwnerId: string): boolean => {
-    if (isCompletedMode) {
+    if (isFinalMode) {
       return false
     }
 
@@ -414,7 +451,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const lookupPersistedContentSectionExpandedState = (contentOwnerId: string): boolean => {
-    if (isCompletedMode) {
+    if (isFinalMode) {
       return true
     }
 
@@ -476,7 +513,7 @@ export const createPromptFolderScreenController = ({
       promptIds: isTemplateFolder
         ? promptTemplateQuery.data.map((template) => template.id)
         : promptQuery.data.flatMap((prompt) =>
-            prompt.status !== PromptStatus.Completed ? [prompt.id] : []
+            !isFinalPromptStatus(prompt.status) ? [prompt.id] : []
           ),
       isCategoryExpanded: (categoryId) => contentSectionExpandedByOwnerId[categoryId] ?? true
     })
@@ -495,17 +532,17 @@ export const createPromptFolderScreenController = ({
       promptIds: isTemplateFolder
         ? promptTemplateQuery.data.map((template) => template.id)
         : promptQuery.data.flatMap((prompt) =>
-            prompt.status !== PromptStatus.Completed ? [prompt.id] : []
+            !isFinalPromptStatus(prompt.status) ? [prompt.id] : []
           ),
       isCategoryExpanded: () => true
     }).flatMap((row) => (row.kind === 'prompt-editor' ? [row.promptId] : []))
   })
   const activePromptCount = $derived(allActiveScreenPromptIds.length)
   const screenPromptIds = $derived(
-    isCompletedMode ? orderedCompletedPromptIds : activeScreenPromptIds
+    isFinalMode ? orderedFinalizedPromptIds : activeScreenPromptIds
   )
   const renderedPromptIds = $derived(
-    isCompletedMode ? orderedCompletedPromptIds : activeScreenPromptIds
+    isFinalMode ? orderedFinalizedPromptIds : activeScreenPromptIds
   )
   const promptMetadataByPromptId = $derived.by(() => {
     const metadataById: Record<string, PromptMetadata> = {}
@@ -606,7 +643,7 @@ export const createPromptFolderScreenController = ({
       })
     }
 
-    if (errorMessage || isCompletedMode) {
+    if (errorMessage || isFinalMode) {
       for (const currentPromptId of visiblePromptIds) {
         appendPromptFindItem(currentPromptId)
       }
@@ -738,7 +775,7 @@ export const createPromptFolderScreenController = ({
       [stateKey]: isExpanded
     }
 
-    if (!workspaceId || isCompletedMode) {
+    if (!workspaceId || isFinalMode) {
       return
     }
 
@@ -760,7 +797,7 @@ export const createPromptFolderScreenController = ({
       [stateKey]: isExpanded
     }
 
-    if (!workspaceId || isCompletedMode) {
+    if (!workspaceId || isFinalMode) {
       return
     }
 
@@ -783,7 +820,7 @@ export const createPromptFolderScreenController = ({
     expandContent = false
   ): boolean => {
     let changed = false
-    if (isCompletedMode || row.kind === 'root-header') return false
+    if (isFinalMode || row.kind === 'root-header') return false
 
     const ownerPath = findContentOwnerPath(row.contentOwnerId) ?? []
     for (const ancestorOwnerId of ownerPath.slice(0, -1)) {
@@ -862,7 +899,7 @@ export const createPromptFolderScreenController = ({
   }
 
   const persistActivePromptScreenRow = () => {
-    if (isCompletedMode) {
+    if (isFinalMode) {
       return
     }
 
@@ -1056,7 +1093,7 @@ export const createPromptFolderScreenController = ({
       }
     // Reveals an explicit or persisted selection after its virtual rows are first created.
     const shouldApplyInitialReveal =
-      !isCompletedMode && Boolean(explicitSelectionTarget || persistedSelectionTarget)
+      !isFinalMode && Boolean(explicitSelectionTarget || persistedSelectionTarget)
     const restoredScrollTop = explicitSelectionTarget ? 0 : getRestoredPromptFolderScrollTop()
     const restoreSelectionSource: PromptNavigationSource =
       persistedSelectionTarget || (!explicitSelectionTarget && restoredScrollTop <= 0)
@@ -1070,7 +1107,7 @@ export const createPromptFolderScreenController = ({
     errorMessage = null
     initialPromptFolderScrollTopPx = restoredScrollTop
     scrollTopPx = restoredScrollTop
-    latestCenteredPromptScreenRow = isCompletedMode ? null : initialSelectionTarget
+    latestCenteredPromptScreenRow = isFinalMode ? null : initialSelectionTarget
 
     if (shouldApplyInitialReveal) {
       const source = explicitSelectionTarget
@@ -1206,7 +1243,7 @@ export const createPromptFolderScreenController = ({
   // Side effect: normalize stale prompt selections once rows are loaded.
   $effect(() => {
     if (!isVirtualContentReady) return
-    if (isCompletedMode) return
+    if (isFinalMode) return
     if (!activePromptScreenRow || activePromptScreenRow.kind !== 'prompt') return
     if (navigablePromptIds.includes(activePromptScreenRow.promptId)) return
 
@@ -1449,7 +1486,7 @@ export const createPromptFolderScreenController = ({
         sourceFolderId: screenRootFolderId,
         sourceCategoryId: source.categoryId,
         contentKind,
-        statusSection: isCompletedMode ? 'completed' : 'active'
+        statusSection: screenMode
       },
       dropPayload
     })
@@ -1457,13 +1494,13 @@ export const createPromptFolderScreenController = ({
   const activeHeaderRowId = 'prompt-header' as const
   /** Sampled category constrained to categories owned by the current root folder. */
   const activeBreadcrumbCategory = $derived(
-    isCompletedMode
+    isFinalMode
       ? null
       : (categories.find((category) => category.id === breadcrumbCategoryId) ?? null)
   )
   /** Root-level content label shown when the sample point is outside a category. */
   const rootContentBreadcrumbLabel = $derived(
-    isTemplateFolder ? 'Templates' : isCompletedMode ? 'Completed' : 'Prompts'
+    isTemplateFolder ? 'Templates' : (finalModeDefinition?.label ?? 'Prompts')
   )
   /** Current category or root-content label shown after the folder breadcrumb. */
   const activeHeaderSection = $derived(
@@ -1557,7 +1594,7 @@ export const createPromptFolderScreenController = ({
 
   const handleVirtualScrollTopChange = (nextScrollTop: number) => {
     scrollTopPx = nextScrollTop
-    if (isCompletedMode) {
+    if (isFinalMode) {
       return
     }
 
@@ -1615,8 +1652,11 @@ export const createPromptFolderScreenController = ({
     get completedPromptCount(): number {
       return completedPromptCount
     },
-    get completedPromptContentOwnerByPromptId(): Record<string, string> {
-      return completedPromptContentOwnerByPromptId
+    get archivedPromptCount(): number {
+      return archivedPromptCount
+    },
+    get finalizedPromptContentOwnerByPromptId(): Record<string, string> {
+      return finalizedPromptContentOwnerByPromptId
     },
     get isVirtualContentReady(): boolean {
       return isVirtualContentReady

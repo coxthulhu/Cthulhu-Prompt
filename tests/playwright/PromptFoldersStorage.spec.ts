@@ -144,6 +144,7 @@ describe('Prompt folder storage', () => {
     await expect(checkFileExists(electronApp, `${alphaPath}/Completed`)).resolves.toBe(
       true
     )
+    await expect(checkFileExists(electronApp, `${alphaPath}/Archived`)).resolves.toBe(true)
 
     // The canonical layout omits root ordering and status metadata not explicitly required.
     const omittedPaths = [
@@ -152,7 +153,10 @@ describe('Prompt folder storage', () => {
       `${alphaPath}/Active/_FolderInfo/Description.md`,
       `${alphaPath}/Completed/_FolderInfo/FolderInfo.json`,
       `${alphaPath}/Completed/_FolderInfo/Description.md`,
-      `${alphaPath}/Completed/_FolderInfo/FolderOrder.json`
+      `${alphaPath}/Completed/_FolderInfo/FolderOrder.json`,
+      `${alphaPath}/Archived/_FolderInfo/FolderInfo.json`,
+      `${alphaPath}/Archived/_FolderInfo/Description.md`,
+      `${alphaPath}/Archived/_FolderInfo/FolderOrder.json`
     ]
     await expect(
       Promise.all(omittedPaths.map((path) => checkFileExists(electronApp, path)))
@@ -278,8 +282,9 @@ describe('Prompt folder storage', () => {
 
     // Deleting the restored prompt removes it from both active and category-view ordering.
     await mainWindow
-      .locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-delete-button"]`)
+      .locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-delete-more-options-button"]`)
       .click()
+    await mainWindow.locator('[data-testid="prompt-delete-menu-item"]').click()
     await mainWindow
       .locator('[role="dialog"][aria-label="Delete Prompt"] button:has-text("Delete")')
       .click()

@@ -1,13 +1,15 @@
 export enum PromptStatus {
   Todo = 'Todo',
   InProgress = 'InProgress',
-  Completed = 'Completed'
+  Completed = 'Completed',
+  Archived = 'Archived'
 }
 
 /** Stable identifier for one code-defined prompt status folder. */
 export enum PromptStatusFolderId {
   Active = 'active',
-  Completed = 'completed'
+  Completed = 'completed',
+  Archived = 'archived'
 }
 
 /** Ordering behavior owned by one prompt status folder. */
@@ -35,6 +37,13 @@ export const PROMPT_STATUS_FOLDER_REGISTRY = {
     id: PromptStatusFolderId.Completed,
     directoryName: 'Completed',
     statuses: [PromptStatus.Completed],
+    ordering: 'finalizedAt',
+    isFinal: true
+  },
+  [PromptStatusFolderId.Archived]: {
+    id: PromptStatusFolderId.Archived,
+    directoryName: 'Archived',
+    statuses: [PromptStatus.Archived],
     ordering: 'finalizedAt',
     isFinal: true
   }

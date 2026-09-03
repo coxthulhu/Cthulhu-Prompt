@@ -188,9 +188,10 @@ describe('Prompt persistence filenames', () => {
 
     await mainWindow
       .locator(
-        `${promptEditorSelector(COLLISION_FIRST_PROMPT_ID)} [data-testid="prompt-delete-button"]`
+        `${promptEditorSelector(COLLISION_FIRST_PROMPT_ID)} [data-testid="prompt-delete-more-options-button"]`
       )
       .click()
+    await mainWindow.locator('[data-testid="prompt-delete-menu-item"]').click()
     await mainWindow.locator('[data-testid="prompt-confirm-delete-button"]').click()
 
     await expect(mainWindow.locator(promptEditorSelector(COLLISION_FIRST_PROMPT_ID))).toHaveCount(0)

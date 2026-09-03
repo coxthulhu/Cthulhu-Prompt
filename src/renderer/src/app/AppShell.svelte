@@ -174,6 +174,8 @@
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
   /** Session-only visibility for the sidebar's Completed prompt section. */
   let isCompletedPromptSectionShown = $state(false)
+  /** Session-only visibility for the sidebar's Archived prompt section. */
+  let isArchivedPromptSectionShown = $state(false)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -599,6 +601,9 @@
     if (nextMode === PromptFolderScreenMode.Completed) {
       isCompletedPromptSectionShown = true
     }
+    if (nextMode === PromptFolderScreenMode.Archived) {
+      isArchivedPromptSectionShown = true
+    }
     promptFolderScreenMode = nextMode
   }
 
@@ -608,6 +613,16 @@
     if (isShown) {
       setPromptFolderMode(PromptFolderScreenMode.Completed)
     } else if (promptFolderScreenMode === PromptFolderScreenMode.Completed) {
+      setPromptFolderMode(PromptFolderScreenMode.Active)
+    }
+  }
+
+  /** Shows or hides Archived prompts and restores Active when hiding the selected section. */
+  const setArchivedPromptSectionShown = (isShown: boolean): void => {
+    isArchivedPromptSectionShown = isShown
+    if (isShown) {
+      setPromptFolderMode(PromptFolderScreenMode.Archived)
+    } else if (promptFolderScreenMode === PromptFolderScreenMode.Archived) {
       setPromptFolderMode(PromptFolderScreenMode.Active)
     }
   }
@@ -664,8 +679,10 @@
           {screenRootFolderId}
           {promptFolderScreenMode}
           {isCompletedPromptSectionShown}
+          {isArchivedPromptSectionShown}
           onPromptFolderModeChange={setPromptFolderMode}
           onCompletedPromptSectionShownChange={setCompletedPromptSectionShown}
+          onArchivedPromptSectionShownChange={setArchivedPromptSectionShown}
           onScreenRootFolderSelect={(promptFolderId) => {
             navigateToScreenRootFolder(promptFolderId)
           }}

@@ -2,7 +2,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/SimpleSelectorButtonWithIntegratedButton.svelte'
   import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import { Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
+  import { Archive, Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
   import { PromptStatus } from '@shared/Prompt'
 
   type Props = {
@@ -43,12 +43,21 @@
       tone: 'success',
       variant: 'completed',
       testId: 'prompt-status-option-completed'
+    },
+    {
+      id: PromptStatus.Archived,
+      label: 'Archived',
+      detail: 'Archived prompts must be restored to another status',
+      icon: Archive,
+      variant: 'archived'
     }
   ]
 
   const selectedStatusItem = $derived(statusItems.find((item) => item.id === status)!)
-  // The menu only offers statuses that would change the prompt's current status.
-  const settableStatusItems = $derived(statusItems.filter((item) => item.id !== status))
+  // The menu offers editable statuses only; Archived is entered through the archive action.
+  const settableStatusItems = $derived(
+    statusItems.filter((item) => item.id !== status && item.id !== PromptStatus.Archived)
+  )
   // A quick status action describes one optional outer segment of the status control.
   type QuickStatusAction = {
     icon: typeof Check
@@ -59,7 +68,7 @@
   }
   // The forward action completes any active prompt and disappears once it is completed.
   const forwardStatusAction = $derived.by<QuickStatusAction | null>(() =>
-    status === PromptStatus.Completed
+    status === PromptStatus.Completed || status === PromptStatus.Archived
       ? null
       : {
           icon: Check,
@@ -71,7 +80,7 @@
   )
   // The backward action returns In Progress or Completed prompts directly to Todo.
   const backwardStatusAction = $derived.by<QuickStatusAction | null>(() => {
-    if (status === PromptStatus.Todo) return null
+    if (status === PromptStatus.Todo || status === PromptStatus.Archived) return null
     return {
       icon: Undo2,
       label: status === PromptStatus.Completed ? 'Uncomplete prompt' : 'Set prompt to Todo',

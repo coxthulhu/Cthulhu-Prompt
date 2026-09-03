@@ -43,6 +43,7 @@ export type UnorderedPromptStatusFolderLayout = {
 export type PromptStatusFolderLayouts = {
   [PromptStatusFolderId.Active]: OrderedPromptStatusFolderLayout
   [PromptStatusFolderId.Completed]: UnorderedPromptStatusFolderLayout
+  [PromptStatusFolderId.Archived]: UnorderedPromptStatusFolderLayout
 }
 
 /** Optional initial data supplied when constructing registry-backed status-folder layouts. */

@@ -46,10 +46,13 @@
     setPromptFolderSelectedEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
-  import { PromptStatus, type Prompt } from '@shared/Prompt'
+  import { isFinalPromptStatus, type Prompt } from '@shared/Prompt'
   import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type { PromptTemplate } from '@shared/PromptTemplate'
-  import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
+  import {
+    getFinalPromptFolderScreenModeDefinition,
+    PromptFolderScreenMode
+  } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import {
     type ScrollToWithinWindowBand,
     type VirtualWindowItem,
@@ -71,7 +74,7 @@
     promptTreeBottomSpacerDropIndicatorTestId,
     promptTreeBottomSpacerDropTargetTestId
   } from './promptTreeTestIds'
-  import { collectCompletedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
+  import { collectFinalizedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
   import { moveCategory } from '@renderer/data/Mutations/CategoryMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
@@ -198,20 +201,25 @@
       promptFolders[0]!
     )
   })
-  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
-  /** Drag payload section identity for this fixed Active or Completed tree. */
-  const dragStatusSection = $derived(isCompletedMode ? 'completed' : 'active')
-  const selectedCompletedPrompts = $derived.by(() => {
+  /** Final-status metadata for this tree, or null for the Active tree. */
+  const finalModeDefinition = $derived(getFinalPromptFolderScreenModeDefinition(screenMode))
+  /** Whether this tree renders an automatically ordered final status. */
+  const isFinalMode = $derived(finalModeDefinition !== null)
+  /** Drag payload section identity for this fixed status tree. */
+  const dragStatusSection = $derived(screenMode)
+  /** Finalized prompts belonging to this tree's exact final status. */
+  const selectedFinalizedPrompts = $derived.by(() => {
     if (!screenRootFolder || screenRootFolder.kind === 'template') {
       return []
     }
 
-    if (!isCompletedMode) {
+    if (!finalModeDefinition) {
       return []
     }
 
-    return collectCompletedPrompts({
+    return collectFinalizedPrompts({
       rootFolder: screenRootFolder,
+      status: finalModeDefinition.status,
       statusByPromptId: Object.fromEntries(
         Object.values(promptById).map((prompt) => [prompt.id, prompt.status])
       ),
@@ -231,14 +239,14 @@
           (entry) =>
             entry.kind === 'prompt' &&
             Boolean(promptById[entry.id]) &&
-            promptById[entry.id]?.status !== PromptStatus.Completed
+            !isFinalPromptStatus(promptById[entry.id]!.status)
         ).length,
       0
     )
   })
-  /** Prompt count for this tree's fixed Active or Completed status. */
+  /** Prompt count for this tree's fixed active or final status. */
   const selectedStatusPromptCount = $derived(
-    isCompletedMode ? selectedCompletedPrompts.length : selectedActivePromptCount
+    isFinalMode ? selectedFinalizedPrompts.length : selectedActivePromptCount
   )
   const PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX = 15
   const PROMPT_TREE_INDENT_WIDTH_PX = 12
@@ -299,7 +307,7 @@
   })
   /** Empty Active trees still render their category headers as navigable content. */
   const isSelectedStatusTreeEmpty = $derived(
-    selectedStatusPromptCount === 0 && (isCompletedMode || categoryTreeIds.length === 0)
+    selectedStatusPromptCount === 0 && (isFinalMode || categoryTreeIds.length === 0)
   )
 
   const findContentOwnerPath = (
@@ -545,7 +553,7 @@
   const handleCategoryAddToTop = async (categoryId: string): Promise<void> => {
     /** Root folder that owns both the category and its new content. */
     const rootFolder = screenRootFolder
-    if (!rootFolder || isCompletedMode || isCreatingCategoryContent) return
+    if (!rootFolder || isFinalMode || isCreatingCategoryContent) return
 
     isCreatingCategoryContent = true
     /** Optimistic creation and its matching persistence promise. */
@@ -599,7 +607,7 @@
 
   // Side effect: report the current tree collapse state to the sidebar action button.
   $effect(() => {
-    if (isCompletedMode) return
+    if (isFinalMode) return
     const areAllCategoriesCollapsed =
       categoryTreeIds.length > 0 &&
       categoryTreeIds.every(
@@ -613,7 +621,7 @@
   $effect(() => {
     const request = expansionRequests.pending
     if (
-      isCompletedMode ||
+      isFinalMode ||
       !request ||
       folderListState !== 'ready' ||
       request.payload.screenRootFolderId !== screenRootFolder?.id
@@ -660,19 +668,19 @@
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
     if (screenRootFolder) {
-      if (isCompletedMode) {
-        for (const [promptIndex, completedPrompt] of selectedCompletedPrompts.entries()) {
-          const ownerFolder = promptFolderById[completedPrompt.contentOwnerId]
+      if (isFinalMode) {
+        for (const [promptIndex, finalizedPrompt] of selectedFinalizedPrompts.entries()) {
+          const ownerFolder = promptFolderById[finalizedPrompt.contentOwnerId]
           if (!ownerFolder) continue
           items.push({
-            id: contentPromptRowId(ownerFolder.id, completedPrompt.promptId),
+            id: contentPromptRowId(ownerFolder.id, finalizedPrompt.promptId),
             row: {
               kind: 'prompt',
               folder: ownerFolder,
               categoryId: null,
-              promptId: completedPrompt.promptId,
+              promptId: finalizedPrompt.promptId,
               indentCount: 0,
-              isLastRow: promptIndex === selectedCompletedPrompts.length - 1,
+              isLastRow: promptIndex === selectedFinalizedPrompts.length - 1,
               isFirstTreeRow: promptIndex === 0
             }
           })
@@ -685,7 +693,7 @@
           entry.kind === 'template'
             ? Boolean(templateById[entry.id])
             : Boolean(promptById[entry.id]) &&
-              promptById[entry.id]?.status !== PromptStatus.Completed
+              !isFinalPromptStatus(promptById[entry.id]!.status)
         ) ?? []
         for (const [entryIndex, entry] of uncategorizedEntries.entries()) {
           items.push({
@@ -710,7 +718,7 @@
             entry.kind === 'template'
               ? Boolean(templateById[entry.id])
               : Boolean(promptById[entry.id]) &&
-                promptById[entry.id]?.status !== PromptStatus.Completed
+                !isFinalPromptStatus(promptById[entry.id]!.status)
           )
           const isExpanded = getPromptTreeCategoryExpandedState(category.id)
           /** Whether this category header is the first rendered active tree row. */
@@ -833,7 +841,7 @@
             onclick={handleEmptyStatusSelect}
           >
             <span class="sidebarPromptTreeEmptyStatusLabel">
-              No {isCompletedMode ? 'completed' : 'active'} prompts. Click to view.
+              No {finalModeDefinition?.label.toLowerCase() ?? 'active'} prompts. Click to view.
             </span>
           </button>
           {#if isOver && edge}
@@ -875,7 +883,7 @@
       endsVisibleBranch={props.row.endsVisibleBranch}
       contentLabel={screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'}
       isAddToTopDisabled={isCreatingCategoryContent}
-      getCategoryContentDroppableOptions={isCompletedMode
+      getCategoryContentDroppableOptions={isFinalMode
         ? undefined
         : () =>
             getPromptTreePromptDroppableOptions(
@@ -888,16 +896,16 @@
                   edge
                 )
             )}
-      getCategoryOrderDroppableOptions={isCompletedMode
+      getCategoryOrderDroppableOptions={isFinalMode
         ? undefined
         : () => getPromptTreeCategoryDroppableOptions(props.rowId, props.row.category.id)}
-      categoryDragOptions={!isCompletedMode
+      categoryDragOptions={!isFinalMode
         ? getCategoryRowDragOptions(props.row.category.id, props.row.category.displayName)
         : undefined}
       onCategoryExpandedChange={handleCategoryExpandedChange}
       onCategoryOpen={handleCategoryOpen}
       onCategorySettingsOpen={handleCategorySettingsOpen}
-      onCategoryAddToTop={isCompletedMode ? undefined : handleCategoryAddToTop}
+      onCategoryAddToTop={isFinalMode ? undefined : handleCategoryAddToTop}
     />
   {/key}
 {/snippet}
@@ -1020,7 +1028,7 @@
 {/snippet}
 
 {#snippet bottomSpacerRow(props)}
-  {#if isCompletedMode}
+  {#if isFinalMode}
     <PromptDropTarget
       getOptions={() =>
         getPromptTreePromptDroppableOptions('bottom-spacer', 'top', () => ({
@@ -1044,7 +1052,7 @@
 {/snippet}
 
 {#snippet promptTreeBottomSpacerRowOverlay({ rowId }: PromptTreeBottomSpacerRowProps)}
-  {@const edge = isCompletedMode
+  {@const edge = isFinalMode
     ? getPromptTreeDropTargetEdge(rowId)
     : getPromptTreeCategoryDropTargetEdge(rowId)}
 
@@ -1053,7 +1061,7 @@
       testId={promptTreeBottomSpacerDropIndicatorTestId}
       insetStart={getPromptTreeDropIndicatorInset(0)}
       {edge}
-      isBlocked={isCompletedMode
+      isBlocked={isFinalMode
         ? promptTreePromptDroppableState.isBlocked(rowId)
         : promptTreeCategoryDroppableState.isBlocked(rowId)}
     />

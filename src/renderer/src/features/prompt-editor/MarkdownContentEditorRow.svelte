@@ -97,6 +97,7 @@
     isDragEnabled = true,
     onEditorLifecycle,
     onDelete,
+    onArchive,
     onStatusChange,
     onMoveUp,
     onMoveDown,
@@ -150,6 +151,8 @@
     isDragEnabled?: boolean
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     onDelete: () => void
+    /** Archives this prompt without opening the delete confirmation dialog. */
+    onArchive?: () => void
     onStatusChange?: (status: PromptStatus) => void
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
@@ -162,14 +165,15 @@
     minLines: systemSettings.promptEditorMinLines,
     maxLines: systemSettings.promptEditorMaxLines
   })
-  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
-  /** Prompt-card sidebar width retained in both Active and Completed modes. */
+  /** Whether this editor belongs to an automatically ordered final-status screen. */
+  const isFinalMode = $derived(screenMode !== PromptFolderScreenMode.Active)
+  /** Prompt-card sidebar width retained in active and final-status modes. */
   const sidebarWidthPx = PROMPT_EDITOR_SIDEBAR_WIDTH_PX
   const titleAreaWidthPx = $derived(
     getPromptEditorTitleAreaWidthPx(virtualWindowWidthPx, true)
   )
   /** Status section represented by this prompt editor card. */
-  const dragStatusSection = $derived(isCompletedMode ? 'completed' : 'active')
+  const dragStatusSection = $derived(screenMode)
   const titleAreaHeightPx = $derived(
     getPromptEditorTitleAreaHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
   )
@@ -551,7 +555,7 @@
       {isFirstPrompt}
       {isLastPrompt}
       {isDragEnabled}
-      showMoveButtons={!isCompletedMode}
+      showMoveButtons={!isFinalMode}
       statusSection={dragStatusSection}
       onMoveUp={handleMoveUp}
       onMoveDown={handleMoveDown}
@@ -575,6 +579,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onDelete}
+    {onArchive}
     {onTemplateSelect}
     {onTemplateSelectAndCopy}
     {onCopySuccess}

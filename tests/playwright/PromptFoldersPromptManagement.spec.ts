@@ -18,6 +18,7 @@ import {
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
 import {
+  checkFileExists,
   checkPersistedPromptFilesExistByTitle,
   readTextFile,
   readPersistedPromptTextById,
@@ -109,7 +110,7 @@ const statusIndicatorSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
 const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
 /** Returns the accordion content selector for one sidebar prompt status. */
-const sidebarPromptStatusContentSelector = (status: 'active' | 'completed') =>
+const sidebarPromptStatusContentSelector = (status: 'active' | 'completed' | 'archived') =>
   `[data-testid="sidebar-prompt-status-accordion-content-${status}"]`
 
 const expectEditedIndicator = async (page: any, promptId: string) => {
@@ -138,7 +139,7 @@ const getPromptEditorIds = async (page: any): Promise<string[]> => {
 
 const getPromptTreePromptRowIds = async (
   page: any,
-  status?: 'active' | 'completed'
+  status?: 'active' | 'completed' | 'archived'
 ): Promise<string[]> => {
   /** Optional status-section root that prevents rows from the sibling tree joining the result. */
   const root = status ? page.locator(sidebarPromptStatusContentSelector(status)) : page
@@ -488,6 +489,28 @@ const buildCompletedModeWorkspace = () => {
     status: PromptStatus.Completed,
     finalizedAt: '2023-01-04T00:00:00.000Z'
   }
+  /** Newest archived prompt used to verify final-status ordering. */
+  const newestArchivedPrompt: PromptPersisted = {
+    id: 'archived-mode-newest',
+    title: 'Newest Archived',
+    fallbackTitle: '',
+    createdAt: '2023-01-06T00:00:00.000Z',
+    modifiedAt: '2023-01-08T00:00:00.000Z',
+    promptText: 'Newest archived body marker.',
+    status: PromptStatus.Archived,
+    finalizedAt: '2023-01-08T00:00:00.000Z'
+  }
+  /** Oldest archived prompt used to verify final-status ordering. */
+  const oldestArchivedPrompt: PromptPersisted = {
+    id: 'archived-mode-oldest',
+    title: 'Oldest Archived',
+    fallbackTitle: '',
+    createdAt: '2023-01-06T00:00:00.000Z',
+    modifiedAt: '2023-01-07T00:00:00.000Z',
+    promptText: 'Oldest archived body marker.',
+    status: PromptStatus.Archived,
+    finalizedAt: '2023-01-07T00:00:00.000Z'
+  }
   const workspace = createWorkspaceWithFolders(
     COMPLETED_MODE_WORKSPACE_PATH,
     [
@@ -533,6 +556,20 @@ const buildCompletedModeWorkspace = () => {
     promptId: oldestCompletedPrompt.id,
     promptTitle: oldestCompletedPrompt.title
   }).markdownPath
+  /** Persisted path for the newest archived fixture prompt. */
+  const newestArchivedPath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+    folderName: `${folderName}/Archived`,
+    promptId: newestArchivedPrompt.id,
+    promptTitle: newestArchivedPrompt.title
+  }).markdownPath
+  /** Persisted path for the oldest archived fixture prompt. */
+  const oldestArchivedPath = resolvePersistedPromptFilePathsByTitle({
+    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
+    folderName: `${folderName}/Archived`,
+    promptId: oldestArchivedPrompt.id,
+    promptTitle: oldestArchivedPrompt.title
+  }).markdownPath
 
   workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_FolderInfo/FolderOrder.json`] =
     JSON.stringify(
@@ -551,8 +588,11 @@ const buildCompletedModeWorkspace = () => {
   return {
     ...workspace,
     [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
+    [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Archived`]: null,
     [newestCompletedPath]: serializePromptMarkdown(newestCompletedPrompt),
-    [oldestCompletedPath]: serializePromptMarkdown(oldestCompletedPrompt)
+    [oldestCompletedPath]: serializePromptMarkdown(oldestCompletedPrompt),
+    [newestArchivedPath]: serializePromptMarkdown(newestArchivedPrompt),
+    [oldestArchivedPath]: serializePromptMarkdown(oldestArchivedPrompt)
   }
 }
 
@@ -2487,12 +2527,12 @@ describe('Prompt folder prompt management', () => {
     )
     await expect(
       mainWindow.locator(
-        `${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-delete-button"]`
+        `${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-archive-button"]`
       )
     ).toBeVisible()
     await expect(
       mainWindow.locator(
-        `${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-completed-time"]`
+        `${promptEditorSelector('completed-mode-newest')} [data-testid="prompt-finalized-time"]`
       )
     ).toContainText('Completed')
 
@@ -2709,6 +2749,145 @@ describe('Prompt folder prompt management', () => {
     ).toHaveAttribute('aria-expanded', 'false')
   })
 
+  test('archives prompts and exposes archived status views and drag targets', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildCompletedModeWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Completed Mode')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-active'))
+
+    /** Populated active prompt whose primary destructive action must be Archive. */
+    const activeEditor = mainWindow.locator(promptEditorSelector('completed-mode-active'))
+    /** Primary archive action whose label and glyph must both follow the default action. */
+    const archiveButton = activeEditor.locator('[data-testid="prompt-archive-button"]')
+    await expect(archiveButton).toHaveAttribute('aria-label', 'Archive prompt')
+    await expect(archiveButton.locator('.lucide-archive')).toBeVisible()
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    await expect(
+      mainWindow.locator('[data-testid="prompt-status-more-options-menu"]').getByText('Archived', {
+        exact: true
+      })
+    ).toHaveCount(0)
+    await mainWindow.keyboard.press('Escape')
+    await activeEditor.locator('[data-testid="prompt-delete-more-options-button"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-delete-menu-item"]')).toBeVisible()
+    await mainWindow.keyboard.press('Escape')
+    await archiveButton.click()
+
+    /** Archived path receiving the prompt without a confirmation dialog. */
+    const archivedActivePromptPath =
+      `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Archived/Active Prompt.prompt.md`
+    await expect.poll(() => checkFileExists(electronApp, archivedActivePromptPath)).toBe(true)
+    await expect.poll(() => readTextFile(electronApp, archivedActivePromptPath)).toContain(
+      'status: Archived'
+    )
+    await expect(mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')).toHaveCount(0)
+
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+    await mainWindow.locator('[data-testid="prompt-folder-archived-filter"]').click()
+    /** Rendered status sections in required Completed, Archived, Active order. */
+    const statusSections = mainWindow.locator(
+      '[data-testid^="sidebar-prompt-status-accordion-section-"]'
+    )
+    await expect(statusSections).toHaveCount(3)
+    expect(
+      await statusSections.evaluateAll((sections) =>
+        sections.map((section) => section.getAttribute('data-testid'))
+      )
+    ).toEqual([
+      'sidebar-prompt-status-accordion-section-completed',
+      'sidebar-prompt-status-accordion-section-archived',
+      'sidebar-prompt-status-accordion-section-active'
+    ])
+    await expect(
+      mainWindow
+        .locator('[data-testid="sidebar-prompt-status-accordion-header-archived"]')
+        .locator('.cthulhuUiAccordionIcon')
+    ).toHaveClass(/lucide-archive/)
+    await expect(
+      mainWindow.locator('[data-testid="toggle-archived-prompts-button"]')
+    ).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.locator('[data-testid="prompt-folder-archived-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await expect
+      .poll(async () => await getPromptEditorIds(mainWindow))
+      .toEqual(['completed-mode-active', 'archived-mode-newest', 'archived-mode-oldest'])
+    expect(await getPromptTreePromptRowIds(mainWindow, 'archived')).toEqual([
+      'completed-mode-active',
+      'archived-mode-newest',
+      'archived-mode-oldest'
+    ])
+
+    /** Sidebar toggle that hides Archived and returns the active screen to Active. */
+    const archivedToggle = mainWindow.locator('[data-testid="toggle-archived-prompts-button"]')
+    await archivedToggle.click()
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-archived"]')
+    ).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await archivedToggle.click()
+    await expect(
+      mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-archived"]')
+    ).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-archived-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+
+    await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText(
+      'Archived'
+    )
+    await expect(mainWindow.locator(completeSelector('completed-mode-active'))).toHaveCount(0)
+    await expect(mainWindow.locator(uncompleteSelector('completed-mode-active'))).toHaveCount(0)
+    await expect(mainWindow.locator(previousStatusSelector('completed-mode-active'))).toHaveCount(0)
+    await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
+    /** Archived status menu that deliberately omits Archived as a destination. */
+    const archivedStatusMenu = mainWindow.locator('[data-testid="prompt-status-more-options-menu"]')
+    await expect(archivedStatusMenu.getByText('Archived', { exact: true })).toHaveCount(0)
+    await mainWindow.keyboard.press('Escape')
+    await expect(
+      activeEditor.locator('[data-testid="prompt-finalized-time"]')
+    ).toContainText('Archived')
+    await expect(activeEditor.locator('[data-testid="prompt-delete-more-options-button"]')).toHaveCount(0)
+    await activeEditor.locator('[data-testid="prompt-delete-button"]').click()
+    await expect(mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')).toBeVisible()
+    await mainWindow.getByRole('button', { name: 'Cancel' }).click()
+
+    await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-active-empty-status"]')
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () => await getPromptTreePromptRowIds(mainWindow, 'active'))
+      .toEqual(['archived-mode-newest'])
+    /** Restored active path proving Archived supports outbound status drops. */
+    const restoredPromptPath =
+      `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/Newest Archived.prompt.md`
+    await expect.poll(() => readTextFile(electronApp, restoredPromptPath)).toContain('status: Todo')
+
+    await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')
+    await moveActiveDragToTarget(
+      mainWindow,
+      `${sidebarPromptStatusContentSelector('archived')} [data-testid="prompt-tree-prompt-archived-mode-oldest"]`
+    )
+    await finishActiveDrag(mainWindow)
+    await expect
+      .poll(async () => await getPromptTreePromptRowIds(mainWindow, 'archived'))
+      .toEqual(['archived-mode-newest', 'completed-mode-active', 'archived-mode-oldest'])
+    await expect.poll(() => checkFileExists(electronApp, restoredPromptPath)).toBe(false)
+  })
+
   test('deletes prompts and keeps deletion after navigation', async ({
     electronApp,
     testSetup
@@ -2753,19 +2932,30 @@ describe('Prompt folder prompt management', () => {
     const emptyPromptId = idsAfterAdd.find((id) => !initialIds.includes(id))
     expect(emptyPromptId).toBeTruthy()
 
+    /** Empty prompt editor whose primary action remains immediate Delete. */
+    const emptyPromptEditor = mainWindow.locator(promptEditorSelector(emptyPromptId!))
     const emptyDeleteSelector = `${promptEditorSelector(emptyPromptId!)} [data-testid="prompt-delete-button"]`
     await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, emptyDeleteSelector)
     const emptyDeleteButton = mainWindow.locator(emptyDeleteSelector)
+    await expect(emptyDeleteButton).toHaveAttribute('aria-label', 'Delete prompt')
+    await expect(emptyDeleteButton.locator('.lucide-trash-2')).toBeVisible()
+    await expect(
+      emptyPromptEditor.locator('[data-testid="prompt-delete-more-options-button"]')
+    ).toBeVisible()
+    await emptyPromptEditor.locator('[data-testid="prompt-delete-more-options-button"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-archive-menu-item"]')).toBeVisible()
+    await mainWindow.keyboard.press('Escape')
     await emptyDeleteButton.click()
     await expect(mainWindow.locator('text=Delete Prompt')).toHaveCount(0)
     await expect(mainWindow.locator(promptEditorSelector(emptyPromptId!))).toHaveCount(0)
     await waitForPromptCount(mainWindow, 2)
 
     // Delete a populated prompt and confirm the dialog flow.
-    const deleteSelector = `${promptEditorSelector('dev-1')} [data-testid="prompt-delete-button"]`
+    const deleteSelector = `${promptEditorSelector('dev-1')} [data-testid="prompt-delete-more-options-button"]`
     await testHelpers.scrollVirtualElementIntoView(PROMPT_FOLDER_HOST_SELECTOR, deleteSelector)
     const deleteButton = mainWindow.locator(deleteSelector)
     await deleteButton.click()
+    await mainWindow.locator('[data-testid="prompt-delete-menu-item"]').click()
 
     const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
     await expect(dialog).toBeVisible()

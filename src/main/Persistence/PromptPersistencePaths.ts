@@ -62,7 +62,7 @@ export const resolveActivePromptFolderName = (
   return resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
 }
 
-// Maps every logical prompt-folder path to its root folder's flat completed directory.
+// Maps every logical prompt-folder path to its root folder's flat Completed directory.
 export const resolveCompletedPromptFolderName = (
   folderName: string,
   kind: PromptFolderKind = 'prompt'

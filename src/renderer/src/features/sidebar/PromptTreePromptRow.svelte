@@ -211,6 +211,12 @@
     visibility: visible;
   }
 
+  .prompt-tree-status-indicator[data-status='Archived'] {
+    --prompt-status-indicator-color: var(--ui-secondary-icon-glyph);
+    color: var(--prompt-status-indicator-color);
+    visibility: visible;
+  }
+
   .prompt-tree-status-indicator[data-navigation-highlight='true'] {
     animation: prompt-tree-navigation-highlight 670ms linear;
   }

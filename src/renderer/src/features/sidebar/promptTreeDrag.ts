@@ -26,6 +26,12 @@ type PromptTreePromptDropResult = {
   targetStatus: PromptStatus | null
 }
 
+/** Final prompt status selected by a sidebar final-status section. */
+const finalStatusBySection = {
+  completed: PromptStatus.Completed,
+  archived: PromptStatus.Archived
+} as const
+
 const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): PromptFolder | null => {
   return promptFolders.find((folder) => folder.id === folderId) ?? null
 }
@@ -62,7 +68,10 @@ export const resolvePromptTreePromptMove = (
   ) {
     return null
   }
-  if (sourcePayload.statusSection === 'completed' && dropPayload.statusSection === 'completed') {
+  if (
+    sourcePayload.statusSection !== 'active' &&
+    sourcePayload.statusSection === dropPayload.statusSection
+  ) {
     return null
   }
   if (
@@ -76,7 +85,7 @@ export const resolvePromptTreePromptMove = (
     sourcePayload.sourceCategoryId ??
     findEntryCategoryId(sourcePromptFolder, sourcePayload.fromId)
   const destinationCategoryId = dropPayload.categoryId ?? null
-  if (dropPayload.statusSection === 'completed') {
+  if (dropPayload.statusSection !== 'active') {
     return {
       move: {
         sourcePromptFolderId: sourcePromptFolder.id,
@@ -85,18 +94,18 @@ export const resolvePromptTreePromptMove = (
         categoryId: sourceCategoryId,
         previousEntryId: null
       },
-      targetStatus: PromptStatus.Completed
+      targetStatus: finalStatusBySection[dropPayload.statusSection]
     }
   }
   /** Category IDs act as logical containers for same-root cross-category no-op detection. */
   const sourceContentOwnerId =
-    sourcePayload.statusSection === 'completed'
-      ? `${sourcePromptFolder.id}:completed`
+    sourcePayload.statusSection !== 'active'
+      ? `${sourcePromptFolder.id}:${sourcePayload.statusSection}`
       : (sourceCategoryId ?? sourcePromptFolder.id)
   const destinationContentOwnerId = destinationCategoryId ?? destinationPromptFolder.id
   const resolvedMove = resolvePromptHandleDropMove(
     sourceContentOwnerId,
-    sourcePayload.statusSection === 'completed'
+    sourcePayload.statusSection !== 'active'
       ? []
       : getCategoryEntryIds(sourcePromptFolder, sourceCategoryId),
     sourcePayload.fromId,
@@ -113,7 +122,7 @@ export const resolvePromptTreePromptMove = (
       categoryId: destinationCategoryId
     },
     targetStatus:
-      sourcePayload.statusSection === 'completed' ? PromptStatus.Todo : null
+      sourcePayload.statusSection !== 'active' ? PromptStatus.Todo : null
   }
 }
 

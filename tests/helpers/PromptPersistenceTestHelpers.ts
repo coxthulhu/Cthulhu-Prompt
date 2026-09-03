@@ -44,7 +44,9 @@ export const resolvePersistedPromptFilePathsByTitle = (
   const [rootFolderName, ...folderSegments] = lookup.folderName.split('/')
   // Explicit status paths remain direct while logical active paths are nested beneath Active.
   const persistedFolderSegments =
-    folderSegments[0] === 'Active' || folderSegments[0] === 'Completed'
+    folderSegments[0] === 'Active' ||
+    folderSegments[0] === 'Completed' ||
+    folderSegments[0] === 'Archived'
       ? [rootFolderName, ...folderSegments]
       : [rootFolderName, 'Active', ...folderSegments]
   const folderPath = `${lookup.workspacePath}/Prompts/${persistedFolderSegments.join('/')}`

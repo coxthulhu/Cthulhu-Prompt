@@ -3,7 +3,7 @@ import {
   type PromptContentFolder
 } from '@shared/PromptFolder'
 import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
-import { collectCompletedPrompts } from '@renderer/features/prompt-folders/promptFolderCompletedPrompts'
+import { collectFinalizedPrompts } from '@renderer/features/prompt-folders/promptFolderCompletedPrompts'
 import { describe, expect, it } from 'vitest'
 
 const createFolder = (
@@ -22,13 +22,14 @@ const createFolder = (
   }
 })
 
-describe('collectCompletedPrompts', () => {
+describe('collectFinalizedPrompts', () => {
   it('collects root-owned prompts and sorts them by completion time', () => {
     const root = createFolder('root', ['older', 'active', 'newer'])
 
     expect(
-      collectCompletedPrompts({
+      collectFinalizedPrompts({
         rootFolder: root,
+        status: PromptStatus.Completed,
         statusByPromptId: {
           older: PromptStatus.Completed,
           active: PromptStatus.Todo,
@@ -52,8 +53,9 @@ describe('collectCompletedPrompts', () => {
     const finalizedAt = '2026-07-09T11:00:00.000Z'
 
     expect(
-      collectCompletedPrompts({
+      collectFinalizedPrompts({
         rootFolder: root,
+        status: PromptStatus.Completed,
         statusByPromptId: {
           'newest-priority': PromptStatus.Completed,
           'older-priority': PromptStatus.Completed

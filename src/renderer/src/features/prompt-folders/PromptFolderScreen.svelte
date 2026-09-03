@@ -309,7 +309,8 @@
             visiblePromptIds={controller.visiblePromptIds}
             activePromptCount={controller.activePromptCount}
             completedPromptCount={controller.completedPromptCount}
-            completedPromptContentOwnerByPromptId={controller.completedPromptContentOwnerByPromptId}
+            archivedPromptCount={controller.archivedPromptCount}
+            finalizedPromptContentOwnerByPromptId={controller.finalizedPromptContentOwnerByPromptId}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
             detailsSectionExpandedByOwnerId={controller.detailsSectionExpandedByOwnerId}

@@ -387,6 +387,7 @@ describe('Prompt folder prompt tree', () => {
     ).toEqual([
       'sidebar-folder-root-button',
       'toggle-completed-prompts-button',
+      'toggle-archived-prompts-button',
       'toggle-all-categories-button',
       'sidebar-add-category-button',
       'selected-prompt-folder-actions-button'

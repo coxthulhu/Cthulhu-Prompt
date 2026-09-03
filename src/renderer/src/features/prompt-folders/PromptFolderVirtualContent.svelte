@@ -8,7 +8,11 @@
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptEditorUiCache.svelte.ts'
   import { lookupCategoryDescriptionMeasuredHeight } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
-  import { PromptStatus, type PromptTemplateReference } from '@shared/Prompt'
+  import {
+    isFinalPromptStatus,
+    PromptStatus,
+    type PromptTemplateReference
+  } from '@shared/Prompt'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
@@ -83,7 +87,10 @@
   import type { ActivePromptScreenRow } from './promptFolderScreenController.svelte.ts'
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
-  import { PromptFolderScreenMode } from './promptFolderScreenMode'
+  import {
+    getFinalPromptFolderScreenModeDefinition,
+    PromptFolderScreenMode
+  } from './promptFolderScreenMode'
   import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type {
     PromptFolderDividerTarget,
@@ -136,7 +143,8 @@
     visiblePromptIds: string[]
     activePromptCount: number
     completedPromptCount: number
-    completedPromptContentOwnerByPromptId: Record<string, string>
+    archivedPromptCount: number
+    finalizedPromptContentOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
     detailsSectionExpandedByOwnerId: Record<string, boolean>
@@ -198,7 +206,8 @@
     visiblePromptIds,
     activePromptCount,
     completedPromptCount,
-    completedPromptContentOwnerByPromptId,
+    archivedPromptCount,
+    finalizedPromptContentOwnerByPromptId,
     screenMode,
     isCreatingPrompt,
     detailsSectionExpandedByOwnerId,
@@ -245,7 +254,10 @@
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   /** Category-only divider target state keyed by virtual row ID. */
   const categoryDividerDroppableState = createDroppableStateRegistry<string>()
-  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
+  /** Final-status metadata for the selected screen mode, or null for Active. */
+  const finalModeDefinition = $derived(getFinalPromptFolderScreenModeDefinition(screenMode))
+  /** Whether this virtual list renders a final-status view. */
+  const isFinalMode = $derived(finalModeDefinition !== null)
   const todoPromptMetadata: PromptMetadata = {
     status: PromptStatus.Todo,
     finalizedAt: null
@@ -474,7 +486,7 @@
   })
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
-    if (!isCompletedMode) {
+    if (!isFinalMode) {
       const activeRows = activeScreenRows.map((row): VirtualWindowItem<PromptFolderRow> => {
         if (row.kind === 'root-header') {
           return { id: PROMPT_FOLDER_ROOT_HEADER_ROW_ID, row }
@@ -530,7 +542,8 @@
       return activeRows
     }
 
-    const completedRows: VirtualWindowItem<PromptFolderRow>[] = [
+    /** Flat virtual rows for the currently selected final status. */
+    const finalizedRows: VirtualWindowItem<PromptFolderRow>[] = [
       {
         id: PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
         row: { kind: 'root-header' }
@@ -538,7 +551,7 @@
     ]
 
     if (visiblePromptIds.length === 0) {
-      completedRows.push({
+      finalizedRows.push({
         id: 'placeholder-empty',
         row: {
           kind: 'placeholder',
@@ -548,7 +561,7 @@
         }
       })
     } else {
-      completedRows.push({
+      finalizedRows.push({
         id: 'divider-initial',
         row: {
           kind: 'prompt-divider',
@@ -561,8 +574,8 @@
 
       visiblePromptIds.forEach((promptId, promptIndex) => {
         const contentOwnerId =
-          completedPromptContentOwnerByPromptId[promptId] ?? screenRootFolderId
-        completedRows.push({
+          finalizedPromptContentOwnerByPromptId[promptId] ?? screenRootFolderId
+        finalizedRows.push({
           id: promptEditorRowId(promptId),
           row: {
             kind: 'prompt-editor',
@@ -574,7 +587,7 @@
             isLastPrompt: promptIndex === visiblePromptIds.length - 1
           }
         })
-        completedRows.push({
+        finalizedRows.push({
           id: promptDividerRowId(promptId),
           row: {
             kind: 'prompt-divider',
@@ -587,8 +600,8 @@
       })
     }
 
-    completedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
-    return completedRows
+    finalizedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+    return finalizedRows
   })
 
   const handleCenterRowChange = (row: PromptFolderRow | null) => {
@@ -604,7 +617,7 @@
       })
       return
     }
-    if (!isCompletedMode && row?.kind === 'category-editor') {
+    if (!isFinalMode && row?.kind === 'category-editor') {
       onCenterRowChange({
         kind: 'category-details',
         contentOwnerId: row.contentOwnerId
@@ -616,7 +629,7 @@
 
   /** Reports the category at the breadcrumb sample point while retaining the final category in trailing space. */
   const handleBreadcrumbSampleRowChange = (row: PromptFolderRow | null): void => {
-    if (isCompletedMode) {
+    if (isFinalMode) {
       onBreadcrumbCategoryChange(null)
       return
     }
@@ -741,7 +754,11 @@
   /** Returns the active content count displayed by a category card. */
   const getCategoryContentCount = (row: PromptFolderScreenCategoryEditorRow): number => {
     return getCategoryEntryIds(row.categoryId).filter(
-      (entryId) => promptMetadataByPromptId[entryId]?.status !== PromptStatus.Completed
+      (entryId) => {
+        /** Loaded status used to exclude every final-status prompt from active counts. */
+        const status = promptMetadataByPromptId[entryId]?.status
+        return status !== undefined && !isFinalPromptStatus(status)
+      }
     ).length
   }
 
@@ -778,6 +795,7 @@
       (isTemplateFolder ? 'Prompt Template Folder' : 'Prompt Folder')}
     {activePromptCount}
     {completedPromptCount}
+    {archivedPromptCount}
     {screenMode}
     {contentKind}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
@@ -819,10 +837,10 @@
         {contentKind}
         isDetailsSectionExpanded={props.row.isDetailsSectionExpanded}
         isContentSectionExpanded={props.row.isContentSectionExpanded}
-        isReadOnly={isCompletedMode}
-        canRename={!isCompletedMode}
+        isReadOnly={isFinalMode}
+        canRename={!isFinalMode}
         showSidebar
-        dragOptions={!isCompletedMode ? getCategoryDragOptions(category) : undefined}
+        dragOptions={!isFinalMode ? getCategoryDragOptions(category) : undefined}
         onDetailsSectionToggle={() => onDetailsSectionToggle(category.id)}
         onContentSectionToggle={() => onContentSectionToggle(category.id)}
         onDescriptionChange={(text, measurement) =>
@@ -842,13 +860,13 @@
     contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
   >
     <p>
-      {isCompletedMode
-        ? 'No completed prompts were found in this folder.'
+      {isFinalMode
+        ? `No ${finalModeDefinition!.label.toLowerCase()} prompts were found in this folder.`
         : isTemplateFolder
           ? 'No templates found in this folder.'
           : 'No active prompts were found in this folder.'}
     </p>
-    {#if !isCompletedMode}
+    {#if !isFinalMode}
       <p class="text-sm mt-2">
         Click the Add {isTemplateFolder ? 'Template' : 'Prompt'} button to create your first
         {isTemplateFolder ? 'template' : 'prompt'}.
@@ -933,7 +951,7 @@
     categoryId: row.categoryId,
     previousEntryId: row.previousEntryId
   }}
-  {@const showsActions = !isCompletedMode}
+  {@const showsActions = !isFinalMode}
   <PromptFolderSectionRow
     {rowHeightPx}
     indentLevel={row.indentLevel}
@@ -1021,6 +1039,9 @@
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       onDelete={() => onDeletePrompt(promptTarget)}
+      onArchive={isTemplateFolder
+        ? undefined
+        : () => onSetPromptStatus(promptTarget, PromptStatus.Archived)}
       onTemplateSelect={isTemplateFolder
         ? undefined
         : () => openTemplateSelectionDialog(promptTarget, 'select')}
@@ -1031,9 +1052,9 @@
       onStatusChange={isTemplateFolder ? undefined : (status) => {
         onSetPromptStatus(promptTarget, status)
       }}
-      onMoveUp={() => (isCompletedMode ? Promise.resolve(false) : onMovePromptUp(promptTarget))}
+      onMoveUp={() => (isFinalMode ? Promise.resolve(false) : onMovePromptUp(promptTarget))}
       onMoveDown={() =>
-        isCompletedMode ? Promise.resolve(false) : onMovePromptDown(promptTarget)}
+        isFinalMode ? Promise.resolve(false) : onMovePromptDown(promptTarget)}
       onPromptTreeDrop={(dropPayload) => {
         return onPromptTreeDrop(promptTarget, dropPayload)
       }}

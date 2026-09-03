@@ -4,7 +4,7 @@ import matter from 'gray-matter'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/workspacePath'
 import { compactGuid } from '@shared/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { PromptStatus } from '@shared/Prompt'
+import { PROMPT_STATUS_FOLDERS, PromptStatus } from '@shared/Prompt'
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { preparePromptFolderName } from '@shared/promptFolderName'
 import { folderEntryRef, promptEntryRef, promptTemplateEntryRef } from '@shared/OrderContainer'
@@ -27,7 +27,7 @@ import {
   resolveActivePromptFolderName,
   resolveCategoriesDirectoryPath,
   resolveCategoryPathFromStem,
-  resolveCompletedPromptFolderName,
+  resolvePromptStatusFolderName,
   resolvePromptFolderCategoryOrderPath,
   resolvePromptFolderPath,
   resolveWorkspaceFolderOrderPath
@@ -100,11 +100,15 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     resolveActivePromptFolderName(EXAMPLE_FOLDER_NAME, 'prompt'),
     'prompt'
   )
-  // Canonical flat directory that owns all completed prompts in the root tree.
-  const completedFolderPath = resolvePromptFolderPath(
-    workspacePath,
-    resolveCompletedPromptFolderName(EXAMPLE_FOLDER_NAME),
-    'prompt'
+  /** Canonical flat directories owned by automatically ordered final statuses. */
+  const finalStatusFolderPaths = PROMPT_STATUS_FOLDERS.filter(
+    (statusFolder) => statusFolder.ordering === 'finalizedAt'
+  ).map((statusFolder) =>
+    resolvePromptFolderPath(
+      workspacePath,
+      resolvePromptStatusFolderName(EXAMPLE_FOLDER_NAME, statusFolder.id),
+      'prompt'
+    )
   )
   const folderInfoPath = path.join(
     exampleFolderPath,
@@ -148,7 +152,9 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
 
   fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
   fs.mkdirSync(path.join(activeFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
-  fs.mkdirSync(completedFolderPath, { recursive: true })
+  for (const finalStatusFolderPath of finalStatusFolderPaths) {
+    fs.mkdirSync(finalStatusFolderPath, { recursive: true })
+  }
   fs.mkdirSync(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'), {
     recursive: true
   })

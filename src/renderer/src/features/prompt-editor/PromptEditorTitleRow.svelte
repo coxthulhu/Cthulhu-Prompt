@@ -14,6 +14,8 @@
     rowId?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onDelete?: () => void
+    /** Archives a prompt through the shared final-status mutation. */
+    onArchive?: () => void
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
@@ -42,12 +44,14 @@
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
-  import { FileText, Layers, Trash2 } from 'lucide-svelte'
-  import { PromptStatus } from '@shared/Prompt'
+  import { Archive, FileText, Layers, Trash2 } from 'lucide-svelte'
+  import { isFinalPromptStatus, PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
 
@@ -62,6 +66,7 @@
     rowId,
     scrollToWithinWindowBand,
     onDelete,
+    onArchive,
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
@@ -108,13 +113,16 @@
     modifiedRelativeLabel ? `Updated ${modifiedRelativeLabel}` : ''
   )
   const modifiedFullLabel = $derived(modifiedAt ? formatPromptModifiedFull(modifiedAt) : '')
-  const completedRelativeLabel = $derived(
+  /** Relative timestamp shared by Completed and Archived metadata. */
+  const finalizedRelativeLabel = $derived(
     finalizedAt ? formatPromptModifiedRelative(finalizedAt, nowMs) : ''
   )
-  const completedLabel = $derived(
-    completedRelativeLabel ? `Completed ${completedRelativeLabel}` : ''
+  /** Status-aware label for the prompt's current finalization time. */
+  const finalizedLabel = $derived(
+    finalizedRelativeLabel ? `${status} ${finalizedRelativeLabel}` : ''
   )
-  const completedFullLabel = $derived(finalizedAt ? formatPromptModifiedFull(finalizedAt) : '')
+  /** Full finalization timestamp exposed as metadata hover text. */
+  const finalizedFullLabel = $derived(finalizedAt ? formatPromptModifiedFull(finalizedAt) : '')
   // Side effect: keep the relative modified label fresh while the prompt folder stays open.
   onMount(() => {
     const intervalId = window.setInterval(() => {
@@ -170,7 +178,7 @@
 
   const handleCopySuccess = async () => {
     await onCopySuccess?.()
-    if (status === PromptStatus.Completed || status === PromptStatus.InProgress) return
+    if (isFinalPromptStatus(status) || status === PromptStatus.InProgress) return
     await onStatusChange?.(PromptStatus.InProgress)
   }
 
@@ -184,6 +192,53 @@
     }
 
     onDelete()
+  }
+
+  /** Whether the split button's primary action archives this nonblank prompt. */
+  const isArchiveDefaultAction = $derived(
+    onArchive !== undefined &&
+      status !== PromptStatus.Archived &&
+      (title.trim().length > 0 || draftText.trim().length > 0)
+  )
+  /** Main split-button icon matching its current default action. */
+  const DeletePrimaryIcon = $derived(isArchiveDefaultAction ? Archive : Trash2)
+  /** Accessible main split-button label matching its current default action. */
+  const deletePrimaryLabel = $derived(isArchiveDefaultAction ? 'Archive prompt' : deleteLabel)
+  /** Alternate action offered by the prompt delete split button. */
+  const deleteMoreOptions = $derived.by<DropdownPopupDetailedItem[]>(() => [
+    isArchiveDefaultAction
+      ? {
+          id: 'delete',
+          label: 'Delete Prompt',
+          detail: 'Permanently delete this prompt',
+          icon: Trash2,
+          testId: 'prompt-delete-menu-item'
+        }
+      : {
+          id: 'archive',
+          label: 'Archive Prompt',
+          detail: 'Move this prompt to Archived',
+          icon: Archive,
+          testId: 'prompt-archive-menu-item'
+        }
+  ])
+
+  /** Runs the split button's context-sensitive primary action. */
+  const handleDeletePrimaryClick = () => {
+    if (isArchiveDefaultAction) {
+      onArchive?.()
+      return
+    }
+    handleDeleteClick()
+  }
+
+  /** Runs the split button action selected from its one-item dropdown. */
+  const handleDeleteMoreOptionsSelect = (item: DropdownPopupDetailedItem) => {
+    if (item.id === 'archive') {
+      onArchive?.()
+      return
+    }
+    handleDeleteClick()
   }
 
   // Confirming closes the dialog before deleting the prompt.
@@ -263,8 +318,8 @@
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
         {#if finalizedAt}
           <SeparatorDot />
-          <span data-testid="prompt-completed-time" title={completedFullLabel}>
-            {completedLabel}
+          <span data-testid="prompt-finalized-time" title={finalizedFullLabel}>
+            {finalizedLabel}
           </span>
         {/if}
       </div>
@@ -293,14 +348,31 @@
     {#if onDelete}
       <Separator orientation="vertical" class="prompt-editor-title-actions-separator" />
       <div class="prompt-editor-title-delete-section">
-        <IconButton
-          icon={Trash2}
-          label={deleteLabel}
-          title={deleteLabel}
-          hoverVariant="danger"
-          testId="prompt-delete-button"
-          onclick={handleDeleteClick}
-        />
+        {#if onArchive && status !== PromptStatus.Archived}
+          <IconButtonWithMoreOptions
+            icon={DeletePrimaryIcon}
+            label={deletePrimaryLabel}
+            title={deletePrimaryLabel}
+            moreOptions={deleteMoreOptions}
+            mainHoverVariant={isArchiveDefaultAction ? 'neutral' : 'danger'}
+            moreOptionsHoverVariant="neutral"
+            testId={isArchiveDefaultAction ? 'prompt-archive-button' : 'prompt-delete-button'}
+            moreOptionsTestId="prompt-delete-more-options-button"
+            menuTestId="prompt-delete-more-options-menu"
+            menuWidth="220px"
+            onclick={handleDeletePrimaryClick}
+            onselect={handleDeleteMoreOptionsSelect}
+          />
+        {:else}
+          <IconButton
+            icon={Trash2}
+            label={deleteLabel}
+            title={deleteLabel}
+            hoverVariant="danger"
+            testId="prompt-delete-button"
+            onclick={handleDeleteClick}
+          />
+        {/if}
       </div>
     {/if}
   </div>
@@ -359,6 +431,11 @@
 
   .prompt-editor-title-status-indicator[data-status='Completed'] {
     --prompt-status-indicator-color: var(--ui-success-normal-text);
+    visibility: visible;
+  }
+
+  .prompt-editor-title-status-indicator[data-status='Archived'] {
+    --prompt-status-indicator-color: var(--ui-secondary-icon-glyph);
     visibility: visible;
   }
 

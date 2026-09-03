@@ -695,6 +695,49 @@ describe('shared domain mutation planners', () => {
     })
   })
 
+  it('resets finalization time when moving between final statuses', () => {
+    /** Prompt root whose Completed layout currently owns the prompt. */
+    const folder = createRootFolder('root', 'prompt', null)
+    folder.statusFolders[PromptStatusFolderId.Completed].promptIds = ['prompt']
+    /** Completed prompt carrying the timestamp that Archived must replace. */
+    const prompt = {
+      id: 'prompt',
+      title: 'Prompt',
+      fallbackTitle: '',
+      modifiedAt: 'old',
+      status: PromptStatus.Completed,
+      finalizedAt: '2026-08-29T12:00:00Z'
+    }
+    /** Shared status plan moving the prompt into Archived with a new timestamp. */
+    const plan = planSetPromptStatusDomainMutation(
+      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      {
+        sourcePromptFolderId: folder.id,
+        destinationPromptFolderId: folder.id,
+        promptId: prompt.id,
+        status: PromptStatus.Archived,
+        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        modifiedAt: '2026-08-30T12:00:00Z'
+      }
+    )
+
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    /** Root projection after ownership moves from Completed to Archived. */
+    const archivedFolder = produce(folder, plan[0]!.recipe!)
+    /** Prompt projection after Archived replaces its finalization timestamp. */
+    const archivedPrompt = produce(prompt, plan[1]!.recipe!)
+    expect(archivedFolder.statusFolders[PromptStatusFolderId.Completed].promptIds).toEqual([])
+    expect(archivedFolder.statusFolders[PromptStatusFolderId.Archived].promptIds).toEqual([
+      prompt.id
+    ])
+    expect(archivedPrompt).toMatchObject({
+      status: PromptStatus.Archived,
+      finalizedAt: '2026-08-30T12:00:00Z',
+      modifiedAt: '2026-08-30T12:00:00Z'
+    })
+  })
+
   it('preserves ordering when a status changes within one status folder', () => {
     /** Active prompt root whose ordering must not be targeted by the status update. */
     const folder = createRootFolder('root', 'prompt', null)

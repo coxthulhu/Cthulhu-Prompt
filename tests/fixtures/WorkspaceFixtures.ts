@@ -3,6 +3,7 @@ import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptF
 import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
 import {
+  isFinalPromptStatus,
   PromptStatus,
   type PromptPersisted,
   type PromptTemplateReference
@@ -228,7 +229,7 @@ const createPromptFiles = (
       promptText: prompt.promptText,
       ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
       ...(prompt.category !== undefined ? { category: prompt.category } : {}),
-      ...(prompt.status === PromptStatus.Completed && prompt.finalizedAt
+      ...(isFinalPromptStatus(prompt.status ?? PromptStatus.Todo) && prompt.finalizedAt
         ? { finalizedAt: prompt.finalizedAt }
         : {})
     }
@@ -383,13 +384,22 @@ export function createWorkspaceWithFolders(
     const activeFolderPath = `${folderPath}/Active`
     const { prompts } = normalizePrompts(folder.prompts)
     // Active fixture prompts remain in the hierarchy and its authoritative order.
-    const activePrompts = prompts.filter((prompt) => prompt.status !== PromptStatus.Completed)
+    const activePrompts = prompts.filter(
+      (prompt) => !isFinalPromptStatus(prompt.status ?? PromptStatus.Todo)
+    )
     // Completed fixture prompts share the root's flat completed directory.
     const completedPrompts = prompts.filter((prompt) => prompt.status === PromptStatus.Completed)
+    // Archived fixture prompts share the root's flat archived directory.
+    const archivedPrompts = prompts.filter((prompt) => prompt.status === PromptStatus.Archived)
     const { promptFiles } = createPromptFiles(activeFolderPath, activePrompts)
     const { promptFiles: completedPromptFiles } = createPromptFiles(
       `${folderPath}/Completed`,
       completedPrompts
+    )
+    // Serialized archived prompt files exercise the production final-status reader.
+    const { promptFiles: archivedPromptFiles } = createPromptFiles(
+      `${folderPath}/Archived`,
+      archivedPrompts
     )
     const promptFolderId =
       typeof folder.promptFolderId === 'string'
@@ -410,9 +420,11 @@ export function createWorkspaceWithFolders(
     )
     addPromptFolderSettingsFiles(structure, folderPath, folder)
     structure[`${folderPath}/Completed`] = null
+    structure[`${folderPath}/Archived`] = null
     structure[`${folderPath}/Categories`] = null
     Object.assign(structure, promptFiles)
     Object.assign(structure, completedPromptFiles)
+    Object.assign(structure, archivedPromptFiles)
   }
   structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(
     folderOrderFile(promptFolderIds),
@@ -908,13 +920,22 @@ export function addFolderToWorkspace(
   const activeFolderPath = `${folderPath}/Active`
   const { prompts } = normalizePrompts(folderConfig.prompts)
   // Active fixture prompts remain in the hierarchy and its authoritative order.
-  const activePrompts = prompts.filter((prompt) => prompt.status !== PromptStatus.Completed)
+  const activePrompts = prompts.filter(
+    (prompt) => !isFinalPromptStatus(prompt.status ?? PromptStatus.Todo)
+  )
   // Completed fixture prompts share the root's flat completed directory.
   const completedPrompts = prompts.filter((prompt) => prompt.status === PromptStatus.Completed)
+  // Archived fixture prompts share the added root's flat archived directory.
+  const archivedPrompts = prompts.filter((prompt) => prompt.status === PromptStatus.Archived)
   const { promptFiles } = createPromptFiles(activeFolderPath, activePrompts)
   const { promptFiles: completedPromptFiles } = createPromptFiles(
     `${folderPath}/Completed`,
     completedPrompts
+  )
+  // Serialized archived files mirror full-workspace fixture creation.
+  const { promptFiles: archivedPromptFiles } = createPromptFiles(
+    `${folderPath}/Archived`,
+    archivedPrompts
   )
   const promptFolderId =
     typeof folderConfig.promptFolderId === 'string'
@@ -933,9 +954,11 @@ export function addFolderToWorkspace(
       2
     ),
     [`${folderPath}/Completed`]: null,
+    [`${folderPath}/Archived`]: null,
     [`${folderPath}/Categories`]: null,
     ...promptFiles,
-    ...completedPromptFiles
+    ...completedPromptFiles,
+    ...archivedPromptFiles
   }
   addPromptFolderSettingsFiles(structure, folderPath, folderConfig)
 

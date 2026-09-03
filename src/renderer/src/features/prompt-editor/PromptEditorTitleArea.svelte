@@ -22,6 +22,7 @@
     rowId,
     scrollToWithinWindowBand,
     onDelete,
+    onArchive,
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
@@ -62,6 +63,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onDelete}
+    {onArchive}
     {onTemplateSelect}
     {onTemplateSelectAndCopy}
     {onCopySuccess}
