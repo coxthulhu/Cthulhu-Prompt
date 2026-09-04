@@ -265,10 +265,21 @@
               type="button"
               data-testid="prompt-folder-header-section"
               class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors duration-[var(--ui-animation-duration-standard)]"
-              onclick={controller.handleHeaderSegmentClick}
+              onclick={controller.handleHeaderFolderClick}
             >
-              {controller.activeHeaderSection}
+              {controller.headerGroupLabel}
             </button>
+            {#if controller.headerCategoryLabel !== null}
+              <span class="prompt-folder-header-separator mx-1 px-2">/</span>
+              <button
+                type="button"
+                data-testid="prompt-folder-header-category"
+                class="prompt-folder-header-section cursor-pointer whitespace-nowrap transition-colors duration-[var(--ui-animation-duration-standard)]"
+                onclick={controller.handleHeaderCategoryClick}
+              >
+                {controller.headerCategoryLabel}
+              </button>
+            {/if}
           </div>
 
           <IconButton
@@ -445,11 +456,13 @@
   }
 
   .prompt-folder-header-breadcrumb,
-  .prompt-folder-header-folder {
+  .prompt-folder-header-folder,
+  .prompt-folder-header-section {
     color: var(--ui-muted-text);
   }
 
-  .prompt-folder-header-folder:hover {
+  .prompt-folder-header-folder:hover,
+  .prompt-folder-header-section:hover {
     color: var(--ui-hoverable-text);
   }
 
@@ -457,11 +470,11 @@
     color: var(--ui-neutral-emphasis-border);
   }
 
-  .prompt-folder-header-section {
+  .prompt-folder-header-section:last-child {
     color: var(--ui-hoverable-text);
   }
 
-  .prompt-folder-header-section:hover {
+  .prompt-folder-header-section:last-child:hover {
     color: var(--ui-normal-text);
   }
 </style>

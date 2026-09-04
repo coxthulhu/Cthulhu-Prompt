@@ -341,6 +341,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Templates'
     )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
       'Templates 2'
     )
@@ -561,10 +562,23 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     /** Separator row retaining the preceding category breadcrumb. */
     const categorySeparatorSelector =
       `[data-testid="prompt-folder-category-separator-${categoryId}"]`
-    /** Fixed breadcrumb segment displaying the sampled content owner. */
+    /** Fixed breadcrumb segment displaying the selected status group. */
     const headerSection = mainWindow.locator('[data-testid="prompt-folder-header-section"]')
+    /** Optional breadcrumb segment displaying the sampled category. */
+    const headerCategory = mainWindow.locator('[data-testid="prompt-folder-header-category"]')
     await expect(mainWindow.locator(categorySelector)).toBeAttached()
-    await expect(headerSection).toHaveText('Prompts')
+    await expect(headerSection).toHaveText('Active')
+    await expect(headerCategory).toHaveCount(0)
+    await mainWindow.mouse.move(0, 0)
+    /** Muted ancestor color used when a category follows the status group. */
+    const ancestorBreadcrumbColor = await mainWindow
+      .locator('[data-testid="prompt-folder-header-folder"]')
+      .evaluate((element) => getComputedStyle(element).color)
+    /** Light trailing-segment color shared by the group and category breadcrumbs. */
+    const currentBreadcrumbColor = await headerSection.evaluate(
+      (element) => getComputedStyle(element).color
+    )
+    expect(currentBreadcrumbColor).not.toBe(ancestorBreadcrumbColor)
 
     /** Reads a rendered row's top edge relative to the virtual viewport. */
     const readRowTopInset = async (selector: string): Promise<number | null> => {
@@ -589,10 +603,19 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(categoryOffsetPx).not.toBeNull()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, categoryOffsetPx! - 86)
-    await expect(headerSection).toHaveText('Prompts')
+    await expect(headerSection).toHaveText('Active')
+    await expect(headerCategory).toHaveCount(0)
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, categoryOffsetPx! - 82)
-    await expect(headerSection).toHaveText('Primary')
+    await expect(headerCategory).toHaveText('Primary')
+    await expect(headerSection).toHaveText('Active')
+    await expect(headerSection).toHaveCSS('color', ancestorBreadcrumbColor)
+    await expect(headerCategory).toHaveCSS('color', currentBreadcrumbColor)
+    await expect(mainWindow.locator('.prompt-folder-header-breadcrumb button')).toHaveText([
+      'Hierarchy',
+      'Active',
+      'Primary'
+    ])
 
     /** Separator offset used to verify the preceding category remains active through the gap. */
     const categorySeparatorOffsetPx = await readRowContentOffset(categorySeparatorSelector)
@@ -601,20 +624,21 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       PROMPT_FOLDER_HOST,
       categorySeparatorOffsetPx! - 80
     )
-    await expect(headerSection).toHaveText('Primary')
+    await expect(headerCategory).toHaveText('Primary')
 
     /** Following category offset used to verify the breadcrumb changes only at its header. */
     const emptyCategoryOffsetPx = await readRowContentOffset(emptyCategorySelector)
     expect(emptyCategoryOffsetPx).not.toBeNull()
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, emptyCategoryOffsetPx! - 86)
-    await expect(headerSection).toHaveText('Primary')
+    await expect(headerCategory).toHaveText('Primary')
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, emptyCategoryOffsetPx! - 82)
-    await expect(headerSection).toHaveText('Empty')
+    await expect(headerCategory).toHaveText('Empty')
 
     /** Full virtual height used to place the sample point in final trailing category space. */
     const virtualHeightPx = await testHelpers.getVirtualWindowScrollHeight(PROMPT_FOLDER_HOST)
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, virtualHeightPx)
-    await expect(headerSection).toHaveText('Empty')
+    await expect(headerCategory).toHaveText('Empty')
+    await expect(headerSection).toHaveText('Active')
 
     await mainWindow
       .locator('[data-testid="prompt-tree-active-category-toggle-button-Primary"]')
@@ -622,7 +646,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow
       .locator('[data-testid="prompt-tree-active-category-open-menu-item-Primary"]')
       .click()
-    await expect(headerSection).toHaveText('Primary')
+    await expect(headerCategory).toHaveText('Primary')
 
     /** Category content toggle used to verify breadcrumb clicks preserve expansion state. */
     const categoryContentToggle = mainWindow
@@ -637,9 +661,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await categoryContentToggle.click()
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
     await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST, 100)
-    await expect(headerSection).toHaveText('Primary')
+    await expect(headerCategory).toHaveText('Primary')
 
-    await headerSection.click()
+    await headerCategory.click()
     await expect
       .poll(async () => Math.abs((await readRowTopInset(categorySelector))! - 80))
       .toBeLessThanOrEqual(2)
@@ -647,20 +671,14 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.locator('.monaco-editor textarea:focus')).toHaveCount(0)
 
-    await mainWindow.locator('[data-testid="prompt-folder-header-folder"]').click()
-    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(headerSection).toHaveText('Prompts')
-
     await headerSection.click()
-    await expect
-      .poll(async () => {
-        /** First root-level divider marks the beginning of Uncategorized prompts. */
-        const dividerTopInset = await readRowTopInset(
-          '[data-testid^="prompt-folder-divider-"][data-testid$="-initial"]'
-        )
-        return Math.abs(dividerTopInset! - 80)
-      })
-      .toBeLessThanOrEqual(2)
+    await mainWindow.mouse.move(0, 0)
+    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
+    await expect(headerSection).toHaveText('Active')
+    await expect(headerCategory).toHaveCount(0)
+    await expect(headerSection).toHaveCSS('color', currentBreadcrumbColor)
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
       'data-active',
       'true'
@@ -1487,10 +1505,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
-      'Prompts'
+      'Active'
     )
 
     await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
+    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
     await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
       'data-active',
       'true'

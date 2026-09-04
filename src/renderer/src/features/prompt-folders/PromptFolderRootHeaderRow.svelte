@@ -112,7 +112,7 @@
           data-testid={`prompt-folder-${group.id}-filter`}
           onclick={() => onScreenModeChange(group.id)}
         >
-          {group.label}{group.ordering === 'category' ? ' Prompts' : ''} <span>{statusGroupCounts[group.id]}</span>
+          {group.label} <span>{statusGroupCounts[group.id]}</span>
         </button>
       {/each}
     {/if}

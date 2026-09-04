@@ -2,6 +2,7 @@ import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
 import {
   getPromptStatusFolderDefinition,
+  PROMPT_STATUS_FOLDER_REGISTRY,
   type PromptStatusFolderId,
   isPromptFull,
   type Prompt,
@@ -1473,13 +1474,9 @@ export const createPromptFolderScreenController = ({
       ? null
       : (categories.find((category) => category.id === breadcrumbCategoryId) ?? null)
   )
-  /** Root-level content label shown when the sample point is outside a category. */
-  const rootContentBreadcrumbLabel = $derived(
-    isTemplateFolder ? 'Templates' : (finalModeDefinition?.label ?? 'Prompts')
-  )
-  /** Current category or root-content label shown after the folder breadcrumb. */
-  const activeHeaderSection = $derived(
-    activeBreadcrumbCategory?.displayName ?? rootContentBreadcrumbLabel
+  /** Fixed status-group or template label shown before the current category. */
+  const headerGroupLabel = $derived(
+    isTemplateFolder ? 'Templates' : PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label
   )
 
   const findRenderedPromptRow = (promptId: string): PromptFolderScreenPromptEditorRow | undefined =>
@@ -1488,27 +1485,21 @@ export const createPromptFolderScreenController = ({
         row.kind === 'prompt-editor' && row.promptId === promptId
     )
 
-  /** Aligns the active content breadcrumb without expanding categories or selecting an editor. */
-  const handleHeaderSegmentClick = () => {
+  /** Aligns the current category without expanding it or selecting an editor. */
+  const handleHeaderCategoryClick = () => {
     if (!scrollToAndTrackRow) return
-    /** Navigation selection representing the category or root content segment. */
-    const targetRow: ActivePromptScreenRow = activeBreadcrumbCategory
-      ? { kind: 'category-details', contentOwnerId: activeBreadcrumbCategory.id }
-      : { kind: 'root-header', contentOwnerId: screenRootFolderId }
-    setCurrentFolderSelection(targetRow, 'header', {
-      forceRequest: true
-    })
-    /** Virtual row aligned for the selected breadcrumb segment. */
-    const targetRowId = activeBreadcrumbCategory
-      ? categoryEditorRowId(activeBreadcrumbCategory.id)
-      : promptFolderDividerRowId(screenRootFolderId, screenRootFolderId, null)
-    scrollToAndTrackRow(targetRowId, {
+    setCurrentFolderSelection(
+      { kind: 'category-details', contentOwnerId: activeBreadcrumbCategory!.id },
+      'header',
+      { forceRequest: true }
+    )
+    scrollToAndTrackRow(categoryEditorRowId(activeBreadcrumbCategory!.id), {
       type: 'vertical-bias',
       verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
     })
   }
 
-  /** Aligns the root-folder breadcrumb at the top without changing category expansion state. */
+  /** Returns folder and group breadcrumb clicks to the top without changing category expansion. */
   const handleHeaderFolderClick = () => {
     if (!scrollToAndTrackRow) return
     setCurrentFolderSelection(
@@ -1670,8 +1661,13 @@ export const createPromptFolderScreenController = ({
     get activeHeaderRowId(): 'prompt-header' {
       return activeHeaderRowId
     },
-    get activeHeaderSection(): string {
-      return activeHeaderSection
+    /** Fixed breadcrumb label for the selected status group or templates. */
+    get headerGroupLabel(): string {
+      return headerGroupLabel
+    },
+    /** Optional category segment for the current viewport position. */
+    get headerCategoryLabel(): string | null {
+      return activeBreadcrumbCategory?.displayName ?? null
     },
     get breadcrumbSampleOffsetPx(): number {
       return BREADCRUMB_SAMPLE_OFFSET_PX
@@ -1686,7 +1682,7 @@ export const createPromptFolderScreenController = ({
     scrollToWithinWindowBandWithManualClear,
     toggleDetailsSectionExpanded,
     toggleContentSectionExpanded,
-    handleHeaderSegmentClick,
+    handleHeaderCategoryClick,
     handleHeaderFolderClick,
     handleBreadcrumbCategoryChange,
     handleFindMatchReveal,

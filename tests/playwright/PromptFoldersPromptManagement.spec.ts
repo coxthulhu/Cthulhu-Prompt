@@ -2509,6 +2509,7 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Completed'
     )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
     const completedFolderTitle = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
     await expect(completedFolderTitle).toBeVisible()
     await expect(completedFolderTitle).toContainText('Completed Mode')
@@ -2846,6 +2847,10 @@ describe('Prompt folder prompt management', () => {
 
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
     await mainWindow.locator('[data-testid="prompt-folder-archived-filter"]').click()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
+      'Archived'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
     /** Rendered status sections in required Completed, Archived, Active order. */
     const statusSections = mainWindow.locator(
       '[data-testid^="sidebar-prompt-status-accordion-section-"]'
