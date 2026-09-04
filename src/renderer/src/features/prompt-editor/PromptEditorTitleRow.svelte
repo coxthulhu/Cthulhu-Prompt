@@ -51,7 +51,7 @@
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
   import { Archive, FileText, Layers, Trash2 } from 'lucide-svelte'
-  import { isFinalPromptStatus, PromptStatus } from '@shared/Prompt'
+  import { PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
 
@@ -178,8 +178,9 @@
 
   const handleCopySuccess = async () => {
     await onCopySuccess?.()
-    if (isFinalPromptStatus(status) || status === PromptStatus.InProgress) return
-    await onStatusChange?.(PromptStatus.InProgress)
+    /** Optional workflow transition configured for successful copying. */
+    const nextStatus = PROMPT_STATUS_BEHAVIORS[status].copyStatus
+    if (nextStatus) await onStatusChange?.(nextStatus)
   }
 
   // The delete action immediately removes blank prompts and confirms deletion for nonblank prompts.

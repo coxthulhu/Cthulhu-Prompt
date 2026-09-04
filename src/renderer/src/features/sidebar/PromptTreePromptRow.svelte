@@ -12,6 +12,8 @@
   type SelectionControl = 'checkbox' | 'radio' | 'copy'
 
   type Props = {
+    /** Status or template namespace used by this reusable row. */
+    testIdGroup?: import('./promptTreeTestIds').PromptTreeTestIdGroup
     folderId: string
     promptId: string
     promptTitle: string
@@ -32,6 +34,7 @@
   }
 
   let {
+    testIdGroup = 'template',
     folderId,
     promptId,
     promptTitle,
@@ -123,7 +126,7 @@
 {#snippet promptButton()}
   <button
     type="button"
-    data-testid={folderPromptTestId(promptId)}
+    data-testid={folderPromptTestId(promptId, testIdGroup)}
     data-row-state={rowState}
     data-selection-control={selectionControl}
     aria-current={isActive ? 'true' : undefined}
@@ -146,7 +149,7 @@
     <button
       use:draggable={promptDragOptions}
       type="button"
-      data-testid={folderPromptTestId(promptId)}
+      data-testid={folderPromptTestId(promptId, testIdGroup)}
       data-row-state={rowState}
       data-selection-control={selectionControl}
       aria-current={isActive ? 'true' : undefined}

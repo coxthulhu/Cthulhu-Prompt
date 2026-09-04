@@ -46,7 +46,7 @@
     setPromptFolderSelectedEntryIdWithAutosave
   } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import type { PromptFolder } from '@shared/PromptFolder'
-  import { isFinalPromptStatus, type Prompt } from '@shared/Prompt'
+  import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDER_REGISTRY, type Prompt } from '@shared/Prompt'
   import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import {
@@ -90,6 +90,8 @@
 
   type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
   type PromptTreeBulkExpansionRequest = {
+    /** Exact category workflow receiving this toolbar request. */
+    statusFolderId: PromptFolderScreenMode
     screenRootFolderId: string
     isExpanded: boolean
   }
@@ -101,7 +103,6 @@
     expansionRequests,
     isPromptFoldersScreenActive = false,
     screenMode = PromptFolderScreenMode.Active,
-    virtualWindowTestId = 'prompt-tree-virtual-window',
     onAllCategoriesCollapsedChange,
     onScreenModeSelect,
     onScreenRootFolderSelect
@@ -112,8 +113,6 @@
     expansionRequests: ConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>
     isPromptFoldersScreenActive?: boolean
     screenMode?: PromptFolderScreenMode
-    /** Test identity for distinguishing concurrently rendered status trees. */
-    virtualWindowTestId?: string
     onAllCategoriesCollapsedChange: (isCollapsed: boolean) => void
     onScreenModeSelect: (screenMode: PromptFolderScreenMode) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
@@ -201,7 +200,13 @@
       promptFolders[0]!
     )
   })
-  /** Final-status metadata for this tree, or null for the Active tree. */
+  /** Registry metadata for this exact workflow tree. */
+  const statusGroup = $derived(PROMPT_STATUS_FOLDER_REGISTRY[screenMode])
+  /** Template trees have their own selector namespace. */
+  const testIdGroup = $derived(screenRootFolder?.kind === 'template' ? 'template' : screenMode)
+  /** Virtualization test identity distinguishes simultaneously mounted trees. */
+  const virtualWindowTestId = $derived(`prompt-tree-${testIdGroup}-virtual-window`)
+  /** Final-status metadata for this tree, or null for a category-ordered tree. */
   const finalModeDefinition = $derived(getFinalPromptFolderScreenModeDefinition(screenMode))
   /** Whether this tree renders an automatically ordered final status. */
   const isFinalMode = $derived(finalModeDefinition !== null)
@@ -219,7 +224,7 @@
 
     return collectFinalizedPrompts({
       rootFolder: screenRootFolder,
-      status: finalModeDefinition.status,
+      statusFolderId: screenMode,
       statusByPromptId: Object.fromEntries(
         Object.values(promptById).map((prompt) => [prompt.id, prompt.status])
       ),
@@ -229,24 +234,24 @@
     })
   })
   /** Loaded active prompt count used to replace an empty status tree with its navigation link. */
-  const selectedActivePromptCount = $derived.by(() => {
-    if (!screenRootFolder || screenRootFolder.kind === 'template') return 0
+  const selectedOrderedPromptCount = $derived.by(() => {
+    if (!screenRootFolder || screenRootFolder.kind === 'template' || isFinalMode) return 0
 
-    return getMarkdownContentCategoryOrder(screenRootFolder).categories.reduce(
+    return getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories.reduce(
       (count, group) =>
         count +
         group.entries.filter(
           (entry) =>
             entry.kind === 'prompt' &&
             Boolean(promptById[entry.id]) &&
-            !isFinalPromptStatus(promptById[entry.id]!.status)
+            getPromptStatusFolderDefinition(promptById[entry.id]!.status).id === screenMode
         ).length,
       0
     )
   })
   /** Prompt count for this tree's fixed active or final status. */
   const selectedStatusPromptCount = $derived(
-    isFinalMode ? selectedFinalizedPrompts.length : selectedActivePromptCount
+    isFinalMode ? selectedFinalizedPrompts.length : selectedOrderedPromptCount
   )
   const PROMPT_TREE_DROP_INDICATOR_BASE_INSET_PX = 15
   const PROMPT_TREE_INDENT_WIDTH_PX = 12
@@ -300,8 +305,8 @@
   }
 
   const categoryTreeIds = $derived.by((): string[] => {
-    if (!screenRootFolder) return []
-    return getMarkdownContentCategoryOrder(screenRootFolder).categories.flatMap((group) =>
+    if (!screenRootFolder || isFinalMode) return []
+    return getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories.flatMap((group) =>
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     )
   })
@@ -375,7 +380,7 @@
     rowId: string,
     nextCategoryId: string | null
   ): DroppableOptions<CategoryDragPayload, CategoryDropPayload> => ({
-    dragType: CATEGORY_DRAG_TYPE,
+    dragType: `${CATEGORY_DRAG_TYPE}:${screenMode}`,
     allowedEdges: 'top',
     payload: { nextCategoryId },
     canDrop: (payload) =>
@@ -440,7 +445,7 @@
     categoryId: string,
     displayName: string
   ): DraggableOptions<CategoryDragPayload, CategoryDropPayload> => ({
-    dragType: CATEGORY_DRAG_TYPE,
+    dragType: `${CATEGORY_DRAG_TYPE}:${screenMode}`,
     payload: { categoryId },
     createGhost: () => createPromptDragGhost(displayName, 'category'),
     onDragStart: (payload) => {
@@ -457,7 +462,7 @@
       )
       if (previousCategoryId === undefined) return
       void runIpcBestEffort(() =>
-        moveCategory(screenRootFolder.id, sourcePayload.categoryId, previousCategoryId)
+        moveCategory(screenRootFolder.id, sourcePayload.categoryId, previousCategoryId, screenMode)
       )
     }
   })
@@ -560,7 +565,7 @@
     const creation =
       rootFolder.kind === 'template'
         ? createBlankPromptTemplateInFolder(rootFolder.id, null, categoryId)
-        : createBlankPromptInFolder(rootFolder.id, null, categoryId)
+        : createBlankPromptInFolder(rootFolder.id, null, categoryId, screenMode)
     /** Stable ID generated for the new prompt or template. */
     const contentId = 'templateId' in creation ? creation.templateId : creation.promptId
     /** Navigation row that selects the new content. */
@@ -624,6 +629,7 @@
       isFinalMode ||
       !request ||
       folderListState !== 'ready' ||
+      request.payload.statusFolderId !== screenMode ||
       request.payload.screenRootFolderId !== screenRootFolder?.id
     ) {
       return
@@ -687,13 +693,13 @@
         }
       } else {
         /** Loaded active entries projected in FolderOrder group order. */
-        const groups = getMarkdownContentCategoryOrder(screenRootFolder).categories
+        const groups = getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories
         /** Uncategorized content shown without a category header. */
         const uncategorizedEntries = groups[0]?.entries.filter((entry) =>
           entry.kind === 'template'
             ? Boolean(templateById[entry.id])
             : Boolean(promptById[entry.id]) &&
-              !isFinalPromptStatus(promptById[entry.id]!.status)
+              getPromptStatusFolderDefinition(promptById[entry.id]!.status).id === screenMode
         ) ?? []
         for (const [entryIndex, entry] of uncategorizedEntries.entries()) {
           items.push({
@@ -718,7 +724,7 @@
             entry.kind === 'template'
               ? Boolean(templateById[entry.id])
               : Boolean(promptById[entry.id]) &&
-                !isFinalPromptStatus(promptById[entry.id]!.status)
+                getPromptStatusFolderDefinition(promptById[entry.id]!.status).id === screenMode
           )
           const isExpanded = getPromptTreeCategoryExpandedState(category.id)
           /** Whether this category header is the first rendered active tree row. */
@@ -841,7 +847,7 @@
             onclick={handleEmptyStatusSelect}
           >
             <span class="sidebarPromptTreeEmptyStatusLabel">
-              No {finalModeDefinition?.label.toLowerCase() ?? 'active'} prompts. Click to view.
+              No {statusGroup.label.toLowerCase()} prompts. Click to view.
             </span>
           </button>
           {#if isOver && edge}
@@ -873,6 +879,7 @@
   <!-- Recreate edge registrations when virtual row reuse changes which row owns tree start. -->
   {#key props.row.isFirstTreeRow}
     <PromptTreeCategoryRow
+      {testIdGroup}
       category={props.row.category}
       isActive={isSettingsActive}
       isDragging={isCategoryRowDragging(props.row.category.id)}
@@ -925,6 +932,7 @@
   <!-- Recreate edge registrations when virtual row reuse changes which row owns tree start. -->
   {#key props.row.isFirstTreeRow}
     <PromptTreePromptRow
+      {testIdGroup}
       folderId={props.row.categoryId ?? props.row.folder.id}
       promptId={props.row.promptId}
       {promptTitle}
@@ -975,14 +983,14 @@
     {#snippet children({ isOver, isBlocked, edge })}
       <div
         class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
-        data-testid="prompt-tree-empty-state"
+        data-testid={`prompt-tree-${testIdGroup}-empty-state`}
       >
         <p class="sidebarPromptTreeEmptyTitle">No templates found in this folder.</p>
         <p class="mt-2">Click the Add Template button to create your first template.</p>
       </div>
       {#if isOver && edge}
         <DropIndicator
-          testId="prompt-tree-empty-drop-indicator"
+          testId={`prompt-tree-${testIdGroup}-empty-drop-indicator`}
           insetStart={getPromptTreeDropIndicatorInset(0)}
           {edge}
           {isBlocked}
@@ -1002,7 +1010,7 @@
 
   {#if hoveredEdge}
     <DropIndicator
-      testId={categoryDropIndicatorTestId(row.category)}
+      testId={categoryDropIndicatorTestId(row.category, testIdGroup)}
       insetStart={getPromptTreeDropIndicatorInset(
         row.indentCount + (hoveredEdge === 'bottom' ? 1 : 0)
       )}
@@ -1015,7 +1023,7 @@
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreePromptRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
   {@const isBlocked = promptTreePromptDroppableState.isBlocked(rowId)}
-  {@const testId = folderPromptDropIndicatorTestId(row.promptId)}
+  {@const testId = folderPromptDropIndicatorTestId(row.promptId, testIdGroup)}
 
   {#if hoveredEdge}
     <DropIndicator
@@ -1046,7 +1054,7 @@
       getOptions={() => getPromptTreeCategoryDroppableOptions('bottom-spacer', null)}
       class="relative h-full"
       style={`height:${props.rowHeightPx}px;`}
-      data-testid={promptTreeBottomSpacerDropTargetTestId}
+      data-testid={promptTreeBottomSpacerDropTargetTestId(testIdGroup)}
     />
   {/if}
 {/snippet}
@@ -1058,7 +1066,7 @@
 
   {#if edge}
     <DropIndicator
-      testId={promptTreeBottomSpacerDropIndicatorTestId}
+      testId={promptTreeBottomSpacerDropIndicatorTestId(testIdGroup)}
       insetStart={getPromptTreeDropIndicatorInset(0)}
       {edge}
       isBlocked={isFinalMode

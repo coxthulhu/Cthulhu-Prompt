@@ -45,7 +45,7 @@ const normalizePromptStatusForFolder = (
 
     return {
       ...prompt,
-      status: statusFolder.statuses[0]!,
+      status: statusFolder.entryStatus,
       finalizedAt: getCurrentIsoSecondTimestamp()
     }
   }
@@ -60,7 +60,7 @@ const normalizePromptStatusForFolder = (
   const { finalizedAt: _finalizedAt, ...activePrompt } = prompt
   return {
     ...activePrompt,
-    status: statusFolder.statuses[0]!
+    status: statusFolder.entryStatus
   }
 }
 

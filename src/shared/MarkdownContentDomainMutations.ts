@@ -16,6 +16,8 @@ import { parseIsoSecondTimestamp } from './isoTimestamp'
 import { promptEntryRef, promptTemplateEntryRef } from './OrderContainer'
 import {
   getPromptStatusFolderDefinition,
+  isPromptStatusFolderId,
+  PROMPT_STATUS_FOLDER_REGISTRY,
   PromptStatus,
   PromptStatusFolderId,
   type PromptPersisted,
@@ -35,6 +37,8 @@ import { createMarkdownContentUiStateKey } from './MarkdownContentUiState'
 
 /** Renderer-authored command for creating one prompt at an exact root position. */
 export type CreatePromptDomainCommand = {
+  /** Category-ordered group receiving the new prompt. */
+  statusFolderId: PromptStatusFolderId
   promptFolderId: string
   contentId: string
   title: string
@@ -157,12 +161,15 @@ export const parseCreatePromptDomainCommand = (
         'createdAt',
         'categoryId',
         'previousEntryId',
-        'templates'
+        'templates',
+        'statusFolderId'
       ].includes(key)
   )
   if (
-    (Object.keys(record).length !== 8 && Object.keys(record).length !== 9) ||
+    (Object.keys(record).length !== 9 && Object.keys(record).length !== 10) ||
     hasUnknownField ||
+    !isPromptStatusFolderId(record.statusFolderId) ||
+    PROMPT_STATUS_FOLDER_REGISTRY[record.statusFolderId].ordering !== 'category' ||
     typeof record.promptFolderId !== 'string' ||
     typeof record.contentId !== 'string' ||
     typeof record.title !== 'string' ||
@@ -184,6 +191,7 @@ export const parseCreatePromptDomainCommand = (
     createdAt: record.createdAt as string,
     categoryId: record.categoryId,
     previousEntryId: record.previousEntryId,
+    statusFolderId: record.statusFolderId,
     ...(templates !== undefined ? { templates } : {})
   }
 }
@@ -340,7 +348,7 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
     promptIds: getOrderedMarkdownContentIds(
       promptFolder,
       'prompt',
-      PromptStatusFolderId.Active
+      command.statusFolderId
     ),
     lookupPrompt: (promptId) => state.get('prompt', promptId),
     promptId: command.contentId,
@@ -355,13 +363,17 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
     modifiedAt: command.createdAt,
     promptText: command.promptText,
     ...(command.templates !== undefined ? { templates: command.templates } : {}),
-    status: PromptStatus.Todo
+    status: PROMPT_STATUS_FOLDER_REGISTRY[command.statusFolderId].entryStatus
   }
+
+  /** Destination layout resolved from the creation group. */
+  const layout = promptFolder.statusFolders[command.statusFolderId]
+  if (layout.ordering !== 'category') return createConflict('Prompt creation group conflict', targets)
 
   try {
     /** Validated prompt data and category order for the requested placement. */
     const placement = placeMarkdownContentInCategoryOrder(
-      promptFolder.statusFolders[PromptStatusFolderId.Active].categoryOrder,
+      layout.categoryOrder,
       prompt,
       promptEntryRef(command.contentId),
       command.categoryId,
@@ -374,8 +386,9 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
         id: command.promptFolderId,
         recipe: (draft) => {
           if (draft.kind === 'prompt') {
-            draft.statusFolders[PromptStatusFolderId.Active].categoryOrder =
-              placement.categoryOrder
+            /** Ordered draft layout receiving the created prompt. */
+            const draftLayout = draft.statusFolders[command.statusFolderId]
+            if (draftLayout.ordering === 'category') draftLayout.categoryOrder = placement.categoryOrder
           }
         }
       },

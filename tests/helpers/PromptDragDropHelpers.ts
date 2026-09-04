@@ -21,12 +21,13 @@ export type TargetVerticalAlign = 'top' | 'center' | 'bottom'
 export const promptHandleSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-drag-handle"]`
 
-export const promptTreePromptSelector = (promptId: string): string =>
-  `[data-testid="prompt-tree-prompt-${promptId}"]`
+/** Selects a prompt row in one explicit workflow or template tree. */
+export const promptTreePromptSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'template' = 'active'): string =>
+  `[data-testid="prompt-tree-${group}-prompt-${promptId}"]`
 
 /** Returns the sidebar toggle selector for one category name. */
-export const promptTreeCategorySelector = (categoryName: string): string =>
-  `[data-testid="prompt-tree-category-toggle-button-${categoryName.replace(/\s+/g, '')}"]`
+export const promptTreeCategorySelector = (categoryName: string, group: 'active' | 'template' = 'active'): string =>
+  `[data-testid="prompt-tree-${group}-category-toggle-button-${categoryName.replace(/\s+/g, '')}"]`
 
 export const promptFolderSelectorTriggerSelector =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
@@ -37,8 +38,9 @@ export const promptFolderSelectorMenuSelector =
 export const promptFolderSelectorDropdownItemSelector = (folderId: string): string =>
   `[data-testid="sidebar-prompt-folder-dropdown-item-${folderId}"]`
 
-export const promptTreePromptDropIndicatorSelector = (promptId: string): string =>
-  `[data-testid="prompt-tree-drop-indicator-prompt-${promptId}"]`
+/** Selects a prompt boundary within one exact workflow tree. */
+export const promptTreePromptDropIndicatorSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'template' = 'active'): string =>
+  `[data-testid="prompt-tree-${group}-drop-indicator-prompt-${promptId}"]`
 
 export const dragGhostSelector = '[data-testid="drag-ghost"]'
 
@@ -148,10 +150,11 @@ export const beginPromptHandleDrag = async (page: Page, promptId: string): Promi
   )
 }
 
-export const beginPromptTreeRowDrag = async (page: Page, promptId: string): Promise<void> => {
+/** Starts a drag from the prompt's current group-specific row. */
+export const beginPromptTreeRowDrag = async (page: Page, promptId: string, group: 'active' | 'completed' | 'archived' | 'template' = 'active'): Promise<void> => {
   await beginDragFromLocator(
     page,
-    page.locator(promptTreePromptSelector(promptId)),
+    page.locator(promptTreePromptSelector(promptId, group)),
     `Missing prompt tree drag geometry for ${promptId}`
   )
 }

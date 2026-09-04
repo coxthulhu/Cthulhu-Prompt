@@ -6,6 +6,7 @@ import type { IpcResult } from './IpcResult'
 import type { MarkdownContentUiState } from './MarkdownContentUiState'
 import {
   PROMPT_STATUS_FOLDERS,
+  PROMPT_STATUS_FOLDER_REGISTRY,
   PromptStatusFolderId
 } from './Prompt'
 
@@ -41,9 +42,9 @@ export type UnorderedPromptStatusFolderLayout = {
 
 /** Root prompt-folder layouts keyed by stable status-folder identity. */
 export type PromptStatusFolderLayouts = {
-  [PromptStatusFolderId.Active]: OrderedPromptStatusFolderLayout
-  [PromptStatusFolderId.Completed]: UnorderedPromptStatusFolderLayout
-  [PromptStatusFolderId.Archived]: UnorderedPromptStatusFolderLayout
+  [Id in PromptStatusFolderId]: (typeof PROMPT_STATUS_FOLDER_REGISTRY)[Id]['ordering'] extends 'category'
+    ? OrderedPromptStatusFolderLayout
+    : UnorderedPromptStatusFolderLayout
 }
 
 /** Optional initial data supplied when constructing registry-backed status-folder layouts. */

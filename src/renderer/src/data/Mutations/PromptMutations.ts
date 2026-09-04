@@ -62,6 +62,7 @@ const mutations = createMarkdownContentRendererMutations<
     /** Builds the deterministic prompt-creation command sent through generic IPC. */
     createCommand: (promptFolderId, prompt, previousEntryId, categoryId) => ({
       promptFolderId,
+      statusFolderId: getPromptStatusFolderDefinition(prompt.status).id,
       contentId: prompt.id,
       title: prompt.title,
       fallbackTitle: prompt.fallbackTitle,
@@ -151,7 +152,8 @@ export const setPromptStatus = async (
       ({
         categoryId: currentCategoryGroup ? currentCategoryGroup.categoryId : (prompt.category ?? null),
         previousEntryId:
-          currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
+          getPromptStatusFolderDefinition(prompt.status).id === getPromptStatusFolderDefinition(targetStatus).id &&
+          sourcePromptFolderId === destinationPromptFolderId && currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
       } satisfies PromptCategoryOrderPlacement)
     /** Destination status-folder layout selected from the requested status. */
     const destinationStatusLayout =

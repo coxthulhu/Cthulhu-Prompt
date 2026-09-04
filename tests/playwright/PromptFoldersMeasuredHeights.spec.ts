@@ -10,7 +10,7 @@ import {
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
-const PROMPT_TREE_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 const FIRST_PROMPT_SELECTOR = '[data-testid="prompt-editor-measurement-1"]'
 const LAST_SHORT_PROMPT_SELECTOR = '[data-testid="prompt-editor-short-60"]'
 const MEASUREMENT_FOLDER_NAME = 'Long Wrapped Singles'
@@ -23,7 +23,7 @@ const getActivePromptTreeEntryTestId = async (mainWindow: Page): Promise<string 
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
     const activeButton = host.querySelector<HTMLButtonElement>(
-      'button[data-row-state="active"][data-testid^="prompt-tree-prompt-"]'
+      'button[data-row-state="active"][data-testid^="prompt-tree-active-prompt-"]'
     )
     return activeButton?.getAttribute('data-testid') ?? null
   }, PROMPT_TREE_SELECTOR)

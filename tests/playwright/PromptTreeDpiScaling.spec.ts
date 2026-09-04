@@ -16,7 +16,7 @@ describe('Prompt tree DPI scaling', () => {
 
     await testHelpers.navigateToPromptFolders('Hierarchy')
     const guide = mainWindow
-      .locator('[data-testid="prompt-tree-prompt-categories-ui-second-category-prompt"]')
+      .locator('[data-testid="prompt-tree-active-prompt-categories-ui-second-category-prompt"]')
       .locator('[data-indent-guide-line]')
       .first()
     await expect(guide).toBeVisible()

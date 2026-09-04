@@ -24,6 +24,8 @@
 
   /** Inputs and callbacks for one category in the prompt sidebar tree. */
   type Props = {
+    /** Status or template namespace used by this reusable row. */
+    testIdGroup?: import('./promptTreeTestIds').PromptTreeTestIdGroup
     category: Category
     isActive: boolean
     isDragging: boolean
@@ -51,6 +53,7 @@
   }
 
   let {
+    testIdGroup = 'template',
     category,
     isActive,
     isDragging,
@@ -120,13 +123,13 @@
       id: 'open-category',
       label: 'Open Category',
       icon: ArrowRight,
-      testId: categoryOpenMenuItemTestId(category)
+      testId: categoryOpenMenuItemTestId(category, testIdGroup)
     },
     {
       id: 'category-settings',
       label: 'Open Category Settings',
       icon: Settings,
-      testId: categorySettingsTestId(category)
+      testId: categorySettingsTestId(category, testIdGroup)
     }
     /*
     Show more/show less remains disabled for category rows.
@@ -203,7 +206,7 @@
     aria-label={`${isExpanded ? 'Collapse' : 'Expand'} category ${category.displayName}`}
     aria-expanded={isExpanded}
     onclick={handleCategoryToggleClick}
-    data-testid={categoryToggleTestId(category)}
+    data-testid={categoryToggleTestId(category, testIdGroup)}
     class="sidebarPromptTreeToggleButton"
   >
     {#if indentCount > 0}
@@ -229,7 +232,7 @@
           borderless
           disabled={isAddToTopDisabled}
           onclick={handleCategoryAddToTop}
-          testId={categoryAddToTopTestId(category)}
+          testId={categoryAddToTopTestId(category, testIdGroup)}
           class="sidebarPromptTreeActionButton"
         />
       </div>

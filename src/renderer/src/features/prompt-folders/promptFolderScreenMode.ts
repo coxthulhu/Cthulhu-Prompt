@@ -1,36 +1,16 @@
-import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatusFolderId } from '@shared/Prompt'
 
-export enum PromptFolderScreenMode {
-  Active = 'active',
-  Completed = 'completed',
-  Archived = 'archived'
+/** Screen modes use the same identities as persisted status groups. */
+export const PromptFolderScreenMode = PromptStatusFolderId
+
+/** Status group selected by the prompt-folder screen. */
+export type PromptFolderScreenMode = PromptStatusFolderId
+
+/** Returns registry metadata for a finalized view, or null for a category-ordered view. */
+export const getFinalPromptFolderScreenModeDefinition = (mode: PromptFolderScreenMode) => {
+  /** Shared group definition that owns the selected screen. */
+  const definition = PROMPT_STATUS_FOLDER_REGISTRY[mode]
+  return definition.ordering === 'finalizedAt'
+    ? { ...definition, status: definition.entryStatus }
+    : null
 }
-
-/** Metadata for one automatically ordered final-status screen mode. */
-export type FinalPromptFolderScreenModeDefinition = {
-  status: PromptStatus.Completed | PromptStatus.Archived
-  statusFolderId: PromptStatusFolderId.Completed | PromptStatusFolderId.Archived
-  label: 'Completed' | 'Archived'
-}
-
-/** Final-status screen definitions keyed by their matching renderer mode. */
-export const FINAL_PROMPT_FOLDER_SCREEN_MODES = {
-  [PromptFolderScreenMode.Completed]: {
-    status: PromptStatus.Completed,
-    statusFolderId: PromptStatusFolderId.Completed,
-    label: 'Completed'
-  },
-  [PromptFolderScreenMode.Archived]: {
-    status: PromptStatus.Archived,
-    statusFolderId: PromptStatusFolderId.Archived,
-    label: 'Archived'
-  }
-} as const satisfies Partial<
-  Record<PromptFolderScreenMode, FinalPromptFolderScreenModeDefinition>
->
-
-/** Returns final-status metadata for a final screen mode, or null for Active. */
-export const getFinalPromptFolderScreenModeDefinition = (
-  mode: PromptFolderScreenMode
-): FinalPromptFolderScreenModeDefinition | null =>
-  mode === PromptFolderScreenMode.Active ? null : FINAL_PROMPT_FOLDER_SCREEN_MODES[mode]

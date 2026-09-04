@@ -438,7 +438,7 @@ describe('Prompt categories', () => {
 
     /** Top edge of an Uncategorized prompt places content before it at root level. */
     const uncategorizedStartDivider =
-      '[data-testid="prompt-tree-prompt-unknown-category-prompt"]'
+      '[data-testid="prompt-tree-active-prompt-unknown-category-prompt"]'
     await expect(mainWindow.locator(uncategorizedStartDivider).locator('xpath=..')).toHaveAttribute(
       'data-first-tree-row',
       'true'
@@ -447,7 +447,7 @@ describe('Prompt categories', () => {
     await moveActiveDragToTarget(mainWindow, uncategorizedStartDivider, 'top')
     await expect(
       mainWindow.locator(
-        '[data-testid="prompt-tree-drop-indicator-prompt-unknown-category-prompt"]'
+        '[data-testid="prompt-tree-active-drop-indicator-prompt-unknown-category-prompt"]'
       )
     ).toHaveAttribute('data-edge', 'top')
     await finishActiveDrag(mainWindow)
@@ -535,7 +535,7 @@ describe('Prompt categories', () => {
     await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
     await moveActiveDragToTarget(
       mainWindow,
-      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      '[data-testid="prompt-tree-active-category-toggle-button-CodeReview"]',
       'top'
     )
     await finishActiveDrag(mainWindow)
@@ -550,7 +550,7 @@ describe('Prompt categories', () => {
     await beginPromptTreeCategoryRowDrag(mainWindow, 'Second')
     await moveActiveDragToTarget(
       mainWindow,
-      '[data-testid="prompt-tree-bottom-spacer-drop-target"]'
+      '[data-testid="prompt-tree-active-bottom-spacer-drop-target"]'
     )
     await finishActiveDrag(mainWindow)
     await expect
@@ -576,7 +576,7 @@ describe('Prompt categories', () => {
 
     /** Sidebar category header that remains a target while collapsed. */
     const categoryHeader = mainWindow.locator(
-      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]'
+      '[data-testid="prompt-tree-active-category-toggle-button-CodeReview"]'
     )
     await categoryHeader.click()
     await expect(categoryHeader).toHaveAttribute('aria-expanded', 'false')
@@ -584,11 +584,11 @@ describe('Prompt categories', () => {
     await beginPromptHandleDrag(mainWindow, 'uncategorized-prompt')
     await moveActiveDragToTarget(
       mainWindow,
-      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      '[data-testid="prompt-tree-active-category-toggle-button-CodeReview"]',
       'bottom'
     )
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-drop-indicator-category-CodeReview"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-drop-indicator-category-CodeReview"]')
     ).toHaveAttribute('data-edge', 'bottom')
     await finishActiveDrag(mainWindow)
 
@@ -653,7 +653,7 @@ describe('Prompt categories', () => {
 
     /** Collapsed template category header that owns the category-start target. */
     const categoryHeader = mainWindow.locator(
-      '[data-testid="prompt-tree-category-toggle-button-Writing"]'
+      '[data-testid="prompt-tree-template-category-toggle-button-Writing"]'
     )
     await categoryHeader.click()
     await expect(categoryHeader).toHaveAttribute('aria-expanded', 'false')
@@ -661,7 +661,7 @@ describe('Prompt categories', () => {
     await beginPromptHandleDrag(mainWindow, 'uncategorized-target-template')
     await moveActiveDragToTarget(
       mainWindow,
-      '[data-testid="prompt-tree-category-toggle-button-Writing"]',
+      '[data-testid="prompt-tree-template-category-toggle-button-Writing"]',
       'bottom'
     )
     await finishActiveDrag(mainWindow)
@@ -733,7 +733,7 @@ describe('Prompt categories', () => {
     await beginPromptHandleDrag(mainWindow, 'category-only-prompt')
     await moveActiveDragToTarget(
       mainWindow,
-      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      '[data-testid="prompt-tree-active-category-toggle-button-CodeReview"]',
       'top'
     )
     await finishActiveDrag(mainWindow)
@@ -750,7 +750,7 @@ describe('Prompt categories', () => {
     await beginPromptHandleDrag(mainWindow, 'category-only-prompt')
     await moveActiveDragToTarget(
       mainWindow,
-      '[data-testid="prompt-tree-category-toggle-button-CodeReview"]',
+      '[data-testid="prompt-tree-active-category-toggle-button-CodeReview"]',
       'bottom'
     )
     await finishActiveDrag(mainWindow)
@@ -820,7 +820,7 @@ describe('Prompt categories', () => {
     ).toHaveCount(0)
     await expect(
       activeSidebarSection.locator(
-        '[data-testid="prompt-tree-category-toggle-button-Existing"]'
+        '[data-testid="prompt-tree-active-category-toggle-button-Existing"]'
       )
     ).toBeVisible()
 

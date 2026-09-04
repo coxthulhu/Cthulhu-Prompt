@@ -87,7 +87,7 @@ const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_FOLDER_NAME = 'Short'
 const SHORT_FOLDER_PATH = promptFolderOrderPath(VIRTUAL_WORKSPACE_PATH, SHORT_FOLDER_NAME)
-const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 const PROMPT_MOVE_SCROLL_TOLERANCE_PX = 2
 const FALLBACK_DESTINATION_FOLDER_ID = createDeterministicId(
   `${MOVE_FALLBACK_WORKSPACE_PATH}:${FALLBACK_DESTINATION_FOLDER_NAME}`
@@ -1119,7 +1119,7 @@ describe('Prompt folder prompt drag-drop', () => {
 
       await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST_SELECTOR, 100_000)
       const destinationCategorySelector =
-        '[data-testid="prompt-tree-category-toggle-button-Destination"]'
+        '[data-testid="prompt-tree-active-category-toggle-button-Destination"]'
       await expect(mainWindow.locator(destinationCategorySelector)).toBeVisible()
       await moveActiveDragToTarget(mainWindow, destinationCategorySelector, 'bottom')
 
@@ -1415,7 +1415,7 @@ describe('Prompt folder prompt drag-drop', () => {
       { steps: 12 }
     )
     await expect(
-      mainWindow.locator('[data-testid^="prompt-tree-drop-indicator-"]')
+      mainWindow.locator('[data-testid^="prompt-tree-active-drop-indicator-"]')
     ).toHaveCount(0)
 
     await mainWindow.mouse.move(

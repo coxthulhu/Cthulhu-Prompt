@@ -9,7 +9,10 @@
   import { lookupCategoryDescriptionMeasuredHeight } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
   import {
-    isFinalPromptStatus,
+    getPromptStatusFolderDefinition,
+    PROMPT_STATUS_FOLDER_REGISTRY,
+    PROMPT_STATUS_BEHAVIORS,
+    type PromptStatusFolderId,
     PromptStatus,
     type PromptTemplateReference
   } from '@shared/Prompt'
@@ -73,7 +76,6 @@
     CATEGORY_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE,
     resolveCategoryDropPreviousCategoryId,
-    resolvePromptHandleDropMove,
     type CategoryDragPayload,
     type CategoryDropPayload,
     type PromptHandleDragPayload,
@@ -91,6 +93,7 @@
     getFinalPromptFolderScreenModeDefinition,
     PromptFolderScreenMode
   } from './promptFolderScreenMode'
+  import { resolvePromptTreePromptMove } from '../sidebar/promptTreeDrag'
   import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
   import type {
     PromptFolderDividerTarget,
@@ -139,11 +142,11 @@
     promptMetadataByPromptId: Record<string, PromptMetadata>
     promptFolders: PromptFolder[]
     categories: Category[]
-    activeScreenRows: PromptFolderScreenRow[]
+    orderedScreenRows: PromptFolderScreenRow[]
     visiblePromptIds: string[]
-    activePromptCount: number
-    completedPromptCount: number
-    archivedPromptCount: number
+    orderedPromptCount: number
+    /** Loaded prompt totals for each registered status group. */
+    statusGroupCounts: Record<PromptStatusFolderId, number>
     finalizedPromptContentOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
@@ -202,11 +205,10 @@
     promptMetadataByPromptId,
     promptFolders,
     categories,
-    activeScreenRows,
+    orderedScreenRows,
     visiblePromptIds,
-    activePromptCount,
-    completedPromptCount,
-    archivedPromptCount,
+    orderedPromptCount,
+    statusGroupCounts,
     finalizedPromptContentOwnerByPromptId,
     screenMode,
     isCreatingPrompt,
@@ -285,8 +287,8 @@
   )
   /** Authoritative category order used to resolve every category boundary. */
   const orderedCategoryIds = $derived(
-    (promptFolderById[screenRootFolderId]
-      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId]).categories
+    (promptFolderById[screenRootFolderId] && !isFinalMode
+      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId], screenMode).categories
       : []).flatMap((group) =>
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     ) ?? []
@@ -352,9 +354,11 @@
         getCopyTemplateTexts(templates)
       )
     )
-    if ((promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status === PromptStatus.Todo) {
-      onSetPromptStatus(templateSelectionTarget, PromptStatus.InProgress)
-    }
+    /** Explicit workflow transition triggered by selecting templates. */
+    const nextStatus = PROMPT_STATUS_BEHAVIORS[
+      (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
+    ].templateSelectionStatus
+    if (nextStatus) onSetPromptStatus(templateSelectionTarget, nextStatus)
   }
 
   const handlePromptCopySuccess = (promptId: string): void => {
@@ -487,7 +491,7 @@
 
   const virtualItems = $derived.by((): VirtualWindowItem<PromptFolderRow>[] => {
     if (!isFinalMode) {
-      const activeRows = activeScreenRows.map((row): VirtualWindowItem<PromptFolderRow> => {
+      const orderedRows = orderedScreenRows.map((row): VirtualWindowItem<PromptFolderRow> => {
         if (row.kind === 'root-header') {
           return { id: PROMPT_FOLDER_ROOT_HEADER_ROW_ID, row }
         }
@@ -538,8 +542,8 @@
         return { id: 'placeholder-empty', row }
       })
 
-      activeRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
-      return activeRows
+      orderedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+      return orderedRows
     }
 
     /** Flat virtual rows for the currently selected final status. */
@@ -646,7 +650,7 @@
       categoryId,
       targetEntryId: previousEntryId,
       position: 'after',
-      statusSection: 'active'
+      statusSection: screenMode
     }
   }
 
@@ -668,13 +672,7 @@
       return false
     }
     return (
-      resolvePromptHandleDropMove(
-        getEntryCategoryId(payload.fromId) ?? 'uncategorized',
-        getCategoryEntryIds(getEntryCategoryId(payload.fromId)),
-        payload.fromId,
-        { ...dropPayload, folderId: categoryId ?? 'uncategorized' },
-        getCategoryEntryIds(categoryId)
-      ) !== null
+      resolvePromptTreePromptMove(promptFolders, payload, dropPayload) !== null
     )
   }
 
@@ -690,29 +688,21 @@
     indicator: promptDividerDroppableState.getState(rowId)
   })
 
-  /** Returns active content IDs from one exact FolderOrder category group. */
+  /** Returns group-ordered content IDs from one exact FolderOrder category group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
-    (promptFolderById[screenRootFolderId]
-      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId]).categories
+    (promptFolderById[screenRootFolderId] && !isFinalMode
+      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId], screenMode).categories
       : [])
       .find((group) => group.categoryId === categoryId)
       ?.entries.filter((entry) => entry.kind === contentKind)
       .map((entry) => entry.id) ?? []
-
-  /** Finds the current category placement of one active content ID. */
-  const getEntryCategoryId = (entryId: string): string | null =>
-    (promptFolderById[screenRootFolderId]
-      ? getMarkdownContentCategoryOrder(promptFolderById[screenRootFolderId]).categories
-      : []).find((group) =>
-      group.entries.some((entry) => entry.id === entryId)
-    )?.categoryId ?? null
 
   /** Builds a category-only target for a full-width divider boundary. */
   const getCategoryDividerDropOptions = (
     rowId: string,
     nextCategoryId: string | null
   ): DroppableOptions<CategoryDragPayload, CategoryDropPayload> => ({
-    dragType: CATEGORY_DRAG_TYPE,
+    dragType: `${CATEGORY_DRAG_TYPE}:${screenMode}`,
     allowedEdges: 'none',
     payload: { nextCategoryId },
     canDrop: (payload) =>
@@ -728,7 +718,7 @@
   const getCategoryDragOptions = (
     category: Category
   ): DraggableOptions<CategoryDragPayload, CategoryDropPayload> => ({
-    dragType: CATEGORY_DRAG_TYPE,
+    dragType: `${CATEGORY_DRAG_TYPE}:${screenMode}`,
     payload: { categoryId: category.id },
     createGhost: () => createPromptDragGhost(category.displayName, 'category'),
     onDragStart: () => {
@@ -751,13 +741,13 @@
     }
   })
 
-  /** Returns the active content count displayed by a category card. */
+  /** Returns the selected group's content count displayed by a category card. */
   const getCategoryContentCount = (row: PromptFolderScreenCategoryEditorRow): number => {
     return getCategoryEntryIds(row.categoryId).filter(
       (entryId) => {
-        /** Loaded status used to exclude every final-status prompt from active counts. */
+        /** Loaded status used to count only this group's prompts. */
         const status = promptMetadataByPromptId[entryId]?.status
-        return status !== undefined && !isFinalPromptStatus(status)
+        return isTemplateFolder || (status !== undefined && getPromptStatusFolderDefinition(status).id === screenMode)
       }
     ).length
   }
@@ -793,9 +783,8 @@
   <PromptFolderRootHeaderRow
     folderDisplayName={promptFolderById[screenRootFolderId]?.displayName ??
       (isTemplateFolder ? 'Prompt Template Folder' : 'Prompt Folder')}
-    {activePromptCount}
-    {completedPromptCount}
-    {archivedPromptCount}
+    {orderedPromptCount}
+    {statusGroupCounts}
     {screenMode}
     {contentKind}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
@@ -864,7 +853,7 @@
         ? `No ${finalModeDefinition!.label.toLowerCase()} prompts were found in this folder.`
         : isTemplateFolder
           ? 'No templates found in this folder.'
-          : 'No active prompts were found in this folder.'}
+          : `No ${PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label.toLowerCase()} prompts were found in this folder.`}
     </p>
     {#if !isFinalMode}
       <p class="text-sm mt-2">

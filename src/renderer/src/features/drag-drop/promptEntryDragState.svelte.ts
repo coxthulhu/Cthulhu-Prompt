@@ -6,6 +6,8 @@ type DraggedPromptTreeEntry =
       kind: 'content'
       folderId: string
       contentId: string
+      /** Workflow retained by folder-selector drops. */
+      statusSection: PromptHandleDragPayload['statusSection']
     }
   | {
       kind: 'category'
@@ -19,7 +21,8 @@ export const startPromptDrag = (payload: PromptHandleDragPayload): void => {
   draggedEntry = {
     kind: 'content',
     folderId: payload.sourceFolderId,
-    contentId: payload.fromId
+    contentId: payload.fromId,
+    statusSection: payload.statusSection
   }
 }
 

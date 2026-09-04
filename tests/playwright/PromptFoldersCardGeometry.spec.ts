@@ -73,7 +73,7 @@ const expectPromptCardExactFill = async (mainWindow: Page, promptId: string): Pr
   ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
 }
 
-const PROMPT_TREE_WINDOW_TEST_ID = 'prompt-tree-virtual-window'
+const PROMPT_TREE_WINDOW_TEST_ID = 'prompt-tree-active-virtual-window'
 const PROMPT_FOLDER_WINDOW_TEST_ID = 'prompt-folder-virtual-window'
 
 const expectNoRowClipsItsContent = async (

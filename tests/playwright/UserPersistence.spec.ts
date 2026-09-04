@@ -11,7 +11,7 @@ import {
 } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
-const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 /** Main prompt-folder virtual viewport used to verify restored reveal positions. */
 const PROMPT_FOLDER_HOST_SELECTOR = '[data-testid="prompt-folder-virtual-window"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
@@ -129,7 +129,7 @@ const getActivePromptTreeTitle = async (mainWindow: any): Promise<string | null>
     const host = document.querySelector<HTMLElement>(hostSelector)
     if (!host) return null
     const activeButton = host.querySelector<HTMLButtonElement>(
-      'button[data-row-state="active"][data-testid^="prompt-tree-prompt-"]'
+      'button[data-row-state="active"][data-testid^="prompt-tree-active-prompt-"]'
     )
     return activeButton?.textContent?.trim() ?? null
   }, PROMPT_TREE_HOST_SELECTOR)
@@ -533,7 +533,7 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')
+    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-active-prompt-dev-2"]')
     await bugAnalysisButton.click()
     await expect(bugAnalysisButton).toHaveAttribute('data-row-state', 'active')
     await testHelpers.navigateToHomeScreen()
@@ -572,10 +572,10 @@ describe('User Persistence', () => {
     await testHelpers.navigateToPromptFolders('Main')
     /** Category toggle used to open the row's context menu. */
     const categoryToggle = mainWindow.locator(
-      '[data-testid="prompt-tree-category-toggle-button-Category"]'
+      '[data-testid="prompt-tree-active-category-toggle-button-Category"]'
     )
     await categoryToggle.click({ button: 'right' })
-    await mainWindow.locator('[data-testid="prompt-tree-category-open-menu-item-Category"]').click()
+    await mainWindow.locator('[data-testid="prompt-tree-active-category-open-menu-item-Category"]').click()
 
     await testHelpers.pauseIpcChannel('window-confirm-close')
     /** Whether the final close gate has already been released successfully. */
@@ -628,12 +628,12 @@ describe('User Persistence', () => {
     })
 
     await testHelpers.navigateToPromptFolders('Development')
-    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')
+    const bugAnalysisButton = mainWindow.locator('[data-testid="prompt-tree-active-prompt-dev-2"]')
     await bugAnalysisButton.click()
     await expect(bugAnalysisButton).toHaveAttribute('data-row-state', 'active')
 
     await testHelpers.navigateToPromptFolders('Examples')
-    const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-tree-prompt-simple-1"]')
+    const simpleGreetingButton = mainWindow.locator('[data-testid="prompt-tree-active-prompt-simple-1"]')
     await simpleGreetingButton.click()
     await expect(simpleGreetingButton).toHaveAttribute('data-row-state', 'active')
     await testHelpers.navigateToHomeScreen()
@@ -791,7 +791,7 @@ describe('User Persistence', () => {
 
     /** Sidebar category row whose active state proves owner-aware restoration. */
     const categoryRow = mainWindow
-      .locator('[data-testid="prompt-tree-category-toggle-button-Category"]')
+      .locator('[data-testid="prompt-tree-active-category-toggle-button-Category"]')
       .locator('..')
     await expect(categoryRow).toHaveAttribute('data-row-state', 'active')
     /** Main category row restored at the retained category-navigation offset. */

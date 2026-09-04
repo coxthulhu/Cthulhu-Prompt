@@ -160,7 +160,7 @@
   /** Persists one category-group reorder from the folder screen. */
   const handleMoveCategory = (categoryId: string, previousCategoryId: string | null): void => {
     void runIpcBestEffort(() =>
-      moveCategory(controller.screenRootFolderId, categoryId, previousCategoryId)
+      moveCategory(controller.screenRootFolderId, categoryId, previousCategoryId, screenMode)
     )
   }
 
@@ -305,11 +305,10 @@
             promptMetadataByPromptId={controller.promptMetadataByPromptId}
             promptFolders={controller.promptFolders}
             categories={controller.categories}
-            activeScreenRows={controller.activePromptFolderScreenRows}
+            orderedScreenRows={controller.orderedPromptFolderScreenRows}
             visiblePromptIds={controller.visiblePromptIds}
-            activePromptCount={controller.activePromptCount}
-            completedPromptCount={controller.completedPromptCount}
-            archivedPromptCount={controller.archivedPromptCount}
+            orderedPromptCount={controller.orderedPromptCount}
+            statusGroupCounts={controller.statusGroupCounts}
             finalizedPromptContentOwnerByPromptId={controller.finalizedPromptContentOwnerByPromptId}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}

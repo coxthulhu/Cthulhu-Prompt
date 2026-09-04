@@ -13,7 +13,7 @@ import { movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMuta
 import { movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/PromptFolder'
-import { PromptStatus } from '@shared/Prompt'
+import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatus, type PromptStatusFolderId } from '@shared/Prompt'
 import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
 
 type PromptTreePromptDragControllerOptions = {
@@ -26,28 +26,23 @@ type PromptTreePromptDropResult = {
   targetStatus: PromptStatus | null
 }
 
-/** Final prompt status selected by a sidebar final-status section. */
-const finalStatusBySection = {
-  completed: PromptStatus.Completed,
-  archived: PromptStatus.Archived
-} as const
-
 const findPromptFolder = (promptFolders: PromptFolder[], folderId: string): PromptFolder | null => {
   return promptFolders.find((folder) => folder.id === folderId) ?? null
 }
 
 /** Finds the exact category group containing an active prompt or template. */
-const findEntryCategoryId = (promptFolder: PromptFolder, entryId: string): string | null =>
-  getMarkdownContentCategoryOrder(promptFolder).categories.find((group) =>
+const findEntryCategoryId = (promptFolder: PromptFolder, entryId: string, statusFolderId: PromptStatusFolderId): string | null =>
+  getMarkdownContentCategoryOrder(promptFolder, statusFolderId).categories.find((group) =>
     group.entries.some((entry) => entry.id === entryId)
   )?.categoryId ?? null
 
 /** Returns active entry IDs from one exact root or category group. */
 const getCategoryEntryIds = (
   promptFolder: PromptFolder,
-  categoryId: string | null
+  categoryId: string | null,
+  statusFolderId: PromptStatusFolderId
 ): string[] =>
-  getMarkdownContentCategoryOrder(promptFolder).categories
+  getMarkdownContentCategoryOrder(promptFolder, statusFolderId).categories
     .find((group) => group.categoryId === categoryId)
     ?.entries.filter((entry) => entry.kind === promptFolder.kind)
     .map((entry) => entry.id) ?? []
@@ -59,6 +54,10 @@ export const resolvePromptTreePromptMove = (
 ): PromptTreePromptDropResult | null => {
   if (!dropPayload) return null
 
+  /** Exact source and destination workflow definitions. */
+  const sourceGroup = PROMPT_STATUS_FOLDER_REGISTRY[sourcePayload.statusSection]
+  const destinationGroup = PROMPT_STATUS_FOLDER_REGISTRY[dropPayload.statusSection]
+
   const sourcePromptFolder = findPromptFolder(promptFolders, sourcePayload.sourceFolderId)
   const destinationPromptFolder = findPromptFolder(promptFolders, dropPayload.folderId)
   if (!sourcePromptFolder || !destinationPromptFolder) return null
@@ -69,7 +68,7 @@ export const resolvePromptTreePromptMove = (
     return null
   }
   if (
-    sourcePayload.statusSection !== 'active' &&
+    sourceGroup.ordering === 'finalizedAt' &&
     sourcePayload.statusSection === dropPayload.statusSection
   ) {
     return null
@@ -83,9 +82,11 @@ export const resolvePromptTreePromptMove = (
 
   const sourceCategoryId =
     sourcePayload.sourceCategoryId ??
-    findEntryCategoryId(sourcePromptFolder, sourcePayload.fromId)
+    (sourceGroup.ordering === 'category'
+      ? findEntryCategoryId(sourcePromptFolder, sourcePayload.fromId, sourceGroup.id)
+      : null)
   const destinationCategoryId = dropPayload.categoryId ?? null
-  if (dropPayload.statusSection !== 'active') {
+  if (destinationGroup.ordering === 'finalizedAt') {
     return {
       move: {
         sourcePromptFolderId: sourcePromptFolder.id,
@@ -94,23 +95,20 @@ export const resolvePromptTreePromptMove = (
         categoryId: sourceCategoryId,
         previousEntryId: null
       },
-      targetStatus: finalStatusBySection[dropPayload.statusSection]
+      targetStatus: destinationGroup.entryStatus
     }
   }
   /** Category IDs act as logical containers for same-root cross-category no-op detection. */
-  const sourceContentOwnerId =
-    sourcePayload.statusSection !== 'active'
-      ? `${sourcePromptFolder.id}:${sourcePayload.statusSection}`
-      : (sourceCategoryId ?? sourcePromptFolder.id)
-  const destinationContentOwnerId = destinationCategoryId ?? destinationPromptFolder.id
+  const sourceContentOwnerId = `${sourcePromptFolder.id}:${sourceGroup.id}:${sourceCategoryId ?? ''}`
+  const destinationContentOwnerId = `${destinationPromptFolder.id}:${destinationGroup.id}:${destinationCategoryId ?? ''}`
   const resolvedMove = resolvePromptHandleDropMove(
     sourceContentOwnerId,
-    sourcePayload.statusSection !== 'active'
+    sourceGroup.ordering === 'finalizedAt'
       ? []
-      : getCategoryEntryIds(sourcePromptFolder, sourceCategoryId),
+      : getCategoryEntryIds(sourcePromptFolder, sourceCategoryId, sourceGroup.id),
     sourcePayload.fromId,
     { ...dropPayload, folderId: destinationContentOwnerId },
-    getCategoryEntryIds(destinationPromptFolder, destinationCategoryId)
+    getCategoryEntryIds(destinationPromptFolder, destinationCategoryId, destinationGroup.id)
   )
   if (!resolvedMove) return null
 
@@ -122,7 +120,7 @@ export const resolvePromptTreePromptMove = (
       categoryId: destinationCategoryId
     },
     targetStatus:
-      sourcePayload.statusSection !== 'active' ? PromptStatus.Todo : null
+      sourceGroup.id !== destinationGroup.id ? destinationGroup.entryStatus : null
   }
 }
 
@@ -149,7 +147,7 @@ export const createPromptTreePromptDragController = ({
           result.move.destinationPromptFolderId,
           result.move.promptId,
           result.targetStatus,
-          result.targetStatus === PromptStatus.Todo
+          PROMPT_STATUS_FOLDER_REGISTRY[dropPayload!.statusSection].ordering === 'category'
             ? {
                 categoryId: result.move.categoryId,
                 previousEntryId: result.move.previousEntryId

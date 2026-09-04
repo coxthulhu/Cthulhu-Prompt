@@ -5,13 +5,14 @@
 <script lang="ts">
   import { Folder, FolderPlus, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import { promptStatusGroups } from './promptStatusGroups'
+  import type { PromptStatusFolderId } from '@shared/Prompt'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
   let {
     folderDisplayName,
-    activePromptCount,
-    completedPromptCount,
-    archivedPromptCount,
+    orderedPromptCount,
+    statusGroupCounts,
     contentKind,
     screenMode,
     onDeletePromptFolder,
@@ -20,9 +21,9 @@
     onScreenModeChange
   } = $props<{
     folderDisplayName: string
-    activePromptCount: number
-    completedPromptCount: number
-    archivedPromptCount: number
+    orderedPromptCount: number
+    /** Counts displayed beside registered group filters. */
+    statusGroupCounts: Record<PromptStatusFolderId, number>
     contentKind: import('@shared/PromptFolder').PromptFolderContentKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
@@ -31,11 +32,6 @@
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
   }>()
 
-  const isCompletedMode = $derived(screenMode === PromptFolderScreenMode.Completed)
-  /** Whether the root filter currently selects archived prompts. */
-  const isArchivedMode = $derived(screenMode === PromptFolderScreenMode.Archived)
-  /** Whether the root filter currently selects active prompts. */
-  const isActiveMode = $derived(screenMode === PromptFolderScreenMode.Active)
   const isTemplateFolder = $derived(contentKind === 'template')
   const folderLabel = $derived(isTemplateFolder ? 'prompt template folder' : 'prompt folder')
 </script>
@@ -103,36 +99,22 @@
     role="group"
     aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
   >
-    <button
-      class:active={isTemplateFolder || isActiveMode}
-      type="button"
-      aria-pressed={isTemplateFolder || isActiveMode}
-      data-testid="prompt-folder-active-filter"
-      onclick={isTemplateFolder
-        ? undefined
-        : () => onScreenModeChange(PromptFolderScreenMode.Active)}
-    >
-      {isTemplateFolder ? 'Templates' : 'Active Prompts'} <span>{activePromptCount}</span>
-    </button>
-    {#if !isTemplateFolder}
-      <button
-        class:active={isCompletedMode}
-        type="button"
-        aria-pressed={isCompletedMode}
-        data-testid="prompt-folder-completed-filter"
-        onclick={() => onScreenModeChange(PromptFolderScreenMode.Completed)}
-      >
-        Completed <span>{completedPromptCount}</span>
+    {#if isTemplateFolder}
+      <button class="active" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
+        Templates <span>{orderedPromptCount}</span>
       </button>
-      <button
-        class:active={isArchivedMode}
-        type="button"
-        aria-pressed={isArchivedMode}
-        data-testid="prompt-folder-archived-filter"
-        onclick={() => onScreenModeChange(PromptFolderScreenMode.Archived)}
-      >
-        Archived <span>{archivedPromptCount}</span>
-      </button>
+    {:else}
+      {#each promptStatusGroups as group (group.id)}
+        <button
+          class:active={screenMode === group.id}
+          type="button"
+          aria-pressed={screenMode === group.id}
+          data-testid={`prompt-folder-${group.id}-filter`}
+          onclick={() => onScreenModeChange(group.id)}
+        >
+          {group.label}{group.ordering === 'category' ? ' Prompts' : ''} <span>{statusGroupCounts[group.id]}</span>
+        </button>
+      {/each}
     {/if}
   </div>
 </div>

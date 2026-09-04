@@ -524,6 +524,7 @@ describe('shared domain mutation planners', () => {
       createDomainState({ promptFolder: [promptRoot] }),
       {
         promptFolderId: promptRoot.id,
+        statusFolderId: PromptStatusFolderId.Active,
         contentId: 'prompt',
         title: '',
         fallbackTitle: 'New Prompt',

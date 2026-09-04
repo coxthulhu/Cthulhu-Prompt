@@ -108,7 +108,6 @@ const statusPillSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-status-pill"]`
 const statusIndicatorSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
-const PROMPT_TREE_PROMPT_ROW_PREFIX = 'prompt-tree-prompt-'
 /** Returns the accordion content selector for one sidebar prompt status. */
 const sidebarPromptStatusContentSelector = (status: 'active' | 'completed' | 'archived') =>
   `[data-testid="sidebar-prompt-status-accordion-content-${status}"]`
@@ -139,14 +138,16 @@ const getPromptEditorIds = async (page: any): Promise<string[]> => {
 
 const getPromptTreePromptRowIds = async (
   page: any,
-  status?: 'active' | 'completed' | 'archived'
+  status: 'active' | 'completed' | 'archived' = 'active'
 ): Promise<string[]> => {
   /** Optional status-section root that prevents rows from the sibling tree joining the result. */
-  const root = status ? page.locator(sidebarPromptStatusContentSelector(status)) : page
-  return await root.locator(`[data-testid^="${PROMPT_TREE_PROMPT_ROW_PREFIX}"]`).evaluateAll(
+  const root = page.locator(sidebarPromptStatusContentSelector(status))
+  /** Group prefix distinguishes rows even when multiple status trees are mounted. */
+  const prefix = `prompt-tree-${status}-prompt-`
+  return await root.locator(`[data-testid^="${prefix}"]`).evaluateAll(
     (elements: HTMLElement[], prefix: string) =>
       elements.map((element) => element.dataset.testid!.replace(prefix, '')),
-    PROMPT_TREE_PROMPT_ROW_PREFIX
+    prefix
   )
 }
 
@@ -870,7 +871,7 @@ describe('Prompt folder prompt management', () => {
     await expect(categoryDialog).toBeHidden()
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-SidebarCategory"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-SidebarCategory"]')
     ).toBeVisible()
   })
 
@@ -949,7 +950,7 @@ describe('Prompt folder prompt management', () => {
     const newEditorSelector = promptEditorSelector(newPromptId!)
     await waitForMonacoEditor(mainWindow, newEditorSelector)
     await expect(
-      mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`)
+      mainWindow.locator(`[data-testid="prompt-tree-active-prompt-${newPromptId}"]`)
     ).toHaveAttribute('aria-current', 'true')
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
@@ -1358,7 +1359,7 @@ describe('Prompt folder prompt management', () => {
 
     for (const promptId of fiveNewIds) {
       const expected = expectedById.get(promptId)!
-      const promptTreeRow = mainWindow.locator(`[data-testid="prompt-tree-prompt-${promptId}"]`)
+      const promptTreeRow = mainWindow.locator(`[data-testid="prompt-tree-active-prompt-${promptId}"]`)
       await expect(promptTreeRow).toBeVisible()
       await promptTreeRow.click()
       await expectPromptContent(mainWindow, promptId, expected)
@@ -1699,7 +1700,7 @@ describe('Prompt folder prompt management', () => {
     // The selector segment exposes the corner rounding that changes with its adjacent actions.
     const activePromptStatusSelector = activePromptStatus.locator('..')
     const activePromptTreeRow = mainWindow.locator(
-      '[data-testid="prompt-tree-prompt-completed-mode-active"]'
+      '[data-testid="prompt-tree-active-prompt-completed-mode-active"]'
     )
     // The persistent tree accent exposes status and edited-state presentation for this prompt.
     const promptTreeStatusIndicator = activePromptTreeRow.locator('..').locator(
@@ -2031,10 +2032,15 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-active', 'completed-mode-newest', 'completed-mode-oldest'])
-    await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'Completed')
-    await expect(promptTreeStatusIndicator).toHaveCSS(
+    /** Completion moves the accent into the Completed tree's namespace. */
+    const completedTreeStatusIndicator = mainWindow
+      .locator('[data-testid="prompt-tree-completed-prompt-completed-mode-active"]')
+      .locator('..')
+      .locator('[data-testid="prompt-tree-status-indicator"]')
+    await expect(completedTreeStatusIndicator).toHaveAttribute('data-status', 'Completed')
+    await expect(completedTreeStatusIndicator).toHaveCSS(
       'background-color',
-      (await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-success-normal-text']))[0]!
+      (await resolvePaletteColors(completedTreeStatusIndicator, ['--ui-success-normal-text']))[0]!
     )
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
@@ -2104,6 +2110,54 @@ describe('Prompt folder prompt management', () => {
     expect(inProgressMarkdown).not.toContain('finalizedAt:')
   })
 
+  test('restores a finalized prompt into an empty category with unique group row IDs', async ({
+    testSetup,
+    electronApp
+  }) => {
+    await testSetup.setupFilesystem(buildStatusDragCategoryWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH)])
+    /** Window and navigation helpers for the categorized workflow fixture. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Status Drag Categories')
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+
+    /** Existing finalized row accepts both prompts so Primary becomes empty. */
+    const completedTarget = '[data-testid="prompt-tree-completed-prompt-status-drag-completed"]'
+    for (const promptId of ['status-drag-primary-first', 'status-drag-primary-second']) {
+      await beginPromptTreeRowDrag(mainWindow, promptId)
+      await moveActiveDragToTarget(mainWindow, completedTarget)
+      await finishActiveDrag(mainWindow)
+      await expect(mainWindow.locator(`[data-testid="prompt-tree-active-prompt-${promptId}"]`)).toHaveCount(0)
+      await expect(mainWindow.locator(`[data-testid="prompt-tree-completed-prompt-${promptId}"]`)).toHaveCount(1)
+    }
+
+    /** An empty category remains a visible, uniquely identified prompt destination. */
+    const primaryCategory = '[data-testid="prompt-tree-active-category-toggle-button-Primary"]'
+    await expect(mainWindow.locator(primaryCategory)).toHaveCount(1)
+    await beginPromptTreeRowDrag(mainWindow, 'status-drag-completed', 'completed')
+    await moveActiveDragToTarget(mainWindow, primaryCategory, 'bottom')
+    await finishActiveDrag(mainWindow)
+    await expect(mainWindow.locator(completedTarget)).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-status-drag-completed"]')).toHaveCount(1)
+
+    /** Persisted prompt must use the destination group's entry status and category. */
+    const restoredPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/Categorized Completed.prompt.md`
+    await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain('status: Todo')
+    await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
+    /** Empty destination gets exactly the restored prompt as its first ordered entry. */
+    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_FolderInfo/FolderOrder.json`
+    await expect.poll(async () => {
+      /** Saved category order proves the transfer used the category target. */
+      const order = JSON.parse(await readTextFile(electronApp, orderPath)) as {
+        categories: Array<{ categoryId: string | null; entries: Array<{ kind: string; id: string }> }>
+      }
+      return order.categories.find((category) => category.categoryId === STATUS_DRAG_PRIMARY_CATEGORY_ID)?.entries
+    }).toEqual([{ kind: 'prompt', id: 'status-drag-completed' }])
+  })
+
   test('persists category and exact order changes across status-tree drops', async ({
     testSetup,
     electronApp
@@ -2121,7 +2175,7 @@ describe('Prompt folder prompt management', () => {
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
 
     /** Completed row accepting a category-preserving completion drop. */
-    const completedTargetSelector = `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-status-drag-completed"]`
+    const completedTargetSelector = `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-status-drag-completed"]`
     await beginPromptTreeRowDrag(mainWindow, 'status-drag-primary-first')
     await moveActiveDragToTarget(mainWindow, completedTargetSelector)
     await finishActiveDrag(mainWindow)
@@ -2143,8 +2197,8 @@ describe('Prompt folder prompt management', () => {
       .toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
 
     /** Secondary prompt row whose bottom edge defines the restored prompt's predecessor. */
-    const secondaryTargetSelector = `${sidebarPromptStatusContentSelector('active')} [data-testid="prompt-tree-prompt-status-drag-secondary-first"]`
-    await beginPromptTreeRowDrag(mainWindow, 'status-drag-completed')
+    const secondaryTargetSelector = `${sidebarPromptStatusContentSelector('active')} [data-testid="prompt-tree-active-prompt-status-drag-secondary-first"]`
+    await beginPromptTreeRowDrag(mainWindow, 'status-drag-completed', 'completed')
     await moveActiveDragToTarget(mainWindow, secondaryTargetSelector, 'bottom')
     await finishActiveDrag(mainWindow)
 
@@ -2212,7 +2266,7 @@ describe('Prompt folder prompt management', () => {
     /** Active section content containing the destination tree but excluding its header. */
     const activeContent = mainWindow.locator(sidebarPromptStatusContentSelector('active'))
     /** Completed row used as an order-independent completion target. */
-    const completedPromptRowSelector = `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-completed-mode-oldest"]`
+    const completedPromptRowSelector = `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-completed-mode-oldest"]`
 
     await expect(
       mainWindow.locator(
@@ -2230,10 +2284,10 @@ describe('Prompt folder prompt management', () => {
       )
     ).toHaveCount(0)
 
-    await beginPromptTreeRowDrag(mainWindow, 'completed-mode-oldest')
+    await beginPromptTreeRowDrag(mainWindow, 'completed-mode-oldest', 'completed')
     await moveActiveDragToTarget(
       mainWindow,
-      `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-completed-mode-newest"]`
+      `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-completed-mode-newest"]`
     )
     await finishActiveDrag(mainWindow)
     expect(await getPromptTreePromptRowIds(mainWindow, 'completed')).toEqual([
@@ -2327,7 +2381,7 @@ describe('Prompt folder prompt management', () => {
         'completed-mode-oldest'
       ])
 
-    await beginPromptTreeRowDrag(mainWindow, 'completed-mode-oldest')
+    await beginPromptTreeRowDrag(mainWindow, 'completed-mode-oldest', 'completed')
     await moveActiveDragToTarget(
       mainWindow,
       '[data-testid="prompt-tree-active-empty-status"]'
@@ -2419,7 +2473,7 @@ describe('Prompt folder prompt management', () => {
     ).toHaveClass(/lucide-list-todo/)
     // The selected root folder is not duplicated as a category in completed mode.
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-CompletedMode"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-CompletedMode"]')
     ).toHaveCount(0)
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
@@ -2430,11 +2484,11 @@ describe('Prompt folder prompt management', () => {
     ])
     /** Active row used to verify status-tree mode navigation. */
     const activeTreePrompt = mainWindow.locator(
-      `${sidebarPromptStatusContentSelector('active')} [data-testid="prompt-tree-prompt-completed-mode-active"]`
+      `${sidebarPromptStatusContentSelector('active')} [data-testid="prompt-tree-active-prompt-completed-mode-active"]`
     )
     /** Completed row used to verify status-tree mode navigation. */
     const completedTreePrompt = mainWindow.locator(
-      `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-completed-mode-newest"]`
+      `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-completed-mode-newest"]`
     )
 
     await activeTreePrompt.click()
@@ -2580,7 +2634,7 @@ describe('Prompt folder prompt management', () => {
     ])
     await mainWindow
       .locator(
-        `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-prompt-completed-mode-oldest"]`
+        `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-completed-mode-oldest"]`
       )
       .click()
     await expect(
@@ -2650,7 +2704,7 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toBeEnabled()
     // The selected root folder is not duplicated as a category in completed mode.
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-NoCompleted"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-NoCompleted"]')
     ).toHaveCount(0)
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
@@ -2865,7 +2919,7 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')).toBeVisible()
     await mainWindow.getByRole('button', { name: 'Cancel' }).click()
 
-    await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')
+    await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest', 'archived')
     await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-active-empty-status"]')
     await finishActiveDrag(mainWindow)
     await expect
@@ -2879,7 +2933,7 @@ describe('Prompt folder prompt management', () => {
     await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')
     await moveActiveDragToTarget(
       mainWindow,
-      `${sidebarPromptStatusContentSelector('archived')} [data-testid="prompt-tree-prompt-archived-mode-oldest"]`
+      `${sidebarPromptStatusContentSelector('archived')} [data-testid="prompt-tree-archived-prompt-archived-mode-oldest"]`
     )
     await finishActiveDrag(mainWindow)
     await expect

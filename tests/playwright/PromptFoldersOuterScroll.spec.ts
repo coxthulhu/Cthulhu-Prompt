@@ -10,7 +10,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const MAIN_SCREEN_SURFACE_SELECTOR = '.mainScreenSurface'
 const PROMPT_FOLDER_SCREEN_SELECTOR = '[data-testid="prompt-folder-screen"]'
 const INITIAL_PROMPT_SELECTOR = promptEditorSelector('short-1')
-const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 const VIRTUAL_SCROLL_TOP_PX = 320
 
 describe('Prompt folder outer scroll containment', () => {
@@ -33,7 +33,7 @@ describe('Prompt folder outer scroll containment', () => {
           if (!host) return null
           const hostBottom = host.getBoundingClientRect().bottom
           const overscannedButton = Array.from(
-            host.querySelectorAll<HTMLButtonElement>('[data-testid^="prompt-tree-prompt-"]')
+            host.querySelectorAll<HTMLButtonElement>('[data-testid^="prompt-tree-active-prompt-"]')
           ).find((button) => button.getBoundingClientRect().top > hostBottom)
           return overscannedButton?.dataset.testid ?? null
         }, PROMPT_TREE_HOST_SELECTOR)

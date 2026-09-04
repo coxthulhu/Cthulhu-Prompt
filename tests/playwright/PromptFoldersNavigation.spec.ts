@@ -17,8 +17,8 @@ import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/PromptFol
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-tree-prompt-simple-1"]'
-const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-prompt-dev-1"]'
+const EXAMPLES_PROMPT_ROW = '[data-testid="prompt-tree-active-prompt-simple-1"]'
+const DEVELOPMENT_PROMPT_ROW = '[data-testid="prompt-tree-active-prompt-dev-1"]'
 const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
@@ -30,9 +30,9 @@ const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-folde
 const SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM =
   '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
 const SIDEBAR_PROMPT_FOLDER_ADD_BUTTON = '[data-testid="sidebar-prompt-folder-add-button"]'
-const SHORT_PROMPT_50 = '[data-testid="prompt-tree-prompt-short-50"]'
+const SHORT_PROMPT_50 = '[data-testid="prompt-tree-active-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
-const PROMPT_TREE_HOST = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_HOST = '[data-testid="prompt-tree-active-virtual-window"]'
 const SIDEBAR_FOLDER_ROOT_BUTTON = '[data-testid="sidebar-folder-root-button"]'
 const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
@@ -341,7 +341,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
       'Templates'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
+    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
       'Templates 2'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveCount(0)
@@ -353,7 +353,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const templateEditor = mainWindow.locator('[data-testid="prompt-editor-template-1"]')
     await expect(templateEditor).toBeVisible()
     /** Template tree row uses the same direct-navigation animation path as prompts. */
-    const templateTreeRow = mainWindow.locator('[data-testid="prompt-tree-prompt-template-1"]')
+    const templateTreeRow = mainWindow.locator('[data-testid="prompt-tree-template-prompt-template-1"]')
     /** Template status line rendered beside the clicked tree entry. */
     const templateTreeIndicator = templateTreeRow
       .locator('..')
@@ -528,7 +528,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(screenInfo.promptCount).toBe(3)
     await expect(mainWindow.locator('[data-testid="prompt-editor-category-prompt"]')).toBeAttached()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toBeVisible()
     // Stable category identity connects the flattened fixture to its category row.
     const categoryId = createDeterministicId(`${CATEGORIES_WORKSPACE_PATH}:Main/Category`)
@@ -617,10 +617,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(headerSection).toHaveText('Empty')
 
     await mainWindow
-      .locator('[data-testid="prompt-tree-category-toggle-button-Primary"]')
+      .locator('[data-testid="prompt-tree-active-category-toggle-button-Primary"]')
       .click({ button: 'right' })
     await mainWindow
-      .locator('[data-testid="prompt-tree-category-open-menu-item-Primary"]')
+      .locator('[data-testid="prompt-tree-active-category-open-menu-item-Primary"]')
       .click()
     await expect(headerSection).toHaveText('Primary')
 
@@ -924,12 +924,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).locator('.lucide-chevrons-down-up')
     ).toHaveCount(1)
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-Category"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-Category"]')
     ).toHaveAttribute('aria-expanded', 'true')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')).toBeVisible()
 
     await mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).click()
 
@@ -941,9 +941,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).locator('.lucide-chevrons-up-down')
     ).toHaveCount(1)
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')).toBeVisible()
 
     await mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).click()
 
@@ -955,7 +955,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).locator('.lucide-chevrons-down-up')
     ).toHaveCount(1)
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toBeVisible()
   })
 
@@ -1131,7 +1131,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     // The selected root folder is represented by the root action, not a duplicate category row.
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-category-toggle-button-TestFolder"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-TestFolder"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-header"]')).toContainText(
       'Test Folder'
@@ -1206,7 +1206,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
       'Examples'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
+    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
       'Templates 0'
     )
     await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toHaveAttribute(
@@ -1455,7 +1455,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
     await expect(
-      mainWindow.locator('[data-testid^="prompt-tree-prompt-short-"][aria-current="true"]')
+      mainWindow.locator('[data-testid^="prompt-tree-active-prompt-short-"][aria-current="true"]')
     ).toBeVisible()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
@@ -1495,7 +1495,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'data-active',
       'true'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-1"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-short-1"]')).toHaveAttribute(
       'data-row-state',
       'idle'
     )

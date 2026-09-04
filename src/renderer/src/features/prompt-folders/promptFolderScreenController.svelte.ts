@@ -1,7 +1,8 @@
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
 import {
-  isFinalPromptStatus,
+  getPromptStatusFolderDefinition,
+  type PromptStatusFolderId,
   isPromptFull,
   type Prompt,
   PromptStatus,
@@ -48,7 +49,7 @@ import { categoryCollection } from '@renderer/data/Collections/CategoryCollectio
 import type { Category } from '@shared/Category'
 import {
   getMarkdownContentCategoryOrder,
-  getOrderedMarkdownContentIds
+  getMarkdownContentIds
 } from '@shared/MarkdownContent'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -98,6 +99,7 @@ import {
   getFinalPromptFolderScreenModeDefinition,
   PromptFolderScreenMode
 } from './promptFolderScreenMode'
+import { getPromptStatusGroupCounts } from './promptStatusGroups'
 import { createBlankPromptInFolder } from './createBlankPromptInFolder'
 import { createBlankPromptTemplateInFolder } from './createBlankPromptTemplateInFolder'
 import {
@@ -330,9 +332,9 @@ export const createPromptFolderScreenController = ({
   )
   /** Root-owned categories in FolderOrder order. */
   const categories = $derived.by(() =>
-    screenRootFolder
+    screenRootFolder && !isFinalMode
       ? getCategoryOrderCategoryIds(
-          getMarkdownContentCategoryOrder(screenRootFolder)
+          getMarkdownContentCategoryOrder(screenRootFolder, screenMode)
         ).flatMap((categoryId) => {
           const category = categoryById[categoryId]
           return category ? [category] : []
@@ -342,48 +344,18 @@ export const createPromptFolderScreenController = ({
   // Categories belong to the current root while root-folder destinations own themselves.
   const findContainingRootFolderId = (contentOwnerId: string): string =>
     categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
-  /** Finalized prompts grouped by their exact final status. */
-  const finalizedPromptsByStatus = $derived.by(() => {
-    if (!screenRootFolder || screenRootFolder.kind === 'template') {
-      return { completed: [], archived: [] }
-    }
-    /** Loaded prompt statuses used to validate status-folder ownership. */
-    const statusByPromptId = Object.fromEntries(
-      promptQuery.data.flatMap((prompt) => (prompt ? [[prompt.id, prompt.status]] : []))
-    )
-    /** Loaded finalization timestamps used for newest-first ordering. */
-    const finalizedAtByPromptId = Object.fromEntries(
-      promptQuery.data.flatMap((prompt) =>
-        prompt ? [[prompt.id, prompt.finalizedAt ?? null] as const] : []
-      )
-    )
-    return {
-      completed: collectFinalizedPrompts({
-        rootFolder: screenRootFolder,
-        status: PromptStatus.Completed,
-        statusByPromptId,
-        finalizedAtByPromptId
-      }),
-      archived: collectFinalizedPrompts({
-        rootFolder: screenRootFolder,
-        status: PromptStatus.Archived,
-        statusByPromptId,
-        finalizedAtByPromptId
-      })
-    }
+  /** Counts for every registered workflow shown in the root filter. */
+  const statusGroupCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, promptQuery.data))
+  /** Finalized prompts in the selected group, ordered by finalization time. */
+  const selectedFinalizedPrompts = $derived.by(() => {
+    if (!screenRootFolder || screenRootFolder.kind === 'template' || !isFinalMode) return []
+    return collectFinalizedPrompts({
+      rootFolder: screenRootFolder,
+      statusFolderId: screenMode,
+      statusByPromptId: Object.fromEntries(promptQuery.data.map((prompt) => [prompt.id, prompt.status])),
+      finalizedAtByPromptId: Object.fromEntries(promptQuery.data.map((prompt) => [prompt.id, prompt.finalizedAt]))
+    })
   })
-  /** Completed prompt total displayed in the root filter. */
-  const completedPromptCount = $derived(finalizedPromptsByStatus.completed.length)
-  /** Archived prompt total displayed in the root filter. */
-  const archivedPromptCount = $derived(finalizedPromptsByStatus.archived.length)
-  /** Finalized prompts belonging to the currently selected final-status screen. */
-  const selectedFinalizedPrompts = $derived(
-    finalModeDefinition?.status === PromptStatus.Completed
-      ? finalizedPromptsByStatus.completed
-      : finalModeDefinition?.status === PromptStatus.Archived
-        ? finalizedPromptsByStatus.archived
-        : []
-  )
   /** Newest-first prompt IDs for the currently selected final status. */
   const orderedFinalizedPromptIds = $derived(
     selectedFinalizedPrompts.map(({ promptId }) => promptId)
@@ -504,45 +476,47 @@ export const createPromptFolderScreenController = ({
       lookupPersistedDetailsSectionExpandedState(screenRootFolderId)
   )
 
-  const activePromptFolderScreenRows = $derived.by((): PromptFolderScreenRow[] => {
-    if (!screenRootFolder) return []
+  const orderedPromptFolderScreenRows = $derived.by((): PromptFolderScreenRow[] => {
+    if (!screenRootFolder || isFinalMode) return []
 
     return buildPromptFolderScreenRows({
       rootFolder: screenRootFolder,
+      statusFolderId: screenMode,
       categories,
       promptIds: isTemplateFolder
         ? promptTemplateQuery.data.map((template) => template.id)
         : promptQuery.data.flatMap((prompt) =>
-            !isFinalPromptStatus(prompt.status) ? [prompt.id] : []
+            getPromptStatusFolderDefinition(prompt.status).id === screenMode ? [prompt.id] : []
           ),
       isCategoryExpanded: (categoryId) => contentSectionExpandedByOwnerId[categoryId] ?? true
     })
   })
-  const activeScreenPromptIds = $derived.by(() =>
-    activePromptFolderScreenRows.flatMap((row) =>
+  const orderedScreenPromptIds = $derived.by(() =>
+    orderedPromptFolderScreenRows.flatMap((row) =>
       row.kind === 'prompt-editor' ? [row.promptId] : []
     )
   )
-  const allActiveScreenPromptIds = $derived.by(() => {
-    if (!screenRootFolder) return []
+  const allOrderedScreenPromptIds = $derived.by(() => {
+    if (!screenRootFolder || isFinalMode) return []
 
     return buildPromptFolderScreenRows({
       rootFolder: screenRootFolder,
+      statusFolderId: screenMode,
       categories,
       promptIds: isTemplateFolder
         ? promptTemplateQuery.data.map((template) => template.id)
         : promptQuery.data.flatMap((prompt) =>
-            !isFinalPromptStatus(prompt.status) ? [prompt.id] : []
+            getPromptStatusFolderDefinition(prompt.status).id === screenMode ? [prompt.id] : []
           ),
       isCategoryExpanded: () => true
     }).flatMap((row) => (row.kind === 'prompt-editor' ? [row.promptId] : []))
   })
-  const activePromptCount = $derived(allActiveScreenPromptIds.length)
+  const orderedPromptCount = $derived(allOrderedScreenPromptIds.length)
   const screenPromptIds = $derived(
-    isFinalMode ? orderedFinalizedPromptIds : activeScreenPromptIds
+    isFinalMode ? orderedFinalizedPromptIds : orderedScreenPromptIds
   )
   const renderedPromptIds = $derived(
-    isFinalMode ? orderedFinalizedPromptIds : activeScreenPromptIds
+    isFinalMode ? orderedFinalizedPromptIds : orderedScreenPromptIds
   )
   const promptMetadataByPromptId = $derived.by(() => {
     const metadataById: Record<string, PromptMetadata> = {}
@@ -591,7 +565,7 @@ export const createPromptFolderScreenController = ({
   })
 
   const navigablePromptIds = $derived(
-    allActiveScreenPromptIds.filter((promptId) => {
+    allOrderedScreenPromptIds.filter((promptId) => {
       const content = isTemplateFolder ? templateById[promptId] : promptById[promptId]
       return Boolean(
         contentDraftById[promptId] &&
@@ -652,7 +626,7 @@ export const createPromptFolderScreenController = ({
 
     /** Loaded visible prompt IDs exclude unresolved screen rows from find. */
     const visiblePromptIdSet = new SvelteSet(visiblePromptIds)
-    for (const row of activePromptFolderScreenRows) {
+    for (const row of orderedPromptFolderScreenRows) {
       if (row.kind === 'prompt-editor') {
         if (visiblePromptIdSet.has(row.promptId)) appendPromptFindItem(row.promptId)
         continue
@@ -1035,7 +1009,7 @@ export const createPromptFolderScreenController = ({
       return false
     }
 
-    for (const promptId of getOrderedMarkdownContentIds(
+    for (const promptId of getMarkdownContentIds(
       cachedPromptFolder,
       cachedPromptFolder.kind
     )) {
@@ -1178,7 +1152,7 @@ export const createPromptFolderScreenController = ({
   const hasPromptScreenRow = (target: ActivePromptScreenRow): boolean => {
     if (target.kind === 'root-header') return true
     if (target.kind === 'category-details') {
-      return activePromptFolderScreenRows.some(
+      return orderedPromptFolderScreenRows.some(
         (row) =>
           row.kind === 'category-editor' && row.contentOwnerId === target.contentOwnerId
       )
@@ -1328,7 +1302,8 @@ export const createPromptFolderScreenController = ({
       const creation = createBlankPromptInFolder(
         rowOwnerFolder.id,
         target.previousEntryId,
-        target.categoryId
+        target.categoryId,
+        screenMode
       )
       selectCreatedPrompt(target.categoryId ?? rowOwnerFolder.id, creation.promptId)
       await runIpcBestEffort(() => creation.persistence)
@@ -1363,16 +1338,16 @@ export const createPromptFolderScreenController = ({
   }
 
   const logicalPromptDropTargets = $derived.by<PromptHandleDropPayload[]>(() => {
-    if (!screenRootFolder) return []
+    if (!screenRootFolder || isFinalMode) return []
     /** Linear placement targets spanning Uncategorized and every category. */
     const targets: PromptHandleDropPayload[] = []
-    for (const group of getMarkdownContentCategoryOrder(screenRootFolder).categories) {
+    for (const group of getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories) {
       targets.push({
         folderId: screenRootFolder.id,
         categoryId: group.categoryId,
         targetEntryId: null,
         position: 'after',
-        statusSection: 'active'
+        statusSection: screenMode
       })
       for (const entry of group.entries) {
         targets.push({
@@ -1380,7 +1355,7 @@ export const createPromptFolderScreenController = ({
           categoryId: group.categoryId,
           targetEntryId: entry.id,
           position: 'after',
-          statusSection: 'active'
+          statusSection: screenMode
         })
       }
     }
@@ -1389,8 +1364,8 @@ export const createPromptFolderScreenController = ({
 
   /** Returns active content IDs for one exact category group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
-    (screenRootFolder
-      ? getMarkdownContentCategoryOrder(screenRootFolder).categories
+    (screenRootFolder && !isFinalMode
+      ? getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories
       : [])
       .find((group) => group.categoryId === categoryId)
       ?.entries.map((entry) => entry.id) ?? []
@@ -1508,7 +1483,7 @@ export const createPromptFolderScreenController = ({
   )
 
   const findRenderedPromptRow = (promptId: string): PromptFolderScreenPromptEditorRow | undefined =>
-    activePromptFolderScreenRows.find(
+    orderedPromptFolderScreenRows.find(
       (row): row is PromptFolderScreenPromptEditorRow =>
         row.kind === 'prompt-editor' && row.promptId === promptId
     )
@@ -1640,20 +1615,18 @@ export const createPromptFolderScreenController = ({
     get categories(): Category[] {
       return categories
     },
-    get activePromptFolderScreenRows(): PromptFolderScreenRow[] {
-      return activePromptFolderScreenRows
+    get orderedPromptFolderScreenRows(): PromptFolderScreenRow[] {
+      return orderedPromptFolderScreenRows
     },
     get visiblePromptIds(): string[] {
       return visiblePromptIds
     },
-    get activePromptCount(): number {
-      return activePromptCount
+    get orderedPromptCount(): number {
+      return orderedPromptCount
     },
-    get completedPromptCount(): number {
-      return completedPromptCount
-    },
-    get archivedPromptCount(): number {
-      return archivedPromptCount
+    /** Counts used by every registry-backed filter. */
+    get statusGroupCounts(): Record<PromptStatusFolderId, number> {
+      return statusGroupCounts
     },
     get finalizedPromptContentOwnerByPromptId(): Record<string, string> {
       return finalizedPromptContentOwnerByPromptId

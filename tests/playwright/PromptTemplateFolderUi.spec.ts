@@ -165,10 +165,10 @@ describe('Prompt template folder UI', () => {
 
     /** Template-category action that creates content at its first boundary. */
     const categoryAddToTopButton = mainWindow.locator(
-      '[data-testid="prompt-tree-category-add-to-top-button-CategoryTemplates"]'
+      '[data-testid="prompt-tree-template-category-add-to-top-button-CategoryTemplates"]'
     )
     await mainWindow
-      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
+      .locator('[data-testid="prompt-tree-template-category-toggle-button-CategoryTemplates"]')
       .hover()
     await categoryAddToTopButton.click()
 
@@ -217,12 +217,12 @@ describe('Prompt template folder UI', () => {
     /** Category template IDs in current tree order after adding at its top boundary. */
     const categoryTemplateOrder = await mainWindow
       .locator(
-        `[data-testid="prompt-tree-prompt-${createdTemplateId}"], [data-testid="prompt-tree-prompt-template-ui-category-template"]`
+        `[data-testid="prompt-tree-template-prompt-${createdTemplateId}"], [data-testid="prompt-tree-template-prompt-template-ui-category-template"]`
       )
       .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
     expect(categoryTemplateOrder).toEqual([
-      `prompt-tree-prompt-${createdTemplateId}`,
-      'prompt-tree-prompt-template-ui-category-template'
+      `prompt-tree-template-prompt-${createdTemplateId}`,
+      'prompt-tree-template-prompt-template-ui-category-template'
     ])
   })
 
@@ -240,10 +240,10 @@ describe('Prompt template folder UI', () => {
 
     /** Category hover action whose label must reflect template-folder content. */
     const categoryAddToTopButton = mainWindow.locator(
-      '[data-testid="prompt-tree-category-add-to-top-button-CategoryTemplates"]'
+      '[data-testid="prompt-tree-template-category-add-to-top-button-CategoryTemplates"]'
     )
     await mainWindow
-      .locator('[data-testid="prompt-tree-category-toggle-button-CategoryTemplates"]')
+      .locator('[data-testid="prompt-tree-template-category-toggle-button-CategoryTemplates"]')
       .hover()
     await expect(categoryAddToTopButton).toHaveAttribute(
       'aria-label',
@@ -565,7 +565,7 @@ describe('Prompt template folder UI', () => {
     await expect(mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')).toHaveCount(
       0
     )
-    await expect(mainWindow.locator('[data-testid="prompt-tree-empty-state"]')).toContainText(
+    await expect(mainWindow.locator('[data-testid="prompt-tree-template-empty-state"]')).toContainText(
       'No templates found in this folder.'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-virtual-window"]')).toContainText(

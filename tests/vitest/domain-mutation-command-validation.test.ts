@@ -119,6 +119,7 @@ describe('domain mutation command validation', () => {
     const createdAt = '2026-08-30T12:00:00Z'
     /** Valid prompt creation command with ordered template references. */
     const promptCommand = {
+      statusFolderId: PromptStatusFolderId.Active,
       promptFolderId: 'prompts',
       contentId: 'prompt',
       title: '',

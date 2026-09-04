@@ -696,7 +696,7 @@ describe('Prompt folder find dialog', () => {
     await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
     await expect(mainWindow.locator(newEditorSelector)).toBeInViewport()
     await expect(
-      mainWindow.locator(`[data-testid="prompt-tree-prompt-${newPromptId}"]`)
+      mainWindow.locator(`[data-testid="prompt-tree-active-prompt-${newPromptId}"]`)
     ).toHaveAttribute('aria-current', 'true')
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector), { timeout: 5000 })
@@ -1292,7 +1292,7 @@ describe('Prompt folder find dialog', () => {
       .poll(async () => getTitleSelectionInfo(), { timeout: 2000 })
       .toEqual({ selectedText: titleQuery, hasFocus: true })
 
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-dev-2"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-dev-2"]')).toHaveAttribute(
       'data-row-state',
       'active'
     )

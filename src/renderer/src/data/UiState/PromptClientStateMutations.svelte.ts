@@ -1,3 +1,5 @@
+import { getPromptStatusFolderDefinition } from '@shared/Prompt'
+import { getPromptStatusFolderContentIds } from '@shared/MarkdownContent'
 import type { PromptFull, PromptPersisted, PromptTemplateReference } from '@shared/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import type { Draft } from 'immer'
@@ -6,7 +8,6 @@ import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
 import { promptCollection } from '../Collections/PromptCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { getPromptFolderPromptIds } from '../Collections/PromptFolderEntries'
 import { mutatePacedPromptAutosaveUpdate } from '../Mutations/PromptMutations'
 import { promptClientState, upsertPromptClientState } from './PromptClientState'
 import { recordPromptEditorMeasuredHeight } from './PromptEditorUiCache.svelte.ts'
@@ -19,10 +20,14 @@ type PromptOptimisticMutationOptions = {
 /** Returns the timestamp applied to one prompt edit. */
 const getPromptModifiedAt = (): string => getCurrentIsoSecondTimestamp()
 
-/** Returns active sibling prompt IDs used to resolve fallback-title collisions. */
+/** Returns same-group sibling prompt IDs used to resolve fallback-title collisions. */
 const getPromptIdsForPrompt = (promptId: string): string[] => {
   for (const promptFolder of promptFolderCollection.values()) {
-    const promptIds = getPromptFolderPromptIds(promptFolder)
+    if (promptFolder.kind !== 'prompt') continue
+    /** Siblings in the edited prompt's exact status group. */
+    const promptIds = getPromptStatusFolderContentIds(
+      promptFolder, getPromptStatusFolderDefinition(promptCollection.get(promptId)!.status).id
+    )
     if (promptIds.includes(promptId)) return promptIds
   }
   return [promptId]

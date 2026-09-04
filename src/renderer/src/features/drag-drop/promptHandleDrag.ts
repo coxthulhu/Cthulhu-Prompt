@@ -1,9 +1,11 @@
+import type { PromptStatusFolderId } from '@shared/Prompt'
+
 export const PROMPT_HANDLE_DRAG_TYPE = 'prompt-handle'
 /** Drag type reserved for category reordering targets. */
 export const CATEGORY_DRAG_TYPE = 'category'
 
 /** Sidebar status section that owns a prompt drag source or destination. */
-export type PromptDragStatusSection = 'active' | 'completed' | 'archived'
+export type PromptDragStatusSection = `${PromptStatusFolderId}`
 
 export type PromptHandleDragPayload = {
   fromId: string

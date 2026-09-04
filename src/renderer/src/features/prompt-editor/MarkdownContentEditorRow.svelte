@@ -3,7 +3,7 @@
   import type { Action } from 'svelte/action'
   import { Check, Layers, Plus } from 'lucide-svelte'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
-  import { PromptStatus } from '@shared/Prompt'
+  import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus } from '@shared/Prompt'
   import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
   import { promptEntryDragState } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
@@ -166,7 +166,8 @@
     maxLines: systemSettings.promptEditorMaxLines
   })
   /** Whether this editor belongs to an automatically ordered final-status screen. */
-  const isFinalMode = $derived(screenMode !== PromptFolderScreenMode.Active)
+  // Finalized groups hide manual ordering controls.
+  const isFinalMode = $derived(PROMPT_STATUS_FOLDER_REGISTRY[screenMode].ordering === 'finalizedAt')
   /** Prompt-card sidebar width retained in active and final-status modes. */
   const sidebarWidthPx = PROMPT_EDITOR_SIDEBAR_WIDTH_PX
   const titleAreaWidthPx = $derived(

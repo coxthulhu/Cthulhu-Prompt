@@ -1,97 +1,27 @@
 <script lang="ts">
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/SimpleSelectorButtonWithIntegratedButton.svelte'
-  import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import { Archive, Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
-  import { PromptStatus } from '@shared/Prompt'
+  import { promptStatusItems } from './promptStatusPresentation'
+  import type { PromptStatus } from '@shared/Prompt'
 
+  /** Current workflow state and its transition callback. */
   type Props = {
     status: PromptStatus
     onStatusChange: (status: PromptStatus) => void
   }
 
+  /** Reactive editor status supplied by its prompt row. */
   let { status, onStatusChange }: Props = $props()
 
-  const statusItems: SimpleSelectorButtonItem[] = [
-    {
-      id: PromptStatus.Todo,
-      label: 'Todo',
-      selectedLabel: 'Todo',
-      detail: 'Move back to active todo status',
-      icon: CircleDashed,
-      iconClass: 'prompt-editor-status-option-icon-todo',
-      variant: 'todo',
-      testId: 'prompt-status-option-todo'
-    },
-    {
-      id: PromptStatus.InProgress,
-      label: 'In Progress',
-      detail: 'Mark this prompt as underway',
-      icon: Play,
-      iconClass: 'prompt-editor-status-option-icon-in-progress',
-      tone: 'warning',
-      variant: 'in-progress',
-      testId: 'prompt-status-option-in-progress'
-    },
-    {
-      id: PromptStatus.Completed,
-      label: 'Complete',
-      selectedLabel: 'Completed',
-      detail: 'Move this prompt to completed',
-      icon: Check,
-      iconClass: 'prompt-editor-status-option-icon-completed',
-      tone: 'success',
-      variant: 'completed',
-      testId: 'prompt-status-option-completed'
-    },
-    {
-      id: PromptStatus.Archived,
-      label: 'Archived',
-      detail: 'Archived prompts must be restored to another status',
-      icon: Archive,
-      variant: 'archived'
-    }
-  ]
-
-  const selectedStatusItem = $derived(statusItems.find((item) => item.id === status)!)
-  // The menu offers editable statuses only; Archived is entered through the archive action.
+  // Selected metadata supplies the label and optional quick transitions.
+  const selectedStatusItem = $derived(promptStatusItems.find((item) => item.id === status)!)
+  // Archive remains available through the separate archive action.
   const settableStatusItems = $derived(
-    statusItems.filter((item) => item.id !== status && item.id !== PromptStatus.Archived)
+    promptStatusItems.filter((item) => item.id !== status && !item.omitFromMenu)
   )
-  // A quick status action describes one optional outer segment of the status control.
-  type QuickStatusAction = {
-    icon: typeof Check
-    label: string
-    hoverVariant: 'neutral' | 'success'
-    testId: string
-    status: PromptStatus
-  }
-  // The forward action completes any active prompt and disappears once it is completed.
-  const forwardStatusAction = $derived.by<QuickStatusAction | null>(() =>
-    status === PromptStatus.Completed || status === PromptStatus.Archived
-      ? null
-      : {
-          icon: Check,
-          label: 'Complete prompt',
-          hoverVariant: 'success',
-          testId: 'prompt-complete-button',
-          status: PromptStatus.Completed
-        }
-  )
-  // The backward action returns In Progress or Completed prompts directly to Todo.
-  const backwardStatusAction = $derived.by<QuickStatusAction | null>(() => {
-    if (status === PromptStatus.Todo || status === PromptStatus.Archived) return null
-    return {
-      icon: Undo2,
-      label: status === PromptStatus.Completed ? 'Uncomplete prompt' : 'Set prompt to Todo',
-      hoverVariant: 'neutral',
-      testId:
-        status === PromptStatus.Completed
-          ? 'prompt-uncomplete-button'
-          : 'prompt-previous-status-button',
-      status: PromptStatus.Todo
-    }
-  })
+  // Each status explicitly declares its forward and backward quick actions.
+  const forwardStatusAction = $derived(selectedStatusItem.forwardAction ?? null)
+  const backwardStatusAction = $derived(selectedStatusItem.backwardAction ?? null)
 </script>
 
 <div class="prompt-editor-status-control">

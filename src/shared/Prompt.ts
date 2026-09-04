@@ -19,6 +19,10 @@ export type PromptStatusFolderOrdering = 'category' | 'finalizedAt'
 export type PromptStatusFolderDefinition = {
   id: PromptStatusFolderId
   directoryName: string
+  /** User-facing group name used by trees and filters. */
+  label: string
+  /** Status assigned when creating a prompt or entering this group. */
+  entryStatus: PromptStatus
   statuses: readonly PromptStatus[]
   ordering: PromptStatusFolderOrdering
   isFinal: boolean
@@ -29,6 +33,8 @@ export const PROMPT_STATUS_FOLDER_REGISTRY = {
   [PromptStatusFolderId.Active]: {
     id: PromptStatusFolderId.Active,
     directoryName: 'Active',
+    label: 'Active',
+    entryStatus: PromptStatus.Todo,
     statuses: [PromptStatus.Todo, PromptStatus.InProgress],
     ordering: 'category',
     isFinal: false
@@ -36,6 +42,8 @@ export const PROMPT_STATUS_FOLDER_REGISTRY = {
   [PromptStatusFolderId.Completed]: {
     id: PromptStatusFolderId.Completed,
     directoryName: 'Completed',
+    label: 'Completed',
+    entryStatus: PromptStatus.Completed,
     statuses: [PromptStatus.Completed],
     ordering: 'finalizedAt',
     isFinal: true
@@ -43,6 +51,8 @@ export const PROMPT_STATUS_FOLDER_REGISTRY = {
   [PromptStatusFolderId.Archived]: {
     id: PromptStatusFolderId.Archived,
     directoryName: 'Archived',
+    label: 'Archived',
+    entryStatus: PromptStatus.Archived,
     statuses: [PromptStatus.Archived],
     ordering: 'finalizedAt',
     isFinal: true
@@ -51,6 +61,28 @@ export const PROMPT_STATUS_FOLDER_REGISTRY = {
 
 /** Status-folder definitions retained in their code-defined display order. */
 export const PROMPT_STATUS_FOLDERS = Object.values(PROMPT_STATUS_FOLDER_REGISTRY)
+
+/** Shared behavior triggered by editor interactions for one status. */
+export type PromptStatusBehavior = {
+  /** Status assigned after successfully copying this prompt. */
+  copyStatus?: PromptStatus
+  /** Status assigned after selecting prompt templates. */
+  templateSelectionStatus?: PromptStatus
+}
+
+/** Explicit automatic transitions keep unrelated groups within their own workflow. */
+export const PROMPT_STATUS_BEHAVIORS: Record<PromptStatus, PromptStatusBehavior> = {
+  [PromptStatus.Todo]: {
+    copyStatus: PromptStatus.InProgress,
+    templateSelectionStatus: PromptStatus.InProgress
+  },
+  [PromptStatus.InProgress]: {},
+  [PromptStatus.Completed]: {},
+  [PromptStatus.Archived]: {}
+}
+
+/** Default group selected when opening a prompt workspace. */
+export const DEFAULT_PROMPT_STATUS_FOLDER_ID = PromptStatusFolderId.Active
 
 /** Reports whether an unknown value is one stable prompt status-folder identity. */
 export const isPromptStatusFolderId = (value: unknown): value is PromptStatusFolderId =>

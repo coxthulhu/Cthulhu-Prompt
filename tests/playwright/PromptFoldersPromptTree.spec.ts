@@ -19,7 +19,7 @@ import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigat
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-virtual-window"]'
+const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 /** Completed tree viewport rendered alongside the default Active tree viewport. */
 const COMPLETED_PROMPT_TREE_HOST_SELECTOR =
   '[data-testid="prompt-tree-completed-virtual-window"]'
@@ -28,11 +28,11 @@ const LONG_SINGLE_LINE_FOLDER_NAME = 'Long Wrapped Singles'
 const TARGET_INDEX = 30
 const TARGET_PROMPT_ID = `measurement-${TARGET_INDEX}`
 const TARGET_PROMPT_TITLE = `Measurement Prompt ${TARGET_INDEX}`
-const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-prompt-${TARGET_PROMPT_ID}"]`
+const TARGET_PROMPT_TREE_ROW_SELECTOR = `[data-testid="prompt-tree-active-prompt-${TARGET_PROMPT_ID}"]`
 const SHORT_FOLDER_NAME = 'Short'
 /** Category selector used to prove the Short root is not duplicated in the tree. */
 const SHORT_ROOT_DUPLICATE_CATEGORY_TOGGLE =
-  '[data-testid="prompt-tree-category-toggle-button-Short"]'
+  '[data-testid="prompt-tree-active-category-toggle-button-Short"]'
 const SHORT_SCROLL_TARGET_PX = 2000
 const SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-folder-actions-button"]'
@@ -40,12 +40,12 @@ const DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM =
   '[data-testid="delete-selected-prompt-folder-menu-item"]'
 const SAMPLE_FOLDER_NAME = 'Development'
 const SAMPLE_PROMPT_ID = 'dev-1'
-const samplePromptTreeRowSelector = `[data-testid="prompt-tree-prompt-${SAMPLE_PROMPT_ID}"]`
+const samplePromptTreeRowSelector = `[data-testid="prompt-tree-active-prompt-${SAMPLE_PROMPT_ID}"]`
 const samplePromptTitleSelector = `${promptEditorSelector(SAMPLE_PROMPT_ID)} ${PROMPT_TITLE_SELECTOR}`
 const UNOPENED_UNTITLED_WORKSPACE_PATH = '/ws/tree-untitled-summaries'
 const LOADED_FOLDER_NAME = 'Loaded'
-const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-1"]'
-const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-tree-prompt-unopened-2"]'
+const UNOPENED_FOLDER_PROMPT_1_SELECTOR = '[data-testid="prompt-tree-active-prompt-unopened-1"]'
+const UNOPENED_FOLDER_PROMPT_2_SELECTOR = '[data-testid="prompt-tree-active-prompt-unopened-2"]'
 const COMPLETED_TREE_WORKSPACE_PATH = '/ws/completed-tree-navigation'
 const COMPLETED_TREE_FOLDER_NAME = 'Completed Tree Navigation'
 const COMPLETED_TREE_PROMPT_COUNT = 20
@@ -57,16 +57,16 @@ const CATEGORY_ID = createDeterministicId(
 )
 /** Category selector used to prove the Main root is not duplicated in the tree. */
 const MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE =
-  '[data-testid="prompt-tree-category-toggle-button-Main"]'
-const CATEGORY_TOGGLE = '[data-testid="prompt-tree-category-toggle-button-Category"]'
+  '[data-testid="prompt-tree-active-category-toggle-button-Main"]'
+const CATEGORY_TOGGLE = '[data-testid="prompt-tree-active-category-toggle-button-Category"]'
 /** Active-tree action that creates content at the start of Category. */
 const CATEGORY_ADD_TO_TOP_BUTTON =
-  '[data-testid="prompt-tree-category-add-to-top-button-Category"]'
+  '[data-testid="prompt-tree-active-category-add-to-top-button-Category"]'
 /** Context-menu action that opens Category without opening its settings. */
 const CATEGORY_OPEN_MENU_ITEM =
-  '[data-testid="prompt-tree-category-open-menu-item-Category"]'
+  '[data-testid="prompt-tree-active-category-open-menu-item-Category"]'
 const CATEGORY_SETTINGS_MENU_ITEM =
-  '[data-testid="prompt-tree-category-settings-menu-item-Category"]'
+  '[data-testid="prompt-tree-active-category-settings-menu-item-Category"]'
 const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
@@ -427,27 +427,27 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
     await expect(mainWindow.locator(MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-after"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-after"]')).toBeVisible()
 
     const treeOrder = await mainWindow
       .locator(
         [
-          '[data-testid="prompt-tree-prompt-base-before"]',
-          '[data-testid="prompt-tree-prompt-base-after"]',
-          '[data-testid="prompt-tree-category-toggle-button-Category"]',
-          '[data-testid="prompt-tree-prompt-category-prompt"]'
+          '[data-testid="prompt-tree-active-prompt-base-before"]',
+          '[data-testid="prompt-tree-active-prompt-base-after"]',
+          '[data-testid="prompt-tree-active-category-toggle-button-Category"]',
+          '[data-testid="prompt-tree-active-prompt-category-prompt"]'
         ].join(', ')
       )
       .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
     expect(treeOrder).toEqual([
-      'prompt-tree-prompt-base-before',
-      'prompt-tree-prompt-base-after',
-      'prompt-tree-category-toggle-button-Category',
-      'prompt-tree-prompt-category-prompt'
+      'prompt-tree-active-prompt-base-before',
+      'prompt-tree-active-prompt-base-after',
+      'prompt-tree-active-category-toggle-button-Category',
+      'prompt-tree-active-prompt-category-prompt'
     ])
 
     /** Full virtual height used to move the root header away before sidebar navigation. */
@@ -469,7 +469,7 @@ describe('Prompt folder prompt tree', () => {
     const indentation = await mainWindow.evaluate(
       ({ categorySelector, categoryPromptSelector }) => {
         const basePromptLabel = document
-          .querySelector<HTMLElement>('[data-testid="prompt-tree-prompt-base-before"]')
+          .querySelector<HTMLElement>('[data-testid="prompt-tree-active-prompt-base-before"]')
           ?.querySelector<HTMLElement>('.sidebarPromptTreeSettingsLabel')
         const categoryRow = document.querySelector<HTMLElement>(categorySelector)
         const categoryChevron = categoryRow?.querySelector<HTMLElement>(
@@ -496,7 +496,7 @@ describe('Prompt folder prompt tree', () => {
       },
       {
         categorySelector: CATEGORY_TOGGLE,
-        categoryPromptSelector: '[data-testid="prompt-tree-prompt-category-prompt"]'
+        categoryPromptSelector: '[data-testid="prompt-tree-active-prompt-category-prompt"]'
       }
     )
     expect(indentation).not.toBeNull()
@@ -508,9 +508,9 @@ describe('Prompt folder prompt tree', () => {
       testHelpers,
       '[data-testid="prompt-editor-category-prompt"]'
     )
-    await mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]').click()
+    await mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]').click()
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toHaveAttribute('data-row-state', 'active')
     await expectRowToReachPromptFolderVerticalBias(
       mainWindow,
@@ -580,7 +580,7 @@ describe('Prompt folder prompt tree', () => {
     await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, CATEGORY_EDITOR)
     await mainWindow.locator(CATEGORY_TOGGLE).hover()
     await expect(
-      mainWindow.locator('[data-testid^="prompt-tree-category-options-button-"]')
+      mainWindow.locator('[data-testid^="prompt-tree-active-category-options-button-"]')
     ).toHaveCount(0)
     // Captures an ordinary point inside the row instead of either hover action.
     const categoryToggleBox = await mainWindow.locator(CATEGORY_TOGGLE).boundingBox()
@@ -651,18 +651,18 @@ describe('Prompt folder prompt tree', () => {
     /** Category prompt IDs in current tree order after adding at its top boundary. */
     const categoryPromptOrder = await mainWindow
       .locator(
-        `[data-testid="prompt-tree-prompt-${createdPromptId}"], [data-testid="prompt-tree-prompt-category-prompt"]`
+        `[data-testid="prompt-tree-active-prompt-${createdPromptId}"], [data-testid="prompt-tree-active-prompt-category-prompt"]`
       )
       .evaluateAll((rows) => rows.map((row) => row.getAttribute('data-testid')))
     expect(categoryPromptOrder).toEqual([
-      `prompt-tree-prompt-${createdPromptId}`,
-      'prompt-tree-prompt-category-prompt'
+      `prompt-tree-active-prompt-${createdPromptId}`,
+      'prompt-tree-active-prompt-category-prompt'
     ])
 
     await mainWindow.locator(CATEGORY_TOGGLE).click()
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect
       .poll(
@@ -683,7 +683,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON).click()
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toBeVisible()
     await expect
       .poll(
@@ -716,14 +716,14 @@ describe('Prompt folder prompt tree', () => {
     )
     /** Primary category add action rendered only by the Active status tree. */
     const categoryAddSelector =
-      '[data-testid="prompt-tree-category-add-to-top-button-Primary"]'
+      '[data-testid="prompt-tree-active-category-add-to-top-button-Primary"]'
 
     await expect(activeTree.locator(categoryAddSelector)).toHaveCount(1)
     await expect(
-      completedTree.locator('[data-testid="prompt-tree-prompt-categories-ui-root-completed"]')
+      completedTree.locator('[data-testid="prompt-tree-completed-prompt-categories-ui-root-completed"]')
     ).toBeVisible()
     await expect(
-      completedTree.locator('[data-testid^="prompt-tree-category-add-to-top-button-"]')
+      completedTree.locator('[data-testid^="prompt-tree-completed-category-add-to-top-button-"]')
     ).toHaveCount(0)
   })
 
@@ -816,7 +816,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
     const promptEditor = promptEditorSelector('category-prompt')
-    const promptTreeRow = mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+    const promptTreeRow = mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -880,7 +880,7 @@ describe('Prompt folder prompt tree', () => {
     )
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
 
-    const targetTreeRow = `[data-testid="prompt-tree-prompt-${COMPLETED_TREE_TARGET_PROMPT_ID}"]`
+    const targetTreeRow = `[data-testid="prompt-tree-completed-prompt-${COMPLETED_TREE_TARGET_PROMPT_ID}"]`
     const targetEditor = promptEditorSelector(COMPLETED_TREE_TARGET_PROMPT_ID)
     await scrollPromptTreeRowIntoView(
       mainWindow,
@@ -950,7 +950,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptsToggle).toHaveAttribute('aria-expanded', 'false')
     await expect(mainWindow.locator(promptEditorSelector('category-prompt'))).toHaveCount(0)
 
-    await mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]').click()
+    await mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]').click()
 
     await expect(promptsToggle).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.locator(promptEditorSelector('category-prompt'))).toBeVisible()
@@ -997,13 +997,13 @@ describe('Prompt folder prompt tree', () => {
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
 
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-5"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-short-5"]')).toBeVisible()
     await scrollPromptTreeRowIntoView(
       mainWindow,
       testHelpers,
-      '[data-testid="prompt-tree-prompt-short-60"]'
+      '[data-testid="prompt-tree-active-prompt-short-60"]'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-short-60"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-short-60"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid^="prompt-tree-folder-show-"]')).toHaveCount(0)
   })
 
@@ -1016,9 +1016,9 @@ describe('Prompt folder prompt tree', () => {
 
     await testHelpers.navigateToPromptFolders('Main')
     await expect(mainWindow.locator(MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
-    const basePrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
+    const basePrompt = mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')
     const category = mainWindow.locator(CATEGORY_TOGGLE)
-    const categoryPrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+    const categoryPrompt = mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     await expect(basePrompt).toBeVisible()
     await expect(category).toBeVisible()
     await expect(categoryPrompt).toBeVisible()
@@ -1070,7 +1070,7 @@ describe('Prompt folder prompt tree', () => {
     const categoryToggle = mainWindow.locator(CATEGORY_TOGGLE)
     const categoryLabel = categoryToggle.locator('.sidebarPromptTreeCategoryLabel')
     const categoryActions = mainWindow.locator(
-      '[data-testid="prompt-tree-category-add-to-top-button-Category"]'
+      '[data-testid="prompt-tree-active-category-add-to-top-button-Category"]'
     )
     const readRoundedLabelWidth = async (): Promise<number> =>
       categoryLabel.evaluate((label) => Math.round(label.getBoundingClientRect().width))
@@ -1110,7 +1110,7 @@ describe('Prompt folder prompt tree', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
-    const promptRow = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
+    const promptRow = mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')
     const categoryToggle = mainWindow.locator(CATEGORY_TOGGLE)
     await expect(promptRow).toBeVisible()
     await expect(categoryToggle).toHaveAttribute('aria-expanded', 'true')
@@ -1129,7 +1129,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.mouse.click(categoryBox.x + 2, categoryBox.y + categoryBox.height / 2)
     await expect(categoryToggle).toHaveAttribute('aria-expanded', 'false')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toHaveCount(0)
     await expect(promptRow).toBeVisible()
   })
@@ -1144,7 +1144,7 @@ describe('Prompt folder prompt tree', () => {
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
-    const firstPrompt = mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')
+    const firstPrompt = mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')
     const category = mainWindow.locator(CATEGORY_TOGGLE)
     await expect(firstPrompt).toBeVisible()
     await expect(category).toBeVisible()
@@ -1181,15 +1181,15 @@ describe('Prompt folder prompt tree', () => {
 
     await testHelpers.navigateToPromptFolders('Main')
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')).toBeVisible()
 
     await mainWindow.locator(CATEGORY_TOGGLE).click()
 
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'false')
     await expect(
-      mainWindow.locator('[data-testid="prompt-tree-prompt-category-prompt"]')
+      mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
     ).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-tree-prompt-base-before"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-editor-base-before"]')).toBeAttached()
   })
 

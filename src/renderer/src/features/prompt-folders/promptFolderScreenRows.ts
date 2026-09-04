@@ -1,3 +1,4 @@
+import { DEFAULT_PROMPT_STATUS_FOLDER_ID, type PromptStatusFolderId } from '@shared/Prompt'
 import type { Category } from '@shared/Category'
 import type { PromptFolder } from '@shared/PromptFolder'
 import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
@@ -86,6 +87,8 @@ export type PromptFolderScreenRow =
 /** Inputs used to project FolderOrder into screen rows. */
 type BuildPromptFolderScreenRowsOptions = {
   rootFolder: PromptFolder
+  /** Exact category-ordered workflow being projected. */
+  statusFolderId?: PromptStatusFolderId
   categories: readonly Category[]
   promptIds: readonly string[]
   isCategoryExpanded: (categoryId: string) => boolean
@@ -94,6 +97,7 @@ type BuildPromptFolderScreenRowsOptions = {
 /** Projects Uncategorized and ordered category groups into the existing folder-style UI. */
 export const buildPromptFolderScreenRows = ({
   rootFolder,
+  statusFolderId = DEFAULT_PROMPT_STATUS_FOLDER_ID,
   categories,
   promptIds,
   isCategoryExpanded
@@ -105,7 +109,7 @@ export const buildPromptFolderScreenRows = ({
   /** Loaded category metadata indexed by stable ID. */
   const categoryById = new Map(categories.map((category) => [category.id, category]))
   /** Valid folder-order groups retained in authoritative order. */
-  const groups = getMarkdownContentCategoryOrder(rootFolder).categories.filter(
+  const groups = getMarkdownContentCategoryOrder(rootFolder, statusFolderId).categories.filter(
     (group) => group.categoryId === null || categoryById.has(group.categoryId)
   )
   /** Total visible active content used by the empty-root decision. */

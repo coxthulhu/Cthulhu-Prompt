@@ -16,6 +16,7 @@
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
+  import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/Prompt'
   import { PromptFolderScreenMode } from '../features/prompt-folders/promptFolderScreenMode'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import type {
@@ -172,10 +173,8 @@
   /** Mounted prompt-folder screen used for sidebar actions owned by that screen. */
   let promptFolderScreen = $state<PromptFolderScreenHandle | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
-  /** Session-only visibility for the sidebar's Completed prompt section. */
-  let isCompletedPromptSectionShown = $state(false)
-  /** Session-only visibility for the sidebar's Archived prompt section. */
-  let isArchivedPromptSectionShown = $state(false)
+  /** Session visibility for toggleable finalized status groups. */
+  let shownFinalStatusGroups = $state<Partial<Record<PromptStatusFolderId, boolean>>>({})
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -598,33 +597,17 @@
       )
       if (folder?.kind === 'template') return
     }
-    if (nextMode === PromptFolderScreenMode.Completed) {
-      isCompletedPromptSectionShown = true
-    }
-    if (nextMode === PromptFolderScreenMode.Archived) {
-      isArchivedPromptSectionShown = true
+    if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') {
+      shownFinalStatusGroups[nextMode] = true
     }
     promptFolderScreenMode = nextMode
   }
 
-  /** Shows or hides Completed prompts and leaves Completed mode through the existing Active restore. */
-  const setCompletedPromptSectionShown = (isShown: boolean): void => {
-    isCompletedPromptSectionShown = isShown
-    if (isShown) {
-      setPromptFolderMode(PromptFolderScreenMode.Completed)
-    } else if (promptFolderScreenMode === PromptFolderScreenMode.Completed) {
-      setPromptFolderMode(PromptFolderScreenMode.Active)
-    }
-  }
-
-  /** Shows or hides Archived prompts and restores Active when hiding the selected section. */
-  const setArchivedPromptSectionShown = (isShown: boolean): void => {
-    isArchivedPromptSectionShown = isShown
-    if (isShown) {
-      setPromptFolderMode(PromptFolderScreenMode.Archived)
-    } else if (promptFolderScreenMode === PromptFolderScreenMode.Archived) {
-      setPromptFolderMode(PromptFolderScreenMode.Active)
-    }
+  /** Toggles a finalized group and restores the default view when hiding the selected group. */
+  const setFinalStatusGroupShown = (groupId: PromptStatusFolderId, isShown: boolean): void => {
+    shownFinalStatusGroups[groupId] = isShown
+    if (isShown) setPromptFolderMode(groupId)
+    else if (promptFolderScreenMode === groupId) setPromptFolderMode(PromptFolderScreenMode.Active)
   }
 
   const navigateHomeAfterRootPromptFolderDelete = (): void => {
@@ -678,11 +661,9 @@
           {workspacePath}
           {screenRootFolderId}
           {promptFolderScreenMode}
-          {isCompletedPromptSectionShown}
-          {isArchivedPromptSectionShown}
+          {shownFinalStatusGroups}
           onPromptFolderModeChange={setPromptFolderMode}
-          onCompletedPromptSectionShownChange={setCompletedPromptSectionShown}
-          onArchivedPromptSectionShownChange={setArchivedPromptSectionShown}
+          onFinalStatusGroupShownChange={setFinalStatusGroupShown}
           onScreenRootFolderSelect={(promptFolderId) => {
             navigateToScreenRootFolder(promptFolderId)
           }}

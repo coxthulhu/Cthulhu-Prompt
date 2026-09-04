@@ -29,7 +29,7 @@ describe('collectFinalizedPrompts', () => {
     expect(
       collectFinalizedPrompts({
         rootFolder: root,
-        status: PromptStatus.Completed,
+        statusFolderId: PromptStatusFolderId.Completed,
         statusByPromptId: {
           older: PromptStatus.Completed,
           active: PromptStatus.Todo,
@@ -55,7 +55,7 @@ describe('collectFinalizedPrompts', () => {
     expect(
       collectFinalizedPrompts({
         rootFolder: root,
-        status: PromptStatus.Completed,
+        statusFolderId: PromptStatusFolderId.Completed,
         statusByPromptId: {
           'newest-priority': PromptStatus.Completed,
           'older-priority': PromptStatus.Completed
