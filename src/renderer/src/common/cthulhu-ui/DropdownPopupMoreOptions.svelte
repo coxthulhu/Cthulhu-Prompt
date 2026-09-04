@@ -30,7 +30,7 @@
     label,
     items,
     trigger,
-    menuWidth = '268px',
+    menuWidth = '240px',
     testId,
     placement = 'below-trigger',
     menuAlignment = 'right',
