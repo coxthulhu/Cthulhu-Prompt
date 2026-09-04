@@ -45,7 +45,7 @@
   {testId}
   {placement}
   {dragOpenTypes}
-  menuClass="cthulhuUiDropdownPopupSimpleMenu p-[6px]"
+  menuClass="cthulhuUiDropdownPopupSimpleMenu p-[4px]"
 >
   {#snippet children({ close })}
     <div class="cthulhuUiDropdownPopupSimpleItems">
