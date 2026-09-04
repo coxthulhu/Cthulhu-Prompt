@@ -1,15 +1,17 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import type { UserConfig } from 'electron-vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
 import { appendImportMetaUrlOptimizeDepsPlugin } from './build/vite/appendImportMetaUrlOptimizeDepsPlugin'
+import { findAvailablePort } from './build/vite/findAvailablePort'
 
 // Allow silencing build logs during Playwright runs.
 // Reads `VITE_LOG_LEVEL` env var and applies to all bundles.
 // Default is 'info'; use 'error' or 'silent' to reduce output.
 const logLevel = (process.env.VITE_LOG_LEVEL as 'info' | 'warn' | 'error' | 'silent') || 'info'
 
-export default defineConfig({
+export default defineConfig(async (): Promise<UserConfig> => ({
   main: {
     // Reduce noisy build logs when desired (e.g., in CI/E2E runs).
     // Purpose: make Playwright output concise and avoid tool truncation.
@@ -40,7 +42,7 @@ export default defineConfig({
     },
     server: {
       host: '127.0.0.1',
-      port: 12000,
+      port: await findAvailablePort('127.0.0.1'),
       strictPort: true
     },
     resolve: {
@@ -58,4 +60,4 @@ export default defineConfig({
       })
     ]
   }
-})
+}))
