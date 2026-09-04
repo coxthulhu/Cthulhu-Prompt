@@ -176,6 +176,51 @@ describe('Accordion', () => {
       1
     )
 
+    await completedHeader.click()
+    await expect(completedHeader).toHaveAttribute('aria-expanded', 'false')
+    /** Bottom section collapsed in place against the accordion's bottom edge. */
+    const collapsedCompletedBox = await readBox(completed)
+    expectWithinPx(collapsedCompletedBox.height, COLLAPSED_HEIGHT_PX, 1)
+    expectWithinPx(
+      collapsedCompletedBox.y,
+      accordionBox.y + accordionBox.height - COLLAPSED_HEIGHT_PX,
+      1
+    )
+    expectWithinPx((await readBox(research)).height, initialBoxes[0]!.height, 1)
+    expectWithinPx((await readBox(active)).height, initialBoxes[1]!.height, 1)
+
+    await completedHeader.click()
+    await expect(completedHeader).toHaveAttribute('aria-expanded', 'true')
+    await activeHeader.click()
+    await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
+    await completedHeader.click()
+    await expect(completedHeader).toHaveAttribute('aria-expanded', 'false')
+    /** Trailing collapsed sections chained together at the accordion's bottom edge. */
+    const trailingCollapsedBoxes = await Promise.all([readBox(active), readBox(completed)])
+    for (const [index, box] of trailingCollapsedBoxes.entries()) {
+      expectWithinPx(box.height, COLLAPSED_HEIGHT_PX, 1)
+      expectWithinPx(
+        box.y,
+        accordionBox.y + accordionBox.height - (2 - index) * COLLAPSED_HEIGHT_PX,
+        1
+      )
+    }
+    expectWithinPx((await readBox(research)).height, initialBoxes[0]!.height, 1)
+
+    await completedHeader.click()
+    await expect(completedHeader).toHaveAttribute('aria-expanded', 'true')
+    await activeHeader.click()
+    await expect(activeHeader).toHaveAttribute('aria-expanded', 'true')
+    /** Restored section boxes after reversing the trailing collapse sequence. */
+    const restoredTrailingBoxes = await Promise.all([
+      readBox(research),
+      readBox(active),
+      readBox(completed)
+    ])
+    for (const [index, box] of restoredTrailingBoxes.entries()) {
+      expectWithinPx(box.height, initialBoxes[index]!.height, 1)
+    }
+
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
 

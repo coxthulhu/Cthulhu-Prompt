@@ -188,6 +188,17 @@
     return displayedHeightsById[sectionId] ?? COLLAPSED_SECTION_HEIGHT_PX
   }
 
+  /** Returns whether this section starts the trailing collapsed group anchored at the bottom. */
+  const isSectionBottomAnchored = (sectionId: string): boolean => {
+    /** Rendered position of the candidate section. */
+    const sectionIndex = resolvedSections.findIndex((section) => section.id === sectionId)
+    if (sectionIndex <= 0 || resolvedSections[sectionIndex]!.isExpanded) return false
+    return (
+      resolvedSections[sectionIndex - 1]!.isExpanded &&
+      resolvedSections.slice(sectionIndex + 1).every((section) => !section.isExpanded)
+    )
+  }
+
   /** Returns whether an expanded section has another expanded section above it. */
   const canResizeSection = (sectionId: string): boolean => {
     /** Rendered position of the candidate section. */
@@ -457,6 +468,7 @@
     unregisterSection,
     isSectionExpanded,
     getSectionHeightPx,
+    isSectionBottomAnchored,
     canResizeSection,
     isSectionSashDragging,
     startSectionResize,

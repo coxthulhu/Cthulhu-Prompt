@@ -18,6 +18,7 @@ export type AccordionContext = {
   unregisterSection: (sectionId: string) => void
   isSectionExpanded: (sectionId: string) => boolean
   getSectionHeightPx: (sectionId: string) => number
+  isSectionBottomAnchored: (sectionId: string) => boolean
   canResizeSection: (sectionId: string) => boolean
   isSectionSashDragging: (sectionId: string) => boolean
   startSectionResize: (sectionId: string, event: PointerEvent) => void

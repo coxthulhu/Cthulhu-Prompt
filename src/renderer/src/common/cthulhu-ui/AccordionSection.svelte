@@ -45,6 +45,8 @@
   const isExpanded = $derived(accordionContext.isSectionExpanded(id))
   /** Explicit total display height calculated by the owning accordion. */
   const displayedHeightPx = $derived(accordionContext.getSectionHeightPx(id))
+  /** Whether this section starts the trailing collapsed group placed at the bottom. */
+  const isBottomAnchored = $derived(accordionContext.isSectionBottomAnchored(id))
   /** Whether this expanded section has an expanded section above it to resize. */
   const canResize = $derived(accordionContext.canResizeSection(id))
   /** Whether this section's sash should show its active blue overlay. */
@@ -85,6 +87,7 @@
 <!-- Independently owned accordion section with an optional draggable top sash. -->
 <section
   class={mergeClasses('cthulhuUiAccordionSection', className)}
+  data-bottom-anchored={isBottomAnchored ? 'true' : 'false'}
   data-expanded={isExpanded ? 'true' : 'false'}
   data-testid={sectionTestId}
   style={`--cthulhu-ui-accordion-section-height: ${displayedHeightPx}px;`}
@@ -138,6 +141,10 @@
     min-height: var(--cthulhu-ui-accordion-section-height);
     overflow: hidden;
     position: relative;
+  }
+
+  .cthulhuUiAccordionSection[data-bottom-anchored='true'] {
+    margin-top: auto;
   }
 
   .cthulhuUiAccordionSash {
