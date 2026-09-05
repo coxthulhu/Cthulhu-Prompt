@@ -338,6 +338,7 @@
         {copyLabel}
         {copyTitle}
         onCopySuccess={handleCopySuccess}
+        showCopyActions={status !== PromptStatus.Backlog}
       />
     </div>
 

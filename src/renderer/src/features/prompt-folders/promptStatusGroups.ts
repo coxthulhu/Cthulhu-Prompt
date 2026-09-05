@@ -1,4 +1,4 @@
-import { Archive, Check, CircleCheckBig, ListTodo } from 'lucide-svelte'
+import { Archive, Bookmark, Check, CircleCheckBig, ListTodo } from 'lucide-svelte'
 import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type Prompt } from '@shared/Prompt'
 
 import type { PromptFolder } from '@shared/PromptFolder'
@@ -8,11 +8,15 @@ import { getPromptStatusFolderContentIds } from '@shared/MarkdownContent'
 const groupIcons = {
   [PromptStatusFolderId.Active]: { icon: ListTodo, toggleIcon: ListTodo },
   [PromptStatusFolderId.Completed]: { icon: CircleCheckBig, toggleIcon: Check },
-  [PromptStatusFolderId.Archived]: { icon: Archive, toggleIcon: Archive }
+  [PromptStatusFolderId.Archived]: { icon: Archive, toggleIcon: Archive },
+  [PromptStatusFolderId.Backlog]: { icon: Bookmark, toggleIcon: Bookmark }
 }
 
-/** Registry definitions enriched with their renderer presentation. */
-export const promptStatusGroups = PROMPT_STATUS_FOLDERS.map((group) => ({
+/** Header filters show category workflows before finalized groups, with their renderer icons. */
+export const promptStatusGroups = [
+  ...PROMPT_STATUS_FOLDERS.filter((group) => group.ordering === 'category'),
+  ...PROMPT_STATUS_FOLDERS.filter((group) => group.ordering === 'finalizedAt')
+].map((group) => ({
   ...group,
   ...groupIcons[group.id]
 }))

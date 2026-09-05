@@ -398,7 +398,13 @@ export const readPromptFolderCategoryOrder = (
   /** Existing category order, or an empty starting point for first-time creation. */
   const persistedOrder = fs.existsSync(orderPath)
     ? readCategoryOrderFile(orderPath, kind)
-    : { categories: [] }
+    : kind === 'prompt' && statusFolderId === PromptStatusFolderId.Backlog
+      ? {
+          // Seed future work with Active's repaired category order, without its prompts.
+          categories: readPromptFolderCategoryOrder(workspacePath, rootFolderName, kind)
+            .categories.map(({ categoryId }) => ({ categoryId, entries: [] }))
+        }
+      : { categories: [] }
   /** Category IDs backed by valid category files for this root. */
   const discoveredCategoryIds = [
     ...readCategoryStemById(workspacePath, rootFolderName, kind).keys()
@@ -460,7 +466,7 @@ export const readPromptFolderCategoryOrder = (
   const categoryOrder: CategoryOrder = {
     categories: [uncategorized, ...newCategories, ...retainedCategories]
   }
-  if (JSON.stringify(categoryOrder) !== JSON.stringify(persistedOrder)) {
+  if (!fs.existsSync(orderPath) || JSON.stringify(categoryOrder) !== JSON.stringify(persistedOrder)) {
     fs.mkdirSync(path.dirname(orderPath), { recursive: true })
     fs.writeFileSync(orderPath, JSON.stringify(categoryOrder, null, 2), 'utf8')
   }

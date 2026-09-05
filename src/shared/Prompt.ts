@@ -1,6 +1,8 @@
 export enum PromptStatus {
   Todo = 'Todo',
   InProgress = 'InProgress',
+  /** Prompts reserved for future work. */
+  Backlog = 'Backlog',
   Completed = 'Completed',
   Archived = 'Archived'
 }
@@ -9,7 +11,9 @@ export enum PromptStatus {
 export enum PromptStatusFolderId {
   Active = 'active',
   Completed = 'completed',
-  Archived = 'archived'
+  Archived = 'archived',
+  /** Independently ordered future work within a prompt root. */
+  Backlog = 'backlog'
 }
 
 /** Ordering behavior owned by one prompt status folder. */
@@ -56,6 +60,15 @@ export const PROMPT_STATUS_FOLDER_REGISTRY = {
     statuses: [PromptStatus.Archived],
     ordering: 'finalizedAt',
     isFinal: true
+  },
+  [PromptStatusFolderId.Backlog]: {
+    id: PromptStatusFolderId.Backlog,
+    directoryName: 'Backlog',
+    label: 'Backlog',
+    entryStatus: PromptStatus.Backlog,
+    statuses: [PromptStatus.Backlog],
+    ordering: 'category',
+    isFinal: false
   }
 } as const satisfies Record<PromptStatusFolderId, PromptStatusFolderDefinition>
 
@@ -77,6 +90,7 @@ export const PROMPT_STATUS_BEHAVIORS: Record<PromptStatus, PromptStatusBehavior>
     templateSelectionStatus: PromptStatus.InProgress
   },
   [PromptStatus.InProgress]: {},
+  [PromptStatus.Backlog]: {},
   [PromptStatus.Completed]: {},
   [PromptStatus.Archived]: {}
 }

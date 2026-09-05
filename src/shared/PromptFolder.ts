@@ -69,7 +69,11 @@ export const createPromptStatusFolderLayouts = ({
       statusFolder.ordering === 'category'
         ? {
             ordering: 'category',
-            categoryOrder: categoryOrders[statusFolder.id] ?? createRootCategoryOrder()
+            categoryOrder: categoryOrders[statusFolder.id] ?? {
+              // New category workflows inherit Active's categories with independent entry arrays.
+              categories: (categoryOrders[PromptStatusFolderId.Active] ?? createRootCategoryOrder())
+                .categories.map(({ categoryId }) => ({ categoryId, entries: [] }))
+            }
           }
         : {
             ordering: 'finalizedAt',

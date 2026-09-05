@@ -22,11 +22,11 @@ export const promptHandleSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-drag-handle"]`
 
 /** Selects a prompt row in one explicit workflow or template tree. */
-export const promptTreePromptSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'template' = 'active'): string =>
+export const promptTreePromptSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'backlog' | 'template' = 'active'): string =>
   `[data-testid="prompt-tree-${group}-prompt-${promptId}"]`
 
 /** Returns the sidebar toggle selector for one category name. */
-export const promptTreeCategorySelector = (categoryName: string, group: 'active' | 'template' = 'active'): string =>
+export const promptTreeCategorySelector = (categoryName: string, group: 'active' | 'backlog' | 'template' = 'active'): string =>
   `[data-testid="prompt-tree-${group}-category-toggle-button-${categoryName.replace(/\s+/g, '')}"]`
 
 export const promptFolderSelectorTriggerSelector =
@@ -39,7 +39,7 @@ export const promptFolderSelectorDropdownItemSelector = (folderId: string): stri
   `[data-testid="sidebar-prompt-folder-dropdown-item-${folderId}"]`
 
 /** Selects a prompt boundary within one exact workflow tree. */
-export const promptTreePromptDropIndicatorSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'template' = 'active'): string =>
+export const promptTreePromptDropIndicatorSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'backlog' | 'template' = 'active'): string =>
   `[data-testid="prompt-tree-${group}-drop-indicator-prompt-${promptId}"]`
 
 export const dragGhostSelector = '[data-testid="drag-ghost"]'
@@ -151,7 +151,7 @@ export const beginPromptHandleDrag = async (page: Page, promptId: string): Promi
 }
 
 /** Starts a drag from the prompt's current group-specific row. */
-export const beginPromptTreeRowDrag = async (page: Page, promptId: string, group: 'active' | 'completed' | 'archived' | 'template' = 'active'): Promise<void> => {
+export const beginPromptTreeRowDrag = async (page: Page, promptId: string, group: 'active' | 'completed' | 'archived' | 'backlog' | 'template' = 'active'): Promise<void> => {
   await beginDragFromLocator(
     page,
     page.locator(promptTreePromptSelector(promptId, group)),
@@ -176,11 +176,13 @@ export const beginCategoryHandleDrag = async (
 /** Starts a category drag from its sidebar row. */
 export const beginPromptTreeCategoryRowDrag = async (
   page: Page,
-  categoryName: string
+  categoryName: string,
+  // Category reordering belongs to the selected workflow.
+  group: 'active' | 'backlog' | 'template' = 'active'
 ): Promise<void> => {
   await beginDragFromLocator(
     page,
-    page.locator(promptTreeCategorySelector(categoryName)),
+    page.locator(promptTreeCategorySelector(categoryName, group)),
     `Missing prompt tree category drag geometry for ${categoryName}`
   )
 }

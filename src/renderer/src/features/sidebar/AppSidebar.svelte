@@ -874,6 +874,7 @@
               label={group.label.toUpperCase()}
               icon={group.icon}
               count={selectedPromptStatusCounts[group.id]}
+              initialExpandedHeightPx={group.id === PromptStatusFolderId.Active ? 400 : 200}
             >
               <PromptTree
                 promptFolders={rootPromptFolders}

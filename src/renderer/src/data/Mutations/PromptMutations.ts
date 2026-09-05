@@ -10,6 +10,7 @@ import {
   getPromptStatusFolderDefinition,
   isFinalPromptStatus,
   PromptStatus,
+  PromptStatusFolderId,
   type PromptCategoryOrderPlacement,
   type PromptFull,
   type PromptPersisted
@@ -139,32 +140,35 @@ export const setPromptStatus = async (
           group.entries.some((entry) => entry.kind === 'prompt' && entry.id === promptId)
         )
       : undefined
-  /** Current prompt index used to retain its exact ordered predecessor. */
-  const currentEntryIndex =
-    currentCategoryGroup?.entries.findIndex(
-      (entry) => entry.kind === 'prompt' && entry.id === promptId
-    ) ?? -1
-  /** Requested or retained category-order placement normalized against the loaded groups. */
+  /** Explicit drop placement or default entry position; same-folder updates ignore placement. */
   const categoryOrderPlacement: PromptCategoryOrderPlacement = (() => {
-    /** Placement supplied by a Completed-to-Active drop or inferred from current prompt ownership. */
-    const placement =
-      requestedCategoryOrderPlacement ??
-      ({
-        categoryId: currentCategoryGroup ? currentCategoryGroup.categoryId : (prompt.category ?? null),
-        previousEntryId:
-          getPromptStatusFolderDefinition(prompt.status).id === getPromptStatusFolderDefinition(targetStatus).id &&
-          sourcePromptFolderId === destinationPromptFolderId && currentEntryIndex > 0 ? currentCategoryGroup!.entries[currentEntryIndex - 1]!.id : null
-      } satisfies PromptCategoryOrderPlacement)
+    /** Category supplied by a drop or retained from the prompt's current ownership. */
+    const categoryId = requestedCategoryOrderPlacement
+      ? requestedCategoryOrderPlacement.categoryId
+      : currentCategoryGroup ? currentCategoryGroup.categoryId : (prompt.category ?? null)
+    /** Workflow receiving the prompt and defining its default entry position. */
+    const destinationStatusFolderId = getPromptStatusFolderDefinition(targetStatus).id
     /** Destination status-folder layout selected from the requested status. */
     const destinationStatusLayout =
-      destinationPromptFolder.statusFolders[getPromptStatusFolderDefinition(targetStatus).id]
-    /** Whether the requested category still belongs to the ordered destination folder. */
-    const hasCategory =
-      destinationStatusLayout.ordering === 'category' &&
-      destinationStatusLayout.categoryOrder.categories.some(
-        (group) => group.categoryId === placement.categoryId
-      )
-    return hasCategory ? placement : { categoryId: null, previousEntryId: null }
+      destinationPromptFolder.statusFolders[destinationStatusFolderId]
+    if (destinationStatusLayout.ordering !== 'category') {
+      return { categoryId: null, previousEntryId: null }
+    }
+    /** Destination category, falling back to Uncategorized when the original was deleted. */
+    const destinationCategory = destinationStatusLayout.categoryOrder.categories.find(
+      (group) => group.categoryId === categoryId
+    ) ?? destinationStatusLayout.categoryOrder.categories[0]!
+    if (requestedCategoryOrderPlacement) {
+      return destinationCategory.categoryId === categoryId
+        ? requestedCategoryOrderPlacement
+        : { categoryId: null, previousEntryId: null }
+    }
+    return {
+      categoryId: destinationCategory.categoryId,
+      previousEntryId: destinationStatusFolderId === PromptStatusFolderId.Active
+        ? (destinationCategory.entries.at(-1)?.id ?? null)
+        : null
+    }
   })()
   /** Shared prompt-status command projected in both processes. */
   const command = {

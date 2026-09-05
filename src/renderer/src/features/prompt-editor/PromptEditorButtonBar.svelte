@@ -14,6 +14,8 @@
     copyLabel?: string
     copyTitle?: string
     onCopySuccess?: () => void | Promise<void>
+    /** Whether this workflow exposes copy and quick-template actions. */
+    showCopyActions?: boolean
   }
 
   let {
@@ -25,12 +27,13 @@
     templateSelectionState = 'not-selected',
     copyLabel = 'Copy prompt',
     copyTitle = 'Copy prompt',
-    onCopySuccess
+    onCopySuccess,
+    showCopyActions = true
   }: Props = $props()
 </script>
 
 <IconButtonBar>
-  {#if !onTemplateSelectAndCopy || templateSelectionState !== 'not-selected'}
+  {#if showCopyActions && (!onTemplateSelectAndCopy || templateSelectionState !== 'not-selected')}
     <CopyButton
       text={copyText ?? draftText}
       label={copyLabel}
@@ -40,7 +43,7 @@
       onCopied={onCopySuccess}
     />
   {/if}
-  {#if onTemplateSelectAndCopy && templateSelectionState === 'not-selected'}
+  {#if showCopyActions && onTemplateSelectAndCopy && templateSelectionState === 'not-selected'}
     <IconButton
       icon={Zap}
       label="Select Template and Copy"

@@ -1738,7 +1738,7 @@ describe('Prompt folder prompt management', () => {
         })
       })
       .toContain('edited tree accent')
-    // The Todo Complete button is the only quick action and occupies the trailing segment.
+    // The Todo Complete button occupies the trailing segment beside the status selector.
     const todoCompleteButton = mainWindow.locator(completeSelector('completed-mode-active'))
     await expect(todoCompleteButton).toBeVisible()
     await expect(mainWindow.locator(previousStatusSelector('completed-mode-active'))).toHaveCount(0)
@@ -1753,8 +1753,8 @@ describe('Prompt folder prompt management', () => {
     expect(
       Math.abs(todoStatusBox!.x + todoStatusBox!.width - todoCompleteBox!.x)
     ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
-    await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '6px')
-    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '6px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-bottom-right-radius', '0px')
     await expect(todoCompleteButton).toHaveCSS('border-top-left-radius', '0px')
@@ -1960,8 +1960,8 @@ describe('Prompt folder prompt management', () => {
       (await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-info-strong-border']))[0]!
     )
     await expect(mainWindow.locator(previousStatusSelector('completed-mode-active'))).toHaveCount(0)
-    await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '6px')
-    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '6px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-bottom-right-radius', '0px')
     await expect
@@ -2295,6 +2295,8 @@ describe('Prompt folder prompt management', () => {
       'completed-mode-oldest'
     ])
 
+    // Collapse the adjacent workflow so its 100px snap zone cannot receive this test drag.
+    await mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-backlog"]').click()
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
     await beginPromptHandleDrag(mainWindow, 'completed-mode-newest')
@@ -2306,6 +2308,7 @@ describe('Prompt folder prompt management', () => {
     await finishActiveDrag(mainWindow)
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'true')
+    await mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-backlog"]').click()
 
     await beginPromptHandleDrag(mainWindow, 'completed-mode-newest')
     await moveActiveDragToTarget(
@@ -2438,18 +2441,19 @@ describe('Prompt folder prompt management', () => {
     await expect(
       mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
     ).toHaveAttribute('data-active', 'true')
-    /** Rendered status sections in their required Completed-before-Active order. */
+    /** Rendered status sections in their required Completed, Active, Backlog order. */
     const statusSections = mainWindow.locator(
       '[data-testid^="sidebar-prompt-status-accordion-section-"]'
     )
-    await expect(statusSections).toHaveCount(2)
+    await expect(statusSections).toHaveCount(3)
     expect(
       await statusSections.evaluateAll((sections) =>
         sections.map((section) => section.dataset.testid)
       )
     ).toEqual([
       'sidebar-prompt-status-accordion-section-completed',
-      'sidebar-prompt-status-accordion-section-active'
+      'sidebar-prompt-status-accordion-section-active',
+      'sidebar-prompt-status-accordion-section-backlog'
     ])
     await expect(
       mainWindow
@@ -2627,11 +2631,11 @@ describe('Prompt folder prompt management', () => {
     ).toHaveAttribute('data-active', 'true')
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
-      .toEqual(['completed-mode-newest', 'completed-mode-active'])
+      .toEqual(['completed-mode-active', 'completed-mode-newest'])
     await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveText('Todo')
     expect(await getPromptTreePromptRowIds(mainWindow, 'active')).toEqual([
-      'completed-mode-newest',
-      'completed-mode-active'
+      'completed-mode-active',
+      'completed-mode-newest'
     ])
     await mainWindow
       .locator(
@@ -2651,7 +2655,7 @@ describe('Prompt folder prompt management', () => {
     )
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
-      .toEqual(['completed-mode-newest', 'completed-mode-active'])
+      .toEqual(['completed-mode-active', 'completed-mode-newest'])
     await expect
       .poll(
         async () => {
@@ -2696,8 +2700,8 @@ describe('Prompt folder prompt management', () => {
           )
       )
       .toEqual([
-        { kind: 'prompt', id: 'completed-mode-newest' },
-        { kind: 'prompt', id: 'completed-mode-active' }
+        { kind: 'prompt', id: 'completed-mode-active' },
+        { kind: 'prompt', id: 'completed-mode-newest' }
       ])
 
     await testHelpers.navigateToPromptFolders('No Completed')
@@ -2851,11 +2855,11 @@ describe('Prompt folder prompt management', () => {
       'Archived'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
-    /** Rendered status sections in required Completed, Archived, Active order. */
+    /** Rendered status sections in required Completed, Archived, Active, Backlog order. */
     const statusSections = mainWindow.locator(
       '[data-testid^="sidebar-prompt-status-accordion-section-"]'
     )
-    await expect(statusSections).toHaveCount(3)
+    await expect(statusSections).toHaveCount(4)
     expect(
       await statusSections.evaluateAll((sections) =>
         sections.map((section) => section.getAttribute('data-testid'))
@@ -2863,7 +2867,8 @@ describe('Prompt folder prompt management', () => {
     ).toEqual([
       'sidebar-prompt-status-accordion-section-completed',
       'sidebar-prompt-status-accordion-section-archived',
-      'sidebar-prompt-status-accordion-section-active'
+      'sidebar-prompt-status-accordion-section-active',
+      'sidebar-prompt-status-accordion-section-backlog'
     ])
     await expect(
       mainWindow

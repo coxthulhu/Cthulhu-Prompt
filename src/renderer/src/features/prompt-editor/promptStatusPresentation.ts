@@ -1,5 +1,5 @@
-import { Archive, Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
-import { PROMPT_STATUS_FOLDERS, PromptStatus } from '@shared/Prompt'
+import { Archive, Bookmark, Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
+import { PromptStatus } from '@shared/Prompt'
 import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
 
 /** Optional quick transition rendered beside the status selector. */
@@ -33,6 +33,13 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
   [PromptStatus.Todo]: {
     id: PromptStatus.Todo,
     forwardAction: completeAction,
+    backwardAction: {
+      icon: Bookmark,
+      label: 'Move prompt to Backlog',
+      hoverVariant: 'neutral',
+      testId: 'prompt-backlog-button',
+      status: PromptStatus.Backlog
+    },
     label: 'Todo',
     selectedLabel: 'Todo',
     detail: 'Move back to active todo status',
@@ -58,6 +65,22 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
     tone: 'warning',
     variant: 'in-progress',
     testId: 'prompt-status-option-in-progress'
+  },
+  [PromptStatus.Backlog]: {
+    id: PromptStatus.Backlog,
+    forwardAction: {
+      icon: CircleDashed,
+      label: 'Set prompt to Todo',
+      hoverVariant: 'neutral',
+      testId: 'prompt-todo-button',
+      status: PromptStatus.Todo
+    },
+    label: 'Backlog',
+    detail: 'Save this prompt for future work',
+    icon: Bookmark,
+    iconClass: 'prompt-editor-status-option-icon-todo',
+    variant: 'todo',
+    testId: 'prompt-status-option-backlog'
   },
   [PromptStatus.Completed]: {
     id: PromptStatus.Completed,
@@ -87,7 +110,5 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
   }
 }
 
-/** Editor options follow the groups and status order declared by the shared registry. */
-export const promptStatusItems = PROMPT_STATUS_FOLDERS.flatMap((group) =>
-  group.statuses.map((status) => statusPresentation[status])
-)
+/** Editor menu order is independent of the sidebar's status-folder order. */
+export const promptStatusItems = Object.values(statusPresentation)
