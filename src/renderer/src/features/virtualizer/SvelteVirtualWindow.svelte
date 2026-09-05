@@ -110,8 +110,8 @@
     setScrollAnchorMode,
     applyUserScrollTop,
     applyProgrammaticScrollTop,
-    getClampedAnchoredScrollTopPx,
-    getAnchoredScrollBottomPx,
+    getResolvedScrollTopPx,
+    getResolvedScrollBottomPx,
     getVisibleRows,
     getViewportRows,
     getScrollShadowActive,
@@ -144,16 +144,15 @@
     getViewportRows,
     getRowRegistry: () => rowRegistry,
     getViewportHeight,
-    getClampedAnchoredScrollTopPx,
-    getAnchoredScrollBottomPx,
+    getResolvedScrollTopPx,
+    getResolvedScrollBottomPx,
     getWidthResizeActive,
     getScrollAnchorMode,
     setScrollAnchorMode
   })
 
   const totalHeightPx = $derived(getTotalHeightPx())
-  const scrollTopPx = $derived(getScrollTopPx())
-  const clampedAnchoredScrollTopPx = $derived(getClampedAnchoredScrollTopPx())
+  const scrollTopPx = $derived(getResolvedScrollTopPx())
   const visibleRows = $derived(getVisibleRows())
   /** Virtual row containing the configured viewport-relative sample point. */
   const sampleRow = $derived.by(() => {
@@ -162,7 +161,7 @@
     /** Index containing the viewport top plus the configured sample padding. */
     const sampleIndex = findIndexAtOffset(
       rowStates,
-      getClampedAnchoredScrollTopPx() + sampleRowOffsetPx
+      getResolvedScrollTopPx() + sampleRowOffsetPx
     )
     return rowStates[sampleIndex] ?? null
   })
@@ -278,7 +277,7 @@
 
       <div style="position:absolute; inset:0;">
         {#each visibleRows as row (row.id)}
-          <div style={rowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
+          <div style={rowWrapperStyle(row, scrollTopPx, devicePixelRatio)}>
             <div
               style={`width:100%; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}
             >
@@ -296,7 +295,7 @@
         {#if rowNeedsOverlay(row)}
           {@const overlayRowElement = overlayRowElements.get(row.id) ?? null}
           {@const overlaySnippet = getOverlaySnippet(row.rowData)}
-          <div style={overlayRowWrapperStyle(row, clampedAnchoredScrollTopPx, devicePixelRatio)}>
+          <div style={overlayRowWrapperStyle(row, scrollTopPx, devicePixelRatio)}>
             <div
               use:registerOverlayRow={row.id}
               style={`width:100%; height:100%; position:relative; overflow:visible; padding-left:${leftScrollPaddingPx}px; padding-right:${rightScrollPaddingPx}px;`}

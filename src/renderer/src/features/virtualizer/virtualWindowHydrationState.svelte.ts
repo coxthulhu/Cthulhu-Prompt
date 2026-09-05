@@ -10,8 +10,8 @@ type VirtualWindowHydrationStateOptions<TRow extends { kind: string }> = {
   getViewportRows: () => VirtualRowState<TRow>[]
   getRowRegistry: () => VirtualWindowRowTypeRegistry<TRow>
   getViewportHeight: () => number
-  getClampedAnchoredScrollTopPx: () => number
-  getAnchoredScrollBottomPx: () => number
+  getResolvedScrollTopPx: () => number
+  getResolvedScrollBottomPx: () => number
   getWidthResizeActive: () => boolean
   getScrollAnchorMode: () => 'top' | 'center'
   setScrollAnchorMode: (mode: 'top' | 'center') => void
@@ -26,8 +26,8 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     getViewportRows,
     getRowRegistry,
     getViewportHeight,
-    getClampedAnchoredScrollTopPx,
-    getAnchoredScrollBottomPx,
+    getResolvedScrollTopPx,
+    getResolvedScrollBottomPx,
     getWidthResizeActive,
     getScrollAnchorMode,
     setScrollAnchorMode
@@ -45,7 +45,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     const visibleRows = getVisibleRows()
     if (visibleRows.length === 0) return new SvelteMap<string, number>()
 
-    const viewportCenterPx = getClampedAnchoredScrollTopPx() + getViewportHeight() / 2
+    const viewportCenterPx = getResolvedScrollTopPx() + getViewportHeight() / 2
     const candidates = visibleRows
       .filter((row) => isHydrationPriorityEligible(row.rowData))
       .map((row) => ({
@@ -71,7 +71,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     const rowStates = getRowStates()
     const viewportHeight = getViewportHeight()
     if (rowStates.length === 0 || viewportHeight <= 0) return null
-    const viewportCenterPx = getClampedAnchoredScrollTopPx() + viewportHeight / 2
+    const viewportCenterPx = getResolvedScrollTopPx() + viewportHeight / 2
     return findNearestEligibleRow(rowStates, viewportCenterPx, isCenterRowEligible)
   })
   const centerRowId = $derived(centerRow?.id ?? null)
@@ -98,7 +98,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
   const shouldDehydrateRow = (row: VirtualRowState<TRow>): boolean =>
     getWidthResizeActive() &&
     (getRowRegistry()[row.rowData.kind].dehydrateOnWidthResize ?? false) &&
-    !rowTouchesViewport(row, getClampedAnchoredScrollTopPx(), getAnchoredScrollBottomPx())
+    !rowTouchesViewport(row, getResolvedScrollTopPx(), getResolvedScrollBottomPx())
 
   // Side effect: revert to top anchoring once rendered eligible rows hydrate during center anchoring.
   $effect(() => {

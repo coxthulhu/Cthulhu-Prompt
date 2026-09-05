@@ -1,3 +1,4 @@
+import { untrack } from 'svelte'
 import { computeAnchoredScrollTop, findIndexAtOffset } from './virtualWindowRowUtils'
 import type { VirtualRowState } from './virtualWindowRows'
 import type {
@@ -40,7 +41,6 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   let trackedRow = $state<{ rowId: string; placement: TrackedRowScrollPlacement } | null>(null)
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
-  const scrollShadowActive = $derived(scrollTopPx > 0)
   const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? getViewportHeight() / 2 : 0)
 
   const clampScrollTop = (nextScrollTop: number): number => {
@@ -70,18 +70,29 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     applyScrollTop(nextScrollTop, false)
   }
 
-  // Anchor viewport math to the scroll position we will apply after layout changes.
-  const anchoredScrollTopPx = $derived.by(() =>
-    computeAnchoredScrollTop(previousRowStates, getRowStates(), scrollTopPx, anchorOffsetPx)
-  )
-  const clampedAnchoredScrollTopPx = $derived(clampScrollTop(anchoredScrollTopPx))
-  const anchoredScrollBottomPx = $derived(clampedAnchoredScrollTopPx + getViewportHeight())
+  // Resolve one position for rendering and scroll updates, giving active tracking priority.
+  const resolvedScrollTopPx = $derived.by(() => {
+    const rowStates = getRowStates()
+    const viewportHeight = getViewportHeight()
+    const tracked = trackedRow
+    if (tracked && scrollAnchorMode === 'center' && viewportHeight > 0) {
+      const row = rowStates.find((candidate) => candidate.id === tracked.rowId)
+      if (row) {
+        return clampScrollTop(getTrackedRowScrollTop(row, viewportHeight, tracked.placement))
+      }
+    }
+    return clampScrollTop(
+      computeAnchoredScrollTop(previousRowStates, rowStates, scrollTopPx, anchorOffsetPx)
+    )
+  })
+  const resolvedScrollBottomPx = $derived(resolvedScrollTopPx + getViewportHeight())
+  const scrollShadowActive = $derived(resolvedScrollTopPx > 0)
 
   const OVERSCAN_PX = 400
 
   // Overscan the viewport so rows above/below are rendered ahead of scroll.
-  const overscannedTopPx = $derived(Math.max(0, clampedAnchoredScrollTopPx - OVERSCAN_PX))
-  const overscannedBottomPx = $derived(anchoredScrollBottomPx + OVERSCAN_PX)
+  const overscannedTopPx = $derived(Math.max(0, resolvedScrollTopPx - OVERSCAN_PX))
+  const overscannedBottomPx = $derived(resolvedScrollBottomPx + OVERSCAN_PX)
 
   const visibleStartIndex = $derived(findIndexAtOffset(getRowStates(), overscannedTopPx))
   const visibleEndIndex = $derived.by(() => {
@@ -97,11 +108,11 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     return getRowStates().slice(visibleStartIndex, visibleEndIndex + 1)
   })
 
-  const viewportStartIndex = $derived(findIndexAtOffset(getRowStates(), clampedAnchoredScrollTopPx))
+  const viewportStartIndex = $derived(findIndexAtOffset(getRowStates(), resolvedScrollTopPx))
   const viewportEndIndex = $derived.by(() => {
     const rowStates = getRowStates()
     if (rowStates.length === 0) return -1
-    const end = findIndexAtOffset(rowStates, anchoredScrollBottomPx)
+    const end = findIndexAtOffset(rowStates, resolvedScrollBottomPx)
     if (viewportStartIndex < 0) return end
     return Math.max(viewportStartIndex, end)
   })
@@ -130,7 +141,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
       destinationTop -= sourceRow.height + sourceTrailingRow.height
     }
     applyProgrammaticScrollTop(
-      clampedAnchoredScrollTopPx + destinationTop - sourceRow.offset
+      resolvedScrollTopPx + destinationTop - sourceRow.offset
     )
   }
 
@@ -213,50 +224,29 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     if (!row) return
 
     trackedRow = { rowId, placement }
-    const nextScrollTop = clampScrollTop(
-      getTrackedRowScrollTop(row, viewportHeight, placement)
-    )
     scrollAnchorMode = 'center'
-    if (nextScrollTop === scrollTopPx) return
-
-    applyProgrammaticScrollTop(nextScrollTop)
+    applyProgrammaticScrollTop(resolvedScrollTopPx)
   }
 
-  // Side effect: stop tracking once we leave center anchoring (e.g., after hydration completes).
-  $effect(() => {
-    if (!trackedRow) return
-    if (scrollAnchorMode === 'center') return
-    trackedRow = null
-  })
-
-  // Side effect: anchor scroll position to the active anchor row when layout or viewport changes.
+  // Side effect: commit the chosen placement and retain the latest layout for the tracking handoff.
   $effect(() => {
     const rowStates = getRowStates()
     const viewportHeight = getViewportHeight()
+    const tracked = trackedRow
+    if (
+      tracked &&
+      (scrollAnchorMode !== 'center' || !rowStates.some((row) => row.id === tracked.rowId))
+    ) {
+      trackedRow = null
+    }
     if (rowStates.length === 0 || viewportHeight <= 0) return
 
-    if (clampedAnchoredScrollTopPx !== scrollTopPx) {
-      applyProgrammaticScrollTop(clampedAnchoredScrollTopPx)
-    }
-
-    previousRowStates = rowStates
-  })
-
-  // Side effect: keep the tracked row aligned as measurements change.
-  $effect(() => {
-    const tracked = trackedRow
-    if (!tracked) return
-    const viewportHeight = getViewportHeight()
-    if (viewportHeight <= 0) return
-
-    const row = getRowStates().find((candidate) => candidate.id === tracked.rowId)
-    if (!row) return
-
-    const nextScrollTop = clampScrollTop(
-      getTrackedRowScrollTop(row, viewportHeight, tracked.placement)
-    )
-    if (nextScrollTop === scrollTopPx) return
-    applyProgrammaticScrollTop(nextScrollTop)
+    const nextScrollTop = resolvedScrollTopPx
+    // Callback reads must not make this effect depend on the consumer's state.
+    untrack(() => {
+      applyProgrammaticScrollTop(nextScrollTop)
+      previousRowStates = rowStates
+    })
   })
 
   // Side effect: reveal the scrollbar briefly after scroll changes.
@@ -272,8 +262,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     setScrollAnchorMode,
     applyUserScrollTop,
     applyProgrammaticScrollTop,
-    getClampedAnchoredScrollTopPx: () => clampedAnchoredScrollTopPx,
-    getAnchoredScrollBottomPx: () => anchoredScrollBottomPx,
+    getResolvedScrollTopPx: () => resolvedScrollTopPx,
+    getResolvedScrollBottomPx: () => resolvedScrollBottomPx,
     getVisibleRows: () => visibleRows,
     getViewportRows: () => viewportRows,
     getScrollShadowActive: () => scrollShadowActive,

@@ -29,9 +29,11 @@ export const computeAnchoredScrollTop = <TRow extends { kind: string }>(
   const anchorPositionPx = scrollTop + anchorOffsetPx
   const anchorRow = previousRows[findIndexAtOffset(previousRows, anchorPositionPx)]
   if (!anchorRow) return scrollTop
-  const offsetInRow = anchorPositionPx - anchorRow.offset
   const nextRow = nextRows.find((row) => row.id === anchorRow.id)
-  return nextRow ? nextRow.offset + offsetInRow - anchorOffsetPx : scrollTop
+  if (!nextRow) return scrollTop
+  const movementPx = nextRow.offset - anchorRow.offset
+  // An unchanged anchor must preserve the exact scroll value, including fractional positions.
+  return movementPx === 0 ? scrollTop : scrollTop + movementPx
 }
 
 const didRowsOnlyReorder = <TRow extends { kind: string }>(
