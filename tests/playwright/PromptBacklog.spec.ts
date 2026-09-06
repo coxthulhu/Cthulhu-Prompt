@@ -74,6 +74,74 @@ const selectStatus = async (page: Page, promptId: string, status: string) => {
 }
 
 describe('Backlog prompts', () => {
+  test('fills Active after collapsing Backlog from an equal sidebar split', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{
+      folderName: 'Work',
+      displayName: 'Work',
+      promptFolderId: 'backlog-root',
+      prompts: Array.from({ length: 40 }, (_, index) => ({
+        id: `prompt-${index}`, title: `Prompt ${index}`, promptText: `Work on ${index}`
+      }))
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    /** Running sidebar with enough Active prompts to require scrolling. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Work')
+
+    /** Accordion bounds used to place the split halfway down the sidebar. */
+    const accordion = mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')
+    /** Expanded Active section whose height must absorb Backlog's released space. */
+    const active = mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-active"]')
+    /** Bottom section toggled without changing the saved split ratio. */
+    const backlog = mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-backlog"]')
+    /** Backlog's collapse and expand control. */
+    const backlogHeader = mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-backlog"]')
+    /** Scroll viewport checked separately from its containing Active section. */
+    const activeViewport = mainWindow.locator('[data-testid="prompt-tree-active-virtual-window"]')
+    /** Initial available height shared by the two sections. */
+    const accordionBox = (await accordion.boundingBox())!
+    /** Resize handle between Active and Backlog. */
+    const sashBox = (await mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-sash-backlog"]').boundingBox())!
+    await mainWindow.mouse.move(sashBox.x + sashBox.width / 2, sashBox.y + sashBox.height / 2)
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(
+      sashBox.x + sashBox.width / 2,
+      accordionBox.y + accordionBox.height / 2 + sashBox.height / 2,
+      { steps: 10 }
+    )
+    await mainWindow.mouse.up()
+    await expect.poll(async () => Math.abs((await active.boundingBox())!.height - (await backlog.boundingBox())!.height))
+      .toBeLessThanOrEqual(2)
+    /** Active's constrained viewport before Backlog releases its height. */
+    const splitViewportBox = (await activeViewport.boundingBox())!
+    /** Expanded Backlog height used to check exactly how much space Active receives. */
+    const expandedBacklogBox = (await backlog.boundingBox())!
+    await expect.poll(() => activeViewport.evaluate((element) => element.scrollHeight > element.clientHeight))
+      .toBe(true)
+
+    await backlogHeader.click()
+    await expect(backlogHeader).toHaveAttribute('aria-expanded', 'false')
+    await expect.poll(async () => Math.abs((await active.boundingBox())!.height - (accordionBox.height - 36)))
+      .toBeLessThanOrEqual(1)
+    /** Collapsed Backlog header remains at the bottom with no gap above it. */
+    const collapsedBacklogBox = (await backlog.boundingBox())!
+    /** Active's enlarged scroll viewport must reach the collapsed header. */
+    const expandedViewportBox = (await activeViewport.boundingBox())!
+    expect(Math.abs(collapsedBacklogBox.height - 36)).toBeLessThanOrEqual(1)
+    expect(Math.abs(collapsedBacklogBox.y + collapsedBacklogBox.height - accordionBox.y - accordionBox.height))
+      .toBeLessThanOrEqual(1)
+    expect(Math.abs(expandedViewportBox.y + expandedViewportBox.height - collapsedBacklogBox.y))
+      .toBeLessThanOrEqual(1)
+    expect(Math.abs(expandedViewportBox.height - splitViewportBox.height - expandedBacklogBox.height + 36))
+      .toBeLessThanOrEqual(1)
+
+    await backlogHeader.click()
+    await expect(backlogHeader).toHaveAttribute('aria-expanded', 'true')
+    await expect.poll(async () => Math.abs((await active.boundingBox())!.height - (await backlog.boundingBox())!.height))
+      .toBeLessThanOrEqual(2)
+  })
+
   test('copies Active categories once and maintains independent ordering with shared category creation', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(createBacklogWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])

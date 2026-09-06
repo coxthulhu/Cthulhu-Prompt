@@ -187,7 +187,11 @@ describe('Accordion', () => {
       1
     )
     expectWithinPx((await readBox(research)).height, initialBoxes[0]!.height, 1)
-    expectWithinPx((await readBox(active)).height, initialBoxes[1]!.height, 1)
+    expectWithinPx(
+      (await readBox(active)).height,
+      initialBoxes[1]!.height + initialBoxes[2]!.height - COLLAPSED_HEIGHT_PX,
+      1
+    )
 
     await completedHeader.click()
     await expect(completedHeader).toHaveAttribute('aria-expanded', 'true')
@@ -205,21 +209,28 @@ describe('Accordion', () => {
         1
       )
     }
-    expectWithinPx((await readBox(research)).height, initialBoxes[0]!.height, 1)
+    expectWithinPx(
+      (await readBox(research)).height,
+      accordionBox.height - 2 * COLLAPSED_HEIGHT_PX,
+      1
+    )
 
     await completedHeader.click()
     await expect(completedHeader).toHaveAttribute('aria-expanded', 'true')
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'true')
-    /** Restored section boxes after reversing the trailing collapse sequence. */
+    /** Reopened sections fill the accordion after expansion reclaims space from below first. */
     const restoredTrailingBoxes = await Promise.all([
       readBox(research),
       readBox(active),
       readBox(completed)
     ])
-    for (const [index, box] of restoredTrailingBoxes.entries()) {
-      expectWithinPx(box.height, initialBoxes[index]!.height, 1)
-    }
+    expectWithinPx(restoredTrailingBoxes[1]!.height, initialBoxes[1]!.height, 1)
+    expectWithinPx(
+      restoredTrailingBoxes.reduce((sum, box) => sum + box.height, 0),
+      accordionBox.height,
+      1
+    )
 
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')

@@ -281,9 +281,9 @@
       /** Height released when the clicked section contracts to its fixed header height. */
       const releasedHeightPx =
         nextHeightsById[sectionId]! - COLLAPSED_SECTION_HEIGHT_PX
-      /** Bottommost expanded section below the clicked header that receives released space. */
+      /** Last remaining expanded section receives all space released by the collapse. */
       const receivingSection = nextSections.findLast(
-        (section, index) => index > sectionIndex && section.isExpanded
+        (section) => section.isExpanded
       )
       nextHeightsById[sectionId] = COLLAPSED_SECTION_HEIGHT_PX
       if (receivingSection) nextHeightsById[receivingSection.id]! += releasedHeightPx
