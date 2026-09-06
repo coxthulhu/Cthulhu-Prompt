@@ -334,7 +334,7 @@
   font-size: 14px;
 }
 
-.sidebarPromptTreeVisibilityRow {
+.sidebarPromptTreeEmptyCategoryRow {
   display: grid;
   grid-template-columns:
     calc(var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
@@ -344,7 +344,7 @@
   padding-block: 1px;
 }
 
-.sidebarPromptTreeVisibilityButtonWrap {
+.sidebarPromptTreeEmptyCategoryButtonWrap {
   display: flex;
   min-width: 0;
   height: 22px;
@@ -352,13 +352,14 @@
   padding-left: 12px;
 }
 
-.sidebarPromptTreeVisibilityRow .sidebarPromptTreeGutter {
+.sidebarPromptTreeEmptyCategoryRow .sidebarPromptTreeGutter {
   min-height: 22px;
 }
 
-.sidebarPromptTreeVisibilityButton {
-  --cthulhu-ui-inline-text-button-line-height: 1;
-  height: auto;
+/* Center the label within the compact row; the label itself handles truncation. */
+.sidebarPromptTreeEmptyCategoryRow .sidebarPromptTreeEmptyCategoryButton.cthulhuUiInlineTextButton {
+  height: 100%;
+  max-width: 100%;
 }
 
 .promptDragGhost {

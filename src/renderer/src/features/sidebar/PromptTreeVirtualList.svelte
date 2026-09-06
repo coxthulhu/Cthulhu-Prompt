@@ -27,6 +27,12 @@
         /** Whether this row owns the unique prompt drop target at tree start. */
         isFirstTreeRow: boolean
       }
+    /** Creation action beneath an expanded category with no visible content. */
+    | {
+        kind: 'empty-category'
+        /** Category that receives the new prompt or template. */
+        category: Category
+      }
     | {
         kind: 'empty-state'
       }
@@ -43,6 +49,10 @@
   >
   export type PromptTreePromptRowProps = VirtualWindowRowComponentProps<
     Extract<PromptTreeRow, { kind: 'prompt' }>
+  >
+  /** Virtual-row props for the empty-category creation action. */
+  export type PromptTreeEmptyCategoryRowProps = VirtualWindowRowComponentProps<
+    Extract<PromptTreeRow, { kind: 'empty-category' }>
   >
   export type PromptTreeEmptyStateRowProps = VirtualWindowRowComponentProps<
     Extract<PromptTreeRow, { kind: 'empty-state' }>
@@ -74,6 +84,8 @@
     promptTreeCategoryRowOverlay?: Snippet<[PromptTreeCategoryRowProps]>
     promptRow: Snippet<[PromptTreePromptRowProps]>
     promptTreeRowOverlay?: Snippet<[PromptTreePromptRowProps]>
+    /** Renders the inline creation action for an empty category. */
+    emptyCategoryRow: Snippet<[PromptTreeEmptyCategoryRowProps]>
     emptyStateRow: Snippet<[PromptTreeEmptyStateRowProps]>
     bottomSpacerRow: Snippet<[PromptTreeBottomSpacerRowProps]>
     promptTreeBottomSpacerRowOverlay?: Snippet<[PromptTreeBottomSpacerRowProps]>
@@ -91,6 +103,7 @@
     promptTreeCategoryRowOverlay,
     promptRow,
     promptTreeRowOverlay,
+    emptyCategoryRow,
     emptyStateRow,
     bottomSpacerRow,
     promptTreeBottomSpacerRowOverlay
@@ -116,6 +129,11 @@
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
         overlayRow: { snippet: promptTreeRowOverlay },
         snippet: promptRow
+      },
+      // Preserve the compact action's 22px content height and 1px padding on each side.
+      'empty-category': {
+        estimateHeight: () => 24,
+        snippet: emptyCategoryRow
       },
       'empty-state': {
         estimateHeight: () => 86,

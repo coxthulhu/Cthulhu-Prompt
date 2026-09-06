@@ -67,9 +67,12 @@
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import PromptTreeCategoryRow from './PromptTreeCategoryRow.svelte'
+  import PromptTreeGutter from './PromptTreeGutter.svelte'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import {
     categoryDropIndicatorTestId,
+    categoryEmptyActionTestId,
     folderPromptDropIndicatorTestId,
     promptTreeBottomSpacerDropIndicatorTestId,
     promptTreeBottomSpacerDropTargetTestId
@@ -738,10 +741,16 @@
               indentCount: 0,
               isFirstTreeRow,
               endsVisibleBranch: groupIndex === groups.length - 2 &&
-                (!isExpanded || categoryEntries.length === 0)
+                !isExpanded
             }
           })
           if (!isExpanded) continue
+          if (categoryEntries.length === 0) {
+            items.push({
+              id: `${category.id}:empty-category`,
+              row: { kind: 'empty-category', category }
+            })
+          }
           for (const [entryIndex, entry] of categoryEntries.entries()) {
             items.push({
               id: contentPromptRowId(category.id, entry.id),
@@ -966,6 +975,21 @@
       onPromptSelect={handlePromptTreePromptSelect}
     />
   {/key}
+{/snippet}
+
+<!-- Offers the category's existing creation action with the compact inline-row appearance. -->
+{#snippet emptyCategoryRow({ row })}
+  <div class="sidebarPromptTreeEmptyCategoryRow">
+    <PromptTreeGutter isLastRow />
+    <div class="sidebarPromptTreeEmptyCategoryButtonWrap">
+      <InlineTextButton
+        text={`Category is empty, click to add a ${screenRootFolder?.kind === 'template' ? 'template' : 'prompt'}`}
+        testId={categoryEmptyActionTestId(row.category, testIdGroup)}
+        class="sidebarPromptTreeEmptyCategoryButton"
+        onclick={() => handleCategoryAddToTop(row.category.id)}
+      />
+    </div>
+  </div>
 {/snippet}
 
 {#snippet emptyStateRow()}

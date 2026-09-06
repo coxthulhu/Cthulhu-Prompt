@@ -37,7 +37,7 @@
   {title}
   {onclick}
 >
-  {text}
+  <span class="cthulhuUiInlineTextButtonLabel">{text}</span>
 </button>
 
 <style>
@@ -55,6 +55,13 @@
     line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
     text-align: inherit;
     transition: color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .cthulhuUiInlineTextButtonLabel {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .cthulhuUiInlineTextButton[data-size='default'] {

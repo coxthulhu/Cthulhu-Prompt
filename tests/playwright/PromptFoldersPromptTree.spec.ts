@@ -699,6 +699,50 @@ describe('Prompt folder prompt tree', () => {
       .toBe(true)
   })
 
+  // Covers empty-state visibility, keyboard creation, and status-specific emptiness.
+  test('creates a prompt from an expanded empty category and restores its action after completion', async ({
+    testSetup
+  }) => {
+    /** Existing fixture includes both a populated category and an empty category. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'categories-ui' }
+    })
+    await testHelpers.navigateToPromptFolders('Hierarchy')
+    /** Empty category header and its indented creation action. */
+    const toggle = mainWindow.getByTestId('prompt-tree-active-category-toggle-button-Empty')
+    /** Button under the empty category, absent under the populated Primary category. */
+    const action = mainWindow.getByTestId('prompt-tree-active-category-empty-action-Empty')
+    await expect(action).toHaveText('Category is empty, click to add a prompt')
+    await expect(mainWindow.getByTestId('prompt-tree-active-category-empty-action-Primary')).toHaveCount(0)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(action).toHaveCount(0)
+    await toggle.click()
+    await expect(action).toBeVisible()
+    await action.focus()
+    await mainWindow.keyboard.press('Enter')
+
+    /** Newly created editor proves the inline action follows normal category creation. */
+    const editor = mainWindow.locator(PROMPT_EDITOR_PREFIX_SELECTOR).filter({
+      has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Prompt"]`)
+    })
+    await expect(editor).toHaveCount(1)
+    /** Generated ID connects the focused editor with its replacement tree row. */
+    const promptId = (await editor.getAttribute('data-testid'))!.replace('prompt-editor-', '')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(promptId))).toBe(true)
+    await expect(action).toHaveCount(0)
+    await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toBeVisible()
+    await toggle.click()
+    await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toHaveCount(0)
+    await toggle.click()
+    await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toBeVisible()
+
+    await editor.getByTestId('prompt-status-more-options-button').click()
+    await mainWindow.getByTestId('prompt-status-option-completed').click()
+    await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toHaveCount(0)
+    await expect(action).toBeVisible()
+  })
+
   test('shows category add-to-top only in the Active tree', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'categories-ui' }
@@ -985,7 +1029,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptTreeRow).toContainText(nextTitle)
   })
 
-  test('shows every prompt in the selected folder without show more rows', async ({
+  test('shows every prompt in the selected folder', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1004,7 +1048,6 @@ describe('Prompt folder prompt tree', () => {
       '[data-testid="prompt-tree-active-prompt-short-60"]'
     )
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-short-60"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid^="prompt-tree-folder-show-"]')).toHaveCount(0)
   })
 
   test('omits the root row and reduces direct entry indentation', async ({ testSetup }) => {

@@ -2134,6 +2134,9 @@ describe('Prompt folder prompt management', () => {
       await expect(mainWindow.locator(`[data-testid="prompt-tree-completed-prompt-${promptId}"]`)).toHaveCount(1)
     }
 
+    /** Empty-category action appears when the last active prompt leaves the category. */
+    const emptyCategoryAction = mainWindow.getByTestId('prompt-tree-active-category-empty-action-Primary')
+    await expect(emptyCategoryAction).toBeVisible()
     /** An empty category remains a visible, uniquely identified prompt destination. */
     const primaryCategory = '[data-testid="prompt-tree-active-category-toggle-button-Primary"]'
     await expect(mainWindow.locator(primaryCategory)).toHaveCount(1)
@@ -2142,6 +2145,8 @@ describe('Prompt folder prompt management', () => {
     await finishActiveDrag(mainWindow)
     await expect(mainWindow.locator(completedTarget)).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-status-drag-completed"]')).toHaveCount(1)
+
+    await expect(emptyCategoryAction).toHaveCount(0)
 
     /** Persisted prompt must use the destination group's entry status and category. */
     const restoredPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/Categorized Completed.prompt.md`

@@ -131,26 +131,6 @@
       icon: Settings,
       testId: categorySettingsTestId(category, testIdGroup)
     }
-    /*
-    Show more/show less remains disabled for category rows.
-    ...(isExpanded && category.promptCount > visiblePromptLimit
-      ? [
-          isShowingAllPrompts
-            ? {
-                id: 'show-less-prompts',
-                label: 'Show less prompts',
-                icon: ChevronsUp,
-                testId: categoryPromptMenuShowLessTestId(category)
-              }
-            : {
-                id: 'show-all-prompts',
-                label: 'Show all prompts',
-                icon: ChevronsDown,
-                testId: categoryPromptMenuShowAllTestId(category)
-              }
-        ]
-      : [])
-    */
   ])
 
   /** Handles a category context-menu selection. */
@@ -167,12 +147,6 @@
       return
     }
 
-    /*
-    if (item.id === 'show-all-prompts' || item.id === 'show-less-prompts') {
-      onPromptVisibilityChange?.(category.id, item.id === 'show-all-prompts')
-      blurButtonAfterMouseClick(event)
-    }
-    */
   }
 
   /** Enables category dragging only when drag options are supplied. */

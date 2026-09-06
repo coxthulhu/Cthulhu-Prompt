@@ -141,6 +141,75 @@ const setEditorSelections = async (
 }
 
 describe('Prompt template folder UI', () => {
+  // Verifies template wording and category ownership through collapse after creation.
+  test('creates and focuses a template from an expanded empty category', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [{
+      folderName: 'Templates',
+      displayName: 'Templates',
+      folderId: TEMPLATE_FOLDER_ID,
+      categories: [{ categoryName: 'Empty', displayName: 'Empty', templates: [] }]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    /** Window and navigation helpers for a root with one empty template category. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Templates')
+    /** Template-specific action rendered under the expanded category. */
+    const action = mainWindow.getByTestId('prompt-tree-template-category-empty-action-Empty')
+    /** Category toggle verifies both empty and populated child visibility. */
+    const toggle = mainWindow.getByTestId('prompt-tree-template-category-toggle-button-Empty')
+    await expect(action).toHaveText('Category is empty, click to add a template')
+    await dragSidebarHandleBy(mainWindow, -100)
+    /** The label truncates independently of the button's flex alignment. */
+    const label = action.locator('.cthulhuUiInlineTextButtonLabel')
+    await expect(label).toHaveCSS('text-overflow', 'ellipsis')
+    await expect(label).toHaveCSS('white-space', 'nowrap')
+    await expect(label).toHaveCSS('overflow-x', 'hidden')
+    await expect.poll(() => label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
+    /** Narrow-sidebar geometry checks that truncation preserves the centered 24px row. */
+    const layout = await action.evaluate((button) => {
+      /** Button and row bounds distinguish line-box alignment from font ink placement. */
+      const buttonRect = button.getBoundingClientRect()
+      /** Label line box must remain centered inside the full-height button. */
+      const labelRect = button.querySelector('.cthulhuUiInlineTextButtonLabel')!.getBoundingClientRect()
+      /** Existing compact row that must not grow when its label is truncated. */
+      const rowRect = button.closest('.sidebarPromptTreeEmptyCategoryRow')!.getBoundingClientRect()
+      return {
+        rowHeight: rowRect.height,
+        buttonHeight: buttonRect.height,
+        centerOffset: Math.abs(buttonRect.top + buttonRect.height / 2 - rowRect.top - rowRect.height / 2),
+        labelCenterOffset: Math.abs(labelRect.top + labelRect.height / 2 - rowRect.top - rowRect.height / 2),
+        rightOverflow: buttonRect.right - rowRect.right
+      }
+    })
+    expect(Math.abs(layout.rowHeight - 24)).toBeLessThanOrEqual(1)
+    expect(Math.abs(layout.buttonHeight - 22)).toBeLessThanOrEqual(1)
+    expect(layout.centerOffset).toBeLessThanOrEqual(1)
+    expect(layout.labelCenterOffset).toBeLessThanOrEqual(1)
+    expect(layout.rightOverflow).toBeLessThanOrEqual(1)
+
+    await toggle.click()
+    await expect(action).toHaveCount(0)
+    await toggle.click()
+    await action.click()
+    /** Generated template editor selected by its fallback title. */
+    const editor = mainWindow.locator('[data-testid^="prompt-editor-"]').filter({
+      has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Template"]`)
+    })
+    await expect(editor).toHaveCount(1)
+    /** Generated template ID used to check editor focus and tree membership. */
+    const templateId = (await editor.getAttribute('data-testid'))!.replace('prompt-editor-', '')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(templateId))).toBe(true)
+    await expect(action).toHaveCount(0)
+    await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toBeVisible()
+    await toggle.click()
+    await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toHaveCount(0)
+    await toggle.click()
+    await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toBeVisible()
+  })
+
   test('adds a template to the top of a category from the prompt tree', async ({
     electronApp,
     testSetup
