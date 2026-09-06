@@ -38,6 +38,10 @@
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
+  import {
+    lookupWorkspacePersistedAccordionViewEntry,
+    setAccordionViewEntryWithAutosave
+  } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
   import {
     PROMPT_STATUS_FOLDER_REGISTRY,
@@ -380,6 +384,30 @@
       variant: 'danger'
     }
   ])
+
+  /** Shows finalized groups expanded without changing their saved accordion heights. */
+  const toggleFinalStatusGroup = (groupId: PromptStatusFolderId): void => {
+    /** Visibility requested by this toolbar click. */
+    const isShown = !shownFinalStatusGroups[groupId]
+    /** Workspace owning the sidebar accordion's saved section state. */
+    const workspaceId = workspaceSelection.selectedWorkspaceId
+    if (isShown && workspaceId) {
+      /** Existing section settings; unsaved sections already default to expanded. */
+      const accordionViewEntry = lookupWorkspacePersistedAccordionViewEntry(
+        workspaceId,
+        PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
+      )
+      if (accordionViewEntry) {
+        setAccordionViewEntryWithAutosave(workspaceId, {
+          ...accordionViewEntry,
+          sections: accordionViewEntry.sections.map((section) =>
+            section.id === groupId ? { ...section, isExpanded: true } : section
+          )
+        })
+      }
+    }
+    onFinalStatusGroupShownChange(groupId, isShown)
+  }
 
   /** Expands or collapses every category under the selected root folder. */
   const handleCategoryExpansionAction = () => {
@@ -783,7 +811,7 @@
               active={shownFinalStatusGroups[group.id] ?? false}
               testId={`toggle-${group.id}-prompts-button`}
               class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
-              onclick={() => onFinalStatusGroupShownChange(group.id, !shownFinalStatusGroups[group.id])}
+              onclick={() => toggleFinalStatusGroup(group.id)}
             />
           {/each}
         {/if}

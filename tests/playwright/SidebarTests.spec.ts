@@ -4,6 +4,59 @@ const { test, expect } = createPlaywrightTestSuite()
 
 // Sidebar navigation and state coverage.
 test.describe('Sidebar Tests', () => {
+  // Each finalized group must reopen expanded after its saved state was collapsed.
+  for (const groupId of ['completed', 'archived']) {
+    test(`shows ${groupId} expanded at its previous resized height`, async ({ testSetup }) => {
+      /** Workspace with a selectable prompt folder and the real sidebar accordion. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'sample' }
+      })
+      await testHelpers.navigateToPromptFolders('Development')
+
+      /** Toolbar control that removes and remounts this section. */
+      const toggle = mainWindow.getByTestId(`toggle-${groupId}-prompts-button`)
+      /** Section whose expanded height must survive hiding and showing. */
+      const section = mainWindow.getByTestId(`sidebar-prompt-status-accordion-section-${groupId}`)
+      /** Header used to persist a collapsed state before hiding the section. */
+      const header = mainWindow.getByTestId(`sidebar-prompt-status-accordion-header-${groupId}`)
+      await expect(section).toHaveCount(0)
+      await toggle.click()
+      await expect(header).toHaveAttribute('aria-expanded', 'true')
+
+      /** Initial height distinguishes restoration from resetting the section's sizing. */
+      const initialHeightPx = (await section.boundingBox())!.height
+      /** Active's top sash resizes the finalized section immediately above it. */
+      const sashBox = (await mainWindow
+        .getByTestId('sidebar-prompt-status-accordion-sash-active')
+        .boundingBox())!
+      await mainWindow.mouse.move(sashBox.x + sashBox.width / 2, sashBox.y + sashBox.height / 2)
+      await mainWindow.mouse.down()
+      await mainWindow.mouse.move(sashBox.x + sashBox.width / 2, sashBox.y + sashBox.height / 2 + 40)
+      await mainWindow.mouse.up()
+      await expect.poll(async () => Math.abs((await section.boundingBox())!.height - initialHeightPx - 40))
+        .toBeLessThanOrEqual(2)
+      /** User-resized height restored when the surrounding layout is unchanged. */
+      const resizedHeightPx = (await section.boundingBox())!.height
+
+      await header.click()
+      await expect(header).toHaveAttribute('aria-expanded', 'false')
+      await toggle.click()
+      await expect(section).toHaveCount(0)
+      await toggle.click()
+      await expect(header).toHaveAttribute('aria-expanded', 'true')
+      await expect.poll(async () => Math.abs((await section.boundingBox())!.height - resizedHeightPx))
+        .toBeLessThanOrEqual(2)
+
+      // Hiding an already expanded section must preserve the same sizing too.
+      await toggle.click()
+      await expect(section).toHaveCount(0)
+      await toggle.click()
+      await expect(header).toHaveAttribute('aria-expanded', 'true')
+      await expect.poll(async () => Math.abs((await section.boundingBox())!.height - resizedHeightPx))
+        .toBeLessThanOrEqual(2)
+    })
+  }
+
   test('home selected on startup and settings enabled', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
