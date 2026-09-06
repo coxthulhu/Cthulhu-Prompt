@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.0.31
+
+### New Features
+
+- Added categories for organizing prompts and templates, with descriptions, drag-and-drop ordering, and category management.
+- Added Backlog and Archived prompt statuses, with drag-and-drop movement between status groups.
+- Added collapsible, resizable sidebar status sections and a sidebar collapse toggle.
+
+### Changes
+
+- Replaced nested prompt folders with categories and reorganized prompt storage into status folders.
+- Simplified template selection to one template per prompt and added a bundled example template.
+- Added prompt folder deletion from the sidebar and included expanded category descriptions in search.
+- Refined prompt editor controls, navigation, dropdowns, and sidebar styling.
+
+### Fixed
+
+- Fixed pending edits being lost when closing a workspace and conflicts when deleting prompts.
+- Fixed find cursor selection and editor focus restoration.
+- Fixed prompt ordering during status changes and restored category selections on startup.
+- Fixed scrolling jumps and feedback loops, drag-and-drop targeting, and sidebar section sizing.
+
 ## 0.0.30
 
 ### New Features
