@@ -239,99 +239,73 @@ const scrollPromptFolderRowAwayFromViewportCenter = async (
 }
 
 describe('Prompt folder prompt tree', () => {
-  test('highlights prompt tree and editor status lines on every prompt click', async ({
+  test('highlights the full editor rail on every prompt click while status accents stay steady', async ({
     testSetup
   }) => {
-    /** Sample workspace exposes a Todo prompt with transparent normal indicators. */
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+    /** Sample prompt exposes persistent status colors and all three rail controls. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders(SAMPLE_FOLDER_NAME)
-
-    /** Clickable tree row that initiates both synchronized highlights. */
+    /** Tree selection triggers the editor rail animation. */
     const promptTreeRow = mainWindow.locator(samplePromptTreeRowSelector)
-    /** Tree status line overlaid beside the clicked prompt. */
-    const treeIndicator = promptTreeRow
-      .locator('..')
-      .locator('[data-testid="prompt-tree-status-indicator"]')
-    /** Matching status line on the prompt editor title bar. */
-    const editorIndicator = mainWindow.locator(
-      `${promptEditorSelector(SAMPLE_PROMPT_ID)} [data-testid="prompt-title-status-indicator"]`
-    )
-    await expect(promptTreeRow).toBeVisible()
-    await expect(editorIndicator).toHaveCount(1)
-    /** Status selector changes the target to a persistent non-transparent warning line. */
-    const statusPill = mainWindow.locator(
-      `${promptEditorSelector(SAMPLE_PROMPT_ID)} [data-testid="prompt-status-pill"]`
-    )
-    await statusPill.click()
+    /** Editor card containing the rail and persistent title accent. */
+    const editor = mainWindow.locator(promptEditorSelector(SAMPLE_PROMPT_ID))
+    /** Both status accents must keep their warning color throughout navigation. */
+    const indicators = [
+      promptTreeRow.locator('..').locator('[data-testid="prompt-tree-status-indicator"]'),
+      editor.locator('[data-testid="prompt-title-status-indicator"]')
+    ]
+    await editor.locator('[data-testid="prompt-status-pill"]').click()
     await mainWindow.locator('[data-testid="prompt-status-option-in-progress"]').click()
-    await expect(treeIndicator).toHaveAttribute('data-status', 'InProgress')
-    await expect(editorIndicator).toHaveAttribute('data-status', 'InProgress')
-
+    /** Persistent colors captured before the navigation animation starts. */
+    const normalColors = await Promise.all(
+      indicators.map((indicator) => indicator.evaluate((element) => getComputedStyle(element).backgroundColor))
+    )
+    /** Single animated background shared by the drag handle and move buttons. */
+    const highlight = editor.locator('[data-testid="prompt-sidebar-highlight"]')
     await promptTreeRow.click()
-    await expect(treeIndicator).toHaveAttribute('data-navigation-highlight', 'true')
-    await expect(editorIndicator).toHaveAttribute('data-navigation-highlight', 'true')
-    /** First generation shared by the tree and editor animations. */
-    const firstGeneration = await treeIndicator.getAttribute(
-      'data-navigation-highlight-generation'
-    )
-    expect(firstGeneration).toBeTruthy()
-    await expect(editorIndicator).toHaveAttribute(
-      'data-navigation-highlight-generation',
-      firstGeneration!
-    )
-
-    /** Tree animation snapshot verifies the requested 50ms, 500ms, and 120ms phases. */
-    const treeAnimation = await readPromptNavigationHighlightAnimation(treeIndicator)
-    /** Editor animation snapshot verifies the same phase contract and purple color. */
-    const editorAnimation = await readPromptNavigationHighlightAnimation(editorIndicator)
-    expect(treeAnimation).toEqual({
-      durationMs: 670,
-      keyframeTimesMs: [0, 50, 550, 670],
-      holdColor: treeAnimation.accentColor,
-      accentColor: treeAnimation.accentColor,
-      finalKeyframeColor: treeAnimation.normalColor,
-      normalColor: treeAnimation.normalColor
+    await expect(highlight).toHaveAttribute('data-navigation-highlight', 'true')
+    /** Browser-observed animation verifies muted violet and all three requested timing phases. */
+    const animation = await readPromptNavigationHighlightAnimation(highlight)
+    expect(animation).toEqual({
+      durationMs: 1000,
+      keyframeTimesMs: [0, 50, 550, 1000],
+      holdColor: animation.accentColor,
+      accentColor: animation.accentColor,
+      finalKeyframeColor: animation.normalColor,
+      normalColor: animation.normalColor
     })
-    expect(editorAnimation).toEqual({
-      durationMs: 670,
-      keyframeTimesMs: [0, 50, 550, 670],
-      holdColor: editorAnimation.accentColor,
-      accentColor: editorAnimation.accentColor,
-      finalKeyframeColor: editorAnimation.normalColor,
-      normalColor: editorAnimation.normalColor
-    })
-
-    await treeIndicator.evaluate((element) => {
-      element.setAttribute('data-testid-highlight-instance', 'first')
-    })
-    await editorIndicator.evaluate((element) => {
-      element.setAttribute('data-testid-highlight-instance', 'first')
-    })
+    /** Accents retain their rendered colors and have no attached animation. */
+    for (const [index, indicator] of indicators.entries()) {
+      expect(await indicator.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(normalColors[index])
+      expect(await indicator.evaluate((element) => element.getAnimations().length)).toBe(0)
+    }
+    /** Background bounds cover every control, including the disabled first move arrow. */
+    const highlightBounds = await highlight.boundingBox()
+    expect(highlightBounds).not.toBeNull()
+    /** Each control must fit inside the full-height highlight with a 1px border tolerance. */
+    for (const testId of ['prompt-move-up', 'prompt-drag-handle', 'prompt-move-down']) {
+      await expect(editor.locator(`[data-testid="${testId}"]`)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      /** Rendered control bounds verify the complete button area receives the wash. */
+      const bounds = await editor.locator(`[data-testid="${testId}"]`).boundingBox()
+      expect(bounds).not.toBeNull()
+      expect(bounds!.x).toBeGreaterThanOrEqual(highlightBounds!.x - 1)
+      expect(bounds!.y).toBeGreaterThanOrEqual(highlightBounds!.y - 1)
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(highlightBounds!.x + highlightBounds!.width + 1)
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(highlightBounds!.y + highlightBounds!.height + 1)
+    }
+    // Start a fresh pulse and mark its live layer immediately before a rapid repeat click.
     await promptTreeRow.click()
-    await expect
-      .poll(() => treeIndicator.getAttribute('data-navigation-highlight-generation'))
-      .not.toBe(firstGeneration)
-    /** Replayed generation remains synchronized between the matching indicators. */
-    const replayGeneration = await treeIndicator.getAttribute(
-      'data-navigation-highlight-generation'
-    )
-    await expect(editorIndicator).toHaveAttribute(
-      'data-navigation-highlight-generation',
-      replayGeneration!
-    )
-    await expect(treeIndicator).not.toHaveAttribute('data-testid-highlight-instance', 'first')
-    await expect(editorIndicator).not.toHaveAttribute('data-testid-highlight-instance', 'first')
-    /** Replayed snapshot requires a fresh animation on the remounted indicator. */
-    const replayTreeAnimation = await readPromptNavigationHighlightAnimation(treeIndicator)
-    /** Fresh editor snapshot proves its independently keyed animation also replayed. */
-    const replayEditorAnimation = await readPromptNavigationHighlightAnimation(editorIndicator)
-    expect(replayTreeAnimation.durationMs).toBe(670)
-    expect(replayTreeAnimation.holdColor).toBe(replayTreeAnimation.accentColor)
-    expect(replayEditorAnimation.durationMs).toBe(670)
-    expect(replayEditorAnimation.holdColor).toBe(replayEditorAnimation.accentColor)
+    await highlight.evaluate((element) => element.setAttribute('data-test-instance', 'original'))
+    await promptTreeRow.click()
+    await expect(highlight).not.toHaveAttribute('data-test-instance', 'original')
+    await expect(highlight).toHaveAttribute('data-navigation-highlight', 'true')
+    /** A repeat click must attach a fresh animation even if the earlier pulse already ended. */
+    const replayAnimation = await readPromptNavigationHighlightAnimation(highlight)
+    expect(replayAnimation.durationMs).toBe(1000)
+    expect(replayAnimation.holdColor).toBe(replayAnimation.accentColor)
+    await expect(highlight).not.toHaveAttribute('data-navigation-highlight', 'true')
   })
 
   test('renders categories and persists prompt tree expansion state', async ({

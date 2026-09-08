@@ -6,8 +6,8 @@ import {
 } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
 
 const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
-/** Full tree-navigation highlight duration: 50ms transition, 500ms hold, and 120ms fade. */
-const PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS = 670
+/** Full tree-navigation highlight duration: 50ms transition, 500ms hold, and 450ms fade. */
+const PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS = 1000
 
 /** Selectable row identities within one root prompt-folder screen. */
 export type PromptNavigationRow = 'root-header' | 'category-details' | `prompt:${string}`
@@ -33,7 +33,7 @@ type PromptNavigationState = {
   contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
-  /** Latest prompt-tree click that should highlight matching tree and editor status lines. */
+  /** Latest prompt-tree click that should highlight the matching editor sidebar rail. */
   navigationHighlight: PromptNavigationHighlight | null
 }
 
@@ -174,7 +174,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
       if (navigationHighlightTimeoutId !== null) {
         window.clearTimeout(navigationHighlightTimeoutId)
       }
-      /** Next click generation restarts both matching CSS animations. */
+      /** Next click generation restarts the matching sidebar animation. */
       const navigationHighlightGeneration = (state.navigationHighlight?.generation ?? 0) + 1
       state.navigationHighlight = {
         promptId: navigationHighlightPromptId,

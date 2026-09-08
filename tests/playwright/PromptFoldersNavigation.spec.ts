@@ -355,24 +355,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(templateEditor).toBeVisible()
     /** Template tree row uses the same direct-navigation animation path as prompts. */
     const templateTreeRow = mainWindow.locator('[data-testid="prompt-tree-template-prompt-template-1"]')
-    /** Template status line rendered beside the clicked tree entry. */
-    const templateTreeIndicator = templateTreeRow
-      .locator('..')
-      .locator('[data-testid="prompt-tree-status-indicator"]')
-    /** Template editor title status line paired with the clicked tree entry. */
-    const templateEditorIndicator = templateEditor.locator(
-      '[data-testid="prompt-title-status-indicator"]'
-    )
+    /** Templates use the same full-height editor rail highlight as prompts. */
+    const templateHighlight = templateEditor.locator('[data-testid="prompt-sidebar-highlight"]')
     await templateTreeRow.click()
-    await expect(templateTreeIndicator).toHaveAttribute('data-navigation-highlight', 'true')
-    await expect(templateEditorIndicator).toHaveAttribute('data-navigation-highlight', 'true')
-    /** Template animation snapshot proves templates share the requested timing and accent. */
-    const templateAnimation = await readPromptNavigationHighlightAnimation(
-      templateEditorIndicator
-    )
+    await expect(templateHighlight).toHaveAttribute('data-navigation-highlight', 'true')
+    /** Template animation snapshot verifies the shared muted violet color and timing. */
+    const templateAnimation = await readPromptNavigationHighlightAnimation(templateHighlight)
     expect(templateAnimation).toEqual({
-      durationMs: 670,
-      keyframeTimesMs: [0, 50, 550, 670],
+      durationMs: 1000,
+      keyframeTimesMs: [0, 50, 550, 1000],
       holdColor: templateAnimation.accentColor,
       accentColor: templateAnimation.accentColor,
       finalKeyframeColor: templateAnimation.normalColor,

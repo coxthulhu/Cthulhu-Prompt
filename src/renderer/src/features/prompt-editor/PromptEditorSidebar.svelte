@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import type { Action } from 'svelte/action'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { ChevronDown, ChevronUp, GripVertical } from 'lucide-svelte'
@@ -46,6 +47,15 @@
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
+
+  /** Shared tree-click state identifies the editor rail to highlight. */
+  const promptNavigation = getPromptNavigationContext()
+  /** Replay only the background layer so rail controls retain their DOM and focus. */
+  const navigationHighlightGeneration = $derived(
+    promptNavigation.navigationHighlight?.promptId === promptId
+      ? promptNavigation.navigationHighlight.generation
+      : null
+  )
 
   const handleDragStart = (sourcePayload: PromptHandleDragPayload): void => {
     startPromptDrag(sourcePayload)
@@ -107,6 +117,16 @@
 </script>
 
 <div class="prompt-editor-sidebar">
+  <!-- One background layer covers every rail control, including disabled move buttons. -->
+  {#key navigationHighlightGeneration}
+    <span
+      class="prompt-editor-sidebar-highlight"
+      data-navigation-highlight={navigationHighlightGeneration === null ? undefined : 'true'}
+      data-navigation-highlight-generation={navigationHighlightGeneration ?? undefined}
+      data-testid="prompt-sidebar-highlight"
+      aria-hidden="true"
+    ></span>
+  {/key}
   {#if showMoveButtons}
     <IconButton
       icon={ChevronUp}
@@ -153,6 +173,7 @@
 
 <style>
   .prompt-editor-sidebar {
+    position: relative;
     background: var(--ui-card-normal-surface);
     border-right: 1px solid var(--ui-neutral-muted-border);
     box-sizing: border-box;
@@ -166,7 +187,33 @@
     width: 32px;
   }
 
+  /* The muted violet wash sits behind the transparent buttons without intercepting input. */
+  .prompt-editor-sidebar-highlight {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--ui-ghost-surface);
+  }
+
+  .prompt-editor-sidebar-highlight[data-navigation-highlight='true'] {
+    animation: prompt-editor-navigation-highlight 1000ms linear;
+  }
+
+  /* 50ms fade in, 500ms hold, then 450ms fade out. */
+  @keyframes prompt-editor-navigation-highlight {
+    0%,
+    100% {
+      background: var(--ui-ghost-surface);
+    }
+    5%,
+    55% {
+      background: var(--ui-accent-action-hover-fill);
+    }
+  }
+
   .prompt-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
+    position: relative;
+    z-index: 1;
     /* Transparent borders preserve both separator space and rail sizing. */
     border-bottom-color: transparent;
     transition:

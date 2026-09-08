@@ -3,7 +3,6 @@
   import { draggable } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
   import PromptDropTarget from '@renderer/features/drag-drop/PromptDropTarget.svelte'
   import type { PromptStatus } from '@shared/Prompt'
-  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { folderPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
@@ -51,15 +50,6 @@
     promptDragOptions,
     onPromptSelect
   }: Props = $props()
-
-  /** Shared navigation state identifies direct tree clicks that should replay this row's accent. */
-  const promptNavigation = getPromptNavigationContext()
-  /** Matching click generation remounts the indicator and restarts its CSS animation. */
-  const navigationHighlightGeneration = $derived(
-    promptNavigation.navigationHighlight?.promptId === promptId
-      ? promptNavigation.navigationHighlight.generation
-      : null
-  )
 
   const handlePromptSelect = (event: MouseEvent) => {
     onPromptSelect(folderId, promptId)
@@ -110,17 +100,13 @@
 
 {#snippet promptStatusIndicator()}
   <!-- The status accent overlays the row so it does not alter button geometry or interaction. -->
-  {#key navigationHighlightGeneration}
-    <span
-      class="prompt-tree-status-indicator"
-      data-status={status}
-      data-edited={isEdited ? 'true' : 'false'}
-      data-navigation-highlight={navigationHighlightGeneration === null ? undefined : 'true'}
-      data-navigation-highlight-generation={navigationHighlightGeneration ?? undefined}
-      data-testid="prompt-tree-status-indicator"
-      aria-hidden="true"
-    ></span>
-  {/key}
+  <span
+    class="prompt-tree-status-indicator"
+    data-status={status}
+    data-edited={isEdited ? 'true' : 'false'}
+    data-testid="prompt-tree-status-indicator"
+    aria-hidden="true"
+  ></span>
 {/snippet}
 
 {#snippet promptButton()}
@@ -218,26 +204,6 @@
     --prompt-status-indicator-color: var(--ui-secondary-icon-glyph);
     color: var(--prompt-status-indicator-color);
     visibility: visible;
-  }
-
-  .prompt-tree-status-indicator[data-navigation-highlight='true'] {
-    animation: prompt-tree-navigation-highlight 670ms linear;
-  }
-
-  @keyframes prompt-tree-navigation-highlight {
-    0% {
-      background: var(--prompt-status-indicator-color);
-      visibility: visible;
-    }
-    7.4627%,
-    82.0896% {
-      background: var(--ui-accent-strong-border);
-      visibility: visible;
-    }
-    100% {
-      background: var(--prompt-status-indicator-color);
-      visibility: visible;
-    }
   }
 
   .sidebarPromptTreeSettingsButton[data-selection-control] {

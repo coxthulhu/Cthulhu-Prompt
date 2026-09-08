@@ -4,24 +4,24 @@ import type { Locator } from '@playwright/test'
 export type PromptNavigationHighlightAnimation = {
   /** Total CSS animation duration in milliseconds. */
   durationMs: number
-  /** Millisecond positions of the normal, purple, held-purple, and final frames. */
+  /** Millisecond positions of the fade-in, hold, and fade-out boundaries. */
   keyframeTimesMs: number[]
-  /** Rendered indicator color halfway through the purple hold. */
+  /** Rendered background layer color halfway through the muted violet hold. */
   holdColor: string
-  /** Palette-resolved accent purple expected during the hold. */
+  /** Palette-resolved muted violet expected during the hold. */
   accentColor: string
   /** Browser-normalized color authored at the final animation keyframe. */
   finalKeyframeColor: string
-  /** Browser-normalized indicator color without the navigation animation. */
+  /** Browser-normalized background layer color without the navigation animation. */
   normalColor: string
 }
 
-/** Pauses one indicator during its hold and reports its computed animation contract. */
+/** Pauses one background layer during its hold and reports its computed animation contract. */
 export const readPromptNavigationHighlightAnimation = async (
   indicator: Locator
 ): Promise<PromptNavigationHighlightAnimation> =>
   await indicator.evaluate((element) => {
-    /** Fresh highlighted clone removes dependence on how much of the live 670ms animation remains. */
+    /** Fresh highlighted clone removes dependence on how much of the live 1000ms animation remains. */
     const animationProbe = element.cloneNode(false) as HTMLElement
     element.parentElement?.append(animationProbe)
     /** CSS animation synchronously attached to the fresh navigation-highlight clone. */
@@ -43,8 +43,8 @@ export const readPromptNavigationHighlightAnimation = async (
     /** Constant-color animation normalizes OKLCH through the same engine as the tested keyframes. */
     const accentAnimation = accentProbe.animate(
       [
-        { backgroundColor: 'var(--ui-accent-strong-border)' },
-        { backgroundColor: 'var(--ui-accent-strong-border)' }
+        { backgroundColor: 'var(--ui-accent-action-hover-fill)' },
+        { backgroundColor: 'var(--ui-accent-action-hover-fill)' }
       ],
       { duration: 1_000, fill: 'both' }
     )
@@ -54,7 +54,7 @@ export const readPromptNavigationHighlightAnimation = async (
     const accentColor = getComputedStyle(accentProbe).backgroundColor
     accentAnimation.cancel()
 
-    /** Final authored background value that should restore the persistent indicator color. */
+    /** Final authored background value that should restore the persistent background layer color. */
     const finalBackgroundColor = String(keyframes.at(-1)?.backgroundColor ?? '')
     /** Constant-color animation normalizes the final keyframe value for comparison. */
     const finalColorAnimation = accentProbe.animate(
@@ -68,12 +68,12 @@ export const readPromptNavigationHighlightAnimation = async (
     finalColorAnimation.cancel()
     accentProbe.remove()
 
-    /** Unanimated clone resolves the indicator's persistent edited/status color. */
+    /** Unanimated clone resolves the background layer's transparent resting color. */
     const normalProbe = element.cloneNode(false) as HTMLElement
     normalProbe.removeAttribute('data-navigation-highlight')
     normalProbe.removeAttribute('data-navigation-highlight-generation')
     element.parentElement?.append(normalProbe)
-    /** Persistent color value resolved from the unanimated edited/status rules. */
+    /** Persistent color value resolved from the unanimated background rule. */
     const normalBackgroundColor = getComputedStyle(normalProbe).backgroundColor
     /** Constant-color animation normalizes the persistent color for keyframe comparison. */
     const normalColorAnimation = normalProbe.animate(
