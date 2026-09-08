@@ -70,7 +70,7 @@
     column-gap: 12px;
     display: flex;
     min-width: 0;
-    padding: 16px;
+    padding: 14px;
     row-gap: 8px;
     text-align: left;
     width: 100%;
@@ -80,7 +80,6 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    gap: 2px;
     min-width: 0;
   }
 
@@ -103,7 +102,7 @@
   .cthulhuUiRowDetailExtra {
     color: var(--ui-muted-text);
     display: block;
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .cthulhuUiRowDetail {
