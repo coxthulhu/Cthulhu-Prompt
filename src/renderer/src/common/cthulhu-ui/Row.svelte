@@ -2,6 +2,7 @@
   import type { ComponentType, Snippet } from 'svelte'
   import { mergeClasses } from './mergeClasses'
   import IconCell from './IconCell.svelte'
+  import Subtitle from './Subtitle.svelte'
 
   export type RowTrailingLayout = 'single' | 'grouped'
 
@@ -39,7 +40,6 @@
 <div
   class={mergeClasses('cthulhuUiRow', className)}
   data-trailing={trailing ? 'true' : 'false'}
-  data-wrap-detail={wrapDetail ? 'true' : 'false'}
   data-trailing-layout={trailingLayout}
   data-testid={testId}
 >
@@ -47,7 +47,7 @@
 
   <span class="cthulhuUiRowTextStack">
     <span class="cthulhuUiRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>
-    <span class="cthulhuUiRowDetail">{detail}</span>
+    <Subtitle text={detail} wrap={wrapDetail} />
     {#if detailExtra}
       <span class="cthulhuUiRowDetailExtra">
         {@render detailExtra()}
@@ -83,39 +83,21 @@
     min-width: 0;
   }
 
-  .cthulhuUiRowText,
-  .cthulhuUiRowDetail {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-  }
-
   .cthulhuUiRowText {
     color: inherit;
     display: block;
     font-size: var(--cthulhu-ui-font-size-primary);
     font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .cthulhuUiRowDetail,
-  .cthulhuUiRowDetailExtra {
-    color: var(--ui-muted-text);
-    display: block;
-    font-size: 14px;
-  }
-
-  .cthulhuUiRowDetail {
-    text-overflow: ellipsis;
-  }
-
-  .cthulhuUiRow[data-wrap-detail='true'] .cthulhuUiRowDetail {
-    overflow-wrap: anywhere;
-    white-space: normal;
+    white-space: nowrap;
   }
 
   .cthulhuUiRowDetailExtra {
     color: var(--ui-secondary-text);
+    display: block;
+    font-size: 14px;
     line-height: 18px;
     overflow-wrap: anywhere;
     white-space: normal;

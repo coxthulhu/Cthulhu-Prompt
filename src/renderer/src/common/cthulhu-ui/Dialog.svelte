@@ -6,6 +6,7 @@
   import CardSurface from './CardSurface.svelte'
   import IconButton from './IconButton.svelte'
   import Separator from './Separator.svelte'
+  import Subtitle from './Subtitle.svelte'
   import Title from './Title.svelte'
   import { mergeClasses } from './mergeClasses'
 
@@ -145,7 +146,7 @@
           <div class="cthulhuUiDialogHeadingText">
             <Title {title} variant="dialog" />
             {#if subtitle}
-              <p class="cthulhuUiDialogSubtitle" data-testid="dialog-subtitle">{subtitle}</p>
+              <Subtitle text={subtitle} data-testid="dialog-subtitle" />
             {/if}
           </div>
         </div>
@@ -256,13 +257,6 @@
 
   .cthulhuUiDialogHeadingText {
     min-width: 0;
-  }
-
-  .cthulhuUiDialogSubtitle {
-    color: var(--ui-muted-text);
-    font-size: 13px;
-    line-height: 19px;
-    margin: 3px 0 0;
   }
 
   .cthulhuUiDialogBody {
