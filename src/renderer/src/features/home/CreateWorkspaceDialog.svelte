@@ -130,7 +130,7 @@
 
 <Dialog
   bind:open
-  class="w-full max-w-[608px]"
+  class="w-full max-w-[620px]"
   icon={FolderPlus}
   title="Create Workspace"
   subtitle="Choose a name and location for your new workspace."
