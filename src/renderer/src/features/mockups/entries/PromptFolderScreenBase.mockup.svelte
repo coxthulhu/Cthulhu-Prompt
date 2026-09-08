@@ -1,13 +1,12 @@
 <script lang="ts">
-  import { NO_TEMPLATE_LABEL, TEMPLATE_NOT_SELECTED_LABEL } from '@renderer/common/emptyStateText'
   import type { ComponentType } from 'svelte'
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
     Ban,
     Check,
-    CheckCheck,
-    CheckCircle2,
+    Archive,
+    Bookmark,
     ChevronDown,
     ChevronRight,
     ChevronUp,
@@ -31,12 +30,72 @@
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
 
+  // Deliberately local: this visual sandbox only shares Svelte, icons, Monaco, and palette tokens.
+  const NO_TEMPLATE_LABEL = 'No template'
+  const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
+
   const MockPromptStatus = {
     Todo: 'Todo',
     InProgress: 'InProgress',
-    Completed: 'Completed'
+    Completed: 'Completed',
+    Backlog: 'Backlog',
+    Archived: 'Archived'
   } as const
   type MockPromptStatus = (typeof MockPromptStatus)[keyof typeof MockPromptStatus]
+
+  const statusItems = [
+    { id: MockPromptStatus.Todo, label: 'Todo', detail: 'Move back to active todo status', icon: CircleDashed },
+    { id: MockPromptStatus.InProgress, label: 'In Progress', detail: 'Mark this prompt as underway', icon: Play },
+    { id: MockPromptStatus.Backlog, label: 'Backlog', detail: 'Save this prompt for future work', icon: Bookmark },
+    { id: MockPromptStatus.Completed, label: 'Complete', selectedLabel: 'Completed', detail: 'Move this prompt to completed', icon: Check },
+    { id: MockPromptStatus.Archived, label: 'Archived', detail: 'Archived prompts must be restored to another status', icon: Archive }
+  ]
+
+  // Side effect: portal the local popup out of editor containers and clamp it like the live dropdown.
+  const mountMockMenu = (node: HTMLElement, options: { anchor: HTMLElement; width: number }) => {
+    const { anchor, width } = options
+    document.body.appendChild(node)
+    const rect = anchor.getBoundingClientRect()
+    node.style.width = `${Math.max(width, rect.width)}px`
+    const menu = node.getBoundingClientRect()
+    node.style.left = `${Math.max(16, Math.min(rect.right - menu.width, window.innerWidth - menu.width - 16))}px`
+    node.style.top = `${Math.max(16, Math.min(rect.bottom + 4, window.innerHeight - menu.height - 8))}px`
+    const dismiss = (event: PointerEvent) => {
+      if (!node.contains(event.target as Node) && !anchor.contains(event.target as Node)) {
+        statusMenuId = null
+        deleteMenuId = null
+      }
+    }
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') anchor.querySelector('button')?.focus()
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+      event.preventDefault()
+      const items = [...node.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+      const index = items.indexOf(document.activeElement as HTMLButtonElement)
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : (index + (event.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length
+      items[next]?.focus()
+    }
+    const preventBackgroundScroll = (event: Event) => {
+      if (!node.contains(event.target as Node)) event.preventDefault()
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', keydown)
+    document.addEventListener('wheel', preventBackgroundScroll, { passive: false })
+    return { destroy: () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', keydown)
+      document.removeEventListener('wheel', preventBackgroundScroll)
+      node.remove()
+    } }
+  }
+  let deleteAnchor = $state<HTMLElement | null>(null)
+  let statusAnchor = $state<HTMLElement | null>(null)
+  const toggleStatusMenu = (prompt: MockPrompt, event: MouseEvent) => {
+    deleteMenuId = null
+    statusAnchor = (event.currentTarget as HTMLElement).parentElement
+    statusMenuId = statusMenuId === prompt.id ? null : prompt.id
+  }
 
   type MockIconButtonOptions = {
     active?: boolean
@@ -92,15 +151,16 @@
     title: string
     settings: MockFolderSetting[]
     prompts: MockPrompt[]
-    children: MockFolder[]
+    collapsed?: boolean
+    settingsHidden?: boolean
   }
 
   const createSettings = (folderId: string, description: string): MockFolderSetting[] => [
     {
       id: `${folderId}-description`,
-      title: 'Folder Description',
+      title: 'Category Description',
       description:
-        'A general description of this folder and the types of prompts that are within it. For informational use only.',
+        'A general description of this category and the types of prompts that are within it. For informational use only.',
       isPresent: true,
       minLines: 1,
       text: description
@@ -213,6 +273,7 @@
       templateDialogPrompt.templateIds = template ? [template.id] : []
       templateDialogPrompt.templateLabel = template?.title ?? NO_TEMPLATE_LABEL
       templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
+      void copyPrompt(templateDialogPrompt)
       closeTemplateDialog()
       return
     }
@@ -237,6 +298,7 @@
       ? selectedTemplates.map((template) => template.title).join(', ')
       : NO_TEMPLATE_LABEL
     templateDialogPrompt.templateState = selectedTemplates.length ? 'selected' : 'no-template'
+    if (templateDialogPrompt.status === 'Todo') templateDialogPrompt.status = MockPromptStatus.InProgress
     closeTemplateDialog()
   }
 
@@ -337,34 +399,68 @@
           MockPromptStatus.InProgress
         )
       ],
-      children: [
-        {
-          id: 'base-verification',
-          title: 'Verification',
-          settings: createSettings(
-            'base-verification',
-            'Prompts for validating product behavior after implementation.'
-          ),
-          prompts: [
-            createPrompt(
-              'base-regression',
-              'Add focused regression coverage',
-              'base-verification',
-              NO_TEMPLATE_LABEL,
-              [
-                'Add focused regression coverage for the behavior changed in this task.',
-                '',
-                'Assert the visible user flow before implementation details.'
-              ].join('\n')
-            )
-          ],
-          children: []
-        }
-      ]
+    },
+    {
+      id: 'base-verification',
+      title: 'Verification',
+      settings: createSettings('base-verification', 'Prompts for validating product behavior.'),
+      prompts: [createPrompt('base-regression', 'Add focused regression coverage',
+        'base-verification', NO_TEMPLATE_LABEL, 'Assert the visible user flow before implementation details.')]
     }
   ])
 
-  const EDITOR_TITLE_HEIGHT_PX = 56
+  const groups = ['Active', 'Backlog', 'Completed', 'Archived'] as const
+  let screenMode = $state<(typeof groups)[number]>('Active')
+  let rootTitle = $state('Product Work')
+  let statusMenuId = $state<string | null>(null)
+  let deleteMenuId = $state<string | null>(null)
+  let findOpen = $state(false)
+  let findQuery = $state('')
+  let findIndex = $state(0)
+  const isFinalMode = $derived(screenMode === 'Completed' || screenMode === 'Archived')
+  const allPrompts = $derived([...rootPrompts, ...subfolders.flatMap((folder) => folder.prompts)])
+  const matchesGroup = (prompt: MockPrompt, group = screenMode) => group === 'Active'
+    ? prompt.status === MockPromptStatus.Todo || prompt.status === MockPromptStatus.InProgress
+    : prompt.status === group
+  const findMatches = $derived(allPrompts.filter((prompt) => matchesGroup(prompt) && findQuery.length > 0 &&
+    `${prompt.title}\n${prompt.text}`.toLowerCase().includes(findQuery.toLowerCase())))
+  const revealFindMatch = (direction: number) => {
+    if (!findMatches.length) return
+    findIndex = (findIndex + direction + findMatches.length) % findMatches.length
+    const prompt = findMatches[findIndex]
+    const folder = subfolders.find((item) => item.id === prompt.folderId)
+    if (folder) folder.collapsed = false
+    window.requestAnimationFrame(() => document.getElementById(`base-card-${prompt.id}`)?.scrollIntoView({ block: 'center' }))
+  }
+  const visiblePrompts = (prompts: MockPrompt[]) => prompts.filter((prompt) => matchesGroup(prompt))
+  const removePrompt = (prompt: MockPrompt) => {
+    rootPrompts = rootPrompts.filter((item) => item.id !== prompt.id)
+    for (const folder of subfolders) folder.prompts = folder.prompts.filter((item) => item.id !== prompt.id)
+    deleteMenuId = null
+  }
+  const addPrompt = (folder?: MockFolder, afterId?: string) => {
+    const prompts = folder ? folder.prompts : rootPrompts
+    const prompt = createPrompt(window.crypto.randomUUID(), '', folder?.id ?? 'base-root', TEMPLATE_NOT_SELECTED_LABEL, '',
+      screenMode === 'Backlog' ? MockPromptStatus.Backlog : MockPromptStatus.Todo)
+    prompts.splice(afterId ? prompts.findIndex((item) => item.id === afterId) + 1 : 0, 0, prompt)
+  }
+  const movePrompt = (prompt: MockPrompt, direction: number) => {
+    const prompts = subfolders.find((folder) => folder.id === prompt.folderId)?.prompts ?? rootPrompts
+    const visible = visiblePrompts(prompts)
+    const target = visible[visible.indexOf(prompt) + direction]
+    if (!target) return
+    const index = prompts.indexOf(prompt)
+    const targetIndex = prompts.indexOf(target)
+    prompts.splice(index, 1)
+    prompts.splice(targetIndex, 0, prompt)
+  }
+  let nameDialog = $state<{ title: string; value: string; save: (value: string) => void } | null>(null)
+  const addCategory = () => {
+    nameDialog = { title: 'Create Category', value: '', save: (title) => {
+      subfolders.push({ id: window.crypto.randomUUID(), title, settings: createSettings(window.crypto.randomUUID(), ''), prompts: [] })
+    } }
+  }
+
   const EDITOR_BODY_PADDING_TOP_PX = 8
   const EDITOR_BODY_PADDING_RIGHT_PX = 10
   const EDITOR_BODY_PADDING_BOTTOM_PX = 10
@@ -465,20 +561,34 @@
     editorCleanupCallbacks.clear()
   })
 
-  // Side effect: mirror the live dialog's Escape-key dismissal while the mock selector is open.
+  // Side effect: handle sandbox find and dismiss open mock dialogs and menus; remove the listener on unmount.
   $effect(() => {
-    if (!templateDialogPrompt) return
-
     const handleKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeTemplateDialog()
+      if (event.key === 'Escape') {
+        closeTemplateDialog()
+        nameDialog = null
+        statusMenuId = null
+        deleteMenuId = null
+        findOpen = false
+      }
+      if (event.ctrlKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault()
+        findOpen = true
+      }
     }
     document.addEventListener('keydown', handleKeydown)
 
     return () => document.removeEventListener('keydown', handleKeydown)
   })
 
+  const copyPrompt = async (prompt: MockPrompt) => {
+    await window.navigator.clipboard.writeText(prompt.text)
+    if (prompt.status === 'Todo') prompt.status = MockPromptStatus.InProgress
+  }
+
   const setPromptStatus = (prompt: MockPrompt, status: MockPromptStatus) => {
     prompt.status = status
+    statusMenuId = null
   }
 </script>
 
@@ -586,56 +696,67 @@
 {/snippet}
 
 {#snippet StatusControl(prompt: MockPrompt)}
-  {@const isCompleted = prompt.status === MockPromptStatus.Completed}
-  {@const isTodo = prompt.status === MockPromptStatus.Todo}
-  {@const StatusIcon = isCompleted
-    ? CheckCircle2
-    : prompt.status === MockPromptStatus.InProgress
-      ? Play
-      : CircleDashed}
+  {@const isActive = prompt.status === 'Todo' || prompt.status === 'InProgress'}
+  {@const hasBackward = isActive || prompt.status === 'Completed'}
+  {@const hasForward = isActive || prompt.status === 'Backlog'}
+  {@const StatusIcon = prompt.status === 'Completed' ? Check : prompt.status === 'Archived' ? Archive : prompt.status === 'Backlog' ? Bookmark : prompt.status === 'InProgress' ? Play : CircleDashed}
   <div class="base-status-control">
-    <div
-      class="base-status-segmented"
-      data-status={prompt.status}
-      data-leading-action={!isTodo ? 'true' : 'false'}
-      data-trailing-action={!isCompleted ? 'true' : 'false'}
-    >
-      {#if !isTodo}
-        {@render IconButton(Undo2, isCompleted ? 'Uncomplete prompt' : 'Set prompt to Todo', {
-          hoverVariant: 'neutral',
-          onclick: () => setPromptStatus(prompt, MockPromptStatus.Todo)
-        })}
+    <div class="base-status-segmented" data-status={prompt.status}
+      data-leading-action={hasBackward ? 'true' : 'false'} data-trailing-action={hasForward ? 'true' : 'false'}>
+      {#if hasBackward}
+        {@render IconButton(prompt.status === 'Todo' ? Bookmark : Undo2,
+          prompt.status === 'Todo' ? 'Move prompt to Backlog' : prompt.status === 'Completed' ? 'Uncomplete prompt' : 'Set prompt to Todo', {
+            onclick: () => setPromptStatus(prompt, prompt.status === 'Todo' ? MockPromptStatus.Backlog : MockPromptStatus.Todo)
+          })}
       {/if}
-      <span class="base-status-selector">
-        <button
-          type="button"
-          class="base-status-value"
-          aria-label={`Change status: ${isCompleted ? 'Completed' : prompt.status === MockPromptStatus.InProgress ? 'In Progress' : 'Todo'}`}
-          onclick={() => {
-            setPromptStatus(
-              prompt,
-              prompt.status === MockPromptStatus.Todo
-                ? MockPromptStatus.InProgress
-                : prompt.status === MockPromptStatus.InProgress
-                  ? MockPromptStatus.Completed
-                  : MockPromptStatus.Todo
-            )
-          }}
-        >
-          <StatusIcon size={16} aria-hidden="true" />
-          <span>{isCompleted ? 'Completed' : prompt.status === MockPromptStatus.InProgress ? 'In Progress' : 'Todo'}</span>
+      <span class="base-status-selector" data-open={statusMenuId === prompt.id ? 'true' : 'false'}>
+        <button type="button" class="base-status-value"
+          aria-label={`Change status: ${prompt.status === 'InProgress' ? 'In Progress' : prompt.status}`}
+          aria-haspopup="menu" aria-expanded={statusMenuId === prompt.id}
+          onclick={(event) => toggleStatusMenu(prompt, event)}>
+          <span class="base-status-value-content">
+            <StatusIcon size={16} aria-hidden="true" />
+            <span>{prompt.status === 'InProgress' ? 'In Progress' : prompt.status}</span>
+          </span>
+          <span class="base-status-more" title="More Options" aria-hidden="true">
+            {#if statusMenuId === prompt.id}
+              <ChevronUp size={20} />
+            {:else}
+              <ChevronDown size={20} />
+            {/if}
+          </span>
         </button>
-        <button type="button" class="base-status-more" aria-label="Change status More Options" title="More Options">
-          <ChevronDown size={16} aria-hidden="true" />
-        </button>
+        <span class="base-status-width-sizer" aria-hidden="true">
+          {#each statusItems.filter((item) => item.id !== 'Archived' || prompt.status === 'Archived') as item (item.id)}
+            <span class="base-status-width-sizer-item">
+              <item.icon size={16} />
+              <span>{item.selectedLabel ?? item.label}</span>
+            </span>
+          {/each}
+        </span>
       </span>
-      {#if !isCompleted}
-        {@render IconButton(CheckCheck, 'Complete prompt', {
-          hoverVariant: 'success',
-          onclick: () => setPromptStatus(prompt, MockPromptStatus.Completed)
-        })}
+      {#if hasForward}
+        {@render IconButton(prompt.status === 'Backlog' ? CircleDashed : Check,
+          prompt.status === 'Backlog' ? 'Set prompt to Todo' : 'Complete prompt', {
+            hoverVariant: prompt.status === 'Backlog' ? 'neutral' : 'success',
+            onclick: () => setPromptStatus(prompt, prompt.status === 'Backlog' ? MockPromptStatus.Todo : MockPromptStatus.Completed)
+          })}
       {/if}
     </div>
+    {#if statusMenuId === prompt.id && statusAnchor}
+      <div class="base-status-menu" role="menu" aria-label="Change status More Options"
+        use:mountMockMenu={{ anchor: statusAnchor, width: 260 }}>
+        {#each statusItems.filter((item) => item.id !== prompt.status && item.id !== 'Archived') as item (item.id)}
+          <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => setPromptStatus(prompt, item.id)}>
+            <span class="base-status-menu-icon" data-status={item.id}><item.icon size={18} aria-hidden="true" /></span>
+            <span class="base-status-menu-text">
+              <span class="base-status-menu-title">{item.label}</span>
+              <span class="base-status-menu-subtitle" title={item.detail}>{item.detail}</span>
+            </span>
+          </button>
+        {/each}
+      </div>
+    {/if}
   </div>
 {/snippet}
 
@@ -661,7 +782,7 @@
         <Trash2 size={16} aria-hidden="true" />
       </span>
     {/if}
-    <span>{setting.title.replace('Folder Description', 'Description').replace('Prompt Folder ', '')}</span>
+    <span>{setting.title.replace('Category Description', 'Description').replace('Prompt Folder ', '')}</span>
   </button>
 {/snippet}
 
@@ -678,47 +799,52 @@
   </div>
 {/snippet}
 
-{#snippet Divider()}
+{#snippet Divider(folder?: MockFolder, afterId?: string)}
+  {#if !isFinalMode}
   <div class="base-divider-row">
-    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from left separator">
+    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from left separator" onclick={() => addPrompt(folder, afterId)}>
       {@render Separator()}
     </button>
     <div class="base-divider-actions">
-      <button type="button" class="base-divider-action-button" aria-label="Add Prompt">
+      <button type="button" class="base-divider-action-button" aria-label="Add Prompt" onclick={() => addPrompt(folder, afterId)}>
         <Plus size={13} aria-hidden="true" />
         <span>Add Prompt</span>
       </button>
-      <button type="button" class="base-divider-action-button" aria-label="Add Subfolder">
-        <FolderPlus size={13} aria-hidden="true" />
-        <span>Add Subfolder</span>
-      </button>
+
     </div>
-    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from right separator">
+    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from right separator" onclick={() => addPrompt(folder, afterId)}>
       {@render Separator()}
     </button>
   </div>
+  {:else}
+    <div class="base-final-gap"></div>
+  {/if}
 {/snippet}
 
 {#snippet PromptCard(prompt: MockPrompt, index: number, siblingCount: number)}
+  {@const archiveDefault = prompt.status !== 'Archived' && Boolean(prompt.title.trim() || prompt.text.trim())}
   <article
+    id={`base-card-${prompt.id}`}
     class="base-editor-card base-prompt-card"
     data-testid={`base-mockup-prompt-editor-${prompt.id}`}
     data-prompt-folder-id={prompt.folderId}
   >
     <aside class="base-editor-sidebar">
-      <button type="button" aria-label="Move prompt up" disabled={index === 0}>
+      {#if !isFinalMode}
+      <button type="button" aria-label="Move prompt up" disabled={isFinalMode || index === 0} onclick={() => movePrompt(prompt, -1)}>
         <ChevronUp size={16} aria-hidden="true" />
       </button>
       <button type="button" aria-label="Drag prompt" class="base-drag-button">
         <GripVertical size={16} aria-hidden="true" />
       </button>
-      <button type="button" aria-label="Move prompt down" disabled={index === siblingCount - 1}>
+      <button type="button" aria-label="Move prompt down" disabled={isFinalMode || index === siblingCount - 1} onclick={() => movePrompt(prompt, 1)}>
         <ChevronDown size={16} aria-hidden="true" />
       </button>
+      {/if}
     </aside>
 
     <div class="base-editor-body">
-      <header class="base-prompt-title-area" style={`height:${EDITOR_TITLE_HEIGHT_PX}px;`}>
+      <header class="base-prompt-title-area">
         <span class="base-status-indicator" data-status={prompt.status} aria-hidden="true"></span>
         <div class="base-prompt-title-main">
           {@render IconCell(FileText)}
@@ -743,6 +869,7 @@
 
         <div class="base-prompt-actions">
           <div class="base-icon-button-bar">
+            {#if prompt.status !== 'Backlog'}
             {#if prompt.templateState === 'not-selected'}
               {@render IconButton(Zap, 'Select Template and Copy', {
                 onclick: () => openTemplateDialog(prompt, 'select-and-copy')
@@ -750,12 +877,9 @@
             {:else}
               {@render IconButton(Copy, 'Copy prompt', {
                 hoverVariant: 'accent',
-                onclick: () => {
-                  if (prompt.status === MockPromptStatus.Todo) {
-                    setPromptStatus(prompt, MockPromptStatus.InProgress)
-                  }
-                }
+                onclick: () => { void copyPrompt(prompt) }
               })}
+            {/if}
             {/if}
             {@render IconButton(Layers, 'Set Template', {
               onclick: () => openTemplateDialog(prompt)
@@ -764,8 +888,41 @@
           <span class="base-actions-separator" aria-hidden="true"></span>
           {@render StatusControl(prompt)}
           <span class="base-actions-separator" aria-hidden="true"></span>
-          <div class="base-prompt-delete-section">
-            {@render IconButton(Trash2, 'Delete prompt', { hoverVariant: 'danger' })}
+          <div class="base-prompt-delete-section" data-split={prompt.status !== 'Archived' ? 'true' : 'false'}>
+            {@render IconButton(archiveDefault ? Archive : Trash2, archiveDefault ? 'Archive prompt' : 'Delete prompt', {
+              hoverVariant: archiveDefault ? 'neutral' : 'danger',
+              onclick: () => archiveDefault ? setPromptStatus(prompt, MockPromptStatus.Archived) : removePrompt(prompt)
+            })}
+            {#if prompt.status !== 'Archived'}
+              <span class="base-delete-separator" aria-hidden="true"></span>
+              {@render IconButton(ChevronDown, `${archiveDefault ? 'Archive prompt' : 'Delete prompt'} More Options`, {
+                active: deleteMenuId === prompt.id,
+                ariaExpanded: deleteMenuId === prompt.id,
+                onclick: (event) => {
+                  statusMenuId = null
+                  deleteAnchor = event.currentTarget as HTMLElement
+                  deleteMenuId = deleteMenuId === prompt.id ? null : prompt.id
+                }
+              })}
+              {#if deleteMenuId === prompt.id && deleteAnchor}
+                <div class="base-status-menu" role="menu" aria-label="Prompt actions"
+                  use:mountMockMenu={{ anchor: deleteAnchor, width: 240 }}>
+                  <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => {
+                    deleteMenuId = null
+                    if (archiveDefault) removePrompt(prompt)
+                    else setPromptStatus(prompt, MockPromptStatus.Archived)
+                  }}>
+                    <span class="base-status-menu-icon" data-action="delete">
+                      {#if archiveDefault}<Trash2 size={18} aria-hidden="true" />{:else}<Archive size={18} aria-hidden="true" />{/if}
+                    </span>
+                    <span class="base-status-menu-text">
+                      <span class="base-status-menu-title">{archiveDefault ? 'Delete Prompt' : 'Archive Prompt'}</span>
+                      <span class="base-status-menu-subtitle">{archiveDefault ? 'Permanently delete this prompt' : 'Move this prompt to Archived'}</span>
+                    </span>
+                  </button>
+                </div>
+              {/if}
+            {/if}
           </div>
         </div>
       </header>
@@ -780,61 +937,65 @@
   <section class="base-folder-section" data-testid={`base-mockup-subfolder-${folder.id}`}>
     <article class="base-editor-card base-folder-card">
       <aside class="base-folder-sidebar">
-        <button type="button" aria-label="Drag prompt folder" title="Drag prompt folder">
+        {#if !isFinalMode}
+        <button type="button" aria-label="Drag category" title="Drag category">
           <GripVertical size={16} aria-hidden="true" />
         </button>
+        {/if}
       </aside>
 
       <div class="base-editor-body">
-        <header class="base-folder-title-bar" aria-expanded="true">
+        <header class="base-folder-title-bar" aria-expanded={!folder.collapsed}>
           <div class="base-folder-title-main">
-            <button class="base-folder-chevron" type="button" aria-label="Folder prompts shown">
+            <button class="base-folder-chevron" type="button" aria-label="Toggle category prompts" aria-expanded={!folder.collapsed} onclick={() => folder.collapsed = !folder.collapsed}>
               <ChevronRight size={24} aria-hidden="true" />
             </button>
             {@render IconCell(Folder)}
             <div class="base-folder-title-copy">
               <div class="base-folder-title-line">
                 <span class="base-folder-title" title={folder.title}>{folder.title}</span>
-                {@render IconButton(Pencil, 'Rename prompt folder', {
+                {#if !isFinalMode}
+                {@render IconButton(Pencil, 'Rename category', {
+                  onclick: () => nameDialog = { title: 'Rename Category', value: folder.title, save: (value) => folder.title = value },
                   size: 'tiny',
                   baseVariant: 'muted',
                   hoverVariant: 'glyph'
                 })}
+                {/if}
               </div>
               <div class="base-metadata-row">
-                <span>{folder.prompts.length} prompt</span>
-                {@render SeparatorDot()}
-                <span>0 completed prompts</span>
-                {@render SeparatorDot()}
-                <span>{folder.children.length} {folder.children.length === 1 ? 'subfolder' : 'subfolders'}</span>
+                <span>{visiblePrompts(folder.prompts).length} {visiblePrompts(folder.prompts).length === 1 ? 'prompt' : 'prompts'}</span>
               </div>
             </div>
           </div>
 
           <div class="base-folder-actions">
             <div class="base-icon-button-bar">
-              {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger' })}
-              {@render IconButton(Settings, 'Hide folder settings', {
-                hoverVariant: 'accent',
-                active: true,
-                ariaPressed: true,
-                testId: `base-mockup-settings-expanded-${folder.id}`
-              })}
+              {#if !isFinalMode}
+                {@render IconButton(Settings, folder.settingsHidden ? 'Show category settings' : 'Hide category settings', {
+                  hoverVariant: 'accent', active: !folder.settingsHidden, ariaPressed: !folder.settingsHidden,
+                  onclick: () => folder.settingsHidden = !folder.settingsHidden
+                })}
+                {@render IconButton(Trash2, 'Delete category', { hoverVariant: 'danger',
+                  onclick: () => { rootPrompts.push(...folder.prompts); subfolders = subfolders.filter((item) => item.id !== folder.id) }
+                })}
+              {/if}
             </div>
           </div>
         </header>
 
+        {#if !folder.settingsHidden && !isFinalMode}
         {@render Separator()}
         <div class="base-folder-settings">
           <div class="base-settings-toolbar">
             <div class="base-settings-toolbar-heading">
               <Settings size={20} aria-hidden="true" />
               <div class="base-settings-toolbar-copy">
-                <span>Folder Settings</span>
+                <span>Category Settings</span>
                 <span>{folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings.length} configured</span>
               </div>
             </div>
-            <div class="base-settings-toolbar-actions" role="group" aria-label="Folder settings">
+            <div class="base-settings-toolbar-actions" role="group" aria-label="Category settings">
               {#each folder.settings as setting (setting.id)}
                 {@render SettingsToggle(setting)}
               {/each}
@@ -864,20 +1025,19 @@
             {/each}
           </div>
         </div>
+        {/if}
       </div>
     </article>
 
+    {#if !folder.collapsed}
     <div class="base-folder-children">
-      {@render Divider()}
-      {#each folder.prompts as prompt, promptIndex (prompt.id)}
-        {@render PromptCard(prompt, promptIndex, folder.prompts.length)}
-        {@render Divider()}
-      {/each}
-      {#each folder.children as child (child.id)}
-        {@render FolderCard(child)}
-        {@render Divider()}
+      {@render Divider(folder)}
+      {#each visiblePrompts(folder.prompts) as prompt, promptIndex (prompt.id)}
+        {@render PromptCard(prompt, promptIndex, visiblePrompts(folder.prompts).length)}
+        {@render Divider(folder, prompt.id)}
       {/each}
     </div>
+    {/if}
     <div class="base-folder-bottom-cap" aria-hidden="true"></div>
   </section>
 {/snippet}
@@ -885,13 +1045,23 @@
 <main class="base-prompt-folder-mockup" data-testid="base-prompt-folder-mockup">
   <div class="base-header-bar">
     <div class="base-breadcrumb">
-      <button type="button">Product Work</button>
+      <button type="button">{rootTitle}</button>
       <span>/</span>
-      <button type="button">Prompts</button>
+      <button type="button">{screenMode}</button>
     </div>
-    {@render IconButton(Search, 'Find in Folder (Control + F)', { size: 'compact' })}
+    {@render IconButton(Search, 'Find in Folder (Control + F)', { size: 'compact', onclick: () => findOpen = !findOpen })}
   </div>
 
+  {#if findOpen}
+    <div class="base-find-widget" role="search" aria-label="Find in Folder">
+      <input aria-label="Find" placeholder="Find" bind:value={findQuery} oninput={() => findIndex = 0}
+        onkeydown={(event) => { if (event.key === 'Enter') revealFindMatch(event.shiftKey ? -1 : 1) }} />
+      <span>{findMatches.length ? `${findIndex + 1} of ${findMatches.length}` : 'No results'}</span>
+      {@render IconButton(ChevronUp, 'Previous match', { size: 'compact', disabled: !findMatches.length, onclick: () => revealFindMatch(-1) })}
+      {@render IconButton(ChevronDown, 'Next match', { size: 'compact', disabled: !findMatches.length, onclick: () => revealFindMatch(1) })}
+      {@render IconButton(X, 'Close find', { size: 'compact', onclick: () => findOpen = false })}
+    </div>
+  {/if}
   <div class="base-content-viewport">
     <section class="base-root-header">
       <div class="base-root-title-row">
@@ -901,46 +1071,69 @@
             <span>Prompt Folder</span>
           </div>
           <div class="base-root-title-line">
-            <h1>Product Work</h1>
+            <h1>{rootTitle}</h1>
             {@render IconButton(Pencil, 'Rename prompt folder', {
+              onclick: () => nameDialog = { title: 'Rename Prompt Folder', value: rootTitle, save: (value) => rootTitle = value },
               size: 'tiny',
               baseVariant: 'muted',
               hoverVariant: 'glyph'
             })}
           </div>
         </div>
-        {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger' })}
+        <div class="base-icon-button-bar">
+          {@render IconButton(FolderPlus, 'Add category', { hoverVariant: 'accent', onclick: addCategory })}
+          {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger',
+            onclick: () => { rootPrompts = []; subfolders = [] }
+          })}
+        </div>
       </div>
 
       <div class="base-filter-bar" role="group" aria-label="Filter prompts">
-        <button class="active" type="button" aria-pressed="true">
-          Todo/In Progress <span>8</span>
-        </button>
-        <button type="button" aria-pressed="false">Completed <span>0</span></button>
+        {#each groups as group (group)}
+          <button class:active={screenMode === group} type="button" aria-pressed={screenMode === group}
+            onclick={() => { screenMode = group; statusMenuId = null; deleteMenuId = null }}>
+            {group} <span>{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
+          </button>
+        {/each}
       </div>
     </section>
 
     <div class="base-entry-flow">
       {@render Divider()}
-      {#each rootPrompts.slice(0, 3) as prompt, promptIndex (prompt.id)}
-        {@render PromptCard(prompt, promptIndex, rootPrompts.length)}
-        {@render Divider()}
+      {#each visiblePrompts(rootPrompts) as prompt, promptIndex (prompt.id)}
+        {@render PromptCard(prompt, promptIndex, visiblePrompts(rootPrompts).length)}
+        {@render Divider(undefined, prompt.id)}
       {/each}
-
       <div class="base-root-folder-inset">
-        {#each subfolders as folder (folder.id)}
+        {#each subfolders.filter((folder) => !isFinalMode || visiblePrompts(folder.prompts).length > 0) as folder (folder.id)}
           {@render FolderCard(folder)}
+          <div class="base-final-gap"></div>
         {/each}
       </div>
-
-      {@render Divider()}
-      {#each rootPrompts.slice(3) as prompt, promptIndex (prompt.id)}
-        {@render PromptCard(prompt, promptIndex + 3, rootPrompts.length)}
-        {@render Divider()}
-      {/each}
+      {#if !allPrompts.some((prompt) => matchesGroup(prompt))}
+        <p class="base-empty">No {screenMode.toLowerCase()} prompts in this folder.</p>
+      {/if}
     </div>
   </div>
 </main>
+
+{#if nameDialog}
+  <div class="base-template-dialog-layer" role="presentation">
+    <form class="base-template-dialog" aria-label={nameDialog.title} onsubmit={(event) => {
+      event.preventDefault()
+      if (!nameDialog?.value.trim()) return
+      nameDialog.save(nameDialog.value.trim())
+      nameDialog = null
+    }}>
+      <h2>{nameDialog.title}</h2>
+      <input class="base-name-input" aria-label="Name" bind:value={nameDialog.value} />
+      <div class="base-template-dialog-footer">
+        <button class="base-dialog-cancel-button" type="button" onclick={() => nameDialog = null}>Cancel</button>
+        <button class="base-dialog-confirm-button" type="submit" disabled={!nameDialog.value.trim()}>Save</button>
+      </div>
+    </form>
+  </div>
+{/if}
 
 {#if templateDialogPrompt}
   <div
@@ -1099,6 +1292,7 @@
 
 <style>
   .base-prompt-folder-mockup {
+    position: relative;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -1299,10 +1493,11 @@
     grid-template-rows: 60px 44px;
     height: 140px;
     min-width: 0;
-    padding: 12px 24px 6px;
+    padding: 12px 0 6px;
   }
 
   .base-root-title-row {
+    padding-inline: 24px;
     align-items: end;
     display: flex;
     gap: 16px;
@@ -1351,6 +1546,7 @@
   }
 
   .base-filter-bar {
+    padding-inline: 24px;
     border-bottom: 1px solid var(--ui-neutral-normal-border);
     box-sizing: border-box;
     display: flex;
@@ -1374,8 +1570,8 @@
   }
 
   .base-filter-bar span {
-    background: var(--ui-neutral-normal-surface);
-    border-radius: 999px;
+    position: relative;
+    top: -1px;
     font-size: 11px;
     margin-left: 4px;
     padding: 2px 6px;
@@ -1470,11 +1666,13 @@
     display: grid;
     grid-template-columns: 32px minmax(0, 1fr);
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
     width: 100%;
   }
 
   .base-editor-body {
+    container-type: inline-size;
+    border-radius: 0 var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card) 0;
     align-content: start;
     background: var(--ui-card-normal-surface);
     display: grid;
@@ -1562,11 +1760,11 @@
   }
 
   .base-prompt-title-area {
+    height: 56px;
     align-items: center;
     display: grid;
     grid-template-columns: 2px minmax(0, 1fr) auto;
     min-width: 0;
-    overflow: hidden;
   }
 
   .base-status-indicator {
@@ -1688,6 +1886,7 @@
   }
 
   .base-status-control {
+    position: relative;
     align-items: center;
     display: inline-flex;
     flex: 0 0 auto;
@@ -1742,61 +1941,123 @@
     border-left-color: transparent;
   }
 
+
   .base-status-selector {
-    --base-status-color: var(--ui-normal-text);
+    --cthulhu-ui-simple-selector-border: var(--ui-neutral-normal-border);
+    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
 
     align-items: stretch;
-    border: 1px solid var(--ui-neutral-normal-border);
+    background: transparent;
+    border: 1px solid var(--cthulhu-ui-simple-selector-border);
     border-radius: var(--cthulhu-ui-radius-control);
     box-sizing: border-box;
-    display: inline-flex;
+    display: inline-grid;
     height: 36px;
     transition:
       background-color var(--ui-animation-duration-standard) ease,
       border-color var(--ui-animation-duration-standard) ease;
+    width: fit-content;
   }
 
   .base-status-segmented[data-status='InProgress'] .base-status-selector {
-    --base-status-color: var(--ui-warning-icon-glyph);
+    --cthulhu-ui-simple-selector-text: var(--ui-warning-icon-glyph);
   }
 
   .base-status-segmented[data-status='Completed'] .base-status-selector {
-    --base-status-color: var(--ui-success-normal-text);
+    --cthulhu-ui-simple-selector-text: var(--ui-success-normal-text);
   }
 
-  .base-status-selector:hover,
-  .base-status-selector:focus-within {
+  .base-status-selector:hover {
+    --cthulhu-ui-simple-selector-border: var(--ui-neutral-hover-border);
+
     background: var(--ui-neutral-action-fill);
-    border-color: var(--ui-neutral-hover-border);
   }
 
-  .base-status-value,
-  .base-status-more {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: var(--base-status-color);
-    display: inline-flex;
-    height: 34px;
-    justify-content: center;
-    padding: 0;
+  .base-status-selector[data-open='true'] {
+    background: var(--ui-neutral-action-hover-fill);
+  }
+
+  .base-status-selector:has(:focus-visible) {
+    --cthulhu-ui-simple-selector-border: var(--ui-neutral-hover-border);
+
+    background: var(--ui-neutral-action-fill);
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
   }
 
   .base-status-value {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
     box-sizing: border-box;
+    color: var(--cthulhu-ui-simple-selector-text);
+    cursor: pointer;
+    display: inline-flex;
+    font-family: inherit;
     font-size: 14px;
     font-weight: 500;
-    gap: 6px;
-    padding: 0 12px;
+    grid-area: 1 / 1;
+    height: 34px;
+    padding: 0;
     white-space: nowrap;
-    width: 116px;
+    width: 100%;
+  }
+
+  .base-status-value:focus-visible {
+    outline: none;
+  }
+
+  .base-status-value-content {
+    align-items: center;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex: 1 1 auto;
+    gap: 6px;
+    height: 34px;
+    justify-content: center;
+    min-width: 0;
+    padding-left: 8px;
+  }
+
+  .base-status-width-sizer-item {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .base-status-width-sizer {
+    display: grid;
+    grid-area: 1 / 1;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .base-status-width-sizer-item {
+    grid-area: 1 / 1;
+    padding-left: 8px;
+    padding-right: 32px;
+    width: max-content;
+  }
+
+  .base-status-value-content :global(svg),
+  .base-status-width-sizer-item :global(svg) {
+    flex: 0 0 auto;
   }
 
   .base-status-more {
-    width: 23px;
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 34px;
+    justify-content: center;
+    margin-left: auto;
+    padding: 0 6px;
   }
 
   .base-prompt-delete-section {
+    position: relative;
     align-items: center;
     display: flex;
     flex: 0 0 auto;
@@ -1857,7 +2118,6 @@
 
   .base-folder-chevron {
     height: 30px;
-    transform: rotate(90deg);
     width: 30px;
   }
 
@@ -2490,5 +2750,106 @@
   input:focus-visible {
     outline: 2px solid var(--ui-neutral-focus-border);
     outline-offset: -2px;
+  }
+  .base-folder-chevron[aria-expanded='true'] { transform: rotate(90deg); }
+  .base-folder-title-copy { display: grid; gap: 4px; min-width: 0; }
+  .base-final-gap { height: 28px; }
+  .base-empty { color: var(--ui-muted-text); text-align: center; padding: 24px; }
+  .base-name-input { background: var(--ui-editor-content-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 8px; }
+  .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }
+  @container (width < 720px) {
+    .base-prompt-title-area { height: 109px; grid-template-columns: 2px minmax(0, 1fr); grid-template-rows: 56px 53px; }
+    .base-status-indicator { grid-row: 1 / -1; }
+    .base-prompt-title-main { grid-column: 2; grid-row: 1; }
+    .base-prompt-actions { grid-column: 2; grid-row: 2; border-top: 1px solid var(--ui-neutral-normal-border); justify-content: space-between; padding-left: 16px; }
+    .base-actions-separator { display: none; }
+  }
+  .base-find-widget { position: absolute; top: 36px; right: 24px; z-index: 30; display: flex; align-items: center; gap: 3px; width: 400px; height: 33px; padding: 0 4px; box-sizing: border-box; background: var(--ui-card-solid-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); box-shadow: 0 0 8px var(--ui-card-normal-shadow); }
+  .base-find-widget input { min-width: 0; flex: 1; background: var(--ui-editor-content-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 2px 6px; }
+  .base-find-widget > span { font-size: 12px; min-width: 69px; }
+
+  .base-status-menu {
+    background: var(--ui-card-overlay-surface);
+    border: 1px solid var(--ui-card-normal-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    box-shadow: 0 0 12px var(--ui-shadow-raised);
+    box-sizing: border-box;
+    color: var(--ui-normal-text);
+    display: grid;
+    gap: 1px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px;
+    position: fixed;
+    z-index: 60;
+  }
+  .base-status-menu-item {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-normal-text);
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 28px minmax(0, 1fr);
+    min-height: 50px;
+    padding: 6px 8px;
+    text-align: left;
+    transition: background-color var(--ui-animation-duration-standard) ease;
+    width: 100%;
+  }
+  .base-status-menu-item:hover,
+  .base-status-menu-item:focus-visible { background: var(--ui-neutral-action-fill); }
+  .base-status-menu-icon {
+    align-items: center;
+    color: var(--ui-secondary-icon-glyph);
+    display: flex;
+    height: 28px;
+    justify-content: center;
+    width: 28px;
+  }
+  .base-status-menu-icon[data-status='InProgress'] { color: var(--ui-warning-icon-glyph); }
+  .base-status-menu-icon[data-status='Completed'] { color: var(--ui-success-normal-text); }
+  .base-status-menu-text { display: grid; gap: 2px; min-width: 0; }
+  .base-status-menu-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .base-status-menu-subtitle {
+    color: var(--ui-secondary-text);
+    font-size: 12px;
+    line-height: 1.25;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .base-status-menu-icon[data-action='delete'] { color: var(--ui-hoverable-icon-glyph); }
+  .base-prompt-delete-section[data-split='true'] {
+    background: var(--ui-ghost-surface);
+    border-radius: var(--cthulhu-ui-radius-control);
+    outline: 1px solid var(--ui-neutral-normal-border);
+    overflow: hidden;
+  }
+  .base-prompt-delete-section[data-split='true'] > .base-icon-button {
+    border: 0;
+    border-radius: 0;
+    box-sizing: content-box;
+  }
+  .base-prompt-delete-section[data-split='true'] > .base-icon-button:last-of-type { width: 23px; }
+  .base-delete-separator {
+    align-self: stretch;
+    border-left: 1px solid var(--ui-neutral-normal-border);
+    flex: 0 0 1px;
+  }
+  .base-status-segmented[data-status='Todo'] .base-status-value-content :global(svg),
+  .base-status-segmented[data-status='Backlog'] .base-status-value-content :global(svg) {
+    color: var(--ui-secondary-icon-glyph);
   }
 </style>
