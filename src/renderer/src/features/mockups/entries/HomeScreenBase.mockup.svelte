@@ -8,7 +8,7 @@
   // Visual baseline of HomeScreen, CreateWorkspaceDialog, and ErrorDialog.
   // Only Svelte, Lucide icons, and palette colors are shared with the application.
   // Native Windows pickers/Explorer are simulated locally; no preload, IPC, or domain imports.
-  const samplePath = 'C:/Workspace'
+  const samplePath = 'C:\\'
   const errorText = 'Failed to open workspace. Please try again.'
   type FolderScenario = 'empty' | 'nonempty' | 'existing' | 'failure'
 
