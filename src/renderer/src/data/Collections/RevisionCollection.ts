@@ -9,6 +9,8 @@ import type { RevisionEnvelope } from '@shared/Revision'
 import type { DomainTargetPolicy } from '@shared/DomainChanges'
 
 export interface RevisionCollectionUtils<TRecord extends object> extends UtilsRecord {
+  /** Clears all authoritative records and revision metadata at a workspace boundary. */
+  clearAuthoritative: () => void
   upsertAuthoritative: (snapshot: RevisionEnvelope<TRecord>) => void
   upsertManyAuthoritative: (snapshots: Array<RevisionEnvelope<TRecord>>) => void
   deleteAuthoritative: (key: string) => void
@@ -178,6 +180,9 @@ export const revisionCollectionOptions = <TRecord extends object>(
     getKey,
     sync,
     utils: {
+      clearAuthoritative: () => {
+        writeManyAuthoritative(collectDeleteMessages([...authoritativeRevisions.keys()]))
+      },
       upsertAuthoritative: (snapshot) => {
         writeManyAuthoritative(collectUpsertMessages([snapshot]))
       },

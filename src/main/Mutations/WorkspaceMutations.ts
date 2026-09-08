@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { data } from '../Data/Data'
 import type { IpcMutationActionResponse } from '@shared/IpcResult'
 import {
   parseMovePromptFolderDomainCommand,
@@ -31,9 +32,14 @@ export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
     'close-workspace',
     async (_, request: unknown): Promise<IpcMutationActionResponse> =>
-      await runMutationIpcRequest(request, parseCloseWorkspaceRequest, async () => ({
-        success: true
-      }))
+      await runMutationIpcRequest(request, parseCloseWorkspaceRequest, async () => {
+        // Release registered workspace stores after flushing, preserving application-wide state.
+        for (const [name, store] of Object.entries(data)) {
+          if (name === 'systemSettings' || name === 'userPersistence') continue
+          store.committedStore.clear()
+        }
+        return { success: true }
+      })
   )
 
   handleMainDomainMutation({

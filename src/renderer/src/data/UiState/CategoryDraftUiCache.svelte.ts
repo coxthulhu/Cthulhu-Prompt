@@ -25,3 +25,8 @@ export const recordCategoryDescriptionMeasuredHeight = (
 export const clearCategoryDescriptionMeasuredHeight = (categoryId: string): void => {
   categoryDescriptionMeasuredHeight.clear(categoryId)
 }
+
+/** Clears all category measurements when the workspace closes. */
+export const clearCategoryDescriptionMeasuredHeights = (): void => {
+  categoryDescriptionMeasuredHeight.clearAll()
+}

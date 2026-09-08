@@ -109,6 +109,8 @@ export type PromptNavigationContext = {
   promptFocusRequests: ConsumableRequestCoordinator<PromptFocusRequest>
   treeExpansionRequests: ConsumableRequestCoordinator<PromptTreeExpansionRequest>
   treeRevealRequests: ConsumableRequestCoordinator<PromptNavigationTarget>
+  /** Releases workspace selection, highlights, and pending navigation requests. */
+  clear: () => void
   select: (options: SelectPromptNavigationOptions) => SelectPromptNavigationResult
 }
 
@@ -259,7 +261,23 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     promptFocusRequests,
     treeExpansionRequests,
     treeRevealRequests,
-    select
+    select,
+    clear: () => {
+      state.screenRootFolderId = null
+      state.contentOwnerId = null
+      state.selectedRow = null
+      state.selectionSource = null
+      state.navigationHighlight = null
+      if (navigationHighlightTimeoutId !== null) {
+        window.clearTimeout(navigationHighlightTimeoutId)
+        navigationHighlightTimeoutId = null
+      }
+      contentExpansionRequests.clear()
+      contentRevealRequests.clear()
+      promptFocusRequests.clear()
+      treeExpansionRequests.clear()
+      treeRevealRequests.clear()
+    }
   }
 }
 

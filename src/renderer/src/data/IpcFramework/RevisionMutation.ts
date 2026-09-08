@@ -30,6 +30,11 @@ const enqueueGlobalMutation = <T>(task: QueuedTask<T>): Promise<T> => {
   return queuedTask
 }
 
+/** Waits for queued immediate and submitted paced mutations before workspace teardown. */
+export const waitForRevisionMutations = async (): Promise<void> => {
+  await mutationQueue
+}
+
 type AnyRevisionCollection = Collection<any, string, RevisionCollectionUtils<any>>
 
 type RevisionCollectionsMap = Record<string, AnyRevisionCollection>

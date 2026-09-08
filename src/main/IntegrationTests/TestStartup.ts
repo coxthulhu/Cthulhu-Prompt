@@ -266,6 +266,8 @@ export function setupTestStartupListener(): void {
   })
   ;(app as any).on('test-setup-file-dialog', (results: string[]) => {
     testFixtures.fileDialogResults = results
+    // Apply replacement dialog selections while Electron stays running during workspace tests.
+    setDialogProvider(createTestDialogProvider(results))
   })
   ;(app as any).on('test-check-file-exists', (filePath: string) => {
     const fs = getFs()

@@ -59,10 +59,3 @@ export const flushMarkdownContentUiStateAutosaves = async (): Promise<void> => {
     )
   )
 }
-
-/** Clears markdown UI state when the selected workspace changes. */
-export const clearMarkdownContentUiStateCollection = (): void => {
-  markdownContentUiStateCollection.utils.deleteManyAuthoritative(
-    Array.from(markdownContentUiStateCollection.keys(), (uiStateId) => String(uiStateId))
-  )
-}

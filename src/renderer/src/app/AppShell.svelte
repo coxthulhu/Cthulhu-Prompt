@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
+  import { clearWorkspaceMonacoModels } from '@renderer/common/Monaco'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
@@ -29,7 +30,6 @@
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { getPromptFolderPromptIds } from '@renderer/data/Collections/PromptFolderEntries'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-  import { switchWorkspaceStoreBridge } from '@renderer/data/UiState/WorkspaceStoreBridge'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
     getSelectedWorkspaceId,
@@ -54,10 +54,7 @@
     promptNavigationRowToPersistedEntryId,
     setPromptNavigationContext
   } from './PromptNavigationContext.svelte.ts'
-  import {
-    flushAllAutosaves,
-    flushWorkspaceScopedAutosaves
-  } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
+  import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import {
@@ -263,10 +260,21 @@
     }
   }
 
-  const resetWorkspaceState = async () => {
-    await runIpcBestEffort(closeWorkspaceMutation)
-    await switchWorkspaceStoreBridge(null)
+  /** Saves the current workspace before releasing its data and navigation caches. */
+  const closeSelectedWorkspace = async (): Promise<void> => {
+    persistPromptNavigationSelection()
+    captureRegisteredMonacoViewStates()
+    await closeWorkspaceMutation()
     clearPromptFolderSelection()
+    promptNavigation.clear()
+    shownFinalStatusGroups = {}
+    // Side effect: let workspace editors unmount before releasing their Monaco models.
+    await tick()
+    await clearWorkspaceMonacoModels()
+  }
+
+  const resetWorkspaceState = async () => {
+    await runIpcBestEffort(closeSelectedWorkspace)
   }
 
   const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
@@ -275,7 +283,7 @@
   }
 
   const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {
-    await switchWorkspaceStoreBridge(workspaceInfoPath)
+    await closeSelectedWorkspace()
     const workspaceId = await loadWorkspaceByPath(workspaceInfoPath)
     await loadWorkspaceUiState(workspaceId)
     setSelectedWorkspaceId(workspaceId)
@@ -424,7 +432,6 @@
   }
 
   const selectWorkspace = async (workspaceInfoPath: string): Promise<WorkspaceSelectionResult> => {
-    clearPromptFolderSelection()
     beginWorkspaceAction()
 
     try {
@@ -450,7 +457,6 @@
     workspaceName: string,
     includeExamplePrompts: boolean
   ): Promise<WorkspaceCreationResult> => {
-    clearPromptFolderSelection()
     beginWorkspaceAction()
 
     try {
@@ -490,12 +496,9 @@
     beginWorkspaceAction()
 
     try {
-      await flushWorkspaceScopedAutosaves()
-      await runIpcBestEffort(closeWorkspaceMutation)
+      await runIpcBestEffort(closeSelectedWorkspace)
       await runIpcBestEffort(() => syncLastWorkspaceInfoPath(null))
     } finally {
-      await switchWorkspaceStoreBridge(null)
-      clearPromptFolderSelection()
       endWorkspaceAction()
     }
   }

@@ -14,6 +14,8 @@ export type CommittedStore<TData, TPersistenceFields> = {
   commitAfterWrite: (id: string, data: TData, persistenceFields?: TPersistenceFields) => number
   updatePersistenceFields: (id: string, persistenceFields: TPersistenceFields) => void
   remove: (id: string) => void
+  /** Releases cached records without deleting persisted data. */
+  clear: () => void
 }
 
 export const createCommittedStore = <TData, TPersistenceFields>(): CommittedStore<
@@ -30,6 +32,9 @@ export const createCommittedStore = <TData, TPersistenceFields>(): CommittedStor
   }
 
   return {
+    clear: () => {
+      entriesById = {}
+    },
     getRevision: (id) => entriesById[id]?.revision ?? 0,
     getEntry: (id) => entriesById[id] ?? null,
     getAllEntries: () => Object.values(entriesById),

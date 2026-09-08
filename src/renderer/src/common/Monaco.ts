@@ -1,4 +1,5 @@
 import * as monaco from 'monaco-editor'
+import { getService, IFileService, ITextFileService } from '@codingame/monaco-vscode-api'
 
 export const PROMPT_EDITOR_MODEL_URI_ROOT = '/cthulhu-prompt'
 
@@ -85,3 +86,25 @@ export const warmupMonacoEditor = async (): Promise<void> => {
 }
 
 export { monaco }
+
+/** Releases Monaco's retained workspace models and virtual files after application saves finish. */
+export const clearWorkspaceMonacoModels = async (): Promise<void> => {
+  /** Monaco's text-file cache can retain dirty models after their editors unmount. */
+  const textFileService = await getService(ITextFileService)
+  await Promise.all(
+    textFileService.files.models
+      .filter((model) => model.resource.path.startsWith(`${PROMPT_EDITOR_MODEL_URI_ROOT}/`))
+      .map(async (model) => {
+        // Application autosave already persisted this text; release Monaco's separate dirty state.
+        await model.revert({ soft: true })
+        model.dispose()
+      })
+  )
+  /** Virtual editor files are separate from the user's on-disk workspace. */
+  const fileService = await getService(IFileService)
+  /** Shared virtual root exists once Monaco has created its first model. */
+  const root = monaco.Uri.file(PROMPT_EDITOR_MODEL_URI_ROOT)
+  if (await fileService.exists(root)) {
+    await fileService.del(root, { recursive: true })
+  }
+}

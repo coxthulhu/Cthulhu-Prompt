@@ -12,34 +12,14 @@ import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { removePromptFolderClientState } from '../UiState/PromptFolderClientState'
-import {
-  getSelectedWorkspaceId,
-  setSelectedWorkspaceId
-} from '../UiState/WorkspaceSelection.svelte.ts'
+import { setSelectedWorkspaceId } from '../UiState/WorkspaceSelection.svelte.ts'
 import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
-import {
-  deletePromptFolderContentRecords
-} from './PromptFolderContentMutations'
 import { promptClientStateCollection } from '../Collections/PromptClientStateCollection'
 import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
 import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
-
-/** Clears every renderer record owned by one closed workspace. */
-const clearSelectedWorkspaceCollections = (workspaceId: string | null): void => {
-  if (!workspaceId) return
-  /** Workspace being removed from renderer state. */
-  const workspace = workspaceCollection.get(workspaceId)
-  if (!workspace) return
-  /** Complete root-owned entity graph being removed. */
-  const graph = collectPromptFolderGraphIds(workspace.entries.map((entry) => entry.id))
-  deletePromptFolderContentRecords(graph)
-  for (const promptFolderId of graph.promptFolderIds) {
-    promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
-    removePromptFolderClientState(promptFolderId)
-  }
-  workspaceCollection.utils.deleteAuthoritative(workspaceId)
-}
+import { clearWorkspaceStoreBridge } from '../UiState/WorkspaceStoreBridge'
+import { submitAllPacedUpdateTransactionsAndWait } from '../IpcFramework/RevisionCollections'
+import { waitForRevisionMutations } from '../IpcFramework/RevisionMutation'
 
 /** Creates a workspace through the command-style IPC endpoint. */
 export const createWorkspace = async (
@@ -52,19 +32,15 @@ export const createWorkspace = async (
     { workspacePath, workspaceName, includeExamplePrompts }
   )
 
-/** Closes the selected workspace and clears its renderer graph. */
+/** Flushes pending writes before releasing all workspace memory in both processes. */
 export const closeWorkspace = async (): Promise<void> => {
-  /** Workspace identity retained for cleanup after IPC settles. */
-  const selectedWorkspaceId = getSelectedWorkspaceId()
-  try {
-    await runLoad(() =>
-      ipcInvokeWithPayload<IpcMutationActionResponse, CloseWorkspacePayload>('close-workspace', {})
-    )
-  } finally {
-    // Side effect: clear renderer workspace state after closing.
-    setSelectedWorkspaceId(null)
-    clearSelectedWorkspaceCollections(selectedWorkspaceId)
-  }
+  await submitAllPacedUpdateTransactionsAndWait()
+  await waitForRevisionMutations()
+  await runLoad(() =>
+    ipcInvokeWithPayload<IpcMutationActionResponse, CloseWorkspacePayload>('close-workspace', {})
+  )
+  setSelectedWorkspaceId(null)
+  clearWorkspaceStoreBridge()
 }
 
 /** Deletes one root prompt folder and every entity it owns. */
