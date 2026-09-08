@@ -3,6 +3,7 @@
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import {
+    AlertCircle,
     Ban,
     Check,
     Archive,
@@ -438,6 +439,11 @@
     for (const folder of subfolders) folder.prompts = folder.prompts.filter((item) => item.id !== prompt.id)
     deleteMenuId = null
   }
+  const requestPromptDelete = (prompt: MockPrompt) => {
+    if (!prompt.title.trim() && !prompt.text.trim()) { removePrompt(prompt); return }
+    confirmation = { title: 'Delete Prompt', description: 'Are you sure you want to delete this prompt?',
+      submit: 'Delete', confirm: () => removePrompt(prompt) }
+  }
   const addPrompt = (folder?: MockFolder, afterId?: string) => {
     const prompts = folder ? folder.prompts : rootPrompts
     const prompt = createPrompt(window.crypto.randomUUID(), '', folder?.id ?? 'base-root', TEMPLATE_NOT_SELECTED_LABEL, '',
@@ -454,7 +460,33 @@
     prompts.splice(index, 1)
     prompts.splice(targetIndex, 0, prompt)
   }
-  let nameDialog = $state<{ title: string; value: string; save: (value: string) => void } | null>(null)
+  let nameDialog = $state<{ title: string; value: string; categoryId?: string; save: (value: string) => void } | null>(null)
+  let nameInteracted = $state(false)
+  let nameInput = $state<HTMLInputElement | null>(null)
+  const isFolderName = $derived(nameDialog?.title === 'Rename Prompt Folder')
+  const nameLabel = $derived(isFolderName ? 'Prompt Folder Name' : 'Category Name')
+  const nameError = $derived(!nameDialog?.value.trim()
+    ? `${isFolderName ? 'Folder' : 'Category'} name is required`
+    : !isFolderName && subfolders.some((folder) => folder.id !== nameDialog?.categoryId &&
+      folder.title.trim().toLocaleLowerCase() === nameDialog?.value.trim().toLocaleLowerCase())
+      ? 'A category with this name already exists' : null)
+  const nameDisabled = $derived(Boolean(nameError) || (isFolderName && nameDialog?.value.trim() === rootTitle))
+  let confirmation = $state<{ title: string; description: string; submit: string; confirm: () => void } | null>(null)
+
+  // Side effect: focus and select the local name field each time its dialog mounts.
+  $effect(() => {
+    if (!nameInput) return
+    nameInteracted = false
+    nameInput.focus()
+    nameInput.select()
+  })
+
+  // Side effect: portal local overlays beyond the mockup's containing block.
+  const mountMockDialog = (node: HTMLElement) => {
+    const previousFocus = document.activeElement as HTMLElement | null
+    document.body.appendChild(node)
+    return { destroy: () => { node.remove(); previousFocus?.focus() } }
+  }
   const addCategory = () => {
     nameDialog = { title: 'Create Category', value: '', save: (title) => {
       subfolders.push({ id: window.crypto.randomUUID(), title, settings: createSettings(window.crypto.randomUUID(), ''), prompts: [] })
@@ -567,6 +599,7 @@
       if (event.key === 'Escape') {
         closeTemplateDialog()
         nameDialog = null
+        confirmation = null
         statusMenuId = null
         deleteMenuId = null
         findOpen = false
@@ -767,7 +800,11 @@
     aria-pressed={setting.isPresent}
     title={`${setting.isPresent ? 'Remove' : 'Add'} ${setting.title.toLowerCase()}`}
     onclick={() => {
-      setting.isPresent = !setting.isPresent
+      if (setting.isPresent) confirmation = {
+        title: 'Delete Category Description', description: 'Are you sure you want to delete this category description?',
+        submit: 'Delete', confirm: () => { setting.isPresent = false; setting.text = '' }
+      }
+      else setting.isPresent = true
     }}
   >
     <span class="base-settings-toggle-default-icon">
@@ -891,7 +928,7 @@
           <div class="base-prompt-delete-section" data-split={prompt.status !== 'Archived' ? 'true' : 'false'}>
             {@render IconButton(archiveDefault ? Archive : Trash2, archiveDefault ? 'Archive prompt' : 'Delete prompt', {
               hoverVariant: archiveDefault ? 'neutral' : 'danger',
-              onclick: () => archiveDefault ? setPromptStatus(prompt, MockPromptStatus.Archived) : removePrompt(prompt)
+              onclick: () => archiveDefault ? setPromptStatus(prompt, MockPromptStatus.Archived) : requestPromptDelete(prompt)
             })}
             {#if prompt.status !== 'Archived'}
               <span class="base-delete-separator" aria-hidden="true"></span>
@@ -909,7 +946,7 @@
                   use:mountMockMenu={{ anchor: deleteAnchor, width: 240 }}>
                   <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => {
                     deleteMenuId = null
-                    if (archiveDefault) removePrompt(prompt)
+                    if (archiveDefault) requestPromptDelete(prompt)
                     else setPromptStatus(prompt, MockPromptStatus.Archived)
                   }}>
                     <span class="base-status-menu-icon" data-action="delete">
@@ -947,7 +984,7 @@
       <div class="base-editor-body">
         <header class="base-folder-title-bar" aria-expanded={!folder.collapsed}>
           <div class="base-folder-title-main">
-            <button class="base-folder-chevron" type="button" aria-label="Toggle category prompts" aria-expanded={!folder.collapsed} onclick={() => folder.collapsed = !folder.collapsed}>
+            <button class="base-folder-chevron" type="button" aria-label={folder.collapsed ? 'Expand category prompts' : 'Collapse category prompts'} aria-expanded={!folder.collapsed} onclick={() => folder.collapsed = !folder.collapsed}>
               <ChevronRight size={24} aria-hidden="true" />
             </button>
             {@render IconCell(Folder)}
@@ -956,7 +993,7 @@
                 <span class="base-folder-title" title={folder.title}>{folder.title}</span>
                 {#if !isFinalMode}
                 {@render IconButton(Pencil, 'Rename category', {
-                  onclick: () => nameDialog = { title: 'Rename Category', value: folder.title, save: (value) => folder.title = value },
+                  onclick: () => nameDialog = { title: 'Rename Category', value: folder.title, categoryId: folder.id, save: (value) => folder.title = value },
                   size: 'tiny',
                   baseVariant: 'muted',
                   hoverVariant: 'glyph'
@@ -977,7 +1014,13 @@
                   onclick: () => folder.settingsHidden = !folder.settingsHidden
                 })}
                 {@render IconButton(Trash2, 'Delete category', { hoverVariant: 'danger',
-                  onclick: () => { rootPrompts.push(...folder.prompts); subfolders = subfolders.filter((item) => item.id !== folder.id) }
+                  onclick: () => confirmation = { title: 'Delete Category',
+                    description: `Are you sure you want to delete “${folder.title}”? Its contents will move to Uncategorized.`,
+                    submit: 'Delete Category', confirm: () => {
+                      for (const prompt of folder.prompts) prompt.folderId = 'base-root'
+                      rootPrompts.push(...folder.prompts)
+                      subfolders = subfolders.filter((item) => item.id !== folder.id)
+                    } }
                 })}
               {/if}
             </div>
@@ -1083,7 +1126,9 @@
         <div class="base-icon-button-bar">
           {@render IconButton(FolderPlus, 'Add category', { hoverVariant: 'accent', onclick: addCategory })}
           {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger',
-            onclick: () => { rootPrompts = []; subfolders = [] }
+            onclick: () => confirmation = { title: 'Delete Prompt Folder',
+              description: `Are you sure you want to permanently delete “${rootTitle}” and all of its contents?`,
+              submit: 'Delete Prompt Folder', confirm: () => { rootPrompts = []; subfolders = [] } }
           })}
         </div>
       </div>
@@ -1111,27 +1156,79 @@
         {/each}
       </div>
       {#if !allPrompts.some((prompt) => matchesGroup(prompt))}
-        <p class="base-empty">No {screenMode.toLowerCase()} prompts in this folder.</p>
+        <div class="base-empty">
+          <p>No {screenMode.toLowerCase()} prompts in this folder.</p>
+          {#if !isFinalMode}<p class="base-empty-detail">Click the Add Prompt button to create your first prompt.</p>{/if}
+        </div>
       {/if}
     </div>
   </div>
 </main>
 
 {#if nameDialog}
-  <div class="base-template-dialog-layer" role="presentation">
-    <form class="base-template-dialog" aria-label={nameDialog.title} onsubmit={(event) => {
-      event.preventDefault()
-      if (!nameDialog?.value.trim()) return
-      nameDialog.save(nameDialog.value.trim())
-      nameDialog = null
-    }}>
-      <h2>{nameDialog.title}</h2>
-      <input class="base-name-input" aria-label="Name" bind:value={nameDialog.value} />
+  {@const NameIcon = isFolderName ? Pencil : FolderPlus}
+  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
+    <div tabindex="-1" class="base-template-dialog base-name-dialog" role="dialog" aria-modal="true" aria-label={nameDialog.title}>
+      <form onsubmit={(event) => {
+        event.preventDefault()
+        if (!nameDialog || nameDisabled) return
+        nameDialog.save(nameDialog.value.trim())
+        nameDialog = null
+      }}>
+        <header class="base-template-dialog-header">
+          <div class="base-template-dialog-heading">
+            <div class="base-template-dialog-icon"><NameIcon size={24} aria-hidden="true" /></div>
+            <div class="base-template-dialog-heading-copy">
+              <h2>{nameDialog.title}</h2>
+              <p>{nameDialog.title === 'Create Category' ? 'Add a category to this root folder.' : `Choose a new name for this ${isFolderName ? 'prompt folder' : 'category'}.`}</p>
+            </div>
+          </div>
+          {@render IconButton(X, 'Close', { onclick: () => nameDialog = null })}
+        </header>
+        {@render Separator()}
+        <div class="base-name-row">
+          <span class="base-name-row-icon"><NameIcon size={24} aria-hidden="true" /></span>
+          <div class="base-name-row-copy">
+            <span>{nameLabel}</span>
+            <small>{isFolderName ? 'Rename this prompt folder.' : 'Name the new category.'}</small>
+          </div>
+          <div class="base-name-control">
+            <input class="base-name-input" bind:this={nameInput} aria-label={nameLabel}
+              placeholder="Name..." bind:value={nameDialog.value}
+              aria-invalid={nameInteracted && nameError ? 'true' : undefined}
+              oninput={() => nameInteracted = true} />
+            {#if nameInteracted && nameError}
+              <div class="base-name-error"><AlertCircle size={16} aria-hidden="true" />{nameError}</div>
+            {/if}
+          </div>
+        </div>
+        {@render Separator()}
+        <div class="base-template-dialog-footer">
+          <button class="base-dialog-confirm-button" type="submit" disabled={nameDisabled}>{nameDialog.title}</button>
+          <button class="base-dialog-cancel-button" type="button" onclick={() => nameDialog = null}>Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{/if}
+
+{#if confirmation}
+  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog
+    onclick={(event) => { if (event.target === event.currentTarget) confirmation = null }}>
+    <div tabindex="-1" class="base-template-dialog base-confirmation-dialog" role="dialog" aria-modal="true" aria-label={confirmation.title}>
+      <header class="base-template-dialog-header">
+        <div class="base-template-dialog-heading">
+          <div class="base-template-dialog-icon"><Trash2 size={24} aria-hidden="true" /></div>
+          <h2>{confirmation.title}</h2>
+        </div>
+        {@render IconButton(X, 'Close', { onclick: () => confirmation = null })}
+      </header>
+      <p>{confirmation.description}</p>
       <div class="base-template-dialog-footer">
-        <button class="base-dialog-cancel-button" type="button" onclick={() => nameDialog = null}>Cancel</button>
-        <button class="base-dialog-confirm-button" type="submit" disabled={!nameDialog.value.trim()}>Save</button>
+        <button class="base-dialog-confirm-button" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
+        <button class="base-dialog-cancel-button" type="button" onclick={() => confirmation = null}>Cancel</button>
       </div>
-    </form>
+    </div>
   </div>
 {/if}
 
@@ -2754,8 +2851,34 @@
   .base-folder-chevron[aria-expanded='true'] { transform: rotate(90deg); }
   .base-folder-title-copy { display: grid; gap: 4px; min-width: 0; }
   .base-final-gap { height: 28px; }
-  .base-empty { color: var(--ui-muted-text); text-align: center; padding: 24px; }
-  .base-name-input { background: var(--ui-editor-content-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 8px; }
+  .base-empty { color: var(--ui-secondary-text); text-align: center; padding: 48px 0; }
+  .base-empty p { margin: 0; }
+  .base-empty .base-empty-detail { font-size: 14px; margin-top: 8px; }
+  .base-name-dialog { max-width: 540px; background: var(--ui-card-overlay-surface); }
+  .base-name-row { display: flex; align-items: center; gap: 12px; padding: 16px; min-width: 0; }
+  .base-name-row-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; color: var(--ui-hoverable-icon-glyph); }
+  .base-name-row-copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+  .base-name-row-copy > span { font-size: var(--cthulhu-ui-font-size-primary); font-weight: 600; }
+  .base-name-row-copy small { color: var(--ui-muted-text); font-size: 13px; }
+  .base-name-row-copy > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .base-name-control { position: relative; flex: 0 0 auto; }
+  .base-name-input { box-sizing: border-box; width: 220px; height: 40px; border-radius: var(--cthulhu-ui-radius-control); background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 4px 14px; font-size: 14px; font-weight: 500; }
+  .base-name-input::placeholder { color: var(--ui-muted-text); }
+  .base-name-input:focus-visible { outline: none; border-color: var(--ui-neutral-focus-border); box-shadow: var(--cthulhu-ui-shadow-focus); }
+  .base-name-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
+  .base-name-error { position: absolute; top: 100%; left: 0; z-index: 10; margin-top: 2px; height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--cthulhu-ui-radius-control); white-space: nowrap; font-size: 14px; background: color-mix(in oklch, var(--ui-card-solid-surface) 76%, var(--ui-danger-strong-border)); box-shadow: 0 8px 18px var(--ui-card-normal-shadow); }
+  .base-name-error :global(svg) { color: var(--ui-danger-icon-glyph); }
+  .base-name-dialog .base-dialog-confirm-button { border-color: var(--ui-accent-muted-border); font-weight: 500; padding-inline: 14px; }
+  .base-name-dialog .base-dialog-confirm-button:disabled { opacity: 0.5; pointer-events: none; }
+  .base-confirmation-dialog { max-width: 480px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
+  .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
+  .base-confirmation-dialog > p { padding: 4px; margin: 0; font-size: 16px; line-height: 1.5; }
+  .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: 500; }
+  .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
+  @media (max-width: 720px) {
+    .base-name-row { flex-wrap: wrap; align-items: flex-start; row-gap: 8px; }
+    .base-name-control { margin-left: 46px; flex-basis: calc(100% - 46px); }
+  }
   .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }
   @container (width < 720px) {
     .base-prompt-title-area { height: 109px; grid-template-columns: 2px minmax(0, 1fr); grid-template-rows: 56px 53px; }
