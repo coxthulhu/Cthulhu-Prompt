@@ -19,16 +19,17 @@
 <style>
   .cthulhuUiTitle[data-variant='page'] {
     color: var(--ui-normal-text);
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 500;
     line-height: 29px;
+    padding-bottom: 20px;
     overflow-wrap: anywhere;
   }
 
   .cthulhuUiTitle[data-variant='small'] {
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 21px;
   }
 

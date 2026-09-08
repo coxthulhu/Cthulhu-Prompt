@@ -166,7 +166,7 @@
   <div class="flex w-full max-w-4xl flex-col gap-4">
     <Title title="System Settings" />
 
-    <Card label="Editor & layout">
+    <Card label="Editor & Layout">
       <div class="flex flex-col">
         <SettingRow
           testId="editor-layout-font-size-row"

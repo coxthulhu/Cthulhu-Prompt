@@ -35,6 +35,5 @@
     display: flex;
     gap: 10px;
     margin-bottom: 12px;
-    padding-left: 8px;
   }
 </style>
