@@ -9,6 +9,7 @@
     icon: ComponentType
     label: string
     detail: string
+    wrapDetail?: boolean
     detailExtra?: Snippet
     trailing?: Snippet
     trailingLayout?: RowTrailingLayout
@@ -23,6 +24,7 @@
     icon: Icon,
     label,
     detail,
+    wrapDetail = false,
     detailExtra,
     trailing,
     trailingLayout = 'single',
@@ -37,6 +39,7 @@
 <div
   class={mergeClasses('cthulhuUiRow', className)}
   data-trailing={trailing ? 'true' : 'false'}
+  data-wrap-detail={wrapDetail ? 'true' : 'false'}
   data-trailing-layout={trailingLayout}
   data-testid={testId}
 >
@@ -105,6 +108,11 @@
 
   .cthulhuUiRowDetail {
     text-overflow: ellipsis;
+  }
+
+  .cthulhuUiRow[data-wrap-detail='true'] .cthulhuUiRowDetail {
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .cthulhuUiRowDetailExtra {

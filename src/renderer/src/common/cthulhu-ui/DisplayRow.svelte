@@ -6,6 +6,7 @@
     icon: ComponentType
     label: string
     detail: string
+    wrapDetail?: boolean
     trailing?: Snippet
     class?: string
     iconClass?: string
@@ -18,6 +19,7 @@
     icon,
     label,
     detail,
+    wrapDetail = false,
     trailing,
     class: className,
     iconClass,
@@ -31,6 +33,7 @@
   {icon}
   {label}
   {detail}
+  {wrapDetail}
   {trailing}
   class={className}
   {iconClass}
