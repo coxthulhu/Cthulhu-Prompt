@@ -1,36 +1,29 @@
 <script lang="ts">
   import {
-    ArrowRight,
-    Check,
-    ChevronsDownUp,
-    ChevronDown,
-    ChevronRight,
-    ExternalLink,
-    Folder,
-    MoreHorizontal,
-    Plus,
-    Settings
+    Archive, ArrowRight, ArrowUpToLine, Bookmark, Check, ChevronsDownUp, ChevronsUpDown,
+    ChevronDown, ChevronRight, CircleCheckBig, ExternalLink, Folder, FolderPlus,
+    ListTodo, MoreHorizontal, Plus, Settings, Trash2
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
-  type MockPrompt = {
+  // Visual sandbox: only icons, the brand image, and palette tokens are shared with the app.
+  // All sample data and interactions below are local and reset when this mockup unmounts.
+  type MockPrompt = { id: string; title: string; status?: string; edited?: boolean }
+  type MockCategory = { id: string; title: string; prompts: MockPrompt[] }
+  type MockGroup = {
     id: string
-    title: string
-  }
-
-  type MockCategory = {
-    id: string
-    title: string
+    label: string
+    icon: typeof Plus
     prompts: MockPrompt[]
+    categories: MockCategory[]
+    expanded: boolean
+    weight: number
   }
-
   const prompt = (id: string, title: string): MockPrompt => ({ id, title })
-  const indentLevels = (indentCount: number): number[] =>
-    Array.from({ length: indentCount }, (_, index) => index)
-
+  const indentLevels = (count: number): number[] => Array.from({ length: count }, (_, i) => i)
   const uncategorizedPrompts: MockPrompt[] = [
-    prompt('map-implementation', 'Map the current implementation'),
-    prompt('clarify-requirements', 'Clarify product requirements'),
+    { ...prompt('map-implementation', 'Map the current implementation'), status: 'InProgress' },
+    { ...prompt('clarify-requirements', 'Clarify product requirements'), edited: true },
     prompt('draft-plan', 'Draft an implementation plan'),
     prompt('identify-edge-cases', 'Identify edge cases'),
     prompt('acceptance-criteria', 'Define acceptance criteria'),
@@ -66,140 +59,141 @@
     }
   ]
 
-  let expandedCategoryIds = $state<Record<string, boolean>>({
-    research: true,
-    verification: true
-  })
+
+  let groups = $state<MockGroup[]>([
+    { id: 'completed', label: 'Completed', icon: CircleCheckBig, expanded: true, weight: 200,
+      prompts: [{ ...prompt('completed-audit', 'Audit the existing sidebar'), status: 'Completed' }], categories: [] },
+    { id: 'archived', label: 'Archived', icon: Archive, expanded: true, weight: 200,
+      prompts: [{ ...prompt('archived-layout', 'Explore the previous layout'), status: 'Archived' }], categories: [] },
+    { id: 'active', label: 'Active', icon: ListTodo, expanded: true, weight: 400,
+      prompts: uncategorizedPrompts, categories },
+    { id: 'backlog', label: 'Backlog', icon: Bookmark, expanded: true, weight: 200,
+      prompts: [prompt('future-search', 'Explore prompt search'), prompt('future-shortcuts', 'Plan keyboard shortcuts')],
+      categories: [{ id: 'ideas', title: 'Ideas', prompts: [] }] }
+  ])
+  let showCompleted = $state(false)
+  let showArchived = $state(false)
+  let expandedCategoryIds = $state<Record<string, boolean>>({ research: true, verification: true, ideas: true })
   let selectedPromptId = $state('map-implementation')
-  let promptTreeElement = $state<HTMLDivElement | null>(null)
-  let promptTreeScrollTopPx = $state(0)
-  let promptTreeViewportHeightPx = $state(0)
-  let promptTreeScrollHeightPx = $state(0)
-  let isPromptTreeHovered = $state(false)
-  let isScrollbarDragging = $state(false)
-  let scrollbarDragOffsetPx = 0
-
-  const SCROLLBAR_WIDTH_PX = 10
-  const MIN_SCROLLBAR_THUMB_HEIGHT_PX = 20
-  const promptTreeMaxScrollTopPx = $derived(
-    Math.max(0, promptTreeScrollHeightPx - promptTreeViewportHeightPx)
-  )
-  const scrollbarThumbHeightPx = $derived.by(() => {
-    if (promptTreeScrollHeightPx <= 0) return MIN_SCROLLBAR_THUMB_HEIGHT_PX
-    const proportionalHeight =
-      (promptTreeViewportHeightPx / promptTreeScrollHeightPx) * promptTreeViewportHeightPx
-    return Math.min(
-      promptTreeViewportHeightPx,
-      Math.max(MIN_SCROLLBAR_THUMB_HEIGHT_PX, proportionalHeight)
-    )
-  })
-  const scrollbarMaxThumbTopPx = $derived(
-    Math.max(0, promptTreeViewportHeightPx - scrollbarThumbHeightPx)
-  )
-  const scrollbarThumbTopPx = $derived(
-    promptTreeMaxScrollTopPx <= 0
-      ? 0
-      : (promptTreeScrollTopPx / promptTreeMaxScrollTopPx) * scrollbarMaxThumbTopPx
-  )
-  const isScrollbarNeeded = $derived(promptTreeScrollHeightPx > promptTreeViewportHeightPx)
-  const areAllCategoriesCollapsed = $derived(
-    categories.every((category) => expandedCategoryIds[category.id] === false)
-  )
-
-  const measurePromptTree = () => {
-    if (!promptTreeElement) return
-    promptTreeViewportHeightPx = promptTreeElement.clientHeight
-    promptTreeScrollHeightPx = promptTreeElement.scrollHeight
-    promptTreeScrollTopPx = promptTreeElement.scrollTop
+  let selectedGroupId = $state('active')
+  let navigationGeneration = $state(0)
+  let isOverviewActive = $state(false)
+  let sidebarWidth = $state(275)
+  let categoryName = $state('')
+  let categoryDialog: HTMLDialogElement
+  let folderTitle = $state('Product Work')
+  let folderMenuOpen = $state(false)
+  let actionsMenuOpen = $state(false)
+  let categoryMenu = $state<{ category: MockCategory; group: MockGroup; x: number; y: number } | null>(null)
+  let selectedCategoryId = $state<string | null>(null)
+  const closeMenus = (event: MouseEvent) => {
+    if (event.target instanceof Element && event.target.closest('.local-menu, .folder-selector, .prompts-actions')) return
+    folderMenuOpen = false
+    actionsMenuOpen = false
+    categoryMenu = null
   }
+  const visibleGroups = $derived(groups.filter((group) =>
+    group.id === 'active' || group.id === 'backlog' ||
+    (group.id === 'completed' && showCompleted) || (group.id === 'archived' && showArchived)))
+  const toolbarGroup = $derived(groups.find((group) => group.id ===
+    (selectedGroupId === 'backlog' ? 'backlog' : 'active'))!)
+  const areAllCategoriesCollapsed = $derived(toolbarGroup.categories.every((category) => !expandedCategoryIds[category.id]))
+  const folderPromptCount = $derived(groups.filter((group) => group.id === 'active' || group.id === 'backlog')
+    .reduce((sum, group) => sum + group.prompts.length + group.categories.reduce((n, category) => n + category.prompts.length, 0), 0))
+  const groupCount = (group: MockGroup) => group.prompts.length + group.categories.reduce((sum, category) => sum + category.prompts.length, 0)
 
-  const observePromptTree = (node: HTMLDivElement) => {
-    promptTreeElement = node
-    measurePromptTree()
-
-    // Side effect: keep the local overlay scrollbar sized to the mock tree viewport.
-    const resizeObserver = new ResizeObserver(measurePromptTree)
-    resizeObserver.observe(node)
-
-    return {
-      destroy() {
-        resizeObserver.disconnect()
-        if (promptTreeElement === node) promptTreeElement = null
-      }
-    }
+  const selectPrompt = (entry: MockPrompt, group: MockGroup) => {
+    selectedCategoryId = null
+    selectedPromptId = entry.id
+    selectedGroupId = group.id
+    isOverviewActive = false
+    navigationGeneration += 1
   }
-
-  const applyPromptTreeScrollTop = (nextScrollTopPx: number) => {
-    if (!promptTreeElement) return
-    promptTreeElement.scrollTop = Math.min(Math.max(nextScrollTopPx, 0), promptTreeMaxScrollTopPx)
-    promptTreeScrollTopPx = promptTreeElement.scrollTop
+  const addPrompt = (category: MockCategory, group: MockGroup) => {
+    const entry = prompt(window.crypto.randomUUID(), 'New Prompt')
+    category.prompts.unshift(entry)
+    expandedCategoryIds[category.id] = true
+    selectPrompt(entry, group)
   }
-
-  const applyScrollbarThumbTop = (nextThumbTopPx: number) => {
-    if (scrollbarMaxThumbTopPx <= 0) {
-      applyPromptTreeScrollTop(0)
-      return
-    }
-
-    const clampedThumbTopPx = Math.min(Math.max(nextThumbTopPx, 0), scrollbarMaxThumbTopPx)
-    applyPromptTreeScrollTop(
-      (clampedThumbTopPx / scrollbarMaxThumbTopPx) * promptTreeMaxScrollTopPx
-    )
+  const addCategory = () => {
+    if (!categoryName.trim()) return
+    const id = window.crypto.randomUUID()
+    toolbarGroup.categories.push({ id, title: categoryName.trim(), prompts: [] })
+    toolbarGroup.expanded = true
+    expandedCategoryIds[id] = true
+    categoryName = ''
+    categoryDialog.close()
   }
-
-  const handleScrollbarTrackPointerDown = (event: PointerEvent) => {
-    if (!(event.currentTarget instanceof HTMLDivElement) || event.target !== event.currentTarget) {
-      return
-    }
-
-    const trackRect = event.currentTarget.getBoundingClientRect()
-    applyScrollbarThumbTop(event.clientY - trackRect.top - scrollbarThumbHeightPx / 2)
-  }
-
-  const handleScrollbarThumbPointerDown = (event: PointerEvent) => {
-    if (!(event.currentTarget instanceof HTMLDivElement)) return
-    event.preventDefault()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    const thumbRect = event.currentTarget.getBoundingClientRect()
-    scrollbarDragOffsetPx = event.clientY - thumbRect.top
-    isScrollbarDragging = true
-  }
-
-  const handleScrollbarThumbPointerMove = (event: PointerEvent) => {
-    if (!isScrollbarDragging || !(event.currentTarget instanceof HTMLDivElement)) return
-    const trackRect = event.currentTarget.parentElement?.getBoundingClientRect()
-    if (!trackRect) return
-    applyScrollbarThumbTop(event.clientY - trackRect.top - scrollbarDragOffsetPx)
-  }
-
-  const handleScrollbarThumbPointerUp = (event: PointerEvent) => {
-    if (!(event.currentTarget instanceof HTMLDivElement)) return
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    isScrollbarDragging = false
-  }
-
-  const setCategoryExpanded = (categoryId: string, isExpanded: boolean) => {
-    expandedCategoryIds = { ...expandedCategoryIds, [categoryId]: isExpanded }
-    window.queueMicrotask(measurePromptTree)
-  }
-
   const toggleAllCategories = () => {
-    const nextExpanded = areAllCategoriesCollapsed
-    expandedCategoryIds = Object.fromEntries(
-      categories.map((category) => [category.id, nextExpanded])
-    )
-    window.queueMicrotask(measurePromptTree)
+    const expand = areAllCategoriesCollapsed
+    for (const category of toolbarGroup.categories) expandedCategoryIds[category.id] = expand
+  }
+
+  type ScrollMetrics = { top: number; height: number; total: number; hovered: boolean; dragging: boolean }
+  let scrollMetrics = $state<Record<string, ScrollMetrics>>({})
+  const viewports: Record<string, HTMLDivElement | undefined> = {}
+  // Element references are imperative handles; scroll geometry is kept in rune state above.
+  const observeTree = (node: HTMLDivElement, id: string) => {
+    viewports[id] = node
+    scrollMetrics[id] = { top: 0, height: 0, total: 0, hovered: false, dragging: false }
+    const measure = () => {
+      Object.assign(scrollMetrics[id]!, { top: node.scrollTop, height: node.clientHeight, total: node.scrollHeight })
+    }
+    // Side effect: track viewport and content changes for each independent overlay scrollbar.
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    if (node.firstElementChild) observer.observe(node.firstElementChild)
+    node.addEventListener('scroll', measure)
+    measure()
+    return { destroy() { observer.disconnect(); node.removeEventListener('scroll', measure); delete viewports[id] } }
+  }
+  const thumbHeight = (scroll: ScrollMetrics) => Math.min(scroll.height, Math.max(20, scroll.height ** 2 / Math.max(1, scroll.total)))
+  const thumbTop = (scroll: ScrollMetrics) => scroll.top / Math.max(1, scroll.total - scroll.height) * (scroll.height - thumbHeight(scroll))
+  let drag: { kind: 'width' | 'section' | 'scroll'; start: number; size: number; id?: string; previousId?: string; previousSize?: number } | null = null
+  const startResize = (event: PointerEvent, group?: MockGroup) => {
+    const target = event.currentTarget as HTMLButtonElement
+    event.preventDefault()
+    target.setPointerCapture(event.pointerId)
+    if (!group) { drag = { kind: 'width', start: event.clientX, size: sidebarWidth }; return }
+    const expanded = visibleGroups.filter((entry) => entry.expanded)
+    const previous = expanded[expanded.indexOf(group) - 1]
+    if (!previous) return
+    // Snapshot rendered content heights so resizing remains stable after proportional layout.
+    for (const entry of expanded) entry.weight = (viewports[entry.id]?.clientHeight ?? entry.weight - 36) + 36
+    drag = { kind: 'section', start: event.clientY, size: group.weight, id: group.id,
+      previousId: previous.id, previousSize: previous.weight }
+  }
+  const startScroll = (event: PointerEvent, id: string) => {
+    event.preventDefault()
+    const target = event.currentTarget as HTMLDivElement
+    target.setPointerCapture(event.pointerId)
+    drag = { kind: 'scroll', start: event.clientY, size: scrollMetrics[id]!.top, id }
+    scrollMetrics[id]!.dragging = true
+  }
+  const moveDrag = (event: PointerEvent) => {
+    if (!drag) return
+    if (drag.kind === 'width') { sidebarWidth = Math.max(240, Math.min(400, drag.size + event.clientX - drag.start)); return }
+    if (drag.kind === 'scroll' && drag.id) {
+      const scroll = scrollMetrics[drag.id]!
+      const node = viewports[drag.id]
+      if (node) node.scrollTop = drag.size + (event.clientY - drag.start) *
+        (scroll.total - scroll.height) / Math.max(1, scroll.height - thumbHeight(scroll))
+      return
+    }
+    const group = groups.find((entry) => entry.id === drag!.id)!
+    const previous = groups.find((entry) => entry.id === drag!.previousId)!
+    const delta = Math.max(100 - drag.previousSize!, Math.min(drag.size - 100, event.clientY - drag.start))
+    group.weight = drag.size - delta
+    previous.weight = drag.previousSize! + delta
+  }
+  const stopDrag = () => {
+    if (drag?.kind === 'scroll' && drag.id) scrollMetrics[drag.id]!.dragging = false
+    drag = null
   }
 </script>
 
-{#snippet IconAction(
-  Icon: typeof Plus,
-  label: string,
-  onclick: (() => void) | undefined = undefined
-)}
-  <button class="icon-action" type="button" aria-label={label} title={label} {onclick}>
+{#snippet IconAction(Icon: typeof Plus, label: string, onclick: () => void, active = false, disabled = false)}
+  <button class="icon-action" type="button" aria-label={label} title={label} {onclick} {disabled} data-active={active}>
     <Icon size={20} aria-hidden="true" />
   </button>
 {/snippet}
@@ -212,15 +206,19 @@
   </span>
 {/snippet}
 
-{#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean)}
+{#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean, group: MockGroup)}
   <div class="tree-prompt-row" style={`--tree-indent-count:${indentCount};`}>
+    {#key !isOverviewActive && selectedPromptId === promptEntry.id ? navigationGeneration : 0}
+      <span class="prompt-status-indicator" data-status={promptEntry.status} data-edited={promptEntry.edited}
+        data-highlight={!isOverviewActive && selectedPromptId === promptEntry.id && navigationGeneration > 0} aria-hidden="true"></span>
+    {/key}
     <button
       class="tree-prompt-button"
-      data-active={selectedPromptId === promptEntry.id ? 'true' : 'false'}
+      data-active={!isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : 'false'}
       type="button"
-      aria-current={selectedPromptId === promptEntry.id ? 'true' : undefined}
+      aria-current={!isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
       onclick={() => {
-        selectedPromptId = promptEntry.id
+        selectPrompt(promptEntry, group)
       }}
     >
       {@render TreeGutter(indentCount, isLastRow)}
@@ -229,15 +227,19 @@
   </div>
 {/snippet}
 
-{#snippet CategoryRow(category: MockCategory, isLastCategory: boolean)}
+{#snippet CategoryRow(category: MockCategory, group: MockGroup)}
   <div class="tree-category-row">
-    <div class="tree-category-content">
+    <div class="tree-category-content" role="group" data-active={selectedCategoryId === category.id}
+      oncontextmenu={(event) => {
+        event.preventDefault()
+        categoryMenu = { category, group, x: event.clientX, y: event.clientY }
+      }}>
       <button
         class="tree-category-toggle"
         type="button"
         aria-label={`${expandedCategoryIds[category.id] ? 'Collapse' : 'Expand'} category ${category.title}`}
         aria-expanded={expandedCategoryIds[category.id]}
-        onclick={() => setCategoryExpanded(category.id, !expandedCategoryIds[category.id])}
+        onclick={() => { expandedCategoryIds[category.id] = !expandedCategoryIds[category.id] }}
       >
         <span
           class="tree-chevron"
@@ -253,10 +255,11 @@
         <button
           class="tree-category-action"
           type="button"
-          aria-label={`Open category ${category.title}`}
-          title={`Open category ${category.title}`}
+          aria-label={`Add Prompt to top of category ${category.title}`}
+          title={`Add Prompt to top of category ${category.title}`}
+          onclick={() => addPrompt(category, group)}
         >
-          <ArrowRight size={16} aria-hidden="true" />
+          <Plus size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -264,15 +267,19 @@
 
   {#if expandedCategoryIds[category.id]}
     {#each category.prompts as promptEntry, promptIndex (promptEntry.id)}
-      {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1)}
+      {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1, group)}
+    {:else}
+      <button class="empty-category" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add a prompt</button>
     {/each}
-  {:else if isLastCategory}
-    <span class="collapsed-last-category-marker" aria-hidden="true"></span>
   {/if}
 {/snippet}
 
+<svelte:window onclick={closeMenus} onkeydown={(event) => {
+  if (event.key === 'Escape') { folderMenuOpen = false; actionsMenuOpen = false; categoryMenu = null }
+}} />
+
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
-  <aside class="mock-sidebar" aria-label="Cthulhu Prompt sidebar">
+  <aside class="mock-sidebar" style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <header class="workspace-header">
       <div class="workspace-icon-cell">
         <img
@@ -304,96 +311,125 @@
     <div class="separator"></div>
 
     <div class="folder-selector-wrap">
-      <button class="folder-selector" type="button" aria-label="Folder selector">
+      <button class="folder-selector" type="button" aria-label="Folder selector" aria-expanded={folderMenuOpen} onclick={() => { folderMenuOpen = !folderMenuOpen }}>
         <span class="selector-icon-cell"><Folder size={20} aria-hidden="true" /></span>
         <span class="selector-copy">
-          <span class="selector-title">Product Work</span>
+          <span class="selector-title">{folderTitle}</span>
           <span class="selector-detail">
-            <span>20 prompts</span>
+            <span>{folderPromptCount} prompts</span>
             <span class="separator-dot" aria-hidden="true"></span>
             <span>Updated today</span>
           </span>
         </span>
         <span class="selector-chevron"><ChevronDown size={20} aria-hidden="true" /></span>
       </button>
+      {#if folderMenuOpen}
+        <div class="local-menu folder-menu">
+          {#each ['Product Work', 'Personal Projects'] as title (title)}
+            <button type="button" onclick={() => { folderTitle = title; folderMenuOpen = false }}><Folder size={20} /><span>{title}<small>{folderPromptCount} prompts · Updated today</small></span>{#if folderTitle === title}<Check size={16} />{/if}</button>
+          {/each}
+        </div>
+      {/if}
     </div>
 
     <div class="separator"></div>
 
     <div class="prompts-header">
       <div class="prompts-actions">
-        {@render IconAction(Settings, 'Show Folder Overview')}
-        {@render IconAction(Check, 'Show Completed Prompts')}
-        {@render IconAction(
-          ChevronsDownUp,
-          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories',
-          toggleAllCategories
-        )}
-        {@render IconAction(Plus, 'Add Prompt')}
-        {@render IconAction(MoreHorizontal, 'Selected Prompt Folder Actions')}
+        {@render IconAction(ArrowUpToLine, 'Show Folder Overview', () => { isOverviewActive = true; selectedCategoryId = null }, isOverviewActive)}
+        {@render IconAction(Check, 'Show Completed Prompts', () => { showCompleted = !showCompleted; groups[0]!.expanded = true }, showCompleted)}
+        {@render IconAction(Archive, 'Show Archived Prompts', () => { showArchived = !showArchived; groups[1]!.expanded = true }, showArchived)}
+        {@render IconAction(areAllCategoriesCollapsed ? ChevronsUpDown : ChevronsDownUp,
+          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories', toggleAllCategories, false, toolbarGroup.categories.length === 0)}
+        {@render IconAction(FolderPlus, 'Add Category', () => categoryDialog.showModal())}
+        {@render IconAction(MoreHorizontal, 'Selected Prompt Folder Actions', () => { actionsMenuOpen = !actionsMenuOpen }, actionsMenuOpen)}
       </div>
-    </div>
-
-    <div
-      class="prompt-tree-shell"
-      role="presentation"
-      style={`--mock-scrollbar-width:${SCROLLBAR_WIDTH_PX}px;`}
-      onmouseenter={() => {
-        isPromptTreeHovered = true
-      }}
-      onmouseleave={() => {
-        isPromptTreeHovered = false
-      }}
-    >
-      <div
-        class="prompt-tree"
-        bind:this={promptTreeElement}
-        use:observePromptTree
-        onscroll={measurePromptTree}
-      >
-        {#each uncategorizedPrompts as promptEntry, promptIndex (promptEntry.id)}
-          {@render PromptRow(
-            promptEntry,
-            0,
-            promptIndex === uncategorizedPrompts.length - 1
-          )}
-        {/each}
-        {#each categories as category, categoryIndex (category.id)}
-          {@render CategoryRow(category, categoryIndex === categories.length - 1)}
-        {/each}
-        <div class="tree-bottom-spacer" aria-hidden="true"></div>
-      </div>
-
-      <div
-        class="mock-overlay-scrollbar"
-        data-visible={isScrollbarNeeded && (isPromptTreeHovered || isScrollbarDragging)
-          ? 'true'
-          : 'false'}
-        aria-hidden="true"
-      >
-        <div
-          class="mock-scrollbar-track"
-          role="button"
-          tabindex="-1"
-          onpointerdown={handleScrollbarTrackPointerDown}
-        >
-          <div
-            class="mock-scrollbar-thumb"
-            class:active={isScrollbarDragging}
-            role="button"
-            tabindex="-1"
-            style={`height:${scrollbarThumbHeightPx}px; transform:translate3d(0, ${scrollbarThumbTopPx}px, 0);`}
-            onpointerdown={handleScrollbarThumbPointerDown}
-            onpointermove={handleScrollbarThumbPointerMove}
-            onpointerup={handleScrollbarThumbPointerUp}
-            onpointercancel={handleScrollbarThumbPointerUp}
-          ></div>
+      {#if actionsMenuOpen}
+        <div class="local-menu actions-menu">
+          <button type="button" onclick={() => { folderTitle = 'No prompt folder selected'; groups.forEach((group) => { group.prompts = []; group.categories = [] }); actionsMenuOpen = false }}><Trash2 size={16} />Delete Prompt Folder</button>
         </div>
-      </div>
+      {/if}
     </div>
 
-    <div class="resize-handle" aria-hidden="true"></div>
+    <div class="status-accordion">
+      {#each visibleGroups as group (group.id)}
+        <section class="status-section" data-testid={`mock-status-section-${group.id}`} data-expanded={group.expanded}
+          style={`flex:${group.expanded ? `${group.weight} 1 0px` : '0 0 36px'};`}>
+          {#if group.expanded && visibleGroups.slice(0, visibleGroups.indexOf(group)).some((entry) => entry.expanded)}
+            <button type="button" class="section-sash" aria-label={`Resize ${group.label} section`} tabindex="-1"
+              onpointerdown={(event) => startResize(event, group)} onpointermove={moveDrag}
+              onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></button>
+          {/if}
+          <button class="status-header" type="button" aria-expanded={group.expanded}
+            onclick={() => { group.expanded = !group.expanded }}>
+            <span class="status-chevron"><ChevronRight size={20} /></span>
+            <group.icon size={16} />
+            <span class="status-label">{group.label.toUpperCase()}</span>
+            <span class="status-count">{groupCount(group)}</span>
+          </button>
+          {#if group.expanded}
+            <div class="prompt-tree-shell" role="presentation"
+              onmouseenter={() => { if (scrollMetrics[group.id]) scrollMetrics[group.id]!.hovered = true }}
+              onmouseleave={() => { if (scrollMetrics[group.id]) scrollMetrics[group.id]!.hovered = false }}>
+              <div class="prompt-tree" use:observeTree={group.id}>
+                <div>
+                  {#each group.prompts as entry, index (entry.id)}
+                    {@render PromptRow(entry, 0, index === group.prompts.length - 1, group)}
+                  {/each}
+                  {#each group.categories as category (category.id)}
+                    {@render CategoryRow(category, group)}
+                  {/each}
+                  {#if groupCount(group) === 0 && group.categories.length === 0}
+                    <button class="empty-status" type="button" onclick={() => { selectedGroupId = group.id }}>No {group.label.toLowerCase()} prompts. Click to view.</button>
+                  {/if}
+                  <div class="tree-bottom-spacer" aria-hidden="true"></div>
+                </div>
+              </div>
+              {#if scrollMetrics[group.id]}
+                {@const scroll = scrollMetrics[group.id]!}
+                <div class="mock-overlay-scrollbar" data-visible={scroll.total > scroll.height && (scroll.hovered || scroll.dragging) ? 'true' : 'false'} aria-hidden="true">
+                  <div class="mock-scrollbar-track" role="button" tabindex="-1"
+                    onpointerdown={(event) => {
+                      if (event.target !== event.currentTarget) return
+                      const node = viewports[group.id]
+                      if (node) node.scrollTop = (event.clientY - event.currentTarget.getBoundingClientRect().top - thumbHeight(scroll) / 2) / Math.max(1, scroll.height - thumbHeight(scroll)) * (scroll.total - scroll.height)
+                    }}>
+                    <div class="mock-scrollbar-thumb" class:active={scroll.dragging} role="button" tabindex="-1"
+                      style={`height:${thumbHeight(scroll)}px; transform:translateY(${thumbTop(scroll)}px);`}
+                      onpointerdown={(event) => startScroll(event, group.id)} onpointermove={moveDrag}
+                      onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></div>
+                  </div>
+                </div>
+              {/if}
+            </div>
+          {/if}
+        </section>
+      {/each}
+    </div>
+    <button class="resize-handle" type="button" aria-label="Resize sidebar" tabindex="-1"
+      onpointerdown={(event) => startResize(event)} onpointermove={moveDrag}
+      onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></button>
   </aside>
+  {#if categoryMenu}
+    <div class="local-menu category-menu" style={`left:${categoryMenu.x}px; top:${categoryMenu.y}px;`}>
+      {#each [{ label: 'Open Category', icon: ArrowRight }, { label: 'Open Category Settings', icon: Settings }] as action (action.label)}
+        <button type="button" onclick={() => {
+          selectedCategoryId = categoryMenu!.category.id
+          selectedGroupId = categoryMenu!.group.id
+          selectedPromptId = ''
+          isOverviewActive = false
+          categoryMenu = null
+        }}><action.icon size={16} />{action.label}</button>
+      {/each}
+    </div>
+  {/if}
+  <dialog bind:this={categoryDialog} class="category-dialog">
+    <form onsubmit={(event) => { event.preventDefault(); addCategory() }}>
+      <h2>Create Category</h2>
+      <label>Category name<input bind:value={categoryName} required /></label>
+      <div><button type="button" onclick={() => categoryDialog.close()}>Cancel</button><button type="submit">Create Category</button></div>
+    </form>
+  </dialog>
 </main>
 
 <style>
@@ -401,19 +437,24 @@
     box-sizing: border-box;
     display: flex;
     height: 100%;
-    min-height: 640px;
+    min-height: 0;
     min-width: 0;
     width: 100%;
   }
 
+  .sidebar-base-stage {
+    --cthulhu-ui-radius-card: 8px;
+    --cthulhu-ui-radius-control: 6px;
+  }
+
   .mock-sidebar {
-    background: var(--app-chrome-surface);
+    background: var(--ui-chrome-normal-surface);
     border-right: 1px solid var(--ui-neutral-hover-border);
     border-top: 1px solid var(--ui-neutral-hover-border);
     box-sizing: border-box;
     color: var(--ui-hoverable-text);
     display: flex;
-    flex: 0 0 275px;
+    flex: 0 0 var(--sidebar-width);
     flex-direction: column;
     font-family: Aptos, 'Segoe UI Variable', 'Segoe UI', sans-serif;
     height: 100%;
@@ -421,7 +462,7 @@
     min-height: 0;
     position: relative;
     user-select: none;
-    width: 275px;
+    width: var(--sidebar-width);
   }
 
   button {
@@ -654,6 +695,11 @@
     width: 100%;
   }
 
+  .tree-prompt-row {
+    position: relative;
+  }
+
+
   .tree-prompt-button {
     align-items: center;
     background: transparent;
@@ -697,6 +743,16 @@
     width: 100%;
   }
 
+  .tree-category-content[data-active='true'] {
+    background: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .local-menu.category-menu {
+    position: fixed;
+    width: 196px;
+  }
+
   .tree-category-toggle {
     align-items: center;
     background: transparent;
@@ -709,7 +765,7 @@
     height: 100%;
     inset: 0;
     min-width: 0;
-    padding: 0 12px 0 9px;
+    padding: 0 12px 0 6px;
     position: absolute;
     text-align: left;
     width: 100%;
@@ -814,10 +870,6 @@
     opacity: 1;
   }
 
-  .collapsed-last-category-marker {
-    display: none;
-  }
-
   .mock-overlay-scrollbar {
     bottom: 0;
     display: flex;
@@ -828,7 +880,7 @@
     top: 0;
     transition: opacity 800ms linear;
     user-select: none;
-    width: var(--mock-scrollbar-width);
+    width: 10px;
   }
 
   .mock-overlay-scrollbar[data-visible='true'] {
@@ -846,7 +898,7 @@
   }
 
   .mock-scrollbar-thumb {
-    background: rgba(121, 121, 121, 0.4);
+    background: var(--ui-neutral-emphasis-border);
     left: 0;
     position: absolute;
     right: 0;
@@ -854,11 +906,11 @@
   }
 
   .mock-scrollbar-thumb:hover {
-    background: rgba(100, 100, 100, 0.7);
+    background: var(--ui-neutral-hover-border);
   }
 
   .mock-scrollbar-thumb.active {
-    background: rgba(191, 191, 191, 0.4);
+    background: var(--ui-secondary-icon-glyph);
   }
 
   .tree-bottom-spacer {
@@ -866,6 +918,10 @@
   }
 
   .resize-handle {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    touch-action: none;
     bottom: 0;
     cursor: ew-resize;
     position: absolute;
@@ -874,4 +930,246 @@
     width: 6px;
     z-index: 2;
   }
+  .status-accordion {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .status-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 100px;
+    position: relative;
+  }
+
+  .status-section[data-expanded='false'] {
+    min-height: 36px;
+  }
+
+  .status-header {
+    display: grid;
+    grid-template-columns: 24px 18px minmax(0, 1fr) auto;
+    gap: 7px;
+    align-items: center;
+    flex: 0 0 36px;
+    height: 36px;
+    width: 100%;
+    padding: 0 12px 0 6px;
+    border: 0;
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    background: var(--ui-ghost-surface);
+    color: var(--ui-muted-text);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .status-chevron {
+    display: flex;
+    justify-content: center;
+    color: var(--ui-muted-icon-glyph);
+  }
+
+  .status-section[data-expanded='true'] .status-chevron {
+    transform: rotate(90deg);
+  }
+
+  .status-header :global(svg) {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .status-header:hover, .status-header:focus-visible, .status-header:hover :global(svg) {
+    color: var(--ui-normal-text);
+  }
+
+  .status-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .status-count {
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .section-sash {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    cursor: ns-resize;
+    touch-action: none;
+    z-index: 3;
+  }
+
+  .section-sash:active, .resize-handle:active {
+    background: var(--ui-info-strong-border);
+  }
+
+  .icon-action[data-active='true'] {
+    background: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .icon-action:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .prompt-status-indicator {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 2px;
+    pointer-events: none;
+    z-index: 1;
+    --status-color: transparent;
+    background: var(--status-color);
+  }
+
+  .prompt-status-indicator[data-edited='true'] {
+    --status-color: var(--ui-info-strong-border);
+  }
+
+  .prompt-status-indicator[data-status='InProgress'] {
+    --status-color: var(--ui-warning-icon-glyph);
+  }
+
+  .prompt-status-indicator[data-status='Completed'] {
+    --status-color: var(--ui-success-normal-text);
+  }
+
+  .prompt-status-indicator[data-status='Archived'] {
+    --status-color: var(--ui-secondary-icon-glyph);
+  }
+
+  .prompt-status-indicator[data-highlight='true'] {
+    animation: navigation-highlight 670ms linear;
+  }
+
+  @keyframes navigation-highlight { 0%, 100% { background: var(--status-color); } 7.4627%, 82.0896% { background: var(--ui-accent-strong-border); } }
+  .empty-category, .empty-status {
+    display: block;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--ui-secondary-text);
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .empty-category {
+    height: 24px;
+    padding: 0 12px 0 24px;
+    font-size: 12px;
+  }
+
+  .empty-status {
+    height: 32px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+
+  .empty-category:hover, .empty-status:hover {
+    color: var(--ui-normal-text);
+  }
+
+  .folder-selector-wrap, .prompts-header {
+    position: relative;
+  }
+
+  .local-menu {
+    position: absolute;
+    z-index: 20;
+    padding: 4px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 8px;
+    background: var(--ui-neutral-field-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .folder-menu {
+    top: 100%;
+    left: 8px;
+    right: 8px;
+  }
+
+  .actions-menu {
+    top: 100%;
+    right: 8px;
+    width: 204px;
+  }
+
+  .local-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px;
+    background: transparent;
+    color: inherit;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .local-menu button:hover {
+    background: var(--ui-neutral-normal-surface);
+  }
+
+  .local-menu small {
+    display: block;
+    font-size: 12px;
+  }
+
+  .category-dialog {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 8px;
+    padding: 24px;
+    background: var(--ui-neutral-field-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .category-dialog h2 {
+    margin: 0 0 16px;
+    font-size: 18px;
+  }
+
+  .category-dialog input {
+    display: block;
+    margin: 8px 0 20px;
+    padding: 8px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    background: var(--ui-ghost-surface);
+    color: inherit;
+  }
+
+  .category-dialog form > div {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .category-dialog button {
+    padding: 8px 12px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 6px;
+    background: var(--ui-neutral-action-fill);
+    color: inherit;
+    cursor: pointer;
+  }
+
 </style>
