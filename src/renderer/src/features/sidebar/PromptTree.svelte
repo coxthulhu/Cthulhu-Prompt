@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { emptyItemsLabel, createFirstItemMessage } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { Loader } from 'lucide-svelte'
   import {
@@ -834,7 +835,7 @@
       Loading folders...
     </div>
   {:else if folderListState === 'empty'}
-    <div class="sidebarPromptTreeStatus px-2 text-xs">Create a Folder to Get Started</div>
+    <div class="sidebarPromptTreeStatus px-2 text-xs">Create a folder to get started.</div>
   {:else if folderListState === 'ready'}
     {#if screenRootFolder?.kind === 'prompt' && isSelectedStatusTreeEmpty}
       <PromptDropTarget
@@ -856,7 +857,7 @@
             onclick={handleEmptyStatusSelect}
           >
             <span class="sidebarPromptTreeEmptyStatusLabel">
-              No {statusGroup.label.toLowerCase()} prompts. Click to view.
+              {emptyItemsLabel('prompt', statusGroup.label)}. Click to view.
             </span>
           </button>
           {#if isOver && edge}
@@ -1009,8 +1010,8 @@
         class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
         data-testid={`prompt-tree-${testIdGroup}-empty-state`}
       >
-        <p class="sidebarPromptTreeEmptyTitle">No templates found in this folder.</p>
-        <p class="mt-2">Click the Add Template button to create your first template.</p>
+        <p class="sidebarPromptTreeEmptyTitle">{emptyItemsLabel('template')}</p>
+        <p class="mt-2">{createFirstItemMessage('template')}</p>
       </div>
       {#if isOver && edge}
         <DropIndicator

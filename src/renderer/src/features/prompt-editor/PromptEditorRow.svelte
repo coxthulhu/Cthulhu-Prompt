@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { TEMPLATE_NOT_SELECTED_LABEL } from '@renderer/common/emptyStateText'
   import type { ComponentProps } from 'svelte'
   import {
     setPromptText,
@@ -31,7 +32,7 @@
   {promptId}
   contentKind="prompt"
   contentLabel="prompt"
-  metadataFolderLabel={props.promptDraftRecord.templateName ?? 'Not Selected'}
+  metadataFolderLabel={props.promptDraftRecord.templateName ?? TEMPLATE_NOT_SELECTED_LABEL}
   metadataFolderState={props.promptDraftRecord.templateState ?? 'not-selected'}
   onTitleChange={(title) => setPromptTitle(promptId, title)}
   onTextChange={(text, measurement) => setPromptText(promptId, text, measurement)}

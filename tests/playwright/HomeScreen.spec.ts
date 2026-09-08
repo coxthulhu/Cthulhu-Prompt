@@ -19,7 +19,7 @@ describe('Home Screen', () => {
     await expect(mainWindow.locator('[data-testid="create-workspace-button"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="sidebar-workspace-subtitle"]')).toHaveText(
-      'Select a Workspace to Get Started'
+      'Select a workspace to get started.'
     )
     await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCount(0)
 

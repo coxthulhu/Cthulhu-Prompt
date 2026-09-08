@@ -60,7 +60,7 @@
       </div>
     {:else}
       <div class="mockups-empty">
-        <h2>No mockups found</h2>
+        <h2>No mockups</h2>
         <p>
           Create a self-contained <code>*.mockup.svelte</code> entry under
           <code>features/mockups/entries</code>.

@@ -229,13 +229,13 @@ describe('Prompt template selection', () => {
       promptEditorSelector('multi-template-prompt')
     )
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'Not Selected'
+      'Not selected'
     )
     await expect(stalePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'No Template'
+      'No template'
     )
     await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'No Template'
+      'No template'
     )
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Second Root Template + 2 More'
@@ -462,7 +462,7 @@ describe('Prompt template selection', () => {
     await dialog.locator('[data-testid="prompt-template-option-none"]').click()
     await expect(dialog).toBeVisible()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No Template')
+    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No template')
     await expectTemplateIndicator(promptEditor, 'no-template', '--ui-muted-text')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
@@ -580,7 +580,7 @@ describe('Prompt template selection', () => {
       promptEditorSelector('multi-template-prompt')
     )
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'Not Selected'
+      'Not selected'
     )
     await expect(promptEditor.locator('[data-testid="prompt-copy-button"]')).toHaveCount(0)
     await expect(
@@ -612,7 +612,7 @@ describe('Prompt template selection', () => {
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
       .toBe('Copy without a template.')
     await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
-      'No Template'
+      'No template'
     )
     await expect(
       noTemplatePromptEditor.locator('[data-testid="prompt-template-and-copy-button"]')

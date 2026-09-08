@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { NO_TEMPLATE_LABEL } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteSet } from 'svelte/reactivity'
   import { Ban, Check, Copy, FolderOpen, Layers } from 'lucide-svelte'
@@ -394,7 +395,7 @@
       >
         <span class="prompt-template-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
         <span class="prompt-template-no-template-copy">
-          <strong>No Template</strong>
+          <strong>{NO_TEMPLATE_LABEL}</strong>
           <small>Use the prompt exactly as written</small>
         </span>
         <span

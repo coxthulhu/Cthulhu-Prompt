@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { NO_TEMPLATE_LABEL, TEMPLATE_NOT_SELECTED_LABEL } from '@renderer/common/emptyStateText'
   import type { ComponentType } from 'svelte'
   import { onDestroy } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
@@ -123,9 +124,9 @@
     templateIds:
       templateLabel === 'Draft Implementation Plan' ? ['draft-implementation-plan'] : [],
     templateState:
-      templateLabel === 'Not Selected'
+      templateLabel === TEMPLATE_NOT_SELECTED_LABEL
         ? 'not-selected'
-        : templateLabel === 'No Template'
+        : templateLabel === NO_TEMPLATE_LABEL
           ? 'no-template'
           : 'selected',
     text
@@ -210,7 +211,7 @@
 
     if (templateDialogMode === 'select-and-copy') {
       templateDialogPrompt.templateIds = template ? [template.id] : []
-      templateDialogPrompt.templateLabel = template?.title ?? 'No Template'
+      templateDialogPrompt.templateLabel = template?.title ?? NO_TEMPLATE_LABEL
       templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
       closeTemplateDialog()
       return
@@ -234,7 +235,7 @@
     templateDialogPrompt.templateIds = selectedTemplates.map((template) => template.id)
     templateDialogPrompt.templateLabel = selectedTemplates.length
       ? selectedTemplates.map((template) => template.title).join(', ')
-      : 'No Template'
+      : NO_TEMPLATE_LABEL
     templateDialogPrompt.templateState = selectedTemplates.length ? 'selected' : 'no-template'
     closeTemplateDialog()
   }
@@ -249,7 +250,7 @@
       'base-discovery',
       'Map the current implementation',
       'base-root',
-      'Not Selected',
+      TEMPLATE_NOT_SELECTED_LABEL,
       [
         'Inspect the existing implementation and summarize the relevant components, data flow, and tests.',
         '',
@@ -261,7 +262,7 @@
       'base-requirements',
       'Turn notes into requirements',
       'base-root',
-      'No Template',
+      NO_TEMPLATE_LABEL,
       [
         'Convert the supplied product notes into a concise implementation checklist.',
         '',
@@ -283,7 +284,7 @@
       'base-review',
       'Review the completed change',
       'base-root',
-      'No Template',
+      NO_TEMPLATE_LABEL,
       [
         'Review the completed change for user-visible regressions, missing edge cases, and unnecessary complexity.',
         '',
@@ -294,7 +295,7 @@
       'base-docs',
       'Update developer documentation',
       'base-root',
-      'No Template',
+      NO_TEMPLATE_LABEL,
       [
         'Update the relevant developer documentation to match the implemented behavior.',
         '',
@@ -305,7 +306,7 @@
       'base-handoff',
       'Prepare the final handoff',
       'base-root',
-      'No Template',
+      NO_TEMPLATE_LABEL,
       [
         'Prepare a short handoff with the outcome, changed files, and verification results.',
         '',
@@ -327,7 +328,7 @@
           'base-build',
           'Implement the approved change',
           'base-implementation',
-          'No Template',
+          NO_TEMPLATE_LABEL,
           [
             'Implement the approved change using the existing architecture and shared UI components.',
             '',
@@ -349,7 +350,7 @@
               'base-regression',
               'Add focused regression coverage',
               'base-verification',
-              'No Template',
+              NO_TEMPLATE_LABEL,
               [
                 'Add focused regression coverage for the behavior changed in this task.',
                 '',
@@ -996,7 +997,7 @@
           >
             <span class="base-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
             <span class="base-no-template-copy">
-              <strong>No Template</strong>
+              <strong>{NO_TEMPLATE_LABEL}</strong>
               <small>Use the prompt exactly as written</small>
             </span>
             <span

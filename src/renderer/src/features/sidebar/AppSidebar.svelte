@@ -492,8 +492,8 @@
   const workspaceDisplay = $derived.by(() => {
     if (!workspacePath) {
       return {
-        title: 'No Workspace Selected',
-        path: 'Select a Workspace to Get Started'
+        title: 'No workspace selected',
+        path: 'Select a workspace to get started.'
       }
     }
 

@@ -1,3 +1,4 @@
+import { NO_TEMPLATE_LABEL, TEMPLATE_NOT_SELECTED_LABEL } from '@renderer/common/emptyStateText'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
 import {
@@ -258,9 +259,9 @@ export const createPromptFolderScreenController = ({
                 ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
                 templateName:
                   prompt.templates === undefined
-                    ? 'Not Selected'
+                    ? TEMPLATE_NOT_SELECTED_LABEL
                     : templateName === undefined
-                      ? 'No Template'
+                      ? NO_TEMPLATE_LABEL
                       : templateNames.length > 1
                         ? `${templateName} + ${templateNames.length - 1} More`
                         : templateName,

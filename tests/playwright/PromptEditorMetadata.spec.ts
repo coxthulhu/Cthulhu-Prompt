@@ -33,7 +33,7 @@ describe('Prompt editor metadata', () => {
     const templateItem = mainWindow.locator(
       `${EMPTY_PROMPT_EDITOR} .prompt-editor-metadata-folder`
     )
-    await expect(templateItem).toHaveText('Not Selected')
+    await expect(templateItem).toHaveText('Not selected')
     const initialWindowWidth = await mainWindow.evaluate(() => window.innerWidth)
     const initialWidth = await templateItem.evaluate(
       (element) => element.getBoundingClientRect().width
@@ -83,7 +83,7 @@ describe('Prompt editor metadata', () => {
     await expect(modifiedTime).toHaveAttribute('title', /.+/)
     await expect(
       mainWindow.locator(`${EMPTY_PROMPT_EDITOR} .prompt-editor-metadata-row`)
-    ).toHaveText(/Not Selected.*Updated today.*0 tokens/)
+    ).toHaveText(/Not selected.*Updated today.*0 tokens/)
   })
 
   test('refreshes the modified time immediately after title and body edits', async ({

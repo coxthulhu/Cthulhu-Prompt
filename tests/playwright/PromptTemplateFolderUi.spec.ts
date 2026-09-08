@@ -635,10 +635,10 @@ describe('Prompt template folder UI', () => {
       0
     )
     await expect(mainWindow.locator('[data-testid="prompt-tree-template-empty-state"]')).toContainText(
-      'No templates found in this folder.'
+      'No templates'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-virtual-window"]')).toContainText(
-      'No templates found in this folder.'
+      'No templates in this folder.'
     )
     await expect(mainWindow.locator('[data-testid="prompt-divider-add-initial"]')).toHaveText(
       'Add Template'

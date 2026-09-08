@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { emptyFolderMessage, createFirstItemMessage } from '@renderer/common/emptyStateText'
   import {
     type PromptFolder,
     type PromptFolderContentKind
@@ -849,16 +850,18 @@
     contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
   >
     <p>
-      {isFinalMode
-        ? `No ${finalModeDefinition!.label.toLowerCase()} prompts were found in this folder.`
-        : isTemplateFolder
-          ? 'No templates found in this folder.'
-          : `No ${PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label.toLowerCase()} prompts were found in this folder.`}
+      {emptyFolderMessage(
+        contentKind,
+        isFinalMode
+          ? finalModeDefinition!.label
+          : isTemplateFolder
+            ? undefined
+            : PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label
+      )}
     </p>
     {#if !isFinalMode}
       <p class="text-sm mt-2">
-        Click the Add {isTemplateFolder ? 'Template' : 'Prompt'} button to create your first
-        {isTemplateFolder ? 'template' : 'prompt'}.
+        {createFirstItemMessage(contentKind)}
       </p>
     {/if}
   </PromptFolderSectionRow>
