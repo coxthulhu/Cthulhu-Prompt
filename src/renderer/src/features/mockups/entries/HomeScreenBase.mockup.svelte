@@ -228,7 +228,7 @@
                 {#snippet githubAction()}
                   <a class="action-button" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Open Github <ExternalLink size={16} aria-hidden="true" /></a>
                 {/snippet}
-                {@render row(Bug, 'Report an Issue', 'Report bugs or request improvements!', githubAction)}
+                {@render row(Bug, 'Report an Issue', 'Report bugs or request features!', githubAction)}
               {/if}
             </div>
           </div>

@@ -234,7 +234,7 @@
               <DisplayRow
                 icon={Bug}
                 label="Report an Issue"
-                detail="Report bugs or request improvements!"
+                detail="Report bugs or request features!"
               >
                 {#snippet trailing()}
                   <LinkButton
