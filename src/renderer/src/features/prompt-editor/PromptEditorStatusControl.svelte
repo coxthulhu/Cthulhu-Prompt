@@ -31,6 +31,7 @@
     items={settableStatusItems}
     selectedItem={selectedStatusItem}
     showIcon
+    menuWidth="260px"
     menuTestId="prompt-status-more-options-menu"
     testId="prompt-status-pill"
     moreOptionsTestId="prompt-status-more-options-button"
