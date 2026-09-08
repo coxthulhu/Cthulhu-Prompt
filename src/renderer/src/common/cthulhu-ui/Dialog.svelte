@@ -5,9 +5,11 @@
   import Button, { type ButtonVariant } from './Button.svelte'
   import CardSurface from './CardSurface.svelte'
   import IconButton from './IconButton.svelte'
+  import IconCell from './IconCell.svelte'
   import Separator from './Separator.svelte'
   import Subtitle from './Subtitle.svelte'
   import Title from './Title.svelte'
+  import TitleSubtitleStack from './TitleSubtitleStack.svelte'
   import { mergeClasses } from './mergeClasses'
 
   type Props = {
@@ -140,15 +142,13 @@
         data-has-subtitle={subtitle ? 'true' : 'false'}
       >
         <div class="cthulhuUiDialogHeading">
-          <div class="cthulhuUiDialogIcon" data-testid="dialog-header-icon">
-            <Icon size={24} aria-hidden="true" />
-          </div>
-          <div class="cthulhuUiDialogHeadingText">
+          <IconCell icon={Icon} size="title" data-testid="dialog-header-icon" />
+          <TitleSubtitleStack>
             <Title {title} variant="dialog" />
             {#if subtitle}
               <Subtitle text={subtitle} data-testid="dialog-subtitle" />
             {/if}
-          </div>
+          </TitleSubtitleStack>
         </div>
 
         {#if showCloseButton}
@@ -242,20 +242,6 @@
     align-items: center;
     display: flex;
     gap: 12px;
-    min-width: 0;
-  }
-
-  .cthulhuUiDialogIcon {
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: flex;
-    flex: 0 0 38px;
-    height: 38px;
-    justify-content: center;
-    width: 38px;
-  }
-
-  .cthulhuUiDialogHeadingText {
     min-width: 0;
   }
 

@@ -3,6 +3,7 @@
   import { mergeClasses } from './mergeClasses'
   import IconCell from './IconCell.svelte'
   import Subtitle from './Subtitle.svelte'
+  import TitleSubtitleStack from './TitleSubtitleStack.svelte'
 
   export type RowTrailingLayout = 'single' | 'grouped'
 
@@ -45,7 +46,7 @@
 >
   <IconCell icon={Icon} {iconClass} />
 
-  <span class="cthulhuUiRowTextStack">
+  <TitleSubtitleStack>
     <span class="cthulhuUiRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>
     <Subtitle text={detail} wrap={wrapDetail} />
     {#if detailExtra}
@@ -53,7 +54,7 @@
         {@render detailExtra()}
       </span>
     {/if}
-  </span>
+  </TitleSubtitleStack>
 
   {#if trailing}
     <span class="cthulhuUiRowTrailing">
@@ -70,17 +71,10 @@
     column-gap: 12px;
     display: flex;
     min-width: 0;
-    padding: 14px;
+    padding: 16px;
     row-gap: 8px;
     text-align: left;
     width: 100%;
-  }
-
-  .cthulhuUiRowTextStack {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    min-width: 0;
   }
 
   .cthulhuUiRowText {
