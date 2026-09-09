@@ -42,6 +42,7 @@ When adding a new major application component or screen, add it to this list wit
 - We are only developing support for Windows. Never develop support for other operating systems.
 - Do not run prettier or a format command unless explicitly asked.
 - When building playwright tests and validating positions, use either 1px or 2px tolerances, not more.
+- Do not add tests for mockups.
 
 ## Project Structure & Module Organization
 
