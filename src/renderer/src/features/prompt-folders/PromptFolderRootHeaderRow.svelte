@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { Folder, FolderPlus, Layers, Pencil, Trash2 } from 'lucide-svelte'
+  import { FileText, FolderPlus, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import { promptStatusGroups } from './promptStatusGroups'
   import type { PromptStatusFolderId } from '@shared/Prompt'
@@ -49,7 +49,7 @@
           <Layers size={14} aria-hidden="true" />
           <span>Prompt Template Folder</span>
         {:else}
-          <Folder size={14} aria-hidden="true" />
+          <FileText size={14} aria-hidden="true" />
           <span>Prompt Folder</span>
         {/if}
       </div>
