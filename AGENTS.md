@@ -25,6 +25,7 @@ When adding a new major application component or screen, add it to this list wit
 
 ## Coding Guidelines
 
+- Use Tailwind font size and line height classes exclusively unless specifically instructed otherwise.
 - This is the only repository that uses any of this code, so you do not need to maintain backwards compability.
 - Backwards compatibility is not required when refactoring.
 - When adding Svelte lifecycle or reactivity (e.g., `onMount`, `onDestroy`, `tick`, reactive statements), include a short comment explaining its side effect/purpose; in Svelte 5 prefer runes/reactivity and avoid `beforeUpdate`/`afterUpdate`.
