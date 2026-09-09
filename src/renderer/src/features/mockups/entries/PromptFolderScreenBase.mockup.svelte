@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import { onDestroy } from 'svelte'
-  import { SvelteSet } from 'svelte/reactivity'
+  import { onDestroy, untrack } from 'svelte'
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import {
     AlertCircle,
     Ban,
@@ -12,6 +12,7 @@
     ChevronRight,
     ChevronUp,
     CircleDashed,
+    ClipboardCheck,
     Copy,
     FileText,
     Folder,
@@ -30,8 +31,11 @@
     X
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
+  import { estimateTokenCount } from 'tokenx'
 
-  // Deliberately local: this visual sandbox only shares Svelte, icons, Monaco, and palette tokens.
+  // Standalone snapshot of the prompt-folder screen: all fixtures, controls, and mutations live here.
+  // Only third-party Svelte/icons/Monaco/token counting and the host's palette/theme are shared.
+  // Editor sizing below intentionally uses application defaults, independent of persisted settings.
   const NO_TEMPLATE_LABEL = 'No template'
   const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
 
@@ -124,6 +128,7 @@
     folderId: string
     templateLabel: string
     modifiedLabel: string
+    finalizedAt: number | null
     status: MockPromptStatus
     templateIds: string[]
     templateState: 'not-selected' | 'no-template' | 'selected'
@@ -132,6 +137,7 @@
   type MockTemplate = {
     id: string
     title: string
+    text?: string
   }
 
   type MockTemplateFolder = {
@@ -181,6 +187,7 @@
     folderId,
     templateLabel,
     modifiedLabel: 'Updated today',
+    finalizedAt: status === 'Completed' || status === 'Archived' ? Date.now() : null,
     status,
     templateIds:
       templateLabel === 'Draft Implementation Plan' ? ['draft-implementation-plan'] : [],
@@ -199,7 +206,7 @@
       title: 'Product Templates',
       templates: [
         { id: 'turn-notes-into-requirements', title: 'Turn Notes into Requirements' },
-        { id: 'draft-implementation-plan', title: 'Draft Implementation Plan' }
+        { id: 'draft-implementation-plan', title: 'Draft Implementation Plan', text: 'Create a repository-grounded implementation plan.\n\n[[PROMPT_TEXT]]\n\nInclude focused validation for each step.' }
       ],
       children: [
         {
@@ -299,7 +306,6 @@
       ? selectedTemplates.map((template) => template.title).join(', ')
       : NO_TEMPLATE_LABEL
     templateDialogPrompt.templateState = selectedTemplates.length ? 'selected' : 'no-template'
-    if (templateDialogPrompt.status === 'Todo') templateDialogPrompt.status = MockPromptStatus.InProgress
     closeTemplateDialog()
   }
 
@@ -405,8 +411,16 @@
       id: 'base-verification',
       title: 'Verification',
       settings: createSettings('base-verification', 'Prompts for validating product behavior.'),
-      prompts: [createPrompt('base-regression', 'Add focused regression coverage',
-        'base-verification', NO_TEMPLATE_LABEL, 'Assert the visible user flow before implementation details.')]
+      prompts: [
+        createPrompt('base-regression', 'Add focused regression coverage',
+          'base-verification', NO_TEMPLATE_LABEL, 'Assert the visible user flow before implementation details.'),
+        createPrompt('base-backlog', 'Explore follow-up improvements',
+          'base-verification', TEMPLATE_NOT_SELECTED_LABEL, 'Collect follow-up ideas after validating the current change.', MockPromptStatus.Backlog),
+        createPrompt('base-completed', 'Verify the release checklist',
+          'base-verification', NO_TEMPLATE_LABEL, 'Confirm the release checklist matches the delivered behavior.', MockPromptStatus.Completed),
+        createPrompt('base-archived', 'Retire the earlier approach',
+          'base-verification', NO_TEMPLATE_LABEL, 'Keep the earlier design notes available for reference.', MockPromptStatus.Archived)
+      ]
     }
   ])
 
@@ -418,20 +432,101 @@
   let findOpen = $state(false)
   let findQuery = $state('')
   let findIndex = $state(0)
+  let findInput = $state<HTMLTextAreaElement | null>(null)
+  let viewport = $state<HTMLDivElement | null>(null)
+  let viewportHeight = $state(0)
+  let breadcrumbCategoryId = $state<string | null>(null)
+  let copiedPromptId = $state<string | null>(null)
+  let copyResetTimer: number | undefined
+  const mountedEditors = new SvelteMap<string, monaco.editor.IStandaloneCodeEditor>()
   const isFinalMode = $derived(screenMode === 'Completed' || screenMode === 'Archived')
   const allPrompts = $derived([...rootPrompts, ...subfolders.flatMap((folder) => folder.prompts)])
   const matchesGroup = (prompt: MockPrompt, group = screenMode) => group === 'Active'
     ? prompt.status === MockPromptStatus.Todo || prompt.status === MockPromptStatus.InProgress
     : prompt.status === group
-  const findMatches = $derived(allPrompts.filter((prompt) => matchesGroup(prompt) && findQuery.length > 0 &&
-    `${prompt.title}\n${prompt.text}`.toLowerCase().includes(findQuery.toLowerCase())))
+  const finalizedPrompts = $derived(allPrompts.filter((prompt) => matchesGroup(prompt))
+    .sort((left, right) => (right.finalizedAt ?? 0) - (left.finalizedAt ?? 0)))
+  const breadcrumbCategory = $derived(isFinalMode ? null : subfolders.find((folder) => folder.id === breadcrumbCategoryId))
+  // Derived search sections follow the visible screen order, including collapsed category descriptions.
+  const findSections = $derived.by(() => {
+    const promptSections = (prompts: MockPrompt[]) => prompts.flatMap((prompt) => [
+      { id: prompt.id, folderId: prompt.folderId, field: 'title', text: prompt.title },
+      { id: prompt.id, folderId: prompt.folderId, field: 'text', text: prompt.text }
+    ])
+    return isFinalMode ? promptSections(finalizedPrompts) : [
+      ...promptSections(visiblePrompts(rootPrompts)),
+      ...subfolders.flatMap((folder) => [
+        ...folder.settings.filter((setting) => setting.isPresent).map((setting) => ({
+          id: setting.id, folderId: folder.id, field: 'text', text: setting.text
+        })),
+        ...promptSections(visiblePrompts(folder.prompts))
+      ])
+    ]
+  })
+  const findMatches = $derived.by(() => {
+    if (!findQuery) return []
+    const query = findQuery.toLowerCase()
+    return findSections.flatMap((section) => {
+      const matches: (typeof section & { offset: number })[] = []
+      const text = section.text.toLowerCase()
+      for (let offset = text.indexOf(query); offset !== -1; offset = text.indexOf(query, offset + query.length)) {
+        matches.push({ ...section, offset })
+      }
+      return matches
+    })
+  })
   const revealFindMatch = (direction: number) => {
     if (!findMatches.length) return
     findIndex = (findIndex + direction + findMatches.length) % findMatches.length
-    const prompt = findMatches[findIndex]
-    const folder = subfolders.find((item) => item.id === prompt.folderId)
-    if (folder) folder.collapsed = false
-    window.requestAnimationFrame(() => document.getElementById(`base-card-${prompt.id}`)?.scrollIntoView({ block: 'center' }))
+    const match = findMatches[findIndex]
+    const folder = subfolders.find((item) => item.id === match.folderId)
+    if (folder && !isFinalMode) {
+      if (folder.settings.some((setting) => setting.id === match.id)) folder.settingsHidden = false
+      else folder.collapsed = false
+    }
+    // Wait for a collapsed section's local editor to mount before revealing the exact match.
+    window.requestAnimationFrame(() => {
+      const target = document.getElementById(`base-card-${match.id}`)
+        ?? document.getElementById(`base-document-${match.id}`)
+      target?.scrollIntoView({ block: 'center' })
+      if (match.field === 'title') {
+        target?.querySelector('input')?.setSelectionRange(match.offset, match.offset + findQuery.length)
+      } else {
+        const editor = mountedEditors.get(match.id)
+        const model = editor?.getModel()
+        if (editor && model) {
+          const start = model.getPositionAt(match.offset)
+          const end = model.getPositionAt(match.offset + findQuery.length)
+          const range = new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column)
+          editor.setSelection(range)
+          editor.revealRangeInCenter(range)
+        }
+      }
+    })
+  }
+  // Side effect: focus the folder-wide find field when it appears.
+  $effect(() => { if (findInput) { findInput.focus(); findInput.select() } })
+  // Side effect: reveal the first occurrence as the user changes the search text.
+  $effect(() => {
+    void findQuery
+    void findMatches.length
+    if (findOpen) untrack(() => { findIndex = 0; revealFindMatch(0) })
+  })
+  const updateBreadcrumb = () => {
+    if (!viewport || isFinalMode) { breadcrumbCategoryId = null; return }
+    const sampleY = viewport.getBoundingClientRect().top + 84
+    let categoryId: string | null = null
+    for (const section of viewport.querySelectorAll<HTMLElement>('[data-category-id]')) {
+      if (section.getBoundingClientRect().top <= sampleY) categoryId = section.dataset.categoryId ?? null
+    }
+    breadcrumbCategoryId = categoryId
+  }
+  const selectGroup = (group: (typeof groups)[number]) => {
+    screenMode = group
+    statusMenuId = null
+    deleteMenuId = null
+    breadcrumbCategoryId = null
+    viewport?.scrollTo({ top: 0 })
   }
   const visiblePrompts = (prompts: MockPrompt[]) => prompts.filter((prompt) => matchesGroup(prompt))
   const removePrompt = (prompt: MockPrompt) => {
@@ -459,6 +554,99 @@
     const targetIndex = prompts.indexOf(target)
     prompts.splice(index, 1)
     prompts.splice(targetIndex, 0, prompt)
+  }
+
+  type MockDragSource = { kind: 'prompt' | 'category'; id: string; title: string }
+  type MockDropTarget = { folder?: MockFolder; afterId?: string; nextCategoryId?: string | null; categoryOnly?: boolean }
+  let dragSource = $state<MockDragSource | null>(null)
+  let dragPosition = $state({ x: 0, y: 0 })
+  const dropTargets = new SvelteMap<HTMLElement, MockDropTarget>()
+  let hoveredDropTarget: HTMLElement | null = null
+
+  const finishDrop = (target: MockDropTarget) => {
+    if (!dragSource) return
+    if (dragSource.kind === 'category') {
+      const folder = subfolders.find((item) => item.id === dragSource?.id)
+      if (!folder || target.nextCategoryId === folder.id) return
+      subfolders = subfolders.filter((item) => item.id !== folder.id)
+      const index = subfolders.findIndex((item) => item.id === target.nextCategoryId)
+      subfolders.splice(index < 0 ? subfolders.length : index, 0, folder)
+    } else {
+      const prompt = allPrompts.find((item) => item.id === dragSource?.id)
+      if (!prompt || target.afterId === prompt.id) return
+      removePrompt(prompt)
+      prompt.folderId = target.folder?.id ?? 'base-root'
+      const prompts = target.folder?.prompts ?? rootPrompts
+      const index = target.afterId ? prompts.findIndex((item) => item.id === target.afterId) + 1 : 0
+      prompts.splice(index, 0, prompt)
+    }
+  }
+
+  // Side effect: register only local divider elements, never the live screen's drag/drop targets.
+  const mockDropTarget = (node: HTMLElement, options: MockDropTarget) => {
+    dropTargets.set(node, options)
+    return {
+      update(next: MockDropTarget) { dropTargets.set(node, next) },
+      destroy() { dropTargets.delete(node) }
+    }
+  }
+
+  // Side effect: own the pointer gesture, local ghost, and divider highlights until drop or Escape.
+  const mockDragHandle = (node: HTMLButtonElement, options: MockDragSource) => {
+    let source = options
+    let cleanupGesture = () => {}
+    const down = (event: PointerEvent) => {
+      if (event.button !== 0 || isFinalMode) return
+      event.preventDefault()
+      const startX = event.clientX
+      const startY = event.clientY
+      const move = (next: PointerEvent) => {
+        if (!dragSource && Math.hypot(next.clientX - startX, next.clientY - startY) < 4) return
+        dragSource = source
+        dragPosition = { x: next.clientX + 12, y: next.clientY + 12 }
+        hoveredDropTarget?.removeAttribute('data-drop-over')
+        hoveredDropTarget = null
+        for (const [element, target] of dropTargets) {
+          const allowed = source.kind === 'category' ? target.nextCategoryId !== undefined : !target.categoryOnly
+          if (!allowed) continue
+          const rect = element.getBoundingClientRect()
+          if (next.clientX >= rect.left && next.clientX <= rect.right && next.clientY >= rect.top && next.clientY <= rect.bottom) {
+            hoveredDropTarget = element
+            element.setAttribute('data-drop-over', 'true')
+            break
+          }
+        }
+        if (viewport) {
+          const rect = viewport.getBoundingClientRect()
+          if (next.clientY < rect.top + 40) viewport.scrollTop -= 20
+          if (next.clientY > rect.bottom - 40) viewport.scrollTop += 20
+        }
+      }
+      const up = () => {
+        const target = hoveredDropTarget ? dropTargets.get(hoveredDropTarget) : null
+        if (target) finishDrop(target)
+        cleanupGesture()
+      }
+      const cancel = (next: KeyboardEvent) => { if (next.key === 'Escape') cleanupGesture() }
+      cleanupGesture = () => {
+        document.removeEventListener('pointermove', move)
+        document.removeEventListener('pointerup', up)
+        document.removeEventListener('pointercancel', cleanupGesture)
+        document.removeEventListener('keydown', cancel)
+        hoveredDropTarget?.removeAttribute('data-drop-over')
+        hoveredDropTarget = null
+        dragSource = null
+      }
+      document.addEventListener('pointermove', move)
+      document.addEventListener('pointerup', up)
+      document.addEventListener('pointercancel', cleanupGesture)
+      document.addEventListener('keydown', cancel)
+    }
+    node.addEventListener('pointerdown', down)
+    return {
+      update(next: MockDragSource) { source = next },
+      destroy() { cleanupGesture(); node.removeEventListener('pointerdown', down) }
+    }
   }
   let nameDialog = $state<{ title: string; value: string; categoryId?: string; save: (value: string) => void } | null>(null)
   let nameInteracted = $state(false)
@@ -498,9 +686,9 @@
   const EDITOR_BODY_PADDING_BOTTOM_PX = 10
   const EDITOR_BODY_PADDING_LEFT_PX = 10
   const editorSizing = {
-    fontSize: 15,
-    minLines: 3,
-    maxLines: 10
+    fontSize: 16,
+    minLines: 2,
+    maxLines: 35
   }
   const lineHeightPx = Math.round(editorSizing.fontSize * 1.35)
   const maxEditorHeightPx = lineHeightPx * editorSizing.maxLines
@@ -509,10 +697,7 @@
   const clampEditorHeight = (heightPx: number, minLines = editorSizing.minLines): number =>
     Math.min(Math.max(heightPx, lineHeightPx * minLines), maxEditorHeightPx)
 
-  const getTokenCount = (text: string): number => {
-    const trimmed = text.trim()
-    return trimmed.length === 0 ? 0 : trimmed.split(/\s+/).length
-  }
+  const getTokenCount = (text: string): number => estimateTokenCount(text)
 
   const getEditorUri = (documentId: string) =>
     monaco.Uri.file(`/cthulhu-prompt/mockups/prompt-folder-base/${documentId}.md`)
@@ -527,7 +712,6 @@
       model,
       automaticLayout: true,
       ariaLabel: `${document.id} editor`,
-      fontFamily: "'Cascadia Code', Consolas, 'Courier New', monospace",
       fontSize: editorSizing.fontSize,
       lineHeight: lineHeightPx,
       lineNumbers: 'on',
@@ -538,7 +722,9 @@
       renderValidationDecorations: 'off',
       revealHorizontalRightPadding: 0,
       scrollBeyondLastLine: false,
-      scrollbar: { alwaysConsumeMouseWheel: false },
+      overviewRulerBorder: false,
+      scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
+      cursorSmoothCaretAnimation: 'off',
       smoothScrolling: false,
       wordWrap: 'on',
       wordWrapColumn: 80,
@@ -550,6 +736,7 @@
         )
       }
     })
+    mountedEditors.set(document.id, editor)
 
     const syncHeight = () => {
       const heightPx = clampEditorHeight(Math.ceil(editor.getContentHeight()), document.minLines)
@@ -561,6 +748,7 @@
     const contentSizeDisposable = editor.onDidContentSizeChange(syncHeight)
     const contentDisposable = editor.onDidChangeModelContent(() => {
       document.text = editor.getValue()
+      if ('modifiedLabel' in document) document.modifiedLabel = 'Updated today'
     })
 
     let isDisposed = false
@@ -570,6 +758,7 @@
       contentSizeDisposable.dispose()
       contentDisposable.dispose()
       editor.dispose()
+      mountedEditors.delete(document.id)
       if (!existingModel) model.dispose()
     }
 
@@ -591,6 +780,7 @@
   onDestroy(() => {
     for (const cleanup of editorCleanupCallbacks) cleanup()
     editorCleanupCallbacks.clear()
+    window.clearTimeout(copyResetTimer)
   })
 
   // Side effect: handle sandbox find and dismiss open mock dialogs and menus; remove the listener on unmount.
@@ -604,9 +794,15 @@
         deleteMenuId = null
         findOpen = false
       }
-      if (event.ctrlKey && event.key.toLowerCase() === 'f') {
+      if (event.ctrlKey && event.key.toLowerCase() === 'f' && !templateDialogPrompt && !nameDialog && !confirmation) {
         event.preventDefault()
         findOpen = true
+        findInput?.focus()
+        findInput?.select()
+      }
+      if (event.key === 'F3' && findOpen) {
+        event.preventDefault()
+        revealFindMatch(event.shiftKey ? -1 : 1)
       }
     }
     document.addEventListener('keydown', handleKeydown)
@@ -615,12 +811,19 @@
   })
 
   const copyPrompt = async (prompt: MockPrompt) => {
-    await window.navigator.clipboard.writeText(prompt.text)
-    if (prompt.status === 'Todo') prompt.status = MockPromptStatus.InProgress
+    const template = templateFolders.flatMap(getTemplates).find((item) => item.id === prompt.templateIds[0])
+    const templateText = template?.text ?? (template ? `${template.title}\n\n[[PROMPT_TEXT]]` : null)
+    const text = templateText ? templateText.replaceAll('[[PROMPT_TEXT]]', prompt.text) : prompt.text
+    await window.navigator.clipboard.writeText(text)
+    copiedPromptId = prompt.id
+    window.clearTimeout(copyResetTimer)
+    copyResetTimer = window.setTimeout(() => { copiedPromptId = null }, 1500)
+    if (prompt.status === 'Todo') setPromptStatus(prompt, MockPromptStatus.InProgress)
   }
 
   const setPromptStatus = (prompt: MockPrompt, status: MockPromptStatus) => {
     prompt.status = status
+    prompt.finalizedAt = status === 'Completed' || status === 'Archived' ? Date.now() : null
     statusMenuId = null
   }
 </script>
@@ -783,7 +986,7 @@
           <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => setPromptStatus(prompt, item.id)}>
             <span class="base-status-menu-icon" data-status={item.id}><item.icon size={18} aria-hidden="true" /></span>
             <span class="base-status-menu-text">
-              <span class="base-status-menu-title text-sm">{item.label}</span>
+              <span class="base-status-menu-title text-sm leading-4.5">{item.label}</span>
               <span class="base-status-menu-subtitle text-xs" title={item.detail}>{item.detail}</span>
             </span>
           </button>
@@ -796,7 +999,7 @@
 {#snippet SettingsToggle(setting: MockFolderSetting)}
   <button
     type="button"
-    class="base-settings-toggle text-sm"
+    class="base-settings-toggle text-sm leading-4"
     aria-pressed={setting.isPresent}
     title={`${setting.isPresent ? 'Remove' : 'Add'} ${setting.title.toLowerCase()}`}
     onclick={() => {
@@ -825,8 +1028,9 @@
 
 {#snippet MonacoBody(document: MockDocument, testId: string)}
   <div
+    id={`base-document-${document.id}`}
     class="base-monaco-shell"
-    style={`padding:${EDITOR_BODY_PADDING_TOP_PX}px ${EDITOR_BODY_PADDING_RIGHT_PX}px ${EDITOR_BODY_PADDING_BOTTOM_PX}px ${EDITOR_BODY_PADDING_LEFT_PX}px;`}
+    style={`padding:${EDITOR_BODY_PADDING_TOP_PX}px ${EDITOR_BODY_PADDING_RIGHT_PX}px ${document.minLines === 1 ? 8 : EDITOR_BODY_PADDING_BOTTOM_PX}px ${EDITOR_BODY_PADDING_LEFT_PX}px;`}
   >
     <div
       class="base-monaco-host"
@@ -836,14 +1040,15 @@
   </div>
 {/snippet}
 
-{#snippet Divider(folder?: MockFolder, afterId?: string)}
+{#snippet Divider(folder?: MockFolder, afterId?: string, nextCategoryId?: string | null)}
   {#if !isFinalMode}
-  <div class="base-divider-row">
+  <div class="base-divider-row" use:mockDropTarget={{ folder, afterId, nextCategoryId }}>
+    <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
     <button type="button" class="base-divider-line-button" aria-label="Add Prompt from left separator" onclick={() => addPrompt(folder, afterId)}>
       {@render Separator()}
     </button>
     <div class="base-divider-actions">
-      <button type="button" class="base-divider-action-button text-xs" aria-label="Add Prompt" onclick={() => addPrompt(folder, afterId)}>
+      <button type="button" class="base-divider-action-button text-xs leading-4" aria-label="Add Prompt" onclick={() => addPrompt(folder, afterId)}>
         <Plus size={13} aria-hidden="true" />
         <span>Add Prompt</span>
       </button>
@@ -854,7 +1059,7 @@
     </button>
   </div>
   {:else}
-    <div class="base-final-gap"></div>
+    <div class="base-final-gap">{@render Separator()}</div>
   {/if}
 {/snippet}
 
@@ -871,9 +1076,12 @@
       <button type="button" aria-label="Move prompt up" disabled={isFinalMode || index === 0} onclick={() => movePrompt(prompt, -1)}>
         <ChevronUp size={16} aria-hidden="true" />
       </button>
-      <button type="button" aria-label="Drag prompt" class="base-drag-button">
+      {/if}
+      <button type="button" aria-label="Drag prompt" class="base-drag-button" tabindex="-1"
+        use:mockDragHandle={{ kind: 'prompt', id: prompt.id, title: prompt.title || 'Untitled prompt' }}>
         <GripVertical size={16} aria-hidden="true" />
       </button>
+      {#if !isFinalMode}
       <button type="button" aria-label="Move prompt down" disabled={isFinalMode || index === siblingCount - 1} onclick={() => movePrompt(prompt, 1)}>
         <ChevronDown size={16} aria-hidden="true" />
       </button>
@@ -886,7 +1094,14 @@
         <div class="base-prompt-title-main">
           {@render IconCell(FileText)}
           <div class="base-title-copy">
-            <input class="text-sm" aria-label="Prompt title" bind:value={prompt.title} />
+            <input class="text-sm" aria-label="Prompt title" placeholder={prompt.title.trim() ? 'Title...' : 'New Prompt...'} bind:value={prompt.title}
+              oninput={() => prompt.modifiedLabel = 'Updated today'}
+              onkeydown={(event) => {
+                if (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey)) {
+                  event.preventDefault()
+                  mountedEditors.get(prompt.id)?.focus()
+                }
+              }} />
             <div class="base-metadata-row text-xs">
               <span
                 class="base-folder-label"
@@ -899,7 +1114,11 @@
               {@render SeparatorDot()}
               <span>{prompt.modifiedLabel}</span>
               {@render SeparatorDot()}
-              <span>{getTokenCount(prompt.text)} tokens</span>
+              <span>{getTokenCount(prompt.text)} {getTokenCount(prompt.text) === 1 ? 'token' : 'tokens'}</span>
+              {#if prompt.finalizedAt}
+                {@render SeparatorDot()}
+                <span title={new Date(prompt.finalizedAt).toLocaleString()}>{prompt.status} today</span>
+              {/if}
             </div>
           </div>
         </div>
@@ -912,7 +1131,7 @@
                 onclick: () => openTemplateDialog(prompt, 'select-and-copy')
               })}
             {:else}
-              {@render IconButton(Copy, 'Copy prompt', {
+              {@render IconButton(copiedPromptId === prompt.id ? ClipboardCheck : Copy, copiedPromptId === prompt.id ? 'Copied' : 'Copy prompt', {
                 hoverVariant: 'accent',
                 onclick: () => { void copyPrompt(prompt) }
               })}
@@ -953,7 +1172,7 @@
                       {#if archiveDefault}<Trash2 size={18} aria-hidden="true" />{:else}<Archive size={18} aria-hidden="true" />{/if}
                     </span>
                     <span class="base-status-menu-text">
-                      <span class="base-status-menu-title text-sm">{archiveDefault ? 'Delete Prompt' : 'Archive Prompt'}</span>
+                      <span class="base-status-menu-title text-sm leading-4.5">{archiveDefault ? 'Delete Prompt' : 'Archive Prompt'}</span>
                       <span class="base-status-menu-subtitle text-xs">{archiveDefault ? 'Permanently delete this prompt' : 'Move this prompt to Archived'}</span>
                     </span>
                   </button>
@@ -971,11 +1190,12 @@
 {/snippet}
 
 {#snippet FolderCard(folder: MockFolder)}
-  <section class="base-folder-section" data-testid={`base-mockup-subfolder-${folder.id}`}>
+  <section id={`base-category-${folder.id}`} class="base-folder-section" data-category-id={folder.id} data-testid={`base-mockup-subfolder-${folder.id}`}>
     <article class="base-editor-card base-folder-card">
       <aside class="base-folder-sidebar">
         {#if !isFinalMode}
-        <button type="button" aria-label="Drag category" title="Drag category">
+        <button type="button" aria-label="Drag category" title="Drag category" tabindex="-1"
+          use:mockDragHandle={{ kind: 'category', id: folder.id, title: folder.title }}>
           <GripVertical size={16} aria-hidden="true" />
         </button>
         {/if}
@@ -990,7 +1210,7 @@
             {@render IconCell(Folder)}
             <div class="base-folder-title-copy">
               <div class="base-folder-title-line">
-                <span class="base-folder-title text-base" title={folder.title}>{folder.title}</span>
+                <span class="base-folder-title text-base leading-5" title={folder.title}>{folder.title}</span>
                 {#if !isFinalMode}
                 {@render IconButton(Pencil, 'Rename category', {
                   onclick: () => nameDialog = { title: 'Rename Category', value: folder.title, categoryId: folder.id, save: (value) => folder.title = value },
@@ -1035,7 +1255,7 @@
               <Settings size={20} aria-hidden="true" />
               <div class="base-settings-toolbar-copy">
                 <span>Category Settings</span>
-                <span>{folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings.length} configured</span>
+                <span class="text-xs">{folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings.length} configured</span>
               </div>
             </div>
             <div class="base-settings-toolbar-actions" role="group" aria-label="Category settings">
@@ -1080,32 +1300,52 @@
         {@render Divider(folder, prompt.id)}
       {/each}
     </div>
+    {:else}
+      <div class="base-folder-children base-collapsed-summary" use:mockDropTarget={{ folder }}>
+        <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
+        <button type="button" class="text-sm leading-5" onclick={() => folder.collapsed = false}>
+          {visiblePrompts(folder.prompts).length} {visiblePrompts(folder.prompts).length === 1 ? 'prompt' : 'prompts'} hidden. Click to expand...
+        </button>
+      </div>
     {/if}
     <div class="base-folder-bottom-cap" aria-hidden="true"></div>
   </section>
 {/snippet}
 
 <main class="base-prompt-folder-mockup" data-testid="base-prompt-folder-mockup">
+  {#if dragSource}
+    <div class="base-drag-ghost text-sm" style={`left:${dragPosition.x}px; top:${dragPosition.y}px;`} aria-hidden="true">
+      {#if dragSource.kind === 'category'}<Folder size={16} />{:else}<FileText size={16} />{/if}
+      <span>{dragSource.title}</span>
+    </div>
+  {/if}
   <div class="base-header-bar">
     <div class="base-breadcrumb text-sm">
-      <button type="button">{rootTitle}</button>
+      <button type="button" onclick={() => viewport?.scrollTo({ top: 0 })}>{rootTitle}</button>
       <span>/</span>
-      <button type="button">{screenMode}</button>
+      <button type="button" onclick={() => viewport?.scrollTo({ top: 0 })}>{screenMode}</button>
+      {#if breadcrumbCategory}
+        <span>/</span>
+        <button type="button" onclick={() => {
+          const section = document.getElementById(`base-category-${breadcrumbCategory.id}`)
+          if (section && viewport) viewport.scrollTop += section.getBoundingClientRect().top - viewport.getBoundingClientRect().top - 80
+        }}>{breadcrumbCategory.title}</button>
+      {/if}
     </div>
-    {@render IconButton(Search, 'Find in Folder (Control + F)', { size: 'compact', onclick: () => findOpen = !findOpen })}
+    {@render IconButton(Search, 'Find in Folder (Control + F)', { size: 'compact', borderless: true, onclick: () => findOpen = !findOpen })}
   </div>
 
   {#if findOpen}
-    <div class="base-find-widget" role="search" aria-label="Find in Folder">
-      <input aria-label="Find" placeholder="Find" bind:value={findQuery} oninput={() => findIndex = 0}
-        onkeydown={(event) => { if (event.key === 'Enter') revealFindMatch(event.shiftKey ? -1 : 1) }} />
-      <span>{findMatches.length ? `${findIndex + 1} of ${findMatches.length}` : 'No results'}</span>
-      {@render IconButton(ChevronUp, 'Previous match', { size: 'compact', disabled: !findMatches.length, onclick: () => revealFindMatch(-1) })}
-      {@render IconButton(ChevronDown, 'Next match', { size: 'compact', disabled: !findMatches.length, onclick: () => revealFindMatch(1) })}
-      {@render IconButton(X, 'Close find', { size: 'compact', onclick: () => findOpen = false })}
+    <div class="base-find-widget text-sm" role="search" aria-label="Find in Folder" data-no-results={findQuery.length > 0 && !findMatches.length}>
+      <textarea class="text-sm" aria-label="Find" placeholder="Find" rows="1" wrap="off" spellcheck="false" bind:this={findInput} bind:value={findQuery}
+        onkeydown={(event) => { if (event.key === 'Enter') { event.preventDefault(); revealFindMatch(event.shiftKey ? -1 : 1) } }}></textarea>
+      <span class="text-xs">{findMatches.length ? `${findIndex + 1} of ${findMatches.length}` : 'No results'}</span>
+      <button type="button" class="base-find-button codicon codicon-find-previous-match" title="Find Previous" aria-label="Find Previous" disabled={!findMatches.length} onclick={() => revealFindMatch(-1)}></button>
+      <button type="button" class="base-find-button codicon codicon-find-next-match" title="Find Next" aria-label="Find Next" disabled={!findMatches.length} onclick={() => revealFindMatch(1)}></button>
+      <button type="button" class="base-find-button codicon codicon-widget-close" title="Close" aria-label="Close find" onclick={() => findOpen = false}></button>
     </div>
   {/if}
-  <div class="base-content-viewport">
+  <div class="base-content-viewport" bind:this={viewport} bind:clientHeight={viewportHeight} onscroll={updateBreadcrumb}>
     <section class="base-root-header">
       <div class="base-root-title-row">
         <div class="base-root-title-block">
@@ -1114,7 +1354,7 @@
             <span>Prompt Folder</span>
           </div>
           <div class="base-root-title-line">
-            <h1>{rootTitle}</h1>
+            <h1 class="text-3xl">{rootTitle}</h1>
             {@render IconButton(Pencil, 'Rename prompt folder', {
               onclick: () => nameDialog = { title: 'Rename Prompt Folder', value: rootTitle, save: (value) => rootTitle = value },
               size: 'tiny',
@@ -1135,33 +1375,45 @@
 
       <div class="base-filter-bar" role="group" aria-label="Filter prompts">
         {#each groups as group (group)}
-          <button class:active={screenMode === group} type="button" aria-pressed={screenMode === group}
-            onclick={() => { screenMode = group; statusMenuId = null; deleteMenuId = null }}>
-            {group} <span class="text-xs">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
+          <button class="text-base leading-6" class:active={screenMode === group} type="button" aria-pressed={screenMode === group}
+            onclick={() => selectGroup(group)}>
+            {group} <span class="text-xs leading-4.5">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
           </button>
         {/each}
       </div>
     </section>
 
     <div class="base-entry-flow">
-      {@render Divider()}
+      {#if isFinalMode}
+        {#if finalizedPrompts.length}{@render Divider()}{/if}
+        {#each finalizedPrompts as prompt, promptIndex (prompt.id)}
+          {@render PromptCard(prompt, promptIndex, finalizedPrompts.length)}
+          {@render Divider()}
+        {/each}
+      {:else}
+      {@render Divider(undefined, undefined, !visiblePrompts(rootPrompts).length ? subfolders[0]?.id : undefined)}
       {#each visiblePrompts(rootPrompts) as prompt, promptIndex (prompt.id)}
         {@render PromptCard(prompt, promptIndex, visiblePrompts(rootPrompts).length)}
-        {@render Divider(undefined, prompt.id)}
+        {@render Divider(undefined, prompt.id, promptIndex === visiblePrompts(rootPrompts).length - 1 ? subfolders[0]?.id : undefined)}
       {/each}
       <div class="base-root-folder-inset">
-        {#each subfolders.filter((folder) => !isFinalMode || visiblePrompts(folder.prompts).length > 0) as folder (folder.id)}
+        {#each subfolders as folder, folderIndex (folder.id)}
           {@render FolderCard(folder)}
-          <div class="base-final-gap"></div>
+          <div class="base-final-gap" use:mockDropTarget={{ categoryOnly: true, nextCategoryId: subfolders[folderIndex + 1]?.id ?? null }}>
+            <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
+            {@render Separator()}
+          </div>
         {/each}
       </div>
-      {#if !allPrompts.some((prompt) => matchesGroup(prompt))}
+      {/if}
+      {#if !allPrompts.some((prompt) => matchesGroup(prompt)) && (isFinalMode || !subfolders.length)}
         <div class="base-empty">
           <p>No {screenMode.toLowerCase()} prompts in this folder.</p>
           {#if !isFinalMode}<p class="base-empty-detail text-sm">Click the Add Prompt button to create your first prompt.</p>{/if}
         </div>
       {/if}
     </div>
+    <div style={`height:${Math.ceil(viewportHeight * 0.75 / 4) * 4}px;`} aria-hidden="true"></div>
   </div>
 </main>
 
@@ -1237,6 +1489,7 @@
     class="base-template-dialog-layer"
     role="presentation"
     data-testid="base-mockup-template-dialog-layer"
+    use:mountMockDialog
     onclick={handleTemplateDialogLayerClick}
   >
     <div
@@ -1303,7 +1556,7 @@
         </div>
 
         <div class="base-template-tree-label">
-          <span class="text-sm">Template Library</span>
+          <span class="text-base">Template Library</span>
         </div>
         {@render Separator()}
 
@@ -1316,7 +1569,7 @@
                   <FolderOpen size={18} aria-hidden="true" />
                 </span>
                 <div class="base-template-root-copy">
-                  <strong class="font-semibold">{rootFolder.title}</strong>
+                  <strong class="text-sm font-semibold">{rootFolder.title}</strong>
                   <span class="text-xs">{templateCount} {templateCount === 1 ? 'template' : 'templates'}</span>
                 </div>
               </div>
@@ -1503,7 +1756,8 @@
   .base-separator {
     border-top: 1px solid var(--ui-neutral-muted-border);
     box-sizing: border-box;
-    flex: 0 0 1px;
+    /* Match the live separator's shrink-0 without overriding its full horizontal width. */
+    flex-shrink: 0;
     height: 1px;
     width: 100%;
   }
@@ -1619,12 +1873,10 @@
 
   .base-root-title-line h1 {
     color: var(--ui-normal-text);
-    font-size: 27px;
     font-weight: var(--font-weight-semibold);
-    height: 36px;
+    height: 40px;
     letter-spacing: -0.03em;
-    line-height: 32px;
-    margin: 0;
+    margin: -2px 0;
     min-width: 0;
     overflow: hidden;
     padding-block: 2px;
@@ -1659,17 +1911,16 @@
   .base-filter-bar span {
     position: relative;
     top: -1px;
-    line-height: 18px;
     margin-left: 4px;
     padding: 2px 6px;
   }
 
   .base-entry-flow {
     min-width: 0;
-    padding-bottom: 24px;
   }
 
   .base-divider-row {
+    position: relative;
     align-items: center;
     display: grid;
     grid-template-columns: minmax(14px, 1fr) auto minmax(14px, 1fr);
@@ -1687,11 +1938,11 @@
     width: 100%;
   }
 
-  .base-divider-line-button:first-child {
+  .base-divider-line-button:first-of-type {
     padding-left: 0;
   }
 
-  .base-divider-line-button:last-child {
+  .base-divider-line-button:last-of-type {
     padding-right: 0;
   }
 
@@ -1733,6 +1984,7 @@
   }
 
   .base-divider-row:has(.base-divider-line-button:hover) .base-divider-line-button .base-separator,
+  .base-divider-row:has(.base-divider-action-button:hover) .base-divider-line-button .base-separator,
   .base-divider-row:has(
       .base-divider-line-button:focus-visible,
       .base-divider-action-button:focus-visible
@@ -1751,13 +2003,12 @@
     display: grid;
     grid-template-columns: 32px minmax(0, 1fr);
     min-width: 0;
-    overflow: visible;
+    overflow: hidden;
     width: 100%;
   }
 
   .base-editor-body {
     container-type: inline-size;
-    border-radius: 0 var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card) 0;
     align-content: start;
     background: var(--ui-card-normal-surface);
     display: grid;
@@ -1908,10 +2159,6 @@
     align-items: center;
     display: inline-flex;
     gap: 4px;
-    max-width: 150px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .base-folder-label[data-template-state='not-selected'] {
@@ -1954,7 +2201,7 @@
   }
 
   .base-folder-chevron:hover {
-    background: var(--ui-hoverable-icon-surface);
+    background: var(--ui-neutral-action-fill);
     color: var(--ui-hoverable-icon-glyph);
   }
 
@@ -2210,7 +2457,6 @@
 
   .base-folder-title {
     color: var(--ui-normal-text);
-    line-height: 20px;
     font-weight: var(--font-weight-semibold);
     min-width: 0;
     overflow: hidden;
@@ -2232,32 +2478,32 @@
     height: 56px;
     justify-content: space-between;
     min-width: 0;
-    padding: 10px 12px 10px 16px;
+    padding: 9px 12px 9px 10px;
   }
 
   .base-settings-toolbar-heading {
     align-items: center;
     color: var(--ui-normal-text);
-    display: flex;
+    display: grid;
     font-weight: var(--font-weight-semibold);
-    gap: 12px;
+    gap: 8px;
+    grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
   }
 
   .base-settings-toolbar-heading > :global(svg) {
+    justify-self: center;
     color: var(--ui-secondary-icon-glyph);
   }
 
   .base-settings-toolbar-copy {
     display: grid;
-    line-height: 16px;
     min-width: 0;
     row-gap: 2px;
   }
 
   .base-settings-toolbar-copy span:last-child {
     color: var(--ui-muted-text);
-    font-size: 12px;
     font-weight: var(--font-weight-normal);
   }
 
@@ -2279,7 +2525,6 @@
     color: var(--ui-hoverable-text);
     display: inline-flex;
     flex: 0 0 auto;
-    line-height: 16px;
     font-weight: var(--font-weight-semibold);
     gap: 7px;
     height: 30px;
@@ -2390,7 +2635,7 @@
     border-right: 1px solid var(--ui-card-nested-border);
     box-sizing: border-box;
     min-width: 0;
-    padding-inline: 12px;
+    padding-inline: 11px; /* Include the 1px side border in the live 12px inset. */
   }
 
   .base-folder-bottom-cap {
@@ -2462,7 +2707,6 @@
 
   .base-template-dialog-header h2 {
     color: var(--ui-normal-text);
-    line-height: 24px;
     font-weight: var(--font-weight-semibold);
     margin: 0;
     min-width: 0;
@@ -2521,7 +2765,7 @@
     border-radius: var(--cthulhu-ui-radius-control);
     display: grid;
     gap: 11px;
-    grid-template-columns: 32px minmax(0, 1fr) 20px;
+    grid-template-columns: 34px minmax(0, 1fr) 20px;
     height: 54px;
     padding: 0 13px 0 10px;
   }
@@ -2578,10 +2822,15 @@
     border-bottom: 1px solid var(--ui-card-nested-border);
     color: var(--ui-normal-text);
     gap: 9px;
-    padding: 9px 12px;
+    height: 50px;
+    box-sizing: border-box;
+    padding: 7px 12px;
   }
 
   .base-template-root-folder-icon {
+    flex: 0 0 34px;
+    height: 34px;
+    justify-content: center;
     align-items: center;
     color: var(--ui-secondary-icon-glyph);
     display: flex;
@@ -2596,9 +2845,7 @@
 
   .base-template-root-copy strong {
     color: var(--ui-normal-text);
-    font-size: 13px;
     font-weight: var(--font-weight-semibold);
-    line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2610,7 +2857,7 @@
 
   .base-template-root-contents {
     background: var(--ui-card-solid-surface);
-    padding: 5px;
+    padding: 6px 5px 7px;
   }
 
   .base-template-option-button,
@@ -2809,9 +3056,50 @@
     outline: 2px solid var(--ui-neutral-focus-border);
     outline-offset: -2px;
   }
-  .base-folder-chevron[aria-expanded='true'] { transform: rotate(90deg); }
+  .base-folder-chevron :global(svg) { transition: transform var(--ui-animation-duration-fast) ease-out; }
+  .base-folder-chevron[aria-expanded='true'] :global(svg) { transform: rotate(90deg); }
   .base-folder-title-copy { display: grid; gap: 4px; min-width: 0; }
-  .base-final-gap { height: 28px; }
+  .base-final-gap { position: relative; height: 28px; display: flex; align-items: center; }
+  .base-collapsed-summary { position: relative; height: 28px; display: flex; align-items: center; justify-content: center; }
+  .base-collapsed-summary button { background: var(--ui-ghost-surface); border: 0; color: var(--ui-secondary-text); padding: 0; }
+  .base-collapsed-summary button:hover { color: var(--ui-hoverable-text); }
+  .base-drop-indicator {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--ui-normal-text);
+    font-weight: var(--font-weight-semibold);
+    pointer-events: none;
+  }
+  .base-drop-indicator::before,
+  .base-drop-indicator::after { content: ''; height: 10px; border-radius: 999px; background: var(--ui-info-strong-border); flex: 1; }
+  .base-divider-row:global([data-drop-over='true']) > :not(.base-drop-indicator),
+  .base-final-gap:global([data-drop-over='true']) > :not(.base-drop-indicator),
+  .base-collapsed-summary:global([data-drop-over='true']) > :not(.base-drop-indicator) { visibility: hidden; }
+  .base-divider-row:global([data-drop-over='true']) > .base-drop-indicator,
+  .base-final-gap:global([data-drop-over='true']) > .base-drop-indicator,
+  .base-collapsed-summary:global([data-drop-over='true']) > .base-drop-indicator { display: flex; }
+  .base-drag-ghost {
+    position: fixed;
+    z-index: 80;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 320px;
+    padding: 8px 12px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    background: var(--ui-card-overlay-surface);
+    color: var(--ui-normal-text);
+    box-shadow: 0 4px 12px var(--ui-card-normal-shadow);
+  }
+  .base-drag-ghost span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .base-editor-sidebar .base-drag-button,
+  .base-folder-sidebar button { cursor: grab; }
   .base-empty { color: var(--ui-secondary-text); text-align: center; padding: 48px 0; }
   .base-empty p { margin: 0; }
   .base-empty .base-empty-detail { margin-top: 8px; }
@@ -2848,9 +3136,57 @@
     .base-prompt-actions { grid-column: 2; grid-row: 2; border-top: 1px solid var(--ui-neutral-normal-border); justify-content: space-between; padding-left: 16px; }
     .base-actions-separator { display: none; }
   }
-  .base-find-widget { position: absolute; top: 36px; right: 24px; z-index: 30; display: flex; align-items: center; gap: 3px; width: 400px; height: 33px; padding: 0 4px; box-sizing: border-box; background: var(--ui-card-solid-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); box-shadow: 0 0 8px var(--ui-card-normal-shadow); }
-  .base-find-widget input { min-width: 0; flex: 1; background: var(--ui-editor-content-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 2px 6px; }
-  .base-find-widget > span { font-size: 12px; min-width: 69px; }
+  .base-find-widget {
+    position: absolute;
+    top: 36px;
+    right: 18px;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    width: 400px;
+    max-width: calc(100% - 36px);
+    height: 33px;
+    padding: 0 4px 0 8px;
+    box-sizing: border-box;
+    background: var(--ui-card-solid-surface);
+    color: var(--ui-normal-text);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-top: 0;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 0 8px 2px var(--ui-card-normal-shadow);
+  }
+  .base-find-widget textarea {
+    min-width: 0;
+    flex: 1;
+    height: 25px;
+    resize: none;
+    overflow: hidden;
+    background: var(--ui-neutral-field-surface);
+    color: var(--ui-normal-text);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 2px;
+    padding: 2px 6px;
+    font-family: inherit;
+  }
+  .base-find-widget textarea:focus-visible { outline: 1px solid var(--ui-info-strong-border); outline-offset: -1px; }
+  .base-find-widget > span { min-width: 69px; margin-left: 3px; padding: 2px 0 0 2px; }
+  .base-find-widget[data-no-results='true'] > span { color: var(--ui-danger-icon-glyph); }
+  .base-find-button {
+    box-sizing: content-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 3px;
+    margin-left: 3px;
+    border: 0;
+    border-radius: 5px;
+    color: inherit;
+    background: var(--ui-ghost-surface);
+  }
+  .base-find-button:hover { background: var(--ui-neutral-action-hover-fill); }
+  .base-find-button:disabled { opacity: 0.4; pointer-events: none; }
 
   .base-status-menu {
     background: var(--ui-card-overlay-surface);
@@ -2898,7 +3234,6 @@
   .base-status-menu-icon[data-status='Completed'] { color: var(--ui-success-normal-text); }
   .base-status-menu-text { display: grid; gap: 2px; min-width: 0; }
   .base-status-menu-title {
-    line-height: 18px;
     font-weight: var(--font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
