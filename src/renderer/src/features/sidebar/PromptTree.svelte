@@ -984,7 +984,7 @@
     <PromptTreeGutter isLastRow />
     <div class="sidebarPromptTreeEmptyCategoryButtonWrap">
       <InlineTextButton
-        text={`Category is empty, click to add a ${screenRootFolder?.kind === 'template' ? 'template' : 'prompt'}`}
+        text="Category is empty, click to add."
         testId={categoryEmptyActionTestId(row.category, testIdGroup)}
         class="sidebarPromptTreeEmptyCategoryButton"
         onclick={() => handleCategoryAddToTop(row.category.id)}

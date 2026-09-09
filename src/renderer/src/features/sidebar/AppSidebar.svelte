@@ -24,7 +24,7 @@
     ChevronsDownUp,
     ChevronsUpDown,
     ExternalLink,
-    Folder,
+    FileText,
     FolderPlus,
     Layers,
     MoreHorizontal,
@@ -195,7 +195,7 @@
     id: 'no-prompt-folders',
     label: 'No folders',
     detail: 'Create one from the menu',
-    icon: Folder
+    icon: FileText
   }
   const promptFolderSelectorFooterItem: DropdownPopupDetailedItem = {
     id: 'add-prompt-folder',
@@ -288,7 +288,7 @@
         id: promptFolder.id,
         label: promptFolder.displayName,
         detailParts,
-        icon: promptFolder.kind === 'template' ? Layers : Folder,
+        icon: promptFolder.kind === 'template' ? Layers : FileText,
         testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
       }
     })

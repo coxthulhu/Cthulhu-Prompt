@@ -160,21 +160,21 @@ describe('Prompt template folder UI', () => {
     const action = mainWindow.getByTestId('prompt-tree-template-category-empty-action-Empty')
     /** Category toggle verifies both empty and populated child visibility. */
     const toggle = mainWindow.getByTestId('prompt-tree-template-category-toggle-button-Empty')
-    await expect(action).toHaveText('Category is empty, click to add a template')
+    await expect(action).toHaveText('Category is empty, click to add.')
     await dragSidebarHandleBy(mainWindow, -100)
-    /** The label truncates independently of the button's flex alignment. */
+    /** The shorter label fits the narrow sidebar while retaining ellipsis styling. */
     const label = action.locator('.cthulhuUiInlineTextButtonLabel')
     await expect(label).toHaveCSS('text-overflow', 'ellipsis')
     await expect(label).toHaveCSS('white-space', 'nowrap')
     await expect(label).toHaveCSS('overflow-x', 'hidden')
-    await expect.poll(() => label.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true)
-    /** Narrow-sidebar geometry checks that truncation preserves the centered 24px row. */
+    await expect.poll(() => label.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    /** Narrow-sidebar geometry checks the centered 24px row. */
     const layout = await action.evaluate((button) => {
       /** Button and row bounds distinguish line-box alignment from font ink placement. */
       const buttonRect = button.getBoundingClientRect()
       /** Label line box must remain centered inside the full-height button. */
       const labelRect = button.querySelector('.cthulhuUiInlineTextButtonLabel')!.getBoundingClientRect()
-      /** Existing compact row that must not grow when its label is truncated. */
+      /** Existing compact row that must not grow in the narrow sidebar. */
       const rowRect = button.closest('.sidebarPromptTreeEmptyCategoryRow')!.getBoundingClientRect()
       return {
         rowHeight: rowRect.height,

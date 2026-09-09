@@ -686,7 +686,7 @@ describe('Prompt folder prompt tree', () => {
     const toggle = mainWindow.getByTestId('prompt-tree-active-category-toggle-button-Empty')
     /** Button under the empty category, absent under the populated Primary category. */
     const action = mainWindow.getByTestId('prompt-tree-active-category-empty-action-Empty')
-    await expect(action).toHaveText('Category is empty, click to add a prompt')
+    await expect(action).toHaveText('Category is empty, click to add.')
     await expect(mainWindow.getByTestId('prompt-tree-active-category-empty-action-Primary')).toHaveCount(0)
     await toggle.click()
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')

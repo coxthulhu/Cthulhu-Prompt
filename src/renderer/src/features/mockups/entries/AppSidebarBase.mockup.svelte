@@ -269,7 +269,7 @@
     {#each category.prompts as promptEntry, promptIndex (promptEntry.id)}
       {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1, group)}
     {:else}
-      <button class="empty-category text-xs" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add a prompt</button>
+      <button class="empty-category text-xs" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add.</button>
     {/each}
   {/if}
 {/snippet}
