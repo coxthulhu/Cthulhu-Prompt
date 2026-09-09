@@ -4,7 +4,7 @@
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import { FolderPlus } from 'lucide-svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
@@ -177,7 +177,7 @@
       <Separator />
     {/if}
 
-    <SettingRow {icon} label={rowLabel} detail={rowDetail}>
+    <ControlRow {icon} label={rowLabel} detail={rowDetail}>
       {#snippet control()}
         <FloatingValidationMessage message={errorMessage} textTestId={errorTestId}>
           <TextInput
@@ -204,7 +204,7 @@
           />
         </FloatingValidationMessage>
       {/snippet}
-    </SettingRow>
+    </ControlRow>
   </div>
 </Dialog>
 

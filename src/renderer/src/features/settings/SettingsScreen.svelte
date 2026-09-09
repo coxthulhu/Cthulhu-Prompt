@@ -4,7 +4,7 @@
   import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
@@ -168,7 +168,7 @@
 
     <Card label="Editor & Layout">
       <div class="flex flex-col">
-        <SettingRow
+        <ControlRow
           testId="editor-layout-font-size-row"
           icon={Type}
           label="Font Size"
@@ -201,11 +201,11 @@
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </SettingRow>
+        </ControlRow>
 
         <Separator />
 
-        <SettingRow
+        <ControlRow
           testId="editor-layout-min-lines-row"
           icon={Rows3}
           label="Minimum Line Count"
@@ -238,11 +238,11 @@
               state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </SettingRow>
+        </ControlRow>
 
         <Separator />
 
-        <SettingRow
+        <ControlRow
           testId="editor-layout-max-lines-row"
           icon={Rows3}
           label="Maximum Line Count"
@@ -275,11 +275,11 @@
               state={isMaxLinesResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </SettingRow>
+        </ControlRow>
 
         <Separator />
 
-        <SettingRow
+        <ControlRow
           testId="editor-layout-line-numbers-row"
           icon={Hash}
           label="Show Line Numbers"
@@ -303,7 +303,7 @@
               state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
-        </SettingRow>
+        </ControlRow>
       </div>
     </Card>
 

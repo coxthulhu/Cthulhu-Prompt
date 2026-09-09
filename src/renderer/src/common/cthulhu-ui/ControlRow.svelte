@@ -39,13 +39,13 @@
 >
   {#snippet trailing()}
     {#if control}
-      <span class="cthulhuUiSettingRowControl">
+      <span class="cthulhuUiControlRowControl">
         {@render control()}
       </span>
     {/if}
 
     {#if actions}
-      <span class="cthulhuUiSettingRowActions">
+      <span class="cthulhuUiControlRowActions">
         {@render actions()}
       </span>
     {/if}
@@ -53,14 +53,14 @@
 </Row>
 
 <style>
-  .cthulhuUiSettingRowControl,
-  .cthulhuUiSettingRowActions {
+  .cthulhuUiControlRowControl,
+  .cthulhuUiControlRowActions {
     align-items: center;
     display: flex;
     min-width: 0;
   }
 
-  .cthulhuUiSettingRowActions {
+  .cthulhuUiControlRowActions {
     gap: 8px;
   }
 </style>

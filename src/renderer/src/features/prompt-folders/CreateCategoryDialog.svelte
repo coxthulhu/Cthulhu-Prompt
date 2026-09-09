@@ -8,7 +8,7 @@
   } from '@shared/Category'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
-  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
 
   /** Input contract for category creation and rename dialogs. */
@@ -133,7 +133,7 @@
   onsubmit={handleSubmit}
 >
   <div class="cthulhuCreateCategoryDialogRows flex min-w-0 flex-col">
-    <SettingRow icon={FolderPlus} label="Category Name" detail="Name the new category.">
+    <ControlRow icon={FolderPlus} label="Category Name" detail="Name the new category.">
       {#snippet control()}
         <FloatingValidationMessage
           message={errorMessage}
@@ -160,7 +160,7 @@
           />
         </FloatingValidationMessage>
       {/snippet}
-    </SettingRow>
+    </ControlRow>
   </div>
 </Dialog>
 

@@ -5,11 +5,8 @@
   import Button, { type ButtonVariant } from './Button.svelte'
   import CardSurface from './CardSurface.svelte'
   import IconButton from './IconButton.svelte'
-  import IconCell from './IconCell.svelte'
+  import Row from './Row.svelte'
   import Separator from './Separator.svelte'
-  import Subtitle from './Subtitle.svelte'
-  import Title from './Title.svelte'
-  import TitleSubtitleStack from './TitleSubtitleStack.svelte'
   import { mergeClasses } from './mergeClasses'
 
   type Props = {
@@ -118,6 +115,10 @@
   })
 </script>
 
+{#snippet closeButton()}
+  <IconButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
+{/snippet}
+
 {#if open}
   <div
     class="cthulhuUiDialogLayer"
@@ -141,19 +142,16 @@
         class="cthulhuUiDialogHeader"
         data-has-subtitle={subtitle ? 'true' : 'false'}
       >
-        <div class="cthulhuUiDialogHeading">
-          <IconCell icon={Icon} size="title" data-testid="dialog-header-icon" />
-          <TitleSubtitleStack>
-            <Title {title} variant="dialog" />
-            {#if subtitle}
-              <Subtitle text={subtitle} data-testid="dialog-subtitle" />
-            {/if}
-          </TitleSubtitleStack>
-        </div>
-
-        {#if showCloseButton}
-          <IconButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
-        {/if}
+        <Row
+          variant="dialog-heading"
+          icon={Icon}
+          label={title}
+          detail={subtitle}
+          wrapDetail
+          iconTestId="dialog-header-icon"
+          detailTestId="dialog-subtitle"
+          trailing={showCloseButton ? closeButton : undefined}
+        />
       </div>
 
       {#if showSeparators}
@@ -221,28 +219,12 @@
   }
 
   .cthulhuUiDialogHeader {
-    align-items: flex-start;
-    display: flex;
-    gap: 12px;
-    justify-content: space-between;
     min-width: 0;
     padding: 0 4px 12px;
   }
 
   .cthulhuUiDialogHeader[data-has-subtitle='true'] {
     padding-bottom: 16px;
-  }
-
-  .cthulhuUiDialogHeader[data-has-subtitle='true']
-    :global(.cthulhuUiTitle[data-variant='dialog']) {
-    line-height: 24px;
-  }
-
-  .cthulhuUiDialogHeading {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-    min-width: 0;
   }
 
   .cthulhuUiDialogBody {

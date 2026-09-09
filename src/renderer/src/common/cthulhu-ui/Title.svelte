@@ -2,21 +2,32 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  type TitleVariant = 'page' | 'small' | 'card' | 'dialog'
+  type TitleVariant = 'page' | 'small' | 'card' | 'dialog' | 'row'
 
   type Props = HTMLAttributes<HTMLDivElement> & {
     title: string
+    tooltip?: string
     variant?: TitleVariant
   }
 
-  let { title, variant = 'page', class: className, ...restProps }: Props = $props()
+  let { title, tooltip, variant = 'page', class: className, ...restProps }: Props = $props()
 </script>
 
-<div class={mergeClasses('cthulhuUiTitle', className)} data-variant={variant} {...restProps}>
+<div class={mergeClasses('cthulhuUiTitle', className)} data-variant={variant} title={tooltip} {...restProps}>
   {title}
 </div>
 
 <style>
+  .cthulhuUiTitle[data-variant='row'] {
+    color: inherit;
+    font-size: var(--cthulhu-ui-font-size-primary);
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .cthulhuUiTitle[data-variant='page'] {
     color: var(--ui-normal-text);
     font-size: 28px;

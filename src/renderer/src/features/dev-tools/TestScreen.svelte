@@ -58,7 +58,7 @@
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
   import SimpleSelectorButton from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
@@ -430,9 +430,9 @@
                 {/snippet}
               </DisplayRow>
 
-              <SettingRow
+              <ControlRow
                 icon={Settings}
-                label="SettingRow: Autosave drafts"
+                label="ControlRow: Autosave drafts"
                 detail="Keep prompt edits available between app launches"
               >
                 {#snippet detailExtra()}
@@ -447,7 +447,7 @@
                     }}
                   />
                 {/snippet}
-              </SettingRow>
+              </ControlRow>
             </Card>
           </div>
         </CardSurface>

@@ -3,26 +3,31 @@
   import { mergeClasses } from './mergeClasses'
   import IconCell from './IconCell.svelte'
   import Subtitle from './Subtitle.svelte'
+  import Title from './Title.svelte'
   import TitleSubtitleStack from './TitleSubtitleStack.svelte'
 
   export type RowTrailingLayout = 'single' | 'grouped'
 
   type Props = {
+    variant?: 'default' | 'dialog-heading'
     icon: ComponentType
     label: string
-    detail: string
+    detail?: string
     wrapDetail?: boolean
     detailExtra?: Snippet
     trailing?: Snippet
     trailingLayout?: RowTrailingLayout
     class?: string
     iconClass?: string
+    iconTestId?: string
+    detailTestId?: string
     labelTitle?: string
     labelTestId?: string
     testId?: string
   }
 
   let {
+    variant = 'default',
     icon: Icon,
     label,
     detail,
@@ -32,6 +37,8 @@
     trailingLayout = 'single',
     class: className,
     iconClass,
+    iconTestId,
+    detailTestId,
     labelTitle,
     labelTestId,
     testId
@@ -40,15 +47,29 @@
 
 <div
   class={mergeClasses('cthulhuUiRow', className)}
+  data-variant={variant}
+  data-has-detail={detail ? 'true' : 'false'}
   data-trailing={trailing ? 'true' : 'false'}
   data-trailing-layout={trailingLayout}
   data-testid={testId}
 >
-  <IconCell icon={Icon} {iconClass} />
+  <IconCell
+    icon={Icon}
+    {iconClass}
+    size={variant === 'dialog-heading' ? 'title' : 'row'}
+    data-testid={iconTestId}
+  />
 
   <TitleSubtitleStack>
-    <span class="cthulhuUiRowText" title={labelTitle} data-testid={labelTestId}>{label}</span>
-    <Subtitle text={detail} wrap={wrapDetail} />
+    <Title
+      title={label}
+      variant={variant === 'dialog-heading' ? 'dialog' : 'row'}
+      tooltip={labelTitle}
+      data-testid={labelTestId}
+    />
+    {#if detail}
+      <Subtitle text={detail} wrap={wrapDetail} data-testid={detailTestId} />
+    {/if}
     {#if detailExtra}
       <span class="cthulhuUiRowDetailExtra">
         {@render detailExtra()}
@@ -77,15 +98,17 @@
     width: 100%;
   }
 
-  .cthulhuUiRowText {
-    color: inherit;
-    display: block;
-    font-size: var(--cthulhu-ui-font-size-primary);
-    font-weight: 600;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .cthulhuUiRow[data-variant='dialog-heading'] {
+    padding: 0;
+  }
+
+  .cthulhuUiRow[data-variant='dialog-heading'][data-has-detail='true']
+    :global(.cthulhuUiTitle) {
+    line-height: 24px;
+  }
+
+  .cthulhuUiRow[data-variant='dialog-heading'] .cthulhuUiRowTrailing {
+    align-self: flex-start;
   }
 
   .cthulhuUiRowDetailExtra {

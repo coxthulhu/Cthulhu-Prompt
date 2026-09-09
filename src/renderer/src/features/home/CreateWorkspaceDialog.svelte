@@ -4,7 +4,7 @@
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -144,7 +144,7 @@
   onsubmit={handleCreateWorkspace}
 >
   <div class="cthulhuCreateWorkspaceRows flex min-w-0 flex-col">
-    <SettingRow icon={Type} label="Workspace Name" detail="Name the new workspace folder.">
+    <ControlRow icon={Type} label="Workspace Name" detail="Name the new workspace folder.">
       {#snippet control()}
         <FloatingValidationMessage
           message={displayedWorkspaceNameError}
@@ -166,11 +166,11 @@
           />
         </FloatingValidationMessage>
       {/snippet}
-    </SettingRow>
+    </ControlRow>
 
     <Separator />
 
-    <SettingRow
+    <ControlRow
       icon={FolderOpen}
       label="Containing Folder"
       detail="Choose where the workspace folder will be created."
@@ -189,11 +189,11 @@
           disabled={isWorkspaceLoading}
         />
       {/snippet}
-    </SettingRow>
+    </ControlRow>
 
     <Separator />
 
-    <SettingRow
+    <ControlRow
       icon={Route}
       label="Final Workspace Path"
       detail="Review the folder that will be created."
@@ -208,7 +208,7 @@
           </span>
         {/if}
       {/snippet}
-    </SettingRow>
+    </ControlRow>
 
     {#if finalPathMessage}
       <MessageRow
@@ -230,7 +230,7 @@
 
     <Separator />
 
-    <SettingRow
+    <ControlRow
       testId="create-workspace-examples-row"
       icon={Sparkles}
       label="Add Examples"
@@ -246,7 +246,7 @@
           }}
         />
       {/snippet}
-    </SettingRow>
+    </ControlRow>
   </div>
 </Dialog>
 

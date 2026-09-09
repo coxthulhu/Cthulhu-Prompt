@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SettingRow from '@renderer/common/cthulhu-ui/SettingRow.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import SimpleSelectorButton, {
     type SimpleSelectorButtonItem
   } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
@@ -99,7 +99,7 @@
   onsubmit={handleCreateFolder}
 >
   {#snippet beforeRows()}
-    <SettingRow
+    <ControlRow
       icon={Folders}
       label="Folder Type"
       detail="Choose what the root folder will contain."
@@ -117,6 +117,6 @@
           }}
         />
       {/snippet}
-    </SettingRow>
+    </ControlRow>
   {/snippet}
 </PromptFolderNameDialog>
