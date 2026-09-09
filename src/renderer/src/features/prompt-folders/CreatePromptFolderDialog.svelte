@@ -7,7 +7,7 @@
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
-  import { Folder, Folders, Layers } from 'lucide-svelte'
+  import { FileText, Folders, Layers } from 'lucide-svelte'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
 
   let {
@@ -31,7 +31,7 @@
       id: 'prompt',
       label: 'Prompt Folder',
       detail: 'Store and organize prompts',
-      icon: Folder
+      icon: FileText
     },
     {
       id: 'template',
