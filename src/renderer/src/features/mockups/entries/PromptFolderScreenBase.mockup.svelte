@@ -1304,9 +1304,6 @@
 
         <div class="base-template-tree-label">
           <span class="text-sm">Template Library</span>
-          {#if templateDialogMode === 'select'}
-            <span class="text-xs">Choose one</span>
-          {/if}
         </div>
         {@render Separator()}
 

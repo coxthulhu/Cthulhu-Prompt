@@ -412,9 +412,6 @@
 
     <div class="prompt-template-tree-label">
       <span class="text-sm">Template Library</span>
-      {#if mode === 'select'}
-        <span class="text-xs">Choose one</span>
-      {/if}
     </div>
     <Separator class="mb-2" />
 
