@@ -959,7 +959,7 @@
     align-items: center;
     color: var(--ui-muted-text);
     display: grid;
-    font-size: 11px;
+    font-size: 12px;
     gap: 4px;
     justify-items: center;
   }

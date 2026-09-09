@@ -1669,7 +1669,7 @@
   .base-filter-bar span {
     position: relative;
     top: -1px;
-    font-size: 11px;
+    font-size: 12px;
     margin-left: 4px;
     padding: 2px 6px;
   }
