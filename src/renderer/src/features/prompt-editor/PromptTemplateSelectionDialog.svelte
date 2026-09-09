@@ -4,6 +4,7 @@
   import { SvelteSet } from 'svelte/reactivity'
   import { Ban, Check, Copy, FolderOpen, Layers } from 'lucide-svelte'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
@@ -393,7 +394,7 @@
         data-testid="prompt-template-option-none"
         onclick={handleNoTemplateSelect}
       >
-        <span class="prompt-template-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
+        <IconCell icon={Ban} size="row" class="prompt-template-no-template-icon" />
         <span class="prompt-template-no-template-copy">
           <strong class="text-sm font-semibold">{NO_TEMPLATE_LABEL}</strong>
           <small class="text-xs">Use the prompt exactly as written</small>
@@ -411,7 +412,7 @@
     </div>
 
     <div class="prompt-template-tree-label">
-      <span class="text-sm">Template Library</span>
+      <span class="text-base">Template Library</span>
     </div>
     <Separator class="mb-2" />
 
@@ -437,9 +438,7 @@
     class="prompt-template-base-folder-header"
     data-testid={`prompt-template-base-folder-header-${row.folder.id}`}
   >
-    <span class="prompt-template-base-folder-icon">
-      <FolderOpen size={18} aria-hidden="true" />
-    </span>
+    <IconCell icon={FolderOpen} size="row" class="prompt-template-base-folder-icon" />
     <span class="prompt-template-base-folder-copy">
       <span class="prompt-template-base-folder-name text-sm">{row.folder.displayName}</span>
       <span class="prompt-template-base-folder-count text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
@@ -523,7 +522,7 @@
     cursor: pointer;
     display: grid;
     gap: 11px;
-    grid-template-columns: 32px minmax(0, 1fr) 20px;
+    grid-template-columns: 34px minmax(0, 1fr) 20px;
     height: 54px;
     padding: 0 13px 0 10px;
     text-align: left;
@@ -548,13 +547,8 @@
     background: var(--ui-accent-action-hover-fill);
   }
 
-  .prompt-template-no-template-icon {
-    align-items: center;
+  .prompt-template-no-template-option :global(.prompt-template-no-template-icon) {
     color: var(--ui-normal-text);
-    display: flex;
-    height: 28px;
-    justify-content: center;
-    width: 28px;
   }
 
   .prompt-template-no-template-copy {
@@ -652,13 +646,7 @@
     display: flex;
     gap: 9px;
     height: 51px;
-    padding: 9px 12px;
-  }
-
-  .prompt-template-base-folder-icon {
-    align-items: center;
-    color: var(--ui-secondary-icon-glyph);
-    display: flex;
+    padding: 7px 12px;
   }
 
   .prompt-template-base-folder-copy {
