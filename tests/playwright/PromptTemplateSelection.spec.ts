@@ -295,7 +295,7 @@ describe('Prompt template selection', () => {
           (firstBaseFolderHeaderSpacerBox.y + firstBaseFolderHeaderSpacerBox.height)
       )
     ).toBeLessThanOrEqual(2)
-    await expect(dialog.locator('.prompt-template-base-folder-copy strong')).toHaveText([
+    await expect(dialog.locator('.prompt-template-base-folder-name')).toHaveText([
       'Second Templates',
       'First Templates'
     ])
@@ -356,7 +356,7 @@ describe('Prompt template selection', () => {
         '[data-testid="prompt-tree-template-prompt-template-first"] .prompt-tree-selection-control[data-control="radio"]'
       )
     ).toBeVisible()
-    await expect(dialog.locator('.prompt-template-tree-label')).toContainText('Choose one')
+    await expect(dialog.locator('.prompt-template-tree-label')).toHaveText('Template Library')
 
     const templateTree = dialog.locator('[data-testid="prompt-template-selection-tree"]')
     const templateTreeSpacer = dialog.locator(
