@@ -166,7 +166,7 @@
   .prompt-folder-root-title {
     color: var(--ui-normal-text);
     font-size: 27px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     height: 36px;
     letter-spacing: -0.03em;
     line-height: 32px;

@@ -18,10 +18,14 @@
 </div>
 
 <style>
+  .cthulhuUiTitle {
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.5;
+  }
+
   .cthulhuUiTitle[data-variant='row'] {
     color: inherit;
     font-size: var(--cthulhu-ui-font-size-primary);
-    font-weight: 600;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -31,8 +35,6 @@
   .cthulhuUiTitle[data-variant='page'] {
     color: var(--ui-normal-text);
     font-size: 28px;
-    font-weight: 500;
-    line-height: 29px;
     padding-bottom: 20px;
     overflow-wrap: anywhere;
   }
@@ -40,16 +42,12 @@
   .cthulhuUiTitle[data-variant='small'] {
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 500;
-    line-height: 21px;
   }
 
   .cthulhuUiTitle[data-variant='card'],
   .cthulhuUiTitle[data-variant='dialog'] {
     color: var(--ui-normal-text);
     font-size: 18px;
-    font-weight: 500;
-    line-height: 22px;
   }
 
   .cthulhuUiTitle[data-variant='dialog'] {

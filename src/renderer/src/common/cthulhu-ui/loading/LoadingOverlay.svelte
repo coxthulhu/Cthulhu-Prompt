@@ -31,7 +31,7 @@
 >
   <div class="cthulhuUiLoadingOverlayContent flex flex-col items-center gap-3">
     <Loader class="cthulhuUiLoadingOverlayIcon size-6 animate-spin" />
-    <p class="text-sm font-medium">{message}</p>
+    <p class="text-sm font-semibold">{message}</p>
   </div>
 </div>
 

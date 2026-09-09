@@ -75,7 +75,7 @@
     color: var(--ui-secondary-text);
     display: flex;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     gap: 5px;
     line-height: 16px;
     min-width: 0;
@@ -107,7 +107,7 @@
   .editor-card-section-description {
     color: var(--ui-muted-text);
     flex: 1 1 auto;
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

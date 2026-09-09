@@ -250,7 +250,7 @@
       >
         {#if controller.isVirtualContentReady}
           <div
-            class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-medium"
+            class="prompt-folder-header-breadcrumb flex min-w-0 items-center text-sm font-semibold"
           >
             <button
               type="button"

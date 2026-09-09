@@ -258,7 +258,7 @@
     color: inherit;
     display: block;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     text-overflow: ellipsis;
     white-space: nowrap;
   }

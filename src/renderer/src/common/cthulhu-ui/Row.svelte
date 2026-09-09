@@ -48,7 +48,6 @@
 <div
   class={mergeClasses('cthulhuUiRow', className)}
   data-variant={variant}
-  data-has-detail={detail ? 'true' : 'false'}
   data-trailing={trailing ? 'true' : 'false'}
   data-trailing-layout={trailingLayout}
   data-testid={testId}
@@ -102,11 +101,6 @@
     padding: 0;
   }
 
-  .cthulhuUiRow[data-variant='dialog-heading'][data-has-detail='true']
-    :global(.cthulhuUiTitle) {
-    line-height: 24px;
-  }
-
   .cthulhuUiRow[data-variant='dialog-heading'] .cthulhuUiRowTrailing {
     align-self: flex-start;
   }
@@ -115,7 +109,8 @@
     color: var(--ui-secondary-text);
     display: block;
     font-size: 14px;
-    line-height: 18px;
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
     overflow-wrap: anywhere;
     white-space: normal;
   }

@@ -205,7 +205,7 @@
 
   .cthulhuUiAccordionLabel {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     letter-spacing: 0.01em;
     min-width: 0;
     overflow: hidden;

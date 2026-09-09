@@ -89,7 +89,7 @@
   .mockups-empty h2 {
     margin: 0;
     color: var(--ui-normal-text);
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
   }
 
   .mockups-empty p {
@@ -129,7 +129,7 @@
     border-radius: 16px;
     font: inherit;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     cursor: pointer;
   }
 

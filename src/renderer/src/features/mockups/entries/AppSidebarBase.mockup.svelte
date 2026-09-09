@@ -507,7 +507,7 @@
   .workspace-title-row h1 {
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     letter-spacing: -0.025em;
     line-height: 20px;
     margin: 0;
@@ -600,7 +600,7 @@
 
   .selector-title {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -801,7 +801,7 @@
   }
 
   .tree-category-toggle .tree-label {
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
   }
 
   .tree-category-actions {
@@ -986,7 +986,7 @@
 
   .status-label {
     font-size: 13px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     letter-spacing: 0.01em;
     overflow: hidden;
     text-overflow: ellipsis;

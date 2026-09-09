@@ -37,7 +37,7 @@
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: var(--font-weight-semibold);
     gap: 6px;
     line-height: 1.25;
     max-width: 11rem;

@@ -166,7 +166,7 @@
   .titlebar__title {
     text-align: center;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: var(--font-weight-semibold);
     line-height: var(--titlebar-height);
     overflow: hidden;
     text-overflow: ellipsis;

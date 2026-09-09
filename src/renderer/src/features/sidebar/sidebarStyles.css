@@ -126,7 +126,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
 }
 
 .sidebarPromptTreeCountBadge {
@@ -140,7 +140,7 @@
   background-color: var(--ui-ghost-surface);
   padding: 0 8px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: 1;
   color: var(--ui-secondary-text);
 }
@@ -311,7 +311,7 @@
 .sidebarPromptTreeRootButton {
   display: flex;
   padding-left: 13px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .sidebarPromptTreeBaseFolderButton {
@@ -319,7 +319,7 @@
   grid-template-columns: 24px minmax(0, 1fr);
   gap: 8px;
   padding: 0 12px 0 9px;
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
 }
 
 .sidebarPromptTreeBaseFolderButton .sidebarPromptTreeFolderIcon {

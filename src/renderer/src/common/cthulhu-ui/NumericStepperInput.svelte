@@ -239,7 +239,7 @@
   .cthulhuUiNumericStepperInputHelper {
     color: var(--ui-muted-text);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 1.25;
     white-space: nowrap;
   }

@@ -59,7 +59,7 @@
     color: var(--ui-normal-text);
     display: grid;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     gap: 8px;
     grid-template-columns: 40px minmax(0, 1fr);
     min-width: 0;
@@ -80,7 +80,7 @@
   .editor-subtitle-bar-metadata {
     color: var(--ui-muted-text);
     font-size: 12px;
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
   }
 
   .editor-subtitle-bar-actions {

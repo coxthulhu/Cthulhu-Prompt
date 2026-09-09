@@ -166,7 +166,7 @@
     display: inline-flex;
     font-family: inherit;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: var(--font-weight-semibold);
     grid-area: 1 / 1;
     height: 34px;
     padding: 0;

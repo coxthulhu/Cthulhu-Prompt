@@ -494,7 +494,7 @@
     color: var(--ui-normal-text);
     font-family: inherit;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     height: 20px;
     line-height: 20px;
     min-width: 0;

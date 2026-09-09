@@ -417,7 +417,7 @@
     flex-direction: column;
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: clamp(64px, 9vw, 88px);
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     letter-spacing: 0.14em;
     line-height: 1;
     text-align: center;

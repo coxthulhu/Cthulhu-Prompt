@@ -162,7 +162,7 @@
     display: inline-flex;
     flex: 0 0 auto;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     height: 26px;
     justify-content: center;
     line-height: 16px;

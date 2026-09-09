@@ -937,7 +937,7 @@
     color: var(--ui-normal-text);
     display: flex;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     gap: 8px;
   }
 
@@ -1001,7 +1001,7 @@
   .component-sample-label {
     color: var(--ui-muted-text);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     line-height: 1.3;
   }
 
@@ -1016,7 +1016,7 @@
   .variant-row > span {
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: var(--font-weight-semibold);
     line-height: 1.3;
   }
 

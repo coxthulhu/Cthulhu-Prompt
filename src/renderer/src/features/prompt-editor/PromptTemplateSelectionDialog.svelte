@@ -395,7 +395,7 @@
       >
         <span class="prompt-template-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
         <span class="prompt-template-no-template-copy">
-          <strong>{NO_TEMPLATE_LABEL}</strong>
+          <strong class="font-semibold">{NO_TEMPLATE_LABEL}</strong>
           <small>Use the prompt exactly as written</small>
         </span>
         <span
@@ -444,7 +444,7 @@
       <FolderOpen size={18} aria-hidden="true" />
     </span>
     <span class="prompt-template-base-folder-copy">
-      <strong>{row.folder.displayName}</strong>
+      <strong class="font-semibold">{row.folder.displayName}</strong>
       <span>{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
     </span>
   </div>
@@ -569,7 +569,7 @@
   .prompt-template-no-template-copy strong {
     color: var(--ui-normal-text);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 19px;
   }
 
@@ -638,7 +638,7 @@
   .prompt-template-tree-label > span:first-child {
     color: var(--ui-normal-text);
     font-size: 15px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 20px;
   }
 
@@ -682,7 +682,7 @@
   .prompt-template-base-folder-copy strong {
     color: var(--ui-normal-text);
     font-size: 13px;
-    font-weight: 650;
+    font-weight: var(--font-weight-semibold);
     line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;

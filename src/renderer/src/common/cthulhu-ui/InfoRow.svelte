@@ -23,7 +23,7 @@
     color: var(--ui-secondary-text);
     display: grid;
     font-size: 13px;
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
     gap: 8px;
     grid-template-columns: 18px minmax(0, 1fr);
     line-height: 18px;

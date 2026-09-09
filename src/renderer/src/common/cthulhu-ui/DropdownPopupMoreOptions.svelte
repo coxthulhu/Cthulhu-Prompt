@@ -162,7 +162,7 @@
 
   .cthulhuUiDropdownPopupMoreOptionsTitle {
     font-size: 14px;
-    font-weight: 600;
+    font-weight: var(--font-weight-semibold);
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;

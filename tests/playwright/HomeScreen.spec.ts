@@ -259,7 +259,7 @@ describe('Home Screen', () => {
       )
       await expect(errorDialog.locator('.cthulhuUiDialogHeader .cthulhuUiTitle')).toHaveCSS(
         'line-height',
-        '22px'
+        '27px'
       )
       await expect(errorDialog).toContainText('The workspace could not be opened.')
       await expect(errorDialog).toContainText('Invalid workspace path')
@@ -371,7 +371,7 @@ describe('Home Screen', () => {
       )
       await expect(createDialog.locator('.cthulhuUiDialogHeader .cthulhuUiTitle')).toHaveCSS(
         'line-height',
-        '24px'
+        '27px'
       )
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Example Workspace')
 

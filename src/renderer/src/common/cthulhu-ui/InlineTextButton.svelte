@@ -51,7 +51,7 @@
     padding: var(--cthulhu-ui-inline-text-button-padding, 0);
     color: var(--ui-muted-text);
     font-size: 13px;
-    font-weight: 400;
+    font-weight: var(--font-weight-normal);
     line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
     text-align: inherit;
     transition: color var(--ui-animation-duration-fast) ease-out;
