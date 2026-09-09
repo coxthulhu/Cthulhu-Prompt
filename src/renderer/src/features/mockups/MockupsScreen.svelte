@@ -61,7 +61,7 @@
     {:else}
       <div class="mockups-empty">
         <h2>No mockups</h2>
-        <p>
+        <p class="text-base">
           Create a self-contained <code>*.mockup.svelte</code> entry under
           <code>features/mockups/entries</code>.
         </p>
@@ -94,7 +94,6 @@
 
   .mockups-empty p {
     margin: 0;
-    line-height: 1.5;
     color: var(--ui-muted-text);
   }
 
@@ -129,6 +128,7 @@
     border-radius: 16px;
     font: inherit;
     font-size: 15px;
+    line-height: 22px;
     font-weight: var(--font-weight-semibold);
     cursor: pointer;
   }

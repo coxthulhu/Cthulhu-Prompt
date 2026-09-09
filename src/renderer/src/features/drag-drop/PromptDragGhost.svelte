@@ -23,6 +23,6 @@
         aria-hidden="true"
       />
     {/if}
-    <span class="sidebarPromptTreeSettingsLabel">{title}</span>
+    <span class="sidebarPromptTreeSettingsLabel text-sm">{title}</span>
   </div>
 </div>

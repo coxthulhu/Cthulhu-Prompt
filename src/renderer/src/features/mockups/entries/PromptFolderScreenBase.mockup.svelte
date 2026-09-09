@@ -678,7 +678,7 @@
   <div class="base-template-folder-row">
     <button
       type="button"
-      class="base-template-folder-button"
+      class="base-template-folder-button text-sm"
       style={`--base-template-indent-count:${indentCount};`}
       aria-expanded={isExpanded}
       onclick={() => toggleTemplateFolder(folder.id)}
@@ -696,7 +696,7 @@
       <div class="base-template-option-row">
         <button
           type="button"
-          class="base-template-option-button"
+          class="base-template-option-button text-sm"
           class:active={templateDialogMode === 'select' && selectedTemplateIds.has(template.id)}
           style={`--base-template-indent-count:${indentCount + 1};`}
           aria-pressed={templateDialogMode === 'select'
@@ -743,7 +743,7 @@
           })}
       {/if}
       <span class="base-status-selector" data-open={statusMenuId === prompt.id ? 'true' : 'false'}>
-        <button type="button" class="base-status-value"
+        <button type="button" class="base-status-value text-sm"
           aria-label={`Change status: ${prompt.status === 'InProgress' ? 'In Progress' : prompt.status}`}
           aria-haspopup="menu" aria-expanded={statusMenuId === prompt.id}
           onclick={(event) => toggleStatusMenu(prompt, event)}>
@@ -783,8 +783,8 @@
           <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => setPromptStatus(prompt, item.id)}>
             <span class="base-status-menu-icon" data-status={item.id}><item.icon size={18} aria-hidden="true" /></span>
             <span class="base-status-menu-text">
-              <span class="base-status-menu-title">{item.label}</span>
-              <span class="base-status-menu-subtitle" title={item.detail}>{item.detail}</span>
+              <span class="base-status-menu-title text-sm">{item.label}</span>
+              <span class="base-status-menu-subtitle text-xs" title={item.detail}>{item.detail}</span>
             </span>
           </button>
         {/each}
@@ -796,7 +796,7 @@
 {#snippet SettingsToggle(setting: MockFolderSetting)}
   <button
     type="button"
-    class="base-settings-toggle"
+    class="base-settings-toggle text-sm"
     aria-pressed={setting.isPresent}
     title={`${setting.isPresent ? 'Remove' : 'Add'} ${setting.title.toLowerCase()}`}
     onclick={() => {
@@ -843,7 +843,7 @@
       {@render Separator()}
     </button>
     <div class="base-divider-actions">
-      <button type="button" class="base-divider-action-button" aria-label="Add Prompt" onclick={() => addPrompt(folder, afterId)}>
+      <button type="button" class="base-divider-action-button text-xs" aria-label="Add Prompt" onclick={() => addPrompt(folder, afterId)}>
         <Plus size={13} aria-hidden="true" />
         <span>Add Prompt</span>
       </button>
@@ -886,8 +886,8 @@
         <div class="base-prompt-title-main">
           {@render IconCell(FileText)}
           <div class="base-title-copy">
-            <input aria-label="Prompt title" bind:value={prompt.title} />
-            <div class="base-metadata-row">
+            <input class="text-sm" aria-label="Prompt title" bind:value={prompt.title} />
+            <div class="base-metadata-row text-xs">
               <span
                 class="base-folder-label"
                 data-template-state={prompt.templateState}
@@ -953,8 +953,8 @@
                       {#if archiveDefault}<Trash2 size={18} aria-hidden="true" />{:else}<Archive size={18} aria-hidden="true" />{/if}
                     </span>
                     <span class="base-status-menu-text">
-                      <span class="base-status-menu-title">{archiveDefault ? 'Delete Prompt' : 'Archive Prompt'}</span>
-                      <span class="base-status-menu-subtitle">{archiveDefault ? 'Permanently delete this prompt' : 'Move this prompt to Archived'}</span>
+                      <span class="base-status-menu-title text-sm">{archiveDefault ? 'Delete Prompt' : 'Archive Prompt'}</span>
+                      <span class="base-status-menu-subtitle text-xs">{archiveDefault ? 'Permanently delete this prompt' : 'Move this prompt to Archived'}</span>
                     </span>
                   </button>
                 </div>
@@ -990,7 +990,7 @@
             {@render IconCell(Folder)}
             <div class="base-folder-title-copy">
               <div class="base-folder-title-line">
-                <span class="base-folder-title" title={folder.title}>{folder.title}</span>
+                <span class="base-folder-title text-base" title={folder.title}>{folder.title}</span>
                 {#if !isFinalMode}
                 {@render IconButton(Pencil, 'Rename category', {
                   onclick: () => nameDialog = { title: 'Rename Category', value: folder.title, categoryId: folder.id, save: (value) => folder.title = value },
@@ -1000,7 +1000,7 @@
                 })}
                 {/if}
               </div>
-              <div class="base-metadata-row">
+              <div class="base-metadata-row text-xs">
                 <span>{visiblePrompts(folder.prompts).length} {visiblePrompts(folder.prompts).length === 1 ? 'prompt' : 'prompts'}</span>
               </div>
             </div>
@@ -1031,7 +1031,7 @@
         {@render Separator()}
         <div class="base-folder-settings">
           <div class="base-settings-toolbar">
-            <div class="base-settings-toolbar-heading">
+            <div class="base-settings-toolbar-heading text-sm">
               <Settings size={20} aria-hidden="true" />
               <div class="base-settings-toolbar-copy">
                 <span>Category Settings</span>
@@ -1056,7 +1056,7 @@
                 class:withTopBorder={settingIndex > 0}
                 data-testid={`base-mockup-settings-section-${setting.id}`}
               >
-                <header>
+                <header class="text-xs">
                   <div class="base-settings-copy">
                     <span>{setting.title}</span>
                     <span>- {setting.description}</span>
@@ -1087,7 +1087,7 @@
 
 <main class="base-prompt-folder-mockup" data-testid="base-prompt-folder-mockup">
   <div class="base-header-bar">
-    <div class="base-breadcrumb">
+    <div class="base-breadcrumb text-sm">
       <button type="button">{rootTitle}</button>
       <span>/</span>
       <button type="button">{screenMode}</button>
@@ -1109,7 +1109,7 @@
     <section class="base-root-header">
       <div class="base-root-title-row">
         <div class="base-root-title-block">
-          <div class="base-root-eyebrow">
+          <div class="base-root-eyebrow text-xs">
             <Folder size={14} aria-hidden="true" />
             <span>Prompt Folder</span>
           </div>
@@ -1137,7 +1137,7 @@
         {#each groups as group (group)}
           <button class:active={screenMode === group} type="button" aria-pressed={screenMode === group}
             onclick={() => { screenMode = group; statusMenuId = null; deleteMenuId = null }}>
-            {group} <span>{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
+            {group} <span class="text-xs">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
           </button>
         {/each}
       </div>
@@ -1158,7 +1158,7 @@
       {#if !allPrompts.some((prompt) => matchesGroup(prompt))}
         <div class="base-empty">
           <p>No {screenMode.toLowerCase()} prompts in this folder.</p>
-          {#if !isFinalMode}<p class="base-empty-detail">Click the Add Prompt button to create your first prompt.</p>{/if}
+          {#if !isFinalMode}<p class="base-empty-detail text-sm">Click the Add Prompt button to create your first prompt.</p>{/if}
         </div>
       {/if}
     </div>
@@ -1179,8 +1179,8 @@
           <div class="base-template-dialog-heading">
             <div class="base-template-dialog-icon"><NameIcon size={24} aria-hidden="true" /></div>
             <div class="base-template-dialog-heading-copy">
-              <h2>{nameDialog.title}</h2>
-              <p>{nameDialog.title === 'Create Category' ? 'Add a category to this root folder.' : `Choose a new name for this ${isFolderName ? 'prompt folder' : 'category'}.`}</p>
+              <h2 class="text-lg">{nameDialog.title}</h2>
+              <p class="text-sm">{nameDialog.title === 'Create Category' ? 'Add a category to this root folder.' : `Choose a new name for this ${isFolderName ? 'prompt folder' : 'category'}.`}</p>
             </div>
           </div>
           {@render IconButton(X, 'Close', { onclick: () => nameDialog = null })}
@@ -1189,23 +1189,23 @@
         <div class="base-name-row">
           <span class="base-name-row-icon"><NameIcon size={24} aria-hidden="true" /></span>
           <div class="base-name-row-copy">
-            <span>{nameLabel}</span>
-            <small>{isFolderName ? 'Rename this prompt folder.' : 'Name the new category.'}</small>
+            <span class="text-base">{nameLabel}</span>
+            <small class="text-sm">{isFolderName ? 'Rename this prompt folder.' : 'Name the new category.'}</small>
           </div>
           <div class="base-name-control">
-            <input class="base-name-input" bind:this={nameInput} aria-label={nameLabel}
+            <input class="base-name-input text-sm" bind:this={nameInput} aria-label={nameLabel}
               placeholder="Name..." bind:value={nameDialog.value}
               aria-invalid={nameInteracted && nameError ? 'true' : undefined}
               oninput={() => nameInteracted = true} />
             {#if nameInteracted && nameError}
-              <div class="base-name-error"><AlertCircle size={16} aria-hidden="true" />{nameError}</div>
+              <div class="base-name-error text-sm"><AlertCircle size={16} aria-hidden="true" />{nameError}</div>
             {/if}
           </div>
         </div>
         {@render Separator()}
         <div class="base-template-dialog-footer">
-          <button class="base-dialog-confirm-button" type="submit" disabled={nameDisabled}>{nameDialog.title}</button>
-          <button class="base-dialog-cancel-button" type="button" onclick={() => nameDialog = null}>Cancel</button>
+          <button class="base-dialog-confirm-button text-sm" type="submit" disabled={nameDisabled}>{nameDialog.title}</button>
+          <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => nameDialog = null}>Cancel</button>
         </div>
       </form>
     </div>
@@ -1219,14 +1219,14 @@
       <header class="base-template-dialog-header">
         <div class="base-template-dialog-heading">
           <div class="base-template-dialog-icon"><Trash2 size={24} aria-hidden="true" /></div>
-          <h2>{confirmation.title}</h2>
+          <h2 class="text-lg">{confirmation.title}</h2>
         </div>
         {@render IconButton(X, 'Close', { onclick: () => confirmation = null })}
       </header>
-      <p>{confirmation.description}</p>
+      <p class="text-base">{confirmation.description}</p>
       <div class="base-template-dialog-footer">
-        <button class="base-dialog-confirm-button" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
-        <button class="base-dialog-cancel-button" type="button" onclick={() => confirmation = null}>Cancel</button>
+        <button class="base-dialog-confirm-button text-sm" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
+        <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => confirmation = null}>Cancel</button>
       </div>
     </div>
   </div>
@@ -1257,12 +1257,12 @@
             {/if}
           </div>
           <div class="base-template-dialog-heading-copy">
-            <h2>
+            <h2 class="text-lg">
               {templateDialogMode === 'select-and-copy'
                 ? 'Quick Template Selection'
                 : 'Select Template'}
             </h2>
-            <p>
+            <p class="text-sm">
               {templateDialogMode === 'select-and-copy'
                 ? 'Click a template to apply it and copy this prompt immediately.'
                 : 'Choose one template, or use the prompt exactly as written.'}
@@ -1278,7 +1278,7 @@
         <div class="base-no-template-panel">
           <button
             type="button"
-            class="base-template-root-option"
+            class="base-template-root-option text-sm"
             class:active={templateDialogMode === 'select' && selectedTemplateIds.size === 0}
             aria-pressed={templateDialogMode === 'select'
               ? selectedTemplateIds.size === 0
@@ -1287,8 +1287,8 @@
           >
             <span class="base-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
             <span class="base-no-template-copy">
-              <strong class="font-semibold">{NO_TEMPLATE_LABEL}</strong>
-              <small>Use the prompt exactly as written</small>
+              <strong class="text-sm font-semibold">{NO_TEMPLATE_LABEL}</strong>
+              <small class="text-xs">Use the prompt exactly as written</small>
             </span>
             <span
               class="base-template-selection-mark"
@@ -1303,9 +1303,9 @@
         </div>
 
         <div class="base-template-tree-label">
-          <span>Template Library</span>
+          <span class="text-sm">Template Library</span>
           {#if templateDialogMode === 'select'}
-            <span>Choose one</span>
+            <span class="text-xs">Choose one</span>
           {/if}
         </div>
         {@render Separator()}
@@ -1320,7 +1320,7 @@
                 </span>
                 <div class="base-template-root-copy">
                   <strong class="font-semibold">{rootFolder.title}</strong>
-                  <span>{templateCount} {templateCount === 1 ? 'template' : 'templates'}</span>
+                  <span class="text-xs">{templateCount} {templateCount === 1 ? 'template' : 'templates'}</span>
                 </div>
               </div>
               <div class="base-template-root-contents">
@@ -1328,7 +1328,7 @@
                   <div class="base-template-option-row">
                     <button
                       type="button"
-                      class="base-template-option-button"
+                      class="base-template-option-button text-sm"
                       class:active={templateDialogMode === 'select' &&
                         selectedTemplateIds.has(template.id)}
                       style="--base-template-indent-count:0;"
@@ -1369,13 +1369,13 @@
       {@render Separator()}
 
       <footer class="base-template-dialog-footer">
-        <button type="button" class="base-dialog-cancel-button" onclick={closeTemplateDialog}>
+        <button type="button" class="base-dialog-cancel-button text-sm" onclick={closeTemplateDialog}>
           Cancel
         </button>
         {#if templateDialogMode === 'select'}
           <button
             type="button"
-            class="base-dialog-confirm-button"
+            class="base-dialog-confirm-button text-sm"
             onclick={confirmTemplateSelections}
           >
             <Check size={16} aria-hidden="true" />
@@ -1399,10 +1399,6 @@
     width: 100%;
   }
 
-  button,
-  input {
-    font: inherit;
-  }
 
   button {
     cursor: pointer;
@@ -1540,7 +1536,6 @@
     align-items: center;
     color: var(--ui-muted-text);
     display: flex;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     min-width: 0;
   }
@@ -1612,10 +1607,8 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
     gap: 6px;
     height: 17px;
-    line-height: 17px;
   }
 
   .base-root-title-line {
@@ -1669,7 +1662,7 @@
   .base-filter-bar span {
     position: relative;
     top: -1px;
-    font-size: 12px;
+    line-height: 18px;
     margin-left: 4px;
     padding: 2px 6px;
   }
@@ -1725,10 +1718,8 @@
     border: 0;
     color: var(--ui-muted-text);
     display: inline-flex;
-    font-size: 12px;
     gap: 4px;
     height: 100%;
-    line-height: 16px;
     padding: 0;
     transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
@@ -1897,10 +1888,8 @@
     background: transparent;
     border: 0;
     color: var(--ui-normal-text);
-    font-size: 15px;
     font-weight: var(--font-weight-semibold);
     height: 20px;
-    line-height: 20px;
     min-width: 0;
     outline: none;
     padding: 0;
@@ -1912,9 +1901,7 @@
     color: var(--ui-muted-text);
     display: flex;
     flex-wrap: nowrap;
-    font-size: 12px;
     gap: 8px;
-    line-height: 16px;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -2092,7 +2079,6 @@
     cursor: pointer;
     display: inline-flex;
     font-family: inherit;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     grid-area: 1 / 1;
     height: 34px;
@@ -2227,9 +2213,8 @@
 
   .base-folder-title {
     color: var(--ui-normal-text);
-    font-size: 16px;
-    font-weight: var(--font-weight-semibold);
     line-height: 20px;
+    font-weight: var(--font-weight-semibold);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2257,7 +2242,6 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     gap: 12px;
     min-width: 0;
@@ -2298,12 +2282,11 @@
     color: var(--ui-hoverable-text);
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 14px;
+    line-height: 16px;
     font-weight: var(--font-weight-semibold);
     gap: 7px;
     height: 30px;
     justify-content: center;
-    line-height: 16px;
     min-width: 0;
     padding: 0 10px;
     transition:
@@ -2374,11 +2357,9 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
     font-weight: var(--font-weight-semibold);
     gap: 5px;
     height: 28px;
-    line-height: 16px;
     min-width: 0;
     overflow: hidden;
     padding: 0 16px;
@@ -2484,9 +2465,8 @@
 
   .base-template-dialog-header h2 {
     color: var(--ui-normal-text);
-    font-size: 18px;
-    font-weight: var(--font-weight-semibold);
     line-height: 24px;
+    font-weight: var(--font-weight-semibold);
     margin: 0;
     min-width: 0;
     overflow: hidden;
@@ -2496,8 +2476,6 @@
 
   .base-template-dialog-heading p {
     color: var(--ui-muted-text);
-    font-size: 13px;
-    line-height: 19px;
     margin: 3px 0 0;
   }
 
@@ -2529,7 +2507,6 @@
   .base-template-folder-button {
     box-sizing: border-box;
     color: var(--ui-hoverable-text);
-    font-size: 14px;
     height: 30px;
     min-width: 0;
     width: 100%;
@@ -2569,15 +2546,11 @@
 
   .base-no-template-copy strong {
     color: var(--ui-normal-text);
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
-    line-height: 19px;
   }
 
   .base-no-template-copy small {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 17px;
   }
 
   .base-template-tree-label {
@@ -2589,15 +2562,11 @@
 
   .base-template-tree-label > span:first-child {
     color: var(--ui-normal-text);
-    font-size: 15px;
     font-weight: var(--font-weight-semibold);
-    line-height: 20px;
   }
 
   .base-template-tree-label span:last-child:not(:first-child) {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 16px;
   }
 
   .base-template-root-group {
@@ -2640,8 +2609,6 @@
 
   .base-template-root-copy span {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 16px;
   }
 
   .base-template-root-contents {
@@ -2803,7 +2770,6 @@
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-normal-text);
     display: inline-flex;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     gap: 7px;
     height: 40px;
@@ -2827,10 +2793,8 @@
     box-sizing: border-box;
     color: var(--ui-normal-text);
     display: inline-flex;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     height: 40px;
-    line-height: 20px;
     padding: 0 14px;
     transition:
       background-color var(--ui-animation-duration-standard) ease,
@@ -2853,26 +2817,26 @@
   .base-final-gap { height: 28px; }
   .base-empty { color: var(--ui-secondary-text); text-align: center; padding: 48px 0; }
   .base-empty p { margin: 0; }
-  .base-empty .base-empty-detail { font-size: 14px; margin-top: 8px; }
+  .base-empty .base-empty-detail { margin-top: 8px; }
   .base-name-dialog { max-width: 540px; background: var(--ui-card-overlay-surface); }
   .base-name-row { display: flex; align-items: center; gap: 12px; padding: 16px; min-width: 0; }
   .base-name-row-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; color: var(--ui-hoverable-icon-glyph); }
   .base-name-row-copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
-  .base-name-row-copy > span { font-size: var(--cthulhu-ui-font-size-primary); font-weight: var(--font-weight-semibold); }
-  .base-name-row-copy small { color: var(--ui-muted-text); font-size: 13px; }
+  .base-name-row-copy > span { font-weight: var(--font-weight-semibold); }
+  .base-name-row-copy small { color: var(--ui-muted-text); }
   .base-name-row-copy > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .base-name-control { position: relative; flex: 0 0 auto; }
-  .base-name-input { box-sizing: border-box; width: 220px; height: 40px; border-radius: var(--cthulhu-ui-radius-control); background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 4px 14px; font-size: 14px; font-weight: var(--font-weight-semibold); }
+  .base-name-input { box-sizing: border-box; width: 220px; height: 40px; border-radius: var(--cthulhu-ui-radius-control); background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 4px 14px; font-weight: var(--font-weight-semibold); }
   .base-name-input::placeholder { color: var(--ui-muted-text); }
   .base-name-input:focus-visible { outline: none; border-color: var(--ui-neutral-focus-border); box-shadow: var(--cthulhu-ui-shadow-focus); }
   .base-name-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
-  .base-name-error { position: absolute; top: 100%; left: 0; z-index: 10; margin-top: 2px; height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--cthulhu-ui-radius-control); white-space: nowrap; font-size: 14px; background: color-mix(in oklch, var(--ui-card-solid-surface) 76%, var(--ui-danger-strong-border)); box-shadow: 0 8px 18px var(--ui-card-normal-shadow); }
+  .base-name-error { position: absolute; top: 100%; left: 0; z-index: 10; margin-top: 2px; height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--cthulhu-ui-radius-control); white-space: nowrap; background: color-mix(in oklch, var(--ui-card-solid-surface) 76%, var(--ui-danger-strong-border)); box-shadow: 0 8px 18px var(--ui-card-normal-shadow); }
   .base-name-error :global(svg) { color: var(--ui-danger-icon-glyph); }
   .base-name-dialog .base-dialog-confirm-button { border-color: var(--ui-accent-muted-border); font-weight: var(--font-weight-semibold); padding-inline: 14px; }
   .base-name-dialog .base-dialog-confirm-button:disabled { opacity: 0.5; pointer-events: none; }
   .base-confirmation-dialog { max-width: 480px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
   .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
-  .base-confirmation-dialog > p { padding: 4px; margin: 0; font-size: 16px; line-height: 1.5; }
+  .base-confirmation-dialog > p { padding: 4px; margin: 0; }
   .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: var(--font-weight-semibold); }
   .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
   @media (max-width: 720px) {
@@ -2937,17 +2901,14 @@
   .base-status-menu-icon[data-status='Completed'] { color: var(--ui-success-normal-text); }
   .base-status-menu-text { display: grid; gap: 2px; min-width: 0; }
   .base-status-menu-title {
-    font-size: 14px;
+    line-height: 18px;
     font-weight: var(--font-weight-semibold);
-    line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .base-status-menu-subtitle {
     color: var(--ui-secondary-text);
-    font-size: 12px;
-    line-height: 1.25;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

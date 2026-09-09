@@ -221,7 +221,7 @@
 
         <div class="category-editor-title-copy">
           <div class="category-editor-title-line">
-            <span class="category-editor-title" title={displayName}>
+            <span class="category-editor-title text-base" title={displayName}>
               {displayName}
             </span>
             {#if canRename && !isReadOnly}
@@ -239,7 +239,7 @@
             {/if}
           </div>
 
-          <div class="category-editor-metadata-row">
+          <div class="category-editor-metadata-row text-xs">
             <span>{contentCountLabel}</span>
           </div>
         </div>
@@ -384,9 +384,8 @@
 
   .category-editor-title {
     color: var(--ui-normal-text);
-    font-size: 16px;
-    font-weight: var(--font-weight-semibold);
     line-height: 20px;
+    font-weight: var(--font-weight-semibold);
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -398,9 +397,7 @@
     color: var(--ui-muted-text);
     display: flex;
     flex-wrap: nowrap;
-    font-size: 12px;
     gap: 8px;
-    line-height: 16px;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;

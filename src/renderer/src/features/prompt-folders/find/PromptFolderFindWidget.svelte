@@ -63,7 +63,7 @@
 
 <div class="prompt-find-widget-host">
   <div
-    class="prompt-find-widget"
+    class="prompt-find-widget text-sm"
     class:prompt-find-widget--no-results={hasNoResults}
     data-testid="prompt-find-widget"
   >
@@ -73,7 +73,7 @@
           <div class="prompt-find-input__box" class:synthetic-focus={isInputFocused}>
             <div class="prompt-find-input__wrapper">
               <textarea
-                class="prompt-find-input__field"
+                class="prompt-find-input__field text-sm"
                 class:empty={isInputEmpty}
                 data-testid="prompt-find-input"
                 rows="1"
@@ -175,7 +175,6 @@
     width: 400px;
     height: 33px;
     overflow: hidden;
-    line-height: 19px;
     padding: 0 4px;
     box-sizing: border-box;
     display: flex;
@@ -191,7 +190,6 @@
     border-bottom-right-radius: 4px;
     background-color: var(--prompt-find-widget-background);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    font-size: 13px;
   }
 
   .prompt-find-widget__find-part {
@@ -253,7 +251,6 @@
     line-height: inherit;
     border: none;
     font-family: inherit;
-    font-size: 13px;
     resize: none;
     color: inherit;
     background-color: transparent;
@@ -302,7 +299,7 @@
     vertical-align: middle;
     box-sizing: border-box;
     text-align: center;
-    line-height: 23px;
+    line-height: 24px;
   }
 
   .prompt-find-widget__button {

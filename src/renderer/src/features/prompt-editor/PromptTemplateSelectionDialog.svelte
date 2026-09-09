@@ -395,8 +395,8 @@
       >
         <span class="prompt-template-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
         <span class="prompt-template-no-template-copy">
-          <strong class="font-semibold">{NO_TEMPLATE_LABEL}</strong>
-          <small>Use the prompt exactly as written</small>
+          <strong class="text-sm font-semibold">{NO_TEMPLATE_LABEL}</strong>
+          <small class="text-xs">Use the prompt exactly as written</small>
         </span>
         <span
           class="prompt-template-no-template-control"
@@ -411,9 +411,9 @@
     </div>
 
     <div class="prompt-template-tree-label">
-      <span>Template Library</span>
+      <span class="text-sm">Template Library</span>
       {#if mode === 'select'}
-        <span>Choose one</span>
+        <span class="text-xs">Choose one</span>
       {/if}
     </div>
     <Separator class="mb-2" />
@@ -445,7 +445,7 @@
     </span>
     <span class="prompt-template-base-folder-copy">
       <strong class="font-semibold">{row.folder.displayName}</strong>
-      <span>{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
+      <span class="text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
     </span>
   </div>
 {/snippet}
@@ -568,15 +568,11 @@
 
   .prompt-template-no-template-copy strong {
     color: var(--ui-normal-text);
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
-    line-height: 19px;
   }
 
   .prompt-template-no-template-copy small {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 17px;
   }
 
   .prompt-template-no-template-control {
@@ -637,15 +633,11 @@
 
   .prompt-template-tree-label > span:first-child {
     color: var(--ui-normal-text);
-    font-size: 15px;
     font-weight: var(--font-weight-semibold);
-    line-height: 20px;
   }
 
   .prompt-template-tree-label span:last-child:not(:first-child) {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 16px;
   }
 
   .prompt-template-selection-tree {
@@ -691,8 +683,6 @@
 
   .prompt-template-base-folder-copy span {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 16px;
   }
 
   .prompt-template-base-folder-header-spacer {

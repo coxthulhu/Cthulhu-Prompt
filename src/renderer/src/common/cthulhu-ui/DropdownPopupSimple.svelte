@@ -63,7 +63,7 @@
           }}
         >
           <ItemIcon size={16} aria-hidden="true" />
-          <span class="cthulhuUiDropdownPopupSimpleItemLabel">{item.label}</span>
+          <span class="cthulhuUiDropdownPopupSimpleItemLabel text-sm">{item.label}</span>
         </button>
       {/each}
     </div>
@@ -131,7 +131,6 @@
   }
 
   .cthulhuUiDropdownPopupSimpleItemLabel {
-    font-size: 13px;
     min-width: 0;
     overflow-wrap: anywhere;
     white-space: normal;

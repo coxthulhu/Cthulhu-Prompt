@@ -125,7 +125,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
   font-weight: var(--font-weight-normal);
 }
 
@@ -139,9 +138,8 @@
   border-radius: var(--cthulhu-ui-radius-card);
   background-color: var(--ui-ghost-surface);
   padding: 0 8px;
-  font-size: 12px;
+  @apply text-xs leading-3;
   font-weight: var(--font-weight-semibold);
-  line-height: 1;
   color: var(--ui-secondary-text);
 }
 
@@ -331,7 +329,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 14px;
 }
 
 .sidebarPromptTreeEmptyCategoryRow {
@@ -397,13 +394,9 @@
 .sidebarPromptTreeEmptyState {
   color: var(--ui-secondary-text);
   font-size: 13px;
-  line-height: 18px;
+  @apply leading-4.5;
 }
 
-.sidebarPromptTreeEmptyTitle {
-  font-size: 14px;
-  line-height: 20px;
-}
 
 .sidebarPromptTreeStatus svg {
   color: var(--ui-muted-icon-glyph);

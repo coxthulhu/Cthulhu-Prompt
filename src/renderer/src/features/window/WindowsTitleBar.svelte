@@ -220,6 +220,6 @@
   .titlebar__icon {
     font-family: 'Segoe MDL2 Assets', 'Segoe UI Symbol', sans-serif;
     font-size: 10px;
-    line-height: 1;
+    line-height: 10px;
   }
 </style>

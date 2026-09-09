@@ -44,7 +44,7 @@
 >
   <div class="prompt-folder-root-screen-header">
     <div class="prompt-folder-root-title-block">
-      <div class="prompt-folder-root-eyebrow">
+      <div class="prompt-folder-root-eyebrow text-xs">
         {#if isTemplateFolder}
           <Layers size={14} aria-hidden="true" />
           <span>Prompt Template Folder</span>
@@ -101,7 +101,7 @@
   >
     {#if isTemplateFolder}
       <button class="active" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
-        Templates <span>{orderedPromptCount}</span>
+        Templates <span class="text-xs">{orderedPromptCount}</span>
       </button>
     {:else}
       {#each promptStatusGroups as group (group.id)}
@@ -112,7 +112,7 @@
           data-testid={`prompt-folder-${group.id}-filter`}
           onclick={() => onScreenModeChange(group.id)}
         >
-          {group.label} <span>{statusGroupCounts[group.id]}</span>
+          {group.label} <span class="text-xs">{statusGroupCounts[group.id]}</span>
         </button>
       {/each}
     {/if}
@@ -148,10 +148,8 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
     gap: 6px;
     height: 17px;
-    line-height: 17px;
   }
 
   .prompt-folder-root-title-line {
@@ -205,7 +203,7 @@
   }
 
   .prompt-folder-root-filter-bar button span {
-    font-size: 12px;
+    line-height: 18px;
     margin-left: 4px;
     padding: 2px 6px;
     position: relative;

@@ -11,6 +11,7 @@
     actions?: Snippet
     sectionElement?: HTMLElement | null
     class?: string
+    headerClass?: string
     testId?: string
     showTopBorder?: boolean
   }
@@ -22,6 +23,7 @@
     actions,
     sectionElement = $bindable(null),
     class: className,
+    headerClass,
     testId,
     showTopBorder = false
   }: Props = $props()
@@ -34,7 +36,7 @@
   data-testid={testId}
 >
   <div
-    class="editor-card-section-header"
+    class={mergeClasses('editor-card-section-header text-xs', headerClass)}
     data-testid={testId ? `editor-card-section-header-${testId}` : undefined}
     style={`height:${EDITOR_CARD_SECTION_HEADER_HEIGHT_PX}px; min-height:${EDITOR_CARD_SECTION_HEADER_HEIGHT_PX}px; max-height:${EDITOR_CARD_SECTION_HEADER_HEIGHT_PX}px;`}
   >
@@ -74,10 +76,8 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
     font-weight: var(--font-weight-semibold);
     gap: 5px;
-    line-height: 16px;
     min-width: 0;
     overflow: hidden;
     padding: 0 16px;

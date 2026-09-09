@@ -7,11 +7,9 @@
   color: var(--ui-normal-text);
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 14px;
   font-weight: var(--font-weight-semibold);
   gap: 8px;
   height: 40px;
-  line-height: 20px;
   max-width: 14rem;
   min-width: 0;
   overflow: hidden;

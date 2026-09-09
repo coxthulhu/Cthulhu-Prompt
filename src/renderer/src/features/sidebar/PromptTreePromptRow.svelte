@@ -94,7 +94,7 @@
         {/if}
       </span>
     {/if}
-    <span class="sidebarPromptTreeSettingsLabel prompt-tree-prompt-label">{promptTitle}</span>
+    <span class="sidebarPromptTreeSettingsLabel text-sm prompt-tree-prompt-label">{promptTitle}</span>
   </span>
 {/snippet}
 

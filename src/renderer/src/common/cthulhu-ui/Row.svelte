@@ -70,7 +70,7 @@
       <Subtitle text={detail} wrap={wrapDetail} data-testid={detailTestId} />
     {/if}
     {#if detailExtra}
-      <span class="cthulhuUiRowDetailExtra">
+      <span class="cthulhuUiRowDetailExtra text-sm">
         {@render detailExtra()}
       </span>
     {/if}
@@ -108,9 +108,7 @@
   .cthulhuUiRowDetailExtra {
     color: var(--ui-secondary-text);
     display: block;
-    font-size: 14px;
     font-weight: var(--font-weight-normal);
-    line-height: 1.5;
     overflow-wrap: anywhere;
     white-space: normal;
   }

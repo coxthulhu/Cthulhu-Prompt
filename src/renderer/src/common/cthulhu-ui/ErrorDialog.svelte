@@ -26,7 +26,7 @@
   <div class="flex min-w-0 flex-col gap-3 py-4">
     <section class="space-y-2">
       <Title title="Message" variant="small" />
-      <p class="cthulhuUiErrorDialogMessage">{description}</p>
+      <p class="cthulhuUiErrorDialogMessage text-sm">{description}</p>
     </section>
     <LogDetails title="Details" text={errorText} />
   </div>
@@ -35,8 +35,6 @@
 <style>
   .cthulhuUiErrorDialogMessage {
     color: var(--ui-normal-text);
-    font-size: 14px;
-    line-height: 1.5;
     margin: 0;
     padding-left: 8px;
   }

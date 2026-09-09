@@ -3,6 +3,23 @@
 @import './styles/palette.css';
 @import './features/sidebar/sidebarStyles.css';
 
+/* Tailwind's standard text scale, with fixed pixel line heights instead of ratios. */
+@theme {
+  --text-xs--line-height: 16px;
+  --text-sm--line-height: 20px;
+  --text-base--line-height: 24px;
+  --text-lg--line-height: 28px;
+  --text-xl--line-height: 28px;
+  --text-2xl--line-height: 32px;
+  --text-3xl--line-height: 36px;
+  --text-4xl--line-height: 40px;
+  --text-5xl--line-height: 48px;
+  --text-6xl--line-height: 60px;
+  --text-7xl--line-height: 72px;
+  --text-8xl--line-height: 96px;
+  --text-9xl--line-height: 128px;
+}
+
 :root {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -18,8 +35,6 @@
   /* Shared cthulhu-ui corner scale for non-pill components. */
   --cthulhu-ui-radius-card: 8px;
   --cthulhu-ui-radius-control: 6px;
-  /* Shared cthulhu-ui typography for primary row/button labels. */
-  --cthulhu-ui-font-size-primary: 16px;
   /* Shared UI animation durations. */
   --ui-animation-duration-fast: 50ms;
   --ui-animation-duration-standard: 120ms;
@@ -47,7 +62,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground font-normal;
+    @apply bg-background text-base text-foreground font-normal;
     cursor: default;
   }
 
@@ -86,6 +101,5 @@
 
 /* Monaco suggest empty message inherits editor font size; keep it compact to avoid overflow. */
 .monaco-editor .suggest-widget > .message {
-  font-size: 16px;
-  line-height: 16px;
+  @apply text-base leading-4;
 }

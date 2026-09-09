@@ -852,7 +852,7 @@
         {#snippet children({ isOver, isBlocked, edge })}
           <button
             type="button"
-            class="sidebarPromptTreeEmptyStatus"
+            class="sidebarPromptTreeEmptyStatus text-xs"
             data-testid={`prompt-tree-${screenMode}-empty-status`}
             onclick={handleEmptyStatusSelect}
           >
@@ -1010,7 +1010,7 @@
         class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
         data-testid={`prompt-tree-${testIdGroup}-empty-state`}
       >
-        <p class="sidebarPromptTreeEmptyTitle">{emptyItemsLabel('template')}</p>
+        <p class="sidebarPromptTreeEmptyTitle text-sm">{emptyItemsLabel('template')}</p>
         <p class="mt-2">{createFirstItemMessage('template')}</p>
       </div>
       {#if isOver && edge}
@@ -1115,7 +1115,7 @@
     color: var(--ui-muted-text);
     cursor: pointer;
     display: flex;
-    font-size: 12px;
+    line-height: 18px;
     height: 32px;
     padding: 0 16px;
     text-align: left;

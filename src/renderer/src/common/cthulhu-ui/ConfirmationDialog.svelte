@@ -36,7 +36,7 @@
   onsubmit={onconfirm}
 >
   <div class="cthulhuUiConfirmationDialogContent">
-    <p class="cthulhuUiConfirmationDialogMessage">{description}</p>
+    <p class="cthulhuUiConfirmationDialogMessage text-base">{description}</p>
   </div>
 </Dialog>
 
@@ -48,8 +48,6 @@
 
   .cthulhuUiConfirmationDialogMessage {
     color: var(--ui-normal-text);
-    font-size: 16px;
-    line-height: 1.5;
     margin: 0;
     min-width: 0;
   }

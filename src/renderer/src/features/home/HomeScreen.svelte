@@ -187,7 +187,7 @@
             class="cthulhuHomeSecondaryTitle"
             data-testid="home-title"
             aria-label={secondaryTitleText}
-            style:font-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
+            style:--home-title-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
           >
             {#each secondaryTitleWords as word (word)}
               <span aria-hidden="true" data-testid={`home-title-word-${word.toLowerCase()}`}>
@@ -411,15 +411,16 @@
   }
 
   .cthulhuHomeSecondaryTitle {
+    /* Match the measured heading size in pixels as its container resizes. */
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
     flex-direction: column;
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: clamp(64px, 9vw, 88px);
+    font-size: var(--home-title-size, clamp(64px, 9vw, 88px));
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.14em;
-    line-height: 1;
+    line-height: var(--home-title-size, clamp(64px, 9vw, 88px));
     text-align: center;
     white-space: nowrap;
   }
@@ -448,7 +449,7 @@
     top: -9999px;
     visibility: hidden;
     width: max-content;
-    font-size: 100px;
+    --home-title-size: 100px;
   }
 
   .cthulhuHomeTitleSeparator {

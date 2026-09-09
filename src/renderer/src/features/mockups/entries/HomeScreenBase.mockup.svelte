@@ -163,8 +163,8 @@
   <div class="home-row" data-wrap-detail={wrap} data-setting={setting} data-trailing={Boolean(trailing)}>
     <span class="row-icon"><Icon size={24} aria-hidden="true" /></span>
     <span class="row-text-stack">
-      <span class="row-label" title={label} data-testid={labelId}>{label}</span>
-      <span class="row-detail">{detail}</span>
+      <span class="row-label text-base" title={label} data-testid={labelId}>{label}</span>
+      <span class="row-detail text-sm">{detail}</span>
       {#if extra || (setting && (label === 'Containing Folder' || label === 'Final Workspace Path'))}
         <!-- The live path rows keep their extra-detail wrapper even before a path is selected. -->
         <span class="row-extra">
@@ -177,19 +177,19 @@
 {/snippet}
 
 {#snippet message(text: string, warning = false, testId?: string)}
-  <div class="message" data-warning={warning} data-testid={testId} role="status">
+  <div class="message text-sm" data-warning={warning} data-testid={testId} role="status">
     {#if warning}<AlertTriangle size={16} aria-hidden="true" />{:else}<AlertCircle size={16} aria-hidden="true" />{/if}
     {text}
   </div>
 {/snippet}
 
-<section class="home-base" data-testid="base-home-mockup">
+<section class="home-base text-base" data-testid="base-home-mockup">
   <main class="home-screen" data-testid="home-screen">
     <div class="home-center">
       <section class="home-layout" data-testid="home-layout">
         <header>
           <div class="title-container" bind:this={titleContainer}>
-            <h2 class="home-title" data-testid="home-title" aria-label="CTHULHU PROMPT" style:font-size={titleFontSize ? `${titleFontSize}px` : undefined}>
+            <h2 class="home-title" data-testid="home-title" aria-label="CTHULHU PROMPT" style:--home-title-size={titleFontSize ? `${titleFontSize}px` : undefined}>
               <span aria-hidden="true" data-testid="home-title-word-cthulhu">CTHULHU</span>
               <span aria-hidden="true" data-testid="home-title-word-prompt">PROMPT</span>
             </h2>
@@ -200,7 +200,7 @@
 
         <div class="home-card-grid">
           <div class="home-card" data-testid="home-primary-card">
-            <h3 class="card-label">{workspacePath ? 'Current Workspace' : 'Get Started'}</h3>
+            <h3 class="card-label text-lg">{workspacePath ? 'Current Workspace' : 'Get Started'}</h3>
             <div class="card-surface">
               {#if workspacePath}
                 {#snippet explorerAction()}
@@ -226,14 +226,14 @@
                 {@render row(FileText, 'Manage Your Prompts', 'Cthulhu Prompt stores and manages your prompts as Markdown files in a workspace folder.', undefined, '', true)}
                 <div class="separator"></div>
                 {#snippet githubAction()}
-                  <a class="action-button" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Open Github <ExternalLink size={16} aria-hidden="true" /></a>
+                  <a class="action-button text-sm" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Open Github <ExternalLink size={16} aria-hidden="true" /></a>
                 {/snippet}
                 {@render row(Bug, 'Report an Issue', 'Report bugs or request features!', githubAction)}
               {/if}
             </div>
           </div>
           <div class="home-card workspace-actions-card" data-testid="home-workspace-actions-card">
-            <h3 class="card-label">Workspace Actions</h3>
+            <h3 class="card-label text-lg">Workspace Actions</h3>
             <div class="card-surface">
               {#each [
                 { icon: FolderOpen, label: 'Open Workspace', detail: 'Open an existing workspace.', text: 'Open', action: openWorkspace },
@@ -242,7 +242,7 @@
               ] as action, index (action.text)}
                 {#if index > 0}<div class="separator"></div>{/if}
                 {#snippet actionControl()}
-                  <button class="action-button workspace-action" type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={`${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
+                  <button class="action-button text-sm workspace-action" type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={`${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
                     <action.icon size={16} aria-hidden="true" /><span>{action.text}</span>
                   </button>
                 {/snippet}
@@ -257,7 +257,7 @@
 </section>
 
 {#if dialog}
-  <div class="dialog-layer" role="presentation" use:mountDialog onclick={(event) => { if (event.target === event.currentTarget && dialog === 'error') closeDialog() }}>
+  <div class="dialog-layer text-base" role="presentation" use:mountDialog onclick={(event) => { if (event.target === event.currentTarget && dialog === 'error') closeDialog() }}>
     <div class="home-dialog" data-create={dialog === 'create'} role="dialog" aria-modal="true" aria-label={dialog === 'create' ? 'Create Workspace' : 'Failed to Open Workspace'} tabindex="-1">
       <div class="dialog-header">
         <div class="dialog-heading">
@@ -265,8 +265,8 @@
             {#if dialog === 'create'}<FolderPlus size={24} aria-hidden="true" />{:else}<AlertCircle size={24} aria-hidden="true" />{/if}
           </span>
           <div class="dialog-heading-text">
-            <h3 class="dialog-title">{dialog === 'create' ? 'Create Workspace' : 'Failed to Open Workspace'}</h3>
-            {#if dialog === 'create'}<p class="dialog-subtitle" data-testid="dialog-subtitle">Choose a name and location for your new workspace.</p>{/if}
+            <h3 class="dialog-title text-lg">{dialog === 'create' ? 'Create Workspace' : 'Failed to Open Workspace'}</h3>
+            {#if dialog === 'create'}<p class="dialog-subtitle text-sm" data-testid="dialog-subtitle">Choose a name and location for your new workspace.</p>{/if}
           </div>
         </div>
         <button type="button" class="icon-button" aria-label="Close" disabled={creating} onclick={closeDialog}><X size={20} aria-hidden="true" /></button>
@@ -276,14 +276,14 @@
         <div class="dialog-body">
           {#snippet nameControl()}
             <div class="validation-anchor">
-              <input class="name-input" type="text" aria-label="Workspace Name" placeholder="Name..." data-testid="create-workspace-name-input" bind:value={workspaceName} disabled={creating} aria-invalid={nameTouched && nameError ? 'true' : undefined} oninput={() => { nameTouched = true; submissionError = false }} />
+              <input class="name-input text-sm" type="text" aria-label="Workspace Name" placeholder="Name..." data-testid="create-workspace-name-input" bind:value={workspaceName} disabled={creating} aria-invalid={nameTouched && nameError ? 'true' : undefined} oninput={() => { nameTouched = true; submissionError = false }} />
               {#if nameTouched && nameError}<div class="floating-validation">{@render message(nameError, false, 'create-workspace-name-error')}</div>{/if}
             </div>
           {/snippet}
           {@render row(Type, 'Workspace Name', 'Name the new workspace folder.', nameControl, '', false, true)}
           <div class="separator"></div>
           {#snippet browseControl()}
-            <button class="action-button" type="button" aria-label="Browse for containing folder" data-testid="create-workspace-path-browse-button" disabled={creating} onclick={() => { containingFolder = samplePath }}><FolderOpen size={16} aria-hidden="true" /><span>Browse</span></button>
+            <button class="action-button text-sm" type="button" aria-label="Browse for containing folder" data-testid="create-workspace-path-browse-button" disabled={creating} onclick={() => { containingFolder = samplePath }}><FolderOpen size={16} aria-hidden="true" /><span>Browse</span></button>
           {/snippet}
           {@render row(FolderOpen, 'Containing Folder', 'Choose where the workspace folder will be created.', browseControl, containingFolder, false, true)}
           <div class="separator"></div>
@@ -292,7 +292,7 @@
           {#if submissionError}<div class="path-message">{@render message('Failed to create workspace. Please try again.', false, 'create-workspace-submit-error')}</div>{/if}
           <div class="separator"></div>
           {#snippet examplesControl()}
-            <button class="examples-toggle" type="button" aria-pressed={includeExamples} data-testid="create-workspace-examples-toggle" disabled={creating} onclick={() => { includeExamples = !includeExamples }}>
+            <button class="examples-toggle text-sm" type="button" aria-pressed={includeExamples} data-testid="create-workspace-examples-toggle" disabled={creating} onclick={() => { includeExamples = !includeExamples }}>
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
               <span class="toggle-label">{includeExamples ? 'Enabled' : 'Disabled'}</span>
             </button>
@@ -301,14 +301,14 @@
         </div>
       {:else}
         <div class="error-body">
-          <section><h4>Message</h4><p>The workspace could not be opened.</p></section>
-          <section><h4>Details</h4><pre>{errorText}</pre></section>
+          <section><h4 class="text-sm">Message</h4><p class="text-sm">The workspace could not be opened.</p></section>
+          <section><h4 class="text-sm">Details</h4><pre class="text-sm">{errorText}</pre></section>
         </div>
       {/if}
       <div class="separator"></div>
       <div class="dialog-footer">
-        {#if dialog === 'create'}<button class="action-button" type="button" data-variant="accent" data-testid="create-workspace-submit-button" disabled={!canCreate} onclick={createWorkspace}>{creating ? 'Creating...' : 'Create Workspace'}</button>{/if}
-        <button class="action-button" type="button" disabled={creating} onclick={closeDialog}>{dialog === 'create' ? 'Cancel' : 'Close'}</button>
+        {#if dialog === 'create'}<button class="action-button text-sm" type="button" data-variant="accent" data-testid="create-workspace-submit-button" disabled={!canCreate} onclick={createWorkspace}>{creating ? 'Creating...' : 'Create Workspace'}</button>{/if}
+        <button class="action-button text-sm" type="button" disabled={creating} onclick={closeDialog}>{dialog === 'create' ? 'Cancel' : 'Close'}</button>
       </div>
     </div>
   </div>
@@ -318,8 +318,6 @@
   .home-base, .dialog-layer {
     color: var(--ui-normal-text);
     font-family: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    font-size: 16px;
-    line-height: 1.5;
   }
   .home-base *, .dialog-layer * { box-sizing: border-box; }
   .home-base { min-width: 0; min-height: 100%; display: flex; flex-direction: column; }
@@ -327,27 +325,27 @@
   .home-center { display: flex; width: 100%; min-width: 0; align-items: flex-start; justify-content: center; }
   .home-layout { container: base-home-layout / inline-size; position: relative; width: 100%; max-width: 1024px; min-width: 0; margin-block: auto; }
   .title-container, .home-card-grid { width: 100%; max-width: 504px; margin-inline: auto; }
-  .home-title { display: flex; flex-direction: column; align-items: center; margin: 0; color: var(--ui-normal-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: clamp(64px, 9vw, 88px); font-weight: var(--font-weight-semibold); letter-spacing: 0.14em; line-height: 1; text-align: center; white-space: nowrap; }
-  .title-measure { position: fixed; left: -9999px; top: -9999px; width: max-content; visibility: hidden; pointer-events: none; font-size: 100px; }
+  .home-title { display: flex; flex-direction: column; align-items: center; margin: 0; color: var(--ui-normal-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: var(--home-title-size, clamp(64px, 9vw, 88px)); font-weight: var(--font-weight-semibold); letter-spacing: 0.14em; line-height: var(--home-title-size, clamp(64px, 9vw, 88px)); text-align: center; white-space: nowrap; }
+  .title-measure { position: fixed; left: -9999px; top: -9999px; width: max-content; visibility: hidden; pointer-events: none; --home-title-size: 100px; }
   .title-separator { background: var(--ui-neutral-muted-border); height: 3px; width: 100%; margin-top: 24px; }
   .home-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; margin-top: 28px; }
   .home-card { width: 100%; min-width: 0; }
-  .card-label { margin: 0 0 12px; padding-left: 8px; font-size: 18px; font-weight: var(--font-weight-semibold); line-height: 22px; }
+  .card-label { margin: 0 0 12px; padding-left: 8px; line-height: 22px; font-weight: var(--font-weight-semibold); }
   .card-surface { border-radius: 8px; background: var(--ui-card-normal-surface); border: 1px solid var(--ui-neutral-muted-border); }
   .home-row { display: flex; align-items: center; column-gap: 12px; row-gap: 8px; min-width: 0; width: 100%; padding: 16px; border-radius: 8px; text-align: left; }
   .row-icon { display: flex; flex: 0 0 34px; width: 34px; height: 34px; align-items: center; justify-content: center; color: var(--ui-hoverable-icon-glyph); }
   .row-text-stack { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
   .row-label, .row-detail { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row-label { font-size: 16px; font-weight: var(--font-weight-semibold); }
-  .row-detail, .row-extra { font-size: 13px; color: var(--ui-muted-text); }
-  .row-extra { display: block; color: var(--ui-secondary-text); line-height: 18px; overflow-wrap: anywhere; white-space: normal; }
+  .row-label { font-weight: var(--font-weight-semibold); }
+  .row-detail, .row-extra { color: var(--ui-muted-text); }
+  .row-extra { display: block; color: var(--ui-secondary-text); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; white-space: normal; }
   .home-row[data-wrap-detail='true'] .row-detail { overflow-wrap: anywhere; white-space: normal; }
   .row-trailing { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; min-width: 0; }
   .separator { flex-shrink: 0; width: 100%; height: 1px; border-top: 1px solid var(--ui-neutral-muted-border); }
   .vertical-separator { flex-shrink: 0; width: 1px; border-left: 1px solid var(--ui-neutral-muted-border); }
   .workspace-stats { display: flex; align-items: stretch; min-width: 0; }
   .workspace-stats .home-row { flex: 1 1 0; }
-  .action-button, .examples-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-width: 0; height: 40px; padding: 0 14px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-action-fill); color: var(--ui-normal-text); font: inherit; font-size: 14px; font-weight: var(--font-weight-semibold); line-height: 20px; white-space: nowrap; text-decoration: none; cursor: pointer; }
+  .action-button, .examples-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-width: 0; height: 40px; padding: 0 14px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-action-fill); color: var(--ui-normal-text); font-family: inherit; font-weight: var(--font-weight-semibold); white-space: nowrap; text-decoration: none; cursor: pointer; }
   .action-button { max-width: 224px; overflow: hidden; }
   .action-button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .action-button:hover, .action-button:focus-visible, .examples-toggle:hover { background: var(--ui-neutral-action-hover-fill); border-color: var(--ui-neutral-hover-border); }
@@ -369,19 +367,19 @@
   .dialog-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .dialog-heading-text { min-width: 0; }
   .dialog-icon { display: flex; flex: 0 0 38px; align-items: center; justify-content: center; width: 38px; height: 38px; }
-  .dialog-title { margin: 0; font-size: 18px; font-weight: var(--font-weight-semibold); line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dialog-title { margin: 0; line-height: 22px; font-weight: var(--font-weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .home-dialog[data-create='true'] .dialog-title { line-height: 24px; }
-  .dialog-subtitle { margin: 3px 0 0; color: var(--ui-muted-text); font-size: 13px; line-height: 19px; }
+  .dialog-subtitle { margin: 3px 0 0; color: var(--ui-muted-text); }
   .dialog-body { min-width: 0; }
   .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; min-width: 0; padding-top: 16px; }
-  .name-input { display: flex; width: 220px; max-width: 100%; min-width: 0; height: 40px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); padding: 4px 14px; font: inherit; font-size: 14px; font-weight: var(--font-weight-semibold); line-height: 20px; outline: none; }
+  .name-input { display: flex; width: 220px; max-width: 100%; min-width: 0; height: 40px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); padding: 4px 14px; font-family: inherit; font-weight: var(--font-weight-semibold); outline: none; }
   .name-input::placeholder { color: var(--ui-muted-text); }
   .name-input:focus-visible { border-color: var(--ui-neutral-focus-border); box-shadow: 0 0 0 3px var(--ui-neutral-emphasis-surface); }
   .name-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); }
   .name-input[aria-invalid='true']:focus-visible { box-shadow: 0 0 0 3px var(--ui-danger-normal-ring); }
   .validation-anchor { position: relative; min-width: 0; }
   .floating-validation { position: absolute; left: 0; top: 100%; z-index: 10; margin-top: 2px; white-space: nowrap; }
-  .message { display: inline-flex; align-items: center; gap: 8px; height: 44px; border-radius: 6px; padding: 0 12px; background: var(--ui-danger-normal-surface); color: var(--ui-normal-text); font-size: 14px; line-height: 20px; }
+  .message { display: inline-flex; align-items: center; gap: 8px; height: 44px; border-radius: 6px; padding: 0 12px; background: var(--ui-danger-normal-surface); color: var(--ui-normal-text); }
   .message :global(svg) { flex-shrink: 0; color: var(--ui-danger-icon-glyph); }
   .message[data-warning='true'] { background: var(--ui-warning-normal-surface); }
   .message[data-warning='true'] :global(svg) { color: var(--ui-warning-icon-glyph); }
@@ -394,9 +392,9 @@
   .toggle-thumb { width: 16px; height: 16px; border-radius: 999px; background: var(--ui-normal-text); box-shadow: 0 1px 2px var(--ui-shadow-raised); }
   .toggle-label { width: 64px; text-align: left; }
   .error-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px 0; }
-  .error-body h4 { margin: 0 0 8px; font-size: 14px; font-weight: var(--font-weight-semibold); line-height: 21px; }
-  .error-body p { margin: 0; padding-left: 8px; font-size: 14px; line-height: 21px; }
-  .error-body pre { margin: 0; border-radius: 6px; padding: 12px; background: var(--ui-neutral-field-surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 14px; line-height: 24px; overflow-x: auto; white-space: pre-wrap; }
+  .error-body h4 { margin: 0 0 8px; font-weight: var(--font-weight-semibold); }
+  .error-body p { margin: 0; padding-left: 8px; }
+  .error-body pre { margin: 0; border-radius: 6px; padding: 12px; background: var(--ui-neutral-field-surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 24px; overflow-x: auto; white-space: pre-wrap; }
   @container base-home-layout (min-width: 1024px) {
     .title-container, .home-card-grid { max-width: none; }
     .home-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

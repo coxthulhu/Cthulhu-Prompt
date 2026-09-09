@@ -227,13 +227,13 @@
   <div class="component-title-block">
     <Title {title} variant="small" />
     {#if description}
-      <p class="component-title-description">{description}</p>
+      <p class="component-title-description text-sm">{description}</p>
     {/if}
   </div>
 {/snippet}
 
 {#snippet componentLabel(label: string)}
-  <span class="component-sample-label">{label}</span>
+  <span class="component-sample-label text-xs">{label}</span>
 {/snippet}
 
 <div class="test-screen-shell" data-testid="test-screen">
@@ -241,7 +241,7 @@
     <header class="test-screen-header">
       <div class="test-screen-title-block">
         <Title title="Cthulhu UI Test Screen" />
-        <p class="component-title-description">
+        <p class="component-title-description text-sm">
           Renderer component gallery for the shared Cthulhu UI surface.
         </p>
       </div>
@@ -268,14 +268,14 @@
               {#each categoryIconCandidates as candidate (candidate.name)}
                 {@const CandidateIcon = candidate.icon}
                 <div class="category-icon-candidate">
-                  <div class="category-icon-heading">
+                  <div class="category-icon-heading text-sm">
                     <CandidateIcon size={20} aria-hidden="true" />
                     <span>{candidate.name}</span>
                   </div>
                   <p>{candidate.description}</p>
                   <div class="category-icon-sizes">
                     {#each categoryIconSizes as size (size)}
-                      <div class="category-icon-size-sample">
+                      <div class="category-icon-size-sample text-xs">
                         <span class="category-icon-preview">
                           <CandidateIcon {size} aria-hidden="true" />
                         </span>
@@ -300,7 +300,7 @@
                 <div class="sample-card">
                   <CardSurface {variant}>
                     <div class="sample-card-content">
-                      <div class="sample-title">CardSurface: {variant}</div>
+                      <div class="sample-title text-sm">CardSurface: {variant}</div>
                       <p>Prompt workspace metadata, compact controls, or nested content.</p>
                     </div>
                   </CardSurface>
@@ -461,7 +461,7 @@
             <div class="stack">
               <div class="button-matrix">
                 <div class="variant-row">
-                  <span>DropdownPopupSimple: folders</span>
+                  <span class="text-sm">DropdownPopupSimple: folders</span>
                   <div class="variant-controls">
                     <DropdownPopupSimple
                       label="Folder options"
@@ -487,7 +487,7 @@
                 </div>
 
                 <div class="variant-row">
-                  <span>DropdownPopupSimple: prompts</span>
+                  <span class="text-sm">DropdownPopupSimple: prompts</span>
                   <div class="variant-controls">
                     <DropdownPopupSimple
                       label="Prompt actions"
@@ -738,7 +738,7 @@
               {#each IconButtonBaseVariants as baseVariant (baseVariant)}
                 {#each IconButtonHoverVariants as hoverVariant (hoverVariant)}
                   <div class="variant-row">
-                    <span>IconButton: {baseVariant} / {hoverVariant}</span>
+                    <span class="text-sm">IconButton: {baseVariant} / {hoverVariant}</span>
                     <div class="variant-controls icon-only-controls">
                       {#each IconButtonSizes as size (size)}
                         <div class="icon-only-sample" data-fill-size={size === 'sidebar-rail'}>
@@ -936,7 +936,6 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     gap: 8px;
   }
@@ -944,7 +943,7 @@
   .category-icon-candidate p {
     color: var(--ui-muted-text);
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 18px;
     margin: 0;
   }
 
@@ -959,7 +958,7 @@
     align-items: center;
     color: var(--ui-muted-text);
     display: grid;
-    font-size: 12px;
+    line-height: 18px;
     gap: 4px;
     justify-items: center;
   }
@@ -992,17 +991,13 @@
 
   .component-title-description {
     color: var(--ui-muted-text);
-    font-size: 14px;
-    line-height: 1.4;
     margin: 0;
     min-width: 0;
   }
 
   .component-sample-label {
     color: var(--ui-muted-text);
-    font-size: 12px;
     font-weight: var(--font-weight-semibold);
-    line-height: 1.3;
   }
 
   .variant-grid,
@@ -1015,9 +1010,8 @@
   .sample-title,
   .variant-row > span {
     color: var(--ui-normal-text);
-    font-size: 14px;
+    line-height: 18px;
     font-weight: var(--font-weight-semibold);
-    line-height: 1.3;
   }
 
   .button-matrix,

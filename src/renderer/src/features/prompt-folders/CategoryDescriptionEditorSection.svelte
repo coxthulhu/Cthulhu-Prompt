@@ -349,6 +349,7 @@
 <EditorCardSection
   bind:sectionElement
   class="category-description-editor-card-section"
+  headerClass="text-sm leading-4.5"
   title={section.title}
   description={section.description}
   testId="category-description-section"
@@ -440,7 +441,5 @@
 
   :global(.category-description-editor-card-section .editor-card-section-header) {
     color: var(--ui-normal-text);
-    font-size: 14px;
-    line-height: 18px;
   }
 </style>

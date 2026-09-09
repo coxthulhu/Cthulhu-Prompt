@@ -45,7 +45,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiIconTextButton', className)}
+  class={mergeClasses('cthulhuUiIconTextButton text-sm', className)}
   data-state={state}
   data-hover-variant={hoverVariant}
   data-has-pressed-hover-icon={pressed === true && pressedHoverIcon !== undefined}
@@ -86,12 +86,11 @@
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 14px;
+    line-height: 16px;
     font-weight: var(--font-weight-semibold);
     gap: 7px;
     height: 30px;
     justify-content: center;
-    line-height: 16px;
     min-width: 0;
     padding: 0 10px;
     transition:

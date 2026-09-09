@@ -28,7 +28,7 @@
   style={`height:${EDITOR_SUBTITLE_BAR_HEIGHT_PX}px; min-height:${EDITOR_SUBTITLE_BAR_HEIGHT_PX}px; max-height:${EDITOR_SUBTITLE_BAR_HEIGHT_PX}px;`}
   data-testid={testId}
 >
-  <div class="editor-subtitle-bar-heading">
+  <div class="editor-subtitle-bar-heading text-sm">
     <Icon size={20} aria-hidden="true" />
     <div class="editor-subtitle-bar-heading-copy">
       <span>{title}</span>
@@ -58,7 +58,6 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: grid;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     gap: 8px;
     grid-template-columns: 40px minmax(0, 1fr);

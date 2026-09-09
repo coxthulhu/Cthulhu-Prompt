@@ -29,7 +29,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiInlineTextButton', className)}
+  class={mergeClasses('cthulhuUiInlineTextButton', size === 'default' ? 'text-sm' : undefined, className)}
   data-size={size}
   data-base-variant={baseVariant}
   data-row-state={rowState}
@@ -50,9 +50,7 @@
     background: transparent;
     padding: var(--cthulhu-ui-inline-text-button-padding, 0);
     color: var(--ui-muted-text);
-    font-size: 13px;
     font-weight: var(--font-weight-normal);
-    line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
     text-align: inherit;
     transition: color var(--ui-animation-duration-fast) ease-out;
   }
@@ -64,9 +62,9 @@
     white-space: nowrap;
   }
 
-  .cthulhuUiInlineTextButton[data-size='default'] {
-    font-size: 14px;
-    line-height: 20px;
+  .cthulhuUiInlineTextButton[data-size='compact'] {
+    font-size: 13px;
+    line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
   }
 
   .cthulhuUiInlineTextButton[data-base-variant='secondary'] {

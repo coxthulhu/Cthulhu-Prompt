@@ -17,7 +17,7 @@
 </script>
 
 <span
-  class={mergeClasses('cthulhuUiValuePill', className)}
+  class={mergeClasses('cthulhuUiValuePill text-sm', className)}
   data-variant={variant}
   title={title ?? text}
   data-testid={testId}
@@ -36,10 +36,9 @@
     color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 14px;
+    line-height: 18px;
     font-weight: var(--font-weight-semibold);
     gap: 6px;
-    line-height: 1.25;
     max-width: 11rem;
     min-width: 0;
     overflow: hidden;

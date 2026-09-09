@@ -74,10 +74,10 @@
           </span>
 
           <span class="cthulhuUiDropdownPopupMoreOptionsTextStack">
-            <span class="cthulhuUiDropdownPopupMoreOptionsTitle">{item.label}</span>
+            <span class="cthulhuUiDropdownPopupMoreOptionsTitle text-sm">{item.label}</span>
             {#if detailParts.length}
               <span
-                class="cthulhuUiDropdownPopupMoreOptionsSubtitle"
+                class="cthulhuUiDropdownPopupMoreOptionsSubtitle text-xs"
                 title={detailParts.map((detailPart) => detailPart.text).join(' / ')}
               >
                 {#each detailParts as detailPart, index (index)}
@@ -161,9 +161,8 @@
   }
 
   .cthulhuUiDropdownPopupMoreOptionsTitle {
-    font-size: 14px;
+    line-height: 18px;
     font-weight: var(--font-weight-semibold);
-    line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -173,9 +172,7 @@
     align-items: center;
     color: var(--ui-secondary-text);
     display: flex;
-    font-size: 12px;
     gap: 5px;
-    line-height: 1.25;
     min-width: 0;
     overflow: hidden;
   }

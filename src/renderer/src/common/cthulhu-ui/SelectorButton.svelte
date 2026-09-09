@@ -115,9 +115,9 @@
   </span>
 
   <span class="cthulhuUiSelectorButtonTextStack">
-    <span class="cthulhuUiSelectorButtonText">{text}</span>
+    <span class="cthulhuUiSelectorButtonText text-sm">{text}</span>
     {#if resolvedDetailParts.length}
-      <span class="cthulhuUiSelectorButtonDetail" title={detailTitle}>
+      <span class="cthulhuUiSelectorButtonDetail text-xs" title={detailTitle}>
         {#each resolvedDetailParts as detailPart, index (`${index}-${detailPart}`)}
           {#if index > 0}
             <SeparatorDot />
@@ -257,7 +257,6 @@
   .cthulhuUiSelectorButtonText {
     color: inherit;
     display: block;
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -267,7 +266,7 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    font-size: 12px;
+    line-height: 18px;
     gap: 6px;
   }
 

@@ -271,13 +271,13 @@
           onkeyup={handleSelectionChange}
           onmouseup={handleSelectionChange}
           onselect={handleSelectionChange}
-          class="prompt-editor-title-input"
+          class="prompt-editor-title-input text-sm"
         />
       {:else}
-        <p class="prompt-editor-title-text">{title}</p>
+        <p class="prompt-editor-title-text text-sm">{title}</p>
       {/if}
 
-      <div class="prompt-editor-metadata-row">
+      <div class="prompt-editor-metadata-row text-xs">
         {#if metadataFolderLabel}
           <span
             class="prompt-editor-metadata-folder"
@@ -493,10 +493,8 @@
     border: 0;
     color: var(--ui-normal-text);
     font-family: inherit;
-    font-size: 15px;
     font-weight: var(--font-weight-semibold);
     height: 20px;
-    line-height: 20px;
     min-width: 0;
     outline: none;
     padding: 0;
@@ -516,9 +514,7 @@
     color: var(--ui-muted-text);
     display: flex;
     flex-wrap: nowrap;
-    font-size: 12px;
     gap: 8px;
-    line-height: 16px;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;

@@ -117,9 +117,9 @@
       <ChevronRight size={20} aria-hidden="true" />
     </span>
     <SectionIcon class="cthulhuUiAccordionIcon" size={16} aria-hidden="true" />
-    <span class="cthulhuUiAccordionLabel">{label}</span>
+    <span class="cthulhuUiAccordionLabel text-sm">{label}</span>
     {#if count !== undefined}
-      <span class="cthulhuUiAccordionCount">{count}</span>
+      <span class="cthulhuUiAccordionCount text-xs">{count}</span>
     {/if}
   </button>
 
@@ -204,7 +204,6 @@
   }
 
   .cthulhuUiAccordionLabel {
-    font-size: 13px;
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.01em;
     min-width: 0;
@@ -215,7 +214,7 @@
 
   .cthulhuUiAccordionCount {
     color: var(--ui-muted-text);
-    font-size: 12px;
+    line-height: 18px;
     font-variant-numeric: tabular-nums;
   }
 

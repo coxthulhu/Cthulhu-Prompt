@@ -222,7 +222,7 @@
       }}
     >
       {@render TreeGutter(indentCount, isLastRow)}
-      <span class="tree-label">{promptEntry.title}</span>
+      <span class="tree-label text-sm">{promptEntry.title}</span>
     </button>
   </div>
 {/snippet}
@@ -248,7 +248,7 @@
           <ChevronRight size={20} aria-hidden="true" />
         </span>
         <Folder class="tree-category-icon" size={16} aria-hidden="true" />
-        <span class="tree-label">{category.title}</span>
+        <span class="tree-label text-sm">{category.title}</span>
       </button>
 
       <div class="tree-category-actions">
@@ -269,7 +269,7 @@
     {#each category.prompts as promptEntry, promptIndex (promptEntry.id)}
       {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1, group)}
     {:else}
-      <button class="empty-category" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add a prompt</button>
+      <button class="empty-category text-xs" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add a prompt</button>
     {/each}
   {/if}
 {/snippet}
@@ -292,7 +292,7 @@
       </div>
       <div class="workspace-copy">
         <div class="workspace-title-row">
-          <h1>CthulhuPromptPublic</h1>
+          <h1 class="text-sm">CthulhuPromptPublic</h1>
           <button
             class="workspace-open-button"
             type="button"
@@ -302,7 +302,7 @@
             <ExternalLink size={14} aria-hidden="true" />
           </button>
         </div>
-        <p title="C:\Source\PromptApps\CthulhuPromptPublic">
+        <p class="text-xs" title="C:\Source\PromptApps\CthulhuPromptPublic">
           C:\Source\PromptApps\CthulhuPromptPublic
         </p>
       </div>
@@ -314,8 +314,8 @@
       <button class="folder-selector" type="button" aria-label="Folder selector" aria-expanded={folderMenuOpen} onclick={() => { folderMenuOpen = !folderMenuOpen }}>
         <span class="selector-icon-cell"><Folder size={20} aria-hidden="true" /></span>
         <span class="selector-copy">
-          <span class="selector-title">{folderTitle}</span>
-          <span class="selector-detail">
+          <span class="selector-title text-sm">{folderTitle}</span>
+          <span class="selector-detail text-xs">
             <span>{folderPromptCount} prompts</span>
             <span class="separator-dot" aria-hidden="true"></span>
             <span>Updated today</span>
@@ -326,7 +326,7 @@
       {#if folderMenuOpen}
         <div class="local-menu folder-menu">
           {#each ['Product Work', 'Personal Projects'] as title (title)}
-            <button type="button" onclick={() => { folderTitle = title; folderMenuOpen = false }}><Folder size={20} /><span>{title}<small>{folderPromptCount} prompts · Updated today</small></span>{#if folderTitle === title}<Check size={16} />{/if}</button>
+            <button class="text-sm" type="button" onclick={() => { folderTitle = title; folderMenuOpen = false }}><Folder size={20} /><span>{title}<small class="text-xs">{folderPromptCount} prompts · Updated today</small></span>{#if folderTitle === title}<Check size={16} />{/if}</button>
           {/each}
         </div>
       {/if}
@@ -346,7 +346,7 @@
       </div>
       {#if actionsMenuOpen}
         <div class="local-menu actions-menu">
-          <button type="button" onclick={() => { folderTitle = 'No prompt folder selected'; groups.forEach((group) => { group.prompts = []; group.categories = [] }); actionsMenuOpen = false }}><Trash2 size={16} />Delete Prompt Folder</button>
+          <button class="text-sm" type="button" onclick={() => { folderTitle = 'No prompt folder selected'; groups.forEach((group) => { group.prompts = []; group.categories = [] }); actionsMenuOpen = false }}><Trash2 size={16} />Delete Prompt Folder</button>
         </div>
       {/if}
     </div>
@@ -364,8 +364,8 @@
             onclick={() => { group.expanded = !group.expanded }}>
             <span class="status-chevron"><ChevronRight size={20} /></span>
             <group.icon size={16} />
-            <span class="status-label">{group.label.toUpperCase()}</span>
-            <span class="status-count">{groupCount(group)}</span>
+            <span class="status-label text-sm">{group.label.toUpperCase()}</span>
+            <span class="status-count text-xs">{groupCount(group)}</span>
           </button>
           {#if group.expanded}
             <div class="prompt-tree-shell" role="presentation"
@@ -380,7 +380,7 @@
                     {@render CategoryRow(category, group)}
                   {/each}
                   {#if groupCount(group) === 0 && group.categories.length === 0}
-                    <button class="empty-status" type="button" onclick={() => { selectedGroupId = group.id }}>No {group.label.toLowerCase()} prompts. Click to view.</button>
+                    <button class="empty-status text-sm" type="button" onclick={() => { selectedGroupId = group.id }}>No {group.label.toLowerCase()} prompts. Click to view.</button>
                   {/if}
                   <div class="tree-bottom-spacer" aria-hidden="true"></div>
                 </div>
@@ -413,7 +413,7 @@
   {#if categoryMenu}
     <div class="local-menu category-menu" style={`left:${categoryMenu.x}px; top:${categoryMenu.y}px;`}>
       {#each [{ label: 'Open Category', icon: ArrowRight }, { label: 'Open Category Settings', icon: Settings }] as action (action.label)}
-        <button type="button" onclick={() => {
+        <button class="text-sm" type="button" onclick={() => {
           selectedCategoryId = categoryMenu!.category.id
           selectedGroupId = categoryMenu!.group.id
           selectedPromptId = ''
@@ -425,7 +425,7 @@
   {/if}
   <dialog bind:this={categoryDialog} class="category-dialog">
     <form onsubmit={(event) => { event.preventDefault(); addCategory() }}>
-      <h2>Create Category</h2>
+      <h2 class="text-lg">Create Category</h2>
       <label>Category name<input bind:value={categoryName} required /></label>
       <div><button type="button" onclick={() => categoryDialog.close()}>Cancel</button><button type="submit">Create Category</button></div>
     </form>
@@ -465,9 +465,6 @@
     width: var(--sidebar-width);
   }
 
-  button {
-    font: inherit;
-  }
 
   .workspace-header {
     align-items: flex-start;
@@ -506,10 +503,8 @@
 
   .workspace-title-row h1 {
     color: var(--ui-normal-text);
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     letter-spacing: -0.025em;
-    line-height: 20px;
     margin: 0;
     min-width: 0;
     overflow: hidden;
@@ -519,8 +514,6 @@
 
   .workspace-copy p {
     color: var(--ui-muted-text);
-    font-size: 12px;
-    line-height: 16px;
     margin: 0;
     overflow: hidden;
     padding-top: 2px;
@@ -599,7 +592,6 @@
   }
 
   .selector-title {
-    font-size: 14px;
     font-weight: var(--font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -610,7 +602,7 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    font-size: 12px;
+    line-height: 18px;
     gap: 6px;
     min-width: 0;
     white-space: nowrap;
@@ -793,7 +785,6 @@
   }
 
   .tree-label {
-    font-size: 14px;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -985,7 +976,6 @@
   }
 
   .status-label {
-    font-size: 13px;
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.01em;
     overflow: hidden;
@@ -994,7 +984,7 @@
   }
 
   .status-count {
-    font-size: 12px;
+    line-height: 18px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -1073,13 +1063,12 @@
   .empty-category {
     height: 24px;
     padding: 0 12px 0 24px;
-    font-size: 12px;
+    line-height: 18px;
   }
 
   .empty-status {
     height: 32px;
     padding: 0 16px;
-    font-size: 13px;
   }
 
   .empty-category:hover, .empty-status:hover {
@@ -1123,7 +1112,6 @@
     border: 0;
     text-align: left;
     cursor: pointer;
-    font-size: 14px;
   }
 
   .local-menu button:hover {
@@ -1132,7 +1120,7 @@
 
   .local-menu small {
     display: block;
-    font-size: 12px;
+    line-height: 18px;
   }
 
   .category-dialog {
@@ -1145,7 +1133,6 @@
 
   .category-dialog h2 {
     margin: 0 0 16px;
-    font-size: 18px;
   }
 
   .category-dialog input {

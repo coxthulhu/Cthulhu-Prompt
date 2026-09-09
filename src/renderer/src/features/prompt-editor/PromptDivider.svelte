@@ -64,7 +64,7 @@
           class={`!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`}
         />
         <div
-          class="promptDividerMoveIndicator"
+          class="promptDividerMoveIndicator text-sm"
           data-drop-over="true"
           data-testid={testId}
           aria-label={dividerText}
@@ -91,7 +91,7 @@
         </button>
         <div class="promptDividerActions">
           <button
-            class="promptDividerActionButton"
+            class="promptDividerActionButton text-xs"
             type="button"
             aria-label={dividerText}
             title={dividerText}
@@ -161,11 +161,10 @@
     color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
-    font-size: 14px;
+    line-height: 16px;
     font-weight: var(--font-weight-semibold);
     height: 26px;
     justify-content: center;
-    line-height: 16px;
     min-width: 96px;
     padding: 0 10px;
     white-space: nowrap;
@@ -223,10 +222,8 @@
     color: var(--ui-muted-text);
     cursor: pointer;
     display: inline-flex;
-    font-size: 12px;
     gap: 4px;
     height: 100%;
-    line-height: 16px;
     padding: 0;
     transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
