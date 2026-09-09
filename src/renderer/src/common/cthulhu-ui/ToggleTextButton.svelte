@@ -25,7 +25,7 @@
 <button
   type="button"
   class={mergeClasses(
-    'cthulhuUiToggleTextButton flex h-10 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] px-3.5 text-sm font-semibold transition duration-[var(--ui-animation-duration-standard)] disabled:pointer-events-none disabled:opacity-50',
+    'cthulhuUiToggleTextButton flex h-10 cursor-pointer items-center gap-3 rounded-[var(--cthulhu-ui-radius-control)] px-3.5 text-sm leading-5 font-semibold transition duration-[var(--ui-animation-duration-standard)] disabled:pointer-events-none disabled:opacity-50',
     buttonStateClasses[stateClassKey],
     className
   )}

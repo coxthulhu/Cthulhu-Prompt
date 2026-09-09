@@ -115,9 +115,10 @@
   </span>
 
   <span class="cthulhuUiSelectorButtonTextStack">
-    <span class="cthulhuUiSelectorButtonText text-sm">{text}</span>
+    <span class="cthulhuUiSelectorButtonText text-sm leading-5">{text}</span>
     {#if resolvedDetailParts.length}
-      <span class="cthulhuUiSelectorButtonDetail text-xs" title={detailTitle}>
+      <!-- Button details are explicitly excluded from default line heights to retain their spacing. -->
+      <span class="cthulhuUiSelectorButtonDetail text-xs leading-4.5" title={detailTitle}>
         {#each resolvedDetailParts as detailPart, index (`${index}-${detailPart}`)}
           {#if index > 0}
             <SeparatorDot />
@@ -266,7 +267,6 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    line-height: 18px;
     gap: 6px;
   }
 

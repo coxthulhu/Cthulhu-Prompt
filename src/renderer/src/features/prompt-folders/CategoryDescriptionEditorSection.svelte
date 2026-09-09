@@ -346,6 +346,7 @@
   })
 </script>
 
+<!-- Category section titles are explicitly excluded from default line heights. -->
 <EditorCardSection
   bind:sectionElement
   class="category-description-editor-card-section"

@@ -67,7 +67,7 @@
     class:prompt-find-widget--no-results={hasNoResults}
     data-testid="prompt-find-widget"
   >
-    <div class="prompt-find-widget__find-part">
+    <div class="prompt-find-widget__find-part text-xs">
       <div class="prompt-find-input">
         <div class="prompt-find-input__scroll" role="presentation">
           <div class="prompt-find-input__box" class:synthetic-focus={isInputFocused}>
@@ -195,7 +195,6 @@
   .prompt-find-widget__find-part {
     /* No toggle buttons on either side, so keep padding tight. */
     margin: 3px 4px 0 4px;
-    font-size: 12px;
     display: flex;
     flex: 1;
   }
@@ -219,7 +218,6 @@
     box-sizing: border-box;
     border-radius: 2px;
     min-height: 25px;
-    font-size: inherit;
     background-color: var(--prompt-find-input-background);
     color: var(--prompt-find-input-foreground);
     border: 1px solid var(--prompt-find-input-border);
@@ -248,7 +246,6 @@
     box-sizing: border-box;
     width: 100%;
     height: 100%;
-    line-height: inherit;
     border: none;
     font-family: inherit;
     resize: none;
@@ -299,7 +296,6 @@
     vertical-align: middle;
     box-sizing: border-box;
     text-align: center;
-    line-height: 24px;
   }
 
   .prompt-find-widget__button {

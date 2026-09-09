@@ -32,7 +32,7 @@
     <Icon size={20} aria-hidden="true" />
     <div class="editor-subtitle-bar-heading-copy">
       <span>{title}</span>
-      <span class="editor-subtitle-bar-metadata">
+      <span class="editor-subtitle-bar-metadata text-xs">
         {configuredCount} of {totalCount} configured
       </span>
     </div>
@@ -51,7 +51,8 @@
     gap: 24px;
     justify-content: space-between;
     min-width: 0;
-    padding: 10px 12px 10px 10px;
+    /* Fit the standard 20px title and 16px metadata lines in the fixed 56px bar. */
+    padding: 9px 12px 9px 10px;
   }
 
   .editor-subtitle-bar-heading {
@@ -71,14 +72,12 @@
 
   .editor-subtitle-bar-heading-copy {
     display: grid;
-    line-height: 16px;
     min-width: 0;
     row-gap: 2px;
   }
 
   .editor-subtitle-bar-metadata {
     color: var(--ui-muted-text);
-    font-size: 12px;
     font-weight: var(--font-weight-normal);
   }
 

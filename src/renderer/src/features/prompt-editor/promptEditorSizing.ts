@@ -1,4 +1,4 @@
-// Match Monaco's default Windows line height ratio when lineHeight=0.
+// Monaco is explicitly excluded; match its default Windows line height ratio when lineHeight=0.
 const LINE_HEIGHT_RATIO = 1.35
 export const PROMPT_EDITOR_TITLE_AREA_HEIGHT_PX = 56
 export const EDITOR_SUBTITLE_BAR_HEIGHT_PX = 56

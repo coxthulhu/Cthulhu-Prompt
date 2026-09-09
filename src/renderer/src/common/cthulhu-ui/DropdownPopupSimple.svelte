@@ -63,7 +63,7 @@
           }}
         >
           <ItemIcon size={16} aria-hidden="true" />
-          <span class="cthulhuUiDropdownPopupSimpleItemLabel text-sm">{item.label}</span>
+          <span class="cthulhuUiDropdownPopupSimpleItemLabel text-sm leading-5">{item.label}</span>
         </button>
       {/each}
     </div>

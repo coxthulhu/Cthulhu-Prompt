@@ -441,7 +441,7 @@
       <FolderOpen size={18} aria-hidden="true" />
     </span>
     <span class="prompt-template-base-folder-copy">
-      <span class="prompt-template-base-folder-name">{row.folder.displayName}</span>
+      <span class="prompt-template-base-folder-name text-sm">{row.folder.displayName}</span>
       <span class="prompt-template-base-folder-count text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
     </span>
   </div>
@@ -670,9 +670,7 @@
 
   .prompt-template-base-folder-name {
     color: var(--ui-normal-text);
-    font-size: 13px;
     font-weight: var(--font-weight-semibold);
-    line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

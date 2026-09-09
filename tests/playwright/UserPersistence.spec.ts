@@ -374,37 +374,6 @@ describe('User Persistence', () => {
       .toBe('home:null')
   })
 
-  test('resets invalid persisted mockup startup screen to home and saves it', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const persistedWorkspacePath = '/ws/persisted-invalid-mockup-screen'
-    const workspaceId = createDeterministicId(persistedWorkspacePath)
-    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
-    await seedUserPersistence(electronApp, {
-      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
-    })
-    await seedWorkspaceUiState(electronApp, {
-      workspaceId,
-      selectedScreen: 'mockups',
-      selectedScreenData: { mockupId: 'missing-mockup-id' },
-      promptFolderViewEntries: []
-    })
-
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
-
-    await expect
-      .poll(async () => {
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
-      })
-      .toBe('home:null')
-  })
-
   test('resets malformed persisted screen data to home and saves it', async ({
     electronApp,
     testSetup
@@ -425,7 +394,7 @@ describe('User Persistence', () => {
       )
       VALUES (
         ${toSqlText(workspaceId)},
-        'mockups',
+        'prompt-folders',
         '{malformed'
       )
       `

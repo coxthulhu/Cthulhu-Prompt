@@ -411,7 +411,7 @@
   }
 
   .cthulhuHomeSecondaryTitle {
-    /* Match the measured heading size in pixels as its container resizes. */
+    /* The CTHULHU PROMPT title is explicitly excluded; its measured size follows its container. */
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;

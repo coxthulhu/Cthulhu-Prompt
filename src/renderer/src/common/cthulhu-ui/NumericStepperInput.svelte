@@ -213,7 +213,6 @@
     background: var(--ui-ghost-surface);
     border: 0;
     color: var(--ui-normal-text);
-    line-height: 18px;
     height: 100%;
     min-width: 2ch;
     outline: none;

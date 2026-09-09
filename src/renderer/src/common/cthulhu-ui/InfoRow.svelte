@@ -11,7 +11,7 @@
   let { text, textTestId, class: className, ...restProps }: Props = $props()
 </script>
 
-<div class={mergeClasses('cthulhuUiInfoRow', className)} data-testid={textTestId} {...restProps}>
+<div class={mergeClasses('cthulhuUiInfoRow text-sm', className)} data-testid={textTestId} {...restProps}>
   <Info class="cthulhuUiInfoRowIcon" size={16} strokeWidth={2} />
   <span class="cthulhuUiInfoRowText">{text}</span>
 </div>
@@ -22,11 +22,9 @@
     box-sizing: border-box;
     color: var(--ui-secondary-text);
     display: grid;
-    font-size: 13px;
     font-weight: var(--font-weight-normal);
     gap: 8px;
     grid-template-columns: 18px minmax(0, 1fr);
-    line-height: 18px;
     margin-left: 24px;
     min-width: 0;
   }

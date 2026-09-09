@@ -193,7 +193,7 @@
       class="sidebarPromptTreeChevronWrap"
     />
     <Folder class="sidebarPromptTreeCategoryIcon" size={16} aria-hidden="true" />
-    <span class="sidebarPromptTreeCategoryLabel text-sm">{category.displayName}</span>
+    <span class="sidebarPromptTreeCategoryLabel text-sm leading-5">{category.displayName}</span>
   </button>
 
   {#if showActions && onCategoryAddToTop}

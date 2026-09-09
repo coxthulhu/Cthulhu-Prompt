@@ -55,7 +55,7 @@
       </div>
       <div class="prompt-folder-root-title-line">
         <div
-          class="prompt-folder-root-title"
+          class="prompt-folder-root-title text-3xl"
           data-testid="prompt-folder-root-title"
           title={folderDisplayName}
         >
@@ -100,19 +100,20 @@
     aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
   >
     {#if isTemplateFolder}
-      <button class="active" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
-        Templates <span class="text-xs">{orderedPromptCount}</span>
+      <button class="active text-base leading-6" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
+        Templates <span class="text-xs leading-4.5">{orderedPromptCount}</span>
       </button>
     {:else}
       {#each promptStatusGroups as group (group.id)}
         <button
+          class="text-base leading-6"
           class:active={screenMode === group.id}
           type="button"
           aria-pressed={screenMode === group.id}
           data-testid={`prompt-folder-${group.id}-filter`}
           onclick={() => onScreenModeChange(group.id)}
         >
-          {group.label} <span class="text-xs">{statusGroupCounts[group.id]}</span>
+          {group.label} <span class="text-xs leading-4.5">{statusGroupCounts[group.id]}</span>
         </button>
       {/each}
     {/if}
@@ -163,14 +164,14 @@
 
   .prompt-folder-root-title {
     color: var(--ui-normal-text);
-    font-size: 27px;
     font-weight: var(--font-weight-semibold);
-    height: 36px;
+    /* Give Windows font glyphs room beyond the 36px line without enlarging the title row. */
+    height: 40px;
+    margin-block: -2px;
+    padding-block: 2px;
     letter-spacing: -0.03em;
-    line-height: 32px;
     min-width: 0;
     overflow: hidden;
-    padding-block: 2px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -202,8 +203,8 @@
     padding: 8px 10px 10px;
   }
 
+  /* Filter button counts are explicitly excluded from default line heights. */
   .prompt-folder-root-filter-bar button span {
-    line-height: 18px;
     margin-left: 4px;
     padding: 2px 6px;
     position: relative;

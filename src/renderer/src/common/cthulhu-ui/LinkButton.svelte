@@ -29,7 +29,7 @@
 </script>
 
 <a
-  class={mergeClasses('cthulhuUiActionButton text-sm cthulhuUiLinkButton', className)}
+  class={mergeClasses('cthulhuUiActionButton text-sm leading-5 cthulhuUiLinkButton', className)}
   data-variant={variant}
   data-testid={testId}
   {href}

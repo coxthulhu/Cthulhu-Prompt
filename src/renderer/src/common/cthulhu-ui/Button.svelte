@@ -38,7 +38,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiActionButton text-sm cthulhuUiButton', className)}
+  class={mergeClasses('cthulhuUiActionButton text-sm leading-5 cthulhuUiButton', className)}
   data-variant={variant}
   data-appearance={appearance}
   data-testid={testId}

@@ -74,10 +74,11 @@
           </span>
 
           <span class="cthulhuUiDropdownPopupMoreOptionsTextStack">
-            <span class="cthulhuUiDropdownPopupMoreOptionsTitle text-sm">{item.label}</span>
+            <!-- Menu button titles are explicitly excluded from default line heights. -->
+            <span class="cthulhuUiDropdownPopupMoreOptionsTitle text-sm leading-4.5">{item.label}</span>
             {#if detailParts.length}
               <span
-                class="cthulhuUiDropdownPopupMoreOptionsSubtitle text-xs"
+                class="cthulhuUiDropdownPopupMoreOptionsSubtitle text-xs leading-4"
                 title={detailParts.map((detailPart) => detailPart.text).join(' / ')}
               >
                 {#each detailParts as detailPart, index (index)}
@@ -161,7 +162,6 @@
   }
 
   .cthulhuUiDropdownPopupMoreOptionsTitle {
-    line-height: 18px;
     font-weight: var(--font-weight-semibold);
     overflow: hidden;
     text-overflow: ellipsis;

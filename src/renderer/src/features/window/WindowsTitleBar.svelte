@@ -163,6 +163,7 @@
     -webkit-app-region: no-drag;
   }
 
+  /* Windows title bar typography is explicitly excluded from Tailwind standardization. */
   .titlebar__title {
     text-align: center;
     font-size: 12px;
@@ -217,6 +218,7 @@
     color: #ffffff;
   }
 
+  /* Windows glyph metrics are explicitly excluded to preserve native control rendering. */
   .titlebar__icon {
     font-family: 'Segoe MDL2 Assets', 'Segoe UI Symbol', sans-serif;
     font-size: 10px;

@@ -117,9 +117,10 @@
       <ChevronRight size={20} aria-hidden="true" />
     </span>
     <SectionIcon class="cthulhuUiAccordionIcon" size={16} aria-hidden="true" />
-    <span class="cthulhuUiAccordionLabel text-sm">{label}</span>
+    <span class="cthulhuUiAccordionLabel text-sm leading-5">{label}</span>
     {#if count !== undefined}
-      <span class="cthulhuUiAccordionCount text-xs">{count}</span>
+      <!-- Button counts are explicitly excluded from default line heights to preserve header spacing. -->
+      <span class="cthulhuUiAccordionCount text-xs leading-4.5">{count}</span>
     {/if}
   </button>
 
@@ -214,7 +215,6 @@
 
   .cthulhuUiAccordionCount {
     color: var(--ui-muted-text);
-    line-height: 18px;
     font-variant-numeric: tabular-nums;
   }
 

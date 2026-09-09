@@ -43,9 +43,10 @@
   const DisplayIcon = $derived(pressed === true && pressedIcon ? pressedIcon : Icon)
 </script>
 
+<!-- Button text is explicitly excluded from the default line height to retain its 16px line. -->
 <button
   type="button"
-  class={mergeClasses('cthulhuUiIconTextButton text-sm', className)}
+  class={mergeClasses('cthulhuUiIconTextButton text-sm leading-4', className)}
   data-state={state}
   data-hover-variant={hoverVariant}
   data-has-pressed-hover-icon={pressed === true && pressedHoverIcon !== undefined}
@@ -86,7 +87,6 @@
     cursor: pointer;
     display: inline-flex;
     flex: 0 0 auto;
-    line-height: 16px;
     font-weight: var(--font-weight-semibold);
     gap: 7px;
     height: 30px;

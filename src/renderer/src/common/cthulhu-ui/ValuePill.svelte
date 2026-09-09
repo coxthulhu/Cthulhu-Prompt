@@ -36,7 +36,6 @@
     color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
-    line-height: 18px;
     font-weight: var(--font-weight-semibold);
     gap: 6px;
     max-width: 11rem;

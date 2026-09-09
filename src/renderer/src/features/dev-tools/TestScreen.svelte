@@ -272,7 +272,7 @@
                     <CandidateIcon size={20} aria-hidden="true" />
                     <span>{candidate.name}</span>
                   </div>
-                  <p>{candidate.description}</p>
+                  <p class="text-sm">{candidate.description}</p>
                   <div class="category-icon-sizes">
                     {#each categoryIconSizes as size (size)}
                       <div class="category-icon-size-sample text-xs">
@@ -782,7 +782,7 @@
                 >
                   <div class="accordion-demo-content">
                     {#each researchAccordionItems as item (item)}
-                      <div class="accordion-demo-row">{item}</div>
+                      <div class="accordion-demo-row text-sm">{item}</div>
                     {/each}
                   </div>
                 </AccordionSection>
@@ -795,7 +795,7 @@
                 >
                   <div class="accordion-demo-content">
                     {#each activeAccordionItems as item (item)}
-                      <div class="accordion-demo-row">{item}</div>
+                      <div class="accordion-demo-row text-sm">{item}</div>
                     {/each}
                   </div>
                 </AccordionSection>
@@ -809,7 +809,7 @@
                 >
                   <div class="accordion-demo-content">
                     {#each completedAccordionItems as item (item)}
-                      <div class="accordion-demo-row">{item}</div>
+                      <div class="accordion-demo-row text-sm">{item}</div>
                     {/each}
                   </div>
                 </AccordionSection>
@@ -912,8 +912,6 @@
   .accordion-demo-row {
     border-bottom: 1px solid var(--ui-neutral-muted-border);
     color: var(--ui-hoverable-text);
-    font-size: 13px;
-    line-height: 18px;
     padding: 8px 16px 8px 58px;
   }
 
@@ -942,8 +940,6 @@
 
   .category-icon-candidate p {
     color: var(--ui-muted-text);
-    font-size: 13px;
-    line-height: 18px;
     margin: 0;
   }
 
@@ -958,7 +954,6 @@
     align-items: center;
     color: var(--ui-muted-text);
     display: grid;
-    line-height: 18px;
     gap: 4px;
     justify-items: center;
   }
@@ -1010,7 +1005,6 @@
   .sample-title,
   .variant-row > span {
     color: var(--ui-normal-text);
-    line-height: 18px;
     font-weight: var(--font-weight-semibold);
   }
 

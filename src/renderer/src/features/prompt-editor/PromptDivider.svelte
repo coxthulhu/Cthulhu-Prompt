@@ -91,7 +91,7 @@
         </button>
         <div class="promptDividerActions">
           <button
-            class="promptDividerActionButton text-xs"
+            class="promptDividerActionButton text-xs leading-4"
             type="button"
             aria-label={dividerText}
             title={dividerText}
@@ -161,7 +161,6 @@
     color: var(--ui-normal-text);
     display: inline-flex;
     flex: 0 0 auto;
-    line-height: 16px;
     font-weight: var(--font-weight-semibold);
     height: 26px;
     justify-content: center;

@@ -65,7 +65,7 @@
     >
       <button
         type="button"
-        class="cthulhuUiSimpleSelectorButtonValue text-sm"
+        class="cthulhuUiSimpleSelectorButtonValue text-sm leading-5"
         data-variant={selectedItem.variant ?? selectedItem.tone ?? 'neutral'}
         data-testid={testId}
         title={selectedItemLabel}

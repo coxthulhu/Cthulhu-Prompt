@@ -221,7 +221,8 @@
 
         <div class="category-editor-title-copy">
           <div class="category-editor-title-line">
-            <span class="category-editor-title text-base" title={displayName}>
+            <!-- Category titles are explicitly excluded from default line heights. -->
+            <span class="category-editor-title text-base leading-5" title={displayName}>
               {displayName}
             </span>
             {#if canRename && !isReadOnly}
@@ -384,7 +385,6 @@
 
   .category-editor-title {
     color: var(--ui-normal-text);
-    line-height: 20px;
     font-weight: var(--font-weight-semibold);
     min-width: 0;
     overflow: hidden;

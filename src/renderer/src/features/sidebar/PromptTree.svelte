@@ -852,7 +852,7 @@
         {#snippet children({ isOver, isBlocked, edge })}
           <button
             type="button"
-            class="sidebarPromptTreeEmptyStatus text-xs"
+            class="sidebarPromptTreeEmptyStatus text-xs leading-4.5"
             data-testid={`prompt-tree-${screenMode}-empty-status`}
             onclick={handleEmptyStatusSelect}
           >
@@ -1108,6 +1108,7 @@
 </div>
 
 <style>
+  /* Empty-state button text is explicitly excluded from default line heights. */
   .sidebarPromptTreeEmptyStatus {
     align-items: center;
     background: transparent;
@@ -1115,7 +1116,6 @@
     color: var(--ui-muted-text);
     cursor: pointer;
     display: flex;
-    line-height: 18px;
     height: 32px;
     padding: 0 16px;
     text-align: left;

@@ -27,9 +27,10 @@
   }: Props = $props()
 </script>
 
+<!-- Button line heights are explicitly excluded from text defaults to preserve compact rows. -->
 <button
   type="button"
-  class={mergeClasses('cthulhuUiInlineTextButton', size === 'default' ? 'text-sm' : undefined, className)}
+  class={mergeClasses('cthulhuUiInlineTextButton text-sm', size === 'default' ? 'leading-5' : 'leading-4.5', className)}
   data-size={size}
   data-base-variant={baseVariant}
   data-row-state={rowState}
@@ -60,11 +61,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .cthulhuUiInlineTextButton[data-size='compact'] {
-    font-size: 13px;
-    line-height: var(--cthulhu-ui-inline-text-button-line-height, 18px);
   }
 
   .cthulhuUiInlineTextButton[data-base-variant='secondary'] {
