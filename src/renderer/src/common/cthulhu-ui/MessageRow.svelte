@@ -18,7 +18,7 @@
 
 <div
   class={mergeClasses(
-    'cthulhuUiMessageRow inline-flex h-11 items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] px-3 text-sm leading-5',
+    'cthulhuUiMessageRow inline-flex h-11 items-center gap-2 rounded-[var(--cthulhu-ui-radius-control)] px-3 text-sm',
     className
   )}
   data-variant={variant}
