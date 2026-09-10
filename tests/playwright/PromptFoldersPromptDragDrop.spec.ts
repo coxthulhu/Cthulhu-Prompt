@@ -132,6 +132,16 @@ const getPromptTreeStatusIndicator = (page: Page, promptId: string): Locator =>
 const promptEditorStatusIndicatorSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
 
+const resolvePaletteColor = async (page: Page, token: string): Promise<string> =>
+  await page.locator('body').evaluate((body, paletteToken) => {
+    const probe = document.createElement('span')
+    probe.style.color = `var(${paletteToken})`
+    body.appendChild(probe)
+    const color = getComputedStyle(probe).color
+    probe.remove()
+    return color
+  }, token)
+
 const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locator =>
   page
     .locator(promptDividerSelector(previousPromptId))
@@ -977,6 +987,14 @@ describe('Prompt folder prompt drag-drop', () => {
       promptFolderSelectorDropdownItemSelector(EXAMPLES_FOLDER_ID)
     )
     await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
+    await expect(destinationItem).toHaveCSS(
+      'background-color',
+      await resolvePaletteColor(mainWindow, '--ui-info-hover-surface')
+    )
+    await expect(destinationItem).toHaveCSS(
+      'border-top-color',
+      await resolvePaletteColor(mainWindow, '--ui-info-muted-hover-border')
+    )
     await finishActiveDrag(mainWindow)
 
     await expect(mainWindow.locator(promptFolderSelectorTriggerSelector)).toContainText(
@@ -1039,20 +1057,14 @@ describe('Prompt folder prompt drag-drop', () => {
       promptFolderSelectorDropdownItemSelector(DEVELOPMENT_FOLDER_ID)
     )
     await expect(sourceItem).toHaveAttribute('data-row-state', 'blocked-over')
-    await expect
-      .poll(() =>
-        sourceItem.evaluate((item) => {
-          /** Temporary element resolving the blocked row token. */
-          const probe = document.createElement('div')
-          probe.style.backgroundColor = 'var(--ui-neutral-emphasis-surface)'
-          document.body.appendChild(probe)
-          /** Whether the completed transition reached the blocked row color. */
-          const matches = getComputedStyle(item).backgroundColor === getComputedStyle(probe).backgroundColor
-          probe.remove()
-          return matches
-        })
-      )
-      .toBe(true)
+    await expect(sourceItem).toHaveCSS(
+      'background-color',
+      await resolvePaletteColor(mainWindow, '--ui-neutral-emphasis-surface')
+    )
+    await expect(sourceItem).toHaveCSS(
+      'border-top-color',
+      await resolvePaletteColor(mainWindow, '--ui-neutral-emphasis-border')
+    )
     await finishActiveDrag(mainWindow)
 
     await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])

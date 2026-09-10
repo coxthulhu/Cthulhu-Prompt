@@ -773,6 +773,7 @@
           footerItem={promptFolderSelectorFooterItem}
           state={promptFolderSelectorState}
           itemDragOptions={promptFolderSelectorItemDragOptions}
+          selectionVariant="accent"
           dragOpenTypes={promptFolderSelectorDragOpenTypes}
           testId="sidebar-prompt-folder-selector-menu"
           triggerTestId="sidebar-prompt-folder-selector-trigger"

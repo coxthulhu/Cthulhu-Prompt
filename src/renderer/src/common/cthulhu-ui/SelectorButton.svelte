@@ -6,6 +6,7 @@
   import SeparatorDot from './SeparatorDot.svelte'
 
   type SelectorButtonState = 'enabled' | 'disabled'
+  export type SelectorButtonSelectionVariant = 'neutral' | 'accent'
   export type SelectorButtonRowState =
     | 'idle'
     | 'active'
@@ -31,6 +32,7 @@
     open?: boolean
     selected?: boolean
     rowState?: SelectorButtonRowState
+    selectionVariant?: SelectorButtonSelectionVariant
     showChevron?: boolean
     state?: SelectorButtonState
     class?: string
@@ -57,6 +59,7 @@
     open = false,
     selected = false,
     rowState = 'idle',
+    selectionVariant = 'neutral',
     showChevron = true,
     state = 'enabled',
     class: className,
@@ -92,6 +95,7 @@
   data-open={open ? 'true' : 'false'}
   data-selected={selected ? 'true' : 'false'}
   data-row-state={rowState}
+  data-selection-variant={selectionVariant}
   data-chevron={showChevron ? 'true' : 'false'}
   data-leading-accessory={leadingAccessory ? 'true' : 'false'}
   data-disabled={isDisabled ? 'true' : 'false'}
@@ -162,6 +166,7 @@
     text-align: left;
     transition:
       background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease,
       color var(--ui-animation-duration-standard) ease;
     width: 100%;
   }
@@ -203,6 +208,57 @@
   .cthulhuUiSelectorButton[data-row-state='blocked-over'] {
     background-color: var(--ui-neutral-emphasis-surface);
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent'] {
+    border: 1px solid var(--ui-ghost-surface);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent'][data-chevron='true'] {
+    padding: 7px;
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent'][data-open='true'] {
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent']:where(
+      [data-open='false'][data-row-state='idle']:hover,
+      [data-open='false'][data-row-state='idle']:focus-visible
+    ) {
+    background-color: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent']:where(
+      [data-row-state='active'],
+      [data-row-state='drag-active']
+    ) {
+    background-color: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent']:where(
+      [data-row-state='active']:hover,
+      [data-row-state='active']:focus-visible
+    ) {
+    background-color: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent'][data-row-state='dragging'] {
+    background-color: var(--ui-info-normal-surface);
+    border-color: var(--ui-info-muted-border);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent'][data-row-state='over'] {
+    background-color: var(--ui-info-hover-surface);
+    border-color: var(--ui-info-muted-hover-border);
+  }
+
+  .cthulhuUiSelectorButton[data-selection-variant='accent'][data-row-state='blocked-over'] {
+    background-color: var(--ui-neutral-emphasis-surface);
+    border-color: var(--ui-neutral-emphasis-border);
   }
 
   .cthulhuUiSelectorButton[data-disabled='true'] {

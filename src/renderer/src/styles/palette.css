@@ -73,6 +73,8 @@
   /* Info */
   --ui-info-normal-surface: oklch(0.666 0.181 254.617 / 18%);
   --ui-info-hover-surface: oklch(0.666 0.181 254.617 / 25%);
+  --ui-info-muted-border: oklch(0.827 0.108 254.617 / 18%);
+  --ui-info-muted-hover-border: oklch(0.827 0.108 254.617 / 19.1%);
   --ui-info-strong-border: oklch(0.666 0.181 254.617);
 
   /* Warning */

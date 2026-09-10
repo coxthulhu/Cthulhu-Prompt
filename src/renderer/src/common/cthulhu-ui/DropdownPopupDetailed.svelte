@@ -16,7 +16,8 @@
   } from './DropdownPopupCore.svelte'
   import SelectorButton, {
     type SelectorButtonDetailPart,
-    type SelectorButtonRowState
+    type SelectorButtonRowState,
+    type SelectorButtonSelectionVariant
   } from './SelectorButton.svelte'
 
   export type DropdownPopupDetailedItem = {
@@ -49,6 +50,7 @@
     placement?: DropdownPopupPlacement
     dragOpenTypes?: string[]
     itemDragOptions?: DropdownPopupDetailedItemDragOptions
+    itemSelectionVariant?: SelectorButtonSelectionVariant
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -63,6 +65,7 @@
     placement = 'cursor',
     dragOpenTypes,
     itemDragOptions,
+    itemSelectionVariant = 'neutral',
     onselect
   }: Props = $props()
 
@@ -112,6 +115,7 @@
     showChevron={false}
     selected={selectedItem?.id === item.id}
     rowState={getItemRowState(item, isRowDropOver, isDropBlocked)}
+    selectionVariant={itemSelectionVariant}
     role="menuitem"
     ariaSelected={selectedItem?.id === item.id}
     testId={item.testId}
@@ -171,6 +175,7 @@
                 showChevron={false}
                 selected={selectedItem?.id === item.id}
                 rowState={getItemRowState(item, false)}
+                selectionVariant={itemSelectionVariant}
                 role="menuitem"
                 ariaSelected={selectedItem?.id === item.id}
                 testId={item.testId}
@@ -193,6 +198,7 @@
             showChevron={false}
             selected={selectedItem?.id === footerItem.id}
             rowState={getItemRowState(footerItem, false)}
+            selectionVariant={itemSelectionVariant}
             role="menuitem"
             ariaSelected={selectedItem?.id === footerItem.id}
             testId={footerItem.testId}
@@ -260,7 +266,19 @@
 
   :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-row-state='idle']:hover),
   :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-row-state='active']:hover),
+  :global(.cthulhuUiDropdownPopupDetailedFooterItem:focus-visible),
   :global(.cthulhuUiDropdownPopupDetailedFooterItem[data-selected='true']) {
     background-color: var(--ui-accent-action-hover-fill);
+  }
+
+  :global(
+    .cthulhuUiDropdownPopupDetailedMenu
+      .cthulhuUiDropdownPopupDetailedFooterItem[data-selection-variant='accent']:where(
+          :hover,
+          :focus-visible,
+          [data-selected='true']
+        )
+  ) {
+    border-color: var(--ui-accent-muted-hover-border);
   }
 </style>

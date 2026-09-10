@@ -4,6 +4,7 @@
     type DropdownPopupDetailedItem
   } from './DropdownPopupDetailed.svelte'
   import SelectorButton from './SelectorButton.svelte'
+  import type { SelectorButtonSelectionVariant } from './SelectorButton.svelte'
 
   type Props = {
     label: string
@@ -15,6 +16,7 @@
     triggerTestId?: string
     dragOpenTypes?: string[]
     itemDragOptions?: DropdownPopupDetailedItemDragOptions
+    selectionVariant?: SelectorButtonSelectionVariant
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -28,6 +30,7 @@
     triggerTestId,
     dragOpenTypes,
     itemDragOptions,
+    selectionVariant = 'neutral',
     onselect
   }: Props = $props()
 </script>
@@ -38,6 +41,7 @@
   {selectedItem}
   {footerItem}
   {itemDragOptions}
+  itemSelectionVariant={selectionVariant}
   {testId}
   {dragOpenTypes}
   placement="below-trigger"
@@ -50,6 +54,7 @@
       detail={selectedItem.detail}
       detailParts={selectedItem.detailParts}
       open={dropdown.open}
+      {selectionVariant}
       {state}
       ariaHaspopup={dropdown.ariaHaspopup}
       ariaExpanded={dropdown.ariaExpanded}

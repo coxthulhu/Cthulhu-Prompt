@@ -26,6 +26,16 @@ const PROMPT_FOLDER_SELECTOR_ITEMS = '[data-testid="sidebar-prompt-folder-select
 const PROMPT_FOLDER_SELECTOR_TRIGGER = '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const PROMPT_FOLDER_DROPDOWN_ITEM_PREFIX = 'sidebar-prompt-folder-dropdown-item-'
 
+const resolvePaletteColor = async (page: Page, token: string): Promise<string> =>
+  await page.locator('body').evaluate((body, paletteToken) => {
+    const probe = document.createElement('span')
+    probe.style.color = `var(${paletteToken})`
+    body.appendChild(probe)
+    const color = getComputedStyle(probe).color
+    probe.remove()
+    return color
+  }, token)
+
 const workspaceFolderOrderPath = (workspacePath: string): string =>
   `${workspacePath}/WorkspaceFolderOrder.json`
 
@@ -326,6 +336,18 @@ describe('Prompt Folder Order', () => {
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
     ).toHaveAttribute('data-row-state', 'dragging')
+    await expect(
+      mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
+    ).toHaveCSS(
+      'background-color',
+      await resolvePaletteColor(mainWindow, '--ui-info-normal-surface')
+    )
+    await expect(
+      mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
+    ).toHaveCSS(
+      'border-top-color',
+      await resolvePaletteColor(mainWindow, '--ui-info-muted-border')
+    )
     await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
     await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-alpha'))
     await expect(

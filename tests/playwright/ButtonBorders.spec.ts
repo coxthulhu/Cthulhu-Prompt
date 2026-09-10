@@ -18,7 +18,7 @@ describe('Button borders', () => {
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'categories' }
+      workspace: { scenario: 'categories-ui' }
     })
     await testHelpers.clickNavButton('Test Screen')
 
@@ -45,6 +45,18 @@ describe('Button borders', () => {
     const accentHoverBorder = await resolvePaletteColor(
       mainWindow.locator('[data-testid="test-screen"]'),
       '--ui-accent-muted-hover-border'
+    )
+    const accentFill = await resolvePaletteColor(
+      mainWindow.locator('[data-testid="test-screen"]'),
+      '--ui-accent-action-fill'
+    )
+    const accentHoverFill = await resolvePaletteColor(
+      mainWindow.locator('[data-testid="test-screen"]'),
+      '--ui-accent-action-hover-fill'
+    )
+    const transparent = await resolvePaletteColor(
+      mainWindow.locator('[data-testid="test-screen"]'),
+      '--ui-ghost-surface'
     )
     const successHoverBorder = await resolvePaletteColor(
       mainWindow.locator('[data-testid="test-screen"]'),
@@ -231,6 +243,45 @@ describe('Button borders', () => {
       .locator('[role="menuitem"][aria-selected="true"]')
     await selectedSelectorItem.hover()
     await expect(selectedSelectorItem).toHaveCSS('background-color', neutralFilledHover)
+    await mainWindow.keyboard.press('Escape')
+
+    const folderSelectorTrigger = mainWindow.locator(
+      '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+    )
+    await mainWindow.mouse.move(0, 0)
+    await expect(folderSelectorTrigger).toHaveCSS('background-color', transparent)
+    await folderSelectorTrigger.hover()
+    await expect(folderSelectorTrigger).toHaveCSS('background-color', neutralFill)
+    await expect(folderSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await folderSelectorTrigger.click()
+    await expect(folderSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
+    await expect(folderSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+
+    const folderSelectorMenu = mainWindow.locator(
+      '[data-testid="sidebar-prompt-folder-selector-menu"]'
+    )
+    const selectedFolder = folderSelectorMenu.locator('[role="menuitem"][aria-selected="true"]')
+    await expect(selectedFolder).toHaveCSS('background-color', accentFill)
+    await expect(selectedFolder).toHaveCSS('border-top-color', accentBorder)
+    await selectedFolder.hover()
+    await expect(folderSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
+    await expect(folderSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(selectedFolder).toHaveCSS('background-color', accentHoverFill)
+    await expect(selectedFolder).toHaveCSS('border-top-color', accentHoverBorder)
+
+    const unselectedFolder = folderSelectorMenu
+      .locator('[role="menuitem"][aria-selected="false"]')
+      .first()
+    await unselectedFolder.hover()
+    await expect(unselectedFolder).toHaveCSS('background-color', neutralFill)
+    await expect(unselectedFolder).toHaveCSS('border-top-color', neutralHoverBorder)
+
+    const createFolderItem = folderSelectorMenu.locator(
+      '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
+    )
+    await createFolderItem.hover()
+    await expect(createFolderItem).toHaveCSS('background-color', accentHoverFill)
+    await expect(createFolderItem).toHaveCSS('border-top-color', accentHoverBorder)
     await mainWindow.keyboard.press('Escape')
 
     const sidebarRailButton = mainWindow.getByRole('button', {

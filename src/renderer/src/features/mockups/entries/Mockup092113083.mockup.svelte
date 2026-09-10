@@ -116,7 +116,7 @@
         </div>
         <div style="display:flex; flex-direction:column; gap:5px; overflow:auto; flex:1;">
           {#each categories as category (category.id)}
-            <button type="button" class="text-sm leading-5" aria-pressed={selectedId === category.id} onclick={() => selectCategory(category)} style={`display:flex;align-items:center;gap:10px;min-height:56px;text-align:left;padding:10px;border:1px solid ${selectedId === category.id ? 'var(--ui-accent-normal-border)' : 'var(--ui-ghost-surface)'};border-radius:var(--cthulhu-ui-radius-control);background:${selectedId === category.id ? 'var(--ui-accent-action-fill)' : 'var(--ui-ghost-surface)'};color:var(--ui-normal-text);`}>
+            <button type="button" class="category-list-button text-sm leading-5" data-selected={selectedId === category.id} aria-pressed={selectedId === category.id} onclick={() => selectCategory(category)}>
               <Folder size={17} style="color:var(--ui-secondary-icon-glyph); flex-shrink:0;" />
               <span style="display:grid; gap:2px; flex:1;"><span style="font-weight:500;">{category.displayName}</span><span class="text-xs leading-4" style="color:var(--ui-muted-text);">{category.count} prompts</span></span>
               {#if selectedId === category.id}<ChevronRight size={14} style="color:var(--ui-secondary-icon-glyph);" />{/if}
@@ -159,3 +159,39 @@
     </div>
   
 </Dialog>
+
+<style>
+  .category-list-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 56px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--ui-normal-text);
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-ghost-surface);
+    border-radius: var(--cthulhu-ui-radius-control);
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      border-color var(--ui-animation-duration-standard) ease;
+  }
+
+  .category-list-button:hover,
+  .category-list-button:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .category-list-button[data-selected='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+  }
+
+  .category-list-button[data-selected='true']:hover,
+  .category-list-button[data-selected='true']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+</style>
