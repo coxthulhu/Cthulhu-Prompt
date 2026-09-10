@@ -506,10 +506,9 @@ describe('Home Screen', () => {
       const categoryToggles = mainWindow.locator(
         '[data-testid^="prompt-tree-active-category-toggle-button-"]'
       )
-      await expect(categoryToggles).toHaveCount(3)
-      await expect(categoryToggles.nth(0)).toContainText('New Features')
-      await expect(categoryToggles.nth(1)).toContainText('Improvements')
-      await expect(categoryToggles.nth(2)).toContainText('Bug Fixes')
+      await expect(categoryToggles).toHaveCount(2)
+      await expect(categoryToggles.nth(0)).toContainText('Features & Improvements')
+      await expect(categoryToggles.nth(1)).toContainText('Bug Fixes')
 
       const birthdayPromptTreeRow = mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]', {
         hasText: 'Example: Add Birthday Date to Settings Page'
@@ -522,8 +521,6 @@ describe('Home Screen', () => {
       await expect(bundledFilesPromptTreeRow).toBeVisible()
       await categoryToggles.nth(0).click()
       await expect(birthdayPromptTreeRow).toHaveCount(0)
-      await expect(bundledFilesPromptTreeRow).toBeVisible()
-      await categoryToggles.nth(1).click()
       await expect(bundledFilesPromptTreeRow).toHaveCount(0)
       await expect(mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]')).toHaveCount(0)
 

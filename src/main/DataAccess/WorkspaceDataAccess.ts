@@ -37,8 +37,7 @@ const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
 // Ordered categories created with the bundled example prompts.
 const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
-  'New Features',
-  'Improvements',
+  'Features & Improvements',
   'Bug Fixes'
 ] as const
 // Ordered bundled prompt sources used when initializing a workspace with examples.
