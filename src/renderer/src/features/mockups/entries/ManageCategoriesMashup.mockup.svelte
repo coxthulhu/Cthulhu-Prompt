@@ -112,9 +112,9 @@
   
     <div class="text-sm leading-5" style="display:grid; grid-template-columns:232px minmax(0,1fr); height:min(570px,calc(100vh - 212px)); min-height:240px;">
       <aside aria-label="Categories" style="display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--ui-neutral-normal-border); padding:20px 14px 20px 0;">
-        <div style="display:flex; align-items:center; justify-content:space-between; padding:0 10px 16px;">
-          <strong class="text-xs leading-4" style="letter-spacing:0.08em; text-transform:uppercase; color:var(--ui-secondary-text);">Categories</strong>
-          <span class="text-xs leading-4" style="padding:2px 7px; border-radius:5px; background:var(--ui-neutral-normal-surface); color:var(--ui-secondary-text);">6</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:0 10px 14px;">
+          <span class="text-sm leading-5" style="font-weight:600; color:var(--ui-normal-text);">All Categories</span>
+          <span class="text-xs leading-4" style="color:var(--ui-muted-text);">6</span>
         </div>
         <div style="display:flex; flex-direction:column; gap:2px; overflow:auto; flex:1;">
           {#each categories as category (category.id)}
@@ -165,13 +165,13 @@
             <p class="text-xs leading-4" style="margin:6px 0 0; color:var(--ui-muted-text);">A brief summary to help you recognize this category.</p>
           </div>
           <div>
-            <div id="category-description-label-083" style="margin-bottom:7px; font-weight:500;">Full Description</div>
+            <div id="category-description-label-083" style="margin-bottom:2px; font-weight:500;">Full Description</div>
+            <p class="text-xs leading-4" style="margin:0 0 7px; color:var(--ui-muted-text);">Describe what belongs here and how to use these prompts. For informational use only.</p>
             <div style="overflow:hidden; border:1px solid var(--ui-neutral-normal-border); border-radius:var(--cthulhu-ui-radius-control); background:var(--ui-editor-content-surface);">
               {#key selectedId}
                 <div class="text-sm leading-6" style="height:194px; width:100%;" use:mountDescription={categories.find((category) => category.id === selectedId)?.displayName ?? 'Implementation'}></div>
               {/key}
             </div>
-            <p class="text-xs leading-4" style="margin:6px 0 0; color:var(--ui-muted-text);">Describe what belongs here and how to use these prompts. For informational use only.</p>
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding-top:17px; border-top:1px solid var(--ui-neutral-normal-border);">
             <div><label for="category-template-083" style="display:flex; align-items:center; gap:6px; margin-bottom:7px; font-weight:500;"><Layers size={14} />Default Template</label><select id="category-template-083" class="text-sm leading-5" style={fieldStyle}><option>Draft Implementation Plan</option><option>No template</option></select><p class="text-xs leading-4" style="margin:6px 0 0; color:var(--ui-muted-text);">Preselect a template for new prompts.</p></div>
