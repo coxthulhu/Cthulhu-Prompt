@@ -9,7 +9,7 @@
   export type RowTrailingLayout = 'single' | 'grouped'
 
   type Props = {
-    variant?: 'default' | 'dialog-heading'
+    variant?: 'default' | 'compact-heading' | 'dialog-heading'
     icon: ComponentType
     label: string
     detail?: string
@@ -97,7 +97,10 @@
     width: 100%;
   }
 
-  .cthulhuUiRow[data-variant='dialog-heading'] {
+  .cthulhuUiRow:where(
+      [data-variant='compact-heading'],
+      [data-variant='dialog-heading']
+    ) {
     padding: 0;
   }
 

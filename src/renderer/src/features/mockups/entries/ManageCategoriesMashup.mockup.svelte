@@ -2,6 +2,7 @@
   import { Check, ChevronDown, ChevronRight, Copy, FileText, Folder, GripVertical, Layers, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
+  import Row from '@renderer/common/cthulhu-ui/Row.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import { hasCategoryDisplayNameConflict, normalizeCategoryDisplayName } from '@shared/Category'
 
@@ -145,10 +146,13 @@
         <button type="button" class="text-sm leading-5" style={`${buttonStyle}margin-top:16px;width:100%;`}><Plus size={16} />New Category</button>
       </aside>
       <div style="min-width:0; overflow:auto; padding:22px 8px 22px 26px;">
-        <div style="display:flex; align-items:center; gap:11px; margin-bottom:22px;">
-          <span style="display:flex; align-items:center; justify-content:center; height:36px; width:36px; border:1px solid var(--ui-accent-muted-border); border-radius:8px; background:var(--ui-accent-action-fill);"><Folder size={19} /></span>
-          <div><h2 class="text-lg leading-6" style="margin:0; font-weight:600;">{categories.find((category) => category.id === selectedId)?.displayName}</h2><p class="text-xs leading-4" style="margin:3px 0 0; color:var(--ui-muted-text);">Category settings</p></div>
-        </div>
+        <Row
+          variant="compact-heading"
+          icon={Folder}
+          label={categories.find((category) => category.id === selectedId)?.displayName ?? ''}
+          detail="Category settings"
+          class="mb-[22px]"
+        />
         <div style="display:grid; gap:17px;">
           <div>
             <label for="category-name-083" class="text-sm leading-5" style="display:block; margin-bottom:7px; font-weight:500;">Category Name <span style="color:var(--ui-muted-text);">*</span></label>
