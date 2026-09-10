@@ -223,7 +223,7 @@
               {:else}
                 {@render row(FolderPlus, 'Choose a Workspace', 'Create a new workspace folder, or open an existing one to continue.')}
                 <div class="separator"></div>
-                {@render row(FileText, 'Manage Your Prompts', 'Cthulhu Prompt stores and manages your prompts as Markdown files in a workspace folder.', undefined, '', true)}
+                {@render row(FileText, 'Manage Your Prompts', 'Cthulhu Prompt stores and manages your prompts as simple Markdown files in a workspace folder.', undefined, '', true)}
                 <div class="separator"></div>
                 {#snippet githubAction()}
                   <a class="action-button text-sm" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Open Github <ExternalLink size={16} aria-hidden="true" /></a>

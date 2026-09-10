@@ -225,7 +225,7 @@
               <DisplayRow
                 icon={FileText}
                 label="Manage Your Prompts"
-                detail="Cthulhu Prompt stores and manages your prompts as Markdown files in a workspace folder."
+                detail="Cthulhu Prompt stores and manages your prompts as simple Markdown files in a workspace folder."
                 wrapDetail
               />
 
