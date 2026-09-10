@@ -161,7 +161,7 @@
             <p class="text-xs leading-4" style="margin:6px 0 0; color:var(--ui-muted-text);">A brief summary to help you recognize this category.</p>
           </div>
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;"><span id="category-description-label-083" style="font-weight:500;">Category Description</span><span class="text-xs leading-4" style="color:var(--ui-muted-text);">Markdown</span></div>
+            <div id="category-description-label-083" style="margin-bottom:7px; font-weight:500;">Full Description</div>
             <div style="overflow:hidden; border:1px solid var(--ui-neutral-normal-border); border-radius:var(--cthulhu-ui-radius-control); background:var(--ui-editor-content-surface);">
               {#key selectedId}
                 <div class="text-sm leading-6" style="height:194px; width:100%;" use:mountDescription={categories.find((category) => category.id === selectedId)?.displayName ?? 'Implementation'}></div>
