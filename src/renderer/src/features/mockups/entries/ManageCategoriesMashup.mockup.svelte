@@ -156,17 +156,17 @@
         <div style="display:grid; gap:17px;">
           <div>
             <label for="category-name-083" class="text-sm leading-5" style="display:block; margin-bottom:2px; font-weight:500;">Category Name <span style="color:var(--ui-muted-text);">*</span></label>
-            <p id="category-name-help-083" class="text-xs leading-4" style={`margin:0 0 7px;color:${nameError ? 'var(--ui-danger-icon-glyph)' : 'var(--ui-muted-text)'};`}>{nameError ?? 'Required. Names must be unique in this folder, ignoring case and surrounding spaces.'}</p>
+            <p id="category-name-help-083" class="text-sm leading-5" style={`margin:0 0 7px;color:${nameError ? 'var(--ui-danger-icon-glyph)' : 'var(--ui-muted-text)'};`}>{nameError ?? 'Required. Names must be unique in this folder, ignoring case and surrounding spaces.'}</p>
             <input id="category-name-083" class="text-sm leading-5" bind:value={categoryName} aria-invalid={nameError ? 'true' : undefined} aria-describedby="category-name-help-083" style={`${fieldStyle}${nameError ? 'border-color:var(--ui-danger-strong-border);' : ''}`} />
           </div>
           <div>
             <label for="category-summary-083" style="display:block; margin-bottom:2px; font-weight:500;">Short Description</label>
-            <p class="text-xs leading-4" style="margin:0 0 7px; color:var(--ui-muted-text);">A brief summary to help you recognize this category.</p>
+            <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">A brief summary to help you recognize this category.</p>
             <input id="category-summary-083" class="text-sm leading-5" bind:value={summary} style={fieldStyle} />
           </div>
           <div>
             <div id="category-description-label-083" style="margin-bottom:2px; font-weight:500;">Full Description</div>
-            <p class="text-xs leading-4" style="margin:0 0 7px; color:var(--ui-muted-text);">Describe what belongs here and how to use these prompts. For informational use only.</p>
+            <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">Describe what belongs here and how to use these prompts. For informational use only.</p>
             <div style="overflow:hidden; border:1px solid var(--ui-neutral-normal-border); border-radius:var(--cthulhu-ui-radius-control); background:var(--ui-editor-content-surface);">
               {#key selectedId}
                 <div class="text-sm leading-6" style="height:194px; width:100%;" use:mountDescription={categories.find((category) => category.id === selectedId)?.displayName ?? 'Implementation'}></div>
@@ -176,12 +176,12 @@
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding-top:17px; border-top:1px solid var(--ui-neutral-normal-border);">
             <div>
               <label for="category-template-083" style="display:flex; align-items:center; gap:6px; margin-bottom:2px; font-weight:500;"><Layers size={14} />Default Template</label>
-              <p class="text-xs leading-4" style="margin:0 0 7px; color:var(--ui-muted-text);">Preselect a template for new prompts.</p>
+              <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">Preselect a template for new prompts.</p>
               <select id="category-template-083" class="text-sm leading-5" style={fieldStyle}><option>Draft Implementation Plan</option><option>No template</option></select>
             </div>
             <div>
               <label for="category-status-083" style="display:block; margin-bottom:2px; font-weight:500;">Default Status</label>
-              <p class="text-xs leading-4" style="margin:0 0 7px; color:var(--ui-muted-text);">Set the starting status for new prompts.</p>
+              <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">Set the starting status for new prompts.</p>
               <select id="category-status-083" class="text-sm leading-5" style={fieldStyle}><option>Todo</option><option>Backlog</option></select>
             </div>
           </div>
