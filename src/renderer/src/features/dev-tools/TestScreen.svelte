@@ -51,7 +51,6 @@
   } from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
@@ -211,7 +210,6 @@
   let togglePressed = $state(true)
   let ErrorDialogOpen = $state(false)
   let ConfirmationDialogOpen = $state(false)
-  let lastDropdownAction = $state('No dropdown item selected')
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
   let testLoadingOverlayActive = $state(false)
   let testLoadingOverlayTimeoutId: number | null = null
@@ -411,12 +409,6 @@
                     moreOptions={iconButtonMoreOptionsItems}
                     menuTestId="icon-button-more-options-menu"
                     moreOptionsTestId="icon-button-more-options-chevron"
-                    onclick={() => {
-                      lastDropdownAction = 'Copy prompt'
-                    }}
-                    onselect={(item) => {
-                      lastDropdownAction = item.label
-                    }}
                   />
                 </div>
               </div>
@@ -533,9 +525,6 @@
                       label="Folder options"
                       items={folderDropdownItems}
                       testId="folder-dropdown-menu"
-                      onselect={(item) => {
-                        lastDropdownAction = item.label
-                      }}
                     >
                       {#snippet trigger(dropdown)}
                         <IconButton
@@ -559,9 +548,6 @@
                       label="Prompt actions"
                       items={promptDropdownItems}
                       testId="prompt-dropdown-menu"
-                      onselect={(item) => {
-                        lastDropdownAction = item.label
-                      }}
                     >
                       {#snippet trigger(dropdown)}
                         <IconButton
@@ -576,11 +562,6 @@
                     </DropdownPopupSimple>
                   </div>
                 </div>
-              </div>
-
-              <div class="component-sample">
-                {@render componentLabel('InfoRow')}
-                <InfoRow text={`Last dropdown action: ${lastDropdownAction}`} />
               </div>
             </div>
           </div>
@@ -603,7 +584,6 @@
                   testId="test-screen-neutral-simple-selector"
                   onselect={(item) => {
                     selectedDetailedDropdownItem = item
-                    lastDropdownAction = item.label
                   }}
                 />
               </div>
@@ -639,14 +619,8 @@
                   triggerTestId="detailed-dropdown-trigger"
                   onselect={(item) => {
                     selectedDetailedDropdownItem = item
-                    lastDropdownAction = item.label
                   }}
                 />
-              </div>
-
-              <div class="component-sample">
-                {@render componentLabel('InfoRow')}
-                <InfoRow text={`Selected detailed item: ${selectedDetailedDropdownItem.label}`} />
               </div>
             </div>
           </div>
@@ -746,16 +720,10 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Message Rows',
-              'Inline guidance, warnings, and validation errors.'
+              'Warnings and validation errors.'
             )}
 
             <div class="stack">
-              <div class="component-sample">
-                {@render componentLabel('InfoRow')}
-                <InfoRow
-                  text="Use this row for short informational guidance that helps explain the surrounding control or section."
-                />
-              </div>
               <div class="component-sample">
                 {@render componentLabel('MessageRow: warning')}
                 <MessageRow text="Review this value before saving." variant="warning" />

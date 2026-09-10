@@ -1,5 +1,4 @@
 <script lang="ts">
-  import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
   import { PromptStatus } from '@shared/Prompt'
   import PromptEditorTitleRow, {
     type PromptEditorTitleRowProps
@@ -8,7 +7,6 @@
   type Props = PromptEditorTitleRowProps & {
     titleAreaHeightPx: number
     compactLayout?: boolean
-    infoText?: string
   }
 
   let {
@@ -42,8 +40,7 @@
     status = PromptStatus.Todo,
     isEdited = false,
     titleAreaHeightPx,
-    compactLayout = false,
-    infoText
+    compactLayout = false
   }: Props = $props()
 </script>
 
@@ -83,17 +80,12 @@
     {isEdited}
     {compactLayout}
   />
-
-  {#if infoText}
-    <InfoRow text={infoText} />
-  {/if}
 </div>
 
 <style>
   .prompt-editor-title-area {
     box-sizing: border-box;
     display: grid;
-    gap: 8px;
     min-width: 0;
     overflow: hidden;
   }

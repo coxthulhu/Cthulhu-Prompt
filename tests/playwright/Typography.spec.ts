@@ -25,7 +25,6 @@ describe('Typography', () => {
       { selector: '.cthulhuUiSelectorButtonText', fontSize: 14, lineHeight: 20 },
       { selector: '.cthulhuUiSelectorButtonDetail', fontSize: 12, lineHeight: 18 },
       { selector: '.cthulhuUiAccordionLabel', fontSize: 14, lineHeight: 20 },
-      { selector: '.cthulhuUiInfoRow', fontSize: 14, lineHeight: 20 },
       { selector: '.cthulhuUiAccordionCount', fontSize: 12, lineHeight: 18 },
       { selector: '.cthulhuUiButton', fontSize: 14, lineHeight: 20 },
       { selector: '.cthulhuUiIconTextButton', fontSize: 14, lineHeight: 16 }
