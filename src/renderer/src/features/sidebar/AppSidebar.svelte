@@ -899,7 +899,7 @@
           {#each visibleStatusGroups as group (group.id)}
             <AccordionSection
               id={group.id}
-              label={group.label.toUpperCase()}
+              label={group.label}
               icon={group.icon}
               count={selectedPromptStatusCounts[group.id]}
               initialExpandedHeightPx={group.id === PromptStatusFolderId.Active ? 400 : 200}
