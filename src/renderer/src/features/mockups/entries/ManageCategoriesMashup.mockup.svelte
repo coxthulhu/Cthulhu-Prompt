@@ -2,8 +2,13 @@
   import { Check, ChevronDown, ChevronRight, Copy, FileText, Folder, GripVertical, Layers, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import Row from '@renderer/common/cthulhu-ui/Row.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
   import { hasCategoryDisplayNameConflict, normalizeCategoryDisplayName } from '@shared/Category'
 
   const categories = [
@@ -111,7 +116,7 @@
 >
   
     <div class="text-sm leading-5" style="display:grid; grid-template-columns:232px minmax(0,1fr); height:min(570px,calc(100vh - 212px)); min-height:240px;">
-      <aside aria-label="Categories" style="display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--ui-neutral-normal-border); padding:20px 14px 20px 0;">
+      <aside aria-label="Categories" style="display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--ui-neutral-normal-border); padding:18px 14px 20px 0;">
         <div style="display:flex; align-items:center; justify-content:space-between; padding:0 10px 14px;">
           <span class="text-sm leading-5" style="font-weight:600; color:var(--ui-normal-text);">All Categories</span>
           <span class="text-xs leading-4" style="color:var(--ui-muted-text);">6</span>
@@ -145,7 +150,7 @@
         </div>
         <button type="button" class="text-sm leading-5" style={`${buttonStyle}margin-top:16px;width:100%;`}><Plus size={16} />New Category</button>
       </aside>
-      <div style="min-width:0; overflow:auto; padding:22px 8px 22px 26px;">
+      <div style="min-width:0; overflow:auto; padding:16px 8px 22px 26px;">
         <Row
           variant="compact-heading"
           icon={Folder}
@@ -155,18 +160,44 @@
         />
         <div style="display:grid; gap:17px;">
           <div>
-            <label for="category-name-083" class="text-sm leading-5" style="display:block; margin-bottom:2px; font-weight:500;">Category Name <span style="color:var(--ui-muted-text);">*</span></label>
-            <p id="category-name-help-083" class="text-sm leading-5" style={`margin:0 0 7px;color:${nameError ? 'var(--ui-danger-icon-glyph)' : 'var(--ui-muted-text)'};`}>{nameError ?? 'Required. Names must be unique in this folder, ignoring case and surrounding spaces.'}</p>
-            <input id="category-name-083" class="text-sm leading-5" bind:value={categoryName} aria-invalid={nameError ? 'true' : undefined} aria-describedby="category-name-help-083" style={`${fieldStyle}${nameError ? 'border-color:var(--ui-danger-strong-border);' : ''}`} />
+            <TitleSubtitleStack class="mb-[7px]">
+              <div style="display:flex; align-items:center; gap:4px;">
+                <Title title="Category Name" variant="small" />
+                <span class="text-sm leading-5" style="color:var(--ui-muted-text);">*</span>
+              </div>
+              <Subtitle
+                id="category-name-help-083"
+                text="Required. Names must be unique in this folder."
+              />
+            </TitleSubtitleStack>
+            <FloatingValidationMessage message={nameError}>
+              <TextInput
+                id="category-name-083"
+                aria-label="Category Name"
+                class="w-full"
+                bind:value={categoryName}
+                aria-invalid={nameError ? 'true' : undefined}
+                aria-describedby="category-name-help-083"
+              />
+            </FloatingValidationMessage>
           </div>
           <div>
-            <label for="category-summary-083" style="display:block; margin-bottom:2px; font-weight:500;">Short Description</label>
-            <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">A brief summary to help you recognize this category.</p>
-            <input id="category-summary-083" class="text-sm leading-5" bind:value={summary} style={fieldStyle} />
+            <TitleSubtitleStack class="mb-[7px]">
+              <Title title="Short Description" variant="small" />
+              <Subtitle text="A brief summary to help you recognize this category." />
+            </TitleSubtitleStack>
+            <TextInput
+              id="category-summary-083"
+              aria-label="Short Description"
+              class="w-full"
+              bind:value={summary}
+            />
           </div>
           <div>
-            <div id="category-description-label-083" style="margin-bottom:2px; font-weight:500;">Full Description</div>
-            <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">Describe what belongs here and how to use these prompts. For informational use only.</p>
+            <TitleSubtitleStack class="mb-[7px]">
+              <Title title="Full Description" variant="small" />
+              <Subtitle text="Describe what belongs here and how to use these prompts." />
+            </TitleSubtitleStack>
             <div style="overflow:hidden; border:1px solid var(--ui-neutral-normal-border); border-radius:var(--cthulhu-ui-radius-control); background:var(--ui-editor-content-surface);">
               {#key selectedId}
                 <div class="text-sm leading-6" style="height:194px; width:100%;" use:mountDescription={categories.find((category) => category.id === selectedId)?.displayName ?? 'Implementation'}></div>
@@ -175,14 +206,21 @@
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; padding-top:17px; border-top:1px solid var(--ui-neutral-normal-border);">
             <div>
-              <label for="category-template-083" style="display:flex; align-items:center; gap:6px; margin-bottom:2px; font-weight:500;"><Layers size={14} />Default Template</label>
-              <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">Preselect a template for new prompts.</p>
-              <select id="category-template-083" class="text-sm leading-5" style={fieldStyle}><option>Draft Implementation Plan</option><option>No template</option></select>
+              <TitleSubtitleStack class="mb-[7px]">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <Layers size={14} />
+                  <Title title="Default Template" variant="small" />
+                </div>
+                <Subtitle text="Preselect a template for new prompts." />
+              </TitleSubtitleStack>
+              <select id="category-template-083" aria-label="Default Template" class="text-sm leading-5" style={fieldStyle}><option>Draft Implementation Plan</option><option>No template</option></select>
             </div>
             <div>
-              <label for="category-status-083" style="display:block; margin-bottom:2px; font-weight:500;">Default Status</label>
-              <p class="text-sm leading-5" style="margin:0 0 7px; color:var(--ui-muted-text);">Set the starting status for new prompts.</p>
-              <select id="category-status-083" class="text-sm leading-5" style={fieldStyle}><option>Todo</option><option>Backlog</option></select>
+              <TitleSubtitleStack class="mb-[7px]">
+                <Title title="Default Status" variant="small" />
+                <Subtitle text="Set the starting status for new prompts." />
+              </TitleSubtitleStack>
+              <select id="category-status-083" aria-label="Default Status" class="text-sm leading-5" style={fieldStyle}><option>Todo</option><option>Backlog</option></select>
             </div>
           </div>
         </div>
