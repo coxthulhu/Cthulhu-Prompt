@@ -2,6 +2,7 @@
   import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import { ChevronDown, ChevronUp } from 'lucide-svelte'
+  import IconCell from './IconCell.svelte'
   import { mergeClasses } from './mergeClasses'
   import SeparatorDot from './SeparatorDot.svelte'
 
@@ -120,9 +121,12 @@
     </span>
   {/if}
 
-  <span class="cthulhuUiSelectorButtonIconCell">
-    <Icon class={iconClass} size={20} aria-hidden="true" />
-  </span>
+  <IconCell
+    icon={Icon}
+    {iconClass}
+    variant="compact"
+    class="cthulhuUiSelectorButtonIconCell"
+  />
 
   <span class="cthulhuUiSelectorButtonTextStack">
     <span class="cthulhuUiSelectorButtonText text-sm leading-5">{text}</span>
@@ -277,16 +281,8 @@
     pointer-events: none;
   }
 
-  .cthulhuUiSelectorButtonIconCell {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-normal-text);
-    display: flex;
+  .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonIconCell) {
     grid-column: 1;
-    height: 34px;
-    justify-content: center;
-    transition: color var(--ui-animation-duration-standard) ease;
-    width: 34px;
   }
 
   .cthulhuUiSelectorButtonLeadingCell {
@@ -307,7 +303,8 @@
     min-width: 0;
   }
 
-  .cthulhuUiSelectorButton[data-leading-accessory='true'] .cthulhuUiSelectorButtonIconCell {
+  .cthulhuUiSelectorButton[data-leading-accessory='true']
+    :global(.cthulhuUiSelectorButtonIconCell) {
     grid-column: 3;
   }
 

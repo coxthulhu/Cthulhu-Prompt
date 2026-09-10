@@ -402,8 +402,9 @@
               <div class="component-sample">
                 {@render componentLabel('IconCell')}
                 <div class="variant-controls">
-                  <IconCell icon={Folder} />
-                  <IconCell icon={FileText} size="title" />
+                  <IconCell icon={Folder} variant="standard" />
+                  <IconCell icon={FileText} variant="title" />
+                  <IconCell icon={Folder} variant="compact" />
                 </div>
               </div>
             </div>

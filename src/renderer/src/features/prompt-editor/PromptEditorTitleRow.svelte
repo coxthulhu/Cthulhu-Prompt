@@ -253,7 +253,7 @@
   ></span>
 
   <div class="prompt-editor-title-main">
-    <IconCell {icon} size="title" />
+    <IconCell {icon} variant="title" />
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}

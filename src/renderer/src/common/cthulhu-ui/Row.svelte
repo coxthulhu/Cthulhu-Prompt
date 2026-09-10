@@ -55,7 +55,7 @@
   <IconCell
     icon={Icon}
     {iconClass}
-    size={variant === 'dialog-heading' ? 'title' : 'row'}
+    variant={variant === 'dialog-heading' ? 'title' : 'standard'}
     data-testid={iconTestId}
   />
 

@@ -394,7 +394,7 @@
         data-testid="prompt-template-option-none"
         onclick={handleNoTemplateSelect}
       >
-        <IconCell icon={Ban} size="row" class="prompt-template-no-template-icon" />
+        <IconCell icon={Ban} variant="standard" class="prompt-template-no-template-icon" />
         <span class="prompt-template-no-template-copy">
           <strong class="text-sm font-semibold">{NO_TEMPLATE_LABEL}</strong>
           <small class="text-xs">Use the prompt exactly as written</small>
@@ -438,7 +438,7 @@
     class="prompt-template-base-folder-header"
     data-testid={`prompt-template-base-folder-header-${row.folder.id}`}
   >
-    <IconCell icon={FolderOpen} size="row" class="prompt-template-base-folder-icon" />
+    <IconCell icon={FolderOpen} variant="standard" class="prompt-template-base-folder-icon" />
     <span class="prompt-template-base-folder-copy">
       <span class="prompt-template-base-folder-name text-sm">{row.folder.displayName}</span>
       <span class="prompt-template-base-folder-count text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>

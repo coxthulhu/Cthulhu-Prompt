@@ -47,7 +47,7 @@
 >
   <div class="prompt-folder-root-screen-header">
     <div class="prompt-folder-root-title-block">
-      <IconCell icon={isTemplateFolder ? Layers : FileText} size="title" />
+      <IconCell icon={isTemplateFolder ? Layers : FileText} variant="title" />
       <TitleSubtitleStack class="prompt-folder-root-title-stack">
         <div class="prompt-folder-root-title-line">
           <Title

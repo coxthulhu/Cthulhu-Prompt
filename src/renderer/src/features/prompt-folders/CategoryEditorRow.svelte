@@ -217,7 +217,7 @@
           onclick={onContentSectionToggle}
         />
 
-        <IconCell icon={Folder} size="title" />
+        <IconCell icon={Folder} variant="title" />
 
         <div class="category-editor-title-copy">
           <div class="category-editor-title-line">

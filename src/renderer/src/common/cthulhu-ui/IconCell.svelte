@@ -3,19 +3,33 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  type IconCellSize = 'row' | 'title'
+  type IconCellVariant = 'standard' | 'title' | 'compact'
 
   type Props = HTMLAttributes<HTMLSpanElement> & {
     icon: ComponentType
     iconClass?: string
-    size?: IconCellSize
+    variant?: IconCellVariant
   }
 
-  let { icon: Icon, iconClass, size = 'row', class: className, ...restProps }: Props = $props()
+  let {
+    icon: Icon,
+    iconClass,
+    variant = 'standard',
+    class: className,
+    ...restProps
+  }: Props = $props()
 </script>
 
-<span class={mergeClasses('cthulhuUiIconCell', className)} data-size={size} {...restProps}>
-  <Icon class={mergeClasses('cthulhuUiIconCellIcon', iconClass)} size={24} aria-hidden="true" />
+<span
+  class={mergeClasses('cthulhuUiIconCell', className)}
+  data-variant={variant}
+  {...restProps}
+>
+  <Icon
+    class={mergeClasses('cthulhuUiIconCellIcon', iconClass)}
+    size={variant === 'compact' ? 20 : 24}
+    aria-hidden="true"
+  />
 </span>
 
 <style>
@@ -30,10 +44,15 @@
     width: 34px;
   }
 
-  .cthulhuUiIconCell[data-size='title'] {
+  .cthulhuUiIconCell[data-variant='title'] {
     flex-basis: 40px;
     height: 40px;
     width: 40px;
+  }
+
+  .cthulhuUiIconCell[data-variant='compact'] {
+    color: var(--ui-normal-text);
+    transition: color var(--ui-animation-duration-standard) ease;
   }
 
   .cthulhuUiIconCellIcon {
