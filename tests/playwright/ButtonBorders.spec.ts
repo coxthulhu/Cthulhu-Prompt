@@ -13,7 +13,7 @@ const resolvePaletteColor = async (locator: Locator, token: string): Promise<str
     return color
   }, token)
 
-describe('Button borders', () => {
+describe('Button styling', () => {
   test('matches borders to button fills while preserving structural exceptions', async ({
     testSetup
   }) => {
@@ -290,5 +290,162 @@ describe('Button borders', () => {
     })
     await expect(sidebarRailButton).toHaveCSS('border-left-style', 'none')
     await expect(sidebarRailButton).toHaveCSS('border-right-style', 'none')
+  })
+
+  test('uses interactive foregrounds for ghost controls and full white for filled controls', async ({
+    testSetup
+  }) => {
+    // The component gallery exposes shared primitives without feature-specific color overrides.
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.clickNavButton('Test Screen')
+
+    // Gallery root resolves palette tokens into the browser's computed color format.
+    const gallery = mainWindow.locator('[data-testid="test-screen"]')
+    // Shared text colors define the idle and interacted control hierarchy.
+    const mutedText = await resolvePaletteColor(gallery, '--ui-muted-text')
+    const hoverableText = await resolvePaletteColor(gallery, '--ui-hoverable-text')
+    const normalText = await resolvePaletteColor(gallery, '--ui-normal-text')
+    // Shared glyph colors define the idle icon hierarchy.
+    const mutedIcon = await resolvePaletteColor(gallery, '--ui-muted-icon-glyph')
+    const hoverableIcon = await resolvePaletteColor(gallery, '--ui-hoverable-icon-glyph')
+    // Semantic foregrounds must survive hover feedback.
+    const warningForeground = await resolvePaletteColor(gallery, '--ui-warning-icon-glyph')
+    const successForeground = await resolvePaletteColor(gallery, '--ui-success-normal-text')
+
+    // Outline actions brighten their text while filled actions remain full white.
+    const outlineButton = mainWindow.locator('[data-testid="test-screen-outline-button"]')
+    const filledButton = mainWindow.locator('[data-testid="test-screen-neutral-button"]')
+    await mainWindow.mouse.move(0, 0)
+    await expect(outlineButton).toHaveCSS('color', hoverableText)
+    await outlineButton.hover()
+    await expect(outlineButton).toHaveCSS('color', normalText)
+    await expect(filledButton).toHaveCSS('color', normalText)
+    await filledButton.hover()
+    await expect(filledButton).toHaveCSS('color', normalText)
+
+    // Icon-only and icon-text controls brighten both text and glyphs together.
+    const iconButton = mainWindow.getByRole('button', {
+      name: 'normal neutral default',
+      exact: true
+    })
+    const iconTextButton = mainWindow.locator(
+      '[data-testid="test-screen-neutral-icon-text-button"]'
+    )
+    await mainWindow.mouse.move(0, 0)
+    await expect(iconButton).toHaveCSS('color', hoverableIcon)
+    await iconButton.hover()
+    await expect(iconButton).toHaveCSS('color', normalText)
+    await mainWindow.mouse.move(0, 0)
+    await expect(iconTextButton).toHaveCSS('color', hoverableText)
+    await expect(iconTextButton.locator('svg')).toHaveCSS('color', hoverableIcon)
+    await iconTextButton.hover()
+    await expect(iconTextButton).toHaveCSS('color', normalText)
+    await expect(iconTextButton.locator('svg')).toHaveCSS('color', normalText)
+
+    // Activity and inline controls preserve their lower-emphasis idle tones before interaction.
+    const activityButton = mainWindow.locator(
+      '[data-testid="test-screen-idle-activity-button"]'
+    )
+    const inlineButton = mainWindow.locator('[data-testid="test-screen-muted-inline-button"]')
+    await mainWindow.mouse.move(0, 0)
+    await expect(activityButton).toHaveCSS('color', mutedIcon)
+    await activityButton.focus()
+    await mainWindow.keyboard.press('Tab')
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect(activityButton).toBeFocused()
+    await expect(activityButton).toHaveCSS('color', normalText)
+    expect(await activityButton.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
+    await mainWindow.mouse.move(0, 0)
+    await expect(inlineButton).toHaveCSS('color', mutedText)
+    await inlineButton.hover()
+    await expect(inlineButton).toHaveCSS('color', normalText)
+
+    // Detailed selectors brighten idle content and retain full white while selected.
+    const idleSelector = mainWindow.locator(
+      '[data-testid="test-screen-idle-selector-button"]'
+    )
+    const selectedSelector = mainWindow.locator(
+      '[data-testid="test-screen-selected-selector-button"]'
+    )
+    await mainWindow.mouse.move(0, 0)
+    await expect(idleSelector).toHaveCSS('color', hoverableText)
+    await expect(idleSelector.locator('.cthulhuUiSelectorButtonIconCell')).toHaveCSS(
+      'color',
+      hoverableIcon
+    )
+    await idleSelector.hover()
+    await expect(idleSelector).toHaveCSS('color', normalText)
+    await expect(idleSelector.locator('.cthulhuUiSelectorButtonIconCell')).toHaveCSS(
+      'color',
+      normalText
+    )
+    await expect(selectedSelector).toHaveCSS('color', normalText)
+    await expect(selectedSelector.locator('.cthulhuUiSelectorButtonIconCell')).toHaveCSS(
+      'color',
+      normalText
+    )
+
+    // Neutral simple selectors brighten, while semantic selector text keeps its status color.
+    const neutralSimpleSelector = mainWindow.locator(
+      '[data-testid="test-screen-neutral-simple-selector"]'
+    )
+    const warningSimpleSelector = mainWindow.locator(
+      '[data-testid="test-screen-warning-simple-selector"]'
+    )
+    const successSimpleSelector = mainWindow.locator(
+      '[data-testid="test-screen-success-simple-selector"]'
+    )
+    await mainWindow.mouse.move(0, 0)
+    await expect(neutralSimpleSelector).toHaveCSS('color', hoverableText)
+    await neutralSimpleSelector.hover()
+    await expect(neutralSimpleSelector).toHaveCSS('color', normalText)
+    await expect(warningSimpleSelector).toHaveCSS('color', warningForeground)
+    await warningSimpleSelector.hover()
+    await expect(warningSimpleSelector).toHaveCSS('color', warningForeground)
+    await expect(successSimpleSelector).toHaveCSS('color', successForeground)
+    await successSimpleSelector.hover()
+    await expect(successSimpleSelector).toHaveCSS('color', successForeground)
+
+    // Both menu row variants follow the same idle-to-hover foreground transition.
+    const simpleDropdownTrigger = mainWindow.getByRole('button', {
+      name: 'Prompt actions',
+      exact: true
+    })
+    await simpleDropdownTrigger.click()
+    const simpleDropdownItem = mainWindow
+      .getByRole('menu', { name: 'Prompt actions' })
+      .getByRole('menuitem', { name: 'Copy prompt', exact: true })
+    await expect(simpleDropdownItem).toHaveCSS('color', hoverableText)
+    await expect(simpleDropdownItem.locator('svg')).toHaveCSS('color', hoverableIcon)
+    await simpleDropdownItem.hover()
+    await expect(simpleDropdownItem).toHaveCSS('color', normalText)
+    await expect(simpleDropdownItem.locator('svg')).toHaveCSS('color', normalText)
+    await mainWindow.keyboard.press('Escape')
+
+    // Detailed menu subtitles join their title and icon at full white on hover.
+    const compoundChevronButton = mainWindow
+      .locator('.cthulhuUiIconButtonWithMoreOptions')
+      .getByRole('button', { name: 'Copy prompt More Options', exact: true })
+    await compoundChevronButton.click()
+    const detailedDropdownItem = mainWindow
+      .locator('[data-testid="icon-button-more-options-menu"]')
+      .getByRole('menuitem')
+      .first()
+    await expect(detailedDropdownItem).toHaveCSS('color', hoverableText)
+    await expect(detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')).toHaveCSS(
+      'color',
+      hoverableIcon
+    )
+    await detailedDropdownItem.hover()
+    await expect(detailedDropdownItem).toHaveCSS('color', normalText)
+    await expect(detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')).toHaveCSS(
+      'color',
+      normalText
+    )
+    await expect(
+      detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsSubtitle')
+    ).toHaveCSS('color', normalText)
   })
 })

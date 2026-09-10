@@ -108,7 +108,7 @@
 <style>
   .cthulhuUiSimpleSelectorButton {
     --cthulhu-ui-simple-selector-border: var(--ui-neutral-normal-border);
-    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
+    --cthulhu-ui-simple-selector-text: var(--ui-hoverable-text);
 
     align-items: stretch;
     background: transparent;
@@ -137,8 +137,16 @@
     background: var(--ui-neutral-action-fill);
   }
 
+  .cthulhuUiSimpleSelectorButton[data-tone='neutral']:hover {
+    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
+  }
+
   .cthulhuUiSimpleSelectorButton[data-open='true'] {
     background: var(--ui-neutral-action-hover-fill);
+  }
+
+  .cthulhuUiSimpleSelectorButton[data-tone='neutral'][data-open='true'] {
+    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
   }
 
   .cthulhuUiSimpleSelectorButton:has(:focus-visible) {
@@ -147,6 +155,10 @@
     background: var(--ui-neutral-action-fill);
     outline: 2px solid var(--ui-neutral-focus-border);
     outline-offset: 2px;
+  }
+
+  .cthulhuUiSimpleSelectorButton[data-tone='neutral']:has(:focus-visible) {
+    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
   }
 
   .cthulhuUiSimpleSelectorButton[data-disabled='true'] {
@@ -169,6 +181,7 @@
     grid-area: 1 / 1;
     height: 34px;
     padding: 0;
+    transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
     width: 100%;
   }
@@ -216,12 +229,18 @@
 
   .cthulhuUiSimpleSelectorButtonMoreOptions {
     align-items: center;
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-icon-glyph);
     display: inline-flex;
     flex: 0 0 auto;
     height: 34px;
     justify-content: center;
     margin-left: auto;
     padding: 0 6px;
+    transition: color var(--ui-animation-duration-standard) ease;
+  }
+
+  .cthulhuUiSimpleSelectorButton:where(:hover, :has(:focus-visible), [data-open='true'])
+    .cthulhuUiSimpleSelectorButtonMoreOptions {
+    color: var(--ui-normal-text);
   }
 </style>

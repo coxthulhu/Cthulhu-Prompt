@@ -60,7 +60,9 @@
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
-  import SimpleSelectorButton from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
+  import SimpleSelectorButton, {
+    type SimpleSelectorButtonItem
+  } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
   import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
@@ -152,6 +154,21 @@
       label: 'Code Review',
       detailParts: ['14 prompts', 'Updated yesterday'],
       icon: ClipboardList
+    }
+  ]
+  /** Semantic selector samples verify that status colors remain stable through interaction. */
+  const semanticSelectorItems: SimpleSelectorButtonItem[] = [
+    {
+      id: 'in-progress',
+      label: 'In Progress',
+      icon: Loader,
+      tone: 'warning'
+    },
+    {
+      id: 'completed',
+      label: 'Completed',
+      icon: Check,
+      tone: 'success'
     }
   ]
   const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
@@ -348,7 +365,12 @@
                     variant="danger"
                     testId="test-screen-danger-button"
                   />
-                  <Button icon={Archive} text="Outline" appearance="outline" />
+                  <Button
+                    icon={Archive}
+                    text="Outline"
+                    appearance="outline"
+                    testId="test-screen-outline-button"
+                  />
                 </div>
               </div>
               <div class="component-sample">
@@ -414,7 +436,11 @@
                 {@render componentLabel('ActivityBarButton')}
                 <div class="variant-controls">
                   <div class="w-12">
-                    <ActivityBarButton icon={Search} label="Idle activity" />
+                    <ActivityBarButton
+                      icon={Search}
+                      label="Idle activity"
+                      testId="test-screen-idle-activity-button"
+                    />
                   </div>
                   <div class="w-12">
                     <ActivityBarButton icon={Settings} label="Active activity" active />
@@ -424,7 +450,7 @@
               <div class="component-sample">
                 {@render componentLabel('InlineTextButton')}
                 <div class="variant-controls">
-                  <InlineTextButton text="Muted" />
+                  <InlineTextButton text="Muted" testId="test-screen-muted-inline-button" />
                   <InlineTextButton text="Secondary" baseVariant="secondary" />
                 </div>
               </div>
@@ -435,12 +461,14 @@
                     icon={Folder}
                     text="Idle selector"
                     detail="Hover to compare"
+                    testId="test-screen-idle-selector-button"
                   />
                   <SelectorButton
                     icon={FileText}
                     text="Selected selector"
                     detail="Selected state"
                     selected
+                    testId="test-screen-selected-selector-button"
                   />
                 </div>
               </div>
@@ -572,11 +600,32 @@
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
                   showIcon
+                  testId="test-screen-neutral-simple-selector"
                   onselect={(item) => {
                     selectedDetailedDropdownItem = item
                     lastDropdownAction = item.label
                   }}
                 />
+              </div>
+
+              <div class="component-sample">
+                {@render componentLabel('SimpleSelectorButton: semantic tones')}
+                <div class="variant-controls">
+                  <SimpleSelectorButton
+                    label="Warning status"
+                    items={semanticSelectorItems}
+                    selectedItem={semanticSelectorItems[0]!}
+                    showIcon
+                    testId="test-screen-warning-simple-selector"
+                  />
+                  <SimpleSelectorButton
+                    label="Success status"
+                    items={semanticSelectorItems}
+                    selectedItem={semanticSelectorItems[1]!}
+                    showIcon
+                    testId="test-screen-success-simple-selector"
+                  />
+                </div>
               </div>
 
               <div class="component-sample">

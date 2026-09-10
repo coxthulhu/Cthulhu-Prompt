@@ -124,7 +124,7 @@
     background: var(--ui-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
     gap: 8px;
@@ -132,13 +132,16 @@
     min-height: 50px;
     padding: 6px 8px;
     text-align: left;
-    transition: background-color var(--ui-animation-duration-standard) ease;
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
     width: 100%;
   }
 
   .cthulhuUiDropdownPopupMoreOptionsItem:hover,
   .cthulhuUiDropdownPopupMoreOptionsItem:focus-visible {
     background: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiDropdownPopupMoreOptionsItem:focus-visible {
@@ -152,7 +155,13 @@
     display: flex;
     height: 28px;
     justify-content: center;
+    transition: color var(--ui-animation-duration-standard) ease;
     width: 28px;
+  }
+
+  .cthulhuUiDropdownPopupMoreOptionsItem:where(:hover, :focus-visible)
+    .cthulhuUiDropdownPopupMoreOptionsIcon {
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiDropdownPopupMoreOptionsTextStack {
@@ -175,6 +184,12 @@
     gap: 5px;
     min-width: 0;
     overflow: hidden;
+    transition: color var(--ui-animation-duration-standard) ease;
+  }
+
+  .cthulhuUiDropdownPopupMoreOptionsItem:where(:hover, :focus-visible)
+    .cthulhuUiDropdownPopupMoreOptionsSubtitle {
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiDropdownPopupMoreOptionsSubtitlePart {

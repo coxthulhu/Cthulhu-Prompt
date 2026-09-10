@@ -163,14 +163,14 @@ test.describe('Sidebar Tests', () => {
     const toggleAppRegion = await toggleButton.evaluate((element) =>
       getComputedStyle(element).getPropertyValue('-webkit-app-region')
     )
-    // The default activity color and hover palette token verify the toggle's two glyph states.
+    // The default activity color and full-white hover token verify the toggle's two glyph states.
     const inactiveActivityColor = await inactiveActivityButton.evaluate(
       (element) => getComputedStyle(element).color
     )
-    const hoverableIconColor = await toggleButton.evaluate((element) => {
+    const normalTextColor = await toggleButton.evaluate((element) => {
       // Temporary glyph resolves the custom palette property to the browser's computed format.
       const colorProbe = document.createElement('span')
-      colorProbe.style.color = 'var(--ui-hoverable-icon-glyph)'
+      colorProbe.style.color = 'var(--ui-normal-text)'
       element.append(colorProbe)
       // Computed probe color matches the serialization used by the hovered button.
       const computedColor = getComputedStyle(colorProbe).color
@@ -203,7 +203,7 @@ test.describe('Sidebar Tests', () => {
     await toggleButton.hover()
     await expect
       .poll(() => toggleButton.evaluate((element) => getComputedStyle(element).color))
-      .toBe(hoverableIconColor)
+      .toBe(normalTextColor)
 
     await toggleButton.click()
     // Collapsed geometry is sampled before any visibility assertion can wait for motion to finish.

@@ -794,10 +794,10 @@
           label="Show Folder Overview"
           title="Show Folder Overview"
           borderless
+          baseVariant="dim"
           disabled={!screenRootFolder}
           active={isFolderRootActive}
           testId="sidebar-folder-root-button"
-          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={selectFolderRoot}
         />
         {#if !isTemplateFolder}
@@ -807,10 +807,10 @@
               label={`Show ${group.label} Prompts`}
               title={`Show ${group.label} Prompts`}
               borderless
+              baseVariant="dim"
               disabled={!screenRootFolder}
               active={shownFinalStatusGroups[group.id] ?? false}
               testId={`toggle-${group.id}-prompts-button`}
-              class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
               onclick={() => toggleFinalStatusGroup(group.id)}
             />
           {/each}
@@ -820,9 +820,9 @@
           label={categoryExpansionActionLabel}
           title={categoryExpansionActionLabel}
           borderless
+          baseVariant="dim"
           disabled={!canToggleCategories}
           testId="toggle-all-categories-button"
-          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={handleCategoryExpansionAction}
         />
         <IconButton
@@ -830,9 +830,9 @@
           label="Add Category"
           title="Add Category"
           borderless
+          baseVariant="dim"
           disabled={!screenRootFolder}
           testId="sidebar-add-category-button"
-          class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
           onclick={openCreateCategoryDialog}
         />
         <DropdownPopupSimple
@@ -848,6 +848,7 @@
               label="Selected Folder Actions"
               title="Selected Folder Actions"
               borderless
+              baseVariant="dim"
               disabled={!screenRootFolder}
               active={dropdown.open}
               ariaHaspopup={dropdown.ariaHaspopup}
@@ -855,7 +856,6 @@
               buttonAction={dropdown.triggerAction}
               onclick={dropdown.toggle}
               testId="selected-prompt-folder-actions-button"
-              class="text-[var(--ui-secondary-icon-glyph)] hover:text-[var(--ui-hoverable-icon-glyph)]"
             />
           {/snippet}
         </DropdownPopupSimple>

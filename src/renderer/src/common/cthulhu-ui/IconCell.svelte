@@ -51,7 +51,7 @@
   }
 
   .cthulhuUiIconCell[data-variant='compact'] {
-    color: var(--ui-normal-text);
+    color: inherit;
     transition: color var(--ui-animation-duration-standard) ease;
   }
 

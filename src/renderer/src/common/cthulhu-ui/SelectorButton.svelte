@@ -170,7 +170,7 @@
     background-color: var(--ui-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
     column-gap: 0;
@@ -201,16 +201,19 @@
   .cthulhuUiSelectorButton:where(:not(:disabled)[data-row-state='active']:hover),
   .cthulhuUiSelectorButton:where(:not(:disabled):focus-visible) {
     background-color: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiSelectorButton[data-open='true'],
   .cthulhuUiSelectorButton[data-selected='true'] {
     background-color: var(--ui-neutral-action-hover-fill);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiSelectorButton[data-row-state='active'],
   .cthulhuUiSelectorButton[data-row-state='drag-active'] {
     background-color: var(--ui-neutral-action-hover-fill);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiSelectorButton[data-row-state='dragging'],
@@ -282,7 +285,28 @@
   }
 
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonIconCell) {
+    color: var(--ui-hoverable-icon-glyph);
     grid-column: 1;
+  }
+
+  .cthulhuUiSelectorButton:where(
+      :not(:disabled):hover,
+      :not(:disabled):focus-visible,
+      [data-open='true'],
+      [data-selected='true'],
+      [data-row-state='active'],
+      [data-row-state='drag-active'],
+      [data-row-state='dragging'],
+      [data-row-state='over'],
+      [data-row-state='blocked-over']
+    )
+    :is(
+      :global(.cthulhuUiSelectorButtonIconCell),
+      .cthulhuUiSelectorButtonLeadingCell,
+      :global(.cthulhuUiSelectorButtonChevronWrap),
+      .cthulhuUiSelectorButtonTrailingAccessory
+    ) {
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiSelectorButtonLeadingCell {
@@ -328,7 +352,7 @@
 
   .cthulhuUiSelectorButtonDetail {
     align-items: center;
-    color: var(--ui-normal-text);
+    color: inherit;
     display: flex;
     gap: 6px;
   }
@@ -348,7 +372,7 @@
   }
 
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonChevronWrap) {
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-icon-glyph);
     grid-column: 4;
   }
 

@@ -57,12 +57,14 @@
 .cthulhuUiActionButton[data-appearance='outline'] {
   background-color: var(--ui-ghost-surface);
   border: 1px solid var(--ui-neutral-normal-border);
+  color: var(--ui-hoverable-text);
 }
 
 .cthulhuUiActionButton[data-appearance='outline']:hover,
 .cthulhuUiActionButton[data-appearance='outline']:focus-visible {
   background-color: var(--ui-neutral-subtle-action-hover-fill);
   border-color: var(--ui-neutral-hover-border);
+  color: var(--ui-normal-text);
 }
 
 .cthulhuUiActionButton[data-appearance='outline'][data-variant='accent'] {

@@ -187,6 +187,7 @@
   .cthulhuUiIconButton:focus-visible {
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconButton[data-size='sidebar-rail']:hover,
@@ -216,23 +217,18 @@
   .cthulhuUiIconButton[data-hover-variant='glyph']:hover,
   .cthulhuUiIconButton[data-hover-variant='glyph']:focus-visible {
     background: var(--ui-ghost-surface);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconButton[data-active='true'] {
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-normal-border);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconButton:focus-visible {
     outline: 2px solid var(--ui-neutral-focus-border);
     outline-offset: 2px;
-  }
-
-  .cthulhuUiIconButton[data-base-variant='dim']:not([data-hover-variant='glyph']):hover,
-  .cthulhuUiIconButton[data-base-variant='dim']:not([data-hover-variant='glyph']):focus-visible {
-    color: var(--ui-hoverable-icon-glyph);
   }
 
   .cthulhuUiIconButton[data-base-variant='dim']:focus-visible {

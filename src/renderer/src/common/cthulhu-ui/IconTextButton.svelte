@@ -104,6 +104,7 @@
   .cthulhuUiIconTextButton:focus-visible {
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconTextButton[data-hover-variant='accent']:hover,
@@ -135,10 +136,15 @@
     pointer-events: none;
   }
 
-  .cthulhuUiIconTextButtonIcon {
+  :global(.cthulhuUiIconTextButtonIcon) {
     color: var(--ui-hoverable-icon-glyph);
     flex: 0 0 auto;
     stroke-width: 2;
+  }
+
+  .cthulhuUiIconTextButton:where(:hover, :focus-visible, [aria-pressed='true'])
+    :global(.cthulhuUiIconTextButtonIcon) {
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiIconTextButtonIconSlot {

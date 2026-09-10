@@ -64,7 +64,8 @@
     transition: color var(--ui-animation-duration-standard) ease-out;
   }
 
-  .cthulhuUiActivityBarButton:hover {
+  .cthulhuUiActivityBarButton:hover,
+  .cthulhuUiActivityBarButton:focus-visible {
     color: var(--ui-normal-text);
   }
 
