@@ -5,6 +5,10 @@
 <script lang="ts">
   import { FileText, FolderPlus, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
   import { promptStatusGroups } from './promptStatusGroups'
   import type { PromptStatusFolderId } from '@shared/Prompt'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
@@ -44,34 +48,33 @@
 >
   <div class="prompt-folder-root-screen-header">
     <div class="prompt-folder-root-title-block">
-      <div class="prompt-folder-root-eyebrow text-xs">
-        {#if isTemplateFolder}
-          <Layers size={14} aria-hidden="true" />
-          <span>Prompt Template Folder</span>
-        {:else}
-          <FileText size={14} aria-hidden="true" />
-          <span>Prompt Folder</span>
-        {/if}
-      </div>
-      <div class="prompt-folder-root-title-line">
-        <div
-          class="prompt-folder-root-title text-3xl"
-          data-testid="prompt-folder-root-title"
-          title={folderDisplayName}
-        >
-          {folderDisplayName}
+      <IconCell icon={isTemplateFolder ? Layers : FileText} size="title" />
+      <TitleSubtitleStack class="prompt-folder-root-title-stack">
+        <div class="prompt-folder-root-title-line">
+          <Title
+            class="prompt-folder-root-title text-3xl leading-9"
+            data-testid="prompt-folder-root-title"
+            title={folderDisplayName}
+            tooltip={folderDisplayName}
+            variant="row"
+          />
+          <IconButton
+            icon={Pencil}
+            label={`Rename ${folderLabel}`}
+            title={`Rename ${folderLabel}`}
+            size="tiny"
+            baseVariant="muted"
+            hoverVariant="glyph"
+            testId="prompt-folder-root-title-edit"
+            onclick={onRenamePromptFolder}
+          />
         </div>
-        <IconButton
-          icon={Pencil}
-          label={`Rename ${folderLabel}`}
-          title={`Rename ${folderLabel}`}
-          size="tiny"
-          baseVariant="muted"
-          hoverVariant="glyph"
-          testId="prompt-folder-root-title-edit"
-          onclick={onRenamePromptFolder}
+        <Subtitle
+          class="prompt-folder-root-subtitle leading-5"
+          text={isTemplateFolder ? 'Prompt Template Folder' : 'Prompt Folder'}
+          wrap={false}
         />
-      </div>
+      </TitleSubtitleStack>
     </div>
 
     <div class="prompt-folder-root-actions">
@@ -141,16 +144,15 @@
   }
 
   .prompt-folder-root-title-block {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
     height: 60px;
     min-width: 0;
   }
 
-  .prompt-folder-root-eyebrow {
-    align-items: center;
-    color: var(--ui-secondary-text);
-    display: flex;
-    gap: 6px;
-    height: 17px;
+  .prompt-folder-root-title-block :global(.prompt-folder-root-title-stack) {
+    gap: 4px;
   }
 
   .prompt-folder-root-title-line {
@@ -158,11 +160,10 @@
     display: flex;
     gap: 11px;
     height: 36px;
-    margin-top: 7px;
     min-width: 0;
   }
 
-  .prompt-folder-root-title {
+  .prompt-folder-root-title-line :global(.prompt-folder-root-title) {
     color: var(--ui-normal-text);
     font-weight: var(--font-weight-semibold);
     /* Give Windows font glyphs room beyond the 36px line without enlarging the title row. */

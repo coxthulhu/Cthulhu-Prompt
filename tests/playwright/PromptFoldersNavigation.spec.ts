@@ -1292,16 +1292,16 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const rootHeaderGeometry = await rootHeader.evaluate((element) => {
       const filterBar = element.querySelector<HTMLElement>('.prompt-folder-root-filter-bar')
       const titleRow = element.querySelector<HTMLElement>('.prompt-folder-root-screen-header')
-      const eyebrow = element.querySelector<HTMLElement>('.prompt-folder-root-eyebrow')
+      const subtitle = element.querySelector<HTMLElement>('.prompt-folder-root-subtitle')
       const titleLine = element.querySelector<HTMLElement>('.prompt-folder-root-title-line')
-      if (!filterBar || !titleRow || !eyebrow || !titleLine) return null
+      if (!filterBar || !titleRow || !subtitle || !titleLine) return null
 
       const rowRect = element.getBoundingClientRect()
       const filterRect = filterBar.getBoundingClientRect()
       return {
         height: rowRect.height,
         titleRowHeight: titleRow.getBoundingClientRect().height,
-        eyebrowHeight: eyebrow.getBoundingClientRect().height,
+        subtitleHeight: subtitle.getBoundingClientRect().height,
         titleLineHeight: titleLine.getBoundingClientRect().height,
         filterRowHeight: filterRect.height,
         bottomInset: rowRect.bottom - filterRect.bottom,
@@ -1312,7 +1312,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(rootHeaderGeometry).not.toBeNull()
     expect(rootHeaderGeometry!.height).toBe(140)
     expect(rootHeaderGeometry!.titleRowHeight).toBe(60)
-    expect(rootHeaderGeometry!.eyebrowHeight).toBe(17)
+    expect(rootHeaderGeometry!.subtitleHeight).toBe(20)
     expect(rootHeaderGeometry!.titleLineHeight).toBe(36)
     expect(rootHeaderGeometry!.filterRowHeight).toBe(44)
     expect(Math.abs(rootHeaderGeometry!.bottomInset - 6)).toBeLessThanOrEqual(1)
