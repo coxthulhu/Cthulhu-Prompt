@@ -39,10 +39,12 @@
     iconClass?: string
     leadingAccessory?: Snippet
     leadingAccessoryTestId?: string
+    trailingAccessory?: Snippet
     testId?: string
     role?: string
     ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
     ariaExpanded?: boolean
+    ariaPressed?: boolean
     ariaSelected?: boolean
     buttonAction?: SelectorButtonAction | null
     buttonActionParameter?: unknown
@@ -66,10 +68,12 @@
     iconClass,
     leadingAccessory,
     leadingAccessoryTestId,
+    trailingAccessory,
     testId,
     role,
     ariaHaspopup,
     ariaExpanded,
+    ariaPressed,
     ariaSelected,
     buttonAction = null,
     buttonActionParameter,
@@ -98,12 +102,14 @@
   data-selection-variant={selectionVariant}
   data-chevron={showChevron ? 'true' : 'false'}
   data-leading-accessory={leadingAccessory ? 'true' : 'false'}
+  data-trailing-accessory={trailingAccessory ? 'true' : 'false'}
   data-disabled={isDisabled ? 'true' : 'false'}
   data-testid={testId}
   disabled={isDisabled}
   {role}
   aria-haspopup={ariaHaspopup}
   aria-expanded={ariaExpanded ?? (showChevron ? open : undefined)}
+  aria-pressed={ariaPressed}
   aria-selected={ariaSelected}
   {onclick}
 >
@@ -139,7 +145,11 @@
     {/if}
   </span>
 
-  {#if showChevron}
+  {#if trailingAccessory}
+    <span class="cthulhuUiSelectorButtonTrailingAccessory">
+      {@render trailingAccessory()}
+    </span>
+  {:else if showChevron}
     <span class="cthulhuUiSelectorButtonChevronWrap cthulhuUiSelectorButtonChevron">
       {#if open}
         <ChevronUp size={20} aria-hidden="true" />
@@ -171,7 +181,7 @@
     width: 100%;
   }
 
-  .cthulhuUiSelectorButton[data-chevron='false'] {
+  .cthulhuUiSelectorButton[data-chevron='false'][data-trailing-accessory='false'] {
     grid-template-columns: 34px 8px minmax(0, 1fr);
   }
 
@@ -179,7 +189,7 @@
     grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr) 22px;
   }
 
-  .cthulhuUiSelectorButton[data-leading-accessory='true'][data-chevron='false'] {
+  .cthulhuUiSelectorButton[data-leading-accessory='true'][data-chevron='false'][data-trailing-accessory='false'] {
     grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr);
   }
 
@@ -356,5 +366,19 @@
     height: 22px;
     justify-content: center;
     width: 22px;
+  }
+
+  .cthulhuUiSelectorButtonTrailingAccessory {
+    align-items: center;
+    display: flex;
+    grid-column: 4;
+    height: 22px;
+    justify-content: center;
+    width: 22px;
+  }
+
+  .cthulhuUiSelectorButton[data-leading-accessory='true']
+    .cthulhuUiSelectorButtonTrailingAccessory {
+    grid-column: 6;
   }
 </style>

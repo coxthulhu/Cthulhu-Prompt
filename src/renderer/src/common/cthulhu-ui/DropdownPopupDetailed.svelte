@@ -2,7 +2,7 @@
   import type { ComponentType, Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import { flip } from 'svelte/animate'
-  import { GripVertical } from 'lucide-svelte'
+  import { ChevronRight, GripVertical } from 'lucide-svelte'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import {
     draggable,
@@ -51,6 +51,7 @@
     dragOpenTypes?: string[]
     itemDragOptions?: DropdownPopupDetailedItemDragOptions
     itemSelectionVariant?: SelectorButtonSelectionVariant
+    showSelectedItemChevron?: boolean
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -66,6 +67,7 @@
     dragOpenTypes,
     itemDragOptions,
     itemSelectionVariant = 'neutral',
+    showSelectedItemChevron = true,
     onselect
   }: Props = $props()
 
@@ -100,6 +102,14 @@
   }
 </script>
 
+{#snippet selectedItemChevron()}
+  <ChevronRight
+    size={14}
+    class="text-[var(--ui-secondary-icon-glyph)]"
+    aria-hidden="true"
+  />
+{/snippet}
+
 {#snippet draggableItem(
   item: DropdownPopupDetailedItem,
   close: () => void,
@@ -122,6 +132,9 @@
     leadingAccessoryTestId={itemDragOptions!.getDragHandleTestId(item)}
     buttonAction={draggableButtonAction}
     buttonActionParameter={itemDragOptions!.getDraggableOptions(item)}
+    trailingAccessory={showSelectedItemChevron && selectedItem?.id === item.id
+      ? selectedItemChevron
+      : undefined}
     class="cthulhuUiDropdownPopupDetailedItem cthulhuUiDropdownPopupDetailedDragItem"
     onclick={(event) => selectItem(item, event, close)}
   >
@@ -179,6 +192,9 @@
                 role="menuitem"
                 ariaSelected={selectedItem?.id === item.id}
                 testId={item.testId}
+                trailingAccessory={showSelectedItemChevron && selectedItem?.id === item.id
+                  ? selectedItemChevron
+                  : undefined}
                 class="cthulhuUiDropdownPopupDetailedItem"
                 onclick={(event) => selectItem(item, event, close)}
               />

@@ -2,6 +2,7 @@
   import { Check, ChevronDown, ChevronRight, Copy, FileText, Folder, GripVertical, Layers, Pencil, Plus, Search, Settings, Trash2 } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import { hasCategoryDisplayNameConflict, normalizeCategoryDisplayName } from '@shared/Category'
 
   const categories = [
@@ -114,13 +115,31 @@
           <strong class="text-xs leading-4" style="letter-spacing:0.08em; text-transform:uppercase; color:var(--ui-secondary-text);">Categories</strong>
           <span class="text-xs leading-4" style="padding:2px 7px; border-radius:5px; background:var(--ui-neutral-normal-surface); color:var(--ui-secondary-text);">6</span>
         </div>
-        <div style="display:flex; flex-direction:column; gap:5px; overflow:auto; flex:1;">
+        <div style="display:flex; flex-direction:column; gap:2px; overflow:auto; flex:1;">
           {#each categories as category (category.id)}
-            <button type="button" class="category-list-button text-sm leading-5" data-selected={selectedId === category.id} aria-pressed={selectedId === category.id} onclick={() => selectCategory(category)}>
-              <Folder size={17} style="color:var(--ui-secondary-icon-glyph); flex-shrink:0;" />
-              <span style="display:grid; gap:2px; flex:1;"><span style="font-weight:500;">{category.displayName}</span><span class="text-xs leading-4" style="color:var(--ui-muted-text);">{category.count} prompts</span></span>
-              {#if selectedId === category.id}<ChevronRight size={14} style="color:var(--ui-secondary-icon-glyph);" />{/if}
-            </button>
+            <SelectorButton
+              icon={Folder}
+              iconClass="text-[var(--ui-secondary-icon-glyph)]"
+              text={category.displayName}
+              detail={`${category.count} prompts`}
+              showChevron={false}
+              selected={selectedId === category.id}
+              rowState={selectedId === category.id ? 'active' : 'idle'}
+              selectionVariant="accent"
+              ariaPressed={selectedId === category.id}
+              class="manage-categories-list-item"
+              onclick={() => selectCategory(category)}
+            >
+              {#snippet trailingAccessory()}
+                {#if selectedId === category.id}
+                  <ChevronRight
+                    size={14}
+                    class="text-[var(--ui-secondary-icon-glyph)]"
+                    aria-hidden="true"
+                  />
+                {/if}
+              {/snippet}
+            </SelectorButton>
           {/each}
         </div>
         <button type="button" class="text-sm leading-5" style={`${buttonStyle}margin-top:16px;width:100%;`}><Plus size={16} />New Category</button>
@@ -161,37 +180,8 @@
 </Dialog>
 
 <style>
-  .category-list-button {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 56px;
-    padding: 10px;
-    cursor: pointer;
-    text-align: left;
-    color: var(--ui-normal-text);
-    background: var(--ui-ghost-surface);
-    border: 1px solid var(--ui-ghost-surface);
-    border-radius: var(--cthulhu-ui-radius-control);
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      border-color var(--ui-animation-duration-standard) ease;
-  }
-
-  .category-list-button:hover,
-  .category-list-button:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    border-color: var(--ui-neutral-hover-border);
-  }
-
-  .category-list-button[data-selected='true'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-  }
-
-  .category-list-button[data-selected='true']:hover,
-  .category-list-button[data-selected='true']:focus-visible {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
+  :global(.manage-categories-list-item.cthulhuUiSelectorButton) {
+    flex: 0 0 auto;
+    height: 58px;
   }
 </style>

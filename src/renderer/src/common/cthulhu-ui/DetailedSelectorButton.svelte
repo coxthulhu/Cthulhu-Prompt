@@ -17,6 +17,7 @@
     dragOpenTypes?: string[]
     itemDragOptions?: DropdownPopupDetailedItemDragOptions
     selectionVariant?: SelectorButtonSelectionVariant
+    showSelectedItemChevron?: boolean
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
@@ -31,6 +32,7 @@
     dragOpenTypes,
     itemDragOptions,
     selectionVariant = 'neutral',
+    showSelectedItemChevron = true,
     onselect
   }: Props = $props()
 </script>
@@ -42,6 +44,7 @@
   {footerItem}
   {itemDragOptions}
   itemSelectionVariant={selectionVariant}
+  {showSelectedItemChevron}
   {testId}
   {dragOpenTypes}
   placement="below-trigger"
