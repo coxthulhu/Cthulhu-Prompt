@@ -3,8 +3,8 @@ import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
-  planRenameCategoryDomainMutation,
-  planSetCategoryDescriptionDomainMutation
+  planSetCategoryDescriptionDomainMutation,
+  planUpdateCategoryDetailsDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptFolderCategoryIds } from '@shared/PromptFolder'
@@ -40,14 +40,15 @@ export const setCategoryDescriptionWithAutosave = (
 /** Creates a root-owned category and returns its stable client-generated ID. */
 export const createCategory = async (
   promptFolderId: string,
-  displayName: string
+  displayName: string,
+  shortDescription: string | null = null
 ): Promise<string> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) throw new Error('Root prompt folder not loaded')
   /** Stable client-generated identity used by renderer and main insertion projections. */
   const categoryId = compactGuid(crypto.randomUUID())
   /** Shared command projected optimistically and persisted through domain transitions. */
-  const command = { categoryId, promptFolderId, displayName }
+  const command = { categoryId, promptFolderId, displayName, shortDescription }
 
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planCreateCategoryDomainMutation },
@@ -58,16 +59,20 @@ export const createCategory = async (
   return categoryId
 }
 
-/** Renames a category and its prompt-style JSON filename. */
-export const renameCategory = async (categoryId: string, displayName: string): Promise<void> => {
+/** Updates a category's title metadata and prompt-style JSON filename. */
+export const updateCategoryDetails = async (
+  categoryId: string,
+  displayName: string,
+  shortDescription: string | null
+): Promise<void> => {
   const category = categoryCollection.get(categoryId)
   if (!category) throw new Error('Category not loaded')
 
-  /** Shared category rename command projected in both processes. */
-  const command = { categoryId, displayName }
+  /** Shared category-details command projected in both processes. */
+  const command = { categoryId, displayName, shortDescription }
   await runImmediateRendererDomainMutation({
-    mutation: { command, plan: planRenameCategoryDomainMutation },
-    ipc: { channel: 'rename-category' },
+    mutation: { command, plan: planUpdateCategoryDetailsDomainMutation },
+    ipc: { channel: 'update-category-details' },
     renderer: {}
   })
 }

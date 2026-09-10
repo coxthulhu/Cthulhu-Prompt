@@ -3,8 +3,8 @@ import {
   parseCreateCategoryDomainCommand,
   parseDeleteCategoryDomainCommand,
   parseMoveCategoryDomainCommand,
-  parseRenameCategoryDomainCommand,
-  parseSetCategoryDescriptionDomainCommand
+  parseSetCategoryDescriptionDomainCommand,
+  parseUpdateCategoryDetailsDomainCommand
 } from '@shared/CategoryDomainMutations'
 import {
   parseCreatePromptDomainCommand,
@@ -86,14 +86,19 @@ describe('domain mutation command validation', () => {
     const command = {
       categoryId: 'category',
       promptFolderId: 'root',
-      displayName: 'Category'
+      displayName: 'Category',
+      shortDescription: null
     }
     expect(parseCreateCategoryDomainCommand(command)).toEqual(command)
   })
 
-  it('accepts category rename and reorder commands', () => {
-    /** Valid category rename command. */
-    const renameCommand = { categoryId: 'category', displayName: 'Renamed' }
+  it('accepts category-details and reorder commands', () => {
+    /** Valid category-details command. */
+    const detailsCommand = {
+      categoryId: 'category',
+      displayName: 'Renamed',
+      shortDescription: 'Short summary.'
+    }
     /** Valid category reorder command. */
     const moveCommand = {
       promptFolderId: 'root',
@@ -101,7 +106,7 @@ describe('domain mutation command validation', () => {
       statusFolderId: PromptStatusFolderId.Active,
       previousCategoryId: null
     }
-    expect(parseRenameCategoryDomainCommand(renameCommand)).toEqual(renameCommand)
+    expect(parseUpdateCategoryDetailsDomainCommand(detailsCommand)).toEqual(detailsCommand)
     expect(parseMoveCategoryDomainCommand(moveCommand)).toEqual(moveCommand)
   })
 

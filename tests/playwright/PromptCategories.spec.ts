@@ -841,10 +841,12 @@ describe('Prompt categories', () => {
     const createdCategory = JSON.parse(await readTextFile(electronApp, categoryPath)) as {
       id: string
       displayName: string
+      shortDescription: string | null
       description: string | null
     }
     expect(createdCategory).toMatchObject({
       displayName: 'Code Review',
+      shortDescription: null,
       description: null
     })
     expect(createdCategory.id).toMatch(/^[0-9a-f]{32}$/)
@@ -865,12 +867,16 @@ describe('Prompt categories', () => {
     await expect(categoryDialog.locator('[data-testid="create-category-button"]')).toBeDisabled()
     await categoryDialog.getByRole('button', { name: 'Cancel' }).click()
 
-    const renameResponse = await mainWindow.evaluate(async (category) => {
-      return await (window as any).electron.ipcRenderer.invoke('rename-category', {
-        requestId: 'rename-category-test',
+    const detailsResponse = await mainWindow.evaluate(async (category) => {
+      return await (window as any).electron.ipcRenderer.invoke('update-category-details', {
+        requestId: 'update-category-details-test',
         clientId: (window as any).ipcClientId,
         payload: {
-          command: { categoryId: category.id, displayName: 'Review Work' },
+          command: {
+            categoryId: category.id,
+            displayName: 'Review Work',
+            shortDescription: '  Prompts for reviewing code.  '
+          },
           expectations: [
             {
               entityType: 'category',
@@ -882,14 +888,15 @@ describe('Prompt categories', () => {
         }
       })
     }, createdCategory)
-    expect(renameResponse).toMatchObject({ success: true })
+    expect(detailsResponse).toMatchObject({ success: true })
     const renamedCategoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Review Work.category.json`
     await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(false)
     await expect.poll(() => checkFileExists(electronApp, renamedCategoryPath)).toBe(true)
 
     const renamedCategory = {
       ...createdCategory,
-      displayName: 'Review Work'
+      displayName: 'Review Work',
+      shortDescription: 'Prompts for reviewing code.'
     }
     const descriptionResponse = await mainWindow.evaluate(async (category) => {
       return await (window as any).electron.ipcRenderer.invoke('set-category-description', {
@@ -928,6 +935,7 @@ describe('Prompt categories', () => {
       .toMatchObject({
         id: createdCategory.id,
         displayName: 'Review Work',
+        shortDescription: 'Prompts for reviewing code.',
         description: 'Prompts for reviewing changes.'
       })
 

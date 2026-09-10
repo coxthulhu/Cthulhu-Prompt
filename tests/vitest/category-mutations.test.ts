@@ -22,7 +22,8 @@ vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({ runRevisionM
 import {
   createCategory,
   deleteCategory,
-  moveCategory
+  moveCategory,
+  updateCategoryDetails
 } from '@renderer/data/Mutations/CategoryMutations'
 
 /** Stable category ID referenced across prompt and template content. */
@@ -56,12 +57,22 @@ describe('category mutations', () => {
     categoryCollection.utils.upsertAuthoritative({
       id: CATEGORY_ID,
       revision: 2,
-      data: { id: CATEGORY_ID, displayName: 'Shared', description: null }
+      data: {
+        id: CATEGORY_ID,
+        displayName: 'Shared',
+        shortDescription: null,
+        description: null
+      }
     })
     categoryCollection.utils.upsertAuthoritative({
       id: SIBLING_CATEGORY_ID,
       revision: 1,
-      data: { id: SIBLING_CATEGORY_ID, displayName: 'Sibling', description: null }
+      data: {
+        id: SIBLING_CATEGORY_ID,
+        displayName: 'Sibling',
+        shortDescription: null,
+        description: null
+      }
     })
     promptFolderCollection.utils.upsertAuthoritative({
       id: ROOT_FOLDER_ID,
@@ -124,7 +135,11 @@ describe('category mutations', () => {
 
   it('sends an absent expectation for the optimistic category insertion', async () => {
     /** Stable category ID returned by the renderer mutation. */
-    const categoryId = await createCategory(ROOT_FOLDER_ID, 'Created')
+    const categoryId = await createCategory(
+      ROOT_FOLDER_ID,
+      'Created',
+      '  Created category summary.  '
+    )
     /** Domain mutation options registered by category creation. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Mutable root order used to verify the shared optimistic folder recipe. */
@@ -149,6 +164,7 @@ describe('category mutations', () => {
     expect(insertCategoryOptimistically).toHaveBeenCalledWith({
       id: categoryId,
       displayName: 'Created',
+      shortDescription: 'Created category summary.',
       description: null
     })
 
@@ -160,7 +176,8 @@ describe('category mutations', () => {
         command: {
           categoryId,
           promptFolderId: ROOT_FOLDER_ID,
-          displayName: 'Created'
+          displayName: 'Created',
+          shortDescription: '  Created category summary.  '
         },
         expectations: [
           {
@@ -200,12 +217,74 @@ describe('category mutations', () => {
           entityType: 'category',
           id: categoryId,
           revision: 1,
-          data: { id: categoryId, displayName: 'Created', description: null }
+          data: {
+            id: categoryId,
+            displayName: 'Created',
+            shortDescription: 'Created category summary.',
+            description: null
+          }
         }
       ]
     })
     expect(upsertFolder).toHaveBeenCalledOnce()
     expect(upsertCategory).toHaveBeenCalledOnce()
+  })
+
+  it('updates category title metadata together and preserves the full description', async () => {
+    categoryCollection.utils.upsertAuthoritative({
+      id: CATEGORY_ID,
+      revision: 3,
+      data: {
+        id: CATEGORY_ID,
+        displayName: 'Shared',
+        shortDescription: 'Previous summary.',
+        description: 'Existing full description.'
+      }
+    })
+
+    await updateCategoryDetails(CATEGORY_ID, ' Updated ', '   ')
+
+    /** Domain mutation options registered by the category-details update. */
+    const options = runRevisionMutation.mock.calls[0]?.[0]
+    /** Mutable category state used to verify the shared optimistic recipe. */
+    const categoryState = structuredClone(categoryCollection.get(CATEGORY_ID)!)
+    options.mutateOptimistically({
+      collections: {
+        category: {
+          update: (id: string, update: (draft: typeof categoryState) => void) => {
+            expect(id).toBe(CATEGORY_ID)
+            update(categoryState)
+          }
+        }
+      }
+    })
+    expect(categoryState).toMatchObject({
+      id: CATEGORY_ID,
+      displayName: 'Updated',
+      shortDescription: null,
+      description: 'Existing full description.'
+    })
+
+    /** IPC invocation spy used to inspect the atomic details request. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'inspect only' })
+    await options.persistMutations({ invoke, transaction: {} })
+    expect(invoke).toHaveBeenCalledWith('update-category-details', {
+      payload: {
+        command: {
+          categoryId: CATEGORY_ID,
+          displayName: ' Updated ',
+          shortDescription: '   '
+        },
+        expectations: [
+          {
+            entityType: 'category',
+            id: CATEGORY_ID,
+            expected: 'revision',
+            revision: 3
+          }
+        ]
+      }
+    })
   })
 
   it('clears every matching renderer reference and sends all touched revisions', async () => {

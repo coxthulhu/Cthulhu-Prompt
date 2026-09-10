@@ -1,4 +1,4 @@
-import type { Category } from '@shared/Category'
+import { normalizeCategoryShortDescription, type Category } from '@shared/Category'
 import type { PromptFolderKind } from '@shared/PromptFolder'
 import { buildPromptStem } from '@shared/promptFilename'
 import { getFs } from '../fs-provider'
@@ -36,18 +36,49 @@ export const isCategory = (value: unknown): value is Category => {
 
   const record = value as Record<string, unknown>
   return (
-    Object.keys(record).length === 3 &&
+    Object.keys(record).length === 4 &&
     typeof record.id === 'string' &&
     typeof record.displayName === 'string' &&
+    (typeof record.shortDescription === 'string' || record.shortDescription === null) &&
     (typeof record.description === 'string' || record.description === null)
   )
+}
+
+/** Parses current or legacy category data into the current persisted shape. */
+const parseCategoryValue = (value: unknown): Category | null => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+
+  /** Untrusted category fields accepted with only the legacy short-description omission. */
+  const record = value as Record<string, unknown>
+  /** Whether the persisted record already contains the current short-description field. */
+  const hasShortDescription = Object.hasOwn(record, 'shortDescription')
+  if (
+    Object.keys(record).length !== (hasShortDescription ? 4 : 3) ||
+    typeof record.id !== 'string' ||
+    typeof record.displayName !== 'string' ||
+    (hasShortDescription &&
+      record.shortDescription !== null &&
+      typeof record.shortDescription !== 'string') ||
+    (typeof record.description !== 'string' && record.description !== null)
+  ) {
+    return null
+  }
+
+  return {
+    id: record.id,
+    displayName: record.displayName,
+    shortDescription: normalizeCategoryShortDescription(
+      hasShortDescription ? (record.shortDescription as string | null) : null
+    ),
+    description: record.description
+  }
 }
 
 /** Parses one category JSON file and rejects malformed records. */
 export const parseCategoryJson = (fileText: string): Category | null => {
   try {
     const parsed = JSON.parse(fileText) as unknown
-    return isCategory(parsed) ? parsed : null
+    return parseCategoryValue(parsed)
   } catch {
     return null
   }
@@ -128,6 +159,6 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
     const fs = getFs()
     if (!fs.existsSync(categoryPath)) return null
     const parsed = readJsonFile<unknown>(categoryPath)
-    return isCategory(parsed) ? parsed : null
+    return parseCategoryValue(parsed)
   }
 }

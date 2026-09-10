@@ -8,6 +8,7 @@ import type {
 import {
   hasCategoryDisplayNameConflict,
   normalizeCategoryDisplayName,
+  normalizeCategoryShortDescription,
   type Category
 } from './Category'
 import {
@@ -29,6 +30,7 @@ export type CreateCategoryDomainCommand = {
   categoryId: string
   promptFolderId: string
   displayName: string
+  shortDescription: string | null
 }
 
 /** Strict runtime parser for category creation commands. */
@@ -39,17 +41,19 @@ export const parseCreateCategoryDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 3 ||
+    Object.keys(record).length !== 4 ||
     typeof record.categoryId !== 'string' ||
     typeof record.promptFolderId !== 'string' ||
-    typeof record.displayName !== 'string'
+    typeof record.displayName !== 'string' ||
+    (record.shortDescription !== null && typeof record.shortDescription !== 'string')
   ) {
     return null
   }
   return {
     categoryId: record.categoryId,
     promptFolderId: record.promptFolderId,
-    displayName: record.displayName
+    displayName: record.displayName,
+    shortDescription: record.shortDescription
   }
 }
 
@@ -61,10 +65,11 @@ export type DeleteCategoryDomainCommand = {
   modifiedAt: string
 }
 
-/** Renderer-authored command for renaming one root-owned category. */
-export type RenameCategoryDomainCommand = {
+/** Renderer-authored command for replacing one category's title metadata. */
+export type UpdateCategoryDetailsDomainCommand = {
   categoryId: string
   displayName: string
+  shortDescription: string | null
 }
 
 /** Renderer-authored command for replacing one category description. */
@@ -105,21 +110,26 @@ export const parseDeleteCategoryDomainCommand = (
   }
 }
 
-/** Strict runtime parser for category rename commands. */
-export const parseRenameCategoryDomainCommand = (
+/** Strict runtime parser for category-details commands. */
+export const parseUpdateCategoryDetailsDomainCommand = (
   value: unknown
-): RenameCategoryDomainCommand | null => {
+): UpdateCategoryDetailsDomainCommand | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 2 ||
+    Object.keys(record).length !== 3 ||
     typeof record.categoryId !== 'string' ||
-    typeof record.displayName !== 'string'
+    typeof record.displayName !== 'string' ||
+    (record.shortDescription !== null && typeof record.shortDescription !== 'string')
   ) {
     return null
   }
-  return { categoryId: record.categoryId, displayName: record.displayName }
+  return {
+    categoryId: record.categoryId,
+    displayName: record.displayName,
+    shortDescription: record.shortDescription
+  }
 }
 
 /** Strict runtime parser for category-description replacement commands. */
@@ -188,6 +198,8 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
   const existingCategory = state.get('category', command.categoryId)
   /** Normalized category name persisted by both renderer and main projections. */
   const displayName = normalizeCategoryDisplayName(command.displayName)
+  /** Normalized optional summary persisted beside the category display name. */
+  const shortDescription = normalizeCategoryShortDescription(command.shortDescription)
   /** Authoritative folder and category targets returned for any conflict. */
   const targets: DomainTarget[] = [
     { entityType: 'promptFolder', id: command.promptFolderId },
@@ -213,7 +225,12 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
   }
 
   /** New category record inserted with its stable client-generated identity. */
-  const category: Category = { id: command.categoryId, displayName, description: null }
+  const category: Category = {
+    id: command.categoryId,
+    displayName,
+    shortDescription,
+    description: null
+  }
   return [
     {
       type: 'update',
@@ -433,20 +450,22 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   return changes
 }
 
-/** Plans a collision-free category display-name and filename update. */
-export const planRenameCategoryDomainMutation: DomainPlanner<
-  RenameCategoryDomainCommand
+/** Plans a collision-free category title and short-description update. */
+export const planUpdateCategoryDetailsDomainMutation: DomainPlanner<
+  UpdateCategoryDetailsDomainCommand
 > = (state, command) => {
-  /** Category selected by the rename command. */
+  /** Category selected by the details command. */
   const category = state.get('category', command.categoryId)
   /** Root folder currently owning the selected category. */
   const owningFolder = state
     .getAll('promptFolder')
     .find((folder) => getPromptFolderCategoryIds(folder).includes(command.categoryId))
-  /** Stable target returned for any rename conflict. */
+  /** Stable target returned for any details conflict. */
   const targets: DomainTarget[] = [{ entityType: 'category', id: command.categoryId }]
   /** Normalized display name shared by renderer and main projections. */
   const displayName = normalizeCategoryDisplayName(command.displayName)
+  /** Normalized optional summary stored atomically with the display name. */
+  const shortDescription = normalizeCategoryShortDescription(command.shortDescription)
   /** Loaded sibling categories participating in name-conflict validation. */
   const siblings = owningFolder
     ? getPromptFolderCategoryIds(owningFolder).flatMap((categoryId) => {
@@ -462,7 +481,7 @@ export const planRenameCategoryDomainMutation: DomainPlanner<
     !displayName ||
     hasCategoryDisplayNameConflict(siblings, displayName, command.categoryId)
   ) {
-    return createConflict('Category rename conflict', targets)
+    return createConflict('Category details conflict', targets)
   }
 
   return [
@@ -472,6 +491,7 @@ export const planRenameCategoryDomainMutation: DomainPlanner<
       id: command.categoryId,
       recipe: (draft) => {
         draft.displayName = displayName
+        draft.shortDescription = shortDescription
       }
     }
   ]

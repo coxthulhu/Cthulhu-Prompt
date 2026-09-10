@@ -32,7 +32,12 @@ const createFolder = (
 })
 
 /** Creates loaded category metadata for row projection. */
-const category = (id: string): Category => ({ id, displayName: id, description: null })
+const category = (id: string): Category => ({
+  id,
+  displayName: id,
+  shortDescription: null,
+  description: null
+})
 
 /** Projects a folder with selected collapsed category IDs. */
 const buildRows = (

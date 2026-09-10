@@ -9,8 +9,8 @@ import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
-  planRenameCategoryDomainMutation,
-  planSetCategoryDescriptionDomainMutation
+  planSetCategoryDescriptionDomainMutation,
+  planUpdateCategoryDetailsDomainMutation
 } from '@shared/CategoryDomainMutations'
 import {
   planCreatePromptDomainMutation,
@@ -230,7 +230,12 @@ describe('shared domain mutation planners', () => {
     /** Shared creation plan produced against an absent stable category ID. */
     const plan = planCreateCategoryDomainMutation(
       createDomainState({ promptFolder: [folder] }),
-      { categoryId: 'created', promptFolderId: folder.id, displayName: '  Created  ' }
+      {
+        categoryId: 'created',
+        promptFolderId: folder.id,
+        displayName: '  Created  ',
+        shortDescription: '  New category summary.  '
+      }
     )
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
@@ -243,7 +248,12 @@ describe('shared domain mutation planners', () => {
       type: 'insert',
       entityType: 'category',
       id: 'created',
-      data: { id: 'created', displayName: 'Created', description: null }
+      data: {
+        id: 'created',
+        displayName: 'Created',
+        shortDescription: 'New category summary.',
+        description: null
+      }
     })
   })
 
@@ -261,7 +271,9 @@ describe('shared domain mutation planners', () => {
     const state = createDomainState({
       workspace: [workspace],
       promptFolder: [folder],
-      category: [{ id: 'category', displayName: 'Shared', description: null }],
+      category: [
+        { id: 'category', displayName: 'Shared', shortDescription: null, description: null }
+      ],
       prompt: [
         {
           id: 'prompt',
@@ -349,7 +361,9 @@ describe('shared domain mutation planners', () => {
     const activeState = createDomainState({
       workspace: [workspace],
       promptFolder: [folder],
-      category: [{ id: 'category', displayName: 'Category', description: null }],
+      category: [
+        { id: 'category', displayName: 'Category', shortDescription: null, description: null }
+      ],
       workspaceUiState: [activeWorkspaceUiState],
       workspacePromptFolderUiState: [rootUiState, categoryUiState]
     })
@@ -386,7 +400,9 @@ describe('shared domain mutation planners', () => {
       createDomainState({
         workspace: [workspace],
         promptFolder: [folder],
-        category: [{ id: 'category', displayName: 'Category', description: null }],
+        category: [
+          { id: 'category', displayName: 'Category', shortDescription: null, description: null }
+        ],
         workspaceUiState: [inactiveWorkspaceUiState],
         workspacePromptFolderUiState: [rootUiState, categoryUiState]
       }),
@@ -409,26 +425,40 @@ describe('shared domain mutation planners', () => {
     ).toBe(false)
   })
 
-  it('plans category rename and group reordering', () => {
+  it('plans category details and group reordering', () => {
     /** Root containing two categorized groups. */
     const folder = createRootFolder('root', 'prompt', 'category-a')
     getMarkdownContentCategoryOrder(folder).categories.push({
       categoryId: 'category-b',
       entries: []
     })
-    /** Categories participating in rename collision validation. */
+    /** Categories participating in details collision validation. */
     const categories = [
-      { id: 'category-a', displayName: 'A', description: null },
-      { id: 'category-b', displayName: 'B', description: null }
+      { id: 'category-a', displayName: 'A', shortDescription: null, description: null },
+      {
+        id: 'category-b',
+        displayName: 'B',
+        shortDescription: null,
+        description: 'Existing full description.'
+      }
     ]
-    /** Shared category rename plan. */
-    const renamePlan = planRenameCategoryDomainMutation(
+    /** Shared category-details plan. */
+    const detailsPlan = planUpdateCategoryDetailsDomainMutation(
       createDomainState({ promptFolder: [folder], category: categories }),
-      { categoryId: 'category-b', displayName: ' Renamed ' }
+      {
+        categoryId: 'category-b',
+        displayName: ' Renamed ',
+        shortDescription: '  Updated summary.  '
+      }
     )
-    expect(Array.isArray(renamePlan)).toBe(true)
-    if (!Array.isArray(renamePlan)) return
-    expect(produce(categories[1]!, renamePlan[0]!.recipe!).displayName).toBe('Renamed')
+    expect(Array.isArray(detailsPlan)).toBe(true)
+    if (!Array.isArray(detailsPlan)) return
+    expect(produce(categories[1]!, detailsPlan[0]!.recipe!)).toEqual({
+      id: 'category-b',
+      displayName: 'Renamed',
+      shortDescription: 'Updated summary.',
+      description: 'Existing full description.'
+    })
 
     /** Shared category reorder plan moving B before A. */
     const movePlan = planMoveCategoryDomainMutation(
@@ -475,7 +505,12 @@ describe('shared domain mutation planners', () => {
 
   it('plans category descriptions and normalized system settings as single targets', () => {
     /** Category receiving a paced description replacement. */
-    const category = { id: 'category', displayName: 'Category', description: null }
+    const category = {
+      id: 'category',
+      displayName: 'Category',
+      shortDescription: null,
+      description: null
+    }
     /** Loaded singleton settings receiving a paced replacement. */
     const settings = {
       promptFontSize: 16,

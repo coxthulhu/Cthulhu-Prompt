@@ -2,17 +2,17 @@ import {
   parseCreateCategoryDomainCommand,
   parseDeleteCategoryDomainCommand,
   parseMoveCategoryDomainCommand,
-  parseRenameCategoryDomainCommand,
   parseSetCategoryDescriptionDomainCommand,
+  parseUpdateCategoryDetailsDomainCommand,
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
-  planRenameCategoryDomainMutation,
-  planSetCategoryDescriptionDomainMutation
+  planSetCategoryDescriptionDomainMutation,
+  planUpdateCategoryDetailsDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
-/** Registers create, rename, description, and deletion category mutation channels. */
+/** Registers create, details, description, and deletion category mutation channels. */
 export const setupCategoryMutationHandlers = (): void => {
   handleMainDomainMutation({
     ipc: { channel: 'create-category' },
@@ -31,10 +31,10 @@ export const setupCategoryMutationHandlers = (): void => {
   })
 
   handleMainDomainMutation({
-    ipc: { channel: 'rename-category' },
+    ipc: { channel: 'update-category-details' },
     mutation: {
-      parseCommand: parseRenameCategoryDomainCommand,
-      plan: planRenameCategoryDomainMutation
+      parseCommand: parseUpdateCategoryDetailsDomainCommand,
+      plan: planUpdateCategoryDetailsDomainMutation
     }
   })
 

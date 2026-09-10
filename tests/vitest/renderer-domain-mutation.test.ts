@@ -117,7 +117,7 @@ const createSuccessResponse = (revision: number, displayName: string) => ({
         entityType: 'category' as const,
         id: CATEGORY_ID,
         revision,
-        data: { id: CATEGORY_ID, displayName, description: null }
+        data: { id: CATEGORY_ID, displayName, shortDescription: null, description: null }
       }
     ]
   }
@@ -185,7 +185,12 @@ describe('renderer domain mutation framework', () => {
     categoryCollection.utils.upsertAuthoritative({
       id: CATEGORY_ID,
       revision: 1,
-      data: { id: CATEGORY_ID, displayName: 'Initial', description: null }
+      data: {
+        id: CATEGORY_ID,
+        displayName: 'Initial',
+        shortDescription: null,
+        description: null
+      }
     })
     promptClientStateCollection.insert({ id: CATEGORY_ID, isEdited: false })
   })

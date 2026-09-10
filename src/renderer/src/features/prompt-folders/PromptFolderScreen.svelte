@@ -18,7 +18,7 @@
     createCategory,
     deleteCategory,
     moveCategory,
-    renameCategory
+    updateCategoryDetails
   } from '@renderer/data/Mutations/CategoryMutations'
   import { setCategoryDescriptionWithAutosave } from '@renderer/data/Mutations/CategoryMutations'
   import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
@@ -136,7 +136,11 @@
     if (!renameCategoryTarget) return false
     return await runIpcBestEffort(
       async () => {
-        await renameCategory(renameCategoryTarget.id, displayName)
+        await updateCategoryDetails(
+          renameCategoryTarget.id,
+          displayName,
+          renameCategoryTarget.shortDescription
+        )
         return true
       },
       () => false

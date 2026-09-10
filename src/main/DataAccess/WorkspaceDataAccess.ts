@@ -120,6 +120,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     ? BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES.map((displayName) => ({
         id: compactGuid(randomUUID()),
         displayName,
+        shortDescription: null,
         description: null
       }))
     : []

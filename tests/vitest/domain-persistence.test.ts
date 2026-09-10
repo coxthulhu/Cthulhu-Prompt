@@ -177,7 +177,12 @@ describe('domain persistence planning', () => {
         entries: [{ kind: 'folder' as const, id: root.id }]
       }
       /** Loaded category physically contained by the renamed root. */
-      const category = { id: 'category', displayName: 'Category', description: null }
+      const category = {
+        id: 'category',
+        displayName: 'Category',
+        shortDescription: null,
+        description: null
+      }
       /** Loaded prompt or template physically contained by the renamed root. */
       const content =
         kind === 'prompt'
@@ -282,7 +287,12 @@ describe('domain persistence planning', () => {
 
   it('applies an update recipe once and retains complete before and after nodes', () => {
     /** Current category record projected by one recipe-based update. */
-    const category = { id: 'category', displayName: 'Before', description: null }
+    const category = {
+      id: 'category',
+      displayName: 'Before',
+      shortDescription: null,
+      description: null
+    }
     mockDomainData.seed('category', category.id, category, {
       workspaceId: 'workspace',
       workspacePath: 'C:\\Workspace',
@@ -417,7 +427,12 @@ describe('domain persistence planning', () => {
     )
     for (const categoryId of ['delete', 'survivor']) {
       /** Duplicate-named category with an existing ID-suffixed filename. */
-      const category = { id: categoryId, displayName: 'Same', description: null }
+      const category = {
+        id: categoryId,
+        displayName: 'Same',
+        shortDescription: null,
+        description: null
+      }
       mockDomainData.seed('category', categoryId, category, {
         workspaceId: 'workspace',
         workspacePath: 'C:\\Workspace',
@@ -471,7 +486,12 @@ describe('domain persistence planning', () => {
     mockDomainData.seed(
       'category',
       'existing',
-      { id: 'existing', displayName: 'Same?', description: null },
+      {
+        id: 'existing',
+        displayName: 'Same?',
+        shortDescription: null,
+        description: null
+      },
       {
         workspaceId: 'workspace',
         workspacePath: 'C:\\Workspace',
@@ -486,7 +506,8 @@ describe('domain persistence planning', () => {
     const plan = planCreateCategoryDomainMutation(createMainLikeDomainState(), {
       categoryId: 'created',
       promptFolderId: root.id,
-      displayName: 'Same*'
+      displayName: 'Same*',
+      shortDescription: null
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return

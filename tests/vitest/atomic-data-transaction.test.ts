@@ -437,7 +437,8 @@ describe('atomic data transaction', () => {
     const plan = planCreateCategoryDomainMutation(state, {
       categoryId: 'created',
       promptFolderId: promptFolder.id,
-      displayName: 'Created'
+      displayName: 'Created',
+      shortDescription: null
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
@@ -452,7 +453,12 @@ describe('atomic data transaction', () => {
     expect(outcome.status).toBe('success')
     expect(mockTransactionState.readEntry('category', 'created')).toEqual({
       revision: 1,
-      committed: { id: 'created', displayName: 'Created', description: null },
+      committed: {
+        id: 'created',
+        displayName: 'Created',
+        shortDescription: null,
+        description: null
+      },
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
@@ -492,7 +498,12 @@ describe('atomic data transaction', () => {
       settings: { folderDescription: null }
     }
     /** Category stored beneath the renamed root. */
-    const category = { id: 'category', displayName: 'Category', description: null }
+    const category = {
+      id: 'category',
+      displayName: 'Category',
+      shortDescription: null,
+      description: null
+    }
     /** Prompt markdown stored beneath the renamed root's active directory. */
     const prompt = {
       id: 'prompt',
