@@ -650,6 +650,8 @@
   ): DroppableOptions<unknown, unknown> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
+    // Folder selection requires the pointer to remain within the visible dropdown row.
+    snapDimensions: { x: 0, y: 0 },
     payload: (): PromptHandleDropPayload => ({
       folderId: item.id,
       targetEntryId: null,

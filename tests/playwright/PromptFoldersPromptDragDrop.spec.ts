@@ -1010,6 +1010,54 @@ describe('Prompt folder prompt drag-drop', () => {
     ])
   })
 
+  test('does not move a prompt when released above the folder selector dropdown', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptFolders(DEVELOPMENT_FOLDER_NAME)
+    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
+
+    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
+    await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+
+    /** Destination row that must stop accepting the drag outside its visible bounds. */
+    const destinationItem = mainWindow.locator(
+      promptFolderSelectorDropdownItemSelector(EXAMPLES_FOLDER_ID)
+    )
+    await moveActiveDragToTarget(
+      mainWindow,
+      promptFolderSelectorDropdownItemSelector(EXAMPLES_FOLDER_ID)
+    )
+    await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
+
+    /** Popup geometry used to leave the menu vertically while staying within its close halo. */
+    const menuBox = await mainWindow.locator(promptFolderSelectorMenuSelector).boundingBox()
+    /** Destination geometry keeps the pointer horizontally aligned with the former target. */
+    const destinationBox = await destinationItem.boundingBox()
+    if (!menuBox || !destinationBox) {
+      throw new Error('Missing prompt folder dropdown geometry for outside release')
+    }
+
+    await mainWindow.mouse.move(
+      destinationBox.x + destinationBox.width / 2,
+      menuBox.y - 1,
+      { steps: 12 }
+    )
+    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
+    await expect(destinationItem).toHaveAttribute('data-row-state', 'idle')
+    await expect(mainWindow.locator('[data-drop-indicator-active="true"]')).toHaveCount(0)
+    await finishActiveDrag(mainWindow)
+
+    await expectCurrentFolderPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, DEVELOPMENT_FOLDER_PATH, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedFolderPromptIds(electronApp, EXAMPLES_FOLDER_PATH, [EXAMPLE_1_ID])
+  })
+
   test('closes the selector dropdown when an active prompt drag moves off to the right', async ({
     testSetup,
     electronApp
