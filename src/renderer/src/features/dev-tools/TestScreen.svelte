@@ -419,9 +419,31 @@
               <div class="component-sample">
                 {@render componentLabel('IconCell')}
                 <div class="variant-controls">
-                  <IconCell icon={Folder} variant="standard" />
-                  <IconCell icon={FileText} variant="title" />
-                  <IconCell icon={Folder} variant="compact" />
+                  <IconCell
+                    icon={Folder}
+                    variant="standard"
+                    data-testid="test-screen-icon-cell-standard"
+                  />
+                  <IconCell
+                    icon={FileText}
+                    variant="title"
+                    data-testid="test-screen-icon-cell-title"
+                  />
+                  <IconCell
+                    icon={Folder}
+                    variant="compact"
+                    data-testid="test-screen-icon-cell-compact"
+                  />
+                  <IconCell
+                    icon={FileText}
+                    variant="small"
+                    data-testid="test-screen-icon-cell-small"
+                  />
+                  <IconCell
+                    icon={Folder}
+                    variant="menu"
+                    data-testid="test-screen-icon-cell-menu"
+                  />
                 </div>
               </div>
               <div class="component-sample">

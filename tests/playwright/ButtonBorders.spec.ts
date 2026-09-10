@@ -301,6 +301,78 @@ describe('Button styling', () => {
     })
     await testHelpers.clickNavButton('Test Screen')
 
+    // Every shared icon-cell variant retains its declared cell and glyph geometry.
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-standard"]')).toHaveCSS(
+      'width',
+      '34px'
+    )
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-standard"]')).toHaveCSS(
+      'height',
+      '34px'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-standard"] svg')
+    ).toHaveCSS('width', '24px')
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-standard"] svg')
+    ).toHaveCSS('height', '24px')
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-title"]')).toHaveCSS(
+      'width',
+      '40px'
+    )
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-title"]')).toHaveCSS(
+      'height',
+      '40px'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-title"] svg')
+    ).toHaveCSS('width', '24px')
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-title"] svg')
+    ).toHaveCSS('height', '24px')
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-compact"]')).toHaveCSS(
+      'width',
+      '34px'
+    )
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-compact"]')).toHaveCSS(
+      'height',
+      '34px'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-compact"] svg')
+    ).toHaveCSS('width', '20px')
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-compact"] svg')
+    ).toHaveCSS('height', '20px')
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-small"]')).toHaveCSS(
+      'width',
+      '18px'
+    )
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-small"]')).toHaveCSS(
+      'height',
+      '18px'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-small"] svg')
+    ).toHaveCSS('width', '16px')
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-small"] svg')
+    ).toHaveCSS('height', '16px')
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-menu"]')).toHaveCSS(
+      'width',
+      '28px'
+    )
+    await expect(mainWindow.locator('[data-testid="test-screen-icon-cell-menu"]')).toHaveCSS(
+      'height',
+      '28px'
+    )
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-menu"] svg')
+    ).toHaveCSS('width', '20px')
+    await expect(
+      mainWindow.locator('[data-testid="test-screen-icon-cell-menu"] svg')
+    ).toHaveCSS('height', '20px')
+
     // Gallery root resolves palette tokens into the browser's computed color format.
     const gallery = mainWindow.locator('[data-testid="test-screen"]')
     // Shared text colors define the idle and interacted control hierarchy.
@@ -434,10 +506,16 @@ describe('Button styling', () => {
       .getByRole('menuitem')
       .first()
     await expect(detailedDropdownItem).toHaveCSS('color', hoverableText)
-    await expect(detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')).toHaveCSS(
-      'color',
-      hoverableIcon
-    )
+    await expect(detailedDropdownItem.locator('svg').first()).toHaveCSS('width', '20px')
+    await expect(
+      detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')
+    ).toHaveCSS('width', '28px')
+    await expect(
+      detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')
+    ).toHaveCSS('height', '28px')
+    await expect(
+      detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')
+    ).toHaveCSS('color', hoverableIcon)
     await detailedDropdownItem.hover()
     await expect(detailedDropdownItem).toHaveCSS('color', normalText)
     await expect(detailedDropdownItem.locator('.cthulhuUiDropdownPopupMoreOptionsIcon')).toHaveCSS(

@@ -5,6 +5,7 @@
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
   } from './DropdownPopupCore.svelte'
+  import IconCell from './IconCell.svelte'
   import type { DropdownPopupDetailedItem } from './DropdownPopupDetailed.svelte'
   import SeparatorDot from './SeparatorDot.svelte'
 
@@ -69,9 +70,12 @@
             onselect?.(item, event)
           }}
         >
-          <span class="cthulhuUiDropdownPopupMoreOptionsIcon">
-            <ItemIcon class={item.iconClass} size={18} aria-hidden="true" />
-          </span>
+          <IconCell
+            icon={ItemIcon}
+            iconClass={item.iconClass}
+            variant="menu"
+            class="cthulhuUiDropdownPopupMoreOptionsIcon"
+          />
 
           <span class="cthulhuUiDropdownPopupMoreOptionsTextStack">
             <!-- Menu button titles are explicitly excluded from default line heights. -->
@@ -149,18 +153,14 @@
     outline-offset: -2px;
   }
 
-  .cthulhuUiDropdownPopupMoreOptionsIcon {
-    align-items: center;
+  .cthulhuUiDropdownPopupMoreOptionsItem
+    :global(.cthulhuUiDropdownPopupMoreOptionsIcon) {
     color: var(--ui-hoverable-icon-glyph);
-    display: flex;
-    height: 28px;
-    justify-content: center;
     transition: color var(--ui-animation-duration-standard) ease;
-    width: 28px;
   }
 
   .cthulhuUiDropdownPopupMoreOptionsItem:where(:hover, :focus-visible)
-    .cthulhuUiDropdownPopupMoreOptionsIcon {
+    :global(.cthulhuUiDropdownPopupMoreOptionsIcon) {
     color: var(--ui-normal-text);
   }
 

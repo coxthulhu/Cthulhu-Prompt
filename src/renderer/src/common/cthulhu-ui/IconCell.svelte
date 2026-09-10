@@ -3,7 +3,17 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from './mergeClasses'
 
-  type IconCellVariant = 'standard' | 'title' | 'compact'
+  /** Supported cell and glyph size combinations. */
+  type IconCellVariant = 'standard' | 'title' | 'compact' | 'small' | 'menu'
+
+  /** Glyph size rendered by each cell variant. */
+  const iconSizeByVariant: Record<IconCellVariant, number> = {
+    standard: 24,
+    title: 24,
+    compact: 20,
+    small: 16,
+    menu: 20
+  }
 
   type Props = HTMLAttributes<HTMLSpanElement> & {
     icon: ComponentType
@@ -27,7 +37,7 @@
 >
   <Icon
     class={mergeClasses('cthulhuUiIconCellIcon', iconClass)}
-    size={variant === 'compact' ? 20 : 24}
+    size={iconSizeByVariant[variant]}
     aria-hidden="true"
   />
 </span>
@@ -50,7 +60,23 @@
     width: 40px;
   }
 
-  .cthulhuUiIconCell[data-variant='compact'] {
+  .cthulhuUiIconCell[data-variant='small'] {
+    flex-basis: 18px;
+    height: 18px;
+    width: 18px;
+  }
+
+  .cthulhuUiIconCell[data-variant='menu'] {
+    flex-basis: 28px;
+    height: 28px;
+    width: 28px;
+  }
+
+  .cthulhuUiIconCell:where(
+      [data-variant='compact'],
+      [data-variant='small'],
+      [data-variant='menu']
+    ) {
     color: inherit;
     transition: color var(--ui-animation-duration-standard) ease;
   }

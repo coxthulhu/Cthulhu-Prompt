@@ -4,6 +4,7 @@
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
   } from './DropdownPopupCore.svelte'
+  import IconCell from './IconCell.svelte'
 
   export type DropdownPopupItemVariant = 'neutral' | 'accent' | 'danger'
 
@@ -62,7 +63,11 @@
             onselect?.(item, event)
           }}
         >
-          <ItemIcon size={16} aria-hidden="true" />
+          <IconCell
+            icon={ItemIcon}
+            variant="small"
+            class="cthulhuUiDropdownPopupSimpleItemIcon"
+          />
           <span class="cthulhuUiDropdownPopupSimpleItemLabel text-sm leading-5">{item.label}</span>
         </button>
       {/each}
@@ -112,7 +117,7 @@
     background: var(--ui-danger-action-hover-fill);
   }
 
-  .cthulhuUiDropdownPopupSimpleItem > :global(svg) {
+  .cthulhuUiDropdownPopupSimpleItem :global(.cthulhuUiDropdownPopupSimpleItemIcon) {
     color: var(--cthulhu-ui-dropdown-popup-item-icon-color);
   }
 

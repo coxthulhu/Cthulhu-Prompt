@@ -3,6 +3,7 @@
   import { untrack, type ComponentType, type Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { getAccordionContext } from './accordionContext'
+  import IconCell from './IconCell.svelte'
   import { mergeClasses } from './mergeClasses'
 
   /** Fixed header height included in every expanded section minimum. */
@@ -116,7 +117,7 @@
     <span class="cthulhuUiAccordionChevron">
       <ChevronRight size={20} aria-hidden="true" />
     </span>
-    <SectionIcon class="cthulhuUiAccordionIcon" size={16} aria-hidden="true" />
+    <IconCell icon={SectionIcon} iconClass="cthulhuUiAccordionIcon" variant="small" />
     <span class="cthulhuUiAccordionLabel text-sm leading-5">{label}</span>
     {#if count !== undefined}
       <!-- Button counts are explicitly excluded from default line heights to preserve header spacing. -->
@@ -200,7 +201,7 @@
     transform: rotate(90deg);
   }
 
-  .cthulhuUiAccordionIcon {
+  :global(.cthulhuUiAccordionIcon) {
     color: var(--ui-secondary-icon-glyph);
   }
 

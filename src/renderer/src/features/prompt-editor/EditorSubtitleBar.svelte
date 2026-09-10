@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import { EDITOR_SUBTITLE_BAR_HEIGHT_PX } from './promptEditorSizing'
 
   type Props = {
@@ -29,7 +30,7 @@
   data-testid={testId}
 >
   <div class="editor-subtitle-bar-heading text-sm">
-    <Icon size={20} aria-hidden="true" />
+    <IconCell icon={Icon} variant="compact" class="editor-subtitle-bar-icon-cell" />
     <div class="editor-subtitle-bar-heading-copy">
       <span>{title}</span>
       <span class="editor-subtitle-bar-metadata text-xs">
@@ -65,7 +66,7 @@
     min-width: 0;
   }
 
-  .editor-subtitle-bar-heading :global(svg) {
+  .editor-subtitle-bar-heading :global(.editor-subtitle-bar-icon-cell) {
     color: var(--ui-secondary-icon-glyph);
     justify-self: center;
   }
