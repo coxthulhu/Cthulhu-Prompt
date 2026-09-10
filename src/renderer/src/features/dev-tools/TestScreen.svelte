@@ -27,6 +27,7 @@
   } from 'lucide-svelte'
   import Accordion from '@renderer/common/cthulhu-ui/Accordion.svelte'
   import AccordionSection from '@renderer/common/cthulhu-ui/AccordionSection.svelte'
+  import ActivityBarButton from '@renderer/common/cthulhu-ui/ActivityBarButton.svelte'
   import CardSurface, {
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
@@ -51,12 +52,14 @@
   import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
   import InfoRow from '@renderer/common/cthulhu-ui/InfoRow.svelte'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import SimpleSelectorButton from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
   import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
@@ -405,6 +408,40 @@
                   <IconCell icon={Folder} variant="standard" />
                   <IconCell icon={FileText} variant="title" />
                   <IconCell icon={Folder} variant="compact" />
+                </div>
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('ActivityBarButton')}
+                <div class="variant-controls">
+                  <div class="w-12">
+                    <ActivityBarButton icon={Search} label="Idle activity" />
+                  </div>
+                  <div class="w-12">
+                    <ActivityBarButton icon={Settings} label="Active activity" active />
+                  </div>
+                </div>
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('InlineTextButton')}
+                <div class="variant-controls">
+                  <InlineTextButton text="Muted" />
+                  <InlineTextButton text="Secondary" baseVariant="secondary" />
+                </div>
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('SelectorButton')}
+                <div class="stack">
+                  <SelectorButton
+                    icon={Folder}
+                    text="Idle selector"
+                    detail="Hover to compare"
+                  />
+                  <SelectorButton
+                    icon={FileText}
+                    text="Selected selector"
+                    detail="Selected state"
+                    selected
+                  />
                 </div>
               </div>
             </div>
