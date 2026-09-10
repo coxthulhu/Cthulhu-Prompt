@@ -37,6 +37,7 @@ When adding a new major application component or screen, add it to this list wit
 - When using render functions/snippets, declare `{#snippet ...}` inline inside the consumer’s component tags instead of passing snippet props where possible, to keep markup concise and consistent.
 - When creating renderer components, only use colors from `src/renderer/src/styles/palette.css`, and ask permission before adding new colors to that palette.
 - When adding colors to `src/renderer/src/styles/palette.css`, follow the rules at the top of that file.
+- For control foregrounds, ghost and outline controls must brighten their text and glyphs on hover and focus, while filled and accented controls must keep their text and glyphs full white; semantic foregrounds such as warning and success must retain their semantic color.
 - In `src/renderer/src/common/cthulhu-ui`, use classes for component identity, layout, and reusable visual variants. Compose root and icon classes with `mergeClasses` when accepting caller-provided classes.
 - In `cthulhu-ui`, use scoped `data-*` attributes for transient visual state or enum-like styling hooks that CSS consumes, such as `data-variant`, `data-disabled`, `data-invalid`, or drag/drop state. Attribute selectors must be anchored to a component class, e.g. `.cthulhuUiComponent[data-state='true']`.
 - In `cthulhu-ui`, use `aria-*` when the state has accessibility meaning, such as `aria-invalid`, `aria-pressed`, `aria-disabled`, or `aria-orientation`. Styling semantic accessibility state with scoped component selectors is acceptable.
