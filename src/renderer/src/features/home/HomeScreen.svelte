@@ -292,12 +292,18 @@
               <Separator />
 
               <div class="cthulhuHomeWorkspaceStats">
-                <DisplayRow icon={FileText} label={displayedPromptCount} detail="Prompts" />
+                <DisplayRow
+                  icon={FileText}
+                  label={displayedPromptCount}
+                  detail="Prompts"
+                  testId="home-prompt-count-stat"
+                />
                 <Separator orientation="vertical" class="h-auto self-stretch" />
                 <DisplayRow
                   icon={Folders}
                   label={displayedPromptFolderCount}
                   detail="Prompt Folders"
+                  testId="home-prompt-folder-count-stat"
                 />
               </div>
             </div>

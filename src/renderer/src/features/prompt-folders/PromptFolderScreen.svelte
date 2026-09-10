@@ -72,11 +72,6 @@
   const renamePromptFolderTarget = $derived(
     controller.promptFolders.find((folder) => folder.id === renamePromptFolderId) ?? null
   )
-  const renameFolderTitle = $derived(
-    renamePromptFolderTarget?.kind === 'template'
-      ? 'Prompt Template Folder'
-      : 'Prompt Folder'
-  )
   // Root folder names conflict with same-kind root siblings.
   const renamePromptFolderSiblings = $derived.by(() => {
     if (!renamePromptFolderTarget) return []
@@ -233,9 +228,6 @@
   const deletePromptFolderTarget = $derived(
     controller.promptFolders.find((folder) => folder.id === deletePromptFolderId) ?? null
   )
-  const deleteFolderTitle = $derived(
-    deletePromptFolderTarget?.kind === 'template' ? 'Prompt Template Folder' : 'Prompt Folder'
-  )
 </script>
 
 <PromptFolderFindIntegration
@@ -365,9 +357,7 @@
           testId="prompt-folder-loading-overlay"
           fadeMs={controller.loadingOverlayFadeMs}
           isFading={controller.loadingOverlay.isFading()}
-          message={controller.contentKind === 'template'
-            ? 'Loading prompt template folder...'
-            : 'Loading prompt folder...'}
+          message="Loading folder..."
         />
       {/if}
     </main>
@@ -401,32 +391,28 @@
   promptFolders={renamePromptFolderSiblings}
   isPromptFolderListLoading={false}
   icon={Pencil}
-  title={`Rename ${renameFolderTitle}`}
-  subtitle={`Choose a new name for this ${renameFolderTitle.toLowerCase()}.`}
-  submitText={renamePromptFolderTarget?.kind === 'template'
-    ? 'Rename Template Folder'
-    : 'Rename Prompt Folder'}
+  title="Rename Folder"
+  subtitle="Choose a new name for this folder."
+  submitText="Rename Folder"
   submittingText="Renaming..."
   submitTestId="rename-prompt-folder-button"
   inputTestId="rename-prompt-folder-name-input"
   errorTestId="rename-prompt-folder-name-error"
-  rowLabel={`${renameFolderTitle} Name`}
-  rowDetail={`Rename this ${renameFolderTitle.toLowerCase()}.`}
+  rowLabel="Folder Name"
+  rowDetail="Rename this folder."
   initialDisplayName={renamePromptFolderTarget?.displayName ?? ''}
   unchangedDisplayName={renamePromptFolderTarget?.displayName ?? null}
   unchangedFolderName={renamePromptFolderTarget?.folderName ?? null}
   duplicatePromptFolderId={renamePromptFolderTarget?.id ?? null}
-  failureMessage={`Failed to rename ${renameFolderTitle.toLowerCase()}. Please try again.`}
+  failureMessage="Failed to rename folder. Please try again."
   onsubmit={handleRenamePromptFolder}
 />
 
 <ConfirmationDialog
   open={deletePromptFolderTarget !== null}
-  title={`Delete ${deleteFolderTitle}`}
+  title="Delete Folder"
   description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents?`}
-  confirmText={deletePromptFolderTarget?.kind === 'template'
-    ? 'Delete Template Folder'
-    : 'Delete Prompt Folder'}
+  confirmText="Delete Folder"
   confirmTestId="prompt-folder-confirm-delete-button"
   oncancel={() => {
     deletePromptFolderId = null

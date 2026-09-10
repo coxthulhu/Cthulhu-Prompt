@@ -74,7 +74,7 @@ export async function clickNavButton(
   // Map navigation button text to their data-testid
   const navButtonMap: Record<string, string> = {
     Home: 'nav-button-home',
-    'Prompt Folders': 'nav-button-prompt-folders',
+    'Prompts & Templates': 'nav-button-prompt-folders',
     Settings: 'nav-button-settings',
     Mockups: 'nav-button-mockups',
     'Test Screen': 'nav-button-test-screen'

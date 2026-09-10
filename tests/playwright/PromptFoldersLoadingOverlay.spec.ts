@@ -28,7 +28,7 @@ describe('Prompt folder loading overlay', () => {
       await mainWindow.waitForSelector(OVERLAY_SELECTOR, { state: 'visible' })
 
       const overlay = mainWindow.locator(OVERLAY_SELECTOR)
-      await expect(overlay.locator('text=Loading prompt folder...')).toBeVisible()
+      await expect(overlay.locator('text=Loading folder...')).toBeVisible()
       await expect(overlay.locator('.animate-spin')).toBeVisible()
       await expect(overlay).toHaveAttribute('style', /transition-duration:\s*120ms/)
 

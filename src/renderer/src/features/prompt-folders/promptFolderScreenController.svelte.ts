@@ -368,7 +368,7 @@ export const createPromptFolderScreenController = ({
       selectedFinalizedPrompts.map(({ contentOwnerId, promptId }) => [promptId, contentOwnerId])
     )
   )
-  const folderDisplayName = $derived(screenRootFolder?.displayName ?? 'Prompt Folder')
+  const folderDisplayName = $derived(screenRootFolder?.displayName ?? 'Folder')
 
   let previousPromptFolderLoadKey = $state<string | null>(null)
   let promptFolderLoadRequestId = $state(0)

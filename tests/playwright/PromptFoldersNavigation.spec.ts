@@ -456,21 +456,21 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toHaveAttribute(
       'aria-label',
-      'Rename prompt template folder'
+      'Rename folder'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-delete-button"]')).toHaveAttribute(
       'aria-label',
-      'Delete prompt template folder'
+      'Delete folder'
     )
     await mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]').click()
     const renameTemplateFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Rename Prompt Template Folder"]'
+      '[role="dialog"][aria-label="Rename Folder"]'
     )
     await expect(renameTemplateFolderDialog).toBeVisible()
     await renameTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
     await mainWindow.locator('[data-testid="prompt-folder-delete-button"]').click()
     const deleteTemplateFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Template Folder"]'
+      '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteTemplateFolderDialog).toBeVisible()
     await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
@@ -764,7 +764,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(bugAnalysisResult.found).toBe(true)
   })
 
-  test('opens Prompt Folders view and renders prompt list', async ({ testSetup }) => {
+  test('opens Prompts & Templates view and renders prompt list', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -790,6 +790,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
+    // The shared navigation button names both folder types in its tooltip and accessible label.
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+      'title',
+      'Prompts & Templates'
+    )
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+      'aria-label',
+      'Prompts & Templates'
+    )
     await mainWindow.locator('[data-testid="nav-button-prompt-folders"]').click()
 
     await mainWindow.waitForSelector('[data-testid="prompt-editor-simple-1"]', {
@@ -860,7 +869,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     const createPromptFolderDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Prompt Folder"]'
+      '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
     await expect(createPromptFolderDialog).toBeVisible()
     await expect(
@@ -869,7 +878,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
     ).toHaveText('Choose the folder type and name for the new folder.')
-    await expect(createPromptFolderDialog.getByLabel('Prompt Folder Name')).toBeVisible()
+    await expect(createPromptFolderDialog.getByLabel('Task Prompt Folder Name')).toBeVisible()
   })
 
   test('shows add prompt folder button when the workspace has no prompt folders', async ({
@@ -986,7 +995,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     const deleteMenuItem = mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)
     await expect(deleteMenuItem).toBeVisible()
-    await expect(deleteMenuItem).toHaveText('Delete Prompt Folder')
+    await expect(deleteMenuItem).toHaveText('Delete Folder')
     await expect(deleteMenuItem).toHaveAttribute('data-variant', 'danger')
     const dangerHoverColor = await deleteMenuItem.evaluate((element) => {
       const probe = document.createElement('div')
@@ -1000,7 +1009,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(deleteMenuItem).toHaveCSS('background-color', dangerHoverColor)
     await deleteMenuItem.click()
     const deleteDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+      '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteDialog).toBeVisible()
     await expect(deleteDialog).toContainText(
@@ -1028,7 +1037,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toBeVisible()
     const deleteDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+      '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteDialog).toBeVisible()
     await expect(deleteDialog).toContainText('Development Tools')
@@ -1194,15 +1203,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
     await expect(mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')).toHaveText(
-      'Prompt Folder'
+      'Task Prompts'
     )
     await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
     const folderTypeMenu = mainWindow.locator(
       '[data-testid="create-prompt-folder-type-menu"]'
     )
-    await expect(folderTypeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
-    await expect(folderTypeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
-    await folderTypeMenu.getByText('Prompt Template Folder', { exact: true }).click()
+    await expect(folderTypeMenu.getByText('Task Prompts', { exact: true })).toBeVisible()
+    await expect(folderTypeMenu.getByText('Prompt Templates', { exact: true })).toBeVisible()
+    await folderTypeMenu.getByText('Prompt Templates', { exact: true }).click()
     const createTemplateFolderDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Prompt Template Folder"]'
     )
@@ -1215,6 +1224,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
       'Examples'
     )
+    // The created template folder identifies its type while individual template controls stay concise.
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-root-header"] .prompt-folder-root-subtitle')
+    ).toHaveText('Prompt Templates')
     await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
       'Templates 0'
     )
@@ -1260,7 +1273,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
     await mainWindow
       .locator('[data-testid="create-prompt-folder-type-menu"]')
-      .getByRole('menuitem', { name: /^Prompt Template Folder\b/ })
+      .getByRole('menuitem', { name: /^Prompt Templates\b/ })
       .click()
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
     await expect(
@@ -1477,7 +1490,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
     const deleteDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+      '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteDialog).toBeVisible()
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)

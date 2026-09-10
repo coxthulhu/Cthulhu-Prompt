@@ -782,8 +782,7 @@
 
 {#snippet rootHeaderRow()}
   <PromptFolderRootHeaderRow
-    folderDisplayName={promptFolderById[screenRootFolderId]?.displayName ??
-      (isTemplateFolder ? 'Prompt Template Folder' : 'Prompt Folder')}
+    folderDisplayName={promptFolderById[screenRootFolderId]!.displayName}
     {orderedPromptCount}
     {statusGroupCounts}
     {screenMode}

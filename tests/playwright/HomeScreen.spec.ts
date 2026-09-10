@@ -1,7 +1,12 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import {
+  createWorkspaceWithFolders,
+  createWorkspaceWithTemplateFolders,
+  getWorkspaceInfoPath
+} from '../fixtures/WorkspaceFixtures'
 import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
+import { PromptStatus } from '../../src/shared/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -179,6 +184,72 @@ describe('Home Screen', () => {
   })
 
   describe('Workspace Management', () => {
+    test('counts every prompt and folder type in the workspace statistics', async ({
+      testSetup
+    }) => {
+      const workspacePath = '/ws/home-workspace-statistics'
+      const filesystem = {
+        ...createWorkspaceWithFolders(workspacePath, [
+          {
+            folderName: 'Tasks',
+            displayName: 'Tasks',
+            promptFolderId: 'home-task-folder',
+            prompts: [
+              { id: 'home-active', title: 'Active', promptText: 'Active prompt' },
+              {
+                id: 'home-completed',
+                title: 'Completed',
+                promptText: 'Completed prompt',
+                status: PromptStatus.Completed,
+                finalizedAt: '2026-09-09T12:00:00.000Z'
+              },
+              {
+                id: 'home-archived',
+                title: 'Archived',
+                promptText: 'Archived prompt',
+                status: PromptStatus.Archived,
+                finalizedAt: '2026-09-08T12:00:00.000Z'
+              }
+            ]
+          }
+        ]),
+        ...createWorkspaceWithTemplateFolders(workspacePath, [
+          {
+            folderName: 'Templates',
+            displayName: 'Templates',
+            folderId: 'home-template-folder',
+            templates: [
+              { id: 'home-template-one', title: 'Template One', templateText: 'First template' },
+              { id: 'home-template-two', title: 'Template Two', templateText: 'Second template' }
+            ]
+          }
+        ]),
+        [workspaceFolderOrderPath(workspacePath)]: JSON.stringify({
+          entries: [
+            { kind: 'folder', id: 'home-task-folder' },
+            { kind: 'folder', id: 'home-template-folder' }
+          ]
+        })
+      }
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await testHelpers.setupWorkspaceViaUI()
+
+      const promptStat = mainWindow.locator('[data-testid="home-prompt-count-stat"]')
+      await expect(promptStat.locator('.cthulhuUiTitle')).toHaveText('5')
+      await expect(promptStat.locator('.cthulhuUiSubtitle')).toHaveText('Prompts')
+      const promptFolderStat = mainWindow.locator(
+        '[data-testid="home-prompt-folder-count-stat"]'
+      )
+      await expect(promptFolderStat.locator('.cthulhuUiTitle')).toHaveText('2')
+      await expect(promptFolderStat.locator('.cthulhuUiSubtitle')).toHaveText('Prompt Folders')
+    })
+
     test('closes a workspace while hydrated folder settings are mounted', async ({ testSetup }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
         workspace: { scenario: 'categories' }

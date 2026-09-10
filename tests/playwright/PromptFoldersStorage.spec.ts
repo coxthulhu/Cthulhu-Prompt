@@ -103,24 +103,41 @@ describe('Prompt folder storage', () => {
 
     await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
     await mainWindow.locator(FOLDER_ADD_ITEM).click()
-    await expect(mainWindow.locator(FOLDER_TYPE_SELECTOR)).toHaveText('Prompt Folder')
+    await expect(mainWindow.locator(FOLDER_TYPE_SELECTOR)).toHaveText('Task Prompts')
     await mainWindow.locator(FOLDER_TYPE_SELECTOR).click()
     // The creation menu exposes prompt and template folders.
     const typeMenu = mainWindow.locator(FOLDER_TYPE_MENU)
     await expect(typeMenu.locator('[role="menuitem"]')).toHaveCount(2)
-    await expect(typeMenu.getByText('Prompt Folder', { exact: true })).toBeVisible()
-    await expect(typeMenu.getByText('Prompt Template Folder', { exact: true })).toBeVisible()
-    await typeMenu.getByText('Prompt Folder', { exact: true }).click()
+    await expect(typeMenu.getByText('Task Prompts', { exact: true })).toBeVisible()
+    await expect(typeMenu.getByText('Prompt Templates', { exact: true })).toBeVisible()
+    // Each folder type explains its purpose on its own creation-menu option.
+    await expect(typeMenu.getByRole('menuitem', { name: /^Task Prompts\b/ })).toContainText(
+      'One-time tasks the AI will accomplish'
+    )
+    await expect(typeMenu.getByRole('menuitem', { name: /^Prompt Templates\b/ })).toContainText(
+      'Workflows for the AI to follow'
+    )
+    // Measure each description to catch clipping that text-presence assertions cannot detect.
+    expect(
+      await typeMenu.locator('.cthulhuUiDropdownPopupMoreOptionsSubtitlePart').evaluateAll(
+        (parts) => parts.every((part) => part.scrollWidth <= part.clientWidth + 1)
+      )
+    ).toBe(true)
+    await typeMenu.getByText('Task Prompts', { exact: true }).click()
     await expect(
-      mainWindow.locator('[role="dialog"][aria-label="Create Prompt Folder"]')
+      mainWindow.locator('[role="dialog"][aria-label="Create Task Prompt Folder"]')
     ).toBeVisible()
-    await expect(mainWindow.getByLabel('Prompt Folder Name')).toBeVisible()
+    await expect(mainWindow.getByLabel('Task Prompt Folder Name')).toBeVisible()
     await mainWindow.locator(FOLDER_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
 
     // The selected prompt root exposes category creation without add-category dividers.
     const selectorTrigger = mainWindow.locator(promptFolderSelectorTriggerSelector)
     await expect(selectorTrigger).toContainText(ALPHA_NAME)
+    // The created task folder identifies its type in the overview header.
+    await expect(
+      mainWindow.locator('[data-testid="prompt-folder-root-header"] .prompt-folder-root-subtitle')
+    ).toHaveText('Task Prompts')
     await expect(mainWindow.locator('[data-testid="prompt-folder-add-category-button"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category-"]')).toHaveCount(0)
 

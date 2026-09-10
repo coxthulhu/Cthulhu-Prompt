@@ -153,8 +153,8 @@
   ]
   const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
     id: 'add-folder',
-    label: 'Add Prompt Folder',
-    detail: 'Create a new prompt folder',
+    label: 'Add Folder',
+    detail: 'Create a new folder',
     icon: Plus
   }
   const iconButtonMoreOptionsItems: DropdownPopupDetailedItem[] = [
@@ -530,7 +530,7 @@
               <div class="component-sample">
                 {@render componentLabel('SimpleSelectorButton')}
                 <SimpleSelectorButton
-                  label="Select prompt folder"
+                  label="Select folder"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
                   showIcon
@@ -544,7 +544,7 @@
               <div class="component-sample">
                 {@render componentLabel('DetailedSelectorButton')}
                 <DetailedSelectorButton
-                  label="Prompt folder selector"
+                  label="Folder selector"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
                   footerItem={detailedDropdownFooterItem}
@@ -675,7 +675,7 @@
               </div>
               <div class="component-sample">
                 {@render componentLabel('MessageRow: danger')}
-                <MessageRow text="Prompt folder name is required." variant="danger" />
+                <MessageRow text="Folder name is required." variant="danger" />
               </div>
             </div>
           </div>

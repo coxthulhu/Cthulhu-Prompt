@@ -29,14 +29,14 @@
   const folderTypeItems: Array<SimpleSelectorButtonItem & { id: PromptFolderKind }> = [
     {
       id: 'prompt',
-      label: 'Prompt Folder',
-      detail: 'Store and organize prompts',
+      label: 'Task Prompts',
+      detail: 'One-time tasks the AI will accomplish',
       icon: FileText
     },
     {
       id: 'template',
-      label: 'Prompt Template Folder',
-      detail: 'Store reusable prompt templates',
+      label: 'Prompt Templates',
+      detail: 'Workflows for the AI to follow',
       icon: Layers
     }
   ]
@@ -79,7 +79,7 @@
   {isPromptFolderListLoading}
   title={selectedFolderType.id === 'template'
     ? 'Create Prompt Template Folder'
-    : 'Create Prompt Folder'}
+    : 'Create Task Prompt Folder'}
   subtitle="Choose the folder type and name for the new folder."
   submitText="Create Folder"
   submittingText="Creating..."
@@ -89,13 +89,13 @@
   dialogClass="w-full max-w-[600px]"
   rowLabel={selectedFolderType.id === 'template'
     ? 'Prompt Template Folder Name'
-    : 'Prompt Folder Name'}
+    : 'Task Prompt Folder Name'}
   rowDetail={selectedFolderType.id === 'template'
     ? 'Name the new prompt template folder.'
-    : 'Name the new prompt folder.'}
+    : 'Name the new task prompt folder.'}
   failureMessage={selectedFolderType.id === 'template'
     ? 'Failed to create prompt template folder. Please try again.'
-    : 'Failed to create prompt folder. Please try again.'}
+    : 'Failed to create task prompt folder. Please try again.'}
   onsubmit={handleCreateFolder}
 >
   {#snippet beforeRows()}
@@ -106,10 +106,11 @@
     >
       {#snippet control()}
         <SimpleSelectorButton
-          label="Prompt folder type"
+          label="Folder type"
           items={folderTypeItems}
           selectedItem={selectedFolderType}
           showIcon
+          menuWidth="280px"
           testId="create-prompt-folder-type-selector"
           menuTestId="create-prompt-folder-type-menu"
           onselect={(item) => {

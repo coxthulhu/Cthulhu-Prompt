@@ -44,7 +44,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     icon: Bug
   },
   'prompt-folders': {
-    label: 'Prompt Folders',
+    label: 'Prompts & Templates',
     testId: 'nav-button-prompt-folders',
     requiresWorkspace: true,
     showInNav: true,

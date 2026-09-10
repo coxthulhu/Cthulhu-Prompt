@@ -37,7 +37,6 @@
   }>()
 
   const isTemplateFolder = $derived(contentKind === 'template')
-  const folderLabel = $derived(isTemplateFolder ? 'prompt template folder' : 'prompt folder')
 </script>
 
 <div
@@ -60,8 +59,8 @@
           />
           <IconButton
             icon={Pencil}
-            label={`Rename ${folderLabel}`}
-            title={`Rename ${folderLabel}`}
+            label="Rename folder"
+            title="Rename folder"
             size="tiny"
             baseVariant="muted"
             hoverVariant="glyph"
@@ -71,7 +70,7 @@
         </div>
         <Subtitle
           class="prompt-folder-root-subtitle leading-5"
-          text={isTemplateFolder ? 'Prompt Template Folder' : 'Prompt Folder'}
+          text={isTemplateFolder ? 'Prompt Templates' : 'Task Prompts'}
           wrap={false}
         />
       </TitleSubtitleStack>
@@ -88,8 +87,8 @@
       />
       <IconButton
         icon={Trash2}
-        label={`Delete ${folderLabel}`}
-        title={`Delete ${folderLabel}`}
+        label="Delete folder"
+        title="Delete folder"
         hoverVariant="danger"
         testId="prompt-folder-delete-button"
         onclick={onDeletePromptFolder}

@@ -28,7 +28,7 @@
     inputTestId,
     errorTestId,
     dialogClass = 'w-full max-w-[540px]',
-    rowLabel = 'Prompt Folder Name',
+    rowLabel = 'Folder Name',
     rowDetail,
     initialDisplayName = '',
     unchangedDisplayName = null,

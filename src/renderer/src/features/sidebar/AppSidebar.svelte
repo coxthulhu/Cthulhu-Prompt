@@ -200,7 +200,7 @@
   const promptFolderSelectorFooterItem: DropdownPopupDetailedItem = {
     id: 'add-prompt-folder',
     label: 'Create Folder',
-    detail: 'Create a prompt or prompt template folder',
+    detail: 'Create a folder for prompts or templates',
     icon: Plus,
     testId: 'sidebar-prompt-folder-dropdown-add-item'
   }
@@ -371,14 +371,11 @@
       group.ordering === 'category' || shownFinalStatusGroups[group.id]
     )
   )
-  const selectedFolderActionsLabel = $derived(
-    isTemplateFolder ? 'Selected Prompt Template Folder Actions' : 'Selected Prompt Folder Actions'
-  )
   // Keep selected-folder overflow actions together as the toolbar gets tighter.
   const selectedPromptFolderActionsItems = $derived.by((): DropdownPopupItem[] => [
     {
       id: 'delete-folder',
-      label: isTemplateFolder ? 'Delete Prompt Template Folder' : 'Delete Prompt Folder',
+      label: 'Delete Folder',
       icon: Trash2,
       testId: 'delete-selected-prompt-folder-menu-item',
       variant: 'danger'
@@ -836,7 +833,7 @@
           onclick={openCreateCategoryDialog}
         />
         <DropdownPopupSimple
-          label={selectedFolderActionsLabel}
+          label="Selected Folder Actions"
           items={selectedPromptFolderActionsItems}
           menuWidth="204px"
           testId="selected-prompt-folder-actions-menu"
@@ -845,8 +842,8 @@
           {#snippet trigger(dropdown)}
             <IconButton
               icon={MoreHorizontal}
-              label={selectedFolderActionsLabel}
-              title={selectedFolderActionsLabel}
+              label="Selected Folder Actions"
+              title="Selected Folder Actions"
               borderless
               disabled={!screenRootFolder}
               active={dropdown.open}

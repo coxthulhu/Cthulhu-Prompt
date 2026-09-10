@@ -939,7 +939,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
     const deleteDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Prompt Folder"]'
+      '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteDialog).toBeVisible()
 

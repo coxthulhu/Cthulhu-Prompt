@@ -28,7 +28,7 @@
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
   import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-  import { getPromptFolderPromptIds } from '@renderer/data/Collections/PromptFolderEntries'
+  import { getMarkdownContentIds } from '@shared/MarkdownContent'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
@@ -155,17 +155,14 @@
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
     for (const promptFolder of selectedWorkspacePromptFolders) {
-      if (promptFolder.kind === 'template') continue
-      for (const promptId of getPromptFolderPromptIds(promptFolder)) {
+      for (const promptId of getMarkdownContentIds(promptFolder, promptFolder.kind)) {
         promptIds.add(promptId)
       }
     }
 
     return promptIds.size
   })
-  const workspacePromptFolderCount = $derived(
-    selectedWorkspacePromptFolders.filter((folder) => folder.kind !== 'template').length
-  )
+  const workspacePromptFolderCount = $derived(selectedWorkspacePromptFolders.length)
   let screenRootFolderId = $state<string | null>(null)
   /** Mounted prompt-folder screen used for sidebar actions owned by that screen. */
   let promptFolderScreen = $state<PromptFolderScreenHandle | null>(null)

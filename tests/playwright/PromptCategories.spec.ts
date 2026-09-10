@@ -933,7 +933,7 @@ describe('Prompt categories', () => {
 
     await mainWindow.locator('[data-testid="prompt-folder-delete-button"]').click()
     await expect(
-      mainWindow.locator('[role="dialog"][aria-label="Delete Prompt Folder"]')
+      mainWindow.locator('[role="dialog"][aria-label="Delete Folder"]')
     ).toBeVisible()
   })
 
