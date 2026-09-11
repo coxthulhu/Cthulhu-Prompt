@@ -33,6 +33,10 @@ const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 const LIVE_COUNT_QUERY = 'cthulhu-live-find-count-marker'
 const LIVE_POSITION_QUERY = 'cthulhu-live-find-position-marker'
+/** Unique incremental query used to repeat sidebar reveals for one prompt-tree row. */
+const SMALL_SIDEBAR_QUERY = 'qzxv-sidebar-center-marker'
+/** Prompt kept away from both tree boundaries during the small-viewport regression. */
+const SMALL_SIDEBAR_TARGET_PROMPT_ID = 'small-sidebar-prompt-30'
 /** Unique query present only in the category-description find fixture. */
 const CATEGORY_DESCRIPTION_FIND_QUERY = 'cthulhu-category-description-find-marker'
 /** Stable category identity used by the category-description find fixture. */
@@ -313,6 +317,34 @@ hello second marker
 hello third marker`
         }
       ]
+    }
+  ])
+}
+
+/** Builds a long prompt tree with one incrementally searchable title near its middle. */
+const buildSmallSidebarFindWorkspace = (
+  workspacePath: string
+): Record<string, string | null> => {
+  /** Prompts surrounding the target prevent virtual-scroll boundary clamping. */
+  const prompts = Array.from({ length: 60 }, (_, index) => {
+    /** Stable one-based identity for the generated prompt row. */
+    const promptId = `small-sidebar-prompt-${index + 1}`
+    return {
+      id: promptId,
+      title:
+        promptId === SMALL_SIDEBAR_TARGET_PROMPT_ID
+          ? `Target ${SMALL_SIDEBAR_QUERY}`
+          : `Ordinary Entry ${index + 1}`,
+      promptText: 'Plain body text.'
+    }
+  })
+
+  return createWorkspaceWithFolders(workspacePath, [
+    {
+      folderName: 'Small Sidebar',
+      displayName: 'Small Sidebar',
+      promptFolderId: 'small-sidebar-folder',
+      prompts
     }
   ])
 }
@@ -1136,6 +1168,91 @@ describe('Prompt folder find dialog', () => {
     await expect
       .poll(() => getMonacoSelectionState(mainWindow, editorSelector), { timeout: 5000 })
       .toMatchObject({ selectedText: TYPING_ANCHOR_QUERY, startLineNumber: 3, startColumn: 1 })
+  })
+
+  test('centers repeated find reveals in a sidebar section too small for the scroll band', async ({
+    testSetup
+  }) => {
+    /** Isolated workspace path for the constrained sidebar find geometry. */
+    const workspacePath = '/ws/find-small-sidebar'
+    await testSetup.setupFilesystem(buildSmallSidebarFindWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+
+    /** Running application and navigation helpers for the real prompt-folder sidebar. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    /** UI setup result confirming that the generated workspace opened. */
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptFolders('Small Sidebar')
+
+    /** Active tree viewport constrained below the shared 200px scroll-band requirement. */
+    const activeViewport = mainWindow.locator(
+      '[data-testid="prompt-tree-active-virtual-window"]'
+    )
+    /** Backlog sash that shrinks the preceding Active section when dragged upward. */
+    const backlogSash = mainWindow.locator(
+      '[data-testid="sidebar-prompt-status-accordion-sash-backlog"]'
+    )
+    /** Accordion bounds used to drag Active to its 100px total minimum height. */
+    const accordion = mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')
+    /** Current sash geometry used as the pointer-drag origin. */
+    const backlogSashBox = await backlogSash.boundingBox()
+    /** Current accordion geometry used to target Active's minimum boundary. */
+    const accordionBox = await accordion.boundingBox()
+    expect(backlogSashBox).not.toBeNull()
+    expect(accordionBox).not.toBeNull()
+    await mainWindow.mouse.move(
+      backlogSashBox!.x + backlogSashBox!.width / 2,
+      backlogSashBox!.y + backlogSashBox!.height / 2
+    )
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(
+      backlogSashBox!.x + backlogSashBox!.width / 2,
+      accordionBox!.y + 100,
+      { steps: 10 }
+    )
+    await mainWindow.mouse.up()
+    await expect
+      .poll(async () => Math.abs((await activeViewport.boundingBox())!.height - 64))
+      .toBeLessThanOrEqual(2)
+
+    /** Find input whose incremental prefixes repeatedly select the same target prompt. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    /** Target tree row whose center must remain stable after every reveal request. */
+    const targetTreeRow = mainWindow.locator(
+      `[data-testid="prompt-tree-active-prompt-${SMALL_SIDEBAR_TARGET_PROMPT_ID}"]`
+    )
+    await mainWindow.keyboard.press('Control+F')
+    await expect(findInput).toBeVisible()
+
+    for (const character of SMALL_SIDEBAR_QUERY.slice(0, 4)) {
+      await findInput.pressSequentially(character)
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 1')
+      // Let the query-driven navigation and sidebar reveal effects finish before measuring.
+      await mainWindow.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          })
+      )
+      await expect
+        .poll(async () => {
+          /** Visible viewport geometry defining the desired center line. */
+          const viewportBox = await activeViewport.boundingBox()
+          /** Repeatedly revealed row geometry after the latest query update. */
+          const targetRowBox = await targetTreeRow.boundingBox()
+          if (!viewportBox || !targetRowBox) return Number.POSITIVE_INFINITY
+          /** Distance between the target row center and constrained viewport center. */
+          const centerDeltaPx =
+            targetRowBox.y +
+            targetRowBox.height / 2 -
+            (viewportBox.y + viewportBox.height / 2)
+          return Math.abs(centerDeltaPx)
+        })
+        .toBeLessThanOrEqual(2)
+    }
   })
 
   test('keeps the original typing anchor when the query is changed or cleared', async ({

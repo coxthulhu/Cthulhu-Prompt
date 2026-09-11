@@ -159,7 +159,11 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     if (!row) return
 
     const targetOffsetPx = row.offset + offsetPx
-    const bandPaddingPx = scrollType === 'minimal' ? scrollPaddingPx : windowBandPaddingPx
+    // Collapse a symmetric band that cannot fit in the viewport to its center point.
+    const bandPaddingPx = Math.min(
+      scrollType === 'minimal' ? scrollPaddingPx : windowBandPaddingPx,
+      viewportHeight / 2
+    )
     const bandTopPx = scrollTopPx + bandPaddingPx
     const bandBottomPx = scrollTopPx + viewportHeight - bandPaddingPx
 
