@@ -43,7 +43,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
-    "@tanstack/svelte-db": "^0.1.69",
+    "@tanstack/svelte-db": "^0.3.8",
     "better-sqlite3": "^12.9.0",
     "chokidar": "^5.0.0",
     "electron-updater": "^6.3.9",
