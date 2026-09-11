@@ -5,7 +5,7 @@ import {
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
+import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { PromptStatus } from '../../src/shared/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -310,6 +310,167 @@ describe('Home Screen', () => {
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
     })
 
+    test('migrates every unversioned workspace file once before opening', async ({
+      electronApp,
+      testSetup
+    }) => {
+      /** Version-zero workspace used to verify both compatibility migrations. */
+      const workspacePath = '/ws/unversioned-migration'
+      /** Current fixture structure downgraded below to the original workspace schema. */
+      const filesystem = createWorkspaceWithFolders(workspacePath, [
+        {
+          folderName: 'Examples',
+          displayName: 'Examples',
+          promptFolderId: 'migration-folder'
+        }
+      ])
+      /** Workspace metadata path whose omitted version must be interpreted as zero. */
+      const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
+      /** Unversioned metadata derived from the otherwise current fixture. */
+      const { schemaVersion: _schemaVersion, ...unversionedInfo } = JSON.parse(
+        filesystem[workspaceInfoPath]!
+      ) as { schemaVersion: number; workspaceId: string; workspaceName: string }
+      filesystem[workspaceInfoPath] = JSON.stringify(unversionedInfo, null, 2)
+      /** Unreferenced nested prompt carrying the retired singular template field. */
+      const promptPath = `${workspacePath}/Prompts/Orphan/Nested/Legacy.prompt.md`
+      filesystem[promptPath] = `---
+id: legacy-prompt
+createdAt: '2026-01-01T00:00:00.000Z'
+title: Legacy Prompt
+templateId: template-1
+status: Todo
+---
+Keep this body.`
+      /** Unreferenced nested category proving migration scans all matching workspace files. */
+      const categoryPath = `${workspacePath}/Templates/Orphan/Nested.category.json`
+      filesystem[categoryPath] = JSON.stringify({
+        id: 'orphan-category',
+        displayName: 'Orphan',
+        description: null
+      })
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([workspaceInfoPath])
+      /** Running application and UI helpers used to open the version-zero workspace twice. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+      /** Canonical workspace metadata committed only after all file migrations succeed. */
+      const migratedInfoText = await readTextFile(electronApp, workspaceInfoPath)
+      /** Canonical prompt source produced from the singular template reference. */
+      const migratedPromptText = await readTextFile(electronApp, promptPath)
+      /** Canonical unreferenced category data produced by the recursive scan. */
+      const migratedCategoryText = await readTextFile(electronApp, categoryPath)
+      expect(JSON.parse(migratedInfoText)).toEqual({
+        schemaVersion: 1,
+        workspaceId: unversionedInfo.workspaceId,
+        workspaceName: unversionedInfo.workspaceName
+      })
+      expect(migratedPromptText).toContain('templates:\n  - id: template-1')
+      expect(migratedPromptText).not.toContain('templateId:')
+      expect(migratedPromptText).toContain('Keep this body.')
+      expect(JSON.parse(migratedCategoryText)).toEqual({
+        id: 'orphan-category',
+        displayName: 'Orphan',
+        shortDescription: null,
+        description: null
+      })
+
+      await testHelpers.clearWorkspaceViaUI()
+      await testSetup.setupFileDialog([workspaceInfoPath])
+      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+      expect(await readTextFile(electronApp, workspaceInfoPath)).toBe(migratedInfoText)
+      expect(await readTextFile(electronApp, promptPath)).toBe(migratedPromptText)
+      expect(await readTextFile(electronApp, categoryPath)).toBe(migratedCategoryText)
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
+      ).toHaveCount(0)
+    })
+
+    test('accepts an explicit workspace schema version zero', async ({
+      electronApp,
+      testSetup
+    }) => {
+      /** Explicitly versioned legacy workspace accepted by the migration runner. */
+      const workspacePath = '/ws/explicit-zero-migration'
+      /** Empty version-zero workspace fixture requiring only the metadata migration. */
+      const filesystem = createWorkspaceWithFolders(workspacePath, [], {
+        settings: { schemaVersion: 0 }
+      })
+      /** Explicitly versioned workspace metadata selected through the open dialog. */
+      const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([workspaceInfoPath])
+      /** Workspace helpers used to verify explicit zero reaches the ready state. */
+      const { testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(1)
+    })
+
+    test('leaves schema version zero when a workspace migration file is malformed', async ({
+      electronApp,
+      testSetup
+    }) => {
+      /** Version-zero workspace that must fail before committing its schema version. */
+      const workspacePath = '/ws/failed-migration'
+      /** Legacy fixture containing one category the migration cannot parse. */
+      const filesystem = createWorkspaceWithFolders(workspacePath, [], {
+        settings: { schemaVersion: 0 }
+      })
+      /** Legacy prompt converted before the later category failure interrupts migration. */
+      const promptPath = `${workspacePath}/Prompts/Orphan/Legacy.prompt.md`
+      filesystem[promptPath] = `---
+id: partial-prompt
+createdAt: '2026-01-01T00:00:00.000Z'
+title: Partial Prompt
+templateId: template-1
+status: Todo
+---
+Keep this partial body.`
+      /** Malformed matching category encountered by the recursive migration scan. */
+      const categoryPath = `${workspacePath}/Prompts/Orphan/Broken.category.json`
+      filesystem[categoryPath] = '{ malformed'
+      /** Workspace metadata that must remain at zero after the failed step. */
+      const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
+
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([workspaceInfoPath])
+      /** Running application used to observe the failed open operation. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+      await mainWindow.click('[data-testid="open-workspace-button"]')
+
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
+      ).toBeVisible()
+      expect(await testHelpers.isWorkspaceReady()).toBe(false)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(0)
+      /** Prompt text already migrated before failure and retained for the retry assertion. */
+      const partiallyMigratedPromptText = await readTextFile(electronApp, promptPath)
+      expect(partiallyMigratedPromptText).toContain('templates:\n  - id: template-1')
+      expect(partiallyMigratedPromptText).not.toContain('templateId:')
+
+      await mainWindow
+        .locator(
+          '[role="dialog"][aria-label="Failed to Open Workspace"] button.cthulhuUiActionButton'
+        )
+        .click()
+      await testSetup.setupFileDialog([workspaceInfoPath])
+      await mainWindow.click('[data-testid="open-workspace-button"]')
+      await expect(
+        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
+      ).toBeVisible()
+      expect(await readTextFile(electronApp, promptPath)).toBe(partiallyMigratedPromptText)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(0)
+    })
+
     test('shows an error dialog when opening an empty directory', async ({ testSetup }) => {
       const { mainWindow } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-directory-open', autoSetup: false }
@@ -411,15 +572,29 @@ describe('Home Screen', () => {
     })
 
     test('shows create dialog for empty directory creation and completes setup', async ({
+      electronApp,
       testSetup
     }) => {
+      /** Running application and helpers used to create and inspect a new workspace. */
       const { testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-directory', autoSetup: false }
       })
 
+      /** Successful UI creation result for the new workspace. */
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
+      /** Created workspace root shown by the ready-state home screen. */
+      const workspacePath = await testHelpers.getDisplayedWorkspacePath()
+      expect(workspacePath).not.toBeNull()
+      expect(
+        JSON.parse(
+          await readTextFile(
+            electronApp,
+            `${workspacePath}\\TestWorkspace.cthulhuprompt.json`
+          )
+        ).schemaVersion
+      ).toBe(1)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {

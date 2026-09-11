@@ -53,15 +53,29 @@ import {
   serializePromptMarkdown,
   serializePromptTemplateMarkdown
 } from '../Persistence/PromptFrontmatter'
+import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/WorkspaceMigrations'
 
 export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile => {
-  const parsed = readJsonFile<WorkspaceInfoFile>(workspaceInfoPath)
+  const parsed = readJsonFile<unknown>(workspaceInfoPath)
 
-  if (!parsed.workspaceId || !parsed.workspaceName) {
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    Array.isArray(parsed) ||
+    Object.keys(parsed).length !== 3 ||
+    !Object.keys(parsed).every((key) =>
+      ['schemaVersion', 'workspaceId', 'workspaceName'].includes(key)
+    ) ||
+    (parsed as Record<string, unknown>).schemaVersion !== LATEST_WORKSPACE_SCHEMA_VERSION ||
+    typeof (parsed as Record<string, unknown>).workspaceId !== 'string' ||
+    (parsed as Record<string, unknown>).workspaceId === '' ||
+    typeof (parsed as Record<string, unknown>).workspaceName !== 'string' ||
+    (parsed as Record<string, unknown>).workspaceName === ''
+  ) {
     throw new Error('Invalid workspace info')
   }
 
-  return parsed
+  return parsed as WorkspaceInfoFile
 }
 
 const readPromptFolderInfo = (

@@ -108,12 +108,22 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     }
   ]),
   [`${WORKSPACE_PATH}/Prompts/Prompts/Categories/Code Review.category.json`]: JSON.stringify(
-    { id: PROMPT_CATEGORY_ID, displayName: 'Code Review', description: null },
+    {
+      id: PROMPT_CATEGORY_ID,
+      displayName: 'Code Review',
+      shortDescription: null,
+      description: null
+    },
     null,
     2
   ),
   [`${WORKSPACE_PATH}/Templates/Templates/Categories/Writing.category.json`]: JSON.stringify(
-    { id: TEMPLATE_CATEGORY_ID, displayName: 'Writing', description: null },
+    {
+      id: TEMPLATE_CATEGORY_ID,
+      displayName: 'Writing',
+      shortDescription: null,
+      description: null
+    },
     null,
     2
   ),
@@ -176,7 +186,12 @@ const addSecondPromptCategory = (filesystem: Record<string, string | null>): str
   }
 
   filesystem[categoryPath] = JSON.stringify(
-    { id: SECOND_PROMPT_CATEGORY_ID, displayName: 'Second', description: null },
+    {
+      id: SECOND_PROMPT_CATEGORY_ID,
+      displayName: 'Second',
+      shortDescription: null,
+      description: null
+    },
     null,
     2
   )
@@ -710,7 +725,12 @@ describe('Prompt categories', () => {
     const orderPath =
       `${WORKSPACE_PATH}/Prompts/CategoryOnly/Active/_FolderInfo/FolderOrder.json`
     filesystem[categoryPath] = JSON.stringify(
-      { id: PROMPT_CATEGORY_ID, displayName: 'Code Review', description: null },
+      {
+        id: PROMPT_CATEGORY_ID,
+        displayName: 'Code Review',
+        shortDescription: null,
+        description: null
+      },
       null,
       2
     )
@@ -795,7 +815,12 @@ describe('Prompt categories', () => {
     ])
     filesystem[`${WORKSPACE_PATH}/Prompts/Empty/Categories/Existing.category.json`] =
       JSON.stringify(
-        { id: EXISTING_CATEGORY_ID, displayName: 'Existing', description: null },
+        {
+          id: EXISTING_CATEGORY_ID,
+          displayName: 'Existing',
+          shortDescription: null,
+          description: null
+        },
         null,
         2
       )
@@ -1313,7 +1338,12 @@ describe('Prompt categories', () => {
     }
     filesystem[`${WORKSPACE_PATH}/Prompts/Source/Categories/Code Review.category.json`] =
       JSON.stringify(
-        { id: PROMPT_CATEGORY_ID, displayName: 'Code Review', description: null },
+        {
+          id: PROMPT_CATEGORY_ID,
+          displayName: 'Code Review',
+          shortDescription: null,
+          description: null
+        },
         null,
         2
       )
@@ -1334,7 +1364,12 @@ describe('Prompt categories', () => {
     filesystem[
       `${WORKSPACE_PATH}/Templates/TemplateSource/Categories/Writing.category.json`
     ] = JSON.stringify(
-      { id: TEMPLATE_CATEGORY_ID, displayName: 'Writing', description: null },
+      {
+        id: TEMPLATE_CATEGORY_ID,
+        displayName: 'Writing',
+        shortDescription: null,
+        description: null
+      },
       null,
       2
     )

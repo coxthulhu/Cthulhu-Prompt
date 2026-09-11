@@ -33,10 +33,15 @@ describe('categories', () => {
     expect(hasCategoryDisplayNameConflict(categories, 'Documentation')).toBe(false)
   })
 
-  it('parses current and legacy category files with normalized short descriptions', () => {
+  it('parses current category files with normalized short descriptions', () => {
     expect(
       parseCategoryJson(
-        JSON.stringify({ id: 'category-1', displayName: 'Code Review', description: null })
+        JSON.stringify({
+          id: 'category-1',
+          displayName: 'Code Review',
+          shortDescription: null,
+          description: null
+        })
       )
     ).toEqual(categories[0])
     expect(
@@ -51,7 +56,7 @@ describe('categories', () => {
     ).toEqual(categories[1])
     expect(
       parseCategoryJson(
-        JSON.stringify({ id: 'category-3', displayName: 'Extra', description: null, extra: true })
+        JSON.stringify({ id: 'category-3', displayName: 'Extra', description: null })
       )
     ).toBeNull()
   })

@@ -11,6 +11,7 @@ export default [
       'out/**',
       'reporters/**',
       '.vscode/**',
+      '.agents/**',
       '.git/**',
       '.gitignore',
       '.eslintignore',

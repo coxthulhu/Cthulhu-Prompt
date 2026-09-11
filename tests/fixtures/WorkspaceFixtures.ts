@@ -337,7 +337,7 @@ export function createBasicWorkspace(
     typeof settings.workspaceId === 'string'
       ? settings.workspaceId
       : createDeterministicId(workspacePath)
-  const settingsPayload = { ...settings, workspaceId }
+  const settingsPayload = { schemaVersion: 1, ...settings, workspaceId }
   const workspaceName =
     typeof settings.workspaceName === 'string'
       ? settings.workspaceName
@@ -473,6 +473,7 @@ export function createWorkspaceWithTemplateFolders(
         {
           id: categoryFixture.categoryId,
           displayName: categoryFixture.displayName,
+          shortDescription: null,
           description: categoryFixture.description
         },
         null,
@@ -596,7 +597,7 @@ export function setupWorkspaceScenario(
         }
       ])
       structure[`${workspacePath}/Prompts/Main/Categories/Category.category.json`] = JSON.stringify(
-        { id: categoryId, displayName: 'Category', description: '' },
+        { id: categoryId, displayName: 'Category', shortDescription: null, description: '' },
         null,
         2
       )
@@ -670,6 +671,7 @@ export function setupWorkspaceScenario(
           {
             id: primaryCategoryId,
             displayName: 'Primary',
+            shortDescription: null,
             description: 'Primary category description.'
           },
           null,
@@ -677,7 +679,7 @@ export function setupWorkspaceScenario(
         )
       structure[`${workspacePath}/Prompts/Hierarchy/Categories/Empty.category.json`] =
         JSON.stringify(
-          { id: emptyCategoryId, displayName: 'Empty', description: null },
+          { id: emptyCategoryId, displayName: 'Empty', shortDescription: null, description: null },
           null,
           2
         )
@@ -718,7 +720,7 @@ export function setupWorkspaceScenario(
       ])
       structure[`${workspacePath}/Prompts/${rootName}/Categories/Category.category.json`] =
         JSON.stringify(
-          { id: categoryId, displayName: 'Category', description: null },
+          { id: categoryId, displayName: 'Category', shortDescription: null, description: null },
           null,
           2
         )
@@ -763,13 +765,13 @@ export function setupWorkspaceScenario(
       ])
       structure[`${workspacePath}/Prompts/Controls/Categories/Primary.category.json`] =
         JSON.stringify(
-          { id: primaryCategoryId, displayName: 'Primary', description: null },
+          { id: primaryCategoryId, displayName: 'Primary', shortDescription: null, description: null },
           null,
           2
         )
       structure[`${workspacePath}/Prompts/Controls/Categories/Secondary.category.json`] =
         JSON.stringify(
-          { id: secondaryCategoryId, displayName: 'Secondary', description: null },
+          { id: secondaryCategoryId, displayName: 'Secondary', shortDescription: null, description: null },
           null,
           2
         )
@@ -1070,6 +1072,7 @@ export function createCorruptedWorkspace(
     case 'missing-prompts':
       structure[getWorkspaceInfoPath(workspacePath)] = JSON.stringify(
         {
+          schemaVersion: 1,
           workspaceId: createDeterministicId(workspacePath),
           workspaceName: getWorkspaceInfoPath(workspacePath)
             .split('/')

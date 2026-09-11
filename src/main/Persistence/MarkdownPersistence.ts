@@ -139,7 +139,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     const fs = getFs()
     if (!fs.existsSync(filePaths.markdownPath)) return null
 
-    // Source text is retained so kind-specific startup migrations can request a rewrite.
+    // Source text is retained so kind-specific normalization can request a rewrite.
     const fileText = fs.readFileSync(filePaths.markdownPath, 'utf8')
     const loadedData = parseMarkdown(fileText)
     if (!loadedData) return null

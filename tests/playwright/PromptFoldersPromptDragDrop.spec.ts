@@ -392,6 +392,7 @@ const buildCategoryScrollWorkspace = (): Record<string, string | null> => {
     {
       id: CATEGORY_SCROLL_CATEGORY_ID,
       displayName: 'Destination',
+      shortDescription: null,
       description: null
     },
     null,

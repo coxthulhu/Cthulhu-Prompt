@@ -169,10 +169,19 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
       folderId: EMPTY_TEMPLATE_FOLDER_ID
     }
   ])
+  /** Workspace metadata path downgraded because this fixture contains legacy prompt fields. */
+  const workspaceInfoPath = getWorkspaceInfoPath(WORKSPACE_PATH)
+  /** Current fixture metadata copied with an explicit version-zero migration marker. */
+  const workspaceInfo = JSON.parse(promptWorkspace[workspaceInfoPath]!) as {
+    schemaVersion: number
+    workspaceId: string
+    workspaceName: string
+  }
 
   return {
     ...promptWorkspace,
     ...templateWorkspace,
+    [workspaceInfoPath]: JSON.stringify({ ...workspaceInfo, schemaVersion: 0 }, null, 2),
     [STALE_PROMPT_PATH]: `---
 id: stale-template-prompt
 createdAt: '2026-01-01T00:00:00.000Z'

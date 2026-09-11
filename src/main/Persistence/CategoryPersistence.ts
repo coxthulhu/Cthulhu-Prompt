@@ -44,33 +44,13 @@ export const isCategory = (value: unknown): value is Category => {
   )
 }
 
-/** Parses current or legacy category data into the current persisted shape. */
+/** Parses current category data into its normalized persisted shape. */
 const parseCategoryValue = (value: unknown): Category | null => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-
-  /** Untrusted category fields accepted with only the legacy short-description omission. */
-  const record = value as Record<string, unknown>
-  /** Whether the persisted record already contains the current short-description field. */
-  const hasShortDescription = Object.hasOwn(record, 'shortDescription')
-  if (
-    Object.keys(record).length !== (hasShortDescription ? 4 : 3) ||
-    typeof record.id !== 'string' ||
-    typeof record.displayName !== 'string' ||
-    (hasShortDescription &&
-      record.shortDescription !== null &&
-      typeof record.shortDescription !== 'string') ||
-    (typeof record.description !== 'string' && record.description !== null)
-  ) {
-    return null
-  }
+  if (!isCategory(value)) return null
 
   return {
-    id: record.id,
-    displayName: record.displayName,
-    shortDescription: normalizeCategoryShortDescription(
-      hasShortDescription ? (record.shortDescription as string | null) : null
-    ),
-    description: record.description
+    ...value,
+    shortDescription: normalizeCategoryShortDescription(value.shortDescription)
   }
 }
 

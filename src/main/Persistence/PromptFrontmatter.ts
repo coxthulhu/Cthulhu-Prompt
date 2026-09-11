@@ -9,13 +9,8 @@ import {
 import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
 import { normalizePromptTitle } from '@shared/promptFallbackTitle'
 
-// Current and legacy template fields accepted while workspace startup migrates prompt files.
-type PromptSelectionFrontmatterData =
-  | { templates?: PromptTemplateReference[] | null; templateId?: never }
-  | { templates?: never; templateId?: string | null }
-
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'category'> &
-  PromptSelectionFrontmatterData &
+  { templates?: PromptTemplateReference[] | null } &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   {
     status: PromptStatus
@@ -40,14 +35,12 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   const hasStatus = keys.includes('status')
   const hasFinalizedAt = keys.includes('finalizedAt')
   const hasTemplates = keys.includes('templates')
-  const hasLegacyTemplateId = keys.includes('templateId')
   const hasCategory = keys.includes('category')
   const allowedKeys = new Set([
     'id',
     'createdAt',
     hasTitle ? 'title' : 'fallbackTitle',
     ...(hasTemplates ? ['templates'] : []),
-    ...(hasLegacyTemplateId ? ['templateId'] : []),
     ...(hasCategory ? ['category'] : []),
     'status',
     ...(hasFinalizedAt ? ['finalizedAt'] : [])
@@ -57,8 +50,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
     !keys.includes('id') ||
     !keys.includes('createdAt') ||
     !hasStatus ||
-    hasTitle === hasFallbackTitle ||
-    (hasTemplates && hasLegacyTemplateId)
+    hasTitle === hasFallbackTitle
   ) {
     return false
   }
@@ -86,9 +78,6 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
             Object.keys(template).length === 1 &&
             typeof (template as Record<string, unknown>).id === 'string'
         ))) &&
-    (!hasLegacyTemplateId ||
-      frontmatter.templateId === null ||
-      typeof frontmatter.templateId === 'string') &&
     (hasTitle
       ? typeof frontmatter.title === 'string'
       : typeof frontmatter.fallbackTitle === 'string') &&
@@ -186,11 +175,7 @@ export const parsePromptMarkdown = (
     modifiedAt: timestamp,
     ...(data.category !== undefined ? { category: data.category } : {}),
     promptText: content,
-    ...(data.templates !== undefined
-      ? { templates: data.templates }
-      : data.templateId !== undefined
-        ? { templates: data.templateId === null ? null : [{ id: data.templateId }] }
-        : {}),
+    ...(data.templates !== undefined ? { templates: data.templates } : {}),
     status: data.status,
     ...(isFinalPromptStatus(data.status) ? { finalizedAt: data.finalizedAt } : {})
   }))
@@ -208,21 +193,6 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
       : {})
   }
   return serializeMarkdownContent(metadata, prompt.promptText)
-}
-
-// Detects legacy prompt template metadata so startup rewrites only files that need migration.
-export const promptMarkdownHasLegacyTemplateId = (fileText: string): boolean => {
-  try {
-    const parsed = matter(fileText, {})
-    return (
-      typeof parsed.data === 'object' &&
-      parsed.data !== null &&
-      !Array.isArray(parsed.data) &&
-      Object.keys(parsed.data).includes('templateId')
-    )
-  } catch {
-    return false
-  }
 }
 
 export const parsePromptTemplateMarkdown = (

@@ -1,4 +1,6 @@
 export type WorkspaceInfoFile = {
+  /** Version governing this file and every persisted file in its workspace. */
+  schemaVersion: number
   workspaceId: string
   workspaceName: string
 }

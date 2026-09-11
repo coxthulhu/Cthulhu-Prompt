@@ -12,6 +12,7 @@ import {
   writeJsonFile
 } from './FilePersistenceHelpers'
 import { resolveWorkspaceFolderOrderPath } from './PromptPersistencePaths'
+import { LATEST_WORKSPACE_SCHEMA_VERSION } from './WorkspaceMigrations'
 
 export type WorkspacePersistenceFields = {
   workspacePath: string
@@ -44,6 +45,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
 
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, {
+      schemaVersion: LATEST_WORKSPACE_SCHEMA_VERSION,
       workspaceId: after.data.id,
       workspaceName: after.data.workspaceName
     })

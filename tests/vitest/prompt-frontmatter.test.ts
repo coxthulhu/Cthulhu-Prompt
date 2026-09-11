@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { PromptStatus } from '@shared/Prompt'
 import {
   parsePromptMarkdown,
-  promptMarkdownHasLegacyTemplateId,
   serializePromptMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
 
@@ -68,7 +67,8 @@ describe('prompt frontmatter', () => {
     expect(parsePromptMarkdown(serialized)).not.toHaveProperty('category')
   })
 
-  it('parses legacy template ids into the list model for startup migration', () => {
+  it('rejects legacy template ids outside workspace migration', () => {
+    /** Version-zero prompt source that must be upgraded before current parsing. */
     const legacyMarkdown = `---
 id: prompt-4
 createdAt: '2026-07-26T12:00:00.000Z'
@@ -78,15 +78,7 @@ status: Todo
 ---
 Legacy text`
 
-    expect(parsePromptMarkdown(legacyMarkdown)).toMatchObject({
-      templates: [{ id: 'template-1' }]
-    })
-    expect(promptMarkdownHasLegacyTemplateId(legacyMarkdown)).toBe(true)
-    expect(
-      promptMarkdownHasLegacyTemplateId(
-        serializePromptMarkdown(parsePromptMarkdown(legacyMarkdown)!)
-      )
-    ).toBe(false)
+    expect(parsePromptMarkdown(legacyMarkdown)).toBeNull()
   })
 
   it('rejects obsolete completion timestamp metadata', () => {

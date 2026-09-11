@@ -33,7 +33,7 @@ const createBacklogWorkspace = () => {
   }])
   for (const categoryId of ['alpha', 'beta']) {
     filesystem[`${ROOT_PATH}/Categories/${categoryId}.category.json`] = JSON.stringify({
-      id: categoryId, displayName: categoryId, description: null
+      id: categoryId, displayName: categoryId, shortDescription: null, description: null
     })
   }
   filesystem[`${ROOT_PATH}/Active/_FolderInfo/FolderOrder.json`] = JSON.stringify({

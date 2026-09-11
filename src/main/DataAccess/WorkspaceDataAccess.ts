@@ -32,6 +32,7 @@ import {
   resolvePromptFolderPath,
   resolveWorkspaceFolderOrderPath
 } from '../Persistence/PromptPersistencePaths'
+import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/WorkspaceMigrations'
 
 const EXAMPLE_FOLDER_NAME = 'MyPrompts'
 const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
@@ -60,7 +61,15 @@ const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string):
 const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): void => {
   const fs = getFs()
   const workspaceInfoPath = resolveWorkspaceInfoPath(workspacePath, workspaceName)
-  const content = JSON.stringify({ workspaceId: compactGuid(randomUUID()), workspaceName }, null, 2)
+  const content = JSON.stringify(
+    {
+      schemaVersion: LATEST_WORKSPACE_SCHEMA_VERSION,
+      workspaceId: compactGuid(randomUUID()),
+      workspaceName
+    },
+    null,
+    2
+  )
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
 }
 

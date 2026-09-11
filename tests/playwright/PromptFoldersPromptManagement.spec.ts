@@ -640,6 +640,7 @@ const buildStatusDragCategoryWorkspace = () => {
     {
       id: STATUS_DRAG_PRIMARY_CATEGORY_ID,
       displayName: 'Primary',
+      shortDescription: null,
       description: null
     },
     null,
@@ -651,6 +652,7 @@ const buildStatusDragCategoryWorkspace = () => {
     {
       id: STATUS_DRAG_SECONDARY_CATEGORY_ID,
       displayName: 'Secondary',
+      shortDescription: null,
       description: null
     },
     null,

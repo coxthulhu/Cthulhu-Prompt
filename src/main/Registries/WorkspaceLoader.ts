@@ -35,6 +35,7 @@ import {
   resolvePromptStatusFolderName,
   resolveWorkspacePathFromInfoPath
 } from '../Persistence/PromptPersistencePaths'
+import { applyWorkspaceMigrations } from '../Persistence/WorkspaceMigrations'
 
 type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
 
@@ -282,6 +283,7 @@ export const loadWorkspaceByPath = async (
       return { success: false, error: 'Invalid workspace path' }
     }
 
+    applyWorkspaceMigrations(workspaceInfoPath)
     const workspaceId = await loadWorkspaceDataIntoNewDataLayer(workspaceInfoPath)
     const payload = buildWorkspaceLoadPayloadFromData(workspaceId)
 

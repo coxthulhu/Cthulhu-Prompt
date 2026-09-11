@@ -8,7 +8,6 @@ import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
 import {
   parsePromptMarkdown,
-  promptMarkdownHasLegacyTemplateId,
   serializePromptMarkdown
 } from './PromptFrontmatter'
 import {
@@ -79,7 +78,6 @@ export const promptPersistence = createMarkdownPersistence<PromptPersisted>({
   serializeMarkdown: serializePromptMarkdown,
   normalizeLoadedData: (prompt, folderPath) =>
     normalizePromptStatusForFolder(prompt, folderPath),
-  shouldRewriteNormalizedData: (loaded, normalized, fileText) =>
-    !hasSameStatusMetadata(loaded, normalized) ||
-    promptMarkdownHasLegacyTemplateId(fileText)
+  shouldRewriteNormalizedData: (loaded, normalized) =>
+    !hasSameStatusMetadata(loaded, normalized)
 })

@@ -71,7 +71,12 @@ describe('FolderOrder repair', () => {
     const categoryId = 'category-existing'
     vol.fromJSON({
       [`${WORKSPACE_PATH}/Prompts/${ROOT_FOLDER_NAME}/Categories/Existing.category.json`]:
-        JSON.stringify({ id: categoryId, displayName: 'Existing', description: null }),
+        JSON.stringify({
+          id: categoryId,
+          displayName: 'Existing',
+          shortDescription: null,
+          description: null
+        }),
       [`${ACTIVE_PATH}/Zebra.prompt.md`]: serializePromptMarkdown(
         createPrompt('prompt-zebra', 'Zebra', categoryId)
       ),
@@ -125,9 +130,19 @@ describe('FolderOrder repair', () => {
     const newCategoryId = 'category-new'
     vol.fromJSON({
       [`${WORKSPACE_PATH}/Prompts/${ROOT_FOLDER_NAME}/Categories/A New.category.json`]:
-        JSON.stringify({ id: newCategoryId, displayName: 'A New', description: null }),
+        JSON.stringify({
+          id: newCategoryId,
+          displayName: 'A New',
+          shortDescription: null,
+          description: null
+        }),
       [`${WORKSPACE_PATH}/Prompts/${ROOT_FOLDER_NAME}/Categories/B Retained.category.json`]:
-        JSON.stringify({ id: retainedCategoryId, displayName: 'B Retained', description: null }),
+        JSON.stringify({
+          id: retainedCategoryId,
+          displayName: 'B Retained',
+          shortDescription: null,
+          description: null
+        }),
       [`${ACTIVE_PATH}/Assigned.prompt.md`]: serializePromptMarkdown(
         createPrompt('prompt-assigned', 'Assigned')
       ),
@@ -181,6 +196,7 @@ describe('FolderOrder repair', () => {
       [`${TEMPLATE_ROOT_PATH}/Categories/Retained.category.json`]: JSON.stringify({
         id: retainedCategoryId,
         displayName: 'Retained',
+        shortDescription: null,
         description: null
       }),
       [`${TEMPLATE_ROOT_PATH}/Direct.template.md`]: serializePromptTemplateMarkdown(

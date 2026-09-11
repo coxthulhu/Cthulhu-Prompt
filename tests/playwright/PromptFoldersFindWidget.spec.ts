@@ -423,6 +423,7 @@ const buildCategoryDescriptionFindWorkspace = (
     {
       id: CATEGORY_DESCRIPTION_FIND_ID,
       displayName: 'Searchable',
+      shortDescription: null,
       description: `Expanded description: ${CATEGORY_DESCRIPTION_FIND_QUERY}`
     },
     null,
