@@ -26,6 +26,10 @@
     overflowWidgetsDomNode: HTMLElement
     rowId: string
     sizingConfig: PromptEditorSizingConfig
+    /** Optional exact editor height that disables content-based vertical resizing. */
+    fixedHeightPx?: number
+    /** Accessible name announced for the Monaco text field. */
+    ariaLabel?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onChange?: (
       value: string,
@@ -58,6 +62,8 @@
     overflowWidgetsDomNode,
     rowId,
     sizingConfig,
+    fixedHeightPx,
+    ariaLabel,
     scrollToWithinWindowBand,
     onChange,
     onBlur,
@@ -73,7 +79,10 @@
 
   const systemSettings = getSystemSettingsContext()
   const showLineNumbers = $derived(systemSettings.showLineNumbers)
-  const minMonacoHeightPx = $derived(getMinMonacoHeightPx(sizingConfig))
+  /** Initial editor height from either the fixed override or configured minimum lines. */
+  const initialMonacoHeightPx = $derived(
+    fixedHeightPx ?? getMinMonacoHeightPx(sizingConfig)
+  )
 
   let container: HTMLDivElement | null = null
   let editor: monaco.editor.IStandaloneCodeEditor | null = null
@@ -90,6 +99,8 @@
   let lastAppliedPromptFontSize: number | null = null
   let lastAppliedPromptEditorMinLines: number | null = null
   let lastAppliedPromptEditorMaxLines: number | null = null
+  /** Last fixed-height override applied to the active Monaco layout. */
+  let lastAppliedFixedHeightPx: number | null | undefined = null
   let lastAppliedShowLineNumbers: boolean | null = null
   let suppressCursorAutoScrollDuringRestore = $state(false)
 
@@ -113,6 +124,7 @@
 
   const measureContentHeightPx = (): number => {
     if (!editor) return monacoHeightPx
+    if (fixedHeightPx !== undefined) return fixedHeightPx
     return clampMonacoHeightPx(Math.ceil(editor.getContentHeight()), sizingConfig)
   }
 
@@ -421,7 +433,7 @@
   // Side effect: keep the initial Monaco height aligned with the current font size.
   $effect(() => {
     if (editor) return
-    monacoHeightPx = minMonacoHeightPx
+    monacoHeightPx = initialMonacoHeightPx
   })
 
   // Side effect: create Monaco once the container is ready; dispose on unmount.
@@ -444,6 +456,7 @@
 
       const nextEditor = monaco.editor.create(targetContainer, {
         model: modelReference.object.textEditorModel,
+        ariaLabel,
         automaticLayout: false,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
@@ -460,7 +473,7 @@
         smoothScrolling: false,
         renderLineHighlightOnlyWhenFocus: true,
         overflowWidgetsDomNode,
-        dimension: { width: measuredWidthPx, height: minMonacoHeightPx }
+        dimension: { width: measuredWidthPx, height: initialMonacoHeightPx }
       })
 
       editor = nextEditor
@@ -539,12 +552,15 @@
     const fontSizeChanged = sizingConfig.fontSize !== lastAppliedPromptFontSize
     const minLinesChanged = sizingConfig.minLines !== lastAppliedPromptEditorMinLines
     const maxLinesChanged = sizingConfig.maxLines !== lastAppliedPromptEditorMaxLines
+    /** Whether the caller changed the exact-height layout override. */
+    const fixedHeightChanged = fixedHeightPx !== lastAppliedFixedHeightPx
     const lineNumbersChanged = showLineNumbers !== lastAppliedShowLineNumbers
     if (
       !editorChanged &&
       !fontSizeChanged &&
       !minLinesChanged &&
       !maxLinesChanged &&
+      !fixedHeightChanged &&
       !lineNumbersChanged
     ) {
       return
@@ -554,6 +570,7 @@
     lastAppliedPromptFontSize = sizingConfig.fontSize
     lastAppliedPromptEditorMinLines = sizingConfig.minLines
     lastAppliedPromptEditorMaxLines = sizingConfig.maxLines
+    lastAppliedFixedHeightPx = fixedHeightPx
     lastAppliedShowLineNumbers = showLineNumbers
 
     if (editorChanged || fontSizeChanged || lineNumbersChanged) {
@@ -615,5 +632,5 @@
 <div
   bind:this={container}
   class={className}
-  style={`min-height:${minMonacoHeightPx}px; position: relative;`}
+  style={`min-height:${initialMonacoHeightPx}px;${fixedHeightPx === undefined ? '' : `height:${fixedHeightPx}px;`} position: relative;`}
 ></div>

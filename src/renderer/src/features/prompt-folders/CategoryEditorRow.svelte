@@ -50,7 +50,6 @@
     onDetailsSectionToggle: () => void
     onContentSectionToggle: () => void
     onDeleteCategory: () => void
-    onRenameCategory: () => void
     onDescriptionChange: (text: string, measurement: TextMeasurement) => void
     onDescriptionPresenceChange: (isPresent: boolean) => void
   }
@@ -81,7 +80,6 @@
     onDetailsSectionToggle,
     onContentSectionToggle,
     onDeleteCategory,
-    onRenameCategory,
     onDescriptionChange,
     onDescriptionPresenceChange
   }: Props = $props()
@@ -111,10 +109,9 @@
   /** Delete workflow exposed by the mounted category description editor. */
   let requestDescriptionDelete: (() => void) | null = null
 
-  /** Opens category rename without allowing the title bar to handle the click. */
+  /** Keeps the future category-management trigger inactive without selecting the row. */
   const handlePencilClick = (event: MouseEvent) => {
     event.stopPropagation()
-    onRenameCategory()
   }
 
   /** Stops rename-button presses from activating the category title bar. */

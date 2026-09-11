@@ -138,7 +138,8 @@ describe('category mutations', () => {
     const categoryId = await createCategory(
       ROOT_FOLDER_ID,
       'Created',
-      '  Created category summary.  '
+      '  Created category summary.  ',
+      '# Created\n\nCategory guidance.'
     )
     /** Domain mutation options registered by category creation. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
@@ -165,7 +166,7 @@ describe('category mutations', () => {
       id: categoryId,
       displayName: 'Created',
       shortDescription: 'Created category summary.',
-      description: null
+      description: '# Created\n\nCategory guidance.'
     })
 
     /** IPC invocation spy used to inspect the generic domain request. */
@@ -177,7 +178,8 @@ describe('category mutations', () => {
           categoryId,
           promptFolderId: ROOT_FOLDER_ID,
           displayName: 'Created',
-          shortDescription: '  Created category summary.  '
+          shortDescription: '  Created category summary.  ',
+          description: '# Created\n\nCategory guidance.'
         },
         expectations: [
           {
@@ -221,7 +223,7 @@ describe('category mutations', () => {
             id: categoryId,
             displayName: 'Created',
             shortDescription: 'Created category summary.',
-            description: null
+            description: '# Created\n\nCategory guidance.'
           }
         }
       ]

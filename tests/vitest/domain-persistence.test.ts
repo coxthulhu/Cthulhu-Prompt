@@ -507,7 +507,8 @@ describe('domain persistence planning', () => {
       categoryId: 'created',
       promptFolderId: root.id,
       displayName: 'Same*',
-      shortDescription: null
+      shortDescription: null,
+      description: null
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return

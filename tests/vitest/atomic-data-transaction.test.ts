@@ -438,7 +438,8 @@ describe('atomic data transaction', () => {
       categoryId: 'created',
       promptFolderId: promptFolder.id,
       displayName: 'Created',
-      shortDescription: null
+      shortDescription: null,
+      description: null
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return

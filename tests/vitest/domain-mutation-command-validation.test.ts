@@ -87,9 +87,23 @@ describe('domain mutation command validation', () => {
       categoryId: 'category',
       promptFolderId: 'root',
       displayName: 'Category',
-      shortDescription: null
+      shortDescription: null,
+      description: 'Category guidance.'
     }
     expect(parseCreateCategoryDomainCommand(command)).toEqual(command)
+    expect(parseCreateCategoryDomainCommand({ ...command, description: null })).toEqual({
+      ...command,
+      description: null
+    })
+    expect(
+      parseCreateCategoryDomainCommand({
+        categoryId: 'category',
+        promptFolderId: 'root',
+        displayName: 'Category',
+        shortDescription: null
+      })
+    ).toBeNull()
+    expect(parseCreateCategoryDomainCommand({ ...command, description: 1 })).toBeNull()
   })
 
   it('accepts category-details and reorder commands', () => {

@@ -41,14 +41,21 @@ export const setCategoryDescriptionWithAutosave = (
 export const createCategory = async (
   promptFolderId: string,
   displayName: string,
-  shortDescription: string | null = null
+  shortDescription: string | null = null,
+  description: string | null = null
 ): Promise<string> => {
   const promptFolder = promptFolderCollection.get(promptFolderId)
   if (!promptFolder) throw new Error('Root prompt folder not loaded')
   /** Stable client-generated identity used by renderer and main insertion projections. */
   const categoryId = compactGuid(crypto.randomUUID())
   /** Shared command projected optimistically and persisted through domain transitions. */
-  const command = { categoryId, promptFolderId, displayName, shortDescription }
+  const command = {
+    categoryId,
+    promptFolderId,
+    displayName,
+    shortDescription,
+    description
+  }
 
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planCreateCategoryDomainMutation },

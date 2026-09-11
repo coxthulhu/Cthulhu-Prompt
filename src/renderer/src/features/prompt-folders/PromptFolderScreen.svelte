@@ -17,8 +17,7 @@
   import {
     createCategory,
     deleteCategory,
-    moveCategory,
-    updateCategoryDetails
+    moveCategory
   } from '@renderer/data/Mutations/CategoryMutations'
   import { setCategoryDescriptionWithAutosave } from '@renderer/data/Mutations/CategoryMutations'
   import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
@@ -61,10 +60,6 @@
   let renamePromptFolderId = $state<string | null>(null)
   /** Imperative handle for opening category creation from the root header. */
   let createCategoryDialog = $state<{ openDialog: () => void } | null>(null)
-  /** Imperative handle for opening category rename. */
-  let renameCategoryDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
-  /** Category currently selected for rename. */
-  let renameCategoryId = $state<string | null>(null)
   /** Category currently awaiting deletion confirmation. */
   let deleteCategoryId = $state<string | null>(null)
   let deletePromptFolderId = $state<string | null>(null)
@@ -107,39 +102,19 @@
   }
 
   /** Persists one validated root-owned category. */
-  const handleCreateCategory = async (displayName: string): Promise<boolean> => {
+  const handleCreateCategory = async (
+    displayName: string,
+    shortDescription: string | null,
+    description: string | null
+  ): Promise<boolean> => {
     if (!controller.screenRootFolder) return false
     return await runIpcBestEffort(
       async () => {
-        await createCategory(controller.screenRootFolderId, displayName)
-        return true
-      },
-      () => false
-    )
-  }
-
-  /** Category currently selected for rename. */
-  const renameCategoryTarget = $derived(
-    controller.categories.find((category) => category.id === renameCategoryId) ?? null
-  )
-
-  /** Opens category rename with its current display name. */
-  const openRenameCategoryDialog = (categoryId: string): void => {
-    const category = controller.categories.find((candidate) => candidate.id === categoryId)
-    if (!category) return
-    renameCategoryId = categoryId
-    renameCategoryDialog?.openDialog(category.displayName)
-  }
-
-  /** Persists a validated category display name. */
-  const handleRenameCategory = async (displayName: string): Promise<boolean> => {
-    if (!renameCategoryTarget) return false
-    return await runIpcBestEffort(
-      async () => {
-        await updateCategoryDetails(
-          renameCategoryTarget.id,
+        await createCategory(
+          controller.screenRootFolderId,
           displayName,
-          renameCategoryTarget.shortDescription
+          shortDescription,
+          description
         )
         return true
       },
@@ -347,7 +322,6 @@
             onDetailsSectionToggle={controller.toggleDetailsSectionExpanded}
             onContentSectionToggle={controller.toggleContentSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}
-            onRenameCategory={openRenameCategoryDialog}
             onDeleteCategory={(categoryId) => {
               deleteCategoryId = categoryId
             }}
@@ -373,20 +347,6 @@
   categories={controller.categories}
   isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
   onsubmit={handleCreateCategory}
-/>
-
-<CreateCategoryDialog
-  bind:this={renameCategoryDialog}
-  categories={controller.categories}
-  excludedCategoryId={renameCategoryId}
-  isWorkspaceReady={controller.workspaceId !== null && renameCategoryTarget !== null}
-  dialogTitle="Rename Category"
-  dialogSubtitle="Choose a new name for this category."
-  submitLabel="Rename Category"
-  submittingLabel="Renaming..."
-  failureMessage="Failed to rename category. Please try again."
-  testIdPrefix="rename"
-  onsubmit={handleRenameCategory}
 />
 
 <PromptFolderNameDialog

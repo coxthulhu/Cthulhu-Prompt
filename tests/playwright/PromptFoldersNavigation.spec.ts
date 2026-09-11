@@ -399,35 +399,38 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       categoryEditor.locator('[data-testid="category-drag-handle"]')
     ).toBeVisible()
-    await expect(
-      categoryEditor.locator('[data-testid="category-editor-content-toggle"]')
-    ).toHaveAttribute('aria-expanded', 'true')
+    /** Content expansion state that must remain unchanged by the inactive pencil. */
+    const categoryContentToggle = categoryEditor.locator(
+      '[data-testid="category-editor-content-toggle"]'
+    )
+    /** Settings expansion state that must remain unchanged by the inactive pencil. */
+    const categorySettingsToggle = categoryEditor.locator(
+      '[data-testid="category-editor-settings-toggle"]'
+    )
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'false')
     await expect(
       categoryEditor.locator('[data-testid="category-editor-delete-button"]')
     ).toBeVisible()
     await expect(
       categoryEditor.locator('[data-testid="category-drag-handle"]')
     ).toHaveAttribute('aria-label', 'Drag category')
-    await expect(
-      categoryEditor.locator('[data-testid="category-editor-title-edit"]')
-    ).toHaveAttribute('aria-label', 'Rename category')
+    /** Visible category pencil retained as an inactive future management-dialog trigger. */
+    const categoryRenameButton = categoryEditor.locator(
+      '[data-testid="category-editor-title-edit"]'
+    )
+    await expect(categoryRenameButton).toHaveAttribute('aria-label', 'Rename category')
     await expect(
       categoryEditor.locator('[data-testid="category-editor-delete-button"]')
     ).toHaveAttribute('aria-label', 'Delete category')
 
-    await categoryEditor.locator('[data-testid="category-editor-title-edit"]').click()
+    await categoryRenameButton.click()
     const renameCategoryDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Rename Category"]'
     )
-    await expect(renameCategoryDialog).toBeVisible()
-    await expect(
-      renameCategoryDialog.locator('[data-testid="dialog-header-icon"]')
-    ).toBeVisible()
-    await expect(
-      renameCategoryDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Choose a new name for this category.')
-    await expect(renameCategoryDialog.getByLabel('Category Name')).toBeVisible()
-    await renameCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(renameCategoryDialog).toHaveCount(0)
+    await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'false')
 
     await categoryEditor.locator('[data-testid="category-editor-delete-button"]').click()
     const deleteCategoryDialog = mainWindow.locator(

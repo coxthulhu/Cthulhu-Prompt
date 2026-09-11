@@ -178,7 +178,6 @@
       isPresent: boolean
     ) => void
     onRenamePromptFolder: (promptFolderId: string) => void
-    onRenameCategory: (categoryId: string) => void
     onDeleteCategory: (categoryId: string) => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
@@ -230,7 +229,6 @@
     onCategoryDescriptionChange,
     onCategoryDescriptionPresenceChange,
     onRenamePromptFolder,
-    onRenameCategory,
     onDeleteCategory,
     onScreenModeChange,
     onScrollToWithinWindowBandChange,
@@ -836,7 +834,6 @@
           onCategoryDescriptionChange(category.id, text, measurement)}
         onDescriptionPresenceChange={(isPresent) =>
           onCategoryDescriptionPresenceChange(category.id, isPresent)}
-        onRenameCategory={() => onRenameCategory(category.id)}
         onDeleteCategory={() => onDeleteCategory(category.id)}
       />
     </PromptFolderSectionRow>

@@ -31,6 +31,7 @@ export type CreateCategoryDomainCommand = {
   promptFolderId: string
   displayName: string
   shortDescription: string | null
+  description: string | null
 }
 
 /** Strict runtime parser for category creation commands. */
@@ -41,11 +42,12 @@ export const parseCreateCategoryDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 4 ||
+    Object.keys(record).length !== 5 ||
     typeof record.categoryId !== 'string' ||
     typeof record.promptFolderId !== 'string' ||
     typeof record.displayName !== 'string' ||
-    (record.shortDescription !== null && typeof record.shortDescription !== 'string')
+    (record.shortDescription !== null && typeof record.shortDescription !== 'string') ||
+    (record.description !== null && typeof record.description !== 'string')
   ) {
     return null
   }
@@ -53,7 +55,8 @@ export const parseCreateCategoryDomainCommand = (
     categoryId: record.categoryId,
     promptFolderId: record.promptFolderId,
     displayName: record.displayName,
-    shortDescription: record.shortDescription
+    shortDescription: record.shortDescription,
+    description: record.description
   }
 }
 
@@ -200,6 +203,8 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
   const displayName = normalizeCategoryDisplayName(command.displayName)
   /** Normalized optional summary persisted beside the category display name. */
   const shortDescription = normalizeCategoryShortDescription(command.shortDescription)
+  /** Optional Markdown description, represented as absent when it contains only whitespace. */
+  const description = command.description?.trim() ? command.description : null
   /** Authoritative folder and category targets returned for any conflict. */
   const targets: DomainTarget[] = [
     { entityType: 'promptFolder', id: command.promptFolderId },
@@ -229,7 +234,7 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
     id: command.categoryId,
     displayName,
     shortDescription,
-    description: null
+    description
   }
   return [
     {

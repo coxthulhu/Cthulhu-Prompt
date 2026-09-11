@@ -472,13 +472,22 @@
   }
 
   /** Persists a validated category for the currently selected root folder. */
-  const handleCreateCategory = async (displayName: string): Promise<boolean> => {
+  const handleCreateCategory = async (
+    displayName: string,
+    shortDescription: string | null,
+    description: string | null
+  ): Promise<boolean> => {
     const promptFolder = screenRootFolder
     if (!promptFolder) return false
 
     return await runIpcBestEffort(
       async () => {
-        await createCategory(promptFolder.id, displayName)
+        await createCategory(
+          promptFolder.id,
+          displayName,
+          shortDescription,
+          description
+        )
         return true
       },
       () => false

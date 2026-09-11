@@ -234,7 +234,8 @@ describe('shared domain mutation planners', () => {
         categoryId: 'created',
         promptFolderId: folder.id,
         displayName: '  Created  ',
-        shortDescription: '  New category summary.  '
+        shortDescription: '  New category summary.  ',
+        description: '  # Created\n\nCategory guidance.  '
       }
     )
     expect(Array.isArray(plan)).toBe(true)
@@ -252,9 +253,24 @@ describe('shared domain mutation planners', () => {
         id: 'created',
         displayName: 'Created',
         shortDescription: 'New category summary.',
-        description: null
+        description: '  # Created\n\nCategory guidance.  '
       }
     })
+
+    /** Separate creation plan verifies whitespace-only Markdown is represented as absent. */
+    const whitespaceDescriptionPlan = planCreateCategoryDomainMutation(
+      createDomainState({ promptFolder: [folder] }),
+      {
+        categoryId: 'whitespace-description',
+        promptFolderId: folder.id,
+        displayName: 'Whitespace Description',
+        shortDescription: null,
+        description: '  \n  '
+      }
+    )
+    expect(Array.isArray(whitespaceDescriptionPlan)).toBe(true)
+    if (!Array.isArray(whitespaceDescriptionPlan)) return
+    expect(whitespaceDescriptionPlan[1]?.data).toMatchObject({ description: null })
   })
 
   it('plans category deletion from summary projections with one renderer timestamp', () => {

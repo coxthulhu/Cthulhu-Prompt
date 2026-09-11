@@ -9,6 +9,7 @@ import {
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   readWorkspaceUiState,
@@ -825,16 +826,65 @@ describe('Prompt categories', () => {
     ).toBeVisible()
 
     await mainWindow.locator('[data-testid="sidebar-add-category-button"]').click()
+    /** Creation dialog that now edits all persisted category fields together. */
     const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Create Category"]')
+    /** Required category-name field used to verify validation and explicit submission. */
     const categoryInput = categoryDialog.locator('[data-testid="create-category-name-input"]')
+    /** Optional summary field persisted in the category file. */
+    const shortDescriptionInput = categoryDialog.locator(
+      '[data-testid="create-category-short-description-input"]'
+    )
+    /** Fixed-height Monaco host for the optional full description. */
+    const fullDescriptionInput = categoryDialog.locator(
+      '[data-testid="create-category-full-description-input"]'
+    )
+    /** Multiline Markdown exceeds 176px at normal autosizing thresholds. */
+    const fullDescription = [
+      '# Code Review',
+      '',
+      ...Array.from(
+        { length: 16 },
+        (_, index) => `Review guideline ${index + 1}.`
+      )
+    ].join('\n')
+    /** Monaco persists multiline content with Windows-native line endings. */
+    const persistedFullDescription = fullDescription.replaceAll('\n', '\r\n')
     await expect(categoryDialog).toBeVisible()
+    await expect(categoryDialog).toHaveText(/Required\. Names must be unique in this folder\./)
+    await expect(categoryDialog).toHaveText(
+      /A brief summary to help you recognize this category\./
+    )
+    await expect(categoryDialog).toHaveText(
+      /Describe what belongs here and how to use these prompts\./
+    )
+    /** Rendered dialog width matches the requested desktop design. */
+    const dialogWidthPx = await categoryDialog.evaluate(
+      (element) => element.getBoundingClientRect().width
+    )
+    expect(Math.abs(dialogWidthPx - 760)).toBeLessThanOrEqual(1)
+    await expect(fullDescriptionInput.locator('.monaco-editor')).toBeVisible()
+    /** Monaco content area remains fixed instead of growing with its Markdown. */
+    const editorHeightPx = await fullDescriptionInput
+      .locator('.monaco-editor')
+      .evaluate((element) => element.getBoundingClientRect().height)
+    expect(Math.abs(editorHeightPx - 176)).toBeLessThanOrEqual(1)
     await categoryInput.fill('   ')
     await expect(categoryDialog.locator('[data-testid="create-category-name-error"]')).toHaveText(
       'Category name is required'
     )
     await expect(categoryDialog.locator('[data-testid="create-category-button"]')).toBeDisabled()
     await categoryInput.fill('  Code Review  ')
-    await categoryDialog.locator('[data-testid="create-category-button"]').click()
+    await categoryInput.press('Enter')
+    await expect(categoryDialog).toBeVisible()
+    await shortDescriptionInput.fill('  Prompts for reviewing implementation changes.  ')
+    await focusMonacoEditor(mainWindow, '[data-testid="create-category-full-description-input"]')
+    await mainWindow.keyboard.insertText(fullDescription)
+    /** Fixed-height override remains active after content exceeds the normal editor height. */
+    const populatedEditorHeightPx = await fullDescriptionInput
+      .locator('.monaco-editor')
+      .evaluate((element) => element.getBoundingClientRect().height)
+    expect(Math.abs(populatedEditorHeightPx - 176)).toBeLessThanOrEqual(1)
+    await categoryDialog.getByRole('button', { name: 'Create Category' }).click()
 
     const categoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Code Review.category.json`
     await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(true)
@@ -846,8 +896,8 @@ describe('Prompt categories', () => {
     }
     expect(createdCategory).toMatchObject({
       displayName: 'Code Review',
-      shortDescription: null,
-      description: null
+      shortDescription: 'Prompts for reviewing implementation changes.',
+      description: persistedFullDescription
     })
     expect(createdCategory.id).toMatch(/^[0-9a-f]{32}$/)
     expect(
@@ -858,6 +908,24 @@ describe('Prompt categories', () => {
         )
       ).categories.map((category: { categoryId: string | null }) => category.categoryId)
     ).toEqual([null, createdCategory.id, EXISTING_CATEGORY_ID])
+
+    await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
+    await categoryInput.fill('Name Only')
+    await categoryDialog.getByRole('button', { name: 'Create Category' }).click()
+    /** Name-only category path verifies both optional fields remain optional. */
+    const nameOnlyCategoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Name Only.category.json`
+    await expect.poll(() => checkFileExists(electronApp, nameOnlyCategoryPath)).toBe(true)
+    /** Name-only persisted record created through the prompt-folder screen handler. */
+    const nameOnlyCategory = JSON.parse(
+      await readTextFile(electronApp, nameOnlyCategoryPath)
+    ) as {
+      shortDescription: string | null
+      description: string | null
+    }
+    expect(nameOnlyCategory).toMatchObject({
+      shortDescription: null,
+      description: null
+    })
 
     await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
     await categoryInput.fill('code review')
