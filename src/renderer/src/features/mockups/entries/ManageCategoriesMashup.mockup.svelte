@@ -3,6 +3,7 @@
   import * as monaco from 'monaco-editor'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import Row from '@renderer/common/cthulhu-ui/Row.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
@@ -157,7 +158,16 @@
           label={categories.find((category) => category.id === selectedId)?.displayName ?? ''}
           detail="Category settings"
           class="mb-[22px]"
-        />
+        >
+          {#snippet trailing()}
+            <IconButton
+              icon={Trash2}
+              label="Delete category"
+              title="Delete category"
+              hoverVariant="danger"
+            />
+          {/snippet}
+        </Row>
         <div style="display:grid; gap:17px;">
           <div>
             <TitleSubtitleStack class="mb-[7px]">
