@@ -703,12 +703,6 @@
       if (!sourceFolder) return false
       // The dropdown would move a same-folder prompt to the top, but that route is too confusing.
       if (sourceFolder.id === destinationFolder.id) return false
-      if (
-        entryPayload.contentKind !== destinationFolder.kind ||
-        sourceFolder.kind !== destinationFolder.kind
-      ) {
-        return false
-      }
       return (
         resolvePromptTreePromptMove(allFolders, entryPayload, dropPayload) !== null
       )
