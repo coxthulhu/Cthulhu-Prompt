@@ -6,6 +6,7 @@ import {
   readTextFile
 } from '../helpers/PromptPersistenceTestHelpers'
 import {
+  createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
@@ -38,6 +39,8 @@ const PROMPT_FOLDER_HOST = '[data-testid="prompt-folder-virtual-window"]'
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
 const TEMPLATE_WORKSPACE_PATH = '/ws/templates'
+/** Mixed-kind workspace used to verify ordered selection after root deletion. */
+const DELETE_NAVIGATION_WORKSPACE_PATH = '/ws/delete-navigation'
 
 const createDeterministicId = (seed: string): string => {
   let hash = 0
@@ -281,7 +284,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       siblingPromptFolderCount: 1,
       siblingCategoryEditorCount: 1,
       siblingMarkdownCount: 1,
-      selectedScreen: 'home',
+      selectedScreen: 'prompt-folders',
       lastPromptFolderId: null
     })
   })
@@ -1042,6 +1045,91 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(deleteDialog).toBeVisible()
     await expect(deleteDialog).toContainText('Development Tools')
     await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
+  })
+
+  /** Verifies ordered post-delete selection and the final-folder empty state. */
+  test('selects the first remaining folder and retains the screen after deleting the last folder', async ({
+    testSetup
+  }) => {
+    /** Mixed prompt and template roots combined before assigning their explicit unified order. */
+    const filesystem = {
+      ...createWorkspaceWithFolders(DELETE_NAVIGATION_WORKSPACE_PATH, [
+        {
+          folderName: 'DeleteSecond',
+          displayName: 'Delete Second',
+          promptFolderId: 'delete-second',
+          prompts: [{ id: 'delete-prompt', title: 'Delete', promptText: 'Delete me.' }]
+        },
+        {
+          folderName: 'LastPrompt',
+          displayName: 'Last Prompt',
+          promptFolderId: 'last-prompt',
+          prompts: [{ id: 'last-prompt-content', title: 'Last', promptText: 'Last prompt.' }]
+        }
+      ]),
+      ...createWorkspaceWithTemplateFolders(DELETE_NAVIGATION_WORKSPACE_PATH, [
+        {
+          folderName: 'FirstTemplate',
+          displayName: 'First Template',
+          folderId: 'first-template',
+          templates: [{ id: 'first-template-content', title: 'First', templateText: 'First.' }]
+        }
+      ])
+    }
+    filesystem[`${DELETE_NAVIGATION_WORKSPACE_PATH}/WorkspaceFolderOrder.json`] = JSON.stringify(
+      {
+        entries: ['first-template', 'delete-second', 'last-prompt'].map((id) => ({
+          kind: 'folder',
+          id
+        }))
+      },
+      null,
+      2
+    )
+    await testSetup.setupFilesystem(filesystem)
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(DELETE_NAVIGATION_WORKSPACE_PATH)])
+    /** Mixed workspace window and helpers used for all three consecutive deletions. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    /** Result of selecting the custom workspace through the normal UI flow. */
+    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+
+    expect(workspaceSetupResult.workspaceReady).toBe(true)
+
+    await testHelpers.navigateToPromptFolders('Delete Second')
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+    /** Confirmation dialog for deleting the selected second folder. */
+    const deleteDialog = mainWindow.locator('[role="dialog"][aria-label="Delete Folder"]')
+    await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
+
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'First Template'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toBeVisible()
+
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+    await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
+
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Last Prompt'
+    )
+
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+    await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
+
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toHaveCount(0)
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
+      'Create Folder'
+    )
+    await expect(mainWindow.locator('text=Create a Folder to Get Started')).toBeVisible()
   })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {

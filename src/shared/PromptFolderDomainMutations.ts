@@ -293,6 +293,9 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
   const contentIds = getMarkdownContentIds(promptFolder, promptFolder.kind)
   /** Category IDs owned by the deleted root folder. */
   const categoryIds = getPromptFolderCategoryIds(promptFolder)
+  /** First root folder remaining in workspace order after the requested deletion. */
+  const nextPromptFolderId =
+    workspace.entries.find((entry) => entry.id !== command.promptFolderId)?.id ?? null
   /** Complete domain changes applied atomically in meaningful ownership order. */
   const changes: DomainChange[] = [
     {
@@ -357,12 +360,15 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
           draft.selectedScreenData.promptFolderId === command.promptFolderId
         ) {
           Object.assign(draft, {
-            selectedScreen: 'home',
-            selectedScreenData: null,
-            lastPromptFolderId: null
+            selectedScreen: 'prompt-folders',
+            selectedScreenData: {
+              promptFolderId: nextPromptFolderId,
+              contentOwnerId: nextPromptFolderId
+            },
+            lastPromptFolderId: nextPromptFolderId
           })
         } else if (draft.lastPromptFolderId === command.promptFolderId) {
-          draft.lastPromptFolderId = null
+          draft.lastPromptFolderId = nextPromptFolderId
         }
       }
     })

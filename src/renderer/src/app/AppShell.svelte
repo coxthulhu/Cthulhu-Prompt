@@ -610,10 +610,16 @@
     else if (promptFolderScreenMode === groupId) setPromptFolderMode(PromptFolderScreenMode.Active)
   }
 
-  const navigateHomeAfterRootPromptFolderDelete = (): void => {
-    clearPromptFolderSelection()
-    activeScreen = 'home'
-    void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('home'))
+  /** Selects the first remaining root folder or retains the empty prompt-folders screen. */
+  const navigateAfterRootPromptFolderDelete = (): void => {
+    /** First remaining folder in the workspace's unified prompt and template order. */
+    const nextPromptFolderId = selectedWorkspacePromptFolders[0]?.id ?? null
+    if (!nextPromptFolderId) {
+      clearPromptFolderSelection()
+      return
+    }
+
+    navigateToScreenRootFolder(nextPromptFolderId)
   }
 
   /** Navigates to the selected folder and opens its screen-owned deletion flow after it mounts. */
@@ -699,7 +705,7 @@
                   screenMode={promptFolderScreenMode}
                   onScreenModeChange={setPromptFolderMode}
                   onScreenRootFolderSelect={navigateToScreenRootFolder}
-                  onRootPromptFolderDeleted={navigateHomeAfterRootPromptFolderDelete}
+                  onRootPromptFolderDeleted={navigateAfterRootPromptFolderDelete}
                 />
               {/key}
             {/if}
