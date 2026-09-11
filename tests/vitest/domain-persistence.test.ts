@@ -33,8 +33,7 @@ const mockDomainData = vi.hoisted(() => {
     markdownContentUiState: new Map<string, Entry>(),
     workspaceUiState: new Map<string, Entry>(),
     workspacePromptFolderUiState: new Map<string, Entry>(),
-    accordionUiState: new Map<string, Entry>(),
-    categoryDescriptionEditorUiState: new Map<string, Entry>()
+    accordionUiState: new Map<string, Entry>()
   }
   /** Creates the committed-store reads used by domain persistence planning. */
   const createStore = (entityType: keyof typeof entries) => ({
@@ -56,11 +55,7 @@ const mockDomainData = vi.hoisted(() => {
       committedStore: createStore('workspacePromptFolderUiState'),
       targetPolicy: 'deleteIfPresent'
     },
-    accordionUiState: { committedStore: createStore('accordionUiState') },
-    categoryDescriptionEditorUiState: {
-      committedStore: createStore('categoryDescriptionEditorUiState'),
-      targetPolicy: 'deleteIfPresent'
-    }
+    accordionUiState: { committedStore: createStore('accordionUiState') }
   }
   /** Clears authoritative entries between persistence-planning tests. */
   const reset = (): void => {

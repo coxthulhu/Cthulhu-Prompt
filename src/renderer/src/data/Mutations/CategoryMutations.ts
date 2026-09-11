@@ -3,8 +3,10 @@ import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
+  planSaveCategoriesDomainMutation,
   planSetCategoryDescriptionDomainMutation,
-  planUpdateCategoryDetailsDomainMutation
+  planUpdateCategoryDetailsDomainMutation,
+  type SaveCategoriesDomainValue
 } from '@shared/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
 import { getPromptFolderCategoryIds } from '@shared/PromptFolder'
@@ -17,6 +19,26 @@ import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
 } from '../IpcFramework/RendererDomainMutation'
+
+/** Atomically persists every retained category draft for one root folder. */
+export const saveCategories = async (
+  workspaceId: string,
+  promptFolderId: string,
+  categories: SaveCategoriesDomainValue[]
+): Promise<void> => {
+  /** Shared complete-set command projected optimistically and persisted atomically. */
+  const command = {
+    workspaceId,
+    promptFolderId,
+    categories,
+    modifiedAt: getCurrentIsoSecondTimestamp()
+  }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planSaveCategoriesDomainMutation },
+    ipc: { channel: 'save-categories' },
+    renderer: {}
+  })
+}
 
 /** Queues a debounced category-description update using the latest optimistic value. */
 export const setCategoryDescriptionWithAutosave = (

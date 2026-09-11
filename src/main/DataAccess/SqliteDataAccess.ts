@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 19
+const LATEST_SCHEMA_VERSION = 20
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -537,6 +537,47 @@ const migrateSchemaV18ToV19 = (db: Database.Database): void => {
   migrate()
 }
 
+/** Removes obsolete inline category-editor state from workspace persistence. */
+const migrateSchemaV19ToV20 = (db: Database.Database): void => {
+  /** Atomic schema update preserving the remaining prompt-folder view state. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      DROP TABLE category_description_editor_view_state;
+
+      CREATE TABLE prompt_folder_view_state_new (
+        workspace_id TEXT NOT NULL,
+        content_owner_id TEXT NOT NULL,
+        selected_entry_id TEXT NOT NULL,
+        tree_is_expanded INTEGER NOT NULL DEFAULT 1,
+        content_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (workspace_id, content_owner_id)
+      );
+
+      INSERT INTO prompt_folder_view_state_new (
+        workspace_id,
+        content_owner_id,
+        selected_entry_id,
+        tree_is_expanded,
+        content_section_is_expanded
+      )
+      SELECT
+        workspace_id,
+        content_owner_id,
+        selected_entry_id,
+        tree_is_expanded,
+        content_section_is_expanded
+      FROM prompt_folder_view_state;
+
+      DROP TABLE prompt_folder_view_state;
+      ALTER TABLE prompt_folder_view_state_new RENAME TO prompt_folder_view_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(20)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -658,6 +699,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 18) {
       migrateSchemaV18ToV19(db)
       schemaVersion = 19
+      continue
+    }
+
+    if (schemaVersion === 19) {
+      migrateSchemaV19ToV20(db)
+      schemaVersion = 20
       continue
     }
 

@@ -248,7 +248,7 @@ describe('Prompt folder card geometry', () => {
     await expectPromptCardExactFill(mainWindow, 'geometry-tall')
   })
 
-  test('category editor cards fit collapsed titles exactly and expanded settings within grid slack', async ({
+  test('category editor cards fit their fixed navigation rows exactly', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -300,31 +300,6 @@ describe('Prompt folder card geometry', () => {
         })
       expect(titleGeometry.topInsetPx, `category ${categoryId} title top spacing`).toBe(8)
       expect(titleGeometry.bottomInsetPx, `category ${categoryId} title bottom spacing`).toBe(8)
-
-      // Expanded settings sections must still fit inside the bordered card.
-      await row.locator('[data-testid="category-editor-settings-toggle"]').click()
-      await row
-        .locator('[data-testid="category-description-section"]')
-        .waitFor({ state: 'attached' })
-      await expect
-        .poll(async () => {
-          const geometry = await measureEditorCardGeometry(mainWindow, rowSelector)
-          if (!geometry) return Number.POSITIVE_INFINITY
-          return Math.max(geometry.hiddenOverflowPx, geometry.internalScrollTopPx)
-        })
-        .toBe(0)
-      const expanded = (await measureEditorCardGeometry(mainWindow, rowSelector))!
-      expect(
-        expanded.bodyChildrenFillGapPx,
-        `expanded category card ${categoryId} content overflows the card`
-      ).toBeGreaterThanOrEqual(-FILL_TOLERANCE_PX)
-      expect(
-        expanded.bodyChildrenFillGapPx,
-        `expanded category card ${categoryId} has extra bottom slack`
-      ).toBeLessThanOrEqual(FILL_TOLERANCE_PX)
-
-      // Restore the collapsed state for the next row's scroll math.
-      await row.locator('[data-testid="category-editor-settings-toggle"]').click()
     }
   })
 

@@ -10,7 +10,6 @@ import { categoryData } from './CategoryData'
 import type { DomainTargetPolicy } from '@shared/DomainChanges'
 import {
   accordionUiStateData,
-  categoryDescriptionEditorUiStateData,
   markdownContentUiStateData,
   userPersistenceData,
   workspacePromptFolderUiStateData,
@@ -39,6 +38,5 @@ export const data = {
   markdownContentUiState: markdownContentUiStateData,
   workspaceUiState: workspaceUiStateData,
   workspacePromptFolderUiState: workspacePromptFolderUiStateData,
-  accordionUiState: accordionUiStateData,
-  categoryDescriptionEditorUiState: categoryDescriptionEditorUiStateData
+  accordionUiState: accordionUiStateData
 }

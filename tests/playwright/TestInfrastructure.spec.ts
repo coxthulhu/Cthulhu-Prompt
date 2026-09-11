@@ -130,7 +130,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 19 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 20 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -150,7 +150,10 @@ describe('Test Infrastructure', () => {
       )
 
       expect(persistenceTablesResult.success).toBe(true)
-      expect(persistenceTablesResult.rows).toHaveLength(6)
+      expect(persistenceTablesResult.rows).toHaveLength(5)
+      /** Persistence table names used to verify obsolete category state was dropped. */
+      const persistenceTableNames = (persistenceTablesResult.rows ?? []).map((row) => row.name)
+      expect(persistenceTableNames).not.toContain('category_description_editor_view_state')
 
       const promptFolderViewStateColumnsResult = await runSqlQuery(
         electronApp,
@@ -162,6 +165,7 @@ describe('Test Infrastructure', () => {
 
       expect(promptFolderViewStateColumnsResult.success).toBe(true)
       expect(promptFolderViewStateColumnNames).toContain('tree_is_expanded')
+      expect(promptFolderViewStateColumnNames).not.toContain('details_section_is_expanded')
       expect(promptFolderViewStateColumnNames).not.toContain(
         'prompt_tree_is_showing_all_prompts'
       )

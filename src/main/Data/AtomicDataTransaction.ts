@@ -298,10 +298,7 @@ const createAtomicDataBuilder = (): {
       markdownContentUiState: createStoreBuilder('markdownContentUiState'),
       workspaceUiState: createStoreBuilder('workspaceUiState'),
       workspacePromptFolderUiState: createStoreBuilder('workspacePromptFolderUiState'),
-      accordionUiState: createStoreBuilder('accordionUiState'),
-      categoryDescriptionEditorUiState: createStoreBuilder(
-        'categoryDescriptionEditorUiState'
-      )
+      accordionUiState: createStoreBuilder('accordionUiState')
     }
   }
 }

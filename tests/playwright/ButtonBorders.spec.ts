@@ -184,7 +184,7 @@ describe('Button styling', () => {
     ).toBe(0)
 
     const sidebarAddCategoryButton = mainWindow.locator(
-      '[data-testid="sidebar-add-category-button"]'
+      '[data-testid="sidebar-manage-categories-button"]'
     )
     await expect(sidebarAddCategoryButton).toBeEnabled()
     await sidebarAddCategoryButton.hover()

@@ -10,7 +10,6 @@ import {
 } from '@shared/UserPersistence'
 import type {
   AccordionUiState,
-  CategoryDescriptionEditorUiState,
   WorkspacePromptFolderUiState,
   WorkspaceUiState
 } from '@shared/UiState'
@@ -42,7 +41,6 @@ type WorkspacePromptFolderUiStateRow = {
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded: number
-  detailsSectionIsExpanded: number
   contentSectionIsExpanded: number
 }
 
@@ -52,9 +50,6 @@ type AccordionUiStateRow = {
   persistenceId: string
   sectionsJson: string
 }
-
-/** SQLite row containing one category-description editor state. */
-type CategoryDescriptionEditorUiStateRow = CategoryDescriptionEditorUiState
 
 /** Splits a workspace-scoped authoritative key at its first separator. */
 const parseWorkspaceCompositeKey = (id: string): WorkspaceCompositeKey => {
@@ -182,7 +177,6 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           content_owner_id AS contentOwnerId,
           selected_entry_id AS selectedEntryId,
           tree_is_expanded AS treeIsExpanded,
-          details_section_is_expanded AS detailsSectionIsExpanded,
           content_section_is_expanded AS contentSectionIsExpanded
         FROM prompt_folder_view_state
         WHERE workspace_id = ? AND content_owner_id = ?
@@ -195,7 +189,6 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           contentOwnerId: row.contentOwnerId,
           selectedEntryId: row.selectedEntryId,
           treeIsExpanded: row.treeIsExpanded !== 0,
-          detailsSectionIsExpanded: row.detailsSectionIsExpanded !== 0,
           contentSectionIsExpanded: row.contentSectionIsExpanded !== 0
         }
       : null
@@ -220,14 +213,12 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
         content_owner_id,
         selected_entry_id,
         tree_is_expanded,
-        details_section_is_expanded,
         content_section_is_expanded
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
         selected_entry_id = excluded.selected_entry_id,
         tree_is_expanded = excluded.tree_is_expanded,
-        details_section_is_expanded = excluded.details_section_is_expanded,
         content_section_is_expanded = excluded.content_section_is_expanded
       `
     ).run(
@@ -235,7 +226,6 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
       contentOwnerId,
       uiState.selectedEntryId,
       uiState.treeIsExpanded ? 1 : 0,
-      uiState.detailsSectionIsExpanded ? 1 : 0,
       uiState.contentSectionIsExpanded ? 1 : 0
     )
   }
@@ -289,55 +279,6 @@ export const accordionUiStateSqlitePersistence: SqlitePersistenceLayer<
         sections_json = excluded.sections_json
       `
     ).run(workspaceId, persistenceId, JSON.stringify(transition.after.data.sections))
-  }
-}
-
-/** SQLite query/command adapter for one category-description editor UI-state record. */
-export const categoryDescriptionEditorUiStateSqlitePersistence: SqlitePersistenceLayer<
-  CategoryDescriptionEditorUiState,
-  SqlitePersistenceFields
-> = {
-  kind: 'sqlite',
-  query: (id) => {
-    /** Composite workspace and category key decoded for the SQL query. */
-    const { workspaceId, localId: categoryId } = parseWorkspaceCompositeKey(id)
-    return (SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        SELECT
-          workspace_id AS workspaceId,
-          category_id AS categoryId,
-          editor_view_state_json AS editorViewStateJson
-        FROM category_description_editor_view_state
-        WHERE workspace_id = ? AND category_id = ?
-        `
-      )
-      .get(workspaceId, categoryId) as CategoryDescriptionEditorUiStateRow | undefined) ?? null
-  },
-  command: (id, transition) => {
-    /** Composite workspace and category key decoded for the SQL command. */
-    const { workspaceId, localId: categoryId } = parseWorkspaceCompositeKey(id)
-    /** Database receiving the category-description UI-state command. */
-    const db = SqliteDataAccess.getDatabase()
-    if (!transition.after) {
-      db.prepare(
-        `DELETE FROM category_description_editor_view_state
-         WHERE workspace_id = ? AND category_id = ?`
-      ).run(workspaceId, categoryId)
-      return
-    }
-    db.prepare(
-      `
-      INSERT INTO category_description_editor_view_state (
-        workspace_id,
-        category_id,
-        editor_view_state_json
-      )
-      VALUES (?, ?, ?)
-      ON CONFLICT(workspace_id, category_id) DO UPDATE SET
-        editor_view_state_json = excluded.editor_view_state_json
-      `
-    ).run(workspaceId, categoryId, transition.after.data.editorViewStateJson)
   }
 }
 

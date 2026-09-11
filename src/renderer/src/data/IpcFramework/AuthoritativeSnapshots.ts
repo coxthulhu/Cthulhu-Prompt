@@ -4,7 +4,6 @@ import { createPromptFull, isPromptFull } from '@shared/Prompt'
 import { createPromptTemplateFull, isPromptTemplateFull } from '@shared/PromptTemplate'
 import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
 import { categoryCollection } from '../Collections/CategoryCollection'
-import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
 import { promptClientStateCollection } from '../Collections/PromptClientStateCollection'
 import { promptCollection } from '../Collections/PromptCollection'
@@ -43,8 +42,6 @@ export const getRendererRevisionCollection = (entityType: DomainEntityType) => {
       return workspacePromptFolderUiStateCollection
     case 'accordionUiState':
       return accordionUiStateCollection
-    case 'categoryDescriptionEditorUiState':
-      return categoryDescriptionEditorUiStateCollection
   }
 }
 
@@ -132,9 +129,6 @@ const reconcileRendererAuthoritativeSnapshot = (
       return
     case 'accordionUiState':
       accordionUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'categoryDescriptionEditorUiState':
-      categoryDescriptionEditorUiStateCollection.utils.upsertAuthoritative(snapshot)
       return
   }
 }

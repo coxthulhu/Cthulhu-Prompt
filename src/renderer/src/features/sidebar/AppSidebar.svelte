@@ -26,7 +26,7 @@
     ChevronsUpDown,
     ExternalLink,
     FileText,
-    FolderPlus,
+    FolderCog,
     Layers,
     MoreHorizontal,
     Plus,
@@ -51,11 +51,13 @@
   } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
   import {
-    getPromptFolderCategoryIds,
     type PromptFolder,
     type PromptFolderKind
   } from '@shared/PromptFolder'
-  import { getOrderedMarkdownContentIds } from '@shared/MarkdownContent'
+  import {
+    getMarkdownContentCategoryOrder,
+    getOrderedMarkdownContentIds
+  } from '@shared/MarkdownContent'
   import type { Category } from '@shared/Category'
   import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
@@ -76,17 +78,21 @@
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
-  import { createCategory } from '@renderer/data/Mutations/CategoryMutations'
+  import { saveCategories } from '@renderer/data/Mutations/CategoryMutations'
   import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
-  import CreateCategoryDialog from '../prompt-folders/CreateCategoryDialog.svelte'
+  import ManageCategoriesDialog, {
+    type ManagedCategoryInput,
+    type ManageCategoriesDialogOpenOptions
+  } from '../prompt-folders/ManageCategoriesDialog.svelte'
   import PromptTree from './PromptTree.svelte'
 
   type CreatePromptFolderDialogHandle = {
     openDialog: () => void
   }
 
-  type CreateCategoryDialogHandle = {
-    openDialog: () => void
+  type ManageCategoriesDialogHandle = {
+    /** Opens category management with an optional category-specific target. */
+    openDialog: (options?: ManageCategoriesDialogOpenOptions) => void
   }
 
   type PromptTreeBulkExpansionRequest = {
@@ -213,7 +219,7 @@
   let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
   let promptFolderSelectorItemsElement = $state<HTMLElement | null>(null)
   let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
-  let createCategoryDialog = $state<CreateCategoryDialogHandle | null>(null)
+  let manageCategoriesDialog = $state<ManageCategoriesDialogHandle | null>(null)
   let nowMs = $state(Date.now())
 
   // Side effect: keep folder-selector relative modified labels fresh while the app is open.
@@ -316,12 +322,16 @@
       rootPromptFolders[0]!
     )
   })
-  /** Categories owned by the selected root folder, preserved in folder order. */
+  /** Categories owned by the selected root folder, preserved in Active-folder order. */
   const selectedRootFolderCategories = $derived.by((): Category[] => {
     if (!screenRootFolder) return []
 
     const categoryById = new Map(categoryQuery.data.map((category) => [category.id, category]))
-    return getPromptFolderCategoryIds(screenRootFolder).flatMap((categoryId) => {
+    return getMarkdownContentCategoryOrder(
+      screenRootFolder,
+      PromptStatusFolderId.Active
+    ).categories.flatMap(({ categoryId }) => {
+      if (categoryId === null) return []
       const category = categoryById.get(categoryId)
       return category ? [category] : []
     })
@@ -469,27 +479,30 @@
     }
   }
 
-  /** Opens category creation for the currently selected root folder. */
-  const openCreateCategoryDialog = (): void => {
-    createCategoryDialog?.openDialog()
+  /** Opens category management for the currently selected root folder. */
+  const openManageCategoriesDialog = (): void => {
+    manageCategoriesDialog?.openDialog()
   }
 
-  /** Persists a validated category for the currently selected root folder. */
-  const handleCreateCategory = async (
-    displayName: string,
-    shortDescription: string | null,
-    description: string | null
+  /** Opens category management to one category selected from the prompt tree. */
+  const openManageCategoryDialog = (categoryId: string): void => {
+    manageCategoriesDialog?.openDialog({ categoryId })
+  }
+
+  /** Persists every retained category draft through one atomic mutation. */
+  const handleSaveCategories = async (
+    categories: ManagedCategoryInput[]
   ): Promise<boolean> => {
     const promptFolder = screenRootFolder
-    if (!promptFolder) return false
+    const workspaceId = selectedWorkspace?.id
+    if (!promptFolder || !workspaceId) return false
 
     return await runIpcBestEffort(
       async () => {
-        await createCategory(
+        await saveCategories(
+          workspaceId,
           promptFolder.id,
-          displayName,
-          shortDescription,
-          description
+          categories
         )
         return true
       },
@@ -838,14 +851,14 @@
           onclick={handleCategoryExpansionAction}
         />
         <IconButton
-          icon={FolderPlus}
-          label="Add Category"
-          title="Add Category"
+          icon={FolderCog}
+          label="Manage Categories"
+          title="Manage Categories"
           borderless
           baseVariant="dim"
           disabled={!screenRootFolder}
-          testId="sidebar-add-category-button"
-          onclick={openCreateCategoryDialog}
+          testId="sidebar-manage-categories-button"
+          onclick={openManageCategoriesDialog}
         />
         <DropdownPopupSimple
           label="Selected Folder Actions"
@@ -898,6 +911,7 @@
           areAllCategoriesCollapsed = isCollapsed
         }}
         onScreenModeSelect={onPromptFolderModeChange}
+        onManageCategory={openManageCategoryDialog}
         {onScreenRootFolderSelect}
       />
     {:else}
@@ -928,6 +942,7 @@
                   if (group.id === categoryToolbarGroupId) areAllCategoriesCollapsed = isCollapsed
                 }}
                 onScreenModeSelect={onPromptFolderModeChange}
+                onManageCategory={openManageCategoryDialog}
                 {onScreenRootFolderSelect}
               />
             </AccordionSection>
@@ -938,11 +953,13 @@
   </div>
 </aside>
 
-<CreateCategoryDialog
-  bind:this={createCategoryDialog}
+<ManageCategoriesDialog
+  bind:this={manageCategoriesDialog}
   categories={selectedRootFolderCategories}
+  folderDisplayName={screenRootFolder?.displayName ?? ''}
+  contentKind={screenRootFolder?.kind ?? 'prompt'}
   isWorkspaceReady={screenRootFolder !== null}
-  onsubmit={handleCreateCategory}
+  onsubmit={handleSaveCategories}
 />
 
 <style>

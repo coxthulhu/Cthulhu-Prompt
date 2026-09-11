@@ -3,6 +3,7 @@ import {
   parseCreateCategoryDomainCommand,
   parseDeleteCategoryDomainCommand,
   parseMoveCategoryDomainCommand,
+  parseSaveCategoriesDomainCommand,
   parseSetCategoryDescriptionDomainCommand,
   parseUpdateCategoryDetailsDomainCommand
 } from '@shared/CategoryDomainMutations'
@@ -104,6 +105,37 @@ describe('domain mutation command validation', () => {
       })
     ).toBeNull()
     expect(parseCreateCategoryDomainCommand({ ...command, description: 1 })).toBeNull()
+  })
+
+  it('accepts complete category management commands and rejects loose drafts', () => {
+    /** Valid atomic retained-set command containing two complete category values. */
+    const command = {
+      workspaceId: 'workspace',
+      promptFolderId: 'root',
+      categories: [
+        {
+          id: 'category-a',
+          displayName: 'Category A',
+          shortDescription: null,
+          description: 'Guidance.'
+        },
+        {
+          id: 'category-b',
+          displayName: 'Category B',
+          shortDescription: 'Summary.',
+          description: null
+        }
+      ],
+      modifiedAt: '2026-09-11T00:00:00Z'
+    }
+    expect(parseSaveCategoriesDomainCommand(command)).toEqual(command)
+    expect(
+      parseSaveCategoriesDomainCommand({
+        ...command,
+        categories: [{ id: 'category-a', displayName: 'Category A' }]
+      })
+    ).toBeNull()
+    expect(parseSaveCategoriesDomainCommand({ ...command, legacyDrafts: [] })).toBeNull()
   })
 
   it('accepts category-details and reorder commands', () => {

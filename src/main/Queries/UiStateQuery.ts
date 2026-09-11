@@ -1,7 +1,6 @@
 import { ipcMain } from 'electron'
 import {
   createAccordionUiStateKey,
-  createCategoryDescriptionEditorUiStateKey,
   createDefaultWorkspaceUiState,
   createWorkspacePromptFolderUiStateKey,
   LOAD_WORKSPACE_UI_STATE_CHANNEL,
@@ -27,12 +26,6 @@ const loadWorkspacePromptFolderUiStateEntry = async (id: string) => {
 const loadAccordionUiStateEntry = async (id: string) => {
   await data.accordionUiState.loadDataFromPersistence(id, {})
   return data.accordionUiState.committedStore.getEntry(id)
-}
-
-/** Loads one category-editor UI-state record into its committed store. */
-const loadCategoryDescriptionEditorUiStateEntry = async (id: string) => {
-  await data.categoryDescriptionEditorUiState.loadDataFromPersistence(id, {})
-  return data.categoryDescriptionEditorUiState.committedStore.getEntry(id)
 }
 
 /** Registers the workspace-scoped split UI-state startup query. */
@@ -72,13 +65,6 @@ export const setupUiStateQueryHandlers = (): void => {
                  FROM accordion_view_state WHERE workspace_id = ?`
               )
               .all(workspaceId) as WorkspaceLocalIdRow[]
-            /** Category-description editor row IDs owned by the selected workspace. */
-            const categoryEditorRows = db
-              .prepare(
-                `SELECT category_id AS localId
-                 FROM category_description_editor_view_state WHERE workspace_id = ?`
-              )
-              .all(workspaceId) as WorkspaceLocalIdRow[]
 
             /** Loaded prompt-folder UI-state committed entries. */
             const promptFolderEntries = await Promise.all(
@@ -93,14 +79,6 @@ export const setupUiStateQueryHandlers = (): void => {
               accordionRows.map((row) =>
                 loadAccordionUiStateEntry(
                   createAccordionUiStateKey(workspaceId, row.localId)
-                )
-              )
-            )
-            /** Loaded category-editor UI-state committed entries. */
-            const categoryEditorEntries = await Promise.all(
-              categoryEditorRows.map((row) =>
-                loadCategoryDescriptionEditorUiStateEntry(
-                  createCategoryDescriptionEditorUiStateKey(workspaceId, row.localId)
                 )
               )
             )
@@ -135,20 +113,6 @@ export const setupUiStateQueryHandlers = (): void => {
                         id: createAccordionUiStateKey(
                           entry.committed.workspaceId,
                           entry.committed.persistenceId
-                        ),
-                        revision: entry.revision,
-                        data: entry.committed
-                      }
-                    ]
-                  : []
-              ),
-              categoryDescriptionEditorUiStates: categoryEditorEntries.flatMap((entry) =>
-                entry
-                  ? [
-                      {
-                        id: createCategoryDescriptionEditorUiStateKey(
-                          entry.committed.workspaceId,
-                          entry.committed.categoryId
                         ),
                         revision: entry.revision,
                         data: entry.committed

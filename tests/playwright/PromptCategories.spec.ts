@@ -11,6 +11,7 @@ import {
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
+import { PromptStatus } from '../../src/shared/Prompt'
 import {
   readWorkspaceUiState,
   seedWorkspaceUiState
@@ -337,15 +338,14 @@ describe('Prompt categories', () => {
     await expect(categoryEditor).toContainText('1 prompt')
     await expect(categoryEditor).not.toContainText('folder')
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category"]')).toHaveCount(0)
-    await categoryEditor.locator('[data-testid="category-editor-settings-toggle"]').click()
-    await expect(categoryEditor.locator('[data-testid="category-settings-toolbar"]')).toBeVisible()
-    await expect(
-      categoryEditor.locator('[data-testid^="category-settings-toggle-"]')
-    ).toHaveCount(1)
-    await expect(
-      categoryEditor.locator('[data-testid="category-settings-toggle-description"]')
-    ).toContainText('Description')
-    await categoryEditor.locator('[data-testid="category-editor-settings-toggle"]').click()
+    await categoryEditor.locator('[data-testid="category-editor-manage-button"]').click()
+    const categoryDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Manage Categories"]'
+    )
+    await expect(categoryDialog.locator('[data-testid="manage-category-name-input"]')).toHaveValue(
+      'Code Review'
+    )
+    await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
 
     /** Plain divider after the first category separates the two category cards. */
     const betweenCategorySeparator = mainWindow.locator(
@@ -852,18 +852,19 @@ describe('Prompt categories', () => {
       )
     ).toBeVisible()
 
-    await mainWindow.locator('[data-testid="sidebar-add-category-button"]').click()
-    /** Creation dialog that now edits all persisted category fields together. */
-    const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Create Category"]')
+    await mainWindow.locator('[data-testid="sidebar-manage-categories-button"]').click()
+    /** Management dialog that edits all retained category fields together. */
+    const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Manage Categories"]')
+    await categoryDialog.locator('[data-testid="manage-categories-new-button"]').click()
     /** Required category-name field used to verify validation and explicit submission. */
-    const categoryInput = categoryDialog.locator('[data-testid="create-category-name-input"]')
+    const categoryInput = categoryDialog.locator('[data-testid="manage-category-name-input"]')
     /** Optional summary field persisted in the category file. */
     const shortDescriptionInput = categoryDialog.locator(
-      '[data-testid="create-category-short-description-input"]'
+      '[data-testid="manage-category-short-description-input"]'
     )
     /** Fixed-height Monaco host for the optional full description. */
     const fullDescriptionInput = categoryDialog.locator(
-      '[data-testid="create-category-full-description-input"]'
+      '[data-testid="manage-category-full-description-input"]'
     )
     /** Multiline Markdown exceeds 176px at normal autosizing thresholds. */
     const fullDescription = [
@@ -888,7 +889,7 @@ describe('Prompt categories', () => {
     const dialogWidthPx = await categoryDialog.evaluate(
       (element) => element.getBoundingClientRect().width
     )
-    expect(Math.abs(dialogWidthPx - 760)).toBeLessThanOrEqual(1)
+    expect(Math.abs(dialogWidthPx - 1040)).toBeLessThanOrEqual(1)
     await expect(fullDescriptionInput.locator('.monaco-editor')).toBeVisible()
     /** Monaco content area remains fixed instead of growing with its Markdown. */
     const editorHeightPx = await fullDescriptionInput
@@ -896,22 +897,22 @@ describe('Prompt categories', () => {
       .evaluate((element) => element.getBoundingClientRect().height)
     expect(Math.abs(editorHeightPx - 176)).toBeLessThanOrEqual(1)
     await categoryInput.fill('   ')
-    await expect(categoryDialog.locator('[data-testid="create-category-name-error"]')).toHaveText(
+    await expect(categoryDialog.locator('[data-testid="manage-category-name-error"]')).toHaveText(
       'Category name is required'
     )
-    await expect(categoryDialog.locator('[data-testid="create-category-button"]')).toBeDisabled()
+    await expect(categoryDialog.locator('[data-testid="manage-categories-save-button"]')).toBeDisabled()
     await categoryInput.fill('  Code Review  ')
     await categoryInput.press('Enter')
     await expect(categoryDialog).toBeVisible()
     await shortDescriptionInput.fill('  Prompts for reviewing implementation changes.  ')
-    await focusMonacoEditor(mainWindow, '[data-testid="create-category-full-description-input"]')
+    await focusMonacoEditor(mainWindow, '[data-testid="manage-category-full-description-input"]')
     await mainWindow.keyboard.insertText(fullDescription)
     /** Fixed-height override remains active after content exceeds the normal editor height. */
     const populatedEditorHeightPx = await fullDescriptionInput
       .locator('.monaco-editor')
       .evaluate((element) => element.getBoundingClientRect().height)
     expect(Math.abs(populatedEditorHeightPx - 176)).toBeLessThanOrEqual(1)
-    await categoryDialog.getByRole('button', { name: 'Create Category' }).click()
+    await categoryDialog.getByRole('button', { name: 'Save Changes' }).click()
 
     const categoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Code Review.category.json`
     await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(true)
@@ -936,9 +937,10 @@ describe('Prompt categories', () => {
       ).categories.map((category: { categoryId: string | null }) => category.categoryId)
     ).toEqual([null, createdCategory.id, EXISTING_CATEGORY_ID])
 
-    await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-folder-manage-categories-button"]').click()
+    await categoryDialog.locator('[data-testid="manage-categories-new-button"]').click()
     await categoryInput.fill('Name Only')
-    await categoryDialog.getByRole('button', { name: 'Create Category' }).click()
+    await categoryDialog.getByRole('button', { name: 'Save Changes' }).click()
     /** Name-only category path verifies both optional fields remain optional. */
     const nameOnlyCategoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Name Only.category.json`
     await expect.poll(() => checkFileExists(electronApp, nameOnlyCategoryPath)).toBe(true)
@@ -954,90 +956,210 @@ describe('Prompt categories', () => {
       description: null
     })
 
-    await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
+    await mainWindow.locator('[data-testid="prompt-folder-manage-categories-button"]').click()
+    await categoryDialog.locator('[data-testid="manage-categories-new-button"]').click()
     await categoryInput.fill('code review')
-    await expect(categoryDialog.locator('[data-testid="create-category-name-error"]')).toHaveText(
+    await expect(categoryDialog.locator('[data-testid="manage-category-name-error"]')).toHaveText(
       'A category with this name already exists'
     )
-    await expect(categoryDialog.locator('[data-testid="create-category-button"]')).toBeDisabled()
-    await categoryDialog.getByRole('button', { name: 'Cancel' }).click()
-
-    const detailsResponse = await mainWindow.evaluate(async (category) => {
-      return await (window as any).electron.ipcRenderer.invoke('update-category-details', {
-        requestId: 'update-category-details-test',
-        clientId: (window as any).ipcClientId,
-        payload: {
-          command: {
-            categoryId: category.id,
-            displayName: 'Review Work',
-            shortDescription: '  Prompts for reviewing code.  '
-          },
-          expectations: [
-            {
-              entityType: 'category',
-              id: category.id,
-              expected: 'revision',
-              revision: 1
-            }
-          ]
-        }
-      })
-    }, createdCategory)
-    expect(detailsResponse).toMatchObject({ success: true })
-    const renamedCategoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Review Work.category.json`
-    await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(false)
-    await expect.poll(() => checkFileExists(electronApp, renamedCategoryPath)).toBe(true)
-
-    const renamedCategory = {
-      ...createdCategory,
-      displayName: 'Review Work',
-      shortDescription: 'Prompts for reviewing code.'
-    }
-    const descriptionResponse = await mainWindow.evaluate(async (category) => {
-      return await (window as any).electron.ipcRenderer.invoke('set-category-description', {
-        requestId: 'set-category-description-test',
-        clientId: (window as any).ipcClientId,
-        payload: {
-          command: {
-            categoryId: category.id,
-            description: 'Prompts for reviewing changes.'
-          },
-          expectations: [
-            {
-              entityType: 'category',
-              id: category.id,
-              expected: 'revision',
-              revision: 2
-            }
-          ]
-        }
-      })
-    }, renamedCategory)
-    expect(descriptionResponse).toMatchObject({
-      success: true,
-      payload: {
-        snapshots: [
-          {
-            entityType: 'category',
-            id: createdCategory.id,
-            revision: 3,
-            data: { description: 'Prompts for reviewing changes.' }
-          }
-        ]
-      }
-    })
-    await expect.poll(async () => JSON.parse(await readTextFile(electronApp, renamedCategoryPath)))
-      .toMatchObject({
-        id: createdCategory.id,
-        displayName: 'Review Work',
-        shortDescription: 'Prompts for reviewing code.',
-        description: 'Prompts for reviewing changes.'
-      })
+    await expect(categoryDialog.locator('[data-testid="manage-categories-save-button"]')).toBeDisabled()
+    await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
 
     await mainWindow.locator('[data-testid="prompt-folder-delete-button"]').click()
     await expect(
       mainWindow.locator('[role="dialog"][aria-label="Delete Folder"]')
     ).toBeVisible()
+  })
+
+  test('retains and atomically saves category management drafts', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Category workspace containing membership across Active and Completed statuses. */
+    const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [
+      {
+        folderName: 'Managed',
+        displayName: 'Managed',
+        promptFolderId: PROMPT_ROOT_ID,
+        prompts: [
+          {
+            id: 'managed-active-review',
+            title: 'Active Review',
+            promptText: 'Active review prompt.',
+            category: PROMPT_CATEGORY_ID
+          },
+          {
+            id: 'managed-completed-review',
+            title: 'Completed Review',
+            promptText: 'Completed review prompt.',
+            status: PromptStatus.Completed,
+            finalizedAt: '2026-09-10T12:00:00.000Z',
+            category: PROMPT_CATEGORY_ID
+          },
+          {
+            id: 'managed-second',
+            title: 'Second Prompt',
+            promptText: 'Second category prompt.',
+            category: SECOND_PROMPT_CATEGORY_ID
+          }
+        ]
+      }
+    ])
+    /** First category metadata used by the Active ordering and cross-status count. */
+    filesystem[`${WORKSPACE_PATH}/Prompts/Managed/Categories/Code Review.category.json`] =
+      JSON.stringify(
+        {
+          id: PROMPT_CATEGORY_ID,
+          displayName: 'Code Review',
+          shortDescription: null,
+          description: null
+        },
+        null,
+        2
+      )
+    /** Second category metadata staged for deletion in the management dialog. */
+    filesystem[`${WORKSPACE_PATH}/Prompts/Managed/Categories/Second.category.json`] =
+      JSON.stringify(
+        {
+          id: SECOND_PROMPT_CATEGORY_ID,
+          displayName: 'Second',
+          shortDescription: null,
+          description: null
+        },
+        null,
+        2
+      )
+    /** Started category workspace exposing the prompt-folder management entry points. */
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+    await testHelpers.navigateToPromptFolders('Managed')
+
+    /** General management entry that must select the first Active-ordered category. */
+    const manageButton = mainWindow.locator(
+      '[data-testid="prompt-folder-manage-categories-button"]'
+    )
+    /** Category-management dialog reused across discard, focus, and save checks. */
+    const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Manage Categories"]')
+    /** First Active-ordered category selector. */
+    const reviewSelector = categoryDialog.locator(
+      `[data-testid="manage-category-selector-${PROMPT_CATEGORY_ID}"]`
+    )
+    /** Second Active-ordered category selector. */
+    const secondSelector = categoryDialog.locator(
+      `[data-testid="manage-category-selector-${SECOND_PROMPT_CATEGORY_ID}"]`
+    )
+    /** Selected category name edited while moving among retained drafts. */
+    const categoryName = categoryDialog.locator('[data-testid="manage-category-name-input"]')
+    /** Atomic dialog submission disabled until every retained draft is valid and changed. */
+    const saveButton = categoryDialog.locator('[data-testid="manage-categories-save-button"]')
+
+    await manageButton.click()
+    await expect(reviewSelector).toHaveAttribute('aria-pressed', 'true')
+    await expect(reviewSelector).toContainText('2 prompts')
+    await expect(secondSelector).toContainText('1 prompt')
+    await expect(saveButton).toBeDisabled()
+    await categoryName.fill('Edited Review')
+    await secondSelector.click()
+    await categoryName.fill('')
+    await reviewSelector.click()
+    await expect(categoryName).toHaveValue('Edited Review')
+    await expect(saveButton).toBeDisabled()
+    await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
+
+    await manageButton.click()
+    await expect(categoryName).toHaveValue('Code Review')
+    await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
+
+    /** Rename action that opens the matching category and selects its complete name. */
+    const renameButton = mainWindow.locator(
+      `[data-testid="category-editor-${PROMPT_CATEGORY_ID}"] [data-testid="category-editor-title-edit"]`
+    )
+    await renameButton.click()
+    await expect(categoryName).toBeFocused()
+    /** Browser selection bounds proving rename focus selected the full name. */
+    const nameSelection = await categoryName.evaluate((element: HTMLInputElement) => ({
+      start: element.selectionStart,
+      end: element.selectionEnd,
+      length: element.value.length
+    }))
+    expect(nameSelection).toEqual({ start: 0, end: 11, length: 11 })
+    await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
+
+    await manageButton.click()
+    /** New-category action that appends and focuses the first new draft. */
+    const newCategoryButton = categoryDialog.locator(
+      '[data-testid="manage-categories-new-button"]'
+    )
+    await newCategoryButton.click()
+    await expect(categoryName).toBeFocused()
+    await categoryName.fill('First New')
+    await newCategoryButton.click()
+    await expect(categoryName).toBeFocused()
+    await categoryName.fill('Second New')
+    /** Selector test IDs expose the two stable client-generated category identities. */
+    const selectorTestIds = await categoryDialog
+      .locator('[data-testid^="manage-category-selector-"]')
+      .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-testid')!))
+    expect(selectorTestIds).toHaveLength(4)
+    /** First new category ID appended after every existing selector while editing. */
+    const firstNewCategoryId = selectorTestIds[2]!.replace('manage-category-selector-', '')
+    /** Second new category ID appended after the first new selector while editing. */
+    const secondNewCategoryId = selectorTestIds[3]!.replace('manage-category-selector-', '')
+
+    await secondSelector.click()
+    await categoryDialog.locator('[data-testid="manage-categories-delete-button"]').click()
+    await expect(categoryName).toHaveValue('First New')
+    await reviewSelector.click()
+    await categoryName.fill('Review Work')
+    await categoryDialog
+      .locator(`[data-testid="manage-category-selector-${secondNewCategoryId}"]`)
+      .click()
+    await expect(categoryName).toHaveValue('Second New')
+    await expect(saveButton).toBeEnabled()
+    await saveButton.click()
+    await expect(categoryDialog).not.toBeVisible()
+
+    // Persisted Active order moves new categories to the start as one block.
+    await expect
+      .poll(() =>
+        readCategoryOrder(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Managed/Active/_FolderInfo/FolderOrder.json`
+        )
+      )
+      .toMatchObject({
+        categories: [
+          { categoryId: null },
+          { categoryId: firstNewCategoryId },
+          { categoryId: secondNewCategoryId },
+          { categoryId: PROMPT_CATEGORY_ID }
+        ]
+      })
+    await expect
+      .poll(() =>
+        checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Managed/Categories/Review Work.category.json`
+        )
+      )
+      .toBe(true)
+    await expect
+      .poll(() =>
+        checkFileExists(
+          electronApp,
+          `${WORKSPACE_PATH}/Prompts/Managed/Categories/Second.category.json`
+        )
+      )
+      .toBe(false)
+    await expect
+      .poll(async () =>
+        parsePromptMarkdown(
+          await readTextFile(
+            electronApp,
+            `${WORKSPACE_PATH}/Prompts/Managed/Active/Second Prompt.prompt.md`
+          )
+        )
+      )
+      .not.toHaveProperty('category')
   })
 
   test('deletes a category and moves its ordered prompts to Uncategorized', async ({
@@ -1073,13 +1195,11 @@ describe('Prompt categories', () => {
           contentOwnerId: PROMPT_ROOT_ID,
           selectedEntryId: 'root-header',
           treeIsExpanded: false,
-          detailsSectionIsExpanded: true,
           contentSectionIsExpanded: false
         },
         {
           contentOwnerId: PROMPT_CATEGORY_ID,
-          selectedEntryId: 'categorized-prompt',
-          categoryDescriptionEditorViewStateJson: '{}'
+          selectedEntryId: 'categorized-prompt'
         }
       ]
     })
@@ -1091,17 +1211,17 @@ describe('Prompt categories', () => {
     expect(await readTextFile(electronApp, promptPath)).toContain(PROMPT_CATEGORY_ID)
     expect(await readTextFile(electronApp, templatePath)).toContain(TEMPLATE_CATEGORY_ID)
 
-    /** Atomic deletion response returned by the main-process IPC handler. */
-    const deleteResponse = await mainWindow.evaluate(
+    /** Atomic retained-set response returned by the main-process IPC handler. */
+    const saveResponse = await mainWindow.evaluate(
       async ({ categoryId, rootFolderId, workspaceId }) => {
-        return await (window as any).electron.ipcRenderer.invoke('delete-category', {
-          requestId: 'delete-category-test',
+        return await (window as any).electron.ipcRenderer.invoke('save-categories', {
+          requestId: 'save-categories-delete-test',
           clientId: (window as any).ipcClientId,
           payload: {
             command: {
-              categoryId,
               promptFolderId: rootFolderId,
               workspaceId,
+              categories: [],
               modifiedAt: '2026-08-29T12:00:00Z'
             },
             expectations: [
@@ -1142,7 +1262,7 @@ describe('Prompt categories', () => {
       { categoryId: PROMPT_CATEGORY_ID, rootFolderId: PROMPT_ROOT_ID, workspaceId }
     )
 
-    expect(deleteResponse).toMatchObject({
+    expect(saveResponse).toMatchObject({
       success: true,
       payload: {
         snapshots: expect.arrayContaining([
@@ -1176,11 +1296,6 @@ describe('Prompt categories', () => {
             id: `${workspaceId}:${PROMPT_CATEGORY_ID}`,
             deleted: true
           },
-          {
-            entityType: 'categoryDescriptionEditorUiState',
-            id: `${workspaceId}:${PROMPT_CATEGORY_ID}`,
-            deleted: true
-          },
           expect.objectContaining({
             entityType: 'prompt',
             id: 'categorized-prompt',
@@ -1206,7 +1321,6 @@ describe('Prompt categories', () => {
               contentOwnerId: PROMPT_ROOT_ID,
               selectedEntryId: 'categorized-prompt',
               treeIsExpanded: false,
-              detailsSectionIsExpanded: true,
               contentSectionIsExpanded: false
             }
           })
@@ -1214,12 +1328,12 @@ describe('Prompt categories', () => {
       }
     })
     /** Updated prompt snapshot returned by the generic deletion response. */
-    const deletedCategoryPrompt = deleteResponse.payload.snapshots.find(
+    const deletedCategoryPrompt = saveResponse.payload.snapshots.find(
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'prompt' && snapshot.id === 'categorized-prompt'
     )
     /** Updated root snapshot returned by the generic deletion response. */
-    const deletedCategoryRoot = deleteResponse.payload.snapshots.find(
+    const deletedCategoryRoot = saveResponse.payload.snapshots.find(
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'promptFolder' && snapshot.id === PROMPT_ROOT_ID
     )
@@ -1251,9 +1365,7 @@ describe('Prompt categories', () => {
           contentOwnerId: PROMPT_ROOT_ID,
           selectedEntryId: 'categorized-prompt',
           treeIsExpanded: false,
-          detailsSectionIsExpanded: true,
-          contentSectionIsExpanded: false,
-          categoryDescriptionEditorViewStateJson: null
+          contentSectionIsExpanded: false
         }
       })
     await expect

@@ -50,7 +50,7 @@ const TEMPLATE_ID = 'renderer-domain-template'
 const PROMPT_FOLDER_ID = 'renderer-domain-prompt-folder'
 /** Template-folder ID establishing template ownership for shared update planning. */
 const TEMPLATE_FOLDER_ID = 'renderer-domain-template-folder'
-/** Absent category-editor UI-state ID used to verify optional renderer deletion. */
+/** Absent prompt-folder UI-state ID used to verify optional renderer deletion. */
 const OPTIONAL_UI_STATE_ID = 'renderer-domain-workspace:absent-category'
 /** Editor measurement reused for prompt and template autosave assertions. */
 const EDITOR_MEASUREMENT = {
@@ -89,7 +89,7 @@ const planRenameCategoryWithOptionalDelete: DomainPlanner<RenameTestCommand> = (
   },
   {
     type: 'delete',
-    entityType: 'categoryDescriptionEditorUiState',
+    entityType: 'workspacePromptFolderUiState',
     id: OPTIONAL_UI_STATE_ID
   }
 ]
@@ -99,11 +99,11 @@ const planDeleteCategory: DomainPlanner<Record<string, never>> = () => [
   { type: 'delete', entityType: 'category', id: CATEGORY_ID }
 ]
 
-/** Shared test planner deleting an optional UI-state record that is not loaded. */
+/** Shared test planner deleting optional prompt-folder state that is not loaded. */
 const planDeleteAbsentUiState: DomainPlanner<Record<string, never>> = () => [
   {
     type: 'delete',
-    entityType: 'categoryDescriptionEditorUiState',
+    entityType: 'workspacePromptFolderUiState',
     id: OPTIONAL_UI_STATE_ID
   }
 ]
@@ -283,7 +283,7 @@ describe('renderer domain mutation framework', () => {
       payload: {
         snapshots: [
           {
-            entityType: 'categoryDescriptionEditorUiState',
+            entityType: 'workspacePromptFolderUiState',
             id: OPTIONAL_UI_STATE_ID,
             deleted: true
           }

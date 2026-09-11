@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { FileText, FolderPlus, Layers, Pencil, Trash2 } from 'lucide-svelte'
+  import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
@@ -20,7 +20,7 @@
     contentKind,
     screenMode,
     onDeletePromptFolder,
-    onAddCategory,
+    onManageCategories,
     onRenamePromptFolder,
     onScreenModeChange
   } = $props<{
@@ -31,7 +31,7 @@
     contentKind: import('@shared/PromptFolder').PromptFolderContentKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
-    onAddCategory: () => void
+    onManageCategories: () => void
     onRenamePromptFolder: () => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
   }>()
@@ -78,12 +78,12 @@
 
     <div class="prompt-folder-root-actions">
       <IconButton
-        icon={FolderPlus}
-        label="Add category"
-        title="Add category"
+        icon={FolderCog}
+        label="Manage categories"
+        title="Manage categories"
         hoverVariant="accent"
-        testId="prompt-folder-add-category-button"
-        onclick={onAddCategory}
+        testId="prompt-folder-manage-categories-button"
+        onclick={onManageCategories}
       />
       <IconButton
         icon={Trash2}

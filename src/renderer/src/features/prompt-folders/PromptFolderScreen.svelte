@@ -13,19 +13,14 @@
   import { createPromptFolderScreenController } from './promptFolderScreenController.svelte.ts'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
-  import CreateCategoryDialog from './CreateCategoryDialog.svelte'
+  import ManageCategoriesDialog, {
+    type ManagedCategoryInput,
+    type ManageCategoriesDialogOpenOptions
+  } from './ManageCategoriesDialog.svelte'
   import {
-    createCategory,
-    deleteCategory,
-    moveCategory
+    moveCategory,
+    saveCategories
   } from '@renderer/data/Mutations/CategoryMutations'
-  import { setCategoryDescriptionWithAutosave } from '@renderer/data/Mutations/CategoryMutations'
-  import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-  import {
-    clearCategoryDescriptionMeasuredHeight,
-    recordCategoryDescriptionMeasuredHeight
-  } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
-  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
 
   let {
     screenRootFolderId,
@@ -58,10 +53,10 @@
 
   let renamePromptFolderDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
   let renamePromptFolderId = $state<string | null>(null)
-  /** Imperative handle for opening category creation from the root header. */
-  let createCategoryDialog = $state<{ openDialog: () => void } | null>(null)
-  /** Category currently awaiting deletion confirmation. */
-  let deleteCategoryId = $state<string | null>(null)
+  /** Imperative handle for opening root-folder category management. */
+  let manageCategoriesDialog = $state<{
+    openDialog: (options?: ManageCategoriesDialogOpenOptions) => void
+  } | null>(null)
   let deletePromptFolderId = $state<string | null>(null)
 
   const renamePromptFolderTarget = $derived(
@@ -96,25 +91,34 @@
     )
   }
 
-  /** Opens category creation for the screen's root folder. */
-  const openCreateCategoryDialog = (): void => {
-    createCategoryDialog?.openDialog()
+  /** Opens category management to the first retained category, if present. */
+  const openManageCategoriesDialog = (): void => {
+    manageCategoriesDialog?.openDialog()
   }
 
-  /** Persists one validated root-owned category. */
-  const handleCreateCategory = async (
-    displayName: string,
-    shortDescription: string | null,
-    description: string | null
+  /** Opens category management to one row and optionally selects its complete name. */
+  const openManageCategoryDialog = (
+    categoryId: string,
+    focusName: boolean
+  ): void => {
+    manageCategoriesDialog?.openDialog({ categoryId, focusName })
+  }
+
+  /** Persists every retained category draft through one atomic mutation. */
+  const handleSaveCategories = async (
+    categories: ManagedCategoryInput[]
   ): Promise<boolean> => {
-    if (!controller.screenRootFolder) return false
+    if (!controller.workspaceId || !controller.screenRootFolder) return false
+    /** Validated workspace identity retained across the asynchronous save callback. */
+    const workspaceId = controller.workspaceId
+    /** Validated root identity retained across the asynchronous save callback. */
+    const promptFolderId = controller.screenRootFolder.id
     return await runIpcBestEffort(
       async () => {
-        await createCategory(
-          controller.screenRootFolderId,
-          displayName,
-          shortDescription,
-          description
+        await saveCategories(
+          workspaceId,
+          promptFolderId,
+          categories
         )
         return true
       },
@@ -122,45 +126,11 @@
     )
   }
 
-  /** Deletes the selected category and moves its content to Uncategorized. */
-  const performCategoryDelete = async (): Promise<void> => {
-    if (!deleteCategoryId) return
-    /** Stable category ID retained while the dialog closes. */
-    const categoryId = deleteCategoryId
-    deleteCategoryId = null
-    await runIpcBestEffort(() => deleteCategory(categoryId))
-  }
-
   /** Persists one category-group reorder from the folder screen. */
   const handleMoveCategory = (categoryId: string, previousCategoryId: string | null): void => {
     void runIpcBestEffort(() =>
       moveCategory(controller.screenRootFolderId, categoryId, previousCategoryId, screenMode)
     )
-  }
-
-  /** Updates and measures a category description before its paced autosave. */
-  const handleCategoryDescriptionChange = (
-    categoryId: string,
-    text: string,
-    measurement: TextMeasurement
-  ): void => {
-    const category = controller.categories.find((candidate) => candidate.id === categoryId)
-    if (!category) return
-    const textChanged = category.description !== text
-    recordCategoryDescriptionMeasuredHeight(categoryId, measurement, textChanged)
-    if (textChanged) setCategoryDescriptionWithAutosave(categoryId, text, AUTOSAVE_MS)
-  }
-
-  /** Adds or removes a category description through the same expandable settings UI. */
-  const handleCategoryDescriptionPresenceChange = (
-    categoryId: string,
-    isPresent: boolean
-  ): void => {
-    const category = controller.categories.find((candidate) => candidate.id === categoryId)
-    const description = isPresent ? '' : null
-    if (!category || category.description === description) return
-    clearCategoryDescriptionMeasuredHeight(categoryId)
-    setCategoryDescriptionWithAutosave(categoryId, description, AUTOSAVE_MS)
   }
 
   const isEmptyPromptFolder = (promptFolderId: string): boolean => {
@@ -294,12 +264,11 @@
             finalizedPromptContentOwnerByPromptId={controller.finalizedPromptContentOwnerByPromptId}
             {screenMode}
             isCreatingPrompt={controller.isCreatingPrompt}
-            detailsSectionExpandedByOwnerId={controller.detailsSectionExpandedByOwnerId}
             contentSectionExpandedByOwnerId={controller.contentSectionExpandedByOwnerId}
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
-            onAddCategory={openCreateCategoryDialog}
+            onManageCategories={openManageCategoriesDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptFolder={handleDeletePromptFolder}
             onSetPromptStatus={controller.handleSetPromptStatus}
@@ -308,8 +277,6 @@
             canMovePrompt={controller.canMovePrompt}
             onPromptTreeDrop={controller.handlePromptTreeDrop}
             onMoveCategory={handleMoveCategory}
-            onCategoryDescriptionChange={handleCategoryDescriptionChange}
-            onCategoryDescriptionPresenceChange={handleCategoryDescriptionPresenceChange}
             onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
             onScrollToAndTrackRowChange={controller.setScrollToAndTrackRow}
             onScrollApiChange={controller.setScrollApi}
@@ -319,12 +286,9 @@
             breadcrumbSampleOffsetPx={controller.breadcrumbSampleOffsetPx}
             onBreadcrumbCategoryChange={controller.handleBreadcrumbCategoryChange}
             onUserScroll={controller.handleVirtualUserScroll}
-            onDetailsSectionToggle={controller.toggleDetailsSectionExpanded}
             onContentSectionToggle={controller.toggleContentSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}
-            onDeleteCategory={(categoryId) => {
-              deleteCategoryId = categoryId
-            }}
+            onManageCategory={openManageCategoryDialog}
             {onScreenModeChange}
           />
         {/if}
@@ -342,11 +306,13 @@
   {/snippet}
 </PromptFolderFindIntegration>
 
-<CreateCategoryDialog
-  bind:this={createCategoryDialog}
-  categories={controller.categories}
+<ManageCategoriesDialog
+  bind:this={manageCategoriesDialog}
+  categories={controller.managedCategories}
+  folderDisplayName={controller.folderDisplayName}
+  contentKind={controller.contentKind}
   isWorkspaceReady={controller.workspaceId !== null && controller.screenRootFolder !== null}
-  onsubmit={handleCreateCategory}
+  onsubmit={handleSaveCategories}
 />
 
 <PromptFolderNameDialog
@@ -386,18 +352,6 @@
       void performPromptFolderDelete(deletePromptFolderTarget.id)
     }
   }}
-/>
-
-<ConfirmationDialog
-  open={deleteCategoryId !== null}
-  title="Delete Category"
-  description={`Are you sure you want to delete “${controller.categories.find((category) => category.id === deleteCategoryId)?.displayName ?? ''}”? Its contents will move to Uncategorized.`}
-  confirmText="Delete Category"
-  confirmTestId="category-confirm-delete-button"
-  oncancel={() => {
-    deleteCategoryId = null
-  }}
-  onconfirm={performCategoryDelete}
 />
 
 <style>

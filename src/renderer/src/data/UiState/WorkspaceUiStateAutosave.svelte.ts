@@ -5,19 +5,16 @@ import {
 } from '@shared/UserPersistence'
 import {
   createAccordionUiStateKey,
-  createCategoryDescriptionEditorUiStateKey,
   createWorkspacePromptFolderUiStateKey,
   type AccordionUiState,
   type WorkspacePromptFolderUiState
 } from '@shared/UiState'
 import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
-import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
 import { submitPacedUpdateTransactionAndWait } from '../IpcFramework/RevisionCollections'
 import {
   setAccordionUiStateWithAutosave,
-  setCategoryDescriptionEditorUiStateWithAutosave as queueCategoryDescriptionEditorUiState,
   setWorkspacePromptFolderUiStateWithAutosave,
   setWorkspaceUiStateWithAutosave
 } from '../Mutations/WorkspaceUiStateMutations'
@@ -26,8 +23,6 @@ import {
 const DEFAULT_SELECTED_ENTRY_ID = 'root-header'
 /** Default sidebar expansion for a newly observed content owner. */
 const DEFAULT_TREE_IS_EXPANDED = true
-/** Default details expansion for a newly observed content owner. */
-const DEFAULT_DETAILS_SECTION_IS_EXPANDED = false
 /** Default content expansion for a newly observed content owner. */
 const DEFAULT_CONTENT_SECTION_IS_EXPANDED = true
 
@@ -40,7 +35,6 @@ const createPromptFolderUiState = (
   contentOwnerId,
   selectedEntryId: DEFAULT_SELECTED_ENTRY_ID,
   treeIsExpanded: DEFAULT_TREE_IS_EXPANDED,
-  detailsSectionIsExpanded: DEFAULT_DETAILS_SECTION_IS_EXPANDED,
   contentSectionIsExpanded: DEFAULT_CONTENT_SECTION_IS_EXPANDED
 })
 
@@ -62,7 +56,6 @@ const setPromptFolderUiStateFieldsWithAutosave = (
       WorkspacePromptFolderUiState,
       | 'selectedEntryId'
       | 'treeIsExpanded'
-      | 'detailsSectionIsExpanded'
       | 'contentSectionIsExpanded'
     >
   >,
@@ -169,22 +162,6 @@ export const lookupWorkspacePersistedCategoryTreeExpandedState = (
   categoryId: string
 ): boolean | null => lookupPromptFolderUiState(workspaceId, categoryId)?.treeIsExpanded ?? null
 
-/** Looks up one category description editor's Monaco view state. */
-export const lookupWorkspacePersistedCategoryDescriptionEditorViewStateJson = (
-  workspaceId: string,
-  categoryId: string
-): string | null =>
-  categoryDescriptionEditorUiStateCollection.get(
-    createCategoryDescriptionEditorUiStateKey(workspaceId, categoryId)
-  )?.editorViewStateJson ?? null
-
-/** Looks up whether one content owner's details section is expanded. */
-export const lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState = (
-  workspaceId: string,
-  contentOwnerId: string
-): boolean | null =>
-  lookupPromptFolderUiState(workspaceId, contentOwnerId)?.detailsSectionIsExpanded ?? null
-
 /** Looks up whether one content owner's content section is expanded. */
 export const lookupWorkspacePersistedPromptFolderContentSectionExpandedState = (
   workspaceId: string,
@@ -216,17 +193,6 @@ export const setCategoryTreeExpandedStateWithAutosave = (
   setPromptFolderUiStateFieldsWithAutosave(workspaceId, categoryId, { treeIsExpanded })
 }
 
-/** Persists whether one content owner's details section is expanded. */
-export const setPromptFolderDetailsSectionExpandedStateWithAutosave = (
-  workspaceId: string,
-  contentOwnerId: string,
-  detailsSectionIsExpanded: boolean
-): void => {
-  setPromptFolderUiStateFieldsWithAutosave(workspaceId, contentOwnerId, {
-    detailsSectionIsExpanded
-  })
-}
-
 /** Persists whether one content owner's content section is expanded. */
 export const setPromptFolderContentSectionExpandedStateWithAutosave = (
   workspaceId: string,
@@ -236,25 +202,6 @@ export const setPromptFolderContentSectionExpandedStateWithAutosave = (
   setPromptFolderUiStateFieldsWithAutosave(workspaceId, contentOwnerId, {
     contentSectionIsExpanded
   })
-}
-
-/** Persists or removes one category description editor's Monaco view state. */
-export const setCategoryDescriptionEditorViewStateWithAutosave = (
-  workspaceId: string,
-  categoryId: string,
-  editorViewStateJson: string | null
-): void => {
-  /** Composite key used to skip redundant nullable editor state changes. */
-  const id = createCategoryDescriptionEditorUiStateKey(workspaceId, categoryId)
-  /** Current authoritative or optimistic editor state. */
-  const current = categoryDescriptionEditorUiStateCollection.get(id)
-  if (current?.editorViewStateJson === editorViewStateJson || (!current && editorViewStateJson === null)) {
-    return
-  }
-  queueCategoryDescriptionEditorUiState(
-    { workspaceId, categoryId, editorViewStateJson },
-    AUTOSAVE_MS
-  )
 }
 
 /** Flushes every pending split workspace UI-state autosave. */
@@ -269,10 +216,6 @@ export const flushWorkspaceUiStateAutosaves = async (): Promise<void> => {
     ...accordionUiStateCollection.toArray.map((record) => [
       accordionUiStateCollection.id,
       createAccordionUiStateKey(record.workspaceId, record.persistenceId)
-    ]),
-    ...categoryDescriptionEditorUiStateCollection.toArray.map((record) => [
-      categoryDescriptionEditorUiStateCollection.id,
-      createCategoryDescriptionEditorUiStateKey(record.workspaceId, record.categoryId)
     ])
   ] as Array<[string, string]>
   await Promise.allSettled(

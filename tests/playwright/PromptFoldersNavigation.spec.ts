@@ -106,19 +106,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
         electronApp,
         `INSERT INTO prompt_folder_view_state (
            workspace_id, content_owner_id, selected_entry_id,
-           tree_is_expanded, details_section_is_expanded, content_section_is_expanded
-         ) VALUES ('${workspaceRow.workspaceId}', '${contentOwnerId}', 'folder-settings', 1, 0, 1)
+           tree_is_expanded, content_section_is_expanded
+         ) VALUES ('${workspaceRow.workspaceId}', '${contentOwnerId}', 'folder-settings', 1, 1)
          ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
            selected_entry_id = excluded.selected_entry_id`
       )
     }
-    await runSqlStatement(
-      electronApp,
-      `INSERT INTO category_description_editor_view_state (
-         workspace_id, category_id, editor_view_state_json
-       ) VALUES ('${workspaceRow.workspaceId}', '${categoryId}', '{}')
-       ON CONFLICT(workspace_id, category_id) DO UPDATE SET editor_view_state_json = '{}'`
-    )
     await runSqlStatement(
       electronApp,
       `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
@@ -129,14 +122,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       electronApp,
       `INSERT INTO prompt_folder_view_state (
          workspace_id, content_owner_id, selected_entry_id,
-         tree_is_expanded, details_section_is_expanded, content_section_is_expanded
-       ) VALUES ('${workspaceRow.workspaceId}', 'sibling-owner', 'folder-settings', 1, 0, 1)`
-    )
-    await runSqlStatement(
-      electronApp,
-      `INSERT INTO category_description_editor_view_state (
-         workspace_id, category_id, editor_view_state_json
-       ) VALUES ('${workspaceRow.workspaceId}', 'sibling-category', '{}')`
+         tree_is_expanded, content_section_is_expanded
+       ) VALUES ('${workspaceRow.workspaceId}', 'sibling-owner', 'folder-settings', 1, 1)`
     )
     await runSqlStatement(
       electronApp,
@@ -153,9 +140,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
               AND content_owner_id IN (
                 '${promptFolderId}', '${categoryId}', 'sibling-owner'
               )) AS promptFolderCount,
-           (SELECT COUNT(*) FROM category_description_editor_view_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND category_id IN ('${categoryId}', 'sibling-category')) AS categoryEditorCount,
            (SELECT COUNT(*) FROM markdown_content_ui_state
             WHERE workspace_id = '${workspaceRow.workspaceId}'
               AND content_id IN ('base-before', 'sibling-content')) AS markdownCount`
@@ -163,7 +147,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).rows?.[0]
     expect(seededRow).toEqual({
       promptFolderCount: 3,
-      categoryEditorCount: 2,
       markdownCount: 2
     })
 
@@ -179,7 +162,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const promptFolderData = promptFolderSnapshot.data as PromptFolder
     /** Content IDs across every status folder owned by the deleted root. */
     const contentIds = getMarkdownContentIds(promptFolderData, promptFolderData.kind)
-    /** Category IDs whose files and editor state are deleted with the root. */
+    /** Category IDs whose files are deleted with the root. */
     const categoryIds = getPromptFolderCategoryIds(promptFolderData)
     /** Required generic domain expectations; optional SQLite deletes are excluded by policy. */
     const deletionExpectations = [
@@ -256,18 +239,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
            (SELECT COUNT(*) FROM prompt_folder_view_state
             WHERE workspace_id = '${workspaceRow.workspaceId}'
               AND content_owner_id IN ('${promptFolderId}', '${categoryId}')) AS promptFolderCount,
-           (SELECT COUNT(*) FROM category_description_editor_view_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND category_id = '${categoryId}') AS categoryEditorCount,
            (SELECT COUNT(*) FROM markdown_content_ui_state
             WHERE workspace_id = '${workspaceRow.workspaceId}'
               AND content_id = 'base-before') AS markdownCount,
            (SELECT COUNT(*) FROM prompt_folder_view_state
             WHERE workspace_id = '${workspaceRow.workspaceId}'
               AND content_owner_id = 'sibling-owner') AS siblingPromptFolderCount,
-           (SELECT COUNT(*) FROM category_description_editor_view_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND category_id = 'sibling-category') AS siblingCategoryEditorCount,
            (SELECT COUNT(*) FROM markdown_content_ui_state
             WHERE workspace_id = '${workspaceRow.workspaceId}'
               AND content_id = 'sibling-content') AS siblingMarkdownCount,
@@ -279,10 +256,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).rows?.[0]
     expect(cleanupRow).toEqual({
       promptFolderCount: 0,
-      categoryEditorCount: 0,
       markdownCount: 0,
       siblingPromptFolderCount: 1,
-      siblingCategoryEditorCount: 1,
       siblingMarkdownCount: 1,
       selectedScreen: 'prompt-task-folders',
       lastPromptTaskFolderId: null
@@ -351,9 +326,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toHaveAttribute(
       'title',
-      'Add Category'
+      'Manage Categories'
     )
     const templateEditor = mainWindow.locator('[data-testid="prompt-editor-template-1"]')
     await expect(templateEditor).toBeVisible()
@@ -404,61 +379,45 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const categoryContentToggle = categoryEditor.locator(
       '[data-testid="category-editor-content-toggle"]'
     )
-    /** Settings expansion state that must remain unchanged by the inactive pencil. */
-    const categorySettingsToggle = categoryEditor.locator(
-      '[data-testid="category-editor-settings-toggle"]'
+    /** Category management action that opens directly to this category. */
+    const categoryManageButton = categoryEditor.locator(
+      '[data-testid="category-editor-manage-button"]'
     )
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'true')
-    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'false')
-    await expect(
-      categoryEditor.locator('[data-testid="category-editor-delete-button"]')
-    ).toBeVisible()
+    await expect(categoryManageButton).toHaveAttribute('aria-label', 'Manage category')
     await expect(
       categoryEditor.locator('[data-testid="category-drag-handle"]')
     ).toHaveAttribute('aria-label', 'Drag category')
-    /** Visible category pencil retained as an inactive future management-dialog trigger. */
+    /** Visible category pencil opens management with the complete name selected. */
     const categoryRenameButton = categoryEditor.locator(
       '[data-testid="category-editor-title-edit"]'
     )
     await expect(categoryRenameButton).toHaveAttribute('aria-label', 'Rename category')
-    await expect(
-      categoryEditor.locator('[data-testid="category-editor-delete-button"]')
-    ).toHaveAttribute('aria-label', 'Delete category')
-
     await categoryRenameButton.click()
-    const renameCategoryDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Rename Category"]'
+    const manageCategoriesDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Manage Categories"]'
     )
-    await expect(renameCategoryDialog).toHaveCount(0)
+    const managedNameInput = manageCategoriesDialog.locator(
+      '[data-testid="manage-category-name-input"]'
+    )
+    await expect(manageCategoriesDialog).toBeVisible()
+    await expect(managedNameInput).toBeFocused()
+    expect(
+      await managedNameInput.evaluate((input: HTMLInputElement) => ({
+        start: input.selectionStart,
+        end: input.selectionEnd
+      }))
+    ).toEqual({ start: 0, end: 'Category Templates'.length })
+    await manageCategoriesDialog.locator('[data-testid="manage-categories-close-button"]').click()
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'true')
-    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'false')
 
-    await categoryEditor.locator('[data-testid="category-editor-delete-button"]').click()
-    const deleteCategoryDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Category"]'
-    )
-    await expect(deleteCategoryDialog).toBeVisible()
+    await categoryManageButton.click()
+    await expect(manageCategoriesDialog).toBeVisible()
     await expect(
-      deleteCategoryDialog.locator('[data-testid="dialog-header-icon"]')
-    ).toBeVisible()
-    await expect(
-      deleteCategoryDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveCount(0)
-    await expect(
-      deleteCategoryDialog.getByRole('button', { name: 'Delete Category' })
-    ).toBeVisible()
-    await deleteCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
-
-    await mainWindow.locator('[data-testid="prompt-folder-add-category-button"]').click()
-    const createCategoryDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Category"]'
-    )
-    await expect(createCategoryDialog).toBeVisible()
-    await expect(
-      createCategoryDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Add a category to this root folder.')
-    await expect(createCategoryDialog.getByLabel('Category Name')).toBeVisible()
-    await createCategoryDialog.getByRole('button', { name: 'Cancel' }).click()
+      manageCategoriesDialog.locator('[data-testid="dialog-subtitle"]')
+    ).toHaveText('Code Review Templates')
+    await expect(managedNameInput).toHaveValue('Category Templates')
+    await manageCategoriesDialog.locator('[data-testid="manage-categories-close-button"]').click()
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toHaveAttribute(
@@ -482,10 +441,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(deleteTemplateFolderDialog).toBeVisible()
     await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
 
-    await categoryEditor.locator('[data-testid="category-editor-settings-toggle"]').click()
-    await expect(
-      categoryEditor.locator('[data-testid^="category-settings-toggle-"]')
-    ).toHaveCount(1)
   })
 
   test('renders prompts when opening Examples', async ({ testSetup }) => {
@@ -650,12 +605,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const categoryContentToggle = mainWindow
       .locator(categorySelector)
       .locator('[data-testid="category-editor-content-toggle"]')
-    /** Category settings toggle used to verify details expansion remains independent. */
-    const categorySettingsToggle = mainWindow
-      .locator(categorySelector)
-      .locator('[data-testid="category-editor-settings-toggle"]')
-    await categorySettingsToggle.click()
-    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
     await categoryContentToggle.click()
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
     await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST, 100)
@@ -666,7 +615,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       .poll(async () => Math.abs((await readRowTopInset(categorySelector))! - 80))
       .toBeLessThanOrEqual(2)
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.locator('.monaco-editor textarea:focus')).toHaveCount(0)
 
     await headerSection.click()
@@ -676,7 +624,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(headerCategory).toHaveCount(0)
     await expect(headerSection).toHaveCSS('color', currentBreadcrumbColor)
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(categorySettingsToggle).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
       'data-active',
       'true'
@@ -1368,9 +1315,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
       'Templates 0'
     )
-    await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toHaveAttribute(
       'title',
-      'Add Category'
+      'Manage Categories'
     )
     await expect
       .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples`))

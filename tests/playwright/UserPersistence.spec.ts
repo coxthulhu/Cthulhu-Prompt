@@ -709,48 +709,12 @@ describe('User Persistence', () => {
           const entry = persisted.promptFolderViewEntries.find(
             (viewEntry) => viewEntry.contentOwnerId === categoryId
           )
-          const settingsExpanded = entry?.detailsSectionIsExpanded ?? null
           const promptsExpanded = entry?.contentSectionIsExpanded ?? null
-          return `${settingsExpanded}:${promptsExpanded}`
+          return promptsExpanded
         },
         { timeout: 15000 }
       )
-      .toBe('false:false')
-  })
-
-  test('autosaves prompt folder settings section expanded state', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const workspacePath = '/ws/categories'
-    const workspaceId = createDeterministicId(workspacePath)
-    const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'categories' }
-    })
-
-    await testHelpers.navigateToPromptFolders('Main')
-
-    const settingsToggle = mainWindow.locator(
-      `[data-testid="category-editor-${categoryId}"] [data-testid="category-editor-settings-toggle"]`
-    )
-    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'false')
-
-    await settingsToggle.click()
-    await expect(settingsToggle).toHaveAttribute('aria-pressed', 'true')
-
-    await expect
-      .poll(
-        async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          const entry = persisted.promptFolderViewEntries.find(
-            (viewEntry) => viewEntry.contentOwnerId === categoryId
-          )
-          return entry?.detailsSectionIsExpanded ?? null
-        },
-        { timeout: 15000 }
-      )
-      .toBe(true)
+      .toBe(false)
   })
 
   test('restores persisted prompt tree entry on startup', async ({ electronApp, testSetup }) => {

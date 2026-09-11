@@ -62,16 +62,16 @@ const CATEGORY_TOGGLE = '[data-testid="prompt-tree-active-category-toggle-button
 /** Active-tree action that creates content at the start of Category. */
 const CATEGORY_ADD_TO_TOP_BUTTON =
   '[data-testid="prompt-tree-active-category-add-to-top-button-Category"]'
-/** Context-menu action that opens Category without opening its settings. */
+/** Context-menu action that opens Category in the prompt-folder screen. */
 const CATEGORY_OPEN_MENU_ITEM =
   '[data-testid="prompt-tree-active-category-open-menu-item-Category"]'
+/** Context-menu action that opens Category in category management. */
 const CATEGORY_SETTINGS_MENU_ITEM =
   '[data-testid="prompt-tree-active-category-settings-menu-item-Category"]'
 const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
 const SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const CATEGORY_EDITOR = `[data-testid="category-editor-${CATEGORY_ID}"]`
-const CATEGORY_SETTINGS_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-settings-toggle"]`
 const CATEGORY_CONTENT_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-content-toggle"]`
 // Matches the category-navigation bias requested from the virtual window.
 const PROMPT_FOLDER_CATEGORY_VERTICAL_BIAS_PX = 80
@@ -363,7 +363,7 @@ describe('Prompt folder prompt tree', () => {
       'toggle-completed-prompts-button',
       'toggle-archived-prompts-button',
       'toggle-all-categories-button',
-      'sidebar-add-category-button',
+      'sidebar-manage-categories-button',
       'selected-prompt-folder-actions-button'
     ])
     const promptSectionAlignment = await mainWindow
@@ -520,10 +520,6 @@ describe('Prompt folder prompt tree', () => {
       '[data-testid="prompt-editor-category-prompt"]'
     )
 
-    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    )
     await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
       'true'
@@ -541,10 +537,6 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(CATEGORY_OPEN_MENU_ITEM).click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
     await expectRowToReachPromptFolderCategoryBias(mainWindow, testHelpers, CATEGORY_EDITOR)
-    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    )
     await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
       'true'
@@ -587,12 +579,11 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON).click({ button: 'right' })
     await expect(mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(CATEGORY_SETTINGS_MENU_ITEM).click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Main')
-    await expectRowToReachPromptFolderCategoryBias(mainWindow, testHelpers, CATEGORY_EDITOR)
-    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
-      'aria-pressed',
-      'true'
+    await expect(mainWindow.getByRole('dialog', { name: 'Manage Categories' })).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="manage-category-name-input"]')).toHaveValue(
+      'Category'
     )
+    await mainWindow.locator('[data-testid="manage-categories-close-button"]').click()
 
     await mainWindow.locator(CATEGORY_TOGGLE).hover()
     await expect(mainWindow.locator(CATEGORY_ADD_TO_TOP_BUTTON)).toBeVisible()
@@ -820,7 +811,7 @@ describe('Prompt folder prompt tree', () => {
     await expect(promptTreeButton).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('stops tracking a biased prompt after hydration beside collapsed folder settings', async ({
+  test('stops tracking a biased prompt after category hydration', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -835,10 +826,6 @@ describe('Prompt folder prompt tree', () => {
 
     const promptEditor = promptEditorSelector('category-prompt')
     const promptTreeRow = mainWindow.locator('[data-testid="prompt-tree-active-prompt-category-prompt"]')
-    await expect(mainWindow.locator(CATEGORY_SETTINGS_TOGGLE)).toHaveAttribute(
-      'aria-pressed',
-      'false'
-    )
     await scrollPromptFolderRowAwayFromViewportCenter(mainWindow, testHelpers, promptEditor)
     await promptTreeRow.click()
     await expectRowToReachPromptFolderVerticalBias(

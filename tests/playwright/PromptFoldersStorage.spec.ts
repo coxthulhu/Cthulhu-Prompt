@@ -123,7 +123,7 @@ describe('Prompt folder storage', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-root-header"] .prompt-folder-root-subtitle')
     ).toHaveText('Task Prompts')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-add-category-button"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-manage-categories-button"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category-"]')).toHaveCount(0)
 
     // The root metadata identifies a prompt folder while only Active owns an order file.

@@ -1,10 +1,8 @@
 import type { DomainChange, DomainPlanner } from './DomainChanges'
 import {
   createAccordionUiStateKey,
-  createCategoryDescriptionEditorUiStateKey,
   createWorkspacePromptFolderUiStateKey,
   type AccordionUiState,
-  type CategoryDescriptionEditorUiState,
   type WorkspacePromptFolderUiState,
   type WorkspaceUiState
 } from './UiState'
@@ -12,13 +10,6 @@ import {
   parseWorkspaceAccordionSections,
   parseWorkspaceScreenSelection
 } from './UserPersistence'
-
-/** Command that sets or removes one category-description editor view state. */
-export type SetCategoryDescriptionEditorUiStateDomainCommand = {
-  workspaceId: string
-  categoryId: string
-  editorViewStateJson: string | null
-}
 
 /** Builds an insert or update plan for one complete authoritative UI-state record. */
 const planUiStateUpsert = <
@@ -87,12 +78,11 @@ export const parseSetWorkspacePromptFolderUiStateDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 6 ||
+    Object.keys(record).length !== 5 ||
     typeof record.workspaceId !== 'string' ||
     typeof record.contentOwnerId !== 'string' ||
     typeof record.selectedEntryId !== 'string' ||
     typeof record.treeIsExpanded !== 'boolean' ||
-    typeof record.detailsSectionIsExpanded !== 'boolean' ||
     typeof record.contentSectionIsExpanded !== 'boolean'
   ) {
     return null
@@ -117,24 +107,6 @@ export const parseSetAccordionUiStateDomainCommand = (
   /** Validated accordion sections retained in persisted order. */
   const sections = parseWorkspaceAccordionSections(record.sections)
   return sections ? { workspaceId: record.workspaceId, persistenceId: record.persistenceId, sections } : null
-}
-
-/** Strict runtime parser for nullable category-editor UI-state commands. */
-export const parseSetCategoryDescriptionEditorUiStateDomainCommand = (
-  value: unknown
-): SetCategoryDescriptionEditorUiStateDomainCommand | null => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw command fields validated without allowing additional properties. */
-  const record = value as Record<string, unknown>
-  if (
-    Object.keys(record).length !== 3 ||
-    typeof record.workspaceId !== 'string' ||
-    typeof record.categoryId !== 'string' ||
-    (record.editorViewStateJson !== null && typeof record.editorViewStateJson !== 'string')
-  ) {
-    return null
-  }
-  return record as SetCategoryDescriptionEditorUiStateDomainCommand
 }
 
 /** Plans one insert-or-update workspace-level UI-state replacement. */
@@ -166,38 +138,3 @@ export const planSetAccordionUiStateDomainMutation: DomainPlanner<AccordionUiSta
     createAccordionUiStateKey(command.workspaceId, command.persistenceId),
     command
   )
-
-/** Plans one insert, update, or optional delete for category-editor UI state. */
-export const planSetCategoryDescriptionEditorUiStateDomainMutation: DomainPlanner<SetCategoryDescriptionEditorUiStateDomainCommand> = (
-  state,
-  command
-) => {
-  /** Composite authoritative key shared by renderer and SQLite persistence. */
-  const id = createCategoryDescriptionEditorUiStateKey(
-    command.workspaceId,
-    command.categoryId
-  )
-  if (command.editorViewStateJson === null) {
-    return [{ type: 'delete', entityType: 'categoryDescriptionEditorUiState', id }]
-  }
-  /** Complete persisted category editor state represented by the command. */
-  const uiState: CategoryDescriptionEditorUiState = {
-    workspaceId: command.workspaceId,
-    categoryId: command.categoryId,
-    editorViewStateJson: command.editorViewStateJson
-  }
-  /** Existing authoritative editor state deciding between insert and update. */
-  const existing = state.get('categoryDescriptionEditorUiState', id)
-  return existing
-    ? [
-        {
-          type: 'update',
-          entityType: 'categoryDescriptionEditorUiState',
-          id,
-          recipe: (draft) => {
-            Object.assign(draft, uiState)
-          }
-        }
-      ]
-    : [{ type: 'insert', entityType: 'categoryDescriptionEditorUiState', id, data: uiState }]
-}

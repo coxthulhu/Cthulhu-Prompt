@@ -4,7 +4,7 @@ import { SvelteSet } from 'svelte/reactivity'
 import {
   getPromptStatusFolderDefinition,
   PROMPT_STATUS_FOLDER_REGISTRY,
-  type PromptStatusFolderId,
+  PromptStatusFolderId,
   isPromptFull,
   type Prompt,
   PromptStatus,
@@ -65,10 +65,8 @@ import {
   recordPromptFolderScrollTop
 } from '@renderer/data/UiState/PromptFolderUiCache.svelte.ts'
 import {
-  lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState,
   lookupWorkspacePersistedPromptFolderContentSectionExpandedState,
   lookupWorkspacePersistedPromptFolderSelection,
-  setPromptFolderDetailsSectionExpandedStateWithAutosave,
   setPromptFolderContentSectionExpandedStateWithAutosave,
   setPromptFolderSelectedEntryIdWithAutosave
 } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
@@ -81,13 +79,11 @@ import type {
 } from '../virtualizer/virtualWindowTypes'
 import {
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-  PROMPT_FOLDER_FIND_CATEGORY_DESCRIPTION_SECTION_KEY,
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
 } from './find/promptFolderFindSectionKeys'
 import type { PromptFolderFindItem, PromptFolderFindMatch } from './find/promptFolderFindTypes'
 import {
   PROMPT_FOLDER_ROOT_HEADER_ROW_ID,
-  categoryDescriptionFindEntityId,
   promptEditorRowId,
   promptFolderDividerRowId,
   categoryEditorRowId
@@ -343,6 +339,18 @@ export const createPromptFolderScreenController = ({
         })
       : []
   )
+  /** Root-owned categories in the Active folder's category ordering. */
+  const managedCategories = $derived.by(() =>
+    screenRootFolder
+      ? getCategoryOrderCategoryIds(
+          getMarkdownContentCategoryOrder(screenRootFolder, PromptStatusFolderId.Active)
+        ).flatMap((categoryId) => {
+          /** Loaded category associated with one Active ordering group. */
+          const category = categoryById[categoryId]
+          return category ? [category] : []
+        })
+      : []
+  )
   // Categories belong to the current root while root-folder destinations own themselves.
   const findContainingRootFolderId = (contentOwnerId: string): string =>
     categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
@@ -401,28 +409,10 @@ export const createPromptFolderScreenController = ({
   let breadcrumbCategoryId = $state<string | null>(null)
   const TOP_SCROLL_EPSILON_PX = 1
 
-  let detailsSectionExpandedStates = $state<Record<string, boolean>>({})
   let contentSectionExpandedStates = $state<Record<string, boolean>>({})
 
   const getContentSectionStateKey = (contentOwnerId: string): string =>
     `${workspaceId ?? 'no-workspace'}:${contentOwnerId}:${screenMode}`
-
-  const lookupPersistedDetailsSectionExpandedState = (contentOwnerId: string): boolean => {
-    if (isFinalMode) {
-      return false
-    }
-
-    if (!workspaceId) {
-      return false
-    }
-
-    return (
-      lookupWorkspacePersistedPromptFolderDetailsSectionExpandedState(
-        workspaceId,
-        contentOwnerId
-      ) ?? false
-    )
-  }
 
   const lookupPersistedContentSectionExpandedState = (contentOwnerId: string): boolean => {
     if (isFinalMode) {
@@ -443,10 +433,6 @@ export const createPromptFolderScreenController = ({
     contentSectionExpandedStates[getContentSectionStateKey(contentOwnerId)] ??
     lookupPersistedContentSectionExpandedState(contentOwnerId)
 
-  const getIsDetailsSectionExpanded = (contentOwnerId: string): boolean =>
-    detailsSectionExpandedStates[getContentSectionStateKey(contentOwnerId)] ??
-    lookupPersistedDetailsSectionExpandedState(contentOwnerId)
-
   const contentSectionExpandedByOwnerId = $derived.by<Record<string, boolean>>(() => {
     const expandedByOwnerId: Record<string, boolean> = {}
     for (const folder of promptFolderQuery.data) {
@@ -458,24 +444,9 @@ export const createPromptFolderScreenController = ({
     }
     return expandedByOwnerId
   })
-  const detailsSectionExpandedByOwnerId = $derived.by<Record<string, boolean>>(() => {
-    const expandedByOwnerId: Record<string, boolean> = {}
-    for (const folder of promptFolderQuery.data) {
-      if (!folder) continue
-      expandedByOwnerId[folder.id] = getIsDetailsSectionExpanded(folder.id)
-    }
-    for (const category of categories) {
-      expandedByOwnerId[category.id] = getIsDetailsSectionExpanded(category.id)
-    }
-    return expandedByOwnerId
-  })
   const isContentSectionExpanded = $derived(
     contentSectionExpandedByOwnerId[screenRootFolderId] ??
       lookupPersistedContentSectionExpandedState(screenRootFolderId)
-  )
-  const isDetailsSectionExpanded = $derived(
-    detailsSectionExpandedByOwnerId[screenRootFolderId] ??
-      lookupPersistedDetailsSectionExpandedState(screenRootFolderId)
   )
 
   const orderedPromptFolderScreenRows = $derived.by((): PromptFolderScreenRow[] => {
@@ -633,26 +604,6 @@ export const createPromptFolderScreenController = ({
         if (visiblePromptIdSet.has(row.promptId)) appendPromptFindItem(row.promptId)
         continue
       }
-      if (row.kind !== 'category-editor') continue
-
-      const category = categoryById[row.categoryId]
-      if (
-        !detailsSectionExpandedByOwnerId[row.categoryId] ||
-        category?.description === null ||
-        category?.description === undefined
-      ) {
-        continue
-      }
-      nextItems.push({
-        entityId: categoryDescriptionFindEntityId(row.categoryId),
-        rowId: categoryEditorRowId(row.categoryId),
-        sections: [
-          {
-            key: PROMPT_FOLDER_FIND_CATEGORY_DESCRIPTION_SECTION_KEY,
-            text: category.description
-          }
-        ]
-      })
     }
 
     return nextItems
@@ -740,28 +691,6 @@ export const createPromptFolderScreenController = ({
         : promptEditorRowId(row.promptId)
   }
 
-  const setDetailsSectionExpanded = (contentOwnerId: string, isExpanded: boolean) => {
-    if (getIsDetailsSectionExpanded(contentOwnerId) === isExpanded) {
-      return
-    }
-
-    const stateKey = getContentSectionStateKey(contentOwnerId)
-    detailsSectionExpandedStates = {
-      ...detailsSectionExpandedStates,
-      [stateKey]: isExpanded
-    }
-
-    if (!workspaceId || isFinalMode) {
-      return
-    }
-
-    setPromptFolderDetailsSectionExpandedStateWithAutosave(workspaceId, contentOwnerId, isExpanded)
-  }
-
-  const toggleDetailsSectionExpanded = (contentOwnerId: string) => {
-    setDetailsSectionExpanded(contentOwnerId, !getIsDetailsSectionExpanded(contentOwnerId))
-  }
-
   const setContentSectionExpanded = (contentOwnerId: string, isExpanded: boolean) => {
     if (getIsContentSectionExpanded(contentOwnerId) === isExpanded) {
       return
@@ -792,7 +721,6 @@ export const createPromptFolderScreenController = ({
   /** Expands the main-screen sections required to reveal one navigation row. */
   const expandSectionForRow = (
     row: ActivePromptScreenRow,
-    expandDetails = true,
     expandContent = false
   ): boolean => {
     let changed = false
@@ -804,15 +732,6 @@ export const createPromptFolderScreenController = ({
         setContentSectionExpanded(ancestorOwnerId, true)
         changed = true
       }
-    }
-
-    if (
-      row.kind === 'category-details' &&
-      expandDetails &&
-      !getIsDetailsSectionExpanded(row.contentOwnerId)
-    ) {
-      setDetailsSectionExpanded(row.contentOwnerId, true)
-      changed = true
     }
 
     if (
@@ -852,7 +771,7 @@ export const createPromptFolderScreenController = ({
     options: {
       forceRequest?: boolean
       contentReveal?: PromptContentRevealPlacement & {
-        expandDetails?: boolean
+        expandContent?: boolean
       }
       focusPromptId?: string
       treeExpansion?: 'owner' | 'ancestors'
@@ -1109,8 +1028,6 @@ export const createPromptFolderScreenController = ({
         forceRequest: true,
         contentReveal: {
           ...initialRevealPlacement,
-          expandDetails:
-            source !== 'category-open' && source !== 'category-move',
           expandContent: source === 'category-open'
         },
         focusPromptId:
@@ -1171,7 +1088,6 @@ export const createPromptFolderScreenController = ({
     promptNavigation.contentExpansionRequests.consume(request, (payload) => {
       expandSectionForRow(
         toActivePromptScreenTarget(payload),
-        payload.expandDetails,
         payload.expandContent
       )
     })
@@ -1521,19 +1437,13 @@ export const createPromptFolderScreenController = ({
 
   /** Selects and reveals the screen row that owns one folder-level find match. */
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
-    /** Category description whose find identity matches the requested entity. */
-    const matchedCategory = categories.find(
-      (category) => categoryDescriptionFindEntityId(category.id) === match.entityId
-    )
-    /** Navigation target for either a category description or prompt match. */
-    const targetRow: ActivePromptScreenRow = matchedCategory
-      ? { kind: 'category-details', contentOwnerId: matchedCategory.id }
-      : {
-          kind: 'prompt',
-          contentOwnerId:
-            findRenderedPromptRow(match.entityId)?.contentOwnerId ?? screenRootFolderId,
-          promptId: match.entityId
-        }
+    /** Navigation target for the prompt owning this folder-level find match. */
+    const targetRow: ActivePromptScreenRow = {
+      kind: 'prompt',
+      contentOwnerId:
+        findRenderedPromptRow(match.entityId)?.contentOwnerId ?? screenRootFolderId,
+      promptId: match.entityId
+    }
     setCurrentFolderSelection(targetRow, 'find', {
       forceRequest: true,
       contentReveal: { scrollType: 'center' }
@@ -1607,6 +1517,9 @@ export const createPromptFolderScreenController = ({
     get categories(): Category[] {
       return categories
     },
+    get managedCategories(): Category[] {
+      return managedCategories
+    },
     get orderedPromptFolderScreenRows(): PromptFolderScreenRow[] {
       return orderedPromptFolderScreenRows
     },
@@ -1641,14 +1554,8 @@ export const createPromptFolderScreenController = ({
     get isCreatingPrompt(): boolean {
       return isCreatingPrompt
     },
-    get isDetailsSectionExpanded(): boolean {
-      return isDetailsSectionExpanded
-    },
     get isContentSectionExpanded(): boolean {
       return isContentSectionExpanded
-    },
-    get detailsSectionExpandedByOwnerId(): Record<string, boolean> {
-      return detailsSectionExpandedByOwnerId
     },
     get contentSectionExpandedByOwnerId(): Record<string, boolean> {
       return contentSectionExpandedByOwnerId
@@ -1681,7 +1588,6 @@ export const createPromptFolderScreenController = ({
     },
     persistActivePromptScreenRow,
     scrollToWithinWindowBandWithManualClear,
-    toggleDetailsSectionExpanded,
     toggleContentSectionExpanded,
     handleHeaderCategoryClick,
     handleHeaderFolderClick,

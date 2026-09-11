@@ -23,6 +23,7 @@ import {
   createCategory,
   deleteCategory,
   moveCategory,
+  saveCategories,
   updateCategoryDetails
 } from '@renderer/data/Mutations/CategoryMutations'
 
@@ -30,6 +31,8 @@ import {
 const CATEGORY_ID = 'category-delete-test'
 /** Second stable category used to verify relative group movement. */
 const SIBLING_CATEGORY_ID = 'category-a'
+/** Stable new category ID used by atomic retained-set renderer coverage. */
+const NEW_CATEGORY_ID = 'category-new'
 /** Stable category owner ID used by the deletion payload. */
 const ROOT_FOLDER_ID = 'category-delete-root'
 /** Stable prompt ID affected by deletion. */
@@ -45,6 +48,7 @@ describe('category mutations', () => {
     vi.clearAllMocks()
     categoryCollection.utils.deleteAuthoritative(CATEGORY_ID)
     categoryCollection.utils.deleteAuthoritative(SIBLING_CATEGORY_ID)
+    categoryCollection.utils.deleteAuthoritative(NEW_CATEGORY_ID)
     promptFolderCollection.utils.deleteAuthoritative(ROOT_FOLDER_ID)
     promptCollection.utils.deleteAuthoritative(PROMPT_ID)
     promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
@@ -132,6 +136,71 @@ describe('category mutations', () => {
       })
     })
     runRevisionMutation.mockResolvedValue(undefined)
+  })
+
+  it('sends one atomic request for all retained category values', async () => {
+    await saveCategories(WORKSPACE_ID, ROOT_FOLDER_ID, [
+      {
+        id: CATEGORY_ID,
+        displayName: ' Updated ',
+        shortDescription: ' Summary. ',
+        description: 'Guidance.'
+      },
+      {
+        id: NEW_CATEGORY_ID,
+        displayName: 'New',
+        shortDescription: null,
+        description: null
+      }
+    ])
+
+    /** Revision mutation options registered by the retained-set save. */
+    const options = runRevisionMutation.mock.calls[0]?.[0]
+    /** IPC invocation spy used to inspect the single atomic request. */
+    const invoke = vi.fn().mockResolvedValue({ success: false, error: 'inspect only' })
+    await options.persistMutations({ invoke, transaction: {} })
+    expect(invoke).toHaveBeenCalledWith('save-categories', {
+      payload: {
+        command: {
+          workspaceId: WORKSPACE_ID,
+          promptFolderId: ROOT_FOLDER_ID,
+          categories: [
+            {
+              id: CATEGORY_ID,
+              displayName: ' Updated ',
+              shortDescription: ' Summary. ',
+              description: 'Guidance.'
+            },
+            {
+              id: NEW_CATEGORY_ID,
+              displayName: 'New',
+              shortDescription: null,
+              description: null
+            }
+          ],
+          modifiedAt: expect.any(String)
+        },
+        expectations: [
+          {
+            entityType: 'promptFolder',
+            id: ROOT_FOLDER_ID,
+            expected: 'revision',
+            revision: 3
+          },
+          {
+            entityType: 'category',
+            id: CATEGORY_ID,
+            expected: 'revision',
+            revision: 2
+          },
+          {
+            entityType: 'category',
+            id: NEW_CATEGORY_ID,
+            expected: 'absent'
+          }
+        ]
+      }
+    })
   })
 
   it('sends an absent expectation for the optimistic category insertion', async () => {
@@ -445,11 +514,6 @@ describe('category mutations', () => {
         },
         {
           entityType: 'workspacePromptFolderUiState',
-          id: `${WORKSPACE_ID}:${CATEGORY_ID}`,
-          deleted: true
-        },
-        {
-          entityType: 'categoryDescriptionEditorUiState',
           id: `${WORKSPACE_ID}:${CATEGORY_ID}`,
           deleted: true
         }

@@ -18,8 +18,7 @@ const mockTransactionState = vi.hoisted(() => {
     'markdownContentUiState',
     'workspaceUiState',
     'workspacePromptFolderUiState',
-    'accordionUiState',
-    'categoryDescriptionEditorUiState'
+    'accordionUiState'
   ] as const
   type StoreName = (typeof storeNames)[number]
   type Entry = {
@@ -39,8 +38,7 @@ const mockTransactionState = vi.hoisted(() => {
     markdownContentUiState: new Map(),
     workspaceUiState: new Map(),
     workspacePromptFolderUiState: new Map(),
-    accordionUiState: new Map(),
-    categoryDescriptionEditorUiState: new Map()
+    accordionUiState: new Map()
   }
   /** Persistence staging counts recorded independently for each authoritative store. */
   const stageCounts = Object.fromEntries(
@@ -119,8 +117,7 @@ const mockTransactionState = vi.hoisted(() => {
       store === 'markdownContentUiState' ||
       store === 'workspaceUiState' ||
       store === 'workspacePromptFolderUiState' ||
-      store === 'accordionUiState' ||
-      store === 'categoryDescriptionEditorUiState'
+      store === 'accordionUiState'
     return {
       committedStore: createCommittedStore(store),
       persistence: isSqliteStore
@@ -154,8 +151,7 @@ const mockTransactionState = vi.hoisted(() => {
         store === 'markdownContentUiState' ||
         store === 'workspaceUiState' ||
         store === 'workspacePromptFolderUiState' ||
-        store === 'accordionUiState' ||
-        store === 'categoryDescriptionEditorUiState'
+        store === 'accordionUiState'
           ? ('deleteIfPresent' as const)
           : ('requirePresent' as const)
     }
@@ -173,10 +169,7 @@ const mockTransactionState = vi.hoisted(() => {
       markdownContentUiState: createRevisionData('markdownContentUiState'),
       workspaceUiState: createRevisionData('workspaceUiState'),
       workspacePromptFolderUiState: createRevisionData('workspacePromptFolderUiState'),
-      accordionUiState: createRevisionData('accordionUiState'),
-      categoryDescriptionEditorUiState: createRevisionData(
-        'categoryDescriptionEditorUiState'
-      )
+      accordionUiState: createRevisionData('accordionUiState')
     },
     reset,
     seedEntry,
@@ -609,8 +602,7 @@ describe('atomic data transaction', () => {
       markdownContentUiState: 0,
       workspaceUiState: 0,
       workspacePromptFolderUiState: 0,
-      accordionUiState: 0,
-      categoryDescriptionEditorUiState: 0
+      accordionUiState: 0
     })
   })
 
@@ -724,8 +716,7 @@ describe('atomic data transaction', () => {
       markdownContentUiState: 0,
       workspaceUiState: 0,
       workspacePromptFolderUiState: 0,
-      accordionUiState: 0,
-      categoryDescriptionEditorUiState: 0
+      accordionUiState: 0
     })
   })
 

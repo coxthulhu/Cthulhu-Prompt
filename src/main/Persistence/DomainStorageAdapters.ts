@@ -302,8 +302,7 @@ const domainStorageAdapters: {
   markdownContentUiState: { deriveDesiredFields: () => ({}) },
   workspaceUiState: { deriveDesiredFields: () => ({}) },
   workspacePromptFolderUiState: { deriveDesiredFields: () => ({}) },
-  accordionUiState: { deriveDesiredFields: () => ({}) },
-  categoryDescriptionEditorUiState: { deriveDesiredFields: () => ({}) }
+  accordionUiState: { deriveDesiredFields: () => ({}) }
 }
 
 /** Converts one graph entry into the persistence record used during staging. */
@@ -449,8 +448,7 @@ export const planDomainStorageTransitions = (
     'markdownContentUiState',
     'workspaceUiState',
     'workspacePromptFolderUiState',
-    'accordionUiState',
-    'categoryDescriptionEditorUiState'
+    'accordionUiState'
   ]
 
   for (const entityType of entityTypes) {

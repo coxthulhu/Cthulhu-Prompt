@@ -2,18 +2,28 @@ import {
   parseCreateCategoryDomainCommand,
   parseDeleteCategoryDomainCommand,
   parseMoveCategoryDomainCommand,
+  parseSaveCategoriesDomainCommand,
   parseSetCategoryDescriptionDomainCommand,
   parseUpdateCategoryDetailsDomainCommand,
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
+  planSaveCategoriesDomainMutation,
   planSetCategoryDescriptionDomainMutation,
   planUpdateCategoryDetailsDomainMutation
 } from '@shared/CategoryDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
-/** Registers create, details, description, and deletion category mutation channels. */
+/** Registers atomic management and focused category mutation channels. */
 export const setupCategoryMutationHandlers = (): void => {
+  handleMainDomainMutation({
+    ipc: { channel: 'save-categories' },
+    mutation: {
+      parseCommand: parseSaveCategoriesDomainCommand,
+      plan: planSaveCategoriesDomainMutation
+    }
+  })
+
   handleMainDomainMutation({
     ipc: { channel: 'create-category' },
     mutation: {

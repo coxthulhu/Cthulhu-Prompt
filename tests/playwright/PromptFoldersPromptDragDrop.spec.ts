@@ -961,8 +961,7 @@ describe('Prompt folder prompt drag-drop', () => {
       promptFolderViewEntries: [
         {
           contentOwnerId: EXAMPLES_FOLDER_ID,
-          selectedEntryId: 'root-header',
-          detailsSectionIsExpanded: true
+          selectedEntryId: 'root-header'
         }
       ]
     })

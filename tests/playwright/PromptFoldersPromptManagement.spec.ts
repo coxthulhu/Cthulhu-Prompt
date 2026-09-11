@@ -856,19 +856,29 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Development')
     await testHelpers.navigateToHomeScreen()
     const addCategoryButton = mainWindow.locator(
-      '[data-testid="sidebar-add-category-button"]'
+      '[data-testid="sidebar-manage-categories-button"]'
     )
     await expect(addCategoryButton).toBeEnabled()
-    await expect(addCategoryButton).toHaveAttribute('title', 'Add Category')
-    await expect(addCategoryButton.locator('svg')).toHaveClass(/lucide-folder-plus/)
+    await expect(addCategoryButton).toHaveAttribute('title', 'Manage Categories')
+    await expect(addCategoryButton.locator('svg')).toHaveClass(/lucide-folder-cog/)
     await addCategoryButton.click()
 
-    const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Create Category"]')
+    const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Manage Categories"]')
     await expect(categoryDialog).toBeVisible()
+    await expect(
+      categoryDialog.locator('[data-testid^="manage-category-selector-"]')
+    ).toHaveCount(0)
+    await expect(categoryDialog.locator('[data-testid="manage-category-name-input"]')).toHaveCount(
+      0
+    )
+    await expect(
+      categoryDialog.locator('[data-testid="manage-categories-save-button"]')
+    ).toBeDisabled()
+    await categoryDialog.locator('[data-testid="manage-categories-new-button"]').click()
     await categoryDialog
-      .locator('[data-testid="create-category-name-input"]')
+      .locator('[data-testid="manage-category-name-input"]')
       .fill('Sidebar Category')
-    await categoryDialog.locator('[data-testid="create-category-button"]').click()
+    await categoryDialog.locator('[data-testid="manage-categories-save-button"]').click()
 
     await expect(categoryDialog).toBeHidden()
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
@@ -2544,10 +2554,7 @@ describe('Prompt folder prompt management', () => {
       mainWindow.locator('[data-testid="prompt-folder-new-prompt-button"]')
     ).toHaveCount(0)
     await expect(
-      mainWindow.locator('[data-testid="category-editor-settings-toggle"]')
-    ).toHaveCount(0)
-    await expect(
-      mainWindow.locator('[data-testid^="category-description-section"]')
+      mainWindow.locator('[data-testid="category-editor-manage-button"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-drag-handle"]')).toHaveCount(2)
@@ -2713,7 +2720,7 @@ describe('Prompt folder prompt management', () => {
 
     await testHelpers.navigateToPromptFolders('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
-    await expect(mainWindow.locator('[data-testid="sidebar-add-category-button"]')).toBeEnabled()
+    await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toBeEnabled()
     // The selected root folder is not duplicated as a category in completed mode.
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-NoCompleted"]')
@@ -2748,7 +2755,7 @@ describe('Prompt folder prompt management', () => {
     ).toHaveText('0')
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toBeVisible()
     await expect(
-      mainWindow.locator('[data-testid="category-editor-settings-toggle"]')
+      mainWindow.locator('[data-testid="category-editor-manage-button"]')
     ).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).not.toContainText(
       'Click the Add Prompt button'

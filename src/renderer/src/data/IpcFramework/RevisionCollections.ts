@@ -17,7 +17,6 @@ import { categoryCollection } from '../Collections/CategoryCollection'
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
 import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
 import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
-import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 
 export {
   mutatePacedUpdateTransaction,
@@ -37,8 +36,7 @@ const revisionCollections = {
   markdownContentUiState: markdownContentUiStateCollection,
   workspaceUiState: workspaceUiStateCollection,
   workspacePromptFolderUiState: workspacePromptFolderUiStateCollection,
-  accordionUiState: accordionUiStateCollection,
-  categoryDescriptionEditorUiState: categoryDescriptionEditorUiStateCollection
+  accordionUiState: accordionUiStateCollection
 }
 
 const clientStateCollections = {

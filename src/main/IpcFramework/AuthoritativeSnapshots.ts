@@ -63,8 +63,7 @@ const buildMainAuthoritativeSnapshot = (target: DomainTarget): AuthoritativeSnap
     case 'markdownContentUiState':
     case 'workspaceUiState':
     case 'workspacePromptFolderUiState':
-    case 'accordionUiState':
-    case 'categoryDescriptionEditorUiState': {
+    case 'accordionUiState': {
       /** Current SQLite-backed entry selected by its authoritative target ID. */
       const entry = data[target.entityType].committedStore.getEntry(target.id)
       return entry

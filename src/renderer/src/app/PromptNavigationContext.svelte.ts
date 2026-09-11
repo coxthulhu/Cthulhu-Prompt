@@ -52,7 +52,6 @@ export type PromptNavigationTarget = {
 }
 
 export type PromptContentExpansionRequest = PromptNavigationTarget & {
-  expandDetails: boolean
   /** Whether category navigation must expose the category's prompt/template content. */
   expandContent: boolean
 }
@@ -85,7 +84,6 @@ type SelectPromptNavigationOptions = {
   navigationHighlightPromptId?: string
   forceRequest?: boolean
   contentReveal?: PromptContentRevealPlacement & {
-    expandDetails?: boolean
     /** Whether category navigation must expose the category's prompt/template content. */
     expandContent?: boolean
   }
@@ -212,7 +210,6 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     if (contentReveal) {
       contentExpansionRequests.request({
         ...target,
-        expandDetails: contentReveal.expandDetails ?? true,
         expandContent: contentReveal.expandContent ?? false
       })
     } else {

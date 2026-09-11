@@ -250,7 +250,7 @@ describe('Home Screen', () => {
       await expect(promptFolderStat.locator('.cthulhuUiSubtitle')).toHaveText('Prompt Folders')
     })
 
-    test('closes a workspace while hydrated folder settings are mounted', async ({ testSetup }) => {
+    test('closes a workspace after category management has mounted', async ({ testSetup }) => {
       const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
         workspace: { scenario: 'categories' }
       })
@@ -260,10 +260,9 @@ describe('Home Screen', () => {
 
       await testHelpers.assertWorkspaceReadyPath('/ws/categories')
       await testHelpers.navigateToPromptFolders('Main')
-      await mainWindow.locator('[data-testid="category-editor-settings-toggle"]').click()
-      await expect(
-        mainWindow.locator('[data-testid^="category-description-section"] .monaco-editor')
-      ).not.toHaveCount(0)
+      await mainWindow.locator('[data-testid="prompt-folder-manage-categories-button"]').click()
+      await expect(mainWindow.getByRole('dialog', { name: 'Manage Categories' })).toBeVisible()
+      await mainWindow.locator('[data-testid="manage-categories-close-button"]').click()
       await testHelpers.navigateToHomeScreen()
 
       await testHelpers.clearWorkspaceViaUI()

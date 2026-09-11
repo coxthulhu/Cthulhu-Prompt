@@ -35,7 +35,6 @@ import { markdownContentUiStateCollection } from '../Collections/MarkdownContent
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
 import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
 import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
-import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 import {
   getRendererRevisionCollection,
   reconcileRendererAuthoritativeSnapshots
@@ -177,10 +176,6 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
       return accordionUiStateCollection.get(id) as
         | DomainPlannerEntityMap[TEntityType]
         | undefined
-    case 'categoryDescriptionEditorUiState':
-      return categoryDescriptionEditorUiStateCollection.get(id) as
-        | DomainPlannerEntityMap[TEntityType]
-        | undefined
   }
 }
 
@@ -231,10 +226,6 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
       >
     case 'accordionUiState':
       return accordionUiStateCollection.toArray as unknown as Array<
-        DomainPlannerEntityMap[TEntityType]
-      >
-    case 'categoryDescriptionEditorUiState':
-      return categoryDescriptionEditorUiStateCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
   }

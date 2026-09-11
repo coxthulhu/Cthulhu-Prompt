@@ -9,7 +9,6 @@ import type { MarkdownContentUiState } from './MarkdownContentUiState'
 import type { UserPersistence } from './UserPersistence'
 import type {
   AccordionUiState,
-  CategoryDescriptionEditorUiState,
   WorkspacePromptFolderUiState,
   WorkspaceUiState
 } from './UiState'
@@ -31,7 +30,6 @@ export type DomainEntityMap = {
   workspaceUiState: WorkspaceUiState
   workspacePromptFolderUiState: WorkspacePromptFolderUiState
   accordionUiState: AccordionUiState
-  categoryDescriptionEditorUiState: CategoryDescriptionEditorUiState
 }
 export type DomainEntityType = keyof DomainEntityMap
 

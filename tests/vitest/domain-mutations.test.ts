@@ -9,6 +9,7 @@ import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
   planMoveCategoryDomainMutation,
+  planSaveCategoriesDomainMutation,
   planSetCategoryDescriptionDomainMutation,
   planUpdateCategoryDetailsDomainMutation
 } from '@shared/CategoryDomainMutations'
@@ -59,9 +60,6 @@ const hasTestDomainEntityId = (
   if (entityType === 'accordionUiState') {
     return `${record.workspaceId}:${record.persistenceId}` === id
   }
-  if (entityType === 'categoryDescriptionEditorUiState') {
-    return `${record.workspaceId}:${record.categoryId}` === id
-  }
   return record.id === id
 }
 
@@ -82,7 +80,6 @@ const createDomainState = (
     workspaceUiState: [],
     workspacePromptFolderUiState: [],
     accordionUiState: [],
-    categoryDescriptionEditorUiState: [],
     ...overrides
   } as TestDomainEntities
   return {
@@ -329,8 +326,7 @@ describe('shared domain mutation planners', () => {
       'category:category',
       'prompt:prompt',
       'promptTemplate:template',
-      'workspacePromptFolderUiState:workspace:category',
-      'categoryDescriptionEditorUiState:workspace:category'
+      'workspacePromptFolderUiState:workspace:category'
     ])
 
     /** Prompt projection after applying the shared cleanup recipe. */
@@ -343,7 +339,134 @@ describe('shared domain mutation planners', () => {
     expect(template.modifiedAt).toBe('renderer-time')
   })
 
-  it('maps active category details to the root and preserves inactive root selection', () => {
+  it('plans one deterministic multi-category save and rejects duplicate retained IDs', () => {
+    /** Root containing the retained and deleted category groups. */
+    const folder = createRootFolder('root', 'prompt', 'category-a', 'prompt-a')
+    getMarkdownContentCategoryOrder(folder).categories.push({
+      categoryId: 'category-b',
+      entries: [{ kind: 'prompt', id: 'prompt-b' }]
+    })
+    /** Workspace proving direct ownership of the managed root. */
+    const workspace = {
+      id: 'workspace',
+      workspacePath: 'C:\\Workspace',
+      workspaceName: 'Workspace',
+      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
+      templateFolderEntries: []
+    }
+    /** Existing category records split between retention and staged deletion. */
+    const categories = [
+      {
+        id: 'category-a',
+        displayName: 'Category A',
+        shortDescription: null,
+        description: null
+      },
+      {
+        id: 'category-b',
+        displayName: 'Category B',
+        shortDescription: null,
+        description: null
+      }
+    ]
+    /** Summary prompts exercising retained ordering and deleted-reference cleanup. */
+    const prompts = [
+      {
+        id: 'prompt-a',
+        title: 'Prompt A',
+        fallbackTitle: '',
+        modifiedAt: 'old',
+        category: 'category-a',
+        status: PromptStatus.Todo
+      },
+      {
+        id: 'prompt-b',
+        title: 'Prompt B',
+        fallbackTitle: '',
+        modifiedAt: 'old',
+        category: 'category-b',
+        status: PromptStatus.Todo
+      }
+    ]
+    /** Domain graph used for both the valid and duplicate-ID plans. */
+    const state = createDomainState({
+      workspace: [workspace],
+      promptFolder: [folder],
+      category: categories,
+      prompt: prompts
+    })
+    /** Atomic command updating one category, inserting two, and deleting one. */
+    const command = {
+      workspaceId: workspace.id,
+      promptFolderId: folder.id,
+      categories: [
+        {
+          id: 'category-a',
+          displayName: ' Renamed A ',
+          shortDescription: ' Summary. ',
+          description: null
+        },
+        {
+          id: 'new-one',
+          displayName: ' New One ',
+          shortDescription: null,
+          description: null
+        },
+        {
+          id: 'new-two',
+          displayName: 'New Two',
+          shortDescription: null,
+          description: null
+        }
+      ],
+      modifiedAt: 'renderer-time'
+    }
+    /** Complete atomic change list produced for the retained set. */
+    const plan = planSaveCategoriesDomainMutation(state, command)
+    expect(Array.isArray(plan)).toBe(true)
+    if (!Array.isArray(plan)) return
+    expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
+      'promptFolder:root',
+      'category:category-a',
+      'category:new-one',
+      'category:new-two',
+      'category:category-b',
+      'prompt:prompt-b',
+      'workspacePromptFolderUiState:workspace:category-b'
+    ])
+    /** Root projection after deleted content moves and new groups prepend as a block. */
+    const projectedFolder = produce(folder, plan[0]!.recipe!)
+    expect(
+      getMarkdownContentCategoryOrder(projectedFolder).categories.map((group) => ({
+        categoryId: group.categoryId,
+        entries: group.entries.map((entry) => entry.id)
+      }))
+    ).toEqual([
+      { categoryId: null, entries: ['prompt-b'] },
+      { categoryId: 'new-one', entries: [] },
+      { categoryId: 'new-two', entries: [] },
+      { categoryId: 'category-a', entries: ['prompt-a'] }
+    ])
+    /** Updated retained category projection after shared normalization. */
+    const projectedCategory = produce(categories[0]!, plan[1]!.recipe!)
+    expect(projectedCategory).toMatchObject({
+      displayName: 'Renamed A',
+      shortDescription: 'Summary.'
+    })
+    /** Deleted prompt projection after category cleanup and timestamp replacement. */
+    const projectedPrompt = produce(prompts[1]!, plan[5]!.recipe!)
+    expect(projectedPrompt).not.toHaveProperty('category')
+    expect(projectedPrompt.modifiedAt).toBe('renderer-time')
+
+    /** Duplicate-ID plan rejected before any category changes are projected. */
+    const duplicatePlan = planSaveCategoriesDomainMutation(state, {
+      ...command,
+      categories: [command.categories[0]!, command.categories[0]!]
+    })
+    expect(duplicatePlan).toMatchObject({ status: 'conflict' })
+  })
+
+  it('maps active category navigation to the root and preserves inactive root selection', () => {
     /** Root owning the category whose view state is deleted. */
     const folder = createRootFolder('root', 'prompt', 'category')
     /** Workspace establishing root ownership for both deletion plans. */
@@ -360,7 +483,6 @@ describe('shared domain mutation planners', () => {
       contentOwnerId: folder.id,
       selectedEntryId: 'existing-root-selection',
       treeIsExpanded: false,
-      detailsSectionIsExpanded: true,
       contentSectionIsExpanded: false
     }
     /** Category state selecting its category-only details row. */
@@ -369,7 +491,6 @@ describe('shared domain mutation planners', () => {
       contentOwnerId: 'category',
       selectedEntryId: 'category-details',
       treeIsExpanded: true,
-      detailsSectionIsExpanded: false,
       contentSectionIsExpanded: true
     }
     /** Active workspace navigation pointing at the deleted category owner. */

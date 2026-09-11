@@ -7,13 +7,11 @@ import { markdownContentUiStateCollection } from '../Collections/MarkdownContent
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
 import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
 import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
-import { categoryDescriptionEditorUiStateCollection } from '../Collections/CategoryDescriptionEditorUiStateCollection'
 import { clearPromptFolderClientStateCollection } from './PromptFolderClientState'
 import { clearPromptClientStateCollection } from './PromptClientStateMutations.svelte.ts'
 import { clearPromptTemplateClientStateCollection } from './PromptTemplateClientStateMutations.svelte.ts'
 import { promptEditorUiCache } from './PromptEditorUiCache.svelte.ts'
 import { promptFolderUiCache } from './PromptFolderUiCache.svelte.ts'
-import { clearCategoryDescriptionMeasuredHeights } from './CategoryDraftUiCache.svelte.ts'
 
 /** Clears workspace memory after saves settle, preserving application-wide collections. */
 export const clearWorkspaceStoreBridge = (): void => {
@@ -23,7 +21,6 @@ export const clearWorkspaceStoreBridge = (): void => {
   promptEditorUiCache.editorMeasuredHeight.clearAll()
   promptFolderUiCache.settingsRowMeasuredHeight.clearAll()
   promptFolderUiCache.scrollTop.clearAll()
-  clearCategoryDescriptionMeasuredHeights()
 
   // Clear records and revision metadata together so reopened disk snapshots are accepted.
   for (const collection of [
@@ -35,8 +32,7 @@ export const clearWorkspaceStoreBridge = (): void => {
     markdownContentUiStateCollection,
     workspaceUiStateCollection,
     workspacePromptFolderUiStateCollection,
-    accordionUiStateCollection,
-    categoryDescriptionEditorUiStateCollection
+    accordionUiStateCollection
   ]) {
     collection.utils.clearAuthoritative()
   }

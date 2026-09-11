@@ -1,19 +1,15 @@
 import type { WorkspaceScreenSelection } from '@shared/UserPersistence'
 import {
   createAccordionUiStateKey,
-  createCategoryDescriptionEditorUiStateKey,
   createWorkspacePromptFolderUiStateKey,
   type AccordionUiState,
-  type CategoryDescriptionEditorUiState,
   type WorkspacePromptFolderUiState,
   type WorkspaceUiState
 } from '@shared/UiState'
 import {
   planSetAccordionUiStateDomainMutation,
-  planSetCategoryDescriptionEditorUiStateDomainMutation,
   planSetWorkspacePromptFolderUiStateDomainMutation,
-  planSetWorkspaceUiStateDomainMutation,
-  type SetCategoryDescriptionEditorUiStateDomainCommand
+  planSetWorkspaceUiStateDomainMutation
 } from '@shared/UiStateDomainMutations'
 import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
 import {
@@ -76,27 +72,6 @@ export const setAccordionUiStateWithAutosave = (
   })
 }
 
-/** Queues one category-description editor UI-state upsert or optional delete. */
-export const setCategoryDescriptionEditorUiStateWithAutosave = (
-  command: SetCategoryDescriptionEditorUiStateDomainCommand,
-  debounceMs: number
-): void => {
-  /** Composite target ID shared with the revision collection. */
-  const id = createCategoryDescriptionEditorUiStateKey(
-    command.workspaceId,
-    command.categoryId
-  )
-  mutatePacedRendererDomainMutation({
-    mutation: { command, plan: planSetCategoryDescriptionEditorUiStateDomainMutation },
-    ipc: { channel: 'set-category-description-editor-ui-state' },
-    renderer: {},
-    pacing: {
-      target: { entityType: 'categoryDescriptionEditorUiState', id },
-      debounceMs
-    }
-  })
-}
-
 /** Immediately synchronizes the workspace screen selection and last-root pointer. */
 export const syncWorkspaceScreenSelection = async (
   workspaceId: string,
@@ -124,6 +99,3 @@ export const syncWorkspaceScreenSelection = async (
     renderer: {}
   })
 }
-
-/** Public category-editor UI-state record type retained for autosave callers. */
-export type { CategoryDescriptionEditorUiState }

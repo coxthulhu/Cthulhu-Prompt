@@ -5,9 +5,7 @@ export type WorkspacePromptFolderUiStateSeedEntry = {
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded?: boolean
-  detailsSectionIsExpanded?: boolean
   contentSectionIsExpanded?: boolean
-  categoryDescriptionEditorViewStateJson?: string | null
 }
 
 /** Seed values for one workspace-scoped accordion instance. */
@@ -44,9 +42,7 @@ export type WorkspaceUiStateSnapshot = {
     contentOwnerId: string
     selectedEntryId: string
     treeIsExpanded: boolean
-    detailsSectionIsExpanded: boolean
     contentSectionIsExpanded: boolean
-    categoryDescriptionEditorViewStateJson: string | null
   }>
   accordionViewEntries: AccordionUiStateSeedEntry[]
 }
@@ -219,10 +215,6 @@ export const seedWorkspaceUiState = async (
   )
   await runSqlStatement(
     electronApp,
-    `DELETE FROM category_description_editor_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
-  )
-  await runSqlStatement(
-    electronApp,
     `DELETE FROM accordion_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
 
@@ -235,7 +227,6 @@ export const seedWorkspaceUiState = async (
         content_owner_id,
         selected_entry_id,
         tree_is_expanded,
-        details_section_is_expanded,
         content_section_is_expanded
       )
       VALUES (
@@ -243,30 +234,10 @@ export const seedWorkspaceUiState = async (
         ${toSqlText(entry.contentOwnerId)},
         ${toSqlText(entry.selectedEntryId)},
         ${entry.treeIsExpanded === false ? 0 : 1},
-        ${entry.detailsSectionIsExpanded === true ? 1 : 0},
         ${entry.contentSectionIsExpanded === false ? 0 : 1}
       )
       `
     )
-
-    if (entry.categoryDescriptionEditorViewStateJson !== null &&
-        entry.categoryDescriptionEditorViewStateJson !== undefined) {
-      await runSqlStatement(
-        electronApp,
-        `
-        INSERT INTO category_description_editor_view_state (
-          workspace_id,
-          category_id,
-          editor_view_state_json
-        )
-        VALUES (
-          ${toSqlText(data.workspaceId)},
-          ${toSqlText(entry.contentOwnerId)},
-          ${toSqlText(entry.categoryDescriptionEditorViewStateJson)}
-        )
-        `
-      )
-    }
   }
 
   for (const entry of data.accordionViewEntries ?? []) {
@@ -343,7 +314,6 @@ export const readWorkspaceUiState = async (
       content_owner_id AS contentOwnerId,
       selected_entry_id AS selectedEntryId,
       tree_is_expanded AS treeIsExpanded,
-      details_section_is_expanded AS detailsSectionIsExpanded,
       content_section_is_expanded AS contentSectionIsExpanded
     FROM prompt_folder_view_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
@@ -352,25 +322,6 @@ export const readWorkspaceUiState = async (
 
   if (!promptFolderViewResult.success) {
     throw new Error(promptFolderViewResult.error ?? 'Failed to read prompt folder view state')
-  }
-
-  /** Category description editor states keyed by category ID. */
-  const categoryDescriptionViewStateResult = await runSqlQuery(
-    electronApp,
-    `
-    SELECT
-      category_id AS categoryId,
-      editor_view_state_json AS editorViewStateJson
-    FROM category_description_editor_view_state
-    WHERE workspace_id = ${toSqlText(workspaceId)}
-    `
-  )
-
-  if (!categoryDescriptionViewStateResult.success) {
-    throw new Error(
-      categoryDescriptionViewStateResult.error ??
-        'Failed to read category description editor view state'
-    )
   }
 
   /** Complete accordion section rows persisted for this workspace. */
@@ -388,14 +339,6 @@ export const readWorkspaceUiState = async (
   if (!accordionViewStateResult.success) {
     throw new Error(accordionViewStateResult.error ?? 'Failed to read accordion view state')
   }
-
-  /** Category description view-state JSON keyed by category ID. */
-  const categoryDescriptionViewStateByCategoryId = new Map(
-    (categoryDescriptionViewStateResult.rows ?? []).map((entry) => [
-      String(entry.categoryId),
-      String(entry.editorViewStateJson)
-    ])
-  )
 
   const workspaceRow = workspaceStateResult.rows?.[0] as
     | {
@@ -418,10 +361,7 @@ export const readWorkspaceUiState = async (
       contentOwnerId: String(entry.contentOwnerId),
       selectedEntryId: String(entry.selectedEntryId),
       treeIsExpanded: entry.treeIsExpanded !== 0,
-      detailsSectionIsExpanded: entry.detailsSectionIsExpanded !== 0,
-      contentSectionIsExpanded: entry.contentSectionIsExpanded !== 0,
-      categoryDescriptionEditorViewStateJson:
-        categoryDescriptionViewStateByCategoryId.get(String(entry.contentOwnerId)) ?? null
+      contentSectionIsExpanded: entry.contentSectionIsExpanded !== 0
     })),
     accordionViewEntries: (accordionViewStateResult.rows ?? []).map((entry) => ({
       persistenceId: String(entry.persistenceId),

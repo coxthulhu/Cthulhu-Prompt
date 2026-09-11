@@ -31,7 +31,6 @@ export type DomainPersistenceFieldsMap = {
   workspaceUiState: Record<string, never>
   workspacePromptFolderUiState: Record<string, never>
   accordionUiState: Record<string, never>
-  categoryDescriptionEditorUiState: Record<string, never>
 }
 
 export type PersistenceStageResult<TPersistenceFields> = {

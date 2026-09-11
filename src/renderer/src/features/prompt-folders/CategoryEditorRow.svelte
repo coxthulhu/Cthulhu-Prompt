@@ -1,87 +1,48 @@
 <script lang="ts">
-  import { Check, ChevronRight, Folder, Pencil, Plus, Settings, Trash2 } from 'lucide-svelte'
+  import { ChevronRight, Folder, FolderCog, Pencil } from 'lucide-svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import type { PromptFolderContentKind } from '@shared/PromptFolder'
-  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
-  import EditorSubtitleBar from '../prompt-editor/EditorSubtitleBar.svelte'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import CategoryDescriptionEditorSection from './CategoryDescriptionEditorSection.svelte'
-  import CategoryEditorSidebar from './CategoryEditorSidebar.svelte'
-  import {
-    type DraggableOptions
-  } from '../drag-drop/dragDrop.svelte.ts'
+  import type { DraggableOptions } from '../drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
     CategoryDropPayload
   } from '../drag-drop/promptHandleDrag'
-  import {
-    CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX
-  } from './categoryEditorSizing'
+  import CategoryEditorSidebar from './CategoryEditorSidebar.svelte'
+  import { CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX } from './categoryEditorSizing'
 
-  /** Inputs and callbacks for one editable category card. */
+  /** Inputs and callbacks for one category navigation card. */
   type Props = {
-    workspaceId: string | null
     categoryId: string
     displayName: string
     contentCount: number
-    description: string | null
     contentKind: PromptFolderContentKind
-    rowId: string
-    virtualWindowWidthPx: number
-    devicePixelRatio: number
     rowHeightPx: number
-    descriptionHeightPx: number
-    hydrationPriority: number
-    shouldDehydrate: boolean
-    overlayRowElement?: HTMLDivElement | null
-    scrollToWithinWindowBand?: ScrollToWithinWindowBand
-    isDetailsSectionExpanded: boolean
     isContentSectionExpanded: boolean
     isReadOnly?: boolean
     canRename?: boolean
     showSidebar?: boolean
     dragOptions?: DraggableOptions<CategoryDragPayload, CategoryDropPayload>
-    onHydrationChange?: (isHydrated: boolean) => void
-    onDetailsSectionToggle: () => void
     onContentSectionToggle: () => void
-    onDeleteCategory: () => void
-    onDescriptionChange: (text: string, measurement: TextMeasurement) => void
-    onDescriptionPresenceChange: (isPresent: boolean) => void
+    onManageCategory: (focusName: boolean) => void
   }
 
+  /** Reactive category-row inputs supplied by the virtualized prompt-folder screen. */
   let {
-    workspaceId,
     categoryId,
     displayName,
     contentCount,
-    description,
     contentKind,
-    rowId,
-    virtualWindowWidthPx,
-    devicePixelRatio,
     rowHeightPx: virtualRowHeightPx,
-    descriptionHeightPx,
-    hydrationPriority,
-    shouldDehydrate,
-    overlayRowElement,
-    scrollToWithinWindowBand,
-    isDetailsSectionExpanded,
     isContentSectionExpanded,
     isReadOnly = false,
     canRename = !isReadOnly,
     showSidebar = false,
     dragOptions,
-    onHydrationChange,
-    onDetailsSectionToggle,
     onContentSectionToggle,
-    onDeleteCategory,
-    onDescriptionChange,
-    onDescriptionPresenceChange
+    onManageCategory
   }: Props = $props()
 
   /** Singular content label used by category metadata and controls. */
@@ -92,87 +53,20 @@
   )
   /** Nonnegative rendered category-card height. */
   const cardHeightPx = $derived(Math.max(0, virtualRowHeightPx))
-  /** Whether the category description Monaco instance is active. */
-  let isDescriptionHydrated = $state(false)
-  /** Number of configured category settings. */
-  const configuredSettingsCount = $derived(description === null ? 0 : 1)
-  /** Whether this row currently contains an editor that must hydrate. */
-  const hasHydratableSection = $derived(
-    isDetailsSectionExpanded && !isReadOnly && description !== null
-  )
-  /** Aggregate hydration state reported to the virtual window. */
-  const isRowHydrated = $derived(!hasHydratableSection || isDescriptionHydrated)
-  /** Last aggregate hydration value sent to the parent. */
-  let lastReportedHydration = $state<boolean | null>(null)
-  /** Requests focus after adding the category description setting. */
-  let focusDescriptionAfterAdd = $state(false)
-  /** Delete workflow exposed by the mounted category description editor. */
-  let requestDescriptionDelete: (() => void) | null = null
 
-  /** Keeps the future category-management trigger inactive without selecting the row. */
-  const handlePencilClick = (event: MouseEvent) => {
+  /** Opens category management from a row action without activating the title bar. */
+  const handleManageClick = (event: MouseEvent, focusName: boolean): void => {
+    event.stopPropagation()
+    onManageCategory(focusName)
+  }
+
+  /** Stops row-action presses from activating the category title bar. */
+  const handleActionMouseDown = (event: MouseEvent): void => {
     event.stopPropagation()
   }
-
-  /** Stops rename-button presses from activating the category title bar. */
-  const handlePencilMouseDown = (event: MouseEvent) => {
-    event.stopPropagation()
-  }
-
-  /** Toggles category settings without activating the category title bar. */
-  const handleSettingsClick = (event: MouseEvent) => {
-    event.stopPropagation()
-    onDetailsSectionToggle()
-  }
-
-  /** Stops settings-button presses from activating the category title bar. */
-  const handleSettingsMouseDown = (event: MouseEvent) => {
-    event.stopPropagation()
-  }
-
-  /** Requests category deletion without activating the title bar. */
-  const handleDeleteClick = (event: MouseEvent) => {
-    event.stopPropagation()
-    onDeleteCategory()
-  }
-
-  /** Stops delete-button presses from activating the category title bar. */
-  const handleDeleteMouseDown = (event: MouseEvent) => {
-    event.stopPropagation()
-  }
-
-  /** Adds or requests removal of the category description. */
-  const handleDescriptionToggle = () => {
-    if (description !== null) {
-      requestDescriptionDelete?.()
-      return
-    }
-
-    focusDescriptionAfterAdd = true
-    onDescriptionPresenceChange(true)
-  }
-
-  /** Receives the mounted description editor's delete workflow. */
-  const handleDeleteRequestChange = (
-    requestDelete: (() => void) | null
-  ) => {
-    requestDescriptionDelete = requestDelete
-  }
-
-  // Side effect: hidden settings sections are unmounted and no longer hydrate the virtual row.
-  $effect(() => {
-    if (isDetailsSectionExpanded && !isReadOnly) return
-    isDescriptionHydrated = false
-  })
-
-  // Side effect: report aggregate row hydration to the virtual window.
-  $effect(() => {
-    if (lastReportedHydration === isRowHydrated) return
-    lastReportedHydration = isRowHydrated
-    onHydrationChange?.(isRowHydrated)
-  })
 </script>
 
+<!-- Category navigation row with management actions delegated to the modal dialog. -->
 <div
   class="category-editor-row"
   style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
@@ -231,8 +125,8 @@
                 baseVariant="muted"
                 hoverVariant="glyph"
                 testId="category-editor-title-edit"
-                onclick={handlePencilClick}
-                onmousedown={handlePencilMouseDown}
+                onclick={(event) => handleManageClick(event, true)}
+                onmousedown={handleActionMouseDown}
               />
             {/if}
           </div>
@@ -246,88 +140,17 @@
       {#if !isReadOnly}
         <IconButtonBar>
           <IconButton
-            icon={Settings}
-            label={isDetailsSectionExpanded ? 'Hide category settings' : 'Show category settings'}
-            title={isDetailsSectionExpanded ? 'Hide category settings' : 'Show category settings'}
+            icon={FolderCog}
+            label="Manage category"
+            title="Manage category"
             hoverVariant="accent"
-            active={isDetailsSectionExpanded}
-            ariaPressed={isDetailsSectionExpanded}
-            testId="category-editor-settings-toggle"
-            onclick={handleSettingsClick}
-            onmousedown={handleSettingsMouseDown}
-          />
-          <IconButton
-            icon={Trash2}
-            label="Delete category"
-            title="Delete category"
-            hoverVariant="danger"
-            testId="category-editor-delete-button"
-            onclick={handleDeleteClick}
-            onmousedown={handleDeleteMouseDown}
+            testId="category-editor-manage-button"
+            onclick={(event) => handleManageClick(event, false)}
+            onmousedown={handleActionMouseDown}
           />
         </IconButtonBar>
       {/if}
     </header>
-
-    {#if isDetailsSectionExpanded && !isReadOnly}
-      <Separator data-testid="category-editor-settings-separator" />
-
-      <div class="category-editor-settings">
-        <EditorSubtitleBar
-          icon={Settings}
-          title="Category Settings"
-          configuredCount={configuredSettingsCount}
-          totalCount={1}
-          actionsLabel="Category settings"
-          testId="category-settings-toolbar"
-        >
-          {#snippet actions()}
-            <IconTextButton
-              icon={Plus}
-              pressedIcon={Check}
-              pressedHoverIcon={Trash2}
-              text="Description"
-              pressed={description !== null}
-              title={`${description !== null ? 'Remove' : 'Add'} category description`}
-              testId="category-settings-toggle-description"
-              onclick={handleDescriptionToggle}
-            />
-          {/snippet}
-        </EditorSubtitleBar>
-
-        {#if configuredSettingsCount > 0}
-          <Separator data-testid="category-settings-toolbar-separator" />
-        {/if}
-
-        <div class="category-editor-sections">
-          {#if description !== null}
-            <CategoryDescriptionEditorSection
-              {workspaceId}
-              {categoryId}
-              {rowId}
-              {virtualWindowWidthPx}
-              {devicePixelRatio}
-              sectionHeightPx={descriptionHeightPx}
-              {hydrationPriority}
-              {shouldDehydrate}
-              {overlayRowElement}
-              {scrollToWithinWindowBand}
-              value={description}
-              focusAfterAdd={focusDescriptionAfterAdd}
-              onFocusAfterAddComplete={() => {
-                focusDescriptionAfterAdd = false
-              }}
-              onDeleteRequestChange={handleDeleteRequestChange}
-              onHydrationChange={(isHydrated) => {
-                isDescriptionHydrated = isHydrated
-              }}
-              {onDescriptionChange}
-              {onDescriptionPresenceChange}
-            />
-          {/if}
-        </div>
-      </div>
-    {/if}
   </EditorCardSurface>
 </div>
 
@@ -416,12 +239,4 @@
   ) {
     transform: rotate(90deg);
   }
-
-  .category-editor-settings,
-  .category-editor-sections {
-    background: var(--ui-card-normal-surface);
-    display: grid;
-    min-width: 0;
-  }
-
 </style>

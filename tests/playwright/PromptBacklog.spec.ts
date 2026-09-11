@@ -177,9 +177,10 @@ describe('Backlog prompts', () => {
     expect((await readOrder(electronApp, 'Active')).categories.map((category) => category.categoryId))
       .toEqual([null, 'beta', 'alpha'])
 
-    await mainWindow.locator('[data-testid="sidebar-add-category-button"]').click()
-    await mainWindow.locator('[data-testid="create-category-name-input"]').fill('new category')
-    await mainWindow.locator('[data-testid="create-category-button"]').click()
+    await mainWindow.locator('[data-testid="sidebar-manage-categories-button"]').click()
+    await mainWindow.locator('[data-testid="manage-categories-new-button"]').click()
+    await mainWindow.locator('[data-testid="manage-category-name-input"]').fill('new category')
+    await mainWindow.locator('[data-testid="manage-categories-save-button"]').click()
     /** Shared category file supplies the generated ID inserted after Uncategorized in both groups. */
     const categoryPath = `${ROOT_PATH}/Categories/new category.category.json`
     await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(true)

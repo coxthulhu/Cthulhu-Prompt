@@ -19,7 +19,3 @@ export const promptFolderDividerRowId = (
     ? 'divider-initial'
     : `divider:${contentOwnerId}:initial`
 }
-
-/** Returns the find entity ID for one category description. */
-export const categoryDescriptionFindEntityId = (categoryId: string): string =>
-  `category-description:${categoryId}`

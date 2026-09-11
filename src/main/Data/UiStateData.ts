@@ -1,6 +1,5 @@
 import {
   accordionUiStateSqlitePersistence,
-  categoryDescriptionEditorUiStateSqlitePersistence,
   markdownContentUiStateSqlitePersistence,
   userPersistenceSqlitePersistence,
   workspacePromptFolderUiStateSqlitePersistence,
@@ -36,13 +35,6 @@ export const workspacePromptFolderUiStateData = createRevisionData({
 /** Authoritative accordion UI state backed by SQLite. */
 export const accordionUiStateData = createRevisionData({
   persistence: accordionUiStateSqlitePersistence,
-  emitCommittedRevisionChanged,
-  targetPolicy: 'deleteIfPresent'
-})
-
-/** Authoritative category-description editor UI state backed by SQLite. */
-export const categoryDescriptionEditorUiStateData = createRevisionData({
-  persistence: categoryDescriptionEditorUiStateSqlitePersistence,
   emitCommittedRevisionChanged,
   targetPolicy: 'deleteIfPresent'
 })

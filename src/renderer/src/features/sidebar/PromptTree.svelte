@@ -109,6 +109,7 @@
     screenMode = PromptFolderScreenMode.Active,
     onAllCategoriesCollapsedChange,
     onScreenModeSelect,
+    onManageCategory,
     onScreenRootFolderSelect
   } = $props<{
     promptFolders: PromptFolder[]
@@ -119,6 +120,8 @@
     screenMode?: PromptFolderScreenMode
     onAllCategoriesCollapsedChange: (isCollapsed: boolean) => void
     onScreenModeSelect: (screenMode: PromptFolderScreenMode) => void
+    /** Opens category management to one tree category. */
+    onManageCategory: (categoryId: string) => void
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
   }>()
 
@@ -525,7 +528,6 @@
               scrollType: 'vertical-bias' as const,
               verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
             }),
-        expandDetails: source !== 'category-open',
         expandContent: source === 'category-open'
       },
       treeExpansion: source === 'category-open' ? 'owner' : undefined
@@ -554,8 +556,9 @@
     handlePromptTreeEntrySelect(categoryId, 'category-details', 'category-open')
   }
 
+  /** Opens the shared management dialog to the selected tree category. */
   const handleCategorySettingsOpen = (categoryId: string) => {
-    handlePromptTreeEntrySelect(categoryId, 'category-details')
+    onManageCategory(categoryId)
   }
 
   /** Creates content at the start of a category and reveals its editor. */

@@ -1,10 +1,8 @@
 import {
   parseSetAccordionUiStateDomainCommand,
-  parseSetCategoryDescriptionEditorUiStateDomainCommand,
   parseSetWorkspacePromptFolderUiStateDomainCommand,
   parseSetWorkspaceUiStateDomainCommand,
   planSetAccordionUiStateDomainMutation,
-  planSetCategoryDescriptionEditorUiStateDomainMutation,
   planSetWorkspacePromptFolderUiStateDomainMutation,
   planSetWorkspaceUiStateDomainMutation
 } from '@shared/UiStateDomainMutations'
@@ -31,13 +29,6 @@ export const setupUiStateMutationHandlers = (): void => {
     mutation: {
       parseCommand: parseSetAccordionUiStateDomainCommand,
       plan: planSetAccordionUiStateDomainMutation
-    }
-  })
-  handleMainDomainMutation({
-    ipc: { channel: 'set-category-description-editor-ui-state' },
-    mutation: {
-      parseCommand: parseSetCategoryDescriptionEditorUiStateDomainCommand,
-      plan: planSetCategoryDescriptionEditorUiStateDomainMutation
     }
   })
 }

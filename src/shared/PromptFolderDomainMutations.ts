@@ -18,10 +18,7 @@ import {
 } from './promptFolderName'
 import { getMarkdownContentIds } from './MarkdownContent'
 import { createMarkdownContentUiStateKey } from './MarkdownContentUiState'
-import {
-  createCategoryDescriptionEditorUiStateKey,
-  createWorkspacePromptFolderUiStateKey
-} from './UiState'
+import { createWorkspacePromptFolderUiStateKey } from './UiState'
 import {
   getAllWorkspaceFolderEntries,
   getWorkspaceFolderEntries,
@@ -358,13 +355,6 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
       type: 'delete',
       entityType: 'workspacePromptFolderUiState',
       id: createWorkspacePromptFolderUiStateKey(command.workspaceId, contentOwnerId)
-    })
-  }
-  for (const categoryId of categoryIds) {
-    changes.push({
-      type: 'delete',
-      entityType: 'categoryDescriptionEditorUiState',
-      id: createCategoryDescriptionEditorUiStateKey(command.workspaceId, categoryId)
     })
   }
   /** Existing workspace screen state adjusted when it references the deleted root. */

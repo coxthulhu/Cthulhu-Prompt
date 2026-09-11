@@ -14,14 +14,7 @@ type PromptFolderViewRow = {
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded: number
-  detailsSectionIsExpanded: number
   contentSectionIsExpanded: number
-}
-
-/** Persisted category-editor state used during stale-row cleanup. */
-type CategoryEditorRow = {
-  categoryId: string
-  editorViewStateJson: string
 }
 
 /** Parses nullable selected-screen JSON without accepting malformed data. */
@@ -75,35 +68,17 @@ export class WorkspaceUiStateDataAccess {
           `SELECT content_owner_id AS contentOwnerId,
                   selected_entry_id AS selectedEntryId,
                   tree_is_expanded AS treeIsExpanded,
-                  details_section_is_expanded AS detailsSectionIsExpanded,
                   content_section_is_expanded AS contentSectionIsExpanded
            FROM prompt_folder_view_state WHERE workspace_id = ?`
         )
         .all(workspaceId) as PromptFolderViewRow[]
-      /** Existing category-editor rows inspected before pruning. */
-      const categoryEditorRows = db
-        .prepare(
-          `SELECT category_id AS categoryId,
-                  editor_view_state_json AS editorViewStateJson
-           FROM category_description_editor_view_state WHERE workspace_id = ?`
-        )
-        .all(workspaceId) as CategoryEditorRow[]
       db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(workspaceId)
-      db.prepare(
-        'DELETE FROM category_description_editor_view_state WHERE workspace_id = ?'
-      ).run(workspaceId)
       /** Prepared insert for one retained owner row. */
       const insertPromptFolder = db.prepare(
         `INSERT INTO prompt_folder_view_state (
            workspace_id, content_owner_id, selected_entry_id,
-           tree_is_expanded, details_section_is_expanded, content_section_is_expanded
-         ) VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      /** Prepared insert for one retained category-editor row. */
-      const insertCategoryEditor = db.prepare(
-        `INSERT INTO category_description_editor_view_state (
-           workspace_id, category_id, editor_view_state_json
-         ) VALUES (?, ?, ?)`
+           tree_is_expanded, content_section_is_expanded
+         ) VALUES (?, ?, ?, ?, ?)`
       )
       for (const row of promptFolderRows) {
         if (!validContentOwnerIds.has(row.contentOwnerId)) continue
@@ -112,13 +87,8 @@ export class WorkspaceUiStateDataAccess {
           row.contentOwnerId,
           row.selectedEntryId,
           row.treeIsExpanded,
-          row.detailsSectionIsExpanded,
           row.contentSectionIsExpanded
         )
-      }
-      for (const row of categoryEditorRows) {
-        if (!validContentOwnerIds.has(row.categoryId)) continue
-        insertCategoryEditor.run(workspaceId, row.categoryId, row.editorViewStateJson)
       }
 
       /** Current workspace-level row validated after owner pruning. */

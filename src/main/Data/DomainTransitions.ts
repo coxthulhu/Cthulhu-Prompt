@@ -10,7 +10,6 @@ import { USER_PERSISTENCE_ID } from '@shared/UserPersistence'
 import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
 import {
   createAccordionUiStateKey,
-  createCategoryDescriptionEditorUiStateKey,
   createWorkspacePromptFolderUiStateKey
 } from '@shared/UiState'
 import { data } from './Data'
@@ -73,8 +72,7 @@ const createEmptyGraphEntries = (): DomainGraphEntries => ({
   markdownContentUiState: new Map(),
   workspaceUiState: new Map(),
   workspacePromptFolderUiState: new Map(),
-  accordionUiState: new Map(),
-  categoryDescriptionEditorUiState: new Map()
+  accordionUiState: new Map()
 })
 
 /** Wraps typed entity maps with uniform graph lookup helpers. */
@@ -115,11 +113,6 @@ const getDomainEntityId = <TEntityType extends DomainEntityType>(
       const uiState = entity as DomainEntityMap['accordionUiState']
       return createAccordionUiStateKey(uiState.workspaceId, uiState.persistenceId)
     }
-    case 'categoryDescriptionEditorUiState': {
-      /** Category editor UI state whose workspace and category IDs form its authoritative key. */
-      const uiState = entity as DomainEntityMap['categoryDescriptionEditorUiState']
-      return createCategoryDescriptionEditorUiStateKey(uiState.workspaceId, uiState.categoryId)
-    }
     default:
       return (entity as { id: string }).id
   }
@@ -141,8 +134,7 @@ const captureCommittedDomainGraph = (): DomainGraph => {
     'markdownContentUiState',
     'workspaceUiState',
     'workspacePromptFolderUiState',
-    'accordionUiState',
-    'categoryDescriptionEditorUiState'
+    'accordionUiState'
   ]
 
   for (const entityType of entityTypes) {
@@ -178,10 +170,7 @@ const copyDomainGraph = (graph: DomainGraph): DomainGraph =>
     markdownContentUiState: new Map(graph.entries.markdownContentUiState),
     workspaceUiState: new Map(graph.entries.workspaceUiState),
     workspacePromptFolderUiState: new Map(graph.entries.workspacePromptFolderUiState),
-    accordionUiState: new Map(graph.entries.accordionUiState),
-    categoryDescriptionEditorUiState: new Map(
-      graph.entries.categoryDescriptionEditorUiState
-    )
+    accordionUiState: new Map(graph.entries.accordionUiState)
   })
 
 /** Finds the optional renderer expectation associated with one planned target. */

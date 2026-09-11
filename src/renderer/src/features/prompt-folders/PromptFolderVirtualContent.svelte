@@ -5,9 +5,7 @@
     type PromptFolderContentKind
   } from '@shared/PromptFolder'
   import type { Category } from '@shared/Category'
-  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptEditorUiCache.svelte.ts'
-  import { lookupCategoryDescriptionMeasuredHeight } from '@renderer/data/UiState/CategoryDraftUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
   import {
     getPromptStatusFolderDefinition,
@@ -58,15 +56,10 @@
   } from './promptFolderRowIds'
   import PromptFolderSectionRow from './PromptFolderSectionRow.svelte'
   import {
-    CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX,
     getPromptFolderSectionContentOffsetPx,
     getPromptFolderSectionContentWidthPx
   } from './promptFolderSectionGutterMetrics'
-  import {
-    estimateCategoryDescriptionRowHeight,
-    getCategoryEditorCollapsedRowHeightPx,
-    getCategoryEditorRowHeightPx
-  } from './categoryEditorSizing'
+  import { getCategoryEditorCollapsedRowHeightPx } from './categoryEditorSizing'
   import {
     createDroppableStateRegistry,
     type DragFinishResult,
@@ -113,7 +106,6 @@
   type PromptFolderRow =
     | PromptFolderScreenRootHeaderRow
     | (PromptFolderScreenCategoryEditorRow & {
-        isDetailsSectionExpanded: boolean
         isContentSectionExpanded: boolean
       })
     | PromptFolderScreenPlaceholderRow
@@ -151,12 +143,11 @@
     finalizedPromptContentOwnerByPromptId: Record<string, string>
     screenMode: PromptFolderScreenMode
     isCreatingPrompt: boolean
-    detailsSectionExpandedByOwnerId: Record<string, boolean>
     contentSectionExpandedByOwnerId: Record<string, boolean>
     initialScrollTopPx: number
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
-    onAddCategory: () => void
+    onManageCategories: () => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
     onDeletePromptFolder: (promptFolderId: string) => void
     onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
@@ -168,17 +159,8 @@
       dropPayload: PromptHandleDropPayload | null
     ) => void | Promise<void>
     onMoveCategory: (categoryId: string, previousCategoryId: string | null) => void
-    onCategoryDescriptionChange: (
-      categoryId: string,
-      text: string,
-      measurement: TextMeasurement
-    ) => void
-    onCategoryDescriptionPresenceChange: (
-      categoryId: string,
-      isPresent: boolean
-    ) => void
     onRenamePromptFolder: (promptFolderId: string) => void
-    onDeleteCategory: (categoryId: string) => void
+    onManageCategory: (categoryId: string, focusName: boolean) => void
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
     onScrollToWithinWindowBandChange: (next: ScrollToWithinWindowBand | null) => void
     onScrollToAndTrackRowChange: (next: ScrollToAndTrackRow | null) => void
@@ -191,7 +173,6 @@
     /** Reports the category owning the row at the breadcrumb sample point. */
     onBreadcrumbCategoryChange: (categoryId: string | null) => void
     onUserScroll: () => void
-    onDetailsSectionToggle: (contentOwnerId: string) => void
     onContentSectionToggle: (contentOwnerId: string) => void
   }
 
@@ -212,12 +193,11 @@
     finalizedPromptContentOwnerByPromptId,
     screenMode,
     isCreatingPrompt,
-    detailsSectionExpandedByOwnerId,
     contentSectionExpandedByOwnerId,
     initialScrollTopPx,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
-    onAddCategory,
+    onManageCategories,
     onDeletePrompt,
     onDeletePromptFolder,
     onSetPromptStatus,
@@ -226,10 +206,8 @@
     canMovePrompt,
     onPromptTreeDrop,
     onMoveCategory,
-    onCategoryDescriptionChange,
-    onCategoryDescriptionPresenceChange,
     onRenamePromptFolder,
-    onDeleteCategory,
+    onManageCategory,
     onScreenModeChange,
     onScrollToWithinWindowBandChange,
     onScrollToAndTrackRowChange,
@@ -240,7 +218,6 @@
     breadcrumbSampleOffsetPx,
     onBreadcrumbCategoryChange,
     onUserScroll,
-    onDetailsSectionToggle,
     onContentSectionToggle
   }: PromptFolderVirtualContentProps = $props()
 
@@ -366,20 +343,6 @@
     }
   }
 
-  /** Resolves a category description height from measurement or estimation. */
-  const getCategoryDescriptionHeight = (
-    categoryId: string,
-    widthPx: number,
-    devicePixelRatio: number
-  ): number => {
-    const description = categoryById[categoryId]?.description
-    if (description === null || description === undefined) return 0
-    return (
-      lookupCategoryDescriptionMeasuredHeight(categoryId, widthPx, devicePixelRatio) ??
-      estimateCategoryDescriptionRowHeight(description, promptEditorSizingConfig.fontSize)
-    )
-  }
-
   const rowRegistry = defineVirtualWindowRowRegistry<PromptFolderRow>({
     'root-header': {
       estimateHeight: () => PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX,
@@ -387,35 +350,8 @@
       snippet: rootHeaderRow
     },
     'category-editor': {
-      estimateHeight: (row) => {
-        const description = categoryById[row.categoryId]?.description
-        const descriptionHeightPx =
-          description === null || description === undefined
-            ? 0
-            : estimateCategoryDescriptionRowHeight(
-                description,
-                promptEditorSizingConfig.fontSize
-              )
-        return row.isDetailsSectionExpanded
-          ? getCategoryEditorRowHeightPx(descriptionHeightPx)
-          : getCategoryEditorCollapsedRowHeightPx()
-      },
-      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
-        const detailsWidthPx = getPromptFolderSectionContentWidthPx(
-          widthPx,
-          row.indentLevel,
-          CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX
-        )
-        return row.isDetailsSectionExpanded
-          ? getCategoryEditorRowHeightPx(
-              getCategoryDescriptionHeight(row.categoryId, detailsWidthPx, devicePixelRatio)
-            )
-          : getCategoryEditorCollapsedRowHeightPx()
-      },
+      estimateHeight: () => getCategoryEditorCollapsedRowHeightPx(),
       centerRowEligible: true,
-      hydrationPriorityEligible: true,
-      overlayRow: {},
-      dehydrateOnWidthResize: true,
       snippet: categoryEditorRow
     },
     placeholder: {
@@ -500,8 +436,6 @@
             id: categoryEditorRowId(row.categoryId),
             row: {
               ...row,
-              isDetailsSectionExpanded:
-                detailsSectionExpandedByOwnerId[row.contentOwnerId] ?? false,
               isContentSectionExpanded:
                 contentSectionExpandedByOwnerId[row.contentOwnerId] ?? true
             }
@@ -787,54 +721,28 @@
     {contentKind}
     onRenamePromptFolder={() => onRenamePromptFolder(screenRootFolderId)}
     onDeletePromptFolder={() => onDeletePromptFolder(screenRootFolderId)}
-    {onAddCategory}
+    {onManageCategories}
     {onScreenModeChange}
   />
 {/snippet}
 
 {#snippet categoryEditorRow(props)}
   {@const category = categoryById[props.row.categoryId]}
-  {@const contentWidthPx = getPromptFolderSectionContentWidthPx(
-    props.virtualWindowWidthPx,
-    props.row.indentLevel,
-    CATEGORY_EDITOR_SIDE_RAIL_WIDTH_PX
-  )}
   {#if category}
     <PromptFolderSectionRow rowHeightPx={props.rowHeightPx} indentLevel={props.row.indentLevel}>
       <CategoryEditorRow
-        {workspaceId}
         categoryId={category.id}
         displayName={category.displayName}
         contentCount={getCategoryContentCount(props.row)}
-        description={category.description}
-        rowId={props.rowId}
-        virtualWindowWidthPx={contentWidthPx}
-        devicePixelRatio={props.devicePixelRatio}
         rowHeightPx={props.rowHeightPx}
-        descriptionHeightPx={getCategoryDescriptionHeight(
-          category.id,
-          contentWidthPx,
-          props.devicePixelRatio
-        )}
-        hydrationPriority={props.hydrationPriority}
-        shouldDehydrate={props.shouldDehydrate}
-        overlayRowElement={props.overlayRowElement ?? null}
-        scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
-        onHydrationChange={props.onHydrationChange}
         {contentKind}
-        isDetailsSectionExpanded={props.row.isDetailsSectionExpanded}
         isContentSectionExpanded={props.row.isContentSectionExpanded}
         isReadOnly={isFinalMode}
         canRename={!isFinalMode}
         showSidebar
         dragOptions={!isFinalMode ? getCategoryDragOptions(category) : undefined}
-        onDetailsSectionToggle={() => onDetailsSectionToggle(category.id)}
         onContentSectionToggle={() => onContentSectionToggle(category.id)}
-        onDescriptionChange={(text, measurement) =>
-          onCategoryDescriptionChange(category.id, text, measurement)}
-        onDescriptionPresenceChange={(isPresent) =>
-          onCategoryDescriptionPresenceChange(category.id, isPresent)}
-        onDeleteCategory={() => onDeleteCategory(category.id)}
+        onManageCategory={(focusName) => onManageCategory(category.id, focusName)}
       />
     </PromptFolderSectionRow>
   {/if}
