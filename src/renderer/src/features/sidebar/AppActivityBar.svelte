@@ -24,7 +24,8 @@
 
   const activityScreenOrder: ScreenId[] = [
     'home',
-    'prompt-folders',
+    'prompt-task-folders',
+    'prompt-template-folders',
     'settings',
     'mockups',
     'test-screen'

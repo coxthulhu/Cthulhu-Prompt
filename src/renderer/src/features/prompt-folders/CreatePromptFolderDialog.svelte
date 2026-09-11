@@ -1,55 +1,33 @@
 <script lang="ts">
-  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
-  import SimpleSelectorButton, {
-    type SimpleSelectorButtonItem
-  } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
-  import { FileText, Folders, Layers } from 'lucide-svelte'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
 
   let {
     isWorkspaceReady,
+    kind,
     promptFolders = [],
-    promptTemplateFolders = [],
     isPromptFolderListLoading,
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
+    /** Fixed root-folder kind supplied by the active folder activity. */
+    kind: PromptFolderKind
     promptFolders: PromptFolder[]
-    promptTemplateFolders: PromptFolder[]
     isPromptFolderListLoading: boolean
     onCreated?: (promptFolderId: string) => void
   }>()
 
   const workspaceSelection = getWorkspaceSelectionContext()
   let promptFolderNameDialog = $state<{ openDialog: () => void } | null>(null)
-  const folderTypeItems: Array<SimpleSelectorButtonItem & { id: PromptFolderKind }> = [
-    {
-      id: 'prompt',
-      label: 'Task Prompts',
-      detail: 'One-time tasks the AI will accomplish',
-      icon: FileText
-    },
-    {
-      id: 'template',
-      label: 'Prompt Templates',
-      detail: 'Workflows for the AI to follow',
-      icon: Layers
-    }
-  ]
-  let selectedFolderType = $state<(typeof folderTypeItems)[number]>(folderTypeItems[0]!)
-  const validationFolders = $derived(
-    selectedFolderType.id === 'template' ? promptTemplateFolders : promptFolders
-  )
-
+  /** Opens the fixed-kind folder name dialog. */
   export const openDialog = () => {
-    selectedFolderType = folderTypeItems[0]!
     promptFolderNameDialog?.openDialog()
   }
 
+  /** Creates one root folder using the activity's fixed kind. */
   const handleCreateFolder = async (normalizedDisplayName: string): Promise<boolean> => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
     if (!selectedWorkspaceId) return false
@@ -60,7 +38,7 @@
           selectedWorkspaceId,
           normalizedDisplayName,
           null,
-          selectedFolderType.id
+          kind
         )
 
         onCreated?.(createdPromptFolderId)
@@ -75,49 +53,28 @@
 <PromptFolderNameDialog
   bind:this={promptFolderNameDialog}
   {isWorkspaceReady}
-  promptFolders={validationFolders}
+  {promptFolders}
   {isPromptFolderListLoading}
-  title={selectedFolderType.id === 'template'
+  title={kind === 'template'
     ? 'Create Prompt Template Folder'
     : 'Create Task Prompt Folder'}
-  subtitle="Choose the folder type and name for the new folder."
+  subtitle={kind === 'template'
+    ? 'Workflows for the AI to follow.'
+    : 'One-time tasks the AI will accomplish.'}
   submitText="Create Folder"
   submittingText="Creating..."
   submitTestId="create-prompt-folder-button"
   inputTestId="create-prompt-folder-name-input"
   errorTestId="create-prompt-folder-name-error"
   dialogClass="w-full max-w-[600px]"
-  rowLabel={selectedFolderType.id === 'template'
+  rowLabel={kind === 'template'
     ? 'Prompt Template Folder Name'
     : 'Task Prompt Folder Name'}
-  rowDetail={selectedFolderType.id === 'template'
+  rowDetail={kind === 'template'
     ? 'Name the new prompt template folder.'
     : 'Name the new task prompt folder.'}
-  failureMessage={selectedFolderType.id === 'template'
+  failureMessage={kind === 'template'
     ? 'Failed to create prompt template folder. Please try again.'
     : 'Failed to create task prompt folder. Please try again.'}
   onsubmit={handleCreateFolder}
->
-  {#snippet beforeRows()}
-    <ControlRow
-      icon={Folders}
-      label="Folder Type"
-      detail="Choose what the root folder will contain."
-    >
-      {#snippet control()}
-        <SimpleSelectorButton
-          label="Folder type"
-          items={folderTypeItems}
-          selectedItem={selectedFolderType}
-          showIcon
-          menuWidth="280px"
-          testId="create-prompt-folder-type-selector"
-          menuTestId="create-prompt-folder-type-menu"
-          onselect={(item) => {
-            selectedFolderType = item as (typeof folderTypeItems)[number]
-          }}
-        />
-      {/snippet}
-    </ControlRow>
-  {/snippet}
-</PromptFolderNameDialog>
+/>

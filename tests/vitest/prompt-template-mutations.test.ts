@@ -65,7 +65,8 @@ describe('prompt template mutations', () => {
         id: 'template-workspace',
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        entries: [
+        promptFolderEntries: [],
+        templateFolderEntries: [
           { kind: 'folder', id: 'source-folder' },
           { kind: 'folder', id: 'destination-folder' }
         ]

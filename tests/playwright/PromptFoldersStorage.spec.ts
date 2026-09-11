@@ -19,8 +19,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const WORKSPACE_PATH = '/ws/sample'
 // These selectors target the shared folder-creation controls.
 const FOLDER_ADD_ITEM = '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
-const FOLDER_TYPE_SELECTOR = '[data-testid="create-prompt-folder-type-selector"]'
-const FOLDER_TYPE_MENU = '[data-testid="create-prompt-folder-type-menu"]'
 const FOLDER_NAME_INPUT = '[data-testid="create-prompt-folder-name-input"]'
 const FOLDER_CREATE_BUTTON = '[data-testid="create-prompt-folder-button"]'
 // These selectors target prompt and status controls.
@@ -28,6 +26,8 @@ const ADD_PROMPT_BUTTON = '[data-testid="prompt-divider-add-initial"]'
 const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]'
 // These stable names make the persisted canonical paths explicit in the assertions.
 const ALPHA_NAME = 'Alpha'
+/** Template root created through the dedicated template activity. */
+const TEMPLATE_ALPHA_NAME = 'Template Alpha'
 const BETA_NAME = 'Beta'
 const FIRST_PROMPT_TITLE = 'Alpha First'
 const SECOND_PROMPT_TITLE = 'Alpha Second'
@@ -103,30 +103,15 @@ describe('Prompt folder storage', () => {
 
     await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
     await mainWindow.locator(FOLDER_ADD_ITEM).click()
-    await expect(mainWindow.locator(FOLDER_TYPE_SELECTOR)).toHaveText('Task Prompts')
-    await mainWindow.locator(FOLDER_TYPE_SELECTOR).click()
-    // The creation menu exposes prompt and template folders.
-    const typeMenu = mainWindow.locator(FOLDER_TYPE_MENU)
-    await expect(typeMenu.locator('[role="menuitem"]')).toHaveCount(2)
-    await expect(typeMenu.getByText('Task Prompts', { exact: true })).toBeVisible()
-    await expect(typeMenu.getByText('Prompt Templates', { exact: true })).toBeVisible()
-    // Each folder type explains its purpose on its own creation-menu option.
-    await expect(typeMenu.getByRole('menuitem', { name: /^Task Prompts\b/ })).toContainText(
-      'One-time tasks the AI will accomplish'
+    /** Fixed-kind task creation dialog opened from the task activity. */
+    const taskDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
-    await expect(typeMenu.getByRole('menuitem', { name: /^Prompt Templates\b/ })).toContainText(
-      'Workflows for the AI to follow'
-    )
-    // Measure each description to catch clipping that text-presence assertions cannot detect.
-    expect(
-      await typeMenu.locator('.cthulhuUiDropdownPopupMoreOptionsSubtitlePart').evaluateAll(
-        (parts) => parts.every((part) => part.scrollWidth <= part.clientWidth + 1)
-      )
-    ).toBe(true)
-    await typeMenu.getByText('Task Prompts', { exact: true }).click()
+    await expect(taskDialog).toBeVisible()
+    await expect(taskDialog).toContainText('One-time tasks the AI will accomplish.')
     await expect(
-      mainWindow.locator('[role="dialog"][aria-label="Create Task Prompt Folder"]')
-    ).toBeVisible()
+      mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
+    ).toHaveCount(0)
     await expect(mainWindow.getByLabel('Task Prompt Folder Name')).toBeVisible()
     await mainWindow.locator(FOLDER_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
@@ -148,10 +133,10 @@ describe('Prompt folder storage', () => {
       .toBe(true)
     expect(JSON.parse(await readTextFile(electronApp, `${alphaPath}/_FolderInfo/FolderInfo.json`)))
       .toMatchObject({ displayName: ALPHA_NAME, kind: 'prompt' })
-    // Prompt and template roots share the authoritative workspace ordering file.
+    // Task roots persist only in the prompt-owned workspace ordering file.
     const alphaId = await readFolderId(electronApp, alphaPath)
     const workspaceOrder = JSON.parse(
-      await readTextFile(electronApp, `${WORKSPACE_PATH}/WorkspaceFolderOrder.json`)
+      await readTextFile(electronApp, `${WORKSPACE_PATH}/Prompts/FolderOrder.json`)
     ) as { entries: Array<{ kind: 'folder'; id: string }> }
     expect(workspaceOrder.entries).toContainEqual({ kind: 'folder', id: alphaId })
     await expect(
@@ -178,6 +163,28 @@ describe('Prompt folder storage', () => {
     await expect(
       Promise.all(omittedPaths.map((path) => checkFileExists(electronApp, path)))
     ).resolves.toEqual(omittedPaths.map(() => false))
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await mainWindow.locator('[data-testid="sidebar-prompt-folder-add-button"]').click()
+    /** Fixed-kind template creation dialog opened from the template activity. */
+    const templateDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Prompt Template Folder"]'
+    )
+    await expect(templateDialog).toContainText('Workflows for the AI to follow.')
+    await expect(
+      mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
+    ).toHaveCount(0)
+    await mainWindow.locator(FOLDER_NAME_INPUT).fill(TEMPLATE_ALPHA_NAME)
+    await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
+    /** Canonical template root created by the fixed-kind dialog. */
+    const templateAlphaPath = `${WORKSPACE_PATH}/Templates/TemplateAlpha`
+    /** Stable ID expected in the template-owned root order. */
+    const templateAlphaId = await readFolderId(electronApp, templateAlphaPath)
+    expect(
+      JSON.parse(
+        await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/FolderOrder.json`)
+      )
+    ).toEqual({ entries: [{ kind: 'folder', id: templateAlphaId }] })
   })
 
   test('orders and moves active prompts and switches completed storage', async ({

@@ -550,7 +550,7 @@ describe('Prompt template selection', () => {
       )
       .toEqual([{ id: 'template-second' }])
 
-    await testHelpers.navigateToPromptFolders('First Templates')
+    await testHelpers.navigateToPromptTemplateFolders('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
     await expect(templateEditor.locator('[data-testid="prompt-template-button"]')).toHaveCount(0)
     await expect(
@@ -714,17 +714,7 @@ describe('Prompt template selection', () => {
     ])
     await testSetup.setupFilesystem({
       ...promptWorkspace,
-      ...templateWorkspace,
-      [`${virtualWorkspacePath}/WorkspaceFolderOrder.json`]: JSON.stringify(
-        {
-          entries: [
-            { kind: 'folder', id: 'virtual-selection-prompts' },
-            { kind: 'folder', id: 'virtual-selection-templates' }
-          ]
-        },
-        null,
-        2
-      )
+      ...templateWorkspace
     })
     await testSetup.setupFileDialog([getWorkspaceInfoPath(virtualWorkspacePath)])
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -871,7 +861,7 @@ describe('Prompt template selection', () => {
     await dialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]').click()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
 
-    await testHelpers.navigateToPromptFolders('First Templates')
+    await testHelpers.navigateToPromptTemplateFolders('First Templates')
     const templateEditorSelector = promptEditorSelector('template-first')
     await waitForMonacoEditor(mainWindow, templateEditorSelector)
     await focusMonacoEditor(mainWindow, templateEditorSelector)
@@ -889,7 +879,7 @@ describe('Prompt template selection', () => {
       .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
       .toBe('Draft Choose a template. wrapper')
 
-    await testHelpers.navigateToPromptFolders('First Templates')
+    await testHelpers.navigateToPromptTemplateFolders('First Templates')
     await focusMonacoEditor(mainWindow, templateEditorSelector)
     await mainWindow.keyboard.press('Control+A')
     await mainWindow.keyboard.insertText('Draft without a token')

@@ -159,13 +159,15 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/WorkspaceFolderOrder.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/Prompts/FolderOrder.json`]: JSON.stringify(
     {
-      entries: [
-        { kind: 'folder', id: PROMPT_ROOT_ID },
-        { kind: 'folder', id: TEMPLATE_ROOT_ID }
-      ]
+      entries: [{ kind: 'folder', id: PROMPT_ROOT_ID }]
     },
+    null,
+    2
+  ),
+  [`${WORKSPACE_PATH}/Templates/FolderOrder.json`]: JSON.stringify(
+    { entries: [{ kind: 'folder', id: TEMPLATE_ROOT_ID }] },
     null,
     2
   )
@@ -237,7 +239,7 @@ describe('Prompt categories', () => {
       'category:'
     )
 
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await expect(mainWindow.locator('.prompt-editor-metadata-category')).toHaveCount(0)
   })
 
@@ -665,7 +667,7 @@ describe('Prompt categories', () => {
       `${WORKSPACE_PATH}/Templates/TemplateTargets/_FolderInfo/FolderOrder.json`
     /** Started template workspace exposing the shared editor and tree drag behavior. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
-    await testHelpers.navigateToPromptFolders('Template Targets')
+    await testHelpers.navigateToPromptTemplateFolders('Template Targets')
 
     /** Collapsed template category header that owns the category-start target. */
     const categoryHeader = mainWindow.locator(
@@ -1060,12 +1062,12 @@ describe('Prompt categories', () => {
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: {
         promptFolderId: PROMPT_ROOT_ID,
         contentOwnerId: PROMPT_CATEGORY_ID
       },
-      lastPromptFolderId: PROMPT_ROOT_ID,
+      lastPromptTaskFolderId: PROMPT_ROOT_ID,
       promptFolderViewEntries: [
         {
           contentOwnerId: PROMPT_ROOT_ID,
@@ -1233,7 +1235,7 @@ describe('Prompt categories', () => {
         )
         return {
           contentOwnerId:
-            uiState.selectedScreen === 'prompt-folders'
+            uiState.selectedScreen === 'prompt-task-folders'
               ? uiState.selectedScreenData?.contentOwnerId
               : null,
           categoryPresent: uiState.promptFolderViewEntries.some(
@@ -1323,11 +1325,19 @@ describe('Prompt categories', () => {
           folderId: templateDestinationRootId
         }
       ]),
-      [`${WORKSPACE_PATH}/WorkspaceFolderOrder.json`]: JSON.stringify(
+      [`${WORKSPACE_PATH}/Prompts/FolderOrder.json`]: JSON.stringify(
         {
           entries: [
             { kind: 'folder', id: sourceRootId },
-            { kind: 'folder', id: destinationRootId },
+            { kind: 'folder', id: destinationRootId }
+          ]
+        },
+        null,
+        2
+      ),
+      [`${WORKSPACE_PATH}/Templates/FolderOrder.json`]: JSON.stringify(
+        {
+          entries: [
             { kind: 'folder', id: templateSourceRootId },
             { kind: 'folder', id: templateDestinationRootId }
           ]
@@ -1433,7 +1443,7 @@ describe('Prompt categories', () => {
         ]
       })
 
-    await testHelpers.navigateToPromptFolders('Template Source')
+    await testHelpers.navigateToPromptTemplateFolders('Template Source')
     await beginPromptHandleDrag(mainWindow, 'moving-category-template')
     await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
     await moveActiveDragToTarget(

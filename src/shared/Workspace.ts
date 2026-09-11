@@ -3,15 +3,43 @@ import type { PromptSummaryData } from './Prompt'
 import type { PromptTemplatePersisted } from './PromptTemplate'
 import type { RevisionEnvelope } from './Revision'
 import type { IpcResult } from './IpcResult'
-import type { FolderEntryRef, OrderContainer } from './OrderContainer'
+import type { FolderEntryRef } from './OrderContainer'
+import type { PromptFolderKind } from './PromptFolder'
 
-export interface WorkspaceRoot extends OrderContainer<FolderEntryRef> {
+export interface WorkspaceRoot {
   id: string
+  /** Ordered task-prompt root folders owned by this workspace. */
+  promptFolderEntries: FolderEntryRef[]
+  /** Ordered prompt-template root folders owned by this workspace. */
+  templateFolderEntries: FolderEntryRef[]
 }
 
 export interface Workspace extends WorkspaceRoot {
   workspacePath: string
   workspaceName: string
+}
+
+/** Returns the workspace root-folder order for one folder kind. */
+export const getWorkspaceFolderEntries = (
+  workspace: WorkspaceRoot,
+  kind: PromptFolderKind
+): FolderEntryRef[] =>
+  kind === 'template' ? workspace.templateFolderEntries : workspace.promptFolderEntries
+
+/** Returns both workspace root-folder orders with task prompts first. */
+export const getAllWorkspaceFolderEntries = (workspace: WorkspaceRoot): FolderEntryRef[] => [
+  ...workspace.promptFolderEntries,
+  ...workspace.templateFolderEntries
+]
+
+/** Replaces the workspace root-folder order for one folder kind. */
+export const setWorkspaceFolderEntries = (
+  workspace: WorkspaceRoot,
+  kind: PromptFolderKind,
+  entries: FolderEntryRef[]
+): void => {
+  if (kind === 'template') workspace.templateFolderEntries = entries
+  else workspace.promptFolderEntries = entries
 }
 
 // Special-case create payload. This is command data for workspace setup,

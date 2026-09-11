@@ -12,6 +12,7 @@ import { PromptStatusFolderId } from '@shared/Prompt'
 import { categoryCollection } from '../Collections/CategoryCollection'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { getAllWorkspaceFolderEntries } from '@shared/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
@@ -120,7 +121,7 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   if (!promptFolder) throw new Error('Category root prompt folder not loaded')
   /** Workspace that directly owns the category root folder. */
   const workspace = workspaceCollection.toArray.find((candidate) =>
-    candidate.entries.some((entry) => entry.id === promptFolder.id)
+    getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === promptFolder.id)
   )
   if (!workspace) throw new Error('Category workspace not loaded')
   /** Renderer-authored command shared with the main-process planner. */

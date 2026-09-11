@@ -59,12 +59,15 @@
   import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
+    isPromptFolderScreen,
+    isPromptFolderScreenSelection,
     isWorkspaceScreenSelectionSame,
+    type PromptFolderScreenId,
     type WorkspaceScreenSelection
   } from '@shared/UserPersistence'
-  import type { PromptFolder } from '@shared/PromptFolder'
+  import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
   import type { SystemSettings } from '@shared/SystemSettings'
-  import type { Workspace } from '@shared/Workspace'
+  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/Workspace'
   import { preparePromptFolderName } from '@shared/promptFolderName'
 
   type PromptFolderScreenHandle = {
@@ -147,7 +150,7 @@
       }
     }
 
-    return selectedWorkspace.entries
+    return getAllWorkspaceFolderEntries(selectedWorkspace)
       .map((entry) => entry.id)
       .map((promptFolderId) => promptFolderById.get(promptFolderId))
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
@@ -203,31 +206,53 @@
     promptFolderScreenMode = PromptFolderScreenMode.Active
   }
 
-  const hasWorkspacePromptFolder = (promptFolderId: string | null): promptFolderId is string => {
-    if (!selectedWorkspace || !promptFolderId) {
-      return false
-    }
+  /** Maps a folder activity to its authoritative root kind. */
+  const getPromptFolderScreenKind = (screen: PromptFolderScreenId): PromptFolderKind =>
+    screen === 'prompt-template-folders' ? 'template' : 'prompt'
 
-    return selectedWorkspacePromptFolders.some((folder) => folder.id === promptFolderId)
-  }
+  /** Resolves the persisted screen used to display one root-folder kind. */
+  const getPromptFolderKindScreen = (kind: PromptFolderKind): PromptFolderScreenId =>
+    kind === 'template' ? 'prompt-template-folders' : 'prompt-task-folders'
 
-  const resolvePromptFolderNavigationId = (): string | null => {
+  /** Resolves the selected or fallback root for one folder activity. */
+  const resolvePromptFolderNavigationId = (screen: PromptFolderScreenId): string | null => {
     const workspaceId = getSelectedWorkspaceId()
     const workspaceUiState = workspaceId
       ? workspaceUiStateCollection.get(workspaceId)
       : null
-    const firstPromptFolderId = selectedWorkspacePromptFolders[0]?.id ?? null
-    const persistedLastPromptFolderId = workspaceUiState?.lastPromptFolderId ?? null
-
-    return hasWorkspacePromptFolder(screenRootFolderId)
+    /** Folder kind displayed by the requested activity. */
+    const kind = getPromptFolderScreenKind(screen)
+    /** Roots eligible for selection within this activity. */
+    const matchingFolders = selectedWorkspacePromptFolders.filter((folder) => folder.kind === kind)
+    /** First root in the repaired type-specific order. */
+    const firstPromptFolderId = matchingFolders[0]?.id ?? null
+    /** Last root persisted independently for the requested activity. */
+    const persistedLastPromptFolderId =
+      kind === 'template'
+        ? (workspaceUiState?.lastPromptTemplateFolderId ?? null)
+        : (workspaceUiState?.lastPromptTaskFolderId ?? null)
+    /** Current root retained only when it belongs to the requested activity. */
+    const currentPromptFolderId = matchingFolders.some(
+      (folder) => folder.id === screenRootFolderId
+    )
       ? screenRootFolderId
-      : hasWorkspacePromptFolder(persistedLastPromptFolderId)
+      : null
+
+    return currentPromptFolderId
+      ? currentPromptFolderId
+      : matchingFolders.some((folder) => folder.id === persistedLastPromptFolderId)
         ? persistedLastPromptFolderId
         : firstPromptFolderId
   }
 
+  /** Selects the remembered task root used by every non-folder activity sidebar. */
+  const selectPromptTaskSidebarRoot = (): void => {
+    screenRootFolderId = resolvePromptFolderNavigationId('prompt-task-folders')
+    promptFolderScreenMode = PromptFolderScreenMode.Active
+  }
+
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
-    if (screen === 'prompt-folders') {
+    if (isPromptFolderScreen(screen)) {
       /** Current owner retained when rebuilding persistence for the already-selected root. */
       const contentOwnerId =
         promptNavigation.screenRootFolderId === screenRootFolderId
@@ -310,7 +335,7 @@
   }
 
   const restoreWorkspaceHomeScreen = async (workspaceId: string): Promise<void> => {
-    clearPromptFolderSelection()
+    selectPromptTaskSidebarRoot()
     activeScreen = 'home'
     await syncWorkspaceScreenSelection(workspaceId, {
       selectedScreen: 'home',
@@ -335,36 +360,58 @@
       return
     }
 
-    if (workspaceUiState.selectedScreen === 'prompt-folders') {
+    if (isPromptFolderScreenSelection(workspaceUiState)) {
       const workspaceRecord = workspaceCollection.get(workspaceId)
       const persistedPromptFolderId = workspaceUiState.selectedScreenData.promptFolderId
-      const hasPromptFolder =
-        persistedPromptFolderId !== null &&
-        Boolean(workspaceRecord?.entries.some((entry) => entry.id === persistedPromptFolderId))
+      /** Root kind required by the persisted split activity. */
+      const persistedFolderKind = getPromptFolderScreenKind(workspaceUiState.selectedScreen)
+      /** Type-specific workspace order used to validate the persisted root. */
+      const persistedFolderEntries =
+        persistedFolderKind === 'template'
+          ? workspaceRecord?.templateFolderEntries
+          : workspaceRecord?.promptFolderEntries
+      /** Last type-specific root retained when the selected screen root is unavailable. */
+      const persistedLastPromptFolderId =
+        persistedFolderKind === 'template'
+          ? workspaceUiState.lastPromptTemplateFolderId
+          : workspaceUiState.lastPromptTaskFolderId
+      /** Root selected from screen data, remembered state, or type-specific order. */
+      const restoredPromptFolderId =
+        persistedFolderEntries?.find((entry) => entry.id === persistedPromptFolderId)?.id ??
+        persistedFolderEntries?.find((entry) => entry.id === persistedLastPromptFolderId)?.id ??
+        persistedFolderEntries?.[0]?.id ??
+        null
 
-      if (hasPromptFolder && persistedPromptFolderId) {
-        screenRootFolderId = persistedPromptFolderId
-        activeScreen = 'prompt-folders'
-        if (workspaceUiState.lastPromptFolderId !== persistedPromptFolderId) {
+      if (restoredPromptFolderId) {
+        screenRootFolderId = restoredPromptFolderId
+        activeScreen = workspaceUiState.selectedScreen
+        if (
+          persistedPromptFolderId !== restoredPromptFolderId ||
+          persistedLastPromptFolderId !== restoredPromptFolderId
+        ) {
           await syncWorkspaceScreenSelection(workspaceId, {
-            selectedScreen: 'prompt-folders',
+            selectedScreen: workspaceUiState.selectedScreen,
             selectedScreenData: {
-              promptFolderId: persistedPromptFolderId,
-              contentOwnerId: workspaceUiState.selectedScreenData.contentOwnerId
+              promptFolderId: restoredPromptFolderId,
+              contentOwnerId:
+                persistedPromptFolderId === restoredPromptFolderId
+                  ? workspaceUiState.selectedScreenData.contentOwnerId
+                  : restoredPromptFolderId
             }
           })
         }
         return
       }
 
-      await restoreWorkspaceHomeScreen(workspaceId)
+      clearPromptFolderSelection()
+      activeScreen = workspaceUiState.selectedScreen
       return
     }
 
     if (workspaceUiState.selectedScreen === 'mockups') {
       const persistedMockupId = workspaceUiState.selectedScreenData.mockupId
       if (persistedMockupId === null || hasMockup(persistedMockupId)) {
-        clearPromptFolderSelection()
+        selectPromptTaskSidebarRoot()
         selectedMockupId = persistedMockupId
         activeScreen = 'mockups'
         return
@@ -374,7 +421,7 @@
       return
     }
 
-    clearPromptFolderSelection()
+    selectPromptTaskSidebarRoot()
     activeScreen = workspaceUiState.selectedScreen
   }
 
@@ -564,12 +611,11 @@
       return
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
-    if (screen === 'prompt-folders') {
-      const promptFolderId = resolvePromptFolderNavigationId()
-      if (!promptFolderId) return
+    if (isPromptFolderScreen(screen)) {
+      const promptFolderId = resolvePromptFolderNavigationId(screen)
       screenRootFolderId = promptFolderId
     } else {
-      promptFolderScreenMode = PromptFolderScreenMode.Active
+      selectPromptTaskSidebarRoot()
     }
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
@@ -577,17 +623,21 @@
 
   const navigateToScreenRootFolder = (promptFolderId: string): void => {
     if (!isWorkspaceReady) return
-    if (activeScreen === 'prompt-folders' && screenRootFolderId === promptFolderId) {
+    /** Loaded root used to choose the matching split activity. */
+    const promptFolder = selectedWorkspacePromptFolders.find(
+      (folder) => folder.id === promptFolderId
+    )
+    if (!promptFolder) return
+    /** Activity dedicated to the selected root's kind. */
+    const targetScreen = getPromptFolderKindScreen(promptFolder.kind)
+    if (activeScreen === targetScreen && screenRootFolderId === promptFolderId) {
       return
     }
     screenRootFolderId = promptFolderId
-    if (
-      selectedWorkspacePromptFolders.find((folder) => folder.id === promptFolderId)?.kind ===
-      'template'
-    ) {
+    if (promptFolder.kind === 'template') {
       promptFolderScreenMode = PromptFolderScreenMode.Active
     }
-    navigateToScreen('prompt-folders')
+    navigateToScreen(targetScreen)
   }
 
   const setPromptFolderMode = (nextMode: PromptFolderScreenMode): void => {
@@ -610,10 +660,14 @@
     else if (promptFolderScreenMode === groupId) setPromptFolderMode(PromptFolderScreenMode.Active)
   }
 
-  /** Selects the first remaining root folder or retains the empty prompt-folders screen. */
+  /** Selects the first remaining same-kind root or retains the empty folder activity. */
   const navigateAfterRootPromptFolderDelete = (): void => {
-    /** First remaining folder in the workspace's unified prompt and template order. */
-    const nextPromptFolderId = selectedWorkspacePromptFolders[0]?.id ?? null
+    /** Kind retained from the activity that owned the deleted root. */
+    const kind = activeScreen === 'prompt-template-folders' ? 'template' : 'prompt'
+    /** First remaining folder in the activity's type-specific order. */
+    const nextPromptFolderId = selectedWorkspacePromptFolders.find(
+      (folder) => folder.kind === kind
+    )?.id ?? null
     if (!nextPromptFolderId) {
       clearPromptFolderSelection()
       return
@@ -668,6 +722,7 @@
           {screenRootFolderId}
           {promptFolderScreenMode}
           {shownFinalStatusGroups}
+          folderKind={activeScreen === 'prompt-template-folders' ? 'template' : 'prompt'}
           onPromptFolderModeChange={setPromptFolderMode}
           onFinalStatusGroupShownChange={setFinalStatusGroupShown}
           onScreenRootFolderSelect={(promptFolderId) => {
@@ -696,7 +751,7 @@
             <SettingsScreen />
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
-          {:else if activeScreen === 'prompt-folders'}
+          {:else if isPromptFolderScreen(activeScreen)}
             {#if screenRootFolderId && workspacePath}
               {#key `${screenRootFolderId}:${promptFolderScreenMode}`}
                 <PromptFolderScreen

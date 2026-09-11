@@ -10,6 +10,7 @@ import {
   finishActiveDrag,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
+import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -36,8 +37,12 @@ const resolvePaletteColor = async (page: Page, token: string): Promise<string> =
     return color
   }, token)
 
-const workspaceFolderOrderPath = (workspacePath: string): string =>
-  `${workspacePath}/WorkspaceFolderOrder.json`
+/** Resolves the type-owned root-folder order used by this suite. */
+const workspaceFolderOrderPath = (
+  workspacePath: string,
+  kind: 'prompt' | 'template' = 'prompt'
+): string =>
+  `${workspacePath}/${kind === 'template' ? 'Templates' : 'Prompts'}/FolderOrder.json`
 
 const readTextFile = async (
   electronApp: ElectronApplication,
@@ -61,9 +66,13 @@ const readTextFile = async (
 
 const readWorkspacePromptFolderIds = async (
   electronApp: ElectronApplication,
-  workspacePath: string
+  workspacePath: string,
+  kind: 'prompt' | 'template' = 'prompt'
 ): Promise<string[]> => {
-  const fileContents = await readTextFile(electronApp, workspaceFolderOrderPath(workspacePath))
+  const fileContents = await readTextFile(
+    electronApp,
+    workspaceFolderOrderPath(workspacePath, kind)
+  )
   return (JSON.parse(fileContents) as { entries: Array<{ id: string }> }).entries.map(
     (entry) => entry.id
   )
@@ -133,7 +142,13 @@ const createCombinedFolderWorkspace = (workspacePath: string) => ({
   ...createWorkspaceWithTemplateFolders(workspacePath, [
     { folderName: 'Beta', displayName: 'Template Beta', folderId: 'template-beta' },
     { folderName: 'Alpha', displayName: 'Template Alpha', folderId: 'template-alpha' }
-  ])
+  ]),
+  [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify({
+    entries: ['prompt-zulu', 'prompt-alpha'].map((id) => ({ kind: 'folder', id }))
+  }),
+  [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify({
+    entries: ['template-beta', 'template-alpha'].map((id) => ({ kind: 'folder', id }))
+  })
 })
 
 describe('Prompt Folder Order', () => {
@@ -191,12 +206,13 @@ describe('Prompt Folder Order', () => {
     ).toHaveCount(0)
   })
 
-  test('repairs and reorders one combined root folder order', async ({
+  test('repairs, filters, and reorders independent root folder orders', async ({
     electronApp,
     testSetup
   }) => {
     const filesystem = createCombinedFolderWorkspace(COMBINED_REPAIR_WORKSPACE_PATH)
     delete filesystem[workspaceFolderOrderPath(COMBINED_REPAIR_WORKSPACE_PATH)]
+    delete filesystem[workspaceFolderOrderPath(COMBINED_REPAIR_WORKSPACE_PATH, 'template')]
 
     await testSetup.setupFilesystem(filesystem)
     await testSetup.setupFileDialog([getWorkspaceInfoPath(COMBINED_REPAIR_WORKSPACE_PATH)])
@@ -210,15 +226,23 @@ describe('Prompt Folder Order', () => {
         async () =>
           await readWorkspacePromptFolderIds(electronApp, COMBINED_REPAIR_WORKSPACE_PATH)
       )
-      .toEqual(['prompt-alpha', 'template-alpha', 'template-beta', 'prompt-zulu'])
+      .toEqual(['prompt-alpha', 'prompt-zulu'])
     await expect
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
         'sidebar-prompt-folder-dropdown-item-prompt-alpha',
-        'sidebar-prompt-folder-dropdown-item-template-alpha',
-        'sidebar-prompt-folder-dropdown-item-template-beta',
         'sidebar-prompt-folder-dropdown-item-prompt-zulu'
       ])
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await expect
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
+      .toEqual([
+        'sidebar-prompt-folder-dropdown-item-template-alpha',
+        'sidebar-prompt-folder-dropdown-item-template-beta'
+    ])
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
+    await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
 
     await beginPromptFolderDropdownDrag(mainWindow, 'prompt-zulu')
     await moveActiveDragToTarget(
@@ -231,23 +255,37 @@ describe('Prompt Folder Order', () => {
         async () =>
           await readWorkspacePromptFolderIds(electronApp, COMBINED_REPAIR_WORKSPACE_PATH)
       )
-      .toEqual(['prompt-zulu', 'prompt-alpha', 'template-alpha', 'template-beta'])
+      .toEqual(['prompt-zulu', 'prompt-alpha'])
+    expect(
+      await readWorkspacePromptFolderIds(
+        electronApp,
+        COMBINED_REPAIR_WORKSPACE_PATH,
+        'template'
+      )
+    ).toEqual(['template-alpha', 'template-beta'])
   })
 
-  test('preserves an explicitly interleaved combined root order', async ({
+  test('migrates an interleaved schema-one order into type-owned orders', async ({
     electronApp,
     testSetup
   }) => {
     const filesystem = createCombinedFolderWorkspace(COMBINED_PERSISTED_WORKSPACE_PATH)
     const persistedIds = ['template-beta', 'prompt-zulu', 'template-alpha', 'prompt-alpha']
-    filesystem[workspaceFolderOrderPath(COMBINED_PERSISTED_WORKSPACE_PATH)] = JSON.stringify(
+    /** Workspace metadata downgraded to activate the schema-one root-order migration. */
+    const workspaceInfoPath = getWorkspaceInfoPath(COMBINED_PERSISTED_WORKSPACE_PATH)
+    /** Current workspace identity retained while its schema marker is downgraded. */
+    const workspaceInfo = JSON.parse(filesystem[workspaceInfoPath]!) as Record<string, unknown>
+    filesystem[workspaceInfoPath] = JSON.stringify({ ...workspaceInfo, schemaVersion: 1 }, null, 2)
+    delete filesystem[workspaceFolderOrderPath(COMBINED_PERSISTED_WORKSPACE_PATH)]
+    delete filesystem[workspaceFolderOrderPath(COMBINED_PERSISTED_WORKSPACE_PATH, 'template')]
+    filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/WorkspaceFolderOrder.json`] = JSON.stringify(
       { entries: persistedIds.map((id) => ({ kind: 'folder', id })) },
       null,
       2
     )
 
     await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMBINED_PERSISTED_WORKSPACE_PATH)])
+    await testSetup.setupFileDialog([workspaceInfoPath])
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -255,15 +293,36 @@ describe('Prompt Folder Order', () => {
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
     expect(
       await readWorkspacePromptFolderIds(electronApp, COMBINED_PERSISTED_WORKSPACE_PATH)
-    ).toEqual(persistedIds)
+    ).toEqual(['prompt-zulu', 'prompt-alpha'])
+    expect(
+      await readWorkspacePromptFolderIds(
+        electronApp,
+        COMBINED_PERSISTED_WORKSPACE_PATH,
+        'template'
+      )
+    ).toEqual(['template-beta', 'template-alpha'])
+    await expect
+      .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
+      .toEqual([
+        'sidebar-prompt-folder-dropdown-item-prompt-zulu',
+        'sidebar-prompt-folder-dropdown-item-prompt-alpha'
+      ])
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
     await expect
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
       .toEqual([
         'sidebar-prompt-folder-dropdown-item-template-beta',
-        'sidebar-prompt-folder-dropdown-item-prompt-zulu',
-        'sidebar-prompt-folder-dropdown-item-template-alpha',
-        'sidebar-prompt-folder-dropdown-item-prompt-alpha'
+        'sidebar-prompt-folder-dropdown-item-template-alpha'
       ])
+    expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath))).toMatchObject({
+      schemaVersion: 2
+    })
+    await expect(
+      checkFileExists(
+        electronApp,
+        `${COMBINED_PERSISTED_WORKSPACE_PATH}/WorkspaceFolderOrder.json`
+      )
+    ).resolves.toBe(false)
   })
 
   test('adds new folders to the top of the persisted folder order', async ({

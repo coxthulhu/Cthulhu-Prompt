@@ -32,7 +32,8 @@ type WorkspaceCompositeKey = {
 type WorkspaceUiStateRow = {
   selectedScreen: string
   selectedScreenDataJson: string | null
-  lastPromptFolderId: string | null
+  lastPromptTaskFolderId: string | null
+  lastPromptTemplateFolderId: string | null
 }
 
 /** SQLite row containing one prompt-folder screen view state. */
@@ -106,7 +107,8 @@ export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
         SELECT
           selected_screen AS selectedScreen,
           selected_screen_data_json AS selectedScreenDataJson,
-          last_prompt_folder_id AS lastPromptFolderId
+          last_prompt_task_folder_id AS lastPromptTaskFolderId,
+          last_prompt_template_folder_id AS lastPromptTemplateFolderId
         FROM workspace_ui_state
         WHERE workspace_id = ?
         `
@@ -119,7 +121,12 @@ export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
       parseJson(row.selectedScreenDataJson)
     )
     return selection
-      ? { workspaceId, ...selection, lastPromptFolderId: row.lastPromptFolderId }
+      ? {
+          workspaceId,
+          ...selection,
+          lastPromptTaskFolderId: row.lastPromptTaskFolderId,
+          lastPromptTemplateFolderId: row.lastPromptTemplateFolderId
+        }
       : null
   },
   command: (workspaceId, transition) => {
@@ -137,19 +144,22 @@ export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
         workspace_id,
         selected_screen,
         selected_screen_data_json,
-        last_prompt_folder_id
+        last_prompt_task_folder_id,
+        last_prompt_template_folder_id
       )
-      VALUES (?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(workspace_id) DO UPDATE SET
         selected_screen = excluded.selected_screen,
         selected_screen_data_json = excluded.selected_screen_data_json,
-        last_prompt_folder_id = excluded.last_prompt_folder_id
+        last_prompt_task_folder_id = excluded.last_prompt_task_folder_id,
+        last_prompt_template_folder_id = excluded.last_prompt_template_folder_id
       `
     ).run(
       workspaceId,
       uiState.selectedScreen,
       uiState.selectedScreenData === null ? null : JSON.stringify(uiState.selectedScreenData),
-      uiState.lastPromptFolderId
+      uiState.lastPromptTaskFolderId,
+      uiState.lastPromptTemplateFolderId
     )
   }
 }

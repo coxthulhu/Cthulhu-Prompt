@@ -60,10 +60,11 @@ describe('root prompt-folder domain mutations', () => {
         id: WORKSPACE_ID,
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        entries: [
+        promptFolderEntries: [
           { kind: 'folder', id: EXISTING_ROOT_ID },
           { kind: 'folder', id: SECOND_ROOT_ID }
-        ]
+        ],
+        templateFolderEntries: []
       }
     })
     runRevisionMutation.mockResolvedValue(undefined)
@@ -94,7 +95,7 @@ describe('root prompt-folder domain mutations', () => {
         promptFolderClientState: { insert: insertClientState }
       }
     })
-    expect(workspace.entries.map((entry) => entry.id)).toEqual([
+    expect(workspace.promptFolderEntries.map((entry) => entry.id)).toEqual([
       EXISTING_ROOT_ID,
       createdId,
       SECOND_ROOT_ID
@@ -153,7 +154,7 @@ describe('root prompt-folder domain mutations', () => {
         }
       }
     })
-    expect(workspace.entries.map((entry) => entry.id)).toEqual([
+    expect(workspace.promptFolderEntries.map((entry) => entry.id)).toEqual([
       SECOND_ROOT_ID,
       EXISTING_ROOT_ID
     ])

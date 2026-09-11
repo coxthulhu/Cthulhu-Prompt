@@ -170,42 +170,44 @@ const writeRepairedOrder = <TEntry extends EntryRef>(
   return entries
 }
 
-const readDirectWorkspaceFolderRefs = (workspacePath: string): FolderEntryRef[] => {
+/** Discovers one kind of root folder in deterministic disk-name order. */
+const readDirectWorkspaceFolderRefs = (
+  workspacePath: string,
+  kind: PromptFolderKind
+): FolderEntryRef[] => {
   const fs = getFs()
-  const folders = (['prompt', 'template'] as const).flatMap((kind) => {
-    const diskPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
-
-    return fs
-      .readdirSync(diskPath, { withFileTypes: true })
-      .filter(
-        (entry) =>
-          entry.isDirectory() && isPromptFolderDirectory(workspacePath, entry.name, kind)
-      )
-      .map((entry) => ({
-        folderName: entry.name,
-        kind,
-        ref: folderEntryRef(readPromptFolderInfo(workspacePath, entry.name, kind).folderId)
-      }))
-  })
+  /** Type directory containing every discoverable root in this order. */
+  const diskPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
+  /** Valid root folders paired with their stable references. */
+  const folders = fs
+    .readdirSync(diskPath, { withFileTypes: true })
+    .filter(
+      (entry) => entry.isDirectory() && isPromptFolderDirectory(workspacePath, entry.name, kind)
+    )
+    .map((entry) => ({
+      folderName: entry.name,
+      ref: folderEntryRef(readPromptFolderInfo(workspacePath, entry.name, kind).folderId)
+    }))
 
   return folders
-    .sort((left, right) => {
-      const nameComparison = left.folderName
-        .toLowerCase()
-        .localeCompare(right.folderName.toLowerCase())
-      if (nameComparison !== 0) return nameComparison
-      return left.kind === right.kind ? 0 : left.kind === 'template' ? 1 : -1
-    })
+    .sort((left, right) =>
+      left.folderName.toLowerCase().localeCompare(right.folderName.toLowerCase())
+    )
     .map((folder) => folder.ref)
 }
 
-export const readWorkspaceFolderEntries = (workspacePath: string): FolderEntryRef[] => {
-  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath)
+/** Reads and repairs the workspace root-folder order for one kind. */
+export const readWorkspaceFolderEntries = (
+  workspacePath: string,
+  kind: PromptFolderKind
+): FolderEntryRef[] => {
+  /** Type-owned order file repaired against folders currently on disk. */
+  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath, kind)
   const persistedEntries = readOrderEntries<FolderEntryRef>(orderPath)
   return writeRepairedOrder(
     orderPath,
     persistedEntries,
-    readDirectWorkspaceFolderRefs(workspacePath)
+    readDirectWorkspaceFolderRefs(workspacePath, kind)
   )
 }
 
@@ -665,7 +667,7 @@ export const readPromptFolders = (
   }
 
   const promptFolderById = new Map(promptFolders.map((folder) => [folder.id, folder]))
-  return readWorkspaceFolderEntries(workspacePath).flatMap((entry) => {
+  return readWorkspaceFolderEntries(workspacePath, kind).flatMap((entry) => {
     const folder = promptFolderById.get(entry.id)
     return folder ? [folder] : []
   })

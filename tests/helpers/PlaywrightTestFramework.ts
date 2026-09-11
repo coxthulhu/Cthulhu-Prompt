@@ -360,6 +360,9 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               promptFolderHelpers.navigateToRegularFolder(mainWindow, folderName),
             navigateToPromptFolders: (folderName: string) =>
               promptFolderHelpers.navigateToRegularFolder(mainWindow, folderName),
+            /** Opens one prompt-template root through its dedicated activity. */
+            navigateToPromptTemplateFolders: (folderName: string) =>
+              promptFolderHelpers.navigateToTemplateFolder(mainWindow, folderName),
             pauseIpcChannel: async (channel: string) => {
               await emitIpcGateEvent('test-ipc-gate', channel)
             },

@@ -12,6 +12,7 @@ import { type MarkdownContentPersisted } from '@shared/MarkdownContent'
 import { type PromptFolderContentKind } from '@shared/PromptFolder'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
 import { workspaceCollection } from '../Collections/WorkspaceCollection'
+import { getAllWorkspaceFolderEntries } from '@shared/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
@@ -155,7 +156,7 @@ export const createMarkdownContentRendererMutations = <
     }
     /** Workspace that owns the deleted content's root folder. */
     const workspace = workspaceCollection.toArray.find((candidate) =>
-      candidate.entries.some((entry) => entry.id === promptFolderId)
+      getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === promptFolderId)
     )
     if (!workspace) throw new Error(`${config.label} workspace not loaded`)
     /** Shared deletion command projected by renderer and main process. */

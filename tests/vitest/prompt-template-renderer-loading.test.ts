@@ -36,7 +36,8 @@ describe('prompt template renderer loading', () => {
           id: 'renderer-template-workspace',
           workspacePath: 'C:\\Templates',
           workspaceName: 'Templates',
-          entries: [{ kind: 'folder', id: 'renderer-template-folder' }]
+          promptFolderEntries: [],
+          templateFolderEntries: [{ kind: 'folder', id: 'renderer-template-folder' }]
         }
       },
       promptFolders: [

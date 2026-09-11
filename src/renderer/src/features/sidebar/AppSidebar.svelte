@@ -17,6 +17,7 @@
     type PromptHandleDropPayload,
   } from '@renderer/features/drag-drop/promptHandleDrag'
   import type { ScreenId } from '@renderer/app/screens'
+  import { isPromptFolderScreen } from '@shared/UserPersistence'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import {
@@ -49,10 +50,14 @@
     type Prompt
   } from '@shared/Prompt'
   import type { PromptTemplate } from '@shared/PromptTemplate'
-  import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
+  import {
+    getPromptFolderCategoryIds,
+    type PromptFolder,
+    type PromptFolderKind
+  } from '@shared/PromptFolder'
   import { getOrderedMarkdownContentIds } from '@shared/MarkdownContent'
   import type { Category } from '@shared/Category'
-  import type { Workspace } from '@shared/Workspace'
+  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
@@ -99,6 +104,7 @@
     screenRootFolderId = null,
     promptFolderScreenMode = PromptFolderScreenMode.Active,
     shownFinalStatusGroups = {},
+    folderKind = 'prompt',
     onPromptFolderModeChange,
     onFinalStatusGroupShownChange,
     onScreenRootFolderSelect,
@@ -112,6 +118,8 @@
     promptFolderScreenMode?: PromptFolderScreenMode
     /** Visibility for each toggleable finalized group. */
     shownFinalStatusGroups?: Partial<Record<PromptStatusFolderId, boolean>>
+    /** Root-folder kind displayed by this sidebar instance. */
+    folderKind?: PromptFolderKind
     onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
     /** Updates one finalized group's visibility. */
     onFinalStatusGroupShownChange: (groupId: PromptStatusFolderId, isShown: boolean) => void
@@ -148,7 +156,8 @@
     return null
   })
 
-  const rootPromptFolders = $derived.by((): PromptFolder[] => {
+  /** Every workspace root resolved in task-then-template order. */
+  const workspacePromptFolders = $derived.by((): PromptFolder[] => {
     if (!selectedWorkspace) {
       return []
     }
@@ -162,25 +171,14 @@
       promptFolderById.set(promptFolder.id, promptFolder)
     }
 
-    return selectedWorkspace.entries
+    return getAllWorkspaceFolderEntries(selectedWorkspace)
       .map((entry) => promptFolderById.get(entry.id))
       .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
   })
-  const promptFolders = $derived(rootPromptFolders.filter((folder) => folder.kind !== 'template'))
-  const promptTemplateFolders = $derived.by((): PromptFolder[] => {
-    if (!selectedWorkspace) return []
-
-    const promptFolderById = new SvelteMap<string, PromptFolder>()
-    for (const promptFolder of promptFolderQuery.data) {
-      if (promptFolder) promptFolderById.set(promptFolder.id, promptFolder)
-    }
-
-    return selectedWorkspace.entries
-      .map((entry) => promptFolderById.get(entry.id))
-      .filter(
-        (promptFolder): promptFolder is PromptFolder => promptFolder?.kind === 'template'
-      )
-  })
+  /** Roots eligible for the current activity's selector and tree. */
+  const rootPromptFolders = $derived(
+    workspacePromptFolders.filter((folder) => folder.kind === folderKind)
+  )
   const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     isWorkspaceLoading
       ? 'loading'
@@ -191,19 +189,24 @@
           : 'ready'
   )
 
-  const promptFolderSelectorPlaceholder: DropdownPopupDetailedItem = {
+  /** Empty selector item specialized to the active root kind. */
+  const promptFolderSelectorPlaceholder = $derived<DropdownPopupDetailedItem>({
     id: 'no-prompt-folders',
     label: 'No folders',
     detail: 'Create one from the menu',
-    icon: FileText
-  }
-  const promptFolderSelectorFooterItem: DropdownPopupDetailedItem = {
+    icon: folderKind === 'template' ? Layers : FileText
+  })
+  /** Folder-creation action specialized to the active root kind. */
+  const promptFolderSelectorFooterItem = $derived<DropdownPopupDetailedItem>({
     id: 'add-prompt-folder',
     label: 'Create Folder',
-    detail: 'Create a folder for prompts or templates',
+    detail:
+      folderKind === 'template'
+        ? 'Create a prompt template folder'
+        : 'Create a task prompt folder',
     icon: Plus,
     testId: 'sidebar-prompt-folder-dropdown-add-item'
-  }
+  })
   let draggedPromptFolderSelectorId = $state<string | null>(null)
   // Local preview order lets the dropdown reorder live without persisting until drop.
   let promptFolderSelectorDragSourceIds = $state<string[] | null>(null)
@@ -356,7 +359,7 @@
   )
   // Highlights the folder overview action only while its navigation target is active onscreen.
   const isFolderRootActive = $derived(
-    activeScreen === 'prompt-folders' &&
+    isPromptFolderScreen(activeScreen) &&
       screenRootFolder !== null &&
       promptNavigation.screenRootFolderId === screenRootFolder.id &&
       promptNavigation.contentOwnerId === screenRootFolder.id &&
@@ -461,7 +464,7 @@
       }
     })
 
-    if (activeScreen !== 'prompt-folders') {
+    if (!isPromptFolderScreen(activeScreen)) {
       onScreenRootFolderSelect(rootFolderId)
     }
   }
@@ -871,8 +874,8 @@
         <CreatePromptFolderDialog
           bind:this={createPromptFolderDialog}
           {isWorkspaceReady}
-          {promptFolders}
-          {promptTemplateFolders}
+          promptFolders={rootPromptFolders}
+          kind={folderKind}
           isPromptFolderListLoading={isWorkspaceLoading}
           onCreated={(promptFolderId) => {
             onScreenRootFolderSelect(promptFolderId)
@@ -890,7 +893,7 @@
         {screenRootFolderId}
         screenMode={PromptFolderScreenMode.Active}
         expansionRequests={promptTreeExpansionRequests}
-        isPromptFoldersScreenActive={activeScreen === 'prompt-folders'}
+        isPromptFoldersScreenActive={isPromptFolderScreen(activeScreen)}
         onAllCategoriesCollapsedChange={(isCollapsed) => {
           areAllCategoriesCollapsed = isCollapsed
         }}
@@ -919,7 +922,7 @@
                 {screenRootFolderId}
                 screenMode={group.id}
                 expansionRequests={promptTreeExpansionRequests}
-                isPromptFoldersScreenActive={activeScreen === 'prompt-folders' &&
+                isPromptFoldersScreenActive={isPromptFolderScreen(activeScreen) &&
                   promptFolderScreenMode === group.id}
                 onAllCategoriesCollapsedChange={(isCollapsed) => {
                   if (group.id === categoryToolbarGroupId) areAllCategoriesCollapsed = isCollapsed

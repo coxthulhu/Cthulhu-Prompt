@@ -168,7 +168,7 @@
   })
   // Root template folders with usable descendants retain workspace ordering.
   const rootTemplateFolders = $derived.by(() =>
-    (selectedWorkspace?.entries ?? []).flatMap((entry) => {
+    (selectedWorkspace?.templateFolderEntries ?? []).flatMap((entry) => {
       const folder = promptFolderById[entry.id]
       return folder?.kind === 'template' && availableTemplateCountByFolderId[folder.id] > 0
         ? [folder]

@@ -11,7 +11,7 @@ import { PromptStatus } from '../../src/shared/Prompt'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const workspaceFolderOrderPath = (workspacePath: string): string =>
-  `${workspacePath}/WorkspaceFolderOrder.json`
+  `${workspacePath}/Prompts/FolderOrder.json`
 
 describe('Home Screen', () => {
   test('shows the get started state on launch without a workspace', async ({ testSetup }) => {
@@ -225,10 +225,10 @@ describe('Home Screen', () => {
           }
         ]),
         [workspaceFolderOrderPath(workspacePath)]: JSON.stringify({
-          entries: [
-            { kind: 'folder', id: 'home-task-folder' },
-            { kind: 'folder', id: 'home-template-folder' }
-          ]
+          entries: [{ kind: 'folder', id: 'home-task-folder' }]
+        }),
+        [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify({
+          entries: [{ kind: 'folder', id: 'home-template-folder' }]
         })
       }
 
@@ -364,7 +364,7 @@ Keep this body.`
       /** Canonical unreferenced category data produced by the recursive scan. */
       const migratedCategoryText = await readTextFile(electronApp, categoryPath)
       expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 1,
+        schemaVersion: 2,
         workspaceId: unversionedInfo.workspaceId,
         workspaceName: unversionedInfo.workspaceName
       })
@@ -410,7 +410,7 @@ Keep this body.`
       })
 
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(1)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(2)
     })
 
     test('leaves schema version zero when a workspace migration file is malformed', async ({
@@ -501,6 +501,7 @@ Keep this partial body.`
       const workspacePath = '/ws/missing-templates'
       const filesystem = createWorkspaceWithFolders(workspacePath, [])
       delete filesystem[`${workspacePath}/Templates`]
+      delete filesystem[`${workspacePath}/Templates/FolderOrder.json`]
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -594,7 +595,7 @@ Keep this partial body.`
             `${workspacePath}\\TestWorkspace.cthulhuprompt.json`
           )
         ).schemaVersion
-      ).toBe(1)
+      ).toBe(2)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {
@@ -702,19 +703,24 @@ Keep this partial body.`
       await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
-      ).toHaveCount(2)
+      ).toHaveCount(1)
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
       ).toContainText('My Prompts')
+      await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+      ).toHaveCount(1)
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
       ).toContainText('1 template')
       await mainWindow
         .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
-        .nth(1)
+        .nth(0)
         .click()
       const exampleTemplate = await testHelpers.verifyPromptVisible('Example Template')
       expect(exampleTemplate.found).toBe(true)
@@ -761,20 +767,25 @@ Keep this partial body.`
       await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
-      ).toHaveCount(2)
+      ).toHaveCount(1)
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
       ).toContainText('My Prompts')
+      await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+      ).toHaveCount(1)
+      await expect(
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
       ).toContainText('0 templates')
 
       await mainWindow
         .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
-        .nth(1)
+        .nth(0)
         .click()
       await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toHaveText(
         'My Templates'

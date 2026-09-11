@@ -23,11 +23,11 @@ const createSwitchingWorkspace = (path: string, label: string): Record<string, s
     folderId: 'shared-template-folder',
     templates: [{ id: 'shared-template', title: `${label} Template`, templateText: `${label} template body` }]
   }]),
-  [`${path}/WorkspaceFolderOrder.json`]: JSON.stringify({
-    entries: [
-      { kind: 'folder', id: 'shared-prompt-folder' },
-      { kind: 'folder', id: 'shared-template-folder' }
-    ]
+  [`${path}/Prompts/FolderOrder.json`]: JSON.stringify({
+    entries: [{ kind: 'folder', id: 'shared-prompt-folder' }]
+  }),
+  [`${path}/Templates/FolderOrder.json`]: JSON.stringify({
+    entries: [{ kind: 'folder', id: 'shared-template-folder' }]
   })
 })
 
@@ -48,7 +48,8 @@ describe('Workspace switching', () => {
       await testHelpers.setupWorkspaceViaUI()
 
       for (const cycle of [1, 2]) {
-        await testHelpers.navigateToPromptFolders(folder)
+        if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders(folder)
+        else await testHelpers.navigateToPromptFolders(folder)
         await focusMonacoEditor(mainWindow, editor)
         await mainWindow.keyboard.press('Control+End')
         /** Block persistence so closing must wait for this edit before clearing memory. */
@@ -69,7 +70,8 @@ describe('Workspace switching', () => {
         await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveCount(0)
         await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
         await testHelpers.setupWorkspaceViaUI()
-        await testHelpers.navigateToPromptFolders(folder)
+        if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders(folder)
+        else await testHelpers.navigateToPromptFolders(folder)
         await waitForMonacoEditor(mainWindow, editor)
         await expect.poll(() => getMonacoEditorText(mainWindow, editor)).toBe(
           `A ${kind} body saved-1${cycle === 2 ? ' saved-2' : ''}`
@@ -102,7 +104,13 @@ describe('Workspace switching', () => {
         label === 'A' ? pathA : pathB
       )
       for (const kind of ['prompt', 'template'] as const) {
-        await testHelpers.navigateToPromptFolders(`${label} ${kind === 'prompt' ? 'Prompts' : 'Templates'}`)
+        /** Displayed root name selected through its kind-specific activity. */
+        const folderName = `${label} ${kind === 'prompt' ? 'Prompts' : 'Templates'}`
+        if (kind === 'template') {
+          await testHelpers.navigateToPromptTemplateFolders(folderName)
+        } else {
+          await testHelpers.navigateToPromptFolders(folderName)
+        }
         /** Editor reused across workspaces to expose stale full-content snapshots. */
         const editor = `[data-testid="prompt-editor-shared-${kind}"]`
         await waitForMonacoEditor(mainWindow, editor)

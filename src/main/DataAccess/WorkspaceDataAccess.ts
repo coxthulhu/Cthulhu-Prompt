@@ -75,10 +75,12 @@ const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): v
 
 const writeWorkspaceFolderOrderFile = (
   workspacePath: string,
+  kind: 'prompt' | 'template',
   folderIds: string[]
 ): void => {
   const fs = getFs()
-  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath)
+  /** Type-owned root order initialized for the new workspace. */
+  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath, kind)
   fs.writeFileSync(
     orderPath,
     JSON.stringify({ entries: folderIds.map(folderEntryRef) }, null, 2),
@@ -359,18 +361,16 @@ export const createWorkspace = async (
     const fs = getFs()
     const promptsPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME)
     const templatesPath = path.join(workspacePath, TEMPLATES_DIRECTORY_NAME)
-    // Ordered root folder IDs persisted for both prompt and template folders.
-    const rootFolderIds: string[] = []
-
     fs.mkdirSync(promptsPath, { recursive: true })
     fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
-    rootFolderIds.push(
-      writeMyPromptsFolder(workspacePath, includeExamplePrompts),
-      writeMyTemplatesFolder(workspacePath, includeExamplePrompts)
-    )
-    writeWorkspaceFolderOrderFile(workspacePath, rootFolderIds)
+    /** Initial task-prompt root persisted in prompt-folder order. */
+    const promptFolderId = writeMyPromptsFolder(workspacePath, includeExamplePrompts)
+    /** Initial prompt-template root persisted in template-folder order. */
+    const templateFolderId = writeMyTemplatesFolder(workspacePath, includeExamplePrompts)
+    writeWorkspaceFolderOrderFile(workspacePath, 'prompt', [promptFolderId])
+    writeWorkspaceFolderOrderFile(workspacePath, 'template', [templateFolderId])
 
     return { success: true }
   } catch (error) {

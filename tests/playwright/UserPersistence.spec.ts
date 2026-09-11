@@ -1,4 +1,9 @@
-import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
+import {
+  createWorkspaceWithFolders,
+  createWorkspaceWithTemplateFolders,
+  getWorkspaceInfoPath,
+  setupWorkspaceScenario
+} from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import {
   readUserPersistence,
@@ -328,7 +333,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId: persistedPromptFolderId },
       promptFolderViewEntries: []
     })
@@ -355,7 +360,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId: 'missing-folder-id' },
       promptFolderViewEntries: []
     })
@@ -394,7 +399,7 @@ describe('User Persistence', () => {
       )
       VALUES (
         ${toSqlText(workspaceId)},
-        'prompt-folders',
+        'prompt-task-folders',
         '{malformed'
       )
       `
@@ -433,11 +438,11 @@ describe('User Persistence', () => {
         return [
           persisted.selectedScreen,
           JSON.stringify(persisted.selectedScreenData),
-          persisted.lastPromptFolderId
+          persisted.lastPromptTaskFolderId
         ].join(':')
       })
       .toBe(
-        `prompt-folders:{"promptFolderId":"${developmentPromptFolderId}","contentOwnerId":"${developmentPromptFolderId}"}:${developmentPromptFolderId}`
+        `prompt-task-folders:{"promptFolderId":"${developmentPromptFolderId}","contentOwnerId":"${developmentPromptFolderId}"}:${developmentPromptFolderId}`
       )
 
     await testHelpers.navigateToSettingsScreen()
@@ -448,20 +453,40 @@ describe('User Persistence', () => {
         return [
           persisted.selectedScreen,
           JSON.stringify(persisted.selectedScreenData),
-          persisted.lastPromptFolderId
+          persisted.lastPromptTaskFolderId
         ].join(':')
       })
       .toBe(`settings:null:${developmentPromptFolderId}`)
   })
 
-  test('opens the persisted last prompt folder from the activity bar', async ({
+  test('remembers the last task and template folder independently', async ({
     electronApp,
     testSetup
   }) => {
     const persistedWorkspacePath = '/ws/persisted-last-folder'
     const workspaceId = createDeterministicId(persistedWorkspacePath)
-    const developmentPromptFolderId = createDeterministicId(`${persistedWorkspacePath}:Development`)
-    await testSetup.setupFilesystem(setupWorkspaceScenario(persistedWorkspacePath, 'sample'))
+    const taskAlphaId = 'persisted-task-alpha'
+    const taskBetaId = 'persisted-task-beta'
+    const templateAlphaId = 'persisted-template-alpha'
+    const templateBetaId = 'persisted-template-beta'
+    /** Mixed-kind workspace retaining both required type-owned order files. */
+    const filesystem = {
+      ...createWorkspaceWithFolders(persistedWorkspacePath, [
+        { folderName: 'TaskAlpha', displayName: 'Task Alpha', promptFolderId: taskAlphaId },
+        { folderName: 'TaskBeta', displayName: 'Task Beta', promptFolderId: taskBetaId }
+      ]),
+      ...createWorkspaceWithTemplateFolders(persistedWorkspacePath, [
+        { folderName: 'TemplateAlpha', displayName: 'Template Alpha', folderId: templateAlphaId },
+        { folderName: 'TemplateBeta', displayName: 'Template Beta', folderId: templateBetaId }
+      ]),
+      [`${persistedWorkspacePath}/Prompts/FolderOrder.json`]: JSON.stringify({
+        entries: [taskAlphaId, taskBetaId].map((id) => ({ kind: 'folder', id }))
+      }),
+      [`${persistedWorkspacePath}/Templates/FolderOrder.json`]: JSON.stringify({
+        entries: [templateAlphaId, templateBetaId].map((id) => ({ kind: 'folder', id }))
+      })
+    }
+    await testSetup.setupFilesystem(filesystem)
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
@@ -469,7 +494,8 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
-      lastPromptFolderId: developmentPromptFolderId,
+      lastPromptTaskFolderId: taskBetaId,
+      lastPromptTemplateFolderId: templateBetaId,
       promptFolderViewEntries: []
     })
 
@@ -479,14 +505,43 @@ describe('User Persistence', () => {
 
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-folders"]').click()
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
-      'Development Tools'
+      'Task Beta'
     )
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'data-active',
       'true'
+    )
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Template Beta'
+    )
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    await mainWindow
+      .locator(`[data-testid="sidebar-prompt-folder-dropdown-item-${templateAlphaId}"]`)
+      .click()
+    await expect
+      .poll(async () => {
+        /** Persisted split selection captured after choosing a different template root. */
+        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
+        return [
+          persisted.selectedScreen,
+          persisted.lastPromptTaskFolderId,
+          persisted.lastPromptTemplateFolderId
+        ].join(':')
+      })
+      .toBe(`prompt-template-folders:${taskBetaId}:${templateAlphaId}`)
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Task Beta'
+    )
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Template Alpha'
     )
   })
 
@@ -563,7 +618,7 @@ describe('User Persistence', () => {
             )
             /** Prompt-folder screen data containing the newly persisted owner pointer. */
             const selectedScreenData =
-              persisted.selectedScreen === 'prompt-folders'
+              persisted.selectedScreen === 'prompt-task-folders'
                 ? (persisted.selectedScreenData as {
                     promptFolderId: string | null
                     contentOwnerId?: string | null
@@ -708,7 +763,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId: developmentPromptFolderId },
       promptFolderViewEntries: [
         {
@@ -744,7 +799,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId, contentOwnerId: categoryId },
       promptFolderViewEntries: [
         {
@@ -791,7 +846,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId, contentOwnerId: categoryId },
       promptFolderViewEntries: [
         {
@@ -829,7 +884,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId: longPromptFolderId },
       promptFolderViewEntries: [
         {
@@ -863,7 +918,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-folders',
+      selectedScreen: 'prompt-task-folders',
       selectedScreenData: { promptFolderId: developmentPromptFolderId },
       promptFolderViewEntries: [
         {

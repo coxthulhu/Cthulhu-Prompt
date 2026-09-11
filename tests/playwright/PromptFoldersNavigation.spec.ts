@@ -272,7 +272,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
             WHERE workspace_id = '${workspaceRow.workspaceId}'
               AND content_id = 'sibling-content') AS siblingMarkdownCount,
            selected_screen AS selectedScreen,
-           last_prompt_folder_id AS lastPromptFolderId
+           last_prompt_task_folder_id AS lastPromptTaskFolderId
          FROM workspace_ui_state
          WHERE workspace_id = '${workspaceRow.workspaceId}'`
       )
@@ -284,8 +284,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       siblingPromptFolderCount: 1,
       siblingCategoryEditorCount: 1,
       siblingMarkdownCount: 1,
-      selectedScreen: 'prompt-folders',
-      lastPromptFolderId: null
+      selectedScreen: 'prompt-task-folders',
+      lastPromptTaskFolderId: null
     })
   })
 
@@ -328,6 +328,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult.workspaceReady).toBe(true)
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toBeVisible()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await expect(
@@ -336,7 +337,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
         .locator('.lucide-layers')
     ).toBeVisible()
     await mainWindow.keyboard.press('Escape')
-    await testHelpers.navigateToPromptFolders('Code Review Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Code Review Templates')
 
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title"]')).toHaveText(
       'Code Review Templates'
@@ -770,7 +771,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(bugAnalysisResult.found).toBe(true)
   })
 
-  test('opens Prompts & Templates view and renders prompt list', async ({ testSetup }) => {
+  test('opens Task Prompts view and renders prompt list', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -796,26 +797,79 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult.workspaceReady).toBe(true)
 
-    // The shared navigation button names both folder types in its tooltip and accessible label.
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+    // Each folder kind has its own tooltip, accessible label, and activity position.
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'title',
-      'Prompts & Templates'
+      'Task Prompts'
     )
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'aria-label',
-      'Prompts & Templates'
+      'Task Prompts'
     )
-    await mainWindow.locator('[data-testid="nav-button-prompt-folders"]').click()
+    await expect(
+      mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]')
+    ).toHaveAttribute('title', 'Prompt Templates')
+    await expect(
+      mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]')
+    ).toHaveAttribute('aria-label', 'Prompt Templates')
+    /** Visible activity IDs proving the required primary-screen order. */
+    const activityIds = await mainWindow
+      .locator('[data-testid="app-activity-bar"] > button')
+      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-testid')))
+    expect(activityIds.slice(0, 4)).toEqual([
+      'nav-button-home',
+      'nav-button-prompt-task-folders',
+      'nav-button-prompt-template-folders',
+      'nav-button-settings'
+    ])
+    await expect(
+      mainWindow.locator('[data-testid="nav-button-prompt-task-folders"] svg')
+    ).toHaveClass(/lucide-file-text/)
+    await expect(
+      mainWindow.locator('[data-testid="nav-button-prompt-template-folders"] svg')
+    ).toHaveClass(/lucide-layers/)
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
 
     await mainWindow.waitForSelector('[data-testid="prompt-editor-simple-1"]', {
       state: 'attached'
     })
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'data-active',
       'true'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'Example Prompts'
+    )
+  })
+
+  test('opens the first ordered template folder when no template folder was selected', async ({
+    testSetup
+  }) => {
+    /** Template-only workspace whose persisted order differs from alphabetical order. */
+    const workspacePath = '/ws/template-activity-fallback'
+    /** Two template roots used to prove the first persisted root is selected. */
+    const filesystem = createWorkspaceWithTemplateFolders(workspacePath, [
+      { folderName: 'Alpha', displayName: 'Alpha Templates', folderId: 'template-alpha' },
+      { folderName: 'Zulu', displayName: 'Zulu Templates', folderId: 'template-zulu' }
+    ])
+    filesystem[`${workspacePath}/Templates/FolderOrder.json`] = JSON.stringify({
+      entries: [
+        { kind: 'folder', id: 'template-zulu' },
+        { kind: 'folder', id: 'template-alpha' }
+      ]
+    })
+
+    await testSetup.setupFilesystem(filesystem)
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Window and UI helpers for opening the custom workspace normally. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Zulu Templates'
     )
   })
 
@@ -837,10 +891,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const savedScrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)
 
     await testHelpers.navigateToHomeScreen()
-    await mainWindow.locator('[data-testid="nav-button-prompt-folders"]').click()
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
 
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'data-active',
       'true'
     )
@@ -883,7 +937,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeVisible()
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Choose the folder type and name for the new folder.')
+    ).toHaveText('One-time tasks the AI will accomplish.')
     await expect(createPromptFolderDialog.getByLabel('Task Prompt Folder Name')).toBeVisible()
   })
 
@@ -901,7 +955,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Create Folder'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toHaveCount(0)
-    await expect(mainWindow.locator('text=Create a Folder to Get Started')).toBeVisible()
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
+      'data-active',
+      'true'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-screen"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="home-screen"]')).toHaveCount(0)
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
     await expect(
@@ -1054,7 +1114,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
   test('selects the first remaining folder and retains the screen after deleting the last folder', async ({
     testSetup
   }) => {
-    /** Mixed prompt and template roots combined before assigning their explicit unified order. */
+    /** Mixed prompt and template roots used to verify kind-local deletion fallback. */
     const filesystem = {
       ...createWorkspaceWithFolders(DELETE_NAVIGATION_WORKSPACE_PATH, [
         {
@@ -1079,9 +1139,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
         }
       ])
     }
-    filesystem[`${DELETE_NAVIGATION_WORKSPACE_PATH}/WorkspaceFolderOrder.json`] = JSON.stringify(
+    filesystem[`${DELETE_NAVIGATION_WORKSPACE_PATH}/Prompts/FolderOrder.json`] = JSON.stringify(
       {
-        entries: ['first-template', 'delete-second', 'last-prompt'].map((id) => ({
+        entries: ['delete-second', 'last-prompt'].map((id) => ({
           kind: 'folder',
           id
         }))
@@ -1091,7 +1151,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await testSetup.setupFilesystem(filesystem)
     await testSetup.setupFileDialog([getWorkspaceInfoPath(DELETE_NAVIGATION_WORKSPACE_PATH)])
-    /** Mixed workspace window and helpers used for all three consecutive deletions. */
+    /** Mixed workspace window and helpers used for consecutive task-folder deletions. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -1108,15 +1168,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
-      'First Template'
-    )
-    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toBeVisible()
-
-    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
-    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
-    await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
-
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'Last Prompt'
     )
 
@@ -1124,7 +1175,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
     await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
 
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-folders"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'data-active',
       'true'
     )
@@ -1132,7 +1183,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
       'Create Folder'
     )
-    await expect(mainWindow.locator('text=Create a Folder to Get Started')).toBeVisible()
+
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'First Template'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toBeVisible()
   })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {
@@ -1281,28 +1337,18 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     electronApp,
     testSetup
   }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+    const { mainWindow } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
+    /** Empty template order repaired when the prompt-only sample workspace loads. */
     const initialWorkspaceFolderEntries = (
       JSON.parse(
-        await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/WorkspaceFolderOrder.json`)
+        await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/FolderOrder.json`)
       ) as { entries: Array<{ kind: 'folder'; id: string }> }
     ).entries
 
-    await testHelpers.navigateToPromptFolders('Development')
-    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
-    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
-    await expect(mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')).toHaveText(
-      'Task Prompts'
-    )
-    await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
-    const folderTypeMenu = mainWindow.locator(
-      '[data-testid="create-prompt-folder-type-menu"]'
-    )
-    await expect(folderTypeMenu.getByText('Task Prompts', { exact: true })).toBeVisible()
-    await expect(folderTypeMenu.getByText('Prompt Templates', { exact: true })).toBeVisible()
-    await folderTypeMenu.getByText('Prompt Templates', { exact: true }).click()
+    await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
     const createTemplateFolderDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Prompt Template Folder"]'
     )
@@ -1342,7 +1388,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       kind: 'template'
     })
     const workspaceFolderOrder = JSON.parse(
-      await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/WorkspaceFolderOrder.json`)
+      await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/FolderOrder.json`)
     ) as { entries: Array<{ kind: 'folder'; id: string }> }
     expect(workspaceFolderOrder.entries).toEqual([
       { kind: 'folder', id: folderInfo.folderId },
@@ -1361,11 +1407,6 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBe(false)
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_DROPDOWN_ADD_ITEM).click()
-    await mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]').click()
-    await mainWindow
-      .locator('[data-testid="create-prompt-folder-type-menu"]')
-      .getByRole('menuitem', { name: /^Prompt Templates\b/ })
-      .click()
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-name-error"]')

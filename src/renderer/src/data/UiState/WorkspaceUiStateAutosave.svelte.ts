@@ -1,5 +1,8 @@
 import { AUTOSAVE_MS } from '@renderer/data/draftAutosave'
-import type { WorkspaceAccordionSectionViewEntry } from '@shared/UserPersistence'
+import {
+  isPromptFolderScreenSelection,
+  type WorkspaceAccordionSectionViewEntry
+} from '@shared/UserPersistence'
 import {
   createAccordionUiStateKey,
   createCategoryDescriptionEditorUiStateKey,
@@ -83,7 +86,8 @@ const setPromptFolderUiStateFieldsWithAutosave = (
   const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
   if (
     selectedPromptFolderId &&
-    workspaceUiState?.selectedScreen === 'prompt-folders' &&
+    workspaceUiState &&
+    isPromptFolderScreenSelection(workspaceUiState) &&
     workspaceUiState.selectedScreenData.promptFolderId === selectedPromptFolderId &&
     workspaceUiState.selectedScreenData.contentOwnerId !== contentOwnerId
   ) {
@@ -145,7 +149,8 @@ export const lookupWorkspacePersistedPromptFolderSelection = (
   /** Workspace screen state containing the active content-owner pointer. */
   const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
   if (
-    workspaceUiState?.selectedScreen !== 'prompt-folders' ||
+    !workspaceUiState ||
+    !isPromptFolderScreenSelection(workspaceUiState) ||
     workspaceUiState.selectedScreenData.promptFolderId !== promptFolderId
   ) {
     return null

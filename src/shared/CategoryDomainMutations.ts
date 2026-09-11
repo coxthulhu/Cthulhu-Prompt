@@ -24,6 +24,8 @@ import {
   createWorkspacePromptFolderUiStateKey,
   type WorkspacePromptFolderUiState
 } from './UiState'
+import { isPromptFolderScreenSelection } from './UserPersistence'
+import { getAllWorkspaceFolderEntries } from './Workspace'
 
 /** Renderer-authored command for creating one root-owned category. */
 export type CreateCategoryDomainCommand = {
@@ -302,7 +304,9 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   /** Workspace that owns the category's root prompt folder. */
   const workspace = state
     .getAll('workspace')
-    .find((candidate) => candidate.entries.some((entry) => entry.id === owningFolder?.id))
+    .find((candidate) =>
+      getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === owningFolder?.id)
+    )
   /** Correct target set used by successful planning and invariant conflicts. */
   const targets = collectCategoryDeletionTargets(
     state,
@@ -377,7 +381,8 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
   /** Whether the deleted category currently owns the visible prompt-folder selection. */
   const isActiveCategory =
-    workspaceUiState?.selectedScreen === 'prompt-folders' &&
+    workspaceUiState &&
+    isPromptFolderScreenSelection(workspaceUiState) &&
     workspaceUiState.selectedScreenData.promptFolderId === command.promptFolderId &&
     workspaceUiState.selectedScreenData.contentOwnerId === command.categoryId
   /** Composite key for the deleted category's prompt-folder view state. */
@@ -408,7 +413,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       entityType: 'workspaceUiState',
       id: command.workspaceId,
       recipe: (draft) => {
-        if (draft.selectedScreen === 'prompt-folders') {
+        if (isPromptFolderScreenSelection(draft)) {
           draft.selectedScreenData.contentOwnerId = command.promptFolderId
         }
       }

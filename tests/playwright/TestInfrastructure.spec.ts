@@ -130,7 +130,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 18 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 19 })
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,
@@ -165,6 +165,19 @@ describe('Test Infrastructure', () => {
       expect(promptFolderViewStateColumnNames).not.toContain(
         'prompt_tree_is_showing_all_prompts'
       )
+
+      /** Workspace selection columns after splitting task and template last-root state. */
+      const workspaceUiStateColumnsResult = await runSqlQuery(
+        electronApp,
+        'PRAGMA table_info(workspace_ui_state)'
+      )
+      /** Workspace UI-state column names used to verify the split-root migration. */
+      const workspaceUiStateColumnNames = (workspaceUiStateColumnsResult.rows ?? []).map(
+        (row) => row.name
+      )
+      expect(workspaceUiStateColumnNames).toContain('last_prompt_task_folder_id')
+      expect(workspaceUiStateColumnNames).toContain('last_prompt_template_folder_id')
+      expect(workspaceUiStateColumnNames).not.toContain('last_prompt_folder_id')
 
       /** Current accordion columns after replacing expansion-only persistence. */
       const accordionViewStateColumnsResult = await runSqlQuery(

@@ -1,4 +1,8 @@
-import type { LoadWorkspaceByPathRequest, LoadWorkspaceByPathResult } from '@shared/Workspace'
+import {
+  getAllWorkspaceFolderEntries,
+  type LoadWorkspaceByPathRequest,
+  type LoadWorkspaceByPathResult
+} from '@shared/Workspace'
 import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
 import { runLoad } from '../IpcFramework/Load'
 import { promptFolderCollection } from '../Collections/PromptFolderCollection'
@@ -23,7 +27,9 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
 
   const previousWorkspace = workspaceCollection.get(result.workspace.id)
   const previousGraph = previousWorkspace
-    ? collectPromptFolderGraphIds(previousWorkspace.entries.map((entry) => entry.id))
+    ? collectPromptFolderGraphIds(
+        getAllWorkspaceFolderEntries(previousWorkspace).map((entry) => entry.id)
+      )
     : null
 
   workspaceCollection.utils.upsertAuthoritative(result.workspace)

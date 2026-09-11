@@ -13,7 +13,8 @@ import {
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
-export const WORKSPACE_FOLDER_ORDER_FILENAME = 'WorkspaceFolderOrder.json'
+/** Legacy combined root-folder order removed by workspace schema migration two. */
+export const LEGACY_WORKSPACE_FOLDER_ORDER_FILENAME = 'WorkspaceFolderOrder.json'
 /** Filename for category-view ordering owned by a root folder. */
 export const PROMPT_FOLDER_CATEGORY_ORDER_FILENAME = 'FolderOrder.json'
 export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
@@ -114,9 +115,20 @@ export const resolvePromptFolderCategoryOrderPath = (
   )
 }
 
-export const resolveWorkspaceFolderOrderPath = (workspacePath: string): string => {
-  return path.join(workspacePath, WORKSPACE_FOLDER_ORDER_FILENAME)
-}
+/** Resolves the root-folder order owned by the selected type directory. */
+export const resolveWorkspaceFolderOrderPath = (
+  workspacePath: string,
+  kind: PromptFolderKind
+): string =>
+  path.join(
+    workspacePath,
+    resolvePromptRootDirectoryName(kind),
+    PROMPT_FOLDER_CATEGORY_ORDER_FILENAME
+  )
+
+/** Resolves the retired schema-one combined root-folder order. */
+export const resolveLegacyWorkspaceFolderOrderPath = (workspacePath: string): string =>
+  path.join(workspacePath, LEGACY_WORKSPACE_FOLDER_ORDER_FILENAME)
 
 export const resolvePromptFolderInfoDirectoryPath = (
   workspacePath: string,

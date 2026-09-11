@@ -105,16 +105,18 @@ export const syncWorkspaceScreenSelection = async (
   /** Current workspace UI state loaded before workspace navigation becomes available. */
   const current = workspaceUiStateCollection.get(workspaceId)
   if (!current) throw new Error('Workspace UI state not loaded')
-  /** Last root updated only when the prompt-folder screen selects a concrete root. */
-  const lastPromptFolderId =
-    workspaceScreenSelection.selectedScreen === 'prompt-folders'
-      ? workspaceScreenSelection.selectedScreenData.promptFolderId
-      : current.lastPromptFolderId
   /** Complete desired workspace-level state persisted through one domain command. */
   const command: WorkspaceUiState = {
     workspaceId,
     ...workspaceScreenSelection,
-    lastPromptFolderId
+    lastPromptTaskFolderId:
+      workspaceScreenSelection.selectedScreen === 'prompt-task-folders'
+        ? workspaceScreenSelection.selectedScreenData.promptFolderId
+        : current.lastPromptTaskFolderId,
+    lastPromptTemplateFolderId:
+      workspaceScreenSelection.selectedScreen === 'prompt-template-folders'
+        ? workspaceScreenSelection.selectedScreenData.promptFolderId
+        : current.lastPromptTemplateFolderId
   }
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planSetWorkspaceUiStateDomainMutation },

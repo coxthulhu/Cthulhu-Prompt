@@ -495,7 +495,7 @@ describe('Prompt folder prompt tree', () => {
     await expect
       .poll(async () => {
         const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return persisted.selectedScreen === 'prompt-folders'
+        return persisted.selectedScreen === 'prompt-task-folders'
           ? persisted.selectedScreenData.promptFolderId
           : null
       })

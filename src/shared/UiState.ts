@@ -8,7 +8,10 @@ import type { RevisionEnvelope } from './Revision'
 /** Persisted screen selection and last-root state for one workspace. */
 export type WorkspaceUiState = WorkspaceScreenSelection & {
   workspaceId: string
-  lastPromptFolderId: string | null
+  /** Last task-prompt root selected in this workspace. */
+  lastPromptTaskFolderId: string | null
+  /** Last prompt-template root selected in this workspace. */
+  lastPromptTemplateFolderId: string | null
 }
 
 /** Persisted prompt-folder screen state for one root or category content owner. */
@@ -40,7 +43,8 @@ export const createDefaultWorkspaceUiState = (workspaceId: string): WorkspaceUiS
   workspaceId,
   selectedScreen: 'home',
   selectedScreenData: null,
-  lastPromptFolderId: null
+  lastPromptTaskFolderId: null,
+  lastPromptTemplateFolderId: null
 })
 
 /** IPC channel that loads every split UI-state collection for one workspace. */

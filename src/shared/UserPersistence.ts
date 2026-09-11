@@ -17,7 +17,29 @@ export type PersistedWorkspaceScreen =
   | 'settings'
   | 'mockups'
   | 'test-screen'
-  | 'prompt-folders'
+  | 'prompt-task-folders'
+  | 'prompt-template-folders'
+
+/** Persisted screen IDs that display one kind of root prompt folder. */
+export type PromptFolderScreenId =
+  | 'prompt-task-folders'
+  | 'prompt-template-folders'
+
+/** Reports whether a screen displays task-prompt or prompt-template folders. */
+export const isPromptFolderScreen = (
+  screen: PersistedWorkspaceScreen
+): screen is PromptFolderScreenId =>
+  screen === 'prompt-task-folders' || screen === 'prompt-template-folders'
+
+/** Persisted selection data shared by both split folder activities. */
+export type PromptFolderWorkspaceScreenSelection = {
+  selectedScreen: PromptFolderScreenId
+  selectedScreenData: {
+    promptFolderId: string | null
+    /** Root-folder or category owner containing the selected prompt-folder screen row. */
+    contentOwnerId: string | null
+  }
+}
 
 export type WorkspaceScreenSelection =
   | {
@@ -38,14 +60,13 @@ export type WorkspaceScreenSelection =
         mockupId: string | null
       }
     }
-  | {
-      selectedScreen: 'prompt-folders'
-      selectedScreenData: {
-        promptFolderId: string | null
-        /** Root-folder or category owner containing the selected prompt-folder screen row. */
-        contentOwnerId: string | null
-      }
-    }
+  | PromptFolderWorkspaceScreenSelection
+
+/** Narrows a complete screen selection to either folder activity. */
+export const isPromptFolderScreenSelection = (
+  selection: WorkspaceScreenSelection
+): selection is PromptFolderWorkspaceScreenSelection =>
+  isPromptFolderScreen(selection.selectedScreen)
 
 /** Persisted collapse and configured sizing state for one accordion section. */
 export type WorkspaceAccordionSectionViewEntry = {
@@ -62,7 +83,7 @@ export const isWorkspaceScreenSelectionSame = (
     return false
   }
 
-  if (left.selectedScreen === 'prompt-folders' && right.selectedScreen === 'prompt-folders') {
+  if (isPromptFolderScreenSelection(left) && isPromptFolderScreenSelection(right)) {
     return (
       left.selectedScreenData.promptFolderId === right.selectedScreenData.promptFolderId &&
       left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId
@@ -114,7 +135,8 @@ const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen
     value === 'settings' ||
     value === 'mockups' ||
     value === 'test-screen' ||
-    value === 'prompt-folders'
+    value === 'prompt-task-folders' ||
+    value === 'prompt-template-folders'
   ) {
     return value
   }

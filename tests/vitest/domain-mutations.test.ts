@@ -144,7 +144,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: folder.id }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
+      templateFolderEntries: []
     }
     /** Shared rename plan applied in renderer and main process. */
     const plan = planRenamePromptFolderDomainMutation(
@@ -171,7 +172,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: sibling.id }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: sibling.id }],
+      templateFolderEntries: []
     }
     /** Root creation plan shared by renderer and main. */
     const createPlan = planCreatePromptFolderDomainMutation(
@@ -188,7 +190,7 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(createPlan)) return
     /** Workspace projection after the creation placement recipe. */
     const workspaceAfterCreate = produce(workspace, createPlan[0]!.recipe!)
-    expect(workspaceAfterCreate.entries.map((entry) => entry.id)).toEqual([
+    expect(workspaceAfterCreate.promptFolderEntries.map((entry) => entry.id)).toEqual([
       sibling.id,
       'created'
     ])
@@ -202,7 +204,7 @@ describe('shared domain mutation planners', () => {
     /** Workspace containing both roots for the reorder plan. */
     const populatedWorkspace = {
       ...workspace,
-      entries: [
+      promptFolderEntries: [
         { kind: 'folder' as const, id: sibling.id },
         { kind: 'folder' as const, id: 'created' }
       ]
@@ -220,7 +222,9 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      produce(populatedWorkspace, movePlan[0]!.recipe!).entries.map((entry) => entry.id)
+      produce(populatedWorkspace, movePlan[0]!.recipe!).promptFolderEntries.map(
+        (entry) => entry.id
+      )
     ).toEqual(['created', sibling.id])
   })
 
@@ -281,7 +285,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: folder.id }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
+      templateFolderEntries: []
     }
     /** Planner state containing summary-compatible prompt and template projections. */
     const state = createDomainState({
@@ -346,7 +351,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: folder.id }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
+      templateFolderEntries: []
     }
     /** Existing root state whose expansion fields must survive selection transfer. */
     const rootUiState = {
@@ -369,9 +375,10 @@ describe('shared domain mutation planners', () => {
     /** Active workspace navigation pointing at the deleted category owner. */
     const activeWorkspaceUiState = {
       workspaceId: workspace.id,
-      selectedScreen: 'prompt-folders' as const,
+      selectedScreen: 'prompt-task-folders' as const,
       selectedScreenData: { promptFolderId: folder.id, contentOwnerId: 'category' },
-      lastPromptFolderId: folder.id
+      lastPromptTaskFolderId: folder.id,
+      lastPromptTemplateFolderId: null
     }
     /** Shared planner state containing active split UI-state records. */
     const activeState = createDomainState({

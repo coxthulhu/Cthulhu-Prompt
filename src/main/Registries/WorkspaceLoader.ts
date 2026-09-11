@@ -69,7 +69,19 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   const prompts: WorkspaceLoadPayload['prompts'] = []
   const promptTemplates: WorkspaceLoadPayload['promptTemplates'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
-  const loadedPromptFolderIds = workspaceSnapshot.data.entries.map((entry) => entry.id)
+  /** Task-prompt root IDs loaded in their type-owned order. */
+  const loadedPromptTaskFolderIds = workspaceSnapshot.data.promptFolderEntries.map(
+    (entry) => entry.id
+  )
+  /** Prompt-template root IDs loaded in their type-owned order. */
+  const loadedPromptTemplateFolderIds = workspaceSnapshot.data.templateFolderEntries.map(
+    (entry) => entry.id
+  )
+  /** Every root ID traversed while building the workspace payload. */
+  const loadedPromptFolderIds = [
+    ...loadedPromptTaskFolderIds,
+    ...loadedPromptTemplateFolderIds
+  ]
   const loadedPromptIds: string[] = []
   const loadedPromptTemplateIds: string[] = []
 
@@ -135,7 +147,8 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   // Side effect: drop stale per-folder UI state and clear invalid screen selections.
   WorkspaceUiStateDataAccess.cleanupWorkspacePromptFolderUiState(
     workspaceId,
-    loadedPromptFolderIds,
+    loadedPromptTaskFolderIds,
+    loadedPromptTemplateFolderIds,
     categories.map((category) => category.data.id)
   )
   // Side effect: remove stale editor view-state rows for content no longer in the workspace.

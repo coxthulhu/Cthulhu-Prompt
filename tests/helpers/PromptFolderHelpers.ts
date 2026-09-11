@@ -337,12 +337,15 @@ export async function getPromptFolderScreenInfo(window: any): Promise<{
   )
 }
 
-/**
- * Navigates to a prompt folder from the sidebar prompt tree.
- * @param window - The Playwright window instance
- * @param folderName - The display name of the folder (e.g., 'Examples', 'Development')
- */
+/** Opens the task-prompt activity before selecting one task-prompt root. */
 export async function navigateToRegularFolder(window: any, folderName: string): Promise<void> {
+  await window.locator('[data-testid="nav-button-prompt-task-folders"]').click()
+  await clickPromptFolderItem(window, folderName)
+}
+
+/** Opens the template activity before selecting one prompt-template root. */
+export async function navigateToTemplateFolder(window: any, folderName: string): Promise<void> {
+  await window.locator('[data-testid="nav-button-prompt-template-folders"]').click()
   await clickPromptFolderItem(window, folderName)
 }
 

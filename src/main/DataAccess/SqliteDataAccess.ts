@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/UserPersistence'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 18
+const LATEST_SCHEMA_VERSION = 19
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -499,6 +499,44 @@ const migrateSchemaV17ToV18 = (db: Database.Database): void => {
   migrate()
 }
 
+/** Splits last-root persistence and discards the retired combined folder activity. */
+const migrateSchemaV18ToV19 = (db: Database.Database): void => {
+  /** Atomic workspace UI-state replacement for the split folder activities. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE workspace_ui_state_new (
+        workspace_id TEXT PRIMARY KEY,
+        selected_screen TEXT NOT NULL,
+        selected_screen_data_json TEXT,
+        last_prompt_task_folder_id TEXT,
+        last_prompt_template_folder_id TEXT
+      );
+
+      INSERT INTO workspace_ui_state_new (
+        workspace_id,
+        selected_screen,
+        selected_screen_data_json,
+        last_prompt_task_folder_id,
+        last_prompt_template_folder_id
+      )
+      SELECT
+        workspace_id,
+        CASE selected_screen WHEN 'prompt-folders' THEN 'home' ELSE selected_screen END,
+        CASE selected_screen WHEN 'prompt-folders' THEN NULL ELSE selected_screen_data_json END,
+        NULL,
+        NULL
+      FROM workspace_ui_state;
+
+      DROP TABLE workspace_ui_state;
+      ALTER TABLE workspace_ui_state_new RENAME TO workspace_ui_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(19)
+  })
+
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -614,6 +652,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 17) {
       migrateSchemaV17ToV18(db)
       schemaVersion = 18
+      continue
+    }
+
+    if (schemaVersion === 18) {
+      migrateSchemaV18ToV19(db)
+      schemaVersion = 19
       continue
     }
 

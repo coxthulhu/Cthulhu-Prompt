@@ -33,6 +33,7 @@ import {
   resolvePromptTitleUpdateForPromptIds
 } from './promptFallbackTitle'
 import type { PromptTemplatePersisted } from './PromptTemplate'
+import { getAllWorkspaceFolderEntries } from './Workspace'
 import { createMarkdownContentUiStateKey } from './MarkdownContentUiState'
 
 /** Renderer-authored command for creating one prompt at an exact root position. */
@@ -535,7 +536,11 @@ const createDeletePlanner = (
   /** Workspace expected to own the requested root folder. */
   const workspace = state
     .getAll('workspace')
-    .find((candidate) => candidate.entries.some((entry) => entry.id === command.promptFolderId))
+    .find((candidate) =>
+      getAllWorkspaceFolderEntries(candidate).some(
+        (entry) => entry.id === command.promptFolderId
+      )
+    )
   /** Required folder and content targets returned for ownership conflicts. */
   const targets: DomainTarget[] = [
     { entityType: 'promptFolder', id: command.promptFolderId },

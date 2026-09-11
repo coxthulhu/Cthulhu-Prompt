@@ -5,7 +5,8 @@ import { SqliteDataAccess } from './SqliteDataAccess'
 type WorkspaceUiStateRow = {
   selectedScreen: string
   selectedScreenDataJson: string | null
-  lastPromptFolderId: string | null
+  lastPromptTaskFolderId: string | null
+  lastPromptTemplateFolderId: string | null
 }
 
 /** Persisted prompt-folder state for one root or category owner. */
@@ -33,13 +34,12 @@ const parseSelectedScreenDataJson = (value: string | null): unknown => {
   }
 }
 
-/** Resets stale workspace navigation to the home screen. */
+/** Resets stale workspace navigation while preserving valid per-kind root memories. */
 const resetWorkspaceScreenSelection = (workspaceId: string): void => {
   SqliteDataAccess.getDatabase()
     .prepare(
       `UPDATE workspace_ui_state
-       SET selected_screen = 'home', selected_screen_data_json = NULL,
-           last_prompt_folder_id = NULL
+       SET selected_screen = 'home', selected_screen_data_json = NULL
        WHERE workspace_id = ?`
     )
     .run(workspaceId)
@@ -50,15 +50,23 @@ export class WorkspaceUiStateDataAccess {
   /** Removes root/category UI state whose owner no longer exists. */
   static cleanupWorkspacePromptFolderUiState(
     workspaceId: string,
-    workspacePromptFolderIds: string[],
+    workspacePromptTaskFolderIds: string[],
+    workspacePromptTemplateFolderIds: string[],
     workspaceCategoryIds: string[]
   ): void {
     /** SQLite database containing split workspace UI state. */
     const db = SqliteDataAccess.getDatabase()
     /** Valid root IDs used to validate screen and last-root state. */
-    const validPromptFolderIds = new Set(workspacePromptFolderIds)
+    const validPromptTaskFolderIds = new Set(workspacePromptTaskFolderIds)
+    /** Valid prompt-template roots used to validate template navigation state. */
+    const validPromptTemplateFolderIds = new Set(workspacePromptTemplateFolderIds)
+    /** Every valid root ID used to retain root-owned view state. */
+    const validPromptFolderIds = new Set([
+      ...workspacePromptTaskFolderIds,
+      ...workspacePromptTemplateFolderIds
+    ])
     /** Valid root and category IDs used to prune owner-scoped state. */
-    const validContentOwnerIds = new Set([...workspacePromptFolderIds, ...workspaceCategoryIds])
+    const validContentOwnerIds = new Set([...validPromptFolderIds, ...workspaceCategoryIds])
     /** Atomic cleanup preserving every still-valid row. */
     const cleanup = db.transaction(() => {
       /** Existing owner rows inspected before pruning. */
@@ -118,7 +126,8 @@ export class WorkspaceUiStateDataAccess {
         .prepare(
           `SELECT selected_screen AS selectedScreen,
                   selected_screen_data_json AS selectedScreenDataJson,
-                  last_prompt_folder_id AS lastPromptFolderId
+                  last_prompt_task_folder_id AS lastPromptTaskFolderId,
+                  last_prompt_template_folder_id AS lastPromptTemplateFolderId
            FROM workspace_ui_state WHERE workspace_id = ?`
         )
         .get(workspaceId) as WorkspaceUiStateRow | undefined
@@ -130,22 +139,31 @@ export class WorkspaceUiStateDataAccess {
       )
       if (!selection) {
         resetWorkspaceScreenSelection(workspaceId)
-        return
-      }
-      if (
-        selection.selectedScreen === 'prompt-folders' &&
+      } else if (
+        (selection.selectedScreen === 'prompt-task-folders' ||
+          selection.selectedScreen === 'prompt-template-folders') &&
         selection.selectedScreenData.promptFolderId &&
-        !validPromptFolderIds.has(selection.selectedScreenData.promptFolderId)
+        !(selection.selectedScreen === 'prompt-template-folders'
+          ? validPromptTemplateFolderIds
+          : validPromptTaskFolderIds
+        ).has(selection.selectedScreenData.promptFolderId)
       ) {
         resetWorkspaceScreenSelection(workspaceId)
-        return
       }
       if (
-        workspaceRow.lastPromptFolderId &&
-        !validPromptFolderIds.has(workspaceRow.lastPromptFolderId)
+        workspaceRow.lastPromptTaskFolderId &&
+        !validPromptTaskFolderIds.has(workspaceRow.lastPromptTaskFolderId)
       ) {
         db.prepare(
-          'UPDATE workspace_ui_state SET last_prompt_folder_id = NULL WHERE workspace_id = ?'
+          'UPDATE workspace_ui_state SET last_prompt_task_folder_id = NULL WHERE workspace_id = ?'
+        ).run(workspaceId)
+      }
+      if (
+        workspaceRow.lastPromptTemplateFolderId &&
+        !validPromptTemplateFolderIds.has(workspaceRow.lastPromptTemplateFolderId)
+      ) {
+        db.prepare(
+          'UPDATE workspace_ui_state SET last_prompt_template_folder_id = NULL WHERE workspace_id = ?'
         ).run(workspaceId)
       }
     })

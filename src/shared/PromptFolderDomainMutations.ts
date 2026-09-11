@@ -22,6 +22,11 @@ import {
   createCategoryDescriptionEditorUiStateKey,
   createWorkspacePromptFolderUiStateKey
 } from './UiState'
+import {
+  getAllWorkspaceFolderEntries,
+  getWorkspaceFolderEntries,
+  setWorkspaceFolderEntries
+} from './Workspace'
 
 /** Renderer-authored command for creating one root prompt or template folder. */
 export type CreatePromptFolderDomainCommand = {
@@ -153,7 +158,7 @@ export const planCreatePromptFolderDomainMutation: DomainPlanner<
   const preparedName = preparePromptFolderName(command.displayName)
   /** Same-kind sibling folders participating in name-conflict validation. */
   const siblings = workspace
-    ? workspace.entries.flatMap((entry) => {
+    ? getAllWorkspaceFolderEntries(workspace).flatMap((entry) => {
         /** Loaded sibling referenced by one workspace entry. */
         const sibling = state.get('promptFolder', entry.id)
         return sibling && sibling.kind === command.kind ? [sibling] : []
@@ -161,7 +166,7 @@ export const planCreatePromptFolderDomainMutation: DomainPlanner<
     : []
   /** Requested insertion index after validating its predecessor. */
   const insertIndex = workspace
-    ? resolveEntryInsertIndex(workspace.entries, command.previousEntryId)
+    ? resolveEntryInsertIndex(getWorkspaceFolderEntries(workspace, command.kind), command.previousEntryId)
     : null
 
   if (
@@ -200,9 +205,10 @@ export const planCreatePromptFolderDomainMutation: DomainPlanner<
       id: command.workspaceId,
       recipe: (draft) => {
         /** Workspace entries receiving the new root at its exact position. */
-        const entries = [...draft.entries]
+        /** Kind-specific order receiving the new root at its exact position. */
+        const entries = [...getWorkspaceFolderEntries(draft, command.kind)]
         entries.splice(insertIndex, 0, folderEntryRef(command.promptFolderId))
-        draft.entries = entries
+        setWorkspaceFolderEntries(draft, command.kind, entries)
       }
     },
     {
@@ -231,12 +237,14 @@ export const planRenamePromptFolderDomainMutation: DomainPlanner<
   /** Workspace that owns the selected root folder. */
   const workspace = state
     .getAll('workspace')
-    .find((candidate) => candidate.entries.some((entry) => entry.id === promptFolder.id))
+    .find((candidate) =>
+      getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === promptFolder.id)
+    )
   /** Validated and normalized display and directory names. */
   const preparedName = preparePromptFolderName(command.displayName)
   /** Same-kind sibling folders participating in name-conflict validation. */
   const siblingFolders = workspace
-    ? workspace.entries.flatMap((entry) => {
+    ? getAllWorkspaceFolderEntries(workspace).flatMap((entry) => {
         /** Loaded root folder referenced by one workspace entry. */
         const candidate = state.get('promptFolder', entry.id)
         return candidate && candidate.kind === promptFolder.kind ? [candidate] : []
@@ -281,7 +289,9 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
   if (
     !workspace ||
     !promptFolder ||
-    !workspace.entries.some((entry) => entry.id === command.promptFolderId)
+    !getWorkspaceFolderEntries(workspace, promptFolder.kind).some(
+      (entry) => entry.id === command.promptFolderId
+    )
   ) {
     return {
       status: 'conflict',
@@ -295,7 +305,9 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
   const categoryIds = getPromptFolderCategoryIds(promptFolder)
   /** First root folder remaining in workspace order after the requested deletion. */
   const nextPromptFolderId =
-    workspace.entries.find((entry) => entry.id !== command.promptFolderId)?.id ?? null
+    getWorkspaceFolderEntries(workspace, promptFolder.kind).find(
+      (entry) => entry.id !== command.promptFolderId
+    )?.id ?? null
   /** Complete domain changes applied atomically in meaningful ownership order. */
   const changes: DomainChange[] = [
     {
@@ -303,7 +315,15 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
       entityType: 'workspace',
       id: command.workspaceId,
       recipe: (draft) => {
-        draft.entries = removeEntry(draft.entries, 'folder', command.promptFolderId)
+        setWorkspaceFolderEntries(
+          draft,
+          promptFolder.kind,
+          removeEntry(
+            getWorkspaceFolderEntries(draft, promptFolder.kind),
+            'folder',
+            command.promptFolderId
+          )
+        )
       }
     },
     ...contentIds.map(
@@ -356,19 +376,33 @@ export const planDeletePromptFolderDomainMutation: DomainPlanner<DeletePromptFol
       id: command.workspaceId,
       recipe: (draft) => {
         if (
-          draft.selectedScreen === 'prompt-folders' &&
+          (draft.selectedScreen === 'prompt-task-folders' ||
+            draft.selectedScreen === 'prompt-template-folders') &&
           draft.selectedScreenData.promptFolderId === command.promptFolderId
         ) {
           Object.assign(draft, {
-            selectedScreen: 'prompt-folders',
+            selectedScreen:
+              promptFolder.kind === 'template'
+                ? 'prompt-template-folders'
+                : 'prompt-task-folders',
             selectedScreenData: {
               promptFolderId: nextPromptFolderId,
               contentOwnerId: nextPromptFolderId
             },
-            lastPromptFolderId: nextPromptFolderId
+            ...(promptFolder.kind === 'template'
+              ? { lastPromptTemplateFolderId: nextPromptFolderId }
+              : { lastPromptTaskFolderId: nextPromptFolderId })
           })
-        } else if (draft.lastPromptFolderId === command.promptFolderId) {
-          draft.lastPromptFolderId = nextPromptFolderId
+        } else if (
+          promptFolder.kind === 'template' &&
+          draft.lastPromptTemplateFolderId === command.promptFolderId
+        ) {
+          draft.lastPromptTemplateFolderId = nextPromptFolderId
+        } else if (
+          promptFolder.kind === 'prompt' &&
+          draft.lastPromptTaskFolderId === command.promptFolderId
+        ) {
+          draft.lastPromptTaskFolderId = nextPromptFolderId
         }
       }
     })
@@ -387,8 +421,12 @@ export const planMovePromptFolderDomainMutation: DomainPlanner<
   /** Stable workspace target returned for ordering conflicts. */
   const targets: DomainTarget[] = [{ entityType: 'workspace', id: command.workspaceId }]
   /** Workspace entries after removing the moved root. */
-  const entries = workspace
-    ? removeEntry(workspace.entries, 'folder', command.promptFolderId)
+  const entries = workspace && promptFolder
+    ? removeEntry(
+        getWorkspaceFolderEntries(workspace, promptFolder.kind),
+        'folder',
+        command.promptFolderId
+      )
     : []
   /** Requested reinsertion index after predecessor validation. */
   const insertIndex = resolveEntryInsertIndex(entries, command.previousEntryId)
@@ -396,7 +434,9 @@ export const planMovePromptFolderDomainMutation: DomainPlanner<
   if (
     !workspace ||
     !promptFolder ||
-    !workspace.entries.some((entry) => entry.id === command.promptFolderId) ||
+    !getWorkspaceFolderEntries(workspace, promptFolder.kind).some(
+      (entry) => entry.id === command.promptFolderId
+    ) ||
     insertIndex === null
   ) {
     return { status: 'conflict', reason: 'Prompt folder move conflict', targets }
@@ -409,7 +449,7 @@ export const planMovePromptFolderDomainMutation: DomainPlanner<
       entityType: 'workspace',
       id: command.workspaceId,
       recipe: (draft) => {
-        draft.entries = entries
+        setWorkspaceFolderEntries(draft, promptFolder.kind, entries)
       }
     }
   ]

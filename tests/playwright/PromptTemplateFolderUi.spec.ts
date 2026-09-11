@@ -21,15 +21,8 @@ import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestH
 import { dragSidebarHandleBy } from '../helpers/PromptFolderHelpers'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 import {
-  beginPromptHandleDrag,
-  dragGhostSelector,
-  expectDragGhostIconBeforeLabel,
-  finishActiveDrag,
-  moveActiveDragToTarget,
   promptFolderSelectorDropdownItemSelector,
-  promptFolderSelectorMenuSelector,
-  promptFolderSelectorTriggerSelector,
-  readPromptFolderEntryIds
+  promptFolderSelectorTriggerSelector
 } from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -155,7 +148,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     /** Template-specific action rendered under the expanded category. */
     const action = mainWindow.getByTestId('prompt-tree-template-category-empty-action-Empty')
     /** Category toggle verifies both empty and populated child visibility. */
@@ -220,7 +213,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
 
     await electronApp.evaluate(({ BrowserWindow }) => {
       /** Active window enlarged enough to leave 300px above and below a short template row. */
@@ -304,7 +297,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     /** Category hover action whose label must reflect template-folder content. */
@@ -385,7 +378,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Case Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Case Templates')
     await waitForMonacoEditor(mainWindow, editorSelector)
 
     const toolbar = mainWindow.locator(
@@ -414,7 +407,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     const toolbar = mainWindow.locator(
@@ -462,7 +455,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     await setEditorSelections(mainWindow, TEMPLATE_EDITOR, [
@@ -496,7 +489,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await stubClipboard(mainWindow)
 
     await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
@@ -543,7 +536,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
 
     const titleRow = mainWindow.locator(`${TEMPLATE_EDITOR} .prompt-editor-title-row`)
     // Use the supported minimum window width before narrowing the title row through the sidebar.
@@ -610,7 +603,7 @@ describe('Prompt template folder UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     await focusMonacoEditor(mainWindow, TEMPLATE_EDITOR)
@@ -629,7 +622,7 @@ describe('Prompt template folder UI', () => {
     await expect
       .poll(async () => Math.abs((await getEditorScrollTop(mainWindow, TEMPLATE_EDITOR))! - 240))
       .toBeLessThanOrEqual(2)
-    await testHelpers.navigateToPromptFolders('Empty Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Empty Templates')
     await expect(mainWindow.locator(TEMPLATE_EDITOR)).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')).toHaveCount(
       0
@@ -653,15 +646,14 @@ describe('Prompt template folder UI', () => {
       })
       .toBe(TEMPLATE_ID)
 
-    await testHelpers.navigateToPromptFolders('Templates')
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
     await expect
       .poll(async () => Math.abs((await getEditorScrollTop(mainWindow, TEMPLATE_EDITOR))! - 240))
       .toBeLessThanOrEqual(2)
   })
 
-  test('blocks prompt and template drops onto roots of the other kind', async ({
-    electronApp,
+  test('filters cross-kind roots from each folder selector', async ({
     testSetup
   }) => {
     const workspacePath = '/ws/template-cross-kind-drag'
@@ -686,11 +678,11 @@ describe('Prompt template folder UI', () => {
           ]
         }
       ]),
-      [`${workspacePath}/WorkspaceFolderOrder.json`]: JSON.stringify({
-        entries: [
-          { kind: 'folder', id: promptFolderId },
-          { kind: 'folder', id: templateFolderId }
-        ]
+      [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify({
+        entries: [{ kind: 'folder', id: promptFolderId }]
+      }),
+      [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify({
+        entries: [{ kind: 'folder', id: templateFolderId }]
       })
     }
     await testSetup.setupFilesystem(filesystem)
@@ -700,43 +692,14 @@ describe('Prompt template folder UI', () => {
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
 
-    const tryCrossKindDrop = async (sourceName: string, contentId: string, destinationId: string) => {
-      await testHelpers.navigateToPromptFolders(sourceName)
-      await waitForMonacoEditor(mainWindow, promptEditorSelector(contentId))
-      await beginPromptHandleDrag(mainWindow, contentId)
-      // The active ghost exposes the content kind and editor-matching icon for this source.
-      const dragGhost = mainWindow.locator(dragGhostSelector)
-      await expect(dragGhost).toHaveAttribute(
-        'data-drag-ghost-kind',
-        sourceName === 'Templates' ? 'template' : 'prompt'
-      )
-      await expect(dragGhost.locator('[data-testid="drag-ghost-icon"]')).toHaveClass(
-        /lucide-file-text/
-      )
-      await expectDragGhostIconBeforeLabel(dragGhost)
-      await moveActiveDragToTarget(mainWindow, promptFolderSelectorTriggerSelector)
-      await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toBeVisible()
-      const destination = mainWindow.locator(
-        promptFolderSelectorDropdownItemSelector(destinationId)
-      )
-      await moveActiveDragToTarget(mainWindow, promptFolderSelectorDropdownItemSelector(destinationId))
-      await expect(destination).not.toHaveAttribute('data-row-state', 'over')
-      await finishActiveDrag(mainWindow)
-    }
+    await testHelpers.navigateToPromptFolders('Prompts')
+    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
+    await expect(mainWindow.locator(promptFolderSelectorDropdownItemSelector(promptFolderId))).toBeVisible()
+    await expect(mainWindow.locator(promptFolderSelectorDropdownItemSelector(templateFolderId))).toHaveCount(0)
 
-    await tryCrossKindDrop('Prompts', 'cross-kind-prompt', templateFolderId)
-    await tryCrossKindDrop('Templates', 'cross-kind-template', promptFolderId)
-    await expect(
-      readPromptFolderEntryIds(
-        electronApp,
-        `${workspacePath}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
-      )
-    ).resolves.toEqual(['cross-kind-prompt'])
-    await expect(
-      readPromptFolderEntryIds(
-        electronApp,
-        `${workspacePath}/Templates/Templates/_FolderInfo/FolderOrder.json`
-      )
-    ).resolves.toEqual(['cross-kind-template'])
+    await testHelpers.navigateToPromptTemplateFolders('Templates')
+    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
+    await expect(mainWindow.locator(promptFolderSelectorDropdownItemSelector(templateFolderId))).toBeVisible()
+    await expect(mainWindow.locator(promptFolderSelectorDropdownItemSelector(promptFolderId))).toHaveCount(0)
   })
 })

@@ -174,7 +174,10 @@ describe('domain persistence planning', () => {
         id: 'workspace',
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        entries: [{ kind: 'folder' as const, id: root.id }]
+        promptFolderEntries:
+          kind === 'prompt' ? [{ kind: 'folder' as const, id: root.id }] : [],
+        templateFolderEntries:
+          kind === 'template' ? [{ kind: 'folder' as const, id: root.id }] : []
       }
       /** Loaded category physically contained by the renamed root. */
       const category = {
@@ -413,7 +416,8 @@ describe('domain persistence planning', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: root.id }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: root.id }],
+      templateFolderEntries: []
     }
     mockDomainData.seed('workspace', workspace.id, workspace, {
       workspacePath: workspace.workspacePath,

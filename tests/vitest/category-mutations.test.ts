@@ -102,7 +102,8 @@ describe('category mutations', () => {
         id: WORKSPACE_ID,
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        entries: [{ kind: 'folder', id: ROOT_FOLDER_ID }]
+        promptFolderEntries: [{ kind: 'folder', id: ROOT_FOLDER_ID }],
+        templateFolderEntries: []
       }
     })
     promptCollection.utils.upsertAuthoritative({

@@ -1,21 +1,28 @@
 import * as path from 'path'
 import matter from 'gray-matter'
 import type { Category } from '@shared/Category'
+import { folderEntryRef, type FolderEntryRef } from '@shared/OrderContainer'
+import type { PromptFolderKind } from '@shared/PromptFolder'
 import type { WorkspaceInfoFile } from '../DiskTypes/WorkspaceDiskTypes'
 import { getFs } from '../fs-provider'
 import { isCategory } from './CategoryPersistence'
 import { readJsonFile, writeJsonFile } from './FilePersistenceHelpers'
 import {
   CATEGORY_FILENAME_SUFFIX,
+  PROMPT_FOLDER_INFO_DIRECTORY_NAME,
+  PROMPT_FOLDER_INFO_FILENAME,
   PROMPTS_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   TEMPLATES_DIRECTORY_NAME,
+  resolveLegacyWorkspaceFolderOrderPath,
+  resolvePromptRootDirectoryName,
+  resolveWorkspaceFolderOrderPath,
   resolveWorkspacePathFromInfoPath
 } from './PromptPersistencePaths'
 import { parsePromptMarkdown, serializePromptMarkdown } from './PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 1
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 2
 
 /** Workspace metadata accepted only while determining which migrations to run. */
 type MigratableWorkspaceInfoFile = Omit<WorkspaceInfoFile, 'schemaVersion'> & {
@@ -24,6 +31,11 @@ type MigratableWorkspaceInfoFile = Omit<WorkspaceInfoFile, 'schemaVersion'> & {
 
 /** Legacy category shape accepted only by the 0 to 1 workspace migration. */
 type SchemaVersionZeroCategory = Omit<Category, 'shortDescription'>
+
+/** Legacy root-order file entry accepted by the schema-one migration. */
+type SchemaVersionOneFolderOrder = {
+  entries: FolderEntryRef[]
+}
 
 /** One sequential workspace schema migration. */
 type WorkspaceMigration = (workspacePath: string, workspaceInfoPath: string) => void
@@ -188,9 +200,119 @@ const migrateSchemaVersionZeroToOne: WorkspaceMigration = (
   } satisfies WorkspaceInfoFile)
 }
 
+/** Reads the retired combined root-folder order when it exists. */
+const readSchemaVersionOneFolderOrder = (workspacePath: string): FolderEntryRef[] => {
+  /** Legacy root-order path present in schema-one workspaces. */
+  const legacyOrderPath = resolveLegacyWorkspaceFolderOrderPath(workspacePath)
+  if (!getFs().existsSync(legacyOrderPath)) return []
+
+  /** Untrusted legacy root-order data validated before migration. */
+  const value = readJsonFile<unknown>(legacyOrderPath)
+  if (
+    !isRecord(value) ||
+    Object.keys(value).length !== 1 ||
+    !Array.isArray(value.entries) ||
+    !value.entries.every(
+      (entry) =>
+        isRecord(entry) &&
+        Object.keys(entry).length === 2 &&
+        entry.kind === 'folder' &&
+        typeof entry.id === 'string'
+    )
+  ) {
+    throw new Error(`Invalid order file: ${legacyOrderPath}`)
+  }
+
+  return (value as SchemaVersionOneFolderOrder).entries
+}
+
+/** Discovers stable root-folder IDs for one kind in alphabetical disk order. */
+const collectSchemaVersionOneFolderIds = (
+  workspacePath: string,
+  kind: PromptFolderKind
+): string[] => {
+  /** Root type directory inspected by this migration. */
+  const rootPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
+  /** Filesystem containing the schema-one workspace. */
+  const fs = getFs()
+  /** Stable IDs discovered from valid type-matching root metadata. */
+  const folderIds: string[] = []
+
+  for (const entry of fs
+    .readdirSync(rootPath, { withFileTypes: true })
+    .filter((candidate) => candidate.isDirectory())
+    .sort((left, right) => left.name.toLowerCase().localeCompare(right.name.toLowerCase()))) {
+    /** Metadata path identifying the candidate root folder. */
+    const infoPath = path.join(
+      rootPath,
+      entry.name,
+      PROMPT_FOLDER_INFO_DIRECTORY_NAME,
+      PROMPT_FOLDER_INFO_FILENAME
+    )
+    if (!fs.existsSync(infoPath)) continue
+    /** Untrusted root metadata used only to identify its stable ID and kind. */
+    const info = readJsonFile<unknown>(infoPath)
+    if (!isRecord(info) || info.kind !== kind || typeof info.folderId !== 'string') continue
+    folderIds.push(info.folderId)
+  }
+
+  return folderIds
+}
+
+/** Builds one type-specific order while preserving legacy relative positions. */
+const buildSchemaVersionTwoFolderOrder = (
+  legacyEntries: FolderEntryRef[],
+  discoveredIds: string[]
+): FolderEntryRef[] => {
+  /** Discovered IDs eligible for the migrated order. */
+  const discoveredIdSet = new Set(discoveredIds)
+  /** IDs already accepted from the legacy order. */
+  const acceptedIds = new Set<string>()
+  /** Valid legacy entries retained in their original relative order. */
+  const entries = legacyEntries.filter((entry) => {
+    if (!discoveredIdSet.has(entry.id) || acceptedIds.has(entry.id)) return false
+    acceptedIds.add(entry.id)
+    return true
+  })
+  for (const folderId of discoveredIds) {
+    if (acceptedIds.has(folderId)) continue
+    entries.push(folderEntryRef(folderId))
+  }
+  return entries
+}
+
+/** Splits the schema-one combined root order into type-owned order files. */
+const migrateSchemaVersionOneToTwo: WorkspaceMigration = (
+  workspacePath,
+  workspaceInfoPath
+) => {
+  /** Combined schema-one entries used to retain relative order within each kind. */
+  const legacyEntries = readSchemaVersionOneFolderOrder(workspacePath)
+  for (const kind of ['prompt', 'template'] as const) {
+    /** Alphabetically discovered roots appended when absent from the legacy order. */
+    const discoveredIds = collectSchemaVersionOneFolderIds(workspacePath, kind)
+    /** Complete migrated order for the current root kind. */
+    const entries = buildSchemaVersionTwoFolderOrder(legacyEntries, discoveredIds)
+    writeJsonFile(resolveWorkspaceFolderOrderPath(workspacePath, kind), { entries })
+  }
+
+  /** Legacy order removed only after both replacement files have been written. */
+  const legacyOrderPath = resolveLegacyWorkspaceFolderOrderPath(workspacePath)
+  if (getFs().existsSync(legacyOrderPath)) getFs().rmSync(legacyOrderPath)
+
+  /** Schema-one identity preserved while committing the new version last. */
+  const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+  writeJsonFile(workspaceInfoPath, {
+    schemaVersion: 2,
+    workspaceId: workspaceInfo.workspaceId,
+    workspaceName: workspaceInfo.workspaceName
+  } satisfies WorkspaceInfoFile)
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
-  0: migrateSchemaVersionZeroToOne
+  0: migrateSchemaVersionZeroToOne,
+  1: migrateSchemaVersionOneToTwo
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

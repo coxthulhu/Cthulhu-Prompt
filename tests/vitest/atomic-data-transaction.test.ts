@@ -393,7 +393,8 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: 'root' }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: 'root' }],
+      templateFolderEntries: []
     }
     /** Root folder updated to own the inserted category. */
     const promptFolder = {
@@ -478,7 +479,8 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: 'root' }]
+      promptFolderEntries: [{ kind: 'folder' as const, id: 'root' }],
+      templateFolderEntries: []
     }
     /** Prompt root containing one category and one active prompt. */
     const promptFolder = {
@@ -618,7 +620,8 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      entries: [{ kind: 'folder' as const, id: 'templates' }]
+      promptFolderEntries: [],
+      templateFolderEntries: [{ kind: 'folder' as const, id: 'templates' }]
     }
     /** Template root containing one active template. */
     const promptFolder = {

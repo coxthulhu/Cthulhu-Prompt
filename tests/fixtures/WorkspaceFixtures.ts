@@ -337,7 +337,7 @@ export function createBasicWorkspace(
     typeof settings.workspaceId === 'string'
       ? settings.workspaceId
       : createDeterministicId(workspacePath)
-  const settingsPayload = { schemaVersion: 1, ...settings, workspaceId }
+  const settingsPayload = { schemaVersion: 2, ...settings, workspaceId }
   const workspaceName =
     typeof settings.workspaceName === 'string'
       ? settings.workspaceName
@@ -349,7 +349,8 @@ export function createBasicWorkspace(
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
     [`${workspacePath}/Templates`]: null,
-    [`${workspacePath}/WorkspaceFolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
+    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
+    [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,
@@ -426,7 +427,7 @@ export function createWorkspaceWithFolders(
     Object.assign(structure, completedPromptFiles)
     Object.assign(structure, archivedPromptFiles)
   }
-  structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(
+  structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
     folderOrderFile(promptFolderIds),
     null,
     2
@@ -532,7 +533,7 @@ export function createWorkspaceWithTemplateFolders(
 
   const folderIds = folderConfigs.map(addFolder)
 
-  structure[`${workspacePath}/WorkspaceFolderOrder.json`] = JSON.stringify(
+  structure[`${workspacePath}/Templates/FolderOrder.json`] = JSON.stringify(
     folderOrderFile(folderIds),
     null,
     2
@@ -1072,7 +1073,7 @@ export function createCorruptedWorkspace(
     case 'missing-prompts':
       structure[getWorkspaceInfoPath(workspacePath)] = JSON.stringify(
         {
-          schemaVersion: 1,
+          schemaVersion: 2,
           workspaceId: createDeterministicId(workspacePath),
           workspaceName: getWorkspaceInfoPath(workspacePath)
             .split('/')

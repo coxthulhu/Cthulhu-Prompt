@@ -23,7 +23,13 @@ export type AccordionUiStateSeedEntry = {
 /** Persisted workspace state read directly from the test SQLite database. */
 export type WorkspaceUiStateSnapshot = {
   workspaceId: string
-  selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
+  selectedScreen:
+    | 'home'
+    | 'settings'
+    | 'mockups'
+    | 'test-screen'
+    | 'prompt-task-folders'
+    | 'prompt-template-folders'
   selectedScreenData:
     | null
     | { mockupId: string | null }
@@ -32,7 +38,8 @@ export type WorkspaceUiStateSnapshot = {
         /** Root-folder or category owner containing the selected row. */
         contentOwnerId?: string | null
       }
-  lastPromptFolderId: string | null
+  lastPromptTaskFolderId: string | null
+  lastPromptTemplateFolderId: string | null
   promptFolderViewEntries: Array<{
     contentOwnerId: string
     selectedEntryId: string
@@ -160,7 +167,13 @@ export const seedWorkspaceUiState = async (
   electronApp: any,
   data: {
     workspaceId: string
-    selectedScreen: 'home' | 'settings' | 'mockups' | 'test-screen' | 'prompt-folders'
+    selectedScreen:
+      | 'home'
+      | 'settings'
+      | 'mockups'
+      | 'test-screen'
+      | 'prompt-task-folders'
+      | 'prompt-template-folders'
     selectedScreenData:
       | null
       | { mockupId: string | null }
@@ -169,7 +182,8 @@ export const seedWorkspaceUiState = async (
           /** Root-folder or category owner containing the selected row. */
           contentOwnerId?: string | null
         }
-    lastPromptFolderId?: string | null
+    lastPromptTaskFolderId?: string | null
+    lastPromptTemplateFolderId?: string | null
     promptFolderViewEntries: WorkspacePromptFolderUiStateSeedEntry[]
     accordionViewEntries?: AccordionUiStateSeedEntry[]
   }
@@ -181,18 +195,21 @@ export const seedWorkspaceUiState = async (
       workspace_id,
       selected_screen,
       selected_screen_data_json,
-      last_prompt_folder_id
+      last_prompt_task_folder_id,
+      last_prompt_template_folder_id
     )
     VALUES (
       ${toSqlText(data.workspaceId)},
       ${toSqlText(data.selectedScreen)},
       ${toSqlJson(data.selectedScreenData)},
-      ${toSqlNullableText(data.lastPromptFolderId)}
+      ${toSqlNullableText(data.lastPromptTaskFolderId)},
+      ${toSqlNullableText(data.lastPromptTemplateFolderId)}
     )
     ON CONFLICT(workspace_id) DO UPDATE SET
       selected_screen = excluded.selected_screen,
       selected_screen_data_json = excluded.selected_screen_data_json,
-      last_prompt_folder_id = excluded.last_prompt_folder_id
+      last_prompt_task_folder_id = excluded.last_prompt_task_folder_id,
+      last_prompt_template_folder_id = excluded.last_prompt_template_folder_id
     `
   )
 
@@ -308,7 +325,8 @@ export const readWorkspaceUiState = async (
     SELECT
       selected_screen AS selectedScreen,
       selected_screen_data_json AS selectedScreenDataJson,
-      last_prompt_folder_id AS lastPromptFolderId
+      last_prompt_task_folder_id AS lastPromptTaskFolderId,
+      last_prompt_template_folder_id AS lastPromptTemplateFolderId
     FROM workspace_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -383,7 +401,8 @@ export const readWorkspaceUiState = async (
     | {
         selectedScreen: WorkspaceUiStateSnapshot['selectedScreen']
         selectedScreenDataJson: string | null
-        lastPromptFolderId: string | null
+        lastPromptTaskFolderId: string | null
+        lastPromptTemplateFolderId: string | null
       }
     | undefined
 
@@ -393,7 +412,8 @@ export const readWorkspaceUiState = async (
     selectedScreenData: workspaceRow?.selectedScreenDataJson
       ? JSON.parse(workspaceRow.selectedScreenDataJson)
       : null,
-    lastPromptFolderId: workspaceRow?.lastPromptFolderId ?? null,
+    lastPromptTaskFolderId: workspaceRow?.lastPromptTaskFolderId ?? null,
+    lastPromptTemplateFolderId: workspaceRow?.lastPromptTemplateFolderId ?? null,
     promptFolderViewEntries: (promptFolderViewResult.rows ?? []).map((entry) => ({
       contentOwnerId: String(entry.contentOwnerId),
       selectedEntryId: String(entry.selectedEntryId),
