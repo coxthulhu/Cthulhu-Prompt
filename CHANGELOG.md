@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.0.32
+
+### New Features
+
+- Added separate Task Prompts and Prompt Templates activities with independent folder ordering and navigation state.
+- Added a centralized category management dialog for creating, editing, and deleting categories.
+- Added automatic workspace schema migrations for existing workspace data.
+
+### Changes
+
+- Added short category descriptions and refreshed the default prompt categories.
+- Standardized typography, headings, empty states, controls, and dialog, sidebar, and editor layouts.
+- Moved prompt navigation highlighting to the editor sidebar rail.
+
+### Fixed
+
+- Fixed stale workspace and editor state when switching workspaces.
+- Fixed prompt drops in the folder selector.
+- Fixed navigation after deleting a prompt or template folder by selecting the next available folder.
+- Fixed prompt folder find scrolling in small sidebars.
+- Fixed incorrect prompt folder icons and preserved sidebar status label casing.
+- Fixed long Home screen descriptions being clipped instead of wrapping.
+
 ## 0.0.31
 
 ### New Features
