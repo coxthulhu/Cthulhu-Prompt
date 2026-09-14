@@ -3,14 +3,15 @@
   import FolderInput from '@renderer/common/cthulhu-ui/FolderInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { WorkspaceFolderStatus } from '@shared/Workspace'
   import { preparePromptFolderName } from '@shared/promptFolderName'
-  import { FolderOpen, FolderPlus, Route, Sparkles, Type } from 'lucide-svelte'
+  import { FolderPlus } from 'lucide-svelte'
   import type { WorkspaceCreationResult } from '@renderer/features/workspace/types'
 
   let {
@@ -142,79 +143,85 @@
   cancelDisabled={isWorkspaceLoading}
   onsubmit={handleCreateWorkspace}
 >
-  <div class="cthulhuCreateWorkspaceRows flex min-w-0 flex-col">
-    <ControlRow icon={Type} label="Workspace Name" detail="Name the new workspace folder.">
-      {#snippet control()}
-        <FloatingValidationMessage
-          message={displayedWorkspaceNameError}
-          textTestId="create-workspace-name-error"
-        >
-          <TextInput
-            id="create-workspace-name-input"
-            class="w-[220px]"
-            bind:value={workspaceName}
-            aria-label="Workspace Name"
-            placeholder="Name..."
-            data-testid="create-workspace-name-input"
-            aria-invalid={displayedWorkspaceNameError ? 'true' : undefined}
-            disabled={isWorkspaceLoading}
-            oninput={() => {
-              hasInteractedWithName = true
-              submissionError = null
-            }}
-          />
-        </FloatingValidationMessage>
-      {/snippet}
-    </ControlRow>
-
-    <Separator />
-
-    <ControlRow
-      icon={FolderOpen}
-      label="Containing Folder"
-      detail="Choose where the workspace folder will be created."
-    >
-      {#snippet detailExtra()}
-        {#if containingFolder}
-          <span data-testid="create-workspace-containing-folder-display">{containingFolder}</span>
-        {/if}
-      {/snippet}
-
-      {#snippet control()}
-        <FolderInput
-          bind:value={containingFolder}
-          ariaLabel="Browse for containing folder"
-          buttonTestId="create-workspace-path-browse-button"
+  <!-- Standard stacked dialog fields for workspace creation options. -->
+  <div class="cthulhuCreateWorkspaceFields grid min-w-0 gap-[17px] px-4 py-4">
+    <div data-testid="create-workspace-name-field">
+      <TitleSubtitleStack class="mb-[7px]">
+        <div class="flex items-center gap-1">
+          <Title title="Workspace Name" variant="small" />
+          <span class="text-sm leading-5 text-[var(--ui-muted-text)]">*</span>
+        </div>
+        <Subtitle id="create-workspace-name-help" text="Enter a name for the new workspace." />
+      </TitleSubtitleStack>
+      <FloatingValidationMessage
+        message={displayedWorkspaceNameError}
+        textTestId="create-workspace-name-error"
+      >
+        <TextInput
+          id="create-workspace-name-input"
+          class="w-full"
+          bind:value={workspaceName}
+          aria-label="Workspace Name"
+          aria-describedby="create-workspace-name-help"
+          placeholder="Name..."
+          data-testid="create-workspace-name-input"
+          aria-invalid={displayedWorkspaceNameError ? 'true' : undefined}
           disabled={isWorkspaceLoading}
+          oninput={() => {
+            hasInteractedWithName = true
+            submissionError = null
+          }}
         />
-      {/snippet}
-    </ControlRow>
+      </FloatingValidationMessage>
+    </div>
 
-    <Separator />
+    <div data-testid="create-workspace-containing-folder-field">
+      <TitleSubtitleStack class="mb-[7px]">
+        <Title title="Containing Folder" variant="small" />
+        <Subtitle
+          id="create-workspace-containing-folder-help"
+          text="Choose the folder that will contain the workspace."
+        />
+      </TitleSubtitleStack>
+      <FolderInput
+        class="w-full"
+        bind:value={containingFolder}
+        inputId="create-workspace-containing-folder-input"
+        inputTestId="create-workspace-containing-folder-display"
+        inputAriaLabel="Containing Folder"
+        inputAriaDescribedby="create-workspace-containing-folder-help"
+        ariaLabel="Browse for containing folder"
+        buttonTestId="create-workspace-path-browse-button"
+        disabled={isWorkspaceLoading}
+      />
+    </div>
 
-    <ControlRow
-      icon={Route}
-      label="Final Workspace Path"
-      detail="Review the folder that will be created."
-    >
-      {#snippet detailExtra()}
-        {#if finalWorkspacePath}
-          <span
-            data-testid="create-workspace-final-path-display"
-            aria-invalid={hasExistingWorkspace ? 'true' : undefined}
-          >
-            {finalWorkspacePath}
-          </span>
-        {/if}
-      {/snippet}
-    </ControlRow>
+    <div data-testid="create-workspace-final-path-field">
+      <TitleSubtitleStack class="mb-[7px]">
+        <Title title="Workspace Path" variant="small" />
+        <Subtitle
+          id="create-workspace-final-path-help"
+          text="Review the full path to the workspace."
+        />
+      </TitleSubtitleStack>
+      <TextInput
+        id="create-workspace-final-path-input"
+        class="w-full"
+        value={finalWorkspacePath}
+        aria-label="Workspace Path"
+        aria-describedby="create-workspace-final-path-help"
+        aria-invalid={hasExistingWorkspace ? 'true' : undefined}
+        data-testid="create-workspace-final-path-display"
+        disabled
+      />
+    </div>
 
     {#if finalPathMessage}
       <MessageRow
         text={finalPathMessage}
         variant={finalPathMessageVariant}
         textTestId="create-workspace-final-path-message"
-        class="mb-3 w-full"
+        class="w-full"
       />
     {/if}
 
@@ -223,34 +230,31 @@
         text={submissionError}
         variant="danger"
         textTestId="create-workspace-submit-error"
-        class="mb-3 w-full"
+        class="w-full"
       />
     {/if}
 
-    <Separator />
-
-    <ControlRow
-      testId="create-workspace-examples-row"
-      icon={Sparkles}
-      label="Add Examples"
-      detail="Include example prompts in a &quot;My Prompts&quot; folder."
-    >
-      {#snippet control()}
-        <ToggleTextButton
-          testId="create-workspace-examples-toggle"
-          pressed={includeExamples}
-          disabled={isWorkspaceLoading}
-          onclick={() => {
-            includeExamples = !includeExamples
-          }}
+    <div data-testid="create-workspace-examples-row">
+      <TitleSubtitleStack class="mb-[7px]">
+        <Title title="Add Examples" variant="small" />
+        <Subtitle
+          text="Include example prompts and templates in the My Prompts and My Templates folders."
         />
-      {/snippet}
-    </ControlRow>
+      </TitleSubtitleStack>
+      <ToggleTextButton
+        testId="create-workspace-examples-toggle"
+        pressed={includeExamples}
+        disabled={isWorkspaceLoading}
+        onclick={() => {
+          includeExamples = !includeExamples
+        }}
+      />
+    </div>
   </div>
 </Dialog>
 
 <style>
-  .cthulhuCreateWorkspaceRows {
+  .cthulhuCreateWorkspaceFields {
     overflow: visible;
   }
 </style>

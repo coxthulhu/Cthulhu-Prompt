@@ -632,6 +632,116 @@ Keep this partial body.`
       )
     })
 
+    test('uses stacked fields and disabled path inputs in the create workspace dialog', async ({
+      testSetup
+    }) => {
+      await testSetup.setupFilesystem({ '/ws/stacked-fields': null })
+      await testSetup.setupFileDialog(['/ws/stacked-fields'])
+
+      /** Running application window used to inspect the redesigned dialog. */
+      const { mainWindow } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="create-workspace-button"]')
+
+      /** Create dialog whose fields should follow the standard above/below layout. */
+      const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
+      /** Workspace-name field used to compare its full-width input placement. */
+      const nameField = createDialog.locator('[data-testid="create-workspace-name-field"]')
+      /** Containing-folder field whose heading and compound control should stack. */
+      const containingFolderField = createDialog.locator(
+        '[data-testid="create-workspace-containing-folder-field"]'
+      )
+      /** Final-path field whose heading and disabled input should stack. */
+      const finalPathField = createDialog.locator(
+        '[data-testid="create-workspace-final-path-field"]'
+      )
+      /** Add-examples field whose heading and toggle should stack. */
+      const examplesField = createDialog.locator('[data-testid="create-workspace-examples-row"]')
+      /** Disabled selected-folder display supplied by the shared folder input. */
+      const containingFolderInput = createDialog.getByLabel('Containing Folder', { exact: true })
+      /** Native folder-picker action placed to the right of its path display. */
+      const browseButton = createDialog.getByLabel('Browse for containing folder')
+      /** Disabled calculated workspace path display. */
+      const finalPathInput = createDialog.getByLabel('Workspace Path', { exact: true })
+      /** Default-enabled toggle rendered below the Add Examples description. */
+      const examplesToggle = createDialog.locator(
+        '[data-testid="create-workspace-examples-toggle"]'
+      )
+
+      await expect(createDialog).toHaveCSS('width', '620px')
+      await expect(nameField.locator('.cthulhuUiTitle')).toHaveText('Workspace Name')
+      await expect(nameField.locator('.cthulhuUiSubtitle')).toHaveText(
+        'Enter a name for the new workspace.'
+      )
+      await expect(
+        containingFolderField.locator('.cthulhuUiSubtitle')
+      ).toHaveText('Choose the folder that will contain the workspace.')
+      await expect(finalPathField.locator('.cthulhuUiSubtitle')).toHaveText(
+        'Review the full path to the workspace.'
+      )
+      await expect(finalPathField.locator('.cthulhuUiTitle')).toHaveText('Workspace Path')
+      await expect(examplesField.locator('.cthulhuUiSubtitle')).toHaveText(
+        'Include example prompts and templates in the My Prompts and My Templates folders.'
+      )
+      await expect(createDialog.locator('.cthulhuUiTitleSubtitleStack svg')).toHaveCount(0)
+      await expect(containingFolderInput).toBeDisabled()
+      await expect(containingFolderInput).toHaveValue('')
+      await expect(containingFolderInput).toHaveAttribute('placeholder', 'Select a folder...')
+      await expect(finalPathInput).toBeDisabled()
+      await expect(examplesToggle).toHaveAttribute('aria-pressed', 'true')
+
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Stacked Workspace')
+      await browseButton.click()
+
+      await expect(containingFolderInput).toHaveValue('/ws/stacked-fields')
+      await expect(finalPathInput).toHaveValue('/ws/stacked-fields\\StackedWorkspace')
+
+      /** Heading, field, and control bounds proving the requested above/below arrangement. */
+      const [
+        nameFieldBox,
+        nameHeadingBox,
+        nameInputBox,
+        containingHeadingBox,
+        containingFolderBox,
+        browseButtonBox,
+        finalPathFieldBox,
+        finalPathHeadingBox,
+        finalPathInputBox,
+        examplesHeadingBox,
+        examplesToggleBox
+      ] = await Promise.all([
+        nameField.boundingBox(),
+        nameField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
+        createDialog.getByLabel('Workspace Name', { exact: true }).boundingBox(),
+        containingFolderField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
+        containingFolderInput.boundingBox(),
+        browseButton.boundingBox(),
+        finalPathField.boundingBox(),
+        finalPathField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
+        finalPathInput.boundingBox(),
+        examplesField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
+        examplesToggle.boundingBox()
+      ])
+      expect(nameInputBox!.y).toBeGreaterThanOrEqual(nameHeadingBox!.y + nameHeadingBox!.height - 1)
+      expect(Math.abs(nameInputBox!.width - nameFieldBox!.width)).toBeLessThanOrEqual(2)
+      expect(containingFolderBox!.y).toBeGreaterThanOrEqual(
+        containingHeadingBox!.y + containingHeadingBox!.height - 1
+      )
+      expect(Math.abs(browseButtonBox!.y - containingFolderBox!.y)).toBeLessThanOrEqual(1)
+      expect(browseButtonBox!.x).toBeGreaterThan(
+        containingFolderBox!.x + containingFolderBox!.width
+      )
+      expect(finalPathInputBox!.y).toBeGreaterThanOrEqual(
+        finalPathHeadingBox!.y + finalPathHeadingBox!.height - 1
+      )
+      expect(Math.abs(finalPathInputBox!.width - finalPathFieldBox!.width)).toBeLessThanOrEqual(2)
+      expect(examplesToggleBox!.y).toBeGreaterThanOrEqual(
+        examplesHeadingBox!.y + examplesHeadingBox!.height - 1
+      )
+    })
+
     test('adds example prompts and templates when setting up a new workspace', async ({
       testSetup
     }) => {
@@ -871,7 +981,7 @@ Keep this partial body.`
 
       await expect(
         mainWindow.locator('[data-testid="create-workspace-final-path-display"]')
-      ).toContainText('/ws/non-empty-containing\\ClientPrompts')
+      ).toHaveValue('/ws/non-empty-containing\\ClientPrompts')
       await expect(
         mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
       ).toContainText(
