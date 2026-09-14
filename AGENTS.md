@@ -63,7 +63,7 @@ Run these WSL wrappers directly from the repository root. They switch to the rep
 - `./scripts/wsl-linttypecheck.sh` — Run ESLint and TypeScript checks with `npm run lint` followed by `npm run typecheck`.
 - `./scripts/wsl-vitest.sh [arguments...]` — Run the Vitest suite with `npm run test:vitest`; any arguments are forwarded to Vitest.
 - `./scripts/wsl-playwright.sh [arguments...]` — Run Playwright with `npm run test:playwright`; any arguments are forwarded to Playwright. See the Playwright section below for examples and additional rules.
-- `./scripts/wsl-vscode.sh [path [line [column]]]` — Open the repository, a file, or a specific file position in Windows VS Code. Relative paths resolve from the repository root. Use `./scripts/wsl-vscode.sh --diff left-path right-path` to open two files in the VS Code diff editor.
+- `./scripts/wsl-vscode.sh [path [line [column]]]` — Open the repository, a file, or a specific file position in Windows VS Code. For Codex tool calls, use `sandbox_permissions="require_escalated"`. Relative paths resolve from the repository root. Use `./scripts/wsl-vscode.sh --diff left-path right-path` to open two files in the VS Code diff editor.
 
 ### Running Playwright (Windows)
 
