@@ -28,7 +28,6 @@
     submitTestId,
     inputTestId,
     errorTestId,
-    dialogClass = 'w-full max-w-[540px]',
     rowLabel = 'Folder Name',
     rowDetail,
     initialDisplayName = '',
@@ -49,7 +48,6 @@
     submitTestId: string
     inputTestId: string
     errorTestId: string
-    dialogClass?: string
     rowLabel?: string
     rowDetail: string
     initialDisplayName?: string
@@ -158,7 +156,7 @@
 
 <Dialog
   bind:open={isDialogOpen}
-  class={dialogClass}
+  class="w-full max-w-[520px]"
   icon={icon}
   {title}
   {subtitle}

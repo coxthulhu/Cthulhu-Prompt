@@ -108,9 +108,7 @@ describe('Prompt folder storage', () => {
       '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
     await expect(taskDialog).toBeVisible()
-    await expect(taskDialog).toContainText(
-      'Organize prompts that describe individual tasks for an AI to complete.'
-    )
+    await expect(taskDialog).toContainText('Organize one-time prompts for individual tasks.')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
     ).toHaveCount(0)
@@ -173,7 +171,7 @@ describe('Prompt folder storage', () => {
       '[role="dialog"][aria-label="Create Prompt Template Folder"]'
     )
     await expect(templateDialog).toContainText(
-      'Organize reusable prompts that guide an AI through repeatable work.'
+      'Organize reusable prompts for repeatable workflows.'
     )
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')

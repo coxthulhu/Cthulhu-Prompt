@@ -881,13 +881,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(createPromptFolderDialog).toBeVisible()
     const createDialogBox = await createPromptFolderDialog.boundingBox()
     expect(createDialogBox).not.toBeNull()
-    expect(Math.abs(createDialogBox!.width - 640)).toBeLessThanOrEqual(2)
+    expect(Math.abs(createDialogBox!.width - 520)).toBeLessThanOrEqual(2)
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-header-icon"]')
     ).toBeVisible()
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Organize prompts that describe individual tasks for an AI to complete.')
+    ).toHaveText('Organize one-time prompts for individual tasks.')
     const nameField = createPromptFolderDialog.locator(
       '[data-testid="prompt-folder-name-field"]'
     )
@@ -1443,9 +1443,12 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const errorMessage = mainWindow.locator('[data-testid="rename-prompt-folder-name-error"]')
 
     await expect(renameDialog).toBeVisible()
+    await expect(renameDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
+      'Change the name shown in the app and on disk.'
+    )
     const renameDialogBox = await renameDialog.boundingBox()
     expect(renameDialogBox).not.toBeNull()
-    expect(Math.abs(renameDialogBox!.width - 600)).toBeLessThanOrEqual(2)
+    expect(Math.abs(renameDialogBox!.width - 520)).toBeLessThanOrEqual(2)
     await expect(nameInput).toBeVisible()
     await expect(nameInput).toBeFocused()
     await expect(nameInput).toHaveValue('Development Tools')
