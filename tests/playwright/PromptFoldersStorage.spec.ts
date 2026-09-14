@@ -108,7 +108,7 @@ describe('Prompt folder storage', () => {
       '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
     await expect(taskDialog).toBeVisible()
-    await expect(taskDialog).toContainText('One-time tasks the AI will accomplish.')
+    await expect(taskDialog).toContainText('A folder for one-time tasks the AI will accomplish.')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
     ).toHaveCount(0)
@@ -170,7 +170,7 @@ describe('Prompt folder storage', () => {
     const templateDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Prompt Template Folder"]'
     )
-    await expect(templateDialog).toContainText('Workflows for the AI to follow.')
+    await expect(templateDialog).toContainText('A folder for workflows the AI will follow.')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
     ).toHaveCount(0)

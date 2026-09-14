@@ -59,8 +59,8 @@
     ? 'Create Prompt Template Folder'
     : 'Create Task Prompt Folder'}
   subtitle={kind === 'template'
-    ? 'Workflows for the AI to follow.'
-    : 'One-time tasks the AI will accomplish.'}
+    ? 'A folder for workflows the AI will follow.'
+    : 'A folder for one-time tasks the AI will accomplish.'}
   submitText="Create Folder"
   submittingText="Creating..."
   submitTestId="create-prompt-folder-button"

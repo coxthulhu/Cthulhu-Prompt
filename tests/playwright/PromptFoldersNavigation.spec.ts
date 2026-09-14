@@ -884,7 +884,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeVisible()
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('One-time tasks the AI will accomplish.')
+    ).toHaveText('A folder for one-time tasks the AI will accomplish.')
     await expect(createPromptFolderDialog.getByLabel('Task Prompt Folder Name')).toBeVisible()
   })
 
