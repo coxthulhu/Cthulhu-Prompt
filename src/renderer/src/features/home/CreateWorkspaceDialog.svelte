@@ -63,15 +63,18 @@
         : null
   )
   const finalPathMessageVariant = $derived(hasExistingWorkspace ? 'danger' : 'warning')
-  const canCreateWorkspace = $derived(
+  // Controls native disabled styling using only validation results already known by the renderer.
+  const submitDisabled = $derived(
     Boolean(
-      workspaceNameValidation.isValid &&
-      trimmedContainingFolder &&
-      finalWorkspacePath &&
-      finalFolderStatus &&
-      !hasExistingWorkspace &&
-      !isWorkspaceLoading
+      !workspaceNameValidation.isValid ||
+      !trimmedContainingFolder ||
+      !finalWorkspacePath ||
+      hasExistingWorkspace ||
+      isWorkspaceLoading
     )
+  )
+  const canCreateWorkspace = $derived(
+    Boolean(!submitDisabled && finalFolderStatus)
   )
 
   const resetDialog = () => {
@@ -136,7 +139,7 @@
   title="Create Workspace"
   subtitle="Choose a name and location for your new workspace."
   submitText={isWorkspaceLoading ? 'Creating...' : 'Create Workspace'}
-  submitDisabled={!canCreateWorkspace}
+  {submitDisabled}
   submitTestId="create-workspace-submit-button"
   submitVariant="accent"
   oncancel={resetDialog}

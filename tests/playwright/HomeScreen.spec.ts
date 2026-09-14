@@ -961,6 +961,65 @@ Keep this partial body.`
       ).toBeDisabled()
     })
 
+    // Verifies that a pending path lookup does not flash the submit button or allow submission.
+    test('keeps Create Workspace enabled but inoperable while the path lookup is pending', async ({
+      testSetup
+    }) => {
+      /** Containing folder selected before editing the valid workspace name. */
+      const containingFolderPath = '/ws/pending-path-containing'
+      /** Non-empty target returned only after the gated lookup is released. */
+      const nonEmptyWorkspacePath = `${containingFolderPath}\\PendingWorkspaceTwo`
+      await testSetup.setupFilesystem({
+        [containingFolderPath]: null,
+        [nonEmptyWorkspacePath]: null,
+        [`${nonEmptyWorkspacePath}\\notes.txt`]: 'Existing file'
+      })
+      await testSetup.setupFileDialog([containingFolderPath])
+
+      /** Running application window and IPC controls used to hold the second path lookup open. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+
+      await mainWindow.click('[data-testid="create-workspace-button"]')
+      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Pending Workspace')
+      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
+
+      /** Submit action that should remain visually active while its latest lookup is unresolved. */
+      const submitButton = mainWindow.locator('[data-testid="create-workspace-submit-button"]')
+      await expect(submitButton).toBeEnabled()
+
+      await testHelpers.pauseIpcChannel('get-workspace-folder-status')
+      try {
+        await mainWindow.fill(
+          '[data-testid="create-workspace-name-input"]',
+          'Pending Workspace Two'
+        )
+
+        await expect(
+          mainWindow.locator('[data-testid="create-workspace-final-path-display"]')
+        ).toHaveValue(nonEmptyWorkspacePath)
+        await expect(
+          mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
+        ).toHaveCount(0)
+        await expect(submitButton).toBeEnabled()
+        await submitButton.click()
+        await expect(submitButton).toBeEnabled()
+        await expect(
+          mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
+        ).toBeVisible()
+      } finally {
+        await testHelpers.resumeIpcChannel('get-workspace-folder-status')
+      }
+
+      await expect(
+        mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
+      ).toContainText(
+        'This folder is not empty. Typically, you should create a workspace in an empty folder.'
+      )
+      await expect(submitButton).toBeEnabled()
+    })
+
     test('warns when the final workspace folder is not empty without blocking creation', async ({
       testSetup
     }) => {
