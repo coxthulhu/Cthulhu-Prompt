@@ -45,7 +45,7 @@
     showCloseButton = true,
     showSubmitButton = true,
     showSeparators = true,
-    closeOnOutsideClick = true,
+    closeOnOutsideClick = false,
     submitDisabled = false,
     cancelDisabled = false,
     submitTestId,

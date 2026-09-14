@@ -138,7 +138,6 @@
   submitDisabled={!canCreateWorkspace}
   submitTestId="create-workspace-submit-button"
   submitVariant="accent"
-  closeOnOutsideClick={false}
   oncancel={resetDialog}
   cancelDisabled={isWorkspaceLoading}
   onsubmit={handleCreateWorkspace}

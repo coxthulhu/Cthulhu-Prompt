@@ -113,7 +113,6 @@
   submitIcon={Check}
   submitDisabled={nameError !== null}
   cancelFirst
-  closeOnOutsideClick={false}
 >
   
     <div class="text-sm leading-5" style="display:grid; grid-template-columns:232px minmax(0,1fr); height:min(570px,calc(100vh - 212px)); min-height:240px;">

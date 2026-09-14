@@ -32,6 +32,7 @@
   showSeparators={false}
   submitVariant="danger"
   submitTestId={confirmTestId}
+  closeOnOutsideClick
   {oncancel}
   onsubmit={onconfirm}
 >

@@ -484,6 +484,8 @@ describe('Prompt template selection', () => {
     )
     await dialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]').click()
     await mainWindow.locator('.cthulhuUiDialogLayer').click({ position: { x: 2, y: 2 } })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toBeHidden()
     expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).toContain(
       'templates:\n  - id: deleted-template'

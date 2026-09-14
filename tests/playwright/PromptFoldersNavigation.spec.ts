@@ -1057,7 +1057,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
         Math.abs((await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)) - scrollTopBefore)
       )
       .toBeLessThanOrEqual(1)
-    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
+    await mainWindow.locator('.cthulhuUiDialogLayer').click({ position: { x: 2, y: 2 } })
+    await expect(deleteDialog).toBeHidden()
   })
 
   test('opens selected folder deletion after navigating from Home', async ({ testSetup }) => {

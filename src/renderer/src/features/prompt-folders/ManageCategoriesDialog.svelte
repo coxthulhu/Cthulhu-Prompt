@@ -285,7 +285,6 @@
   submitTestId="manage-categories-save-button"
   cancelTestId="manage-categories-close-button"
   cancelFirst
-  closeOnOutsideClick={false}
   oncancel={handleCancel}
   onsubmit={handleSubmit}
 >

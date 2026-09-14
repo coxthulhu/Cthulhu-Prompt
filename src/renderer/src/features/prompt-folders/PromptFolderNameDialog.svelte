@@ -167,7 +167,6 @@
   cancelDisabled={isSubmitting}
   {submitTestId}
   submitVariant="accent"
-  closeOnOutsideClick={false}
   oncancel={handleCancel}
   onsubmit={handleSubmit}
 >

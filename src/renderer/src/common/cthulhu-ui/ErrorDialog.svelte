@@ -22,6 +22,7 @@
   submitText=""
   cancelText="Close"
   showSubmitButton={false}
+  closeOnOutsideClick
 >
   <div class="flex min-w-0 flex-col gap-3 py-4">
     <section class="space-y-2">

@@ -510,10 +510,13 @@ Keep this partial body.`
 
       await mainWindow.click('[data-testid="open-workspace-button"]')
 
-      await expect(
-        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
-      ).toBeVisible()
+      const errorDialog = mainWindow.locator(
+        '[role="dialog"][aria-label="Failed to Open Workspace"]'
+      )
+      await expect(errorDialog).toBeVisible()
       expect(await testHelpers.isWorkspaceReady()).toBe(false)
+      await mainWindow.locator('.cthulhuUiDialogLayer').click({ position: { x: 2, y: 2 } })
+      await expect(errorDialog).toBeHidden()
     })
 
     test('repairs a missing workspace folder order during load', async ({
