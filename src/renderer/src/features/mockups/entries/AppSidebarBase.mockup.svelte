@@ -5,8 +5,12 @@
     ListTodo, MoreHorizontal, Plus, Settings, Trash2
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
+  import {
+    getNextAppIconTooltip,
+    INITIAL_APP_ICON_TOOLTIP
+  } from '@renderer/features/sidebar/appIconTooltip'
 
-  // Visual sandbox: only icons, the brand image, and palette tokens are shared with the app.
+  // Visual sandbox: only icons, brand details, and palette tokens are shared with the app.
   // All sample data and interactions below are local and reset when this mockup unmounts.
   type MockPrompt = { id: string; title: string; status?: string; edited?: boolean }
   type MockCategory = { id: string; title: string; prompts: MockPrompt[] }
@@ -285,8 +289,11 @@
         <img
           src={appIcon}
           alt="Cthulhu Prompt icon"
-          title="Made in R'lyeh"
+          title={INITIAL_APP_ICON_TOOLTIP}
           draggable="false"
+          onmouseenter={(event) => {
+            event.currentTarget.title = getNextAppIconTooltip(event.currentTarget.title)
+          }}
           ondragstart={(event) => event.preventDefault()}
         />
       </div>

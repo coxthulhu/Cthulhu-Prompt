@@ -85,6 +85,10 @@
     type ManageCategoriesDialogOpenOptions
   } from '../prompt-folders/ManageCategoriesDialog.svelte'
   import PromptTree from './PromptTree.svelte'
+  import {
+    getNextAppIconTooltip,
+    INITIAL_APP_ICON_TOOLTIP
+  } from './appIconTooltip'
 
   type CreatePromptFolderDialogHandle = {
     openDialog: () => void
@@ -734,8 +738,11 @@
           class="h-8 w-8 object-contain"
           src={appIcon}
           alt="Cthulhu Prompt icon"
-          title="Made in R'lyeh"
+          title={INITIAL_APP_ICON_TOOLTIP}
           draggable="false"
+          onmouseenter={(event) => {
+            event.currentTarget.title = getNextAppIconTooltip(event.currentTarget.title)
+          }}
           ondragstart={(event) => event.preventDefault()}
         />
       </div>
