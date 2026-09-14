@@ -5,12 +5,15 @@
   import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
   import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import { Bug, ExternalLink, Hash, Info, RefreshCcw, Rows3, Type } from 'lucide-svelte'
+  import { ExternalLink, Info, RefreshCcw, Settings, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -164,13 +167,34 @@
   data-testid="settings-screen"
 >
   <div class="flex w-full max-w-4xl flex-col gap-4">
-    <Title title="System Settings" />
+    <div class="settings-screen-title-block">
+      <IconCell icon={Settings} variant="title" />
+      <TitleSubtitleStack class="settings-screen-title-stack">
+        <div class="settings-screen-title-line">
+          <Title
+            class="settings-screen-title text-3xl leading-9"
+            data-testid="settings-screen-title"
+            title="System Settings"
+            variant="row"
+          />
+        </div>
+        <Subtitle
+          class="leading-5"
+          data-testid="settings-screen-subtitle"
+          text="System-wide settings stored locally on your machine."
+          wrap={false}
+        />
+      </TitleSubtitleStack>
+    </div>
 
-    <Card label="Editor & Layout">
+    <Card
+      label="Editor & Layout"
+      icon={Type}
+      subtitle="Configure prompt editor text, sizing, and line numbers."
+    >
       <div class="flex flex-col">
         <ControlRow
           testId="editor-layout-font-size-row"
-          icon={Type}
           label="Font Size"
           detail="Sets the base font size used inside the prompt editor."
         >
@@ -207,7 +231,6 @@
 
         <ControlRow
           testId="editor-layout-min-lines-row"
-          icon={Rows3}
           label="Minimum Line Count"
           detail="Sets the minimum number of visible lines in prompt editors."
         >
@@ -244,7 +267,6 @@
 
         <ControlRow
           testId="editor-layout-max-lines-row"
-          icon={Rows3}
           label="Maximum Line Count"
           detail="Sets the maximum number of visible lines before prompt editors begin scrolling."
         >
@@ -281,7 +303,6 @@
 
         <ControlRow
           testId="editor-layout-line-numbers-row"
-          icon={Hash}
           label="Show Line Numbers"
           detail="Display line numbers beside prompt text for easier review."
         >
@@ -307,11 +328,14 @@
       </div>
     </Card>
 
-    <Card label="About">
+    <Card
+      label="About"
+      icon={Info}
+      subtitle="View application information and get support."
+    >
       <div class="flex flex-col">
         <DisplayRow
           testId="about-issue-display-row"
-          icon={Bug}
           label="Report an Issue"
           detail="Report bugs, request improvements, or check whether a problem is already tracked."
         >
@@ -332,7 +356,6 @@
 
         <DisplayRow
           testId="about-version-display-row"
-          icon={Info}
           label="Current Version"
           detail="The version currently installed on this device."
         >
@@ -346,3 +369,37 @@
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>
 </section>
+
+<style>
+  .settings-screen-title-block {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
+    height: 60px;
+    margin-bottom: 20px;
+    min-width: 0;
+  }
+
+  .settings-screen-title-block :global(.settings-screen-title-stack) {
+    gap: 4px;
+  }
+
+  .settings-screen-title-line {
+    height: 36px;
+    min-width: 0;
+  }
+
+  .settings-screen-title-line :global(.settings-screen-title) {
+    color: var(--ui-normal-text);
+    font-weight: var(--font-weight-semibold);
+    /* Give Windows font glyphs room beyond the 36px line without enlarging the title row. */
+    height: 40px;
+    margin-block: -2px;
+    padding-block: 2px;
+    letter-spacing: -0.03em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+</style>

@@ -3,7 +3,7 @@
   import Row from './Row.svelte'
 
   type Props = {
-    icon: ComponentType
+    icon?: ComponentType
     label: string
     detail: string
     wrapDetail?: boolean

@@ -10,7 +10,7 @@
 
   type Props = {
     variant?: 'default' | 'compact-heading' | 'dialog-heading'
-    icon: ComponentType
+    icon?: ComponentType
     label: string
     detail?: string
     wrapDetail?: boolean
@@ -52,12 +52,14 @@
   data-trailing-layout={trailingLayout}
   data-testid={testId}
 >
-  <IconCell
-    icon={Icon}
-    {iconClass}
-    variant={variant === 'dialog-heading' ? 'title' : 'standard'}
-    data-testid={iconTestId}
-  />
+  {#if Icon}
+    <IconCell
+      icon={Icon}
+      {iconClass}
+      variant={variant === 'dialog-heading' ? 'title' : 'standard'}
+      data-testid={iconTestId}
+    />
+  {/if}
 
   <TitleSubtitleStack>
     <Title
