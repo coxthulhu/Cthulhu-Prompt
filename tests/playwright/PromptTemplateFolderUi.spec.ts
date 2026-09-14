@@ -154,6 +154,7 @@ describe('Prompt template folder UI', () => {
     /** Category toggle verifies both empty and populated child visibility. */
     const toggle = mainWindow.getByTestId('prompt-tree-template-category-toggle-button-Empty')
     await expect(action).toHaveText('Category is empty, click to add.')
+    await expect(action).toHaveCSS('font-size', '14px')
     await dragSidebarHandleBy(mainWindow, -100)
     /** The shorter label fits the narrow sidebar while retaining ellipsis styling. */
     const label = action.locator('.cthulhuUiInlineTextButtonLabel')
@@ -167,13 +168,16 @@ describe('Prompt template folder UI', () => {
       const buttonRect = button.getBoundingClientRect()
       /** Label line box must remain centered inside the full-height button. */
       const labelRect = button.querySelector('.cthulhuUiInlineTextButtonLabel')!.getBoundingClientRect()
-      /** Existing compact row that must not grow in the narrow sidebar. */
-      const rowRect = button.closest('.sidebarPromptTreeEmptyCategoryRow')!.getBoundingClientRect()
+      /** Shared compact row that must retain its indentation and narrow-sidebar height. */
+      const row = button.closest('.sidebarPromptTreeInlineActionRow')!
+      /** Shared row bounds used for alignment and overflow assertions. */
+      const rowRect = row.getBoundingClientRect()
       return {
         rowHeight: rowRect.height,
         buttonHeight: buttonRect.height,
         centerOffset: Math.abs(buttonRect.top + buttonRect.height / 2 - rowRect.top - rowRect.height / 2),
         labelCenterOffset: Math.abs(labelRect.top + labelRect.height / 2 - rowRect.top - rowRect.height / 2),
+        indentGuideCount: row.querySelectorAll('[data-indent-guide-line]').length,
         rightOverflow: buttonRect.right - rowRect.right
       }
     })
@@ -181,6 +185,7 @@ describe('Prompt template folder UI', () => {
     expect(Math.abs(layout.buttonHeight - 22)).toBeLessThanOrEqual(1)
     expect(layout.centerOffset).toBeLessThanOrEqual(1)
     expect(layout.labelCenterOffset).toBeLessThanOrEqual(1)
+    expect(layout.indentGuideCount).toBe(1)
     expect(layout.rightOverflow).toBeLessThanOrEqual(1)
 
     await toggle.click()
@@ -200,6 +205,53 @@ describe('Prompt template folder UI', () => {
     await toggle.click()
     await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toHaveCount(0)
     await toggle.click()
+    await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toBeVisible()
+  })
+
+  // Verifies the root action creates and focuses the first uncategorized template.
+  test('creates a template from the empty-folder action', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(createTemplateUiWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    /** Window and navigation helpers for the root with no templates or categories. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptTemplateFolders('Empty Templates')
+
+    /** Shared action replacing the former two-line empty indicator. */
+    const action = mainWindow.getByTestId('prompt-tree-template-empty-state')
+    await expect(action).toHaveText('No templates. Click to add.')
+    await expect(action).toHaveCSS('font-size', '14px')
+    /** Root action geometry proving compact height, left alignment, and zero indentation. */
+    const layout = await action.evaluate((button) => {
+      /** Shared row containing the left-aligned inline button. */
+      const row = button.closest('.sidebarPromptTreeInlineActionRow')!
+      /** Button bounds used to compare its left edge with the row. */
+      const buttonRect = button.getBoundingClientRect()
+      /** Full compact-row bounds. */
+      const rowRect = row.getBoundingClientRect()
+      return {
+        rowHeight: rowRect.height,
+        leftInset: buttonRect.left - rowRect.left,
+        indentGuideCount: row.querySelectorAll('[data-indent-guide-line]').length
+      }
+    })
+    expect(Math.abs(layout.rowHeight - 24)).toBeLessThanOrEqual(1)
+    expect(Math.abs(layout.leftInset - 12)).toBeLessThanOrEqual(1)
+    expect(layout.indentGuideCount).toBe(0)
+    await action.click()
+
+    /** Generated root template editor selected by its fallback title. */
+    const editor = mainWindow.locator('[data-testid^="prompt-editor-"]').filter({
+      has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Template"]`)
+    })
+    await expect(editor).toHaveCount(1)
+    /** Generated template identity used to verify focus and tree membership. */
+    const templateId = (await editor.getAttribute('data-testid'))!.replace('prompt-editor-', '')
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(templateId)))
+      .toBe(true)
     await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toBeVisible()
   })
 
@@ -627,8 +679,12 @@ describe('Prompt template folder UI', () => {
     await expect(mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')).toHaveCount(
       0
     )
-    await expect(mainWindow.locator('[data-testid="prompt-tree-template-empty-state"]')).toContainText(
-      'No templates'
+    await expect(mainWindow.locator('[data-testid="prompt-tree-template-empty-state"]')).toHaveText(
+      'No templates. Click to add.'
+    )
+    await expect(mainWindow.locator('[data-testid="prompt-tree-template-empty-state"]')).toHaveCSS(
+      'font-size',
+      '14px'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-virtual-window"]')).toContainText(
       'No templates in this folder.'

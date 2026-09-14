@@ -678,6 +678,7 @@ describe('Prompt folder prompt tree', () => {
     /** Button under the empty category, absent under the populated Primary category. */
     const action = mainWindow.getByTestId('prompt-tree-active-category-empty-action-Empty')
     await expect(action).toHaveText('Category is empty, click to add.')
+    await expect(action).toHaveCSS('font-size', '14px')
     await expect(mainWindow.getByTestId('prompt-tree-active-category-empty-action-Primary')).toHaveCount(0)
     await toggle.click()
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -706,6 +707,47 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.getByTestId('prompt-status-option-completed').click()
     await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toHaveCount(0)
     await expect(action).toBeVisible()
+  })
+
+  // Verifies the root ghost action creates, selects, and focuses uncategorized content.
+  test('creates and focuses a prompt from an empty Active status action', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(buildCompletedTreeWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH)])
+
+    /** Window and navigation helpers for a folder whose prompts are all Completed. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(COMPLETED_TREE_FOLDER_NAME)
+    await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
+
+    /** Active ghost action that creates the first uncategorized prompt. */
+    const action = mainWindow.locator('[data-testid="prompt-tree-active-empty-status"]')
+    await expect(action).toHaveText('No active prompts. Click to add.')
+    await expect(action).toHaveCSS('font-size', '14px')
+    /** Unindented shared row geometry used by a status-level action. */
+    const actionRow = action.locator('..').locator('..')
+    await expect(actionRow).toHaveClass(/sidebarPromptTreeInlineActionRow/)
+    await expect(actionRow).toHaveCSS('height', '24px')
+    await expect(actionRow.locator('.sidebarPromptTreeGutter')).toHaveCount(0)
+    await action.click()
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    /** Newly created editor proves the status action follows normal root creation. */
+    const editor = mainWindow.locator(PROMPT_EDITOR_PREFIX_SELECTOR).filter({
+      has: mainWindow.locator(`${PROMPT_TITLE_SELECTOR}[placeholder^="New Prompt"]`)
+    })
+    await expect(editor).toHaveCount(1)
+    /** Generated identity connects the focused editor with its new Active tree row. */
+    const promptId = (await editor.getAttribute('data-testid'))!.replace('prompt-editor-', '')
+    await expect
+      .poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(promptId)))
+      .toBe(true)
+    await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toBeVisible()
   })
 
   test('shows category add-to-top only in the Active tree', async ({ testSetup }) => {
@@ -875,10 +917,10 @@ describe('Prompt folder prompt tree', () => {
     await testHelpers.navigateToPromptFolders(COMPLETED_TREE_FOLDER_NAME)
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-empty-status"]')).toHaveText(
-      'No active prompts. Click to view.'
+      'No active prompts. Click to add.'
     )
     await expect(mainWindow.locator(PROMPT_TREE_HOST_SELECTOR)).toHaveCount(0)
-    await mainWindow.locator('[data-testid="prompt-tree-active-empty-status"]').click()
+    await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
     await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
       'aria-pressed',
       'true'

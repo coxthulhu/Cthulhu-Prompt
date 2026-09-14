@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { emptyItemsLabel, createFirstItemMessage } from '@renderer/common/emptyStateText'
+  import { emptyItemsLabel } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { Loader } from 'lucide-svelte'
   import {
@@ -68,8 +68,7 @@
   import DropIndicator from '../drag-drop/DropIndicator.svelte'
   import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
   import PromptTreeCategoryRow from './PromptTreeCategoryRow.svelte'
-  import PromptTreeGutter from './PromptTreeGutter.svelte'
-  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
+  import PromptTreeInlineActionRow from './PromptTreeInlineActionRow.svelte'
   import PromptTreePromptRow from './PromptTreePromptRow.svelte'
   import {
     categoryDropIndicatorTestId,
@@ -129,8 +128,8 @@
   let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let categoryTreeExpandedStates = $state<Record<string, boolean>>({})
-  /** Whether a category add-to-top action is waiting for persistence. */
-  let isCreatingCategoryContent = $state(false)
+  /** Whether a prompt-tree creation action is waiting for persistence. */
+  let isCreatingTreeContent = $state(false)
   const promptNavigation = getPromptNavigationContext()
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
@@ -561,13 +560,13 @@
     onManageCategory(categoryId)
   }
 
-  /** Creates content at the start of a category and reveals its editor. */
-  const handleCategoryAddToTop = async (categoryId: string): Promise<void> => {
-    /** Root folder that owns both the category and its new content. */
+  /** Creates content at the start of the root or a category and reveals its editor. */
+  const handleTreeContentAddToTop = async (categoryId: string | null): Promise<void> => {
+    /** Root folder that owns the destination and its new content. */
     const rootFolder = screenRootFolder
-    if (!rootFolder || isFinalMode || isCreatingCategoryContent) return
+    if (!rootFolder || isFinalMode || isCreatingTreeContent) return
 
-    isCreatingCategoryContent = true
+    isCreatingTreeContent = true
     /** Optimistic creation and its matching persistence promise. */
     const creation =
       rootFolder.kind === 'template'
@@ -581,7 +580,7 @@
     onScreenModeSelect(screenMode)
     promptNavigation.select({
       screenRootFolderId: rootFolder.id,
-      contentOwnerId: categoryId,
+      contentOwnerId: categoryId ?? rootFolder.id,
       row,
       source: 'prompt-tree-create',
       forceRequest: true,
@@ -599,7 +598,7 @@
       setPromptFolderSelectedEntryIdWithAutosave(
         workspaceId,
         rootFolder.id,
-        categoryId,
+        categoryId ?? rootFolder.id,
         promptNavigationRowToPersistedEntryId(row)
       )
     }
@@ -609,7 +608,7 @@
     }
 
     await runIpcBestEffort(() => creation.persistence)
-    isCreatingCategoryContent = false
+    isCreatingTreeContent = false
   }
 
   /** Opens this empty tree's status view while retaining the root folder selection. */
@@ -752,7 +751,12 @@
           if (categoryEntries.length === 0) {
             items.push({
               id: `${category.id}:empty-category`,
-              row: { kind: 'empty-category', category }
+              row: {
+                kind: 'empty-category',
+                category,
+                indentCount: 1,
+                isLastRow: true
+              }
             })
           }
           for (const [entryIndex, entry] of categoryEntries.entries()) {
@@ -833,12 +837,12 @@
 
 <div class="sidebarPromptTree flex min-h-0 flex-1 flex-col">
   {#if folderListState === 'loading'}
-    <div class="sidebarPromptTreeStatus flex items-center gap-2 px-2 text-xs">
+    <div class="sidebarPromptTreeStatus flex items-center gap-2 px-2 text-sm">
       <Loader class="size-4 animate-spin" />
       Loading folders...
     </div>
   {:else if folderListState === 'empty'}
-    <div class="sidebarPromptTreeStatus px-2 text-xs">Create a folder to get started.</div>
+    <div class="sidebarPromptTreeStatus px-2 text-sm">Create a folder to get started.</div>
   {:else if folderListState === 'ready'}
     {#if screenRootFolder?.kind === 'prompt' && isSelectedStatusTreeEmpty}
       <PromptDropTarget
@@ -853,16 +857,11 @@
         class="relative"
       >
         {#snippet children({ isOver, isBlocked, edge })}
-          <button
-            type="button"
-            class="sidebarPromptTreeEmptyStatus text-xs leading-4.5"
-            data-testid={`prompt-tree-${screenMode}-empty-status`}
-            onclick={handleEmptyStatusSelect}
-          >
-            <span class="sidebarPromptTreeEmptyStatusLabel">
-              {emptyItemsLabel('prompt', statusGroup.label)}. Click to view.
-            </span>
-          </button>
+          <PromptTreeInlineActionRow
+            text={`${emptyItemsLabel('prompt', statusGroup.label)}. Click to ${isFinalMode ? 'view' : 'add'}.`}
+            testId={`prompt-tree-${screenMode}-empty-status`}
+            onclick={isFinalMode ? handleEmptyStatusSelect : () => handleTreeContentAddToTop(null)}
+          />
           {#if isOver && edge}
             <DropIndicator
               testId={`prompt-tree-${screenMode}-empty-drop-indicator`}
@@ -902,7 +901,7 @@
       indentCount={props.row.indentCount}
       endsVisibleBranch={props.row.endsVisibleBranch}
       contentLabel={screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'}
-      isAddToTopDisabled={isCreatingCategoryContent}
+      isAddToTopDisabled={isCreatingTreeContent}
       getCategoryContentDroppableOptions={isFinalMode
         ? undefined
         : () =>
@@ -925,7 +924,7 @@
       onCategoryExpandedChange={handleCategoryExpandedChange}
       onCategoryOpen={handleCategoryOpen}
       onCategorySettingsOpen={handleCategorySettingsOpen}
-      onCategoryAddToTop={isFinalMode ? undefined : handleCategoryAddToTop}
+      onCategoryAddToTop={isFinalMode ? undefined : handleTreeContentAddToTop}
     />
   {/key}
 {/snippet}
@@ -983,17 +982,13 @@
 
 <!-- Offers the category's existing creation action with the compact inline-row appearance. -->
 {#snippet emptyCategoryRow({ row })}
-  <div class="sidebarPromptTreeEmptyCategoryRow">
-    <PromptTreeGutter isLastRow />
-    <div class="sidebarPromptTreeEmptyCategoryButtonWrap">
-      <InlineTextButton
-        text="Category is empty, click to add."
-        testId={categoryEmptyActionTestId(row.category, testIdGroup)}
-        class="sidebarPromptTreeEmptyCategoryButton"
-        onclick={() => handleCategoryAddToTop(row.category.id)}
-      />
-    </div>
-  </div>
+  <PromptTreeInlineActionRow
+    text="Category is empty, click to add."
+    indentCount={row.indentCount}
+    isLastRow={row.isLastRow}
+    testId={categoryEmptyActionTestId(row.category, testIdGroup)}
+    onclick={() => handleTreeContentAddToTop(row.category.id)}
+  />
 {/snippet}
 
 {#snippet emptyStateRow()}
@@ -1009,13 +1004,11 @@
     class="relative h-full"
   >
     {#snippet children({ isOver, isBlocked, edge })}
-      <div
-        class="sidebarPromptTreeEmptyState px-2 py-2 text-center"
-        data-testid={`prompt-tree-${testIdGroup}-empty-state`}
-      >
-        <p class="sidebarPromptTreeEmptyTitle text-sm">{emptyItemsLabel('template')}</p>
-        <p class="mt-2">{createFirstItemMessage('template')}</p>
-      </div>
+      <PromptTreeInlineActionRow
+        text={`${emptyItemsLabel('template')}. Click to add.`}
+        testId={`prompt-tree-${testIdGroup}-empty-state`}
+        onclick={() => handleTreeContentAddToTop(null)}
+      />
       {#if isOver && edge}
         <DropIndicator
           testId={`prompt-tree-${testIdGroup}-empty-drop-indicator`}
@@ -1109,31 +1102,3 @@
     {/if}
   {/if}
 </div>
-
-<style>
-  /* Empty-state button text is explicitly excluded from default line heights. */
-  .sidebarPromptTreeEmptyStatus {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: var(--ui-muted-text);
-    cursor: pointer;
-    display: flex;
-    height: 32px;
-    padding: 0 16px;
-    text-align: left;
-    width: 100%;
-  }
-
-  .sidebarPromptTreeEmptyStatusLabel {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .sidebarPromptTreeEmptyStatus:hover,
-  .sidebarPromptTreeEmptyStatus:focus-visible {
-    color: var(--ui-normal-text);
-  }
-</style>

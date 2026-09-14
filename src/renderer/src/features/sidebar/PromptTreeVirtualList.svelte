@@ -32,6 +32,10 @@
         kind: 'empty-category'
         /** Category that receives the new prompt or template. */
         category: Category
+        /** Number of prompt-tree guide levels before the action. */
+        indentCount: number
+        /** Whether the category branch ends with this action. */
+        isLastRow: boolean
       }
     | {
         kind: 'empty-state'
@@ -110,6 +114,8 @@
   }: Props = $props()
 
   const PROMPT_TREE_ROW_HEIGHT_PX = 32
+  /** Shared compact height for inline prompt-tree text actions. */
+  const PROMPT_TREE_INLINE_ACTION_ROW_HEIGHT_PX = 24
   const PROMPT_TREE_BOTTOM_SPACER_HEIGHT_PX = 16
   const rowRegistry = $derived.by(() =>
     defineVirtualWindowRowRegistry<PromptTreeRow>({
@@ -132,11 +138,11 @@
       },
       // Preserve the compact action's 22px content height and 1px padding on each side.
       'empty-category': {
-        estimateHeight: () => 24,
+        estimateHeight: () => PROMPT_TREE_INLINE_ACTION_ROW_HEIGHT_PX,
         snippet: emptyCategoryRow
       },
       'empty-state': {
-        estimateHeight: () => 86,
+        estimateHeight: () => PROMPT_TREE_INLINE_ACTION_ROW_HEIGHT_PX,
         snippet: emptyStateRow
       },
       'bottom-spacer': {

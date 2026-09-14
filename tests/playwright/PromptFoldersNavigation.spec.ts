@@ -901,6 +901,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
       'Create Folder'
     )
+    await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveText(
+      'Create a folder to get started.'
+    )
+    await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCSS('font-size', '14px')
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toHaveCount(0)
     await mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]').click()
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
@@ -1239,7 +1243,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(PROMPT_FOLDER_HOST)).toBeVisible()
     await expect(mainWindow.locator(PROMPT_TREE_HOST)).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-empty-status"]')).toHaveText(
-      'No active prompts. Click to view.'
+      'No active prompts. Click to add.'
     )
     // The selected root folder is represented by the root action, not a duplicate category row.
     await expect(

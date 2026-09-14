@@ -74,6 +74,41 @@ const selectStatus = async (page: Page, promptId: string, status: string) => {
 }
 
 describe('Backlog prompts', () => {
+  // Verifies an empty Backlog action creates content in Backlog rather than the default Active group.
+  test('creates a Backlog prompt from its empty status action', async ({ testSetup }) => {
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{
+      folderName: 'Work',
+      displayName: 'Work',
+      promptFolderId: 'backlog-root',
+      prompts: [{ id: 'active-prompt', title: 'Active prompt', promptText: 'Active work' }]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    /** Window and navigation helpers for a root with no Backlog prompts or categories. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Work')
+
+    /** Backlog ghost action whose workflow identity must drive prompt creation. */
+    const action = mainWindow.locator('[data-testid="prompt-tree-backlog-empty-status"]')
+    await expect(action).toHaveText('No backlog prompts. Click to add.')
+    await action.click()
+
+    await expect(mainWindow.locator('[data-testid="prompt-folder-backlog-filter"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    /** Newly created Backlog editor selected by its workflow status. */
+    const editor = mainWindow.locator('[data-testid^="prompt-editor-"]').filter({
+      has: mainWindow.locator('[data-testid="prompt-status-pill"]', { hasText: 'Backlog' })
+    })
+    await expect(editor).toHaveCount(1)
+    /** Generated identity connects the editor with its replacement Backlog tree row. */
+    const promptId = (await editor.getAttribute('data-testid'))!.replace('prompt-editor-', '')
+    await expect(mainWindow.getByTestId(`prompt-tree-backlog-prompt-${promptId}`)).toBeVisible()
+  })
+
   test('fills Active after collapsing Backlog from an equal sidebar split', async ({ testSetup }) => {
     await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{
       folderName: 'Work',
