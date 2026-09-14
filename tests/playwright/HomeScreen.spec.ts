@@ -629,7 +629,7 @@ Keep this partial body.`
       )
     })
 
-    test('adds example prompts and a template when setting up a new workspace', async ({
+    test('adds example prompts and templates when setting up a new workspace', async ({
       testSetup
     }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -672,11 +672,34 @@ Keep this partial body.`
       const secondPrompt = await testHelpers.verifyPromptVisible(
         'Example: Define Example Prompts in Files'
       )
+      const thirdPrompt = await testHelpers.verifyPromptVisible(
+        'Example: Investigate Category Persistence Bug'
+      )
       expect(firstPrompt.found).toBe(true)
       expect(secondPrompt.found).toBe(true)
+      expect(thirdPrompt.found).toBe(true)
+
+      const getTemplateLabel = (promptTitle: string): Promise<string | null> =>
+        mainWindow.locator('[data-testid="prompt-title"]').evaluateAll((titleInputs, title) => {
+          const titleInput = titleInputs.find(
+            (element) => (element as HTMLInputElement).value === title
+          )
+          return (
+            titleInput
+              ?.closest('[data-testid^="prompt-editor-"]')
+              ?.querySelector('.prompt-editor-metadata-folder')
+              ?.textContent?.trim() ?? null
+          )
+        }, promptTitle)
+      await expect
+        .poll(() => getTemplateLabel('Example: Define Example Prompts in Files'))
+        .toBe('Example: Q&A with Implementation & Testing')
+      await expect
+        .poll(() => getTemplateLabel('Example: Investigate Category Persistence Bug'))
+        .toBe('Example: Bug Fix Template')
 
       const screenInfo = await testHelpers.getPromptFolderScreenInfo()
-      expect(screenInfo.promptCount).toBe(2)
+      expect(screenInfo.promptCount).toBe(3)
 
       const categoryToggles = mainWindow.locator(
         '[data-testid^="prompt-tree-active-category-toggle-button-"]'
@@ -692,11 +715,18 @@ Keep this partial body.`
         '[data-testid^="prompt-tree-active-prompt-"]',
         { hasText: 'Example: Define Example Prompts in Files' }
       )
+      const categoryPersistencePromptTreeRow = mainWindow.locator(
+        '[data-testid^="prompt-tree-active-prompt-"]',
+        { hasText: 'Example: Investigate Category Persistence Bug' }
+      )
       await expect(birthdayPromptTreeRow).toBeVisible()
       await expect(bundledFilesPromptTreeRow).toBeVisible()
+      await expect(categoryPersistencePromptTreeRow).toBeVisible()
       await categoryToggles.nth(0).click()
       await expect(birthdayPromptTreeRow).toHaveCount(0)
       await expect(bundledFilesPromptTreeRow).toHaveCount(0)
+      await expect(categoryPersistencePromptTreeRow).toBeVisible()
+      await categoryToggles.nth(1).click()
       await expect(mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]')).toHaveCount(0)
 
       await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
@@ -716,14 +746,20 @@ Keep this partial body.`
       ).toContainText('My Templates')
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
-      ).toContainText('1 template')
+      ).toContainText('2 templates')
       await mainWindow
         .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
         .nth(0)
         .click()
-      const exampleTemplate = await testHelpers.verifyPromptVisible('Example Template')
-      expect(exampleTemplate.found).toBe(true)
-      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(1)
+      const exampleFeatureTemplate = await testHelpers.verifyPromptVisible(
+        'Example: Q&A with Implementation & Testing'
+      )
+      const exampleBugFixTemplate = await testHelpers.verifyPromptVisible(
+        'Example: Bug Fix Template'
+      )
+      expect(exampleFeatureTemplate.found).toBe(true)
+      expect(exampleBugFixTemplate.found).toBe(true)
+      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(2)
     })
 
     test('creates a blank My Prompts folder when examples are disabled', async ({ testSetup }) => {

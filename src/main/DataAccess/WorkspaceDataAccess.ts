@@ -15,7 +15,9 @@ import {
 } from '../Persistence/PromptFrontmatter'
 import example1PromptSource from '../BundledPrompts/Example1.md?raw'
 import example2PromptSource from '../BundledPrompts/Example2.md?raw'
-import exampleTemplateSource from '../BundledPrompts/ExampleTemplate.md?raw'
+import example3PromptSource from '../BundledPrompts/Example3.md?raw'
+import exampleBugFixTemplateSource from '../BundledPrompts/ExampleBugFixTemplate.md?raw'
+import exampleFeatureTemplateSource from '../BundledPrompts/ExampleFeatureTemplate.md?raw'
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
@@ -41,10 +43,24 @@ const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
   'Features & Improvements',
   'Bug Fixes'
 ] as const
+type BundledTemplateKey = 'feature' | 'bugFix'
 // Ordered bundled prompt sources used when initializing a workspace with examples.
-const BUNDLED_PROMPT_SOURCES = [example1PromptSource, example2PromptSource]
+const BUNDLED_PROMPT_SOURCES: Array<{
+  source: string
+  templateKey?: BundledTemplateKey
+}> = [
+  { source: example1PromptSource },
+  { source: example2PromptSource, templateKey: 'feature' },
+  { source: example3PromptSource, templateKey: 'bugFix' }
+]
 // Ordered bundled template sources used when initializing a workspace with examples.
-const BUNDLED_TEMPLATE_SOURCES = [exampleTemplateSource]
+const BUNDLED_TEMPLATE_SOURCES: Array<{
+  key: BundledTemplateKey
+  source: string
+}> = [
+  { key: 'feature', source: exampleFeatureTemplateSource },
+  { key: 'bugFix', source: exampleBugFixTemplateSource }
+]
 // Default on-disk directory name for the template folder created with each workspace.
 const DEFAULT_TEMPLATE_FOLDER_NAME = 'MyTemplates'
 // Default display name for the template folder created with each workspace.
@@ -101,7 +117,11 @@ const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> 
   )
 }
 
-const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: boolean): string => {
+const writeMyPromptsFolder = (
+  workspacePath: string,
+  includeExamplePrompts: boolean,
+  templateIdByKey: ReadonlyMap<BundledTemplateKey, string>
+): string => {
   const fs = getFs()
   const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_FOLDER_NAME)
   // Canonical directory that owns active prompts and root ordering.
@@ -139,12 +159,16 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
     exampleCategories.map((category) => [category.displayName, category.id])
   )
   const examplePrompts = includeExamplePrompts
-    ? BUNDLED_PROMPT_SOURCES.map((source) => {
+    ? BUNDLED_PROMPT_SOURCES.map(({ source, templateKey }) => {
         // Parsed bundled document that supplies the prompt's title and body.
         const bundledPrompt = matter(source, {})
         const categoryId = categoryIdByDisplayName.get(bundledPrompt.data.category)
         if (!categoryId) {
           throw new Error(`Unknown bundled prompt category: ${bundledPrompt.data.category}`)
+        }
+        const templateId = templateKey ? templateIdByKey.get(templateKey) : undefined
+        if (templateKey && !templateId) {
+          throw new Error(`Unknown bundled prompt template: ${templateKey}`)
         }
 
         return {
@@ -155,6 +179,7 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
           modifiedAt: now,
           status: PromptStatus.Todo,
           category: categoryId,
+          ...(templateId ? { templates: [{ id: templateId }] } : {}),
           promptText: bundledPrompt.content.replace(/\r?\n$/, '')
         }
       })
@@ -232,10 +257,15 @@ const writeMyPromptsFolder = (workspacePath: string, includeExamplePrompts: bool
 }
 
 /** Creates the default template folder and returns its persisted folder ID. */
+type WriteMyTemplatesFolderResult = {
+  folderId: string
+  templateIdByKey: Map<BundledTemplateKey, string>
+}
+
 const writeMyTemplatesFolder = (
   workspacePath: string,
   includeExampleTemplates: boolean
-): string => {
+): WriteMyTemplatesFolderResult => {
   // Filesystem used to persist the default template folder.
   const fs = getFs()
   // Root path for the default template folder.
@@ -248,10 +278,11 @@ const writeMyTemplatesFolder = (
   const templateFolderId = compactGuid(randomUUID())
   const now = getCurrentIsoSecondTimestamp()
   const templates = includeExampleTemplates
-    ? BUNDLED_TEMPLATE_SOURCES.map((source) => {
+    ? BUNDLED_TEMPLATE_SOURCES.map(({ key, source }) => {
         const bundledTemplate = matter(source, {})
 
         return {
+          key,
           id: compactGuid(randomUUID()),
           title: bundledTemplate.data.title as string,
           fallbackTitle: '',
@@ -321,7 +352,10 @@ const writeMyTemplatesFolder = (
     'utf8'
   )
 
-  return templateFolderId
+  return {
+    folderId: templateFolderId,
+    templateIdByKey: new Map(templates.map((template) => [template.key, template.id]))
+  }
 }
 
 const validateNewWorkspacePath = (workspacePath: string): CreateWorkspaceResult | null => {
@@ -365,10 +399,17 @@ export const createWorkspace = async (
     fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
-    /** Initial task-prompt root persisted in prompt-folder order. */
-    const promptFolderId = writeMyPromptsFolder(workspacePath, includeExamplePrompts)
     /** Initial prompt-template root persisted in template-folder order. */
-    const templateFolderId = writeMyTemplatesFolder(workspacePath, includeExamplePrompts)
+    const { folderId: templateFolderId, templateIdByKey } = writeMyTemplatesFolder(
+      workspacePath,
+      includeExamplePrompts
+    )
+    /** Initial task-prompt root persisted in prompt-folder order. */
+    const promptFolderId = writeMyPromptsFolder(
+      workspacePath,
+      includeExamplePrompts,
+      templateIdByKey
+    )
     writeWorkspaceFolderOrderFile(workspacePath, 'prompt', [promptFolderId])
     writeWorkspaceFolderOrderFile(workspacePath, 'template', [templateFolderId])
 
