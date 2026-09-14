@@ -108,11 +108,13 @@ describe('Prompt folder storage', () => {
       '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
     await expect(taskDialog).toBeVisible()
-    await expect(taskDialog).toContainText('A folder for one-time tasks the AI will accomplish.')
+    await expect(taskDialog).toContainText(
+      'Organize prompts that describe individual tasks for an AI to complete.'
+    )
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
     ).toHaveCount(0)
-    await expect(mainWindow.getByLabel('Task Prompt Folder Name')).toBeVisible()
+    await expect(mainWindow.getByLabel('Folder Name')).toBeVisible()
     await mainWindow.locator(FOLDER_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(FOLDER_CREATE_BUTTON).click()
 
@@ -170,7 +172,9 @@ describe('Prompt folder storage', () => {
     const templateDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Prompt Template Folder"]'
     )
-    await expect(templateDialog).toContainText('A folder for workflows the AI will follow.')
+    await expect(templateDialog).toContainText(
+      'Organize reusable prompts that guide an AI through repeatable work.'
+    )
     await expect(
       mainWindow.locator('[data-testid="create-prompt-folder-type-selector"]')
     ).toHaveCount(0)

@@ -1,11 +1,12 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import type { ComponentType, Snippet } from 'svelte'
+  import type { ComponentType } from 'svelte'
   import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
+  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
   import { FolderPlus } from 'lucide-svelte'
   import type { PromptFolder } from '@shared/PromptFolder'
   import {
@@ -36,7 +37,6 @@
     duplicatePromptFolderId = null,
     failureMessage,
     icon = FolderPlus,
-    beforeRows,
     onsubmit
   } = $props<{
     isWorkspaceReady: boolean
@@ -58,7 +58,6 @@
     duplicatePromptFolderId?: string | null
     failureMessage: string
     icon?: ComponentType
-    beforeRows?: Snippet
     onsubmit: SubmitPromptFolderName
   }>()
 
@@ -104,6 +103,7 @@
   const errorMessage = $derived(
     submissionError ?? (!isSubmitting && hasInteractedWithInput ? validationMessage : null)
   )
+  const inputHelpId = $derived(`${inputTestId}-help`)
   const isValid = $derived(
     Boolean(
       !validationMessage &&
@@ -171,45 +171,46 @@
   oncancel={handleCancel}
   onsubmit={handleSubmit}
 >
-  <div class="cthulhuPromptFolderNameDialogRows flex min-w-0 flex-col">
-    {#if beforeRows}
-      {@render beforeRows()}
-      <Separator />
-    {/if}
-
-    <ControlRow {icon} label={rowLabel} detail={rowDetail}>
-      {#snippet control()}
-        <FloatingValidationMessage message={errorMessage} textTestId={errorTestId}>
-          <TextInput
-            bind:ref={inputElement}
-            id={inputTestId}
-            class="w-[220px]"
-            data-testid={inputTestId}
-            placeholder="Name..."
-            bind:value={displayName}
-            aria-label={rowLabel}
-            aria-invalid={errorMessage ? 'true' : undefined}
-            disabled={isSubmitting}
-            oninput={() => {
-              hasInteractedWithInput = true
-              submissionError = null
-            }}
-            onkeydown={(event) => {
-              if (event.key === 'Enter' && isValid) {
-                handleSubmit()
-              } else if (event.key === 'Escape') {
-                handleCancel()
-              }
-            }}
-          />
-        </FloatingValidationMessage>
-      {/snippet}
-    </ControlRow>
+  <div class="cthulhuPromptFolderNameDialogFields grid min-w-0 gap-[17px] px-4 py-4">
+    <div data-testid="prompt-folder-name-field">
+      <TitleSubtitleStack class="mb-[7px]">
+        <div class="flex items-center gap-1">
+          <Title title={rowLabel} variant="small" />
+          <span class="text-sm leading-5 text-[var(--ui-muted-text)]">*</span>
+        </div>
+        <Subtitle id={inputHelpId} text={rowDetail} />
+      </TitleSubtitleStack>
+      <FloatingValidationMessage message={errorMessage} textTestId={errorTestId}>
+        <TextInput
+          bind:ref={inputElement}
+          id={inputTestId}
+          class="w-full"
+          data-testid={inputTestId}
+          placeholder="Name..."
+          bind:value={displayName}
+          aria-label={rowLabel}
+          aria-invalid={errorMessage ? 'true' : undefined}
+          aria-describedby={inputHelpId}
+          disabled={isSubmitting}
+          oninput={() => {
+            hasInteractedWithInput = true
+            submissionError = null
+          }}
+          onkeydown={(event) => {
+            if (event.key === 'Enter' && isValid) {
+              handleSubmit()
+            } else if (event.key === 'Escape') {
+              handleCancel()
+            }
+          }}
+        />
+      </FloatingValidationMessage>
+    </div>
   </div>
 </Dialog>
 
 <style>
-  .cthulhuPromptFolderNameDialogRows {
+  .cthulhuPromptFolderNameDialogFields {
     overflow: visible;
   }
 </style>

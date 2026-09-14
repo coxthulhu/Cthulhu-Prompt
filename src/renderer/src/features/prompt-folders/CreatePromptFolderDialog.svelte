@@ -59,20 +59,17 @@
     ? 'Create Prompt Template Folder'
     : 'Create Task Prompt Folder'}
   subtitle={kind === 'template'
-    ? 'A folder for workflows the AI will follow.'
-    : 'A folder for one-time tasks the AI will accomplish.'}
+    ? 'Organize reusable prompts that guide an AI through repeatable work.'
+    : 'Organize prompts that describe individual tasks for an AI to complete.'}
   submitText="Create Folder"
   submittingText="Creating..."
   submitTestId="create-prompt-folder-button"
   inputTestId="create-prompt-folder-name-input"
   errorTestId="create-prompt-folder-name-error"
-  dialogClass="w-full max-w-[600px]"
-  rowLabel={kind === 'template'
-    ? 'Prompt Template Folder Name'
-    : 'Task Prompt Folder Name'}
+  dialogClass="w-full max-w-[640px]"
   rowDetail={kind === 'template'
-    ? 'Name the new prompt template folder.'
-    : 'Name the new task prompt folder.'}
+    ? 'Required. Names must be unique among prompt template folders.'
+    : 'Required. Names must be unique among task prompt folders.'}
   failureMessage={kind === 'template'
     ? 'Failed to create prompt template folder. Please try again.'
     : 'Failed to create task prompt folder. Please try again.'}

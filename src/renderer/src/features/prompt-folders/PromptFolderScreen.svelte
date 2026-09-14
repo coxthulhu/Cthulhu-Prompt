@@ -322,14 +322,15 @@
   isPromptFolderListLoading={false}
   icon={Pencil}
   title="Rename Folder"
-  subtitle="Choose a new name for this folder."
+  subtitle="Change the name shown in the app and the folder name on disk."
   submitText="Rename Folder"
   submittingText="Renaming..."
   submitTestId="rename-prompt-folder-button"
   inputTestId="rename-prompt-folder-name-input"
   errorTestId="rename-prompt-folder-name-error"
+  dialogClass="w-full max-w-[600px]"
   rowLabel="Folder Name"
-  rowDetail="Rename this folder."
+  rowDetail="Required. Names must be unique among folders of the same type."
   initialDisplayName={renamePromptFolderTarget?.displayName ?? ''}
   unchangedDisplayName={renamePromptFolderTarget?.displayName ?? null}
   unchangedFolderName={renamePromptFolderTarget?.folderName ?? null}

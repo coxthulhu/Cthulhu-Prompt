@@ -879,13 +879,33 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
     await expect(createPromptFolderDialog).toBeVisible()
+    const createDialogBox = await createPromptFolderDialog.boundingBox()
+    expect(createDialogBox).not.toBeNull()
+    expect(Math.abs(createDialogBox!.width - 640)).toBeLessThanOrEqual(2)
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-header-icon"]')
     ).toBeVisible()
     await expect(
       createPromptFolderDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('A folder for one-time tasks the AI will accomplish.')
-    await expect(createPromptFolderDialog.getByLabel('Task Prompt Folder Name')).toBeVisible()
+    ).toHaveText('Organize prompts that describe individual tasks for an AI to complete.')
+    const nameField = createPromptFolderDialog.locator(
+      '[data-testid="prompt-folder-name-field"]'
+    )
+    const nameInput = createPromptFolderDialog.getByLabel('Folder Name')
+    await expect(nameField.locator('.cthulhuUiTitle')).toHaveText('Folder Name')
+    await expect(nameField.locator('.cthulhuUiSubtitle')).toHaveText(
+      'Required. Names must be unique among task prompt folders.'
+    )
+    await expect(nameInput).toHaveAttribute(
+      'aria-describedby',
+      'create-prompt-folder-name-input-help'
+    )
+    const nameFieldBox = await nameField.boundingBox()
+    const nameInputBox = await nameInput.boundingBox()
+    expect(nameFieldBox).not.toBeNull()
+    expect(nameInputBox).not.toBeNull()
+    expect(nameInputBox!.y).toBeGreaterThan(nameFieldBox!.y)
+    expect(Math.abs(nameInputBox!.width - nameFieldBox!.width)).toBeLessThanOrEqual(2)
   })
 
   test('shows add prompt folder button when the workspace has no prompt folders', async ({
@@ -1304,7 +1324,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Create Prompt Template Folder"]'
     )
     await expect(createTemplateFolderDialog).toBeVisible()
-    await expect(createTemplateFolderDialog.getByLabel('Prompt Template Folder Name')).toBeVisible()
+    await expect(createTemplateFolderDialog.getByLabel('Folder Name')).toBeVisible()
     await mainWindow.locator('[data-testid="create-prompt-folder-name-input"]').fill('Examples')
     await mainWindow.locator('[data-testid="create-prompt-folder-button"]').click()
 
@@ -1416,10 +1436,15 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(Math.abs(rootHeaderGeometry!.filterRightInset)).toBeLessThanOrEqual(1)
     await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
 
+    const renameDialog = mainWindow.getByRole('dialog', { name: 'Rename Folder' })
     const nameInput = mainWindow.locator('[data-testid="rename-prompt-folder-name-input"]')
     const renameButton = mainWindow.locator('[data-testid="rename-prompt-folder-button"]')
     const errorMessage = mainWindow.locator('[data-testid="rename-prompt-folder-name-error"]')
 
+    await expect(renameDialog).toBeVisible()
+    const renameDialogBox = await renameDialog.boundingBox()
+    expect(renameDialogBox).not.toBeNull()
+    expect(Math.abs(renameDialogBox!.width - 600)).toBeLessThanOrEqual(2)
     await expect(nameInput).toBeVisible()
     await expect(nameInput).toBeFocused()
     await expect(nameInput).toHaveValue('Development Tools')
