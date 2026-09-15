@@ -29,8 +29,7 @@ export default [
     languageOptions: {
       parser: svelte.parser,
       parserOptions: {
-        projectService: true,
-        extraFileExtensions: ['.svelte'],
+        lib: ['es2024', 'dom'],
         parser: tseslint.parser
       },
       globals: {
@@ -47,9 +46,6 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
       parser: tseslint.parser,
-      parserOptions: {
-        projectService: true
-      },
       globals: {
         // Browser globals that should be readonly
         window: 'readonly',
