@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import { Pencil, Search } from 'lucide-svelte'
-  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isPromptFolderEmpty } from '@renderer/data/Collections/PromptFolderEntries'

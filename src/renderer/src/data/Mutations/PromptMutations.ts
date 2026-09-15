@@ -1,10 +1,10 @@
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import {
   planCreatePromptDomainMutation,
   planPromptUpdate,
   type CreatePromptDomainCommand,
   type UpdatePromptDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import {
   isPromptFull,
   getPromptStatusFolderDefinition,
@@ -14,14 +14,14 @@ import {
   type PromptCategoryOrderPlacement,
   type PromptFull,
   type PromptPersisted
-} from '@shared/Prompt'
-import { planSetPromptStatusDomainMutation } from '@shared/PromptDomainMutations'
-import { promptCollection } from '../Collections/PromptCollection'
+} from '@shared/domain/prompt/Prompt'
+import { planSetPromptStatusDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
+import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import {
   markPromptClientStateEdited
-} from '../Collections/PromptClientStateCollection'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
+} from '@renderer/data/Collections/PromptClientStateCollection'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (prompt: PromptFull): PromptPersisted => ({

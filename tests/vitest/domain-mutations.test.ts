@@ -4,7 +4,7 @@ import type {
   DomainEntityType,
   DomainPlannerEntityMap,
   DomainState
-} from '@shared/DomainChanges'
+} from '@shared/domain/DomainChanges'
 import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
@@ -12,7 +12,7 @@ import {
   planSaveCategoriesDomainMutation,
   planSetCategoryDescriptionDomainMutation,
   planUpdateCategoryDetailsDomainMutation
-} from '@shared/CategoryDomainMutations'
+} from '@shared/domain/category/CategoryDomainMutations'
 import {
   planCreatePromptDomainMutation,
   planCreatePromptTemplateDomainMutation,
@@ -20,21 +20,21 @@ import {
   planPromptTemplateUpdate,
   planPromptUpdate,
   planPromptTemplateMove
-} from '@shared/MarkdownContentDomainMutations'
-import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
-import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
   type PromptFolder
-} from '@shared/PromptFolder'
+} from '@shared/domain/prompt-folder/PromptFolder'
 import {
   planCreatePromptFolderDomainMutation,
   planMovePromptFolderDomainMutation,
   planRenamePromptFolderDomainMutation
-} from '@shared/PromptFolderDomainMutations'
-import { planSetPromptStatusDomainMutation } from '@shared/PromptDomainMutations'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
-import { planSetSystemSettingsDomainMutation } from '@shared/SystemSettingsDomainMutations'
+} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+import { planSetPromptStatusDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
+import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
+import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
 
 /** Complete in-memory entity graph used by shared planner tests. */
 type TestDomainEntities = {

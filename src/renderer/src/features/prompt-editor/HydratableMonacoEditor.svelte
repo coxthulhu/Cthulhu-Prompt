@@ -3,7 +3,7 @@
   import type { monaco } from '@renderer/common/Monaco'
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
   import type { PromptEditorSizingConfig } from './promptEditorSizing'
   import {

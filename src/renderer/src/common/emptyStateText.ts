@@ -1,4 +1,4 @@
-import type { PromptFolderContentKind } from '@shared/PromptFolder'
+import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
 
 /** Compact sentence-case labels for empty sidebar content. */
 export const emptyItemsLabel = (

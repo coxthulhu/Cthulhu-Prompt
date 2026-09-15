@@ -1,4 +1,4 @@
-import type { AuthoritativeSnapshot } from '@shared/AuthoritativeSnapshot'
+import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {

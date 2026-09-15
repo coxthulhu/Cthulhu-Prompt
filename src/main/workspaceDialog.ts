@@ -1,6 +1,6 @@
 import { ipcMain, shell } from 'electron'
 import * as path from 'path'
-import type { WorkspaceFolderStatus } from '@shared/Workspace'
+import type { WorkspaceFolderStatus } from '@shared/domain/workspace/Workspace'
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,

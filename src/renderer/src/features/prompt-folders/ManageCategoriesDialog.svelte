@@ -17,20 +17,20 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { Check, Folder, FolderCog } from 'lucide-svelte'
-  import type { Category } from '@shared/Category'
+  import type { Category } from '@shared/domain/category/Category'
   import {
     hasCategoryDisplayNameConflict,
     normalizeCategoryDisplayName,
     normalizeCategoryShortDescription
-  } from '@shared/Category'
-  import { compactGuid } from '@shared/compactGuid'
-  import type { PromptFolderContentKind } from '@shared/PromptFolder'
-  import type { Prompt } from '@shared/Prompt'
-  import type { PromptTemplate } from '@shared/PromptTemplate'
-  import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
+  } from '@shared/domain/category/Category'
+  import { compactGuid } from '@shared/utilities/compactGuid'
+  import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { Prompt } from '@shared/domain/prompt/Prompt'
+  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
+  import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import ManagementSelectorPanel, {
     type ManagementSelectorPanelItem
-  } from '@renderer/common/cthulhu-ui/ManagementSelectorPanel.svelte'
+  } from '@renderer/common/cthulhu-ui/selectors/ManagementSelectorPanel.svelte'
   import { promptCollection } from '@renderer/data/Collections/PromptCollection'
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import CategoryManagementEditor from './CategoryManagementEditor.svelte'

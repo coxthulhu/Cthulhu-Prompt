@@ -1,12 +1,12 @@
-import type { PromptFolderKind } from '@shared/PromptFolder'
-import { compactGuid } from '@shared/compactGuid'
+import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { compactGuid } from '@shared/utilities/compactGuid'
 import {
   planCreatePromptFolderDomainMutation,
   planRenamePromptFolderDomainMutation
-} from '@shared/PromptFolderDomainMutations'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
+} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
 
 export const createPromptFolder = async (
   workspaceId: string,

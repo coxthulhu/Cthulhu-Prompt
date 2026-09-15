@@ -1,8 +1,8 @@
 import { Archive, Bookmark, Check, CircleCheckBig, ListTodo } from 'lucide-svelte'
-import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type Prompt } from '@shared/Prompt'
+import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type Prompt } from '@shared/domain/prompt/Prompt'
 
-import type { PromptFolder } from '@shared/PromptFolder'
-import { getPromptStatusFolderContentIds } from '@shared/MarkdownContent'
+import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 
 /** Renderer icons kept outside the shared workflow definitions. */
 const groupIcons = {

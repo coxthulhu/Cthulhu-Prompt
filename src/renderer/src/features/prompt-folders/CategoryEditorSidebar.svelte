@@ -1,12 +1,12 @@
 <script lang="ts">
   import { GripVertical } from 'lucide-svelte'
   import type { Action } from 'svelte/action'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import { draggable, type DraggableOptions } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import { draggable, type DraggableOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
     CategoryDropPayload
-  } from '@renderer/features/drag-drop/promptHandleDrag'
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
 
   /** Category drag-handle inputs supplied by the folder-style category row. */
   type Props = {

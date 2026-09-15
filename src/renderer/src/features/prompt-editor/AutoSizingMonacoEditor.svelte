@@ -4,7 +4,7 @@
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { FindController } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
   import { FindModelBoundToEditorModel } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { registerMonacoEditor, unregisterMonacoEditor } from './MonacoEditorRegistry'
   import {
     registerMonacoViewStateSaver,

@@ -1,0 +1,771 @@
+import Database from 'better-sqlite3'
+import { app } from 'electron'
+import * as path from 'path'
+import { getFs } from '../../fs-provider'
+import { isPlaywrightEnvironment } from '../../appEnvironment'
+import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPersistence'
+
+const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
+const INITIAL_SCHEMA_VERSION = 1
+const LATEST_SCHEMA_VERSION = 20
+
+let database: Database.Database | null = null
+let inMemoryDatabase = false
+
+const resolveDatabasePath = (): string => {
+  return path.join(app.getPath('userData'), SQLITE_FILENAME)
+}
+
+const ensureSchemaVersionTable = (db: Database.Database): void => {
+  db.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER NOT NULL)')
+
+  const existingVersion = db.prepare('SELECT version FROM schema_version LIMIT 1').get() as
+    | { version: number }
+    | undefined
+
+  if (existingVersion) {
+    return
+  }
+
+  db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(INITIAL_SCHEMA_VERSION)
+}
+
+const migrateSchemaV1ToV2 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS app_persistence (
+        id INTEGER PRIMARY KEY,
+        last_workspace_info_path TEXT,
+        app_sidebar_width_px INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS workspace_ui_state (
+        workspace_id TEXT PRIMARY KEY,
+        selected_screen TEXT NOT NULL,
+        selected_prompt_folder_id TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS prompt_folder_ui_state (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+    `)
+
+    db.prepare(
+      `
+      INSERT INTO app_persistence (
+        id,
+        last_workspace_info_path,
+        app_sidebar_width_px
+      )
+      VALUES (
+        1,
+        ?,
+        ?
+      )
+      ON CONFLICT(id) DO NOTHING
+      `
+    ).run(
+      DEFAULT_USER_PERSISTENCE.lastWorkspaceInfoPath,
+      DEFAULT_USER_PERSISTENCE.appSidebarWidthPx
+    )
+
+    db.prepare('UPDATE schema_version SET version = ?').run(2)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV2ToV3 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN folder_description_editor_view_state_json TEXT;
+
+      CREATE TABLE IF NOT EXISTS prompt_ui_state (
+        workspace_id TEXT NOT NULL,
+        prompt_id TEXT NOT NULL,
+        editor_view_state_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, prompt_id)
+      );
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(3)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV3ToV4 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE app_persistence
+      ADD COLUMN window_x_px INTEGER;
+
+      ALTER TABLE app_persistence
+      ADD COLUMN window_y_px INTEGER;
+
+      ALTER TABLE app_persistence
+      ADD COLUMN window_width_px INTEGER;
+
+      ALTER TABLE app_persistence
+      ADD COLUMN window_height_px INTEGER;
+
+      ALTER TABLE app_persistence
+      ADD COLUMN window_is_maximized INTEGER;
+
+      ALTER TABLE app_persistence
+      ADD COLUMN window_is_fullscreen INTEGER;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(4)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV4ToV5 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    const tableInfo = db.prepare('PRAGMA table_info(prompt_folder_ui_state)').all() as Array<{
+      name: string
+    }>
+    const hasPromptTreeEntryColumn = tableInfo.some(
+      (column) => column.name === 'prompt_tree_entry_id'
+    )
+    const hasOutlinerEntryColumn = tableInfo.some((column) => column.name === 'outliner_entry_id')
+    const hasDescriptionViewStateColumn = tableInfo.some(
+      (column) => column.name === 'folder_description_editor_view_state_json'
+    )
+
+    // Ensure the source table has prompt_tree_entry_id before rebuilding.
+    if (!hasPromptTreeEntryColumn) {
+      db.exec(`
+        ALTER TABLE prompt_folder_ui_state
+        ADD COLUMN prompt_tree_entry_id TEXT;
+      `)
+    }
+
+    db.exec(`
+      CREATE TABLE prompt_folder_ui_state_new (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        folder_description_editor_view_state_json TEXT,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+    `)
+
+    const promptTreeEntryExpr = hasOutlinerEntryColumn
+      ? "COALESCE(prompt_tree_entry_id, outliner_entry_id, 'folder-settings')"
+      : "COALESCE(prompt_tree_entry_id, 'folder-settings')"
+    const descriptionViewStateExpr = hasDescriptionViewStateColumn
+      ? 'folder_description_editor_view_state_json'
+      : 'NULL'
+
+    db.exec(`
+      INSERT INTO prompt_folder_ui_state_new (
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        folder_description_editor_view_state_json
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        ${promptTreeEntryExpr},
+        ${descriptionViewStateExpr}
+      FROM prompt_folder_ui_state;
+    `)
+
+    db.exec('DROP TABLE prompt_folder_ui_state;')
+    db.exec('ALTER TABLE prompt_folder_ui_state_new RENAME TO prompt_folder_ui_state;')
+
+    db.prepare('UPDATE schema_version SET version = ?').run(5)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV5ToV6 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN prompt_tree_is_expanded INTEGER NOT NULL DEFAULT 1;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(6)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV6ToV7 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    const workspaceUiStateRows = db
+      .prepare(
+        `
+        SELECT
+          workspace_id AS workspaceId,
+          selected_screen AS selectedScreen,
+          selected_prompt_folder_id AS selectedPromptFolderId
+        FROM workspace_ui_state
+        `
+      )
+      .all() as Array<{
+      workspaceId: string
+      selectedScreen: string
+      selectedPromptFolderId: string | null
+    }>
+
+    db.exec(`
+      CREATE TABLE workspace_ui_state_new (
+        workspace_id TEXT PRIMARY KEY,
+        selected_screen TEXT NOT NULL,
+        selected_screen_data_json TEXT
+      );
+    `)
+
+    const insertWorkspaceUiState = db.prepare(
+      `
+      INSERT INTO workspace_ui_state_new (
+        workspace_id,
+        selected_screen,
+        selected_screen_data_json
+      )
+      VALUES (?, ?, ?)
+      `
+    )
+
+    for (const row of workspaceUiStateRows) {
+      const selectedScreenDataJson =
+        row.selectedScreen === 'prompt-folders'
+          ? JSON.stringify({ promptFolderId: row.selectedPromptFolderId })
+          : null
+
+      insertWorkspaceUiState.run(row.workspaceId, row.selectedScreen, selectedScreenDataJson)
+    }
+
+    db.exec('DROP TABLE workspace_ui_state;')
+    db.exec('ALTER TABLE workspace_ui_state_new RENAME TO workspace_ui_state;')
+
+    db.prepare('UPDATE schema_version SET version = ?').run(7)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV7ToV8 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN prompt_tree_is_showing_all_prompts INTEGER NOT NULL DEFAULT 0;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(8)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV8ToV9 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.prepare('UPDATE schema_version SET version = ?').run(9)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV9ToV10 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE prompt_folder_settings_editor_view_state (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        settings_field TEXT NOT NULL,
+        editor_view_state_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, prompt_folder_id, settings_field)
+      );
+
+      INSERT INTO prompt_folder_settings_editor_view_state (
+        workspace_id,
+        prompt_folder_id,
+        settings_field,
+        editor_view_state_json
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        'folderDescription',
+        folder_description_editor_view_state_json
+      FROM prompt_folder_ui_state
+      WHERE folder_description_editor_view_state_json IS NOT NULL;
+
+      CREATE TABLE prompt_folder_ui_state_new (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        prompt_tree_is_expanded INTEGER NOT NULL DEFAULT 1,
+        prompt_tree_is_showing_all_prompts INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+
+      INSERT INTO prompt_folder_ui_state_new (
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        prompt_tree_is_expanded,
+        prompt_tree_is_showing_all_prompts
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        prompt_tree_is_expanded,
+        prompt_tree_is_showing_all_prompts
+      FROM prompt_folder_ui_state;
+
+      DROP TABLE prompt_folder_ui_state;
+      ALTER TABLE prompt_folder_ui_state_new RENAME TO prompt_folder_ui_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(10)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV10ToV11 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE workspace_ui_state
+      ADD COLUMN last_prompt_folder_id TEXT;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(11)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV11ToV12 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 0;
+
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN prompts_section_is_expanded INTEGER NOT NULL DEFAULT 1;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(12)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV12ToV13 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE prompt_folder_ui_state_new (
+        workspace_id TEXT NOT NULL,
+        prompt_folder_id TEXT NOT NULL,
+        prompt_tree_entry_id TEXT NOT NULL,
+        folder_settings_section_is_expanded INTEGER NOT NULL DEFAULT 0,
+        prompts_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (workspace_id, prompt_folder_id)
+      );
+
+      INSERT INTO prompt_folder_ui_state_new (
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        folder_settings_section_is_expanded,
+        prompts_section_is_expanded
+      )
+      SELECT
+        workspace_id,
+        prompt_folder_id,
+        prompt_tree_entry_id,
+        folder_settings_section_is_expanded,
+        prompts_section_is_expanded
+      FROM prompt_folder_ui_state;
+
+      DROP TABLE prompt_folder_ui_state;
+      ALTER TABLE prompt_folder_ui_state_new RENAME TO prompt_folder_ui_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(13)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV13ToV14 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_folder_ui_state
+      ADD COLUMN prompt_tree_is_expanded INTEGER NOT NULL DEFAULT 1;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(14)
+  })
+
+  migrate()
+}
+
+const migrateSchemaV14ToV15 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      ALTER TABLE prompt_ui_state RENAME TO markdown_content_ui_state;
+      ALTER TABLE markdown_content_ui_state RENAME COLUMN prompt_id TO content_id;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(15)
+  })
+
+  migrate()
+}
+
+/** Replaces obsolete category workspace view-state tables without migrating their data. */
+const migrateSchemaV15ToV16 = (db: Database.Database): void => {
+  const migrate = db.transaction(() => {
+    db.exec(`
+      DROP TABLE prompt_folder_settings_editor_view_state;
+      DROP TABLE prompt_folder_ui_state;
+
+      CREATE TABLE prompt_folder_view_state (
+        workspace_id TEXT NOT NULL,
+        content_owner_id TEXT NOT NULL,
+        selected_entry_id TEXT NOT NULL,
+        tree_is_expanded INTEGER NOT NULL DEFAULT 1,
+        details_section_is_expanded INTEGER NOT NULL DEFAULT 0,
+        content_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (workspace_id, content_owner_id)
+      );
+
+      CREATE TABLE category_description_editor_view_state (
+        workspace_id TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        editor_view_state_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, category_id)
+      );
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(16)
+  })
+
+  migrate()
+}
+
+/** Adds workspace-scoped expansion persistence for reusable accordion instances. */
+const migrateSchemaV16ToV17 = (db: Database.Database): void => {
+  /** Atomic schema update for accordion view state. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE accordion_view_state (
+        workspace_id TEXT NOT NULL,
+        persistence_id TEXT NOT NULL,
+        expanded_section_ids_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, persistence_id)
+      );
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(17)
+  })
+
+  migrate()
+}
+
+/** Replaces expansion-only accordion rows with complete per-section JSON state. */
+const migrateSchemaV17ToV18 = (db: Database.Database): void => {
+  /** Atomic schema reset that intentionally discards obsolete accordion rows. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      DROP TABLE accordion_view_state;
+
+      CREATE TABLE accordion_view_state (
+        workspace_id TEXT NOT NULL,
+        persistence_id TEXT NOT NULL,
+        sections_json TEXT NOT NULL,
+        PRIMARY KEY (workspace_id, persistence_id)
+      );
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(18)
+  })
+
+  migrate()
+}
+
+/** Splits last-root persistence and discards the retired combined folder activity. */
+const migrateSchemaV18ToV19 = (db: Database.Database): void => {
+  /** Atomic workspace UI-state replacement for the split folder activities. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      CREATE TABLE workspace_ui_state_new (
+        workspace_id TEXT PRIMARY KEY,
+        selected_screen TEXT NOT NULL,
+        selected_screen_data_json TEXT,
+        last_prompt_task_folder_id TEXT,
+        last_prompt_template_folder_id TEXT
+      );
+
+      INSERT INTO workspace_ui_state_new (
+        workspace_id,
+        selected_screen,
+        selected_screen_data_json,
+        last_prompt_task_folder_id,
+        last_prompt_template_folder_id
+      )
+      SELECT
+        workspace_id,
+        CASE selected_screen WHEN 'prompt-folders' THEN 'home' ELSE selected_screen END,
+        CASE selected_screen WHEN 'prompt-folders' THEN NULL ELSE selected_screen_data_json END,
+        NULL,
+        NULL
+      FROM workspace_ui_state;
+
+      DROP TABLE workspace_ui_state;
+      ALTER TABLE workspace_ui_state_new RENAME TO workspace_ui_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(19)
+  })
+
+  migrate()
+}
+
+/** Removes obsolete inline category-editor state from workspace persistence. */
+const migrateSchemaV19ToV20 = (db: Database.Database): void => {
+  /** Atomic schema update preserving the remaining prompt-folder view state. */
+  const migrate = db.transaction(() => {
+    db.exec(`
+      DROP TABLE category_description_editor_view_state;
+
+      CREATE TABLE prompt_folder_view_state_new (
+        workspace_id TEXT NOT NULL,
+        content_owner_id TEXT NOT NULL,
+        selected_entry_id TEXT NOT NULL,
+        tree_is_expanded INTEGER NOT NULL DEFAULT 1,
+        content_section_is_expanded INTEGER NOT NULL DEFAULT 1,
+        PRIMARY KEY (workspace_id, content_owner_id)
+      );
+
+      INSERT INTO prompt_folder_view_state_new (
+        workspace_id,
+        content_owner_id,
+        selected_entry_id,
+        tree_is_expanded,
+        content_section_is_expanded
+      )
+      SELECT
+        workspace_id,
+        content_owner_id,
+        selected_entry_id,
+        tree_is_expanded,
+        content_section_is_expanded
+      FROM prompt_folder_view_state;
+
+      DROP TABLE prompt_folder_view_state;
+      ALTER TABLE prompt_folder_view_state_new RENAME TO prompt_folder_view_state;
+    `)
+
+    db.prepare('UPDATE schema_version SET version = ?').run(20)
+  })
+
+  migrate()
+}
+
+const applyStartupMigrations = (db: Database.Database): void => {
+  ensureSchemaVersionTable(db)
+
+  let schemaVersion = (
+    db.prepare('SELECT version FROM schema_version LIMIT 1').get() as {
+      version: number
+    }
+  ).version
+
+  if (schemaVersion > LATEST_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported schema version ${schemaVersion}. Latest supported version is ${LATEST_SCHEMA_VERSION}.`
+    )
+  }
+
+  while (schemaVersion < LATEST_SCHEMA_VERSION) {
+    if (schemaVersion === 1) {
+      migrateSchemaV1ToV2(db)
+      schemaVersion = 2
+      continue
+    }
+
+    if (schemaVersion === 2) {
+      migrateSchemaV2ToV3(db)
+      schemaVersion = 3
+      continue
+    }
+
+    if (schemaVersion === 3) {
+      migrateSchemaV3ToV4(db)
+      schemaVersion = 4
+      continue
+    }
+
+    if (schemaVersion === 4) {
+      migrateSchemaV4ToV5(db)
+      schemaVersion = 5
+      continue
+    }
+
+    if (schemaVersion === 5) {
+      migrateSchemaV5ToV6(db)
+      schemaVersion = 6
+      continue
+    }
+
+    if (schemaVersion === 6) {
+      migrateSchemaV6ToV7(db)
+      schemaVersion = 7
+      continue
+    }
+
+    if (schemaVersion === 7) {
+      migrateSchemaV7ToV8(db)
+      schemaVersion = 8
+      continue
+    }
+
+    if (schemaVersion === 8) {
+      migrateSchemaV8ToV9(db)
+      schemaVersion = 9
+      continue
+    }
+
+    if (schemaVersion === 9) {
+      migrateSchemaV9ToV10(db)
+      schemaVersion = 10
+      continue
+    }
+
+    if (schemaVersion === 10) {
+      migrateSchemaV10ToV11(db)
+      schemaVersion = 11
+      continue
+    }
+
+    if (schemaVersion === 11) {
+      migrateSchemaV11ToV12(db)
+      schemaVersion = 12
+      continue
+    }
+
+    if (schemaVersion === 12) {
+      migrateSchemaV12ToV13(db)
+      schemaVersion = 13
+      continue
+    }
+
+    if (schemaVersion === 13) {
+      migrateSchemaV13ToV14(db)
+      schemaVersion = 14
+      continue
+    }
+
+    if (schemaVersion === 14) {
+      migrateSchemaV14ToV15(db)
+      schemaVersion = 15
+      continue
+    }
+
+    if (schemaVersion === 15) {
+      migrateSchemaV15ToV16(db)
+      schemaVersion = 16
+      continue
+    }
+
+    if (schemaVersion === 16) {
+      migrateSchemaV16ToV17(db)
+      schemaVersion = 17
+      continue
+    }
+
+    if (schemaVersion === 17) {
+      migrateSchemaV17ToV18(db)
+      schemaVersion = 18
+      continue
+    }
+
+    if (schemaVersion === 18) {
+      migrateSchemaV18ToV19(db)
+      schemaVersion = 19
+      continue
+    }
+
+    if (schemaVersion === 19) {
+      migrateSchemaV19ToV20(db)
+      schemaVersion = 20
+      continue
+    }
+
+    throw new Error(`No SQLite migration found for schema version ${schemaVersion}.`)
+  }
+}
+
+export class SqliteDataAccess {
+  static initializeDatabase(): void {
+    if (database) {
+      return
+    }
+
+    if (isPlaywrightEnvironment()) {
+      const memoryDb = new Database(':memory:')
+      applyStartupMigrations(memoryDb)
+      database = memoryDb
+      inMemoryDatabase = true
+      return
+    }
+
+    const fs = getFs()
+    const userDataPath = app.getPath('userData')
+    fs.mkdirSync(userDataPath, { recursive: true })
+
+    const sqlitePath = resolveDatabasePath()
+    const fileDb = new Database(sqlitePath)
+    fileDb.pragma('journal_mode = WAL')
+    applyStartupMigrations(fileDb)
+
+    database = fileDb
+    inMemoryDatabase = false
+  }
+
+  static runSqlForTests(sql: string): { rows?: Array<Record<string, unknown>> } {
+    const trimmedSql = sql.trim()
+    const db = this.getDatabase()
+    const statement = db.prepare(trimmedSql)
+
+    if (statement.reader) {
+      return { rows: statement.all() as Array<Record<string, unknown>> }
+    }
+
+    statement.run()
+    return {}
+  }
+
+  /** Runs synchronous SQLite commands inside one database transaction. */
+  static runTransaction<TResult>(commands: () => TResult): TResult {
+    return this.getDatabase().transaction(commands)()
+  }
+
+  static isUsingInMemoryDatabase(): boolean {
+    return inMemoryDatabase
+  }
+
+  static getDatabase(): Database.Database {
+    if (!database) {
+      throw new Error('Database has not been initialized')
+    }
+
+    return database
+  }
+}

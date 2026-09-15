@@ -3,15 +3,15 @@ import {
   PROMPT_FOLDER_SETTINGS_FIELDS,
   type CategoryOrder,
   type PromptFolder,
-} from '@shared/PromptFolder'
+} from '@shared/domain/prompt-folder/PromptFolder'
 import {
   PROMPT_STATUS_FOLDERS,
   type PromptStatusFolderId
-} from '@shared/Prompt'
+} from '@shared/domain/prompt/Prompt'
 import type {
   PromptFolderCategoryOrderFile,
   PromptFolderInfoFile
-} from '../DiskTypes/WorkspaceDiskTypes'
+} from './workspace/WorkspaceDiskTypes'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -35,7 +35,7 @@ import {
   resolvePromptStatusFolderName
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
-import { readPromptFolder } from '../DataAccess/WorkspaceReads'
+import { readPromptFolder } from './workspace/WorkspaceReads'
 
 export type PromptFolderPersistenceFields = {
   workspaceId: string

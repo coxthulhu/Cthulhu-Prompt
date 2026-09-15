@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   DomainCommandParser,
   DomainPlanner
-} from '@shared/DomainChanges'
-import { PromptStatusFolderId } from '@shared/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
+} from '@shared/domain/DomainChanges'
+import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 
 /** Minimal committed entry accepted by mocked snapshot normalizers. */
 type MockSnapshotEntry = { revision: number; committed: { id: string } }

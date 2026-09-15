@@ -9,14 +9,14 @@
     Folders,
     X
   } from 'lucide-svelte'
-  import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
-  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
-  import Card from '@renderer/common/cthulhu-ui/Card.svelte'
-  import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
-  import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
+  import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
+  import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,

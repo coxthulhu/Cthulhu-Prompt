@@ -2,18 +2,18 @@ import {
   getAllWorkspaceFolderEntries,
   type LoadWorkspaceByPathRequest,
   type LoadWorkspaceByPathResult
-} from '@shared/Workspace'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { runLoad } from '../IpcFramework/Load'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
+} from '@shared/domain/workspace/Workspace'
+import { ipcInvokeWithPayload } from '@renderer/data/IpcFramework/IpcRequestInvoke'
+import { runLoad } from '@renderer/data/IpcFramework/Load'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { collectPromptFolderGraphIds } from '@renderer/data/Collections/PromptFolderGraph'
 import {
   deletePromptFolderClientStates,
   upsertPromptFolderClientStates
-} from '../UiState/PromptFolderClientState'
-import { workspaceCollection } from '../Collections/WorkspaceCollection'
+} from '@renderer/data/UiState/client-state/PromptFolderClientState'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
-import { categoryCollection } from '../Collections/CategoryCollection'
+import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 
 export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<string> => {
   const result = await runLoad(() =>

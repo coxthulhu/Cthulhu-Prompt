@@ -1,5 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import type { Category } from '@shared/Category'
+import type { Category } from '@shared/domain/category/Category'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 /** Authoritative renderer collection for root-owned categories. */

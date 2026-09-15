@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import type { VirtualRowState } from '@renderer/features/virtualizer/virtualWindowRows'
-import { computeAnchoredScrollTop } from '@renderer/features/virtualizer/virtualWindowRowUtils'
+import type { VirtualRowState } from '@renderer/common/virtual-window/virtualWindowRows'
+import { computeAnchoredScrollTop } from '@renderer/common/virtual-window/virtualWindowRowUtils'
 
 type TestRow = { kind: 'row' }
 

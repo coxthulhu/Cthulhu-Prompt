@@ -3,9 +3,9 @@ import {
   PromptStatus,
   PromptStatusFolderId,
   createPromptSummary
-} from '@shared/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
+} from '@shared/domain/prompt/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'

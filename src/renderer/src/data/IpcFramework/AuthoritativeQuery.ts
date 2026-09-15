@@ -1,4 +1,4 @@
-import type { AuthoritativeSnapshotQueryResult } from '@shared/AuthoritativeSnapshot'
+import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/AuthoritativeSnapshot'
 import { ipcInvoke } from './IpcRequestInvoke'
 import { runLoad } from './Load'
 import { reconcileRendererAuthoritativeSnapshots } from './AuthoritativeSnapshots'

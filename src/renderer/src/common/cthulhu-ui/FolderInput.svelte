@@ -1,9 +1,9 @@
 <script lang="ts">
   import { FolderOpen } from 'lucide-svelte'
-  import { mergeClasses } from './mergeClasses'
+  import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import Button from './Button.svelte'
-  import TextInput from './TextInput.svelte'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
 
   /** Native folder-picker response returned through the preload bridge. */
   type OpenFolderDialogResult = {

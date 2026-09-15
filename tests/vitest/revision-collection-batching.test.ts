@@ -1,5 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import type { RevisionEnvelope } from '@shared/Revision'
+import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import { describe, expect, it } from 'vitest'
 import { revisionCollectionOptions } from '@renderer/data/Collections/RevisionCollection'
 

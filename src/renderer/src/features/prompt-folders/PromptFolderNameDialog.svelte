@@ -1,19 +1,19 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import type { ComponentType } from 'svelte'
-  import Dialog from '@renderer/common/cthulhu-ui/Dialog.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
-  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
-  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
-  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
-  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
+  import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import { FolderPlus } from 'lucide-svelte'
-  import type { PromptFolder } from '@shared/PromptFolder'
+  import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
   import {
     hasPromptFolderNameConflict,
     preparePromptFolderName,
     PROMPT_FOLDER_NAME_CONFLICT_ERROR
-  } from '@shared/promptFolderName'
+  } from '@shared/domain/prompt-folder/promptFolderName'
 
   type SubmitPromptFolderName = (displayName: string, folderName: string) => Promise<boolean>
 

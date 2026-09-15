@@ -4,7 +4,7 @@ import { PersistentLogWriter, type PersistentLogEntry } from './PersistentLogWri
 import {
   RENDERER_ERROR_CHANNEL,
   type RendererErrorReport
-} from '@shared/RendererErrorReport'
+} from '@shared/ipc/RendererErrorReport'
 
 let persistentLogWriter: PersistentLogWriter | null = null
 let mainProcessHandlersInstalled = false

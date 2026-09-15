@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
+import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'

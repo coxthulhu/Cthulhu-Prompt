@@ -2,16 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   DomainPlannerEntityMap,
   DomainState
-} from '@shared/DomainChanges'
-import { planDeleteCategoryDomainMutation } from '@shared/CategoryDomainMutations'
-import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
-import { planPromptMove } from '@shared/MarkdownContentDomainMutations'
-import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+} from '@shared/domain/DomainChanges'
+import { planDeleteCategoryDomainMutation } from '@shared/domain/category/CategoryDomainMutations'
+import { planCreateCategoryDomainMutation } from '@shared/domain/category/CategoryDomainMutations'
+import { planPromptMove } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
   type PromptFolder
-} from '@shared/PromptFolder'
-import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import { planRenamePromptFolderDomainMutation } from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
 
 /** Hoisted authoritative stores used by the main persistence planner. */
 const mockDomainData = vi.hoisted(() => {

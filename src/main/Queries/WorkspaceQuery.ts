@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron'
-import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
+import type { LoadWorkspaceByPathResult } from '@shared/domain/workspace/Workspace'
 import { parseLoadWorkspaceByPathRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
-import { loadWorkspaceByPath } from '../Registries/WorkspaceLoader'
+import { loadWorkspaceByPath } from '../Workspace/WorkspaceLoader'
 
 export const setupWorkspaceQueryHandlers = (): void => {
   ipcMain.handle(

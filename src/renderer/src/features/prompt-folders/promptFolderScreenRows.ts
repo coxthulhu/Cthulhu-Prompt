@@ -1,7 +1,7 @@
-import { DEFAULT_PROMPT_STATUS_FOLDER_ID, type PromptStatusFolderId } from '@shared/Prompt'
-import type { Category } from '@shared/Category'
-import type { PromptFolder } from '@shared/PromptFolder'
-import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
+import { DEFAULT_PROMPT_STATUS_FOLDER_ID, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import type { Category } from '@shared/domain/category/Category'
+import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
 
 /** Placement identity shared by category-screen rows. */
 type PromptFolderScreenContentRow = {

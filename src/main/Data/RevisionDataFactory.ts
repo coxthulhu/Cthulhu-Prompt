@@ -2,7 +2,7 @@ import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import { createCommittedStore } from './CommittedStore'
 import type { RevisionData } from './Data'
 import { createRevisionDataHandlers } from './RevisionDataHandlers'
-import type { DomainTargetPolicy } from '@shared/DomainChanges'
+import type { DomainTargetPolicy } from '@shared/domain/DomainChanges'
 
 export const createRevisionData = <TData, TPersistenceFields>(params: {
   persistence: PersistenceLayer<TData, TPersistenceFields>

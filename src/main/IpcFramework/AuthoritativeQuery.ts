@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
-import type { AuthoritativeSnapshotQueryResult } from '@shared/AuthoritativeSnapshot'
-import type { DomainTarget } from '@shared/DomainChanges'
+import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/AuthoritativeSnapshot'
+import type { DomainTarget } from '@shared/domain/DomainChanges'
 import { buildMainAuthoritativeSnapshots } from './AuthoritativeSnapshots'
 
 /** Query-specific loader that prepares authoritative state and selects response targets. */

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PromptStatus } from '@shared/Prompt'
+  import { PromptStatus } from '@shared/domain/prompt/Prompt'
   import PromptEditorTitleRow, {
     type PromptEditorTitleRowProps
   } from './PromptEditorTitleRow.svelte'

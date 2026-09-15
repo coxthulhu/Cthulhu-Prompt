@@ -1,11 +1,11 @@
 import {
   UPDATE_USER_PERSISTENCE_CHANNEL,
   type UserPersistence
-} from '@shared/UserPersistence'
+} from '@shared/domain/user-persistence/UserPersistence'
 import {
   parseSetUserPersistenceDomainCommand,
   planSetUserPersistenceDomainMutation
-} from '@shared/UserPersistenceDomainMutations'
+} from '@shared/domain/user-persistence/UserPersistenceDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers the user-persistence singleton domain mutation. */

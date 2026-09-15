@@ -12,29 +12,29 @@ import {
   type DomainRevisionExpectation,
   type DomainState,
   type DomainTarget
-} from '@shared/DomainChanges'
+} from '@shared/domain/DomainChanges'
 import {
   createPromptFull,
   type Prompt,
   type PromptSummaryData
-} from '@shared/Prompt'
+} from '@shared/domain/prompt/Prompt'
 import {
   createPromptTemplateFull,
   type PromptTemplate,
   type PromptTemplateSummaryData
-} from '@shared/PromptTemplate'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
-import { categoryCollection } from '../Collections/CategoryCollection'
-import { promptCollection } from '../Collections/PromptCollection'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
-import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
-import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
-import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
-import { workspacePromptFolderUiStateCollection } from '../Collections/WorkspacePromptFolderUiStateCollection'
-import { accordionUiStateCollection } from '../Collections/AccordionUiStateCollection'
+} from '@shared/domain/prompt-template/PromptTemplate'
+import type { IpcMutationPayloadResult } from '@shared/ipc/IpcResult'
+import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
+import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
+import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
+import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
+import { workspacePromptFolderUiStateCollection } from '@renderer/data/Collections/WorkspacePromptFolderUiStateCollection'
+import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
 import {
   getRendererRevisionCollection,
   reconcileRendererAuthoritativeSnapshots

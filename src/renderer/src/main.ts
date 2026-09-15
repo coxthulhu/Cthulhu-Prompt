@@ -2,7 +2,7 @@ import './app.css'
 import { mount } from 'svelte'
 import { loadSystemSettings } from './data/Queries/SystemSettingsQuery'
 import { loadUserPersistence } from './data/Queries/UserPersistenceQuery'
-import { initializeSvelteVirtualWindowHydrationControls } from './features/virtualizer/SvelteVirtualWindowHydrationControls'
+import { initializeSvelteVirtualWindowHydrationControls } from './common/virtual-window/SvelteVirtualWindowHydrationControls'
 import { initMonacoVscode } from './lib/monacoVscode'
 import { initializeRendererErrorLogging } from './app/rendererErrorLogging'
 

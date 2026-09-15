@@ -13,8 +13,8 @@ import {
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
 import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
-import { getMarkdownContentIds } from '@shared/MarkdownContent'
-import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
+import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 

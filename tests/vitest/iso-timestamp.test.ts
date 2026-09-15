@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getCurrentIsoSecondTimestamp,
   parseIsoSecondTimestamp
-} from '@shared/isoTimestamp'
+} from '@shared/utilities/isoTimestamp'
 
 describe('ISO second timestamps', () => {
   it('accepts the exact UTC whole-second client format', () => {

@@ -1,4 +1,4 @@
-import { LOAD_SYSTEM_SETTINGS_CHANNEL, SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+import { LOAD_SYSTEM_SETTINGS_CHANNEL, SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { getRequiredSystemSettingsEntry } from '../Data/SystemSettingsData'
 import { handleMainAuthoritativeQuery } from '../IpcFramework/AuthoritativeQuery'
 

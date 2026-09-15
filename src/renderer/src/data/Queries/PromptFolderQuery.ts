@@ -1,18 +1,18 @@
 import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
-} from '@shared/PromptFolder'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { runLoad } from '../IpcFramework/Load'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
-import { markdownContentUiStateCollection } from '../Collections/MarkdownContentUiStateCollection'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import { ipcInvokeWithPayload } from '@renderer/data/IpcFramework/IpcRequestInvoke'
+import { runLoad } from '@renderer/data/IpcFramework/Load'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { collectPromptFolderGraphIds } from '@renderer/data/Collections/PromptFolderGraph'
+import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import {
   setPromptFolderClientStateHasLoadedInitialData,
   upsertPromptFolderClientStates
-} from '../UiState/PromptFolderClientState'
+} from '@renderer/data/UiState/client-state/PromptFolderClientState'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
-import { categoryCollection } from '../Collections/CategoryCollection'
+import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 
 export const loadPromptFolderInitial = async (
   workspaceId: string,

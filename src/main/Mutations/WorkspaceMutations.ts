@@ -1,11 +1,11 @@
 import { ipcMain } from 'electron'
 import { data } from '../Data/Data'
-import type { IpcMutationActionResponse } from '@shared/IpcResult'
+import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
 import {
   parseMovePromptFolderDomainCommand,
   planMovePromptFolderDomainMutation
-} from '@shared/PromptFolderDomainMutations'
-import { createWorkspace } from '../DataAccess/WorkspaceDataAccess'
+} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+import { createWorkspace } from '../Workspace/createWorkspace'
 import {
   parseCloseWorkspaceRequest,
   parseCreateWorkspaceRequest

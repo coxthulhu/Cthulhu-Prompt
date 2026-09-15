@@ -25,7 +25,7 @@ import {
   resolvePersistedPromptFilePathsByTitle
 } from '../helpers/PromptPersistenceTestHelpers'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
-import { PromptStatus, type PromptPersisted } from '../../src/shared/Prompt'
+import { PromptStatus, type PromptPersisted } from '@shared/domain/prompt/Prompt'
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,

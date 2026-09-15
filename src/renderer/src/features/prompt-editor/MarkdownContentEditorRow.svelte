@@ -3,12 +3,12 @@
   import type { Action } from 'svelte/action'
   import { Check, Layers, Plus } from 'lucide-svelte'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
-  import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus } from '@shared/Prompt'
-  import type { TextMeasurement } from '@renderer/data/measuredHeightCache'
-  import type { PromptHandleDropPayload } from '@renderer/features/drag-drop/promptHandleDrag'
-  import { promptEntryDragState } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
+  import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus } from '@shared/domain/prompt/Prompt'
+  import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
+  import type { PromptHandleDropPayload } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
+  import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
   import EditorCardSurface from './EditorCardSurface.svelte'
   import EditorSubtitleBar from './EditorSubtitleBar.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
@@ -16,12 +16,12 @@
   import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
-  import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
+  import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
+  import { getPromptDisplayTitle as getPromptTitleText } from '@shared/domain/prompt/promptFallbackTitle'
   import {
     lookupMarkdownContentEditorViewStateJson,
     setMarkdownContentEditorViewStateJson
-  } from '@renderer/data/UiState/MarkdownContentUiStateAutosave.svelte.ts'
+  } from '@renderer/data/UiState/autosave/MarkdownContentUiStateAutosave.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
@@ -116,7 +116,7 @@
       templateState?: 'not-selected' | 'no-template' | 'selected'
       isEdited: boolean
     }
-    contentKind?: import('@shared/PromptFolder').PromptFolderContentKind
+    contentKind?: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
     contentLabel?: string
     metadataFolderLabel?: string | null
     metadataFolderState?: 'not-selected' | 'no-template' | 'selected'

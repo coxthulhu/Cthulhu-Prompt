@@ -1,5 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import type { Workspace } from '@shared/Workspace'
+import type { Workspace } from '@shared/domain/workspace/Workspace'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 export const workspaceCollection = createCollection(

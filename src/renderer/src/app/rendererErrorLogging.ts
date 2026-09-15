@@ -1,4 +1,4 @@
-import type { RendererErrorReport } from '@shared/RendererErrorReport'
+import type { RendererErrorReport } from '@shared/ipc/RendererErrorReport'
 
 /** Native console implementation retained so renderer errors remain visible in DevTools. */
 const originalConsoleError = console.error.bind(console)

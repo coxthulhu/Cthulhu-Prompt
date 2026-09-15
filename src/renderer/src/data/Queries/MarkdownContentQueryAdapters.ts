@@ -1,23 +1,23 @@
-import { createPromptFull, createPromptSummary, isPromptFull, type PromptFull } from '@shared/Prompt'
+import { createPromptFull, createPromptSummary, isPromptFull, type PromptFull } from '@shared/domain/prompt/Prompt'
 import {
   createPromptTemplateFull,
   isPromptTemplateFull,
   type PromptTemplateFull
-} from '@shared/PromptTemplate'
-import type { LoadPromptFolderInitialResult } from '@shared/PromptFolder'
-import type { LoadWorkspaceByPathResult } from '@shared/Workspace'
-import type { PromptFolderContentKind } from '@shared/PromptFolder'
-import { promptCollection } from '../Collections/PromptCollection'
-import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
+} from '@shared/domain/prompt-template/PromptTemplate'
+import type { LoadPromptFolderInitialResult } from '@shared/domain/prompt-folder/PromptFolder'
+import type { LoadWorkspaceByPathResult } from '@shared/domain/workspace/Workspace'
+import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import {
   deletePromptClientStates,
   upsertPromptClientStates
-} from '../UiState/PromptClientStateMutations.svelte.ts'
+} from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
 import {
   deletePromptTemplateClientStates,
   upsertPromptTemplateClientStates
-} from '../UiState/PromptTemplateClientStateMutations.svelte.ts'
-import { clearPromptEditorMeasuredHeights } from '../UiState/PromptEditorUiCache.svelte.ts'
+} from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
+import { clearPromptEditorMeasuredHeights } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
 
 /** Clears prompt measurements whose canonical full text is changing. */
 const clearChangedPromptMeasurements = (prompts: PromptFull[]): void => {

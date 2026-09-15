@@ -3,9 +3,9 @@ import {
   PROMPT_STATUS_FOLDERS,
   PromptStatus,
   type PromptPersisted
-} from '@shared/Prompt'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
+} from '@shared/domain/prompt/Prompt'
+import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
+import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
 import {
   parsePromptMarkdown,
   serializePromptMarkdown

@@ -1,20 +1,20 @@
 <script lang="ts">
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import type { Action } from 'svelte/action'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { ChevronDown, ChevronUp, GripVertical } from 'lucide-svelte'
   import {
     draggable,
     type DragFinishResult,
     type DraggableOptions
-  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import { startPromptDrag } from '@renderer/features/drag-drop/promptEntryDragState.svelte.ts'
+  } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
+  import { startPromptDrag } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
-  } from '@renderer/features/drag-drop/promptHandleDrag'
-  import { createPromptDragGhost } from '@renderer/features/drag-drop/promptDragGhost'
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
+  import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
 
   let {
     promptId,
@@ -33,7 +33,7 @@
   }: {
     promptId: string
     promptFolderId: string
-    contentKind?: import('@shared/PromptFolder').PromptFolderContentKind
+    contentKind?: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
     contentLabel?: string
     title: string
     isFirstPrompt: boolean
@@ -42,7 +42,7 @@
     /** Whether the Active-only move arrow controls are rendered. */
     showMoveButtons?: boolean
     /** Status section represented by this editor-card drag source. */
-    statusSection?: import('@renderer/features/drag-drop/promptHandleDrag').PromptDragStatusSection
+    statusSection?: import('@renderer/features/prompt-drag-drop/promptHandleDrag').PromptDragStatusSection
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>

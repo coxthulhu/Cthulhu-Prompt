@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
+import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
@@ -21,11 +21,11 @@ import {
   setPromptTemplates,
   setPromptText,
   setPromptTitle
-} from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
+} from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
 import {
   setPromptTemplateText,
   setPromptTemplateTitle
-} from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
+} from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
 
 /** Stable prompt edited through the renamed canonical setter APIs. */
 const PROMPT_ID = 'prompt-editor-mutation'

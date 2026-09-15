@@ -1,6 +1,6 @@
-import { normalizeCategoryShortDescription, type Category } from '@shared/Category'
-import type { PromptFolderKind } from '@shared/PromptFolder'
-import { buildPromptStem } from '@shared/promptFilename'
+import { normalizeCategoryShortDescription, type Category } from '@shared/domain/category/Category'
+import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
 import { getFs } from '../fs-provider'
 import {
   commitStagedFileChanges,

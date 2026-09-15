@@ -1,7 +1,7 @@
 <script lang="ts">
-  import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
-  import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
+  import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { Layers, Zap } from 'lucide-svelte'
 
   type Props = {

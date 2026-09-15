@@ -5,7 +5,7 @@ import {
   planCreatePromptFolderDomainMutation,
   planDeletePromptFolderDomainMutation,
   planRenamePromptFolderDomainMutation
-} from '@shared/PromptFolderDomainMutations'
+} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers root prompt-folder creation, deletion, and rename mutations. */

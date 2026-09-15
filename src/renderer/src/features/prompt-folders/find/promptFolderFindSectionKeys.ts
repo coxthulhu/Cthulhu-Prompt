@@ -1,7 +1,7 @@
 import {
   PROMPT_FOLDER_SETTINGS_FIND_SECTION_KEYS,
   type PromptFolderSettingsField
-} from '@shared/PromptFolder'
+} from '@shared/domain/prompt-folder/PromptFolder'
 
 export const PROMPT_FOLDER_FIND_TITLE_SECTION_KEY = 'title'
 export const PROMPT_FOLDER_FIND_BODY_SECTION_KEY = 'body'

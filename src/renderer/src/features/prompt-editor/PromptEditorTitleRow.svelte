@@ -1,6 +1,6 @@
 <script module lang="ts">
   import type { ComponentType } from 'svelte'
-  import type { ScrollToWithinWindowBand } from '../virtualizer/virtualWindowTypes'
+  import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
 
   export type PromptEditorTitleRowProps = {
     title: string
@@ -17,7 +17,7 @@
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
-    onStatusChange?: (status: import('@shared/Prompt').PromptStatus) => void
+    onStatusChange?: (status: import('@shared/domain/prompt/Prompt').PromptStatus) => void
     onSelectionChange?: (startOffset: number, endOffset: number) => void
     onTitleEditorFocus?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
@@ -31,7 +31,7 @@
     deleteDialogTitle?: string
     deleteDialogDescription?: string
     finalizedAt?: string | null
-    status?: import('@shared/Prompt').PromptStatus
+    status?: import('@shared/domain/prompt/Prompt').PromptStatus
     isEdited?: boolean
     compactLayout?: boolean
   }
@@ -39,17 +39,17 @@
 
 <script lang="ts">
   import { onMount } from 'svelte'
-  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import SeparatorDot from '@renderer/common/cthulhu-ui/SeparatorDot.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/buttons/IconButtonWithMoreOptions.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
   import { Archive, FileText, Layers, Trash2 } from 'lucide-svelte'
-  import { PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/Prompt'
+  import { PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
   let {

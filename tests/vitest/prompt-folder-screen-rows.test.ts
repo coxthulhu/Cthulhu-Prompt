@@ -1,9 +1,9 @@
-import type { Category } from '@shared/Category'
+import type { Category } from '@shared/domain/category/Category'
 import {
   createPromptStatusFolderLayouts,
   type PromptFolder
-} from '@shared/PromptFolder'
-import { PromptStatusFolderId } from '@shared/Prompt'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   buildPromptFolderScreenRows,
   type PromptFolderScreenRow

@@ -5,15 +5,15 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/renderer/src/app/Globals.css",
+    "css": "src/renderer/src/app.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""
   },
   "aliases": {
-    "components": "@renderer/common/ui",
-    "utils": "@renderer/common/Cn",
-    "ui": "@renderer/common/ui",
+    "components": "@renderer/common/cthulhu-ui",
+    "utils": "@renderer/common/cthulhu-ui/mergeClasses",
+    "ui": "@renderer/common/cthulhu-ui",
     "lib": "@renderer/common",
     "hooks": "@renderer/common"
   },

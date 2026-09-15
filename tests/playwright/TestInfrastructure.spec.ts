@@ -1,8 +1,8 @@
 import { test as playwrightTest, expect as playwrightExpect } from '@playwright/test'
-import type { LoadSystemSettingsResult } from '@shared/SystemSettings'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
-import type { LoadUserPersistenceResult } from '@shared/UserPersistence'
-import { USER_PERSISTENCE_ID } from '@shared/UserPersistence'
+import type { LoadSystemSettingsResult } from '@shared/domain/settings/SystemSettings'
+import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
+import type { LoadUserPersistenceResult } from '@shared/domain/user-persistence/UserPersistence'
+import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()

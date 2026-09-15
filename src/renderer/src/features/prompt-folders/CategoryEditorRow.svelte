@@ -1,15 +1,15 @@
 <script lang="ts">
   import { ChevronRight, Folder, FolderCog, Pencil } from 'lucide-svelte'
-  import IconButtonBar from '@renderer/common/cthulhu-ui/IconButtonBar.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import type { PromptFolderContentKind } from '@shared/PromptFolder'
+  import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
-  import type { DraggableOptions } from '../drag-drop/dragDrop.svelte.ts'
+  import type { DraggableOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
     CategoryDropPayload
-  } from '../drag-drop/promptHandleDrag'
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
   import CategoryEditorSidebar from './CategoryEditorSidebar.svelte'
   import { CATEGORY_EDITOR_TITLE_AREA_HEIGHT_PX } from './categoryEditorSizing'
 

@@ -1,19 +1,19 @@
 <script lang="ts">
   import { Plus } from 'lucide-svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import PromptDropTarget, {
-    type PromptDropTargetState
-  } from '@renderer/features/drag-drop/PromptDropTarget.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import DropTarget, {
+    type DropTargetState
+  } from '@renderer/common/drag-drop/DropTarget.svelte'
   import type {
     DroppableOptions,
     DroppableState
-  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
     CategoryDropPayload,
     PromptHandleDragPayload,
     PromptHandleDropPayload
-  } from '@renderer/features/drag-drop/promptHandleDrag'
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
   import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from './promptDividerSizing'
 
   let {
@@ -124,30 +124,30 @@
 {/snippet}
 
 <!-- Prompt and category actions use nested registrations because their drag types never overlap. -->
-{#snippet promptDropTarget(categoryTargetState?: PromptDropTargetState)}
+{#snippet promptDropTarget(categoryTargetState?: DropTargetState)}
   {#if getDropOptions}
-    <PromptDropTarget getOptions={getDropOptions}>
+    <DropTarget getOptions={getDropOptions}>
       {#snippet children(promptTargetState)}
         {@const resolvedState = promptTargetState.isOver
           ? promptTargetState
           : (categoryTargetState ?? indicatorState)}
         {@render dividerContent(resolvedState)}
       {/snippet}
-    </PromptDropTarget>
+    </DropTarget>
   {:else}
     {@render dividerContent(categoryTargetState ?? indicatorState)}
   {/if}
 {/snippet}
 
 {#if getCategoryDropOptions}
-  <PromptDropTarget
+  <DropTarget
     getOptions={getCategoryDropOptions}
     data-testid={testId ? `${testId}-category-drop-target` : undefined}
   >
     {#snippet children(categoryTargetState)}
       {@render promptDropTarget(categoryTargetState)}
     {/snippet}
-  </PromptDropTarget>
+  </DropTarget>
 {:else}
   {@render promptDropTarget()}
 {/if}

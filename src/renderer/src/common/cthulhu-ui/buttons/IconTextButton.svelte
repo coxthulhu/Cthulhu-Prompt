@@ -1,0 +1,179 @@
+<script lang="ts">
+  import type { ComponentType } from 'svelte'
+  import type { HTMLButtonAttributes } from 'svelte/elements'
+  import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
+
+  type IconTextButtonState = 'enabled' | 'disabled'
+  type IconTextButtonHoverVariant = 'neutral' | 'accent'
+
+  type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled' | 'aria-pressed'> & {
+    icon: ComponentType
+    pressedIcon?: ComponentType
+    pressedHoverIcon?: ComponentType
+    text: string
+    pressed?: boolean
+    state?: IconTextButtonState
+    hoverVariant?: IconTextButtonHoverVariant
+    class?: string
+    iconClass?: string
+    iconSize?: number
+    testId?: string
+    onclick?: (event: MouseEvent) => void
+  }
+
+  let {
+    icon: Icon,
+    pressedIcon,
+    pressedHoverIcon,
+    text,
+    pressed,
+    state = 'enabled',
+    hoverVariant = 'neutral',
+    class: className,
+    iconClass,
+    iconSize = 16,
+    testId,
+    onclick,
+    ...restProps
+  }: Props = $props()
+
+  // Derived from state so native disabled behavior mirrors the visual state.
+  const isDisabled = $derived(state === 'disabled')
+  // Reactive icon selection keeps controlled toggle state visually synchronized.
+  const DisplayIcon = $derived(pressed === true && pressedIcon ? pressedIcon : Icon)
+</script>
+
+<!-- Button text is explicitly excluded from the default line height to retain its 16px line. -->
+<button
+  type="button"
+  class={mergeClasses('cthulhuUiIconTextButton text-sm leading-4', className)}
+  data-state={state}
+  data-hover-variant={hoverVariant}
+  data-has-pressed-hover-icon={pressed === true && pressedHoverIcon !== undefined}
+  data-testid={testId}
+  aria-pressed={pressed}
+  disabled={isDisabled}
+  {onclick}
+  {...restProps}
+>
+  <span class="cthulhuUiIconTextButtonIconSlot cthulhuUiIconTextButtonDefaultIconSlot">
+    <DisplayIcon
+      class={mergeClasses('cthulhuUiIconTextButtonIcon', iconClass)}
+      size={iconSize}
+      aria-hidden="true"
+    />
+  </span>
+  {#if pressed === true && pressedHoverIcon}
+    {@const PressedHoverIcon = pressedHoverIcon}
+    <span class="cthulhuUiIconTextButtonIconSlot cthulhuUiIconTextButtonPressedHoverIconSlot">
+      <PressedHoverIcon
+        class={mergeClasses('cthulhuUiIconTextButtonIcon', iconClass)}
+        size={iconSize}
+        aria-hidden="true"
+      />
+    </span>
+  {/if}
+  <span class="cthulhuUiIconTextButtonText">{text}</span>
+</button>
+
+<style>
+  .cthulhuUiIconTextButton {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    box-sizing: border-box;
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-weight: var(--font-weight-semibold);
+    gap: 7px;
+    height: 30px;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 10px;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+    white-space: nowrap;
+  }
+
+  .cthulhuUiIconTextButton:hover,
+  .cthulhuUiIconTextButton:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButton[data-hover-variant='accent']:hover,
+  .cthulhuUiIconTextButton[data-hover-variant='accent']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .cthulhuUiIconTextButton[aria-pressed='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButton[aria-pressed='true']:hover,
+  .cthulhuUiIconTextButton[aria-pressed='true']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .cthulhuUiIconTextButton:focus-visible {
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
+  }
+
+  .cthulhuUiIconTextButton[data-state='disabled'] {
+    cursor: default;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  :global(.cthulhuUiIconTextButtonIcon) {
+    color: var(--ui-hoverable-icon-glyph);
+    flex: 0 0 auto;
+    stroke-width: 2;
+  }
+
+  .cthulhuUiIconTextButton:where(:hover, :focus-visible, [aria-pressed='true'])
+    :global(.cthulhuUiIconTextButtonIcon) {
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiIconTextButtonIconSlot {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  .cthulhuUiIconTextButtonPressedHoverIconSlot {
+    display: none;
+  }
+
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:hover
+    .cthulhuUiIconTextButtonDefaultIconSlot,
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:focus-visible
+    .cthulhuUiIconTextButtonDefaultIconSlot {
+    display: none;
+  }
+
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:hover
+    .cthulhuUiIconTextButtonPressedHoverIconSlot,
+  .cthulhuUiIconTextButton[data-has-pressed-hover-icon='true']:focus-visible
+    .cthulhuUiIconTextButtonPressedHoverIconSlot {
+    display: inline-flex;
+  }
+
+  .cthulhuUiIconTextButtonText {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>

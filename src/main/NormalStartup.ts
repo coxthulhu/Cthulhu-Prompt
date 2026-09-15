@@ -18,17 +18,17 @@ import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
 import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
 import { setupUserPersistenceQueryHandlers } from './Queries/UserPersistenceQuery'
 import { setupUiStateQueryHandlers } from './Queries/UiStateQuery'
-import { SqliteDataAccess } from './DataAccess/SqliteDataAccess'
+import { SqliteDataAccess } from './Persistence/sqlite/SqliteDataAccess'
 import {
   UserPersistenceDataAccess,
   type WindowPersistence
-} from './DataAccess/UserPersistenceDataAccess'
+} from './Persistence/sqlite/UserPersistenceDataAccess'
 import {
   RUNTIME_ARG_PREFIX,
   type RuntimeConfig,
   type RuntimeEnvironment
-} from '@shared/runtimeConfig'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+} from '@shared/runtime/runtimeConfig'
+import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
 import { attachRendererLogging } from './logging'

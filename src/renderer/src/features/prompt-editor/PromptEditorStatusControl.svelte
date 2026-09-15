@@ -1,8 +1,8 @@
 <script lang="ts">
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/SimpleSelectorButtonWithIntegratedButton.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import SimpleSelectorButtonWithIntegratedButton from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButtonWithIntegratedButton.svelte'
   import { promptStatusItems } from './promptStatusPresentation'
-  import type { PromptStatus } from '@shared/Prompt'
+  import type { PromptStatus } from '@shared/domain/prompt/Prompt'
 
   /** Current workflow state and its transition callback. */
   type Props = {

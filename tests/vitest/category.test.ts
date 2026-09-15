@@ -4,7 +4,7 @@ import {
   normalizeCategoryDisplayName,
   normalizeCategoryShortDescription,
   type Category
-} from '@shared/Category'
+} from '@shared/domain/category/Category'
 import { parseCategoryJson } from '../../src/main/Persistence/CategoryPersistence'
 
 /** Stable category fixtures used by category validation tests. */

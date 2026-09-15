@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import { screens, type ScreenId } from '@renderer/app/screens'
-  import ActivityBarButton from '@renderer/common/cthulhu-ui/ActivityBarButton.svelte'
+  import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
 
   let {
     activeScreen,

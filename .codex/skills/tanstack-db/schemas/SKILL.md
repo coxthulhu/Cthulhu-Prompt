@@ -16,10 +16,10 @@ Use the existing layer that owns each concern:
 | --- | --- |
 | Collection record shape | Explicit TypeScript generic on `revisionCollectionOptions<T>` or `localOnlyCollectionOptions<T>` |
 | Query IPC request/result shape | Shared request, result, payload, and revision-envelope types under `src/shared` plus query parsers in `IpcValidation.ts` |
-| Mutation command and authoritative changes | Strict command parser plus shared `DomainPlanner` in `src/shared/*DomainMutations.ts` |
+| Mutation command and authoritative changes | Strict command parser plus shared `DomainPlanner` in `src/shared/domain/**/*DomainMutations.ts` |
 | Generic mutation wire shape | `DomainMutationRequest`, revision expectations, and authoritative snapshots in `DomainChanges.ts` |
 | Persisted-to-renderer representation | Domain constructors such as `createPromptSummary`, `createPromptFull`, and template equivalents |
-| Editable form validity | Feature/UI-state validation helpers such as `SystemSettingsFormat.ts` |
+| Editable form validity | Feature/UI-state validation helpers such as `data/UiState/client-state/SystemSettingsFormat.ts` |
 | Security, business, and filesystem invariants | Strict main command parsing, main-side planner recomputation, domain transitions, and storage adapters |
 | Optimistic concurrency | Framework-derived exact target/revision expectations plus authoritative snapshot reconciliation |
 

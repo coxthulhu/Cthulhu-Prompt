@@ -1,6 +1,6 @@
-import type { MarkdownContentPersisted } from '@shared/MarkdownContent'
-import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
-import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
+import type { MarkdownContentPersisted } from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
+import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
 import type { CommittedEntry } from '../Data/CommittedStore'
 import type { MarkdownPersistenceFields } from '../Persistence/MarkdownPersistence'
 

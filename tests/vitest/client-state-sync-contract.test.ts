@@ -1,5 +1,5 @@
-import { PromptStatus, type PromptFull, type PromptSummaryData } from '@shared/Prompt'
-import type { SystemSettings } from '@shared/SystemSettings'
+import { PromptStatus, type PromptFull, type PromptSummaryData } from '@shared/domain/prompt/Prompt'
+import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
 import { afterEach, describe, expect, it } from 'vitest'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import {
@@ -9,8 +9,8 @@ import {
 import {
   upsertPromptClientState,
   upsertPromptClientStates
-} from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
-import { upsertSystemSettingsClientState } from '@renderer/data/UiState/SystemSettingsClientStateMutations.svelte.ts'
+} from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
+import { upsertSystemSettingsClientState } from '@renderer/data/UiState/client-state/SystemSettingsClientStateMutations.svelte.ts'
 
 /** Clears prompt client state between contract tests. */
 const clearPromptClientStateCollection = (): void => {

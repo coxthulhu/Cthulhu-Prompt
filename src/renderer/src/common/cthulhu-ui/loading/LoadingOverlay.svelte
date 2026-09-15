@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Loader } from 'lucide-svelte'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
-  import { mergeClasses } from '../mergeClasses'
+  import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   let {
     fadeMs = uiAnimationDurationMs.standard,

@@ -1,7 +1,7 @@
 import {
   LOAD_USER_PERSISTENCE_CHANNEL,
   USER_PERSISTENCE_ID
-} from '@shared/UserPersistence'
+} from '@shared/domain/user-persistence/UserPersistence'
 import { data } from '../Data/Data'
 import { handleMainAuthoritativeQuery } from '../IpcFramework/AuthoritativeQuery'
 

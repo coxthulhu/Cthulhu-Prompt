@@ -1,25 +1,25 @@
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload
-} from '@shared/Workspace'
-import type { IpcMutationActionResponse } from '@shared/IpcResult'
+} from '@shared/domain/workspace/Workspace'
+import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
 import {
   planDeletePromptFolderDomainMutation,
   planMovePromptFolderDomainMutation
-} from '@shared/PromptFolderDomainMutations'
-import { runLoad } from '../IpcFramework/Load'
-import { ipcInvokeWithPayload } from '../IpcFramework/IpcRequestInvoke'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { collectPromptFolderGraphIds } from '../Collections/PromptFolderGraph'
-import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { setSelectedWorkspaceId } from '../UiState/WorkspaceSelection.svelte.ts'
-import { runImmediateRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
-import { promptClientStateCollection } from '../Collections/PromptClientStateCollection'
-import { promptTemplateClientStateCollection } from '../Collections/PromptTemplateClientStateCollection'
-import { promptFolderClientStateCollection } from '../Collections/PromptFolderClientStateCollection'
-import { clearWorkspaceStoreBridge } from '../UiState/WorkspaceStoreBridge'
-import { submitAllPacedUpdateTransactionsAndWait } from '../IpcFramework/RevisionCollections'
-import { waitForRevisionMutations } from '../IpcFramework/RevisionMutation'
+} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+import { runLoad } from '@renderer/data/IpcFramework/Load'
+import { ipcInvokeWithPayload } from '@renderer/data/IpcFramework/IpcRequestInvoke'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { collectPromptFolderGraphIds } from '@renderer/data/Collections/PromptFolderGraph'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { setSelectedWorkspaceId } from '@renderer/app/workspaceSelection.svelte.ts'
+import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
+import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
+import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
+import { promptFolderClientStateCollection } from '@renderer/data/Collections/PromptFolderClientStateCollection'
+import { clearWorkspaceData } from '@renderer/data/UiState/workspace/clearWorkspaceData'
+import { submitAllPacedUpdateTransactionsAndWait } from '@renderer/data/IpcFramework/RevisionCollections'
+import { waitForRevisionMutations } from '@renderer/data/IpcFramework/RevisionMutation'
 
 /** Creates a workspace through the command-style IPC endpoint. */
 export const createWorkspace = async (
@@ -40,7 +40,7 @@ export const closeWorkspace = async (): Promise<void> => {
     ipcInvokeWithPayload<IpcMutationActionResponse, CloseWorkspacePayload>('close-workspace', {})
   )
   setSelectedWorkspaceId(null)
-  clearWorkspaceStoreBridge()
+  clearWorkspaceData()
 }
 
 /** Deletes one root prompt folder and every entity it owns. */

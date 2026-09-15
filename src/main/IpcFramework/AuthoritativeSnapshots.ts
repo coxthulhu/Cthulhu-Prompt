@@ -1,5 +1,5 @@
-import type { AuthoritativeSnapshot } from '@shared/AuthoritativeSnapshot'
-import type { DomainTarget } from '@shared/DomainChanges'
+import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
+import type { DomainTarget } from '@shared/domain/DomainChanges'
 import { data } from '../Data/Data'
 import {
   buildCategorySnapshot,

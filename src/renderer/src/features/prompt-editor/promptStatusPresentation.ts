@@ -1,6 +1,6 @@
 import { Archive, Bookmark, Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
-import { PromptStatus } from '@shared/Prompt'
-import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
+import { PromptStatus } from '@shared/domain/prompt/Prompt'
+import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
 
 /** Optional quick transition rendered beside the status selector. */
 type QuickStatusAction = {

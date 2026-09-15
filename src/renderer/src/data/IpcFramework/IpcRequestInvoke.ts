@@ -1,6 +1,6 @@
 import { ipcInvoke as invokeIpc } from './IpcInvoke'
-import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
-import { compactGuid } from '@shared/compactGuid'
+import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/ipc/IpcRequest'
+import { compactGuid } from '@shared/utilities/compactGuid'
 
 const createRequestId = (): string => compactGuid(crypto.randomUUID())
 const getClientId = (): string => window.ipcClientId

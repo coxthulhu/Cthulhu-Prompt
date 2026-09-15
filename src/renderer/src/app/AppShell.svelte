@@ -17,7 +17,7 @@
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
   import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
-  import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/Prompt'
+  import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
   import { PromptFolderScreenMode } from '../features/prompt-folders/promptFolderScreenMode'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import type {
@@ -28,16 +28,16 @@
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
   import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
   import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-  import { getMarkdownContentIds } from '@shared/MarkdownContent'
+  import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
   import {
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
-  } from '@renderer/data/UiState/WorkspaceSelection.svelte.ts'
+  } from '@renderer/app/workspaceSelection.svelte.ts'
   import { syncLastWorkspaceInfoPath } from '@renderer/data/Mutations/UserPersistenceMutations'
   import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
-  import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/UserPersistenceAutosave.svelte.ts'
+  import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
   import { loadWorkspaceUiState } from '@renderer/data/Queries/WorkspaceUiStateQuery'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
@@ -54,9 +54,9 @@
     promptNavigationRowToPersistedEntryId,
     setPromptNavigationContext
   } from './PromptNavigationContext.svelte.ts'
-  import { flushAllAutosaves } from '@renderer/data/UiState/AutosaveFlushes.svelte.ts'
+  import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
-  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
+  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
     isPromptFolderScreen,
@@ -64,11 +64,11 @@
     isWorkspaceScreenSelectionSame,
     type PromptFolderScreenId,
     type WorkspaceScreenSelection
-  } from '@shared/UserPersistence'
-  import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
-  import type { SystemSettings } from '@shared/SystemSettings'
-  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/Workspace'
-  import { preparePromptFolderName } from '@shared/promptFolderName'
+  } from '@shared/domain/user-persistence/UserPersistence'
+  import type { PromptFolder, PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
+  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/domain/workspace/Workspace'
+  import { preparePromptFolderName } from '@shared/domain/prompt-folder/promptFolderName'
 
   type PromptFolderScreenHandle = {
     openDeletePromptFolderDialog: (promptFolderId: string) => void

@@ -12,7 +12,7 @@ Do not add collection-level persistence handlers, `createOptimisticAction`, buil
 
 ## Standard Feature Shape
 
-Colocate a serializable command type, strict runtime parser, and shared `DomainPlanner` under `src/shared/*DomainMutations.ts`. Dispatch the command in the renderer:
+Colocate a serializable command type, strict runtime parser, and shared `DomainPlanner` under `src/shared/domain/**/*DomainMutations.ts`. Dispatch the command in the renderer:
 
 ```ts
 const command = { categoryId, displayName }

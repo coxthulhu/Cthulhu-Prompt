@@ -6,18 +6,18 @@ import {
   planPromptTemplateMove,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
-import type { DomainPlanner } from '@shared/DomainChanges'
-import { type MarkdownContentPersisted } from '@shared/MarkdownContent'
-import { type PromptFolderContentKind } from '@shared/PromptFolder'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { getAllWorkspaceFolderEntries } from '@shared/Workspace'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import type { DomainPlanner } from '@shared/domain/DomainChanges'
+import { type MarkdownContentPersisted } from '@shared/domain/markdown-content/MarkdownContent'
+import { type PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
-} from '../IpcFramework/RendererDomainMutation'
-import { runRevisionMutation } from '../IpcFramework/RevisionCollections'
+} from '@renderer/data/IpcFramework/RendererDomainMutation'
+import { runRevisionMutation } from '@renderer/data/IpcFramework/RevisionCollections'
 
 /** Revision mutation options used to derive local helper types. */
 type MutationOptions<TPayload> = Parameters<typeof runRevisionMutation<TPayload>>[0]

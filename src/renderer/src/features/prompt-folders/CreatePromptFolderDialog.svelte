@@ -2,7 +2,7 @@
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { createPromptFolder } from '@renderer/data/Mutations/PromptFolderMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import type { PromptFolder, PromptFolderKind } from '@shared/PromptFolder'
+  import type { PromptFolder, PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
   import PromptFolderNameDialog from './PromptFolderNameDialog.svelte'
 
   let {

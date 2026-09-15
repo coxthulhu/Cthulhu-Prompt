@@ -1,11 +1,11 @@
-import type { LoadPromptFolderInitialPayload } from '@shared/PromptFolder'
-import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/IpcRequest'
-import type { LoadWorkspaceUiStateRequest } from '@shared/UiState'
+import type { LoadPromptFolderInitialPayload } from '@shared/domain/prompt-folder/PromptFolder'
+import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/ipc/IpcRequest'
+import type { LoadWorkspaceUiStateRequest } from '@shared/domain/ui-state/UiState'
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
   LoadWorkspaceByPathRequest
-} from '@shared/Workspace'
+} from '@shared/domain/workspace/Workspace'
 
 export type Parser<T> = (value: unknown) => T | null
 

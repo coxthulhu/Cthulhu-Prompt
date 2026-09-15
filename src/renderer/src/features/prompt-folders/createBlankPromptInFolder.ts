@@ -1,8 +1,8 @@
 import { createPrompt } from '@renderer/data/Mutations/PromptMutations'
-import { compactGuid } from '@shared/compactGuid'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
-import { DEFAULT_PROMPT_STATUS_FOLDER_ID, PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId, type PromptFull } from '@shared/Prompt'
+import { compactGuid } from '@shared/utilities/compactGuid'
+import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
+import { DEFAULT_PROMPT_FALLBACK_TITLE } from '@shared/domain/prompt/promptFallbackTitle'
+import { DEFAULT_PROMPT_STATUS_FOLDER_ID, PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId, type PromptFull } from '@shared/domain/prompt/Prompt'
 
 /** Created prompt identity and its pending persistence. */
 export type BlankPromptCreation = {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { PanelLeftClose, PanelLeftOpen } from 'lucide-svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   // Application artwork shared with the sidebar accent icon.
   import appIcon from '@renderer/assets/cutethulhu.png'
 

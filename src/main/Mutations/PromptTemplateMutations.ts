@@ -5,7 +5,7 @@ import {
   planPromptTemplateUpdate,
   type CreatePromptTemplateDomainCommand,
   type UpdatePromptTemplateDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 
 export const setupPromptTemplateMutationHandlers = (): void => {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
-  import DragGhostOverlay from '@renderer/features/drag-drop/DragGhostOverlay.svelte'
+  import DragGhostOverlay from '@renderer/common/drag-drop/DragGhostOverlay.svelte'
 
   type OverlayState = {
     isVisible: () => boolean

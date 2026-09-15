@@ -3,7 +3,7 @@ import {
   normalizeAppVersion,
   normalizeRuntimeEnvironment,
   type RuntimeConfig
-} from '@shared/runtimeConfig'
+} from '@shared/runtime/runtimeConfig'
 
 export const getRuntimeConfig = (): RuntimeConfig => {
   const config = window.runtimeConfig ?? DEFAULT_RUNTIME_CONFIG

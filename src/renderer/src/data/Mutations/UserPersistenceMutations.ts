@@ -1,10 +1,10 @@
-import { UPDATE_USER_PERSISTENCE_CHANNEL, USER_PERSISTENCE_ID } from '@shared/UserPersistence'
-import { planSetUserPersistenceDomainMutation } from '@shared/UserPersistenceDomainMutations'
-import { userPersistenceCollection } from '../Collections/UserPersistenceCollection'
+import { UPDATE_USER_PERSISTENCE_CHANNEL, USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
+import { planSetUserPersistenceDomainMutation } from '@shared/domain/user-persistence/UserPersistenceDomainMutations'
+import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
-} from '../IpcFramework/RendererDomainMutation'
+} from '@renderer/data/IpcFramework/RendererDomainMutation'
 
 export const mutatePacedUserPersistenceAutosaveUpdate = ({
   userPersistence,

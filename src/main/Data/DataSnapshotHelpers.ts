@@ -1,10 +1,10 @@
-import type { PromptPersisted } from '@shared/Prompt'
-import type { CategoryOrder, PromptFolder } from '@shared/PromptFolder'
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
-import type { FolderEntryRef } from '@shared/OrderContainer'
-import type { RevisionEnvelope } from '@shared/Revision'
-import type { Workspace } from '@shared/Workspace'
-import type { Category } from '@shared/Category'
+import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
+import type { CategoryOrder, PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
+import type { FolderEntryRef } from '@shared/domain/OrderContainer'
+import type { RevisionEnvelope } from '@shared/ipc/Revision'
+import type { Workspace } from '@shared/domain/workspace/Workspace'
+import type { Category } from '@shared/domain/category/Category'
 import type { PromptFolderPersistenceFields } from '../Persistence/PromptFolderPersistence'
 import {
   readPromptModifiedAt,

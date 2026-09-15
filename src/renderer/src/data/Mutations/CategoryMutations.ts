@@ -1,4 +1,4 @@
-import { compactGuid } from '@shared/compactGuid'
+import { compactGuid } from '@shared/utilities/compactGuid'
 import {
   planCreateCategoryDomainMutation,
   planDeleteCategoryDomainMutation,
@@ -7,18 +7,18 @@ import {
   planSetCategoryDescriptionDomainMutation,
   planUpdateCategoryDetailsDomainMutation,
   type SaveCategoriesDomainValue
-} from '@shared/CategoryDomainMutations'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { getPromptFolderCategoryIds } from '@shared/PromptFolder'
-import { PromptStatusFolderId } from '@shared/Prompt'
-import { categoryCollection } from '../Collections/CategoryCollection'
-import { promptFolderCollection } from '../Collections/PromptFolderCollection'
-import { workspaceCollection } from '../Collections/WorkspaceCollection'
-import { getAllWorkspaceFolderEntries } from '@shared/Workspace'
+} from '@shared/domain/category/CategoryDomainMutations'
+import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
+import { getPromptFolderCategoryIds } from '@shared/domain/prompt-folder/PromptFolder'
+import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
+import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
-} from '../IpcFramework/RendererDomainMutation'
+} from '@renderer/data/IpcFramework/RendererDomainMutation'
 
 /** Atomically persists every retained category draft for one root folder. */
 export const saveCategories = async (

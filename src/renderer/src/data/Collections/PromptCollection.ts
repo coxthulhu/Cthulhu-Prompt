@@ -1,5 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import { isPromptFull, type Prompt } from '@shared/Prompt'
+import { isPromptFull, type Prompt } from '@shared/domain/prompt/Prompt'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 export const promptCollection = createCollection(

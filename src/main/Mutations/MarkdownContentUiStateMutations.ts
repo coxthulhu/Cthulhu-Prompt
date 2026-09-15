@@ -2,7 +2,7 @@ import {
   UPDATE_MARKDOWN_CONTENT_UI_STATE_CHANNEL,
   parseSetMarkdownContentUiStateDomainCommand,
   planSetMarkdownContentUiStateDomainMutation
-} from '@shared/MarkdownContentUiState'
+} from '@shared/domain/ui-state/MarkdownContentUiState'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers the paced markdown editor UI-state domain mutation. */

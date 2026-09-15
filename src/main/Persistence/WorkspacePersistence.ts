@@ -1,7 +1,7 @@
-import type { Workspace } from '@shared/Workspace'
-import type { FolderEntryRef } from '@shared/OrderContainer'
-import type { WorkspaceFolderOrderFile } from '../DiskTypes/WorkspaceDiskTypes'
-import { readWorkspaceFolderEntries, readWorkspaceInfo } from '../DataAccess/WorkspaceReads'
+import type { Workspace } from '@shared/domain/workspace/Workspace'
+import type { FolderEntryRef } from '@shared/domain/OrderContainer'
+import type { WorkspaceFolderOrderFile } from './workspace/WorkspaceDiskTypes'
+import { readWorkspaceFolderEntries, readWorkspaceInfo } from './workspace/WorkspaceReads'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -12,7 +12,7 @@ import {
   writeJsonFile
 } from './FilePersistenceHelpers'
 import { resolveWorkspaceFolderOrderPath } from './PromptPersistencePaths'
-import { LATEST_WORKSPACE_SCHEMA_VERSION } from './WorkspaceMigrations'
+import { LATEST_WORKSPACE_SCHEMA_VERSION } from './workspace/WorkspaceMigrations'
 
 export type WorkspacePersistenceFields = {
   workspacePath: string

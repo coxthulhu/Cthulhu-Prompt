@@ -3,9 +3,9 @@
   import {
     type PromptFolder,
     type PromptFolderContentKind
-  } from '@shared/PromptFolder'
-  import type { Category } from '@shared/Category'
-  import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/PromptEditorUiCache.svelte.ts'
+  } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { Category } from '@shared/domain/category/Category'
+  import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
   import type { MarkdownContentDraftRecord } from './promptFolderScreenController.svelte.ts'
   import {
     getPromptStatusFolderDefinition,
@@ -14,12 +14,12 @@
     type PromptStatusFolderId,
     PromptStatus,
     type PromptTemplateReference
-  } from '@shared/Prompt'
+  } from '@shared/domain/prompt/Prompt'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
   import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
-  import { setPromptTemplates } from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
+  import { setPromptTemplates } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
@@ -33,7 +33,7 @@
   import PromptDivider from '../prompt-editor/PromptDivider.svelte'
   import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from '../prompt-editor/promptDividerSizing'
   import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
-  import SvelteVirtualWindow from '../virtualizer/SvelteVirtualWindow.svelte'
+  import SvelteVirtualWindow from '@renderer/common/virtual-window/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
     type ScrollToAndTrackRow,
@@ -42,7 +42,7 @@
     type VirtualWindowRowComponentProps,
     type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
-  } from '../virtualizer/virtualWindowTypes'
+  } from '@renderer/common/virtual-window/virtualWindowTypes'
   import CategoryEditorRow from './CategoryEditorRow.svelte'
   import PromptFolderRootHeaderRow, {
     PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX
@@ -65,7 +65,7 @@
     type DragFinishResult,
     type DraggableOptions,
     type DroppableOptions
-  } from '../drag-drop/dragDrop.svelte.ts'
+  } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import {
     CATEGORY_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE,
@@ -74,21 +74,21 @@
     type CategoryDropPayload,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload
-  } from '../drag-drop/promptHandleDrag'
-  import { createPromptDragGhost } from '../drag-drop/promptDragGhost'
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
+  import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
   import {
     clearPromptEntryDrag,
     startCategoryDrag
-  } from '../drag-drop/promptEntryDragState.svelte.ts'
+  } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
   import type { ActivePromptScreenRow } from './promptFolderScreenController.svelte.ts'
-  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
-  import PromptDropTarget from '../drag-drop/PromptDropTarget.svelte'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/buttons/InlineTextButton.svelte'
+  import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
   import {
     getFinalPromptFolderScreenModeDefinition,
     PromptFolderScreenMode
   } from './promptFolderScreenMode'
-  import { resolvePromptTreePromptMove } from '../sidebar/promptTreeDrag'
-  import { getMarkdownContentCategoryOrder } from '@shared/MarkdownContent'
+  import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
+  import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
   import type {
     PromptFolderDividerTarget,
     PromptFolderPromptTarget,
@@ -781,7 +781,7 @@
         ? 'templates'
         : 'prompts'
   } hidden. Click to expand...`}
-  <PromptDropTarget
+  <DropTarget
     getOptions={() => getPromptDividerDropOptions(rowId, row.categoryId, null)}
     class="h-full"
   >
@@ -809,7 +809,7 @@
         {/if}
       </PromptFolderSectionRow>
     {/snippet}
-  </PromptDropTarget>
+  </DropTarget>
 {/snippet}
 
 {#snippet categoryBottomCapRow({ row, rowHeightPx })}

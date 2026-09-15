@@ -1,7 +1,7 @@
 import {
   parseSetSystemSettingsDomainCommand,
   planSetSystemSettingsDomainMutation
-} from '@shared/SystemSettingsDomainMutations'
+} from '@shared/domain/settings/SystemSettingsDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers the paced system-settings domain mutation channel. */

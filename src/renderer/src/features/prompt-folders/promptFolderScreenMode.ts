@@ -1,4 +1,4 @@
-import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatusFolderId } from '@shared/Prompt'
+import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
 /** Screen modes use the same identities as persisted status groups. */
 export const PromptFolderScreenMode = PromptStatusFolderId

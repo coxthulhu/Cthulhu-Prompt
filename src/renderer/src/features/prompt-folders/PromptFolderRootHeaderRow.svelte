@@ -4,13 +4,13 @@
 
 <script lang="ts">
   import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
-  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
-  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import { promptStatusGroups } from './promptStatusGroups'
-  import type { PromptStatusFolderId } from '@shared/Prompt'
+  import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
 
   let {
@@ -28,7 +28,7 @@
     orderedPromptCount: number
     /** Counts displayed beside registered group filters. */
     statusGroupCounts: Record<PromptStatusFolderId, number>
-    contentKind: import('@shared/PromptFolder').PromptFolderContentKind
+    contentKind: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
     screenMode: PromptFolderScreenMode
     onDeletePromptFolder: () => void
     onManageCategories: () => void

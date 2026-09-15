@@ -4,7 +4,7 @@ import {
   userPersistenceSqlitePersistence,
   workspacePromptFolderUiStateSqlitePersistence,
   workspaceUiStateSqlitePersistence
-} from '../Persistence/UiStateSqlitePersistence'
+} from '../Persistence/sqlite/UiStateSqlitePersistence'
 import { createRevisionData } from './RevisionDataFactory'
 
 /** Placeholder revision notification hook for SQLite-backed authoritative UI state. */

@@ -1,4 +1,4 @@
-import { normalizeRuntimeEnvironment } from '@shared/runtimeConfig'
+import { normalizeRuntimeEnvironment } from '@shared/runtime/runtimeConfig'
 
 const DEV_ENVIRONMENT_VARIABLE = 'DEV_ENVIRONMENT' as const
 

@@ -11,7 +11,7 @@ import {
   planSaveCategoriesDomainMutation,
   planSetCategoryDescriptionDomainMutation,
   planUpdateCategoryDetailsDomainMutation
-} from '@shared/CategoryDomainMutations'
+} from '@shared/domain/category/CategoryDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers atomic management and focused category mutation channels. */

@@ -7,7 +7,7 @@ import { promptTemplateData } from './PromptTemplateData'
 import { systemSettingsData } from './SystemSettingsData'
 import { workspaceData } from './WorkspaceData'
 import { categoryData } from './CategoryData'
-import type { DomainTargetPolicy } from '@shared/DomainChanges'
+import type { DomainTargetPolicy } from '@shared/domain/DomainChanges'
 import {
   accordionUiStateData,
   markdownContentUiStateData,

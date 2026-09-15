@@ -1,5 +1,5 @@
-import type { PromptContentFolder } from '@shared/PromptFolder'
-import { getPromptStatusFolderDefinition, type PromptStatus, type PromptStatusFolderId } from '@shared/Prompt'
+import type { PromptContentFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import { getPromptStatusFolderDefinition, type PromptStatus, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
 /** Finalized prompt paired with the root-content owner used by navigation. */
 export type FinalizedPromptWithOwner = {

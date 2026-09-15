@@ -12,9 +12,9 @@ import {
   type DomainRevisionExpectation,
   type DomainState,
   type DomainTarget
-} from '@shared/DomainChanges'
-import type { IpcRequestWithPayload } from '@shared/IpcRequest'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
+} from '@shared/domain/DomainChanges'
+import type { IpcRequestWithPayload } from '@shared/ipc/IpcRequest'
+import type { IpcMutationPayloadResult } from '@shared/ipc/IpcResult'
 import { runAtomicDomainTransitionTransaction } from '../Data/AtomicDataTransaction'
 import { data } from '../Data/Data'
 import { projectDomainTransitions } from '../Data/DomainTransitions'

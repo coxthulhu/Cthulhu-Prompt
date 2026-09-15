@@ -1,4 +1,4 @@
-import type { IpcResult, IpcSuccess } from '@shared/IpcResult'
+import type { IpcResult, IpcSuccess } from '@shared/ipc/IpcResult'
 
 export const runLoad = async <TData extends object>(
   load: () => Promise<IpcResult<TData>>

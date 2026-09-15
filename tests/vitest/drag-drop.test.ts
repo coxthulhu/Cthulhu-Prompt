@@ -3,7 +3,7 @@ import {
   DEFAULT_DROPPABLE_SNAP_DIMENSIONS,
   isPointInDroppableSnapZone,
   selectNearestDroppableCandidate
-} from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+} from '@renderer/common/drag-drop/dragDrop.svelte.ts'
 
 describe('drag-drop defaults', () => {
   it('expands targets by 100px vertically and 0px horizontally', () => {

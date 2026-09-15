@@ -3,7 +3,7 @@ import { startupNormally } from '../NormalStartup'
 import { getFs, setFs } from '../fs-provider'
 import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
 import { isPlaywrightEnvironment } from '../appEnvironment'
-import { SqliteDataAccess } from '../DataAccess/SqliteDataAccess'
+import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
 import { initializePersistentLogging } from '../logging'
 
 interface TestFixtures {

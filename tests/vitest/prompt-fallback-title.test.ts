@@ -5,7 +5,7 @@ import {
   resolvePromptTitleUpdate,
   resolvePromptTitleUpdateForPromptIds,
   type PromptFallbackTitleCandidate
-} from '@shared/promptFallbackTitle'
+} from '@shared/domain/prompt/promptFallbackTitle'
 
 const prompts: PromptFallbackTitleCandidate[] = [
   { id: 'active-new-prompt', title: 'New Prompt', fallbackTitle: '' },

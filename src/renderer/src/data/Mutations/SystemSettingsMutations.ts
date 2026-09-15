@@ -1,9 +1,9 @@
 import {
   SYSTEM_SETTINGS_ID,
   type SystemSettings
-} from '@shared/SystemSettings'
-import { planSetSystemSettingsDomainMutation } from '@shared/SystemSettingsDomainMutations'
-import { mutatePacedRendererDomainMutation } from '../IpcFramework/RendererDomainMutation'
+} from '@shared/domain/settings/SystemSettings'
+import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
+import { mutatePacedRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
 
 /** Inputs used to enqueue one paced system-settings replacement. */
 type PacedSystemSettingsUpdateOptions = Pick<

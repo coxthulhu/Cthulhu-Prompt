@@ -1,18 +1,18 @@
-import type { Category } from '@shared/Category'
+import type { Category } from '@shared/domain/category/Category'
 import { isDeepStrictEqual } from 'node:util'
-import type { DomainEntityMap, DomainEntityType } from '@shared/DomainChanges'
-import { getOrderedMarkdownContentIds } from '@shared/MarkdownContent'
+import type { DomainEntityMap, DomainEntityType } from '@shared/domain/DomainChanges'
+import { getOrderedMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import {
   getPromptFolderCategoryIds,
   type PromptFolder,
   type PromptFolderContentKind
-} from '@shared/PromptFolder'
+} from '@shared/domain/prompt-folder/PromptFolder'
 import {
   PROMPT_STATUS_FOLDERS,
   type PromptStatusFolderId
-} from '@shared/Prompt'
-import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
-import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
+} from '@shared/domain/prompt/Prompt'
+import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
+import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
 import type {
   DomainGraph,
   DomainGraphEntryFor,
@@ -28,7 +28,7 @@ import {
   resolvePromptStatusFolderName,
   resolveWorkspaceInfoPath
 } from './PromptPersistencePaths'
-import { getAllWorkspaceFolderEntries } from '@shared/Workspace'
+import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
 import type { WorkspacePersistenceFields } from './WorkspacePersistence'
 
 /** One typed storage transition staged without inventing a domain mutation. */

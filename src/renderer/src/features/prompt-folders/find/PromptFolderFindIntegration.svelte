@@ -13,7 +13,7 @@
   } from './promptFolderFindSearch'
   import { createPromptFolderFindSearchModel } from './promptFolderFindSearchModel'
   import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
-  import type { ScrollToWithinWindowBand } from '../../virtualizer/virtualWindowTypes'
+  import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import {
     findMatchIndexAtOrAfter,

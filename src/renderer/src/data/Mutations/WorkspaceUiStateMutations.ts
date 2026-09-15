@@ -1,21 +1,21 @@
-import type { WorkspaceScreenSelection } from '@shared/UserPersistence'
+import type { WorkspaceScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
 import {
   createAccordionUiStateKey,
   createWorkspacePromptFolderUiStateKey,
   type AccordionUiState,
   type WorkspacePromptFolderUiState,
   type WorkspaceUiState
-} from '@shared/UiState'
+} from '@shared/domain/ui-state/UiState'
 import {
   planSetAccordionUiStateDomainMutation,
   planSetWorkspacePromptFolderUiStateDomainMutation,
   planSetWorkspaceUiStateDomainMutation
-} from '@shared/UiStateDomainMutations'
-import { workspaceUiStateCollection } from '../Collections/WorkspaceUiStateCollection'
+} from '@shared/domain/ui-state/UiStateDomainMutations'
+import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
-} from '../IpcFramework/RendererDomainMutation'
+} from '@renderer/data/IpcFramework/RendererDomainMutation'
 
 /** Queues one complete workspace-level UI-state replacement. */
 export const setWorkspaceUiStateWithAutosave = (

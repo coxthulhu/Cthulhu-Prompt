@@ -1,10 +1,10 @@
 import { createTransaction } from '@tanstack/svelte-db'
 import type { Collection } from '@tanstack/svelte-db'
 import type { Transaction } from '@tanstack/svelte-db'
-import type { RevisionPayloadEntity } from '@shared/Revision'
-import type { IpcMutationPayloadResult } from '@shared/IpcResult'
+import type { RevisionPayloadEntity } from '@shared/ipc/Revision'
+import type { IpcMutationPayloadResult } from '@shared/ipc/IpcResult'
 import { ipcInvokeWithPayload } from './IpcRequestInvoke'
-import type { RevisionCollectionUtils } from '../Collections/RevisionCollection'
+import type { RevisionCollectionUtils } from '@renderer/data/Collections/RevisionCollection'
 import {
   applyOptimisticMutation,
   collectTouchedElementsFromMutation,

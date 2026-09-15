@@ -1,38 +1,38 @@
 <script lang="ts">
-  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
-  import Card from '@renderer/common/cthulhu-ui/Card.svelte'
-  import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
-  import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
-  import Subtitle from '@renderer/common/cthulhu-ui/Subtitle.svelte'
-  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
-  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/TitleSubtitleStack.svelte'
-  import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
-  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
+  import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
+  import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/forms/ControlRow.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
+  import ValuePill from '@renderer/common/cthulhu-ui/layout/ValuePill.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
+  import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
   import { ExternalLink, Info, RefreshCcw, Settings, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
     selectSystemSettingsClientStateRecord,
     useSystemSettingsClientStateQuery
-  } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
+  } from '@renderer/data/UiState/autosave/SystemSettingsAutosave.svelte.ts'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     setSystemSettingsClientStateFontSizeInput,
     setSystemSettingsClientStatePromptEditorMaxLinesInput,
     setSystemSettingsClientStatePromptEditorMinLinesInput,
     setSystemSettingsClientStateShowLineNumbers
-  } from '@renderer/data/UiState/SystemSettingsClientStateMutations.svelte.ts'
+  } from '@renderer/data/UiState/client-state/SystemSettingsClientStateMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
     formatPromptEditorMaxLinesInput,
     formatPromptEditorMinLinesInput,
     formatPromptFontSizeInput
-  } from '@renderer/data/UiState/SystemSettingsFormat'
+  } from '@renderer/data/UiState/client-state/SystemSettingsFormat'
   import BottomSpacer from '@renderer/features/prompt-editor/BottomSpacer.svelte'
   import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
   import {
@@ -43,7 +43,7 @@
     MIN_PROMPT_EDITOR_MAX_LINES,
     MIN_PROMPT_EDITOR_MIN_LINES,
     MIN_PROMPT_FONT_SIZE
-  } from '@shared/SystemSettings'
+  } from '@shared/domain/settings/SystemSettings'
 
   const systemSettingsClientStateQuery = useSystemSettingsClientStateQuery()
   const systemSettingsClientState = $derived(

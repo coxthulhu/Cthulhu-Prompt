@@ -1,9 +1,9 @@
-import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/PromptFolder'
-import { isFinalPromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+import { getPromptFolderCategoryIds, type PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import { isFinalPromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   getMarkdownContentIds,
   getOrderedMarkdownContentIds
-} from '@shared/MarkdownContent'
+} from '@shared/domain/markdown-content/MarkdownContent'
 import { promptCollection } from './PromptCollection'
 
 export const getPromptFolderAllPromptIds = (promptFolder: PromptFolder): string[] =>

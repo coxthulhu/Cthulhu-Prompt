@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte'
-import type { SystemSettings } from '@shared/SystemSettings'
+import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
 
 const SYSTEM_SETTINGS_CONTEXT = Symbol('system-settings')
 

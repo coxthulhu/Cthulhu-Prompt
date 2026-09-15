@@ -1,5 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import type { PromptFolder } from '@shared/PromptFolder'
+import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 export const promptFolderCollection = createCollection(

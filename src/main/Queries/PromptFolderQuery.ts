@@ -2,10 +2,10 @@ import { ipcMain } from 'electron'
 import type {
   LoadPromptFolderInitialPayload,
   LoadPromptFolderInitialResult
-} from '@shared/PromptFolder'
-import { isFinalPromptStatus, PromptStatus } from '@shared/Prompt'
-import { getPromptFolderCategoryIds } from '@shared/PromptFolder'
-import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import { isFinalPromptStatus, PromptStatus } from '@shared/domain/prompt/Prompt'
+import { getPromptFolderCategoryIds } from '@shared/domain/prompt-folder/PromptFolder'
+import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 import { data } from '../Data/Data'
 import {
   buildPromptFolderSnapshot,

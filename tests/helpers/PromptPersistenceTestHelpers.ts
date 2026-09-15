@@ -1,5 +1,5 @@
 import { createTestRequestId } from './PlaywrightTestFramework'
-import { buildPromptStem } from '@shared/promptFilename'
+import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
 
 type PersistedPromptLookup = {
   workspacePath: string

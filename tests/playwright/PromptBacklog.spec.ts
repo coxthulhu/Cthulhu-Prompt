@@ -10,7 +10,7 @@ import {
   finishActiveDrag,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
-import type { CategoryOrder } from '../../src/shared/PromptFolder'
+import type { CategoryOrder } from '@shared/domain/prompt-folder/PromptFolder'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 
 /** Repository test fixtures and assertions for the Backlog workflow. */

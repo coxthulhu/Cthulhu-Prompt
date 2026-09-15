@@ -5,9 +5,9 @@ import {
   createWorkspacePromptFolderUiStateKey,
   LOAD_WORKSPACE_UI_STATE_CHANNEL,
   type LoadWorkspaceUiStateResult
-} from '@shared/UiState'
+} from '@shared/domain/ui-state/UiState'
 import { data } from '../Data/Data'
-import { SqliteDataAccess } from '../DataAccess/SqliteDataAccess'
+import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
 import { parseLoadWorkspaceUiStateRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
 

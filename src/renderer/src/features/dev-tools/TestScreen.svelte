@@ -25,48 +25,48 @@
     StickyNote,
     Trash2
   } from 'lucide-svelte'
-  import Accordion from '@renderer/common/cthulhu-ui/Accordion.svelte'
-  import AccordionSection from '@renderer/common/cthulhu-ui/AccordionSection.svelte'
-  import ActivityBarButton from '@renderer/common/cthulhu-ui/ActivityBarButton.svelte'
+  import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
+  import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
+  import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
   import CardSurface, {
     type CardSurfaceVariant
-  } from '@renderer/common/cthulhu-ui/CardSurface.svelte'
+  } from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
-  import ConfirmationDialog from '@renderer/common/cthulhu-ui/ConfirmationDialog.svelte'
-  import Card from '@renderer/common/cthulhu-ui/Card.svelte'
-  import CopyButton from '@renderer/common/cthulhu-ui/CopyButton.svelte'
-  import DisplayRow from '@renderer/common/cthulhu-ui/DisplayRow.svelte'
-  import ErrorDialog from '@renderer/common/cthulhu-ui/ErrorDialog.svelte'
-  import Button from '@renderer/common/cthulhu-ui/Button.svelte'
-  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/FloatingValidationMessage.svelte'
+  } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupSimple.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
+  import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
+  import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
+  import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
+  import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import FolderInput from '@renderer/common/cthulhu-ui/FolderInput.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import IconButton, {
     type IconButtonBaseVariant,
     type IconButtonHoverVariant,
     type IconButtonSize
-  } from '@renderer/common/cthulhu-ui/IconButton.svelte'
-  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/IconButtonWithMoreOptions.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/IconTextButton.svelte'
-  import InlineTextButton from '@renderer/common/cthulhu-ui/InlineTextButton.svelte'
-  import LinkButton from '@renderer/common/cthulhu-ui/LinkButton.svelte'
-  import MessageRow from '@renderer/common/cthulhu-ui/MessageRow.svelte'
+  } from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/buttons/IconButtonWithMoreOptions.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/buttons/InlineTextButton.svelte'
+  import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
+  import MessageRow from '@renderer/common/cthulhu-ui/layout/MessageRow.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
-  import NumericStepperInput from '@renderer/common/cthulhu-ui/NumericStepperInput.svelte'
-  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
-  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
+  import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
+  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/selectors/DetailedSelectorButton.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
   import SimpleSelectorButton, {
     type SimpleSelectorButtonItem
-  } from '@renderer/common/cthulhu-ui/SimpleSelectorButton.svelte'
-  import ControlRow from '@renderer/common/cthulhu-ui/ControlRow.svelte'
-  import TextInput from '@renderer/common/cthulhu-ui/TextInput.svelte'
-  import Title from '@renderer/common/cthulhu-ui/Title.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/ToggleTextButton.svelte'
-  import ValuePill from '@renderer/common/cthulhu-ui/ValuePill.svelte'
+  } from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
+  import ControlRow from '@renderer/common/cthulhu-ui/forms/ControlRow.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
+  import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
+  import ValuePill from '@renderer/common/cthulhu-ui/layout/ValuePill.svelte'
 
   /** Workspace-scoped persistence key for the Test Screen accordion demo. */
   const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'

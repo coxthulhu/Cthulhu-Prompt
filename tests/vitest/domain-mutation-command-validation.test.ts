@@ -6,7 +6,7 @@ import {
   parseSaveCategoriesDomainCommand,
   parseSetCategoryDescriptionDomainCommand,
   parseUpdateCategoryDetailsDomainCommand
-} from '@shared/CategoryDomainMutations'
+} from '@shared/domain/category/CategoryDomainMutations'
 import {
   parseCreatePromptDomainCommand,
   parseCreatePromptTemplateDomainCommand,
@@ -14,16 +14,16 @@ import {
   parseMoveMarkdownContentDomainCommand,
   parseUpdatePromptDomainCommand,
   parseUpdatePromptTemplateDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import {
   parseCreatePromptFolderDomainCommand,
   parseDeletePromptFolderDomainCommand,
   parseMovePromptFolderDomainCommand,
   parseRenamePromptFolderDomainCommand
-} from '@shared/PromptFolderDomainMutations'
-import { parseSetPromptStatusDomainCommand } from '@shared/PromptDomainMutations'
-import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
-import { parseSetSystemSettingsDomainCommand } from '@shared/SystemSettingsDomainMutations'
+} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+import { parseSetPromptStatusDomainCommand } from '@shared/domain/prompt/PromptDomainMutations'
+import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { parseSetSystemSettingsDomainCommand } from '@shared/domain/settings/SystemSettingsDomainMutations'
 
 describe('domain mutation command validation', () => {
   it('accepts a root-folder rename command and rejects legacy payload fields', () => {

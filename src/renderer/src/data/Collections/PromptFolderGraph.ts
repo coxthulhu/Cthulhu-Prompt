@@ -1,8 +1,8 @@
 import {
   MARKDOWN_CONTENT_KINDS,
   getMarkdownContentIds
-} from '@shared/MarkdownContent'
-import { getPromptFolderCategoryIds, type PromptFolderContentKind } from '@shared/PromptFolder'
+} from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptFolderCategoryIds, type PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
 import { promptFolderCollection } from './PromptFolderCollection'
 
 export type PromptFolderGraphIds = {

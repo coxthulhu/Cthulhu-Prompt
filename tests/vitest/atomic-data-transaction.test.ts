@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DomainState } from '@shared/DomainChanges'
-import { PromptStatusFolderId } from '@shared/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
+import type { DomainState } from '@shared/domain/DomainChanges'
+import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 
 /** Ordered persistence events shared by filesystem and SQLite transaction mocks. */
 const persistenceEvents = vi.hoisted(() => [] as string[])
@@ -215,12 +215,12 @@ vi.mock('../../src/main/Data/GlobalMutationQueue', () => {
   return { enqueueGlobalMutation }
 })
 
-vi.mock('../../src/main/DataAccess/SqliteDataAccess', () => ({
+vi.mock('../../src/main/Persistence/sqlite/SqliteDataAccess', () => ({
   SqliteDataAccess: { runTransaction: runSqliteTransaction }
 }))
 
-import { planCreateCategoryDomainMutation } from '@shared/CategoryDomainMutations'
-import { planRenamePromptFolderDomainMutation } from '@shared/PromptFolderDomainMutations'
+import { planCreateCategoryDomainMutation } from '@shared/domain/category/CategoryDomainMutations'
+import { planRenamePromptFolderDomainMutation } from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
 import {
   runAtomicDataTransaction,
   runAtomicDomainTransitionTransaction

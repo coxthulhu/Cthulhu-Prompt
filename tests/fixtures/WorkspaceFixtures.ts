@@ -1,19 +1,19 @@
 import { samplePrompts, heightTestPrompts } from './TestData'
-import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/promptFallbackTitle'
-import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/promptFilename'
-import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/PromptFolder'
+import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/domain/prompt/promptFallbackTitle'
+import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
+import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/domain/prompt-folder/PromptFolder'
 import {
   isFinalPromptStatus,
   PromptStatus,
   type PromptPersisted,
   type PromptTemplateReference
-} from '@shared/Prompt'
-import type { PromptFolderInfoFile } from '../../src/main/DiskTypes/WorkspaceDiskTypes'
+} from '@shared/domain/prompt/Prompt'
+import type { PromptFolderInfoFile } from '../../src/main/Persistence/workspace/WorkspaceDiskTypes'
 import {
   serializePromptMarkdown,
   serializePromptTemplateMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
+import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import { PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,

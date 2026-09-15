@@ -11,7 +11,7 @@ import {
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
-import { PromptStatus } from '../../src/shared/Prompt'
+import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import {
   readWorkspaceUiState,
   seedWorkspaceUiState

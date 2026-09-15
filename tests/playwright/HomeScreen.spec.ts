@@ -6,7 +6,7 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { PromptStatus } from '../../src/shared/Prompt'
+import { PromptStatus } from '@shared/domain/prompt/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 

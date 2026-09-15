@@ -5,11 +5,11 @@ import {
   planPromptUpdate,
   type CreatePromptDomainCommand,
   type UpdatePromptDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import {
   parseSetPromptStatusDomainCommand,
   planSetPromptStatusDomainMutation
-} from '@shared/PromptDomainMutations'
+} from '@shared/domain/prompt/PromptDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 

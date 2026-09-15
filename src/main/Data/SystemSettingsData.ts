@@ -1,4 +1,4 @@
-import { SYSTEM_SETTINGS_ID, type SystemSettings } from '@shared/SystemSettings'
+import { SYSTEM_SETTINGS_ID, type SystemSettings } from '@shared/domain/settings/SystemSettings'
 import {
   systemSettingsPersistence,
   type SystemSettingsPersistenceFields

@@ -1,8 +1,8 @@
 import {
   createPromptStatusFolderLayouts,
   type PromptContentFolder
-} from '@shared/PromptFolder'
-import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import { collectFinalizedPrompts } from '@renderer/features/prompt-folders/promptFolderCompletedPrompts'
 import { describe, expect, it } from 'vitest'
 

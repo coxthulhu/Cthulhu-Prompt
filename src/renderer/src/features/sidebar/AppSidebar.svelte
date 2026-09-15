@@ -5,19 +5,19 @@
   import type {
     DraggableOptions,
     DroppableOptions
-  } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
-  import { createDroppableStateRegistry } from '@renderer/features/drag-drop/dragDrop.svelte.ts'
+  } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
+  import { createDroppableStateRegistry } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import {
     PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
     type PromptFolderDragPayload
-  } from '@renderer/features/drag-drop/promptFolderDrag'
+  } from '@renderer/features/prompt-drag-drop/promptFolderDrag'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload,
-  } from '@renderer/features/drag-drop/promptHandleDrag'
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
   import type { ScreenId } from '@renderer/app/screens'
-  import { isPromptFolderScreen } from '@shared/UserPersistence'
+  import { isPromptFolderScreen } from '@shared/domain/user-persistence/UserPersistence'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import {
@@ -42,38 +42,38 @@
   import {
     lookupWorkspacePersistedAccordionViewEntry,
     setAccordionViewEntryWithAutosave
-  } from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
+  } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
   import {
     PROMPT_STATUS_FOLDER_REGISTRY,
     PromptStatusFolderId,
     type Prompt
-  } from '@shared/Prompt'
-  import type { PromptTemplate } from '@shared/PromptTemplate'
+  } from '@shared/domain/prompt/Prompt'
+  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import {
     type PromptFolder,
     type PromptFolderKind
-  } from '@shared/PromptFolder'
+  } from '@shared/domain/prompt-folder/PromptFolder'
   import {
     getMarkdownContentCategoryOrder,
     getOrderedMarkdownContentIds
-  } from '@shared/MarkdownContent'
-  import type { Category } from '@shared/Category'
-  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/Workspace'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/DropdownPopupDetailed.svelte'
+  } from '@shared/domain/markdown-content/MarkdownContent'
+  import type { Category } from '@shared/domain/category/Category'
+  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/domain/workspace/Workspace'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/DropdownPopupSimple.svelte'
-  import SelectorButton from '@renderer/common/cthulhu-ui/SelectorButton.svelte'
-  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/DetailedSelectorButton.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/IconButton.svelte'
+  } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupSimple.svelte'
+  import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
+  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/selectors/DetailedSelectorButton.svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
-  import Accordion from '@renderer/common/cthulhu-ui/Accordion.svelte'
-  import AccordionSection from '@renderer/common/cthulhu-ui/AccordionSection.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
+  import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
-  import { promptEntryDragState } from '../drag-drop/promptEntryDragState.svelte.ts'
-  import { resolvePromptTreePromptMove } from './promptTreeDrag'
+  import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
+  import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
   import { getPromptStatusGroupCounts, promptStatusGroups, sidebarPromptStatusGroups } from '../prompt-folders/promptStatusGroups'
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
@@ -84,7 +84,7 @@
     type ManagedCategoryInput,
     type ManageCategoriesDialogOpenOptions
   } from '../prompt-folders/ManageCategoriesDialog.svelte'
-  import PromptTree from './PromptTree.svelte'
+  import PromptTree from '@renderer/features/prompt-tree/PromptTree.svelte'
   import {
     getNextAppIconTooltip,
     INITIAL_APP_ICON_TOOLTIP

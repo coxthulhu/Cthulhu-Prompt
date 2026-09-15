@@ -1,20 +1,20 @@
 import { vol } from 'memfs'
 import { describe, expect, it, vi } from 'vitest'
 import { setFs } from '../../src/main/fs-provider'
-import { loadWorkspaceByPath } from '../../src/main/Registries/WorkspaceLoader'
+import { loadWorkspaceByPath } from '../../src/main/Workspace/WorkspaceLoader'
 import { loadPromptFolderInitialData } from '../../src/main/Queries/PromptFolderQuery'
 import {
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
-vi.mock('../../src/main/DataAccess/WorkspaceUiStateDataAccess', () => ({
+vi.mock('../../src/main/Persistence/sqlite/WorkspaceUiStateDataAccess', () => ({
   WorkspaceUiStateDataAccess: {
     cleanupWorkspacePromptFolderUiState: vi.fn()
   }
 }))
 
-vi.mock('../../src/main/DataAccess/MarkdownContentUiStateDataAccess', () => ({
+vi.mock('../../src/main/Persistence/sqlite/MarkdownContentUiStateDataAccess', () => ({
   MarkdownContentUiStateDataAccess: {
     cleanupWorkspaceMarkdownContentUiState: vi.fn(),
     readMarkdownContentUiState: vi.fn(() => null),

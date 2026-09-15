@@ -1,5 +1,5 @@
-import type { PromptFolderContentKind } from '@shared/PromptFolder'
-import { buildPromptStem } from '@shared/promptFilename'
+import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
 import {
   commitStagedFileChanges,
   createStagedEnsureDirectory,

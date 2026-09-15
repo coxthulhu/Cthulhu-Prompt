@@ -1,6 +1,6 @@
-import type { PromptFolder } from '@shared/PromptFolder'
-import type { Workspace } from '@shared/Workspace'
-import { getAllWorkspaceFolderEntries } from '@shared/Workspace'
+import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { Workspace } from '@shared/domain/workspace/Workspace'
+import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
 import { data } from '../Data/Data'
 
 /** Returns loaded root prompt folders in workspace order. */

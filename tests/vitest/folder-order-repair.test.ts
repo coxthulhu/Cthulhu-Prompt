@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { vol } from 'memfs'
-import { PromptStatus, type PromptPersisted } from '@shared/Prompt'
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
+import { PromptStatus, type PromptPersisted } from '@shared/domain/prompt/Prompt'
+import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import { setFs } from '../../src/main/fs-provider'
-import { readPromptFolderCategoryOrder } from '../../src/main/DataAccess/WorkspaceReads'
+import { readPromptFolderCategoryOrder } from '../../src/main/Persistence/workspace/WorkspaceReads'
 import {
   parsePromptMarkdown,
   parsePromptTemplateMarkdown,

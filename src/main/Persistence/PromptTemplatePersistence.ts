@@ -1,5 +1,5 @@
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
-import { getPromptDisplayTitle } from '@shared/promptFallbackTitle'
+import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
+import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
 import {
   parsePromptTemplateMarkdown,
   serializePromptTemplateMarkdown

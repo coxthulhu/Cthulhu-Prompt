@@ -4,11 +4,11 @@ import {
   type PromptFolderContentKind,
   type PromptFolderKind,
   type PromptFolderSettingsField
-} from '@shared/PromptFolder'
+} from '@shared/domain/prompt-folder/PromptFolder'
 import {
   PROMPT_STATUS_FOLDER_REGISTRY,
   PromptStatusFolderId
-} from '@shared/Prompt'
+} from '@shared/domain/prompt/Prompt'
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'

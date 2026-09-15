@@ -5,7 +5,7 @@ import {
   planSetAccordionUiStateDomainMutation,
   planSetWorkspacePromptFolderUiStateDomainMutation,
   planSetWorkspaceUiStateDomainMutation
-} from '@shared/UiStateDomainMutations'
+} from '@shared/domain/ui-state/UiStateDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers mutations for every split workspace UI-state collection. */

@@ -36,3 +36,6 @@ export function mergeClasses(...inputs: ClassValue[]): string {
 
   return twMerge(classes.join(' '))
 }
+
+/** Conventional utility name used by component-generation tooling. */
+export const cn = mergeClasses

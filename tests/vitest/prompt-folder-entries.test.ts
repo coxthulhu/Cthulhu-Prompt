@@ -2,8 +2,8 @@ import { isPromptFolderEmpty } from '@renderer/data/Collections/PromptFolderEntr
 import {
   createPromptStatusFolderLayouts,
   type PromptFolder
-} from '@shared/PromptFolder'
-import { PROMPT_STATUS_FOLDERS, PromptStatusFolderId } from '@shared/Prompt'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import { PROMPT_STATUS_FOLDERS, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import { describe, expect, it } from 'vitest'
 
 const createFolder = (overrides: Partial<PromptFolder> = {}): PromptFolder => ({

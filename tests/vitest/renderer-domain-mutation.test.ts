@@ -19,26 +19,26 @@ import {
   setPromptTemplates,
   setPromptText,
   setPromptTitle
-} from '@renderer/data/UiState/PromptClientStateMutations.svelte.ts'
+} from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
 import {
   setPromptTemplateText,
   setPromptTemplateTitle
-} from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
-import { mutateSystemSettingsClientStateWithAutosave } from '@renderer/data/UiState/SystemSettingsAutosave.svelte.ts'
-import type { DomainPlanner } from '@shared/DomainChanges'
+} from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
+import { mutateSystemSettingsClientStateWithAutosave } from '@renderer/data/UiState/autosave/SystemSettingsAutosave.svelte.ts'
+import type { DomainPlanner } from '@shared/domain/DomainChanges'
 import type {
   UpdatePromptDomainCommand,
   UpdatePromptTemplateDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
-import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
-import { createPromptTemplateFull } from '@shared/PromptTemplate'
-import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
+import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import {
   clearPromptEditorMeasuredHeight,
   lookupPromptEditorMeasuredHeight,
   recordPromptEditorMeasuredHeight
-} from '@renderer/data/UiState/PromptEditorUiCache.svelte.ts'
+} from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
 
 /** Stable category and local-state ID used by executable renderer framework tests. */
 const CATEGORY_ID = 'renderer-domain-framework'

@@ -3,7 +3,7 @@ import {
   hasPromptFolderNameConflict,
   sanitizePromptFolderName,
   validatePromptFolderName
-} from '@shared/promptFolderName'
+} from '@shared/domain/prompt-folder/promptFolderName'
 
 describe('prompt folder name helpers', () => {
   describe('validatePromptFolderName', () => {

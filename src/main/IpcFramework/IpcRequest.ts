@@ -3,8 +3,8 @@ import type {
   IpcMutationResponseContext,
   IpcQueryResponseContext,
   IpcRequestWithPayload
-} from '@shared/IpcRequest'
-import type { IpcFailure } from '@shared/IpcResult'
+} from '@shared/ipc/IpcRequest'
+import type { IpcFailure } from '@shared/ipc/IpcResult'
 
 const INVALID_REQUEST_PAYLOAD_ERROR = 'Invalid request payload'
 const INVALID_CLIENT_ID_ERROR = 'Invalid client ID'

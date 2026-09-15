@@ -9,16 +9,16 @@ import {
   type Prompt,
   PromptStatus,
   type PromptTemplateReference
-} from '@shared/Prompt'
+} from '@shared/domain/prompt/Prompt'
 import {
   isPromptTemplateFull,
   type PromptTemplate
-} from '@shared/PromptTemplate'
+} from '@shared/domain/prompt-template/PromptTemplate'
 import {
   getCategoryOrderCategoryIds,
   type PromptFolder,
   type PromptFolderContentKind
-} from '@shared/PromptFolder'
+} from '@shared/domain/prompt-folder/PromptFolder'
 import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
 import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
 import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
@@ -48,11 +48,11 @@ import {
 } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-import type { Category } from '@shared/Category'
+import type { Category } from '@shared/domain/category/Category'
 import {
   getMarkdownContentCategoryOrder,
   getMarkdownContentIds
-} from '@shared/MarkdownContent'
+} from '@shared/domain/markdown-content/MarkdownContent'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
@@ -63,20 +63,20 @@ import {
 import {
   lookupPromptFolderScrollTop,
   recordPromptFolderScrollTop
-} from '@renderer/data/UiState/PromptFolderUiCache.svelte.ts'
+} from '@renderer/data/UiState/cache/PromptFolderUiCache.svelte.ts'
 import {
   lookupWorkspacePersistedPromptFolderContentSectionExpandedState,
   lookupWorkspacePersistedPromptFolderSelection,
   setPromptFolderContentSectionExpandedStateWithAutosave,
   setPromptFolderSelectedEntryIdWithAutosave
-} from '@renderer/data/UiState/WorkspaceUiStateAutosave.svelte.ts'
+} from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
   ScrollToAndTrackRow,
   ScrollToWithinWindowBand,
   VirtualWindowScrollApi,
   VirtualWindowViewportMetrics
-} from '../virtualizer/virtualWindowTypes'
+} from '@renderer/common/virtual-window/virtualWindowTypes'
 import {
   PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
   PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
@@ -91,7 +91,7 @@ import {
 import {
   resolvePromptHandleDropMove,
   type PromptHandleDropPayload
-} from '../drag-drop/promptHandleDrag'
+} from '@renderer/features/prompt-drag-drop/promptHandleDrag'
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
 import {
   getFinalPromptFolderScreenModeDefinition,
@@ -108,8 +108,8 @@ import {
   type PromptFolderScreenRow
 } from './promptFolderScreenRows'
 import { collectFinalizedPrompts } from './promptFolderCompletedPrompts'
-import { getPromptDisplayTitle as getPromptTitleText } from '@shared/promptFallbackTitle'
-import { createPromptTreePromptDragController } from '../sidebar/promptTreeDrag'
+import { getPromptDisplayTitle as getPromptTitleText } from '@shared/domain/prompt/promptFallbackTitle'
+import { createPromptTreePromptDragController } from '@renderer/features/prompt-tree/promptTreeDrag'
 import {
   PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX,
   PROMPT_FOLDER_VERTICAL_BIAS_PX

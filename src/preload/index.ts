@@ -1,17 +1,17 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { compactGuid } from '@shared/compactGuid'
+import { compactGuid } from '@shared/utilities/compactGuid'
 import {
   DEFAULT_RUNTIME_CONFIG,
   RUNTIME_ARG_PREFIX,
   normalizeAppVersion,
   normalizeRuntimeEnvironment,
   type RuntimeConfig
-} from '@shared/runtimeConfig'
+} from '@shared/runtime/runtimeConfig'
 import {
   RENDERER_ERROR_CHANNEL,
   type RendererErrorReport
-} from '@shared/RendererErrorReport'
+} from '@shared/ipc/RendererErrorReport'
 
 /** Narrow bridge used to forward renderer stacks without exposing Error objects over IPC. */
 const rendererLogging = {

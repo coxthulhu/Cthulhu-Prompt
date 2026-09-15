@@ -1,8 +1,8 @@
-import { getMarkdownContentIds } from '@shared/MarkdownContent'
-import type { RevisionEnvelope } from '@shared/Revision'
-import type { PromptPersisted } from '@shared/Prompt'
-import type { PromptFolder } from '@shared/PromptFolder'
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
+import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
+import type { RevisionEnvelope } from '@shared/ipc/Revision'
+import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
+import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import {
   buildPromptSnapshot,
   buildPromptTemplateSnapshot,

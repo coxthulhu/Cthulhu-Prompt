@@ -1,8 +1,8 @@
 import { createPromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
-import { compactGuid } from '@shared/compactGuid'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
-import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE } from '@shared/promptFallbackTitle'
-import type { PromptTemplateFull } from '@shared/PromptTemplate'
+import { compactGuid } from '@shared/utilities/compactGuid'
+import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
+import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE } from '@shared/domain/prompt/promptFallbackTitle'
+import type { PromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 
 export const createBlankPromptTemplateInFolder = (
   promptFolderId: string,

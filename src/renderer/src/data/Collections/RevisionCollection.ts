@@ -5,8 +5,8 @@ import type {
   SyncConfig,
   UtilsRecord
 } from '@tanstack/svelte-db'
-import type { RevisionEnvelope } from '@shared/Revision'
-import type { DomainTargetPolicy } from '@shared/DomainChanges'
+import type { RevisionEnvelope } from '@shared/ipc/Revision'
+import type { DomainTargetPolicy } from '@shared/domain/DomainChanges'
 
 export interface RevisionCollectionUtils<TRecord extends object> extends UtilsRecord {
   /** Clears all authoritative records and revision metadata at a workspace boundary. */

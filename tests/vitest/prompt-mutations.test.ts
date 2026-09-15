@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createPromptSummary, PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/PromptFolder'
+import { createPromptSummary, PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'

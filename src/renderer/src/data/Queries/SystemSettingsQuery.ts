@@ -1,7 +1,7 @@
-import { LOAD_SYSTEM_SETTINGS_CHANNEL, SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
-import { systemSettingsCollection } from '../Collections/SystemSettingsCollection'
-import { upsertSystemSettingsClientState } from '../UiState/SystemSettingsClientStateMutations.svelte.ts'
-import { runRendererAuthoritativeQuery } from '../IpcFramework/AuthoritativeQuery'
+import { LOAD_SYSTEM_SETTINGS_CHANNEL, SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
+import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
+import { upsertSystemSettingsClientState } from '@renderer/data/UiState/client-state/SystemSettingsClientStateMutations.svelte.ts'
+import { runRendererAuthoritativeQuery } from '@renderer/data/IpcFramework/AuthoritativeQuery'
 
 export const loadSystemSettings = async (): Promise<void> => {
   await runRendererAuthoritativeQuery(LOAD_SYSTEM_SETTINGS_CHANNEL)

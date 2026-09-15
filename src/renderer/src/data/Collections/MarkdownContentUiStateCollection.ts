@@ -2,7 +2,7 @@ import { createCollection } from '@tanstack/svelte-db'
 import {
   createMarkdownContentUiStateKey,
   type MarkdownContentUiState
-} from '@shared/MarkdownContentUiState'
+} from '@shared/domain/ui-state/MarkdownContentUiState'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 export const markdownContentUiStateCollection = createCollection(

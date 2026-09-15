@@ -1,7 +1,7 @@
-import type { SystemSettings } from '@shared/SystemSettings'
+import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
 import { app } from 'electron'
 import * as path from 'path'
-import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/SystemSettings'
+import { DEFAULT_SYSTEM_SETTINGS, normalizeSystemSettings } from '@shared/domain/settings/SystemSettings'
 import { getFs } from '../fs-provider'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {

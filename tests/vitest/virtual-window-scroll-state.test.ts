@@ -4,13 +4,13 @@ import { compileModule } from 'svelte/compiler'
 import * as client from 'svelte/internal/client'
 import ts from 'typescript'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import * as rowUtils from '@renderer/features/virtualizer/virtualWindowRowUtils'
-import type { VirtualRowState } from '@renderer/features/virtualizer/virtualWindowRows'
-import type { createVirtualWindowScrollState } from '@renderer/features/virtualizer/virtualWindowScrollState.svelte.ts'
+import * as rowUtils from '@renderer/common/virtual-window/virtualWindowRowUtils'
+import type { VirtualRowState } from '@renderer/common/virtual-window/virtualWindowRows'
+import type { createVirtualWindowScrollState } from '@renderer/common/virtual-window/virtualWindowScrollState.svelte.ts'
 
 // The Node test environment normally compiles runes for SSR, which omits the effects under test.
 const { readFileSync } = await vi.importActual<typeof import('node:fs')>('node:fs')
-const filename = resolve('src/renderer/src/features/virtualizer/virtualWindowScrollState.svelte.ts')
+const filename = resolve('src/renderer/src/common/virtual-window/virtualWindowScrollState.svelte.ts')
 const source = ts.transpileModule(readFileSync(filename, 'utf8'), {
   compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext }
 }).outputText

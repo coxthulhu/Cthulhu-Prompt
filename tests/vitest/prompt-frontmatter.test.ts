@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PromptStatus } from '@shared/Prompt'
+import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import {
   parsePromptMarkdown,
   serializePromptMarkdown

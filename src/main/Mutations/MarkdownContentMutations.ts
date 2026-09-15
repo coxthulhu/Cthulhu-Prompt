@@ -7,9 +7,9 @@ import {
   planPromptTemplateMove,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
-import type { DomainCommandParser, DomainPlanner } from '@shared/DomainChanges'
-import type { PromptFolderContentKind } from '@shared/PromptFolder'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import type { DomainCommandParser, DomainPlanner } from '@shared/domain/DomainChanges'
+import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Shared main-process registration for prompt and prompt-template mutation channels. */

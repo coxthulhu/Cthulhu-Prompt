@@ -7,7 +7,7 @@ import type { DomainStorageTransition } from '../Persistence/DomainStorageAdapte
 import type { DomainTransitionProjection } from './DomainTransitions'
 import { data, type DataRecipe, type RevisionData } from './Data'
 import { enqueueGlobalMutation } from './GlobalMutationQueue'
-import { SqliteDataAccess } from '../DataAccess/SqliteDataAccess'
+import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
 
 export type DataStoreKey = keyof typeof data
 

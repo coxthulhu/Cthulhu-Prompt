@@ -5,9 +5,9 @@ import {
   PromptStatus,
   type PromptPersisted,
   type PromptTemplateReference
-} from '@shared/Prompt'
-import type { PromptTemplatePersisted } from '@shared/PromptTemplate'
-import { normalizePromptTitle } from '@shared/promptFallbackTitle'
+} from '@shared/domain/prompt/Prompt'
+import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
+import { normalizePromptTitle } from '@shared/domain/prompt/promptFallbackTitle'
 
 type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'category'> &
   { templates?: PromptTemplateReference[] | null } &

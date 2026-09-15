@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/IconCell.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import { EDITOR_SUBTITLE_BAR_HEIGHT_PX } from './promptEditorSizing'
 
   type Props = {

@@ -2,18 +2,18 @@ import {
   isPromptTemplateFull,
   type PromptTemplateFull,
   type PromptTemplatePersisted
-} from '@shared/PromptTemplate'
-import { getCurrentIsoSecondTimestamp } from '@shared/isoTimestamp'
+} from '@shared/domain/prompt-template/PromptTemplate'
+import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import {
   planCreatePromptTemplateDomainMutation,
   planPromptTemplateUpdate,
   type CreatePromptTemplateDomainCommand,
   type UpdatePromptTemplateDomainCommand
-} from '@shared/MarkdownContentDomainMutations'
-import { promptTemplateCollection } from '../Collections/PromptTemplateCollection'
+} from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import {
   markPromptTemplateClientStateEdited
-} from '../Collections/PromptTemplateClientStateCollection'
+} from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { createMarkdownContentRendererMutations } from './MarkdownContentMutations'
 
 const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => ({

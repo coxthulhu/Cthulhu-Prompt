@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
-import { createPromptTemplateSummary } from '@shared/PromptTemplate'
+import { createPromptTemplateSummary } from '@shared/domain/prompt-template/PromptTemplate'
 import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
 import { promptFolderClientStateCollection } from '@renderer/data/Collections/PromptFolderClientStateCollection'
-import { upsertPromptTemplateClientStates } from '@renderer/data/UiState/PromptTemplateClientStateMutations.svelte.ts'
+import { upsertPromptTemplateClientStates } from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
 
 const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
 

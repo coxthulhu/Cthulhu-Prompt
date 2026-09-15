@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import Separator from '@renderer/common/cthulhu-ui/Separator.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import { EDITOR_CARD_SECTION_HEADER_HEIGHT_PX } from './promptEditorSizing'
 

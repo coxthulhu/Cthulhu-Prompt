@@ -2,7 +2,7 @@ import { createCollection } from '@tanstack/svelte-db'
 import {
   createWorkspacePromptFolderUiStateKey,
   type WorkspacePromptFolderUiState
-} from '@shared/UiState'
+} from '@shared/domain/ui-state/UiState'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 /** Authoritative prompt-folder view UI state, ready for renderer hydration in the next phase. */

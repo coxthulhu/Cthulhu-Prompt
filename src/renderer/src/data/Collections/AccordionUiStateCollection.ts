@@ -1,5 +1,5 @@
 import { createCollection } from '@tanstack/svelte-db'
-import { createAccordionUiStateKey, type AccordionUiState } from '@shared/UiState'
+import { createAccordionUiStateKey, type AccordionUiState } from '@shared/domain/ui-state/UiState'
 import { revisionCollectionOptions } from './RevisionCollection'
 
 /** Authoritative accordion UI state, ready for renderer hydration in the next phase. */

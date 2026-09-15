@@ -14,7 +14,7 @@ import {
   moveMonacoCursorToEnd,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
-import { PromptStatus } from '../../src/shared/Prompt'
+import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()

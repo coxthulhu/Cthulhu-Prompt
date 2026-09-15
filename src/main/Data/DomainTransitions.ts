@@ -4,14 +4,14 @@ import type {
   DomainEntityMap,
   DomainEntityType,
   DomainRevisionExpectation
-} from '@shared/DomainChanges'
-import { SYSTEM_SETTINGS_ID } from '@shared/SystemSettings'
-import { USER_PERSISTENCE_ID } from '@shared/UserPersistence'
-import { createMarkdownContentUiStateKey } from '@shared/MarkdownContentUiState'
+} from '@shared/domain/DomainChanges'
+import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
+import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
+import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 import {
   createAccordionUiStateKey,
   createWorkspacePromptFolderUiStateKey
-} from '@shared/UiState'
+} from '@shared/domain/ui-state/UiState'
 import { data } from './Data'
 import type { DomainPersistenceFieldsMap } from '../Persistence/PersistenceTypes'
 

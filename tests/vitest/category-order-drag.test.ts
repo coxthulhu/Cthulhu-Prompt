@@ -3,14 +3,14 @@ import {
   createPromptStatusFolderLayouts,
   insertCategoryOrderEntry,
   moveCategoryOrderGroup
-} from '@shared/PromptFolder'
-import type { PromptFolder } from '@shared/PromptFolder'
-import { PromptStatus, PromptStatusFolderId } from '@shared/Prompt'
+} from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   resolveCategoryDropPreviousCategoryId,
   resolvePromptHandleDropMove
-} from '@renderer/features/drag-drop/promptHandleDrag'
-import { resolvePromptTreePromptMove } from '@renderer/features/sidebar/promptTreeDrag'
+} from '@renderer/features/prompt-drag-drop/promptHandleDrag'
+import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
 
 describe('category ordering and drag placement', () => {
   it('moves content between exact groups and places it at the requested position', () => {

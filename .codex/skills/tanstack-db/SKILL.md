@@ -55,11 +55,11 @@ Read the relevant child `SKILL.md` completely before editing that area.
 
 - `src/renderer/src/data/Collections/RevisionCollection.ts`
 - `src/renderer/src/data/IpcFramework/RevisionCollections.ts`
-- `src/shared/DomainChanges.ts`
-- `src/shared/*DomainMutations.ts`
+- `src/shared/domain/DomainChanges.ts`
+- `src/shared/domain/**/*DomainMutations.ts`
 - `src/renderer/src/data/IpcFramework/RendererDomainMutation.ts`
 - `src/renderer/src/data/IpcFramework/RevisionMutation.ts` and `RevisionMutationTransactionRegistry.ts`
-- `src/renderer/src/data/UiState/AutosaveFlushes.svelte.ts`
+- `src/renderer/src/data/UiState/autosave/AutosaveFlushes.svelte.ts`
 - `src/renderer/src/data/Queries/`
 - `src/renderer/src/data/Mutations/`
 - `src/renderer/src/data/UiState/`
