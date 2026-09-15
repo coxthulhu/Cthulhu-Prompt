@@ -4,6 +4,7 @@ import { getFs, setFs } from '../fs-provider'
 import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
 import { isPlaywrightEnvironment } from '../appEnvironment'
 import { SqliteDataAccess } from '../DataAccess/SqliteDataAccess'
+import { initializePersistentLogging } from '../logging'
 
 interface TestFixtures {
   fileDialogResults?: string[]
@@ -219,6 +220,10 @@ function parseWindowStatePayload(payload: unknown): WindowStatePayload | null {
 
 export function setupTestStartupListener(): void {
   initializeIpcGatingForE2E()
+  // Side effect: allow the persistent logging integration test to opt in without cross-test logs.
+  ;(app as any).on('test-initialize-persistent-logging', () => {
+    initializePersistentLogging()
+  })
   ;(app as any).on('test-setup-filesystem', async (payload: unknown) => {
     const typedPayload = parseFilesystemSetupPayload(payload)
 

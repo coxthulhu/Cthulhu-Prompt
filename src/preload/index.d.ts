@@ -1,5 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { RuntimeConfig } from '@shared/runtimeConfig'
+import type { RendererErrorReport } from '@shared/RendererErrorReport'
 
 interface WindowControls {
   minimize: () => Promise<void>
@@ -11,11 +12,17 @@ interface WindowControls {
   onCloseRequested: (callback: () => void) => () => void
 }
 
+/** Renderer-facing API for forwarding complete error details to persistent logging. */
+interface RendererLogging {
+  reportError: (report: RendererErrorReport) => void
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
     runtimeConfig: RuntimeConfig
     ipcClientId: string
     windowControls: WindowControls
+    rendererLogging: RendererLogging
   }
 }

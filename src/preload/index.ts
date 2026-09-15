@@ -8,6 +8,17 @@ import {
   normalizeRuntimeEnvironment,
   type RuntimeConfig
 } from '@shared/runtimeConfig'
+import {
+  RENDERER_ERROR_CHANNEL,
+  type RendererErrorReport
+} from '@shared/RendererErrorReport'
+
+/** Narrow bridge used to forward renderer stacks without exposing Error objects over IPC. */
+const rendererLogging = {
+  reportError: (report: RendererErrorReport): void => {
+    electronAPI.ipcRenderer.send(RENDERER_ERROR_CHANNEL, report)
+  }
+}
 
 function loadRuntimeConfig(): RuntimeConfig {
   const runtimeFlag = process.argv.find((arg) => arg.startsWith(RUNTIME_ARG_PREFIX))
@@ -77,6 +88,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('runtimeConfig', runtimeConfig)
     contextBridge.exposeInMainWorld('ipcClientId', ipcClientId)
     contextBridge.exposeInMainWorld('windowControls', windowControls)
+    contextBridge.exposeInMainWorld('rendererLogging', rendererLogging)
   } catch (error) {
     console.error(error)
   }
@@ -89,4 +101,6 @@ if (process.contextIsolated) {
   window.ipcClientId = ipcClientId
   // @ts-expect-error (define in dts)
   window.windowControls = windowControls
+  // @ts-expect-error (define in dts)
+  window.rendererLogging = rendererLogging
 }

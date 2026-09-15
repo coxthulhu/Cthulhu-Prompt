@@ -1,6 +1,10 @@
 import { inspect } from 'node:util'
 import { app, type BrowserWindow, type WebContents } from 'electron'
 import { PersistentLogWriter, type PersistentLogEntry } from './PersistentLogWriter'
+import {
+  RENDERER_ERROR_CHANNEL,
+  type RendererErrorReport
+} from '@shared/RendererErrorReport'
 
 let persistentLogWriter: PersistentLogWriter | null = null
 let mainProcessHandlersInstalled = false
@@ -34,6 +38,15 @@ const writePersistentLog = (entry: PersistentLogEntry): void => {
 const getWebContentsLocation = (webContents: WebContents): string | undefined => {
   if (webContents.isDestroyed()) return undefined
   return webContents.getURL() || undefined
+}
+
+/** Accepts only the string fields that can safely become a persistent renderer log entry. */
+const isRendererErrorReport = (payload: unknown): payload is RendererErrorReport => {
+  if (!payload || typeof payload !== 'object') return false
+
+  /** Candidate IPC object inspected without trusting renderer-provided values. */
+  const candidate = payload as Partial<RendererErrorReport>
+  return typeof candidate.message === 'string' && typeof candidate.stack === 'string'
 }
 
 const installMainProcessHandlers = (): void => {
@@ -88,8 +101,20 @@ export const initializePersistentLogging = (): void => {
 export const attachRendererLogging = (window: BrowserWindow): void => {
   const { webContents } = window
 
+  webContents.ipc.on(RENDERER_ERROR_CHANNEL, (event, payload: unknown) => {
+    if (!isRendererErrorReport(payload)) return
+
+    writePersistentLog({
+      level: 'error',
+      source: 'renderer-console',
+      message: payload.message,
+      location: event.senderFrame?.url || undefined,
+      stack: payload.stack
+    })
+  })
+
   webContents.on('console-message', (event) => {
-    if (event.level !== 'warning' && event.level !== 'error') return
+    if (event.level !== 'warning') return
 
     const location = event.sourceId
       ? `${event.sourceId}${event.lineNumber > 0 ? `:${event.lineNumber.toString()}` : ''}`

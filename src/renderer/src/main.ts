@@ -4,7 +4,9 @@ import { loadSystemSettings } from './data/Queries/SystemSettingsQuery'
 import { loadUserPersistence } from './data/Queries/UserPersistenceQuery'
 import { initializeSvelteVirtualWindowHydrationControls } from './features/virtualizer/SvelteVirtualWindowHydrationControls'
 import { initMonacoVscode } from './lib/monacoVscode'
+import { initializeRendererErrorLogging } from './app/rendererErrorLogging'
 
+initializeRendererErrorLogging()
 initializeSvelteVirtualWindowHydrationControls()
 
 const bootstrap = async (): Promise<void> => {

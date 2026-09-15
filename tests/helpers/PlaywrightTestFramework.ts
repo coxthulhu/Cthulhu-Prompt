@@ -184,6 +184,14 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
 
       const setupUtils = {
         getRendererErrors: () => [...rendererErrors],
+        /** Removes intentional errors while retaining unrelated failures for the error reporter. */
+        removeRendererErrorsContaining: (messagePart: string) => {
+          for (let errorIndex = rendererErrors.length - 1; errorIndex >= 0; errorIndex -= 1) {
+            if (rendererErrors[errorIndex]?.message.includes(messagePart)) {
+              rendererErrors.splice(errorIndex, 1)
+            }
+          }
+        },
         setupFilesystem: async (
           filesystem: Record<string, string | null>,
           options: FilesystemSetupOptions = {}
