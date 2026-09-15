@@ -1,25 +1,27 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import {
-    AlertCircle, AlertTriangle, Bug, ClipboardCheck, Copy, ExternalLink, FileText,
-    FolderOpen, FolderPlus, Folders, FolderSymlink, Route, Sparkles, Type, X
+    AlertCircle, AlertTriangle, BookOpen, Bug, ClipboardCheck, Copy, ExternalLink, FileText,
+    FolderOpen, FolderPlus, Folders, FolderSymlink, X
   } from 'lucide-svelte'
 
-  // Visual baseline of HomeScreen, CreateWorkspaceDialog, and ErrorDialog.
+  // Visual baseline of HomeScreen, WelcomeDialog, CreateWorkspaceDialog, and ErrorDialog.
   // Only Svelte, Lucide icons, and palette colors are shared with the application.
   // Native Windows pickers/Explorer are simulated locally; no preload, IPC, or domain imports.
-  const samplePath = 'C:\\'
+  const sampleParent = 'C:\\Users\\Alex\\Documents\\Prompt Workspaces'
+  const samplePath = `${sampleParent}\\Product Development`
   const errorText = 'Failed to open workspace. Please try again.'
   type FolderScenario = 'empty' | 'nonempty' | 'existing' | 'failure'
 
   // Local sample state keeps the screen and its dialog variants independent of the workspace.
   let workspacePath = $state<string | null>(samplePath)
-  let promptCount = $state(12)
+  let promptCount = $state(24)
   let promptFolderCount = $state(3)
+  // Edit these local switches to preview disabled actions, folder warnings, and open errors.
   let loading = $state(false)
   let folderScenario = $state<FolderScenario>('empty')
   let openFails = $state(false)
-  let dialog = $state<'create' | 'error' | null>(null)
+  let dialog = $state<'create' | 'error' | 'welcome' | null>(null)
   let workspaceName = $state('')
   let containingFolder = $state('')
   let includeExamples = $state(true)
@@ -74,8 +76,9 @@
       dialog = 'error'
       return
     }
+    dialog = null
     workspacePath = samplePath
-    promptCount = 12
+    promptCount = 24
     promptFolderCount = 3
   }
 
@@ -128,7 +131,7 @@
     // Side effect: cover the viewport, contain keyboard focus, and restore focus when dismissed.
     const previousFocus = document.activeElement as HTMLElement | null
     document.body.appendChild(node)
-    const focusable = () => [...node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)')]
+    const focusable = () => [...node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href]')]
     node.querySelector<HTMLInputElement>('input')?.focus()
     if (!node.contains(document.activeElement)) focusable()[0]?.focus()
     const keydown = (event: KeyboardEvent) => {
@@ -159,18 +162,12 @@
   }
 </script>
 
-{#snippet row(Icon: ComponentType, label: string, detail: string, trailing?: Snippet, extra = '', wrap = false, setting = false, labelId?: string)}
-  <div class="home-row" data-wrap-detail={wrap} data-setting={setting} data-trailing={Boolean(trailing)}>
+{#snippet row(Icon: ComponentType, label: string, detail: string, trailing?: Snippet, wrap = false, labelId?: string)}
+  <div class="home-row" data-wrap-detail={wrap} data-trailing={Boolean(trailing)}>
     <span class="row-icon"><Icon size={24} aria-hidden="true" /></span>
     <span class="row-text-stack">
       <span class="row-label text-base" title={label} data-testid={labelId}>{label}</span>
       <span class="row-detail text-sm">{detail}</span>
-      {#if extra || (setting && (label === 'Containing Folder' || label === 'Final Workspace Path'))}
-        <!-- The live path rows keep their extra-detail wrapper even before a path is selected. -->
-        <span class="row-extra">
-          {#if extra}<span data-testid={label === 'Final Workspace Path' ? 'create-workspace-final-path-display' : 'create-workspace-containing-folder-display'} aria-invalid={label === 'Final Workspace Path' && folderScenario === 'existing' ? 'true' : undefined}>{extra}</span>{/if}
-        </span>
-      {/if}
     </span>
     {#if trailing}<span class="row-trailing">{@render trailing()}</span>{/if}
   </div>
@@ -189,14 +186,14 @@
       <section class="home-layout" data-testid="home-layout">
         <header>
           <div class="title-container" bind:this={titleContainer}>
-            <h2 class="home-title" data-testid="home-title" aria-label="CTHULHU PROMPT" style:--home-title-size={titleFontSize ? `${titleFontSize}px` : undefined}>
+            <h2 class="text-[length:var(--home-title-size,clamp(64px,9vw,88px))] leading-[var(--home-title-size,clamp(64px,9vw,88px))] home-title" data-testid="home-title" aria-label="CTHULHU PROMPT" style:--home-title-size={titleFontSize ? `${titleFontSize}px` : undefined}>
               <span aria-hidden="true" data-testid="home-title-word-cthulhu">CTHULHU</span>
               <span aria-hidden="true" data-testid="home-title-word-prompt">PROMPT</span>
             </h2>
             <div class="title-separator" data-testid="home-title-separator"></div>
           </div>
         </header>
-        <span class="home-title title-measure" bind:this={titleMeasure} aria-hidden="true"><span>CTHULHU</span><span>PROMPT</span></span>
+        <span class="text-[length:var(--home-title-size,clamp(64px,9vw,88px))] leading-[var(--home-title-size,clamp(64px,9vw,88px))] home-title title-measure" bind:this={titleMeasure} aria-hidden="true"><span>CTHULHU</span><span>PROMPT</span></span>
 
         <div class="home-card-grid">
           <div class="home-card" data-testid="home-primary-card">
@@ -204,7 +201,7 @@
             <div class="card-surface">
               {#if workspacePath}
                 {#snippet explorerAction()}
-                  <button class="icon-button" type="button" aria-label="Open Workspace Folder" title="Open Workspace Folder" data-testid="home-open-workspace-folder-button" onclick={openWorkspace}><ExternalLink size={20} aria-hidden="true" /></button>
+                  <button class="icon-button" type="button" aria-label="Open Workspace Folder" title="Open Workspace Folder" data-testid="home-open-workspace-folder-button" onclick={() => { /* Explorer is intentionally simulated without changing the workspace. */ }}><ExternalLink size={20} aria-hidden="true" /></button>
                 {/snippet}
                 {@render row(FolderOpen, workspaceFolderName, 'Workspace Name', explorerAction)}
                 <div class="separator"></div>
@@ -213,7 +210,7 @@
                     {#if copied}<ClipboardCheck size={20} aria-hidden="true" />{:else}<Copy size={20} aria-hidden="true" />{/if}
                   </button>
                 {/snippet}
-                {@render row(FolderSymlink, workspacePath, 'Workspace Path', copyAction, '', false, false, 'workspace-ready-path')}
+                {@render row(FolderSymlink, workspacePath, 'Workspace Path', copyAction, false, 'workspace-ready-path')}
                 <div class="separator"></div>
                 <div class="workspace-stats">
                   {@render row(FileText, String(promptCount), 'Prompts')}
@@ -223,7 +220,7 @@
               {:else}
                 {@render row(FolderPlus, 'Choose a Workspace', 'Create a new workspace folder, or open an existing one to continue.')}
                 <div class="separator"></div>
-                {@render row(FileText, 'Manage Your Prompts', 'Cthulhu Prompt stores and manages your prompts as simple Markdown files in a workspace folder.', undefined, '', true)}
+                {@render row(FileText, 'Manage Your Prompts', 'Cthulhu Prompt stores and manages your prompts as simple Markdown files in a workspace folder.', undefined, true)}
                 <div class="separator"></div>
                 {#snippet githubAction()}
                   <a class="action-button text-sm" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Open Github <ExternalLink size={16} aria-hidden="true" /></a>
@@ -238,11 +235,11 @@
               {#each [
                 { icon: FolderOpen, label: 'Open Workspace', detail: 'Open an existing workspace.', text: 'Open', action: openWorkspace },
                 { icon: FolderPlus, label: 'Create Workspace', detail: 'Choose a folder to set up a new workspace.', text: 'Create', action: () => { dialog = 'create' as const } },
-                ...(workspacePath ? [{ icon: X, label: 'Close Workspace', detail: 'Unload the current workspace folder.', text: 'Close', action: () => { workspacePath = null } }] : [])
+                ...(workspacePath ? [{ icon: X, label: 'Close Workspace', detail: 'Unload the current workspace folder.', text: 'Close', action: () => { workspacePath = null } }] : [{ icon: BookOpen, label: 'Welcome', detail: 'Learn to use Cthulhu Prompt.', text: 'Welcome', action: () => { dialog = 'welcome' as const } }])
               ] as action, index (action.text)}
                 {#if index > 0}<div class="separator"></div>{/if}
                 {#snippet actionControl()}
-                  <button class="action-button text-sm workspace-action" type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={`${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
+                  <button class="action-button text-sm leading-5" class:workspace-action={action.text !== 'Welcome'} type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={action.text === 'Welcome' ? 'show-welcome-button' : `${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
                     <action.icon size={16} aria-hidden="true" /><span>{action.text}</span>
                   </button>
                 {/snippet}
@@ -258,14 +255,14 @@
 
 {#if dialog}
   <div class="dialog-layer text-base" role="presentation" use:mountDialog onclick={(event) => { if (event.target === event.currentTarget && dialog === 'error') closeDialog() }}>
-    <div class="home-dialog" data-create={dialog === 'create'} role="dialog" aria-modal="true" aria-label={dialog === 'create' ? 'Create Workspace' : 'Failed to Open Workspace'} tabindex="-1">
+    <div class="home-dialog" data-create={dialog === 'create'} data-welcome={dialog === 'welcome'} role="dialog" aria-modal="true" aria-label={dialog === 'create' ? 'Create Workspace' : dialog === 'welcome' ? 'Welcome' : 'Failed to Open Workspace'} tabindex="-1">
       <div class="dialog-header">
         <div class="dialog-heading">
           <span class="dialog-icon" data-testid="dialog-header-icon">
-            {#if dialog === 'create'}<FolderPlus size={24} aria-hidden="true" />{:else}<AlertCircle size={24} aria-hidden="true" />{/if}
+            {#if dialog === 'create'}<FolderPlus size={24} aria-hidden="true" />{:else if dialog === 'welcome'}<BookOpen size={24} aria-hidden="true" />{:else}<AlertCircle size={24} aria-hidden="true" />{/if}
           </span>
           <div class="dialog-heading-text">
-            <h3 class="dialog-title text-lg">{dialog === 'create' ? 'Create Workspace' : 'Failed to Open Workspace'}</h3>
+            <h3 class="dialog-title text-lg">{dialog === 'create' ? 'Create Workspace' : dialog === 'welcome' ? 'Welcome' : 'Failed to Open Workspace'}</h3>
             {#if dialog === 'create'}<p class="dialog-subtitle text-sm" data-testid="dialog-subtitle">Choose a name and location for your new workspace.</p>{/if}
           </div>
         </div>
@@ -273,42 +270,103 @@
       </div>
       <div class="separator"></div>
       {#if dialog === 'create'}
-        <div class="dialog-body">
-          {#snippet nameControl()}
+        <div class="dialog-body grid min-w-0 gap-[17px] px-4 py-4">
+          <div>
+            <div class="field-heading"><label for="mock-workspace-name" class="text-sm font-semibold">Workspace Name <span class="muted font-normal">*</span></label><span class="muted text-sm">Enter a name for the new workspace.</span></div>
             <div class="validation-anchor">
-              <input class="name-input text-sm" type="text" aria-label="Workspace Name" placeholder="Name..." data-testid="create-workspace-name-input" bind:value={workspaceName} disabled={creating} aria-invalid={nameTouched && nameError ? 'true' : undefined} oninput={() => { nameTouched = true; submissionError = false }} />
+              <input id="mock-workspace-name" class="name-input text-sm leading-5" type="text" placeholder="Name..." data-testid="create-workspace-name-input" bind:value={workspaceName} disabled={creating} aria-invalid={nameTouched && nameError ? 'true' : undefined} oninput={() => { nameTouched = true; submissionError = false }} />
               {#if nameTouched && nameError}<div class="floating-validation">{@render message(nameError, false, 'create-workspace-name-error')}</div>{/if}
             </div>
-          {/snippet}
-          {@render row(Type, 'Workspace Name', 'Name the new workspace folder.', nameControl, '', false, true)}
-          <div class="separator"></div>
-          {#snippet browseControl()}
-            <button class="action-button text-sm" type="button" aria-label="Browse for containing folder" data-testid="create-workspace-path-browse-button" disabled={creating} onclick={() => { containingFolder = samplePath }}><FolderOpen size={16} aria-hidden="true" /><span>Browse</span></button>
-          {/snippet}
-          {@render row(FolderOpen, 'Containing Folder', 'Choose where the workspace folder will be created.', browseControl, containingFolder, false, true)}
-          <div class="separator"></div>
-          {@render row(Route, 'Final Workspace Path', 'Review the folder that will be created.', undefined, finalPath, false, true)}
-          {#if pathMessage}<div class="path-message">{@render message(pathMessage, folderScenario === 'nonempty', 'create-workspace-final-path-message')}</div>{/if}
-          {#if submissionError}<div class="path-message">{@render message('Failed to create workspace. Please try again.', false, 'create-workspace-submit-error')}</div>{/if}
-          <div class="separator"></div>
-          {#snippet examplesControl()}
-            <button class="examples-toggle text-sm" type="button" aria-pressed={includeExamples} data-testid="create-workspace-examples-toggle" disabled={creating} onclick={() => { includeExamples = !includeExamples }}>
+          </div>
+          <div>
+            <div class="field-heading"><label for="mock-containing-folder" class="text-sm font-semibold">Containing Folder</label><span class="muted text-sm">Choose the folder that will contain the workspace.</span></div>
+            <div class="flex min-w-0 gap-2">
+              <input id="mock-containing-folder" class="name-input min-w-0 flex-1 text-sm leading-5" value={containingFolder} placeholder="Select a folder..." data-testid="create-workspace-containing-folder-display" disabled />
+              <button class="action-button text-sm leading-5" type="button" aria-label="Browse for containing folder" data-testid="create-workspace-path-browse-button" disabled={creating} onclick={() => { containingFolder = sampleParent }}><FolderOpen size={16} aria-hidden="true" /><span>Browse</span></button>
+            </div>
+          </div>
+          <div>
+            <div class="field-heading"><label for="mock-final-path" class="text-sm font-semibold">Workspace Path</label><span class="muted text-sm">Review the full path to the workspace.</span></div>
+            <input id="mock-final-path" class="name-input text-sm leading-5" value={finalPath} data-testid="create-workspace-final-path-display" aria-invalid={folderScenario === 'existing' ? 'true' : undefined} disabled />
+          </div>
+          {#if pathMessage}{@render message(pathMessage, folderScenario === 'nonempty', 'create-workspace-final-path-message')}{/if}
+          {#if submissionError}{@render message('Failed to create workspace. Please try again.', false, 'create-workspace-submit-error')}{/if}
+          <div>
+            <div class="field-heading"><span class="text-sm font-semibold">Add Examples</span><span class="muted text-sm">Include example prompts and templates in the My Prompts and My Templates folders.</span></div>
+            <button class="examples-toggle text-sm leading-5" type="button" aria-pressed={includeExamples} data-testid="create-workspace-examples-toggle" disabled={creating} onclick={() => { includeExamples = !includeExamples }}>
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
               <span class="toggle-label">{includeExamples ? 'Enabled' : 'Disabled'}</span>
             </button>
-          {/snippet}
-          {@render row(Sparkles, 'Add Examples', 'Include example prompts in a "My Prompts" folder.', examplesControl, '', false, true)}
+          </div>
+        </div>
+      {:else if dialog === 'welcome'}
+        <div class="welcomeContent space-y-4 py-4 text-sm leading-6">
+          <section aria-labelledby="welcome-introduction-heading" class="space-y-2">
+            <h2 id="welcome-introduction-heading" class="text-base leading-6 font-semibold">
+              Welcome to Cthulhu Prompt
+            </h2>
+            <p>
+              Create, organize, and copy prompts to your AI tools. If you encounter bugs or quirks,
+              <a
+                class="welcomeGithubLink underline underline-offset-2"
+                href="https://github.com/coxthulhu/Cthulhu-Prompt/issues"
+                data-testid="welcome-github-link"
+                target="_blank"
+                rel="noreferrer"
+              >visit our GitHub page</a> to report them. Enhancement requests are welcome too!
+            </p>
+            <p>
+              For very short prompts or questions, you can go straight to your AI tool. Cthulhu Prompt
+              is most useful when you need space to develop detailed instructions, organize related
+              tasks, or reuse a workflow.
+            </p>
+          </section>
+
+          <div class="separator"></div>
+
+          <section aria-labelledby="welcome-workspaces-heading" class="space-y-2">
+            <h2 id="welcome-workspaces-heading" class="text-base leading-6 font-semibold">
+              Workspaces and Files
+            </h2>
+            <p>
+              A workspace keeps your prompt tasks and templates together in a folder on your computer.
+              Your prompts are saved as Markdown files inside the Prompts and Templates folders.
+              Create a workspace to begin, or open an existing workspace by selecting its
+              .cthulhuprompt.json file.
+            </p>
+          </section>
+
+          <div class="separator"></div>
+
+          <section aria-labelledby="welcome-activities-heading" class="space-y-2">
+            <h2 id="welcome-activities-heading" class="text-base leading-6 font-semibold">
+              Prompt Tasks and Templates
+            </h2>
+            <p>
+              <strong>Prompt tasks</strong> are the prompts you write to make a change: one-time
+              instructions for a specific task.
+            </p>
+            <p>
+              <strong>Prompt templates</strong> define reusable workflows. Assign a template to a
+              prompt task, and it will be applied when you copy that task to your clipboard.
+            </p>
+          </section>
         </div>
       {:else}
         <div class="error-body">
           <section><h4 class="text-sm">Message</h4><p class="text-sm">The workspace could not be opened.</p></section>
-          <section><h4 class="text-sm">Details</h4><pre class="text-sm">{errorText}</pre></section>
+          <section><h4 class="text-sm">Details</h4><pre class="text-sm leading-6">{errorText}</pre></section>
         </div>
       {/if}
       <div class="separator"></div>
       <div class="dialog-footer">
         {#if dialog === 'create'}<button class="action-button text-sm" type="button" data-variant="accent" data-testid="create-workspace-submit-button" disabled={!canCreate} onclick={createWorkspace}>{creating ? 'Creating...' : 'Create Workspace'}</button>{/if}
+        {#if dialog === 'welcome'}
+          <button class="action-button text-sm leading-5" type="button" data-variant="accent" data-testid="welcome-create-workspace-button" onclick={() => { dialog = 'create' }}><FolderPlus size={16} aria-hidden="true" />Create Workspace</button>
+          <button class="action-button text-sm leading-5" type="button" data-testid="welcome-open-workspace-button" onclick={openWorkspace}><FolderOpen size={16} aria-hidden="true" />Open Workspace</button>
+        {:else}
         <button class="action-button text-sm" type="button" disabled={creating} onclick={closeDialog}>{dialog === 'create' ? 'Cancel' : 'Close'}</button>
+        {/if}
       </div>
     </div>
   </div>
@@ -321,24 +379,23 @@
   }
   .home-base *, .dialog-layer * { box-sizing: border-box; }
   .home-base { min-width: 0; min-height: 100%; display: flex; flex-direction: column; }
-  .home-screen { display: flex; flex: 1; min-width: 0; padding: 24px; }
+  .home-screen { display: flex; flex: 1; min-width: 0; overflow-y: auto; padding: 24px; }
   .home-center { display: flex; width: 100%; min-width: 0; align-items: flex-start; justify-content: center; }
   .home-layout { container: base-home-layout / inline-size; position: relative; width: 100%; max-width: 1024px; min-width: 0; margin-block: auto; }
   .title-container, .home-card-grid { width: 100%; max-width: 504px; margin-inline: auto; }
-  .home-title { display: flex; flex-direction: column; align-items: center; margin: 0; color: var(--ui-normal-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: var(--home-title-size, clamp(64px, 9vw, 88px)); font-weight: var(--font-weight-semibold); letter-spacing: 0.14em; line-height: var(--home-title-size, clamp(64px, 9vw, 88px)); text-align: center; white-space: nowrap; }
+  .home-title { display: flex; flex-direction: column; align-items: center; margin: 0; color: var(--ui-normal-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: var(--font-weight-semibold); letter-spacing: 0.14em; text-align: center; white-space: nowrap; }
   .title-measure { position: fixed; left: -9999px; top: -9999px; width: max-content; visibility: hidden; pointer-events: none; --home-title-size: 100px; }
   .title-separator { background: var(--ui-neutral-muted-border); height: 3px; width: 100%; margin-top: 24px; }
   .home-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; margin-top: 28px; }
   .home-card { width: 100%; min-width: 0; }
-  .card-label { margin: 0 0 12px; padding-left: 8px; line-height: 22px; font-weight: var(--font-weight-semibold); }
+  .card-label { margin: 0 0 12px; font-weight: var(--font-weight-semibold); }
   .card-surface { border-radius: 8px; background: var(--ui-card-normal-surface); border: 1px solid var(--ui-neutral-muted-border); }
   .home-row { display: flex; align-items: center; column-gap: 12px; row-gap: 8px; min-width: 0; width: 100%; padding: 16px; border-radius: 8px; text-align: left; }
   .row-icon { display: flex; flex: 0 0 34px; width: 34px; height: 34px; align-items: center; justify-content: center; color: var(--ui-hoverable-icon-glyph); }
   .row-text-stack { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
   .row-label, .row-detail { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .row-label { font-weight: var(--font-weight-semibold); }
-  .row-detail, .row-extra { color: var(--ui-muted-text); }
-  .row-extra { display: block; color: var(--ui-secondary-text); font-size: 13px; line-height: 18px; overflow-wrap: anywhere; white-space: normal; }
+  .row-detail { color: var(--ui-muted-text); }
   .home-row[data-wrap-detail='true'] .row-detail { overflow-wrap: anywhere; white-space: normal; }
   .row-trailing { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; min-width: 0; }
   .separator { flex-shrink: 0; width: 100%; height: 1px; border-top: 1px solid var(--ui-neutral-muted-border); }
@@ -351,28 +408,34 @@
   .action-button:hover, .action-button:focus-visible, .examples-toggle:hover { background: var(--ui-neutral-action-hover-fill); border-color: var(--ui-neutral-hover-border); }
   .action-button[data-variant='accent'], .examples-toggle[aria-pressed='true'] { background: var(--ui-accent-action-fill); border-color: var(--ui-accent-muted-border); }
   .action-button[data-variant='accent']:hover, .action-button[data-variant='accent']:focus-visible, .examples-toggle[aria-pressed='true']:hover { background: var(--ui-accent-action-hover-fill); border-color: var(--ui-accent-muted-hover-border); }
-  .action-button[data-appearance='outline'] { background: var(--ui-ghost-surface); }
-  .action-button[data-appearance='outline']:hover, .action-button[data-appearance='outline']:focus-visible { background: var(--ui-neutral-subtle-action-hover-fill); }
+  .action-button[data-appearance='outline'] { background: var(--ui-ghost-surface); color: var(--ui-hoverable-text); }
+  .action-button[data-appearance='outline']:hover, .action-button[data-appearance='outline']:focus-visible { background: var(--ui-neutral-subtle-action-hover-fill); color: var(--ui-normal-text); }
   .workspace-action { width: 108px; justify-content: center; }
   .workspace-actions-card .row-icon :global(svg) { transform: translateY(1px); }
   .icon-button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-ghost-surface); color: var(--ui-hoverable-icon-glyph); cursor: pointer; }
-  .icon-button:hover, .icon-button:focus-visible { background: var(--ui-neutral-action-fill); border-color: var(--ui-neutral-hover-border); }
+  .icon-button:hover, .icon-button:focus-visible { color: var(--ui-normal-text); background: var(--ui-neutral-action-fill); border-color: var(--ui-neutral-hover-border); }
   button:disabled, input:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
   button:focus-visible, a:focus-visible { outline: 2px solid var(--ui-neutral-focus-border); outline-offset: 2px; }
   .dialog-layer { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--ui-card-normal-shadow); -webkit-app-region: no-drag; }
   .home-dialog { display: flex; flex-direction: column; width: 100%; max-width: 576px; max-height: calc(100vh - 32px); min-width: 0; padding: 16px; border-radius: 8px; border: 1px solid var(--ui-card-normal-border); background: var(--ui-card-overlay-surface); box-shadow: 0 8px 12px var(--ui-card-normal-shadow); }
-  .home-dialog[data-create='true'] { max-width: 608px; padding-top: 18px; }
+  .home-dialog[data-create='true'] { max-width: 620px; padding-top: 18px; }
   .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; padding: 0 4px 12px; }
   .home-dialog[data-create='true'] .dialog-header { padding-bottom: 16px; }
   .dialog-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .dialog-heading-text { min-width: 0; }
-  .dialog-icon { display: flex; flex: 0 0 38px; align-items: center; justify-content: center; width: 38px; height: 38px; }
-  .dialog-title { margin: 0; line-height: 22px; font-weight: var(--font-weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .home-dialog[data-create='true'] .dialog-title { line-height: 24px; }
+  .dialog-icon { display: flex; flex: 0 0 40px; align-items: center; justify-content: center; width: 40px; height: 40px; }
+  .dialog-title { margin: 0; font-weight: var(--font-weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .dialog-subtitle { margin: 3px 0 0; color: var(--ui-muted-text); }
   .dialog-body { min-width: 0; }
+  .field-heading { display: flex; flex-direction: column; gap: 2px; margin-bottom: 7px; }
+  .muted { color: var(--ui-muted-text); }
+  .home-dialog[data-welcome='true'] { max-width: 672px; }
+  .welcomeContent { min-height: 0; overflow-y: auto; color: var(--ui-hoverable-text); }
+  .welcomeContent h2, .welcomeContent strong { color: var(--ui-normal-text); }
+  .welcomeGithubLink { color: var(--ui-accent-link-text); }
+  .welcomeGithubLink:hover, .welcomeGithubLink:focus-visible { color: var(--ui-accent-link-hover-text); }
   .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; min-width: 0; padding-top: 16px; }
-  .name-input { display: flex; width: 220px; max-width: 100%; min-width: 0; height: 40px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); padding: 4px 14px; font-family: inherit; font-weight: var(--font-weight-semibold); outline: none; }
+  .name-input { display: flex; width: 100%; max-width: 100%; min-width: 0; height: 40px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); padding: 4px 14px; font-family: inherit; font-weight: var(--font-weight-semibold); outline: none; }
   .name-input::placeholder { color: var(--ui-muted-text); }
   .name-input:focus-visible { border-color: var(--ui-neutral-focus-border); box-shadow: 0 0 0 3px var(--ui-neutral-emphasis-surface); }
   .name-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); }
@@ -384,8 +447,6 @@
   .message[data-warning='true'] { background: var(--ui-warning-normal-surface); }
   .message[data-warning='true'] :global(svg) { color: var(--ui-warning-icon-glyph); }
   .floating-validation .message { box-shadow: 0 8px 18px var(--ui-card-normal-shadow); background: color-mix(in oklch, var(--ui-card-solid-surface) 76%, var(--ui-danger-strong-border)); }
-  .path-message { margin-bottom: 12px; }
-  .path-message .message { width: 100%; }
   .examples-toggle { gap: 12px; }
   .toggle-track { display: flex; align-items: center; justify-content: flex-start; width: 40px; height: 24px; padding: 4px; border-radius: 999px; background: var(--ui-neutral-emphasis-surface); }
   .examples-toggle[aria-pressed='true'] .toggle-track { justify-content: flex-end; background: var(--ui-accent-action-fill); }
@@ -394,14 +455,10 @@
   .error-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px 0; }
   .error-body h4 { margin: 0 0 8px; font-weight: var(--font-weight-semibold); }
   .error-body p { margin: 0; padding-left: 8px; }
-  .error-body pre { margin: 0; border-radius: 6px; padding: 12px; background: var(--ui-neutral-field-surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; line-height: 24px; overflow-x: auto; white-space: pre-wrap; }
+  .error-body pre { margin: 0; border-radius: 6px; padding: 12px; background: var(--ui-neutral-field-surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-x: auto; white-space: pre-wrap; }
   @container base-home-layout (min-width: 1024px) {
     .title-container, .home-card-grid { max-width: none; }
     .home-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .home-title { flex-direction: row; justify-content: center; column-gap: 1.14em; }
-  }
-  @media (max-width: 720px) {
-    .home-row[data-setting='true'][data-trailing='true'] { align-items: flex-start; flex-wrap: wrap; }
-    .home-row[data-setting='true'] .row-trailing { flex-basis: calc(100% - 46px); max-width: calc(100% - 46px); margin-left: 46px; justify-content: flex-start; }
   }
 </style>
