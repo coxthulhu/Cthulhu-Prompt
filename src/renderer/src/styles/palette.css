@@ -59,6 +59,10 @@
   --ui-accent-muted-hover-border: oklch(0.827 0.108 306.383 / 19.1%);
   --ui-accent-normal-border: oklch(0.827 0.108 306.383 / 30%);
   --ui-accent-normal-text: oklch(0.969 0.016 293.756);
+  /* Opaque accent hue for inline links. */
+  --ui-accent-link-text: oklch(0.827 0.108 306.383);
+  /* Brighter accent hue for hovered and focused inline links. */
+  --ui-accent-link-hover-text: oklch(0.88 0.09 306.383);
   --ui-accent-strong-border: oklch(0.827 0.108 306.383 / 68%);
   --ui-accent-action-fill: oklch(0.606 0.219 292.717 / 25.2%);
   --ui-accent-action-hover-fill: oklch(0.606 0.219 292.717 / 36%);

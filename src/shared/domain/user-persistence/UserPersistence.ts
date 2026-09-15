@@ -3,11 +3,14 @@ import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/Authoritative
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
+  /** Whether Welcome has been displayed on this installation. */
+  hasShownWelcome: boolean
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   lastWorkspaceInfoPath: null,
-  appSidebarWidthPx: 275
+  appSidebarWidthPx: 275,
+  hasShownWelcome: false
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -125,7 +128,8 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
 
   return {
     lastWorkspaceInfoPath,
-    appSidebarWidthPx
+    appSidebarWidthPx,
+    hasShownWelcome: value.hasShownWelcome === true
   }
 }
 

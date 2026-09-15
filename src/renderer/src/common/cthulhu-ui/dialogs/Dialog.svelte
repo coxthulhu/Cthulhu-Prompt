@@ -18,6 +18,10 @@
     cancelText?: string
     showCloseButton?: boolean
     showSubmitButton?: boolean
+    /** Allows informational dialogs to omit the footer Cancel action. */
+    showCancelButton?: boolean
+    /** Keeps long content scrollable within the available dialog height. */
+    scrollBody?: boolean
     showSeparators?: boolean
     closeOnOutsideClick?: boolean
     submitDisabled?: boolean
@@ -26,6 +30,8 @@
     cancelTestId?: string
     class?: string
     children?: Snippet
+    /** Additional footer actions placed after the primary action. */
+    secondaryActions?: Snippet
     submitVariant?: ButtonVariant
     // Optional leading icon for the primary action.
     submitIcon?: ComponentType
@@ -44,6 +50,8 @@
     cancelText = 'Cancel',
     showCloseButton = true,
     showSubmitButton = true,
+    showCancelButton = true,
+    scrollBody = false,
     showSeparators = true,
     closeOnOutsideClick = false,
     submitDisabled = false,
@@ -52,6 +60,7 @@
     cancelTestId,
     class: className,
     children,
+    secondaryActions,
     submitVariant = 'accent',
     submitIcon,
     cancelFirst = false,
@@ -159,7 +168,7 @@
       {/if}
 
       {#if children}
-        <div class="cthulhuUiDialogBody">
+        <div class="cthulhuUiDialogBody" data-scrollable={scrollBody}>
           {@render children()}
         </div>
       {/if}
@@ -169,7 +178,7 @@
       {/if}
 
       <div class="cthulhuUiDialogFooter">
-        {#if cancelFirst}
+        {#if showCancelButton && cancelFirst}
           <Button
             text={cancelText}
             state={cancelDisabled ? 'disabled' : 'enabled'}
@@ -187,7 +196,10 @@
             onclick={submitDialog}
           />
         {/if}
-        {#if !cancelFirst}
+        {#if secondaryActions}
+          {@render secondaryActions()}
+        {/if}
+        {#if showCancelButton && !cancelFirst}
           <Button
             text={cancelText}
             state={cancelDisabled ? 'disabled' : 'enabled'}
@@ -229,6 +241,11 @@
 
   .cthulhuUiDialogBody {
     min-width: 0;
+  }
+
+  .cthulhuUiDialogBody[data-scrollable='true'] {
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .cthulhuUiDialogFooter {

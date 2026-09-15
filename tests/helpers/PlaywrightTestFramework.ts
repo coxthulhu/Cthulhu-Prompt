@@ -5,6 +5,7 @@ import * as buttonHelpers from './ButtonHelpers'
 import * as workspaceHelpers from './WorkspaceHelpers'
 import * as promptFolderHelpers from './PromptFolderHelpers'
 import * as uiValidationHelpers from './UiValidationHelpers'
+import { runSqlStatement } from './UserPersistenceHelpers'
 import {
   setupWorkspaceScenario,
   type WorkspaceScenario,
@@ -17,6 +18,8 @@ export interface PlaywrightTestOptions {
 }
 
 export interface TestSetupOptions {
+  /** Preserves the SQLite Welcome default when testing the first-launch experience. */
+  firstLaunch?: boolean
   workspace?: {
     scenario: WorkspaceScenario | 'none'
     path?: string
@@ -264,6 +267,13 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
         },
 
         setupAndStart: async (options: TestSetupOptions = {}) => {
+          // Side effect: ordinary tests start as returning users; Welcome tests retain real defaults.
+          if (!options.firstLaunch) {
+            await runSqlStatement(
+              electronApp,
+              'UPDATE app_persistence SET has_shown_welcome = 1 WHERE id = 1'
+            )
+          }
           // Handle workspace setup if provided
           if (options.workspace && options.workspace.scenario !== 'none') {
             const workspacePath =

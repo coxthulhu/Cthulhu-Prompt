@@ -12,6 +12,8 @@ const APP_PERSISTENCE_ID = 1
 type UserPersistenceRow = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
+  /** SQLite integer representing whether Welcome has been displayed. */
+  hasShownWelcome: number
 }
 
 /** SQLite projection for main-process window persistence. */
@@ -54,12 +56,18 @@ export class UserPersistenceDataAccess {
     const persistenceRow = db
       .prepare(
         `SELECT last_workspace_info_path AS lastWorkspaceInfoPath,
-                app_sidebar_width_px AS appSidebarWidthPx
+                app_sidebar_width_px AS appSidebarWidthPx,
+                has_shown_welcome AS hasShownWelcome
          FROM app_persistence WHERE id = ?`
       )
       .get(APP_PERSISTENCE_ID) as UserPersistenceRow | undefined
     /** Validated persistence or the stable defaults. */
-    const parsedPersistence = parseUserPersistence(persistenceRow)
+    const parsedPersistence = parseUserPersistence(
+      persistenceRow && {
+        ...persistenceRow,
+        hasShownWelcome: Boolean(persistenceRow.hasShownWelcome)
+      }
+    )
     return parsedPersistence ?? DEFAULT_USER_PERSISTENCE
   }
 
@@ -70,18 +78,21 @@ export class UserPersistenceDataAccess {
     /** Normalized values persisted by the domain mutation. */
     const nextUserPersistence = {
       lastWorkspaceInfoPath: userPersistence.lastWorkspaceInfoPath,
-      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx)
+      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx),
+      hasShownWelcome: userPersistence.hasShownWelcome
     }
     db.prepare(
-      `INSERT INTO app_persistence (id, last_workspace_info_path, app_sidebar_width_px)
-       VALUES (?, ?, ?)
+      `INSERT INTO app_persistence (id, last_workspace_info_path, app_sidebar_width_px, has_shown_welcome)
+       VALUES (?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          last_workspace_info_path = excluded.last_workspace_info_path,
-         app_sidebar_width_px = excluded.app_sidebar_width_px`
+         app_sidebar_width_px = excluded.app_sidebar_width_px,
+         has_shown_welcome = excluded.has_shown_welcome`
     ).run(
       APP_PERSISTENCE_ID,
       nextUserPersistence.lastWorkspaceInfoPath,
-      nextUserPersistence.appSidebarWidthPx
+      nextUserPersistence.appSidebarWidthPx,
+      nextUserPersistence.hasShownWelcome ? 1 : 0
     )
     return nextUserPersistence
   }

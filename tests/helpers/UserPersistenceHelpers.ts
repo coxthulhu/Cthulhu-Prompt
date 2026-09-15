@@ -264,13 +264,16 @@ export const readUserPersistence = async (
 ): Promise<{
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
+  /** Raw SQLite display flag, allowing tests to assert the persisted value. */
+  hasShownWelcome: number
 }> => {
   const queryResult = await runSqlQuery(
     electronApp,
     `
     SELECT
       last_workspace_info_path AS lastWorkspaceInfoPath,
-      app_sidebar_width_px AS appSidebarWidthPx
+      app_sidebar_width_px AS appSidebarWidthPx,
+      has_shown_welcome AS hasShownWelcome
     FROM app_persistence
     WHERE id = 1
     `
@@ -283,6 +286,8 @@ export const readUserPersistence = async (
   return queryResult.rows[0] as {
     lastWorkspaceInfoPath: string | null
     appSidebarWidthPx: number
+    /** SQLite boolean stored as zero or one. */
+    hasShownWelcome: number
   }
 }
 

@@ -130,7 +130,22 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 20 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 21 })
+
+      /** Welcome remains eligible by default when the preference column is migrated. */
+      const appPersistenceColumnsResult = await runSqlQuery(
+        electronApp,
+        'PRAGMA table_info(app_persistence)'
+      )
+      expect(appPersistenceColumnsResult.success).toBe(true)
+      expect(appPersistenceColumnsResult.rows).toContainEqual(
+        expect.objectContaining({
+          name: 'has_shown_welcome',
+          type: 'INTEGER',
+          notnull: 1,
+          dflt_value: '0'
+        })
+      )
 
       const persistenceTablesResult = await runSqlQuery(
         electronApp,

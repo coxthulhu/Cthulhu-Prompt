@@ -40,3 +40,18 @@ export const syncLastWorkspaceInfoPath = async (
     renderer: {}
   })
 }
+
+/** Records Welcome immediately on display while retaining the other preferences. */
+export const markWelcomeShown = async (): Promise<void> => {
+  /** Startup-loaded preferences, including any pending optimistic changes. */
+  const current = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  if (current.hasShownWelcome) return
+  await runImmediateRendererDomainMutation({
+    mutation: {
+      command: { ...current, hasShownWelcome: true },
+      plan: planSetUserPersistenceDomainMutation
+    },
+    ipc: { channel: UPDATE_USER_PERSISTENCE_CHANNEL },
+    renderer: {}
+  })
+}

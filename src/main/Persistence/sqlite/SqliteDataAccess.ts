@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPe
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 20
+const LATEST_SCHEMA_VERSION = 21
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -578,6 +578,16 @@ const migrateSchemaV19ToV20 = (db: Database.Database): void => {
   migrate()
 }
 
+/** Makes Welcome eligible once for both existing and new installations. */
+const migrateSchemaV20ToV21 = (db: Database.Database): void => {
+  /** Atomically adds the display flag and advances the schema version. */
+  const migrate = db.transaction(() => {
+    db.exec('ALTER TABLE app_persistence ADD COLUMN has_shown_welcome INTEGER NOT NULL DEFAULT 0')
+    db.prepare('UPDATE schema_version SET version = ?').run(21)
+  })
+  migrate()
+}
+
 const applyStartupMigrations = (db: Database.Database): void => {
   ensureSchemaVersionTable(db)
 
@@ -705,6 +715,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 19) {
       migrateSchemaV19ToV20(db)
       schemaVersion = 20
+      continue
+    }
+
+    if (schemaVersion === 20) {
+      migrateSchemaV20ToV21(db)
+      schemaVersion = 21
       continue
     }
 

@@ -106,6 +106,10 @@
   /** Returns the startup-loaded user persistence singleton. */
   const getUserPersistence = () => userPersistenceCollection.get(USER_PERSISTENCE_ID)!
   const appSidebarDefaultWidthPx = getUserPersistence().appSidebarWidthPx
+  /** Startup decision retained while workspace restoration updates preferences. */
+  const needsWelcome = !getUserPersistence().hasShownWelcome
+  /** Welcome visibility shared with Home after startup restoration completes. */
+  let showWelcomeDialog = $state(false)
   // Session-only visibility starts expanded whenever the application launches.
   let isAppSidebarExpanded = $state(true)
   // Toggles only the resizable sidebar while leaving primary navigation visible.
@@ -456,7 +460,11 @@
 
     const selectionResult = await selectWorkspace(lastWorkspaceInfoPath)
     if (selectionResult.success) {
-      await restoreWorkspaceScreenFromPersistence()
+      if (needsWelcome) {
+        await restoreWorkspaceHomeScreen(getSelectedWorkspaceId()!)
+      } else {
+        await restoreWorkspaceScreenFromPersistence()
+      }
       return
     }
 
@@ -561,6 +569,7 @@
         console.error('Failed to restore workspace from user persistence.', error)
       } finally {
         startupRestorePhase = 'ready'
+        showWelcomeDialog = needsWelcome
       }
     })()
   })
@@ -738,6 +747,7 @@
         >
           {#if activeScreen === 'home'}
             <HomeScreen
+              bind:showWelcomeDialog
               {workspacePath}
               {isWorkspaceReady}
               {isWorkspaceLoading}

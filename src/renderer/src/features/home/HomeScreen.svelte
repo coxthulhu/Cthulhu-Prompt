@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     Bug,
+    BookOpen,
     ExternalLink,
     FileText,
     FolderOpen,
@@ -24,8 +25,10 @@
   } from '@renderer/features/workspace/types'
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
+  import WelcomeDialog from './WelcomeDialog.svelte'
 
   let {
+    showWelcomeDialog = $bindable(false),
     workspacePath,
     isWorkspaceReady,
     isWorkspaceLoading,
@@ -35,6 +38,8 @@
     onWorkspaceCreate,
     onWorkspaceClear
   } = $props<{
+    /** Welcome visibility controlled by startup or the Get Started action. */
+    showWelcomeDialog?: boolean
     workspacePath: string | null
     isWorkspaceReady: boolean
     isWorkspaceLoading: boolean
@@ -381,11 +386,40 @@
                 {/snippet}
               </DisplayRow>
             {/if}
+
+            {#if !currentWorkspaceDetails}
+              <Separator />
+
+              <DisplayRow
+                icon={BookOpen}
+                label="Welcome"
+                detail="Learn to use Cthulhu Prompt."
+                wrapDetail
+              >
+                {#snippet trailing()}
+                  <Button
+                    icon={BookOpen}
+                    text="Welcome"
+                    variant="accent"
+                    testId="show-welcome-button"
+                    onclick={() => (showWelcomeDialog = true)}
+                  />
+                {/snippet}
+              </DisplayRow>
+            {/if}
           </div>
         </Card>
       </div>
     </section>
   </div>
+
+  {#if showWelcomeDialog}
+    <WelcomeDialog
+      bind:open={showWelcomeDialog}
+      oncreate={handleCreateFolder}
+      onopen={handleSelectFolder}
+    />
+  {/if}
 
   <CreateWorkspaceDialog
     bind:open={showCreateWorkspaceDialog}
