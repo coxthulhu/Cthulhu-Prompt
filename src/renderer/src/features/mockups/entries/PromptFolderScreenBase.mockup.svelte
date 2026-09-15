@@ -16,15 +16,14 @@
     Copy,
     FileText,
     Folder,
+    FolderCog,
     FolderOpen,
-    FolderPlus,
     GripVertical,
     Layers,
     Pencil,
     Play,
     Plus,
     Search,
-    Settings,
     Trash2,
     Undo2,
     Zap,
@@ -118,6 +117,7 @@
   }
 
   type MockDocument = {
+    fixedHeightPx?: number
     id: string
     minLines?: number
     text: string
@@ -147,32 +147,20 @@
     children: MockTemplateFolder[]
   }
 
-  type MockFolderSetting = MockDocument & {
-    title: string
-    description: string
-    isPresent: boolean
-  }
-
   type MockFolder = {
     id: string
     title: string
-    settings: MockFolderSetting[]
+    shortDescription: string
+    description: string
     prompts: MockPrompt[]
     collapsed?: boolean
-    settingsHidden?: boolean
   }
 
-  const createSettings = (folderId: string, description: string): MockFolderSetting[] => [
-    {
-      id: `${folderId}-description`,
-      title: 'Category Description',
-      description:
-        'A general description of this category and the types of prompts that are within it. For informational use only.',
-      isPresent: true,
-      minLines: 1,
-      text: description
-    }
-  ]
+  type MockCategoryDraft = MockDocument & {
+    title: string
+    shortDescription: string
+    hasInteracted: boolean
+  }
 
   const createPrompt = (
     id: string,
@@ -268,10 +256,6 @@
 
   const closeTemplateDialog = () => {
     templateDialogPrompt = null
-  }
-
-  const handleTemplateDialogLayerClick = (event: MouseEvent) => {
-    if (event.target === event.currentTarget) closeTemplateDialog()
   }
 
   const selectTemplate = (template: MockTemplate | null) => {
@@ -388,10 +372,8 @@
     {
       id: 'base-implementation',
       title: 'Implementation',
-      settings: createSettings(
-        'base-implementation',
-        'Prompts used while implementing an approved product change.'
-      ),
+      shortDescription: 'Build approved product changes.',
+      description: 'Prompts used while implementing an approved product change.',
       prompts: [
         createPrompt(
           'base-build',
@@ -410,7 +392,8 @@
     {
       id: 'base-verification',
       title: 'Verification',
-      settings: createSettings('base-verification', 'Prompts for validating product behavior.'),
+      shortDescription: 'Validate behavior and release readiness.',
+      description: 'Prompts for validating product behavior and preparing a release.',
       prompts: [
         createPrompt('base-regression', 'Add focused regression coverage',
           'base-verification', NO_TEMPLATE_LABEL, 'Assert the visible user flow before implementation details.'),
@@ -447,7 +430,7 @@
   const finalizedPrompts = $derived(allPrompts.filter((prompt) => matchesGroup(prompt))
     .sort((left, right) => (right.finalizedAt ?? 0) - (left.finalizedAt ?? 0)))
   const breadcrumbCategory = $derived(isFinalMode ? null : subfolders.find((folder) => folder.id === breadcrumbCategoryId))
-  // Derived search sections follow the visible screen order, including collapsed category descriptions.
+  // Derived search sections follow the visible prompt order in the selected status group.
   const findSections = $derived.by(() => {
     const promptSections = (prompts: MockPrompt[]) => prompts.flatMap((prompt) => [
       { id: prompt.id, folderId: prompt.folderId, field: 'title', text: prompt.title },
@@ -455,12 +438,7 @@
     ])
     return isFinalMode ? promptSections(finalizedPrompts) : [
       ...promptSections(visiblePrompts(rootPrompts)),
-      ...subfolders.flatMap((folder) => [
-        ...folder.settings.filter((setting) => setting.isPresent).map((setting) => ({
-          id: setting.id, folderId: folder.id, field: 'text', text: setting.text
-        })),
-        ...promptSections(visiblePrompts(folder.prompts))
-      ])
+      ...subfolders.flatMap((folder) => promptSections(visiblePrompts(folder.prompts)))
     ]
   })
   const findMatches = $derived.by(() => {
@@ -481,8 +459,7 @@
     const match = findMatches[findIndex]
     const folder = subfolders.find((item) => item.id === match.folderId)
     if (folder && !isFinalMode) {
-      if (folder.settings.some((setting) => setting.id === match.id)) folder.settingsHidden = false
-      else folder.collapsed = false
+      folder.collapsed = false
     }
     // Wait for a collapsed section's local editor to mount before revealing the exact match.
     window.requestAnimationFrame(() => {
@@ -648,18 +625,131 @@
       destroy() { cleanupGesture(); node.removeEventListener('pointerdown', down) }
     }
   }
-  let nameDialog = $state<{ title: string; value: string; categoryId?: string; save: (value: string) => void } | null>(null)
+  let nameDialog = $state<{ value: string; save: (value: string) => void } | null>(null)
   let nameInteracted = $state(false)
   let nameInput = $state<HTMLInputElement | null>(null)
-  const isFolderName = $derived(nameDialog?.title === 'Rename Prompt Folder')
-  const nameLabel = $derived(isFolderName ? 'Prompt Folder Name' : 'Category Name')
-  const nameError = $derived(!nameDialog?.value.trim()
-    ? `${isFolderName ? 'Folder' : 'Category'} name is required`
-    : !isFolderName && subfolders.some((folder) => folder.id !== nameDialog?.categoryId &&
-      folder.title.trim().toLocaleLowerCase() === nameDialog?.value.trim().toLocaleLowerCase())
-      ? 'A category with this name already exists' : null)
-  const nameDisabled = $derived(Boolean(nameError) || (isFolderName && nameDialog?.value.trim() === rootTitle))
+  const nameError = $derived(!nameDialog?.value.trim() ? 'Folder name is required' : null)
+  const nameDisabled = $derived(Boolean(nameError) || nameDialog?.value.trim() === rootTitle)
   let confirmation = $state<{ title: string; description: string; submit: string; confirm: () => void } | null>(null)
+
+  let manageCategoriesOpen = $state(false)
+  let managementDrafts = $state<MockCategoryDraft[]>([])
+  let selectedCategoryId = $state<string | null>(null)
+  let managementNameInput = $state<HTMLInputElement | null>(null)
+  let shouldFocusManagementName = $state(false)
+  const selectedCategoryDraft = $derived(
+    managementDrafts.find((draft) => draft.id === selectedCategoryId) ?? null
+  )
+  const selectedCategoryNameError = $derived(
+    !selectedCategoryDraft
+      ? null
+      : !selectedCategoryDraft.title.trim()
+        ? 'Category name is required'
+        : managementDrafts.some(
+              (draft) =>
+                draft.id !== selectedCategoryDraft.id &&
+                draft.title.trim().toLocaleLowerCase() ===
+                  selectedCategoryDraft.title.trim().toLocaleLowerCase()
+            )
+          ? 'A category with this name already exists'
+          : null
+  )
+  const managementDraftsValid = $derived(
+    managementDrafts.every(
+      (draft, index) =>
+        draft.title.trim().length > 0 &&
+        !managementDrafts.some(
+          (candidate, candidateIndex) =>
+            candidateIndex !== index &&
+            candidate.title.trim().toLocaleLowerCase() ===
+              draft.title.trim().toLocaleLowerCase()
+        )
+    )
+  )
+  const managementHasChanges = $derived(
+    JSON.stringify(
+      managementDrafts.map(({ id, title, shortDescription, text }) => ({
+        id,
+        title: title.trim(),
+        shortDescription: shortDescription.trim(),
+        description: text.trim()
+      }))
+    ) !==
+      JSON.stringify(
+        subfolders.map(({ id, title, shortDescription, description }) => ({
+          id,
+          title,
+          shortDescription,
+          description
+        }))
+      )
+  )
+
+  const openManageCategories = (categoryId?: string, focusName = false) => {
+    managementDrafts = subfolders.map((folder) => ({
+      id: folder.id,
+      title: folder.title,
+      shortDescription: folder.shortDescription,
+      text: folder.description,
+      fixedHeightPx: 176,
+      hasInteracted: false
+    }))
+    selectedCategoryId = categoryId && managementDrafts.some((draft) => draft.id === categoryId)
+      ? categoryId
+      : (managementDrafts[0]?.id ?? null)
+    shouldFocusManagementName = focusName
+    manageCategoriesOpen = true
+  }
+
+  const closeManageCategories = () => {
+    manageCategoriesOpen = false
+    managementDrafts = []
+    selectedCategoryId = null
+    shouldFocusManagementName = false
+  }
+
+  const addCategoryDraft = () => {
+    const id = window.crypto.randomUUID()
+    managementDrafts.push({
+      id,
+      title: '',
+      shortDescription: '',
+      text: '',
+      fixedHeightPx: 176,
+      hasInteracted: false
+    })
+    selectedCategoryId = id
+    shouldFocusManagementName = true
+  }
+
+  const deleteSelectedCategoryDraft = () => {
+    if (!selectedCategoryDraft) return
+    const index = managementDrafts.findIndex((draft) => draft.id === selectedCategoryDraft.id)
+    managementDrafts.splice(index, 1)
+    selectedCategoryId = managementDrafts[index]?.id ?? managementDrafts[index - 1]?.id ?? null
+    shouldFocusManagementName = false
+  }
+
+  const saveCategoryDrafts = () => {
+    if (!managementDraftsValid || !managementHasChanges) return
+    const retainedIds = new Set(managementDrafts.map((draft) => draft.id))
+    for (const removedFolder of subfolders.filter((folder) => !retainedIds.has(folder.id))) {
+      for (const prompt of removedFolder.prompts) prompt.folderId = 'base-root'
+      rootPrompts.push(...removedFolder.prompts)
+    }
+    subfolders = managementDrafts.map((draft) => {
+      const existing = subfolders.find((folder) => folder.id === draft.id)
+      return {
+        id: draft.id,
+        title: draft.title.trim(),
+        shortDescription: draft.shortDescription.trim(),
+        description: draft.text.trim(),
+        prompts: existing?.prompts ?? [],
+        collapsed: existing?.collapsed ?? false
+      }
+    })
+    closeManageCategories()
+  }
 
   // Side effect: focus and select the local name field each time its dialog mounts.
   $effect(() => {
@@ -669,18 +759,20 @@
     nameInput.select()
   })
 
+  // Side effect: focus and select the managed category name requested by rename or creation.
+  $effect(() => {
+    if (!managementNameInput || !shouldFocusManagementName) return
+    managementNameInput.focus()
+    managementNameInput.select()
+    shouldFocusManagementName = false
+  })
+
   // Side effect: portal local overlays beyond the mockup's containing block.
   const mountMockDialog = (node: HTMLElement) => {
     const previousFocus = document.activeElement as HTMLElement | null
     document.body.appendChild(node)
     return { destroy: () => { node.remove(); previousFocus?.focus() } }
   }
-  const addCategory = () => {
-    nameDialog = { title: 'Create Category', value: '', save: (title) => {
-      subfolders.push({ id: window.crypto.randomUUID(), title, settings: createSettings(window.crypto.randomUUID(), ''), prompts: [] })
-    } }
-  }
-
   const EDITOR_BODY_PADDING_TOP_PX = 8
   const EDITOR_BODY_PADDING_RIGHT_PX = 10
   const EDITOR_BODY_PADDING_BOTTOM_PX = 10
@@ -730,16 +822,18 @@
       wordWrapColumn: 80,
       dimension: {
         width: Math.max(1, host.clientWidth),
-        height: clampEditorHeight(
-          lineHeightPx * Math.max(1, document.text.split('\n').length),
-          document.minLines
-        )
+        height: document.fixedHeightPx ??
+          clampEditorHeight(
+            lineHeightPx * Math.max(1, document.text.split('\n').length),
+            document.minLines
+          )
       }
     })
     mountedEditors.set(document.id, editor)
 
     const syncHeight = () => {
-      const heightPx = clampEditorHeight(Math.ceil(editor.getContentHeight()), document.minLines)
+      const heightPx = document.fixedHeightPx ??
+        clampEditorHeight(Math.ceil(editor.getContentHeight()), document.minLines)
       host.style.height = `${heightPx}px`
       editor.layout({ width: Math.max(1, host.clientWidth), height: heightPx })
     }
@@ -789,12 +883,13 @@
       if (event.key === 'Escape') {
         closeTemplateDialog()
         nameDialog = null
+        closeManageCategories()
         confirmation = null
         statusMenuId = null
         deleteMenuId = null
         findOpen = false
       }
-      if (event.ctrlKey && event.key.toLowerCase() === 'f' && !templateDialogPrompt && !nameDialog && !confirmation) {
+      if (event.ctrlKey && event.key.toLowerCase() === 'f' && !templateDialogPrompt && !nameDialog && !manageCategoriesOpen && !confirmation) {
         event.preventDefault()
         findOpen = true
         findInput?.focus()
@@ -996,36 +1091,6 @@
   </div>
 {/snippet}
 
-{#snippet SettingsToggle(setting: MockFolderSetting)}
-  <button
-    type="button"
-    class="base-settings-toggle text-sm leading-4"
-    aria-pressed={setting.isPresent}
-    title={`${setting.isPresent ? 'Remove' : 'Add'} ${setting.title.toLowerCase()}`}
-    onclick={() => {
-      if (setting.isPresent) confirmation = {
-        title: 'Delete Category Description', description: 'Are you sure you want to delete this category description?',
-        submit: 'Delete', confirm: () => { setting.isPresent = false; setting.text = '' }
-      }
-      else setting.isPresent = true
-    }}
-  >
-    <span class="base-settings-toggle-default-icon">
-      {#if setting.isPresent}
-        <Check size={16} aria-hidden="true" />
-      {:else}
-        <Plus size={16} aria-hidden="true" />
-      {/if}
-    </span>
-    {#if setting.isPresent}
-      <span class="base-settings-toggle-remove-icon">
-        <Trash2 size={16} aria-hidden="true" />
-      </span>
-    {/if}
-    <span>{setting.title.replace('Category Description', 'Description').replace('Prompt Folder ', '')}</span>
-  </button>
-{/snippet}
-
 {#snippet MonacoBody(document: MockDocument, testId: string)}
   <div
     id={`base-document-${document.id}`}
@@ -1213,7 +1278,7 @@
                 <span class="base-folder-title text-base leading-5" title={folder.title}>{folder.title}</span>
                 {#if !isFinalMode}
                 {@render IconButton(Pencil, 'Rename category', {
-                  onclick: () => nameDialog = { title: 'Rename Category', value: folder.title, categoryId: folder.id, save: (value) => folder.title = value },
+                  onclick: () => openManageCategories(folder.id, true),
                   size: 'tiny',
                   baseVariant: 'muted',
                   hoverVariant: 'glyph'
@@ -1229,66 +1294,14 @@
           <div class="base-folder-actions">
             <div class="base-icon-button-bar">
               {#if !isFinalMode}
-                {@render IconButton(Settings, folder.settingsHidden ? 'Show category settings' : 'Hide category settings', {
-                  hoverVariant: 'accent', active: !folder.settingsHidden, ariaPressed: !folder.settingsHidden,
-                  onclick: () => folder.settingsHidden = !folder.settingsHidden
-                })}
-                {@render IconButton(Trash2, 'Delete category', { hoverVariant: 'danger',
-                  onclick: () => confirmation = { title: 'Delete Category',
-                    description: `Are you sure you want to delete “${folder.title}”? Its contents will move to Uncategorized.`,
-                    submit: 'Delete Category', confirm: () => {
-                      for (const prompt of folder.prompts) prompt.folderId = 'base-root'
-                      rootPrompts.push(...folder.prompts)
-                      subfolders = subfolders.filter((item) => item.id !== folder.id)
-                    } }
+                {@render IconButton(FolderCog, 'Manage category', {
+                  hoverVariant: 'accent',
+                  onclick: () => openManageCategories(folder.id)
                 })}
               {/if}
             </div>
           </div>
         </header>
-
-        {#if !folder.settingsHidden && !isFinalMode}
-        {@render Separator()}
-        <div class="base-folder-settings">
-          <div class="base-settings-toolbar">
-            <div class="base-settings-toolbar-heading text-sm">
-              <Settings size={20} aria-hidden="true" />
-              <div class="base-settings-toolbar-copy">
-                <span>Category Settings</span>
-                <span class="text-xs">{folder.settings.filter((setting) => setting.isPresent).length} of {folder.settings.length} configured</span>
-              </div>
-            </div>
-            <div class="base-settings-toolbar-actions" role="group" aria-label="Category settings">
-              {#each folder.settings as setting (setting.id)}
-                {@render SettingsToggle(setting)}
-              {/each}
-            </div>
-          </div>
-
-          {#if folder.settings.some((setting) => setting.isPresent)}
-            {@render Separator()}
-          {/if}
-
-          <div class="base-folder-settings-sections">
-            {#each folder.settings.filter((setting) => setting.isPresent) as setting, settingIndex (setting.id)}
-              <section
-                class="base-settings-section"
-                class:withTopBorder={settingIndex > 0}
-                data-testid={`base-mockup-settings-section-${setting.id}`}
-              >
-                <header class="text-xs">
-                  <div class="base-settings-copy">
-                    <span>{setting.title}</span>
-                    <span>- {setting.description}</span>
-                  </div>
-                </header>
-                {@render Separator()}
-                {@render MonacoBody(setting, `base-mockup-monaco-${setting.id}`)}
-              </section>
-            {/each}
-          </div>
-        </div>
-        {/if}
       </div>
     </article>
 
@@ -1349,26 +1362,26 @@
     <section class="base-root-header">
       <div class="base-root-title-row">
         <div class="base-root-title-block">
-          <div class="base-root-eyebrow text-xs">
-            <Folder size={14} aria-hidden="true" />
-            <span>Prompt Folder</span>
-          </div>
-          <div class="base-root-title-line">
-            <h1 class="text-3xl">{rootTitle}</h1>
-            {@render IconButton(Pencil, 'Rename prompt folder', {
-              onclick: () => nameDialog = { title: 'Rename Prompt Folder', value: rootTitle, save: (value) => rootTitle = value },
-              size: 'tiny',
-              baseVariant: 'muted',
-              hoverVariant: 'glyph'
-            })}
+          {@render IconCell(FileText)}
+          <div class="base-root-title-stack">
+            <div class="base-root-title-line">
+              <h1 class="text-3xl leading-9">{rootTitle}</h1>
+              {@render IconButton(Pencil, 'Rename folder', {
+                onclick: () => nameDialog = { value: rootTitle, save: (value) => rootTitle = value },
+                size: 'tiny',
+                baseVariant: 'muted',
+                hoverVariant: 'glyph'
+              })}
+            </div>
+            <span class="base-root-subtitle text-sm leading-5">Task Prompts</span>
           </div>
         </div>
         <div class="base-icon-button-bar">
-          {@render IconButton(FolderPlus, 'Add category', { hoverVariant: 'accent', onclick: addCategory })}
-          {@render IconButton(Trash2, 'Delete prompt folder', { hoverVariant: 'danger',
-            onclick: () => confirmation = { title: 'Delete Prompt Folder',
+          {@render IconButton(FolderCog, 'Manage categories', { hoverVariant: 'accent', onclick: () => openManageCategories() })}
+          {@render IconButton(Trash2, 'Delete folder', { hoverVariant: 'danger',
+            onclick: () => confirmation = { title: 'Delete Folder',
               description: `Are you sure you want to permanently delete “${rootTitle}” and all of its contents?`,
-              submit: 'Delete Prompt Folder', confirm: () => { rootPrompts = []; subfolders = [] } }
+              submit: 'Delete Folder', confirm: () => { rootPrompts = []; subfolders = [] } }
           })}
         </div>
       </div>
@@ -1417,10 +1430,140 @@
   </div>
 </main>
 
-{#if nameDialog}
-  {@const NameIcon = isFolderName ? Pencil : FolderPlus}
+{#if manageCategoriesOpen}
   <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
-    <div tabindex="-1" class="base-template-dialog base-name-dialog" role="dialog" aria-modal="true" aria-label={nameDialog.title}>
+    <div class="base-template-dialog base-manage-dialog" role="dialog" aria-modal="true" aria-label="Manage Categories">
+      <header class="base-template-dialog-header">
+        <div class="base-template-dialog-heading">
+          <div class="base-template-dialog-icon"><FolderCog size={24} aria-hidden="true" /></div>
+          <div class="base-template-dialog-heading-copy">
+            <h2 class="text-lg">Manage Categories</h2>
+            <p class="text-sm">{rootTitle}</p>
+          </div>
+        </div>
+        {@render IconButton(X, 'Close', { onclick: closeManageCategories })}
+      </header>
+      {@render Separator()}
+
+      <div class="base-manage-body text-sm leading-5">
+        <aside class="base-management-selector" aria-label="All Categories">
+          <div class="base-management-selector-header">
+            <span class="text-sm leading-5">All Categories</span>
+            <span class="text-xs leading-4">{managementDrafts.length}</span>
+          </div>
+          <div class="base-management-selector-items">
+            {#each managementDrafts as draft (draft.id)}
+              {@const contentCount = subfolders.find((folder) => folder.id === draft.id)?.prompts.length ?? 0}
+              <button
+                type="button"
+                class="base-management-selector-item"
+                class:active={selectedCategoryId === draft.id}
+                aria-pressed={selectedCategoryId === draft.id}
+                onclick={() => {
+                  selectedCategoryId = draft.id
+                  shouldFocusManagementName = false
+                }}
+              >
+                <span class="base-management-selector-icon">
+                  <Folder size={20} aria-hidden="true" />
+                </span>
+                <span class="base-management-selector-copy">
+                  <span class="text-sm leading-5">{draft.title.trim() || 'New Category'}</span>
+                  <span class="text-xs leading-4.5">{contentCount} {contentCount === 1 ? 'prompt' : 'prompts'}</span>
+                </span>
+                {#if selectedCategoryId === draft.id}
+                  <ChevronRight size={14} aria-hidden="true" />
+                {/if}
+              </button>
+            {/each}
+          </div>
+          <button type="button" class="base-management-add-button text-sm leading-5" onclick={addCategoryDraft}>
+            <Plus size={16} aria-hidden="true" />
+            <span>New Category</span>
+          </button>
+        </aside>
+
+        <div class="base-management-editor">
+          {#if selectedCategoryDraft}
+            {#key selectedCategoryDraft.id}
+              <div class="base-management-heading-row">
+                <span class="base-management-heading-icon"><Folder size={24} aria-hidden="true" /></span>
+                <span class="base-management-heading-copy">
+                  <strong class="text-base">{selectedCategoryDraft.title.trim() || 'New Category'}</strong>
+                  <span class="text-sm">Category settings</span>
+                </span>
+                {@render IconButton(Trash2, 'Delete category', {
+                  hoverVariant: 'danger',
+                  onclick: deleteSelectedCategoryDraft
+                })}
+              </div>
+
+              <div class="base-management-fields">
+                <label>
+                  <span class="base-management-field-copy">
+                    <span class="base-management-field-heading">
+                      <strong class="text-sm">Category Name</strong>
+                      <span class="text-sm leading-5">*</span>
+                    </span>
+                    <span class="base-management-field-detail text-sm">Required. Names must be unique in this folder.</span>
+                  </span>
+                  <span class="base-management-field-control">
+                    <input
+                      class="base-management-input text-sm"
+                      bind:this={managementNameInput}
+                      bind:value={selectedCategoryDraft.title}
+                      aria-invalid={selectedCategoryDraft.hasInteracted && selectedCategoryNameError ? 'true' : undefined}
+                      oninput={() => selectedCategoryDraft.hasInteracted = true}
+                    />
+                    {#if selectedCategoryDraft.hasInteracted && selectedCategoryNameError}
+                      <span class="base-name-error text-sm"><AlertCircle size={16} aria-hidden="true" />{selectedCategoryNameError}</span>
+                    {/if}
+                  </span>
+                </label>
+
+                <label>
+                  <span class="base-management-field-copy">
+                    <strong class="text-sm">Short Description</strong>
+                    <span class="base-management-field-detail text-sm">A brief summary to help you recognize this category.</span>
+                  </span>
+                  <input class="base-management-input text-sm" bind:value={selectedCategoryDraft.shortDescription} />
+                </label>
+
+                <div class="base-management-field">
+                  <span class="base-management-field-copy">
+                    <strong class="text-sm">Full Description</strong>
+                    <span class="base-management-field-detail text-sm">Describe what belongs here and how to use these prompts.</span>
+                  </span>
+                  <div class="base-management-description-editor">
+                    <div class="base-monaco-host" use:mountMockupMonaco={selectedCategoryDraft}></div>
+                  </div>
+                </div>
+              </div>
+            {/key}
+          {/if}
+        </div>
+      </div>
+
+      {@render Separator()}
+      <footer class="base-template-dialog-footer">
+        <button type="button" class="base-dialog-cancel-button text-sm" onclick={closeManageCategories}>Close</button>
+        <button
+          type="button"
+          class="base-dialog-confirm-button text-sm"
+          disabled={!managementDraftsValid || !managementHasChanges}
+          onclick={saveCategoryDrafts}
+        >
+          <Check size={16} aria-hidden="true" />
+          <span>Save Changes</span>
+        </button>
+      </footer>
+    </div>
+  </div>
+{/if}
+
+{#if nameDialog}
+  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
+    <div tabindex="-1" class="base-template-dialog base-name-dialog" role="dialog" aria-modal="true" aria-label="Rename Folder">
       <form onsubmit={(event) => {
         event.preventDefault()
         if (!nameDialog || nameDisabled) return
@@ -1429,23 +1572,25 @@
       }}>
         <header class="base-template-dialog-header">
           <div class="base-template-dialog-heading">
-            <div class="base-template-dialog-icon"><NameIcon size={24} aria-hidden="true" /></div>
+            <div class="base-template-dialog-icon"><Pencil size={24} aria-hidden="true" /></div>
             <div class="base-template-dialog-heading-copy">
-              <h2 class="text-lg">{nameDialog.title}</h2>
-              <p class="text-sm">{nameDialog.title === 'Create Category' ? 'Add a category to this root folder.' : `Choose a new name for this ${isFolderName ? 'prompt folder' : 'category'}.`}</p>
+              <h2 class="text-lg">Rename Folder</h2>
+              <p class="text-sm">Change the name shown in the app and on disk.</p>
             </div>
           </div>
           {@render IconButton(X, 'Close', { onclick: () => nameDialog = null })}
         </header>
         {@render Separator()}
-        <div class="base-name-row">
-          <span class="base-name-row-icon"><NameIcon size={24} aria-hidden="true" /></span>
-          <div class="base-name-row-copy">
-            <span class="text-base">{nameLabel}</span>
-            <small class="text-sm">{isFolderName ? 'Rename this prompt folder.' : 'Name the new category.'}</small>
+        <div class="base-name-field">
+          <div class="base-management-field-copy">
+            <div class="base-management-field-heading">
+              <strong class="text-sm">Folder Name</strong>
+              <span class="text-sm leading-5">*</span>
+            </div>
+            <span class="base-management-field-detail text-sm">Required. Names must be unique among folders of the same type.</span>
           </div>
           <div class="base-name-control">
-            <input class="base-name-input text-sm" bind:this={nameInput} aria-label={nameLabel}
+            <input class="base-name-input text-sm" bind:this={nameInput} aria-label="Folder Name"
               placeholder="Name..." bind:value={nameDialog.value}
               aria-invalid={nameInteracted && nameError ? 'true' : undefined}
               oninput={() => nameInteracted = true} />
@@ -1456,7 +1601,7 @@
         </div>
         {@render Separator()}
         <div class="base-template-dialog-footer">
-          <button class="base-dialog-confirm-button text-sm" type="submit" disabled={nameDisabled}>{nameDialog.title}</button>
+          <button class="base-dialog-confirm-button text-sm" type="submit" disabled={nameDisabled}>Rename Folder</button>
           <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => nameDialog = null}>Cancel</button>
         </div>
       </form>
@@ -1490,7 +1635,6 @@
     role="presentation"
     data-testid="base-mockup-template-dialog-layer"
     use:mountMockDialog
-    onclick={handleTemplateDialogLayerClick}
   >
     <div
       class="base-template-dialog"
@@ -1698,6 +1842,7 @@
   .base-icon-button:focus-visible {
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
   }
 
   .base-icon-button[data-hover-variant='accent']:hover,
@@ -1721,12 +1866,13 @@
   .base-icon-button[data-hover-variant='glyph']:hover,
   .base-icon-button[data-hover-variant='glyph']:focus-visible {
     background: var(--ui-ghost-surface);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .base-icon-button[data-active='true'] {
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-normal-border);
+    color: var(--ui-normal-text);
   }
 
   .base-icon-button:disabled {
@@ -1850,16 +1996,19 @@
   }
 
   .base-root-title-block {
+    align-items: flex-start;
+    display: flex;
+    gap: 12px;
     height: 60px;
     min-width: 0;
   }
 
-  .base-root-eyebrow {
-    align-items: center;
-    color: var(--ui-secondary-text);
+  .base-root-title-stack {
     display: flex;
-    gap: 6px;
-    height: 17px;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
   }
 
   .base-root-title-line {
@@ -1867,7 +2016,6 @@
     display: flex;
     gap: 11px;
     height: 36px;
-    margin-top: 7px;
     min-width: 0;
   }
 
@@ -1880,6 +2028,15 @@
     min-width: 0;
     overflow: hidden;
     padding-block: 2px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .base-root-subtitle {
+    color: var(--ui-muted-text);
+    display: block;
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2272,7 +2429,7 @@
 
   .base-status-selector {
     --cthulhu-ui-simple-selector-border: var(--ui-neutral-normal-border);
-    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
+    --cthulhu-ui-simple-selector-text: var(--ui-hoverable-text);
 
     align-items: stretch;
     background: transparent;
@@ -2299,6 +2456,15 @@
     --cthulhu-ui-simple-selector-border: var(--ui-neutral-hover-border);
 
     background: var(--ui-neutral-action-fill);
+  }
+
+  .base-status-segmented:not([data-status='InProgress']):not([data-status='Completed'])
+    .base-status-selector:hover,
+  .base-status-segmented:not([data-status='InProgress']):not([data-status='Completed'])
+    .base-status-selector[data-open='true'],
+  .base-status-segmented:not([data-status='InProgress']):not([data-status='Completed'])
+    .base-status-selector:has(:focus-visible) {
+    --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
   }
 
   .base-status-selector[data-open='true'] {
@@ -2374,13 +2540,19 @@
 
   .base-status-more {
     align-items: center;
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-icon-glyph);
     display: inline-flex;
     flex: 0 0 auto;
     height: 34px;
     justify-content: center;
     margin-left: auto;
     padding: 0 6px;
+    transition: color var(--ui-animation-duration-standard) ease;
+  }
+
+  .base-status-selector:where(:hover, :has(:focus-visible), [data-open='true'])
+    .base-status-more {
+    color: var(--ui-normal-text);
   }
 
   .base-prompt-delete-section {
@@ -2420,6 +2592,7 @@
     border-color: var(--ui-card-nested-border);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
+    height: 58px;
   }
 
   .base-folder-title-bar {
@@ -2464,171 +2637,6 @@
     white-space: nowrap;
   }
 
-  .base-folder-settings {
-    background: var(--ui-card-normal-surface);
-    display: grid;
-    min-width: 0;
-  }
-
-  .base-settings-toolbar {
-    align-items: center;
-    box-sizing: border-box;
-    display: flex;
-    gap: 24px;
-    height: 56px;
-    justify-content: space-between;
-    min-width: 0;
-    padding: 9px 12px 9px 10px;
-  }
-
-  .base-settings-toolbar-heading {
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: grid;
-    font-weight: var(--font-weight-semibold);
-    gap: 8px;
-    grid-template-columns: 40px minmax(0, 1fr);
-    min-width: 0;
-  }
-
-  .base-settings-toolbar-heading > :global(svg) {
-    justify-self: center;
-    color: var(--ui-secondary-icon-glyph);
-  }
-
-  .base-settings-toolbar-copy {
-    display: grid;
-    min-width: 0;
-    row-gap: 2px;
-  }
-
-  .base-settings-toolbar-copy span:last-child {
-    color: var(--ui-muted-text);
-    font-weight: var(--font-weight-normal);
-  }
-
-  .base-settings-toolbar-actions {
-    align-items: center;
-    display: flex;
-    flex: 0 1 auto;
-    gap: 8px;
-    justify-content: flex-end;
-    min-width: 0;
-  }
-
-  .base-settings-toggle {
-    align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
-    color: var(--ui-hoverable-text);
-    display: inline-flex;
-    flex: 0 0 auto;
-    font-weight: var(--font-weight-semibold);
-    gap: 7px;
-    height: 30px;
-    justify-content: center;
-    min-width: 0;
-    padding: 0 10px;
-    transition:
-      background-color var(--ui-animation-duration-fast) ease-out,
-      border-color var(--ui-animation-duration-fast) ease-out,
-      color var(--ui-animation-duration-fast) ease-out;
-    white-space: nowrap;
-  }
-
-  .base-settings-toggle:hover,
-  .base-settings-toggle:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    border-color: var(--ui-neutral-hover-border);
-  }
-
-  .base-settings-toggle[aria-pressed='true'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-    color: var(--ui-normal-text);
-  }
-
-  .base-settings-toggle[aria-pressed='true']:hover,
-  .base-settings-toggle[aria-pressed='true']:focus-visible {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
-  }
-
-  .base-settings-toggle :global(svg) {
-    color: var(--ui-hoverable-icon-glyph);
-  }
-
-  .base-settings-toggle-remove-icon {
-    display: none;
-  }
-
-  .base-settings-toggle[aria-pressed='true']:hover .base-settings-toggle-default-icon,
-  .base-settings-toggle[aria-pressed='true']:focus-visible .base-settings-toggle-default-icon {
-    display: none;
-  }
-
-  .base-settings-toggle[aria-pressed='true']:hover .base-settings-toggle-remove-icon,
-  .base-settings-toggle[aria-pressed='true']:focus-visible .base-settings-toggle-remove-icon {
-    display: inline-flex;
-  }
-
-  .base-settings-toggle-default-icon,
-  .base-settings-toggle-remove-icon {
-    align-items: center;
-    flex: 0 0 auto;
-  }
-
-  .base-folder-settings-sections {
-    background: var(--ui-card-normal-surface);
-    display: grid;
-    min-width: 0;
-  }
-
-  .base-settings-section {
-    display: grid;
-    min-width: 0;
-  }
-
-  .base-settings-section.withTopBorder {
-    border-top: 1px solid var(--ui-neutral-muted-border);
-  }
-
-  .base-settings-section > header {
-    align-items: center;
-    color: var(--ui-secondary-text);
-    display: flex;
-    font-weight: var(--font-weight-semibold);
-    gap: 5px;
-    height: 28px;
-    min-width: 0;
-    overflow: hidden;
-    padding: 0 16px;
-    white-space: nowrap;
-  }
-
-  .base-settings-copy {
-    align-items: center;
-    display: flex;
-    flex: 1 1 auto;
-    gap: 5px;
-    min-width: 0;
-  }
-
-  .base-settings-copy span:first-child {
-    flex: 0 0 auto;
-  }
-
-  .base-settings-copy span:last-child {
-    color: var(--ui-muted-text);
-    flex: 1 1 auto;
-    font-weight: var(--font-weight-normal);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .base-folder-children {
     background: var(--ui-card-nested-surface);
     border-left: 1px solid var(--ui-card-nested-border);
@@ -2661,7 +2669,7 @@
   }
 
   .base-template-dialog {
-    background: var(--ui-card-solid-surface);
+    background: var(--ui-card-overlay-surface);
     border: 1px solid var(--ui-card-normal-border);
     border-radius: var(--cthulhu-ui-radius-card);
     box-shadow: 0 8px 12px var(--ui-card-normal-shadow);
@@ -2699,10 +2707,10 @@
     align-items: center;
     color: var(--ui-normal-text);
     display: flex;
-    flex: 0 0 38px;
-    height: 38px;
+    flex: 0 0 40px;
+    height: 40px;
     justify-content: center;
-    width: 38px;
+    width: 40px;
   }
 
   .base-template-dialog-header h2 {
@@ -3103,15 +3111,10 @@
   .base-empty { color: var(--ui-secondary-text); text-align: center; padding: 48px 0; }
   .base-empty p { margin: 0; }
   .base-empty .base-empty-detail { margin-top: 8px; }
-  .base-name-dialog { max-width: 540px; background: var(--ui-card-overlay-surface); }
-  .base-name-row { display: flex; align-items: center; gap: 12px; padding: 16px; min-width: 0; }
-  .base-name-row-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 34px; height: 34px; color: var(--ui-hoverable-icon-glyph); }
-  .base-name-row-copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
-  .base-name-row-copy > span { font-weight: var(--font-weight-semibold); }
-  .base-name-row-copy small { color: var(--ui-muted-text); }
-  .base-name-row-copy > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .base-name-control { position: relative; flex: 0 0 auto; }
-  .base-name-input { box-sizing: border-box; width: 220px; height: 40px; border-radius: var(--cthulhu-ui-radius-control); background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 4px 14px; font-weight: var(--font-weight-semibold); }
+  .base-name-dialog { max-width: 520px; background: var(--ui-card-overlay-surface); }
+  .base-name-field { display: grid; gap: 7px; min-width: 0; padding: 16px; }
+  .base-name-control { position: relative; min-width: 0; }
+  .base-name-input { box-sizing: border-box; width: 100%; height: 40px; border-radius: var(--cthulhu-ui-radius-control); background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 4px 14px; font-weight: var(--font-weight-semibold); }
   .base-name-input::placeholder { color: var(--ui-muted-text); }
   .base-name-input:focus-visible { outline: none; border-color: var(--ui-neutral-focus-border); box-shadow: var(--cthulhu-ui-shadow-focus); }
   .base-name-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
@@ -3119,15 +3122,55 @@
   .base-name-error :global(svg) { color: var(--ui-danger-icon-glyph); }
   .base-name-dialog .base-dialog-confirm-button { border-color: var(--ui-accent-muted-border); font-weight: var(--font-weight-semibold); padding-inline: 14px; }
   .base-name-dialog .base-dialog-confirm-button:disabled { opacity: 0.5; pointer-events: none; }
+  .base-manage-dialog { background: var(--ui-card-overlay-surface); max-width: min(1040px, calc(100vw - 32px)); width: 100%; }
+  .base-manage-body { display: grid; grid-template-columns: 232px minmax(0, 1fr); height: min(570px, calc(100vh - 212px)); min-height: 240px; }
+  .base-management-selector { border-right: 1px solid var(--ui-neutral-normal-border); display: flex; flex-direction: column; min-height: 0; padding: 18px 14px 20px 0; }
+  .base-management-selector-header { align-items: center; color: var(--ui-normal-text); display: flex; font-weight: var(--font-weight-semibold); justify-content: space-between; padding: 0 10px 14px; }
+  .base-management-selector-header span:last-child { color: var(--ui-muted-text); font-weight: var(--font-weight-normal); }
+  .base-management-selector-items { display: flex; flex: 1; flex-direction: column; gap: 2px; overflow: auto; }
+  .base-management-selector-item { align-items: center; background: var(--ui-ghost-surface); border: 1px solid var(--ui-ghost-surface); border-radius: var(--cthulhu-ui-radius-card); box-sizing: border-box; color: var(--ui-hoverable-text); display: grid; grid-template-columns: 34px 8px minmax(0, 1fr) 22px; height: 58px; padding: 8px; text-align: left; width: 100%; }
+  .base-management-selector-item:hover,
+  .base-management-selector-item:focus-visible { background: var(--ui-neutral-action-fill); border-color: var(--ui-neutral-hover-border); color: var(--ui-normal-text); }
+  .base-management-selector-item.active { background: var(--ui-accent-action-fill); border-color: var(--ui-accent-muted-border); color: var(--ui-normal-text); }
+  .base-management-selector-item.active:hover,
+  .base-management-selector-item.active:focus-visible { background: var(--ui-accent-action-hover-fill); border-color: var(--ui-accent-muted-hover-border); }
+  .base-management-selector-icon { align-items: center; color: var(--ui-secondary-icon-glyph); display: flex; grid-column: 1; height: 34px; justify-content: center; width: 34px; }
+  .base-management-selector-copy { display: flex; flex-direction: column; gap: 2px; grid-column: 3; min-width: 0; }
+  .base-management-selector-copy > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .base-management-selector-copy > span:first-child { font-weight: var(--font-weight-semibold); }
+  .base-management-selector-copy > span:last-child { color: inherit; }
+  .base-management-selector-item > :global(svg) { color: var(--ui-secondary-icon-glyph); grid-column: 4; justify-self: center; }
+  .base-management-add-button { align-items: center; background: var(--ui-neutral-action-fill); border: 1px solid var(--ui-neutral-normal-border); border-radius: var(--cthulhu-ui-radius-control); color: var(--ui-normal-text); display: inline-flex; font-weight: var(--font-weight-semibold); gap: 7px; height: 40px; justify-content: center; margin-top: 16px; padding: 0 14px; width: 100%; }
+  .base-management-add-button:hover,
+  .base-management-add-button:focus-visible { background: var(--ui-neutral-action-hover-fill); border-color: var(--ui-neutral-hover-border); }
+  .base-management-editor { min-width: 0; overflow: auto; padding: 16px 8px 22px 26px; }
+  .base-management-heading-row { align-items: center; color: var(--ui-normal-text); display: flex; gap: 12px; margin-bottom: 22px; min-width: 0; width: 100%; }
+  .base-management-heading-icon { align-items: center; color: var(--ui-hoverable-icon-glyph); display: flex; flex: 0 0 34px; height: 34px; justify-content: center; width: 34px; }
+  .base-management-heading-copy { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+  .base-management-heading-copy strong,
+  .base-management-heading-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .base-management-heading-copy span { color: var(--ui-muted-text); }
+  .base-management-fields { display: grid; gap: 17px; }
+  .base-management-fields label,
+  .base-management-field { display: grid; gap: 7px; min-width: 0; }
+  .base-management-field-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .base-management-field-heading { align-items: center; display: flex; gap: 4px; }
+  .base-management-field-heading strong,
+  .base-management-field-copy > strong { color: var(--ui-normal-text); font-weight: var(--font-weight-semibold); }
+  .base-management-field-heading span,
+  .base-management-field-detail { color: var(--ui-muted-text); }
+  .base-management-field-control { min-width: 0; position: relative; }
+  .base-management-input { background: var(--ui-neutral-field-surface); border: 1px solid var(--ui-neutral-normal-border); border-radius: var(--cthulhu-ui-radius-control); box-sizing: border-box; color: var(--ui-normal-text); font-weight: var(--font-weight-semibold); height: 40px; min-width: 0; outline: none; padding: 4px 14px; width: 100%; }
+  .base-management-input:focus-visible { border-color: var(--ui-neutral-focus-border); box-shadow: var(--cthulhu-ui-shadow-focus); outline: none; }
+  .base-management-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); }
+  .base-management-input[aria-invalid='true']:focus-visible { box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
+  .base-management-description-editor { background: var(--ui-editor-content-surface); border: 1px solid var(--ui-neutral-normal-border); border-radius: var(--cthulhu-ui-radius-control); display: block; min-width: 0; overflow: hidden; }
+  .base-manage-dialog .base-dialog-confirm-button:disabled { cursor: default; opacity: 0.5; pointer-events: none; }
   .base-confirmation-dialog { max-width: 480px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
   .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
   .base-confirmation-dialog > p { padding: 4px; margin: 0; }
   .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: var(--font-weight-semibold); }
   .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
-  @media (max-width: 720px) {
-    .base-name-row { flex-wrap: wrap; align-items: flex-start; row-gap: 8px; }
-    .base-name-control { margin-left: 46px; flex-basis: calc(100% - 46px); }
-  }
   .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }
   @container (width < 720px) {
     .base-prompt-title-area { height: 109px; grid-template-columns: 2px minmax(0, 1fr); grid-template-rows: 56px 53px; }
@@ -3209,7 +3252,7 @@
     background: var(--ui-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
     gap: 8px;
@@ -3221,7 +3264,7 @@
     width: 100%;
   }
   .base-status-menu-item:hover,
-  .base-status-menu-item:focus-visible { background: var(--ui-neutral-action-fill); }
+  .base-status-menu-item:focus-visible { background: var(--ui-neutral-action-fill); color: var(--ui-normal-text); }
   .base-status-menu-icon {
     align-items: center;
     color: var(--ui-secondary-icon-glyph);
@@ -3246,6 +3289,9 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .base-status-menu-item:where(:hover, :focus-visible) .base-status-menu-subtitle { color: var(--ui-normal-text); }
+  .base-status-menu-item:where(:hover, :focus-visible)
+    .base-status-menu-icon:not([data-status='InProgress']):not([data-status='Completed']) { color: var(--ui-normal-text); }
   .base-status-menu-icon[data-action='delete'] { color: var(--ui-hoverable-icon-glyph); }
   .base-prompt-delete-section[data-split='true'] {
     background: var(--ui-ghost-surface);
