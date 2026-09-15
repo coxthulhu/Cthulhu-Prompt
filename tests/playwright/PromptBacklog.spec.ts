@@ -6,6 +6,7 @@ import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptTreeCategoryRowDrag,
+  beginPromptHandleDrag,
   beginPromptTreeRowDrag,
   finishActiveDrag,
   moveActiveDragToTarget
@@ -74,6 +75,103 @@ const selectStatus = async (page: Page, promptId: string, status: string) => {
 }
 
 describe('Backlog prompts', () => {
+  // Header transfers must prepend within the retained category and reject their own workflow.
+  test('drops onto workflow headers without snapping, expanding, or reordering the same section', async ({ testSetup, electronApp }) => {
+    await testSetup.setupFilesystem(createBacklogWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    /** Running editor and sidebar sharing the same categorized prompts. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Work')
+    /** Collapsed destination remains usable without revealing its tree. */
+    const backlogHeader = mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog')
+    /** Same-section target must block nearby row snap targets. */
+    const activeHeader = mainWindow.getByTestId('sidebar-prompt-status-accordion-header-active')
+    await backlogHeader.click()
+
+    await beginPromptHandleDrag(mainWindow, 'second')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-active"]')
+    await expect(activeHeader).toHaveAttribute('data-drop-state', 'blocked')
+    /** Neutral blocked surface resolved by Chromium using the existing palette. */
+    const blockedColor = await activeHeader.evaluate((element) => {
+      /** Probe for the computed palette color. */
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--ui-neutral-emphasis-surface)'
+      element.append(probe)
+      /** Computed color retained before removing the probe. */
+      const color = getComputedStyle(probe).color
+      probe.remove()
+      return color
+    })
+    await expect(activeHeader).toHaveCSS('background-color', blockedColor)
+    await finishActiveDrag(mainWindow)
+    expect(await readEntries(electronApp, 'Active')).toEqual(['first', 'second', 'third'])
+
+    // Both drag sources prepend to the same category even when its destination tree is hidden.
+    for (const promptId of ['second', 'first']) {
+      if (promptId === 'second') await beginPromptHandleDrag(mainWindow, promptId)
+      else await beginPromptTreeRowDrag(mainWindow, promptId)
+      await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-backlog"]')
+      await expect(backlogHeader).toHaveAttribute('data-drop-state', 'over')
+      /** Header bounds isolate the zero-snap target from nearby tree targets. */
+      const box = (await backlogHeader.boundingBox())!
+      await mainWindow.mouse.move(box.x + box.width / 2, box.y - 2)
+      await expect(backlogHeader).toHaveAttribute('data-drop-state', 'idle')
+      await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-backlog"]')
+      await finishActiveDrag(mainWindow)
+      await expect(backlogHeader).toHaveAttribute('aria-expanded', 'false')
+      await expect.poll(() => readEntries(electronApp, 'Backlog')).toEqual(
+        promptId === 'second' ? ['second'] : ['first', 'second']
+      )
+    }
+    await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toHaveAttribute('aria-pressed', 'true')
+    await backlogHeader.click()
+    await beginPromptTreeRowDrag(mainWindow, 'second', 'backlog')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-active"]')
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'third'])
+    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/second.prompt.md`)))
+      .toMatchObject({ status: 'Todo', category: 'alpha' })
+
+    // Finalized headers retain category metadata and reject drops that would refresh their timestamp.
+    /** Previous finalization time must change when entering another finalized workflow. */
+    let previousFinalizedAt: string | undefined
+    for (const group of ['completed', 'archived'] as const) {
+      if (previousFinalizedAt) {
+        // Persistence timestamps have second precision, so enter Archived in a later second.
+        await expect.poll(() => Date.now()).toBeGreaterThan(Date.parse(previousFinalizedAt) + 1000)
+      }
+      await mainWindow.getByTestId(`prompt-folder-${group}-filter`).click()
+      await beginPromptTreeRowDrag(mainWindow, 'second', group === 'completed' ? 'active' : 'completed')
+      await moveActiveDragToTarget(mainWindow, `[data-testid="sidebar-prompt-status-accordion-header-${group}"]`)
+      await finishActiveDrag(mainWindow)
+      /** Status directory owning the finalized prompt. */
+      const directory = group === 'completed' ? 'Completed' : 'Archived'
+      /** Saved metadata verifies both the final status and retained category. */
+      const path = `${ROOT_PATH}/${directory}/second.prompt.md`
+      await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, path)))
+        .toMatchObject({ status: directory, category: 'alpha', finalizedAt: expect.any(String) })
+      /** Original content must remain byte-for-byte unchanged by a rejected drop. */
+      const original = await readTextFile(electronApp, path)
+      /** Saved timestamp distinguishes a fresh finalization from retention of the old one. */
+      const finalizedAt = parsePromptMarkdown(original).finalizedAt!
+      if (previousFinalizedAt) expect(Date.parse(finalizedAt)).toBeGreaterThan(Date.parse(previousFinalizedAt))
+      previousFinalizedAt = finalizedAt
+      await beginPromptTreeRowDrag(mainWindow, 'second', group)
+      await moveActiveDragToTarget(mainWindow, `[data-testid="sidebar-prompt-status-accordion-header-${group}"]`)
+      await expect(mainWindow.getByTestId(`sidebar-prompt-status-accordion-header-${group}`))
+        .toHaveAttribute('data-drop-state', 'blocked')
+      await finishActiveDrag(mainWindow)
+      expect(await readTextFile(electronApp, path)).toBe(original)
+    }
+    await beginPromptHandleDrag(mainWindow, 'second')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-active"]')
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'third'])
+    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/second.prompt.md`)))
+      .toMatchObject({ status: 'Todo', category: 'alpha' })
+  })
+
   // Verifies an empty Backlog action creates content in Backlog rather than the default Active group.
   test('creates a Backlog prompt from its empty status action', async ({ testSetup }) => {
     await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{

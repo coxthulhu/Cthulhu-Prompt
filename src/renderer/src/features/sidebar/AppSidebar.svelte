@@ -674,6 +674,39 @@
     }
   })
 
+  /** Independent hover and rejection indicators for the workflow headers. */
+  const statusHeaderDroppableState = createDroppableStateRegistry<PromptStatusFolderId>()
+
+  /** Keeps a header transfer in the dragged prompt's retained category. */
+  const getStatusHeaderDropPayload = (statusSection: PromptStatusFolderId): PromptHandleDropPayload => {
+    /** Current prompt identity shared by editor and tree drag sources. */
+    const draggedEntry = promptEntryDragState.draggedEntry
+    return {
+      folderId: screenRootFolderId,
+      categoryId: draggedEntry?.kind === 'content'
+        ? promptCollection.get(draggedEntry.contentId)?.category ?? null
+        : null,
+      targetEntryId: null,
+      position: 'before',
+      statusSection
+    }
+  }
+
+  /** Accepts cross-section prompt transfers only while the pointer is inside the header. */
+  const getStatusHeaderDroppableOptions = (statusSection: PromptStatusFolderId): DroppableOptions => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    allowedEdges: 'none',
+    snapDimensions: { x: 0, y: 0 },
+    payload: () => getStatusHeaderDropPayload(statusSection),
+    canDrop: (payload) => {
+      /** Typed prompt source supplied by the shared prompt drag type. */
+      const source = payload as PromptHandleDragPayload
+      return source.statusSection !== statusSection &&
+        resolvePromptTreePromptMove(promptFolderQuery.data, source, getStatusHeaderDropPayload(statusSection)) !== null
+    },
+    indicator: statusHeaderDroppableState.getState(statusSection)
+  })
+
   const getPromptFolderSelectorPromptDroppableOptions = (
     item: DropdownPopupDetailedItem
   ): DroppableOptions<unknown, unknown> => ({
@@ -930,6 +963,7 @@
               icon={group.icon}
               count={selectedPromptStatusCounts[group.id]}
               initialExpandedHeightPx={group.id === PromptStatusFolderId.Active ? 400 : 200}
+              headerDroppableOptions={getStatusHeaderDroppableOptions(group.id)}
             >
               <PromptTree
                 promptFolders={rootPromptFolders}

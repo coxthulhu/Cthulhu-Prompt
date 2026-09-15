@@ -5,6 +5,7 @@
   import { getAccordionContext } from './accordionContext'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
+  import { droppable, type DroppableOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
 
   /** Fixed header height included in every expanded section minimum. */
   const ACCORDION_HEADER_HEIGHT_PX = 36
@@ -23,6 +24,8 @@
     minimumExpandedContentHeightPx?: number
     children: Snippet
     class?: string
+    /** Optional whole-header drop target supplied by the owning feature. */
+    headerDroppableOptions?: DroppableOptions
   }
 
   /** Section metadata, sizing configuration, content, and remaining element attributes. */
@@ -35,11 +38,22 @@
     minimumExpandedContentHeightPx = DEFAULT_MINIMUM_EXPANDED_CONTENT_HEIGHT_PX,
     children,
     class: className,
+    headerDroppableOptions,
     ...restProps
   }: Props = $props()
 
   /** Nearest accordion controller that owns this section's layout and persisted state. */
   const accordionContext = getAccordionContext()
+  /** Header element registered as a drop target when the feature supplies options. */
+  let headerElement = $state<HTMLButtonElement | null>(null)
+
+  // Side effect: register only enabled header targets and release them when options or ownership change.
+  $effect(() => {
+    if (!headerElement || !headerDroppableOptions) return
+    /** Registration kept outside effect tracking because drag indicators are mutable state. */
+    const registration = untrack(() => droppable(headerElement!, headerDroppableOptions!))
+    return () => untrack(() => registration.destroy())
+  })
   /** Reactive icon component selected by the section metadata. */
   const SectionIcon = $derived(icon)
   /** Reactive persisted expansion state for this section ID. */
@@ -107,8 +121,12 @@
   {/if}
 
   <button
+    bind:this={headerElement}
     type="button"
     class="cthulhuUiAccordionHeader"
+    data-drop-state={headerDroppableOptions?.indicator.isOver
+      ? headerDroppableOptions.indicator.isBlocked ? 'blocked' : 'over'
+      : 'idle'}
     aria-controls={contentId}
     aria-expanded={isExpanded}
     data-testid={headerTestId}
@@ -187,6 +205,16 @@
   .cthulhuUiAccordionHeader:hover,
   .cthulhuUiAccordionHeader:focus-visible {
     color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiAccordionHeader[data-drop-state='over'] {
+    background: var(--ui-info-normal-surface);
+    box-shadow: inset 0 0 0 1px var(--ui-info-strong-border);
+  }
+
+  .cthulhuUiAccordionHeader[data-drop-state='blocked'] {
+    background: var(--ui-neutral-emphasis-surface);
+    box-shadow: inset 0 0 0 1px var(--ui-neutral-emphasis-border);
   }
 
   .cthulhuUiAccordionChevron {

@@ -31,7 +31,6 @@ import {
   beginPromptTreeRowDrag,
   finishActiveDrag,
   moveActiveDragToTarget,
-  promptTreePromptDropIndicatorSelector,
   readPromptFolderEntries
 } from '../helpers/PromptDragDropHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
@@ -2191,8 +2190,8 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('Status Drag Categories')
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
 
-    /** Completed row accepting a category-preserving completion drop. */
-    const completedTargetSelector = `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-status-drag-completed"]`
+    /** Completed header accepting a category-preserving completion drop. */
+    const completedTargetSelector = '[data-testid="sidebar-prompt-status-accordion-header-completed"]'
     await beginPromptTreeRowDrag(mainWindow, 'status-drag-primary-first')
     await moveActiveDragToTarget(mainWindow, completedTargetSelector)
     await finishActiveDrag(mainWindow)
@@ -2276,12 +2275,10 @@ describe('Prompt folder prompt management', () => {
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
     await waitForMonacoEditor(mainWindow, promptEditorSelector('completed-mode-newest'))
 
-    /** Active accordion header used to verify headers and collapsed sections reject drops. */
+    /** Active accordion header accepts transfers without changing expansion or selection. */
     const activeHeader = mainWindow.locator(
       '[data-testid="sidebar-prompt-status-accordion-header-active"]'
     )
-    /** Active section content containing the destination tree but excluding its header. */
-    const activeContent = mainWindow.locator(sidebarPromptStatusContentSelector('active'))
     /** Completed row used as an order-independent completion target. */
     const completedPromptRowSelector = `${sidebarPromptStatusContentSelector('completed')} [data-testid="prompt-tree-completed-prompt-completed-mode-oldest"]`
 
@@ -2312,8 +2309,6 @@ describe('Prompt folder prompt management', () => {
       'completed-mode-oldest'
     ])
 
-    // Collapse the adjacent workflow so its 100px snap zone cannot receive this test drag.
-    await mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-backlog"]').click()
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
     await beginPromptHandleDrag(mainWindow, 'completed-mode-newest')
@@ -2321,35 +2316,15 @@ describe('Prompt folder prompt management', () => {
       mainWindow,
       '[data-testid="sidebar-prompt-status-accordion-header-active"]'
     )
-    await expect(mainWindow.locator('[data-drop-indicator-active="true"]')).toHaveCount(0)
+    await expect(activeHeader).toHaveAttribute('data-drop-state', 'over')
+    /** Existing blue target surface resolved through the active palette. */
+    const [dropColor] = await resolvePaletteColors(activeHeader, ['--ui-info-normal-surface'])
+    await expect(activeHeader).toHaveCSS('background-color', dropColor)
+    await expect(mainWindow.locator('[data-drop-indicator-active="true"]')).toHaveCount(1)
     await finishActiveDrag(mainWindow)
+    await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'true')
-    await mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-backlog"]').click()
-
-    await beginPromptHandleDrag(mainWindow, 'completed-mode-newest')
-    await moveActiveDragToTarget(
-      mainWindow,
-      '[data-testid="sidebar-prompt-status-accordion-header-active"]'
-    )
-    /** First-row indicator snapped through the expanded accordion header. */
-    const activeIndicator = activeContent.locator(
-      `${promptTreePromptDropIndicatorSelector('completed-mode-active')}[data-edge="top"]`
-    )
-    await expect(activeIndicator).toBeVisible()
-    const [activeIndicatorBox, activeContentBox, activeHeaderBox] = await Promise.all([
-      activeIndicator.boundingBox(),
-      activeContent.boundingBox(),
-      activeHeader.boundingBox()
-    ])
-    expect(activeIndicatorBox).not.toBeNull()
-    expect(activeContentBox).not.toBeNull()
-    expect(activeHeaderBox).not.toBeNull()
-    expect(activeIndicatorBox!.y).toBeLessThan(activeContentBox!.y)
-    expect(activeIndicatorBox!.y).toBeGreaterThanOrEqual(activeHeaderBox!.y)
-    await expect(activeContent).toHaveCSS('overflow', 'visible')
-    await expect(activeContent).toHaveCSS('z-index', '2')
-    await finishActiveDrag(mainWindow)
 
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow, 'active'))
@@ -2957,7 +2932,7 @@ describe('Prompt folder prompt management', () => {
     await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')
     await moveActiveDragToTarget(
       mainWindow,
-      `${sidebarPromptStatusContentSelector('archived')} [data-testid="prompt-tree-archived-prompt-archived-mode-oldest"]`
+      '[data-testid="sidebar-prompt-status-accordion-header-archived"]'
     )
     await finishActiveDrag(mainWindow)
     await expect
