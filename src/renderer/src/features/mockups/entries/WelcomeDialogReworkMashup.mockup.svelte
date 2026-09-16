@@ -315,7 +315,7 @@
               <span class="text-xl leading-10 font-semibold" style="width: 42px; height: 42px; text-align: center; border: 1px solid var(--ui-accent-muted-border); border-radius: 50%; color: var(--ui-normal-text); background: var(--ui-accent-action-fill);">2</span>
               <div>
                 <h2 class="text-base leading-6 font-semibold" style="display: flex; align-items: center; gap: 9px; margin: 0 0 6px; color: var(--ui-normal-text);"><Layers size={19} color="var(--ui-hoverable-icon-glyph)" aria-hidden="true" />Build a prompt template<span class="text-sm leading-5 font-normal" style="padding: 0 8px; border: 1px solid var(--ui-neutral-muted-border); border-radius: 4px; color: var(--ui-muted-text);">Optional</span></h2>
-                <p style="margin: 0;">Open Prompt Templates to write a reusable workflow: investigate a bug, implement a feature with Q&amp;A, or create mockups. Your task is added when you copy.</p>
+                <p style="margin: 0;">Use Prompt Templates to write a reusable workflow: investigate a bug, implement a feature with Q&amp;A, or create mockups. Your task's text is added when you copy.</p>
                 <div class="text-sm leading-5" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; color: var(--ui-muted-text);">
                   {#each ['Investigate a bug', 'Implement a feature', 'Create mockups'] as workflow (workflow)}<span style="padding: 2px 9px; border-radius: 4px; background: var(--ui-neutral-field-surface);">{workflow}</span>{/each}
                 </div>
@@ -333,7 +333,7 @@
               <span class="text-xl leading-10 font-semibold" style="width: 42px; height: 42px; text-align: center; border: 1px solid var(--ui-accent-muted-border); border-radius: 50%; color: var(--ui-normal-text); background: var(--ui-accent-action-fill);">4</span>
               <div>
                 <h2 class="text-base leading-6 font-semibold" style="display: flex; align-items: center; gap: 9px; margin: 0 0 6px; color: var(--ui-normal-text);"><Zap size={19} color="var(--ui-hoverable-icon-glyph)" aria-hidden="true" />Pick a template. Copy and go.</h2>
-                <p style="margin: 0;">Use the quick template button in the prompt editor to assign a template, or choose no template, and copy the combined text. Paste this into your AI tool and send it off!</p>
+                <p style="margin: 0;">Use the quick template button in the prompt editor to assign a template, or choose no template, and copy the combined text. Paste into your AI tool and send it off!</p>
                 <div class="text-sm leading-5" style="display: flex; align-items: center; gap: 8px; margin-top: 9px; color: var(--ui-muted-text);"><Check size={16} color="var(--ui-hoverable-icon-glyph)" />When the AI finishes, check off the task to move it to Completed.</div>
               </div>
             </li>
