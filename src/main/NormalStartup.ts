@@ -1,7 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
 import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { loadDevtools } from './devtools'
 import icon from '../../resources/icon.png?asset'
 import { setupWorkspaceDialogHandlers } from './workspaceDialog'
 import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
@@ -292,11 +291,6 @@ export function startupNormally(): void {
   app.whenReady().then(async () => {
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.cthulhuprompt')
-
-    // Install DevTools and ensure they are active without reload (dev only)
-    if (is.dev) {
-      await loadDevtools()
-    }
 
     // Default open or close DevTools by F12 in development
     // and ignore CommandOrControl + R in production.
