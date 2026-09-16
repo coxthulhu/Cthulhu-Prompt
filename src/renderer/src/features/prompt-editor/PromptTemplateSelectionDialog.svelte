@@ -377,7 +377,6 @@
   submitIcon={Check}
   submitTestId="prompt-template-confirm-button"
   showSubmitButton={mode === 'select'}
-  cancelFirst
   onsubmit={handleConfirm}
 >
   <div class="prompt-template-selection-body">

@@ -284,7 +284,6 @@
   cancelDisabled={isSubmitting}
   submitTestId="manage-categories-save-button"
   cancelTestId="manage-categories-close-button"
-  cancelFirst
   oncancel={handleCancel}
   onsubmit={handleSubmit}
 >

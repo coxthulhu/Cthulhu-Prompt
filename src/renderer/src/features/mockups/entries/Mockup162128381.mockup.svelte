@@ -1611,8 +1611,8 @@
         </div>
         {@render Separator()}
         <div class="base-template-dialog-footer">
-          <button class="base-dialog-confirm-button text-sm" type="submit" disabled={nameDisabled}>Rename Folder</button>
           <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => nameDialog = null}>Cancel</button>
+          <button class="base-dialog-confirm-button text-sm" type="submit" disabled={nameDisabled}>Rename Folder</button>
         </div>
       </form>
     </div>
@@ -1632,8 +1632,8 @@
       </header>
       <p class="text-base">{confirmation.description}</p>
       <div class="base-template-dialog-footer">
-        <button class="base-dialog-confirm-button text-sm" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
         <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => confirmation = null}>Cancel</button>
+        <button class="base-dialog-confirm-button text-sm" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
       </div>
     </div>
   </div>

@@ -30,13 +30,11 @@
     cancelTestId?: string
     class?: string
     children?: Snippet
-    /** Additional footer actions placed after the primary action. */
+    /** Additional footer actions placed before the primary action. */
     secondaryActions?: Snippet
     submitVariant?: ButtonVariant
     // Optional leading icon for the primary action.
     submitIcon?: ComponentType
-    // Places Cancel before the primary action when the dialog requires that action order.
-    cancelFirst?: boolean
     oncancel?: () => void
     onsubmit?: () => void
   }
@@ -63,7 +61,6 @@
     secondaryActions,
     submitVariant = 'accent',
     submitIcon,
-    cancelFirst = false,
     oncancel,
     onsubmit
   }: Props = $props()
@@ -178,13 +175,16 @@
       {/if}
 
       <div class="cthulhuUiDialogFooter">
-        {#if showCancelButton && cancelFirst}
+        {#if showCancelButton}
           <Button
             text={cancelText}
             state={cancelDisabled ? 'disabled' : 'enabled'}
             testId={cancelTestId}
             onclick={closeDialog}
           />
+        {/if}
+        {#if secondaryActions}
+          {@render secondaryActions()}
         {/if}
         {#if showSubmitButton}
           <Button
@@ -194,17 +194,6 @@
             variant={submitVariant}
             testId={submitTestId}
             onclick={submitDialog}
-          />
-        {/if}
-        {#if secondaryActions}
-          {@render secondaryActions()}
-        {/if}
-        {#if showCancelButton && !cancelFirst}
-          <Button
-            text={cancelText}
-            state={cancelDisabled ? 'disabled' : 'enabled'}
-            testId={cancelTestId}
-            onclick={closeDialog}
           />
         {/if}
       </div>

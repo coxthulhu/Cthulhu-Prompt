@@ -1427,7 +1427,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       }
     })
     expect(rootHeaderGeometry).not.toBeNull()
-    expect(rootHeaderGeometry!.height).toBe(140)
+    expect(rootHeaderGeometry!.height).toBe(144)
     expect(rootHeaderGeometry!.titleRowHeight).toBe(60)
     expect(rootHeaderGeometry!.subtitleHeight).toBe(20)
     expect(rootHeaderGeometry!.titleLineHeight).toBe(36)

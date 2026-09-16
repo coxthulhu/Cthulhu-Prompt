@@ -363,13 +363,13 @@
       {/if}
       <div class="separator"></div>
       <div class="dialog-footer">
-        {#if dialog === 'create'}<button class="action-button text-sm" type="button" data-variant="accent" data-testid="create-workspace-submit-button" disabled={!canCreate} onclick={createWorkspace}>{creating ? 'Creating...' : 'Create Workspace'}</button>{/if}
         {#if dialog === 'welcome'}
-          <button class="action-button text-sm leading-5" type="button" data-variant="accent" data-testid="welcome-create-workspace-button" onclick={() => { dialog = 'create' }}><FolderPlus size={16} aria-hidden="true" />Create Workspace</button>
           <button class="action-button text-sm leading-5" type="button" data-testid="welcome-open-workspace-button" onclick={openWorkspace}><FolderOpen size={16} aria-hidden="true" />Open Workspace</button>
+          <button class="action-button text-sm leading-5" type="button" data-variant="accent" data-testid="welcome-create-workspace-button" onclick={() => { dialog = 'create' }}><FolderPlus size={16} aria-hidden="true" />Create Workspace</button>
         {:else}
         <button class="action-button text-sm" type="button" disabled={creating} onclick={closeDialog}>{dialog === 'create' ? 'Cancel' : 'Close'}</button>
         {/if}
+        {#if dialog === 'create'}<button class="action-button text-sm" type="button" data-variant="accent" data-testid="create-workspace-submit-button" disabled={!canCreate} onclick={createWorkspace}>{creating ? 'Creating...' : 'Create Workspace'}</button>{/if}
       </div>
     </div>
   </div>
