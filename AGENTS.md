@@ -22,7 +22,7 @@ When adding a new major application component or screen, add it to this list wit
 - I do not ask rhetorical questions. Answer my questions before proceeding.
 - Do not answer my questions generically or abstractly. Do not speculate. Read over the code and be concrete and specific in your answers.
 - Ignore any git stashed commits unless I specifically tell you to access them.
-- Whenever you run a python script, make sure to explain what that script did in your next update to the commentary channel.
+- Whenever you run a custom script to change files, like a python script or node script, make sure to explain what that script did in your next update to the commentary channel.
 
 ## Coding Guidelines
 
