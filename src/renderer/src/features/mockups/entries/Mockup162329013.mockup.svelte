@@ -1591,7 +1591,6 @@
       class="w-full max-w-[520px]"
       icon={Trash2}
       title="Delete Folder"
-      subtitle="This action cannot be undone."
       submitText="Delete folder"
       submitIcon={Trash2}
       submitVariant="danger"
@@ -1601,13 +1600,13 @@
       scrollBody
     >
       <div style="display: grid; gap: 20px; padding: 12px;">
-        <p class="text-sm leading-6" style="margin: 0; color: var(--ui-normal-text);">This folder and everything inside it will be permanently deleted, including completed and archived prompts.</p>
-        <label class="text-sm leading-5" style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--ui-danger-muted-border); border-radius: 8px; background: var(--ui-danger-normal-surface); color: var(--ui-normal-text);">
+        <p class="text-base" style="margin: 0; color: var(--ui-normal-text);">This folder and everything inside it will be permanently deleted, including completed and archived prompts.</p>
+        <label class="text-base" style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--ui-danger-muted-border); border-radius: 8px; background: var(--ui-danger-normal-surface); color: var(--ui-normal-text);">
           <span class="base-delete-checkbox">
             <input class="base-delete-checkbox-input" type="checkbox" checked />
             <span class="base-delete-checkbox-mark" aria-hidden="true"><Check size={13} /></span>
           </span>
-          <span>I confirm that I want to delete this folder and all of its contents.</span>
+          <span>Yes, I want to delete this folder and all of its contents.</span>
         </label>
       </div>
     </Dialog>
