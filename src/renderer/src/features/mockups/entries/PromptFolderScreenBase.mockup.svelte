@@ -112,7 +112,7 @@
     iconClass?: string
     iconSize?: number
     onclick?: (event: MouseEvent) => void
-    size?: 'default' | 'compact' | 'tiny' | 'sidebar-rail'
+    size?: 'default' | 'compact' | 'compact-large-icon' | 'tiny' | 'sidebar-rail'
     testId?: string
   }
 
@@ -328,9 +328,15 @@
       'base-root',
       'Draft Implementation Plan',
       [
+        '## Implementation plan',
+        '',
         'Create an implementation plan grounded in the current repository.',
         '',
-        'Include the files to change and the focused verification for each step.'
+        '- Identify the components and data boundaries affected by the change.',
+        '- Preserve keyboard navigation and focus behavior.',
+        '- Include the files to change and focused verification for each step.',
+        '',
+        'Return a checklist with concrete acceptance criteria.'
       ].join('\n')
     ),
     createPrompt(
@@ -404,6 +410,13 @@
         createPrompt('base-archived', 'Retire the earlier approach',
           'base-verification', NO_TEMPLATE_LABEL, 'Keep the earlier design notes available for reference.', MockPromptStatus.Archived)
       ]
+    },
+    {
+      id: 'base-release',
+      title: 'Release preparation',
+      shortDescription: 'Ready for the next release cycle.',
+      description: 'Add release notes and handoff prompts here once verification is complete.',
+      prompts: []
     }
   ])
 
@@ -947,7 +960,7 @@
     <Icon
       class={options.iconClass}
       size={options.iconSize ??
-        (options.size === undefined || options.size === 'default'
+        (options.size === undefined || options.size === 'default' || options.size === 'compact-large-icon'
           ? 20
           : options.size === 'tiny'
             ? 14
@@ -1365,10 +1378,10 @@
           {@render IconCell(FileText)}
           <div class="base-root-title-stack">
             <div class="base-root-title-line">
-              <h1 class="text-3xl leading-9">{rootTitle}</h1>
+              <h1 class="text-3xl leading-9" title={rootTitle}>{rootTitle}</h1>
               {@render IconButton(Pencil, 'Rename folder', {
                 onclick: () => nameDialog = { value: rootTitle, save: (value) => rootTitle = value },
-                size: 'tiny',
+                size: 'compact-large-icon',
                 baseVariant: 'muted',
                 hoverVariant: 'glyph'
               })}
@@ -1376,23 +1389,30 @@
             <span class="base-root-subtitle text-sm leading-5">Task Prompts</span>
           </div>
         </div>
-        <div class="base-icon-button-bar">
-          {@render IconButton(FolderCog, 'Manage categories', { hoverVariant: 'accent', onclick: () => openManageCategories() })}
-          {@render IconButton(Trash2, 'Delete folder', { hoverVariant: 'danger',
+      </div>
+
+      <div class="base-root-toolbar">
+        <div class="base-filter-bar" role="group" aria-label="Filter prompts">
+          {#each groups as group (group)}
+            <button class="text-sm leading-5" type="button" aria-pressed={screenMode === group}
+              onclick={() => selectGroup(group)}>
+              {group} <span class="text-xs leading-4.5">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
+            </button>
+          {/each}
+        </div>
+        <div class="base-root-actions">
+          <button class="base-categories-button text-sm leading-4" type="button" aria-label="Manage categories"
+            title="Manage categories" onclick={() => openManageCategories()}>
+            <FolderCog size={18} aria-hidden="true" />
+            <span>Categories</span>
+          </button>
+          <span class="base-root-action-divider" aria-hidden="true"></span>
+          {@render IconButton(Trash2, 'Delete folder', { borderless: true, hoverVariant: 'danger',
             onclick: () => confirmation = { title: 'Delete Folder',
               description: `Are you sure you want to permanently delete “${rootTitle}” and all of its contents?`,
               submit: 'Delete Folder', confirm: () => { rootPrompts = []; subfolders = [] } }
           })}
         </div>
-      </div>
-
-      <div class="base-filter-bar" role="group" aria-label="Filter prompts">
-        {#each groups as group (group)}
-          <button class="text-base leading-6" class:active={screenMode === group} type="button" aria-pressed={screenMode === group}
-            onclick={() => selectGroup(group)}>
-            {group} <span class="text-xs leading-4.5">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
-          </button>
-        {/each}
       </div>
     </section>
 
@@ -1823,6 +1843,11 @@
     width: 28px;
   }
 
+  .base-icon-button[data-size='compact-large-icon'] {
+    height: 28px;
+    width: 36px;
+  }
+
   .base-icon-button[data-size='tiny'] {
     border-radius: 0;
     height: 18px;
@@ -1980,9 +2005,9 @@
     display: grid;
     gap: 18px;
     grid-template-rows: 60px 44px;
-    height: 140px;
+    height: 144px;
     min-width: 0;
-    padding: 12px 0 6px;
+    padding: 16px 0 6px;
   }
 
   .base-root-title-row {
@@ -2041,33 +2066,112 @@
     white-space: nowrap;
   }
 
-  .base-filter-bar {
+  .base-root-toolbar {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    min-width: 0;
     padding-inline: 24px;
-    border-bottom: 1px solid var(--ui-neutral-normal-border);
+  }
+
+  .base-filter-bar,
+  .base-root-actions {
+    align-items: center;
+    background: var(--ui-card-solid-surface);
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: 10px;
     box-sizing: border-box;
     display: flex;
-    gap: 6px;
+    flex-shrink: 0;
+    gap: 4px;
     height: 44px;
+    padding: 4px;
   }
 
-  .base-filter-bar button {
+  .base-categories-button {
+    align-items: center;
     background: var(--ui-ghost-surface);
     border: 0;
-    border-bottom: 2px solid transparent;
-    color: var(--ui-muted-text);
-    height: 44px;
-    margin-bottom: -1px;
-    padding: 8px 10px 10px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-hoverable-text);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-weight: var(--font-weight-semibold);
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    white-space: nowrap;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
   }
 
-  .base-filter-bar button.active {
-    border-bottom-color: var(--ui-accent-normal-border);
+  .base-categories-button :global(svg) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .base-categories-button:where(:hover, :focus-visible) :global(svg) {
     color: var(--ui-normal-text);
   }
 
+  .base-categories-button:hover,
+  .base-categories-button:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .base-root-actions > .base-icon-button {
+    height: 34px;
+    width: 34px;
+  }
+
+  .base-root-action-divider {
+    background: var(--ui-neutral-normal-border);
+    height: 20px;
+    margin-inline: 3px;
+    width: 1px;
+  }
+
+  .base-filter-bar button {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-ghost-surface);
+    border-radius: 6px;
+    color: var(--ui-hoverable-text);
+    display: flex;
+    font-family: inherit;
+    gap: 8px;
+    height: 34px;
+    padding: 0 11px;
+  }
+
+  .base-filter-bar button:hover,
+  .base-filter-bar button:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
+  }
+
+  .base-filter-bar button[aria-pressed='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+    color: var(--ui-normal-text);
+  }
+
+  .base-filter-bar button[aria-pressed='true']:hover,
+  .base-filter-bar button[aria-pressed='true']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  .base-filter-bar button:focus-visible,
+  .base-categories-button:focus-visible {
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
+  }
+
   .base-filter-bar span {
-    position: relative;
-    top: -1px;
     margin-left: 4px;
     padding: 2px 6px;
   }
