@@ -1,5 +1,5 @@
 import * as path from 'path'
-import matter from 'gray-matter'
+import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from '../MarkdownFrontmatter'
 import type { Category } from '@shared/domain/category/Category'
 import { folderEntryRef, type FolderEntryRef } from '@shared/domain/OrderContainer'
 import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
@@ -132,7 +132,7 @@ const migratePromptToSchemaVersionOne = (promptPath: string): void => {
   /** Original prompt source retained when no rewrite is required. */
   const fileText = getFs().readFileSync(promptPath, 'utf8')
   /** Parsed Markdown body and front matter inspected by the migration. */
-  const parsed = matter(fileText, {})
+  const parsed = parseMarkdownFrontmatter(fileText)
   if (!isRecord(parsed.data)) throw new Error(`Invalid prompt file: ${promptPath}`)
 
   /** Whether this prompt contains the retired singular template field. */
@@ -154,10 +154,13 @@ const migratePromptToSchemaVersionOne = (promptPath: string): void => {
   /** Legacy metadata without the retired singular template field. */
   const { templateId: _templateId, ...currentMetadata } = parsed.data
   /** Schema-one source used by the strict current prompt parser. */
-  const migratedSource = matter.stringify(parsed.content, {
-    ...currentMetadata,
-    templates: templateId === null ? null : [{ id: templateId }]
-  })
+  const migratedSource = serializeMarkdownFrontmatter(
+    {
+      ...currentMetadata,
+      templates: templateId === null ? null : [{ id: templateId }]
+    },
+    parsed.content
+  )
   /** Current prompt record used to emit canonical front matter. */
   const migratedPrompt = parsePromptMarkdown(migratedSource)
   if (!migratedPrompt) throw new Error(`Invalid prompt file: ${promptPath}`)

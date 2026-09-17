@@ -1,4 +1,4 @@
-import matter from 'gray-matter'
+import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from './MarkdownFrontmatter'
 import {
   isFinalPromptStatus,
   isPromptStatus,
@@ -118,14 +118,6 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
   )
 }
 
-const resolveFrontmatterPrefix = (document: string): string => {
-  const frontmatterPrefixMatch = document.match(/^---\n[\s\S]*?\n---\n/)
-  if (!frontmatterPrefixMatch) {
-    throw new Error('Failed to serialize prompt frontmatter')
-  }
-  return frontmatterPrefixMatch[0]
-}
-
 const parseMarkdownContent = <TFrontmatter, TContent>(
   fileText: string,
   modifiedAt: string,
@@ -133,8 +125,7 @@ const parseMarkdownContent = <TFrontmatter, TContent>(
   createContent: (data: TFrontmatter, content: string, modifiedAt: string) => TContent
 ): TContent | null => {
   try {
-    // Side effect: pass explicit options to avoid gray-matter's internal content cache path.
-    const parsed = matter(fileText, {})
+    const parsed = parseMarkdownFrontmatter(fileText)
     return isFrontmatter(parsed.data)
       ? createContent(parsed.data, parsed.content, modifiedAt)
       : null
@@ -155,13 +146,6 @@ const createTitleMetadata = (content: {
     ? { title: content.title }
     : { fallbackTitle: content.fallbackTitle })
 })
-
-const serializeMarkdownContent = (metadata: object, content: string): string => {
-  const frontmatterDocument = matter.stringify('', metadata)
-  const frontmatterPrefix = resolveFrontmatterPrefix(frontmatterDocument)
-  // Side effect: keep markdown content exactly as provided; only prefix frontmatter.
-  return `${frontmatterPrefix}${content}`
-}
 
 export const parsePromptMarkdown = (
   fileText: string,
@@ -192,7 +176,7 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
       ? { finalizedAt: prompt.finalizedAt }
       : {})
   }
-  return serializeMarkdownContent(metadata, prompt.promptText)
+  return serializeMarkdownFrontmatter(metadata, prompt.promptText)
 }
 
 export const parsePromptTemplateMarkdown = (
@@ -219,5 +203,5 @@ export const serializePromptTemplateMarkdown = (template: PromptTemplatePersiste
     ...createTitleMetadata(template),
     ...(template.category !== undefined ? { category: template.category } : {})
   }
-  return serializeMarkdownContent(metadata, template.templateText)
+  return serializeMarkdownFrontmatter(metadata, template.templateText)
 }

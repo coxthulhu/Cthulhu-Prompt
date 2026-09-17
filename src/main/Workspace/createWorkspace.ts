@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import * as path from 'path'
-import matter from 'gray-matter'
+import { parseMarkdownFrontmatter } from '../Persistence/MarkdownFrontmatter'
 import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/domain/workspace/workspacePath'
 import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
@@ -161,7 +161,7 @@ const writeMyPromptsFolder = (
   const examplePrompts = includeExamplePrompts
     ? BUNDLED_PROMPT_SOURCES.map(({ source, templateKey }) => {
         // Parsed bundled document that supplies the prompt's title and body.
-        const bundledPrompt = matter(source, {})
+        const bundledPrompt = parseMarkdownFrontmatter(source)
         const categoryId = categoryIdByDisplayName.get(bundledPrompt.data.category)
         if (!categoryId) {
           throw new Error(`Unknown bundled prompt category: ${bundledPrompt.data.category}`)
@@ -279,7 +279,7 @@ const writeMyTemplatesFolder = (
   const now = getCurrentIsoSecondTimestamp()
   const templates = includeExampleTemplates
     ? BUNDLED_TEMPLATE_SOURCES.map(({ key, source }) => {
-        const bundledTemplate = matter(source, {})
+        const bundledTemplate = parseMarkdownFrontmatter(source)
 
         return {
           key,
