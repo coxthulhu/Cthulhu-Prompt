@@ -1408,7 +1408,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     ).toBeLessThanOrEqual(0)
     /** Header geometry guards the fixed virtualizer estimate and toolbar alignment. */
     const rootHeaderGeometry = await rootHeader.evaluate((element) => {
-      const filterBar = element.querySelector<HTMLElement>('.prompt-folder-root-filter-bar')
+      const filterBar = element.querySelector<HTMLElement>('[role="group"][aria-label="Filter prompts"]')
       const titleRow = element.querySelector<HTMLElement>('.prompt-folder-root-screen-header')
       const subtitle = element.querySelector<HTMLElement>('.prompt-folder-root-subtitle')
       const titleLine = element.querySelector<HTMLElement>('.prompt-folder-root-title-line')

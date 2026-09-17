@@ -7,6 +7,7 @@
   import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
+  import ButtonBarSelector from '@renderer/common/cthulhu-ui/selectors/ButtonBarSelector.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
@@ -40,6 +41,16 @@
 
   /** Template folders show a single Templates entry instead of status filters. */
   const isTemplateFolder = $derived(contentKind === 'template')
+
+  /** Keep displayed filter counts synchronized with the folder's current contents. */
+  const statusFilterItems = $derived(
+    promptStatusGroups.map((group) => ({
+      id: group.id,
+      label: group.label,
+      count: statusGroupCounts[group.id],
+      testId: `prompt-folder-${group.id}-filter`
+    }))
+  )
 </script>
 
 <div
@@ -82,29 +93,25 @@
 
   <!-- Keep filters and folder actions aligned within the existing virtual row height. -->
   <div class="prompt-folder-root-toolbar">
-    <div
-      class="prompt-folder-root-filter-bar"
-      role="group"
-      aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
-    >
-      {#if isTemplateFolder}
-        <button class="text-sm leading-5" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
-          Templates <span class="text-xs leading-4.5">{orderedPromptCount}</span>
-        </button>
-      {:else}
-        {#each promptStatusGroups as group (group.id)}
-          <button
-            class="text-sm leading-5"
-            type="button"
-            aria-pressed={screenMode === group.id}
-            data-testid={`prompt-folder-${group.id}-filter`}
-            onclick={() => onScreenModeChange(group.id)}
-          >
-            {group.label} <span class="text-xs leading-4.5">{statusGroupCounts[group.id]}</span>
-          </button>
-        {/each}
-      {/if}
-    </div>
+    {#if isTemplateFolder}
+      <ButtonBarSelector
+        label="Templates"
+        items={[{
+          id: 'templates',
+          label: 'Templates',
+          count: orderedPromptCount,
+          testId: 'prompt-folder-template-filter'
+        }]}
+        selectedId="templates"
+      />
+    {:else}
+      <ButtonBarSelector
+        label="Filter prompts"
+        items={statusFilterItems}
+        selectedId={screenMode}
+        onselect={onScreenModeChange}
+      />
+    {/if}
     <div class="prompt-folder-root-actions">
       <IconTextButton
         class="prompt-folder-root-categories-button"
@@ -195,7 +202,6 @@
     padding-inline: 24px;
   }
 
-  .prompt-folder-root-filter-bar,
   .prompt-folder-root-actions {
     align-items: center;
     background: var(--ui-card-solid-surface);
@@ -225,49 +231,5 @@
     height: 20px;
     margin-inline: 3px;
     width: 1px;
-  }
-
-  .prompt-folder-root-filter-bar button {
-    align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 1px solid var(--ui-ghost-surface);
-    border-radius: 6px;
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: flex;
-    font-family: inherit;
-    gap: 8px;
-    height: 34px;
-    padding: 0 11px;
-  }
-
-  /* Filter button counts are explicitly excluded from default line heights. */
-  .prompt-folder-root-filter-bar button span {
-    margin-left: 4px;
-    padding: 2px 6px;
-  }
-
-  .prompt-folder-root-filter-bar button:hover,
-  .prompt-folder-root-filter-bar button:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    border-color: var(--ui-neutral-hover-border);
-    color: var(--ui-normal-text);
-  }
-
-  .prompt-folder-root-filter-bar button[aria-pressed='true'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-    color: var(--ui-normal-text);
-  }
-
-  .prompt-folder-root-filter-bar button[aria-pressed='true']:hover,
-  .prompt-folder-root-filter-bar button[aria-pressed='true']:focus-visible {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
-  }
-
-  .prompt-folder-root-filter-bar button:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
-    outline-offset: 2px;
   }
 </style>
