@@ -1406,15 +1406,24 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(
       await rootTitle.evaluate((element) => element.scrollHeight - element.clientHeight)
     ).toBeLessThanOrEqual(0)
+    /** Header geometry guards the fixed virtualizer estimate and toolbar alignment. */
     const rootHeaderGeometry = await rootHeader.evaluate((element) => {
       const filterBar = element.querySelector<HTMLElement>('.prompt-folder-root-filter-bar')
       const titleRow = element.querySelector<HTMLElement>('.prompt-folder-root-screen-header')
       const subtitle = element.querySelector<HTMLElement>('.prompt-folder-root-subtitle')
       const titleLine = element.querySelector<HTMLElement>('.prompt-folder-root-title-line')
+      /** Action bar and rename glyph must align with their respective rows. */
+      const actions = element.querySelector<HTMLElement>('.prompt-folder-root-actions')!
+      /** Enlarged pencil retains its size beside the title. */
+      const pencil = element.querySelector<SVGElement>('[data-testid="prompt-folder-root-title-edit"] svg')!
       if (!filterBar || !titleRow || !subtitle || !titleLine) return null
 
       const rowRect = element.getBoundingClientRect()
       const filterRect = filterBar.getBoundingClientRect()
+      /** Measured action container used to check the trailing inset and common row. */
+      const actionsRect = actions.getBoundingClientRect()
+      /** Glyph bounds used to check size. */
+      const pencilRect = pencil.getBoundingClientRect()
       return {
         height: rowRect.height,
         titleRowHeight: titleRow.getBoundingClientRect().height,
@@ -1423,7 +1432,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
         filterRowHeight: filterRect.height,
         bottomInset: rowRect.bottom - filterRect.bottom,
         filterLeftInset: filterRect.left - rowRect.left,
-        filterRightInset: rowRect.right - filterRect.right
+        actionsRightInset: rowRect.right - actionsRect.right,
+        actionsHeight: actionsRect.height,
+        toolbarAlignment: actionsRect.top - filterRect.top,
+        toolbarGap: actionsRect.left - filterRect.right,
+        pencilHeight: pencilRect.height
       }
     })
     expect(rootHeaderGeometry).not.toBeNull()
@@ -1433,8 +1446,33 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(rootHeaderGeometry!.titleLineHeight).toBe(36)
     expect(rootHeaderGeometry!.filterRowHeight).toBe(44)
     expect(Math.abs(rootHeaderGeometry!.bottomInset - 6)).toBeLessThanOrEqual(1)
-    expect(Math.abs(rootHeaderGeometry!.filterLeftInset)).toBeLessThanOrEqual(1)
-    expect(Math.abs(rootHeaderGeometry!.filterRightInset)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootHeaderGeometry!.filterLeftInset - 24)).toBeLessThanOrEqual(1)
+    expect(Math.abs(rootHeaderGeometry!.actionsRightInset - 24)).toBeLessThanOrEqual(1)
+    expect(rootHeaderGeometry!.actionsHeight).toBe(44)
+    expect(Math.abs(rootHeaderGeometry!.toolbarAlignment)).toBeLessThanOrEqual(1)
+    expect(rootHeaderGeometry!.toolbarGap).toBeGreaterThanOrEqual(16)
+    expect(rootHeaderGeometry!.pencilHeight).toBe(20)
+    await expect(rootHeader.locator('.prompt-folder-root-title-line')).toHaveCSS('align-items', 'baseline')
+    await expect(rootHeader.locator('[data-testid="prompt-folder-manage-categories-button"]')).toHaveText('Categories')
+    await expect(rootHeader.locator('[data-testid="prompt-folder-manage-categories-button"]')).toHaveCSS('border-top-width', '0px')
+    await expect(rootHeader.locator('[data-testid="prompt-folder-delete-button"]')).toHaveCSS('border-top-width', '0px')
+
+    await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+    /** Actual sidebar selection provides the reference colors for the header selector. */
+    const selectedFolder = mainWindow.locator(`${SIDEBAR_PROMPT_FOLDER_DROPDOWN_ITEM}[data-selected="true"]`)
+    await expect(selectedFolder).toBeVisible()
+    /** Capture settled sidebar colors before moving focus to the header. */
+    const selectedColors = await selectedFolder.evaluate((element) => {
+      /** Computed selection colors resolve the current application palette. */
+      const style = getComputedStyle(element)
+      return { background: style.backgroundColor, border: style.borderTopColor, text: style.color }
+    })
+    await mainWindow.keyboard.press('Escape')
+    /** Active filter must share the sidebar's selected-entry colors. */
+    const activeFilter = rootHeader.locator('[data-testid="prompt-folder-active-filter"]')
+    await expect(activeFilter).toHaveCSS('background-color', selectedColors.background)
+    await expect(activeFilter).toHaveCSS('border-top-color', selectedColors.border)
+    await expect(activeFilter).toHaveCSS('color', selectedColors.text)
     await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
 
     const renameDialog = mainWindow.getByRole('dialog', { name: 'Rename Folder' })

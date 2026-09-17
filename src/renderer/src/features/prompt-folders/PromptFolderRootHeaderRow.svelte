@@ -1,10 +1,12 @@
 <script module lang="ts">
+  /** Shared rendered height and virtualizer estimate for the folder header. */
   export const PROMPT_FOLDER_ROOT_HEADER_ROW_HEIGHT_PX = 144
 </script>
 
 <script lang="ts">
   import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
@@ -36,6 +38,7 @@
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
   }>()
 
+  /** Template folders show a single Templates entry instead of status filters. */
   const isTemplateFolder = $derived(contentKind === 'template')
 </script>
 
@@ -61,7 +64,7 @@
             icon={Pencil}
             label="Rename folder"
             title="Rename folder"
-            size="tiny"
+            size="compact-large-icon"
             baseVariant="muted"
             hoverVariant="glyph"
             testId="prompt-folder-root-title-edit"
@@ -75,50 +78,57 @@
         />
       </TitleSubtitleStack>
     </div>
+  </div>
 
+  <!-- Keep filters and folder actions aligned within the existing virtual row height. -->
+  <div class="prompt-folder-root-toolbar">
+    <div
+      class="prompt-folder-root-filter-bar"
+      role="group"
+      aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
+    >
+      {#if isTemplateFolder}
+        <button class="text-sm leading-5" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
+          Templates <span class="text-xs leading-4.5">{orderedPromptCount}</span>
+        </button>
+      {:else}
+        {#each promptStatusGroups as group (group.id)}
+          <button
+            class="text-sm leading-5"
+            type="button"
+            aria-pressed={screenMode === group.id}
+            data-testid={`prompt-folder-${group.id}-filter`}
+            onclick={() => onScreenModeChange(group.id)}
+          >
+            {group.label} <span class="text-xs leading-4.5">{statusGroupCounts[group.id]}</span>
+          </button>
+        {/each}
+      {/if}
+    </div>
     <div class="prompt-folder-root-actions">
-      <IconButton
+      <IconTextButton
+        class="prompt-folder-root-categories-button"
         icon={FolderCog}
-        label="Manage categories"
+        iconSize={18}
+        text="Categories"
+        aria-label="Manage categories"
         title="Manage categories"
-        hoverVariant="accent"
+        borderless
         testId="prompt-folder-manage-categories-button"
         onclick={onManageCategories}
       />
+      <span class="prompt-folder-root-action-divider" aria-hidden="true"></span>
       <IconButton
+        class="prompt-folder-root-delete-button"
         icon={Trash2}
         label="Delete folder"
         title="Delete folder"
+        borderless
         hoverVariant="danger"
         testId="prompt-folder-delete-button"
         onclick={onDeletePromptFolder}
       />
     </div>
-  </div>
-
-  <div
-    class="prompt-folder-root-filter-bar"
-    role="group"
-    aria-label={isTemplateFolder ? 'Templates' : 'Filter prompts'}
-  >
-    {#if isTemplateFolder}
-      <button class="active text-base leading-6" type="button" aria-pressed="true" data-testid="prompt-folder-template-filter">
-        Templates <span class="text-xs leading-4.5">{orderedPromptCount}</span>
-      </button>
-    {:else}
-      {#each promptStatusGroups as group (group.id)}
-        <button
-          class="text-base leading-6"
-          class:active={screenMode === group.id}
-          type="button"
-          aria-pressed={screenMode === group.id}
-          data-testid={`prompt-folder-${group.id}-filter`}
-          onclick={() => onScreenModeChange(group.id)}
-        >
-          {group.label} <span class="text-xs leading-4.5">{statusGroupCounts[group.id]}</span>
-        </button>
-      {/each}
-    {/if}
   </div>
 </div>
 
@@ -176,44 +186,84 @@
     white-space: nowrap;
   }
 
-  .prompt-folder-root-actions {
+  .prompt-folder-root-toolbar {
     align-items: center;
     display: flex;
-    gap: 8px;
-  }
-
-  .prompt-folder-root-filter-bar {
-    border-bottom: 1px solid var(--ui-neutral-normal-border);
-    box-sizing: border-box;
-    display: flex;
-    gap: 6px;
-    height: 44px;
+    gap: 16px;
+    justify-content: space-between;
+    min-width: 0;
     padding-inline: 24px;
   }
 
-  .prompt-folder-root-filter-bar button {
-    background: var(--ui-ghost-surface);
-    border: 0;
-    border-bottom: 2px solid transparent;
-    color: var(--ui-muted-text);
-    cursor: pointer;
-    font-family: inherit;
+  .prompt-folder-root-filter-bar,
+  .prompt-folder-root-actions {
+    align-items: center;
+    background: var(--ui-card-solid-surface);
+    border: 1px solid var(--ui-neutral-muted-border);
+    border-radius: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-shrink: 0;
+    gap: 4px;
     height: 44px;
-    margin-bottom: -1px;
-    padding: 8px 10px 10px;
+    padding: 4px;
+  }
+
+  .prompt-folder-root-actions :global(.prompt-folder-root-categories-button) {
+    gap: 8px;
+    height: 34px;
+    padding-inline: 12px;
+  }
+
+  .prompt-folder-root-actions :global(.prompt-folder-root-delete-button) {
+    height: 34px;
+    width: 34px;
+  }
+
+  .prompt-folder-root-action-divider {
+    background: var(--ui-neutral-normal-border);
+    height: 20px;
+    margin-inline: 3px;
+    width: 1px;
+  }
+
+  .prompt-folder-root-filter-bar button {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 1px solid var(--ui-ghost-surface);
+    border-radius: 6px;
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
+    display: flex;
+    font-family: inherit;
+    gap: 8px;
+    height: 34px;
+    padding: 0 11px;
   }
 
   /* Filter button counts are explicitly excluded from default line heights. */
   .prompt-folder-root-filter-bar button span {
     margin-left: 4px;
     padding: 2px 6px;
-    position: relative;
-    top: -1px;
   }
 
-  .prompt-folder-root-filter-bar button.active {
-    border-bottom-color: var(--ui-accent-normal-border);
+  .prompt-folder-root-filter-bar button:hover,
+  .prompt-folder-root-filter-bar button:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
+  }
+
+  .prompt-folder-root-filter-bar button[aria-pressed='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+    color: var(--ui-normal-text);
+  }
+
+  .prompt-folder-root-filter-bar button[aria-pressed='true']:hover,
+  .prompt-folder-root-filter-bar button[aria-pressed='true']:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
   }
 
   .prompt-folder-root-filter-bar button:focus-visible {

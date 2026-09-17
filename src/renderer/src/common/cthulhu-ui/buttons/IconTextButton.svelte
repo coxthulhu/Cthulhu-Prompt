@@ -14,6 +14,8 @@
     pressed?: boolean
     state?: IconTextButtonState
     hoverVariant?: IconTextButtonHoverVariant
+    /** Removes the outline for buttons grouped inside a toolbar. */
+    borderless?: boolean
     class?: string
     iconClass?: string
     iconSize?: number
@@ -29,6 +31,8 @@
     pressed,
     state = 'enabled',
     hoverVariant = 'neutral',
+    // Match the borderless treatment provided by IconButton.
+    borderless = false,
     class: className,
     iconClass,
     iconSize = 16,
@@ -49,6 +53,7 @@
   class={mergeClasses('cthulhuUiIconTextButton text-sm leading-4', className)}
   data-state={state}
   data-hover-variant={hoverVariant}
+  data-borderless={borderless ? 'true' : 'false'}
   data-has-pressed-hover-icon={pressed === true && pressedHoverIcon !== undefined}
   data-testid={testId}
   aria-pressed={pressed}
@@ -98,6 +103,10 @@
       border-color var(--ui-animation-duration-fast) ease-out,
       color var(--ui-animation-duration-fast) ease-out;
     white-space: nowrap;
+  }
+
+  .cthulhuUiIconTextButton[data-borderless='true'] {
+    border: 0;
   }
 
   .cthulhuUiIconTextButton:hover,
