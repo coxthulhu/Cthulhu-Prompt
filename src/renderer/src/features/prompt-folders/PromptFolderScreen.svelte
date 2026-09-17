@@ -341,8 +341,9 @@
 <ConfirmationDialog
   open={deletePromptFolderTarget !== null}
   title="Delete Folder"
-  description={`Are you sure you want to permanently delete “${deletePromptFolderTarget?.displayName ?? ''}” and all of its contents?`}
-  confirmText="Delete Folder"
+  description="This folder and everything inside it will be permanently deleted, including completed and archived prompts."
+  confirmationText="Yes, I want to delete this folder and all of its contents."
+  confirmText="Delete folder"
   confirmTestId="prompt-folder-confirm-delete-button"
   oncancel={() => {
     deletePromptFolderId = null

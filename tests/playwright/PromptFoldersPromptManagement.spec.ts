@@ -2410,11 +2410,11 @@ describe('Prompt folder prompt management', () => {
     await expect(mainWindow.locator(statusPillSelector('completed-mode-active'))).toHaveText('Todo')
     const rootHeader = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
     await expect(rootHeader).toContainText('Completed Mode')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] span')).toHaveText(
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] .cthulhuUiButtonBarSelectorCount')).toHaveText(
       '1'
     )
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] .cthulhuUiButtonBarSelectorCount')
     ).toHaveText('2')
     await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
       'aria-pressed',
@@ -2510,7 +2510,7 @@ describe('Prompt folder prompt management', () => {
     await expect(completedFolderTitle).toBeVisible()
     await expect(completedFolderTitle).toContainText('Completed Mode')
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] .cthulhuUiButtonBarSelectorCount')
     ).toHaveText('2')
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')
@@ -2597,11 +2597,11 @@ describe('Prompt folder prompt management', () => {
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['completed-mode-oldest'])
-    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] span')).toHaveText(
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"] .cthulhuUiButtonBarSelectorCount')).toHaveText(
       '2'
     )
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] .cthulhuUiButtonBarSelectorCount')
     ).toHaveText('1')
     await expect(
       mainWindow
@@ -2726,7 +2726,7 @@ describe('Prompt folder prompt management', () => {
     await expect(emptyCompletedFolderTitle).toBeVisible()
     await expect(emptyCompletedFolderTitle).toContainText('No Completed')
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] span')
+      mainWindow.locator('[data-testid="prompt-folder-completed-filter"] .cthulhuUiButtonBarSelectorCount')
     ).toHaveText('0')
     await expect(mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')).toBeVisible()
     await expect(
@@ -3013,6 +3013,8 @@ describe('Prompt folder prompt management', () => {
     const dialog = mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('text=Delete Prompt')).toBeVisible()
+    await expect(dialog.getByRole('checkbox')).toHaveCount(0)
+    await expect(dialog.getByRole('button', { name: 'Delete', exact: true })).toBeEnabled()
 
     await dialog.locator('button:has-text("Delete")').click()
     await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toHaveCount(0)

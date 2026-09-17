@@ -439,6 +439,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteTemplateFolderDialog).toBeVisible()
+    await expect(deleteTemplateFolderDialog.getByRole('checkbox')).not.toBeChecked()
+    await expect(deleteTemplateFolderDialog.getByRole('button', { name: 'Delete folder' })).toBeDisabled()
+    await deleteTemplateFolderDialog.getByRole('checkbox').check()
+    await expect(deleteTemplateFolderDialog.getByRole('button', { name: 'Delete folder' })).toBeEnabled()
     await deleteTemplateFolderDialog.getByRole('button', { name: 'Cancel' }).click()
 
   })
@@ -1050,8 +1054,22 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     await expect(deleteDialog).toBeVisible()
     await expect(deleteDialog).toContainText(
-      'Are you sure you want to permanently delete “Development Tools” and all of its contents?'
+      'This folder and everything inside it will be permanently deleted, including completed and archived prompts.'
     )
+    /** Acknowledgement must gate deletion and reset after dismissing the dialog. */
+    const acknowledgement = deleteDialog.getByRole('checkbox', {
+      name: 'Yes, I want to delete this folder and all of its contents.'
+    })
+    /** Destructive action remains unavailable until explicitly acknowledged. */
+    const confirmDelete = deleteDialog.getByRole('button', { name: 'Delete folder' })
+    await expect(acknowledgement).not.toBeChecked()
+    await expect(confirmDelete).toBeDisabled()
+    await acknowledgement.focus()
+    await mainWindow.keyboard.press('Space')
+    await expect(confirmDelete).toBeEnabled()
+    await acknowledgement.uncheck()
+    await expect(confirmDelete).toBeDisabled()
+    await acknowledgement.check()
     await expect
       .poll(async () =>
         Math.abs((await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)) - scrollTopBefore)
@@ -1059,6 +1077,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       .toBeLessThanOrEqual(1)
     await mainWindow.locator('.cthulhuUiDialogLayer').click({ position: { x: 2, y: 2 } })
     await expect(deleteDialog).toBeHidden()
+    await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
+    await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
+    await expect(acknowledgement).not.toBeChecked()
+    await expect(confirmDelete).toBeDisabled()
+    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
   test('opens selected folder deletion after navigating from Home', async ({ testSetup }) => {
@@ -1078,7 +1101,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Delete Folder"]'
     )
     await expect(deleteDialog).toBeVisible()
-    await expect(deleteDialog).toContainText('Development Tools')
+    await expect(deleteDialog).toContainText('This folder and everything inside it will be permanently deleted')
     await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
@@ -1137,7 +1160,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
     /** Confirmation dialog for deleting the selected second folder. */
     const deleteDialog = mainWindow.locator('[role="dialog"][aria-label="Delete Folder"]')
-    await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
+    await expect(deleteDialog.getByRole('button', { name: 'Delete folder' })).toBeDisabled()
+    await deleteDialog.getByRole('checkbox').check()
+    await deleteDialog.getByRole('button', { name: 'Delete folder' }).click()
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'Last Prompt'
@@ -1145,7 +1170,10 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
-    await deleteDialog.getByRole('button', { name: 'Delete Folder' }).click()
+    await expect(deleteDialog.getByRole('checkbox')).not.toBeChecked()
+    await expect(deleteDialog.getByRole('button', { name: 'Delete folder' })).toBeDisabled()
+    await deleteDialog.getByRole('checkbox').check()
+    await deleteDialog.getByRole('button', { name: 'Delete folder' }).click()
 
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
       'data-active',
