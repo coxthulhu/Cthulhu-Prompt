@@ -26,14 +26,15 @@
     Search,
     Trash2,
     Undo2,
-    Zap,
-    X
+    Zap
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
   import { estimateTokenCount } from 'tokenx'
+  import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
 
   // Standalone snapshot of the prompt-folder screen: all fixtures, controls, and mutations live here.
-  // Only third-party Svelte/icons/Monaco/token counting and the host's palette/theme are shared.
+  // Dialog framing uses the shared UI; fixtures and mutations remain local to this mockup.
   // Editor sizing below intentionally uses application defaults, independent of persisted settings.
   const NO_TEMPLATE_LABEL = 'No template'
   const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
@@ -630,6 +631,12 @@
   let nameInput = $state<HTMLInputElement | null>(null)
   const nameError = $derived(!nameDialog?.value.trim() ? 'Folder name is required' : null)
   const nameDisabled = $derived(Boolean(nameError) || nameDialog?.value.trim() === rootTitle)
+  const saveFolderName = () => {
+    if (!nameDialog || nameDisabled) return
+    nameDialog.save(nameDialog.value.trim())
+    nameDialog = null
+  }
+
   let confirmation = $state<{ title: string; description: string; submit: string; confirm: () => void } | null>({
     title: 'Delete Folder',
     description: 'Are you sure you want to permanently delete “Product Work” and all of its contents?',
@@ -772,12 +779,6 @@
     shouldFocusManagementName = false
   })
 
-  // Side effect: portal local overlays beyond the mockup's containing block.
-  const mountMockDialog = (node: HTMLElement) => {
-    const previousFocus = document.activeElement as HTMLElement | null
-    document.body.appendChild(node)
-    return { destroy: () => { node.remove(); previousFocus?.focus() } }
-  }
   const EDITOR_BODY_PADDING_TOP_PX = 8
   const EDITOR_BODY_PADDING_RIGHT_PX = 10
   const EDITOR_BODY_PADDING_BOTTOM_PX = 10
@@ -882,14 +883,10 @@
     window.clearTimeout(copyResetTimer)
   })
 
-  // Side effect: handle sandbox find and dismiss open mock dialogs and menus; remove the listener on unmount.
+  // Side effect: handle sandbox find and dismiss local menus; remove the listener on unmount.
   $effect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        closeTemplateDialog()
-        nameDialog = null
-        closeManageCategories()
-        confirmation = null
         statusMenuId = null
         deleteMenuId = null
         findOpen = false
@@ -1436,20 +1433,20 @@
 </main>
 
 {#if manageCategoriesOpen}
-  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
-    <div class="base-template-dialog base-manage-dialog" role="dialog" aria-modal="true" aria-label="Manage Categories">
-      <header class="base-template-dialog-header">
-        <div class="base-template-dialog-heading">
-          <div class="base-template-dialog-icon"><FolderCog size={24} aria-hidden="true" /></div>
-          <div class="base-template-dialog-heading-copy">
-            <h2 class="text-lg">Manage Categories</h2>
-            <p class="text-sm">{rootTitle}</p>
-          </div>
-        </div>
-        {@render IconButton(X, 'Close', { onclick: closeManageCategories })}
-      </header>
-      {@render Separator()}
-
+  <Dialog
+    open
+    class="w-full max-w-[1040px]"
+    icon={FolderCog}
+    title="Manage Categories"
+    subtitle={rootTitle}
+    submitText="Save Changes"
+    submitIcon={Check}
+    cancelText="Close"
+    submitDisabled={!managementDraftsValid || !managementHasChanges}
+    oncancel={closeManageCategories}
+    onsubmit={saveCategoryDrafts}
+    scrollBody
+  >
       <div class="base-manage-body text-sm leading-5">
         <aside class="base-management-selector" aria-label="All Categories">
           <div class="base-management-selector-header">
@@ -1549,43 +1546,22 @@
         </div>
       </div>
 
-      {@render Separator()}
-      <footer class="base-template-dialog-footer">
-        <button type="button" class="base-dialog-cancel-button text-sm" onclick={closeManageCategories}>Close</button>
-        <button
-          type="button"
-          class="base-dialog-confirm-button text-sm"
-          disabled={!managementDraftsValid || !managementHasChanges}
-          onclick={saveCategoryDrafts}
-        >
-          <Check size={16} aria-hidden="true" />
-          <span>Save Changes</span>
-        </button>
-      </footer>
-    </div>
-  </div>
+  </Dialog>
 {/if}
 
 {#if nameDialog}
-  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
-    <div tabindex="-1" class="base-template-dialog base-name-dialog" role="dialog" aria-modal="true" aria-label="Rename Folder">
-      <form onsubmit={(event) => {
-        event.preventDefault()
-        if (!nameDialog || nameDisabled) return
-        nameDialog.save(nameDialog.value.trim())
-        nameDialog = null
-      }}>
-        <header class="base-template-dialog-header">
-          <div class="base-template-dialog-heading">
-            <div class="base-template-dialog-icon"><Pencil size={24} aria-hidden="true" /></div>
-            <div class="base-template-dialog-heading-copy">
-              <h2 class="text-lg">Rename Folder</h2>
-              <p class="text-sm">Change the name shown in the app and on disk.</p>
-            </div>
-          </div>
-          {@render IconButton(X, 'Close', { onclick: () => nameDialog = null })}
-        </header>
-        {@render Separator()}
+  <Dialog
+    open
+    class="w-full max-w-[520px]"
+    icon={Pencil}
+    title="Rename Folder"
+    subtitle="Change the name shown in the app and on disk."
+    submitText="Rename Folder"
+    submitDisabled={nameDisabled}
+    oncancel={() => nameDialog = null}
+    onsubmit={saveFolderName}
+  >
+    <form onsubmit={(event) => { event.preventDefault(); saveFolderName() }}>
         <div class="base-name-field">
           <div class="base-management-field-copy">
             <div class="base-management-field-heading">
@@ -1604,111 +1580,65 @@
             {/if}
           </div>
         </div>
-        {@render Separator()}
-        <div class="base-template-dialog-footer">
-          <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => nameDialog = null}>Cancel</button>
-          <button class="base-dialog-confirm-button text-sm" type="submit" disabled={nameDisabled}>Rename Folder</button>
-        </div>
-      </form>
-    </div>
-  </div>
+    </form>
+  </Dialog>
 {/if}
 
 {#if confirmation}
-  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog
-    onclick={(event) => { if (event.target === event.currentTarget) confirmation = null }}>
-    {#if confirmation.title === 'Delete Folder'}
-    <div tabindex="-1" class="base-template-dialog base-confirmation-dialog" role="dialog" aria-modal="true" aria-label="Delete folder" style="max-width: 520px; padding: 0; overflow: hidden; border: 1px solid var(--ui-neutral-emphasis-border); border-radius: 14px; background: var(--ui-card-overlay-surface);">
-      <header style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px 24px 20px; border-bottom: 1px solid var(--ui-neutral-muted-border);">
-        <div style="display: flex; align-items: center; gap: 14px;">
-          <div style="display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: var(--ui-danger-icon-glyph); background: var(--ui-danger-normal-surface); border: 1px solid var(--ui-danger-muted-border);"><Trash2 size={22} aria-hidden="true" /></div>
-          <div style="display: grid; gap: 2px;">
-            <h2 class="text-lg leading-7" style="margin: 0; font-weight: 600; color: var(--ui-normal-text);">Delete folder?</h2>
-            <span class="text-sm leading-5" style="color: var(--ui-secondary-text);">This action cannot be undone.</span>
-          </div>
-        </div>
-        {@render IconButton(X, 'Close', { onclick: () => confirmation = null })}
-      </header>
-      <div style="display: grid; gap: 20px; padding: 24px;">
-        <div style="display: flex; align-items: center; gap: 14px; padding: 16px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 8px; background: var(--ui-card-normal-surface);">
-          <FolderOpen size={26} style="color: var(--ui-secondary-icon-glyph); flex-shrink: 0;" aria-hidden="true" />
-          <div style="display: grid; gap: 4px; min-width: 0;">
-            <strong class="text-base leading-6" style="color: var(--ui-normal-text); overflow-wrap: anywhere;">{rootTitle}</strong>
-            <span class="text-sm leading-5" style="color: var(--ui-secondary-text);">{allPrompts.length} prompts <span style="padding: 0 6px; color: var(--ui-muted-text);">·</span> {subfolders.length} categories</span>
-          </div>
-        </div>
-        <p class="text-sm leading-6" style="margin: 0; color: var(--ui-secondary-text);">This folder and everything inside it will be permanently deleted, including completed and archived prompts.</p>
+  {#if confirmation.title === 'Delete Folder'}
+    <Dialog
+      open
+      class="w-full max-w-[520px]"
+      icon={Trash2}
+      title="Delete Folder"
+      subtitle="This action cannot be undone."
+      submitText="Delete folder"
+      submitIcon={Trash2}
+      submitVariant="danger"
+      closeOnOutsideClick
+      oncancel={() => confirmation = null}
+      onsubmit={() => { confirmation?.confirm(); confirmation = null }}
+      scrollBody
+    >
+      <div style="display: grid; gap: 20px; padding: 12px;">
+        <p class="text-sm leading-6" style="margin: 0; color: var(--ui-normal-text);">This folder and everything inside it will be permanently deleted, including completed and archived prompts.</p>
         <label class="text-sm leading-5" style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--ui-danger-muted-border); border-radius: 8px; background: var(--ui-danger-normal-surface); color: var(--ui-normal-text);">
-          <input type="checkbox" checked style="width: 17px; height: 17px; margin: 2px 0 0; flex-shrink: 0; accent-color: var(--ui-danger-strong-border);" />
+          <span class="base-delete-checkbox">
+            <input class="base-delete-checkbox-input" type="checkbox" checked />
+            <span class="base-delete-checkbox-mark" aria-hidden="true"><Check size={13} /></span>
+          </span>
           <span>I confirm that I want to delete this folder and all of its contents.</span>
         </label>
       </div>
-      <footer style="display: flex; justify-content: flex-end; gap: 10px; padding: 18px 24px; border-top: 1px solid var(--ui-neutral-muted-border); background: var(--ui-card-normal-surface);">
-        <button class="base-dialog-cancel-button text-sm leading-5" type="button" onclick={() => confirmation = null}>Cancel</button>
-        <button class="base-dialog-confirm-button text-sm leading-5" type="button" style="color: var(--ui-normal-text);" onclick={() => { confirmation?.confirm(); confirmation = null }}><Trash2 size={16} aria-hidden="true" />Delete folder</button>
-      </footer>
-    </div>
-    {:else}
-    <div tabindex="-1" class="base-template-dialog base-confirmation-dialog" role="dialog" aria-modal="true" aria-label={confirmation.title}>
-      <header class="base-template-dialog-header">
-        <div class="base-template-dialog-heading">
-          <div class="base-template-dialog-icon"><Trash2 size={24} aria-hidden="true" /></div>
-          <h2 class="text-lg">{confirmation.title}</h2>
-        </div>
-        {@render IconButton(X, 'Close', { onclick: () => confirmation = null })}
-      </header>
-      <p class="text-base">{confirmation.description}</p>
-      <div class="base-template-dialog-footer">
-        <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => confirmation = null}>Cancel</button>
-        <button class="base-dialog-confirm-button text-sm" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
-      </div>
-    </div>
-    {/if}
-  </div>
+    </Dialog>
+  {:else}
+    <ConfirmationDialog
+      open
+      title={confirmation.title}
+      description={confirmation.description}
+      confirmText={confirmation.submit}
+      oncancel={() => confirmation = null}
+      onconfirm={() => { confirmation?.confirm(); confirmation = null }}
+    />
+  {/if}
 {/if}
 
 {#if templateDialogPrompt}
-  <div
-    class="base-template-dialog-layer"
-    role="presentation"
-    data-testid="base-mockup-template-dialog-layer"
-    use:mountMockDialog
+  <Dialog
+    open
+    class="w-full max-w-[580px]"
+    icon={templateDialogMode === 'select-and-copy' ? Copy : Layers}
+    title={templateDialogMode === 'select-and-copy' ? 'Quick Template Selection' : 'Select Template'}
+    subtitle={templateDialogMode === 'select-and-copy'
+      ? 'Click a template to apply it and copy this prompt immediately.'
+      : 'Choose one template, or use the prompt exactly as written.'}
+    submitText="Confirm Selection"
+    submitIcon={Check}
+    showSubmitButton={templateDialogMode === 'select'}
+    oncancel={closeTemplateDialog}
+    onsubmit={confirmTemplateSelections}
+    scrollBody
   >
-    <div
-      class="base-template-dialog"
-      role="dialog"
-      aria-modal="true"
-      aria-label={templateDialogMode === 'select-and-copy'
-        ? 'Quick Template Selection'
-        : 'Select Template'}
-    >
-      <header class="base-template-dialog-header">
-        <div class="base-template-dialog-heading">
-          <div class="base-template-dialog-icon">
-            {#if templateDialogMode === 'select-and-copy'}
-              <Copy size={24} aria-hidden="true" />
-            {:else}
-              <Layers size={24} aria-hidden="true" />
-            {/if}
-          </div>
-          <div class="base-template-dialog-heading-copy">
-            <h2 class="text-lg">
-              {templateDialogMode === 'select-and-copy'
-                ? 'Quick Template Selection'
-                : 'Select Template'}
-            </h2>
-            <p class="text-sm">
-              {templateDialogMode === 'select-and-copy'
-                ? 'Click a template to apply it and copy this prompt immediately.'
-                : 'Choose one template, or use the prompt exactly as written.'}
-            </p>
-          </div>
-        </div>
-        {@render IconButton(X, 'Close', { onclick: closeTemplateDialog })}
-      </header>
-
-      {@render Separator()}
-
       <div class="base-template-dialog-body">
         <div class="base-no-template-panel">
           <button
@@ -1798,28 +1728,55 @@
         </div>
       </div>
 
-      {@render Separator()}
-
-      <footer class="base-template-dialog-footer">
-        <button type="button" class="base-dialog-cancel-button text-sm" onclick={closeTemplateDialog}>
-          Cancel
-        </button>
-        {#if templateDialogMode === 'select'}
-          <button
-            type="button"
-            class="base-dialog-confirm-button text-sm"
-            onclick={confirmTemplateSelections}
-          >
-            <Check size={16} aria-hidden="true" />
-            Confirm Selection
-          </button>
-        {/if}
-      </footer>
-    </div>
-  </div>
+  </Dialog>
 {/if}
 
 <style>
+  .base-delete-checkbox {
+    position: relative;
+    flex: 0 0 17px;
+    height: 17px;
+    margin-top: 2px;
+  }
+
+  .base-delete-checkbox-input {
+    position: absolute;
+    inset: 0;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .base-delete-checkbox-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 17px;
+    height: 17px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 4px;
+    color: transparent;
+    pointer-events: none;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-delete-checkbox-input:checked + .base-delete-checkbox-mark {
+    background: var(--ui-danger-selection-fill);
+    border-color: var(--ui-danger-selection-border);
+    color: var(--ui-normal-text);
+  }
+
+  .base-delete-checkbox-input:focus-visible + .base-delete-checkbox-mark {
+    outline: 2px solid var(--ui-danger-strong-border);
+    outline-offset: 2px;
+  }
+
   .base-prompt-folder-mockup {
     position: relative;
     box-sizing: border-box;
@@ -2694,78 +2651,6 @@
     width: 100%;
   }
 
-  .base-template-dialog-layer {
-    -webkit-app-region: no-drag;
-    align-items: center;
-    background: var(--ui-card-normal-shadow);
-    display: flex;
-    inset: 0;
-    justify-content: center;
-    padding: 16px;
-    position: fixed;
-    z-index: 50;
-  }
-
-  .base-template-dialog {
-    background: var(--ui-card-overlay-surface);
-    border: 1px solid var(--ui-card-normal-border);
-    border-radius: var(--cthulhu-ui-radius-card);
-    box-shadow: 0 8px 12px var(--ui-card-normal-shadow);
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 32px);
-    max-width: 580px;
-    min-width: 0;
-    padding: 18px 16px 16px;
-    width: 100%;
-  }
-
-  .base-template-dialog-header {
-    align-items: flex-start;
-    display: flex;
-    gap: 12px;
-    justify-content: space-between;
-    min-width: 0;
-    padding: 0 4px 16px;
-  }
-
-  .base-template-dialog-heading {
-    align-items: center;
-    display: flex;
-    gap: 12px;
-    min-width: 0;
-  }
-
-  .base-template-dialog-heading-copy {
-    min-width: 0;
-  }
-
-  .base-template-dialog-icon {
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: flex;
-    flex: 0 0 40px;
-    height: 40px;
-    justify-content: center;
-    width: 40px;
-  }
-
-  .base-template-dialog-header h2 {
-    color: var(--ui-normal-text);
-    font-weight: var(--font-weight-semibold);
-    margin: 0;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .base-template-dialog-heading p {
-    color: var(--ui-muted-text);
-    margin: 3px 0 0;
-  }
-
   .base-template-dialog-body {
     min-width: 0;
     padding-top: 14px;
@@ -3045,58 +2930,6 @@
     transform: rotate(90deg);
   }
 
-  .base-template-dialog-footer {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    min-width: 0;
-    padding-top: 16px;
-  }
-
-  .base-dialog-confirm-button {
-    align-items: center;
-    background: var(--ui-accent-action-fill);
-    border: 1px solid var(--ui-accent-normal-border);
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
-    display: inline-flex;
-    font-weight: var(--font-weight-semibold);
-    gap: 7px;
-    height: 40px;
-    padding: 0 15px;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      border-color var(--ui-animation-duration-standard) ease;
-  }
-
-  .base-dialog-confirm-button:hover,
-  .base-dialog-confirm-button:focus-visible {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
-  }
-
-  .base-dialog-cancel-button {
-    align-items: center;
-    background: var(--ui-neutral-action-fill);
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
-    color: var(--ui-normal-text);
-    display: inline-flex;
-    font-weight: var(--font-weight-semibold);
-    height: 40px;
-    padding: 0 14px;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      border-color var(--ui-animation-duration-standard) ease;
-  }
-
-  .base-dialog-cancel-button:hover,
-  .base-dialog-cancel-button:focus-visible {
-    background: var(--ui-neutral-action-hover-fill);
-    border-color: var(--ui-neutral-hover-border);
-  }
-
   button:focus-visible,
   input:focus-visible {
     outline: 2px solid var(--ui-neutral-focus-border);
@@ -3149,7 +2982,6 @@
   .base-empty { color: var(--ui-secondary-text); text-align: center; padding: 48px 0; }
   .base-empty p { margin: 0; }
   .base-empty .base-empty-detail { margin-top: 8px; }
-  .base-name-dialog { max-width: 520px; background: var(--ui-card-overlay-surface); }
   .base-name-field { display: grid; gap: 7px; min-width: 0; padding: 16px; }
   .base-name-control { position: relative; min-width: 0; }
   .base-name-input { box-sizing: border-box; width: 100%; height: 40px; border-radius: var(--cthulhu-ui-radius-control); background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); border: 1px solid var(--ui-neutral-normal-border); padding: 4px 14px; font-weight: var(--font-weight-semibold); }
@@ -3158,9 +2990,6 @@
   .base-name-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
   .base-name-error { position: absolute; top: 100%; left: 0; z-index: 10; margin-top: 2px; height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--cthulhu-ui-radius-control); white-space: nowrap; background: color-mix(in oklch, var(--ui-card-solid-surface) 76%, var(--ui-danger-strong-border)); box-shadow: 0 8px 18px var(--ui-card-normal-shadow); }
   .base-name-error :global(svg) { color: var(--ui-danger-icon-glyph); }
-  .base-name-dialog .base-dialog-confirm-button { border-color: var(--ui-accent-muted-border); font-weight: var(--font-weight-semibold); padding-inline: 14px; }
-  .base-name-dialog .base-dialog-confirm-button:disabled { opacity: 0.5; pointer-events: none; }
-  .base-manage-dialog { background: var(--ui-card-overlay-surface); max-width: min(1040px, calc(100vw - 32px)); width: 100%; }
   .base-manage-body { display: grid; grid-template-columns: 232px minmax(0, 1fr); height: min(570px, calc(100vh - 212px)); min-height: 240px; }
   .base-management-selector { border-right: 1px solid var(--ui-neutral-normal-border); display: flex; flex-direction: column; min-height: 0; padding: 18px 14px 20px 0; }
   .base-management-selector-header { align-items: center; color: var(--ui-normal-text); display: flex; font-weight: var(--font-weight-semibold); justify-content: space-between; padding: 0 10px 14px; }
@@ -3203,12 +3032,6 @@
   .base-management-input[aria-invalid='true'] { border-color: var(--ui-danger-strong-border); }
   .base-management-input[aria-invalid='true']:focus-visible { box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
   .base-management-description-editor { background: var(--ui-editor-content-surface); border: 1px solid var(--ui-neutral-normal-border); border-radius: var(--cthulhu-ui-radius-control); display: block; min-width: 0; overflow: hidden; }
-  .base-manage-dialog .base-dialog-confirm-button:disabled { cursor: default; opacity: 0.5; pointer-events: none; }
-  .base-confirmation-dialog { max-width: 480px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
-  .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
-  .base-confirmation-dialog > p { padding: 4px; margin: 0; }
-  .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: var(--font-weight-semibold); }
-  .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
   .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }
   @container (width < 720px) {
     .base-prompt-title-area { height: 109px; grid-template-columns: 2px minmax(0, 1fr); grid-template-rows: 56px 53px; }
