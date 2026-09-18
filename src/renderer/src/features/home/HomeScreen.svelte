@@ -244,7 +244,7 @@
                 {#snippet trailing()}
                   <LinkButton
                     href={githubIssuesUrl}
-                    text="Open Github"
+                    text="Github"
                     endIcon={ExternalLink}
                     variant="accent"
                     testId="get-started-github-issues-link"
