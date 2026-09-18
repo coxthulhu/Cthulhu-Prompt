@@ -1,17 +1,12 @@
 import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettingsField } from '@shared/domain/prompt-folder/PromptFolder'
-import {
-  createSessionMeasuredHeightCache,
-  createSessionValueCache
-} from './sessionUiCacheFactories.svelte.ts'
+import { createSessionMeasuredHeightCache } from './sessionUiCacheFactories.svelte.ts'
 
 const settingsRowMeasuredHeight = createSessionMeasuredHeightCache()
-const scrollTop = createSessionValueCache<number>()
 
-/** Renderer-session measurements and scroll positions for prompt folders. */
+/** Renderer-session measurements for prompt folders. */
 export const promptFolderUiCache = {
-  settingsRowMeasuredHeight,
-  scrollTop
+  settingsRowMeasuredHeight
 }
 
 const promptFolderSettingsRowCacheId = (
@@ -64,20 +59,4 @@ export const clearPromptFolderSettingsRowMeasuredHeights = (promptFolderIds: str
   for (const promptFolderId of promptFolderIds) {
     clearPromptFolderSettingsRowMeasuredHeight(promptFolderId)
   }
-}
-
-export const lookupPromptFolderScrollTop = (promptFolderId: string): number | null => {
-  return promptFolderUiCache.scrollTop.lookup(promptFolderId)
-}
-
-export const recordPromptFolderScrollTop = (promptFolderId: string, scrollTopPx: number): void => {
-  promptFolderUiCache.scrollTop.record(promptFolderId, scrollTopPx)
-}
-
-export const clearPromptFolderScrollTop = (promptFolderId: string): void => {
-  promptFolderUiCache.scrollTop.clear(promptFolderId)
-}
-
-export const clearPromptFolderScrollTops = (promptFolderIds: string[]): void => {
-  promptFolderUiCache.scrollTop.clearMany(promptFolderIds)
 }

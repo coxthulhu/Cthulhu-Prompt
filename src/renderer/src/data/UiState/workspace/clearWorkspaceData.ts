@@ -20,7 +20,6 @@ export const clearWorkspaceData = (): void => {
   clearPromptTemplateClientStateCollection()
   promptEditorUiCache.editorMeasuredHeight.clearAll()
   promptFolderUiCache.settingsRowMeasuredHeight.clearAll()
-  promptFolderUiCache.scrollTop.clearAll()
 
   // Clear records and revision metadata together so reopened disk snapshots are accepted.
   for (const collection of [

@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPe
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 21
+const LATEST_SCHEMA_VERSION = 22
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -721,6 +721,16 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 20) {
       migrateSchemaV20ToV21(db)
       schemaVersion = 21
+      continue
+    }
+
+    if (schemaVersion === 21) {
+      // Preserve existing selections while giving unvisited modes no saved offset.
+      db.transaction(() => {
+        db.exec("ALTER TABLE prompt_folder_view_state ADD COLUMN scroll_top_by_mode_json TEXT NOT NULL DEFAULT '{}'")
+        db.prepare('UPDATE schema_version SET version = ?').run(22)
+      })()
+      schemaVersion = 22
       continue
     }
 

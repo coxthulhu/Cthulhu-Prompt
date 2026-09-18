@@ -1,4 +1,5 @@
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
+import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   isPromptFolderScreenSelection,
   type WorkspaceAccordionSectionViewEntry
@@ -35,7 +36,8 @@ const createPromptFolderUiState = (
   contentOwnerId,
   selectedEntryId: DEFAULT_SELECTED_ENTRY_ID,
   treeIsExpanded: DEFAULT_TREE_IS_EXPANDED,
-  contentSectionIsExpanded: DEFAULT_CONTENT_SECTION_IS_EXPANDED
+  contentSectionIsExpanded: DEFAULT_CONTENT_SECTION_IS_EXPANDED,
+  scrollTopByMode: {}
 })
 
 /** Reads one root or category prompt-folder view state by its composite key. */
@@ -57,6 +59,7 @@ const setPromptFolderUiStateFieldsWithAutosave = (
       | 'selectedEntryId'
       | 'treeIsExpanded'
       | 'contentSectionIsExpanded'
+      | 'scrollTopByMode'
     >
   >,
   selectedPromptFolderId?: string
@@ -95,6 +98,29 @@ const setPromptFolderUiStateFieldsWithAutosave = (
       AUTOSAVE_MS
     )
   }
+}
+
+/** Reads the saved offset without treating an unvisited mode as a saved top position. */
+export const lookupPromptFolderScrollTop = (
+  workspaceId: string,
+  promptFolderId: string,
+  mode: PromptStatusFolderId
+): number | null =>
+  lookupPromptFolderUiState(workspaceId, promptFolderId)?.scrollTopByMode[mode] ?? null
+
+/** Saves one mode's reachable offset while retaining the folder's other UI state. */
+export const setPromptFolderScrollTopWithAutosave = (
+  workspaceId: string,
+  promptFolderId: string,
+  mode: PromptStatusFolderId,
+  scrollTopPx: number
+): void => {
+  /** Latest optimistic offsets include other mode changes still awaiting autosave. */
+  const current = lookupPromptFolderUiState(workspaceId, promptFolderId)?.scrollTopByMode ?? {}
+  if (current[mode] === scrollTopPx) return
+  setPromptFolderUiStateFieldsWithAutosave(workspaceId, promptFolderId, {
+    scrollTopByMode: { ...current, [mode]: scrollTopPx }
+  })
 }
 
 /** Looks up the complete saved state for one workspace accordion instance. */

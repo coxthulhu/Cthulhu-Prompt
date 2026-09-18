@@ -42,6 +42,8 @@ type WorkspacePromptFolderUiStateRow = {
   selectedEntryId: string
   treeIsExpanded: number
   contentSectionIsExpanded: number
+  /** Serialized offsets for the root folder's visited status modes. */
+  scrollTopByModeJson: string
 }
 
 /** SQLite row containing one serialized accordion state. */
@@ -177,7 +179,8 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           content_owner_id AS contentOwnerId,
           selected_entry_id AS selectedEntryId,
           tree_is_expanded AS treeIsExpanded,
-          content_section_is_expanded AS contentSectionIsExpanded
+          content_section_is_expanded AS contentSectionIsExpanded,
+          scroll_top_by_mode_json AS scrollTopByModeJson
         FROM prompt_folder_view_state
         WHERE workspace_id = ? AND content_owner_id = ?
         `
@@ -189,7 +192,8 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           contentOwnerId: row.contentOwnerId,
           selectedEntryId: row.selectedEntryId,
           treeIsExpanded: row.treeIsExpanded !== 0,
-          contentSectionIsExpanded: row.contentSectionIsExpanded !== 0
+          contentSectionIsExpanded: row.contentSectionIsExpanded !== 0,
+          scrollTopByMode: JSON.parse(row.scrollTopByModeJson)
         }
       : null
   },
@@ -213,20 +217,23 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
         content_owner_id,
         selected_entry_id,
         tree_is_expanded,
-        content_section_is_expanded
+        content_section_is_expanded,
+        scroll_top_by_mode_json
       )
-      VALUES (?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
         selected_entry_id = excluded.selected_entry_id,
         tree_is_expanded = excluded.tree_is_expanded,
-        content_section_is_expanded = excluded.content_section_is_expanded
+        content_section_is_expanded = excluded.content_section_is_expanded,
+        scroll_top_by_mode_json = excluded.scroll_top_by_mode_json
       `
     ).run(
       workspaceId,
       contentOwnerId,
       uiState.selectedEntryId,
       uiState.treeIsExpanded ? 1 : 0,
-      uiState.contentSectionIsExpanded ? 1 : 0
+      uiState.contentSectionIsExpanded ? 1 : 0,
+      JSON.stringify(uiState.scrollTopByMode)
     )
   }
 }

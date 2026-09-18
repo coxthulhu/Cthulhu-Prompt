@@ -15,6 +15,8 @@ type PromptFolderViewRow = {
   selectedEntryId: string
   treeIsExpanded: number
   contentSectionIsExpanded: number
+  /** Serialized offsets retained during stale-owner cleanup. */
+  scrollTopByModeJson: string
 }
 
 /** Parses nullable selected-screen JSON without accepting malformed data. */
@@ -68,7 +70,8 @@ export class WorkspaceUiStateDataAccess {
           `SELECT content_owner_id AS contentOwnerId,
                   selected_entry_id AS selectedEntryId,
                   tree_is_expanded AS treeIsExpanded,
-                  content_section_is_expanded AS contentSectionIsExpanded
+                  content_section_is_expanded AS contentSectionIsExpanded,
+                  scroll_top_by_mode_json AS scrollTopByModeJson
            FROM prompt_folder_view_state WHERE workspace_id = ?`
         )
         .all(workspaceId) as PromptFolderViewRow[]
@@ -77,8 +80,8 @@ export class WorkspaceUiStateDataAccess {
       const insertPromptFolder = db.prepare(
         `INSERT INTO prompt_folder_view_state (
            workspace_id, content_owner_id, selected_entry_id,
-           tree_is_expanded, content_section_is_expanded
-         ) VALUES (?, ?, ?, ?, ?)`
+           tree_is_expanded, content_section_is_expanded, scroll_top_by_mode_json
+         ) VALUES (?, ?, ?, ?, ?, ?)`
       )
       for (const row of promptFolderRows) {
         if (!validContentOwnerIds.has(row.contentOwnerId)) continue
@@ -87,7 +90,8 @@ export class WorkspaceUiStateDataAccess {
           row.contentOwnerId,
           row.selectedEntryId,
           row.treeIsExpanded,
-          row.contentSectionIsExpanded
+          row.contentSectionIsExpanded,
+          row.scrollTopByModeJson
         )
       }
 

@@ -130,7 +130,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 21 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 22 })
 
       /** Welcome remains eligible by default when the preference column is migrated. */
       const appPersistenceColumnsResult = await runSqlQuery(

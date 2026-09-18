@@ -62,9 +62,7 @@ import {
 } from '@renderer/data/Mutations/PromptTemplateMutations'
 import {
   lookupPromptFolderScrollTop,
-  recordPromptFolderScrollTop
-} from '@renderer/data/UiState/cache/PromptFolderUiCache.svelte.ts'
-import {
+  setPromptFolderScrollTopWithAutosave,
   lookupWorkspacePersistedPromptFolderContentSectionExpandedState,
   lookupWorkspacePersistedPromptFolderSelection,
   setPromptFolderContentSectionExpandedStateWithAutosave,
@@ -162,7 +160,7 @@ export const createPromptFolderScreenController = ({
   })
   const screenRootFolderId = $derived(getScreenRootFolderId())
   const screenMode = $derived(getScreenMode())
-  /** Final-status metadata for the selected screen mode, or null for Active. */
+  /** Final-status metadata for the selected screen mode, or null for category-ordered modes. */
   const finalModeDefinition = $derived(getFinalPromptFolderScreenModeDefinition(screenMode))
   /** Whether the screen renders a final-status prompt list. */
   const isFinalMode = $derived(finalModeDefinition !== null)
@@ -399,8 +397,9 @@ export const createPromptFolderScreenController = ({
   let scrollToAndTrackRow = $state<ScrollToAndTrackRow | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
+  /** Seeds the virtual window from this root's persisted status-mode offset. */
   const getRestoredPromptFolderScrollTop = (): number =>
-    isFinalMode ? 0 : (lookupPromptFolderScrollTop(screenRootFolderId) ?? 0)
+    workspaceId ? (lookupPromptFolderScrollTop(workspaceId, screenRootFolderId, screenMode) ?? 0) : 0
 
   let initialPromptFolderScrollTopPx = $state(getRestoredPromptFolderScrollTop())
   let latestCenteredPromptScreenRow = $state<ActivePromptScreenRow | null>(null)
@@ -967,9 +966,13 @@ export const createPromptFolderScreenController = ({
     const requestId = promptFolderLoadRequestId
     const canUseCachedData = hasCachedPromptFolderData(screenRootFolderId)
     const currentNavigationTarget = selectedNavigationTarget
+    /** Only an outstanding reveal is explicit navigation; a retained selection is history. */
     const hasExplicitSelection =
-      currentNavigationTarget !== null && promptNavigation.selectionSource !== 'scroll-follow'
+      currentNavigationTarget !== null &&
+      promptNavigation.contentRevealRequests.pending?.payload.screenRootFolderId === screenRootFolderId
     const explicitSelectionTarget = hasExplicitSelection ? currentNavigationTarget : null
+    /** Saved zero is a real position and must also override saved-item restoration. */
+    const savedScrollTop = lookupPromptFolderScrollTop(workspaceId, screenRootFolderId, screenMode)
     const persistedSelection =
       !explicitSelectionTarget && !canUseCachedData
         ? lookupWorkspacePersistedPromptFolderSelection(workspaceId, screenRootFolderId)
@@ -987,11 +990,13 @@ export const createPromptFolderScreenController = ({
         contentOwnerId: screenRootFolderId
       }
     // Reveals an explicit or persisted selection after its virtual rows are first created.
-    const shouldApplyInitialReveal =
-      !isFinalMode && Boolean(explicitSelectionTarget || persistedSelectionTarget)
-    const restoredScrollTop = explicitSelectionTarget ? 0 : getRestoredPromptFolderScrollTop()
+    const shouldApplyInitialReveal = Boolean(
+      explicitSelectionTarget || (!isFinalMode && savedScrollTop === null && persistedSelectionTarget)
+    )
+    const restoredScrollTop = explicitSelectionTarget ? 0 : (savedScrollTop ?? 0)
     const restoreSelectionSource: PromptNavigationSource =
-      persistedSelectionTarget || (!explicitSelectionTarget && restoredScrollTop <= 0)
+      (savedScrollTop === null && persistedSelectionTarget) ||
+      (!explicitSelectionTarget && restoredScrollTop <= 0)
         ? 'restore-hold'
         : 'restore'
 
@@ -1045,7 +1050,7 @@ export const createPromptFolderScreenController = ({
                 : undefined
       })
       initialContentRevealRequestId = result.contentRevealRequest?.id ?? null
-    } else if (!currentNavigationTarget) {
+    } else if (!currentNavigationTarget || savedScrollTop !== null) {
       setCurrentFolderSelection(initialSelectionTarget, restoreSelectionSource, {
         forceRequest: true
       })
@@ -1469,13 +1474,19 @@ export const createPromptFolderScreenController = ({
     viewportMetrics = nextViewportMetrics
   }
 
+  /** Persists actual virtual offsets, including clamping and explicit navigation results. */
   const handleVirtualScrollTopChange = (nextScrollTop: number) => {
     scrollTopPx = nextScrollTop
-    if (isFinalMode) {
-      return
-    }
+    if (!workspaceId) return
+    setPromptFolderScrollTopWithAutosave(workspaceId, screenRootFolderId, screenMode, nextScrollTop)
+  }
 
-    recordPromptFolderScrollTop(screenRootFolderId, nextScrollTop)
+  /** Copies the visible offset to the destination before the header tab remounts the screen. */
+  const preserveScrollForScreenMode = (nextMode: PromptFolderScreenMode): void => {
+    if (!workspaceId || nextMode === screenMode) return
+    setPromptFolderScrollTopWithAutosave(
+      workspaceId, screenRootFolderId, nextMode, scrollApi?.getScrollTop() ?? scrollTopPx
+    )
   }
 
   const handleVirtualCenterRowChange = (nextCenteredRow: ActivePromptScreenRow | null) => {
@@ -1605,6 +1616,7 @@ export const createPromptFolderScreenController = ({
     setScrollApi,
     setViewportMetrics,
     handleVirtualScrollTopChange,
+    preserveScrollForScreenMode,
     handleVirtualCenterRowChange,
     handleVirtualUserScroll
   }

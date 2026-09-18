@@ -56,7 +56,10 @@
   } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
-  import { setPromptFolderSelectedEntryIdWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
+  import {
+    setPromptFolderSelectedEntryIdWithAutosave,
+    setPromptFolderScrollTopWithAutosave
+  } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
     isPromptFolderScreen,
@@ -665,8 +668,16 @@
   /** Toggles a finalized group and restores the default view when hiding the selected group. */
   const setFinalStatusGroupShown = (groupId: PromptStatusFolderId, isShown: boolean): void => {
     shownFinalStatusGroups[groupId] = isShown
-    if (isShown) setPromptFolderMode(groupId)
-    else if (promptFolderScreenMode === groupId) setPromptFolderMode(PromptFolderScreenMode.Active)
+    if (isShown) {
+      /** Enabling a sidebar section resets only this root's destination mode. */
+      const workspaceId = workspaceSelection.selectedWorkspaceId
+      if (workspaceId && screenRootFolderId) {
+        setPromptFolderScrollTopWithAutosave(workspaceId, screenRootFolderId, groupId, 0)
+      }
+      setPromptFolderMode(groupId)
+    } else if (promptFolderScreenMode === groupId) {
+      setPromptFolderMode(PromptFolderScreenMode.Active)
+    }
   }
 
   /** Selects the first remaining same-kind root or retains the empty folder activity. */

@@ -420,7 +420,8 @@ describe('main domain mutation framework', () => {
         contentOwnerId: 'category',
         selectedEntryId: 'category-details',
         treeIsExpanded: true,
-        contentSectionIsExpanded: true
+        contentSectionIsExpanded: true,
+        scrollTopByMode: {}
       },
       persistenceFields: {}
     })

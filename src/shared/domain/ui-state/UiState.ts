@@ -4,6 +4,7 @@ import type {
 } from '@shared/domain/user-persistence/UserPersistence'
 import type { IpcResult } from '@shared/ipc/IpcResult'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
+import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
 /** Persisted screen selection and last-root state for one workspace. */
 export type WorkspaceUiState = WorkspaceScreenSelection & {
@@ -21,6 +22,8 @@ export type WorkspacePromptFolderUiState = {
   selectedEntryId: string
   treeIsExpanded: boolean
   contentSectionIsExpanded: boolean
+  /** Last reachable viewport offset for each visited status mode of a root folder. */
+  scrollTopByMode: Partial<Record<PromptStatusFolderId, number>>
 }
 
 /** Persisted section state for one accordion instance in one workspace. */

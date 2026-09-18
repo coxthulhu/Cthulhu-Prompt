@@ -1,4 +1,5 @@
 import type { DomainChange, DomainPlanner } from '@shared/domain/DomainChanges'
+import { isPromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createAccordionUiStateKey,
   createWorkspacePromptFolderUiStateKey,
@@ -78,12 +79,19 @@ export const parseSetWorkspacePromptFolderUiStateDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 5 ||
+    Object.keys(record).length !== 6 ||
     typeof record.workspaceId !== 'string' ||
     typeof record.contentOwnerId !== 'string' ||
     typeof record.selectedEntryId !== 'string' ||
     typeof record.treeIsExpanded !== 'boolean' ||
-    typeof record.contentSectionIsExpanded !== 'boolean'
+    typeof record.contentSectionIsExpanded !== 'boolean' ||
+    typeof record.scrollTopByMode !== 'object' ||
+    record.scrollTopByMode === null ||
+    Array.isArray(record.scrollTopByMode) ||
+    Object.entries(record.scrollTopByMode).some(
+      ([mode, offset]) => !isPromptStatusFolderId(mode) ||
+        typeof offset !== 'number' || !Number.isFinite(offset) || offset < 0
+    )
   ) {
     return null
   }

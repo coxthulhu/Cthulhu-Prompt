@@ -4,9 +4,7 @@ import {
 } from '@renderer/data/Collections/PromptFolderClientStateCollection'
 import {
   clearPromptFolderSettingsRowMeasuredHeight,
-  clearPromptFolderSettingsRowMeasuredHeights,
-  clearPromptFolderScrollTop,
-  clearPromptFolderScrollTops
+  clearPromptFolderSettingsRowMeasuredHeights
 } from '@renderer/data/UiState/cache/PromptFolderUiCache.svelte.ts'
 
 /** Creates the renderer-session client state for one prompt folder. */
@@ -31,7 +29,6 @@ export const upsertPromptFolderClientStates = (promptFolderIds: string[]): void 
   for (const promptFolderId of promptFolderIds) {
     if (promptFolderClientStateCollection.has(promptFolderId)) continue
     clearPromptFolderSettingsRowMeasuredHeight(promptFolderId)
-    clearPromptFolderScrollTop(promptFolderId)
     clientStateInserts.push(createPromptFolderClientStateRecord(promptFolderId))
   }
 
@@ -62,7 +59,6 @@ export const deletePromptFolderClientStates = (promptFolderIds: string[]): void 
   }
 
   clearPromptFolderSettingsRowMeasuredHeights(promptFolderIds)
-  clearPromptFolderScrollTops(promptFolderIds)
   promptFolderClientStateCollection.delete(promptFolderIds)
 }
 

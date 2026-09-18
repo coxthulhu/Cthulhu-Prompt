@@ -1321,7 +1321,8 @@ describe('Prompt categories', () => {
               contentOwnerId: PROMPT_ROOT_ID,
               selectedEntryId: 'categorized-prompt',
               treeIsExpanded: false,
-              contentSectionIsExpanded: false
+              contentSectionIsExpanded: false,
+              scrollTopByMode: {}
             }
           })
         ])

@@ -45,6 +45,12 @@
 
   let didDeleteScreenRootFolder = $state(false)
 
+  /** Keeps the folder header at its current offset when selecting a different status tab. */
+  const handleScreenModeChange = (nextMode: PromptFolderScreenMode): void => {
+    controller.preserveScrollForScreenMode(nextMode)
+    onScreenModeChange(nextMode)
+  }
+
   // Side effect: persist the last selected row for this folder when the screen unmounts.
   onDestroy(() => {
     if (didDeleteScreenRootFolder) return
@@ -289,7 +295,7 @@
             onContentSectionToggle={controller.toggleContentSectionExpanded}
             onRenamePromptFolder={openRenamePromptFolderDialog}
             onManageCategory={openManageCategoryDialog}
-            {onScreenModeChange}
+            onScreenModeChange={handleScreenModeChange}
           />
         {/if}
       </div>

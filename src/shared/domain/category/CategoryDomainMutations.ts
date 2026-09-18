@@ -601,7 +601,8 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
         contentOwnerId: command.promptFolderId,
         selectedEntryId,
         treeIsExpanded: true,
-        contentSectionIsExpanded: true
+        contentSectionIsExpanded: true,
+        scrollTopByMode: {}
       }
       changes.push({
         type: 'insert',
@@ -766,7 +767,8 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
         contentOwnerId: command.promptFolderId,
         selectedEntryId,
         treeIsExpanded: true,
-        contentSectionIsExpanded: true
+        contentSectionIsExpanded: true,
+        scrollTopByMode: {}
       }
       changes.push({
         type: 'insert',
