@@ -220,19 +220,21 @@
           <Card label="Get Started" class={homeCardClass} data-testid="home-primary-card">
             <div class="flex flex-col">
               <DisplayRow
-                icon={FolderPlus}
-                label="Choose a Workspace"
-                detail="Create a new workspace folder, or open an existing one to continue."
-              />
-
-              <Separator />
-
-              <DisplayRow
-                icon={FileText}
-                label="Manage Your Prompts"
-                detail="Cthulhu Prompt stores and manages your prompts as simple Markdown files in a workspace folder."
+                icon={BookOpen}
+                label="Welcome to Cthulhu Prompt"
+                detail="Learn to use Cthulhu Prompt."
                 wrapDetail
-              />
+              >
+                {#snippet trailing()}
+                  <Button
+                    icon={BookOpen}
+                    text="Welcome"
+                    variant="accent"
+                    testId="show-welcome-button"
+                    onclick={() => (showWelcomeDialog = true)}
+                  />
+                {/snippet}
+              </DisplayRow>
 
               <Separator />
 
@@ -382,27 +384,6 @@
                     appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
                     onclick={onWorkspaceClear}
                     state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                  />
-                {/snippet}
-              </DisplayRow>
-            {/if}
-
-            {#if !currentWorkspaceDetails}
-              <Separator />
-
-              <DisplayRow
-                icon={BookOpen}
-                label="Welcome"
-                detail="Learn to use Cthulhu Prompt."
-                wrapDetail
-              >
-                {#snippet trailing()}
-                  <Button
-                    icon={BookOpen}
-                    text="Welcome"
-                    variant="accent"
-                    testId="show-welcome-button"
-                    onclick={() => (showWelcomeDialog = true)}
                   />
                 {/snippet}
               </DisplayRow>
