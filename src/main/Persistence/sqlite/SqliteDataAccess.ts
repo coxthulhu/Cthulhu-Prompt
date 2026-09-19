@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPe
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 22
+const LATEST_SCHEMA_VERSION = 23
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -731,6 +731,17 @@ const applyStartupMigrations = (db: Database.Database): void => {
         db.prepare('UPDATE schema_version SET version = ?').run(22)
       })()
       schemaVersion = 22
+      continue
+    }
+
+    if (schemaVersion === 22) {
+      // Give each root independent navigation defaults while retaining existing UI state.
+      db.transaction(() => {
+        db.exec("ALTER TABLE prompt_folder_view_state ADD COLUMN selected_mode TEXT NOT NULL DEFAULT 'active'")
+        db.exec("ALTER TABLE prompt_folder_view_state ADD COLUMN shown_final_status_groups_json TEXT NOT NULL DEFAULT '{}'")
+        db.prepare('UPDATE schema_version SET version = ?').run(23)
+      })()
+      schemaVersion = 23
       continue
     }
 

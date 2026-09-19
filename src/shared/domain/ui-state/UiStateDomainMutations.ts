@@ -79,12 +79,19 @@ export const parseSetWorkspacePromptFolderUiStateDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 6 ||
+    Object.keys(record).length !== 8 ||
     typeof record.workspaceId !== 'string' ||
     typeof record.contentOwnerId !== 'string' ||
     typeof record.selectedEntryId !== 'string' ||
     typeof record.treeIsExpanded !== 'boolean' ||
     typeof record.contentSectionIsExpanded !== 'boolean' ||
+    !isPromptStatusFolderId(record.selectedMode) ||
+    typeof record.shownFinalStatusGroups !== 'object' ||
+    record.shownFinalStatusGroups === null ||
+    Array.isArray(record.shownFinalStatusGroups) ||
+    Object.entries(record.shownFinalStatusGroups).some(
+      ([mode, shown]) => !isPromptStatusFolderId(mode) || typeof shown !== 'boolean'
+    ) ||
     typeof record.scrollTopByMode !== 'object' ||
     record.scrollTopByMode === null ||
     Array.isArray(record.scrollTopByMode) ||

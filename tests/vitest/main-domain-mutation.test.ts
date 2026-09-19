@@ -421,7 +421,9 @@ describe('main domain mutation framework', () => {
         selectedEntryId: 'category-details',
         treeIsExpanded: true,
         contentSectionIsExpanded: true,
-        scrollTopByMode: {}
+        scrollTopByMode: {},
+        selectedMode: PromptStatusFolderId.Active,
+        shownFinalStatusGroups: {}
       },
       persistenceFields: {}
     })

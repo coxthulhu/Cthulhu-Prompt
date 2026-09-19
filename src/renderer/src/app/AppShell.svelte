@@ -58,7 +58,10 @@
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import {
     setPromptFolderSelectedEntryIdWithAutosave,
-    setPromptFolderScrollTopWithAutosave
+    setPromptFolderScrollTopWithAutosave,
+    lookupPromptFolderUiState,
+    setPromptFolderStatusNavigationWithAutosave,
+    expandPromptStatusSectionWithAutosave
   } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
@@ -177,8 +180,10 @@
   /** Mounted prompt-folder screen used for sidebar actions owned by that screen. */
   let promptFolderScreen = $state<PromptFolderScreenHandle | null>(null)
   let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
-  /** Session visibility for toggleable finalized status groups. */
+  /** Selected root's persisted visibility for toggleable finalized status groups. */
   let shownFinalStatusGroups = $state<Partial<Record<PromptStatusFolderId, boolean>>>({})
+  /** Most recently visited modes first, independently for each root in the open workspace. */
+  let modeHistoryByFolder = $state<Record<string, PromptStatusFolderId[]>>({})
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -211,6 +216,45 @@
   const clearPromptFolderSelection = () => {
     screenRootFolderId = null
     promptFolderScreenMode = PromptFolderScreenMode.Active
+    shownFinalStatusGroups = {}
+  }
+
+  /** Records a visit without accumulating duplicate entries in a folder's return history. */
+  const rememberPromptFolderMode = (): void => {
+    if (!screenRootFolderId) return
+    modeHistoryByFolder[screenRootFolderId] = [
+      promptFolderScreenMode,
+      ...(modeHistoryByFolder[screenRootFolderId] ?? []).filter(
+        (mode) => mode !== promptFolderScreenMode
+      )
+    ]
+  }
+
+  /** Restores the selected root before its screen mounts, including template-root state. */
+  const restorePromptFolderMode = (expandSection = true): void => {
+    /** Workspace whose loaded collection contains the selected root's navigation settings. */
+    const workspaceId = getSelectedWorkspaceId()
+    /** Saved navigation defaults to Active with both optional sections hidden. */
+    const saved = workspaceId && screenRootFolderId
+      ? lookupPromptFolderUiState(workspaceId, screenRootFolderId)
+      : null
+    promptFolderScreenMode = saved?.selectedMode ?? PromptFolderScreenMode.Active
+    shownFinalStatusGroups = { ...saved?.shownFinalStatusGroups }
+    rememberPromptFolderMode()
+    if (expandSection && workspaceId && screenRootFolderId &&
+      promptFolderCollection.get(screenRootFolderId)?.kind === 'prompt') {
+      expandPromptStatusSectionWithAutosave(workspaceId, promptFolderScreenMode)
+    }
+  }
+
+  /** Queues both navigation fields together through the existing folder autosave. */
+  const persistPromptFolderMode = (): void => {
+    /** Workspace owning this root's independent navigation preferences. */
+    const workspaceId = getSelectedWorkspaceId()
+    if (!workspaceId || !screenRootFolderId) return
+    setPromptFolderStatusNavigationWithAutosave(
+      workspaceId, screenRootFolderId, promptFolderScreenMode, shownFinalStatusGroups
+    )
   }
 
   /** Maps a folder activity to its authoritative root kind. */
@@ -255,7 +299,7 @@
   /** Selects the remembered task root used by every non-folder activity sidebar. */
   const selectPromptTaskSidebarRoot = (): void => {
     screenRootFolderId = resolvePromptFolderNavigationId('prompt-task-folders')
-    promptFolderScreenMode = PromptFolderScreenMode.Active
+    restorePromptFolderMode(false)
   }
 
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
@@ -296,7 +340,7 @@
     await closeWorkspaceMutation()
     clearPromptFolderSelection()
     promptNavigation.clear()
-    shownFinalStatusGroups = {}
+    modeHistoryByFolder = {}
     // Side effect: let workspace editors unmount before releasing their Monaco models.
     await tick()
     await clearWorkspaceMonacoModels()
@@ -391,6 +435,7 @@
 
       if (restoredPromptFolderId) {
         screenRootFolderId = restoredPromptFolderId
+        restorePromptFolderMode()
         activeScreen = workspaceUiState.selectedScreen
         if (
           persistedPromptFolderId !== restoredPromptFolderId ||
@@ -626,6 +671,7 @@
     if (isPromptFolderScreen(screen)) {
       const promptFolderId = resolvePromptFolderNavigationId(screen)
       screenRootFolderId = promptFolderId
+      restorePromptFolderMode()
     } else {
       selectPromptTaskSidebarRoot()
     }
@@ -646,9 +692,6 @@
       return
     }
     screenRootFolderId = promptFolderId
-    if (promptFolder.kind === 'template') {
-      promptFolderScreenMode = PromptFolderScreenMode.Active
-    }
     navigateToScreen(targetScreen)
   }
 
@@ -663,9 +706,14 @@
       shownFinalStatusGroups[nextMode] = true
     }
     promptFolderScreenMode = nextMode
+    rememberPromptFolderMode()
+    persistPromptFolderMode()
+    /** Every selected destination must be reachable in the sidebar, including restored modes. */
+    const workspaceId = getSelectedWorkspaceId()
+    if (workspaceId) expandPromptStatusSectionWithAutosave(workspaceId, nextMode)
   }
 
-  /** Toggles a finalized group and restores the default view when hiding the selected group. */
+  /** Hides the selected group by returning to this root's most recently visited visible mode. */
   const setFinalStatusGroupShown = (groupId: PromptStatusFolderId, isShown: boolean): void => {
     shownFinalStatusGroups[groupId] = isShown
     if (isShown) {
@@ -676,7 +724,14 @@
       }
       setPromptFolderMode(groupId)
     } else if (promptFolderScreenMode === groupId) {
-      setPromptFolderMode(PromptFolderScreenMode.Active)
+      /** Hidden finalized groups are skipped; category workflows always remain available. */
+      const returnMode = (modeHistoryByFolder[screenRootFolderId ?? ''] ?? []).find(
+        (mode) => mode !== groupId &&
+          (PROMPT_STATUS_FOLDER_REGISTRY[mode].ordering === 'category' || shownFinalStatusGroups[mode])
+      ) ?? PromptFolderScreenMode.Active
+      setPromptFolderMode(returnMode)
+    } else {
+      persistPromptFolderMode()
     }
   }
 

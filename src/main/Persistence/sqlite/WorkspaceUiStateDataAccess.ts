@@ -17,6 +17,10 @@ type PromptFolderViewRow = {
   contentSectionIsExpanded: number
   /** Serialized offsets retained during stale-owner cleanup. */
   scrollTopByModeJson: string
+  /** Last root mode retained when stale owners are pruned. */
+  selectedMode: string
+  /** Root-specific visibility retained when stale owners are pruned. */
+  shownFinalStatusGroupsJson: string
 }
 
 /** Parses nullable selected-screen JSON without accepting malformed data. */
@@ -71,7 +75,9 @@ export class WorkspaceUiStateDataAccess {
                   selected_entry_id AS selectedEntryId,
                   tree_is_expanded AS treeIsExpanded,
                   content_section_is_expanded AS contentSectionIsExpanded,
-                  scroll_top_by_mode_json AS scrollTopByModeJson
+                  scroll_top_by_mode_json AS scrollTopByModeJson,
+                  selected_mode AS selectedMode,
+                  shown_final_status_groups_json AS shownFinalStatusGroupsJson
            FROM prompt_folder_view_state WHERE workspace_id = ?`
         )
         .all(workspaceId) as PromptFolderViewRow[]
@@ -80,8 +86,9 @@ export class WorkspaceUiStateDataAccess {
       const insertPromptFolder = db.prepare(
         `INSERT INTO prompt_folder_view_state (
            workspace_id, content_owner_id, selected_entry_id,
-           tree_is_expanded, content_section_is_expanded, scroll_top_by_mode_json
-         ) VALUES (?, ?, ?, ?, ?, ?)`
+           tree_is_expanded, content_section_is_expanded, scroll_top_by_mode_json,
+           selected_mode, shown_final_status_groups_json
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
       for (const row of promptFolderRows) {
         if (!validContentOwnerIds.has(row.contentOwnerId)) continue
@@ -91,7 +98,9 @@ export class WorkspaceUiStateDataAccess {
           row.selectedEntryId,
           row.treeIsExpanded,
           row.contentSectionIsExpanded,
-          row.scrollTopByModeJson
+          row.scrollTopByModeJson,
+          row.selectedMode,
+          row.shownFinalStatusGroupsJson
         )
       }
 

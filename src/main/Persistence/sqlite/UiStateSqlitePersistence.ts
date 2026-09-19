@@ -44,6 +44,10 @@ type WorkspacePromptFolderUiStateRow = {
   contentSectionIsExpanded: number
   /** Serialized offsets for the root folder's visited status modes. */
   scrollTopByModeJson: string
+  /** Selected root mode retained across application launches. */
+  selectedMode: WorkspacePromptFolderUiState['selectedMode']
+  /** Serialized visibility of the root's optional status sections. */
+  shownFinalStatusGroupsJson: string
 }
 
 /** SQLite row containing one serialized accordion state. */
@@ -180,7 +184,9 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           selected_entry_id AS selectedEntryId,
           tree_is_expanded AS treeIsExpanded,
           content_section_is_expanded AS contentSectionIsExpanded,
-          scroll_top_by_mode_json AS scrollTopByModeJson
+          scroll_top_by_mode_json AS scrollTopByModeJson,
+          selected_mode AS selectedMode,
+          shown_final_status_groups_json AS shownFinalStatusGroupsJson
         FROM prompt_folder_view_state
         WHERE workspace_id = ? AND content_owner_id = ?
         `
@@ -193,7 +199,9 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           selectedEntryId: row.selectedEntryId,
           treeIsExpanded: row.treeIsExpanded !== 0,
           contentSectionIsExpanded: row.contentSectionIsExpanded !== 0,
-          scrollTopByMode: JSON.parse(row.scrollTopByModeJson)
+          scrollTopByMode: JSON.parse(row.scrollTopByModeJson),
+          selectedMode: row.selectedMode,
+          shownFinalStatusGroups: JSON.parse(row.shownFinalStatusGroupsJson)
         }
       : null
   },
@@ -218,14 +226,18 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
         selected_entry_id,
         tree_is_expanded,
         content_section_is_expanded,
-        scroll_top_by_mode_json
+        scroll_top_by_mode_json,
+        selected_mode,
+        shown_final_status_groups_json
       )
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
         selected_entry_id = excluded.selected_entry_id,
         tree_is_expanded = excluded.tree_is_expanded,
         content_section_is_expanded = excluded.content_section_is_expanded,
-        scroll_top_by_mode_json = excluded.scroll_top_by_mode_json
+        scroll_top_by_mode_json = excluded.scroll_top_by_mode_json,
+        selected_mode = excluded.selected_mode,
+        shown_final_status_groups_json = excluded.shown_final_status_groups_json
       `
     ).run(
       workspaceId,
@@ -233,7 +245,9 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
       uiState.selectedEntryId,
       uiState.treeIsExpanded ? 1 : 0,
       uiState.contentSectionIsExpanded ? 1 : 0,
-      JSON.stringify(uiState.scrollTopByMode)
+      JSON.stringify(uiState.scrollTopByMode),
+      uiState.selectedMode,
+      JSON.stringify(uiState.shownFinalStatusGroups)
     )
   }
 }

@@ -1322,7 +1322,9 @@ describe('Prompt categories', () => {
               selectedEntryId: 'categorized-prompt',
               treeIsExpanded: false,
               contentSectionIsExpanded: false,
-              scrollTopByMode: {}
+              scrollTopByMode: {},
+              selectedMode: 'active',
+              shownFinalStatusGroups: {}
             }
           })
         ])

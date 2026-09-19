@@ -24,7 +24,8 @@ const WORKSPACE_ID = 'status-scroll-workspace'
 /** Starts two populated roots with distinct saved offsets and a conflicting selected item. */
 const startSavedWorkspace = async (
   { electronApp, testSetup }: Pick<PlaywrightTestFixtures, 'electronApp' | 'testSetup'>,
-  initialActiveOffset = 137
+  initialActiveOffset = 137,
+  selectedMode: 'active' | 'backlog' = 'active'
 ) => {
   await testSetup.setupFilesystem(
     createWorkspaceWithFolders(
@@ -58,6 +59,7 @@ const startSavedWorkspace = async (
       {
         contentOwnerId: 'Alpha',
         selectedEntryId: 'Alpha-Todo-10',
+        selectedMode,
         scrollTopByMode: { active: initialActiveOffset, backlog: 900, completed: 271, archived: 389 }
       },
       {
@@ -93,6 +95,20 @@ const expectScroll = async (
 }
 
 describe('Prompt folder status scroll restoration', () => {
+  test('clamps an empty restored mode to its reachable offset', async ({ electronApp, testSetup }) => {
+    /** Backlog restores its saved 900px position without a header click replacing that offset. */
+    const { mainWindow, testHelpers } = await startSavedWorkspace({ electronApp, testSetup }, 137, 'backlog')
+    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Backlog')
+    /** Empty content's actual scroll limit must replace the unreachable persisted position. */
+    const reachableOffset = Math.max(0,
+      (await testHelpers.getVirtualWindowScrollHeight(HOST)) -
+      (await (mainWindow as Page).locator(HOST).evaluate((host) => host.clientHeight)))
+    expect(reachableOffset).toBeLessThan(900)
+    await expectScroll(testHelpers, reachableOffset)
+    await expect.poll(async () => Math.abs((await readOffsets(electronApp, 'Alpha')).backlog - reachableOffset))
+      .toBeLessThanOrEqual(2)
+  })
+
   test('restores exact startup and root offsets, while explicit item and overview navigation win', async ({ electronApp, testSetup }) => {
     /** Startup uses Active's saved viewport even though prompt 10 was selected. */
     const { mainWindow, testHelpers } = await startSavedWorkspace({ electronApp, testSetup }, 1200)
@@ -128,23 +144,27 @@ describe('Prompt folder status scroll restoration', () => {
     await expectScroll(testHelpers, 40)
     await expect.poll(async () => (await readOffsets(electronApp, 'Alpha')).completed).toBe(40)
     await clickPromptFolderItem(mainWindow, 'Beta')
-    await expectScroll(testHelpers, 317)
+    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
+    await expectScroll(testHelpers, 223)
     await clickPromptFolderItem(mainWindow, 'Alpha')
     await expectScroll(testHelpers, 40)
     await mainWindow.getByTestId('prompt-folder-archived-filter').click()
     await expectScroll(testHelpers, 40)
     await expect.poll(async () => (await readOffsets(electronApp, 'Alpha')).archived).toBe(40)
     await clickPromptFolderItem(mainWindow, 'Beta')
-    await expectScroll(testHelpers, 431)
+    await expectScroll(testHelpers, 223)
     await testHelpers.scrollVirtualWindowTo(HOST, 0)
     await mainWindow.getByTestId('prompt-folder-backlog-filter').click()
     await clickPromptFolderItem(mainWindow, 'Alpha')
+    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Archived')
+    await expectScroll(testHelpers, 40)
+    await mainWindow.getByTestId('prompt-folder-backlog-filter').click()
     /** Empty Backlog can still scroll through its header and proportional bottom spacer. */
-    const reachableOffset = Math.max(
+    const reachableOffset = Math.min(40, Math.max(
       0,
       (await testHelpers.getVirtualWindowScrollHeight(HOST)) -
         (await (mainWindow as Page).locator(HOST).evaluate((host) => host.clientHeight))
-    )
+    ))
     expect(reachableOffset).toBeLessThan(900)
     await expectScroll(testHelpers, reachableOffset)
     await expect
@@ -152,10 +172,10 @@ describe('Prompt folder status scroll restoration', () => {
       .toBeLessThanOrEqual(2)
     await expect.poll(async () => (await readOffsets(electronApp, 'Alpha')).active).toBe(40)
     expect(await readOffsets(electronApp, 'Beta')).toEqual({
-      active: 223,
+      active: 0,
       backlog: 0,
       completed: 317,
-      archived: 0
+      archived: 431
     })
   })
 

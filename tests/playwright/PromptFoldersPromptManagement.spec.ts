@@ -2774,6 +2774,8 @@ describe('Prompt folder prompt management', () => {
     expect(Math.abs(resizedActiveHeightPx - initialActiveHeightPx + 30)).toBeLessThanOrEqual(2)
     await testHelpers.navigateToPromptFolders('Completed Mode')
     /** Status section heights after navigating to another root prompt folder. */
+    // This root previously hid Completed; visibility is now independent for each root.
+    await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     const navigatedStatusHeightsPx = await Promise.all([
       mainWindow
         .locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
@@ -2794,7 +2796,7 @@ describe('Prompt folder prompt management', () => {
     await testHelpers.navigateToPromptFolders('No Completed')
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-completed"]')
-    ).toHaveAttribute('aria-expanded', 'false')
+    ).toHaveAttribute('aria-expanded', 'true')
   })
 
   test('archives prompts and exposes archived status views and drag targets', async ({
@@ -2880,13 +2882,13 @@ describe('Prompt folder prompt management', () => {
       'archived-mode-oldest'
     ])
 
-    /** Sidebar toggle that hides Archived and returns the active screen to Active. */
+    /** Sidebar toggle returns to Completed, the most recently visited visible mode. */
     const archivedToggle = mainWindow.locator('[data-testid="toggle-archived-prompts-button"]')
     await archivedToggle.click()
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-section-archived"]')
     ).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveAttribute(
       'aria-pressed',
       'true'
     )

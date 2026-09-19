@@ -130,7 +130,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 22 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 23 })
 
       /** Welcome remains eligible by default when the preference column is migrated. */
       const appPersistenceColumnsResult = await runSqlQuery(
@@ -179,6 +179,10 @@ describe('Test Infrastructure', () => {
       )
 
       expect(promptFolderViewStateColumnsResult.success).toBe(true)
+      expect(promptFolderViewStateColumnsResult.rows).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'selected_mode', type: 'TEXT', notnull: 1, dflt_value: "'active'" }),
+        expect.objectContaining({ name: 'shown_final_status_groups_json', type: 'TEXT', notnull: 1, dflt_value: "'{}'" })
+      ]))
       expect(promptFolderViewStateColumnNames).toContain('tree_is_expanded')
       expect(promptFolderViewStateColumnNames).not.toContain('details_section_is_expanded')
       expect(promptFolderViewStateColumnNames).not.toContain(

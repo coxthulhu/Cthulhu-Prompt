@@ -484,7 +484,9 @@ describe('shared domain mutation planners', () => {
       selectedEntryId: 'existing-root-selection',
       treeIsExpanded: false,
       contentSectionIsExpanded: false,
-      scrollTopByMode: {}
+      scrollTopByMode: {},
+      selectedMode: PromptStatusFolderId.Active,
+      shownFinalStatusGroups: {}
     }
     /** Category state selecting its category-only details row. */
     const categoryUiState = {
@@ -493,7 +495,9 @@ describe('shared domain mutation planners', () => {
       selectedEntryId: 'category-details',
       treeIsExpanded: true,
       contentSectionIsExpanded: true,
-      scrollTopByMode: {}
+      scrollTopByMode: {},
+      selectedMode: PromptStatusFolderId.Active,
+      shownFinalStatusGroups: {}
     }
     /** Active workspace navigation pointing at the deleted category owner. */
     const activeWorkspaceUiState = {

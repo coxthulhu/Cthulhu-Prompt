@@ -24,6 +24,10 @@ export type WorkspacePromptFolderUiState = {
   contentSectionIsExpanded: boolean
   /** Last reachable viewport offset for each visited status mode of a root folder. */
   scrollTopByMode: Partial<Record<PromptStatusFolderId, number>>
+  /** Last selected status mode for this root folder. */
+  selectedMode: PromptStatusFolderId
+  /** Toggleable sidebar sections shown for this root folder. */
+  shownFinalStatusGroups: Partial<Record<PromptStatusFolderId, boolean>>
 }
 
 /** Persisted section state for one accordion instance in one workspace. */

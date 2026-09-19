@@ -602,7 +602,9 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
         selectedEntryId,
         treeIsExpanded: true,
         contentSectionIsExpanded: true,
-        scrollTopByMode: {}
+        scrollTopByMode: {},
+        selectedMode: PromptStatusFolderId.Active,
+        shownFinalStatusGroups: {}
       }
       changes.push({
         type: 'insert',
@@ -768,7 +770,9 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
         selectedEntryId,
         treeIsExpanded: true,
         contentSectionIsExpanded: true,
-        scrollTopByMode: {}
+        scrollTopByMode: {},
+        selectedMode: PromptStatusFolderId.Active,
+        shownFinalStatusGroups: {}
       }
       changes.push({
         type: 'insert',

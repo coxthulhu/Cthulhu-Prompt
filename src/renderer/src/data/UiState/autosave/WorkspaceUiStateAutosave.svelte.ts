@@ -1,5 +1,5 @@
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
-import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   isPromptFolderScreenSelection,
   type WorkspaceAccordionSectionViewEntry
@@ -37,11 +37,13 @@ const createPromptFolderUiState = (
   selectedEntryId: DEFAULT_SELECTED_ENTRY_ID,
   treeIsExpanded: DEFAULT_TREE_IS_EXPANDED,
   contentSectionIsExpanded: DEFAULT_CONTENT_SECTION_IS_EXPANDED,
-  scrollTopByMode: {}
+  scrollTopByMode: {},
+  selectedMode: PromptStatusFolderId.Active,
+  shownFinalStatusGroups: {}
 })
 
 /** Reads one root or category prompt-folder view state by its composite key. */
-const lookupPromptFolderUiState = (
+export const lookupPromptFolderUiState = (
   workspaceId: string,
   contentOwnerId: string
 ): WorkspacePromptFolderUiState | null =>
@@ -60,6 +62,8 @@ const setPromptFolderUiStateFieldsWithAutosave = (
       | 'treeIsExpanded'
       | 'contentSectionIsExpanded'
       | 'scrollTopByMode'
+      | 'selectedMode'
+      | 'shownFinalStatusGroups'
     >
   >,
   selectedPromptFolderId?: string
@@ -98,6 +102,40 @@ const setPromptFolderUiStateFieldsWithAutosave = (
       AUTOSAVE_MS
     )
   }
+}
+
+/** Saves root-specific navigation without changing selection, scroll, or accordion sizing. */
+export const setPromptFolderStatusNavigationWithAutosave = (
+  workspaceId: string,
+  promptFolderId: string,
+  selectedMode: PromptStatusFolderId,
+  shownFinalStatusGroups: WorkspacePromptFolderUiState['shownFinalStatusGroups']
+): void => {
+  setPromptFolderUiStateFieldsWithAutosave(workspaceId, promptFolderId, {
+    selectedMode,
+    shownFinalStatusGroups: { ...shownFinalStatusGroups }
+  })
+}
+
+/** Workspace-wide accordion shared by the root folders' status trees. */
+export const PROMPT_STATUS_ACCORDION_PERSISTENCE_ID = 'sidebar-prompt-statuses'
+
+/** Expands a navigation destination while retaining every configured section height. */
+export const expandPromptStatusSectionWithAutosave = (
+  workspaceId: string,
+  mode: PromptStatusFolderId
+): void => {
+  /** Saved sections default to expanded until the user explicitly collapses one. */
+  const current = lookupWorkspacePersistedAccordionViewEntry(
+    workspaceId, PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
+  )
+  if (!current?.sections.some((section) => section.id === mode && !section.isExpanded)) return
+  setAccordionViewEntryWithAutosave(workspaceId, {
+    ...current,
+    sections: current.sections.map((section) =>
+      section.id === mode ? { ...section, isExpanded: true } : section
+    )
+  })
 }
 
 /** Reads the saved offset without treating an unvisited mode as a saved top position. */

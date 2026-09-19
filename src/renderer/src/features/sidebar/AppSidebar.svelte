@@ -40,8 +40,7 @@
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
   import {
-    lookupWorkspacePersistedAccordionViewEntry,
-    setAccordionViewEntryWithAutosave
+    PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
   } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
   import {
@@ -136,9 +135,6 @@
     onScreenRootFolderSelect: (screenRootFolderId: string) => void
     onDeleteSelectedPromptFolder: (screenRootFolderId: string) => void
   }>()
-
-  /** Workspace-wide persistence key shared by every prompt folder's status accordion. */
-  const PROMPT_STATUS_ACCORDION_PERSISTENCE_ID = 'sidebar-prompt-statuses'
 
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptNavigation = getPromptNavigationContext()
@@ -399,27 +395,10 @@
     }
   ])
 
-  /** Shows finalized groups expanded without changing their saved accordion heights. */
+  /** Toggles this root's finalized section through the shared navigation handler. */
   const toggleFinalStatusGroup = (groupId: PromptStatusFolderId): void => {
     /** Visibility requested by this toolbar click. */
     const isShown = !shownFinalStatusGroups[groupId]
-    /** Workspace owning the sidebar accordion's saved section state. */
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (isShown && workspaceId) {
-      /** Existing section settings; unsaved sections already default to expanded. */
-      const accordionViewEntry = lookupWorkspacePersistedAccordionViewEntry(
-        workspaceId,
-        PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
-      )
-      if (accordionViewEntry) {
-        setAccordionViewEntryWithAutosave(workspaceId, {
-          ...accordionViewEntry,
-          sections: accordionViewEntry.sections.map((section) =>
-            section.id === groupId ? { ...section, isExpanded: true } : section
-          )
-        })
-      }
-    }
     onFinalStatusGroupShownChange(groupId, isShown)
   }
 

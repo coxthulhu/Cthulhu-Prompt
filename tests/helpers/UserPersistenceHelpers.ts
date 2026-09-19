@@ -8,6 +8,10 @@ export type WorkspacePromptFolderUiStateSeedEntry = {
   contentSectionIsExpanded?: boolean
   /** Saved root-folder viewport offsets seeded for startup restoration tests. */
   scrollTopByMode?: Partial<Record<'active' | 'backlog' | 'completed' | 'archived', number>>
+  /** Root mode selected before startup. */
+  selectedMode?: 'active' | 'backlog' | 'completed' | 'archived'
+  /** Root-specific optional sections visible before startup. */
+  shownFinalStatusGroups?: Partial<Record<'completed' | 'archived', boolean>>
 }
 
 /** Seed values for one workspace-scoped accordion instance. */
@@ -230,7 +234,9 @@ export const seedWorkspaceUiState = async (
         selected_entry_id,
         tree_is_expanded,
         content_section_is_expanded,
-        scroll_top_by_mode_json
+        scroll_top_by_mode_json,
+        selected_mode,
+        shown_final_status_groups_json
       )
       VALUES (
         ${toSqlText(data.workspaceId)},
@@ -238,7 +244,9 @@ export const seedWorkspaceUiState = async (
         ${toSqlText(entry.selectedEntryId)},
         ${entry.treeIsExpanded === false ? 0 : 1},
         ${entry.contentSectionIsExpanded === false ? 0 : 1},
-        ${toSqlJson(entry.scrollTopByMode ?? {})}
+        ${toSqlJson(entry.scrollTopByMode ?? {})},
+        ${toSqlText(entry.selectedMode ?? 'active')},
+        ${toSqlJson(entry.shownFinalStatusGroups ?? {})}
       )
       `
     )
