@@ -1,3 +1,4 @@
+import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   createWorkspaceWithFolders,
@@ -10,13 +11,14 @@ import {
 } from '../helpers/PromptFolderSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
-import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
+import { parsePromptMarkdown, serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import {
   readWorkspaceUiState,
   seedWorkspaceUiState
 } from '../helpers/UserPersistenceHelpers'
 import {
+  beginCategoryHandleDrag,
   beginPromptHandleDrag,
   beginPromptTreeCategoryRowDrag,
   finishActiveDrag,
@@ -537,6 +539,63 @@ describe('Prompt categories', () => {
       ]
     })
   })
+
+  for (const source of ['editor', 'tree'] as const) {
+    test(`retains category capture after virtualizing the ${source} source and cancels cleanly`, async ({
+      electronApp,
+      testSetup
+    }) => {
+      /** Existing category fixture extended with enough entries to unload either source. */
+      const filesystem = createCategorizedWorkspace()
+      /** Persisted category order checked after a cancelled reorder. */
+      const orderPath = addSecondPromptCategory(filesystem)
+      /** Original category order used to attach filler prompts to the first category. */
+      const order = JSON.parse(filesystem[orderPath]!)
+      for (let index = 0; index < 80; index += 1) {
+        /** Stable fixture prompt identity and filename. */
+        const id = `capture-filler-${index}`
+        filesystem[`${WORKSPACE_PATH}/Prompts/Prompts/Active/${id}.prompt.md`] =
+          serializePromptMarkdown({
+            id,
+            title: id,
+            fallbackTitle: id,
+            category: PROMPT_CATEGORY_ID,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            modifiedAt: '2026-01-01T00:00:00.000Z',
+            status: PromptStatus.Todo,
+            promptText: 'Capture test prompt.'
+          })
+        order.categories[1].entries.push({ kind: 'prompt', id })
+      }
+      filesystem[orderPath] = JSON.stringify(order)
+      /** Running categorized workspace with virtualized editor and tree surfaces. */
+      const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+      await testHelpers.navigateToPromptFolders('Prompts')
+      /** Source row that must disappear while its viewport retains capture. */
+      const row = source === 'editor'
+        ? mainWindow.getByTestId(`category-editor-${PROMPT_CATEGORY_ID}`)
+        : mainWindow.getByTestId('prompt-tree-active-category-toggle-button-CodeReview')
+      /** Virtual viewport selected independently of the recycled source row. */
+      const viewportSelector = source === 'editor'
+        ? PROMPT_FOLDER_HOST_SELECTOR
+        : '[data-testid="prompt-tree-active-virtual-window"]'
+      /** Stable pointer-capture owner outside the virtual row list. */
+      const frame = mainWindow.locator(viewportSelector).locator('..')
+      await recordPointerId(frame)
+      if (source === 'editor') await beginCategoryHandleDrag(mainWindow, PROMPT_CATEGORY_ID)
+      else await beginPromptTreeCategoryRowDrag(mainWindow, 'Code Review')
+      /** Browser pointer identity preserved while virtual scrolling unloads the source. */
+      const pointerId = await expectPointerCapture(frame)
+      await testHelpers.scrollVirtualWindowBy(viewportSelector, 100_000)
+      await expect(row).toHaveCount(0)
+      await expectPointerCapture(frame)
+      await expect(mainWindow.getByTestId('drag-ghost')).toBeVisible()
+      await interruptPointerDrag(mainWindow, frame, pointerId, 'lostpointercapture')
+      await expect(mainWindow.getByTestId('drag-ghost')).toHaveCount(0)
+      await mainWindow.mouse.up()
+      expect(await readCategoryOrder(electronApp, orderPath)).toEqual(order)
+    })
+  }
 
   test('reorders categories before prompt-tree headers and at the tree bottom', async ({
     electronApp,

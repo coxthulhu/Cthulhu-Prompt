@@ -1,3 +1,4 @@
+import { expectPointerCapture, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
@@ -1246,10 +1247,16 @@ describe('Prompt folder prompt drag-drop', () => {
 
     const sourcePromptId = 'short-1'
 
+    /** Stable frame must retain browser capture after its source row unmounts. */
+    const frame = mainWindow.locator(PROMPT_TREE_HOST_SELECTOR).locator('..')
+    await recordPointerId(frame)
     await beginPromptTreeRowDrag(mainWindow, sourcePromptId)
+    await expectPointerCapture(frame)
     await scrollPromptTreeUntilRowUnmounts(mainWindow, sourcePromptId)
 
     await expect(mainWindow.locator(promptTreePromptSelector(sourcePromptId))).toHaveCount(0)
+    await expectPointerCapture(frame)
+    await expect(mainWindow.locator(dragGhostSelector)).toBeVisible()
     await expect(mainWindow.locator('body')).toHaveCSS('cursor', 'grabbing')
 
     await finishActiveDrag(mainWindow)

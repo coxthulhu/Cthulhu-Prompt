@@ -1,3 +1,4 @@
+import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
 import {
@@ -434,6 +435,46 @@ describe('Prompt Folder Order', () => {
       )
       .toEqual(['folder-gamma', 'folder-alpha', 'folder-beta'])
   })
+
+  for (const interruption of ['pointercancel', 'lostpointercapture'] as const) {
+    test(`discards folder-selector reorder previews after ${interruption}`, async ({ electronApp, testSetup }) => {
+      await testSetup.setupFilesystem(
+        createEmptyFolderWorkspace(DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH, ['Alpha', 'Beta', 'Gamma'])
+      )
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH)])
+      /** Workspace with a three-row selector whose preview can visibly change order. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Beta')
+      await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
+      /** Stationary list owns capture while its keyed rows reorder for the preview. */
+      const owner = mainWindow.locator(PROMPT_FOLDER_SELECTOR_ITEMS)
+      await recordPointerId(owner)
+      await beginPromptFolderDropdownDrag(mainWindow, 'folder-gamma')
+      /** Browser pointer retained across the preview's DOM reordering. */
+      const pointerId = await expectPointerCapture(owner)
+      await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-alpha'))
+      await expect.poll(() => readPromptFolderDropdownItemTestIds(mainWindow)).toEqual([
+        'sidebar-prompt-folder-dropdown-item-folder-gamma',
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-beta'
+      ])
+      await expectPointerCapture(owner)
+      await interruptPointerDrag(mainWindow, owner, pointerId, interruption)
+      await mainWindow.mouse.up()
+      await expect.poll(() => readPromptFolderDropdownItemTestIds(mainWindow)).toEqual([
+        'sidebar-prompt-folder-dropdown-item-folder-alpha',
+        'sidebar-prompt-folder-dropdown-item-folder-beta',
+        'sidebar-prompt-folder-dropdown-item-folder-gamma'
+      ])
+      expect(await readWorkspacePromptFolderIds(electronApp, DROPDOWN_DRAG_FOLDER_ORDER_WORKSPACE_PATH))
+        .toEqual(['folder-alpha', 'folder-beta', 'folder-gamma'])
+      await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText('Beta')
+      await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', 'grabbing')
+    })
+  }
 
   test('reorders folders from a scrolled folder selector dropdown', async ({
     electronApp,

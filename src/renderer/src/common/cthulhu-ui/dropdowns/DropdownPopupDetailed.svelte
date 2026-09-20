@@ -158,6 +158,7 @@
       <div
         use:itemsElementAction
         class="cthulhuUiDropdownPopupDetailedItems"
+        data-pointer-drag-owner
         data-testid={testId ? `${testId}-items` : undefined}
       >
         {#each items as item (item.id)}

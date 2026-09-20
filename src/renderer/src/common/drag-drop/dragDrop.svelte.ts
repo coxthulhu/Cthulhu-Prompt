@@ -1,5 +1,6 @@
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 import type { Component } from 'svelte'
+import { startPointerDrag } from './pointerDrag'
 
 const DRAG_START_DISTANCE_PX = 4
 const DRAG_GHOST_OFFSET_PX = 4
@@ -20,6 +21,8 @@ type DroppablePayloadResolver<TDropPayload> = (edge: DroppableEdge | null) => TD
 export type DragFinishResult<TSourcePayload, TDropPayload> = {
   sourcePayload: TSourcePayload
   dropPayload: TDropPayload | null
+  /** True when browser cancellation or capture loss prevented a drop. */
+  cancelled: boolean
 }
 
 export type DragGhostOptions = {
@@ -72,7 +75,7 @@ type ActiveDrag = {
   payload: unknown
   onDragStart: (() => void) | null
   onDragMove: ((clientX: number, clientY: number) => void) | null
-  onDragFinish: ((dropPayload: unknown | null) => void) | null
+  onDragFinish: ((dropPayload: unknown | null, cancelled: boolean) => void) | null
   cursorStyleElement: HTMLStyleElement | null
 }
 
@@ -667,10 +670,11 @@ const beginDrag = <TSourcePayload, TDropPayload>(
       ? (clientX, clientY) => options.onDragMove?.(sourcePayload, clientX, clientY)
       : null,
     onDragFinish: options.onDragFinish
-      ? (dropPayload) =>
+      ? (dropPayload, cancelled) =>
           options.onDragFinish?.({
             sourcePayload,
-            dropPayload: dropPayload as TDropPayload | null
+            dropPayload: dropPayload as TDropPayload | null,
+            cancelled
           })
       : null,
     cursorStyleElement: createDragCursorStyleElement(sourceNode)
@@ -700,7 +704,8 @@ const finishDrag = (): {
   }
 }
 
-const endDrag = (): void => {
+/** Clears the drag and accepts a target only after a normal pointer release. */
+const endDrag = (cancelled: boolean): void => {
   const { activeDrag: completedDrag, activeDropTarget: completedDropTarget } = finishDrag()
 
   if (!completedDrag) {
@@ -708,13 +713,13 @@ const endDrag = (): void => {
   }
 
   const dropPayload =
-    completedDropTarget && !completedDropTarget.isBlocked
+    !cancelled && completedDropTarget && !completedDropTarget.isBlocked
       ? completedDropTarget.registration.getOptions().resolvePayload(completedDropTarget.edge)
       : null
-  if (completedDropTarget && !completedDropTarget.isBlocked) {
+  if (!cancelled && completedDropTarget && !completedDropTarget.isBlocked) {
     completedDropTarget.registration.getOptions().onDrop?.(completedDrag.payload)
   }
-  completedDrag.onDragFinish?.(dropPayload)
+  completedDrag.onDragFinish?.(dropPayload, cancelled)
   closeDragOpenedDropdowns()
 }
 
@@ -736,6 +741,10 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
   node: HTMLElement,
   options: DraggableOptions<TSourcePayload, TDropPayload>
 ) => {
+  /** Pending or captured pointer session retained across source-row virtualization. */
+  let dragSession: ReturnType<typeof startPointerDrag> | null = null
+  /** Stable capture owner for the active press. */
+  let captureTarget: HTMLElement | null = null
   let draggableOptions = options
   let suppressNextClick = false
   let suppressClickResetId: number | null = null
@@ -771,55 +780,57 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
     event.stopImmediatePropagation()
   }
 
-  const handleMouseDown = (event: MouseEvent) => {
-    if (event.button !== 0 || activeDrag) {
-      return
-    }
+  /** Starts tracking a primary-button press without changing ordinary row clicks. */
+  const handlePointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || activeDrag || dragSession) return
 
+    /** Pointer-down coordinates used by the existing four-pixel drag threshold. */
     const startX = event.clientX
+    /** Vertical origin of the pending drag. */
     const startY = event.clientY
+    /** Whether this press has crossed the threshold and created drag visuals. */
     let hasStartedDrag = false
+    captureTarget = node.closest<HTMLElement>('[data-virtual-window-frame], [data-pointer-drag-owner]') ?? node
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!hasStartedDrag) {
-        const deltaX = moveEvent.clientX - startX
-        const deltaY = moveEvent.clientY - startY
-        if (deltaX * deltaX + deltaY * deltaY < DRAG_START_DISTANCE_PX * DRAG_START_DISTANCE_PX) {
-          return
+    dragSession = startPointerDrag({
+      target: captureTarget,
+      event,
+      captureImmediately: false,
+      onMove: (moveEvent) => {
+        if (!hasStartedDrag) {
+          /** Horizontal distance from the initial press. */
+          const deltaX = moveEvent.clientX - startX
+          /** Vertical distance from the initial press. */
+          const deltaY = moveEvent.clientY - startY
+          if (deltaX * deltaX + deltaY * deltaY < DRAG_START_DISTANCE_PX * DRAG_START_DISTANCE_PX) {
+            return
+          }
+
+          dragSession!.capture()
+          hasStartedDrag = true
+          beginDrag(node, draggableOptions, moveEvent.clientX, moveEvent.clientY)
+        } else {
+          updateDragCursor(moveEvent.clientX, moveEvent.clientY)
         }
-
-        beginDrag(node, draggableOptions, moveEvent.clientX, moveEvent.clientY)
-        hasStartedDrag = true
-      } else {
-        updateDragCursor(moveEvent.clientX, moveEvent.clientY)
+        moveEvent.preventDefault()
+      },
+      onFinish: (cancelled) => {
+        dragSession = null
+        captureTarget = null
+        if (hasStartedDrag) {
+          suppressClickAfterDrag()
+          endDrag(cancelled)
+        }
       }
-
-      moveEvent.preventDefault()
-    }
-
-    const cleanupPointerListeners = () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    const handleMouseUp = () => {
-      cleanupPointerListeners()
-
-      if (hasStartedDrag) {
-        suppressClickAfterDrag()
-        endDrag()
-      }
-    }
-
-    // Side effect: track the pointer on the window only for the active press.
-    window.addEventListener('mousemove', handleMouseMove, { passive: false })
-    window.addEventListener('mouseup', handleMouseUp)
+    })
   }
 
   node.draggable = false
   node.addEventListener('click', handleClickCapture, true)
   node.addEventListener('dragstart', handleNativeDragStart)
-  node.addEventListener('mousedown', handleMouseDown)
+  node.addEventListener('pointerdown', handlePointerDown)
+  // Touch drags starting on handles must not become browser panning gestures.
+  node.style.touchAction = 'none'
 
   return {
     update(nextOptions: DraggableOptions<TSourcePayload, TDropPayload>) {
@@ -829,8 +840,10 @@ export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(
       clearClickSuppression()
       node.removeEventListener('click', handleClickCapture, true)
       node.removeEventListener('dragstart', handleNativeDragStart)
-      node.removeEventListener('mousedown', handleMouseDown)
-      // Keep the active drag alive if virtualization unmounts the source row mid-drag.
+      node.removeEventListener('pointerdown', handlePointerDown)
+      node.style.removeProperty('touch-action')
+      // Keep capture on the frame while virtualization removes only the source row.
+      if (captureTarget === node || activeDrag?.sourceNode !== node) dragSession?.cancel()
     }
   }
 }

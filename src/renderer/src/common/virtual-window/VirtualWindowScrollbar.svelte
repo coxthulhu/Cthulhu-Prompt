@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
+  import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
 
   type Props = {
     scrollTopPx: number
@@ -90,7 +91,8 @@
     onScrollTopChange(nextScrollTop)
   }
 
-  const startDragging = (dragOffsetPx: number) => {
+  /** Captures a thumb or track press while preserving its initial thumb offset. */
+  const startDragging = (event: PointerEvent, dragOffsetPx: number) => {
     if (!trackElement) return
     const rect = trackElement.getBoundingClientRect()
     revealScrollbar()
@@ -102,7 +104,6 @@
     }
 
     const handlePointerUp = () => {
-      dragCleanup?.()
       dragCleanup = null
       isDragging = false
       if (isPointerOverWindow) {
@@ -112,34 +113,35 @@
       hideScrollbar(true)
     }
 
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp, { once: true })
-
-    dragCleanup = () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-    }
+    /** Captured thumb or track owns this scroll gesture until completion. */
+    const session = startPointerDrag({
+      target: event.currentTarget as HTMLElement,
+      event,
+      onMove: handlePointerMove,
+      onFinish: handlePointerUp
+    })
+    dragCleanup = session.cancel
   }
 
   const handleThumbPointerDown = (event: PointerEvent) => {
-    if (!trackElement) return
+    if (!trackElement || event.button !== 0 || isDragging) return
     event.preventDefault()
 
     const rect = trackElement.getBoundingClientRect()
     const clickOffset = event.clientY - rect.top
     const dragOffsetPx = clamp(clickOffset - thumbTopPx, 0, thumbHeightPx)
-    startDragging(dragOffsetPx)
+    startDragging(event, dragOffsetPx)
   }
 
   const handleTrackPointerDown = (event: PointerEvent) => {
-    if (!trackElement || event.target !== trackElement) return
+    if (!trackElement || event.target !== trackElement || event.button !== 0 || isDragging) return
     event.preventDefault()
 
     const rect = trackElement.getBoundingClientRect()
     const clickOffset = event.clientY - rect.top
     const nextThumbTop = clamp(clickOffset - thumbHeightPx / 2, 0, maxThumbTopPx)
     applyThumbTop(nextThumbTop)
-    startDragging(thumbHeightPx / 2)
+    startDragging(event, thumbHeightPx / 2)
   }
 
   // Side effect: keep scrollbar visibility aligned with hover state.
@@ -233,6 +235,7 @@
   }
 
   .virtual-window-scrollbar-track {
+    touch-action: none;
     position: relative;
     width: 100%;
     height: 100%;

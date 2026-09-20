@@ -1,6 +1,7 @@
 <script lang="ts">
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import type { Snippet } from 'svelte'
+  import { onDestroy, type Snippet } from 'svelte'
+  import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
   import type { HTMLAttributes } from 'svelte/elements'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
@@ -60,6 +61,8 @@
   let registeredSections = $state<AccordionSectionRegistration[]>([])
   /** Active drag metadata, or null while no sash is being dragged. */
   let dragState = $state<AccordionDragState | null>(null)
+  /** Active pointer session owned by the sash rather than the moving header. */
+  let dragSession: ReturnType<typeof startPointerDrag> | null = null
   /** Explicit section heights shown during the active sash drag. */
   let dragHeightsById = $state<Record<string, number> | null>(null)
   /** Explicit section heights preserving header positions between toggles and viewport resizing. */
@@ -409,15 +412,16 @@
       }))
       persistAccordionSections(sections)
     }
+    dragSession = null
     dragState = null
     dragHeightsById = null
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
   }
 
-  /** Starts a left-button sash drag from the current proportional layout. */
+  /** Starts a primary-button sash drag for mouse, touch, or pen. */
   const startSectionResize = (sectionId: string, event: PointerEvent): void => {
-    if (event.pointerType !== 'mouse' || event.button !== 0 || !canResizeSection(sectionId)) return
+    if (event.button !== 0 || dragSession || !canResizeSection(sectionId)) return
     event.preventDefault()
     event.stopPropagation()
     dragState = {
@@ -430,6 +434,12 @@
     toggledHeightsById = null
     document.body.style.cursor = 'ns-resize'
     document.body.style.userSelect = 'none'
+    dragSession = startPointerDrag({
+      target: event.currentTarget as HTMLElement,
+      event,
+      onMove: handlePointerMove,
+      onFinish: finishDragging
+    })
   }
 
   // Side effect: recalculate proportional section sizes whenever the accordion viewport changes.
@@ -445,16 +455,8 @@
     return () => resizeObserver.disconnect()
   })
 
-  // Side effect: capture pointer movement globally only for the duration of a sash drag.
-  $effect(() => {
-    if (!dragState) return
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', finishDragging, { once: true })
-    return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', finishDragging)
-    }
-  })
+  // Side effect: release capture and drag visuals when the accordion unmounts.
+  onDestroy(() => dragSession?.cancel())
 
   /** Reactive compound-component API supplied to descendant accordion sections. */
   const accordionContext: AccordionContext = {

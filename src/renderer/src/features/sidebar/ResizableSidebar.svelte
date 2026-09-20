@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte'
+  import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
 
   let {
     /** Controls whether the sidebar surface and resize handle are rendered. */
@@ -39,45 +40,48 @@
   let desiredWidth = $state(untrack(() => defaultWidth))
   const width = $derived.by(() => Math.min(Math.max(desiredWidth, minWidth), maxWidth))
   let isDragging = $state(false)
-  let startMouseX = 0
+  /** Cancels the active pointer session when the component unmounts. */
+  let dragSession: ReturnType<typeof startPointerDrag> | null = null
+  /** Horizontal pointer origin for the current resize. */
+  let startPointerX = 0
   let startWidth = 0
 
+  /** Retains the latest width while clearing all resize-only visuals. */
   const stopDragging = () => {
+    dragSession = null
     isDragging = false
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
     document.documentElement.style.removeProperty('--disable-transitions')
   }
 
-  const handleMouseMove = (event: MouseEvent) => {
+  /** Applies horizontal pointer travel to the width captured at drag start. */
+  const handlePointerMove = (event: PointerEvent) => {
     if (!isDragging) return
-    const deltaX = event.clientX - startMouseX
+    const deltaX = event.clientX - startPointerX
     const nextWidth = startWidth + deltaX
     desiredWidth = Math.min(Math.max(nextWidth, minWidth), maxWidth)
   }
 
-  const handleMouseDown = (event: MouseEvent) => {
+  /** Starts a captured primary-button resize for mouse, touch, or pen. */
+  const handlePointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || dragSession) return
     event.preventDefault()
     event.stopPropagation()
-    startMouseX = event.clientX
+    startPointerX = event.clientX
     startWidth = width
     isDragging = true
     document.body.style.cursor = 'ew-resize'
     document.body.style.userSelect = 'none'
     // Disable transitions during drag to avoid jitter.
     document.documentElement.style.setProperty('--disable-transitions', '0s')
+    dragSession = startPointerDrag({
+      target: event.currentTarget as HTMLElement,
+      event,
+      onMove: handlePointerMove,
+      onFinish: stopDragging
+    })
   }
-
-  // Attach global listeners only while dragging so the rest of the app keeps pointer events.
-  $effect(() => {
-    if (!isDragging) return
-    window.addEventListener('mousemove', handleMouseMove, { passive: false })
-    window.addEventListener('mouseup', stopDragging)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('mouseup', stopDragging)
-    }
-  })
 
   // Side effect: keep external layouts in sync with the current sidebar width.
   $effect(() => {
@@ -91,7 +95,7 @@
 
   // Ensure drag state is cleared if the component unmounts mid-drag.
   onDestroy(() => {
-    stopDragging()
+    dragSession?.cancel()
   })
 </script>
 
@@ -110,10 +114,10 @@
 
         <button
           type="button"
-          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize bg-[var(--ui-ghost-surface)] z-10"
+          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize touch-none bg-[var(--ui-ghost-surface)] z-10"
           data-testid={handleTestId}
           aria-label="Resize sidebar"
-          onmousedown={handleMouseDown}
+          onpointerdown={handlePointerDown}
         ></button>
       </div>
     </div>

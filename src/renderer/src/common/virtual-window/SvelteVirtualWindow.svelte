@@ -251,6 +251,7 @@
 >
   <div
     bind:this={viewportFrame}
+    data-virtual-window-frame
     class="relative flex h-full w-full"
     onwheel={(event) => {
       event.preventDefault()

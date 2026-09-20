@@ -131,10 +131,11 @@ export const createPromptTreePromptDragController = ({
     startPromptDrag(sourcePayload)
   }
 
+  /** Resolves domain placement from a completed drag; cancelled drags supply no drop payload. */
   const handleDragFinish = ({
     sourcePayload,
     dropPayload
-  }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
+  }: Pick<DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>, 'sourcePayload' | 'dropPayload'>): void => {
     clearPromptEntryDrag()
 
     const result = resolvePromptTreePromptMove(getPromptFolders(), sourcePayload, dropPayload)

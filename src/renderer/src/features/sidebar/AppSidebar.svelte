@@ -646,7 +646,9 @@
       )
     },
     onDragFinish: (result) => {
-      persistPromptFolderSelectorReorder((result.sourcePayload as PromptFolderDragPayload).folderId)
+      if (!result.cancelled) {
+        persistPromptFolderSelectorReorder((result.sourcePayload as PromptFolderDragPayload).folderId)
+      }
       draggedPromptFolderSelectorId = null
       promptFolderSelectorDragSourceIds = null
       promptFolderSelectorPreviewIds = null
