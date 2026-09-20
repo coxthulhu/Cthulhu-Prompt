@@ -9,7 +9,7 @@
   export type RowTrailingLayout = 'single' | 'grouped'
 
   type Props = {
-    variant?: 'default' | 'compact-heading' | 'dialog-heading'
+    variant?: 'default' | 'dialog-heading'
     icon?: ComponentType
     label: string
     detail?: string
@@ -93,17 +93,9 @@
     column-gap: 12px;
     display: flex;
     min-width: 0;
-    padding: 16px;
     row-gap: 8px;
     text-align: left;
     width: 100%;
-  }
-
-  .cthulhuUiRow:where(
-      [data-variant='compact-heading'],
-      [data-variant='dialog-heading']
-    ) {
-    padding: 0;
   }
 
   .cthulhuUiRow[data-variant='dialog-heading'] .cthulhuUiRowTrailing {

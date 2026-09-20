@@ -94,7 +94,6 @@
 <!-- Single-category editor shared by existing and newly staged category drafts. -->
 <div class="cthulhuCategoryManagementEditor">
   <Row
-    variant="compact-heading"
     icon={Folder}
     label={displayName.trim() || 'New Category'}
     detail="Category settings"

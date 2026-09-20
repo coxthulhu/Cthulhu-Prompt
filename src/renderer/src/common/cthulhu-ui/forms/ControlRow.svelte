@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
+  import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {
     icon?: ComponentType
@@ -27,12 +28,13 @@
   }: Props = $props()
 </script>
 
+<!-- Control rows own the inset used inside card surfaces. -->
 <Row
   {icon}
   {label}
   {detail}
   {detailExtra}
-  class={className}
+  class={mergeClasses('cthulhuUiControlRow p-4', className)}
   {iconClass}
   {testId}
   trailingLayout="grouped"
