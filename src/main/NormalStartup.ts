@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
 import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -31,6 +31,7 @@ import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
 import { attachRendererLogging } from './logging'
+import { configureRendererSecurity, getRendererDevelopmentUrl } from './rendererSecurity'
 
 const WINDOW_DEFAULT_WIDTH = 1366
 const WINDOW_DEFAULT_HEIGHT = 768
@@ -207,6 +208,10 @@ const persistWindowState = (window: BrowserWindow): void => {
 
 function createWindow(runtimeConfig: RuntimeConfig): void {
   const windowStartupState = resolveWindowStartupState()
+  /** Bundled resources are the renderer's only direct filesystem source. */
+  const rendererDirectory = join(__dirname, '../renderer')
+  /** Development permits only the configured loopback Vite server. */
+  const developmentUrl = getRendererDevelopmentUrl()
 
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -231,6 +236,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
     }
   })
 
+  configureRendererSecurity(mainWindow, rendererDirectory, developmentUrl)
   attachRendererLogging(mainWindow)
 
   if (windowStartupState.isFullScreen) {
@@ -270,17 +276,11 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
   mainWindow.on('maximize', emitMaximizeState)
   mainWindow.on('unmaximize', emitMaximizeState)
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  // Development reloads use the same exact server allowed by the request policy.
+  if (developmentUrl) {
+    mainWindow.loadURL(developmentUrl.href)
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(rendererDirectory, 'index.html'))
   }
 }
 
