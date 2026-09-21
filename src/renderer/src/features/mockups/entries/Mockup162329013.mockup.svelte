@@ -514,7 +514,7 @@
   }
   const requestPromptDelete = (prompt: MockPrompt) => {
     if (!prompt.title.trim() && !prompt.text.trim()) { removePrompt(prompt); return }
-    confirmation = { title: 'Delete Prompt', description: 'Are you sure you want to delete this prompt?',
+    confirmation = { title: 'Delete Prompt', description: 'Are you sure you want to permanently delete this prompt?',
       submit: 'Delete', confirm: () => removePrompt(prompt) }
   }
   const addPrompt = (folder?: MockFolder, afterId?: string) => {

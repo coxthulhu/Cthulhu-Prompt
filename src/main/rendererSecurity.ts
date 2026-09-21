@@ -56,10 +56,20 @@ export function configureRendererSecurity(
     callback({ cancel: !allowsResource(details.url) })
   })
 
-  // The application changes screens internally; document navigation is never needed.
-  window.webContents.on('will-navigate', (event) => event.preventDefault())
+  /** Vite reloads the current development document when Svelte components change. */
+  const allowsDevelopmentReload = (address: string): boolean =>
+    developmentUrl !== undefined &&
+    address === developmentUrl.href &&
+    address === window.webContents.getURL()
+
+  // Permit Vite's development reload while preventing navigation away from the app.
+  window.webContents.on('will-navigate', (event) => {
+    if (!allowsDevelopmentReload(event.url)) event.preventDefault()
+  })
   window.webContents.on('will-frame-navigate', (event) => {
-    if (event.isMainFrame || !allowsResource(event.url)) event.preventDefault()
+    if (event.isMainFrame ? !allowsDevelopmentReload(event.url) : !allowsResource(event.url)) {
+      event.preventDefault()
+    }
   })
   window.webContents.on('will-redirect', (event, url) => {
     if (!allowsResource(url)) event.preventDefault()

@@ -526,7 +526,7 @@
   }
   const requestPromptDelete = (prompt: MockPrompt) => {
     if (!prompt.title.trim() && !prompt.text.trim()) { removePrompt(prompt); return }
-    confirmation = { title: 'Delete Prompt', description: 'Are you sure you want to delete this prompt?',
+    confirmation = { title: 'Delete Prompt', description: 'Are you sure you want to permanently delete this prompt?',
       submit: 'Delete', confirm: () => removePrompt(prompt) }
   }
   const addPrompt = (folder?: MockFolder, afterId?: string) => {
@@ -3272,7 +3272,7 @@
   .base-manage-dialog .base-dialog-confirm-button:disabled { cursor: default; opacity: 0.5; pointer-events: none; }
   .base-confirmation-dialog { max-width: 480px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
   .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
-  .base-confirmation-dialog > p { padding: 4px; margin: 0; }
+  .base-confirmation-dialog > p { padding: 0 4px 4px; margin: 0; }
   .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: var(--font-weight-semibold); }
   .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
   .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }

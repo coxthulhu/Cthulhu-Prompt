@@ -40,7 +40,7 @@
   copyTitle="Copy template"
   deleteLabel="Delete template"
   deleteDialogTitle="Delete Template"
-  deleteDialogDescription="Are you sure you want to delete this template?"
+  deleteDialogDescription="Are you sure you want to permanently delete this template?"
   onTitleChange={(title) => setPromptTemplateTitle(promptId, title)}
   onTextChange={(text, measurement) =>
     setPromptTemplateText(promptId, text, measurement)}

@@ -918,7 +918,7 @@
 <ConfirmationDialog
   bind:open={ConfirmationDialogOpen}
   title="Delete Prompt"
-  description="Are you sure you want to delete this prompt?"
+  description="Are you sure you want to permanently delete this prompt?"
   confirmText="Delete"
   onconfirm={() => {
     ConfirmationDialogOpen = false

@@ -47,12 +47,13 @@
   submitDisabled={!!confirmationText && !acknowledged}
   submitVariant="danger"
   submitTestId={confirmTestId}
+  showSeparators={!!confirmationText}
   closeOnOutsideClick
   scrollBody
   {oncancel}
   onsubmit={onconfirm}
 >
-  <div class="cthulhuUiConfirmationDialogContent">
+  <div class="cthulhuUiConfirmationDialogContent" data-has-acknowledgement={!!confirmationText}>
     <p class="cthulhuUiConfirmationDialogMessage text-base">{description}</p>
     {#if confirmationText}
       <label class="cthulhuUiConfirmationDialogAcknowledgement text-base">
@@ -78,6 +79,10 @@
     gap: 20px;
     min-width: 0;
     padding: 12px;
+  }
+
+  .cthulhuUiConfirmationDialogContent[data-has-acknowledgement='false'] {
+    padding: 0 12px 4px;
   }
 
   .cthulhuUiConfirmationDialogMessage {

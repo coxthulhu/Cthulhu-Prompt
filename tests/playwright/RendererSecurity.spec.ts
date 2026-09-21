@@ -45,6 +45,30 @@ describe('Renderer security', () => {
       const mainWindow = await electronApp.firstWindow()
       await mainWindow.waitForLoadState('domcontentloaded')
       await expect(mainWindow).toHaveTitle('Local development server')
+      /** Exercise Vite's renderer-initiated reload, rather than Playwright's privileged reload API. */
+      await mainWindow.evaluate(() => {
+        document.body.dataset.beforeReload = 'true'
+      })
+      await Promise.all([
+        mainWindow.waitForEvent('domcontentloaded'),
+        mainWindow.evaluate(() => location.reload())
+      ])
+      expect(await mainWindow.evaluate(() => document.body.dataset.beforeReload)).toBeUndefined()
+      expect(mainWindow.url()).toBe(`${origin}/`)
+
+      /** The reload exception must not allow another document on the same development server. */
+      await electronApp.evaluate(({ app, BrowserWindow }) => {
+        BrowserWindow.getAllWindows()[0].webContents.once('will-frame-navigate', (event) => {
+          ;(app as any).developmentNavigationBlocked = event.defaultPrevented
+        })
+      })
+      await mainWindow.evaluate(() => {
+        location.href = '/other-document'
+      })
+      await expect.poll(() => electronApp.evaluate(({ app }) =>
+        (app as any).developmentNavigationBlocked
+      )).toBe(true)
+      expect(mainWindow.url()).toBe(`${origin}/`)
       expect(await mainWindow.evaluate(async () => (await fetch('/allowed')).ok)).toBe(true)
       expect(await mainWindow.evaluate(async (origin) => {
         return await new Promise<boolean>((resolve) => {

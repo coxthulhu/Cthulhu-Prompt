@@ -78,7 +78,7 @@
     copyTitle,
     deleteLabel = 'Delete prompt',
     deleteDialogTitle = 'Delete Prompt',
-    deleteDialogDescription = 'Are you sure you want to delete this prompt?',
+    deleteDialogDescription = 'Are you sure you want to permanently delete this prompt?',
     finalizedAt = null,
     status = PromptStatus.Todo,
     isEdited = false,
