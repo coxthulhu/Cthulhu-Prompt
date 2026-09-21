@@ -3,6 +3,9 @@
   "productName": "Cthulhu Prompt",
   "version": "0.0.33",
   "packageManager": "npm@11.19.0",
+  "allowScripts": {
+    "better-sqlite3": false
+  },
   "devEngines": {
     "packageManager": {
       "name": "npm",
@@ -22,7 +25,7 @@
     "typecheck": "npm run typecheck:node && npm run svelte-check",
     "dev": "cross-env DEV_ENVIRONMENT=DEV CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=200 electron-vite dev --watch",
     "build": "npm run typecheck && electron-vite build",
-    "postinstall": "patch-package && electron-builder install-app-deps",
+    "postinstall": "patch-package && electron-builder install-app-deps && node scripts/verify-sqlite.mjs",
     "test:vitest": "vitest run tests/vitest",
     "test:playwright": "py -3 .\\RunPlaywrightCompact.py"
   },
@@ -44,7 +47,7 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@tailwindcss/vite": "^4.1.11",
     "@tanstack/svelte-db": "^0.3.8",
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "13.0.3",
     "gray-matter": "^4.0.3",
     "immer": "^11.1.4",
     "lucide-svelte": "^1.0.1",

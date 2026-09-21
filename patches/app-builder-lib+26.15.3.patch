@@ -1,0 +1,12 @@
+diff --git a/node_modules/app-builder-lib/out/util/yarn.js b/node_modules/app-builder-lib/out/util/yarn.js
+--- a/node_modules/app-builder-lib/out/util/yarn.js
++++ b/node_modules/app-builder-lib/out/util/yarn.js
+@@ -158,6 +158,8 @@ async function rebuild(config, { appDir, projectDir, workspaceRoot }, options) {
+         projectRootPath,
+         mode,
+         disablePreGypCopy: true,
++        // SQLite 13 ships a Node-API binary verified separately by our postinstall.
++        ignoreModules: ["better-sqlite3"],
+     };
+     return (0, rebuild_1.rebuild)(rebuildOptions);
+ }
