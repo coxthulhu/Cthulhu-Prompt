@@ -60,7 +60,7 @@
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let returnFocusTarget = $state<PromptFolderFindFocusRequest | null>(null)
   let shouldSelectCurrentMatch = $state(true)
-  // Preserve the editor anchor while reopening performs its required full rescan.
+  // Preserve the editor anchor whenever Ctrl+F requests a fresh search.
   let preserveSelectionOnNextSearch = false
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
   const query = $derived(matchText)
@@ -88,10 +88,8 @@
   const openFindDialog = () => {
     focusRequests.clear()
     revealRequests.clear()
-    if (!isFindOpen) {
-      isFindOpen = true
-      searchRevision += 1
-    }
+    isFindOpen = true
+    searchRevision += 1
     findInputFocusRequests.request(undefined)
   }
 
@@ -197,10 +195,13 @@
     revealRequests.request({ match, query })
   }
 
+  // Resume navigation from the user's cursor and cancel any older pending reveal.
   const recordSelectionAnchor = (anchor: PromptFolderFindAnchor) => {
     const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
     const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
     lastSelectionAnchor = { ...anchor, startOffset, endOffset }
+    shouldSelectCurrentMatch = false
+    revealRequests.clear()
     returnFocusTarget = {
       entityId: anchor.entityId,
       sectionKey: anchor.sectionKey,
@@ -254,7 +255,7 @@
 
   const openFindDialogFromSelection = () => {
     const nextMatchText = getSelectionMatchText()
-    preserveSelectionOnNextSearch = !isFindOpen
+    preserveSelectionOnNextSearch = true
     if (nextMatchText && nextMatchText !== matchText) {
       matchText = nextMatchText
     }

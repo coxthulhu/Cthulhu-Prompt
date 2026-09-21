@@ -701,6 +701,131 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveValue(selectedText!)
   })
 
+  // Navigation must follow a manually moved cursor even after find has selected a result.
+  test('navigates from a manually moved cursor while find stays open', async ({ testSetup }) => {
+    /** Isolated folder with three body matches on separate lines. */
+    const workspacePath = '/ws/find-manual-navigation-anchor'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Application window and navigation helpers for the regression workspace. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Anchor')
+    /** Editor containing all three navigation targets. */
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await waitForMonacoEditor(mainWindow, editorSelector)
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Control+F')
+    /** Find input used to establish an actively selected search result. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await findInput.press('Enter')
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+      selectedText: TYPING_ANCHOR_QUERY,
+      startLineNumber: 1
+    })
+    await findInput.press('Enter')
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+      selectedText: TYPING_ANCHOR_QUERY,
+      startLineNumber: 3
+    })
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.locator('[data-testid="prompt-find-next"]').click()
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+      selectedText: TYPING_ANCHOR_QUERY,
+      startLineNumber: 1
+    })
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+End')
+    await mainWindow.keyboard.press('Home')
+    await mainWindow.locator('[data-testid="prompt-find-prev"]').click()
+    await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+      selectedText: TYPING_ANCHOR_QUERY,
+      startLineNumber: 3
+    })
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+  })
+
+  // Reinvoking find must preserve both cursor positions and selection direction.
+  for (const selectionCase of ['same-word', 'different-word', 'backward-selection'] as const) {
+    test(`preserves ${selectionCase} on Ctrl+F while find stays open`, async ({ testSetup }) => {
+      /** Separate persisted workspace for each selection scenario. */
+      const workspacePath = `/ws/find-open-${selectionCase}`
+      await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Application window and navigation helpers for this scenario. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Anchor')
+      /** Editor whose cursor or selection supplies the next query. */
+      const editorSelector = promptEditorSelector('typing-anchor-1')
+      await waitForMonacoEditor(mainWindow, editorSelector)
+      await focusMonacoEditor(mainWindow, editorSelector)
+      await mainWindow.keyboard.press('Control+Home')
+      await mainWindow.keyboard.press('Control+F')
+      /** Existing find input, kept open throughout the cursor change. */
+      const findInput = mainWindow.locator(FIND_INPUT)
+      await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+      await findInput.press('Enter')
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+        selectedText: TYPING_ANCHOR_QUERY,
+        startLineNumber: 1
+      })
+      await findInput.press('Enter')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+
+      await focusMonacoEditor(mainWindow, editorSelector)
+      await mainWindow.keyboard.press('Control+Home')
+      if (selectionCase === 'backward-selection') {
+        await mainWindow.keyboard.press('End')
+        await mainWindow.keyboard.press('Control+Shift+ArrowLeft')
+      } else {
+        if (selectionCase === 'different-word') await mainWindow.keyboard.press('ArrowDown')
+        await mainWindow.keyboard.press('ArrowRight')
+      }
+      /** Exact editor selection, including direction, before refocusing find. */
+      const selectionBeforeFind = await getMonacoSelectionState(mainWindow, editorSelector)
+      expect(selectionBeforeFind).toMatchObject(
+        selectionCase === 'backward-selection'
+          ? { selectedText: 'marker', selectionStartColumn: 19, positionColumn: 13 }
+          : { selectedText: '', startColumn: 2 }
+      )
+      await mainWindow.keyboard.press('Control+F')
+      await expect(findInput).toBeFocused()
+      await expect(findInput).toHaveValue(
+        selectionCase === 'backward-selection'
+          ? 'marker'
+          : selectionCase === 'different-word'
+            ? 'zzzz'
+            : TYPING_ANCHOR_QUERY
+      )
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe(
+        selectionCase === 'backward-selection'
+          ? '1 of 4'
+          : selectionCase === 'different-word'
+            ? '1 of 1'
+            : '1 of 3'
+      )
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(
+        selectionBeforeFind
+      )
+      await mainWindow.keyboard.press('Escape')
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(
+        selectionBeforeFind
+      )
+    })
+  }
+
   test('preserves a backward selected Monaco match when opening and closing find', async ({
     testSetup
   }) => {
