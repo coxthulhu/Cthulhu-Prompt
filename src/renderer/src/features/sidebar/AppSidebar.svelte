@@ -368,14 +368,6 @@
       ? 'Expand All Categories'
       : 'Collapse All Categories'
   )
-  // Highlights the folder overview action only while its navigation target is active onscreen.
-  const isFolderRootActive = $derived(
-    isPromptFolderScreen(activeScreen) &&
-      screenRootFolder !== null &&
-      promptNavigation.screenRootFolderId === screenRootFolder.id &&
-      promptNavigation.contentOwnerId === screenRootFolder.id &&
-      promptNavigation.selectedRow === 'root-header'
-  )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
   /** Exact group counts shown in the accordion headers. */
   const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptStatus.Todo })) : promptQuery.data))
@@ -837,7 +829,6 @@
           borderless
           baseVariant="dim"
           disabled={!screenRootFolder}
-          active={isFolderRootActive}
           testId="sidebar-folder-root-button"
           onclick={selectFolderRoot}
         />

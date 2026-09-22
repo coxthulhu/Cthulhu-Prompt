@@ -338,9 +338,10 @@
     left.contentOwnerId === right.contentOwnerId &&
     left.row === right.row
 
+  /** Maps overview navigation to the first content entry in this status tree. */
   const getPromptTreeRowId = (target: PromptNavigationTarget): string | null => {
     if (target.row === 'root-header') {
-      return null
+      return virtualItems.find((item) => item.row.kind === 'prompt' || item.row.kind === 'category')?.id ?? null
     }
     if (target.row === 'category-details') {
       return categoryRowId(target.contentOwnerId)
@@ -474,13 +475,25 @@
     }
   })
 
+  /** Highlights the first entry for the overview, or the explicitly selected content row. */
   const isTreeEntryActive = (contentOwnerId: string, row: PromptNavigationRow): boolean => {
-    if (!isPromptFoldersScreenActive || !promptNavigation.selectedRow) {
+    if (
+      !isPromptFoldersScreenActive ||
+      promptNavigation.screenRootFolderId !== screenRootFolder?.id ||
+      !promptNavigation.selectedRow
+    ) {
       return false
     }
 
+    if (promptNavigation.selectedRow === 'root-header') {
+      return virtualItems[0]?.id === (
+        row === 'category-details'
+          ? categoryRowId(contentOwnerId)
+          : contentPromptRowId(contentOwnerId, promptNavigationRowToPersistedEntryId(row))
+      )
+    }
+
     return (
-      promptNavigation.screenRootFolderId === screenRootFolder?.id &&
       promptNavigation.contentOwnerId === contentOwnerId &&
       promptNavigation.selectedRow === row
     )
@@ -821,7 +834,7 @@
       return
     }
 
-    if (request.payload.row === 'root-header') {
+    if (request.payload.row === 'root-header' && isSelectedStatusTreeEmpty) {
       promptNavigation.treeRevealRequests.consume(request, () => undefined)
       return
     }

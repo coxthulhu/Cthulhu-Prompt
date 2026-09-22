@@ -628,7 +628,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(headerCategory).toHaveCount(0)
     await expect(headerSection).toHaveCSS('color', currentBreadcrumbColor)
     await expect(categoryContentToggle).toHaveAttribute('aria-expanded', 'false')
-    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).not.toHaveAttribute(
       'data-active',
       'true'
     )
@@ -1641,7 +1641,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SHORT_PROMPT_50)).toHaveAttribute('data-row-state', 'active')
   })
 
-  test('selects the root folder target at the top and opens its delete action', async ({
+  test('highlights the first prompt at the top and opens the folder delete action', async ({
     testSetup
   }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1660,10 +1660,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 0)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).not.toHaveAttribute(
       'data-active',
       'true'
     )
+    await expect(mainWindow.getByTestId('prompt-tree-active-prompt-short-1')).toHaveAttribute('aria-current', 'true')
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
     await expect(mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(DELETE_SELECTED_PROMPT_FOLDER_MENU_ITEM).click()
@@ -1693,13 +1694,13 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await mainWindow.locator('[data-testid="prompt-folder-header-section"]').click()
     await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
-    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).not.toHaveAttribute(
       'data-active',
       'true'
     )
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-short-1"]')).toHaveAttribute(
       'data-row-state',
-      'idle'
+      'active'
     )
   })
 
@@ -1816,23 +1817,24 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 1200)
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(1200)
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 0)
-    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).not.toHaveAttribute(
       'data-active',
-      'false'
+      'true'
     )
 
     await mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON).click()
 
     await expect.poll(async () => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST)).toBe(0)
-    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).not.toHaveAttribute(
       'data-active',
       'true'
     )
+    await expect(mainWindow.getByTestId('prompt-tree-active-prompt-short-1')).toHaveAttribute('aria-current', 'true')
     await testHelpers.navigateToHomeScreen()
     await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toBeVisible()
-    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).toHaveAttribute(
+    await expect(mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON)).not.toHaveAttribute(
       'data-active',
-      'false'
+      'true'
     )
   })
 })

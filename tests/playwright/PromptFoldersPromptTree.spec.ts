@@ -323,7 +323,7 @@ describe('Prompt folder prompt tree', () => {
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
     const folderRootButton = mainWindow.locator(SIDEBAR_FOLDER_ROOT_BUTTON_SELECTOR)
     await expect(mainWindow.locator('[data-testid="prompt-tree-root-folder"]')).toHaveCount(0)
-    await expect(folderRootButton).toHaveAttribute('data-active', 'true')
+    await expect(folderRootButton).not.toHaveAttribute('data-active', 'true')
     await expect(folderRootButton).toHaveCSS('border-top-style', 'none')
     const folderRootButtonBox = await folderRootButton.boundingBox()
     const folderRootIconBox = await folderRootButton.locator('svg').boundingBox()
@@ -379,25 +379,10 @@ describe('Prompt folder prompt tree', () => {
     expect(Math.abs(promptSectionAlignment!)).toBeLessThanOrEqual(1)
     await expect(mainWindow.locator('.cthulhuSidebarPromptSectionTitle')).toHaveCount(0)
     await mainWindow.locator('[data-testid="prompt-folder-completed-filter"]').click()
-    await expect(folderRootButton).toHaveAttribute('data-active', 'true')
+    await expect(folderRootButton).not.toHaveAttribute('data-active', 'true')
     await expect(
       mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
     ).toHaveAttribute('data-active', 'true')
-    // The gear uses the completed-check button's active background and glyph treatment.
-    const folderRootActiveStyles = await folderRootButton.evaluate((button) => ({
-      backgroundColor: getComputedStyle(button).backgroundColor,
-      color: getComputedStyle(button).color
-    }))
-    await expect
-      .poll(async () =>
-        mainWindow
-          .locator('[data-testid="toggle-completed-prompts-button"]')
-          .evaluate((button) => ({
-            backgroundColor: getComputedStyle(button).backgroundColor,
-            color: getComputedStyle(button).color
-          }))
-      )
-      .toEqual(folderRootActiveStyles)
     await mainWindow.locator('[data-testid="prompt-folder-active-filter"]').click()
     await expect(mainWindow.locator(MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
