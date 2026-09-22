@@ -246,7 +246,8 @@ export interface PromptContentFolder extends PromptFolderBase {
 export interface PromptTemplateFolder extends PromptFolderBase {
   kind: 'template'
   settings: PromptTemplateFolderSettings
-  categoryOrder: CategoryOrder
+  /** Shared layouts; templates expose only Active and Archived. */
+  statusFolders: PromptStatusFolderLayouts
 }
 
 export type PromptFolder = PromptContentFolder | PromptTemplateFolder
@@ -254,7 +255,7 @@ export type PromptFolder = PromptContentFolder | PromptTemplateFolder
 /** Returns every independently ordered category layout owned by one root folder. */
 export const getPromptFolderCategoryOrders = (promptFolder: PromptFolder): CategoryOrder[] =>
   promptFolder.kind === 'template'
-    ? [promptFolder.categoryOrder]
+    ? [promptFolder.statusFolders.active.categoryOrder]
     : Object.values(promptFolder.statusFolders).flatMap((layout) =>
         layout.ordering === 'category' ? [layout.categoryOrder] : []
       )

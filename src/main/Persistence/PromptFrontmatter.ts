@@ -19,7 +19,7 @@ type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'categor
 
 type PromptTemplateFrontmatterData = Pick<
   PromptTemplatePersisted,
-  'id' | 'createdAt' | 'category'
+  'id' | 'createdAt' | 'category' | 'status' | 'finalizedAt'
 > &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string })
 
@@ -97,7 +97,9 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
   const hasCategory = keys.includes('category')
 
   return (
-    keys.length === (hasCategory ? 4 : 3) &&
+    keys.length === (hasCategory ? 4 : 3) + (frontmatter.status === undefined ? 0 : 1) + (frontmatter.finalizedAt === undefined ? 0 : 1) &&
+    (frontmatter.status === undefined || frontmatter.status === PromptStatus.Todo || frontmatter.status === PromptStatus.Archived) &&
+    (frontmatter.status === PromptStatus.Archived ? typeof frontmatter.finalizedAt === 'string' : frontmatter.finalizedAt === undefined) &&
     keys.includes('id') &&
     keys.includes('createdAt') &&
     hasTitle !== hasFallbackTitle &&
@@ -105,6 +107,8 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
       new Set([
         'id',
         'createdAt',
+        'status',
+        'finalizedAt',
         hasTitle ? 'title' : 'fallbackTitle',
         ...(hasCategory ? ['category'] : [])
       ]).has(key)
@@ -194,6 +198,8 @@ export const parsePromptTemplateMarkdown = (
       createdAt: data.createdAt,
       modifiedAt: timestamp,
       ...(data.category !== undefined ? { category: data.category } : {}),
+      status: data.status ?? PromptStatus.Todo,
+      ...(data.finalizedAt ? { finalizedAt: data.finalizedAt } : {}),
       templateText: content
     })
   )
@@ -201,6 +207,7 @@ export const parsePromptTemplateMarkdown = (
 export const serializePromptTemplateMarkdown = (template: PromptTemplatePersisted): string => {
   const metadata: PromptTemplateFrontmatterData = {
     ...createTitleMetadata(template),
+    ...(template.status === PromptStatus.Archived ? { status: template.status, finalizedAt: template.finalizedAt } : {}),
     ...(template.category !== undefined ? { category: template.category } : {})
   }
   return serializeMarkdownFrontmatter(metadata, template.templateText)

@@ -7,7 +7,6 @@ import { folderEntryRef, removeEntry, resolveEntryInsertIndex } from '@shared/do
 import {
   createEmptyPromptFolderSettings,
   createPromptStatusFolderLayouts,
-  createRootCategoryOrder,
   getPromptFolderCategoryIds,
   type PromptFolder,
   type PromptFolderKind
@@ -192,7 +191,7 @@ export const planCreatePromptFolderDomainMutation: DomainPlanner<
           kind: 'template',
           folderName: preparedName.folderName,
           displayName: preparedName.displayName,
-          categoryOrder: createRootCategoryOrder(),
+          statusFolders: createPromptStatusFolderLayouts(),
           settings: createEmptyPromptFolderSettings()
         }
   return [

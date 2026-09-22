@@ -1,5 +1,5 @@
 import * as path from 'path'
-import { isFinalPromptStatus } from '@shared/domain/prompt/Prompt'
+import { getContentStatusFolders, isFinalPromptStatus } from '@shared/domain/prompt/Prompt'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import {
   getPromptFolderCategoryIds,
@@ -103,9 +103,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
 
     if (promptFolderSnapshot.data.kind === 'template') {
       /** Template IDs in their category-view order. */
-      const templateIds = promptFolderSnapshot.data.categoryOrder.categories.flatMap(
-        (category) => category.entries.map((entry) => entry.id)
-      )
+      const templateIds = getMarkdownContentIds(promptFolderSnapshot.data, 'template')
       for (const templateEntry of getLoadedPromptTemplateEntries(templateIds)) {
         loadedPromptTemplateIds.push(templateEntry.committed.id)
         promptTemplates.push(buildPromptTemplateSnapshot(templateEntry))
@@ -260,27 +258,23 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   // Side effect: hydrate all prompts only after prompt folder loads complete.
   await Promise.all(promptLoadTasks)
 
-  const promptTemplateLoadTasks = promptTemplateFolders.flatMap((promptFolder) => {
-    const folderPath = promptFolder.folderName
-    const templateStemById = readPromptTemplateStemById(workspacePath, folderPath)
-
-    return promptFolder.categoryOrder.categories.flatMap((category) => category.entries).flatMap((entry) => {
-      const templateStem = templateStemById.get(entry.id)
-      if (!templateStem) return []
-
-      return [
-        data.promptTemplate.loadDataFromPersistence(entry.id, {
-          workspaceId,
-          workspacePath,
-          folderPath,
+  const promptTemplateLoadTasks = promptTemplateFolders.flatMap((promptFolder) =>
+    getContentStatusFolders('template').flatMap((group) => {
+      /** Physical template directory and its discovered stable IDs. */
+      const folderPath = resolvePromptStatusFolderName(promptFolder.folderName, group.id)
+      /** Filenames used to hydrate both active and archived templates. */
+      const stems = readPromptTemplateStemById(workspacePath, folderPath)
+      return [...stems].map(([templateId, templateStem]) =>
+        data.promptTemplate.loadDataFromPersistence(templateId, {
+          workspaceId, workspacePath, folderPath,
           promptFolderId: promptFolder.id,
-          promptId: entry.id,
+          promptId: templateId,
           promptStem: templateStem,
-          needsFilenameIdSuffix: templateStem.endsWith(`-${entry.id.slice(0, 8)}`)
+          needsFilenameIdSuffix: templateStem.endsWith(`-${templateId.slice(0, 8)}`)
         })
-      ]
+      )
     })
-  })
+  )
 
   // Side effect: hydrate all prompt templates only after template folder loads complete.
   await Promise.all(promptTemplateLoadTasks)

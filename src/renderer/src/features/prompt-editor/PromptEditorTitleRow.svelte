@@ -14,6 +14,8 @@
     onDelete?: () => void
     /** Archives a prompt through the shared final-status mutation. */
     onArchive?: () => void
+    /** Restores an archived template to the top of Active. */
+    onRestore?: () => void
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
@@ -42,13 +44,14 @@
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/buttons/IconButtonWithMoreOptions.svelte'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
-  import { Archive, FileText, Layers, Trash2 } from 'lucide-svelte'
+  import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
   import { PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
@@ -63,6 +66,7 @@
     scrollToWithinWindowBand,
     onDelete,
     onArchive,
+    onRestore,
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
@@ -191,21 +195,21 @@
   /** Main split-button icon matching its current default action. */
   const DeletePrimaryIcon = $derived(isArchiveDefaultAction ? Archive : Trash2)
   /** Accessible main split-button label matching its current default action. */
-  const deletePrimaryLabel = $derived(isArchiveDefaultAction ? 'Archive prompt' : deleteLabel)
+  const deletePrimaryLabel = $derived(isArchiveDefaultAction ? deleteLabel.replace('Delete', 'Archive') : deleteLabel)
   /** Alternate action offered by the prompt delete split button. */
   const deleteMoreOptions = $derived.by<DropdownPopupDetailedItem[]>(() => [
     isArchiveDefaultAction
       ? {
           id: 'delete',
-          label: 'Delete Prompt',
-          detail: 'Permanently delete this prompt',
+          label: deleteDialogTitle,
+          detail: `Permanently ${deleteLabel.toLowerCase()}`,
           icon: Trash2,
           testId: 'prompt-delete-menu-item'
         }
       : {
           id: 'archive',
-          label: 'Archive Prompt',
-          detail: 'Move this prompt to Archived',
+          label: deleteDialogTitle.replace('Delete', 'Archive'),
+          detail: 'Move to Archived',
           icon: Archive,
           testId: 'prompt-archive-menu-item'
         }
@@ -332,7 +336,16 @@
 
     {#if onDelete}
       <Separator orientation="vertical" class="prompt-editor-title-actions-separator" />
-      <div class="prompt-editor-title-delete-section">
+      <IconButtonBar class="prompt-editor-title-delete-section">
+        {#if onRestore}
+          <IconButton
+            icon={Undo2}
+            label="Restore to Active"
+            title="Restore to Active"
+            testId="template-restore-button"
+            onclick={onRestore}
+          />
+        {/if}
         {#if onArchive && status !== PromptStatus.Archived}
           <IconButtonWithMoreOptions
             icon={DeletePrimaryIcon}
@@ -358,7 +371,7 @@
             onclick={handleDeleteClick}
           />
         {/if}
-      </div>
+      </IconButtonBar>
     {/if}
   </div>
 </div>
@@ -461,12 +474,6 @@
     align-items: center;
     display: flex;
     min-width: 0;
-  }
-
-  .prompt-editor-title-delete-section {
-    align-items: center;
-    display: flex;
-    flex: 0 0 auto;
   }
 
   :global(.prompt-editor-title-actions-separator.cthulhuUiSeparator) {

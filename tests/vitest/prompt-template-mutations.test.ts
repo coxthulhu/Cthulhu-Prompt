@@ -1,3 +1,4 @@
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
@@ -28,14 +29,14 @@ const templateFolder = (id: string, templateIds: string[] = []) => ({
   kind: 'template' as const,
   folderName: id,
   displayName: id,
-  categoryOrder: {
+  statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
     categories: [
       {
         categoryId: null,
         entries: templateIds.map((id) => ({ kind: 'template' as const, id }))
       }
     ]
-  },
+  } } }),
   settings: { folderDescription: null }
 })
 
@@ -176,7 +177,7 @@ describe('prompt template mutations', () => {
       id: 'new-template',
       isEdited: true
     })
-    expect(sourceFolder.categoryOrder.categories[0]?.entries).toEqual([
+    expect(sourceFolder.statusFolders.active.categoryOrder.categories[0]?.entries).toEqual([
       { kind: 'template', id: 'new-template' },
       { kind: 'template', id: 'paced-template' }
     ])
@@ -270,7 +271,7 @@ describe('prompt template mutations', () => {
     })
     expect(deleteTemplate).toHaveBeenCalledWith('paced-template')
     expect(deleteClientState).toHaveBeenCalledWith('paced-template')
-    expect(sourceAfterDelete.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(sourceAfterDelete.statusFolders.active.categoryOrder.categories[0]?.entries).toEqual([])
     /** Generic delete invoke spy captures the workspace-scoped deletion command. */
     const deleteInvoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
     await deleteOptions.persistMutations({ invoke: deleteInvoke, transaction: {} })
@@ -328,8 +329,8 @@ describe('prompt template mutations', () => {
         promptTemplateClientState: { update: updateClientState }
       }
     })
-    expect(sourceAfterMove.categoryOrder.categories[0]?.entries).toEqual([])
-    expect(destinationAfterMove.categoryOrder.categories[0]?.entries).toEqual([
+    expect(sourceAfterMove.statusFolders.active.categoryOrder.categories[0]?.entries).toEqual([])
+    expect(destinationAfterMove.statusFolders.active.categoryOrder.categories[0]?.entries).toEqual([
       { kind: 'template', id: 'paced-template' }
     ])
     expect(updateTemplate).toHaveBeenCalledWith('paced-template', expect.any(Function))

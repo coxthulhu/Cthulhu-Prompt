@@ -129,7 +129,7 @@ const createRootFolder = (
           categoryOrders: { [PromptStatusFolderId.Active]: categoryOrder }
         })
       }
-    : { ...baseFolder, kind, categoryOrder }
+    : { ...baseFolder, kind, statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: categoryOrder } }) }
 }
 
 describe('shared domain mutation planners', () => {

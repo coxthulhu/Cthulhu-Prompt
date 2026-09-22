@@ -18,7 +18,6 @@
 
   let {
     folderDisplayName,
-    orderedPromptCount,
     statusGroupCounts,
     contentKind,
     screenMode,
@@ -39,12 +38,12 @@
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
   }>()
 
-  /** Template folders show a single Templates entry instead of status filters. */
+  /** Template folders expose only the shared Active and Archived filters. */
   const isTemplateFolder = $derived(contentKind === 'template')
 
   /** Keep displayed filter counts synchronized with the folder's current contents. */
   const statusFilterItems = $derived(
-    promptStatusGroups.map((group) => ({
+    promptStatusGroups.filter((group) => !isTemplateFolder || group.id === 'active' || group.id === 'archived').map((group) => ({
       id: group.id,
       label: group.label,
       count: statusGroupCounts[group.id],
@@ -93,25 +92,13 @@
 
   <!-- Keep filters and folder actions aligned within the existing virtual row height. -->
   <div class="prompt-folder-root-toolbar">
-    {#if isTemplateFolder}
-      <ButtonBarSelector
-        label="Templates"
-        items={[{
-          id: 'templates',
-          label: 'Templates',
-          count: orderedPromptCount,
-          testId: 'prompt-folder-template-filter'
-        }]}
-        selectedId="templates"
-      />
-    {:else}
       <ButtonBarSelector
         label="Filter prompts"
         items={statusFilterItems}
         selectedId={screenMode}
         onselect={onScreenModeChange}
       />
-    {/if}
+
     <div class="prompt-folder-root-actions">
       <IconTextButton
         class="prompt-folder-root-categories-button"

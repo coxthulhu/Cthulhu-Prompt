@@ -209,7 +209,7 @@
   /** Registry metadata for this exact workflow tree. */
   const statusGroup = $derived(PROMPT_STATUS_FOLDER_REGISTRY[screenMode])
   /** Template trees have their own selector namespace. */
-  const testIdGroup = $derived(screenRootFolder?.kind === 'template' ? 'template' : screenMode)
+  const testIdGroup = $derived(screenRootFolder?.kind === 'template' && screenMode === 'active' ? 'template' : screenMode)
   /** Virtualization test identity distinguishes simultaneously mounted trees. */
   const virtualWindowTestId = $derived(`prompt-tree-${testIdGroup}-virtual-window`)
   /** Final-status metadata for this tree, or null for a category-ordered tree. */
@@ -220,7 +220,7 @@
   const dragStatusSection = $derived(screenMode)
   /** Finalized prompts belonging to this tree's exact final status. */
   const selectedFinalizedPrompts = $derived.by(() => {
-    if (!screenRootFolder || screenRootFolder.kind === 'template') {
+    if (!screenRootFolder) {
       return []
     }
 
@@ -232,25 +232,26 @@
       rootFolder: screenRootFolder,
       statusFolderId: screenMode,
       statusByPromptId: Object.fromEntries(
-        Object.values(promptById).map((prompt) => [prompt.id, prompt.status])
+        Object.values(screenRootFolder.kind === 'template' ? templateById : promptById).map((prompt) => [prompt.id, prompt.status])
       ),
       finalizedAtByPromptId: Object.fromEntries(
-        Object.values(promptById).map((prompt) => [prompt.id, prompt.finalizedAt ?? null])
+        Object.values(screenRootFolder.kind === 'template' ? templateById : promptById).map((prompt) => [prompt.id, prompt.finalizedAt ?? null])
       )
     })
   })
   /** Loaded active prompt count used to replace an empty status tree with its navigation link. */
   const selectedOrderedPromptCount = $derived.by(() => {
-    if (!screenRootFolder || screenRootFolder.kind === 'template' || isFinalMode) return 0
+    if (!screenRootFolder || isFinalMode) return 0
 
     return getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories.reduce(
       (count, group) =>
         count +
         group.entries.filter(
           (entry) =>
-            entry.kind === 'prompt' &&
-            Boolean(promptById[entry.id]) &&
-            getPromptStatusFolderDefinition(promptById[entry.id]!.status).id === screenMode
+            entry.kind === 'template'
+              ? Boolean(templateById[entry.id])
+              : Boolean(promptById[entry.id]) &&
+                getPromptStatusFolderDefinition(promptById[entry.id]!.status).id === screenMode
         ).length,
       0
     )
@@ -844,7 +845,7 @@
   {:else if folderListState === 'empty'}
     <div class="sidebarPromptTreeStatus px-2 text-sm">Create a folder to get started.</div>
   {:else if folderListState === 'ready'}
-    {#if screenRootFolder?.kind === 'prompt' && isSelectedStatusTreeEmpty}
+    {#if screenRootFolder && isSelectedStatusTreeEmpty && (screenRootFolder.kind === 'prompt' || isFinalMode)}
       <DropTarget
         getOptions={() =>
           getPromptTreePromptDroppableOptions('empty-status', 'top', () => ({

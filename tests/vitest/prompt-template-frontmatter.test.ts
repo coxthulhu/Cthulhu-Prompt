@@ -22,6 +22,7 @@ describe('prompt template frontmatter', () => {
       fallbackTitle: '',
       createdAt: '2026-07-22T12:00:00.000Z',
       modifiedAt: '2026-07-22T13:00:00.000Z',
+      status: 'Todo',
       templateText: 'Review {{change}} exactly.\n',
       category: 'category-1'
     })

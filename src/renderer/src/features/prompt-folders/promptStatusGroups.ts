@@ -29,7 +29,7 @@ export const sidebarPromptStatusGroups = [
 /** Counts loaded prompts in each exact group owned by the selected root. */
 export const getPromptStatusGroupCounts = (
   folder: PromptFolder | null,
-  prompts: readonly Prompt[]
+  prompts: readonly Pick<Prompt, 'id' | 'status'>[]
 ): Record<PromptStatusFolderId, number> => {
   /** Loaded membership keyed once for all group counts. */
   const groupByPromptId = new Map(
@@ -37,7 +37,7 @@ export const getPromptStatusGroupCounts = (
   )
   return Object.fromEntries(PROMPT_STATUS_FOLDERS.map((group) => [
     group.id,
-    folder?.kind === 'prompt'
+    folder
       ? getPromptStatusFolderContentIds(folder, group.id).filter(
           (id) => groupByPromptId.get(id) === group.id
         ).length

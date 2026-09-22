@@ -1,3 +1,4 @@
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
 import { createPromptTemplateSummary } from '@shared/domain/prompt-template/PromptTemplate'
@@ -50,14 +51,14 @@ describe('prompt template renderer loading', () => {
             folderName: 'Templates',
             displayName: 'Templates',
             entries: [{ kind: 'template', id: 'renderer-template' }],
-            categoryOrder: {
+            statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
               categories: [
                 {
                   categoryId: null,
                   entries: [{ kind: 'template', id: 'renderer-template' }]
                 }
               ]
-            },
+            } } }),
             settings: {
               folderDescription: 'Template description'
             }
@@ -129,14 +130,14 @@ describe('prompt template renderer loading', () => {
         folderName: 'Templates',
         displayName: 'Templates',
         entries: [{ kind: 'template', id: 'renderer-template' }],
-        categoryOrder: {
+        statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
           categories: [
             {
               categoryId: null,
               entries: [{ kind: 'template', id: 'renderer-template' }]
             }
           ]
-        },
+        } } }),
         settings: { folderDescription: 'Template description' }
       }
     })
@@ -169,14 +170,14 @@ describe('prompt template renderer loading', () => {
             folderName: 'Templates',
             displayName: 'Templates',
             entries: [{ kind: 'template', id: 'renderer-template' }],
-            categoryOrder: {
+            statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
               categories: [
                 {
                   categoryId: null,
                   entries: [{ kind: 'template', id: 'renderer-template' }]
                 }
               ]
-            },
+            } } }),
             settings: { folderDescription: 'Template description' }
           }
         }

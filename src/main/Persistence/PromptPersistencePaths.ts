@@ -56,10 +56,8 @@ export const resolvePromptStatusFolderName = (
 // Maps a logical prompt-folder path into the canonical active hierarchy.
 export const resolveActivePromptFolderName = (
   folderName: string,
-  kind: PromptFolderKind
+  _kind: PromptFolderKind
 ): string => {
-  if (kind === 'template') return folderName
-
   return resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
 }
 
@@ -105,9 +103,7 @@ export const resolvePromptFolderCategoryOrderPath = (
 ): string => {
   /** Prompt roots store metadata below the selected ordered status folder. */
   const orderFolderName =
-    kind === 'prompt'
-      ? resolvePromptStatusFolderName(rootFolderName, statusFolderId)
-      : rootFolderName
+    resolvePromptStatusFolderName(rootFolderName, statusFolderId)
   return path.join(
     resolvePromptFolderPath(workspacePath, orderFolderName, kind),
     PROMPT_FOLDER_INFO_DIRECTORY_NAME,

@@ -10,7 +10,7 @@ import {
   type PromptHandleDropPayload
 } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
 import { movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
-import { movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
+import { setPromptTemplateStatus, movePromptTemplate } from '@renderer/data/Mutations/PromptTemplateMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
 import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatus, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
@@ -73,13 +73,6 @@ export const resolvePromptTreePromptMove = (
   ) {
     return null
   }
-  if (
-    sourcePayload.statusSection !== dropPayload.statusSection &&
-    sourcePayload.contentKind !== 'prompt'
-  ) {
-    return null
-  }
-
   const sourceCategoryId =
     sourcePayload.sourceCategoryId ??
     (sourceGroup.ordering === 'category'
@@ -143,7 +136,7 @@ export const createPromptTreePromptDragController = ({
 
     void runIpcBestEffort(async () => {
       if (result.targetStatus) {
-        await setPromptStatus(
+        await (sourcePayload.contentKind === 'template' ? setPromptTemplateStatus : setPromptStatus)(
           result.move.sourcePromptFolderId,
           result.move.destinationPromptFolderId,
           result.move.promptId,

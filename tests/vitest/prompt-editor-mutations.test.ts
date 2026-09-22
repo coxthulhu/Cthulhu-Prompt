@@ -93,11 +93,11 @@ describe('prompt editor mutations', () => {
         kind: 'template',
         folderName: 'Templates',
         displayName: 'Templates',
-        categoryOrder: {
+        statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
           categories: [
             { categoryId: null, entries: [{ kind: 'template', id: TEMPLATE_ID }] }
           ]
-        },
+        } } }),
         settings: { folderDescription: null }
       }
     })

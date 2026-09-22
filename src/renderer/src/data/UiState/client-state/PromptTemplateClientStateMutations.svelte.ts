@@ -5,7 +5,8 @@ import type {
 import type { Draft } from 'immer'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { getOrderedMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptStatusFolderDefinition, PromptStatus } from '@shared/domain/prompt/Prompt'
 import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
 import {
@@ -49,10 +50,15 @@ export const flushPromptTemplateClientStateAutosaves = clientState.flushAutosave
 /** Clears all prompt-template client state for the current workspace. */
 export const clearPromptTemplateClientStateCollection = clientState.clearClientStateCollection
 
+/** Resolves filename siblings within the template's current physical status directory. */
 const getSiblingTemplateIds = (templateId: string): string[] => {
+  /** Current template status selects Active or Archived collision scope. */
+  const statusFolderId = getPromptStatusFolderDefinition(
+    promptTemplateCollection.get(templateId)?.status ?? PromptStatus.Todo
+  ).id
   for (const folder of promptFolderCollection.values()) {
     if (folder.kind !== 'template') continue
-    const templateIds = getOrderedMarkdownContentIds(folder, 'template')
+    const templateIds = getPromptStatusFolderContentIds(folder, statusFolderId)
     if (templateIds.includes(templateId)) return templateIds
   }
   return [templateId]

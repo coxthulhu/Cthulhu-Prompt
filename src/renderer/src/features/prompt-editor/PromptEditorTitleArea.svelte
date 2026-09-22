@@ -20,6 +20,7 @@
     scrollToWithinWindowBand,
     onDelete,
     onArchive,
+    onRestore,
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
@@ -59,6 +60,7 @@
     {scrollToWithinWindowBand}
     {onDelete}
     {onArchive}
+    {onRestore}
     {onTemplateSelect}
     {onTemplateSelectAndCopy}
     {onCopySuccess}

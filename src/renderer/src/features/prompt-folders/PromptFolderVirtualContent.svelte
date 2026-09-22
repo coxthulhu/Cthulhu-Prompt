@@ -935,9 +935,10 @@
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       onDelete={() => onDeletePrompt(promptTarget)}
-      onArchive={isTemplateFolder
-        ? undefined
-        : () => onSetPromptStatus(promptTarget, PromptStatus.Archived)}
+      onArchive={() => onSetPromptStatus(promptTarget, PromptStatus.Archived)}
+      onRestore={isTemplateFolder && promptMetadata.status === PromptStatus.Archived
+        ? () => onSetPromptStatus(promptTarget, PromptStatus.Todo)
+        : undefined}
       onTemplateSelect={isTemplateFolder
         ? undefined
         : () => openTemplateSelectionDialog(promptTarget, 'select')}

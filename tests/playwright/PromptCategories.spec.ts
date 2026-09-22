@@ -149,7 +149,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Templates/Templates/_FolderInfo/FolderOrder.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/Templates/Templates/Active/_FolderInfo/FolderOrder.json`]: JSON.stringify(
     {
       categories: [
         { categoryId: null, entries: [] },
@@ -723,7 +723,7 @@ describe('Prompt categories', () => {
     ])
     /** Template order path observed after the category drop. */
     const orderPath =
-      `${WORKSPACE_PATH}/Templates/TemplateTargets/_FolderInfo/FolderOrder.json`
+      `${WORKSPACE_PATH}/Templates/TemplateTargets/Active/_FolderInfo/FolderOrder.json`
     /** Started template workspace exposing the shared editor and tree drag behavior. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptTemplateFolders('Template Targets')
@@ -1233,7 +1233,7 @@ describe('Prompt categories', () => {
     const initialModifiedAt = '2020-01-01T00:00:00.000Z'
     /** Template path whose separately owned category must remain unchanged. */
     const templatePath =
-      `${WORKSPACE_PATH}/Templates/Templates/Categorized Template.template.md`
+      `${WORKSPACE_PATH}/Templates/Templates/Active/Categorized Template.template.md`
     /** Prompt path expected to be rewritten during category deletion. */
     const promptPath =
       `${WORKSPACE_PATH}/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
@@ -1558,7 +1558,7 @@ describe('Prompt categories', () => {
       2
     )
     filesystem[
-      `${WORKSPACE_PATH}/Templates/TemplateSource/_FolderInfo/FolderOrder.json`
+      `${WORKSPACE_PATH}/Templates/TemplateSource/Active/_FolderInfo/FolderOrder.json`
     ] = JSON.stringify(
       {
         categories: [
@@ -1629,14 +1629,14 @@ describe('Prompt categories', () => {
     const movedTemplate = mainWindow.locator(promptEditorSelector('moving-category-template'))
     await expect(movedTemplate.locator('.prompt-editor-metadata-category')).toHaveCount(0)
     const movedTemplatePath =
-      `${WORKSPACE_PATH}/Templates/TemplateDestination/Moving Template.template.md`
+      `${WORKSPACE_PATH}/Templates/TemplateDestination/Active/Moving Template.template.md`
     await expect.poll(() => checkFileExists(electronApp, movedTemplatePath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, movedTemplatePath)).not.toContain('category:')
     await expect
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/TemplateSource/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/TemplateSource/Active/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual({
@@ -1649,7 +1649,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/TemplateDestination/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/TemplateDestination/Active/_FolderInfo/FolderOrder.json`
         )
       )
       .toEqual({

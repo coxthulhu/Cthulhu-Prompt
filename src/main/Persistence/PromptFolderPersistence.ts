@@ -5,7 +5,7 @@ import {
   type PromptFolder,
 } from '@shared/domain/prompt-folder/PromptFolder'
 import {
-  PROMPT_STATUS_FOLDERS,
+  getContentStatusFolders,
   type PromptStatusFolderId
 } from '@shared/domain/prompt/Prompt'
 import type {
@@ -97,10 +97,10 @@ export const promptFolderPersistence: PersistenceLayer<
     )
     const fs = getFs()
     // Root prompt folders own every code-defined status directory.
-    const isPromptRoot = kind === 'prompt' && !/[\\/]/.test(stagingRelativePath)
+    const isPromptRoot = !/[\\/]/.test(stagingRelativePath)
     /** Existing status-directory paths and creation state for a prompt root. */
     const statusDirectories = isPromptRoot
-      ? PROMPT_STATUS_FOLDERS.map((statusFolder) => {
+      ? getContentStatusFolders(kind).map((statusFolder) => {
           /** Physical directory owned by one registry entry. */
           const directoryPath = resolvePromptFolderPath(
             workspacePath,
@@ -141,8 +141,8 @@ export const promptFolderPersistence: PersistenceLayer<
       ? (after.data.kind === 'template'
           ? [
               {
-                statusFolderId: undefined,
-                categoryOrder: after.data.categoryOrder
+                statusFolderId: 'active' as PromptStatusFolderId,
+                categoryOrder: after.data.statusFolders.active.categoryOrder
               }
             ]
           : Object.entries(after.data.statusFolders).flatMap(

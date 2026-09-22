@@ -318,11 +318,16 @@ const writeMyTemplatesFolder = (
     'utf8'
   )
 
+  // Side effect: create template status directories before writing examples and order metadata.
+  fs.mkdirSync(path.join(templateFolderPath, 'Active', '_FolderInfo'), { recursive: true })
+  fs.mkdirSync(path.join(templateFolderPath, 'Archived'), { recursive: true })
+
   for (const template of templates) {
     const templateStem = buildPromptStem(template.title, template.id, false)
     fs.writeFileSync(
       path.join(
         templateFolderPath,
+        'Active',
         `${templateStem}${PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX}`
       ),
       serializePromptTemplateMarkdown(template),

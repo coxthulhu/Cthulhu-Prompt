@@ -119,7 +119,7 @@ const createRootFolder = (
           categoryOrders: { [PromptStatusFolderId.Active]: categoryOrder }
         })
       }
-    : { ...baseFolder, kind, categoryOrder }
+    : { ...baseFolder, kind, statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: categoryOrder } }) }
 }
 
 /** Creates persistence fields for one root folder. */
@@ -227,7 +227,7 @@ describe('domain persistence planning', () => {
         promptStem: content.title,
         folderPath:
           kind === 'template'
-            ? root.folderName
+            ? `${root.folderName}\\Active`
             : `${root.folderName}\\${location === 'completed' ? 'Completed' : 'Active'}`
       })
 
@@ -275,7 +275,7 @@ describe('domain persistence planning', () => {
           persistenceFields: {
             folderPath:
               kind === 'template'
-                ? 'RenamedRoot'
+                ? 'RenamedRoot\\Active'
                 : `RenamedRoot\\${location === 'completed' ? 'Completed' : 'Active'}`
           }
         }

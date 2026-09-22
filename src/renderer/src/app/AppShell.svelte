@@ -242,7 +242,7 @@
     shownFinalStatusGroups = { ...saved?.shownFinalStatusGroups }
     rememberPromptFolderMode()
     if (expandSection && workspaceId && screenRootFolderId &&
-      promptFolderCollection.get(screenRootFolderId)?.kind === 'prompt') {
+      promptFolderCollection.has(screenRootFolderId)) {
       expandPromptStatusSectionWithAutosave(workspaceId, promptFolderScreenMode)
     }
   }
@@ -700,7 +700,7 @@
       const folder = selectedWorkspacePromptFolders.find(
         (candidate) => candidate.id === screenRootFolderId
       )
-      if (folder?.kind === 'template') return
+      if (folder?.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
     }
     if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') {
       shownFinalStatusGroups[nextMode] = true

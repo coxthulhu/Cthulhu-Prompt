@@ -491,7 +491,7 @@ export function createWorkspaceWithTemplateFolders(
         }))
       )
     ]
-    structure[getPromptFolderCategoryOrderPath(folderPath)] = JSON.stringify(
+    structure[getPromptFolderCategoryOrderPath(`${folderPath}/Active`)] = JSON.stringify(
       {
         categories: [
           {
@@ -524,7 +524,7 @@ export function createWorkspaceWithTemplateFolders(
         ...(template.category !== undefined ? { category: template.category } : {})
       }
       const displayTitle = getPromptDisplayTitle(templateData)
-      structure[`${folderPath}/${buildPromptStem(displayTitle, template.id, false)}.template.md`] =
+      structure[`${folderPath}/Active/${buildPromptStem(displayTitle, template.id, false)}.template.md`] =
         serializePromptTemplateMarkdown(templateData)
     }
 

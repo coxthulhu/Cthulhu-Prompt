@@ -98,6 +98,7 @@
     onEditorLifecycle,
     onDelete,
     onArchive,
+    onRestore,
     onStatusChange,
     onMoveUp,
     onMoveDown,
@@ -153,6 +154,8 @@
     onDelete: () => void
     /** Archives this prompt without opening the delete confirmation dialog. */
     onArchive?: () => void
+    /** Restores an archived template to the top of Active. */
+    onRestore?: () => void
     onStatusChange?: (status: PromptStatus) => void
     onMoveUp: () => Promise<boolean>
     onMoveDown: () => Promise<boolean>
@@ -580,6 +583,7 @@
     {scrollToWithinWindowBand}
     {onDelete}
     {onArchive}
+    {onRestore}
     {onTemplateSelect}
     {onTemplateSelectAndCopy}
     {onCopySuccess}

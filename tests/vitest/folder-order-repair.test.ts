@@ -22,7 +22,7 @@ const CATEGORY_ORDER_PATH = `${ACTIVE_PATH}/_FolderInfo/FolderOrder.json`
 /** Template root containing direct and categorized templates for repair coverage. */
 const TEMPLATE_ROOT_PATH = `${WORKSPACE_PATH}/Templates/Templates`
 /** Canonical template category-order file stored at the template root. */
-const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/_FolderInfo/FolderOrder.json`
+const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/Active/_FolderInfo/FolderOrder.json`
 
 /** Creates one serializable active prompt with optional category front matter. */
 const createPrompt = (
@@ -199,10 +199,10 @@ describe('FolderOrder repair', () => {
         shortDescription: null,
         description: null
       }),
-      [`${TEMPLATE_ROOT_PATH}/Direct.template.md`]: serializePromptTemplateMarkdown(
+      [`${TEMPLATE_ROOT_PATH}/Active/Direct.template.md`]: serializePromptTemplateMarkdown(
         createTemplate('template-direct', 'Direct', retainedCategoryId)
       ),
-      [`${TEMPLATE_ROOT_PATH}/Categorized.template.md`]: serializePromptTemplateMarkdown(
+      [`${TEMPLATE_ROOT_PATH}/Active/Categorized.template.md`]: serializePromptTemplateMarkdown(
         createTemplate('template-categorized', 'Categorized', deletedCategoryId)
       ),
       [TEMPLATE_CATEGORY_ORDER_PATH]: JSON.stringify({
@@ -244,11 +244,11 @@ describe('FolderOrder repair', () => {
     })
     /** Direct template repaired according to its first accepted folder-order reference. */
     const directTemplate = parsePromptTemplateMarkdown(
-      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Direct.template.md`, 'utf8').toString()
+      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Active/Direct.template.md`, 'utf8').toString()
     )!
     /** Second template repaired after its deleted category group redirects to Uncategorized. */
     const categorizedTemplate = parsePromptTemplateMarkdown(
-      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Categorized.template.md`, 'utf8').toString()
+      vol.readFileSync(`${TEMPLATE_ROOT_PATH}/Active/Categorized.template.md`, 'utf8').toString()
     )!
     expect(directTemplate).not.toHaveProperty('category')
     expect(categorizedTemplate).not.toHaveProperty('category')

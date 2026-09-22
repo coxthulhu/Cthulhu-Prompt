@@ -116,18 +116,18 @@ describe('Prompt template mutations', () => {
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'promptFolder' && snapshot.id === SOURCE_FOLDER_ID
     )
-    expect(createdTemplate.data).not.toHaveProperty('status')
+    expect(createdTemplate.data.status ?? 'Todo').toBe('Todo')
     expect(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/New Template.template.md`
+        `${WORKSPACE_PATH}/Templates/Source/Active/New Template.template.md`
       )
     ).toContain('Initial {{value}}.')
     expect(
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Source/Active/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({
@@ -175,13 +175,13 @@ describe('Prompt template mutations', () => {
     expect(
       await checkFileExists(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/New Template.template.md`
+        `${WORKSPACE_PATH}/Templates/Source/Active/New Template.template.md`
       )
     ).toBe(false)
     expect(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/Templates/Source/Active/Renamed Template.template.md`
       )
     ).toContain('Updated {{value}}.')
 
@@ -223,21 +223,21 @@ describe('Prompt template mutations', () => {
             entityType: 'promptFolder',
             id: SOURCE_FOLDER_ID,
             data: expect.objectContaining({
-              categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
+              statusFolders: expect.objectContaining({ active: expect.objectContaining({ categoryOrder: { categories: [{ categoryId: null, entries: [] }] } }) })
             })
           }),
           expect.objectContaining({
             entityType: 'promptFolder',
             id: DESTINATION_FOLDER_ID,
             data: expect.objectContaining({
-              categoryOrder: {
+              statusFolders: expect.objectContaining({ active: expect.objectContaining({ categoryOrder: {
                 categories: [
                   {
                     categoryId: null,
                     entries: [{ kind: 'template', id: 'ipc-template' }]
                   }
                 ]
-              }
+              } }) })
             })
           })
         ])
@@ -256,20 +256,20 @@ describe('Prompt template mutations', () => {
     expect(
       await checkFileExists(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/Templates/Source/Active/Renamed Template.template.md`
       )
     ).toBe(false)
     expect(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Destination/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/Templates/Destination/Active/Renamed Template.template.md`
       )
     ).toContain('Updated {{value}}.')
     expect(
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Source/Active/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
@@ -277,7 +277,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Destination/Active/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({
@@ -332,7 +332,7 @@ describe('Prompt template mutations', () => {
             entityType: 'promptFolder',
             id: DESTINATION_FOLDER_ID,
             data: expect.objectContaining({
-              categoryOrder: { categories: [{ categoryId: null, entries: [] }] }
+              statusFolders: expect.objectContaining({ active: expect.objectContaining({ categoryOrder: { categories: [{ categoryId: null, entries: [] }] } }) })
             })
           }),
           { entityType: 'promptTemplate', id: templateId, deleted: true },
@@ -347,14 +347,14 @@ describe('Prompt template mutations', () => {
     expect(
       await checkFileExists(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Destination/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/Templates/Destination/Active/Renamed Template.template.md`
       )
     ).toBe(false)
     expect(
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Destination/Active/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

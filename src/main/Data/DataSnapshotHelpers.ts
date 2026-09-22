@@ -124,29 +124,25 @@ export const buildPromptFolderSnapshot = (
   return {
     id: promptFolder.id,
     revision: promptFolderEntry.revision,
-    data:
-      promptFolder.kind === 'template'
-        ? {
-            ...promptFolder,
-            categoryOrder: filterLoadedCategoryOrder(promptFolder.categoryOrder)
-          }
-        : {
-            ...promptFolder,
-            statusFolders: Object.fromEntries(
-              Object.entries(promptFolder.statusFolders).map(([statusFolderId, layout]) => [
-                statusFolderId,
-                layout.ordering === 'category'
-                  ? {
-                      ...layout,
-                      categoryOrder: filterLoadedCategoryOrder(layout.categoryOrder)
-                    }
-                  : {
-                      ...layout,
-                      promptIds: filterLoadedPromptIds(layout.promptIds)
-                    }
-              ])
-            ) as typeof promptFolder.statusFolders
-          }
+    data: {
+      ...promptFolder,
+      statusFolders: Object.fromEntries(
+        Object.entries(promptFolder.statusFolders).map(([statusFolderId, layout]) => [
+          statusFolderId,
+          layout.ordering === 'category'
+            ? {
+                ...layout,
+                categoryOrder: filterLoadedCategoryOrder(layout.categoryOrder)
+              }
+            : {
+                ...layout,
+                promptIds: promptFolder.kind === 'template'
+                  ? layout.promptIds.filter((id) => data.promptTemplate.committedStore.getEntry(id))
+                  : filterLoadedPromptIds(layout.promptIds)
+              }
+        ])
+      ) as typeof promptFolder.statusFolders
+    }
   }
 }
 

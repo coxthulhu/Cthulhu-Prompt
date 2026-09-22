@@ -1,3 +1,4 @@
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { vol } from 'memfs'
 import { describe, expect, it, vi } from 'vitest'
 import { setFs } from '../../src/main/fs-provider'
@@ -57,21 +58,21 @@ describe('prompt template workspace loading', () => {
     )?.data
     expect(rootTemplateFolder).toMatchObject({
       kind: 'template',
-      categoryOrder: {
+      statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
         categories: [
           {
             categoryId: null,
             entries: [{ kind: 'template', id: 'category-template' }]
           }
         ]
-      }
+      } } })
     })
     expect(rootTemplateFolder?.settings).toEqual({
       folderDescription: 'Root description'
     })
     expect(result.promptTemplates).toHaveLength(1)
     const templateModifiedAt = vol
-      .statSync(`${workspacePath}/Templates/Root/Category Template.template.md`)
+      .statSync(`${workspacePath}/Templates/Root/Active/Category Template.template.md`)
       .mtime.toISOString()
     expect(result.promptTemplates[0]?.data).toMatchObject({
       id: 'category-template',

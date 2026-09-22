@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PromptStatus } from '@shared/domain/prompt/Prompt'
   import { onMount } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
@@ -377,11 +378,11 @@
   )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
   /** Exact group counts shown in the accordion headers. */
-  const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, promptQuery.data))
+  const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptStatus.Todo })) : promptQuery.data))
   /** Category workflows are always present; finalized groups follow their toggles. */
   const visibleStatusGroups = $derived(
     sidebarPromptStatusGroups.filter((group) =>
-      group.ordering === 'category' || shownFinalStatusGroups[group.id]
+      (!isTemplateFolder || group.id === 'active' || group.id === 'archived') && (group.ordering === 'category' || shownFinalStatusGroups[group.id])
     )
   )
   // Keep selected-folder overflow actions together as the toolbar gets tighter.
@@ -840,12 +841,12 @@
           testId="sidebar-folder-root-button"
           onclick={selectFolderRoot}
         />
-        {#if !isTemplateFolder}
-          {#each promptStatusGroups.filter((group) => group.ordering === 'finalizedAt') as group (group.id)}
+        {#if screenRootFolder}
+          {#each promptStatusGroups.filter((group) => group.ordering === 'finalizedAt' && (!isTemplateFolder || group.id === 'archived')) as group (group.id)}
             <IconButton
               icon={group.toggleIcon}
-              label={`Show ${group.label} Prompts`}
-              title={`Show ${group.label} Prompts`}
+              label={`Show ${group.label} ${isTemplateFolder ? 'Templates' : 'Prompts'}`}
+              title={`Show ${group.label} ${isTemplateFolder ? 'Templates' : 'Prompts'}`}
               borderless
               baseVariant="dim"
               disabled={!screenRootFolder}
@@ -914,7 +915,7 @@
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col overflow-visible">
-    {#if screenRootFolder?.kind !== 'prompt'}
+    {#if !screenRootFolder}
       <PromptTree
         promptFolders={rootPromptFolders}
         {folderListState}

@@ -50,7 +50,6 @@ export const getMarkdownContentCategoryOrder = (
   promptFolder: PromptFolder,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): CategoryOrder => {
-  if (promptFolder.kind === 'template') return promptFolder.categoryOrder
   /** Prompt status-folder layout selected by stable registry identity. */
   const layout = promptFolder.statusFolders[statusFolderId]
   if (layout.ordering !== 'category') throw new Error('Prompt status folder is unordered')
@@ -69,14 +68,14 @@ export const getOrderedMarkdownContentIds = (
 
 /** Returns prompt IDs owned by one exact status folder regardless of ordering behavior. */
 export const getPromptStatusFolderContentIds = (
-  promptFolder: Extract<PromptFolder, { kind: 'prompt' }>,
+  promptFolder: PromptFolder,
   statusFolderId: PromptStatusFolderId
 ): string[] => {
   /** Layout selected from the root's status-folder data. */
   const layout = promptFolder.statusFolders[statusFolderId]
   return layout.ordering === 'category'
     ? layout.categoryOrder.categories.flatMap((category) =>
-        category.entries.flatMap((entry) => (entry.kind === 'prompt' ? [entry.id] : []))
+        category.entries.flatMap((entry) => (entry.kind === promptFolder.kind ? [entry.id] : []))
       )
     : [...layout.promptIds]
 }
@@ -86,9 +85,7 @@ export const getMarkdownContentIds = (
   promptFolder: PromptFolder,
   kind: PromptFolderContentKind
 ): string[] => {
-  if (promptFolder.kind === 'template') {
-    return getOrderedMarkdownContentIds(promptFolder, kind)
-  }
+  if (promptFolder.kind !== kind) return []
   return Object.values(promptFolder.statusFolders).flatMap((layout) =>
     layout.ordering === 'category'
       ? layout.categoryOrder.categories.flatMap((category) =>

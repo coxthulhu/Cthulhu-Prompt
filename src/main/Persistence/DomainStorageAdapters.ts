@@ -1,7 +1,6 @@
 import type { Category } from '@shared/domain/category/Category'
 import { isDeepStrictEqual } from 'node:util'
 import type { DomainEntityMap, DomainEntityType } from '@shared/domain/DomainChanges'
-import { getOrderedMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import {
   getPromptFolderCategoryIds,
   type PromptFolder,
@@ -170,23 +169,13 @@ const findMarkdownOwner = (
     /** Projected root inspected for channel-specific content ownership. */
     const folder = entry.data
     if (folder.kind !== kind) continue
-    if (folder.kind === 'template') {
-      /** Template IDs sharing the root's collision-aware filename group. */
-      const templateIds = getOrderedMarkdownContentIds(folder, 'template')
-      if (!templateIds.includes(contentId)) continue
-      return {
-        folder,
-        contentIds: templateIds,
-        folderPath: folder.folderName
-      }
-    }
     for (const [statusFolderId, layout] of Object.entries(folder.statusFolders)) {
       /** Prompt IDs sharing this exact physical status-folder filename group. */
       const promptIds =
         layout.ordering === 'category'
           ? layout.categoryOrder.categories.flatMap((category) =>
               category.entries.flatMap((entry) =>
-                entry.kind === 'prompt' ? [entry.id] : []
+                entry.kind === kind ? [entry.id] : []
               )
             )
           : layout.promptIds
@@ -385,7 +374,6 @@ const isMarkdownRelocatedByRootRename = (
   const { folderPath: _afterFolderPath, ...afterRest } = afterFields
   /** Whether prompt content follows the same registry-backed status directory through the rename. */
   const followsPromptStatusDirectory =
-    rename.kind === 'prompt' &&
     PROMPT_STATUS_FOLDERS.some(
       (statusFolder) =>
         beforeFields.folderPath ===
@@ -393,16 +381,11 @@ const isMarkdownRelocatedByRootRename = (
         afterFields.folderPath ===
           resolvePromptStatusFolderName(rename.afterFolderName, statusFolder.id)
     )
-  /** Whether template content follows its direct root directory through the rename. */
-  const followsTemplateRoot =
-    rename.kind === 'template' &&
-    beforeFields.folderPath === rename.beforeFolderName &&
-    afterFields.folderPath === rename.afterFolderName
   return (
     isDeepStrictEqual(transition.before.data, transition.after.data) &&
     beforeFields.promptFolderId === rename.promptFolderId &&
     afterFields.promptFolderId === rename.promptFolderId &&
-    (followsPromptStatusDirectory || followsTemplateRoot) &&
+    followsPromptStatusDirectory &&
     isDeepStrictEqual(beforeRest, afterRest)
   )
 }

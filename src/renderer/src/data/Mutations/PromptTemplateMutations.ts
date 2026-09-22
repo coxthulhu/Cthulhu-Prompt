@@ -1,3 +1,6 @@
+import { PromptStatus, type PromptCategoryOrderPlacement } from '@shared/domain/prompt/Prompt'
+import { planSetPromptTemplateStatusDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
+import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
 import {
   isPromptTemplateFull,
   type PromptTemplateFull,
@@ -23,6 +26,8 @@ const toPersisted = (template: PromptTemplateFull): PromptTemplatePersisted => (
   createdAt: template.createdAt,
   modifiedAt: template.modifiedAt,
   ...(template.category !== undefined ? { category: template.category } : {}),
+  status: template.status,
+  finalizedAt: template.finalizedAt,
   templateText: template.templateText
 })
 
@@ -93,3 +98,26 @@ export const mutatePacedPromptTemplateAutosaveUpdate = (
 }
 export const deletePromptTemplate = mutations.delete
 export const movePromptTemplate = mutations.move
+
+/** Archives or restores a template through the shared atomic folder-transfer planner. */
+export const setPromptTemplateStatus = async (
+  sourcePromptFolderId: string,
+  destinationPromptFolderId: string,
+  promptId: string,
+  status: PromptStatus,
+  placement?: PromptCategoryOrderPlacement
+): Promise<void> => {
+  /** Current category is retained for restoration unless a drop supplies an exact placement. */
+  const template = promptTemplateCollection.get(promptId)!
+  /** Serializable transfer command shared by optimistic and committed domain planning. */
+  const command = {
+    sourcePromptFolderId, destinationPromptFolderId, promptId, status,
+    categoryOrderPlacement: placement ?? { categoryId: template.category ?? null, previousEntryId: null },
+    modifiedAt: getCurrentIsoSecondTimestamp()
+  }
+  await runImmediateRendererDomainMutation({
+    mutation: { command, plan: planSetPromptTemplateStatusDomainMutation },
+    ipc: { channel: 'set-prompt-template-status' },
+    renderer: {}
+  })
+}

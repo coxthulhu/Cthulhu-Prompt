@@ -1,3 +1,4 @@
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import * as path from 'path'
 import {
   PROMPT_STATUS_FOLDERS,
@@ -106,7 +107,7 @@ const readContentIds = (
   const contentKind = kind
   /** Physical ordered directory selected for prompts or the direct template root. */
   const orderedFolderName =
-    kind === 'prompt' ? resolvePromptStatusFolderName(folderName, statusFolderId) : folderName
+    resolvePromptStatusFolderName(folderName, statusFolderId)
   const contentStemById = readContentStemById(workspacePath, orderedFolderName, contentKind)
   return readPromptFolderCategoryOrder(
     workspacePath,
@@ -355,9 +356,7 @@ const readRootCategoryOrderContents = (
   /** Physical root containing every item covered by the category order. */
   const orderedRootPath = resolvePromptFolderPath(
     workspacePath,
-    kind === 'prompt'
-      ? resolvePromptStatusFolderName(rootFolderName, statusFolderId)
-      : rootFolderName,
+    resolvePromptStatusFolderName(rootFolderName, statusFolderId),
     kind
   )
   /** Filename suffix identifying the root's content kind. */
@@ -532,7 +531,10 @@ export const readPromptFolder = (
     return {
       ...baseFolder,
       kind,
-      categoryOrder: readPromptFolderCategoryOrder(workspacePath, folderPath, kind),
+      statusFolders: createPromptStatusFolderLayouts({
+        categoryOrders: { active: readPromptFolderCategoryOrder(workspacePath, folderPath, kind) },
+        promptIds: { archived: [...readPromptTemplateStemById(workspacePath, resolvePromptStatusFolderName(folderPath, PromptStatusFolderId.Archived)).keys()] }
+      }),
       settings: { folderDescription }
     }
   }
@@ -582,9 +584,7 @@ const readMarkdownContents = <TContent>(
   const contentKind = folderKind
   /** Ordered source directory used by this active-compatible reader. */
   const orderedFolderName =
-    folderKind === 'prompt'
-      ? resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
-      : folderName
+    resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
   const contentIds = readContentIds(workspacePath, folderName, folderKind)
   const contentStemById = readContentStemById(workspacePath, orderedFolderName, contentKind)
   const folderPath = resolvePromptFolderPath(workspacePath, orderedFolderName, folderKind)

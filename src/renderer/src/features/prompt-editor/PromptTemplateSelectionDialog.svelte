@@ -10,7 +10,7 @@
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-  import type { PromptTemplateReference } from '@shared/domain/prompt/Prompt'
+  import { PromptStatus, type PromptTemplateReference } from '@shared/domain/prompt/Prompt'
   import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
   import type { Category } from '@shared/domain/category/Category'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
@@ -118,6 +118,11 @@
   let stagedTemplateIds = $state<string[]>([])
   // Tracks the opening edge so staging is initialized exactly once per opening.
   let wasOpen = $state(false)
+  /** Distinguishes confirming an existing hidden selection from choosing a replacement. */
+  let selectionChanged = $state(false)
+  /** Archived references retained invisibly until an explicit choice replaces them. */
+  const hasArchivedSelection = $derived((selectedTemplates ?? []).some((reference) =>
+    promptTemplateQuery.data.some((template) => template.id === reference.id && template.status === PromptStatus.Archived)))
   // Calculated virtual row extent lets short template libraries size the dialog to their content.
   let templateTreeContentHeightPx = $state(0)
 
@@ -137,7 +142,7 @@
   const templateTitleById = $derived.by(() =>
     Object.fromEntries(
       promptTemplateQuery.data.flatMap((template) =>
-        template.loadingState === 'full' && hasPromptTextToken(template.templateText)
+        template.status !== PromptStatus.Archived && template.loadingState === 'full' && hasPromptTextToken(template.templateText)
           ? [[template.id, getPromptDisplayTitle(template)] as const]
           : []
       )
@@ -209,8 +214,9 @@
   $effect(() => {
     if (open && !wasOpen) {
       collapsedCategoryIds.clear()
+      selectionChanged = false
       stagedTemplateIds =
-        mode === 'select'
+        mode === 'select' && !hasArchivedSelection
           ? normalizeTemplateIds((selectedTemplates ?? []).map((template) => template.id)).slice(
               0,
               1
@@ -248,6 +254,7 @@
       return
     }
 
+    selectionChanged = true
     stagedTemplateIds = [templateId]
   }
 
@@ -259,11 +266,16 @@
       return
     }
 
+    selectionChanged = true
     stagedTemplateIds = []
   }
 
   // Persists the normalized staged selection and closes the full dialog.
   const handleConfirm = (): void => {
+    if (hasArchivedSelection && !selectionChanged) {
+      open = false
+      return
+    }
     const templates = normalizedStagedTemplateIds.map((id) => ({ id }))
     void onselect(templates.length > 0 ? templates : null)
     open = false
@@ -384,11 +396,11 @@
       <button
         type="button"
         class="prompt-template-no-template-option"
-        data-row-state={mode === 'select' && normalizedStagedTemplateIds.length === 0
+        data-row-state={mode === 'select' && normalizedStagedTemplateIds.length === 0 && (!hasArchivedSelection || selectionChanged)
           ? 'active'
           : 'idle'}
         aria-pressed={mode === 'select'
-          ? normalizedStagedTemplateIds.length === 0
+          ? normalizedStagedTemplateIds.length === 0 && (!hasArchivedSelection || selectionChanged)
           : undefined}
         data-testid="prompt-template-option-none"
         onclick={handleNoTemplateSelect}

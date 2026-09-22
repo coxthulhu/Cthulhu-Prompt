@@ -443,7 +443,7 @@ export const planCreatePromptTemplateDomainMutation: DomainPlanner<
   try {
     /** Validated template data and category order for the requested placement. */
     const placement = placeMarkdownContentInCategoryOrder(
-      promptFolder.categoryOrder,
+      promptFolder.statusFolders.active.categoryOrder,
       template,
       promptTemplateEntryRef(command.contentId),
       command.categoryId,
@@ -455,7 +455,7 @@ export const planCreatePromptTemplateDomainMutation: DomainPlanner<
         entityType: 'promptFolder',
         id: command.promptFolderId,
         recipe: (draft) => {
-          if (draft.kind === 'template') draft.categoryOrder = placement.categoryOrder
+          if (draft.kind === 'template') draft.statusFolders.active.categoryOrder = placement.categoryOrder
         }
       },
       {
@@ -567,10 +567,6 @@ const createDeletePlanner = (
       entityType: 'promptFolder',
       id: command.promptFolderId,
       recipe: (draft) => {
-        if (draft.kind === 'template') {
-          draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
-          return
-        }
         for (const layout of Object.values(draft.statusFolders)) {
           if (layout.ordering === 'category') {
             layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
@@ -664,7 +660,10 @@ export const planPromptTemplateUpdate: DomainPlanner<UpdatePromptTemplateDomainC
   }
   /** Collision-free title fields resolved against authoritative sibling state. */
   const titleFields = resolvePromptTitleUpdateForPromptIds({
-    promptIds: getOrderedMarkdownContentIds(owner, 'template'),
+    promptIds: getPromptStatusFolderContentIds(
+      owner,
+      getPromptStatusFolderDefinition(template.status ?? PromptStatus.Todo).id
+    ),
     lookupPrompt: (templateId) => state.get('promptTemplate', templateId),
     promptId: command.contentId,
     currentTitle: template.title,
@@ -807,7 +806,7 @@ const createMovePlanner = (
           /** Ordered category layout receiving the in-place movement. */
           const categoryOrder =
             draft.kind === 'template'
-              ? draft.categoryOrder
+              ? draft.statusFolders.active.categoryOrder
               : draft.statusFolders[statusFolderId].ordering === 'category'
                 ? draft.statusFolders[statusFolderId].categoryOrder
                 : null
@@ -820,7 +819,7 @@ const createMovePlanner = (
             command.categoryId,
             command.previousEntryId
           ).categoryOrder
-          if (draft.kind === 'template') draft.categoryOrder = nextCategoryOrder
+          if (draft.kind === 'template') draft.statusFolders.active.categoryOrder = nextCategoryOrder
           else {
             /** Prompt layout narrowed by the validated ordered source status folder. */
             const layout = draft.statusFolders[statusFolderId]
@@ -836,7 +835,7 @@ const createMovePlanner = (
           id: requestedSource.id,
           recipe: (draft) => {
             if (draft.kind === 'template') {
-              draft.categoryOrder = removeCategoryOrderEntry(draft.categoryOrder, entry)
+              draft.statusFolders.active.categoryOrder = removeCategoryOrderEntry(draft.statusFolders.active.categoryOrder, entry)
             } else {
               /** Ordered prompt source layout losing the moved entry. */
               const layout = draft.statusFolders[statusFolderId]
@@ -854,7 +853,7 @@ const createMovePlanner = (
             /** Ordered category layout receiving the cross-root movement. */
             const categoryOrder =
               draft.kind === 'template'
-                ? draft.categoryOrder
+                ? draft.statusFolders.active.categoryOrder
                 : draft.statusFolders[statusFolderId].ordering === 'category'
                   ? draft.statusFolders[statusFolderId].categoryOrder
                   : null
@@ -867,7 +866,7 @@ const createMovePlanner = (
               command.categoryId,
               command.previousEntryId
             ).categoryOrder
-            if (draft.kind === 'template') draft.categoryOrder = nextCategoryOrder
+            if (draft.kind === 'template') draft.statusFolders.active.categoryOrder = nextCategoryOrder
             else {
               /** Prompt layout narrowed by the validated ordered destination status folder. */
               const layout = draft.statusFolders[statusFolderId]

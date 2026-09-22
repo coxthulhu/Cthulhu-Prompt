@@ -22,7 +22,7 @@ import {
 import { parsePromptMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 2
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 3
 
 /** Workspace metadata accepted only while determining which migrations to run. */
 type MigratableWorkspaceInfoFile = Omit<WorkspaceInfoFile, 'schemaVersion'> & {
@@ -312,10 +312,42 @@ const migrateSchemaVersionOneToTwo: WorkspaceMigration = (
   } satisfies WorkspaceInfoFile)
 }
 
+/** Moves schema-two templates into Active while retaining root metadata and categories. */
+const migrateSchemaVersionTwoToThree: WorkspaceMigration = (workspacePath, workspaceInfoPath) => {
+  /** Filesystem containing the legacy template roots. */
+  const fs = getFs()
+  /** Template library whose immediate directories are root folders. */
+  const templatesPath = path.join(workspacePath, TEMPLATES_DIRECTORY_NAME)
+  for (const entry of fs.readdirSync(templatesPath, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    /** Root paths preserve existing filenames and stable template IDs. */
+    const rootPath = path.join(templatesPath, entry.name)
+    /** Active directory receiving existing template content and ordering. */
+    const activePath = path.join(rootPath, 'Active')
+    fs.mkdirSync(activePath, { recursive: true })
+    fs.mkdirSync(path.join(rootPath, 'Archived'), { recursive: true })
+    for (const file of fs.readdirSync(rootPath, { withFileTypes: true })) {
+      if (file.isFile() && file.name.endsWith('.template.md')) {
+        fs.renameSync(path.join(rootPath, file.name), path.join(activePath, file.name))
+      }
+    }
+    /** Legacy order is moved intact; descriptions and categories remain root-owned. */
+    const orderPath = path.join(rootPath, '_FolderInfo', 'FolderOrder.json')
+    if (fs.existsSync(orderPath)) {
+      fs.mkdirSync(path.join(activePath, '_FolderInfo'), { recursive: true })
+      fs.renameSync(orderPath, path.join(activePath, '_FolderInfo', 'FolderOrder.json'))
+    }
+  }
+  /** Workspace identity retained when the new schema is committed last. */
+  const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+  writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 3 })
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   0: migrateSchemaVersionZeroToOne,
-  1: migrateSchemaVersionOneToTwo
+  1: migrateSchemaVersionOneToTwo,
+  2: migrateSchemaVersionTwoToThree
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

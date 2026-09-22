@@ -1,14 +1,13 @@
 import type { DomainChange, DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
-import { promptEntryRef } from '@shared/domain/OrderContainer'
+import { promptTemplateEntryRef, promptEntryRef } from '@shared/domain/OrderContainer'
 import {
   getPromptStatusFolderDefinition,
   isFinalPromptStatus,
   isPromptStatus,
   PromptStatus,
-  type PromptCategoryOrderPlacement,
-  type PromptPersisted
+  type PromptCategoryOrderPlacement
 } from '@shared/domain/prompt/Prompt'
 import { removeCategoryOrderEntry } from '@shared/domain/prompt-folder/PromptFolder'
 
@@ -72,9 +71,9 @@ export const parseSetPromptStatusDomainCommand = (
 }
 
 /** Plans prompt status metadata and any required root-scoped status-folder transfer. */
-export const planSetPromptStatusDomainMutation: DomainPlanner<
-  SetPromptStatusDomainCommand
-> = (state, command) => {
+const createSetContentStatusPlanner = (kind: 'prompt' | 'template'): DomainPlanner<SetPromptStatusDomainCommand> => (state, command) => {
+  /** Entity type selected by the channel, never by untrusted command data. */
+  const entityType = kind === 'prompt' ? 'prompt' : 'promptTemplate'
   /** Prompt root that currently owns the prompt representation. */
   const sourcePromptFolder = state.get('promptFolder', command.sourcePromptFolderId)
   /** Prompt root that will own the requested status representation. */
@@ -83,13 +82,14 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
     command.destinationPromptFolderId
   )
   /** Prompt receiving the requested workflow status. */
-  const prompt = state.get('prompt', command.promptId)
+  const prompt = state.get(entityType, command.promptId)
   if (
     !sourcePromptFolder ||
-    sourcePromptFolder.kind !== 'prompt' ||
+    sourcePromptFolder.kind !== kind ||
     !destinationPromptFolder ||
-    destinationPromptFolder.kind !== 'prompt' ||
-    !prompt
+    destinationPromptFolder.kind !== kind ||
+    !prompt ||
+    (kind === 'template' && command.status !== PromptStatus.Todo && command.status !== PromptStatus.Archived)
   ) {
     /** Stable conflict targets available before status-folder ownership can be resolved. */
     const targets: DomainTarget[] = [
@@ -102,13 +102,13 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
               id: command.destinationPromptFolderId
             }
           ]),
-      { entityType: 'prompt', id: command.promptId }
+      { entityType, id: command.promptId }
     ]
     return { status: 'conflict', reason: 'Prompt status conflict', targets }
   }
 
   /** Status-folder definition owning the prompt before this status change. */
-  const sourceStatusFolder = getPromptStatusFolderDefinition(prompt.status)
+  const sourceStatusFolder = getPromptStatusFolderDefinition(prompt.status ?? PromptStatus.Todo)
   /** Status-folder definition owning the requested target status. */
   const destinationStatusFolder = getPromptStatusFolderDefinition(command.status)
   /** Whether root-scoped physical status-folder ownership actually changes. */
@@ -130,7 +130,7 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
               ])
         ]
       : []),
-    { entityType: 'prompt', id: command.promptId }
+    { entityType, id: command.promptId }
   ]
   /** Source layout that must contain the prompt before the mutation can apply. */
   const sourceLayout = sourcePromptFolder.statusFolders[sourceStatusFolder.id]
@@ -139,7 +139,7 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
     sourceLayout.ordering === 'category'
       ? sourceLayout.categoryOrder.categories.some((group) =>
           group.entries.some(
-            (entry) => entry.kind === 'prompt' && entry.id === command.promptId
+            (entry) => entry.kind === kind && entry.id === command.promptId
           )
         )
       : sourceLayout.promptIds.includes(command.promptId)
@@ -167,14 +167,14 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
         : command.modifiedAt
       : undefined
   /** Prompt fields after applying status and finalization metadata. */
-  const statusPrompt: PromptPersisted = {
-    ...(statusPromptBase as PromptPersisted),
+  const statusPrompt = {
+    ...statusPromptBase,
     status: command.status,
     modifiedAt: command.modifiedAt,
     ...(finalizedAt ? { finalizedAt } : {})
   }
   /** Ordered reference transferred only when physical status-folder ownership changes. */
-  const entry = promptEntryRef(command.promptId)
+  const entry = kind === 'prompt' ? promptEntryRef(command.promptId) : promptTemplateEntryRef(command.promptId)
 
   try {
     /** Prompt whose category metadata follows an ordered destination transfer. */
@@ -197,7 +197,7 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
               entityType: 'promptFolder',
               id: sourcePromptFolder.id,
               recipe: (draft) => {
-                if (draft.kind !== 'prompt') return
+                if (draft.kind !== kind) return
                 /** Draft source layout losing the prompt reference. */
                 const draftSource = draft.statusFolders[sourceStatusFolder.id]
                 if (draftSource.ordering === 'category') {
@@ -237,7 +237,7 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
               entityType: 'promptFolder',
               id: sourcePromptFolder.id,
               recipe: (draft) => {
-                if (draft.kind !== 'prompt') return
+                if (draft.kind !== kind) return
                 /** Draft source layout losing cross-root ownership. */
                 const layout = draft.statusFolders[sourceStatusFolder.id]
                 if (layout.ordering === 'category') {
@@ -254,7 +254,7 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
               entityType: 'promptFolder',
               id: destinationPromptFolder.id,
               recipe: (draft) => {
-                if (draft.kind !== 'prompt') return
+                if (draft.kind !== kind) return
                 /** Draft destination layout receiving cross-root ownership. */
                 const layout = draft.statusFolders[destinationStatusFolder.id]
                 if (layout.ordering === 'category') {
@@ -281,16 +281,29 @@ export const planSetPromptStatusDomainMutation: DomainPlanner<
       ...promptFolderChanges,
       {
         type: 'update',
-        entityType: 'prompt',
+        entityType,
         id: command.promptId,
         recipe: (draft) => {
           Object.assign(draft, nextPrompt)
           if (!finalizedAt) delete draft.finalizedAt
           if (nextPrompt.category === undefined) delete draft.category
         }
-      }
+      } as DomainChange
     ]
   } catch {
     return { status: 'conflict', reason: 'Prompt status placement conflict', targets }
   }
+}
+
+/** Shared task status planner retains the task-specific channel contract. */
+export const planSetPromptStatusDomainMutation = createSetContentStatusPlanner('prompt')
+
+/** Shared template transfer planner accepts only Active and Archived destinations. */
+export const planSetPromptTemplateStatusDomainMutation = createSetContentStatusPlanner('template')
+
+/** Parses the same transfer contract while excluding task-only template states. */
+export const parseSetPromptTemplateStatusDomainCommand = (value: unknown): SetPromptStatusDomainCommand | null => {
+  /** Strict shared command before applying the template-specific status restriction. */
+  const command = parseSetPromptStatusDomainCommand(value)
+  return command && (command.status === PromptStatus.Todo || command.status === PromptStatus.Archived) ? command : null
 }

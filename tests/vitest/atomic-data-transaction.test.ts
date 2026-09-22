@@ -1,3 +1,4 @@
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DomainState } from '@shared/domain/DomainChanges'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
@@ -621,14 +622,14 @@ describe('atomic data transaction', () => {
       kind: 'template' as const,
       folderName: 'Templates',
       displayName: 'Templates',
-      categoryOrder: {
+      statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
         categories: [
           {
             categoryId: null,
             entries: [{ kind: 'template' as const, id: 'template' }]
           }
         ]
-      },
+      } } }),
       settings: { folderDescription: null }
     }
     /** Template markdown stored directly beneath its root directory. */
@@ -665,7 +666,7 @@ describe('atomic data transaction', () => {
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        folderPath: promptFolder.folderName,
+        folderPath: `${promptFolder.folderName}\\Active`,
         promptFolderId: promptFolder.id,
         promptId: promptTemplate.id,
         promptStem: promptTemplate.title,
@@ -703,7 +704,7 @@ describe('atomic data transaction', () => {
       mockTransactionState.readEntry('promptTemplate', promptTemplate.id)
     ).toMatchObject({
       revision: 6,
-      persistenceFields: { folderPath: 'RenamedTemplates' }
+      persistenceFields: { folderPath: 'RenamedTemplates\\Active' }
     })
     expect(mockTransactionState.stageCounts).toEqual({
       systemSettings: 0,

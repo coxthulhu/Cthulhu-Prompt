@@ -57,6 +57,7 @@ import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuer
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
 import {
+  setPromptTemplateStatus,
   deletePromptTemplate,
   movePromptTemplate
 } from '@renderer/data/Mutations/PromptTemplateMutations'
@@ -353,15 +354,15 @@ export const createPromptFolderScreenController = ({
   const findContainingRootFolderId = (contentOwnerId: string): string =>
     categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
   /** Counts for every registered workflow shown in the root filter. */
-  const statusGroupCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, promptQuery.data))
+  const statusGroupCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptStatus.Todo })) : promptQuery.data))
   /** Finalized prompts in the selected group, ordered by finalization time. */
   const selectedFinalizedPrompts = $derived.by(() => {
-    if (!screenRootFolder || screenRootFolder.kind === 'template' || !isFinalMode) return []
+    if (!screenRootFolder || !isFinalMode) return []
     return collectFinalizedPrompts({
       rootFolder: screenRootFolder,
       statusFolderId: screenMode,
-      statusByPromptId: Object.fromEntries(promptQuery.data.map((prompt) => [prompt.id, prompt.status])),
-      finalizedAtByPromptId: Object.fromEntries(promptQuery.data.map((prompt) => [prompt.id, prompt.finalizedAt]))
+      statusByPromptId: Object.fromEntries((isTemplateFolder ? promptTemplateQuery.data : promptQuery.data).map((prompt) => [prompt.id, prompt.status])),
+      finalizedAtByPromptId: Object.fromEntries((isTemplateFolder ? promptTemplateQuery.data : promptQuery.data).map((prompt) => [prompt.id, prompt.finalizedAt]))
     })
   })
   /** Newest-first prompt IDs for the currently selected final status. */
@@ -502,8 +503,8 @@ export const createPromptFolderScreenController = ({
     if (isTemplateFolder) {
       for (const template of promptTemplateQuery.data) {
         metadataById[template.id] = {
-          status: PromptStatus.Todo,
-          finalizedAt: null
+          status: template.status ?? PromptStatus.Todo,
+          finalizedAt: template.finalizedAt ?? null
         }
       }
     }
@@ -1250,13 +1251,12 @@ export const createPromptFolderScreenController = ({
   }
 
   const handleSetPromptStatus = (target: PromptFolderPromptTarget, status: PromptStatus) => {
-    if (isTemplateFolder) return
     if (!promptFolderCollection.get(screenRootFolderId)) {
       return
     }
 
     void runIpcBestEffort(async () => {
-      await setPromptStatus(screenRootFolderId, screenRootFolderId, target.promptId, status)
+      await (isTemplateFolder ? setPromptTemplateStatus : setPromptStatus)(screenRootFolderId, screenRootFolderId, target.promptId, status)
     })
   }
 
@@ -1398,7 +1398,7 @@ export const createPromptFolderScreenController = ({
   )
   /** Fixed status-group or template label shown before the current category. */
   const headerGroupLabel = $derived(
-    isTemplateFolder ? 'Templates' : PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label
+    PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label
   )
 
   const findRenderedPromptRow = (promptId: string): PromptFolderScreenPromptEditorRow | undefined =>

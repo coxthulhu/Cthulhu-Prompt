@@ -318,11 +318,11 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       'Code Review Templates'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-section"]')).toHaveText(
-      'Templates'
+      'Active'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-header-category"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
-      'Templates 2'
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
+      'Active 2'
     )
     await expect(mainWindow.locator('[data-testid="prompt-folder-completed-filter"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveCount(0)
@@ -1188,7 +1188,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'First Template'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toBeVisible()
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toBeVisible()
   })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {
@@ -1365,8 +1365,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator('[data-testid="prompt-folder-root-header"] .prompt-folder-root-subtitle')
     ).toHaveText('Prompt Templates')
-    await expect(mainWindow.locator('[data-testid="prompt-folder-template-filter"]')).toHaveText(
-      'Templates 0'
+    await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
+      'Active 0'
     )
     await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toHaveAttribute(
       'title',
@@ -1398,7 +1398,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_FolderInfo/FolderOrder.json`
+          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Active/_FolderInfo/FolderOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

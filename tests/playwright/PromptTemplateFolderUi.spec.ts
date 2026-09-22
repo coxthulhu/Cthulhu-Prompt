@@ -565,7 +565,7 @@ describe('Prompt template folder UI', () => {
       createdEditor.locator('[data-testid="prompt-title-status-indicator"]')
     ).toHaveAttribute('data-edited', 'true')
 
-    const persistedPath = `${WORKSPACE_PATH}/Templates/Templates/UI Template.template.md`
+    const persistedPath = `${WORKSPACE_PATH}/Templates/Templates/Active/UI Template.template.md`
     await expect.poll(() => checkFileExists(electronApp, persistedPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, persistedPath)).toContain('Use {{selection}}.')
 
@@ -574,7 +574,8 @@ describe('Prompt template folder UI', () => {
       .poll(() => mainWindow.evaluate(() => window.navigator.clipboard.readText()))
       .toBe('Use {{selection}}.')
 
-    await createdEditor.locator('[data-testid="prompt-delete-button"]').click()
+    await createdEditor.locator('[data-testid="prompt-delete-more-options-button"]').click()
+    await mainWindow.getByTestId('prompt-delete-menu-item').click()
     await expect(mainWindow.getByText('Delete Template', { exact: true })).toBeVisible()
     await mainWindow.locator('[data-testid="prompt-confirm-delete-button"]').click()
     await expect(mainWindow.locator(promptEditorSelector(newTemplateId!))).toHaveCount(0)
@@ -677,7 +678,7 @@ describe('Prompt template folder UI', () => {
     await testHelpers.navigateToPromptTemplateFolders('Empty Templates')
     await expect(mainWindow.locator(TEMPLATE_EDITOR)).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')).toHaveCount(
-      0
+      1
     )
     await expect(mainWindow.locator('[data-testid="prompt-tree-template-empty-state"]')).toHaveText(
       'No templates. Click to add.'

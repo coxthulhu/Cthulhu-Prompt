@@ -212,3 +212,8 @@ export type PromptCategoryOrderPlacement = {
   categoryId: string | null
   previousEntryId: string | null
 }
+
+/** Returns workflow groups exposed by a task or template root. */
+export const getContentStatusFolders = (kind: 'prompt' | 'template'): PromptStatusFolderDefinition[] =>
+  PROMPT_STATUS_FOLDERS.filter((group) => kind === 'prompt' ||
+    group.id === PromptStatusFolderId.Active || group.id === PromptStatusFolderId.Archived)

@@ -310,7 +310,7 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
       id: promptFolder.id,
       recipe: (draft) => {
         if (draft.kind === 'template') {
-          draft.categoryOrder = insertCategoryOrderGroup(draft.categoryOrder, category.id)
+          draft.statusFolders.active.categoryOrder = insertCategoryOrderGroup(draft.statusFolders.active.categoryOrder, category.id)
           return
         }
         for (const layout of Object.values(draft.statusFolders)) {
@@ -461,8 +461,8 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
       id: promptFolder.id,
       recipe: (draft) => {
         if (draft.kind === 'template') {
-          draft.categoryOrder = applyManagedCategoryOrderChanges(
-            draft.categoryOrder,
+          draft.statusFolders.active.categoryOrder = applyManagedCategoryOrderChanges(
+            draft.statusFolders.active.categoryOrder,
             deletedCategoryIds,
             newCategoryIds
           )
@@ -668,8 +668,8 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       id: owningFolder.id,
       recipe: (draft) => {
         if (draft.kind === 'template') {
-          draft.categoryOrder = deleteCategoryOrderGroup(
-            draft.categoryOrder,
+          draft.statusFolders.active.categoryOrder = deleteCategoryOrderGroup(
+            draft.statusFolders.active.categoryOrder,
             command.categoryId
           )
           return
@@ -877,7 +877,7 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
   const currentCategoryOrder =
     promptFolder.kind === 'template'
       ? command.statusFolderId === null
-        ? promptFolder.categoryOrder
+        ? promptFolder.statusFolders.active.categoryOrder
         : null
       : command.statusFolderId === null
         ? null
@@ -902,7 +902,7 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
         id: command.promptFolderId,
         recipe: (draft) => {
           if (draft.kind === 'template') {
-            draft.categoryOrder = categoryOrder
+            draft.statusFolders.active.categoryOrder = categoryOrder
           } else if (command.statusFolderId !== null) {
             /** Ordered draft layout selected by the validated command identity. */
             const layout = draft.statusFolders[command.statusFolderId]

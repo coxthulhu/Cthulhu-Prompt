@@ -130,7 +130,7 @@ describe('Prompt folder status navigation', () => {
     await mainWindow.getByTestId('toggle-completed-prompts-button').click()
     await mainWindow.getByTestId('prompt-folder-backlog-filter').click()
     await testHelpers.navigateToPromptTemplateFolders('Templates')
-    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Templates')
+    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
     await testHelpers.navigateToPromptFolders('Beta')
     await expect(mainWindow.getByTestId('prompt-folder-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
 
@@ -161,6 +161,6 @@ describe('Prompt folder status navigation', () => {
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
     await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toHaveAttribute('aria-pressed', 'true')
     await testHelpers.navigateToPromptTemplateFolders('Templates')
-    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Templates')
+    await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
   })
 })

@@ -316,7 +316,7 @@ describe('Prompt Folder Order', () => {
         'sidebar-prompt-folder-dropdown-item-template-alpha'
       ])
     expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath))).toMatchObject({
-      schemaVersion: 2
+      schemaVersion: 3
     })
     await expect(
       checkFileExists(
