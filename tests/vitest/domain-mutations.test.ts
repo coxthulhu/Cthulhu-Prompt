@@ -1,3 +1,4 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { produce } from 'immer'
 import { describe, expect, it } from 'vitest'
 import type {
@@ -16,10 +17,8 @@ import {
 import {
   planCreatePromptDomainMutation,
   planCreatePromptTemplateDomainMutation,
-  planPromptMove,
   planPromptTemplateUpdate,
   planPromptUpdate,
-  planPromptTemplateMove
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
@@ -32,7 +31,7 @@ import {
   planMovePromptFolderDomainMutation,
   planRenamePromptFolderDomainMutation
 } from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
-import { planSetPromptStatusDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
+import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
 
@@ -850,14 +849,13 @@ describe('shared domain mutation planners', () => {
       status: PromptStatus.Todo
     }
     /** Shared status plan moving the prompt into Completed. */
-    const plan = planSetPromptStatusDomainMutation(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({ promptFolder: [folder], prompt: [prompt] }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: folder.id,
-        destinationPromptFolderId: folder.id,
         promptId: prompt.id,
-        status: PromptStatus.Completed,
-        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -895,14 +893,13 @@ describe('shared domain mutation planners', () => {
       finalizedAt: '2026-08-29T12:00:00Z'
     }
     /** Shared status plan moving the prompt into Archived with a new timestamp. */
-    const plan = planSetPromptStatusDomainMutation(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({ promptFolder: [folder], prompt: [prompt] }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: folder.id,
-        destinationPromptFolderId: folder.id,
         promptId: prompt.id,
-        status: PromptStatus.Archived,
-        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Archived },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -940,14 +937,13 @@ describe('shared domain mutation planners', () => {
       status: PromptStatus.Todo
     }
     /** Shared status plan expected to update only the prompt entity. */
-    const plan = planSetPromptStatusDomainMutation(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({ promptFolder: [folder], prompt: [prompt] }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: folder.id,
-        destinationPromptFolderId: folder.id,
         promptId: prompt.id,
-        status: PromptStatus.InProgress,
-        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.InProgress },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -981,14 +977,13 @@ describe('shared domain mutation planners', () => {
       status: PromptStatus.Todo
     }
     /** Shared status plan expected to transfer both root orderings and update the prompt. */
-    const plan = planSetPromptStatusDomainMutation(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({ promptFolder: [source, destination], prompt: [prompt] }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: source.id,
-        destinationPromptFolderId: destination.id,
         promptId: prompt.id,
-        status: PromptStatus.InProgress,
-        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        location: { promptFolderId: destination.id, categoryId: null, previousEntryId: null, status: PromptStatus.InProgress },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -1028,14 +1023,13 @@ describe('shared domain mutation planners', () => {
       status: PromptStatus.Todo
     }
     /** Shared status plan transferring ownership into the destination Completed hierarchy. */
-    const plan = planSetPromptStatusDomainMutation(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({ promptFolder: [source, destination], prompt: [prompt] }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: source.id,
-        destinationPromptFolderId: destination.id,
         promptId: prompt.id,
-        status: PromptStatus.Completed,
-        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        location: { promptFolderId: destination.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -1071,14 +1065,13 @@ describe('shared domain mutation planners', () => {
       finalizedAt: 'old'
     }
     /** Shared restoration plan targeting the Uncategorized group. */
-    const plan = planSetPromptStatusDomainMutation(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({ promptFolder: [folder], prompt: [prompt] }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: folder.id,
-        destinationPromptFolderId: folder.id,
         promptId: prompt.id,
-        status: PromptStatus.Todo,
-        categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -1106,7 +1099,7 @@ describe('shared domain mutation planners', () => {
     /** Valid destination for the attempted movement. */
     const destination = createRootFolder('destination', 'prompt', 'destination-category')
     /** Planner conflict produced from authoritative ownership. */
-    const conflict = planPromptMove(
+    const conflict = planSetPromptLocationDomainMutation(
       createDomainState({
         promptFolder: [actualSource, claimedSource, destination],
         prompt: [
@@ -1120,16 +1113,16 @@ describe('shared domain mutation planners', () => {
         ]
       }),
       {
+        kind: 'prompt',
         sourcePromptFolderId: 'claimed-source',
-        destinationPromptFolderId: 'destination',
-        contentId: 'prompt',
-        categoryId: 'destination-category',
-        previousEntryId: null
+        promptId: 'prompt',
+        location: { promptFolderId: 'destination', categoryId: 'destination-category', previousEntryId: null, status: PromptStatus.Todo },
+        modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
     expect(conflict).toEqual({
       status: 'conflict',
-      reason: 'Markdown content ownership conflict',
+      reason: 'Prompt location ownership conflict',
       targets: [
         { entityType: 'promptFolder', id: 'actual-source' },
         { entityType: 'promptFolder', id: 'destination' },
@@ -1152,7 +1145,7 @@ describe('shared domain mutation planners', () => {
       id: 'existing'
     })
     /** Shared template movement plan. */
-    const plan = planPromptTemplateMove(
+    const plan = planSetPromptLocationDomainMutation(
       createDomainState({
         promptFolder: [source, destination],
         promptTemplate: [
@@ -1171,11 +1164,11 @@ describe('shared domain mutation planners', () => {
         ]
       }),
       {
+        kind: 'template',
         sourcePromptFolderId: 'source',
-        destinationPromptFolderId: 'destination',
-        contentId: 'moving',
-        categoryId: null,
-        previousEntryId: 'existing'
+        promptId: 'moving',
+        location: { promptFolderId: 'destination', categoryId: null, previousEntryId: 'existing', status: PromptTemplateStatus.Active },
+        modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
     expect(Array.isArray(plan)).toBe(true)
@@ -1191,5 +1184,7 @@ describe('shared domain mutation planners', () => {
       plan[2]!.recipe!
     )
     expect(movedTemplate.fallbackTitle).toBe('New Template 1')
+    // Pure movement retains the domain timestamp; persisted snapshots use filesystem mtime.
+    expect(movedTemplate.modifiedAt).toBe('now')
   })
 })

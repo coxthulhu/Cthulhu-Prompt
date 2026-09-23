@@ -5,7 +5,7 @@ import type {
 } from '@shared/domain/DomainChanges'
 import { planDeleteCategoryDomainMutation } from '@shared/domain/category/CategoryDomainMutations'
 import { planCreateCategoryDomainMutation } from '@shared/domain/category/CategoryDomainMutations'
-import { planPromptMove } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
+import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
@@ -364,12 +364,12 @@ describe('domain persistence planning', () => {
     }
 
     /** Shared movement changes projected into main persistence writes. */
-    const plan = planPromptMove(createMainLikeDomainState(), {
+    const plan = planSetPromptLocationDomainMutation(createMainLikeDomainState(), {
+      kind: 'prompt',
       sourcePromptFolderId: source.id,
-      destinationPromptFolderId: destination.id,
-      contentId: 'moving',
-      categoryId: null,
-      previousEntryId: 'sibling'
+      promptId: 'moving',
+      location: { promptFolderId: destination.id, categoryId: null, previousEntryId: 'sibling', status: PromptStatus.Todo },
+      modifiedAt: '2026-08-30T12:00:00Z'
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return

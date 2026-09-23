@@ -1,3 +1,4 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { describe, expect, it } from 'vitest'
 import {
   parseCreateCategoryDomainCommand,
@@ -11,7 +12,6 @@ import {
   parseCreatePromptDomainCommand,
   parseCreatePromptTemplateDomainCommand,
   parseDeleteMarkdownContentDomainCommand,
-  parseMoveMarkdownContentDomainCommand,
   parseUpdatePromptDomainCommand,
   parseUpdatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
@@ -21,7 +21,7 @@ import {
   parseMovePromptFolderDomainCommand,
   parseRenamePromptFolderDomainCommand
 } from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
-import { parseSetPromptStatusDomainCommand } from '@shared/domain/prompt/PromptDomainMutations'
+import { parseSetPromptLocationDomainCommand } from '@shared/domain/prompt/PromptDomainMutations'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import { parseSetSystemSettingsDomainCommand } from '@shared/domain/settings/SystemSettingsDomainMutations'
 
@@ -209,27 +209,42 @@ describe('domain mutation command validation', () => {
   it('accepts a prompt-status command and rejects redundant entity payloads', () => {
     /** Valid prompt-status command carrying domain intent only. */
     const command = {
+      kind: 'prompt',
       sourcePromptFolderId: 'source-prompts',
-      destinationPromptFolderId: 'destination-prompts',
       promptId: 'prompt',
-      status: PromptStatus.Completed,
-      categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+      location: { promptFolderId: 'destination-prompts', categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
       modifiedAt: '2026-08-30T12:00:00Z'
     }
-    expect(parseSetPromptStatusDomainCommand(command)).toEqual(command)
-    expect(parseSetPromptStatusDomainCommand({ ...command, prompt: { id: 'legacy' } })).toBeNull()
+    expect(parseSetPromptLocationDomainCommand(command)).toEqual(command)
+    expect(parseSetPromptLocationDomainCommand({ ...command, prompt: { id: 'legacy' } })).toBeNull()
   })
 
-  it('accepts the channel-independent markdown movement command', () => {
-    /** Valid movement command shared by the prompt and template channels. */
+  it.each([PromptTemplateStatus.Active, PromptTemplateStatus.Archived])('accepts template location status %s', (status) => {
+    /** Valid template location command sent through the same channel as prompts. */
     const command = {
+      kind: 'template',
       sourcePromptFolderId: 'source',
-      destinationPromptFolderId: 'destination',
-      contentId: 'content',
-      categoryId: null,
-      previousEntryId: null
+      promptId: 'content',
+      location: { promptFolderId: 'destination', categoryId: null, previousEntryId: null, status },
+      modifiedAt: '2026-08-30T12:00:00Z'
     }
-    expect(parseMoveMarkdownContentDomainCommand(command)).toEqual(command)
+    expect(parseSetPromptLocationDomainCommand(command)).toEqual(command)
+  })
+
+  it.each([
+    ['template', PromptStatus.Todo],
+    ['template', PromptStatus.InProgress],
+    ['template', PromptStatus.Backlog],
+    ['template', PromptStatus.Completed],
+    ['prompt', PromptTemplateStatus.Active]
+  ])('rejects %s location status %s', (kind, status) => {
+    expect(parseSetPromptLocationDomainCommand({
+      kind,
+      sourcePromptFolderId: 'source',
+      promptId: 'content',
+      location: { promptFolderId: 'destination', categoryId: null, previousEntryId: null, status },
+      modifiedAt: '2026-08-30T12:00:00Z'
+    })).toBeNull()
   })
 
   it('accepts exact prompt and template update commands', () => {
@@ -278,17 +293,17 @@ describe('domain mutation command validation', () => {
     expect(parseSetSystemSettingsDomainCommand({ ...command, legacy: true })).toBeNull()
   })
 
-  it('rejects legacy kind and other extra movement fields', () => {
-    /** Legacy movement command whose kind must now be determined by the IPC channel. */
+  it('rejects extra location command fields', () => {
+    /** Complete location command with an unsupported extra field. */
     const command = {
+      extra: true,
       kind: 'prompt',
       sourcePromptFolderId: 'source',
-      destinationPromptFolderId: 'destination',
-      contentId: 'prompt',
-      categoryId: null,
-      previousEntryId: null
+      promptId: 'prompt',
+      location: { promptFolderId: 'destination', categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
+      modifiedAt: '2026-08-30T12:00:00Z'
     }
-    expect(parseMoveMarkdownContentDomainCommand(command)).toBeNull()
+    expect(parseSetPromptLocationDomainCommand(command)).toBeNull()
   })
 
   it('accepts a valid category deletion command', () => {

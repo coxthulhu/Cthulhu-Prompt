@@ -25,7 +25,7 @@ import {
   resolvePersistedPromptFilePathsByTitle
 } from '../helpers/PromptPersistenceTestHelpers'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
-import { PromptStatus, type PromptPersisted } from '@shared/domain/prompt/Prompt'
+import { PromptStatus, type PromptLocation, type PromptPersisted } from '@shared/domain/prompt/Prompt'
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
@@ -601,6 +601,7 @@ const buildStatusDragCategoryWorkspace = () => {
   /** Workspace structure populated with Active and Completed categorized prompts. */
   const workspace = createWorkspaceWithFolders(STATUS_DRAG_CATEGORY_WORKSPACE_PATH, [
     {
+      promptFolderId: 'status-drag-root',
       folderName: 'Status Drag Categories',
       displayName: 'Status Drag Categories',
       prompts: [
@@ -632,7 +633,7 @@ const buildStatusDragCategoryWorkspace = () => {
         }
       ]
     }
-  ])
+  ], { settings: { workspaceId: 'status-drag-workspace' } })
   workspace[
     `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Categories/Primary.category.json`
   ] = JSON.stringify(
@@ -1595,7 +1596,7 @@ describe('Prompt folder prompt management', () => {
     expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
   })
 
-  test('rejects moving a completed prompt through IPC', async ({ testSetup, electronApp }) => {
+  test('rejects manual ordering in a completed location through IPC', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
 
@@ -1624,16 +1625,16 @@ describe('Prompt folder prompt management', () => {
         const prompt = sourceLoad.prompts.find(
           (candidate: { id: string }) => candidate.id === promptId
         )
-        return await window.electron.ipcRenderer.invoke('move-prompt', {
+        return await window.electron.ipcRenderer.invoke('set-prompt-location', {
           requestId: `test-move-completed-${Date.now()}`,
           clientId: window.ipcClientId,
           payload: {
             command: {
+              kind: 'prompt',
               sourcePromptFolderId: sourcePromptFolder.id,
-              destinationPromptFolderId: destinationPromptFolder.id,
-              contentId: prompt.id,
-              previousEntryId: null,
-              categoryId: null
+              promptId: prompt.id,
+              location: { promptFolderId: destinationPromptFolder.id, categoryId: null, previousEntryId: 'completed-mode-oldest', status: 'Completed' },
+              modifiedAt: '2026-08-30T12:00:00Z'
             },
             expectations: [
               {
@@ -1666,18 +1667,7 @@ describe('Prompt folder prompt management', () => {
       }
     )
 
-    expect(moveResult.success).toBe(false)
-    expect(moveResult.conflict).toBe(true)
-    expect(
-      moveResult.payload.snapshots.map(
-        (snapshot: { entityType: string; id: string }) =>
-          `${snapshot.entityType}:${snapshot.id}`
-      )
-    ).toEqual([
-      `promptFolder:${COMPLETED_MODE_FOLDER_ID}`,
-      `promptFolder:${NO_COMPLETED_FOLDER_ID}`,
-      'prompt:completed-mode-newest'
-    ])
+    expect(moveResult).toMatchObject({ success: false, error: 'Invalid request payload' })
     expect(
       await checkPersistedPromptFilesExistByTitle(electronApp, {
         workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
@@ -2172,6 +2162,80 @@ describe('Prompt folder prompt management', () => {
       }
       return order.categories.find((category) => category.categoryId === STATUS_DRAG_PRIMARY_CATEGORY_ID)?.entries
     }).toEqual([{ kind: 'prompt', id: 'status-drag-completed' }])
+  })
+
+  test('sets status and exact placement together and preserves placement for status controls and drags', async ({ testSetup, electronApp }) => {
+    await testSetup.setupFilesystem(buildStatusDragCategoryWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH)])
+    /** Renderer and persistence helpers exercise the real IPC and subsequent UI actions. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    /** Complete destination changes category, predecessor, and status within Active. */
+    const location: PromptLocation = {
+      promptFolderId: 'status-drag-root',
+      categoryId: STATUS_DRAG_SECONDARY_CATEGORY_ID,
+      previousEntryId: 'status-drag-secondary-first',
+      status: PromptStatus.InProgress
+    }
+    /** Atomic result must include both the root ordering and the updated prompt. */
+    const result = await mainWindow.evaluate(async (location) => {
+      /** Loaded revisions form the exact expectations for this two-entity mutation. */
+      const loaded = await window.electron.ipcRenderer.invoke('load-prompt-folder-initial', {
+        requestId: 'location-test-load', clientId: window.ipcClientId,
+        payload: { workspaceId: 'status-drag-workspace', promptFolderId: location.promptFolderId }
+      })
+      /** Current owning root revision. */
+      const folder = loaded.promptFolders.find((folder: { id: string }) => folder.id === location.promptFolderId)
+      /** Current prompt revision is independent of its root revision. */
+      const prompt = loaded.prompts.find((prompt: { id: string }) => prompt.id === 'status-drag-primary-first')
+      return await window.electron.ipcRenderer.invoke('set-prompt-location', {
+        requestId: 'location-test-set', clientId: window.ipcClientId,
+        payload: {
+          command: {
+            kind: 'prompt', sourcePromptFolderId: folder.id, promptId: prompt.id,
+            location, modifiedAt: '2026-09-22T12:00:00Z'
+          },
+          expectations: [
+            { entityType: 'promptFolder', id: folder.id, expected: 'revision', revision: folder.revision },
+            { entityType: 'prompt', id: prompt.id, expected: 'revision', revision: prompt.revision }
+          ]
+        }
+      })
+    }, location)
+    expect(result.success).toBe(true)
+    expect(result.payload.snapshots).toEqual(expect.arrayContaining([
+      expect.objectContaining({ entityType: 'prompt', data: expect.objectContaining({ status: PromptStatus.InProgress, category: STATUS_DRAG_SECONDARY_CATEGORY_ID }) }),
+      expect.objectContaining({ entityType: 'promptFolder' })
+    ]))
+    /** Persisted group order verifies the exact predecessor across every UI action. */
+    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_FolderInfo/FolderOrder.json`
+    /** Reads one category's persisted IDs without relying on renderer optimism. */
+    const readCategoryIds = async (categoryId: string) => {
+      /** Current order file after the atomic mutation. */
+      const order = JSON.parse(await readTextFile(electronApp, orderPath)) as {
+        categories: Array<{ categoryId: string | null; entries: Array<{ id: string }> }>
+      }
+      return order.categories.find((group) => group.categoryId === categoryId)!.entries.map((entry) => entry.id)
+    }
+    expect(await readCategoryIds(STATUS_DRAG_PRIMARY_CATEGORY_ID)).toEqual(['status-drag-primary-second'])
+    expect(await readCategoryIds(STATUS_DRAG_SECONDARY_CATEGORY_ID)).toEqual(['status-drag-secondary-first', 'status-drag-primary-first'])
+    await testHelpers.navigateToPromptFolders('Status Drag Categories')
+    await expect(mainWindow.locator(statusPillSelector('status-drag-primary-first'))).toHaveText('In Progress')
+    await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
+    await mainWindow.getByTestId('prompt-status-option-todo').click()
+    /** Prompt front matter proves the status control persisted before ordering is checked. */
+    const promptPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/Primary First.prompt.md`
+    await expect.poll(() => readTextFile(electronApp, promptPath)).toContain('status: Todo')
+    expect(await readCategoryIds(STATUS_DRAG_SECONDARY_CATEGORY_ID)).toEqual(['status-drag-secondary-first', 'status-drag-primary-first'])
+    await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
+    await mainWindow.getByTestId('prompt-status-option-in-progress').click()
+    await expect.poll(() => readTextFile(electronApp, promptPath)).toContain('status: InProgress')
+    await beginPromptTreeRowDrag(mainWindow, 'status-drag-primary-first')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-active-prompt-status-drag-primary-second"]', 'bottom')
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCategoryIds(STATUS_DRAG_PRIMARY_CATEGORY_ID)).toEqual(['status-drag-primary-second', 'status-drag-primary-first'])
+    expect(await readTextFile(electronApp, promptPath)).toContain('status: InProgress')
+    expect(await readTextFile(electronApp, promptPath)).toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
   })
 
   test('persists category and exact order changes across status-tree drops', async ({

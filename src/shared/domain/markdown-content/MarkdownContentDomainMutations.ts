@@ -1,3 +1,4 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import type {
   DomainChange,
   DomainMutationConflict,
@@ -6,7 +7,6 @@ import type {
   DomainTarget
 } from '@shared/domain/DomainChanges'
 import {
-  getMarkdownContentCategoryOrder,
   getMarkdownContentIds,
   getOrderedMarkdownContentIds,
   getPromptStatusFolderContentIds,
@@ -18,7 +18,7 @@ import {
   getPromptStatusFolderDefinition,
   isPromptStatusFolderId,
   PROMPT_STATUS_FOLDER_REGISTRY,
-  PromptStatus,
+  type PromptContentStatus,
   PromptStatusFolderId,
   type PromptPersisted,
   type PromptTemplateReference
@@ -59,15 +59,6 @@ export type CreatePromptTemplateDomainCommand = {
   fallbackTitle: string
   templateText: string
   createdAt: string
-  categoryId: string | null
-  previousEntryId: string | null
-}
-
-/** Channel-scoped command for moving markdown content to an exact category-order position. */
-export type MoveMarkdownContentDomainCommand = {
-  sourcePromptFolderId: string
-  destinationPromptFolderId: string
-  contentId: string
   categoryId: string | null
   previousEntryId: string | null
 }
@@ -224,32 +215,6 @@ export const parseCreatePromptTemplateDomainCommand = (
     fallbackTitle: record.fallbackTitle,
     templateText: record.templateText,
     createdAt: record.createdAt as string,
-    categoryId: record.categoryId,
-    previousEntryId: record.previousEntryId
-  }
-}
-
-/** Strict runtime parser for prompt or template movement commands. */
-export const parseMoveMarkdownContentDomainCommand = (
-  value: unknown
-): MoveMarkdownContentDomainCommand | null => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw command fields validated without allowing additional properties. */
-  const record = value as Record<string, unknown>
-  if (
-    Object.keys(record).length !== 5 ||
-    typeof record.sourcePromptFolderId !== 'string' ||
-    typeof record.destinationPromptFolderId !== 'string' ||
-    typeof record.contentId !== 'string' ||
-    (record.categoryId !== null && typeof record.categoryId !== 'string') ||
-    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
-  ) {
-    return null
-  }
-  return {
-    sourcePromptFolderId: record.sourcePromptFolderId,
-    destinationPromptFolderId: record.destinationPromptFolderId,
-    contentId: record.contentId,
     categoryId: record.categoryId,
     previousEntryId: record.previousEntryId
   }
@@ -437,7 +402,8 @@ export const planCreatePromptTemplateDomainMutation: DomainPlanner<
     ...titleFields,
     createdAt: command.createdAt,
     modifiedAt: command.createdAt,
-    templateText: command.templateText
+    templateText: command.templateText,
+    status: PromptTemplateStatus.Active
   }
 
   try {
@@ -470,14 +436,6 @@ export const planCreatePromptTemplateDomainMutation: DomainPlanner<
   }
 }
 
-/** Adds a target once while preserving the caller's meaningful order. */
-const addUniqueTarget = (targets: DomainTarget[], target: DomainTarget): void => {
-  /** Stable key for the candidate target. */
-  const targetKey = `${target.entityType}:${target.id}`
-  if (targets.some((candidate) => `${candidate.entityType}:${candidate.id}` === targetKey)) return
-  targets.push(target)
-}
-
 /** Builds a planner conflict with a unique authoritative target set. */
 const createConflict = (reason: string, targets: DomainTarget[]): DomainMutationConflict => ({
   status: 'conflict',
@@ -499,7 +457,7 @@ type MarkdownContentDomainProjection = {
   fallbackTitle: string
   modifiedAt: string
   category?: string
-  status?: PromptStatus
+  status?: PromptContentStatus
 }
 
 /** Reads one prompt or template projection from shared domain state. */
@@ -662,7 +620,7 @@ export const planPromptTemplateUpdate: DomainPlanner<UpdatePromptTemplateDomainC
   const titleFields = resolvePromptTitleUpdateForPromptIds({
     promptIds: getPromptStatusFolderContentIds(
       owner,
-      getPromptStatusFolderDefinition(template.status ?? PromptStatus.Todo).id
+      getPromptStatusFolderDefinition(template.status ?? PromptTemplateStatus.Active).id
     ),
     lookupPrompt: (templateId) => state.get('promptTemplate', templateId),
     promptId: command.contentId,
@@ -686,216 +644,3 @@ export const planPromptTemplateUpdate: DomainPlanner<UpdatePromptTemplateDomainC
     }
   ]
 }
-
-/** Returns the authoritative targets relevant to one content movement attempt. */
-const collectMoveTargets = (
-  sourcePromptFolderId: string,
-  destinationPromptFolderId: string,
-  contentId: string,
-  kind: PromptFolderContentKind
-): DomainTarget[] => {
-  /** Ordered unique movement target set. */
-  const targets: DomainTarget[] = []
-  addUniqueTarget(targets, { entityType: 'promptFolder', id: sourcePromptFolderId })
-  addUniqueTarget(targets, { entityType: 'promptFolder', id: destinationPromptFolderId })
-  addUniqueTarget(targets, {
-    entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
-    id: contentId
-  })
-  return targets
-}
-
-/** Creates a channel-specific movement planner without placing kind on the command wire shape. */
-const createMovePlanner = (
-  kind: PromptFolderContentKind
-): DomainPlanner<MoveMarkdownContentDomainCommand> => (state, command) => {
-  /** Requested source folder from the movement command. */
-  const requestedSource = state.get('promptFolder', command.sourcePromptFolderId)
-  /** Requested destination folder from the movement command. */
-  const destination = state.get('promptFolder', command.destinationPromptFolderId)
-  /** Canonical content projection selected by the registered movement channel. */
-  const content = getMarkdownContent(state, kind, command.contentId)
-  /** Prompt status-folder definition selected by the canonical prompt status. */
-  const promptStatusFolder =
-    kind === 'prompt' && content?.status
-      ? getPromptStatusFolderDefinition(content.status)
-      : null
-  /** Whether the selected template root or prompt status folder is manually ordered. */
-  const canMoveContent = kind === 'template' || promptStatusFolder?.ordering === 'category'
-  /** Actual root containing the requested ordered content reference. */
-  const actualSource = state
-    .getAll('promptFolder')
-    .find((folder) => {
-      if (folder.kind !== kind || !canMoveContent) return false
-      return folder.kind === 'template'
-        ? getOrderedMarkdownContentIds(folder, 'template').includes(command.contentId)
-        : getOrderedMarkdownContentIds(
-            folder,
-            'prompt',
-            promptStatusFolder!.id
-          ).includes(command.contentId)
-    })
-  /** Correct source used for invariant-conflict reconciliation. */
-  const conflictSourceId = actualSource?.id ?? requestedSource?.id ?? command.sourcePromptFolderId
-  /** Correct authoritative movement target set. */
-  const targets = collectMoveTargets(
-    conflictSourceId,
-    command.destinationPromptFolderId,
-    command.contentId,
-    kind
-  )
-  if (
-    !requestedSource ||
-    !destination ||
-    requestedSource.kind !== kind ||
-    destination.kind !== kind ||
-    !content ||
-    !actualSource ||
-    actualSource.id !== requestedSource.id ||
-    !canMoveContent
-  ) {
-    return createConflict('Markdown content ownership conflict', targets)
-  }
-
-  /** Entry reference transferred between category groups or root folders. */
-  const entry = createContentEntryRef(kind, command.contentId)
-  /** Ordered status-folder identity used only for prompt movement. */
-  const statusFolderId = promptStatusFolder?.id ?? PromptStatusFolderId.Active
-  /** Destination IDs used to resolve blank-title fallback collisions. */
-  const destinationContentIds = getOrderedMarkdownContentIds(
-    destination,
-    kind,
-    statusFolderId
-  ).filter((contentId) => contentId !== command.contentId)
-  /** Cross-root content projection with a destination-safe fallback title. */
-  const contentWithDestinationFallback =
-    requestedSource.id !== destination.id && content.title.trim().length === 0
-      ? {
-          ...content,
-          fallbackTitle: resolvePromptTitleUpdateForPromptIds({
-            promptIds: destinationContentIds,
-            lookupPrompt: (contentId) => getMarkdownContent(state, kind, contentId),
-            promptId: command.contentId,
-            currentTitle: content.title,
-            currentFallbackTitle: content.fallbackTitle,
-            nextTitle: content.title,
-            defaultFallbackTitle:
-              kind === 'template' ? DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE : undefined
-          }).fallbackTitle
-        }
-      : content
-
-  try {
-    /** Destination placement validates category and predecessor invariants. */
-    const placement = placeMarkdownContentInCategoryOrder(
-      getMarkdownContentCategoryOrder(destination, statusFolderId),
-      contentWithDestinationFallback,
-      entry,
-      command.categoryId,
-      command.previousEntryId
-    )
-    /** Domain changes shared by renderer optimism and main persistence. */
-    const changes: DomainChange[] = []
-
-    if (requestedSource.id === destination.id) {
-      changes.push({
-        type: 'update',
-        entityType: 'promptFolder',
-        id: requestedSource.id,
-        recipe: (draft) => {
-          /** Ordered category layout receiving the in-place movement. */
-          const categoryOrder =
-            draft.kind === 'template'
-              ? draft.statusFolders.active.categoryOrder
-              : draft.statusFolders[statusFolderId].ordering === 'category'
-                ? draft.statusFolders[statusFolderId].categoryOrder
-                : null
-          if (!categoryOrder) return
-          /** Reordered category layout projected from the exact placement. */
-          const nextCategoryOrder = placeMarkdownContentInCategoryOrder(
-            categoryOrder,
-            placement.content,
-            entry,
-            command.categoryId,
-            command.previousEntryId
-          ).categoryOrder
-          if (draft.kind === 'template') draft.statusFolders.active.categoryOrder = nextCategoryOrder
-          else {
-            /** Prompt layout narrowed by the validated ordered source status folder. */
-            const layout = draft.statusFolders[statusFolderId]
-            if (layout.ordering === 'category') layout.categoryOrder = nextCategoryOrder
-          }
-        }
-      })
-    } else {
-      changes.push(
-        {
-          type: 'update',
-          entityType: 'promptFolder',
-          id: requestedSource.id,
-          recipe: (draft) => {
-            if (draft.kind === 'template') {
-              draft.statusFolders.active.categoryOrder = removeCategoryOrderEntry(draft.statusFolders.active.categoryOrder, entry)
-            } else {
-              /** Ordered prompt source layout losing the moved entry. */
-              const layout = draft.statusFolders[statusFolderId]
-              if (layout.ordering === 'category') {
-                layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
-              }
-            }
-          }
-        },
-        {
-          type: 'update',
-          entityType: 'promptFolder',
-          id: destination.id,
-          recipe: (draft) => {
-            /** Ordered category layout receiving the cross-root movement. */
-            const categoryOrder =
-              draft.kind === 'template'
-                ? draft.statusFolders.active.categoryOrder
-                : draft.statusFolders[statusFolderId].ordering === 'category'
-                  ? draft.statusFolders[statusFolderId].categoryOrder
-                  : null
-            if (!categoryOrder) return
-            /** Destination category order with the content inserted once. */
-            const nextCategoryOrder = placeMarkdownContentInCategoryOrder(
-              categoryOrder,
-              placement.content,
-              entry,
-              command.categoryId,
-              command.previousEntryId
-            ).categoryOrder
-            if (draft.kind === 'template') draft.statusFolders.active.categoryOrder = nextCategoryOrder
-            else {
-              /** Prompt layout narrowed by the validated ordered destination status folder. */
-              const layout = draft.statusFolders[statusFolderId]
-              if (layout.ordering === 'category') layout.categoryOrder = nextCategoryOrder
-            }
-          }
-        }
-      )
-    }
-
-    changes.push({
-      type: 'update',
-      entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
-      id: command.contentId,
-      recipe: (draft) => {
-        if (placement.content.category === undefined) delete draft.category
-        else draft.category = placement.content.category
-        draft.fallbackTitle = placement.content.fallbackTitle
-      }
-    } as DomainChange)
-
-    return changes
-  } catch {
-    return createConflict('Markdown content placement conflict', targets)
-  }
-}
-
-/** Plans prompt movement for the prompt-specific move channel. */
-export const planPromptMove = createMovePlanner('prompt')
-
-/** Plans prompt-template movement for the prompt-template-specific move channel. */
-export const planPromptTemplateMove = createMovePlanner('template')

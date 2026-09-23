@@ -1,13 +1,12 @@
+import type { PromptLocation } from '@shared/domain/prompt/Prompt'
 import type { PromptHandleDragPayload } from './promptHandleDrag'
 
 /** Prompt-tree entry currently participating in a drag gesture. */
 type DraggedPromptTreeEntry =
   | {
       kind: 'content'
-      folderId: string
+      location: PromptLocation
       contentId: string
-      /** Workflow retained by folder-selector drops. */
-      statusSection: PromptHandleDragPayload['statusSection']
     }
   | {
       kind: 'category'
@@ -20,9 +19,8 @@ let draggedEntry = $state<DraggedPromptTreeEntry | null>(null)
 export const startPromptDrag = (payload: PromptHandleDragPayload): void => {
   draggedEntry = {
     kind: 'content',
-    folderId: payload.sourceFolderId,
-    contentId: payload.fromId,
-    statusSection: payload.statusSection
+    location: payload.location,
+    contentId: payload.fromId
   }
 }
 

@@ -1,3 +1,4 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { describe, expect, it } from 'vitest'
 import {
   parsePromptTemplateMarkdown,
@@ -5,6 +6,14 @@ import {
 } from '../../src/main/Persistence/PromptFrontmatter'
 
 describe('prompt template frontmatter', () => {
+  it.each([PromptTemplateStatus.Active, PromptTemplateStatus.Archived])('reads explicit %s template status', (status) => {
+    const finalizedAt = status === PromptTemplateStatus.Archived ? '\nfinalizedAt: "2026-09-23T12:00:00Z"' : ''
+    const markdown = `---\nid: template\ncreatedAt: "2026-09-23T12:00:00Z"\ntitle: Template\nstatus: ${status}${finalizedAt}\n---\nText`
+    const parsed = parsePromptTemplateMarkdown(markdown)
+    expect(parsed).toMatchObject({ status })
+    expect(parsePromptTemplateMarkdown(serializePromptTemplateMarkdown(parsed!))).toMatchObject({ status })
+  })
+
   it('round trips title metadata and template text', () => {
     const serialized = serializePromptTemplateMarkdown({
       id: 'template-1',
@@ -22,7 +31,7 @@ describe('prompt template frontmatter', () => {
       fallbackTitle: '',
       createdAt: '2026-07-22T12:00:00.000Z',
       modifiedAt: '2026-07-22T13:00:00.000Z',
-      status: 'Todo',
+      status: PromptTemplateStatus.Active,
       templateText: 'Review {{change}} exactly.\n',
       category: 'category-1'
     })

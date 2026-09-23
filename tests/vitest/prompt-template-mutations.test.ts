@@ -1,3 +1,5 @@
+import { setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
@@ -20,7 +22,6 @@ vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({
 import {
   createPromptTemplate,
   deletePromptTemplate,
-  movePromptTemplate,
   mutatePacedPromptTemplateAutosaveUpdate
 } from '@renderer/data/Mutations/PromptTemplateMutations'
 
@@ -251,7 +252,7 @@ describe('prompt template mutations', () => {
     )
   })
 
-  it('sends delete and move through their template-specific IPC channels', async () => {
+  it('sends template deletion and location changes through their IPC channels', async () => {
     await deletePromptTemplate('source-folder', 'paced-template')
     const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
     const sourceAfterDelete = templateFolder('source-folder', ['paced-template'])
@@ -299,12 +300,12 @@ describe('prompt template mutations', () => {
       }
     })
 
-    await movePromptTemplate(
-      'source-folder',
-      'destination-folder',
-      'paced-template',
-      null
-    )
+    await setPromptLocation('source-folder', 'paced-template', {
+      promptFolderId: 'destination-folder',
+      categoryId: null,
+      previousEntryId: null,
+      status: PromptTemplateStatus.Active
+    })
     const moveOptions = runRevisionMutation.mock.calls[1]?.[0]
     const sourceAfterMove = templateFolder('source-folder', ['paced-template'])
     const destinationAfterMove = templateFolder('destination-folder')
@@ -339,14 +340,14 @@ describe('prompt template mutations', () => {
     /** Generic move invoke spy captures the template command and complete target set. */
     const moveInvoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
     await moveOptions.persistMutations({ invoke: moveInvoke, transaction: {} })
-    expect(moveInvoke).toHaveBeenCalledWith('move-prompt-template', {
+    expect(moveInvoke).toHaveBeenCalledWith('set-prompt-location', {
       payload: {
         command: {
+          kind: 'template',
           sourcePromptFolderId: 'source-folder',
-          destinationPromptFolderId: 'destination-folder',
-          contentId: 'paced-template',
-          categoryId: null,
-          previousEntryId: null
+          promptId: 'paced-template',
+          location: { promptFolderId: 'destination-folder', categoryId: null, previousEntryId: null, status: PromptTemplateStatus.Active },
+          modifiedAt: expect.any(String)
         },
         expectations: [
           {

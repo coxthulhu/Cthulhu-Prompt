@@ -1,9 +1,7 @@
 import { produce, type Draft } from 'immer'
 import {
   planPromptDelete,
-  planPromptMove,
   planPromptTemplateDelete,
-  planPromptTemplateMove,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
@@ -25,8 +23,6 @@ type MutationOptions<TPayload> = Parameters<typeof runRevisionMutation<TPayload>
 type OptimisticCollections = Parameters<MutationOptions<unknown>['mutateOptimistically']>[0][
   'collections'
 ]
-/** Canonical editable fields shared by prompts and prompt templates. */
-type ContentRecord = { id: string; title: string; fallbackTitle: string; category?: string }
 
 /** Entity-specific adapters used by shared renderer content mutations. */
 export type MarkdownContentRendererMutationConfig<
@@ -37,8 +33,7 @@ export type MarkdownContentRendererMutationConfig<
 > = {
   kind: PromptFolderContentKind
   label: string
-  channels: { create: string; update: string; delete: string; move: string }
-  getContent: (contentId: string) => ContentRecord | undefined
+  channels: { create: string; update: string; delete: string }
   getFullPersisted: (contentId: string) => TPersisted | null
   createDomain: {
     plan: DomainPlanner<TCreateCommand>
@@ -74,8 +69,6 @@ export const createMarkdownContentRendererMutations = <
     TUpdateCommand
   >
 ) => {
-  /** Move planner selected by the renderer channel's configured markdown-content kind. */
-  const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
   /** Delete planner selected by the renderer channel's configured markdown-content kind. */
   const deletePlanner = config.kind === 'prompt' ? planPromptDelete : planPromptTemplateDelete
   /** Domain entity type selected by the configured content kind. */
@@ -179,41 +172,5 @@ export const createMarkdownContentRendererMutations = <
     })
   }
 
-  /** Moves content to an exact root/category position and synchronizes category front matter. */
-  const move = async (
-    sourcePromptFolderId: string,
-    destinationPromptFolderId: string,
-    contentId: string,
-    previousEntryId: string | null,
-    categoryId: string | null = null
-  ): Promise<void> => {
-    /** Source root currently owning the content. */
-    const source = promptFolderCollection.get(sourcePromptFolderId)
-    /** Destination root and category-order owner. */
-    const destination = promptFolderCollection.get(destinationPromptFolderId)
-    if (!source || !destination || source.kind !== config.kind || destination.kind !== config.kind) {
-      throw new Error(`${config.label} folder not loaded`)
-    }
-    /** Canonical renderer content moved between category positions. */
-    const content = config.getContent(contentId)
-    if (!content) throw new Error(`${config.label} data not loaded`)
-    /** Shared command used to compute matching renderer and main-process plans. */
-    const command = {
-      sourcePromptFolderId,
-      destinationPromptFolderId,
-      contentId,
-      categoryId,
-      previousEntryId
-    }
-
-    await runImmediateRendererDomainMutation({
-      mutation: { command, plan: movePlanner },
-      ipc: { channel: config.channels.move },
-      renderer: {
-        mutate: ({ collections }) => config.markClientStateEdited(collections, contentId)
-      }
-    })
-  }
-
-  return { create, mutatePacedAutosaveUpdate, delete: deleteContent, move }
+  return { create, mutatePacedAutosaveUpdate, delete: deleteContent }
 }

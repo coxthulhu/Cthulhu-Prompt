@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
   import { emptyItemsLabel } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { Loader } from 'lucide-svelte'
@@ -371,7 +372,7 @@
     const destinationFolder = promptFolderById[dropPayload.folderId]
     if (!destinationFolder) return false
 
-    const sourceFolder = promptFolderById[payload.sourceFolderId]
+    const sourceFolder = promptFolderById[payload.location.promptFolderId]
     if (!sourceFolder) return false
     if (
       payload.contentKind !== destinationFolder.kind ||
@@ -430,7 +431,6 @@
 
   const getPromptRowDragOptions = (
     folderId: string,
-    sourceCategoryId: string | null,
     promptId: string,
     title: string,
     contentKind: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
@@ -438,10 +438,8 @@
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
-      sourceFolderId: folderId,
-      sourceCategoryId,
-      contentKind,
-      statusSection: dragStatusSection
+      location: getPromptLocation(folderId, promptId),
+      contentKind
     },
     createGhost: () => createPromptDragGhost(title, contentKind),
     onDragStart: promptDragController.handleDragStart,
@@ -503,7 +501,7 @@
     const draggedEntry = promptEntryDragState.draggedEntry
     return (
       draggedEntry?.kind === 'content' &&
-      draggedEntry.folderId === folderId &&
+      draggedEntry.location.promptFolderId === folderId &&
       draggedEntry.contentId === promptId
     )
   }
@@ -984,7 +982,6 @@
         )}
       promptDragOptions={getPromptRowDragOptions(
         props.row.folder.id,
-        props.row.categoryId,
         props.row.promptId,
         promptTitle,
         props.row.folder.kind

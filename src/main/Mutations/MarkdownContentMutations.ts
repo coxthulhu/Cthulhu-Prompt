@@ -1,10 +1,7 @@
 import {
   parseDeleteMarkdownContentDomainCommand,
-  parseMoveMarkdownContentDomainCommand,
   planPromptDelete,
-  planPromptMove,
   planPromptTemplateDelete,
-  planPromptTemplateMove,
   type CreatePromptDomainCommand,
   type CreatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
@@ -22,7 +19,6 @@ export type MarkdownContentMutationConfig<
     create: string
     update: string
     delete: string
-    move: string
   }
   createDomain: {
     parseCommand: DomainCommandParser<TCreateCommand>
@@ -34,13 +30,11 @@ export type MarkdownContentMutationConfig<
   }
 }
 
-/** Registers create, update, delete, and move handlers for one markdown-content kind. */
+/** Registers create, update, and delete handlers for one markdown-content kind. */
 export const setupMarkdownContentMutationHandlers = <
   TCreateCommand extends CreatePromptDomainCommand | CreatePromptTemplateDomainCommand,
   TUpdateCommand
 >(config: MarkdownContentMutationConfig<TCreateCommand, TUpdateCommand>): void => {
-  /** Move planner selected by the channel's configured content kind. */
-  const movePlanner = config.kind === 'prompt' ? planPromptMove : planPromptTemplateMove
   /** Delete planner selected by the channel's configured content kind. */
   const deletePlanner = config.kind === 'prompt' ? planPromptDelete : planPromptTemplateDelete
   handleMainDomainMutation({
@@ -56,13 +50,6 @@ export const setupMarkdownContentMutationHandlers = <
     mutation: {
       parseCommand: parseDeleteMarkdownContentDomainCommand,
       plan: deletePlanner
-    }
-  })
-  handleMainDomainMutation({
-    ipc: { channel: config.channels.move },
-    mutation: {
-      parseCommand: parseMoveMarkdownContentDomainCommand,
-      plan: movePlanner
     }
   })
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { PromptStatus } from '@shared/domain/prompt/Prompt'
+  import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
+  import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
   import { onMount } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
@@ -370,7 +371,7 @@
   )
   const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
   /** Exact group counts shown in the accordion headers. */
-  const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptStatus.Todo })) : promptQuery.data))
+  const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptTemplateStatus.Active })) : promptQuery.data))
   /** Category workflows are always present; finalized groups follow their toggles. */
   const visibleStatusGroups = $derived(
     sidebarPromptStatusGroups.filter((group) =>
@@ -675,7 +676,7 @@
     canDrop: (payload) => {
       /** Typed prompt source supplied by the shared prompt drag type. */
       const source = payload as PromptHandleDragPayload
-      return source.statusSection !== statusSection &&
+      return getPromptStatusFolderDefinition(source.location.status).id !== statusSection &&
         resolvePromptTreePromptMove(promptFolderQuery.data, source, getStatusHeaderDropPayload(statusSection)) !== null
     },
     indicator: statusHeaderDroppableState.getState(statusSection)
@@ -693,12 +694,12 @@
       targetEntryId: null,
       position: 'after',
       statusSection: promptEntryDragState.draggedEntry?.kind === 'content'
-        ? promptEntryDragState.draggedEntry.statusSection
+        ? getPromptStatusFolderDefinition(promptEntryDragState.draggedEntry.location.status).id
         : PromptFolderScreenMode.Active
     }),
     canDrop: (payload) => {
       const entryPayload = payload as PromptHandleDragPayload
-      if (PROMPT_STATUS_FOLDER_REGISTRY[entryPayload.statusSection].ordering !== 'category') return false
+      if (getPromptStatusFolderDefinition(entryPayload.location.status).ordering !== 'category') return false
       const allFolders = promptFolderQuery.data
       const destinationFolder = allFolders.find((folder) => folder.id === item.id)
       if (!destinationFolder) return false
@@ -706,10 +707,10 @@
         folderId: item.id,
         targetEntryId: null,
         position: 'after',
-        statusSection: entryPayload.statusSection
+        statusSection: getPromptStatusFolderDefinition(entryPayload.location.status).id
       }
       const sourceFolder = allFolders.find(
-        (folder) => folder.id === entryPayload.sourceFolderId
+        (folder) => folder.id === entryPayload.location.promptFolderId
       )
       if (!sourceFolder) return false
       // The dropdown would move a same-folder prompt to the top, but that route is too confusing.

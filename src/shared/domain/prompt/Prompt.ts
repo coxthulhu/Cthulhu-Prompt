@@ -1,3 +1,5 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
+
 export enum PromptStatus {
   Todo = 'Todo',
   InProgress = 'InProgress',
@@ -6,6 +8,9 @@ export enum PromptStatus {
   Completed = 'Completed',
   Archived = 'Archived'
 }
+
+/** Status accepted by shared task/template layout and movement infrastructure. */
+export type PromptContentStatus = PromptStatus | PromptTemplateStatus
 
 /** Stable identifier for one code-defined prompt status folder. */
 export enum PromptStatusFolderId {
@@ -110,18 +115,19 @@ export const isPromptStatus = (value: unknown): value is PromptStatus =>
 
 /** Returns the status-folder definition that owns one prompt status. */
 export const getPromptStatusFolderDefinition = (
-  status: PromptStatus
+  status: PromptContentStatus
 ): PromptStatusFolderDefinition => {
+  if (status === PromptTemplateStatus.Active) return PROMPT_STATUS_FOLDER_REGISTRY.active
   /** Registry entry whose status set contains the requested status. */
   const definition = PROMPT_STATUS_FOLDERS.find((candidate) =>
-    (candidate.statuses as readonly PromptStatus[]).includes(status)
+    candidate.statuses.some((candidateStatus) => candidateStatus === status)
   )
   if (!definition) throw new Error(`Prompt status folder not found: ${status}`)
   return definition
 }
 
 /** Reports whether one prompt status is final. */
-export const isFinalPromptStatus = (status: PromptStatus): boolean =>
+export const isFinalPromptStatus = (status: PromptContentStatus): boolean =>
   getPromptStatusFolderDefinition(status).isFinal
 
 // Ordered reference to a prompt template selected for a prompt.
@@ -207,10 +213,25 @@ export const isPromptFull = (prompt: Prompt): prompt is PromptFull => {
   return prompt.loadingState === 'full'
 }
 
-/** Exact category-order placement used when a prompt enters the ordered tree. */
-export type PromptCategoryOrderPlacement = {
+/** Complete location of a prompt or template; final statuses have no manual predecessor. */
+export type PromptLocation = {
+  promptFolderId: string
   categoryId: string | null
   previousEntryId: string | null
+  status: PromptContentStatus
+}
+
+/** Selects the entity-specific status when entering a shared physical folder. */
+export const getContentStatusFolderEntryStatus = (
+  kind: 'prompt' | 'template',
+  folderId: PromptStatusFolderId
+): PromptContentStatus => {
+  if (kind === 'template') {
+    if (folderId === PromptStatusFolderId.Active) return PromptTemplateStatus.Active
+    if (folderId === PromptStatusFolderId.Archived) return PromptTemplateStatus.Archived
+    throw new Error(`Unsupported template status folder: ${folderId}`)
+  }
+  return PROMPT_STATUS_FOLDER_REGISTRY[folderId].entryStatus
 }
 
 /** Returns workflow groups exposed by a task or template root. */

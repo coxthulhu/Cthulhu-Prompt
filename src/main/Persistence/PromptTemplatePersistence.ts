@@ -1,4 +1,4 @@
-import { PromptStatus } from '@shared/domain/prompt/Prompt'
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
@@ -29,8 +29,8 @@ export const promptTemplatePersistence = createMarkdownPersistence<PromptTemplat
     /** Active templates do not retain a finalization timestamp. */
     const { finalizedAt, ...content } = template
     return archived
-      ? { ...content, status: PromptStatus.Archived, finalizedAt: finalizedAt ?? getCurrentIsoSecondTimestamp() }
-      : { ...content, status: PromptStatus.Todo }
+      ? { ...content, status: PromptTemplateStatus.Archived, finalizedAt: finalizedAt ?? getCurrentIsoSecondTimestamp() }
+      : { ...content, status: PromptTemplateStatus.Active }
   },
   shouldRewriteNormalizedData: (loaded, normalized) =>
     loaded.status !== normalized.status || loaded.finalizedAt !== normalized.finalizedAt

@@ -1,5 +1,5 @@
 import { Archive, Bookmark, Check, CircleCheckBig, ListTodo } from 'lucide-svelte'
-import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type Prompt } from '@shared/domain/prompt/Prompt'
+import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type PromptContentStatus } from '@shared/domain/prompt/Prompt'
 
 import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
 import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content/MarkdownContent'
@@ -29,7 +29,7 @@ export const sidebarPromptStatusGroups = [
 /** Counts loaded prompts in each exact group owned by the selected root. */
 export const getPromptStatusGroupCounts = (
   folder: PromptFolder | null,
-  prompts: readonly Pick<Prompt, 'id' | 'status'>[]
+  prompts: readonly { id: string; status: PromptContentStatus }[]
 ): Record<PromptStatusFolderId, number> => {
   /** Loaded membership keyed once for all group counts. */
   const groupByPromptId = new Map(

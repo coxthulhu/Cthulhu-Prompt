@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import type { Action } from 'svelte/action'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
@@ -26,7 +27,6 @@
     isLastPrompt,
     isDragEnabled = true,
     showMoveButtons = true,
-    statusSection = 'active',
     onMoveUp,
     onMoveDown,
     onPromptTreeDrop
@@ -41,8 +41,6 @@
     isDragEnabled?: boolean
     /** Whether the Active-only move arrow controls are rendered. */
     showMoveButtons?: boolean
-    /** Status section represented by this editor-card drag source. */
-    statusSection?: import('@renderer/features/prompt-drag-drop/promptHandleDrag').PromptDragStatusSection
     onMoveUp: () => void | Promise<void>
     onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
@@ -88,9 +86,8 @@
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
-      sourceFolderId: promptFolderId,
-      contentKind,
-      statusSection
+      location: getPromptLocation(promptFolderId, promptId),
+      contentKind
     },
     createGhost: () => createPromptDragGhost(title, contentKind),
     onDragStart: handleDragStart,

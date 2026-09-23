@@ -8,7 +8,7 @@ import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   resolveCategoryDropPreviousCategoryId,
-  resolvePromptHandleDropMove
+  resolvePromptDropPreviousEntryId
 } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
 import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
 
@@ -89,7 +89,7 @@ describe('category ordering and drag placement', () => {
 
   it('resolves a category change but rejects a same-position drop', () => {
     expect(
-      resolvePromptHandleDropMove(
+      resolvePromptDropPreviousEntryId(
         'category-a',
         ['prompt-a'],
         'prompt-a',
@@ -102,9 +102,9 @@ describe('category ordering and drag placement', () => {
         },
         []
       )
-    ).toMatchObject({ categoryId: 'category-b', previousEntryId: null })
+    ).toBeNull()
     expect(
-      resolvePromptHandleDropMove(
+      resolvePromptDropPreviousEntryId(
         'category-a',
         ['prompt-a'],
         'prompt-a',
@@ -117,7 +117,7 @@ describe('category ordering and drag placement', () => {
         },
         ['prompt-a']
       )
-    ).toBeNull()
+    ).toBeUndefined()
   })
 
   it('resolves cross-status drops without treating completed ordering as active ordering', () => {
@@ -151,10 +151,8 @@ describe('category ordering and drag placement', () => {
         [promptFolder],
         {
           fromId: 'active-first',
-          sourceFolderId: promptFolder.id,
-          sourceCategoryId: null,
-          contentKind: 'prompt',
-          statusSection: 'active'
+          location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
+          contentKind: 'prompt'
         },
         {
           folderId: promptFolder.id,
@@ -165,8 +163,8 @@ describe('category ordering and drag placement', () => {
         }
       )
     ).toMatchObject({
-      move: { promptId: 'active-first', categoryId: null, previousEntryId: null },
-      targetStatus: PromptStatus.Completed
+      promptId: 'active-first',
+      location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed }
     })
 
     expect(
@@ -174,10 +172,8 @@ describe('category ordering and drag placement', () => {
         [promptFolder],
         {
           fromId: 'completed-prompt',
-          sourceFolderId: promptFolder.id,
-          sourceCategoryId: null,
-          contentKind: 'prompt',
-          statusSection: 'completed'
+          location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+          contentKind: 'prompt'
         },
         {
           folderId: promptFolder.id,
@@ -188,12 +184,8 @@ describe('category ordering and drag placement', () => {
         }
       )
     ).toMatchObject({
-      move: {
-        promptId: 'completed-prompt',
-        categoryId: null,
-        previousEntryId: 'active-first'
-      },
-      targetStatus: PromptStatus.Todo
+      promptId: 'completed-prompt',
+      location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: 'active-first', status: PromptStatus.Todo }
     })
   })
 
@@ -220,9 +212,8 @@ describe('category ordering and drag placement', () => {
         [promptFolder],
         {
           fromId: 'completed-first',
-          sourceFolderId: promptFolder.id,
-          contentKind: 'prompt',
-          statusSection: 'completed'
+          location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+          contentKind: 'prompt'
         },
         {
           folderId: promptFolder.id,

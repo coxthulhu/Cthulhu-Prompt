@@ -1,3 +1,5 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
+import { getPromptLocation, getPromptStatusLocation, setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
 import { NO_TEMPLATE_LABEL, TEMPLATE_NOT_SELECTED_LABEL } from '@renderer/common/emptyStateText'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
@@ -7,7 +9,7 @@ import {
   PromptStatusFolderId,
   isPromptFull,
   type Prompt,
-  PromptStatus,
+  type PromptContentStatus,
   type PromptTemplateReference
 } from '@shared/domain/prompt/Prompt'
 import {
@@ -55,11 +57,9 @@ import {
 } from '@shared/domain/markdown-content/MarkdownContent'
 import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-import { deletePrompt, movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
+import { deletePrompt } from '@renderer/data/Mutations/PromptMutations'
 import {
-  setPromptTemplateStatus,
-  deletePromptTemplate,
-  movePromptTemplate
+  deletePromptTemplate
 } from '@renderer/data/Mutations/PromptTemplateMutations'
 import {
   lookupPromptFolderScrollTop,
@@ -88,7 +88,7 @@ import {
   categoryEditorRowId
 } from './promptFolderRowIds'
 import {
-  resolvePromptHandleDropMove,
+  resolvePromptDropPreviousEntryId,
   type PromptHandleDropPayload
 } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
 import type { PromptEditorSizingConfig } from '../prompt-editor/promptEditorSizing'
@@ -124,7 +124,7 @@ export type ActivePromptScreenRow =
 const BREADCRUMB_SAMPLE_OFFSET_PX = PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX + 4
 
 type PromptMetadata = {
-  status: PromptStatus
+  status: PromptContentStatus
   finalizedAt: string | null
 }
 
@@ -354,7 +354,7 @@ export const createPromptFolderScreenController = ({
   const findContainingRootFolderId = (contentOwnerId: string): string =>
     categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
   /** Counts for every registered workflow shown in the root filter. */
-  const statusGroupCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptStatus.Todo })) : promptQuery.data))
+  const statusGroupCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptTemplateStatus.Active })) : promptQuery.data))
   /** Finalized prompts in the selected group, ordered by finalization time. */
   const selectedFinalizedPrompts = $derived.by(() => {
     if (!screenRootFolder || !isFinalMode) return []
@@ -503,7 +503,7 @@ export const createPromptFolderScreenController = ({
     if (isTemplateFolder) {
       for (const template of promptTemplateQuery.data) {
         metadataById[template.id] = {
-          status: template.status ?? PromptStatus.Todo,
+          status: template.status ?? PromptTemplateStatus.Active,
           finalizedAt: template.finalizedAt ?? null
         }
       }
@@ -1157,55 +1157,6 @@ export const createPromptFolderScreenController = ({
     )
   })
 
-  const movePromptFromFolder = async (
-    sourcePromptFolderId: string,
-    promptId: string,
-    destinationPromptFolderId: string,
-    previousEntryId: string | null,
-    categoryId: string | null
-  ): Promise<boolean> => {
-    const sourcePromptFolder = promptFolderCollection.get(sourcePromptFolderId)
-    if (
-      !sourcePromptFolder ||
-      sourcePromptFolder.kind !== contentKind
-    ) {
-      return false
-    }
-
-    const destinationPromptFolder = promptFolderCollection.get(destinationPromptFolderId)
-    if (
-      !destinationPromptFolder ||
-      destinationPromptFolder.kind !== contentKind ||
-      sourcePromptFolder.kind !== destinationPromptFolder.kind
-    ) {
-      return false
-    }
-
-    return await runIpcBestEffort(
-      async () => {
-        if (isTemplateFolder) {
-          await movePromptTemplate(
-            sourcePromptFolder.id,
-            destinationPromptFolderId,
-            promptId,
-            previousEntryId,
-            categoryId
-          )
-        } else {
-          await movePrompt(
-            sourcePromptFolder.id,
-            destinationPromptFolderId,
-            promptId,
-            previousEntryId,
-            categoryId
-          )
-        }
-        return true
-      },
-      () => false
-    )
-  }
-
   const handleAddPrompt = async (target: PromptFolderDividerTarget) => {
     const rowOwnerFolder = promptFolderCollection.get(screenRootFolderId)
     if (!rowOwnerFolder || isCreatingPrompt) {
@@ -1250,13 +1201,13 @@ export const createPromptFolderScreenController = ({
     })
   }
 
-  const handleSetPromptStatus = (target: PromptFolderPromptTarget, status: PromptStatus) => {
+  const handleSetPromptStatus = (target: PromptFolderPromptTarget, status: PromptContentStatus) => {
     if (!promptFolderCollection.get(screenRootFolderId)) {
       return
     }
 
     void runIpcBestEffort(async () => {
-      await (isTemplateFolder ? setPromptTemplateStatus : setPromptStatus)(screenRootFolderId, screenRootFolderId, target.promptId, status)
+      await setPromptLocation(screenRootFolderId, target.promptId, getPromptStatusLocation(screenRootFolderId, target.promptId, status))
     })
   }
 
@@ -1314,19 +1265,19 @@ export const createPromptFolderScreenController = ({
       const dropTarget = logicalPromptDropTargets[targetIndex]
       /** Destination category entry IDs used by no-op detection. */
       const destinationEntryIds = getCategoryEntryIds(dropTarget.categoryId ?? null)
-      const move = resolvePromptHandleDropMove(
+      /** Exact predecessor selected by the adjacent move button. */
+      const previousEntryId = resolvePromptDropPreviousEntryId(
         target.categoryId ?? 'uncategorized',
         getCategoryEntryIds(target.categoryId),
         target.promptId,
         { ...dropTarget, folderId: dropTarget.categoryId ?? 'uncategorized' },
         destinationEntryIds
       )
-      if (move) {
+      if (previousEntryId !== undefined) {
         return {
-          ...move,
-          sourcePromptFolderId: screenRootFolderId,
-          destinationPromptFolderId: screenRootFolderId,
-          categoryId: dropTarget.categoryId ?? null
+          ...getPromptLocation(screenRootFolderId, target.promptId),
+          categoryId: dropTarget.categoryId ?? null,
+          previousEntryId
         }
       }
     }
@@ -1340,30 +1291,29 @@ export const createPromptFolderScreenController = ({
     target: PromptFolderPromptTarget,
     direction: 'up' | 'down'
   ): Promise<boolean> => {
-    const move = resolveAdjacentPromptMove(target, direction)
-    if (!move) return false
+    /** Complete destination selected by the move button. */
+    const location = resolveAdjacentPromptMove(target, direction)
+    if (!location) return false
     scrollApi?.compensateForRowMove(
-      promptEditorRowId(move.promptId),
+      promptEditorRowId(target.promptId),
       promptFolderDividerRowId(
         screenRootFolderId,
         target.contentOwnerId,
-        move.promptId
+        target.promptId
       ),
       promptFolderDividerRowId(
         screenRootFolderId,
-        move.categoryId ?? screenRootFolderId,
-        move.previousEntryId
+        location.categoryId ?? screenRootFolderId,
+        location.previousEntryId
       )
     )
-    const didMove = await movePromptFromFolder(
-      move.sourcePromptFolderId,
-      move.promptId,
-      move.destinationPromptFolderId,
-      move.previousEntryId,
-      move.categoryId
-    )
-    if (didMove && target.categoryId !== move.categoryId) {
-      selectMovedPrompt(move.categoryId ?? screenRootFolderId, move.promptId, false)
+    /** Navigation changes only after the shared location mutation succeeds. */
+    const didMove = await runIpcBestEffort(async () => {
+      await setPromptLocation(screenRootFolderId, target.promptId, location)
+      return true
+    }, () => false)
+    if (didMove && target.categoryId !== location.categoryId) {
+      selectMovedPrompt(location.categoryId ?? screenRootFolderId, target.promptId, false)
     }
     return didMove
   }
@@ -1381,10 +1331,8 @@ export const createPromptFolderScreenController = ({
     promptDragController.handleDragFinish({
       sourcePayload: {
         fromId: source.promptId,
-        sourceFolderId: screenRootFolderId,
-        sourceCategoryId: source.categoryId,
-        contentKind,
-        statusSection: screenMode
+        location: getPromptLocation(screenRootFolderId, source.promptId),
+        contentKind
       },
       dropPayload
     })

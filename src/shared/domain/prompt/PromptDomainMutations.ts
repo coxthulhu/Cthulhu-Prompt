@@ -1,309 +1,170 @@
+import { isPromptTemplateStatus, PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import type { DomainChange, DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptStatusFolderContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
 import { promptTemplateEntryRef, promptEntryRef } from '@shared/domain/OrderContainer'
-import {
-  getPromptStatusFolderDefinition,
-  isFinalPromptStatus,
-  isPromptStatus,
-  PromptStatus,
-  type PromptCategoryOrderPlacement
-} from '@shared/domain/prompt/Prompt'
-import { removeCategoryOrderEntry } from '@shared/domain/prompt-folder/PromptFolder'
+import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, PromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
+import { removeCategoryOrderEntry, type PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE, resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 
-/** Renderer-authored command for changing one prompt's workflow status. */
-export type SetPromptStatusDomainCommand = {
+/** Renderer-authored command setting the complete location of one prompt or template. */
+export type SetPromptLocationDomainCommand = {
+  kind: PromptFolderContentKind
   sourcePromptFolderId: string
-  destinationPromptFolderId: string
   promptId: string
-  status: PromptStatus
-  categoryOrderPlacement: PromptCategoryOrderPlacement
+  location: PromptLocation
   modifiedAt: string
 }
 
-/** Parses one exact category-order placement object. */
-const parsePromptCategoryOrderPlacement = (
-  value: unknown
-): PromptCategoryOrderPlacement | null => {
+/** Parses the exact shared location shape, including automatic final-status ordering. */
+const parsePromptLocation = (value: unknown): PromptLocation | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw placement fields validated without allowing additional properties. */
+  /** Raw location fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 2 ||
+    Object.keys(record).length !== 4 ||
+    typeof record.promptFolderId !== 'string' ||
     (record.categoryId !== null && typeof record.categoryId !== 'string') ||
-    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string')
-  ) {
-    return null
-  }
-  return { categoryId: record.categoryId, previousEntryId: record.previousEntryId }
+    (record.previousEntryId !== null && typeof record.previousEntryId !== 'string') ||
+    (!isPromptStatus(record.status) && !isPromptTemplateStatus(record.status)) ||
+    (isFinalPromptStatus(record.status) && record.previousEntryId !== null)
+  ) return null
+  return record as PromptLocation
 }
 
-/** Strict runtime parser for prompt-status commands. */
-export const parseSetPromptStatusDomainCommand = (
-  value: unknown
-): SetPromptStatusDomainCommand | null => {
+/** Strictly validates the unified IPC command and template-specific status restrictions. */
+export const parseSetPromptLocationDomainCommand = (value: unknown): SetPromptLocationDomainCommand | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw command fields validated without allowing additional properties. */
+  /** Raw command fields validated before selecting an entity collection. */
   const record = value as Record<string, unknown>
-  /** Validated destination placement carried by the command. */
-  const categoryOrderPlacement = parsePromptCategoryOrderPlacement(
-    record.categoryOrderPlacement
-  )
+  /** Complete destination shared by all location callers. */
+  const location = parsePromptLocation(record.location)
   if (
-    Object.keys(record).length !== 6 ||
+    Object.keys(record).length !== 5 ||
+    (record.kind !== 'prompt' && record.kind !== 'template') ||
     typeof record.sourcePromptFolderId !== 'string' ||
-    typeof record.destinationPromptFolderId !== 'string' ||
     typeof record.promptId !== 'string' ||
-    !isPromptStatus(record.status) ||
-    !categoryOrderPlacement ||
+    !location ||
+    (record.kind === 'template' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status)) ||
     parseIsoSecondTimestamp(record.modifiedAt) === null
-  ) {
-    return null
-  }
-  return {
-    sourcePromptFolderId: record.sourcePromptFolderId,
-    destinationPromptFolderId: record.destinationPromptFolderId,
-    promptId: record.promptId,
-    status: record.status,
-    categoryOrderPlacement,
-    modifiedAt: record.modifiedAt as string
-  }
+  ) return null
+  return { ...record, location } as SetPromptLocationDomainCommand
 }
 
-/** Plans prompt status metadata and any required root-scoped status-folder transfer. */
-const createSetContentStatusPlanner = (kind: 'prompt' | 'template'): DomainPlanner<SetPromptStatusDomainCommand> => (state, command) => {
-  /** Entity type selected by the channel, never by untrusted command data. */
+/** Plans ordering, ownership, and status metadata atomically for prompts and templates. */
+export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocationDomainCommand> = (state, command) => {
+  /** Explicit content kind and complete destination carried by the validated command. */
+  const { kind, location, promptId } = command
+  /** Authoritative collection selected by the command's validated content kind. */
   const entityType = kind === 'prompt' ? 'prompt' : 'promptTemplate'
-  /** Prompt root that currently owns the prompt representation. */
-  const sourcePromptFolder = state.get('promptFolder', command.sourcePromptFolderId)
-  /** Prompt root that will own the requested status representation. */
-  const destinationPromptFolder = state.get(
-    'promptFolder',
-    command.destinationPromptFolderId
+  /** Canonical content whose current status determines its source layout. */
+  const prompt = state.get(entityType, promptId)
+  /** Claimed source root used to verify ownership. */
+  const source = state.get('promptFolder', command.sourcePromptFolderId)
+  /** Root receiving the complete location. */
+  const destination = state.get('promptFolder', location.promptFolderId)
+  /** Current physical status folder, including older template records with no status. */
+  const sourceStatus = getPromptStatusFolderDefinition(prompt?.status ?? (kind === 'template' ? PromptTemplateStatus.Active : PromptStatus.Todo))
+  /** Actual owner included in conflict snapshots when the renderer source is stale. */
+  const actualSource = state.getAll('promptFolder').find((folder) =>
+    folder.kind === kind && getPromptStatusFolderContentIds(folder, sourceStatus.id).includes(promptId)
   )
-  /** Prompt receiving the requested workflow status. */
-  const prompt = state.get(entityType, command.promptId)
-  if (
-    !sourcePromptFolder ||
-    sourcePromptFolder.kind !== kind ||
-    !destinationPromptFolder ||
-    destinationPromptFolder.kind !== kind ||
-    !prompt ||
-    (kind === 'template' && command.status !== PromptStatus.Todo && command.status !== PromptStatus.Archived)
-  ) {
-    /** Stable conflict targets available before status-folder ownership can be resolved. */
-    const targets: DomainTarget[] = [
-      { entityType: 'promptFolder', id: command.sourcePromptFolderId },
-      ...(command.destinationPromptFolderId === command.sourcePromptFolderId
-        ? []
-        : [
-            {
-              entityType: 'promptFolder' as const,
-              id: command.destinationPromptFolderId
-            }
-          ]),
-      { entityType, id: command.promptId }
-    ]
-    return { status: 'conflict', reason: 'Prompt status conflict', targets }
-  }
-
-  /** Status-folder definition owning the prompt before this status change. */
-  const sourceStatusFolder = getPromptStatusFolderDefinition(prompt.status ?? PromptStatus.Todo)
-  /** Status-folder definition owning the requested target status. */
-  const destinationStatusFolder = getPromptStatusFolderDefinition(command.status)
-  /** Whether root-scoped physical status-folder ownership actually changes. */
-  const movesStatusFolder =
-    sourcePromptFolder.id !== destinationPromptFolder.id ||
-    sourceStatusFolder.id !== destinationStatusFolder.id
-  /** Folder and prompt targets required by the exact planned mutation. */
+  /** Unique root targets needed to reconcile an ownership or placement conflict. */
   const targets: DomainTarget[] = [
-    ...(movesStatusFolder
-      ? [
-          { entityType: 'promptFolder' as const, id: sourcePromptFolder.id },
-          ...(destinationPromptFolder.id === sourcePromptFolder.id
-            ? []
-            : [
-                {
-                  entityType: 'promptFolder' as const,
-                  id: destinationPromptFolder.id
-                }
-              ])
-        ]
-      : []),
-    { entityType, id: command.promptId }
+    ...Array.from(new Set([actualSource?.id ?? command.sourcePromptFolderId, location.promptFolderId]))
+      .map((id) => ({ entityType: 'promptFolder' as const, id })),
+    { entityType, id: promptId }
   ]
-  /** Source layout that must contain the prompt before the mutation can apply. */
-  const sourceLayout = sourcePromptFolder.statusFolders[sourceStatusFolder.id]
-  /** Whether source status-folder data agrees with the prompt's current status. */
-  const hasExpectedOwnership =
-    sourceLayout.ordering === 'category'
-      ? sourceLayout.categoryOrder.categories.some((group) =>
-          group.entries.some(
-            (entry) => entry.kind === kind && entry.id === command.promptId
-          )
-        )
-      : sourceLayout.promptIds.includes(command.promptId)
-  if (!hasExpectedOwnership) {
-    return { status: 'conflict', reason: 'Prompt status ownership conflict', targets }
-  }
+  if (
+    !source || !destination || !prompt || source.kind !== kind || destination.kind !== kind ||
+    actualSource?.id !== source.id ||
+    (kind === 'template' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status))
+  ) return { status: 'conflict', reason: 'Prompt location ownership conflict', targets }
 
-  /** Destination layout selected by the target status-folder registry entry. */
-  const destinationLayout = destinationPromptFolder.statusFolders[destinationStatusFolder.id]
-  /** Requested placement normalized only for a destination that is manually ordered. */
-  const categoryOrderPlacement =
-    destinationLayout.ordering === 'category' &&
-    destinationLayout.categoryOrder.categories.some(
-      (group) => group.categoryId === command.categoryOrderPlacement.categoryId
-    )
-      ? command.categoryOrderPlacement
-      : { categoryId: null, previousEntryId: null }
-  /** Prompt data without the final-status timestamp controlled by this mutation. */
-  const { finalizedAt: previousFinalizedAt, ...statusPromptBase } = prompt
-  /** Timestamp retained only within the same final status and reset for every final-status entry. */
-  const finalizedAt =
-    isFinalPromptStatus(command.status)
-      ? prompt.status === command.status && previousFinalizedAt
-        ? previousFinalizedAt
-        : command.modifiedAt
-      : undefined
-  /** Prompt fields after applying status and finalization metadata. */
-  const statusPrompt = {
-    ...statusPromptBase,
-    status: command.status,
-    modifiedAt: command.modifiedAt,
-    ...(finalizedAt ? { finalizedAt } : {})
-  }
-  /** Ordered reference transferred only when physical status-folder ownership changes. */
-  const entry = kind === 'prompt' ? promptEntryRef(command.promptId) : promptTemplateEntryRef(command.promptId)
+  /** Destination workflow and its category or finalization ordering. */
+  const destinationStatus = getPromptStatusFolderDefinition(location.status)
+  /** Destination layout used for exact placement validation. */
+  const destinationLayout = destination.statusFolders[destinationStatus.id]
+  /** Whether the physical owning root or status folder changes. */
+  const transfersOwnership = source.id !== destination.id || sourceStatus.id !== destinationStatus.id
+  /** Source layout used to resolve the current ordered category. */
+  const sourceLayout = source.statusFolders[sourceStatus.id]
+  /** Current ordered category, absent for automatically sorted final statuses. */
+  const sourceCategory = sourceLayout.ordering === 'category'
+    ? sourceLayout.categoryOrder.categories.find((group) => group.entries.some((entry) => entry.id === promptId))
+    : undefined
+  /** Current predecessor within the source category. */
+  const sourcePreviousEntryId = sourceCategory?.entries[sourceCategory.entries.findIndex((entry) => entry.id === promptId) - 1]?.id ?? null
+  /** Whether this command changes any root ordering or ownership. */
+  const changesOrdering = transfersOwnership || (destinationLayout.ordering === 'category' &&
+    (sourceCategory?.categoryId !== location.categoryId || sourcePreviousEntryId !== location.previousEntryId))
+  /** Status changes own modified/finalized timestamps; pure moves retain their timestamps. */
+  const changesStatus = (prompt.status ?? (kind === 'template' ? PromptTemplateStatus.Active : PromptStatus.Todo)) !== location.status
+  /** Finalization is retained within one final status and cleared on restoration. */
+  const finalizedAt = isFinalPromptStatus(location.status)
+    ? !changesStatus && prompt.finalizedAt ? prompt.finalizedAt : command.modifiedAt
+    : undefined
+  /** Destination-safe fallback title preserves existing cross-root move behavior. */
+  const fallbackTitle = source.id !== destination.id && prompt.title.trim().length === 0
+    ? resolvePromptTitleUpdateForPromptIds({
+        promptIds: getPromptStatusFolderContentIds(destination, destinationStatus.id).filter((id) => id !== promptId),
+        lookupPrompt: (id) => state.get(entityType, id),
+        promptId,
+        currentTitle: prompt.title,
+        currentFallbackTitle: prompt.fallbackTitle,
+        nextTitle: prompt.title,
+        defaultFallbackTitle: kind === 'template' ? DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE : undefined
+      }).fallbackTitle
+    : prompt.fallbackTitle
+  /** Ordered reference shared by source removal and destination insertion. */
+  const entry = kind === 'prompt' ? promptEntryRef(promptId) : promptTemplateEntryRef(promptId)
 
   try {
-    /** Prompt whose category metadata follows an ordered destination transfer. */
-    const nextPrompt =
-      movesStatusFolder && destinationLayout.ordering === 'category'
-        ? placeMarkdownContentInCategoryOrder(
-            destinationLayout.categoryOrder,
-            statusPrompt,
-            entry,
-            categoryOrderPlacement.categoryId,
-            categoryOrderPlacement.previousEntryId
-          ).content
-        : statusPrompt
-    /** Status-folder transfer changes omitted for same-root, same-status-folder updates. */
-    const promptFolderChanges: DomainChange[] = movesStatusFolder
-      ? sourcePromptFolder.id === destinationPromptFolder.id
-        ? [
-            {
-              type: 'update',
-              entityType: 'promptFolder',
-              id: sourcePromptFolder.id,
-              recipe: (draft) => {
-                if (draft.kind !== kind) return
-                /** Draft source layout losing the prompt reference. */
-                const draftSource = draft.statusFolders[sourceStatusFolder.id]
-                if (draftSource.ordering === 'category') {
-                  draftSource.categoryOrder = removeCategoryOrderEntry(
-                    draftSource.categoryOrder,
-                    entry
-                  )
-                } else {
-                  draftSource.promptIds = draftSource.promptIds.filter(
-                    (promptId) => promptId !== command.promptId
-                  )
-                }
-                /** Draft destination layout receiving the prompt reference. */
-                const draftDestination = draft.statusFolders[destinationStatusFolder.id]
-                if (draftDestination.ordering === 'category') {
-                  draftDestination.categoryOrder = placeMarkdownContentInCategoryOrder(
-                    draftDestination.categoryOrder,
-                    nextPrompt,
-                    entry,
-                    categoryOrderPlacement.categoryId,
-                    categoryOrderPlacement.previousEntryId
-                  ).categoryOrder
-                } else {
-                  draftDestination.promptIds = [
-                    command.promptId,
-                    ...draftDestination.promptIds.filter(
-                      (promptId) => promptId !== command.promptId
-                    )
-                  ]
-                }
-              }
+    /** Validated destination placement; final statuses retain their restoration category. */
+    const placement = destinationLayout.ordering === 'category'
+      ? placeMarkdownContentInCategoryOrder(destinationLayout.categoryOrder, prompt, entry, location.categoryId, location.previousEntryId)
+      : null
+    if (destinationLayout.ordering === 'finalizedAt' && location.previousEntryId !== null) {
+      return { status: 'conflict', reason: 'Prompt location placement conflict', targets }
+    }
+    /** One update per affected root, even for moves between layouts in the same root. */
+    const changes: DomainChange[] = changesOrdering
+      ? Array.from(new Set([source.id, destination.id])).map((id) => ({
+          type: 'update' as const,
+          entityType: 'promptFolder' as const,
+          id,
+          recipe: (draft) => {
+            if (id === source.id) {
+              /** Source layout losing the old ordered or finalized reference. */
+              const layout = draft.statusFolders[sourceStatus.id]
+              if (layout.ordering === 'category') layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
+              else layout.promptIds = layout.promptIds.filter((id) => id !== promptId)
             }
-          ]
-        : [
-            {
-              type: 'update',
-              entityType: 'promptFolder',
-              id: sourcePromptFolder.id,
-              recipe: (draft) => {
-                if (draft.kind !== kind) return
-                /** Draft source layout losing cross-root ownership. */
-                const layout = draft.statusFolders[sourceStatusFolder.id]
-                if (layout.ordering === 'category') {
-                  layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
-                } else {
-                  layout.promptIds = layout.promptIds.filter(
-                    (promptId) => promptId !== command.promptId
-                  )
-                }
-              }
-            },
-            {
-              type: 'update',
-              entityType: 'promptFolder',
-              id: destinationPromptFolder.id,
-              recipe: (draft) => {
-                if (draft.kind !== kind) return
-                /** Draft destination layout receiving cross-root ownership. */
-                const layout = draft.statusFolders[destinationStatusFolder.id]
-                if (layout.ordering === 'category') {
-                  layout.categoryOrder = placeMarkdownContentInCategoryOrder(
-                    layout.categoryOrder,
-                    nextPrompt,
-                    entry,
-                    categoryOrderPlacement.categoryId,
-                    categoryOrderPlacement.previousEntryId
-                  ).categoryOrder
-                } else {
-                  layout.promptIds = [
-                    command.promptId,
-                    ...layout.promptIds.filter(
-                      (promptId) => promptId !== command.promptId
-                    )
-                  ]
-                }
-              }
+            if (id === destination.id) {
+              /** Destination layout receiving the validated placement exactly once. */
+              const layout = draft.statusFolders[destinationStatus.id]
+              if (layout.ordering === 'category') layout.categoryOrder = placement!.categoryOrder
+              else layout.promptIds = [promptId, ...layout.promptIds.filter((id) => id !== promptId)]
             }
-          ]
+          }
+        }))
       : []
-    return [
-      ...promptFolderChanges,
-      {
-        type: 'update',
-        entityType,
-        id: command.promptId,
-        recipe: (draft) => {
-          Object.assign(draft, nextPrompt)
-          if (!finalizedAt) delete draft.finalizedAt
-          if (nextPrompt.category === undefined) delete draft.category
-        }
-      } as DomainChange
-    ]
+    changes.push({
+      type: 'update',
+      entityType,
+      id: promptId,
+      recipe: (draft) => {
+        draft.status = location.status
+        draft.fallbackTitle = fallbackTitle
+        if (changesStatus) draft.modifiedAt = command.modifiedAt
+        if (location.categoryId === null) delete draft.category
+        else draft.category = location.categoryId
+        if (finalizedAt) draft.finalizedAt = finalizedAt
+        else delete draft.finalizedAt
+      }
+    } as DomainChange)
+    return changes
   } catch {
-    return { status: 'conflict', reason: 'Prompt status placement conflict', targets }
+    return { status: 'conflict', reason: 'Prompt location placement conflict', targets }
   }
-}
-
-/** Shared task status planner retains the task-specific channel contract. */
-export const planSetPromptStatusDomainMutation = createSetContentStatusPlanner('prompt')
-
-/** Shared template transfer planner accepts only Active and Archived destinations. */
-export const planSetPromptTemplateStatusDomainMutation = createSetContentStatusPlanner('template')
-
-/** Parses the same transfer contract while excluding task-only template states. */
-export const parseSetPromptTemplateStatusDomainCommand = (value: unknown): SetPromptStatusDomainCommand | null => {
-  /** Strict shared command before applying the template-specific status restriction. */
-  const command = parseSetPromptStatusDomainCommand(value)
-  return command && (command.status === PromptStatus.Todo || command.status === PromptStatus.Archived) ? command : null
 }

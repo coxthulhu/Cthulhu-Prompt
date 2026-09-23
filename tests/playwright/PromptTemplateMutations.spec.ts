@@ -1,3 +1,5 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
+import { PromptStatus } from '../../src/shared/domain/prompt/Prompt'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   createWorkspaceWithTemplateFolders,
@@ -116,7 +118,7 @@ describe('Prompt template mutations', () => {
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'promptFolder' && snapshot.id === SOURCE_FOLDER_ID
     )
-    expect(createdTemplate.data.status ?? 'Todo').toBe('Todo')
+    expect(createdTemplate.data.status).toBe(PromptTemplateStatus.Active)
     expect(
       await readTextFile(
         electronApp,
@@ -185,14 +187,30 @@ describe('Prompt template mutations', () => {
       )
     ).toContain('Updated {{value}}.')
 
-    const moveResult = await invoke('move-prompt-template', {
-      command: {
-        sourcePromptFolderId: SOURCE_FOLDER_ID,
-        destinationPromptFolderId: DESTINATION_FOLDER_ID,
-        contentId: updatedTemplate.id,
-        previousEntryId: null,
-        categoryId: null
-      },
+    /** Complete template destination accepted by the shared prompt-location channel. */
+    const locationCommand = {
+      kind: 'template',
+      sourcePromptFolderId: SOURCE_FOLDER_ID,
+      promptId: updatedTemplate.id,
+      location: { promptFolderId: DESTINATION_FOLDER_ID, categoryId: null, previousEntryId: null, status: PromptTemplateStatus.Active },
+      modifiedAt: '2026-08-30T12:00:00Z'
+    }
+    /** Invalid kinds, template statuses, and nested fields must fail before persistence. */
+    for (const command of [
+      { ...locationCommand, kind: 'unknown' },
+      ...[PromptStatus.Todo, PromptStatus.InProgress, PromptStatus.Backlog, PromptStatus.Completed].map((status) => ({
+        ...locationCommand, location: { ...locationCommand.location, status }
+      })),
+      { ...locationCommand, location: { ...locationCommand.location, extra: true } },
+      { ...locationCommand, location: { ...locationCommand.location, previousEntryId: undefined } }
+    ]) {
+      expect(await invoke('set-prompt-location', { command, expectations: [] })).toMatchObject({
+        success: false, error: 'Invalid request payload'
+      })
+    }
+
+    const moveResult = await invoke('set-prompt-location', {
+      command: locationCommand,
       expectations: [
         {
           entityType: 'promptFolder',

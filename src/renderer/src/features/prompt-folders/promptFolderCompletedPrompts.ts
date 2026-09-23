@@ -1,5 +1,5 @@
 import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
-import { getPromptStatusFolderDefinition, type PromptStatus, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { getPromptStatusFolderDefinition, type PromptContentStatus, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
 /** Finalized prompt paired with the root-content owner used by navigation. */
 export type FinalizedPromptWithOwner = {
@@ -11,7 +11,7 @@ export type FinalizedPromptWithOwner = {
 type CollectFinalizedPromptsOptions = {
   rootFolder: PromptFolder
   statusFolderId: PromptStatusFolderId
-  statusByPromptId: Readonly<Record<string, PromptStatus | undefined>>
+  statusByPromptId: Readonly<Record<string, PromptContentStatus | undefined>>
   finalizedAtByPromptId: Readonly<Record<string, string | null | undefined>>
 }
 

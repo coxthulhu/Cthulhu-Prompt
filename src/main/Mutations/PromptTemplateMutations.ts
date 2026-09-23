@@ -1,5 +1,3 @@
-import { handleMainDomainMutation } from './DomainMutation'
-import { parseSetPromptTemplateStatusDomainCommand, planSetPromptTemplateStatusDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import {
   parseCreatePromptTemplateDomainCommand,
   parseUpdatePromptTemplateDomainCommand,
@@ -11,10 +9,6 @@ import {
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 
 export const setupPromptTemplateMutationHandlers = (): void => {
-  handleMainDomainMutation({
-    ipc: { channel: 'set-prompt-template-status' },
-    mutation: { parseCommand: parseSetPromptTemplateStatusDomainCommand, plan: planSetPromptTemplateStatusDomainMutation }
-  })
   setupMarkdownContentMutationHandlers<
     CreatePromptTemplateDomainCommand,
     UpdatePromptTemplateDomainCommand
@@ -23,8 +17,7 @@ export const setupPromptTemplateMutationHandlers = (): void => {
     channels: {
       create: 'create-prompt-template',
       update: 'update-prompt-template',
-      delete: 'delete-prompt-template',
-      move: 'move-prompt-template'
+      delete: 'delete-prompt-template'
     },
     createDomain: {
       parseCommand: parseCreatePromptTemplateDomainCommand,

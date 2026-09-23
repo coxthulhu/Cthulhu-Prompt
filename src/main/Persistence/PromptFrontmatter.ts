@@ -1,3 +1,4 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from './MarkdownFrontmatter'
 import {
   isFinalPromptStatus,
@@ -98,8 +99,8 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
 
   return (
     keys.length === (hasCategory ? 4 : 3) + (frontmatter.status === undefined ? 0 : 1) + (frontmatter.finalizedAt === undefined ? 0 : 1) &&
-    (frontmatter.status === undefined || frontmatter.status === PromptStatus.Todo || frontmatter.status === PromptStatus.Archived) &&
-    (frontmatter.status === PromptStatus.Archived ? typeof frontmatter.finalizedAt === 'string' : frontmatter.finalizedAt === undefined) &&
+    (frontmatter.status === undefined || frontmatter.status === PromptTemplateStatus.Active || frontmatter.status === PromptTemplateStatus.Archived) &&
+    (frontmatter.status === PromptTemplateStatus.Archived ? typeof frontmatter.finalizedAt === 'string' : frontmatter.finalizedAt === undefined) &&
     keys.includes('id') &&
     keys.includes('createdAt') &&
     hasTitle !== hasFallbackTitle &&
@@ -198,7 +199,7 @@ export const parsePromptTemplateMarkdown = (
       createdAt: data.createdAt,
       modifiedAt: timestamp,
       ...(data.category !== undefined ? { category: data.category } : {}),
-      status: data.status ?? PromptStatus.Todo,
+      status: data.status ?? PromptTemplateStatus.Active,
       ...(data.finalizedAt ? { finalizedAt: data.finalizedAt } : {}),
       templateText: content
     })
@@ -207,7 +208,7 @@ export const parsePromptTemplateMarkdown = (
 export const serializePromptTemplateMarkdown = (template: PromptTemplatePersisted): string => {
   const metadata: PromptTemplateFrontmatterData = {
     ...createTitleMetadata(template),
-    ...(template.status === PromptStatus.Archived ? { status: template.status, finalizedAt: template.finalizedAt } : {}),
+    ...(template.status === PromptTemplateStatus.Archived ? { status: template.status, finalizedAt: template.finalizedAt } : {}),
     ...(template.category !== undefined ? { category: template.category } : {})
   }
   return serializeMarkdownFrontmatter(metadata, template.templateText)

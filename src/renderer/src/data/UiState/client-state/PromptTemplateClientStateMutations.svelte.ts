@@ -1,3 +1,4 @@
+import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import type {
   PromptTemplateFull,
   PromptTemplatePersisted
@@ -6,7 +7,7 @@ import type { Draft } from 'immer'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content/MarkdownContent'
-import { getPromptStatusFolderDefinition, PromptStatus } from '@shared/domain/prompt/Prompt'
+import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
 import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
 import {
@@ -54,7 +55,7 @@ export const clearPromptTemplateClientStateCollection = clientState.clearClientS
 const getSiblingTemplateIds = (templateId: string): string[] => {
   /** Current template status selects Active or Archived collision scope. */
   const statusFolderId = getPromptStatusFolderDefinition(
-    promptTemplateCollection.get(templateId)?.status ?? PromptStatus.Todo
+    promptTemplateCollection.get(templateId)?.status ?? PromptTemplateStatus.Active
   ).id
   for (const folder of promptFolderCollection.values()) {
     if (folder.kind !== 'template') continue

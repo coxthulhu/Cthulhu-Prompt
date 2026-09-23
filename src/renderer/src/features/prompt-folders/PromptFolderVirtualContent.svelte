@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { emptyFolderMessage, createFirstItemMessage } from '@renderer/common/emptyStateText'
   import {
     type PromptFolder,
@@ -13,6 +14,8 @@
     PROMPT_STATUS_BEHAVIORS,
     type PromptStatusFolderId,
     PromptStatus,
+    isPromptStatus,
+    type PromptContentStatus,
     type PromptTemplateReference
   } from '@shared/domain/prompt/Prompt'
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
@@ -121,7 +124,7 @@
   >
 
   type PromptMetadata = {
-    status: PromptStatus
+    status: PromptContentStatus
     finalizedAt: string | null
   }
 
@@ -150,7 +153,7 @@
     onManageCategories: () => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
     onDeletePromptFolder: (promptFolderId: string) => void
-    onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptStatus) => void
+    onSetPromptStatus: (target: PromptFolderPromptTarget, status: PromptContentStatus) => void
     canMovePrompt: (target: PromptFolderPromptTarget, direction: 'up' | 'down') => boolean
     onMovePromptUp: (target: PromptFolderPromptTarget) => Promise<boolean>
     onMovePromptDown: (target: PromptFolderPromptTarget) => Promise<boolean>
@@ -331,9 +334,8 @@
       )
     )
     /** Explicit workflow transition triggered by selecting templates. */
-    const nextStatus = PROMPT_STATUS_BEHAVIORS[
-      (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
-    ].templateSelectionStatus
+    const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
+    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].templateSelectionStatus : undefined
     if (nextStatus) onSetPromptStatus(templateSelectionTarget, nextStatus)
   }
 
@@ -596,7 +598,7 @@
     if (!destinationFolder) return false
     const dropPayload = getPromptDividerDropPayload(categoryId, previousEntryId)
 
-    const sourceFolder = promptFolderById[payload.sourceFolderId]
+    const sourceFolder = promptFolderById[payload.location.promptFolderId]
     if (!sourceFolder) return false
     if (
       payload.contentKind !== destinationFolder.kind ||
@@ -935,9 +937,9 @@
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       onDelete={() => onDeletePrompt(promptTarget)}
-      onArchive={() => onSetPromptStatus(promptTarget, PromptStatus.Archived)}
-      onRestore={isTemplateFolder && promptMetadata.status === PromptStatus.Archived
-        ? () => onSetPromptStatus(promptTarget, PromptStatus.Todo)
+      onArchive={() => onSetPromptStatus(promptTarget, isTemplateFolder ? PromptTemplateStatus.Archived : PromptStatus.Archived)}
+      onRestore={isTemplateFolder && promptMetadata.status === PromptTemplateStatus.Archived
+        ? () => onSetPromptStatus(promptTarget, PromptTemplateStatus.Active)
         : undefined}
       onTemplateSelect={isTemplateFolder
         ? undefined

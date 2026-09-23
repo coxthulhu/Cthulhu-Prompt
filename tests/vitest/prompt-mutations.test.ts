@@ -14,7 +14,7 @@ vi.mock('@renderer/data/IpcFramework/RevisionCollections', () => ({
   submitPacedUpdateTransactionAndWait: vi.fn()
 }))
 
-import { movePrompt, setPromptStatus } from '@renderer/data/Mutations/PromptMutations'
+import { setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
 
 /** Stable prompt used by move and status mutation tests. */
 const PROMPT_ID = 'prompt-mutation-test'
@@ -85,13 +85,12 @@ describe('prompt mutations', () => {
   })
 
   it('moves canonical prompt state while sending only its revision reference', async () => {
-    await movePrompt(
-      SOURCE_FOLDER_ID,
-      DESTINATION_FOLDER_ID,
-      PROMPT_ID,
-      null,
-      DESTINATION_CATEGORY_ID
-    )
+    await setPromptLocation(SOURCE_FOLDER_ID, PROMPT_ID, {
+      promptFolderId: DESTINATION_FOLDER_ID,
+      categoryId: DESTINATION_CATEGORY_ID,
+      previousEntryId: null,
+      status: PromptStatus.Todo
+    })
 
     /** Revision mutation options registered by the prompt move. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
@@ -135,14 +134,14 @@ describe('prompt mutations', () => {
     /** Generic invoke spy captures the command and automatically derived target revisions. */
     const invoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
     await options.persistMutations({ invoke, transaction: {} })
-    expect(invoke).toHaveBeenCalledWith('move-prompt', {
+    expect(invoke).toHaveBeenCalledWith('set-prompt-location', {
       payload: {
         command: {
+          kind: 'prompt',
           sourcePromptFolderId: SOURCE_FOLDER_ID,
-          destinationPromptFolderId: DESTINATION_FOLDER_ID,
-          contentId: PROMPT_ID,
-          categoryId: DESTINATION_CATEGORY_ID,
-          previousEntryId: null
+          promptId: PROMPT_ID,
+          location: { promptFolderId: DESTINATION_FOLDER_ID, categoryId: DESTINATION_CATEGORY_ID, previousEntryId: null, status: PromptStatus.Todo },
+          modifiedAt: expect.any(String)
         },
         expectations: [
           {
@@ -169,12 +168,12 @@ describe('prompt mutations', () => {
   })
 
   it('transfers canonical prompt status across roots while latching the edited marker', async () => {
-    await setPromptStatus(
-      SOURCE_FOLDER_ID,
-      DESTINATION_FOLDER_ID,
-      PROMPT_ID,
-      PromptStatus.Completed
-    )
+    await setPromptLocation(SOURCE_FOLDER_ID, PROMPT_ID, {
+      promptFolderId: DESTINATION_FOLDER_ID,
+      categoryId: null,
+      previousEntryId: null,
+      status: PromptStatus.Completed
+    })
 
     /** Revision mutation options registered by the prompt status change. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
@@ -217,14 +216,13 @@ describe('prompt mutations', () => {
     /** Generic invoke spy captures the status command and derived revisions. */
     const invoke = vi.fn().mockResolvedValue({ success: false, error: 'stop before commit' })
     await options.persistMutations({ invoke, transaction: {} })
-    expect(invoke).toHaveBeenCalledWith('set-prompt-status', {
+    expect(invoke).toHaveBeenCalledWith('set-prompt-location', {
       payload: {
         command: {
+          kind: 'prompt',
           sourcePromptFolderId: SOURCE_FOLDER_ID,
-          destinationPromptFolderId: DESTINATION_FOLDER_ID,
           promptId: PROMPT_ID,
-          status: PromptStatus.Completed,
-          categoryOrderPlacement: { categoryId: null, previousEntryId: null },
+          location: { promptFolderId: DESTINATION_FOLDER_ID, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
           modifiedAt: prompt.modifiedAt
         },
         expectations: [

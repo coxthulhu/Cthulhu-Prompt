@@ -33,7 +33,7 @@
     deleteDialogTitle?: string
     deleteDialogDescription?: string
     finalizedAt?: string | null
-    status?: import('@shared/domain/prompt/Prompt').PromptStatus
+    status?: import('@shared/domain/prompt/Prompt').PromptContentStatus
     isEdited?: boolean
     compactLayout?: boolean
   }
@@ -52,7 +52,7 @@
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
   import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
-  import { PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
+  import { isPromptStatus, PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
 
   let {
@@ -170,7 +170,7 @@
   const handleCopySuccess = async () => {
     await onCopySuccess?.()
     /** Optional workflow transition configured for successful copying. */
-    const nextStatus = PROMPT_STATUS_BEHAVIORS[status].copyStatus
+    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].copyStatus : undefined
     if (nextStatus) await onStatusChange?.(nextStatus)
   }
 
@@ -329,7 +329,7 @@
       />
     </div>
 
-    {#if onStatusChange}
+    {#if onStatusChange && isPromptStatus(status)}
       <Separator orientation="vertical" class="prompt-editor-title-actions-separator" />
       <PromptEditorStatusControl {status} {onStatusChange} />
     {/if}

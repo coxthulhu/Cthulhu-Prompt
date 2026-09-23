@@ -1,6 +1,3 @@
-import { PromptStatus, type PromptCategoryOrderPlacement } from '@shared/domain/prompt/Prompt'
-import { planSetPromptTemplateStatusDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
-import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
 import {
   isPromptTemplateFull,
   type PromptTemplateFull,
@@ -42,10 +39,8 @@ const mutations = createMarkdownContentRendererMutations<
   channels: {
     create: 'create-prompt-template',
     update: 'update-prompt-template',
-    delete: 'delete-prompt-template',
-    move: 'move-prompt-template'
+    delete: 'delete-prompt-template'
   },
-  getContent: (templateId) => promptTemplateCollection.get(templateId),
   getFullPersisted: (templateId) => {
     const template = promptTemplateCollection.get(templateId)
     return template && isPromptTemplateFull(template) ? toPersisted(template) : null
@@ -97,27 +92,3 @@ export const mutatePacedPromptTemplateAutosaveUpdate = (
   mutations.mutatePacedAutosaveUpdate({ contentId: templateId, ...mutationOptions })
 }
 export const deletePromptTemplate = mutations.delete
-export const movePromptTemplate = mutations.move
-
-/** Archives or restores a template through the shared atomic folder-transfer planner. */
-export const setPromptTemplateStatus = async (
-  sourcePromptFolderId: string,
-  destinationPromptFolderId: string,
-  promptId: string,
-  status: PromptStatus,
-  placement?: PromptCategoryOrderPlacement
-): Promise<void> => {
-  /** Current category is retained for restoration unless a drop supplies an exact placement. */
-  const template = promptTemplateCollection.get(promptId)!
-  /** Serializable transfer command shared by optimistic and committed domain planning. */
-  const command = {
-    sourcePromptFolderId, destinationPromptFolderId, promptId, status,
-    categoryOrderPlacement: placement ?? { categoryId: template.category ?? null, previousEntryId: null },
-    modifiedAt: getCurrentIsoSecondTimestamp()
-  }
-  await runImmediateRendererDomainMutation({
-    mutation: { command, plan: planSetPromptTemplateStatusDomainMutation },
-    ipc: { channel: 'set-prompt-template-status' },
-    renderer: {}
-  })
-}

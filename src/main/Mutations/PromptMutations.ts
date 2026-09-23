@@ -7,13 +7,13 @@ import {
   type UpdatePromptDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import {
-  parseSetPromptStatusDomainCommand,
-  planSetPromptStatusDomainMutation
+  parseSetPromptLocationDomainCommand,
+  planSetPromptLocationDomainMutation
 } from '@shared/domain/prompt/PromptDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
 import { setupMarkdownContentMutationHandlers } from './MarkdownContentMutations'
 
-/** Registers prompt creation, update, deletion, movement, and status mutations. */
+/** Registers prompt CRUD and the shared prompt/template location mutation. */
 export const setupPromptMutationHandlers = (): void => {
   setupMarkdownContentMutationHandlers<
     CreatePromptDomainCommand,
@@ -23,8 +23,7 @@ export const setupPromptMutationHandlers = (): void => {
     channels: {
       create: 'create-prompt',
       update: 'update-prompt',
-      delete: 'delete-prompt',
-      move: 'move-prompt'
+      delete: 'delete-prompt'
     },
     createDomain: {
       parseCommand: parseCreatePromptDomainCommand,
@@ -37,10 +36,10 @@ export const setupPromptMutationHandlers = (): void => {
   })
 
   handleMainDomainMutation({
-    ipc: { channel: 'set-prompt-status' },
+    ipc: { channel: 'set-prompt-location' },
     mutation: {
-      parseCommand: parseSetPromptStatusDomainCommand,
-      plan: planSetPromptStatusDomainMutation
+      parseCommand: parseSetPromptLocationDomainCommand,
+      plan: planSetPromptLocationDomainMutation
     }
   })
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { NO_TEMPLATE_LABEL } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteSet } from 'svelte/reactivity'
@@ -10,7 +11,7 @@
   import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-  import { PromptStatus, type PromptTemplateReference } from '@shared/domain/prompt/Prompt'
+  import { type PromptTemplateReference } from '@shared/domain/prompt/Prompt'
   import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
   import type { Category } from '@shared/domain/category/Category'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
@@ -122,7 +123,7 @@
   let selectionChanged = $state(false)
   /** Archived references retained invisibly until an explicit choice replaces them. */
   const hasArchivedSelection = $derived((selectedTemplates ?? []).some((reference) =>
-    promptTemplateQuery.data.some((template) => template.id === reference.id && template.status === PromptStatus.Archived)))
+    promptTemplateQuery.data.some((template) => template.id === reference.id && template.status === PromptTemplateStatus.Archived)))
   // Calculated virtual row extent lets short template libraries size the dialog to their content.
   let templateTreeContentHeightPx = $state(0)
 
@@ -142,7 +143,7 @@
   const templateTitleById = $derived.by(() =>
     Object.fromEntries(
       promptTemplateQuery.data.flatMap((template) =>
-        template.status !== PromptStatus.Archived && template.loadingState === 'full' && hasPromptTextToken(template.templateText)
+        template.status !== PromptTemplateStatus.Archived && template.loadingState === 'full' && hasPromptTextToken(template.templateText)
           ? [[template.id, getPromptDisplayTitle(template)] as const]
           : []
       )

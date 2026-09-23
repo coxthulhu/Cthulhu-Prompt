@@ -3,7 +3,7 @@
   import type { Action } from 'svelte/action'
   import { Check, Layers, Plus } from 'lucide-svelte'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
-  import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus } from '@shared/domain/prompt/Prompt'
+  import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus, type PromptContentStatus } from '@shared/domain/prompt/Prompt'
   import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
   import type { PromptHandleDropPayload } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
   import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
@@ -144,7 +144,7 @@
     deleteDialogTitle?: string
     deleteDialogDescription?: string
     screenMode?: PromptFolderScreenMode
-    status?: PromptStatus
+    status?: PromptContentStatus
     finalizedAt?: string | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     isFirstPrompt: boolean
@@ -176,8 +176,6 @@
   const titleAreaWidthPx = $derived(
     getPromptEditorTitleAreaWidthPx(virtualWindowWidthPx, true)
   )
-  /** Status section represented by this prompt editor card. */
-  const dragStatusSection = $derived(screenMode)
   const titleAreaHeightPx = $derived(
     getPromptEditorTitleAreaHeightPx(titleAreaWidthPx, compactLayoutMaxWidthPx)
   )
@@ -227,7 +225,7 @@
     const draggedEntry = promptEntryDragState.draggedEntry
     return (
       draggedEntry?.kind === 'content' &&
-      draggedEntry.folderId === promptFolderId &&
+      draggedEntry.location.promptFolderId === promptFolderId &&
       draggedEntry.contentId === promptId
     )
   })
@@ -560,7 +558,6 @@
       {isLastPrompt}
       {isDragEnabled}
       showMoveButtons={!isFinalMode}
-      statusSection={dragStatusSection}
       onMoveUp={handleMoveUp}
       onMoveDown={handleMoveDown}
       {onPromptTreeDrop}

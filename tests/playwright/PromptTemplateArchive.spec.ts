@@ -78,6 +78,7 @@ describe('Template archive', () => {
     await testHelpers.navigateToPromptTemplateFolders('Library')
     /** Populated template defaults to Archive without a confirmation dialog. */
     const editor = mainWindow.locator(promptEditorSelector(TEMPLATE_ID))
+    await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Active')
     await editor.getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(false)
@@ -87,6 +88,7 @@ describe('Template archive', () => {
     await expect(mainWindow.getByTestId('prompt-folder-completed-filter')).toHaveCount(0)
     await expect(mainWindow.getByTestId('toggle-completed-prompts-button')).toHaveCount(0)
     await expect(editor.getByTestId('template-restore-button')).toBeVisible()
+    await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Archived')
     await expect(editor.getByTestId('prompt-delete-more-options-button')).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-backlog')).toHaveCount(0)
     await editor.getByTestId('template-restore-button').click()
@@ -104,6 +106,7 @@ describe('Template archive', () => {
     await expect.poll(() => checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ARCHIVED_PATH)).toBe(false)
     await mainWindow.getByTestId('prompt-folder-active-filter').click()
+    await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Active')
     await editor.getByTestId('prompt-archive-button').click()
     await mainWindow.getByTestId('prompt-folder-archived-filter').click()
     await editor.getByTestId('prompt-delete-button').click()
