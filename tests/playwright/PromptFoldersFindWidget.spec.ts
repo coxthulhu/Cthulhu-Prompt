@@ -387,6 +387,54 @@ const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, str
 }
 
 describe('Prompt folder find dialog', () => {
+  // Guard the visible match colors as the active result moves between occurrences.
+  test('uses an amber fill without a border for the current match while navigating', async ({
+    testSetup
+  }) => {
+    /** Isolated prompt with three matches for forward and backward navigation. */
+    const workspacePath = '/ws/find-match-colors'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Window and helpers for opening the search fixture. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Anchor')
+    /** Editor containing the current and remaining matches. */
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Control+F')
+    /** Find input seeded from the word at the cursor. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await findInput.press('Enter')
+
+    /** Check rendered colors and selection together so navigation cannot leave stale styling. */
+    const expectMatchAppearance = async (lineNumber: number) => {
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+        selectedText: TYPING_ANCHOR_QUERY,
+        startLineNumber: lineNumber
+      })
+      /** Monaco's active decoration must remain unique and borderless. */
+      const currentMatch = mainWindow.locator(`${editorSelector} .currentFindMatch`)
+      await expect(currentMatch).toHaveCount(1)
+      await expect(currentMatch).toHaveCSS('background-color', 'oklch(0.8 0.15 80 / 0.3)')
+      await expect(currentMatch).toHaveCSS('border-top-style', 'none')
+      /** Other occurrences retain the Dark 2026 blue highlight. */
+      const otherMatches = mainWindow.locator(`${editorSelector} .findMatch`)
+      await expect(otherMatches).toHaveCount(2)
+      await expect(otherMatches.first()).toHaveCSS('background-color', 'rgba(39, 103, 130, 0.5)')
+    }
+
+    await expectMatchAppearance(1)
+    await findInput.press('Enter')
+    await expectMatchAppearance(3)
+    await findInput.press('Shift+Enter')
+    await expectMatchAppearance(1)
+  })
+
   test('opens with Ctrl+F and closes with Escape or the close button', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }

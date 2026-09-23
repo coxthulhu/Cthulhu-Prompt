@@ -38,6 +38,8 @@
   /* Editor */
   /* Keep this hex value to exactly match Monaco's Dark 2026 editor.background. */
   --ui-editor-content-surface: #121314;
+  /* Distinguish the active search result from other matches and text selections. */
+  --ui-search-current-fill: oklch(0.8 0.15 80 / 30%);
 
   /* Neutral */
   --ui-ghost-surface: transparent;
