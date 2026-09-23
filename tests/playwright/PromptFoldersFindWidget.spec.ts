@@ -417,10 +417,10 @@ describe('Prompt folder find dialog', () => {
         selectedText: TYPING_ANCHOR_QUERY,
         startLineNumber: lineNumber
       })
-      /** Monaco's active decoration must remain unique and borderless. */
+      /** Monaco's theme supplies the amber fill and leaves the current match borderless. */
       const currentMatch = mainWindow.locator(`${editorSelector} .currentFindMatch`)
       await expect(currentMatch).toHaveCount(1)
-      await expect(currentMatch).toHaveCSS('background-color', 'oklch(0.8 0.15 80 / 0.3)')
+      await expect(currentMatch).toHaveCSS('background-color', 'rgba(240, 177, 53, 0.3)')
       await expect(currentMatch).toHaveCSS('border-top-style', 'none')
       /** Other occurrences retain the Dark 2026 blue highlight. */
       const otherMatches = mainWindow.locator(`${editorSelector} .findMatch`)
@@ -433,6 +433,168 @@ describe('Prompt folder find dialog', () => {
     await expectMatchAppearance(3)
     await findInput.press('Shift+Enter')
     await expectMatchAppearance(1)
+  })
+
+  // Keep title decorations, editor decorations, and focus synchronized across find navigation.
+  test('highlights title occurrences while find retains focus and clears stale matches', async ({ testSetup }) => {
+    /** Fixture includes two title matches and a body match to exercise section transitions. */
+    const workspacePath = '/ws/find-title-colors'
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, [{
+      folderName: 'Title Highlights',
+      displayName: 'Title Highlights',
+      promptFolderId: 'title-highlights-folder',
+      prompts: [{ id: 'title-highlights-prompt', title: 'needle and NEEDLE', promptText: 'needle body' }]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** App window and navigation helpers for the title fixture. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Title Highlights')
+    /** Prompt containing both title and Monaco matches. */
+    const row = mainWindow.locator(promptEditorSelector('title-highlights-prompt'))
+    /** Native title input must stay unfocused during find navigation. */
+    const title = row.locator(PROMPT_TITLE_SELECTOR)
+    /** All title match backgrounds, including the current occurrence. */
+    const matches = row.locator('[data-testid="prompt-title-find-match"]')
+    /** Find input controls navigation without transferring focus to the title. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await mainWindow.locator(FIND_BUTTON).click()
+    await findInput.fill('needle')
+    await expect(mainWindow.locator(FIND_MATCHES_LABEL)).toHaveText('1 of 3')
+    await expect(matches).toHaveCount(2)
+    await expect(matches.nth(0)).toHaveAttribute('data-current', 'true')
+    await expect(matches.nth(0)).toHaveCSS('background-color', 'oklch(0.8 0.15 80 / 0.3)')
+    await expect(matches.nth(0)).toHaveCSS('border-top-style', 'none')
+    await expect(matches.nth(1)).toHaveCSS('background-color', 'oklch(0.485004 0.0772893 229.387 / 0.5)')
+    await expect(findInput).toBeFocused()
+    await expect(title).not.toBeFocused()
+
+    await findInput.press('Enter')
+    await expect(matches.nth(1)).toHaveAttribute('data-current', 'true')
+    await expect(matches.nth(0)).toHaveAttribute('data-current', 'false')
+    await findInput.press('Enter')
+    await expect(row.locator('[data-testid="prompt-title-find-match"][data-current="true"]')).toHaveCount(0)
+    await expect(row.locator('.currentFindMatch')).toHaveCount(1)
+    await expect(findInput).toBeFocused()
+    await findInput.press('Shift+Enter')
+    await expect(matches.nth(1)).toHaveAttribute('data-current', 'true')
+    await expect(row.locator('.currentFindMatch')).toHaveCount(0)
+    await expect(findInput).toBeFocused()
+
+    await findInput.fill('missing')
+    await expect(matches).toHaveCount(0)
+    await findInput.fill('needle')
+    await expect(matches).toHaveCount(2)
+    await findInput.fill('')
+    await expect(matches).toHaveCount(0)
+    await findInput.fill('needle')
+    await expect(matches).toHaveCount(2)
+    await findInput.press('Escape')
+    await expect(matches).toHaveCount(0)
+    await expect(title).toBeFocused()
+
+    // Opening from a title cursor remains passive until navigation.
+    await title.press('Control+Home')
+    await title.press('Control+F')
+    await expect(findInput).toHaveValue('needle')
+    await expect(matches).toHaveCount(2)
+    await expect(row.locator('[data-testid="prompt-title-find-match"][data-current="true"]')).toHaveCount(0)
+    await expect(findInput).toBeFocused()
+    await findInput.press('Enter')
+    await expect(row.locator('[data-testid="prompt-title-find-match"][data-current="true"]')).toHaveCount(1)
+
+    // Editing while find stays open must recalculate decorations without taking focus back.
+    await title.fill('needle changed')
+    await expect(matches).toHaveCount(1)
+    await expect(matches).toHaveText('needle')
+    await expect(title).toBeFocused()
+  })
+
+  // Reproduce clipped matches and stale highlight offsets in an overflowing native title input.
+  test('reveals long title matches horizontally without focusing or selecting the title', async ({ testSetup }) => {
+    /** Wide spacing forces the second occurrence outside the native input viewport. */
+    const titleText = `needle ${'wide spacing '.repeat(40)}NEEDLE`
+    /** Workspace dedicated to horizontal title navigation. */
+    const workspacePath = '/ws/find-title-overflow'
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, [{
+      folderName: 'Long Titles',
+      displayName: 'Long Titles',
+      promptFolderId: 'long-titles-folder',
+      prompts: [{ id: 'long-title-prompt', title: titleText, promptText: 'No body matches.' }]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Window and helpers used to open the long-title fixture. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Long Titles')
+    /** Native title and its highlight mirror share a viewport. */
+    const row = mainWindow.locator(promptEditorSelector('long-title-prompt'))
+    /** Input selection must not move as find changes only its scroll offset. */
+    const title = row.locator(PROMPT_TITLE_SELECTOR)
+    await title.click()
+    await title.press('Control+Home')
+    /** Initial cursor selection to compare after forward and backward navigation. */
+    const selection = await title.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])
+    await title.press('Control+F')
+    /** Find query is seeded from the first word, without initially revealing a match. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await expect(findInput).toHaveValue('needle')
+    await findInput.press('Enter')
+    /** Current title decoration to check against the native input's visible bounds. */
+    const current = row.locator('[data-testid="prompt-title-find-match"][data-current="true"]')
+    await expect(current).toHaveText('needle')
+    await findInput.press('Enter')
+    await expect(current).toHaveText('NEEDLE')
+    await expect.poll(() => title.evaluate((input) => input.scrollLeft)).toBeGreaterThan(0)
+
+    /** Confirm background alignment and clipping using a strict two-pixel geometry tolerance. */
+    const expectVisibleAlignedMatch = async () => {
+      await expect.poll(() => row.evaluate((element) => {
+        /** Native title field, its invisible mirror, and the active background rectangle. */
+        const input = element.querySelector<HTMLInputElement>('[data-testid="prompt-title"]')!
+        const mirror = element.querySelector<HTMLElement>('.prompt-editor-title-mirror')!
+        const match = element.querySelector<HTMLElement>('[data-testid="prompt-title-find-match"][data-current="true"]')!
+        /** Visible bounds of the input and active match. */
+        const inputRect = input.getBoundingClientRect()
+        const matchRect = match.getBoundingClientRect()
+        return Math.max(
+          inputRect.left - matchRect.left,
+          matchRect.right - inputRect.right,
+          Math.abs(mirror.getBoundingClientRect().left - (inputRect.left - input.scrollLeft)),
+          Math.abs(matchRect.top - inputRect.top)
+        )
+      })).toBeLessThanOrEqual(2)
+      await expect(findInput).toBeFocused()
+      expect(await title.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual(selection)
+      expect(await row.locator('.prompt-editor-title-mirror').textContent()).toBe(titleText)
+      expect(await row.evaluate((element) => {
+        /** Matching font metrics keep the mirror's substring offsets aligned with the native text. */
+        const inputStyle = getComputedStyle(element.querySelector('[data-testid="prompt-title"]')!)
+        const mirrorStyle = getComputedStyle(element.querySelector('.prompt-editor-title-mirror')!)
+        return (['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing'] as const).every(
+          (property) => inputStyle[property] === mirrorStyle[property]
+        )
+      })).toBe(true)
+    }
+    await expectVisibleAlignedMatch()
+    await findInput.press('Shift+Enter')
+    await expect(current).toHaveText('needle')
+    await expect.poll(() => title.evaluate((input) => input.scrollLeft)).toBeLessThanOrEqual(1)
+    await expectVisibleAlignedMatch()
+
+    // Native editing scroll must move the mirror too, even with no active find result.
+    await title.click()
+    await title.press('End')
+    await expect.poll(() => title.evaluate((input) => input.scrollLeft)).toBeGreaterThan(0)
+    await expect.poll(() => title.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd]))
+      .toEqual([titleText.length, titleText.length])
+    await expect.poll(() => row.evaluate((element) => {
+      /** Input and mirror offsets after keyboard-driven native scrolling. */
+      const input = element.querySelector<HTMLInputElement>('[data-testid="prompt-title"]')!
+      const mirror = element.querySelector<HTMLElement>('.prompt-editor-title-mirror')!
+      return Math.abs(mirror.getBoundingClientRect().left - (input.getBoundingClientRect().left - input.scrollLeft))
+    })).toBeLessThanOrEqual(1)
+    await expect(title).toBeFocused()
   })
 
   test('opens with Ctrl+F and closes with Escape or the close button', async ({ testSetup }) => {

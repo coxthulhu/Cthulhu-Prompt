@@ -115,9 +115,3 @@
 .monaco-editor .suggest-widget > .message {
   @apply text-base leading-4;
 }
-
-/* Use a shared fill-only highlight for the current search result in every editor. */
-body .monaco-editor .currentFindMatch {
-  background-color: var(--ui-search-current-fill);
-  border: none;
-}

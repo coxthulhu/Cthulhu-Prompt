@@ -10,6 +10,7 @@ import * as monaco from 'monaco-editor'
 import {
   ConfigurationTarget,
   getService,
+  IConfigurationService,
   IExtensionService,
   initialize,
   IWorkbenchThemeService
@@ -78,6 +79,17 @@ export const initMonacoVscode = async (): Promise<void> => {
 
     const extensionService = await getService(IExtensionService)
     await extensionService.whenInstalledExtensionsRegistered()
+
+    /** Configure find colors through the theme service before any editors are created. */
+    const configurationService = await getService(IConfigurationService)
+    await configurationService.updateValue(
+      'workbench.colorCustomizations',
+      {
+        // Hex equivalent of palette.css --ui-search-current-fill, including 30% opacity.
+        'editor.findMatchBackground': '#f0b1354d'
+      },
+      ConfigurationTarget.MEMORY
+    )
 
     const themeService = await getService(IWorkbenchThemeService)
     const themes = await themeService.getColorThemes()

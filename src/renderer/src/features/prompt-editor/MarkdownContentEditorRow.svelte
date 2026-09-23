@@ -565,6 +565,7 @@
   {/snippet}
 
   <PromptEditorTitleArea
+    {findRequest}
     title={promptData.draft.title}
     draftText={promptData.draft.text}
     {copyText}

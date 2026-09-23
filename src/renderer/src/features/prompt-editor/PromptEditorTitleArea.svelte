@@ -10,6 +10,7 @@
   }
 
   let {
+    findRequest,
     title,
     draftText,
     copyText,
@@ -50,6 +51,7 @@
   style={`height:${titleAreaHeightPx}px; min-height:${titleAreaHeightPx}px; max-height:${titleAreaHeightPx}px;`}
 >
   <PromptEditorTitleRow
+    {findRequest}
     {title}
     {draftText}
     {copyText}

@@ -50,6 +50,8 @@ export type PromptFolderFindRowHandle = {
 }
 
 export type PromptFolderFindState = {
+  /** Reuse Monaco's search ranges for title decorations and match counts. */
+  findMatchesInText: import('./promptFolderFindSearchModel').PromptFolderFindSearchModel['findMatchesInText']
   isFindOpen: boolean
   query: string
   currentMatch: PromptFolderFindMatch | null

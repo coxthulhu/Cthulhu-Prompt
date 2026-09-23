@@ -40,6 +40,8 @@
   --ui-editor-content-surface: #121314;
   /* Distinguish the active search result from other matches and text selections. */
   --ui-search-current-fill: oklch(0.8 0.15 80 / 30%);
+  /* Match Monaco Dark 2026's blue fill for other search occurrences. */
+  --ui-search-match-fill: oklch(0.485004 0.0772893 229.387 / 50%);
 
   /* Neutral */
   --ui-ghost-surface: transparent;

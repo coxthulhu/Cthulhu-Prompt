@@ -632,6 +632,7 @@
   }
 
   const findState = $state<PromptFolderFindState>({
+    findMatchesInText: searchModel.findMatchesInText,
     isFindOpen: false,
     query: '',
     currentMatch: null,

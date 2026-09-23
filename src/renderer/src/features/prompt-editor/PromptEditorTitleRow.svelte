@@ -1,8 +1,11 @@
 <script module lang="ts">
   import type { ComponentType } from 'svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
+  import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
 
   export type PromptEditorTitleRowProps = {
+    /** Folder search state used to decorate title occurrences without taking focus. */
+    findRequest?: PromptFolderFindRequest | null
     title: string
     draftText: string
     copyText?: string
@@ -54,8 +57,11 @@
   import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
   import { isPromptStatus, PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
+  import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
+  import { PROMPT_FOLDER_FIND_TITLE_SECTION_KEY } from '../prompt-folders/find/promptFolderFindSectionKeys'
 
   let {
+    findRequest,
     title,
     draftText,
     copyText,
@@ -88,6 +94,50 @@
     isEdited = false,
     compactLayout = false
   }: PromptEditorTitleRowProps = $props()
+
+  /** Shared Monaco search implementation keeps title decoration ranges consistent with counts. */
+  const findContext = getPromptFolderFindContext()
+  /** Invisible text mirror whose backgrounds show through the native input. */
+  let titleMirror = $state<HTMLDivElement | null>(null)
+  /** Horizontal input offset applied to the highlight mirror. */
+  let titleScrollLeft = $state(0)
+  /** Available title width; resizing also reveals the current match again. */
+  let titleWidth = $state(0)
+  /** Literal, case-insensitive occurrences while the find dialog is open. */
+  const titleMatches = $derived(
+    findRequest?.isOpen && findRequest.query
+      ? (findContext?.findMatchesInText(title, findRequest.query) ?? [])
+      : []
+  )
+  /** Only explicit find navigation decorates a current match, matching Monaco's passive opening. */
+  const currentTitleMatchIndex = $derived(
+    findRequest?.shouldSelectActiveMatch &&
+      findRequest.activeSectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
+      ? findRequest.activeSectionMatchIndex
+      : null
+  )
+
+  /** Keep match backgrounds aligned when the native input scrolls during editing. */
+  const syncTitleScroll = () => {
+    titleScrollLeft = inputRef?.scrollLeft ?? 0
+  }
+
+  // Side effect: reveal a navigated title occurrence horizontally without changing focus or selection.
+  $effect(() => {
+    if (!titleWidth || !titleMatches.length || !inputRef || !titleMirror || currentTitleMatchIndex == null) return
+    /** Current occurrence's geometry in the unscrolled mirror. */
+    const match = titleMirror.querySelector<HTMLElement>('[data-current="true"]')
+    if (!match) return
+    /** Pixel bounds measured from the same font and text as the native input. */
+    const start = match.offsetLeft
+    const end = start + match.offsetWidth
+    if (start < inputRef.scrollLeft) {
+      inputRef.scrollLeft = start
+    } else if (end > inputRef.scrollLeft + inputRef.clientWidth) {
+      inputRef.scrollLeft = Math.min(start, end - inputRef.clientWidth)
+    }
+    syncTitleScroll()
+  })
 
   // Delete dialog state keeps confirmation behavior with the isolated delete section.
   let isDeleteDialogOpen = $state(false)
@@ -261,22 +311,40 @@
 
     <div class="prompt-editor-title-copy">
       {#if onTitleChange}
-        <input
-          data-testid="prompt-title"
-          placeholder={titlePlaceholder}
-          value={title}
-          bind:this={inputRef}
-          oninput={(event) => {
-            handleTitleInput(event)
-            handleSelectionChange(event)
-          }}
-          onfocus={handleTitleFocus}
-          onkeydown={handleTitleKeydown}
-          onkeyup={handleSelectionChange}
-          onmouseup={handleSelectionChange}
-          onselect={handleSelectionChange}
-          class="prompt-editor-title-input text-sm"
-        />
+        <div class="prompt-editor-title-field" bind:clientWidth={titleWidth}>
+          <div class="prompt-editor-title-highlights text-sm leading-5" aria-hidden="true">
+            <div
+              class="prompt-editor-title-mirror"
+              bind:this={titleMirror}
+              style:transform={`translateX(${-titleScrollLeft}px)`}
+            >
+              {#each titleMatches as match, index (match.startOffset)}
+                {title.slice(index === 0 ? 0 : titleMatches[index - 1].endOffset, match.startOffset)}<span
+                  class="prompt-editor-title-match"
+                  data-testid="prompt-title-find-match"
+                  data-current={index === currentTitleMatchIndex}
+                >{title.slice(match.startOffset, match.endOffset)}</span>
+              {/each}{title.slice(titleMatches.at(-1)?.endOffset ?? 0)}
+            </div>
+          </div>
+          <input
+            data-testid="prompt-title"
+            placeholder={titlePlaceholder}
+            value={title}
+            bind:this={inputRef}
+            oninput={(event) => {
+              handleTitleInput(event)
+              handleSelectionChange(event)
+            }}
+            onfocus={handleTitleFocus}
+            onkeydown={handleTitleKeydown}
+            onkeyup={handleSelectionChange}
+            onmouseup={handleSelectionChange}
+            onselect={handleSelectionChange}
+            onscroll={syncTitleScroll}
+            class="prompt-editor-title-input text-sm leading-5"
+          />
+        </div>
       {:else}
         <p class="prompt-editor-title-text text-sm">{title}</p>
       {/if}
@@ -506,6 +574,41 @@
     outline: none;
     padding: 0;
     width: 100%;
+  }
+
+  .prompt-editor-title-field {
+    position: relative;
+    min-width: 0;
+    height: 20px;
+  }
+
+  .prompt-editor-title-input {
+    position: relative;
+    display: block;
+  }
+
+  .prompt-editor-title-highlights {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    color: transparent;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .prompt-editor-title-mirror {
+    position: relative;
+    width: max-content;
+    white-space: pre;
+  }
+
+  .prompt-editor-title-match {
+    background-color: var(--ui-search-match-fill);
+    border: none;
+  }
+
+  .prompt-editor-title-match[data-current='true'] {
+    background-color: var(--ui-search-current-fill);
   }
 
   .prompt-editor-title-text {
