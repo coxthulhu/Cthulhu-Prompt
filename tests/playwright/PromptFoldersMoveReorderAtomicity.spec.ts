@@ -6,6 +6,37 @@ import {
 } from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
+import type { Page } from '@playwright/test'
+
+/** Waits for visible editors to hydrate and row geometry to stop changing before recording. */
+const waitForMeasuredRows = async (page: Page): Promise<void> => {
+  /** Previous measured layout, compared with the next observed layout rather than a timer. */
+  let previousLayout = ''
+  await expect.poll(async () => {
+    /** Visible hydration and geometry snapshot from the virtual viewport. */
+    const layout = await page.locator(PROMPT_FOLDER_HOST_SELECTOR).evaluate((host) => {
+      /** Viewport bounds distinguish queued visible hydration from offscreen placeholders. */
+      const bounds = host.getBoundingClientRect()
+      /** Rows whose geometry can affect the moved prompt's placement. */
+      const rows = Array.from(host.querySelectorAll<HTMLElement>('[data-testid^="prompt-editor-"]'))
+      if (rows.some((row) => {
+        /** Row position determines whether its placeholder still needs hydration. */
+        const rect = row.getBoundingClientRect()
+        return rect.bottom > bounds.top && rect.top < bounds.bottom &&
+          row.querySelector('[data-testid="monaco-placeholder"]') !== null
+      })) return null
+      return JSON.stringify(rows.map((row) => {
+        /** Measured bounds include height changes produced by Monaco hydration. */
+        const rect = row.getBoundingClientRect()
+        return [row.dataset.testid, rect.top, rect.height]
+      }))
+    })
+    /** Equal observations establish the baseline only after visible hydration finishes. */
+    const unchanged = layout !== null && layout === previousLayout
+    previousLayout = layout ?? ''
+    return unchanged
+  }).toBe(true)
+}
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -76,15 +107,16 @@ const startFrameRecorder = async (page: any, movedPromptId: string) => {
   }, movedPromptId)
 }
 
-const stopFrameRecorder = async (page: any): Promise<FrameSnapshot[]> => {
-  const frames = await page.evaluate(() => {
-    const win = window as any
-    win.__moveFramesStop = true
-    return win.__moveFrames as FrameSnapshot[]
-  })
-  // Let the pending animation frame callback drain before a new recorder starts.
-  await page.waitForTimeout(100)
-  return frames
+/** Includes the reconciled layout's next frame, then stops this recorder before returning. */
+const stopFrameRecorder = async (page: Page): Promise<FrameSnapshot[]> => {
+  return page.evaluate(() => new Promise<FrameSnapshot[]>((resolve) => {
+    requestAnimationFrame(() => {
+      /** The recorder's earlier frame callback has now captured the final layout. */
+      const win = window as any
+      win.__moveFramesStop = true
+      resolve(win.__moveFrames as FrameSnapshot[])
+    })
+  }))
 }
 
 const runMove = async (
@@ -93,7 +125,7 @@ const runMove = async (
   label: string,
   targetId: string,
   direction: 'up' | 'down',
-  waitForMove?: () => Promise<void>
+  waitForMove: () => Promise<void>
 ) => {
   const buttonSelector =
     direction === 'down' ? moveDownSelector(targetId) : moveUpSelector(targetId)
@@ -107,8 +139,7 @@ const runMove = async (
     buttonSelector,
     120
   )
-  // Let scroll persistence and height measurement settle before recording.
-  await page.waitForTimeout(400)
+  await waitForMeasuredRows(page)
 
   await expect(page.locator(buttonSelector)).toBeEnabled()
   const initialTop = await page.locator(promptEditorSelector(targetId)).evaluate(
@@ -116,13 +147,10 @@ const runMove = async (
   )
   await startFrameRecorder(page, targetId)
   await page.locator(buttonSelector).click()
-  if (waitForMove) {
-    await waitForMove()
-  } else {
-    await page.waitForTimeout(600)
-  }
-  // Capture the final authoritative layout before stopping the recorder.
-  await page.waitForTimeout(50)
+  await waitForMove()
+  // Persisted order is visible before the renderer finishes authoritative reconciliation.
+  await page.evaluate(() => window.playwrightTestControls!.waitForMutations())
+  await waitForMeasuredRows(page)
   const frames = await stopFrameRecorder(page)
 
   expect(frames.length, `${label}: recorder captured no frames`).toBeGreaterThan(0)

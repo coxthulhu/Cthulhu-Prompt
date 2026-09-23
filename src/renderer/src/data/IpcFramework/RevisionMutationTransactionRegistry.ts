@@ -28,6 +28,9 @@ type ElementPacedUpdateState = {
 
 const elementStatesByGlobalKey = new Map<string, ElementPacedUpdateState>()
 
+/** Reports pending debounce and in-flight autosave work without submitting it early. */
+export const hasPendingPacedUpdates = (): boolean => elementStatesByGlobalKey.size > 0
+
 // Keep element keys aligned with TanStack's global mutation key format.
 export const buildGlobalElementKey = (collectionId: string, elementId: string | number): string => {
   return `KEY::${collectionId}/${elementId}`

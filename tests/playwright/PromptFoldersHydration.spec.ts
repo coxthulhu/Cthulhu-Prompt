@@ -205,7 +205,6 @@ const scrollToPlaceholderAnchorAtViewportTop = async (
     if (anchor) return anchor
 
     await testHelpers.scrollVirtualWindowBy(HOST_SELECTOR, 8)
-    await mainWindow.waitForTimeout(20)
   }
 
   throw new Error('Failed to scroll a placeholder row across the viewport top')

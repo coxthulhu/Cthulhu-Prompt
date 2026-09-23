@@ -5,9 +5,11 @@ import { loadUserPersistence } from './data/Queries/UserPersistenceQuery'
 import { initializeSvelteVirtualWindowHydrationControls } from './common/virtual-window/SvelteVirtualWindowHydrationControls'
 import { initMonacoVscode } from './lib/monacoVscode'
 import { initializeRendererErrorLogging } from './app/rendererErrorLogging'
+import { initializePlaywrightTestControls } from './app/playwrightTestControls'
 
 initializeRendererErrorLogging()
 initializeSvelteVirtualWindowHydrationControls()
+initializePlaywrightTestControls()
 
 const bootstrap = async (): Promise<void> => {
   // Side effect: block first render until authoritative system settings are loaded.

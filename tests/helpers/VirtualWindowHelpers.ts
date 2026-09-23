@@ -145,11 +145,11 @@ export async function scrollVirtualWindowTo(
 
   /** Reports whether the requested renderer scroll operation ran. */
   const didScroll = await page.evaluate(
-    ({ targetTestId, targetScrollTopPx }) => {
+    async ({ targetTestId, targetScrollTopPx }) => {
       /** Renderer hooks for the currently registered virtual viewports. */
       const controls = window.svelteVirtualWindowTestControls
       if (!controls?.scrollTo) return false
-      controls.scrollTo(targetTestId, Math.round(targetScrollTopPx))
+      await controls.scrollTo(targetTestId, Math.round(targetScrollTopPx))
       return true
     },
     { targetTestId: testId, targetScrollTopPx: scrollTopPx }
@@ -173,14 +173,14 @@ export async function scrollVirtualWindowBy(
 
   /** Reports whether the requested renderer scroll operation ran. */
   const didScroll = await page.evaluate(
-    ({ targetTestId, targetDeltaPx }) => {
+    async ({ targetTestId, targetDeltaPx }) => {
       /** Renderer hooks for the currently registered virtual viewports. */
       const controls = window.svelteVirtualWindowTestControls
       if (!controls?.getScrollTop || !controls?.scrollTo) return false
       /** Current offset used to calculate a relative scroll. */
       const currentTop = controls.getScrollTop(targetTestId)
       if (typeof currentTop !== 'number') return false
-      controls.scrollTo(targetTestId, currentTop + targetDeltaPx)
+      await controls.scrollTo(targetTestId, currentTop + targetDeltaPx)
       return true
     },
     { targetTestId: testId, targetDeltaPx: deltaPx }
@@ -191,7 +191,7 @@ export async function scrollVirtualWindowBy(
   }
 }
 
-/** Reveals a mounted target using the existing geometry, attempts, and pacing. */
+/** Reveals a mounted target, measuring again after each committed scroll. */
 export async function scrollVirtualElementIntoView(
   page: Page,
   hostSelector: string,
@@ -251,7 +251,6 @@ export async function scrollVirtualElementIntoView(
     }
 
     await scrollVirtualWindowBy(page, hostSelector, measurement.deltaPx)
-    await page.waitForTimeout(20)
   }
 
   throw new Error(`Failed to scroll virtual element into view: ${targetSelector}`)

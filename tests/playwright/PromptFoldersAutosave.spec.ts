@@ -7,13 +7,14 @@ import {
   isMonacoEditorFocused
 } from '../helpers/MonacoHelpers'
 import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
+import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const DEVELOPMENT_EDITOR = '[data-testid="prompt-editor-dev-1"]'
 
 describe('Prompt Folders Autosave (Svelte)', () => {
-  test('keeps the Monaco editor focused after autosave completes', async ({ testSetup }) => {
+  test('keeps the Monaco editor focused after autosave completes', async ({ testSetup, electronApp }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -33,7 +34,13 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     expect(cursorBeforeAutosave).not.toBeNull()
     expect(cursorBeforeAutosave?.column ?? 0).toBeGreaterThan(1)
 
-    await mainWindow.waitForTimeout(3000)
+    await expect.poll(() => readPersistedPromptTextById(electronApp, {
+      workspacePath: '/ws/sample',
+      folderName: 'Development',
+      promptId: 'dev-1',
+      promptTitle: 'Code Review'
+    })).toContain(marker)
+    await waitForRendererPersistence(mainWindow)
 
     const cursorAfterAutosave = await getMonacoCursorPosition(mainWindow, DEVELOPMENT_EDITOR)
     expect(cursorAfterAutosave).toEqual(cursorBeforeAutosave)
@@ -95,8 +102,9 @@ describe('Prompt Folders Autosave (Svelte)', () => {
       .toContain(marker)
   })
 
-  test('retains typed content when switching folders after autosave delay', async ({
-    testSetup
+  test('retains typed content when switching folders after autosave completes', async ({
+    testSetup,
+    electronApp
   }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
@@ -105,11 +113,17 @@ describe('Prompt Folders Autosave (Svelte)', () => {
     await testHelpers.navigateToPromptFolders('Development')
     await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
 
-    const marker = '[autosave-switch-after-delay]'
+    const marker = '[autosave-switch-after-save]'
     await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
     await mainWindow.keyboard.type(marker, { delay: 50 })
 
-    await mainWindow.waitForTimeout(3000)
+    await expect.poll(() => readPersistedPromptTextById(electronApp, {
+      workspacePath: '/ws/sample',
+      folderName: 'Development',
+      promptId: 'dev-1',
+      promptTitle: 'Code Review'
+    })).toContain(marker)
+    await waitForRendererPersistence(mainWindow)
 
     await testHelpers.navigateToPromptFolders('Examples')
     await expect

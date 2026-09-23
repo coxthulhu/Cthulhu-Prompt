@@ -1,4 +1,5 @@
 import { isDevOrPlaywrightEnvironment } from '@renderer/app/runtimeConfig'
+import { tick } from 'svelte'
 import { setMonacoHydrationQueuePaused } from '@renderer/features/prompt-editor/monacoHydrationQueue'
 
 let monacoHydrationPaused = false
@@ -40,8 +41,10 @@ export const initializeSvelteVirtualWindowHydrationControls = (): void => {
     unregisterVirtualWindowScroller: (testId) => {
       virtualWindowScrollApis.delete(testId)
     },
-    scrollTo: (testId, scrollTopPx) => {
+    scrollTo: async (testId, scrollTopPx) => {
       virtualWindowScrollApis.get(testId)?.scrollTo(scrollTopPx)
+      // Commit the requested viewport placement before test helpers measure its rows.
+      await tick()
     },
     getScrollTop: (testId) => {
       return virtualWindowScrollApis.get(testId)?.getScrollTop() ?? null

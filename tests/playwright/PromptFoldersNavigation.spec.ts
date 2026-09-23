@@ -1706,31 +1706,50 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders('Short')
-    await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+    /** Captured DOM identity remains inspectable after its Monaco instance is disposed. */
+    let originalEditor: import('@playwright/test').ElementHandle<HTMLElement | SVGElement> | null = null
+    await mainWindow.evaluate(() => window.playwrightTestControls!.tokenization.pause())
+    try {
+      await testHelpers.navigateToPromptFolders('Short')
+      await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
+      await expect.poll(() => mainWindow.evaluate(() =>
+        window.playwrightTestControls!.tokenization.getHeldReplyCount('/cthulhu-prompt/prompts/short-1.md')
+      )).toBeGreaterThan(0)
+      /** Original editor must be recycled before its held worker replies are delivered. */
+      originalEditor = await mainWindow.locator('[data-testid="prompt-editor-short-1"] .monaco-editor')
+        .elementHandle()
+      expect(originalEditor).not.toBeNull()
 
-    const scrollPositions = [0, 1200, 2400, 0, 1800, 600, 2400, 0]
-    for (const scrollTopPx of scrollPositions) {
-      await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, scrollTopPx)
-      await expect
-        .poll(async () => {
-          return await mainWindow.evaluate((hostSelector) => {
-            const host = document.querySelector<HTMLElement>(hostSelector)
-            if (!host) return false
-            const hostRect = host.getBoundingClientRect()
-            return Array.from(host.querySelectorAll<HTMLElement>('.monaco-editor')).some(
-              (editor) => {
-                const editorRect = editor.getBoundingClientRect()
-                return editorRect.bottom > hostRect.top && editorRect.top < hostRect.bottom
-              }
-            )
-          }, PROMPT_FOLDER_HOST)
-        })
-        .toBe(true)
+      /** Rapid viewport changes exercise disposal and remounting while replies are held. */
+      const scrollPositions = [0, 1200, 2400, 0, 1800, 600, 2400, 0]
+      for (const scrollTopPx of scrollPositions) {
+        await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, scrollTopPx)
+        await expect
+          .poll(async () => {
+            return await mainWindow.evaluate((hostSelector) => {
+              const host = document.querySelector<HTMLElement>(hostSelector)
+              if (!host) return false
+              const hostRect = host.getBoundingClientRect()
+              return Array.from(host.querySelectorAll<HTMLElement>('.monaco-editor')).some(
+                (editor) => {
+                  const editorRect = editor.getBoundingClientRect()
+                  return editorRect.bottom > hostRect.top && editorRect.top < hostRect.bottom
+                }
+              )
+            }, PROMPT_FOLDER_HOST)
+          })
+          .toBe(true)
+        if (scrollTopPx === 2400) {
+          expect(await originalEditor!.evaluate((element) => element.isConnected)).toBe(false)
+        }
+      }
+    } finally {
+      try {
+        await mainWindow.evaluate(() => window.playwrightTestControls!.tokenization.release())
+      } finally {
+        await originalEditor?.dispose()
+      }
     }
-
-    // Let already-posted TextMate worker results reach the renderer before asserting the capture.
-    await mainWindow.waitForTimeout(100)
     expect(testSetup.getRendererErrors()).toEqual([])
   })
 

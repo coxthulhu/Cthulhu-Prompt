@@ -30,35 +30,6 @@ type MonacoLinePoint = {
   hostBottom: number
 }
 
-async function expectMonacoEditorToStayAttached(
-  page: Page,
-  editorSelector: string,
-  stableDurationMs: number
-): Promise<void> {
-  await page.evaluate(
-    ({ editorSelector, stableDurationMs }) =>
-      new Promise<void>((resolve, reject) => {
-        const startedAt = performance.now()
-        const interval = window.setInterval(() => {
-          const editor = document.querySelector(`${editorSelector} .monaco-editor`)
-          const viewLines = document.querySelector(`${editorSelector} .view-lines`)
-
-          if (!editor || !viewLines) {
-            window.clearInterval(interval)
-            reject(new Error('Monaco editor detached after clicking a word.'))
-            return
-          }
-
-          if (performance.now() - startedAt >= stableDurationMs) {
-            window.clearInterval(interval)
-            resolve()
-          }
-        }, 50)
-      }),
-    { editorSelector, stableDurationMs }
-  )
-}
-
 async function getMonacoLinePoint(
   page: Page,
   editorSelector: string,
@@ -270,12 +241,20 @@ describe('Monaco editor clicks', () => {
 
     const editorSelector = promptEditorSelector('dev-1')
     const monacoSelector = await waitForMonacoEditor(mainWindow, editorSelector)
+    /** Original editor node must survive the asynchronous highlighting request. */
+    const originalEditor = (await mainWindow.locator(monacoSelector).elementHandle())!
     const firstLine = mainWindow.locator(`${monacoSelector} .view-line`).first()
     await firstLine.waitFor({ state: 'visible' })
     const firstLineBox = await firstLine.boundingBox()
     expect(firstLineBox).not.toBeNull()
     await mainWindow.mouse.click(firstLineBox!.x + 12, firstLineBox!.y + firstLineBox!.height / 2)
-    await expectMonacoEditorToStayAttached(mainWindow, editorSelector, 1500)
+    // Occurrence decorations prove the asynchronous word-highlighting request has rendered.
+    await expect(mainWindow.locator(
+      `${monacoSelector} :is(.wordHighlight, .wordHighlightText, .wordHighlightStrong)`
+    ).first()).toBeVisible()
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+    expect(await originalEditor.evaluate((element) => element.isConnected)).toBe(true)
+    await originalEditor.dispose()
 
     const modelState = await mainWindow.evaluate((selector) => {
       const root = document.querySelector(selector)
@@ -339,7 +318,9 @@ describe('Monaco editor clicks', () => {
 
     const scrollTopBeforeClick = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     await clickMonacoLine(mainWindow, LAST_TWENTY_LINE_EDITOR, 1)
-    await mainWindow.waitForTimeout(300)
+    await expect.poll(() => getMonacoCursorPosition(mainWindow, LAST_TWENTY_LINE_EDITOR))
+      .toMatchObject({ lineNumber: 1 })
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, LAST_TWENTY_LINE_EDITOR)).toBe(true)
     const scrollTopAfterClick = await testHelpers.getElementScrollTop(HOST_SELECTOR)
 
     expect(Math.abs(scrollTopAfterClick - scrollTopBeforeClick)).toBeLessThanOrEqual(2)

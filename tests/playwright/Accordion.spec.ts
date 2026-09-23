@@ -1,4 +1,5 @@
 import { createDeterministicId } from '../fixtures/FixtureIds'
+import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
 import type { Locator, Page } from '@playwright/test'
 import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -466,7 +467,7 @@ describe('Accordion', () => {
       activeSashBox.y + activeSashBox.height / 2
     )
     await testHelpers.navigateToHomeScreen()
-    await mainWindow.waitForTimeout(2200)
+    await waitForRendererPersistence(mainWindow)
 
     /** SQLite state proving a press without movement did not promote displayed sizes. */
     const pressOnlyUiState = await readWorkspaceUiState(electronApp, workspaceId)

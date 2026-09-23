@@ -137,10 +137,10 @@ describe('Backlog prompts', () => {
     /** Previous finalization time must change when entering another finalized workflow. */
     let previousFinalizedAt: string | undefined
     for (const group of ['completed', 'archived'] as const) {
-      if (previousFinalizedAt) {
-        // Persistence timestamps have second precision, so enter Archived in a later second.
-        await expect.poll(() => Date.now()).toBeGreaterThan(Date.parse(previousFinalizedAt) + 1000)
-      }
+      // Supply distinct command timestamps while leaving timers and animation frames running normally.
+      await mainWindow.clock.setFixedTime(new Date(
+        group === 'completed' ? '2030-01-01T12:00:00Z' : '2030-01-01T12:00:02Z'
+      ))
       await mainWindow.getByTestId(`prompt-folder-${group}-filter`).click()
       await beginPromptTreeRowDrag(mainWindow, 'second', group === 'completed' ? 'active' : 'completed')
       await moveActiveDragToTarget(mainWindow, `[data-testid="sidebar-prompt-status-accordion-header-${group}"]`)
@@ -157,6 +157,8 @@ describe('Backlog prompts', () => {
       const finalizedAt = parsePromptMarkdown(original)!.finalizedAt!
       if (previousFinalizedAt) expect(Date.parse(finalizedAt)).toBeGreaterThan(Date.parse(previousFinalizedAt))
       previousFinalizedAt = finalizedAt
+      // A rejected drop must preserve its timestamp even when the command clock has advanced.
+      await mainWindow.clock.setFixedTime(new Date(Date.parse(finalizedAt) + 1000))
       await beginPromptTreeRowDrag(mainWindow, 'second', group)
       await moveActiveDragToTarget(mainWindow, `[data-testid="sidebar-prompt-status-accordion-header-${group}"]`)
       await expect(mainWindow.getByTestId(`sidebar-prompt-status-accordion-header-${group}`))
