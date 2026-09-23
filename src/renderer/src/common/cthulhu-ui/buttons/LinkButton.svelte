@@ -8,6 +8,7 @@
   type Props = {
     href: string
     text: string
+    icon?: ComponentType
     endIcon?: ComponentType
     variant?: LinkButtonVariant
     class?: string
@@ -19,6 +20,7 @@
   let {
     href,
     text,
+    icon: Icon,
     endIcon: EndIcon,
     variant = 'neutral',
     class: className,
@@ -36,6 +38,9 @@
   {target}
   {rel}
 >
+  {#if Icon}
+    <Icon class="cthulhuUiLinkButtonIcon" size={16} aria-hidden="true" />
+  {/if}
   <span>{text}</span>
   {#if EndIcon}
     <EndIcon class="cthulhuUiLinkButtonIcon" size={16} aria-hidden="true" />

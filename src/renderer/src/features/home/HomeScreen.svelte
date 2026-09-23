@@ -246,6 +246,7 @@
                 {#snippet trailing()}
                   <LinkButton
                     href={githubIssuesUrl}
+                    icon={Bug}
                     text="Github"
                     endIcon={ExternalLink}
                     variant="accent"
