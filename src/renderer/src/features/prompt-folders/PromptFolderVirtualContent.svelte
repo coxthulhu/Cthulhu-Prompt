@@ -855,27 +855,26 @@
     indentLevel={row.indentLevel}
     testId={`prompt-folder-divider-${row.contentOwnerId}-${row.previousEntryId ?? 'initial'}`}
   >
-    <!-- Recreate the shared action when category reordering changes this divider's boundary. -->
-    {#key row.categoryDropNextCategoryId}
-      <PromptDivider
-        disabled={isCreatingPrompt}
-        mode={showsActions ? 'add' : 'separator'}
-        contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
-        onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
-        getDropOptions={!showsActions
-          ? undefined
-          : () => getPromptDividerDropOptions(rowId, row.categoryId, row.previousEntryId)}
-        getCategoryDropOptions={!showsActions || row.categoryDropNextCategoryId === undefined
-          ? undefined
-          : () =>
-              getCategoryDividerDropOptions(rowId, row.categoryDropNextCategoryId ?? null)}
-        testId={showsActions
-          ? row.previousEntryId
-            ? `prompt-divider-add-after-${row.previousEntryId}`
-            : 'prompt-divider-add-initial'
-          : undefined}
-      />
-    {/key}
+    <!-- Update the drop boundary in place so adding the first prompt retains the button. -->
+    <PromptDivider
+      disabled={isCreatingPrompt}
+      revealed={orderedPromptCount === 0}
+      mode={showsActions ? 'add' : 'separator'}
+      contentLabel={isTemplateFolder ? 'Template' : 'Prompt'}
+      onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
+      getDropOptions={!showsActions
+        ? undefined
+        : () => getPromptDividerDropOptions(rowId, row.categoryId, row.previousEntryId)}
+      getCategoryDropOptions={!showsActions || row.categoryDropNextCategoryId === undefined
+        ? undefined
+        : () =>
+            getCategoryDividerDropOptions(rowId, row.categoryDropNextCategoryId ?? null)}
+      testId={showsActions
+        ? row.previousEntryId
+          ? `prompt-divider-add-after-${row.previousEntryId}`
+          : 'prompt-divider-add-initial'
+        : undefined}
+    />
   </PromptFolderSectionRow>
 {/snippet}
 

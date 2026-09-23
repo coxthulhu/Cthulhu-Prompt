@@ -25,7 +25,8 @@
   }
 
   type Props = Omit<HTMLAttributes<HTMLDivElement>, 'children'> & {
-    getOptions: () => AnyDroppableOptions
+    /** Omit options to retain the content without registering a drop target. */
+    getOptions?: () => AnyDroppableOptions
     children?: Snippet<[DropTargetState]>
   }
 
@@ -38,25 +39,32 @@
     edge: dropState?.edge ?? null
   })
 
-  const dropTargetAction: Action<HTMLDivElement, () => AnyDroppableOptions> = (
+  /** Updates the registration without replacing the rendered children. */
+  const dropTargetAction: Action<HTMLDivElement, (() => AnyDroppableOptions) | undefined> = (
     node,
     initialGetOptions
   ) => {
-    let resolveOptions = initialGetOptions
-    const readOptions = () => {
-      const options = resolveOptions()
-      dropState = options.indicator
-      return options
-    }
-    const action = droppable(node, readOptions())
+    /** Initial registration options, absent for an inactive target. */
+    const options = initialGetOptions?.()
+    dropState = options?.indicator ?? null
+    /** Registration can change while the wrapper and its children stay mounted. */
+    let action = options ? droppable(node, options) : undefined
 
     return {
       update(nextGetOptions) {
-        resolveOptions = nextGetOptions
-        action.update(readOptions())
+        /** Latest options determine whether this wrapper participates in dragging. */
+        const nextOptions = nextGetOptions?.()
+        if (nextOptions) {
+          if (action) action.update(nextOptions)
+          else action = droppable(node, nextOptions)
+        } else {
+          action?.destroy()
+          action = undefined
+        }
+        dropState = nextOptions?.indicator ?? null
       },
       destroy() {
-        action.destroy()
+        action?.destroy()
         dropState = null
       }
     }

@@ -221,6 +221,88 @@ const startCategoryWorkspace = async (
 }
 
 describe('Prompt categories', () => {
+  // Each editable workflow reveals all add buttons only while that workflow is empty.
+  for (const workflow of ['active', 'backlog', 'template'] as const) {
+    test(`reveals empty ${workflow} dividers and retains hover and focus colors`, async ({ testSetup }) => {
+      /** Fixture retains Active prompts when checking the independently empty Backlog. */
+      const filesystem = createCategorizedWorkspace()
+      /** Content directory whose entries are removed for the empty workflow. */
+      const contentPath = workflow === 'template' ? '/Templates/Templates/Active/' : '/Prompts/Prompts/Active/'
+      if (workflow !== 'backlog') {
+        for (const path of Object.keys(filesystem)) {
+          if (path.includes(contentPath) && path.endsWith('.md')) delete filesystem[path]
+        }
+      }
+      /** Window and navigation helpers for this empty workflow. */
+      const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+      if (workflow === 'template') await testHelpers.navigateToPromptTemplateFolders('Templates')
+      else await testHelpers.navigateToPromptFolders('Prompts')
+      if (workflow === 'backlog') await mainWindow.getByTestId('prompt-folder-backlog-filter').click()
+      await mainWindow.mouse.move(0, 0)
+      /** Root and category add buttons must both be revealed without interaction. */
+      const actions = mainWindow.locator('.promptDividerActions')
+      await expect(actions).toHaveCount(2)
+      for (const action of await actions.all()) await expect(action).toHaveCSS('opacity', '1')
+      /** Initial button retains its muted resting color and existing interaction colors. */
+      const button = actions.first().getByRole('button')
+      /** Resolve palette colors through CSS so assertions use the browser's color format. */
+      const colors = await button.evaluate((element: HTMLElement) => {
+        /** Temporary child inherits the same palette as the button. */
+        const reference = document.createElement('span')
+        element.append(reference)
+        reference.style.color = 'var(--ui-muted-text)'
+        /** Expected resting foreground. */
+        const resting = getComputedStyle(reference).color
+        reference.style.color = 'var(--ui-accent-normal-text)'
+        /** Expected hover and focus foreground. */
+        const interactive = getComputedStyle(reference).color
+        reference.remove()
+        return { resting, interactive }
+      })
+      await expect(button).toHaveCSS('color', colors.resting)
+      await button.hover()
+      await expect(button).toHaveCSS('color', colors.interactive)
+      await mainWindow.mouse.move(0, 0)
+      await expect(button).toHaveCSS('color', colors.resting)
+      await button.focus()
+      await expect(button).toHaveCSS('color', colors.interactive)
+      await button.click()
+      await expect(mainWindow.locator('[data-testid="prompt-title"]')).toHaveCount(1)
+      await mainWindow.mouse.move(0, 0)
+      // Creation focuses the new editor; the nonempty workflow resumes hover-only visibility.
+      for (const action of await actions.all()) await expect(action).toHaveCSS('opacity', '0')
+    })
+  }
+
+  // Preserve the actual button node when the first Uncategorized entry takes over the category boundary.
+  for (const contentKind of ['prompt', 'template'] as const) {
+    test(`retains the top ${contentKind} divider when adding before a category`, async ({ testSetup }) => {
+      /** Categorized content remains populated while Uncategorized starts empty. */
+      const filesystem = createCategorizedWorkspace()
+      if (contentKind === 'prompt') {
+        for (const path of Object.keys(filesystem)) {
+          if (path.endsWith('/Uncategorized Prompt.prompt.md') || path.endsWith('/Unknown Category Prompt.prompt.md')) {
+            delete filesystem[path]
+          }
+        }
+      }
+      /** Window and navigation helpers for the category-boundary transition. */
+      const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
+      if (contentKind === 'template') await testHelpers.navigateToPromptTemplateFolders('Templates')
+      else await testHelpers.navigateToPromptFolders('Prompts')
+      /** Top button initially doubles as the first category drop boundary. */
+      const button = mainWindow.getByTestId('prompt-divider-add-initial').first()
+      await button.hover()
+      await expect(button.locator('..')).toHaveCSS('opacity', '1')
+      /** Browser handle detects replacement even if the new node looks identical. */
+      const originalButton = await button.elementHandle()
+      await button.click()
+      await expect(mainWindow.locator('[data-testid="prompt-title"]')).toHaveCount(2)
+      expect(await originalButton.evaluate((element: HTMLElement) => element.isConnected)).toBe(true)
+      await expect(button.locator('..')).toHaveCSS('opacity', '1')
+    })
+  }
+
   test('omits categories from prompt metadata while folder order repairs category front matter', async ({
     electronApp,
     testSetup

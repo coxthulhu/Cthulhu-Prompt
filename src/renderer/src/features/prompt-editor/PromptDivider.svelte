@@ -21,6 +21,7 @@
     mode = 'add',
     contentLabel = 'Prompt',
     disabled = false,
+    revealed = false,
     testId,
     getDropOptions,
     getCategoryDropOptions,
@@ -30,6 +31,8 @@
     mode?: 'add' | 'separator'
     contentLabel?: 'Prompt' | 'Template'
     disabled?: boolean
+    /** Keeps the add button visible while retaining hover and focus colors. */
+    revealed?: boolean
     testId?: string
     getDropOptions?: () => DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload>
     /** Category-only options sharing this entire visual divider row. */
@@ -42,6 +45,7 @@
   {@const dividerText = isOver ? 'Move Here' : `Add ${contentLabel}`}
   <div
     class="promptDividerRow grid w-full items-center"
+    data-revealed={revealed}
     data-drop-over={isOver ? 'true' : 'false'}
     data-drop-blocked={isBlocked ? 'true' : undefined}
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
@@ -139,18 +143,15 @@
   {/if}
 {/snippet}
 
-{#if getCategoryDropOptions}
-  <DropTarget
-    getOptions={getCategoryDropOptions}
-    data-testid={testId ? `${testId}-category-drop-target` : undefined}
-  >
-    {#snippet children(categoryTargetState)}
-      {@render promptDropTarget(categoryTargetState)}
-    {/snippet}
-  </DropTarget>
-{:else}
-  {@render promptDropTarget()}
-{/if}
+<!-- Keep the button mounted when its category drop registration changes. -->
+<DropTarget
+  getOptions={getCategoryDropOptions}
+  data-testid={getCategoryDropOptions && testId ? `${testId}-category-drop-target` : undefined}
+>
+  {#snippet children(categoryTargetState)}
+    {@render promptDropTarget(getCategoryDropOptions ? categoryTargetState : undefined)}
+  {/snippet}
+</DropTarget>
 
 <style>
   .promptDividerMoveIndicator {
@@ -232,6 +233,7 @@
     cursor: default;
   }
 
+  .promptDividerRow[data-revealed='true'] .promptDividerActions,
   .promptDividerRow:hover .promptDividerActions,
   .promptDividerRow:focus-within .promptDividerActions {
     opacity: 1;
