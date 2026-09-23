@@ -1,3 +1,4 @@
+import type { PromptTemplateFolder } from '@shared/domain/prompt-folder/PromptFolder'
 import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
@@ -139,7 +140,7 @@ describe('prompt template renderer loading', () => {
           ]
         } } }),
         settings: { folderDescription: 'Template description' }
-      }
+      } as PromptTemplateFolder
     })
     const summary = {
       id: 'renderer-template',

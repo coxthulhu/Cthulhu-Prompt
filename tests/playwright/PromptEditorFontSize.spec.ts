@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test'
+import { setPromptEditorMaxLines } from '../helpers/SettingsHelpers'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
@@ -9,7 +11,7 @@ import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-async function waitForStoredPromptFontSize(mainWindow: any, value: number): Promise<void> {
+async function waitForStoredPromptFontSize(mainWindow: Page, value: number): Promise<void> {
   await mainWindow.waitForFunction((expected) => {
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
@@ -22,7 +24,7 @@ async function waitForStoredPromptFontSize(mainWindow: any, value: number): Prom
   }, value)
 }
 
-async function waitForStoredShowLineNumbers(mainWindow: any, value: boolean): Promise<void> {
+async function waitForStoredShowLineNumbers(mainWindow: Page, value: boolean): Promise<void> {
   await mainWindow.waitForFunction((expected) => {
     const ipc = window.electron?.ipcRenderer
     if (!ipc?.invoke) return false
@@ -35,21 +37,8 @@ async function waitForStoredShowLineNumbers(mainWindow: any, value: boolean): Pr
   }, value)
 }
 
-async function waitForStoredPromptMaxLines(mainWindow: any, value: number): Promise<void> {
-  await mainWindow.waitForFunction((expected) => {
-    const ipc = window.electron?.ipcRenderer
-    if (!ipc?.invoke) return false
-    return ipc.invoke('load-system-settings').then((result) => {
-      /** System-settings snapshot selected without relying on response order. */
-      return result?.snapshots?.find(
-        (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
-      )?.data?.promptEditorMaxLines === expected
-    })
-  }, value)
-}
-
 async function setPromptFontSize(
-  mainWindow: any,
+  mainWindow: Page,
   testHelpers: {
     navigateToSettingsScreen: () => Promise<void>
     navigateToHomeScreen: () => Promise<void>
@@ -64,23 +53,7 @@ async function setPromptFontSize(
   await waitForStoredPromptFontSize(mainWindow, value)
 }
 
-async function setPromptEditorMaxLines(
-  mainWindow: any,
-  testHelpers: {
-    navigateToSettingsScreen: () => Promise<void>
-    navigateToHomeScreen: () => Promise<void>
-  },
-  value: number
-): Promise<void> {
-  await testHelpers.navigateToSettingsScreen()
-  const input = mainWindow.locator('[data-testid="max-lines-input"]')
-  await input.fill(String(value))
-  await expect(input).toHaveValue(String(value))
-  await testHelpers.navigateToHomeScreen()
-  await waitForStoredPromptMaxLines(mainWindow, value)
-}
-
-async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Promise<number> {
+async function getMonacoLineHeight(mainWindow: Page, editorSelector: string): Promise<number> {
   const monacoSelector = `${editorSelector} .monaco-editor`
   await mainWindow.waitForSelector(monacoSelector, { state: 'visible' })
   await mainWindow.waitForSelector(`${monacoSelector} .view-line`, { state: 'attached' })
@@ -102,7 +75,7 @@ async function getMonacoLineHeight(mainWindow: any, editorSelector: string): Pro
   return lineHeight
 }
 
-async function getMonacoRootHeight(mainWindow: any, editorSelector: string): Promise<number> {
+async function getMonacoRootHeight(mainWindow: Page, editorSelector: string): Promise<number> {
   const monacoSelector = `${editorSelector} .monaco-editor`
   await mainWindow.waitForSelector(monacoSelector, { state: 'visible' })
 
@@ -123,7 +96,7 @@ async function getMonacoRootHeight(mainWindow: any, editorSelector: string): Pro
 }
 
 async function getMonacoLineNumbersSetting(
-  mainWindow: any,
+  mainWindow: Page,
   editorSelector: string
 ): Promise<string | null> {
   return await mainWindow.evaluate((selector) => {
@@ -156,7 +129,7 @@ async function getMonacoLineNumbersSetting(
 }
 
 async function getMonacoThemeState(
-  mainWindow: any,
+  mainWindow: Page,
   editorSelector: string
 ): Promise<{ className: string } | null> {
   return await mainWindow.evaluate((selector) => {
@@ -175,7 +148,7 @@ describe('Prompt editor settings', () => {
       workspace: { scenario: 'height' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     const prompt = heightTestPrompts.singleLine
     const rowSelector = promptEditorSelector(prompt.id)
@@ -200,7 +173,7 @@ describe('Prompt editor settings', () => {
       workspace: { scenario: 'height' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     const prompt = heightTestPrompts.singleLine
     const rowSelector = promptEditorSelector(prompt.id)
@@ -248,7 +221,7 @@ describe('Prompt editor settings', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToSettingsScreen()
     const input = mainWindow.locator('[data-testid="font-size-input"]')
@@ -266,7 +239,7 @@ describe('Prompt editor settings', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToSettingsScreen()
 
@@ -288,7 +261,7 @@ describe('Prompt editor settings', () => {
       workspace: { scenario: 'height' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     const prompt = heightTestPrompts.hundredLine
     const rowSelector = promptEditorSelector(prompt.id)
@@ -313,7 +286,7 @@ describe('Prompt editor settings', () => {
       workspace: { scenario: 'height' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     const prompt = heightTestPrompts.singleLine
     const rowSelector = promptEditorSelector(prompt.id)

@@ -1,9 +1,11 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { readPromptFolderEntryIds } from '../helpers/PromptDragDropHelpers'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { readPromptFolderEntryIds, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  promptEditorSelector
+} from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
-import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 

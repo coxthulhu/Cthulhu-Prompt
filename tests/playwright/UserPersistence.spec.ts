@@ -1,10 +1,12 @@
+import { createDeterministicId } from '../fixtures/FixtureIds'
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
   getWorkspaceInfoPath,
   setupWorkspaceScenario
 } from '../fixtures/WorkspaceFixtures'
-import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createTestRequestId } from '../helpers/TestRequestId'
 import {
   readUserPersistence,
   readWorkspaceUiState,
@@ -82,14 +84,6 @@ const expectRestoredRowVerticalBias = async (
     .toBeLessThanOrEqual(2)
 }
 
-const createDeterministicId = (seed: string): string => {
-  let hash = 0
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
-  }
-  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000000000000000${suffix}`
-}
 
 const readMainWindowState = async (
   electronApp: any

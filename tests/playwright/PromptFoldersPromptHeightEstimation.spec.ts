@@ -184,7 +184,7 @@ async function startPromptFoldersScenario(testSetup: any): Promise<PromptFolders
     workspace: { scenario: 'height' }
   })
 
-  expect(context.workspaceSetupResult.workspaceReady).toBe(true)
+  expect(context.workspaceSetupResult!.workspaceReady).toBe(true)
   return context
 }
 

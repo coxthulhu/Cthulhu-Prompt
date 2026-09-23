@@ -17,7 +17,7 @@ describe('Prompt folder loading overlay', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.pauseIpcChannel(LOADING_CHANNEL)
     try {

@@ -1,17 +1,7 @@
-import type { Locator } from '@playwright/test'
+import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
-
-const resolvePaletteColor = async (locator: Locator, token: string): Promise<string> =>
-  await locator.evaluate((element, paletteToken) => {
-    const probe = document.createElement('span')
-    probe.style.color = `var(${paletteToken})`
-    element.appendChild(probe)
-    const color = getComputedStyle(probe).color
-    probe.remove()
-    return color
-  }, token)
 
 describe('Button styling', () => {
   test('matches borders to button fills while preserving structural exceptions', async ({

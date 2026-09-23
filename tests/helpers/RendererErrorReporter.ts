@@ -2,25 +2,8 @@ import type { Reporter, TestCase, TestResult } from '@playwright/test/reporter'
 import fs from 'node:fs'
 import path from 'node:path'
 
-interface RendererErrorEntry {
-  kind: 'console' | 'pageerror'
-  level?: string
-  message: string
-  pageUrl?: string
-  location?: {
-    url?: string
-    lineNumber?: number
-    columnNumber?: number
-  }
-  timestamp: number
-}
+import { RENDERER_ERROR_ANNOTATION, type RendererErrorPayload } from './RendererErrors'
 
-interface RendererErrorPayload {
-  entries: RendererErrorEntry[]
-  truncatedCount: number
-}
-
-const RENDERER_ERROR_ANNOTATION = 'renderer-errors-json'
 const REPORT_FILE = path.resolve(process.cwd(), 'temp', 'test-results', 'renderer-errors.txt')
 
 class RendererErrorReporter implements Reporter {

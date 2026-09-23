@@ -1,9 +1,22 @@
+import { resolvePaletteColor } from '../helpers/PaletteHelpers'
+import { createDeterministicId } from '../fixtures/FixtureIds'
 import { expectPointerCapture, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
-import { checkPersistedPromptFilesExistByTitle } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  promptEditorSelector,
+  promptFolderSelectorDropdownItemSelector,
+  promptFolderSelectorMenuSelector,
+  promptFolderSelectorTriggerSelector,
+  promptTreePromptSelector
+} from '../helpers/PromptFolderSelectors'
+import {
+  checkPersistedPromptFilesExistByTitle,
+  expectPersistedFolderPromptIds,
+  readPromptFolderEntryIds
+} from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
@@ -11,23 +24,17 @@ import {
   dragGhostSelector,
   dragPromptHandleToTarget,
   dragPromptTreeRowToTarget,
-  expectCurrentFolderPromptEditors,
   expectDragGhostIconBeforeLabel,
-  expectPersistedFolderPromptIds,
   expectPromptTreeRowDraggingState,
   expectPromptTreeRowActiveState,
   finishActiveDrag,
   getRowViewportOffsets,
   moveActiveDragToTarget,
-  promptFolderSelectorDropdownItemSelector,
-  promptFolderSelectorMenuSelector,
-  promptFolderSelectorTriggerSelector,
   promptTreePromptDropIndicatorSelector,
-  promptTreePromptSelector,
-  readPromptFolderEntryIds,
   scrollPromptEditorAcrossViewportTop,
   scrollUntilPromptEditorVisible
 } from '../helpers/PromptDragDropHelpers'
+import { expectCurrentFolderPromptEditors } from '../helpers/PromptFolderHelpers'
 import {
   createWorkspaceWithFolders,
   getWorkspaceInfoPath,
@@ -49,14 +56,6 @@ const promptFolderOrderPath = (workspacePath: string, folderName: string): strin
 }
 const DEVELOPMENT_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, DEVELOPMENT_FOLDER_NAME)
 const EXAMPLES_FOLDER_PATH = promptFolderOrderPath(WORKSPACE_PATH, EXAMPLES_FOLDER_NAME)
-const createDeterministicId = (seed: string): string => {
-  let hash = 0
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
-  }
-  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000000000000000${suffix}`
-}
 const WORKSPACE_ID = createDeterministicId(WORKSPACE_PATH)
 const DEVELOPMENT_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${DEVELOPMENT_FOLDER_NAME}`)
 const EXAMPLES_FOLDER_ID = createDeterministicId(`${WORKSPACE_PATH}:${EXAMPLES_FOLDER_NAME}`)
@@ -132,16 +131,6 @@ const getPromptTreeStatusIndicator = (page: Page, promptId: string): Locator =>
     .locator('[data-testid="prompt-tree-status-indicator"]')
 const promptEditorStatusIndicatorSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-title-status-indicator"]`
-
-const resolvePaletteColor = async (page: Page, token: string): Promise<string> =>
-  await page.locator('body').evaluate((body, paletteToken) => {
-    const probe = document.createElement('span')
-    probe.style.color = `var(${paletteToken})`
-    body.appendChild(probe)
-    const color = getComputedStyle(probe).color
-    probe.remove()
-    return color
-  }, token)
 
 const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locator =>
   page
@@ -990,11 +979,11 @@ describe('Prompt folder prompt drag-drop', () => {
     await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
     await expect(destinationItem).toHaveCSS(
       'background-color',
-      await resolvePaletteColor(mainWindow, '--ui-info-hover-surface')
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-hover-surface')
     )
     await expect(destinationItem).toHaveCSS(
       'border-top-color',
-      await resolvePaletteColor(mainWindow, '--ui-info-muted-hover-border')
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-hover-border')
     )
     await finishActiveDrag(mainWindow)
 
@@ -1108,11 +1097,11 @@ describe('Prompt folder prompt drag-drop', () => {
     await expect(sourceItem).toHaveAttribute('data-row-state', 'blocked-over')
     await expect(sourceItem).toHaveCSS(
       'background-color',
-      await resolvePaletteColor(mainWindow, '--ui-neutral-emphasis-surface')
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-neutral-emphasis-surface')
     )
     await expect(sourceItem).toHaveCSS(
       'border-top-color',
-      await resolvePaletteColor(mainWindow, '--ui-neutral-emphasis-border')
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-neutral-emphasis-border')
     )
     await finishActiveDrag(mainWindow)
 

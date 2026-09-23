@@ -1,6 +1,8 @@
+import { resolvePaletteColor } from '../helpers/PaletteHelpers'
+import { readTextFile, checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import type { ElectronApplication, Page } from 'playwright'
-import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
@@ -11,7 +13,6 @@ import {
   finishActiveDrag,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
-import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -28,16 +29,6 @@ const PROMPT_FOLDER_SELECTOR_ITEMS = '[data-testid="sidebar-prompt-folder-select
 const PROMPT_FOLDER_SELECTOR_TRIGGER = '[data-testid="sidebar-prompt-folder-selector-trigger"]'
 const PROMPT_FOLDER_DROPDOWN_ITEM_PREFIX = 'sidebar-prompt-folder-dropdown-item-'
 
-const resolvePaletteColor = async (page: Page, token: string): Promise<string> =>
-  await page.locator('body').evaluate((body, paletteToken) => {
-    const probe = document.createElement('span')
-    probe.style.color = `var(${paletteToken})`
-    body.appendChild(probe)
-    const color = getComputedStyle(probe).color
-    probe.remove()
-    return color
-  }, token)
-
 /** Resolves the type-owned root-folder order used by this suite. */
 const workspaceFolderOrderPath = (
   workspacePath: string,
@@ -45,25 +36,6 @@ const workspaceFolderOrderPath = (
 ): string =>
   `${workspacePath}/${kind === 'template' ? 'Templates' : 'Prompts'}/FolderOrder.json`
 
-const readTextFile = async (
-  electronApp: ElectronApplication,
-  filePath: string
-): Promise<string> => {
-  const requestId = createTestRequestId('read')
-
-  return await electronApp.evaluate(
-    async ({ app }, payload) => {
-      const { targetPath, requestId } = payload
-      return await new Promise<string>((resolve) => {
-        app.once(`test-read-file-ready:${requestId}`, (result: { content: string }) => {
-          resolve(result.content)
-        })
-        app.emit('test-read-file', { filePath: targetPath, requestId })
-      })
-    },
-    { targetPath: filePath, requestId }
-  )
-}
 
 const readWorkspacePromptFolderIds = async (
   electronApp: ElectronApplication,
@@ -181,7 +153,7 @@ describe('Prompt Folder Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await expect
       .poll(async () => await readPromptFolderDropdownItemTestIds(mainWindow))
@@ -342,7 +314,7 @@ describe('Prompt Folder Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
     await mainWindow.locator('[data-testid="sidebar-prompt-folder-dropdown-add-item"]').click()
@@ -382,7 +354,7 @@ describe('Prompt Folder Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Beta')
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
@@ -400,13 +372,13 @@ describe('Prompt Folder Order', () => {
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
     ).toHaveCSS(
       'background-color',
-      await resolvePaletteColor(mainWindow, '--ui-info-normal-surface')
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface')
     )
     await expect(
       mainWindow.locator(promptFolderDropdownItemSelector('folder-gamma'))
     ).toHaveCSS(
       'border-top-color',
-      await resolvePaletteColor(mainWindow, '--ui-info-muted-border')
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border')
     )
     await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
     await moveActiveDragToTarget(mainWindow, promptFolderDropdownItemSelector('folder-alpha'))
@@ -500,7 +472,7 @@ describe('Prompt Folder Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await expect(mainWindow.locator(PROMPT_FOLDER_SELECTOR_MENU)).toBeVisible()
@@ -561,7 +533,7 @@ describe('Prompt Folder Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')
@@ -600,7 +572,7 @@ describe('Prompt Folder Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await beginPromptFolderDropdownDrag(mainWindow, 'folder-alpha')

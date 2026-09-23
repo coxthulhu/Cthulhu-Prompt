@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
@@ -40,7 +41,7 @@ type MonacoViewStateSnapshot = {
 }
 
 const readMonacoViewStateSnapshot = async (
-  mainWindow: any,
+  mainWindow: Page,
   editorSelector: string
 ): Promise<MonacoViewStateSnapshot | null> => {
   return await mainWindow.evaluate((selector) => {
@@ -94,7 +95,7 @@ const readMonacoViewStateSnapshot = async (
 }
 
 const setMonacoViewStateForTest = async (
-  mainWindow: any,
+  mainWindow: Page,
   editorSelector: string
 ): Promise<void> => {
   await mainWindow.evaluate((selector) => {
@@ -156,7 +157,7 @@ const setMonacoViewStateForTest = async (
 }
 
 const readPlaceholderAnchorAtViewportTop = async (
-  mainWindow: any
+  mainWindow: Page
 ): Promise<PromptAnchorData | null> => {
   return await mainWindow.evaluate(
     ({ hostSelector, rowSelector, placeholderSelector }) => {
@@ -193,7 +194,7 @@ const readPlaceholderAnchorAtViewportTop = async (
 }
 
 const scrollToPlaceholderAnchorAtViewportTop = async (
-  mainWindow: any,
+  mainWindow: Page,
   testHelpers: { scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void> },
   initialDeltaPx: number
 ): Promise<PromptAnchorData> => {
@@ -600,8 +601,8 @@ describe('Prompt Folder Hydration', () => {
       const scrollShift =
         anchoringVerification.scrollTopAfter - rowsAboveViewportData.scrollTopBefore
       const totalMeasuredDelta = hydratedRows.reduce(
-        (sum: number, row: { hydratedHeight: number; placeholderHeight: number }) => {
-          return sum + (row.hydratedHeight - row.placeholderHeight)
+        (sum: number, row) => {
+          return sum + (row.hydratedHeight! - row.placeholderHeight)
         },
         0
       )
@@ -637,7 +638,7 @@ describe('Prompt Folder Hydration', () => {
         }
       )
 
-      const hydratedAnchor = await hydratedAnchorHandle.jsonValue()
+      const hydratedAnchor = await hydratedAnchorHandle.jsonValue() as Exclude<Awaited<ReturnType<typeof hydratedAnchorHandle.jsonValue>>, false>
       await hydratedAnchorHandle.dispose()
 
       if (!hydratedAnchor?.rowId || typeof hydratedAnchor.offset !== 'number') {

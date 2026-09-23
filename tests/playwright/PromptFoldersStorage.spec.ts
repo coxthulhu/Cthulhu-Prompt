@@ -1,15 +1,20 @@
 import type { Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import {
+  promptEditorSelector,
+  promptFolderSelectorDropdownItemSelector,
+  promptFolderSelectorMenuSelector,
+  promptFolderSelectorTriggerSelector
+} from '../helpers/PromptFolderSelectors'
+import {
+  checkFileExists,
+  readTextFile,
+  readPromptFolderEntryIds
+} from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptHandleDrag,
   finishActiveDrag,
-  moveActiveDragToTarget,
-  promptFolderSelectorDropdownItemSelector,
-  promptFolderSelectorMenuSelector,
-  promptFolderSelectorTriggerSelector,
-  readPromptFolderEntryIds
+  moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 
 // The repository Playwright wrapper supplies the configured test primitives.

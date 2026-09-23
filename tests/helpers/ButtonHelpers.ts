@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 /**
  * ===========================
  * BUTTON INTERACTION HELPERS
@@ -10,7 +11,7 @@
  * @param buttonText - The text to search for in buttons
  * @returns Promise resolving to true if button is visible
  */
-export async function isButtonVisible(window: any, buttonText: string): Promise<boolean> {
+export async function isButtonVisible(page: Page, buttonText: string): Promise<boolean> {
   // Map common button text to their data-testid
   const buttonMap: Record<string, string> = {
     'Open Workspace': 'open-workspace-button',
@@ -20,13 +21,13 @@ export async function isButtonVisible(window: any, buttonText: string): Promise<
 
   const testId = buttonMap[buttonText]
   if (testId) {
-    return await window.evaluate((testId: string) => {
+    return await page.evaluate((testId: string) => {
       return !!document.querySelector(`[data-testid="${testId}"]`)
     }, testId)
   }
 
   // If no mapping found, fall back to text search (but this should be avoided)
-  return await window.evaluate((text: string) => {
+  return await page.evaluate((text: string) => {
     const buttons = document.querySelectorAll('button')
     for (const button of Array.from(buttons)) {
       if (button.textContent?.includes(text)) return true
@@ -41,8 +42,8 @@ export async function isButtonVisible(window: any, buttonText: string): Promise<
  * @param buttonText - The text of the button to check
  * @returns Promise resolving to true if button is active
  */
-export async function isNavButtonActive(window: any, buttonText: string): Promise<boolean> {
-  return await window.evaluate((text: string) => {
+export async function isNavButtonActive(page: Page, buttonText: string): Promise<boolean> {
+  return await page.evaluate((text: string) => {
     const buttons = document.querySelectorAll('[data-testid^="nav-button-"]')
     for (const button of Array.from(buttons)) {
       const label = `${button.textContent ?? ''} ${button.getAttribute('aria-label') ?? ''}`
@@ -67,7 +68,7 @@ export async function isNavButtonActive(window: any, buttonText: string): Promis
  * @param timeout - Optional timeout for the click action
  */
 export async function clickNavButton(
-  window: any,
+  page: Page,
   buttonText: string,
   timeout = 2000
 ): Promise<void> {
@@ -83,13 +84,13 @@ export async function clickNavButton(
 
   const testId = navButtonMap[buttonText]
   if (testId) {
-    await window.click(`[data-testid="${testId}"]`, { timeout })
-    await window.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
+    await page.click(`[data-testid="${testId}"]`, { timeout })
+    await page.waitForSelector(`[data-testid="${testId}"][data-active="true"]`, {
       state: 'attached',
       timeout
     })
   } else {
     // Fallback for unmapped buttons (should be avoided)
-    await window.click(`button:has-text("${buttonText}")`, { timeout })
+    await page.click(`button:has-text("${buttonText}")`, { timeout })
   }
 }

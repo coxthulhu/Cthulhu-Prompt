@@ -3,12 +3,12 @@ import { vol } from 'memfs'
 
 // Mock filesystem with memfs
 vi.mock('fs', async () => {
-  const memfs = await vi.importActual('memfs')
+  const memfs = await vi.importActual<typeof import('memfs')>('memfs')
   return memfs.fs
 })
 
 vi.mock('fs/promises', async () => {
-  const memfs = await vi.importActual('memfs')
+  const memfs = await vi.importActual<typeof import('memfs')>('memfs')
   return memfs.fs.promises
 })
 

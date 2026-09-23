@@ -2,6 +2,9 @@ import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTempl
 import { produce } from 'immer'
 import { describe, expect, it } from 'vitest'
 import type {
+  DomainChange,
+  DomainChangeFor,
+  DomainUpdateRecipe,
   DomainEntityType,
   DomainPlannerEntityMap,
   DomainState
@@ -34,6 +37,10 @@ import {
 import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
+
+/** Narrows a planner update whose entity and operation are established by its test case. */
+const getUpdateRecipe = <TEntityType extends DomainEntityType>(change: DomainChange): DomainUpdateRecipe<TEntityType> =>
+  (change as DomainChange & { recipe: DomainUpdateRecipe<TEntityType> }).recipe
 
 /** Complete in-memory entity graph used by shared planner tests. */
 type TestDomainEntities = {
@@ -152,7 +159,7 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(plan)) return
     expect(plan).toHaveLength(1)
     /** Folder projection after applying the shared rename recipe. */
-    const renamedFolder = produce(folder, plan[0]!.recipe!)
+    const renamedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
     expect(renamedFolder).toMatchObject({
       id: folder.id,
       displayName: 'Renamed Root',
@@ -185,7 +192,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(createPlan)).toBe(true)
     if (!Array.isArray(createPlan)) return
     /** Workspace projection after the creation placement recipe. */
-    const workspaceAfterCreate = produce(workspace, createPlan[0]!.recipe!)
+    const workspaceAfterCreate = produce(workspace, getUpdateRecipe<'workspace'>(createPlan[0]!))
     expect(workspaceAfterCreate.promptFolderEntries.map((entry) => entry.id)).toEqual([
       sibling.id,
       'created'
@@ -206,7 +213,7 @@ describe('shared domain mutation planners', () => {
       ]
     }
     /** Created root projected from the insertion plan. */
-    const createdRoot = createPlan[1]!.data as PromptFolder
+    const createdRoot = (createPlan[1]! as Extract<DomainChangeFor<'promptFolder'>, { type: 'insert' }>).data
     /** Root reorder plan moving the created root to the beginning. */
     const movePlan = planMovePromptFolderDomainMutation(
       createDomainState({
@@ -218,7 +225,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      produce(populatedWorkspace, movePlan[0]!.recipe!).promptFolderEntries.map(
+      produce(populatedWorkspace, getUpdateRecipe<'workspace'>(movePlan[0]!)).promptFolderEntries.map(
         (entry) => entry.id
       )
     ).toEqual(['created', sibling.id])
@@ -241,7 +248,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Folder projection after applying the ownership recipe. */
-    const projectedFolder = produce(folder, plan[0]!.recipe!)
+    const projectedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
     expect(getMarkdownContentCategoryOrder(projectedFolder).categories[1]?.categoryId).toBe(
       'created'
     )
@@ -270,7 +277,7 @@ describe('shared domain mutation planners', () => {
     )
     expect(Array.isArray(whitespaceDescriptionPlan)).toBe(true)
     if (!Array.isArray(whitespaceDescriptionPlan)) return
-    expect(whitespaceDescriptionPlan[1]?.data).toMatchObject({ description: null })
+    expect((whitespaceDescriptionPlan[1] as Extract<DomainChangeFor<'category'>, { type: 'insert' }> | undefined)?.data).toMatchObject({ description: null })
   })
 
   it('plans category deletion from summary projections with one renderer timestamp', () => {
@@ -329,9 +336,9 @@ describe('shared domain mutation planners', () => {
     ])
 
     /** Prompt projection after applying the shared cleanup recipe. */
-    const prompt = produce(state.get('prompt', 'prompt')!, plan[2]!.recipe!)
+    const prompt = produce(state.get('prompt', 'prompt')!, getUpdateRecipe<'prompt'>(plan[2]!))
     /** Template projection after applying the shared cleanup recipe. */
-    const template = produce(state.get('promptTemplate', 'template')!, plan[3]!.recipe!)
+    const template = produce(state.get('promptTemplate', 'template')!, getUpdateRecipe<'promptTemplate'>(plan[3]!))
     expect(prompt).not.toHaveProperty('category')
     expect(template).not.toHaveProperty('category')
     expect(prompt.modifiedAt).toBe('renderer-time')
@@ -434,7 +441,7 @@ describe('shared domain mutation planners', () => {
       'workspacePromptFolderUiState:workspace:category-b'
     ])
     /** Root projection after deleted content moves and new groups prepend as a block. */
-    const projectedFolder = produce(folder, plan[0]!.recipe!)
+    const projectedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
     expect(
       getMarkdownContentCategoryOrder(projectedFolder).categories.map((group) => ({
         categoryId: group.categoryId,
@@ -447,13 +454,13 @@ describe('shared domain mutation planners', () => {
       { categoryId: 'category-a', entries: ['prompt-a'] }
     ])
     /** Updated retained category projection after shared normalization. */
-    const projectedCategory = produce(categories[0]!, plan[1]!.recipe!)
+    const projectedCategory = produce(categories[0]!, getUpdateRecipe<'category'>(plan[1]!))
     expect(projectedCategory).toMatchObject({
       displayName: 'Renamed A',
       shortDescription: 'Summary.'
     })
     /** Deleted prompt projection after category cleanup and timestamp replacement. */
-    const projectedPrompt = produce(prompts[1]!, plan[5]!.recipe!)
+    const projectedPrompt = produce(prompts[1]!, getUpdateRecipe<'prompt'>(plan[5]!))
     expect(projectedPrompt).not.toHaveProperty('category')
     expect(projectedPrompt.modifiedAt).toBe('renderer-time')
 
@@ -534,7 +541,7 @@ describe('shared domain mutation planners', () => {
     )
     expect(rootUpdate?.type).toBe('update')
     if (rootUpdate?.type !== 'update') return
-    expect(produce(rootUiState, rootUpdate.recipe)).toEqual({
+    expect(produce(rootUiState, getUpdateRecipe<'workspacePromptFolderUiState'>(rootUpdate))).toEqual({
       ...rootUiState,
       selectedEntryId: 'root-header'
     })
@@ -602,7 +609,7 @@ describe('shared domain mutation planners', () => {
     )
     expect(Array.isArray(detailsPlan)).toBe(true)
     if (!Array.isArray(detailsPlan)) return
-    expect(produce(categories[1]!, detailsPlan[0]!.recipe!)).toEqual({
+    expect(produce(categories[1]!, getUpdateRecipe<'category'>(detailsPlan[0]!))).toEqual({
       id: 'category-b',
       displayName: 'Renamed',
       shortDescription: 'Updated summary.',
@@ -622,7 +629,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      getMarkdownContentCategoryOrder(produce(folder, movePlan[0]!.recipe!)).categories.map(
+      getMarkdownContentCategoryOrder(produce(folder, getUpdateRecipe<'promptFolder'>(movePlan[0]!))).categories.map(
         (group) => group.categoryId
       )
     ).toEqual([null, 'category-b', 'category-a'])
@@ -647,7 +654,7 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(templateMovePlan)) return
     expect(
       getMarkdownContentCategoryOrder(
-        produce(templateFolder, templateMovePlan[0]!.recipe!)
+        produce(templateFolder, getUpdateRecipe<'promptFolder'>(templateMovePlan[0]!))
       ).categories.map((group) => group.categoryId)
     ).toEqual([null, 'category-b', 'category-a'])
   })
@@ -675,7 +682,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(categoryPlan)).toBe(true)
     if (!Array.isArray(categoryPlan)) return
     expect(categoryPlan).toHaveLength(1)
-    expect(produce(category, categoryPlan[0]!.recipe!).description).toBe('Updated description.')
+    expect(produce(category, getUpdateRecipe<'category'>(categoryPlan[0]!)).description).toBe('Updated description.')
 
     /** Single-settings plan normalized through the shared bounds. */
     const settingsPlan = planSetSystemSettingsDomainMutation(
@@ -690,7 +697,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(settingsPlan)).toBe(true)
     if (!Array.isArray(settingsPlan)) return
     expect(settingsPlan).toHaveLength(1)
-    expect(produce(settings, settingsPlan[0]!.recipe!)).toEqual({
+    expect(produce(settings, getUpdateRecipe<'systemSettings'>(settingsPlan[0]!))).toEqual({
       promptFontSize: 32,
       promptEditorMinLines: 3,
       promptEditorMaxLines: 30,
@@ -728,7 +735,7 @@ describe('shared domain mutation planners', () => {
     })
     expect(
       getMarkdownContentCategoryOrder(
-        produce(promptRoot, promptPlan[0]!.recipe!)
+        produce(promptRoot, getUpdateRecipe<'promptFolder'>(promptPlan[0]!))
       ).categories[0]?.entries
     ).toEqual([{ kind: 'prompt', id: 'prompt' }])
 
@@ -803,7 +810,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(promptPlan)).toBe(true)
     if (!Array.isArray(promptPlan)) return
     expect(promptPlan).toHaveLength(1)
-    expect(produce(prompt, promptPlan[0]!.recipe!)).toEqual({
+    expect(produce(prompt, getUpdateRecipe<'prompt'>(promptPlan[0]!))).toEqual({
       ...prompt,
       title: 'Updated Prompt',
       modifiedAt: '2026-08-30T12:00:00Z',
@@ -825,7 +832,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(templatePlan)).toBe(true)
     if (!Array.isArray(templatePlan)) return
     expect(templatePlan).toHaveLength(1)
-    expect(produce(template, templatePlan[0]!.recipe!)).toEqual({
+    expect(produce(template, getUpdateRecipe<'promptTemplate'>(templatePlan[0]!))).toEqual({
       ...template,
       title: 'Updated Template',
       modifiedAt: '2026-08-30T12:00:00Z',
@@ -862,9 +869,9 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Root projection after completion ownership changes. */
-    const completedFolder = produce(folder, plan[0]!.recipe!)
+    const completedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
     /** Prompt projection after completion fields are applied. */
-    const completedPrompt = produce(prompt, plan[1]!.recipe!)
+    const completedPrompt = produce(prompt, getUpdateRecipe<'prompt'>(plan[1]!))
     expect(
       completedFolder.statusFolders[PromptStatusFolderId.Completed].promptIds
     ).toEqual([prompt.id])
@@ -907,9 +914,9 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Root projection after ownership moves from Completed to Archived. */
-    const archivedFolder = produce(folder, plan[0]!.recipe!)
+    const archivedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
     /** Prompt projection after Archived replaces its finalization timestamp. */
-    const archivedPrompt = produce(prompt, plan[1]!.recipe!)
+    const archivedPrompt = produce(prompt, getUpdateRecipe<'prompt'>(plan[1]!))
     expect(archivedFolder.statusFolders[PromptStatusFolderId.Completed].promptIds).toEqual([])
     expect(archivedFolder.statusFolders[PromptStatusFolderId.Archived].promptIds).toEqual([
       prompt.id
@@ -953,7 +960,7 @@ describe('shared domain mutation planners', () => {
     expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
       'prompt:prompt'
     ])
-    expect(produce(prompt, plan[0]!.recipe!)).toMatchObject({
+    expect(produce(prompt, getUpdateRecipe<'prompt'>(plan[0]!))).toMatchObject({
       status: PromptStatus.InProgress,
       modifiedAt: '2026-08-30T12:00:00Z'
     })
@@ -996,9 +1003,9 @@ describe('shared domain mutation planners', () => {
       'prompt:prompt'
     ])
     /** Source root after its Active ordering loses the prompt. */
-    const projectedSource = produce(source, plan[0]!.recipe!)
+    const projectedSource = produce(source, getUpdateRecipe<'promptFolder'>(plan[0]!))
     /** Destination root after its Active ordering receives the prompt. */
-    const projectedDestination = produce(destination, plan[1]!.recipe!)
+    const projectedDestination = produce(destination, getUpdateRecipe<'promptFolder'>(plan[1]!))
     expect(getMarkdownContentCategoryOrder(projectedSource).categories[0]?.entries).toEqual([])
     expect(getMarkdownContentCategoryOrder(projectedDestination).categories[0]?.entries).toEqual([
       { kind: 'prompt', id: prompt.id }
@@ -1041,9 +1048,9 @@ describe('shared domain mutation planners', () => {
       'prompt:prompt'
     ])
     /** Source projection after active ownership is removed. */
-    const projectedSource = produce(source, plan[0]!.recipe!)
+    const projectedSource = produce(source, getUpdateRecipe<'promptFolder'>(plan[0]!))
     /** Destination projection after completed ownership is inserted. */
-    const projectedDestination = produce(destination, plan[1]!.recipe!)
+    const projectedDestination = produce(destination, getUpdateRecipe<'promptFolder'>(plan[1]!))
     expect(getMarkdownContentCategoryOrder(projectedSource).categories[0]?.entries).toEqual([])
     expect(
       projectedDestination.statusFolders[PromptStatusFolderId.Completed].promptIds
@@ -1078,9 +1085,9 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Restored prompt projection after applying the shared recipe. */
-    const restoredPrompt = produce(prompt, plan[1]!.recipe!)
+    const restoredPrompt = produce(prompt, getUpdateRecipe<'prompt'>(plan[1]!))
     /** Root projection after restoring Active-tree ownership. */
-    const restoredFolder = produce(folder, plan[0]!.recipe!)
+    const restoredFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
     expect(restoredPrompt).not.toHaveProperty('category')
     expect(restoredPrompt).not.toHaveProperty('finalizedAt')
     expect(
@@ -1181,7 +1188,7 @@ describe('shared domain mutation planners', () => {
         fallbackTitle: 'New Template',
         modifiedAt: 'now'
       },
-      plan[2]!.recipe!
+      getUpdateRecipe<'promptTemplate'>(plan[2]!)
     )
     expect(movedTemplate.fallbackTitle).toBe('New Template 1')
     // Pure movement retains the domain timestamp; persisted snapshots use filesystem mtime.

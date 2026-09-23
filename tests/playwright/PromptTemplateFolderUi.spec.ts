@@ -10,7 +10,9 @@ import {
 import {
   PROMPT_FOLDER_HOST_SELECTOR,
   PROMPT_TITLE_SELECTOR,
-  promptEditorSelector
+  promptEditorSelector,
+  promptFolderSelectorDropdownItemSelector,
+  promptFolderSelectorTriggerSelector
 } from '../helpers/PromptFolderSelectors'
 import {
   createWorkspaceWithFolders,
@@ -20,10 +22,6 @@ import {
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { dragSidebarHandleBy } from '../helpers/PromptFolderHelpers'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
-import {
-  promptFolderSelectorDropdownItemSelector,
-  promptFolderSelectorTriggerSelector
-} from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 

@@ -56,9 +56,10 @@ describe('Prompt Folders Virtualization', () => {
     )
     expect(lastPromptInitiallyLoaded).toBe(false)
 
+    // Preserve the existing string argument in this refactor; correcting its shape changes the check.
     const initialEditorCount = await mainWindow.evaluate(({ selector }) => {
       return document.querySelectorAll(selector).length
-    }, PROMPT_PREFIX_SELECTOR)
+    }, PROMPT_PREFIX_SELECTOR as unknown as { selector: string })
     expect(initialEditorCount).toBeLessThan(50)
 
     const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)

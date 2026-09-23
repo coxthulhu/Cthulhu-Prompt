@@ -2,7 +2,12 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithFolders, createWorkspaceWithTemplateFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
-import { beginPromptTreeRowDrag, finishActiveDrag, getPromptEditorIds, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
+import {
+  beginPromptTreeRowDrag,
+  finishActiveDrag,
+  moveActiveDragToTarget
+} from '../helpers/PromptDragDropHelpers'
+import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
 
 /** Electron integration suite exercises persisted archive transfers and selection behavior. */

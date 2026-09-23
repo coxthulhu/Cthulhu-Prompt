@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { clickNavButton } from './ButtonHelpers'
 
 /**
@@ -11,8 +12,8 @@ import { clickNavButton } from './ButtonHelpers'
  * @param window - The Playwright window instance
  * @returns Promise resolving to the active screen name
  */
-export async function getActiveScreen(window: any): Promise<string> {
-  return await window.evaluate(() => {
+export async function getActiveScreen(page: Page): Promise<string> {
+  return await page.evaluate(() => {
     const promptFolderScreen = document.querySelector('[data-testid="prompt-folder-screen"]')
     if (promptFolderScreen) {
       return 'prompt-folder'
@@ -46,14 +47,14 @@ export async function getActiveScreen(window: any): Promise<string> {
  * Navigates to the Home screen
  * @param window - The Playwright window instance
  */
-export async function navigateToHomeScreen(window: any): Promise<void> {
-  await clickNavButton(window, 'Home')
+export async function navigateToHomeScreen(page: Page): Promise<void> {
+  await clickNavButton(page, 'Home')
 }
 
 /**
  * Navigates to the Settings screen
  * @param window - The Playwright window instance
  */
-export async function navigateToSettingsScreen(window: any): Promise<void> {
-  await clickNavButton(window, 'Settings')
+export async function navigateToSettingsScreen(page: Page): Promise<void> {
+  await clickNavButton(page, 'Settings')
 }

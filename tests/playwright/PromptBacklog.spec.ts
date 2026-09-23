@@ -154,7 +154,7 @@ describe('Backlog prompts', () => {
       /** Original content must remain byte-for-byte unchanged by a rejected drop. */
       const original = await readTextFile(electronApp, path)
       /** Saved timestamp distinguishes a fresh finalization from retention of the old one. */
-      const finalizedAt = parsePromptMarkdown(original).finalizedAt!
+      const finalizedAt = parsePromptMarkdown(original)!.finalizedAt!
       if (previousFinalizedAt) expect(Date.parse(finalizedAt)).toBeGreaterThan(Date.parse(previousFinalizedAt))
       previousFinalizedAt = finalizedAt
       await beginPromptTreeRowDrag(mainWindow, 'second', group)

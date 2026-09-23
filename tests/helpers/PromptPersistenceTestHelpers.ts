@@ -1,4 +1,6 @@
-import { createTestRequestId } from './PlaywrightTestFramework'
+import type { EventEmitter } from 'node:events'
+import { expect, type ElectronApplication } from '@playwright/test'
+import { createTestRequestId } from './TestRequestId'
 import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
 
 type PersistedPromptLookup = {
@@ -13,14 +15,14 @@ type PersistedPromptFilePaths = {
   markdownPath: string
 }
 
-export const readTextFile = async (electronApp: any, filePath: string): Promise<string> => {
+export const readTextFile = async (electronApp: ElectronApplication, filePath: string): Promise<string> => {
   const requestId = createTestRequestId('read')
 
   return await electronApp.evaluate(
     async ({ app }, payload) => {
       const { targetPath, requestId } = payload
       return await new Promise<string>((resolve) => {
-        app.once(`test-read-file-ready:${requestId}`, (result: { content: string }) => {
+        (app as EventEmitter).once(`test-read-file-ready:${requestId}`, (result: { content: string }) => {
           resolve(result.content)
         })
         app.emit('test-read-file', { filePath: targetPath, requestId })
@@ -30,7 +32,7 @@ export const readTextFile = async (electronApp: any, filePath: string): Promise<
   )
 }
 
-export const checkFileExists = async (electronApp: any, filePath: string): Promise<boolean> => {
+export const checkFileExists = async (electronApp: ElectronApplication, filePath: string): Promise<boolean> => {
   return await electronApp.evaluate(async ({ app }, targetPath) => {
     app.emit('test-check-file-exists', targetPath)
     return Boolean((global as any).testFileExistsResult)
@@ -61,7 +63,7 @@ export const resolvePersistedPromptFilePathsByTitle = (
 }
 
 export async function readPersistedPromptTextById(
-  electronApp: any,
+  electronApp: ElectronApplication,
   lookup: PersistedPromptLookup
 ): Promise<string> {
   const paths = resolvePersistedPromptFilePathsByTitle(lookup)
@@ -69,7 +71,7 @@ export async function readPersistedPromptTextById(
 }
 
 export async function checkPersistedPromptFilesExistByTitle(
-  electronApp: any,
+  electronApp: ElectronApplication,
   lookup: PersistedPromptLookup
 ): Promise<{ markdownExists: boolean }> {
   const paths = resolvePersistedPromptFilePathsByTitle(lookup)
@@ -78,4 +80,38 @@ export async function checkPersistedPromptFilesExistByTitle(
   return {
     markdownExists
   }
+}
+
+/** Reads persisted entries across the root’s category groups. */
+export const readPromptFolderEntries = async (
+  electronApp: ElectronApplication,
+  folderOrderPath: string
+): Promise<Array<{ kind: 'prompt' | 'folder'; id: string }>> => {
+  /** Raw ordering file read through the existing Electron test event. */
+  const fileContents = await readTextFile(electronApp, folderOrderPath)
+  /** Current root ordering groups active content beneath category ownership. */
+  const order = JSON.parse(fileContents) as {
+    categories: Array<{
+      entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
+    }>
+  }
+  return order.categories.flatMap((category) => category.entries)
+}
+
+/** Projects persisted category entries to their ordered IDs. */
+export const readPromptFolderEntryIds = async (
+  electronApp: ElectronApplication,
+  folderOrderPath: string
+): Promise<string[]> =>
+  (await readPromptFolderEntries(electronApp, folderOrderPath)).map((entry) => entry.id)
+
+/** Polls the existing persisted-folder ordering assertion. */
+export const expectPersistedFolderPromptIds = async (
+  electronApp: ElectronApplication,
+  folderOrderPath: string,
+  expectedPromptIds: string[]
+): Promise<void> => {
+  await expect
+    .poll(async () => await readPromptFolderEntryIds(electronApp, folderOrderPath))
+    .toEqual(expectedPromptIds)
 }

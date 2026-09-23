@@ -104,8 +104,8 @@ export async function focusMonacoEditor(
       if (!item?.container) return false
       return (
         item.container === container ||
-        item.container.contains(container) ||
-        container.contains(item.container)
+        item.container.contains(container!) ||
+        container!.contains(item.container)
       )
     })
     entry?.editor.focus()
@@ -166,8 +166,8 @@ export async function isMonacoEditorFocused(page: Page, editorSelector: string):
       if (!item?.container) return false
       return (
         item.container === container ||
-        item.container.contains(container) ||
-        container.contains(item.container)
+        item.container.contains(container!) ||
+        container!.contains(item.container)
       )
     })
 
@@ -209,8 +209,8 @@ export async function getMonacoEditorText(page: Page, editorSelector: string): P
       if (!item?.container) return false
       return (
         item.container === container ||
-        item.container.contains(container) ||
-        container.contains(item.container)
+        item.container.contains(container!) ||
+        container!.contains(item.container)
       )
     })
 

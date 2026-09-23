@@ -3,32 +3,10 @@ import type { LoadSystemSettingsResult } from '@shared/domain/settings/SystemSet
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import type { LoadUserPersistenceResult } from '@shared/domain/user-persistence/UserPersistence'
 import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
-import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
-
-const runSqlQuery = async (
-  electronApp: any,
-  sql: string
-): Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }> => {
-  const requestId = createTestRequestId('sql')
-  return await electronApp.evaluate(
-    async ({ app }, payload) => {
-      const { query, requestId } = payload
-      return await new Promise<{
-        success: boolean
-        rows?: Array<Record<string, unknown>>
-        error?: string
-      }>((resolve) => {
-        app.once(`test-run-sql-query-ready:${requestId}`, (payload) => {
-          resolve(payload)
-        })
-        app.emit('test-run-sql-query', { requestId, sql: query })
-      })
-    },
-    { query: sql, requestId }
-  )
-}
 
 describe('Test Infrastructure', () => {
   describe('Controlled Startup Framework', () => {

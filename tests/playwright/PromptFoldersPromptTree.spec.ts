@@ -1,3 +1,4 @@
+import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
@@ -79,14 +80,6 @@ const PROMPT_FOLDER_CATEGORY_VERTICAL_BIAS_PX = 80
 const PROMPT_FOLDER_VERTICAL_BIAS_PX = 300
 /** Minimum viewport-top offset retained when a complete editor is too tall for symmetric space. */
 const PROMPT_FOLDER_MINIMUM_TOP_OFFSET_PX = 20
-function createDeterministicId(seed: string): string {
-  let hash = 0
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
-  }
-  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000000000000000${suffix}`
-}
 
 const buildCompletedTreeWorkspace = (): Record<string, string | null> => {
   const workspace = createWorkspaceWithFolders(COMPLETED_TREE_WORKSPACE_PATH, [
@@ -317,7 +310,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
@@ -481,7 +474,7 @@ describe('Prompt folder prompt tree', () => {
       .poll(async () => {
         const persisted = await readWorkspaceUiState(electronApp, workspaceId)
         return persisted.selectedScreen === 'prompt-task-folders'
-          ? persisted.selectedScreenData.promptFolderId
+          ? (persisted.selectedScreenData as { promptFolderId: string | null }).promptFolderId
           : null
       })
       .toBe(CATEGORIES_MAIN_FOLDER_ID)
@@ -739,7 +732,7 @@ describe('Prompt folder prompt tree', () => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'categories-ui' }
     })
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Hierarchy')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
 
@@ -770,7 +763,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'long-wrapped-lines' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(LONG_SINGLE_LINE_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
@@ -845,7 +838,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
@@ -938,7 +931,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
@@ -971,7 +964,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
@@ -993,7 +986,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(SAMPLE_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
@@ -1024,7 +1017,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(SHORT_FOLDER_NAME)
     await mainWindow.waitForSelector(PROMPT_TREE_HOST_SELECTOR, { state: 'attached' })
@@ -1043,7 +1036,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     await expect(mainWindow.locator(MAIN_ROOT_DUPLICATE_CATEGORY_TOGGLE)).toHaveCount(0)
@@ -1095,7 +1088,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     const categoryToggle = mainWindow.locator(CATEGORY_TOGGLE)
@@ -1138,7 +1131,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     const promptRow = mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')
@@ -1172,7 +1165,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     const firstPrompt = mainWindow.locator('[data-testid="prompt-tree-active-prompt-base-before"]')
@@ -1208,7 +1201,7 @@ describe('Prompt folder prompt tree', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     await expect(mainWindow.locator(CATEGORY_TOGGLE)).toHaveAttribute('aria-expanded', 'true')
@@ -1265,7 +1258,7 @@ describe('Prompt folder prompt tree', () => {
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Unopened Untitled')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })

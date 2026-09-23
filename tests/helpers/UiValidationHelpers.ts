@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 /**
  * ===========================
  * GENERAL UI VALIDATION HELPERS
@@ -9,12 +10,12 @@
  * @param window - The Playwright window instance
  * @returns Promise resolving to structure validation results
  */
-export async function validatePageStructure(window: any): Promise<{
+export async function validatePageStructure(page: Page): Promise<{
   hasMainElement: boolean
   hasSidebar: boolean
   hasWelcomeText: boolean
 }> {
-  return await window.evaluate(() => {
+  return await page.evaluate(() => {
     const hasMainElement = !!document.querySelector('main')
     const hasSidebar = !!document.querySelector('[data-testid="app-sidebar"]')
     const hasWelcomeText = !!document.querySelector('[data-testid="home-title"]')

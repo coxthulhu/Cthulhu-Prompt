@@ -1,6 +1,7 @@
-import type { Locator } from '@playwright/test'
+import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
+import { resolvePaletteColors } from '../helpers/PaletteHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { stubClipboard } from '../helpers/ClipboardHelpers'
+import { stubClipboard, readClipboardText } from '../helpers/ClipboardHelpers'
 import {
   focusMonacoEditor,
   getMonacoEditorText,
@@ -11,7 +12,6 @@ import {
 } from '../helpers/MonacoHelpers'
 import {
   PROMPT_FOLDER_HOST_SELECTOR,
-  PROMPT_EDITOR_PREFIX_SELECTOR,
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptFolderSelectors'
@@ -22,7 +22,8 @@ import {
   checkPersistedPromptFilesExistByTitle,
   readTextFile,
   readPersistedPromptTextById,
-  resolvePersistedPromptFilePathsByTitle
+  resolvePersistedPromptFilePathsByTitle,
+  readPromptFolderEntries
 } from '../helpers/PromptPersistenceTestHelpers'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PromptStatus, type PromptLocation, type PromptPersisted } from '@shared/domain/prompt/Prompt'
@@ -30,28 +31,12 @@ import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
   finishActiveDrag,
-  moveActiveDragToTarget,
-  readPromptFolderEntries
+  moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
 import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
-
-// Resolves palette tokens through Chromium so CSS assertions use the browser's color format.
-const resolvePaletteColors = async (locator: Locator, tokens: readonly string[]): Promise<string[]> =>
-  await locator.evaluate((element, paletteTokens) => {
-    return paletteTokens.map((token) => {
-      // The temporary probe asks Chromium to compute one palette token as a color.
-      const probe = document.createElement('span')
-      probe.style.color = `var(${token})`
-      element.appendChild(probe)
-      // The computed color is stable across the fill and border properties under test.
-      const color = getComputedStyle(probe).color
-      probe.remove()
-      return color
-    })
-  }, tokens)
 
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
 const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
@@ -124,15 +109,6 @@ const expectEditedIndicator = async (page: any, promptId: string) => {
     return { actual: getComputedStyle(element).backgroundColor, expected }
   })
   expect(colors.actual).toBe(colors.expected)
-}
-
-const getPromptEditorIds = async (page: any): Promise<string[]> => {
-  return await page.evaluate((selector: string) => {
-    return Array.from(document.querySelectorAll(selector))
-      .map((element) => element.getAttribute('data-testid') ?? '')
-      .filter((testId) => testId.startsWith('prompt-editor-'))
-      .map((testId) => testId.replace('prompt-editor-', ''))
-  }, PROMPT_EDITOR_PREFIX_SELECTOR)
 }
 
 const getPromptTreePromptRowIds = async (
@@ -794,7 +770,7 @@ describe('Prompt folder prompt management', () => {
     await expect(titleInput).toBeFocused()
     await expect
       .poll(async () =>
-        titleInput.evaluate((input) => [input.selectionStart, input.selectionEnd])
+        titleInput.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])
       )
       .toEqual([2, 2])
 
@@ -1401,7 +1377,7 @@ describe('Prompt folder prompt management', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Copy Prompt')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('copy-source'))
@@ -1443,9 +1419,7 @@ describe('Prompt folder prompt management', () => {
 
     await expect
       .poll(async () => {
-        const clipboardText = await mainWindow.evaluate(
-          () => (window as any).__testClipboardText ?? ''
-        )
+        const clipboardText = await readClipboardText(mainWindow)
         return normalizeNewlines(clipboardText)
       })
       .toBe(promptText)
@@ -1557,7 +1531,7 @@ describe('Prompt folder prompt management', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(folderName)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(activePromptId))

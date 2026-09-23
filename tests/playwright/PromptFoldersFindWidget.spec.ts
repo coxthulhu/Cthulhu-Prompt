@@ -11,7 +11,7 @@ import {
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { getPromptEditorIds } from '../helpers/PromptDragDropHelpers'
+import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_ID,
   VIRTUAL_FIND_LAST_PROMPT_ID,
@@ -526,7 +526,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Live Counts')
     const editorSelector = promptEditorSelector('find-live-counts-prompt')
@@ -578,7 +578,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Live Position')
     const firstEditorSelector = promptEditorSelector('find-live-position-first')
@@ -885,7 +885,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
@@ -938,7 +938,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
@@ -987,7 +987,7 @@ describe('Prompt folder find dialog', () => {
     })
     /** Workspace setup result confirms the prompt folder is available for navigation. */
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Reopen')
     /** Prompt body whose blank lines provide nonmatching persisted-query anchors. */
@@ -1071,7 +1071,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
@@ -1147,7 +1147,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Boundaries')
     const editorSelector = promptEditorSelector('configured-word-1')
@@ -1206,7 +1206,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
@@ -1250,7 +1250,7 @@ describe('Prompt folder find dialog', () => {
     })
     /** UI setup result confirming that the generated workspace opened. */
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Small Sidebar')
 
     /** Active tree viewport constrained below the shared 200px scroll-band requirement. */
@@ -1332,7 +1332,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Anchor')
     const editorSelector = promptEditorSelector('typing-anchor-1')
@@ -1505,7 +1505,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Focus Return')
     const editorSelector = promptEditorSelector('find-focus-return-prompt')
@@ -2027,7 +2027,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Long')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })
@@ -2079,7 +2079,7 @@ describe('Prompt folder find dialog', () => {
       workspace: { scenario: 'none' }
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Long')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST_SELECTOR, { state: 'attached' })

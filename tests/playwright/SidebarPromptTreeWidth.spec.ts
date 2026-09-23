@@ -1,4 +1,5 @@
-import { createPlaywrightTestSuite, createTestRequestId } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createTestRequestId } from '../helpers/TestRequestId'
 
 const { test, expect } = createPlaywrightTestSuite()
 

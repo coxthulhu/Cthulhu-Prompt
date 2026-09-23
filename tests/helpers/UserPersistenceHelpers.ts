@@ -1,4 +1,6 @@
-import { createTestRequestId } from './PlaywrightTestFramework'
+import type { ElectronApplication } from 'playwright'
+import type { EventEmitter } from 'node:events'
+import { createTestRequestId } from './TestRequestId'
 
 /** Seed values for one root-folder or category view-state entry. */
 export type WorkspacePromptFolderUiStateSeedEntry = {
@@ -78,7 +80,7 @@ const toSqlNullableBoolean = (value: boolean | null): string => {
 }
 
 export const runSqlQuery = async (
-  electronApp: any,
+  electronApp: ElectronApplication,
   sql: string
 ): Promise<{ success: boolean; rows?: Array<Record<string, unknown>>; error?: string }> => {
   const requestId = createTestRequestId('sql')
@@ -90,7 +92,7 @@ export const runSqlQuery = async (
         rows?: Array<Record<string, unknown>>
         error?: string
       }>((resolve) => {
-        app.once(`test-run-sql-query-ready:${requestId}`, (nextPayload) => {
+        ;(app as EventEmitter).once(`test-run-sql-query-ready:${requestId}`, (nextPayload) => {
           resolve(nextPayload)
         })
         app.emit('test-run-sql-query', { requestId, sql: query })
@@ -100,7 +102,7 @@ export const runSqlQuery = async (
   )
 }
 
-export const runSqlStatement = async (electronApp: any, sql: string): Promise<void> => {
+export const runSqlStatement = async (electronApp: ElectronApplication, sql: string): Promise<void> => {
   const result = await runSqlQuery(electronApp, sql)
 
   if (!result.success) {
@@ -109,7 +111,7 @@ export const runSqlStatement = async (electronApp: any, sql: string): Promise<vo
 }
 
 export const seedUserPersistence = async (
-  electronApp: any,
+  electronApp: ElectronApplication,
   data: {
     lastWorkspaceInfoPath: string | null
     appSidebarWidthPx?: number
@@ -139,7 +141,7 @@ export const seedUserPersistence = async (
 }
 
 export const seedWindowPersistence = async (
-  electronApp: any,
+  electronApp: ElectronApplication,
   data: {
     x: number | null
     y: number | null
@@ -166,7 +168,7 @@ export const seedWindowPersistence = async (
 }
 
 export const seedWorkspaceUiState = async (
-  electronApp: any,
+  electronApp: ElectronApplication,
   data: {
     workspaceId: string
     selectedScreen:
@@ -272,7 +274,7 @@ export const seedWorkspaceUiState = async (
 }
 
 export const readUserPersistence = async (
-  electronApp: any
+  electronApp: ElectronApplication
 ): Promise<{
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
@@ -304,7 +306,7 @@ export const readUserPersistence = async (
 }
 
 export const readWorkspaceUiState = async (
-  electronApp: any,
+  electronApp: ElectronApplication,
   workspaceId: string
 ): Promise<WorkspaceUiStateSnapshot> => {
   const workspaceStateResult = await runSqlQuery(

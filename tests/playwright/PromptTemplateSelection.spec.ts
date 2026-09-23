@@ -6,14 +6,14 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
-import { stubClipboard } from '../helpers/ClipboardHelpers'
+import { stubClipboard, readClipboardText } from '../helpers/ClipboardHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   focusMonacoEditor,
   getMonacoEditorText,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
-import { getPromptEditorIds } from '../helpers/PromptDragDropHelpers'
+import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -601,7 +601,7 @@ describe('Prompt template selection', () => {
 
     await multiTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
-      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .poll(() => readClipboardText(mainWindow))
       .toBe('Category Second root Second root Copy with several templates....')
     await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'Second Root Template + 2 More'
@@ -620,7 +620,7 @@ describe('Prompt template selection', () => {
 
     await noTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
-      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .poll(() => readClipboardText(mainWindow))
       .toBe('Copy without a template.')
     await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'No template'
@@ -666,7 +666,7 @@ describe('Prompt template selection', () => {
     await quickDialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]').click()
     await expect(quickDialog).toBeHidden()
     await expect
-      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .poll(() => readClipboardText(mainWindow))
       .toBe('First root Choose a template..')
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'First Root Template'
@@ -878,7 +878,7 @@ describe('Prompt template selection', () => {
     await stubClipboard(mainWindow)
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
-      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .poll(() => readClipboardText(mainWindow))
       .toBe('Draft Choose a template. wrapper')
 
     await testHelpers.navigateToPromptTemplateFolders('First Templates')
@@ -893,7 +893,7 @@ describe('Prompt template selection', () => {
     await stubClipboard(mainWindow)
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
-      .poll(() => mainWindow.evaluate(() => (window as any).__testClipboardText ?? ''))
+      .poll(() => readClipboardText(mainWindow))
       .toBe('Choose a template.')
     await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
       'First Root Template'

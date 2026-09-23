@@ -1,4 +1,4 @@
-import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
+import { setPromptEditorMaxLines } from '../helpers/SettingsHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
@@ -25,35 +25,6 @@ type PromptTarget = {
 
 type PromptTitleTarget = PromptTarget & {
   scrollDelta: number
-}
-
-async function waitForStoredPromptMaxLines(mainWindow: any, value: number): Promise<void> {
-  await mainWindow.waitForFunction((expected) => {
-    const ipc = window.electron?.ipcRenderer
-    if (!ipc?.invoke) return false
-    return ipc.invoke('load-system-settings').then((result) => {
-      /** System-settings snapshot selected without relying on response order. */
-      return result?.snapshots?.find(
-        (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
-      )?.data?.promptEditorMaxLines === expected
-    })
-  }, value)
-}
-
-async function setPromptEditorMaxLinesForTest(
-  mainWindow: any,
-  testHelpers: {
-    navigateToSettingsScreen: () => Promise<void>
-    navigateToHomeScreen: () => Promise<void>
-  },
-  value: number
-): Promise<void> {
-  await testHelpers.navigateToSettingsScreen()
-  const input = mainWindow.locator('[data-testid="max-lines-input"]')
-  await input.fill(String(value))
-  await expect(input).toHaveValue(String(value))
-  await testHelpers.navigateToHomeScreen()
-  await waitForStoredPromptMaxLines(mainWindow, value)
 }
 
 const scrollForNextCandidate = async (page: any, testHelpers: any): Promise<boolean> => {
@@ -363,7 +334,7 @@ describe('Prompt Folders Autoscroll', () => {
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
 
-    await setPromptEditorMaxLinesForTest(mainWindow, testHelpers, 40)
+    await setPromptEditorMaxLines(mainWindow, testHelpers, 40)
     await testHelpers.navigateToPromptFolders(LONG_WRAPPED_FOLDER_NAME)
 
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })

@@ -1,5 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { stubClipboard } from '../helpers/ClipboardHelpers'
+import { stubClipboard, readClipboardText } from '../helpers/ClipboardHelpers'
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
@@ -255,8 +255,8 @@ describe('Home Screen', () => {
         workspace: { scenario: 'categories' }
       })
 
-      expect(workspaceSetupResult.setupDialogAppeared).toBe(false)
-      expect(workspaceSetupResult.workspaceReady).toBe(true)
+      expect(workspaceSetupResult!.setupDialogAppeared).toBe(false)
+      expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
       await testHelpers.assertWorkspaceReadyPath('/ws/categories')
       await testHelpers.navigateToPromptFolders('Main')
@@ -277,7 +277,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'minimal' }
       })
 
-      expect(workspaceSetupResult.workspaceReady).toBe(true)
+      expect(workspaceSetupResult!.workspaceReady).toBe(true)
       await testHelpers.assertWorkspaceReadyPath('/ws/minimal')
       await stubClipboard(mainWindow)
 
@@ -287,7 +287,7 @@ describe('Home Screen', () => {
 
       await expect
         .poll(async () => {
-          return await mainWindow.evaluate(() => (window as any).__testClipboardText ?? '')
+          return await readClipboardText(mainWindow)
         })
         .toBe('/ws/minimal')
       await expect(copyButton).toHaveAttribute('aria-label', 'Copied')
@@ -301,7 +301,7 @@ describe('Home Screen', () => {
         workspace: { scenario: 'minimal' }
       })
 
-      expect(workspaceSetupResult.workspaceReady).toBe(true)
+      expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
       await testHelpers.navigateToSettingsScreen()
       await testHelpers.navigateToHomeScreen()

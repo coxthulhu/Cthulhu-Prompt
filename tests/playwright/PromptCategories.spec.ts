@@ -1,3 +1,4 @@
+import { createDeterministicId } from '../fixtures/FixtureIds'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
@@ -7,7 +8,9 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import {
   PROMPT_FOLDER_HOST_SELECTOR,
-  promptEditorSelector
+  promptEditorSelector,
+  promptFolderSelectorDropdownItemSelector,
+  promptFolderSelectorTriggerSelector
 } from '../helpers/PromptFolderSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
@@ -22,9 +25,7 @@ import {
   beginPromptHandleDrag,
   beginPromptTreeCategoryRowDrag,
   finishActiveDrag,
-  moveActiveDragToTarget,
-  promptFolderSelectorDropdownItemSelector,
-  promptFolderSelectorTriggerSelector
+  moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 
 // The repository Playwright wrapper supplies the configured test primitives.
@@ -44,17 +45,6 @@ const PROMPT_ROOT_ID = 'prompt-category-root'
 const TEMPLATE_ROOT_ID = 'template-category-root'
 // Selector toggles the prompt root between active and completed modes.
 const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]'
-
-/** Reproduces the application's deterministic workspace ID for a fixture path. */
-const createDeterministicId = (seed: string): string => {
-  let hash = 0
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
-  }
-  /** Twelve-character suffix used by deterministic fixture IDs. */
-  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000000000000000${suffix}`
-}
 
 /** Reads the full persisted category order so tests retain ownership information. */
 const readCategoryOrder = async (
@@ -1494,7 +1484,7 @@ describe('Prompt categories', () => {
         return {
           contentOwnerId:
             uiState.selectedScreen === 'prompt-task-folders'
-              ? uiState.selectedScreenData?.contentOwnerId
+              ? (uiState.selectedScreenData as { contentOwnerId?: string } | null)?.contentOwnerId
               : null,
           categoryPresent: uiState.promptFolderViewEntries.some(
             (entry) => entry.contentOwnerId === PROMPT_CATEGORY_ID

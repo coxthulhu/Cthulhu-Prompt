@@ -5,7 +5,10 @@ import {
   measureVirtualRowOverflows
 } from '../helpers/CardGeometryHelpers'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  promptEditorSelector
+} from '../helpers/PromptFolderSelectors'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
 

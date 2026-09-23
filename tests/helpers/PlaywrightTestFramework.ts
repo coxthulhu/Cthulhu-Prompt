@@ -1,10 +1,9 @@
-import { test as baseTest, expect as baseExpect } from '@playwright/test'
-import { _electron as electron, type ConsoleMessage, type Page } from 'playwright'
-import * as screenHelpers from './ScreenHelpers'
-import * as buttonHelpers from './ButtonHelpers'
-import * as workspaceHelpers from './WorkspaceHelpers'
-import * as promptFolderHelpers from './PromptFolderHelpers'
-import * as uiValidationHelpers from './UiValidationHelpers'
+import type { EventEmitter } from 'node:events'
+import { test as baseTest } from '@playwright/test'
+import { _electron as electron, type ElectronApplication, type Page } from 'playwright'
+import { createPageHelpers, type PageHelpers } from './PageHelpers'
+import { createRendererErrorTracker } from './RendererErrors'
+import { createTestRequestId } from './TestRequestId'
 import { runSqlStatement } from './UserPersistenceHelpers'
 import {
   setupWorkspaceScenario,
@@ -13,10 +12,12 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
+/** Per-suite overrides for the shared Electron launch configuration. */
 export interface PlaywrightTestOptions {
-  launchOptions?: any
+  launchOptions?: NonNullable<Parameters<typeof electron.launch>[0]>
 }
 
+/** Startup and optional workspace preparation requested by one test. */
 export interface TestSetupOptions {
   /** Preserves the SQLite Welcome default when testing the first-launch experience. */
   firstLaunch?: boolean
@@ -28,22 +29,29 @@ export interface TestSetupOptions {
   }
 }
 
+/** Electron application and controlled-startup fixtures exposed to specs. */
 export interface PlaywrightTestFixtures {
-  electronApp: any
-  testSetup: any
+  electronApp: ElectronApplication
+  testSetup: TestSetup
 }
 
-interface RendererErrorEntry {
-  kind: 'console' | 'pageerror'
-  level?: string
-  message: string
-  pageUrl?: string
-  location?: {
-    url?: string
-    lineNumber?: number
-    columnNumber?: number
-  }
-  timestamp: number
+/** Main window and helpers returned after the existing startup sequence. */
+export interface StartedTest {
+  mainWindow: Page
+  testHelpers: PageHelpers
+  workspaceSetupResult: Awaited<ReturnType<PageHelpers['setupWorkspaceViaUI']>> | undefined
+}
+
+/** Typed controls available before and after Electron startup. */
+export interface TestSetup {
+  getRendererErrors: ReturnType<typeof createRendererErrorTracker>['getRendererErrors']
+  removeRendererErrorsContaining: (messagePart: string) => void
+  setupFilesystem: (filesystem: Record<string, string | null>, options?: FilesystemSetupOptions) => Promise<void>
+  setupFileDialog: (results: string[]) => Promise<void>
+  pauseIpcChannel: (channel: string) => Promise<void>
+  resumeIpcChannel: (channel: string) => Promise<void>
+  completeStartup: () => Promise<void>
+  setupAndStart: (options?: TestSetupOptions) => Promise<StartedTest>
 }
 
 const defaultOptions: Required<PlaywrightTestOptions> = {
@@ -61,22 +69,18 @@ const DEFAULT_ELECTRON_LAUNCH_ARGS = [
   '--screen-info={1920x1080}'
 ]
 
-const RENDERER_ERROR_ANNOTATION = 'renderer-errors-json'
-
-export const createTestRequestId = (prefix: string): string => {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`
-}
-
+/** Optional filesystem timestamps supplied to the existing test setup event. */
 type FilesystemSetupOptions = {
   fileModifiedTimes?: Record<string, string>
 }
 
+/** Creates isolated Electron fixtures with the shared startup and teardown sequence. */
 export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
   const config = { ...defaultOptions, ...options }
 
   const playwrightTest = baseTest.extend<PlaywrightTestFixtures>({
     electronApp: async ({}, use) => {
-      let app: any = null
+      let app: ElectronApplication | null = null
 
       try {
         const electronLaunchConfig = {
@@ -105,73 +109,8 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
     },
 
     testSetup: async ({ electronApp }, use, testInfo) => {
-      const rendererErrors: RendererErrorEntry[] = []
-      let truncatedCount = 0
-      const maxErrorsPerTest = 10
-
-      const recordRendererError = (entry: RendererErrorEntry) => {
-        if (rendererErrors.length < maxErrorsPerTest) {
-          rendererErrors.push(entry)
-        } else {
-          truncatedCount += 1
-        }
-      }
-
-      const trackedListeners: Array<() => void> = []
-      const trackedPages = new WeakSet<Page>()
-
-      const trackPageForRendererErrors = (page: Page) => {
-        if (trackedPages.has(page)) {
-          return
-        }
-        trackedPages.add(page)
-
-        const handleConsole = (message: ConsoleMessage) => {
-          if (message.type() !== 'error') {
-            return
-          }
-
-          const location = message.location()
-          recordRendererError({
-            kind: 'console',
-            level: message.type(),
-            message: message.text(),
-            pageUrl: page.url(),
-            location: {
-              url: location?.url,
-              lineNumber: location?.lineNumber,
-              columnNumber: location?.columnNumber
-            },
-            timestamp: Date.now()
-          })
-        }
-
-        const handlePageError = (error: Error) => {
-          recordRendererError({
-            kind: 'pageerror',
-            message: error?.stack || error?.message || String(error),
-            pageUrl: page.url(),
-            timestamp: Date.now()
-          })
-        }
-
-        page.on('console', handleConsole)
-        page.on('pageerror', handlePageError)
-
-        trackedListeners.push(() => {
-          page.off('console', handleConsole)
-          page.off('pageerror', handlePageError)
-        })
-      }
-
-      const handleElectronWindow = (page: Page) => {
-        trackPageForRendererErrors(page)
-      }
-
-      electronApp.on('window', handleElectronWindow)
-      trackedListeners.push(() => {
-        electronApp.off('window', handleElectronWindow)
-      })
+      /** Captures renderer failures for this fixture's lifetime. */
+      const errorTracker = createRendererErrorTracker(electronApp, testInfo)
 
       const emitIpcGateEvent = async (
         eventName: 'test-ipc-gate' | 'test-ipc-release',
@@ -185,16 +124,9 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
         )
       }
 
-      const setupUtils = {
-        getRendererErrors: () => [...rendererErrors],
-        /** Removes intentional errors while retaining unrelated failures for the error reporter. */
-        removeRendererErrorsContaining: (messagePart: string) => {
-          for (let errorIndex = rendererErrors.length - 1; errorIndex >= 0; errorIndex -= 1) {
-            if (rendererErrors[errorIndex]?.message.includes(messagePart)) {
-              rendererErrors.splice(errorIndex, 1)
-            }
-          }
-        },
+      const setupUtils: TestSetup = {
+        getRendererErrors: errorTracker.getRendererErrors,
+        removeRendererErrorsContaining: errorTracker.removeRendererErrorsContaining,
         setupFilesystem: async (
           filesystem: Record<string, string | null>,
           options: FilesystemSetupOptions = {}
@@ -209,7 +141,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
                   resolve({ success: false, error: 'Filesystem setup timed out' })
                 }, 5000)
 
-                app.once(channel, (payload: { success: boolean; error?: string } | undefined) => {
+                ;(app as EventEmitter).once(channel, (payload: { success: boolean; error?: string } | undefined) => {
                   clearTimeout(timeout)
                   resolve(payload ?? { success: true })
                 })
@@ -225,7 +157,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           }
         },
 
-        setupFileDialog: async (results: any[]) => {
+        setupFileDialog: async (results: string[]) => {
           await electronApp.evaluate(async ({ app }, results) => {
             app.emit('test-setup-file-dialog', results)
           }, results)
@@ -250,7 +182,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
                   resolve({ success: false, error: 'Startup completion timed out' })
                 }, 10000)
 
-                app.once(channel, (payload: { success: boolean; error?: string } | undefined) => {
+                ;(app as EventEmitter).once(channel, (payload: { success: boolean; error?: string } | undefined) => {
                   clearTimeout(timeout)
                   resolve(payload ?? { success: true })
                 })
@@ -266,7 +198,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           }
         },
 
-        setupAndStart: async (options: TestSetupOptions = {}) => {
+        setupAndStart: async (options: TestSetupOptions = {}): Promise<StartedTest> => {
           // Side effect: ordinary tests start as returning users; Welcome tests retain real defaults.
           if (!options.firstLaunch) {
             await runSqlStatement(
@@ -278,12 +210,12 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           if (options.workspace && options.workspace.scenario !== 'none') {
             const workspacePath =
               options.workspace.path ||
-              getWorkspacePath(options.workspace.scenario as WorkspaceScenario)
+              getWorkspacePath(options.workspace.scenario)
 
             // Create filesystem structure using existing scenario logic
             const workspaceFilesystem = setupWorkspaceScenario(
               workspacePath,
-              options.workspace.scenario as WorkspaceScenario
+              options.workspace.scenario
             )
             await setupUtils.setupFilesystem(workspaceFilesystem, {
               fileModifiedTimes: options.workspace.fileModifiedTimes
@@ -300,7 +232,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
 
           // Get the main window
           const mainWindow = await electronApp.firstWindow()
-          trackPageForRendererErrors(mainWindow)
+          errorTracker.trackPageForRendererErrors(mainWindow)
           await mainWindow.waitForLoadState('domcontentloaded')
           await mainWindow.waitForSelector('[data-testid="app-sidebar"]', { state: 'visible' })
           await mainWindow.waitForSelector('[data-testid="startup-loading-overlay"]', {
@@ -309,88 +241,10 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           await mainWindow.waitForSelector('[data-testid="nav-button-home"]', { state: 'visible' })
 
           // Create bound test helpers
-          const testHelpers = {
-            getActiveScreen: () => screenHelpers.getActiveScreen(mainWindow),
-            isButtonVisible: (buttonText: string) =>
-              buttonHelpers.isButtonVisible(mainWindow, buttonText),
-            isNavButtonActive: (buttonText: string) =>
-              buttonHelpers.isNavButtonActive(mainWindow, buttonText),
-            assertHomeActive: async () => {
-              baseExpect(await screenHelpers.getActiveScreen(mainWindow)).toBe('home')
-              baseExpect(await buttonHelpers.isNavButtonActive(mainWindow, 'Home')).toBe(true)
-            },
-            clickNavButton: (buttonText: string, timeout?: number) =>
-              buttonHelpers.clickNavButton(mainWindow, buttonText, timeout),
-            validatePageStructure: () => uiValidationHelpers.validatePageStructure(mainWindow),
-            setupWorkspaceViaUI: () => workspaceHelpers.setupWorkspaceViaUI(mainWindow),
-            createWorkspaceViaUI: () => workspaceHelpers.createWorkspaceViaUI(mainWindow),
-            clearWorkspaceViaUI: () => workspaceHelpers.clearWorkspaceViaUI(mainWindow),
-            isWorkspaceReady: () => workspaceHelpers.isWorkspaceReady(mainWindow),
-            isWorkspaceGetStarted: () => workspaceHelpers.isWorkspaceGetStarted(mainWindow),
-            getDisplayedWorkspacePath: () => workspaceHelpers.getDisplayedWorkspacePath(mainWindow),
-            assertWorkspaceReadyPath: async (path: string) => {
-              baseExpect(await workspaceHelpers.getDisplayedWorkspacePath(mainWindow)).toBe(path)
-              baseExpect(await workspaceHelpers.isWorkspaceReady(mainWindow)).toBe(true)
-            },
-            clickCollapsibleTrigger: (triggerText: string) =>
-              promptFolderHelpers.clickCollapsibleTrigger(mainWindow, triggerText),
-            clickPromptFolderItem: (folderName: string, timeout?: number) =>
-              promptFolderHelpers.clickPromptFolderItem(mainWindow, folderName, timeout),
-            getPromptRowHeight: (selector: string) =>
-              promptFolderHelpers.getPromptRowHeight(mainWindow, selector),
-            getPromptRowWidth: (selector: string) =>
-              promptFolderHelpers.getPromptRowWidth(mainWindow, selector),
-            getElementScrollTop: (selector: string) =>
-              promptFolderHelpers.getElementScrollTop(mainWindow, selector),
-            getVirtualWindowScrollHeight: (selector: string) =>
-              promptFolderHelpers.getVirtualWindowScrollHeight(mainWindow, selector),
-            scrollVirtualWindowTo: (selector: string, scrollTopPx: number) =>
-              promptFolderHelpers.scrollVirtualWindowTo(mainWindow, selector, scrollTopPx),
-            scrollVirtualWindowBy: (selector: string, deltaPx: number) =>
-              promptFolderHelpers.scrollVirtualWindowBy(mainWindow, selector, deltaPx),
-            scrollVirtualElementIntoView: (
-              hostSelector: string,
-              targetSelector: string,
-              paddingPx?: number
-            ) =>
-              promptFolderHelpers.scrollVirtualElementIntoView(
-                mainWindow,
-                hostSelector,
-                targetSelector,
-                paddingPx
-              ),
-            openPromptFolderAndWaitForHydrationReady: (options: {
-              folderName: string
-              hostSelector: string
-              promptSelector: string
-              placeholderSelector: string
-            }) => promptFolderHelpers.openPromptFolderAndWaitForHydrationReady(mainWindow, options),
-            dragSidebarHandleBy: (distance: number) =>
-              promptFolderHelpers.dragSidebarHandleBy(mainWindow, distance),
-            verifyPromptVisible: (promptTitle: string) =>
-              promptFolderHelpers.verifyPromptVisible(mainWindow, promptTitle),
-            getPromptFolderScreenInfo: () =>
-              promptFolderHelpers.getPromptFolderScreenInfo(mainWindow),
-            // Screen navigation utilities
-            navigateToHomeScreen: () => screenHelpers.navigateToHomeScreen(mainWindow),
-            navigateToSettingsScreen: () => screenHelpers.navigateToSettingsScreen(mainWindow),
-            navigateToRegularFolder: (folderName: string) =>
-              promptFolderHelpers.navigateToRegularFolder(mainWindow, folderName),
-            navigateToPromptFolders: (folderName: string) =>
-              promptFolderHelpers.navigateToRegularFolder(mainWindow, folderName),
-            /** Opens one prompt-template root through its dedicated activity. */
-            navigateToPromptTemplateFolders: (folderName: string) =>
-              promptFolderHelpers.navigateToTemplateFolder(mainWindow, folderName),
-            pauseIpcChannel: async (channel: string) => {
-              await emitIpcGateEvent('test-ipc-gate', channel)
-            },
-            resumeIpcChannel: async (channel: string) => {
-              await emitIpcGateEvent('test-ipc-release', channel)
-            }
-          }
+          const testHelpers = createPageHelpers(mainWindow, setupUtils)
 
           // Automatically set up workspace if requested
-          let workspaceSetupResult = undefined
+          let workspaceSetupResult: StartedTest['workspaceSetupResult'] = undefined
           if (
             options.workspace &&
             options.workspace.scenario !== 'none' &&
@@ -410,25 +264,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
       try {
         await use(setupUtils)
       } finally {
-        trackedListeners.forEach((dispose) => {
-          try {
-            dispose()
-          } catch {
-            // Ignore errors from cleanup
-          }
-        })
-
-        if (rendererErrors.length > 0 || truncatedCount > 0) {
-          const payload = {
-            entries: rendererErrors,
-            truncatedCount
-          }
-
-          testInfo.annotations.push({
-            type: RENDERER_ERROR_ANNOTATION,
-            description: JSON.stringify(payload)
-          })
-        }
+        errorTracker.dispose()
       }
     }
   })

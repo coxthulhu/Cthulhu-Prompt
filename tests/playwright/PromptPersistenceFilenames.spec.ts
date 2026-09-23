@@ -150,7 +150,7 @@ describe('Prompt persistence filenames', () => {
     })
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders(COLLISION_FOLDER_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(COLLISION_FIRST_PROMPT_ID))

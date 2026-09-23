@@ -1,4 +1,3 @@
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DomainState } from '@shared/domain/DomainChanges'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
@@ -366,8 +365,8 @@ describe('atomic data transaction', () => {
     const outcome = await runAtomicDataTransaction((tx) => ({
       prompt: tx.prompt.create({
         id: PROMPT_ID,
-        data: prompt,
-        persistenceFields: { promptStem: 'Created' }
+        data: prompt as Parameters<typeof tx.prompt.create>[0]['data'],
+        persistenceFields: { promptStem: 'Created' } as Parameters<typeof tx.prompt.create>[0]['persistenceFields']
       })
     }))
     expect(outcome).toMatchObject({
@@ -833,7 +832,7 @@ describe('atomic data transaction', () => {
         persistenceFields: {
           promptStem: 'Duplicate title-prompt-1',
           needsFilenameIdSuffix: true
-        }
+        } as Parameters<typeof tx.prompt.updatePersistenceFields>[0]['persistenceFields']
       })
     }))
 

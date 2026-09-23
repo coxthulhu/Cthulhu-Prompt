@@ -1,6 +1,6 @@
+import { promptTreePromptSelector, promptTreeCategorySelector } from './PromptFolderSelectors'
 import { expect, type Page } from '@playwright/test'
-import type { ElectronApplication, Locator } from 'playwright'
-import { createTestRequestId } from './PlaywrightTestFramework'
+import type { Locator } from 'playwright'
 import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from './PromptFolderSelectors'
 
 type ElementBox = {
@@ -20,23 +20,6 @@ export type TargetVerticalAlign = 'top' | 'center' | 'bottom'
 
 export const promptHandleSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-drag-handle"]`
-
-/** Selects a prompt row in one explicit workflow or template tree. */
-export const promptTreePromptSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'backlog' | 'template' = 'active'): string =>
-  `[data-testid="prompt-tree-${group}-prompt-${promptId}"]`
-
-/** Returns the sidebar toggle selector for one category name. */
-export const promptTreeCategorySelector = (categoryName: string, group: 'active' | 'backlog' | 'template' = 'active'): string =>
-  `[data-testid="prompt-tree-${group}-category-toggle-button-${categoryName.replace(/\s+/g, '')}"]`
-
-export const promptFolderSelectorTriggerSelector =
-  '[data-testid="sidebar-prompt-folder-selector-trigger"]'
-
-export const promptFolderSelectorMenuSelector =
-  '[data-testid="sidebar-prompt-folder-selector-menu"]'
-
-export const promptFolderSelectorDropdownItemSelector = (folderId: string): string =>
-  `[data-testid="sidebar-prompt-folder-dropdown-item-${folderId}"]`
 
 /** Selects a prompt boundary within one exact workflow tree. */
 export const promptTreePromptDropIndicatorSelector = (promptId: string, group: 'active' | 'completed' | 'archived' | 'backlog' | 'template' = 'active'): string =>
@@ -229,71 +212,6 @@ export const expectPromptTreeRowDraggingState = async (
   }
 
   await expect(row).not.toHaveAttribute('data-row-state', 'dragging')
-}
-
-export const getPromptEditorIds = async (page: Page): Promise<string[]> => {
-  return await page.evaluate(() => {
-    return Array.from(document.querySelectorAll<HTMLElement>('[data-testid^="prompt-editor-"]'))
-      .map((element) => element.getAttribute('data-testid') ?? '')
-      .map((testId) => testId.replace('prompt-editor-', ''))
-  })
-}
-
-const readTextFile = async (
-  electronApp: ElectronApplication,
-  filePath: string
-): Promise<string> => {
-  const requestId = createTestRequestId('read')
-
-  return await electronApp.evaluate(
-    async ({ app }, payload) => {
-      const { targetPath, requestId } = payload
-      return await new Promise<string>((resolve) => {
-        app.once(`test-read-file-ready:${requestId}`, (result: { content: string }) => {
-          resolve(result.content)
-        })
-        app.emit('test-read-file', { filePath: targetPath, requestId })
-      })
-    },
-    { targetPath: filePath, requestId }
-  )
-}
-
-export const readPromptFolderEntries = async (
-  electronApp: ElectronApplication,
-  folderOrderPath: string
-): Promise<Array<{ kind: 'prompt' | 'folder'; id: string }>> => {
-  const fileContents = await readTextFile(electronApp, folderOrderPath)
-  /** Current root ordering groups active content beneath category ownership. */
-  const order = JSON.parse(fileContents) as {
-    categories: Array<{
-      entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
-    }>
-  }
-  return order.categories.flatMap((category) => category.entries)
-}
-
-export const readPromptFolderEntryIds = async (
-  electronApp: ElectronApplication,
-  folderOrderPath: string
-): Promise<string[]> =>
-  (await readPromptFolderEntries(electronApp, folderOrderPath)).map((entry) => entry.id)
-
-export const expectCurrentFolderPromptEditors = async (
-  page: Page,
-  expectedPromptIds: string[]
-): Promise<void> => {
-  await expect.poll(async () => await getPromptEditorIds(page)).toEqual(expectedPromptIds)
-}
-
-export const expectPersistedFolderPromptIds = async (
-  electronApp: ElectronApplication,
-  folderOrderPath: string,
-  expectedPromptIds: string[]
-): Promise<void> => {
-  await expect
-    .poll(async () => await readPromptFolderEntryIds(electronApp, folderOrderPath))
-    .toEqual(expectedPromptIds)
 }
 
 export const getRowViewportOffsets = async (

@@ -107,7 +107,7 @@ test.describe('Sidebar Tests', () => {
       workspace: { scenario: 'empty' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await testHelpers.assertHomeActive()
 
     await testHelpers.navigateToSettingsScreen()

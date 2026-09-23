@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { isButtonVisible } from './ButtonHelpers'
 
 /**
@@ -11,18 +12,18 @@ import { isButtonVisible } from './ButtonHelpers'
  * @param window - The Playwright window instance
  * @returns Promise that resolves with information about what happened
  */
-export async function setupWorkspaceViaUI(window: any): Promise<{
+export async function setupWorkspaceViaUI(page: Page): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {
-  await window.click('[data-testid="open-workspace-button"]')
+  await page.click('[data-testid="open-workspace-button"]')
 
-  const workspaceReadyPath = window.locator('[data-testid="workspace-ready-path"]')
+  const workspaceReadyPath = page.locator('[data-testid="workspace-ready-path"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
   await workspaceReadyPath.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
-  const workspaceReady = await isWorkspaceReady(window)
+  const workspaceReady = await isWorkspaceReady(page)
 
   return {
     setupDialogAppeared: false,
@@ -30,29 +31,29 @@ export async function setupWorkspaceViaUI(window: any): Promise<{
   }
 }
 
-export async function createWorkspaceViaUI(window: any): Promise<{
+export async function createWorkspaceViaUI(page: Page): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {
-  await window.click('[data-testid="create-workspace-button"]')
+  await page.click('[data-testid="create-workspace-button"]')
 
-  const createDialog = window.locator('[role="dialog"][aria-label="Create Workspace"]')
-  const workspaceReadyPath = window.locator('[data-testid="workspace-ready-path"]')
+  const createDialog = page.locator('[role="dialog"][aria-label="Create Workspace"]')
+  const workspaceReadyPath = page.locator('[data-testid="workspace-ready-path"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
   await createDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
-  await window.fill('[data-testid="create-workspace-name-input"]', 'Test Workspace')
-  await window.click('[data-testid="create-workspace-path-browse-button"]')
-  await window.waitForFunction(() => {
+  await page.fill('[data-testid="create-workspace-name-input"]', 'Test Workspace')
+  await page.click('[data-testid="create-workspace-path-browse-button"]')
+  await page.waitForFunction(() => {
     const button = document.querySelector<HTMLButtonElement>(
       '[data-testid="create-workspace-submit-button"]'
     )
     return button && !button.disabled
   })
-  await window.click('[data-testid="create-workspace-submit-button"]')
+  await page.click('[data-testid="create-workspace-submit-button"]')
   await workspaceReadyPath.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
-  const workspaceReady = await isWorkspaceReady(window)
+  const workspaceReady = await isWorkspaceReady(page)
 
   return {
     setupDialogAppeared: true,
@@ -65,10 +66,10 @@ export async function createWorkspaceViaUI(window: any): Promise<{
  * @param window - The Playwright window instance
  * @returns Promise that resolves when workspace is cleared
  */
-export async function clearWorkspaceViaUI(window: any): Promise<void> {
+export async function clearWorkspaceViaUI(page: Page): Promise<void> {
   // Click "Close Workspace" button
-  await window.click('[data-testid="close-workspace-button"]')
-  await window.waitForSelector('[data-testid="open-workspace-button"]', {
+  await page.click('[data-testid="close-workspace-button"]')
+  await page.waitForSelector('[data-testid="open-workspace-button"]', {
     state: 'visible',
     timeout: 5000
   })
@@ -79,8 +80,8 @@ export async function clearWorkspaceViaUI(window: any): Promise<void> {
  * @param window - The Playwright window instance
  * @returns Promise resolving to true if workspace is ready
  */
-export async function isWorkspaceReady(window: any): Promise<boolean> {
-  return await window.evaluate(() => {
+export async function isWorkspaceReady(page: Page): Promise<boolean> {
+  return await page.evaluate(() => {
     return !!document.querySelector('[data-testid="workspace-ready-path"]')
   })
 }
@@ -90,8 +91,8 @@ export async function isWorkspaceReady(window: any): Promise<boolean> {
  * @param window - The Playwright window instance
  * @returns Promise resolving to true if in get started state
  */
-export async function isWorkspaceGetStarted(window: any): Promise<boolean> {
-  return await isButtonVisible(window, 'Open Workspace')
+export async function isWorkspaceGetStarted(page: Page): Promise<boolean> {
+  return await isButtonVisible(page, 'Open Workspace')
 }
 
 /**
@@ -99,8 +100,8 @@ export async function isWorkspaceGetStarted(window: any): Promise<boolean> {
  * @param window - The Playwright window instance
  * @returns Promise resolving to the workspace path or null if not found
  */
-export async function getDisplayedWorkspacePath(window: any): Promise<string | null> {
-  return await window.evaluate(() => {
+export async function getDisplayedWorkspacePath(page: Page): Promise<string | null> {
+  return await page.evaluate(() => {
     return document.querySelector('[data-testid="workspace-ready-path"]')?.textContent ?? null
   })
 }

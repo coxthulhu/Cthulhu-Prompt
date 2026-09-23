@@ -1,3 +1,4 @@
+import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { ConsoleMessage, Page } from 'playwright'
 import {
@@ -42,14 +43,6 @@ const TEMPLATE_WORKSPACE_PATH = '/ws/templates'
 /** Mixed-kind workspace used to verify ordered selection after root deletion. */
 const DELETE_NAVIGATION_WORKSPACE_PATH = '/ws/delete-navigation'
 
-const createDeterministicId = (seed: string): string => {
-  let hash = 0
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
-  }
-  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000000000000000${suffix}`
-}
 
 describe('Prompt Folder Navigation (non-virtual)', () => {
   test('deletes root-owned SQLite UI state with a prompt folder', async ({
@@ -302,7 +295,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toBeVisible()
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
@@ -452,7 +445,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
     await mainWindow.waitForSelector(EXAMPLES_PROMPT_ROW, { state: 'attached' })
@@ -472,7 +465,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Main')
     await mainWindow.waitForSelector('[data-testid="prompt-editor-base-before"]', {
@@ -503,7 +496,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'categories-ui' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Hierarchy')
 
     /** Path used to derive both stable category identities in the hierarchy fixture. */
@@ -640,7 +633,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
     await mainWindow.waitForSelector(EXAMPLES_PROMPT_ROW, { state: 'attached' })
@@ -689,9 +682,9 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToRegularFolder('Examples')
+    await testHelpers.navigateToPromptFolders('Examples')
 
     let screenInfo = await testHelpers.getPromptFolderScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
@@ -705,7 +698,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(promptResult.hasPromptEditor).toBe(true)
     expect(promptResult.titleText).toContain('Simple Greeting')
 
-    await testHelpers.navigateToRegularFolder('Development')
+    await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', { state: 'attached' })
 
     screenInfo = await testHelpers.getPromptFolderScreenInfo()
@@ -727,7 +720,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
 
@@ -746,7 +739,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     // Each folder kind has its own tooltip, accessible label, and activity position.
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-folders"]')).toHaveAttribute(
@@ -831,7 +824,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
@@ -861,7 +854,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER).click()
     await mainWindow
@@ -919,7 +912,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'minimal' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toBeVisible()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON)).toContainText(
@@ -949,7 +942,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Examples')
     await expect(mainWindow.locator(EXAMPLES_PROMPT_ROW)).toBeVisible()
@@ -971,7 +964,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'categories' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
     await testHelpers.navigateToPromptFolders('Main')
 
     await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeEnabled()
@@ -1023,7 +1016,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST, 500)
@@ -1089,7 +1082,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     await testHelpers.navigateToHomeScreen()
@@ -1153,7 +1146,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     /** Result of selecting the custom workspace through the normal UI flow. */
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Delete Second')
     await mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON).click()
@@ -1196,7 +1189,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     const pencilButton = mainWindow.locator('[data-testid="prompt-folder-root-title-edit"]')
@@ -1212,7 +1205,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'minimal' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await expect(mainWindow.locator(SELECTED_PROMPT_FOLDER_ACTIONS_BUTTON)).toBeDisabled()
     await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeDisabled()
@@ -1223,7 +1216,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'minimal' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(SIDEBAR_PROMPT_FOLDER_ADD_BUTTON).click()
 
@@ -1284,7 +1277,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       })
     ).toBe(false)
 
-    await testHelpers.navigateToRegularFolder('Test Folder')
+    await testHelpers.navigateToPromptFolders('Test Folder')
 
     await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
       'Test Folder'
@@ -1423,7 +1416,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     })
     const developmentFolderId = createDeterministicId(`${SAMPLE_WORKSPACE_PATH}:Development`)
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     const rootHeader = mainWindow.locator('[data-testid="prompt-folder-root-header"]')
@@ -1624,7 +1617,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 1700)
     await mainWindow.waitForSelector(SHORT_PROMPT_50, { state: 'attached' })
@@ -1648,7 +1641,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
@@ -1682,7 +1675,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
@@ -1711,7 +1704,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
@@ -1760,7 +1753,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'sample' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Development')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
@@ -1792,7 +1785,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })
@@ -1810,7 +1803,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    expect(workspaceSetupResult.workspaceReady).toBe(true)
+    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptFolders('Short')
     await mainWindow.waitForSelector(PROMPT_FOLDER_HOST, { state: 'attached' })

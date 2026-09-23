@@ -1,3 +1,4 @@
+import { createDeterministicId } from '../fixtures/FixtureIds'
 import type { Locator, Page } from '@playwright/test'
 import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -16,18 +17,6 @@ const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'
 const COLLAPSED_HEIGHT_PX = 36
 /** Completed demo section minimum including its fixed header and configured content minimum. */
 const COMPLETED_MINIMUM_EXPANDED_HEIGHT_PX = 136
-
-/** Creates fixture-stable entity IDs using the workspace fixture algorithm. */
-const createDeterministicId = (seed: string): string => {
-  /** Incremental unsigned hash for the fixture seed. */
-  let hash = 0
-  for (let index = 0; index < seed.length; index += 1) {
-    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0
-  }
-  /** Fixed-width suffix used by deterministic workspace fixture IDs. */
-  const suffix = hash.toString(16).padStart(12, '0').slice(0, 12)
-  return `00000000000000000000${suffix}`
-}
 
 /** Creates complete persisted section state with independently configurable expanded heights. */
 const createAccordionSections = (

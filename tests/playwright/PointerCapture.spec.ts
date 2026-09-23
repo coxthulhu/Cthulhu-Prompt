@@ -1,14 +1,16 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
-import { PROMPT_FOLDER_HOST_SELECTOR } from '../helpers/PromptFolderSelectors'
+import {
+  PROMPT_FOLDER_HOST_SELECTOR,
+  promptTreePromptSelector
+} from '../helpers/PromptFolderSelectors'
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
   dragGhostSelector,
-  moveActiveDragToTarget,
-  promptTreePromptSelector,
-  readPromptFolderEntryIds
+  moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
+import { readPromptFolderEntryIds } from '../helpers/PromptPersistenceTestHelpers'
 
 /** Electron fixtures and browser assertions for real pointer-capture sessions. */
 const { test, describe, expect } = createPlaywrightTestSuite()
