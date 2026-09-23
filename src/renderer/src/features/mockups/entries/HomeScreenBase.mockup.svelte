@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import {
-    AlertCircle, AlertTriangle, BookOpen, Bug, ClipboardCheck, Copy, ExternalLink, FileText,
-    FolderOpen, FolderPlus, Folders, FolderSymlink, X
+    AlertCircle, AlertTriangle, ArrowRight, BookOpen, Bug, Check, ClipboardCheck, Copy, ExternalLink, FileText,
+    FolderOpen, FolderPlus, Folders, FolderSymlink, Home, Layers, X, Zap
   } from 'lucide-svelte'
 
   // Visual baseline of HomeScreen, WelcomeDialog, CreateWorkspaceDialog, and ErrorDialog.
@@ -10,13 +10,21 @@
   // Native Windows pickers/Explorer are simulated locally; no preload, IPC, or domain imports.
   const sampleParent = 'C:\\Users\\Alex\\Documents\\Prompt Workspaces'
   const samplePath = `${sampleParent}\\Product Development`
+  // Close the sample workspace to preview Get Started; Open restores these counts.
+  const sampleCounts = { prompts: 24, folders: 3 }
+  const welcomeSteps = [
+    { icon: Home, title: 'Create a workspace', description: 'Choose a folder on your computer. Your tasks and templates live here as simple Markdown files, ready to commit to source control.' },
+    { icon: Layers, title: 'Build a prompt template', description: "Use Prompt Templates to write a reusable workflow: investigate a bug, implement a feature with Q&A, or create mockups. Your task's text is added when you copy." },
+    { icon: FileText, title: 'Add a prompt task', description: 'Open Task Prompts and add the change you want your AI to make. Include context, requirements, and details. Name your tasks and group them into custom categories.' },
+    { icon: Zap, title: 'Pick a template. Copy and go.', description: 'Use the quick template button in the prompt editor to assign a template, or choose no template, and copy the combined text. Paste into your AI tool and send it off!' }
+  ]
   const errorText = 'Failed to open workspace. Please try again.'
   type FolderScenario = 'empty' | 'nonempty' | 'existing' | 'failure'
 
   // Local sample state keeps the screen and its dialog variants independent of the workspace.
   let workspacePath = $state<string | null>(samplePath)
-  let promptCount = $state(24)
-  let promptFolderCount = $state(3)
+  let promptCount = $state(sampleCounts.prompts)
+  let promptFolderCount = $state(sampleCounts.folders)
   // Edit these local switches to preview disabled actions, folder warnings, and open errors.
   let loading = $state(false)
   let folderScenario = $state<FolderScenario>('empty')
@@ -59,7 +67,7 @@
     ? 'A workspace already exists at this path.' : folderScenario === 'nonempty'
       ? 'This folder is not empty. Typically, you should create a workspace in an empty folder.'
       : null)
-  const canCreate = $derived(Boolean(finalPath && !nameError && folderScenario !== 'existing' && !creating))
+  const canCreate = $derived(Boolean(finalPath && !nameError && folderScenario !== 'existing' && !creating && !loading))
 
   const closeDialog = () => {
     if (creating) return
@@ -78,8 +86,8 @@
     }
     dialog = null
     workspacePath = samplePath
-    promptCount = 24
-    promptFolderCount = 3
+    promptCount = sampleCounts.prompts
+    promptFolderCount = sampleCounts.folders
   }
 
   const createWorkspace = () => {
@@ -218,12 +226,13 @@
                   {@render row(Folders, String(promptFolderCount), 'Prompt Folders')}
                 </div>
               {:else}
-                {@render row(FolderPlus, 'Choose a Workspace', 'Create a new workspace folder, or open an existing one to continue.')}
-                <div class="separator"></div>
-                {@render row(FileText, 'Manage Your Prompts', 'Cthulhu Prompt stores and manages your prompts as simple Markdown files in a workspace folder.', undefined, true)}
+                {#snippet welcomeAction()}
+                  <button class="action-button text-sm leading-5" type="button" data-variant="accent" data-testid="show-welcome-button" onclick={() => { dialog = 'welcome' }}><BookOpen size={16} aria-hidden="true" /><span>Welcome</span></button>
+                {/snippet}
+                {@render row(BookOpen, 'Welcome to Cthulhu Prompt', 'Learn to use Cthulhu Prompt.', welcomeAction, true)}
                 <div class="separator"></div>
                 {#snippet githubAction()}
-                  <a class="action-button text-sm" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Open Github <ExternalLink size={16} aria-hidden="true" /></a>
+                  <a class="action-button text-sm" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Github <ExternalLink size={16} aria-hidden="true" /></a>
                 {/snippet}
                 {@render row(Bug, 'Report an Issue', 'Report bugs or request features!', githubAction)}
               {/if}
@@ -235,11 +244,11 @@
               {#each [
                 { icon: FolderOpen, label: 'Open Workspace', detail: 'Open an existing workspace.', text: 'Open', action: openWorkspace },
                 { icon: FolderPlus, label: 'Create Workspace', detail: 'Choose a folder to set up a new workspace.', text: 'Create', action: () => { dialog = 'create' as const } },
-                ...(workspacePath ? [{ icon: X, label: 'Close Workspace', detail: 'Unload the current workspace folder.', text: 'Close', action: () => { workspacePath = null } }] : [{ icon: BookOpen, label: 'Welcome', detail: 'Learn to use Cthulhu Prompt.', text: 'Welcome', action: () => { dialog = 'welcome' as const } }])
+                ...(workspacePath ? [{ icon: X, label: 'Close Workspace', detail: 'Unload the current workspace folder.', text: 'Close', action: () => { workspacePath = null } }] : [])
               ] as action, index (action.text)}
                 {#if index > 0}<div class="separator"></div>{/if}
                 {#snippet actionControl()}
-                  <button class="action-button text-sm leading-5" class:workspace-action={action.text !== 'Welcome'} type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={action.text === 'Welcome' ? 'show-welcome-button' : `${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
+                  <button class="action-button workspace-action text-sm leading-5" type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={`${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
                     <action.icon size={16} aria-hidden="true" /><span>{action.text}</span>
                   </button>
                 {/snippet}
@@ -255,15 +264,15 @@
 
 {#if dialog}
   <div class="dialog-layer text-base" role="presentation" use:mountDialog onclick={(event) => { if (event.target === event.currentTarget && dialog === 'error') closeDialog() }}>
-    <div class="home-dialog" data-create={dialog === 'create'} data-welcome={dialog === 'welcome'} role="dialog" aria-modal="true" aria-label={dialog === 'create' ? 'Create Workspace' : dialog === 'welcome' ? 'Welcome' : 'Failed to Open Workspace'} tabindex="-1">
+    <div class="home-dialog" data-create={dialog === 'create'} data-welcome={dialog === 'welcome'} role="dialog" aria-modal="true" aria-label={dialog === 'create' ? 'Create Workspace' : dialog === 'welcome' ? 'Welcome to Cthulhu Prompt' : 'Failed to Open Workspace'} tabindex="-1">
       <div class="dialog-header">
         <div class="dialog-heading">
           <span class="dialog-icon" data-testid="dialog-header-icon">
             {#if dialog === 'create'}<FolderPlus size={24} aria-hidden="true" />{:else if dialog === 'welcome'}<BookOpen size={24} aria-hidden="true" />{:else}<AlertCircle size={24} aria-hidden="true" />{/if}
           </span>
           <div class="dialog-heading-text">
-            <h3 class="dialog-title text-lg">{dialog === 'create' ? 'Create Workspace' : dialog === 'welcome' ? 'Welcome' : 'Failed to Open Workspace'}</h3>
-            {#if dialog === 'create'}<p class="dialog-subtitle text-sm" data-testid="dialog-subtitle">Choose a name and location for your new workspace.</p>{/if}
+            <h3 class="dialog-title text-lg">{dialog === 'create' ? 'Create Workspace' : dialog === 'welcome' ? 'Welcome to Cthulhu Prompt' : 'Failed to Open Workspace'}</h3>
+            {#if dialog === 'create'}<p class="dialog-subtitle text-sm" data-testid="dialog-subtitle">Choose a name and location for your new workspace.</p>{:else if dialog === 'welcome'}<p class="dialog-subtitle text-sm" data-testid="dialog-subtitle">Your first prompt, from workspace to clipboard.</p>{/if}
           </div>
         </div>
         <button type="button" class="icon-button" aria-label="Close" disabled={creating} onclick={closeDialog}><X size={20} aria-hidden="true" /></button>
@@ -300,57 +309,40 @@
           </div>
         </div>
       {:else if dialog === 'welcome'}
-        <div class="welcomeContent space-y-4 py-4 text-sm leading-6">
-          <section aria-labelledby="welcome-introduction-heading" class="space-y-2">
-            <h2 id="welcome-introduction-heading" class="text-base leading-6 font-semibold">
-              Welcome to Cthulhu Prompt
-            </h2>
-            <p>
-              Create, organize, and copy prompts to your AI tools. If you encounter bugs or quirks,
-              <a
-                class="welcomeGithubLink underline underline-offset-2"
-                href="https://github.com/coxthulhu/Cthulhu-Prompt/issues"
-                data-testid="welcome-github-link"
-                target="_blank"
-                rel="noreferrer"
-              >visit our GitHub page</a> to report them. Enhancement requests are welcome too!
-            </p>
-            <p>
-              For very short prompts or questions, you can go straight to your AI tool. Cthulhu Prompt
-              is most useful when you need space to develop detailed instructions, organize related
-              tasks, or reuse a workflow.
-            </p>
-          </section>
-
-          <div class="separator"></div>
-
-          <section aria-labelledby="welcome-workspaces-heading" class="space-y-2">
-            <h2 id="welcome-workspaces-heading" class="text-base leading-6 font-semibold">
-              Workspaces and Files
-            </h2>
-            <p>
-              A workspace keeps your prompt tasks and templates together in a folder on your computer.
-              Your prompts are saved as Markdown files inside the Prompts and Templates folders.
-              Create a workspace to begin, or open an existing workspace by selecting its
-              .cthulhuprompt.json file.
-            </p>
-          </section>
-
-          <div class="separator"></div>
-
-          <section aria-labelledby="welcome-activities-heading" class="space-y-2">
-            <h2 id="welcome-activities-heading" class="text-base leading-6 font-semibold">
-              Prompt Tasks and Templates
-            </h2>
-            <p>
-              <strong>Prompt tasks</strong> are the prompts you write to make a change: one-time
-              instructions for a specific task.
-            </p>
-            <p>
-              <strong>Prompt templates</strong> define reusable workflows. Assign a template to a
-              prompt task, and it will be applied when you copy that task to your clipboard.
-            </p>
-          </section>
+        <div class="welcome-content">
+          <ol class="m-0 list-none px-3" data-testid="welcome-steps">
+            {#each welcomeSteps as step, index (step.title)}
+              <li class="welcome-step text-sm leading-6">
+                <span class="step-number text-xl leading-10 font-semibold">{index + 1}</span>
+                <div class="min-w-0">
+                  <div class="step-heading">
+                    <step.icon size={19} aria-hidden="true" />
+                    <h2 class="text-base leading-6 font-semibold">{step.title}</h2>
+                    {#if index === 1}<span class="step-badge text-sm leading-5">Optional</span>{/if}
+                  </div>
+                  <p>{step.description}</p>
+                  <div class="step-tip text-sm leading-5">
+                    {#if index === 0}
+                      <span class="screen-icons" aria-hidden="true"><Home size={14} /><FileText size={14} /><Layers size={14} /></span>
+                      <span>Use the left-hand icon bar to switch screens.</span>
+                    {:else if index === 1}
+                      <span class="workflow">Investigate a bug</span>
+                      <span class="workflow">Implement a feature</span>
+                      <span class="workflow">Create mockups</span>
+                    {:else if index === 2}
+                      Backlog<ArrowRight size={14} aria-hidden="true" />
+                      Todo<ArrowRight size={14} aria-hidden="true" />
+                      In Progress<ArrowRight size={14} aria-hidden="true" />
+                      <span class="completed">Completed</span>
+                    {:else}
+                      <span class="step-check"><Check size={16} aria-hidden="true" /></span>
+                      <span class="min-w-0 flex-1">When the AI finishes, check off the task to move it to Completed.</span>
+                    {/if}
+                  </div>
+                </div>
+              </li>
+            {/each}
+          </ol>
         </div>
       {:else}
         <div class="error-body">
@@ -403,6 +395,7 @@
   .workspace-stats { display: flex; align-items: stretch; min-width: 0; }
   .workspace-stats .home-row { flex: 1 1 0; }
   .action-button, .examples-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-width: 0; height: 40px; padding: 0 14px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-action-fill); color: var(--ui-normal-text); font-family: inherit; font-weight: var(--font-weight-semibold); white-space: nowrap; text-decoration: none; cursor: pointer; }
+  .action-button :global(svg) { flex: 0 0 auto; }
   .action-button { max-width: 224px; overflow: hidden; }
   .action-button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .action-button:hover, .action-button:focus-visible, .examples-toggle:hover { background: var(--ui-neutral-action-hover-fill); border-color: var(--ui-neutral-hover-border); }
@@ -418,22 +411,31 @@
   button:focus-visible, a:focus-visible { outline: 2px solid var(--ui-neutral-focus-border); outline-offset: 2px; }
   .dialog-layer { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--ui-card-normal-shadow); -webkit-app-region: no-drag; }
   .home-dialog { display: flex; flex-direction: column; width: 100%; max-width: 576px; max-height: calc(100vh - 32px); min-width: 0; padding: 16px; border-radius: 8px; border: 1px solid var(--ui-card-normal-border); background: var(--ui-card-overlay-surface); box-shadow: 0 8px 12px var(--ui-card-normal-shadow); }
-  .home-dialog[data-create='true'] { max-width: 620px; padding-top: 18px; }
+  .home-dialog[data-create='true'] { max-width: 620px; }
+  .home-dialog[data-create='true'], .home-dialog[data-welcome='true'] { padding-top: 18px; }
   .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; padding: 0 4px 12px; }
-  .home-dialog[data-create='true'] .dialog-header { padding-bottom: 16px; }
+  .home-dialog[data-create='true'] .dialog-header, .home-dialog[data-welcome='true'] .dialog-header { padding-bottom: 16px; }
   .dialog-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
   .dialog-heading-text { min-width: 0; }
-  .dialog-icon { display: flex; flex: 0 0 40px; align-items: center; justify-content: center; width: 40px; height: 40px; }
+  .dialog-icon { color: var(--ui-hoverable-icon-glyph); display: flex; flex: 0 0 40px; align-items: center; justify-content: center; width: 40px; height: 40px; }
   .dialog-title { margin: 0; font-weight: var(--font-weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dialog-subtitle { margin: 3px 0 0; color: var(--ui-muted-text); }
+  .dialog-subtitle { margin: 2px 0 0; color: var(--ui-muted-text); }
   .dialog-body { min-width: 0; }
   .field-heading { display: flex; flex-direction: column; gap: 2px; margin-bottom: 7px; }
   .muted { color: var(--ui-muted-text); }
-  .home-dialog[data-welcome='true'] { max-width: 672px; }
-  .welcomeContent { min-height: 0; overflow-y: auto; color: var(--ui-hoverable-text); }
-  .welcomeContent h2, .welcomeContent strong { color: var(--ui-normal-text); }
-  .welcomeGithubLink { color: var(--ui-accent-link-text); }
-  .welcomeGithubLink:hover, .welcomeGithubLink:focus-visible { color: var(--ui-accent-link-hover-text); }
+  .home-dialog[data-welcome='true'] { max-width: 800px; }
+  .welcome-content { min-height: 0; overflow-y: auto; }
+  .welcome-step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 18px; padding: 20px 0; color: var(--ui-hoverable-text); }
+  .welcome-step:not(:first-child) { border-top: 1px solid var(--ui-neutral-muted-border); }
+  .step-number { width: 42px; height: 42px; text-align: center; border: 1px solid var(--ui-accent-muted-border); border-radius: 50%; color: var(--ui-normal-text); background: var(--ui-accent-action-fill); }
+  .step-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-bottom: 6px; color: var(--ui-normal-text); }
+  .step-heading :global(svg) { flex-shrink: 0; color: var(--ui-hoverable-icon-glyph); }
+  .step-badge { padding: 0 8px; border: 1px solid var(--ui-neutral-muted-border); border-radius: 4px; color: var(--ui-muted-text); }
+  .step-tip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; color: var(--ui-muted-text); }
+  .screen-icons { display: flex; gap: 10px; padding: 5px 9px; border: 1px solid var(--ui-neutral-muted-border); border-radius: 5px; color: var(--ui-muted-icon-glyph); }
+  .workflow { padding: 2px 9px; border-radius: 4px; background: var(--ui-neutral-field-surface); }
+  .completed { color: var(--ui-normal-text); }
+  .step-check { flex-shrink: 0; color: var(--ui-hoverable-icon-glyph); }
   .dialog-footer { display: flex; justify-content: flex-end; gap: 8px; min-width: 0; padding-top: 16px; }
   .name-input { display: flex; width: 100%; max-width: 100%; min-width: 0; height: 40px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-field-surface); color: var(--ui-normal-text); padding: 4px 14px; font-family: inherit; font-weight: var(--font-weight-semibold); outline: none; }
   .name-input::placeholder { color: var(--ui-muted-text); }
