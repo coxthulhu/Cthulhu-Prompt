@@ -53,6 +53,12 @@ export function configureRendererSecurity(
   }
 
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    // DevTools shares this session; its frontend and automatic theme use separate internal origins.
+    const url = new URL(details.url)
+    if (url.protocol === 'devtools:' && (url.host === 'devtools' || url.host === 'theme')) {
+      callback({ cancel: false })
+      return
+    }
     callback({ cancel: !allowsResource(details.url) })
   })
 

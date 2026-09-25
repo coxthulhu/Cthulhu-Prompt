@@ -8,6 +8,39 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 describe('Renderer security', () => {
+  test('loads the internal DevTools frontend and automatic theme resources', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await testSetup.setupAndStart({
+      workspace: { scenario: 'minimal' }
+    })
+
+    const windowId = await electronApp.evaluate(({ BrowserWindow }) => {
+      const window = BrowserWindow.getAllWindows()[0]
+      window.webContents.openDevTools({ mode: 'undocked' })
+      return window.id
+    })
+    await expect.poll(() => electronApp.evaluate(({ BrowserWindow }, id) => {
+      return BrowserWindow.fromId(id)!.webContents.isDevToolsOpened()
+    }, windowId)).toBe(true)
+    await expect.poll(() => electronApp.evaluate(async ({ BrowserWindow }, id) => {
+      const devTools = BrowserWindow.fromId(id)!.webContents.devToolsWebContents
+      if (!devTools || devTools.isLoading()) return false
+      return devTools.executeJavaScript('Boolean(document.querySelector(".root-view"))')
+    }, windowId)).toBe(true)
+
+    await expect.poll(() => electronApp.evaluate(async ({ BrowserWindow }, id) => {
+      const contents = BrowserWindow.fromId(id)!.webContents.devToolsWebContents!
+      return contents.executeJavaScript(
+        'Array.from(document.styleSheets, sheet => sheet.href).filter(Boolean)'
+      )
+    }, windowId)).toEqual(expect.arrayContaining([expect.stringMatching(/^devtools:\/\/theme\/colors\.css/)]))
+    await electronApp.evaluate(({ BrowserWindow }, id) => {
+      BrowserWindow.fromId(id)!.webContents.closeDevTools()
+    }, windowId)
+  })
+
   /** The development exception allows one exact HTTP/WS origin without opening other network access. */
   test('allows only the configured development server and blocks remote redirects', async ({
     electronApp,
