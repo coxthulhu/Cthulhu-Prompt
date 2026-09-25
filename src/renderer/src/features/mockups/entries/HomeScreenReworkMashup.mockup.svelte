@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BookOpen, Bug, ChevronRight, ExternalLink, FileText, FolderOpen, FolderPlus, Folders, X } from 'lucide-svelte'
+  import { BookOpen, Bug, ExternalLink, FileText, FolderOpen, FolderPlus, Folders, X } from 'lucide-svelte'
 
   const recentWorkspaces = [
     { name: 'Product Development', path: 'C:\\Users\\Alex\\Documents\\Prompt Workspaces\\Product Development', prompts: 24, folders: 3 },
@@ -18,7 +18,7 @@
 
 <section class="text-base leading-6" style="display: flex; min-width: 0; min-height: 100%; padding: 48px 32px; color: var(--ui-normal-text); font-family: ui-sans-serif, system-ui, sans-serif;" data-testid="home-screen">
   <main style="width: 100%; max-width: 780px; min-width: 0; margin: auto; display: flex; flex-direction: column; gap: 30px;">
-    <header style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+    <header style="display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
       <h1 class="text-6xl leading-none" style="margin: 0; font-weight: 650; letter-spacing: -0.055em;" data-testid="home-title">Cthulhu <span style="color: var(--ui-accent-link-text);">Prompt</span></h1>
       <div style="display: flex; align-items: center; gap: 8px;">
         <button type="button" class="mockup-control text-sm leading-5" style={controlStyle('welcome', !workspace)} onmouseenter={() => hovered = 'welcome'} onmouseleave={() => hovered = null} onfocus={() => focused = 'welcome'} onblur={() => focused = null}>
@@ -52,21 +52,6 @@
           <button type="button" class="mockup-control text-sm leading-5" style={controlStyle('create', !workspace)} data-testid="create-workspace-button" onmouseenter={() => hovered = 'create'} onmouseleave={() => hovered = null} onfocus={() => focused = 'create'} onblur={() => focused = null}><FolderPlus size={16} aria-hidden="true" /> Create</button>
           <button type="button" class="mockup-control text-sm leading-5" style={controlStyle('close')} disabled={!workspace} data-testid="close-workspace-button" onclick={() => workspace = null} onmouseenter={() => hovered = 'close'} onmouseleave={() => hovered = null} onfocus={() => focused = 'close'} onblur={() => focused = null}><X size={16} aria-hidden="true" /> Close</button>
         </div>
-      </div>
-      <hr style="margin: 0; border: 0; border-top: 1px solid var(--ui-neutral-muted-border);" />
-      <h2 id="recent-workspaces-heading" class="text-lg leading-7 font-semibold" style="margin: 0; padding: 20px 24px 12px;">Recent Workspaces</h2>
-      <div role="group" aria-labelledby="recent-workspaces-heading" style="min-width: 0; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 4px;">
-        {#each recentWorkspaces as recent (recent.path)}
-          <button type="button" style={`display: flex; width: 100%; min-width: 0; align-items: center; gap: 14px; padding: 17px 14px; border: 0; border-radius: 6px; text-align: left; font-family: inherit; cursor: pointer; background: var(${isActive(recent.path) ? '--ui-neutral-action-fill' : '--ui-ghost-surface'}); color: var(${isActive(recent.path) ? '--ui-normal-text' : '--ui-hoverable-text'});`} onclick={() => workspace = recent} onmouseenter={() => hovered = recent.path} onmouseleave={() => hovered = null} onfocus={() => focused = recent.path} onblur={() => focused = null}>
-            <span style="display: flex; width: 34px; flex-shrink: 0; justify-content: center;"><FolderOpen size={23} strokeWidth={1.5} aria-hidden="true" /></span>
-            <span style="display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px;">
-              <span class="text-lg leading-6 font-semibold" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{recent.name}</span>
-              <span class="text-sm leading-5" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={recent.path}>{recent.path}</span>
-            </span>
-            <span class="text-sm leading-5" style="display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; white-space: nowrap;"><FileText size={15} aria-hidden="true" />{recent.prompts} prompts</span>
-            <ChevronRight size={18} style="flex-shrink: 0;" aria-hidden="true" />
-          </button>
-        {/each}
       </div>
     </section>
   </main>
