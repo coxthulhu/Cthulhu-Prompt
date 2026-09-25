@@ -4,12 +4,13 @@
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   /** Supported cell and glyph size combinations. */
-  type IconCellVariant = 'standard' | 'title' | 'compact' | 'small' | 'menu'
+  type IconCellVariant = 'standard' | 'title' | 'large' | 'compact' | 'small' | 'menu'
 
   /** Glyph size rendered by each cell variant. */
   const iconSizeByVariant: Record<IconCellVariant, number> = {
     standard: 24,
     title: 24,
+    large: 32,
     compact: 20,
     small: 16,
     menu: 20
@@ -38,6 +39,7 @@
   <Icon
     class={mergeClasses('cthulhuUiIconCellIcon', iconClass)}
     size={iconSizeByVariant[variant]}
+    strokeWidth={variant === 'large' ? 1.5 : 2}
     aria-hidden="true"
   />
 </span>
@@ -66,6 +68,12 @@
     width: 18px;
   }
 
+  .cthulhuUiIconCell[data-variant='large'] {
+    flex-basis: 40px;
+    height: 40px;
+    width: 40px;
+  }
+
   .cthulhuUiIconCell[data-variant='menu'] {
     flex-basis: 28px;
     height: 28px;
@@ -79,9 +87,5 @@
     ) {
     color: inherit;
     transition: color var(--ui-animation-duration-standard) ease;
-  }
-
-  .cthulhuUiIconCellIcon {
-    stroke-width: 2;
   }
 </style>

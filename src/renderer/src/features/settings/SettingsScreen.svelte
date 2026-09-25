@@ -1,16 +1,13 @@
 <script lang="ts">
+  import PageHeader from '@renderer/common/cthulhu-ui/layout/PageHeader.svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
   import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import ControlRow from '@renderer/common/cthulhu-ui/forms/ControlRow.svelte'
-  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
-  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
-  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/layout/ValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
   import { ExternalLink, Info, RefreshCcw, Settings, Type } from 'lucide-svelte'
@@ -167,25 +164,14 @@
   data-testid="settings-screen"
 >
   <div class="flex w-full max-w-4xl flex-col gap-4">
-    <div class="settings-screen-title-block">
-      <IconCell icon={Settings} variant="title" />
-      <TitleSubtitleStack class="settings-screen-title-stack">
-        <div class="settings-screen-title-line">
-          <Title
-            class="settings-screen-title text-3xl leading-9"
-            data-testid="settings-screen-title"
-            title="System Settings"
-            variant="row"
-          />
-        </div>
-        <Subtitle
-          class="leading-5"
-          data-testid="settings-screen-subtitle"
-          text="System-wide settings stored locally on your machine."
-          wrap={false}
-        />
-      </TitleSubtitleStack>
-    </div>
+    <PageHeader
+      icon={Settings}
+      title="System Settings"
+      subtitle="System-wide settings stored locally on your machine."
+      titleTestId="settings-screen-title"
+      subtitleTestId="settings-screen-subtitle"
+      class="mb-5"
+    />
 
     <Card
       label="Editor & Layout"
@@ -369,37 +355,3 @@
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>
 </section>
-
-<style>
-  .settings-screen-title-block {
-    align-items: flex-start;
-    display: flex;
-    gap: 12px;
-    height: 60px;
-    margin-bottom: 20px;
-    min-width: 0;
-  }
-
-  .settings-screen-title-block :global(.settings-screen-title-stack) {
-    gap: 4px;
-  }
-
-  .settings-screen-title-line {
-    height: 36px;
-    min-width: 0;
-  }
-
-  .settings-screen-title-line :global(.settings-screen-title) {
-    color: var(--ui-normal-text);
-    font-weight: var(--font-weight-semibold);
-    /* Give Windows font glyphs room beyond the 36px line without enlarging the title row. */
-    height: 40px;
-    margin-block: -2px;
-    padding-block: 2px;
-    letter-spacing: -0.03em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-</style>

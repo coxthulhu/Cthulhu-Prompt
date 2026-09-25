@@ -4,14 +4,11 @@
 </script>
 
 <script lang="ts">
+  import PageHeader from '@renderer/common/cthulhu-ui/layout/PageHeader.svelte'
   import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
   import ButtonBarSelector from '@renderer/common/cthulhu-ui/selectors/ButtonBarSelector.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
-  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
-  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
-  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import { promptStatusGroups } from './promptStatusGroups'
   import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
   import { PromptFolderScreenMode } from './promptFolderScreenMode'
@@ -59,35 +56,27 @@
   data-virtual-window-row
 >
   <div class="prompt-folder-root-screen-header">
-    <div class="prompt-folder-root-title-block">
-      <IconCell icon={isTemplateFolder ? Layers : FileText} variant="title" />
-      <TitleSubtitleStack class="prompt-folder-root-title-stack">
-        <div class="prompt-folder-root-title-line">
-          <Title
-            class="prompt-folder-root-title text-3xl leading-9"
-            data-testid="prompt-folder-root-title"
-            title={folderDisplayName}
-            tooltip={folderDisplayName}
-            variant="row"
-          />
-          <IconButton
-            icon={Pencil}
-            label="Rename folder"
-            title="Rename folder"
-            size="compact-large-icon"
-            baseVariant="muted"
-            hoverVariant="glyph"
-            testId="prompt-folder-root-title-edit"
-            onclick={onRenamePromptFolder}
-          />
-        </div>
-        <Subtitle
-          class="prompt-folder-root-subtitle leading-5"
-          text={isTemplateFolder ? 'Prompt Templates' : 'Task Prompts'}
-          wrap={false}
+    <PageHeader
+      icon={isTemplateFolder ? Layers : FileText}
+      title={folderDisplayName}
+      titleTooltip={folderDisplayName}
+      titleTestId="prompt-folder-root-title"
+      subtitle={isTemplateFolder ? 'Prompt Templates' : 'Task Prompts'}
+      subtitleTestId="prompt-folder-root-subtitle"
+    >
+      {#snippet titleAction()}
+        <IconButton
+          icon={Pencil}
+          label="Rename folder"
+          title="Rename folder"
+          size="compact-large-icon"
+          baseVariant="muted"
+          hoverVariant="glyph"
+          testId="prompt-folder-root-title-edit"
+          onclick={onRenamePromptFolder}
         />
-      </TitleSubtitleStack>
-    </div>
+      {/snippet}
+    </PageHeader>
   </div>
 
   <!-- Keep filters and folder actions aligned within the existing virtual row height. -->
@@ -144,40 +133,6 @@
     justify-content: space-between;
     min-width: 0;
     padding-inline: 24px;
-  }
-
-  .prompt-folder-root-title-block {
-    align-items: flex-start;
-    display: flex;
-    gap: 12px;
-    height: 60px;
-    min-width: 0;
-  }
-
-  .prompt-folder-root-title-block :global(.prompt-folder-root-title-stack) {
-    gap: 4px;
-  }
-
-  .prompt-folder-root-title-line {
-    align-items: baseline;
-    display: flex;
-    gap: 11px;
-    height: 36px;
-    min-width: 0;
-  }
-
-  .prompt-folder-root-title-line :global(.prompt-folder-root-title) {
-    color: var(--ui-normal-text);
-    font-weight: var(--font-weight-semibold);
-    /* Give Windows font glyphs room beyond the 36px line without enlarging the title row. */
-    height: 40px;
-    margin-block: -2px;
-    padding-block: 2px;
-    letter-spacing: -0.03em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .prompt-folder-root-toolbar {

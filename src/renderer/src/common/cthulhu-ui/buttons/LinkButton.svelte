@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import type { ButtonAppearance } from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import '@renderer/common/cthulhu-ui/actionButton.css'
 
@@ -11,6 +12,7 @@
     icon?: ComponentType
     endIcon?: ComponentType
     variant?: LinkButtonVariant
+    appearance?: ButtonAppearance
     class?: string
     target?: string
     rel?: string
@@ -23,6 +25,7 @@
     icon: Icon,
     endIcon: EndIcon,
     variant = 'neutral',
+    appearance = 'filled',
     class: className,
     target,
     rel,
@@ -33,6 +36,7 @@
 <a
   class={mergeClasses('cthulhuUiActionButton text-sm leading-5 cthulhuUiLinkButton', className)}
   data-variant={variant}
+  data-appearance={appearance}
   data-testid={testId}
   {href}
   {target}

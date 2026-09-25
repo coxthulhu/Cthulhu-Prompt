@@ -1431,8 +1431,8 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     const rootHeaderGeometry = await rootHeader.evaluate((element) => {
       const filterBar = element.querySelector<HTMLElement>('[role="group"][aria-label="Filter prompts"]')
       const titleRow = element.querySelector<HTMLElement>('.prompt-folder-root-screen-header')
-      const subtitle = element.querySelector<HTMLElement>('.prompt-folder-root-subtitle')
-      const titleLine = element.querySelector<HTMLElement>('.prompt-folder-root-title-line')
+      const subtitle = element.querySelector<HTMLElement>('[data-testid="prompt-folder-root-subtitle"]')
+      const titleLine = element.querySelector<HTMLElement>('.cthulhuUiPageHeaderTitleLine')
       /** Action bar and rename glyph must align with their respective rows. */
       const actions = element.querySelector<HTMLElement>('.prompt-folder-root-actions')!
       /** Enlarged pencil retains its size beside the title. */
@@ -1473,7 +1473,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     expect(Math.abs(rootHeaderGeometry!.toolbarAlignment)).toBeLessThanOrEqual(1)
     expect(rootHeaderGeometry!.toolbarGap).toBeGreaterThanOrEqual(16)
     expect(rootHeaderGeometry!.pencilHeight).toBe(20)
-    await expect(rootHeader.locator('.prompt-folder-root-title-line')).toHaveCSS('align-items', 'baseline')
+    await expect(rootHeader.locator('.cthulhuUiPageHeaderTitleLine')).toHaveCSS('align-items', 'baseline')
     await expect(rootHeader.locator('[data-testid="prompt-folder-manage-categories-button"]')).toHaveText('Categories')
     await expect(rootHeader.locator('[data-testid="prompt-folder-manage-categories-button"]')).toHaveCSS('border-top-width', '0px')
     await expect(rootHeader.locator('[data-testid="prompt-folder-delete-button"]')).toHaveCSS('border-top-width', '0px')

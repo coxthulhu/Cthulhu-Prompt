@@ -2,14 +2,15 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
-  type TitleVariant = 'page' | 'small' | 'card' | 'dialog' | 'row'
+  type TitleVariant = 'page' | 'small' | 'card' | 'dialog' | 'row' | 'workspace'
 
   const textClasses: Record<TitleVariant, string> = {
-    page: 'text-3xl',
+    page: 'text-3xl leading-9',
     small: 'text-sm',
     card: 'text-lg',
     dialog: 'text-lg',
-    row: 'text-base'
+    row: 'text-base',
+    workspace: 'text-2xl leading-8'
   }
 
   type Props = HTMLAttributes<HTMLDivElement> & {
@@ -30,7 +31,8 @@
     font-weight: var(--font-weight-semibold);
   }
 
-  .cthulhuUiTitle[data-variant='row'] {
+  .cthulhuUiTitle[data-variant='row'],
+  .cthulhuUiTitle[data-variant='workspace'] {
     color: inherit;
     min-width: 0;
     overflow: hidden;
@@ -38,10 +40,22 @@
     white-space: nowrap;
   }
 
+  .cthulhuUiTitle[data-variant='workspace'] {
+    color: var(--ui-normal-text);
+    letter-spacing: -0.03em;
+  }
+
   .cthulhuUiTitle[data-variant='page'] {
     color: var(--ui-normal-text);
-    padding-bottom: 20px;
-    overflow-wrap: anywhere;
+    /* Give Windows glyphs room beyond the 36px line without enlarging the layout height. */
+    height: 40px;
+    margin-block: -2px;
+    padding-block: 2px;
+    letter-spacing: -0.03em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .cthulhuUiTitle[data-variant='small'] {
