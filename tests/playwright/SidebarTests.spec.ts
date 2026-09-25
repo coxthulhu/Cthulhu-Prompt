@@ -108,7 +108,7 @@ test.describe('Sidebar Tests', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await testHelpers.assertHomeActive()
+    expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
 
     await testHelpers.navigateToSettingsScreen()
     expect(await testHelpers.getActiveScreen()).toBe('settings')

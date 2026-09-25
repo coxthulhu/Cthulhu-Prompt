@@ -579,7 +579,7 @@ Keep this partial body.`
       testSetup
     }) => {
       /** Running application and helpers used to create and inspect a new workspace. */
-      const { testHelpers } = await testSetup.setupAndStart({
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-directory', autoSetup: false }
       })
 
@@ -587,6 +587,9 @@ Keep this partial body.`
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
+      await expect(mainWindow.getByTestId('prompt-folder-header-folder')).toHaveText('My Prompts')
+      await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
+      await testHelpers.navigateToHomeScreen()
       /** Created workspace root shown by the ready-state home screen. */
       const workspacePath = await testHelpers.getDisplayedWorkspacePath()
       expect(workspacePath).not.toBeNull()
@@ -766,14 +769,15 @@ Keep this partial body.`
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
       ).toBeEnabled()
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.waitForSelector('[data-testid="workspace-ready-path"]', {
+      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', {
         state: 'visible',
         timeout: 5000
       })
 
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
 
-      await testHelpers.navigateToPromptFolders('My Prompts')
+      await expect(mainWindow.getByTestId('prompt-folder-header-folder')).toHaveText('My Prompts')
+      await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
       await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', { state: 'visible' })
       await mainWindow.waitForSelector('[data-testid^="prompt-editor-"]', {
         state: 'attached'
@@ -896,14 +900,14 @@ Keep this partial body.`
       await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'false')
 
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.waitForSelector('[data-testid="workspace-ready-path"]', {
+      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', {
         state: 'visible',
         timeout: 5000
       })
 
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
 
-      await testHelpers.navigateToPromptFolders('My Prompts')
+      await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
       await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toHaveText(
         'My Prompts'
       )

@@ -570,6 +570,7 @@
 
           if (result.success) {
             await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
+            navigateToScreen('prompt-task-folders')
             return { success: true }
           }
 
