@@ -5,11 +5,8 @@
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import CthulhuPromptWordmark from '@renderer/common/cthulhu-ui/layout/CthulhuPromptWordmark.svelte'
-  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
-  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
-  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
-  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
 
   const recentWorkspaces = [
     { name: 'Product Development', path: 'C:\\Users\\Alex\\Documents\\Prompt Workspaces\\Product Development', prompts: 24, folders: 3 },
@@ -45,29 +42,24 @@
     </header>
 
     <CardSurface class="overflow-hidden" role="region" aria-label="Workspaces" data-testid="home-primary-card">
-      <div style="display: flex; align-items: center; gap: 12px; padding: 16px; min-width: 0;">
-        <IconCell icon={FolderOpen} variant="large" />
-        <TitleSubtitleStack>
-          <Title
-            title={workspace?.name ?? 'No workspace open'}
-            variant="workspace"
-            role="heading"
-            aria-level={2}
+      <Row
+        variant="workspace"
+        icon={FolderOpen}
+        label={workspace?.name ?? 'No workspace open'}
+        detail={workspace?.path ?? 'Open a workspace or create one to get started.'}
+        detailTitle={workspace?.path}
+        detailTestId="workspace-ready-path"
+        class="p-4"
+      >
+        {#snippet trailing()}
+          <IconButton
+            icon={ExternalLink}
+            label="Open workspace folder"
+            title="Open workspace folder"
+            disabled={!workspace}
           />
-          <Subtitle
-            text={workspace?.path ?? 'Open a workspace or create one to get started.'}
-            wrap={false}
-            title={workspace?.path}
-            data-testid="workspace-ready-path"
-          />
-        </TitleSubtitleStack>
-        <IconButton
-          icon={ExternalLink}
-          label="Open workspace folder"
-          title="Open workspace folder"
-          disabled={!workspace}
-        />
-      </div>
+        {/snippet}
+      </Row>
       <Separator />
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 16px;">
         <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 22px; color: var(--ui-muted-text);">

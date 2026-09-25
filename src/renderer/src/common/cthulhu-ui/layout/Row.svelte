@@ -9,7 +9,7 @@
   export type RowTrailingLayout = 'single' | 'grouped'
 
   type Props = {
-    variant?: 'default' | 'dialog-heading'
+    variant?: 'default' | 'dialog-heading' | 'workspace'
     icon?: ComponentType
     label: string
     detail?: string
@@ -21,6 +21,7 @@
     iconClass?: string
     iconTestId?: string
     detailTestId?: string
+    detailTitle?: string
     labelTitle?: string
     labelTestId?: string
     testId?: string
@@ -39,6 +40,7 @@
     iconClass,
     iconTestId,
     detailTestId,
+    detailTitle,
     labelTitle,
     labelTestId,
     testId
@@ -56,7 +58,7 @@
     <IconCell
       icon={Icon}
       {iconClass}
-      variant={variant === 'dialog-heading' ? 'title' : 'standard'}
+      variant={variant === 'workspace' ? 'large' : variant === 'dialog-heading' ? 'title' : 'standard'}
       data-testid={iconTestId}
     />
   {/if}
@@ -64,12 +66,12 @@
   <TitleSubtitleStack>
     <Title
       title={label}
-      variant={variant === 'dialog-heading' ? 'dialog' : 'row'}
+      variant={variant === 'workspace' ? 'workspace' : variant === 'dialog-heading' ? 'dialog' : 'row'}
       tooltip={labelTitle}
       data-testid={labelTestId}
     />
     {#if detail}
-      <Subtitle text={detail} wrap={wrapDetail} data-testid={detailTestId} />
+      <Subtitle text={detail} wrap={wrapDetail} title={detailTitle} data-testid={detailTestId} />
     {/if}
     {#if detailExtra}
       <span class="cthulhuUiRowDetailExtra text-sm">
