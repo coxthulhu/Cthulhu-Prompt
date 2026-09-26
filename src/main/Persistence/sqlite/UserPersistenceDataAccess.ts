@@ -48,6 +48,20 @@ const DEFAULT_WINDOW_PERSISTENCE: WindowPersistence = {
 
 /** SQLite access for renderer user persistence and main window persistence. */
 export class UserPersistenceDataAccess {
+  /** Main-process dialog preference, independent of the currently open workspace. */
+  static readWorkspaceDialogDirectory(): string | null {
+    const row = SqliteDataAccess.getDatabase()
+      .prepare('SELECT workspace_dialog_directory AS directory FROM app_persistence WHERE id = ?')
+      .get(APP_PERSISTENCE_ID) as { directory: string | null } | undefined
+    return row?.directory ?? null
+  }
+
+  static updateWorkspaceDialogDirectory(directory: string): void {
+    SqliteDataAccess.getDatabase()
+      .prepare('UPDATE app_persistence SET workspace_dialog_directory = ? WHERE id = ?')
+      .run(directory, APP_PERSISTENCE_ID)
+  }
+
   /** Reads the renderer-owned user-persistence singleton. */
   static readUserPersistence(): UserPersistence {
     /** SQLite database containing the singleton application row. */

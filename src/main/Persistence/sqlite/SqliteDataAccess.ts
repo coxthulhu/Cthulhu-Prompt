@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPe
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 23
+const LATEST_SCHEMA_VERSION = 24
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -742,6 +742,15 @@ const applyStartupMigrations = (db: Database.Database): void => {
         db.prepare('UPDATE schema_version SET version = ?').run(23)
       })()
       schemaVersion = 23
+      continue
+    }
+
+    if (schemaVersion === 23) {
+      db.transaction(() => {
+        db.exec('ALTER TABLE app_persistence ADD COLUMN workspace_dialog_directory TEXT')
+        db.prepare('UPDATE schema_version SET version = ?').run(24)
+      })()
+      schemaVersion = 24
       continue
     }
 

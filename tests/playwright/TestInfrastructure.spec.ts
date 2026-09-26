@@ -108,7 +108,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 23 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 24 })
 
       /** Welcome remains eligible by default when the preference column is migrated. */
       const appPersistenceColumnsResult = await runSqlQuery(
@@ -116,6 +116,9 @@ describe('Test Infrastructure', () => {
         'PRAGMA table_info(app_persistence)'
       )
       expect(appPersistenceColumnsResult.success).toBe(true)
+      expect(appPersistenceColumnsResult.rows).toContainEqual(
+        expect.objectContaining({ name: 'workspace_dialog_directory', type: 'TEXT', notnull: 0 })
+      )
       expect(appPersistenceColumnsResult.rows).toContainEqual(
         expect.objectContaining({
           name: 'has_shown_welcome',

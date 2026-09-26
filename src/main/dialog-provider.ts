@@ -1,4 +1,8 @@
 import { dialog } from 'electron'
+import {
+  readWorkspaceDialogDirectory,
+  rememberWorkspaceDialogDirectory
+} from './Persistence/WorkspaceDialogPersistence'
 
 // Define the interface for dialog operations
 interface DialogProvider {
@@ -20,9 +24,13 @@ class ElectronDialogProvider implements DialogProvider {
 
   async selectWorkspaceInfoFile(): Promise<{ dialogCancelled: boolean; filePaths: string[] }> {
     const result = await dialog.showOpenDialog({
+      defaultPath: readWorkspaceDialogDirectory(),
       filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cthulhuprompt.json'] }],
       properties: ['openFile']
     })
+    if (!result.canceled && result.filePaths.length > 0) {
+      rememberWorkspaceDialogDirectory(result.filePaths[0])
+    }
     return {
       dialogCancelled: result.canceled,
       filePaths: result.filePaths
@@ -51,7 +59,7 @@ class TestDialogProvider implements DialogProvider {
 
 let current: DialogProvider = new ElectronDialogProvider()
 
-export function setDialogProvider(provider: DialogProvider): void {
+export function setDialogProvider(provider: DialogProvider = new ElectronDialogProvider()): void {
   current = provider
 }
 

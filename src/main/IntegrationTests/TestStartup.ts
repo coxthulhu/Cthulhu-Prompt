@@ -269,10 +269,11 @@ export function setupTestStartupListener(): void {
       })
     }
   })
-  ;(app as any).on('test-setup-file-dialog', (results: string[]) => {
-    testFixtures.fileDialogResults = results
+  ;(app as any).on('test-setup-file-dialog', (results: string[] | null) => {
+    testFixtures.fileDialogResults = results ?? undefined
     // Apply replacement dialog selections while Electron stays running during workspace tests.
-    setDialogProvider(createTestDialogProvider(results))
+    // Null restores the real provider so tests can stub only Electron's native dialog boundary.
+    setDialogProvider(results === null ? undefined : createTestDialogProvider(results))
   })
   ;(app as any).on('test-check-file-exists', (filePath: string) => {
     const fs = getFs()
