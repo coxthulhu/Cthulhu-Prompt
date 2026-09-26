@@ -11,6 +11,7 @@
     Download,
     FileText,
     Folder,
+    Folders,
     ListTodo,
     Loader,
     MoreHorizontal,
@@ -38,6 +39,7 @@
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
   import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
+  import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
   import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
@@ -496,10 +498,15 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Card and rows',
-              'Card, display row, setting row, and value pill composition.'
+              'Card, display row, setting row, value pill, and count display composition.'
             )}
 
             <Card label="Card: Workspace details">
+              <div class="flex flex-wrap items-center gap-6 p-4">
+                <CountDisplay icon={FileText} count={24} label="Prompts" />
+                <CountDisplay icon={Folders} count={3} label="Prompt Folders" />
+                <CountDisplay count={0} label="Templates" />
+              </div>
               <DisplayRow
                 icon={FileText}
                 label="DisplayRow: Active workspace"

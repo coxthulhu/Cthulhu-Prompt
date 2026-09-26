@@ -4,6 +4,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
+  import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
   import CthulhuPromptWordmark from '@renderer/common/cthulhu-ui/layout/CthulhuPromptWordmark.svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
@@ -62,9 +63,9 @@
       </Row>
       <Separator />
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px; padding: 16px;">
-        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 22px; color: var(--ui-muted-text);">
-          <span class="text-sm leading-5" style="display: inline-flex; align-items: center; gap: 8px;"><FileText size={17} aria-hidden="true" /><strong class="text-base leading-6 font-semibold" style="color: var(--ui-normal-text);">{workspace?.prompts ?? 0}</strong> Prompts</span>
-          <span class="text-sm leading-5" style="display: inline-flex; align-items: center; gap: 8px;"><Folders size={18} aria-hidden="true" /><strong class="text-base leading-6 font-semibold" style="color: var(--ui-normal-text);">{workspace?.folders ?? 0}</strong> Prompt Folders</span>
+        <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 22px;">
+          <CountDisplay icon={FileText} count={workspace?.prompts ?? 0} label="Prompts" />
+          <CountDisplay icon={Folders} count={workspace?.folders ?? 0} label="Prompt Folders" />
         </div>
         <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
           <Button
