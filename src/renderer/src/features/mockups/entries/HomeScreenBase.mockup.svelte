@@ -1,8 +1,7 @@
 <script lang="ts">
-  import type { ComponentType, Snippet } from 'svelte'
   import {
-    AlertCircle, AlertTriangle, ArrowRight, BookOpen, Bug, Check, ClipboardCheck, Copy, ExternalLink, FileText,
-    FolderOpen, FolderPlus, Folders, FolderSymlink, Home, Layers, X, Zap
+    AlertCircle, AlertTriangle, ArrowRight, BookOpen, Bug, Check, ExternalLink, FileText,
+    FolderOpen, FolderPlus, Folders, Home, Layers, X, Zap
   } from 'lucide-svelte'
 
   // Visual baseline of HomeScreen, WelcomeDialog, CreateWorkspaceDialog, and ErrorDialog.
@@ -10,7 +9,7 @@
   // Native Windows pickers/Explorer are simulated locally; no preload, IPC, or domain imports.
   const sampleParent = 'C:\\Users\\Alex\\Documents\\Prompt Workspaces'
   const samplePath = `${sampleParent}\\Product Development`
-  // Close the sample workspace to preview Get Started; Open restores these counts.
+  // Close the sample workspace to preview the empty state; Open restores these counts.
   const sampleCounts = { prompts: 24, folders: 3 }
   const welcomeSteps = [
     { icon: Home, title: 'Create a workspace', description: 'Choose a folder on your computer. Your tasks and templates live here as simple Markdown files, ready to commit to source control.' },
@@ -36,12 +35,7 @@
   let nameTouched = $state(false)
   let submissionError = $state(false)
   let creating = $state(false)
-  let copied = $state(false)
-  let copyTimer: number | undefined
   let createTimer: number | undefined
-  let titleContainer = $state<HTMLDivElement | null>(null)
-  let titleMeasure = $state<HTMLSpanElement | null>(null)
-  let titleFontSize = $state<number | null>(null)
 
   // Derived display values mirror the live name normalization and Windows path presentation.
   const workspaceFolderName = $derived(workspacePath?.split(/[\\/]/).filter(Boolean).pop() ?? '')
@@ -107,31 +101,14 @@
     }, 1200)
   }
 
-  const copyPath = () => {
-    // Simulate the live feedback without changing the system clipboard in a visual sandbox.
-    copied = true
-    window.clearTimeout(copyTimer)
-    copyTimer = window.setTimeout(() => { copied = false }, 1500)
+  const closeWorkspace = () => {
+    workspacePath = null
+    promptCount = 0
+    promptFolderCount = 0
   }
 
-  // Side effect: measure both title layouts to preserve the live width-driven font scaling.
-  $effect(() => {
-    const container = titleContainer
-    const measure = titleMeasure
-    if (!container || !measure) return
-    const update = () => {
-      titleFontSize = container.getBoundingClientRect().width / measure.getBoundingClientRect().width * 100
-    }
-    update()
-    const observer = new ResizeObserver(update)
-    observer.observe(container)
-    observer.observe(measure)
-    return () => observer.disconnect()
-  })
-
-  // Side effect cleanup: a discarded mockup must not finish a pending creation or copy animation.
+  // Side effect cleanup: a discarded mockup must not finish a pending creation.
   $effect(() => () => {
-    window.clearTimeout(copyTimer)
     window.clearTimeout(createTimer)
   })
 
@@ -170,17 +147,6 @@
   }
 </script>
 
-{#snippet row(Icon: ComponentType, label: string, detail: string, trailing?: Snippet, wrap = false, labelId?: string)}
-  <div class="home-row" data-wrap-detail={wrap} data-trailing={Boolean(trailing)}>
-    <span class="row-icon"><Icon size={24} aria-hidden="true" /></span>
-    <span class="row-text-stack">
-      <span class="row-label text-base" title={label} data-testid={labelId}>{label}</span>
-      <span class="row-detail text-sm">{detail}</span>
-    </span>
-    {#if trailing}<span class="row-trailing">{@render trailing()}</span>{/if}
-  </div>
-{/snippet}
-
 {#snippet message(text: string, warning = false, testId?: string)}
   <div class="message text-sm" data-warning={warning} data-testid={testId} role="status">
     {#if warning}<AlertTriangle size={16} aria-hidden="true" />{:else}<AlertCircle size={16} aria-hidden="true" />{/if}
@@ -190,75 +156,80 @@
 
 <section class="home-base text-base" data-testid="base-home-mockup">
   <main class="home-screen" data-testid="home-screen">
-    <div class="home-center">
-      <section class="home-layout" data-testid="home-layout">
-        <header>
-          <div class="title-container" bind:this={titleContainer}>
-            <h2 class="text-[length:var(--home-title-size,clamp(64px,9vw,88px))] leading-[var(--home-title-size,clamp(64px,9vw,88px))] home-title" data-testid="home-title" aria-label="CTHULHU PROMPT" style:--home-title-size={titleFontSize ? `${titleFontSize}px` : undefined}>
-              <span aria-hidden="true" data-testid="home-title-word-cthulhu">CTHULHU</span>
-              <span aria-hidden="true" data-testid="home-title-word-prompt">PROMPT</span>
-            </h2>
-            <div class="title-separator" data-testid="home-title-separator"></div>
-          </div>
-        </header>
-        <span class="text-[length:var(--home-title-size,clamp(64px,9vw,88px))] leading-[var(--home-title-size,clamp(64px,9vw,88px))] home-title title-measure" bind:this={titleMeasure} aria-hidden="true"><span>CTHULHU</span><span>PROMPT</span></span>
+    <section class="home-layout" data-testid="home-layout">
+      <header class="flex flex-wrap items-end justify-between gap-5">
+        <h1 class="home-title m-0 text-6xl leading-none font-semibold" data-testid="home-title">
+          Cthulhu <span>Prompt</span>
+        </h1>
+        <div class="flex items-center gap-2">
+          <button
+            class="action-button text-sm leading-5"
+            type="button"
+            data-variant={workspacePath ? 'neutral' : 'accent'}
+            data-appearance={workspacePath ? 'outline' : 'filled'}
+            data-testid="show-welcome-button"
+            onclick={() => { dialog = 'welcome' }}
+          ><BookOpen size={16} aria-hidden="true" /><span>Welcome</span></button>
+          <a
+            class="action-button text-sm leading-5"
+            data-appearance="outline"
+            href="https://github.com/coxthulhu/Cthulhu-Prompt/issues"
+            target="_blank"
+            rel="noreferrer"
+            data-testid="get-started-github-issues-link"
+          ><Bug size={16} aria-hidden="true" /><span>Github</span><ExternalLink size={16} aria-hidden="true" /></a>
+        </div>
+      </header>
 
-        <div class="home-card-grid">
-          <div class="home-card" data-testid="home-primary-card">
-            <h3 class="card-label text-lg">{workspacePath ? 'Current Workspace' : 'Get Started'}</h3>
-            <div class="card-surface">
-              {#if workspacePath}
-                {#snippet explorerAction()}
-                  <button class="icon-button" type="button" aria-label="Open Workspace Folder" title="Open Workspace Folder" data-testid="home-open-workspace-folder-button" onclick={() => { /* Explorer is intentionally simulated without changing the workspace. */ }}><ExternalLink size={20} aria-hidden="true" /></button>
-                {/snippet}
-                {@render row(FolderOpen, workspaceFolderName, 'Workspace Name', explorerAction)}
-                <div class="separator"></div>
-                {#snippet copyAction()}
-                  <button class="icon-button" type="button" aria-label={copied ? 'Copied' : 'Copy workspace path'} title={copied ? 'Copied' : 'Copy workspace path'} data-testid="copy-workspace-path-button" onclick={copyPath}>
-                    {#if copied}<ClipboardCheck size={20} aria-hidden="true" />{:else}<Copy size={20} aria-hidden="true" />{/if}
-                  </button>
-                {/snippet}
-                {@render row(FolderSymlink, workspacePath, 'Workspace Path', copyAction, false, 'workspace-ready-path')}
-                <div class="separator"></div>
-                <div class="workspace-stats">
-                  {@render row(FileText, String(promptCount), 'Prompts')}
-                  <div class="vertical-separator"></div>
-                  {@render row(Folders, String(promptFolderCount), 'Prompt Folders')}
-                </div>
-              {:else}
-                {#snippet welcomeAction()}
-                  <button class="action-button text-sm leading-5" type="button" data-variant="accent" data-testid="show-welcome-button" onclick={() => { dialog = 'welcome' }}><BookOpen size={16} aria-hidden="true" /><span>Welcome</span></button>
-                {/snippet}
-                {@render row(BookOpen, 'Welcome to Cthulhu Prompt', 'Learn to use Cthulhu Prompt.', welcomeAction, true)}
-                <div class="separator"></div>
-                {#snippet githubAction()}
-                  <a class="action-button text-sm" data-variant="accent" href="https://github.com/coxthulhu/Cthulhu-Prompt/issues" target="_blank" rel="noreferrer" data-testid="get-started-github-issues-link">Github <ExternalLink size={16} aria-hidden="true" /></a>
-                {/snippet}
-                {@render row(Bug, 'Report an Issue', 'Report bugs or request features!', githubAction)}
-              {/if}
-            </div>
+      <div class="card-surface overflow-hidden" role="region" aria-label="Workspace" data-testid="home-primary-card">
+        <div class="home-row">
+          <span class="row-icon"><FolderOpen size={32} strokeWidth={1.5} aria-hidden="true" /></span>
+          <span class="row-text-stack">
+            <span class="row-label text-2xl leading-8" title={workspacePath ? workspaceFolderName : undefined}>
+              {workspacePath ? workspaceFolderName : 'No workspace open'}
+            </span>
+            <span class="row-detail text-sm" title={workspacePath ?? undefined} data-testid={workspacePath ? 'workspace-ready-path' : undefined}>
+              {workspacePath ?? 'Open a workspace or create one to get started.'}
+            </span>
+          </span>
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Open Workspace Folder"
+            title="Open Workspace Folder"
+            data-testid="home-open-workspace-folder-button"
+            disabled={!workspacePath}
+            onclick={() => { /* Native Explorer is outside this self-contained visual preview. */ }}
+          ><ExternalLink size={20} aria-hidden="true" /></button>
+        </div>
+        <div class="separator"></div>
+        <div class="flex flex-wrap items-center justify-between gap-5 p-4">
+          <div class="flex flex-wrap items-center gap-[22px]">
+            <span class="count-display text-sm leading-5" data-testid="home-prompt-count-stat">
+              <FileText size={18} class="shrink-0" aria-hidden="true" />
+              <strong class="text-base leading-6 font-semibold">{promptCount}</strong>
+              <span>Prompts</span>
+            </span>
+            <span class="count-display text-sm leading-5" data-testid="home-prompt-folder-count-stat">
+              <Folders size={18} class="shrink-0" aria-hidden="true" />
+              <strong class="text-base leading-6 font-semibold">{promptFolderCount}</strong>
+              <span>Prompt Folders</span>
+            </span>
           </div>
-          <div class="home-card workspace-actions-card" data-testid="home-workspace-actions-card">
-            <h3 class="card-label text-lg">Workspace Actions</h3>
-            <div class="card-surface">
-              {#each [
-                { icon: FolderOpen, label: 'Open Workspace', detail: 'Open an existing workspace.', text: 'Open', action: openWorkspace },
-                { icon: FolderPlus, label: 'Create Workspace', detail: 'Choose a folder to set up a new workspace.', text: 'Create', action: () => { dialog = 'create' as const } },
-                ...(workspacePath ? [{ icon: X, label: 'Close Workspace', detail: 'Unload the current workspace folder.', text: 'Close', action: () => { workspacePath = null } }] : [])
-              ] as action, index (action.text)}
-                {#if index > 0}<div class="separator"></div>{/if}
-                {#snippet actionControl()}
-                  <button class="action-button workspace-action text-sm leading-5" type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid={`${action.text.toLowerCase()}-workspace-button`} disabled={loading} onclick={action.action}>
-                    <action.icon size={16} aria-hidden="true" /><span>{action.text}</span>
-                  </button>
-                {/snippet}
-                {@render row(action.icon, action.label, action.detail, actionControl)}
-              {/each}
-            </div>
+          <div class="ml-auto flex items-center gap-2">
+            <button class="action-button text-sm leading-5" type="button" data-variant="accent" data-testid="open-workspace-button" disabled={loading} onclick={openWorkspace}>
+              <FolderOpen size={16} aria-hidden="true" /><span>Open</span>
+            </button>
+            <button class="action-button text-sm leading-5" type="button" data-variant={workspacePath ? 'neutral' : 'accent'} data-appearance={workspacePath ? 'outline' : 'filled'} data-testid="create-workspace-button" disabled={loading} onclick={() => { dialog = 'create' }}>
+              <FolderPlus size={16} aria-hidden="true" /><span>Create</span>
+            </button>
+            <button class="action-button text-sm leading-5" type="button" data-appearance="outline" data-testid="close-workspace-button" disabled={!workspacePath || loading} onclick={closeWorkspace}>
+              <X size={16} aria-hidden="true" /><span>Close</span>
+            </button>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   </main>
 </section>
 
@@ -371,29 +342,20 @@
   }
   .home-base *, .dialog-layer * { box-sizing: border-box; }
   .home-base { min-width: 0; min-height: 100%; display: flex; flex-direction: column; }
-  .home-screen { display: flex; flex: 1; min-width: 0; overflow-y: auto; padding: 24px; }
-  .home-center { display: flex; width: 100%; min-width: 0; align-items: flex-start; justify-content: center; }
-  .home-layout { container: base-home-layout / inline-size; position: relative; width: 100%; max-width: 1024px; min-width: 0; margin-block: auto; }
-  .title-container, .home-card-grid { width: 100%; max-width: 504px; margin-inline: auto; }
-  .home-title { display: flex; flex-direction: column; align-items: center; margin: 0; color: var(--ui-normal-text); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-weight: var(--font-weight-semibold); letter-spacing: 0.14em; text-align: center; white-space: nowrap; }
-  .title-measure { position: fixed; left: -9999px; top: -9999px; width: max-content; visibility: hidden; pointer-events: none; --home-title-size: 100px; }
-  .title-separator { background: var(--ui-neutral-muted-border); height: 3px; width: 100%; margin-top: 24px; }
-  .home-card-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 16px; margin-top: 28px; }
-  .home-card { width: 100%; min-width: 0; }
-  .card-label { margin: 0 0 12px; font-weight: var(--font-weight-semibold); }
-  .card-surface { border-radius: 8px; background: var(--ui-card-normal-surface); border: 1px solid var(--ui-neutral-muted-border); }
+  .home-screen { display: flex; flex: 1; min-width: 0; overflow-y: auto; padding: 48px 32px; }
+  .home-layout { display: flex; flex-direction: column; gap: 30px; width: 100%; max-width: 780px; min-width: 0; margin: auto; }
+  .home-title { color: var(--ui-normal-text); font-family: ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.055em; }
+  .home-title span { color: var(--ui-accent-link-text); }
+  .card-surface { width: 100%; min-width: 0; border-radius: 8px; background: var(--ui-card-normal-surface); border: 1px solid var(--ui-neutral-muted-border); }
   .home-row { display: flex; align-items: center; column-gap: 12px; row-gap: 8px; min-width: 0; width: 100%; padding: 16px; border-radius: 8px; text-align: left; }
-  .row-icon { display: flex; flex: 0 0 34px; width: 34px; height: 34px; align-items: center; justify-content: center; color: var(--ui-hoverable-icon-glyph); }
+  .row-icon { display: flex; flex: 0 0 40px; width: 40px; height: 40px; align-items: center; justify-content: center; color: var(--ui-hoverable-icon-glyph); }
   .row-text-stack { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
   .row-label, .row-detail { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .row-label { font-weight: var(--font-weight-semibold); }
+  .row-label { font-weight: var(--font-weight-semibold); letter-spacing: -0.03em; }
   .row-detail { color: var(--ui-muted-text); }
-  .home-row[data-wrap-detail='true'] .row-detail { overflow-wrap: anywhere; white-space: normal; }
-  .row-trailing { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; min-width: 0; }
   .separator { flex-shrink: 0; width: 100%; height: 1px; border-top: 1px solid var(--ui-neutral-muted-border); }
-  .vertical-separator { flex-shrink: 0; width: 1px; border-left: 1px solid var(--ui-neutral-muted-border); }
-  .workspace-stats { display: flex; align-items: stretch; min-width: 0; }
-  .workspace-stats .home-row { flex: 1 1 0; }
+  .count-display { display: inline-flex; align-items: center; gap: 8px; color: var(--ui-muted-text); }
+  .count-display strong { color: var(--ui-normal-text); }
   .action-button, .examples-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-width: 0; height: 40px; padding: 0 14px; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-neutral-action-fill); color: var(--ui-normal-text); font-family: inherit; font-weight: var(--font-weight-semibold); white-space: nowrap; text-decoration: none; cursor: pointer; }
   .action-button :global(svg) { flex: 0 0 auto; }
   .action-button { max-width: 224px; overflow: hidden; }
@@ -403,8 +365,6 @@
   .action-button[data-variant='accent']:hover, .action-button[data-variant='accent']:focus-visible, .examples-toggle[aria-pressed='true']:hover { background: var(--ui-accent-action-hover-fill); border-color: var(--ui-accent-muted-hover-border); }
   .action-button[data-appearance='outline'] { background: var(--ui-ghost-surface); color: var(--ui-hoverable-text); }
   .action-button[data-appearance='outline']:hover, .action-button[data-appearance='outline']:focus-visible { background: var(--ui-neutral-subtle-action-hover-fill); color: var(--ui-normal-text); }
-  .workspace-action { width: 108px; justify-content: center; }
-  .workspace-actions-card .row-icon :global(svg) { transform: translateY(1px); }
   .icon-button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--ui-neutral-normal-border); border-radius: 6px; background: var(--ui-ghost-surface); color: var(--ui-hoverable-icon-glyph); cursor: pointer; }
   .icon-button:hover, .icon-button:focus-visible { color: var(--ui-normal-text); background: var(--ui-neutral-action-fill); border-color: var(--ui-neutral-hover-border); }
   button:disabled, input:disabled { opacity: 0.5; cursor: default; pointer-events: none; }
@@ -458,9 +418,4 @@
   .error-body h4 { margin: 0 0 8px; font-weight: var(--font-weight-semibold); }
   .error-body p { margin: 0; padding-left: 8px; }
   .error-body pre { margin: 0; border-radius: 6px; padding: 12px; background: var(--ui-neutral-field-surface); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-x: auto; white-space: pre-wrap; }
-  @container base-home-layout (min-width: 1024px) {
-    .title-container, .home-card-grid { max-width: none; }
-    .home-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .home-title { flex-direction: row; justify-content: center; column-gap: 1.14em; }
-  }
 </style>
