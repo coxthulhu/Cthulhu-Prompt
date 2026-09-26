@@ -1,5 +1,4 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { stubClipboard, readClipboardText } from '../helpers/ClipboardHelpers'
 import {
   createWorkspaceWithFolders,
   createWorkspaceWithTemplateFolders,
@@ -43,144 +42,53 @@ describe('Home Screen', () => {
     expect(pageStructure.hasSidebar).toBe(true)
     expect(pageStructure.hasWelcomeText).toBe(true)
 
-    const titleBox = await mainWindow.locator('[data-testid="home-title"]').boundingBox()
-    const separatorBox = await mainWindow
-      .locator('[data-testid="home-title-separator"]')
-      .boundingBox()
-
-    expect(titleBox).not.toBeNull()
-    expect(separatorBox).not.toBeNull()
-    expect(Math.abs(separatorBox!.width - titleBox!.width)).toBeLessThanOrEqual(1)
-  })
-
-  test('keeps the title reachable at the minimum window height', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    await electronApp.evaluate(({ BrowserWindow }) => {
-      const window = BrowserWindow.getAllWindows()[0]
-      if (!window) throw new Error('Missing main window')
-      window.setSize(800, 600)
-    })
-
-    const homeScreen = mainWindow.locator('[data-testid="home-screen"]')
-    const homeTitle = mainWindow.locator('[data-testid="home-title"]')
-
-    await expect
-      .poll(async () =>
-        homeScreen.evaluate((element) => element.scrollHeight > element.clientHeight)
-      )
-      .toBe(true)
-
-    const [homeScreenBox, homeTitleBox] = await Promise.all([
-      homeScreen.boundingBox(),
-      homeTitle.boundingBox()
-    ])
-
-    expect(homeScreenBox).not.toBeNull()
-    expect(homeTitleBox).not.toBeNull()
-    expect(homeTitleBox!.y).toBeGreaterThanOrEqual(homeScreenBox!.y)
-    expect(await homeScreen.evaluate((element) => element.scrollTop)).toBe(0)
-  })
-
-  test('stacks the title words at the same breakpoint as the cards', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-    const cthulhuWord = mainWindow.locator('[data-testid="home-title-word-cthulhu"]')
-    const promptWord = mainWindow.locator('[data-testid="home-title-word-prompt"]')
-    const homeLayout = mainWindow.locator('[data-testid="home-layout"]')
-    const setHomeLayoutWidth = async (width: number) => {
-      const currentWidth = await homeLayout.evaluate((element) => element.getBoundingClientRect().width)
-      await electronApp.evaluate(
-        ({ BrowserWindow }, widthDelta) => {
-          const window = BrowserWindow.getAllWindows()[0]
-          if (!window) throw new Error('Missing main window')
-          const bounds = window.getBounds()
-          window.setSize(bounds.width + widthDelta, bounds.height)
-        },
-        Math.round(width - currentWidth)
-      )
-      await expect
-        .poll(async () => homeLayout.evaluate((element) => element.getBoundingClientRect().width))
-        .toBe(width)
-    }
-
-    await setHomeLayoutWidth(1023)
-    const [narrowCthulhuBox, narrowPromptBox] = await Promise.all([
-      cthulhuWord.boundingBox(),
-      promptWord.boundingBox()
-    ])
-    expect(narrowCthulhuBox).not.toBeNull()
-    expect(narrowPromptBox).not.toBeNull()
-    expect(narrowPromptBox!.y).toBeGreaterThanOrEqual(
-      narrowCthulhuBox!.y + narrowCthulhuBox!.height - 1
+    await expect(mainWindow.getByTestId('home-title')).toHaveText('Cthulhu Prompt')
+    await expect(mainWindow.getByTestId('home-primary-card')).toContainText('No workspace open')
+    await expect(mainWindow.getByTestId('close-workspace-button')).toBeDisabled()
+    await expect(mainWindow.getByTestId('home-open-workspace-folder-button')).toBeDisabled()
+    await expect(mainWindow.getByTestId('show-welcome-button')).toBeVisible()
+    await expect(mainWindow.getByTestId('get-started-github-issues-link')).toHaveAttribute(
+      'href',
+      'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
     )
-
-    await setHomeLayoutWidth(1024)
-    const [wideCthulhuBox, widePromptBox] = await Promise.all([
-      cthulhuWord.boundingBox(),
-      promptWord.boundingBox()
-    ])
-    expect(wideCthulhuBox).not.toBeNull()
-    expect(widePromptBox).not.toBeNull()
-    expect(Math.abs(widePromptBox!.y - wideCthulhuBox!.y)).toBeLessThanOrEqual(1)
   })
 
-  test('switches card columns without changing their maximum width', async ({
+  test('keeps the workspace card and actions within the screen at narrow and wide sizes', async ({
     electronApp,
     testSetup
   }) => {
     const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
+      workspace: { scenario: 'minimal' }
     })
-    const homeLayout = mainWindow.locator('[data-testid="home-layout"]')
-    const primaryCard = mainWindow.locator('[data-testid="home-primary-card"]')
-    const actionsCard = mainWindow.locator('[data-testid="home-workspace-actions-card"]')
-    const setHomeLayoutWidth = async (width: number) => {
-      const currentWidth = await homeLayout.evaluate((element) => element.getBoundingClientRect().width)
-      await electronApp.evaluate(
-        ({ BrowserWindow }, widthDelta) => {
-          const window = BrowserWindow.getAllWindows()[0]
-          if (!window) throw new Error('Missing main window')
-          const bounds = window.getBounds()
-          window.setSize(bounds.width + widthDelta, bounds.height)
-        },
-        Math.round(width - currentWidth)
-      )
+
+    for (const width of [800, 1400]) {
+      await electronApp.evaluate(({ BrowserWindow }, windowWidth) => {
+        const window = BrowserWindow.getAllWindows()[0]
+        if (!window) throw new Error('Missing main window')
+        window.setSize(windowWidth, 600)
+      }, width)
+
+      const homeScreen = mainWindow.getByTestId('home-screen')
+      await expect(mainWindow.getByTestId('home-title')).toBeInViewport()
+      await expect(mainWindow.getByTestId('close-workspace-button')).toBeInViewport()
       await expect
-        .poll(async () => homeLayout.evaluate((element) => element.getBoundingClientRect().width))
-        .toBe(width)
+        .poll(() => homeScreen.evaluate((element) => element.scrollWidth - element.clientWidth))
+        .toBeLessThanOrEqual(1)
+
+      const [screenBox, cardBox, titleBox, openBox, closeBox] = await Promise.all([
+        homeScreen.boundingBox(),
+        mainWindow.getByTestId('home-primary-card').boundingBox(),
+        mainWindow.getByTestId('home-title').boundingBox(),
+        mainWindow.getByTestId('open-workspace-button').boundingBox(),
+        mainWindow.getByTestId('close-workspace-button').boundingBox()
+      ])
+      expect(cardBox!.width).toBeLessThanOrEqual(781)
+      expect(cardBox!.x).toBeGreaterThanOrEqual(screenBox!.x)
+      expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(screenBox!.x + screenBox!.width + 1)
+      expect(cardBox!.y).toBeGreaterThanOrEqual(titleBox!.y + titleBox!.height)
+      expect(Math.abs(openBox!.y - closeBox!.y)).toBeLessThanOrEqual(1)
+      expect(closeBox!.y + closeBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height)
     }
-
-    await setHomeLayoutWidth(1023)
-    const [stackedPrimaryBox, stackedActionsBox] = await Promise.all([
-      primaryCard.boundingBox(),
-      actionsCard.boundingBox()
-    ])
-    expect(stackedPrimaryBox).not.toBeNull()
-    expect(stackedActionsBox).not.toBeNull()
-    expect(Math.abs(stackedPrimaryBox!.width - 504)).toBeLessThanOrEqual(1)
-    expect(Math.abs(stackedActionsBox!.width - 504)).toBeLessThanOrEqual(1)
-    expect(stackedActionsBox!.y).toBeGreaterThan(stackedPrimaryBox!.y + stackedPrimaryBox!.height)
-
-    await setHomeLayoutWidth(1024)
-    const [widePrimaryBox, wideActionsBox] = await Promise.all([
-      primaryCard.boundingBox(),
-      actionsCard.boundingBox()
-    ])
-    expect(widePrimaryBox).not.toBeNull()
-    expect(wideActionsBox).not.toBeNull()
-    expect(Math.abs(stackedPrimaryBox!.width - widePrimaryBox!.width)).toBeLessThanOrEqual(1)
-    expect(Math.abs(stackedActionsBox!.width - wideActionsBox!.width)).toBeLessThanOrEqual(1)
-    expect(Math.abs(wideActionsBox!.y - widePrimaryBox!.y)).toBeLessThanOrEqual(1)
   })
 
   describe('Workspace Management', () => {
@@ -241,13 +149,13 @@ describe('Home Screen', () => {
       await testHelpers.setupWorkspaceViaUI()
 
       const promptStat = mainWindow.locator('[data-testid="home-prompt-count-stat"]')
-      await expect(promptStat.locator('.cthulhuUiTitle')).toHaveText('5')
-      await expect(promptStat.locator('.cthulhuUiSubtitle')).toHaveText('Prompts')
+      await expect(promptStat.locator('strong')).toHaveText('5')
+      await expect(promptStat).toContainText('Prompts')
       const promptFolderStat = mainWindow.locator(
         '[data-testid="home-prompt-folder-count-stat"]'
       )
-      await expect(promptFolderStat.locator('.cthulhuUiTitle')).toHaveText('2')
-      await expect(promptFolderStat.locator('.cthulhuUiSubtitle')).toHaveText('Prompt Folders')
+      await expect(promptFolderStat.locator('strong')).toHaveText('2')
+      await expect(promptFolderStat).toContainText('Prompt Folders')
     })
 
     test('closes a workspace after category management has mounted', async ({ testSetup }) => {
@@ -268,32 +176,6 @@ describe('Home Screen', () => {
       await testHelpers.clearWorkspaceViaUI()
       expect(await testHelpers.isWorkspaceGetStarted()).toBe(true)
       expect(await testHelpers.isWorkspaceReady()).toBe(false)
-    })
-
-    test('copies the current workspace path and briefly shows copied state', async ({
-      testSetup
-    }) => {
-      const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-        workspace: { scenario: 'minimal' }
-      })
-
-      expect(workspaceSetupResult!.workspaceReady).toBe(true)
-      await testHelpers.assertWorkspaceReadyPath('/ws/minimal')
-      await stubClipboard(mainWindow)
-
-      const copyButton = mainWindow.locator('[data-testid="copy-workspace-path-button"]')
-      await expect(copyButton).toHaveAttribute('aria-label', 'Copy workspace path')
-      await copyButton.click()
-
-      await expect
-        .poll(async () => {
-          return await readClipboardText(mainWindow)
-        })
-        .toBe('/ws/minimal')
-      await expect(copyButton).toHaveAttribute('aria-label', 'Copied')
-      await expect(copyButton).toHaveAttribute('aria-label', 'Copy workspace path', {
-        timeout: 2500
-      })
     })
 
     test('keeps workspace ready across navigation', async ({ testSetup }) => {

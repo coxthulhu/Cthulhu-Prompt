@@ -71,7 +71,7 @@ describe('Welcome Dialog', () => {
     await expect(welcome).toBeVisible()
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(workspacePath)
-    await expect(mainWindow.locator('[data-testid="show-welcome-button"]')).toHaveCount(0)
+    await expect(mainWindow.locator('[data-testid="show-welcome-button"]')).toBeVisible()
     await expect.poll(async () => await readUserPersistence(electronApp)).toEqual({
       lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath),
       appSidebarWidthPx: 290,
@@ -86,7 +86,7 @@ describe('Welcome Dialog', () => {
     await expect(welcome).toHaveCount(0)
   })
 
-  test('reopens from Get Started, ignores outside clicks, and closes with Escape', async ({ testSetup }) => {
+  test('reopens from Home, ignores outside clicks, and closes with Escape', async ({ testSetup }) => {
     /** Returning user can reopen the introduction without a workspace. */
     const { mainWindow } = await testSetup.setupAndStart()
     await mainWindow.locator('[data-testid="show-welcome-button"]').click()
@@ -114,7 +114,7 @@ describe('Welcome Dialog', () => {
     await expect(mainWindow.locator('[data-testid="show-welcome-button"]')).toHaveCount(0)
   })
 
-  test('closes before opening an existing workspace and exposes Welcome again after closing it', async ({ testSetup }) => {
+  test('keeps Welcome available before and after closing an existing workspace', async ({ testSetup }) => {
     /** Existing workspace offered by the native file picker. */
     const workspacePath = '/ws/welcome-open'
     await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, []))
@@ -124,7 +124,10 @@ describe('Welcome Dialog', () => {
     await mainWindow.locator('[data-testid="welcome-open-workspace-button"]').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(workspacePath)
-    await expect(mainWindow.locator('[data-testid="show-welcome-button"]')).toHaveCount(0)
+    await mainWindow.locator('[data-testid="show-welcome-button"]').click()
+    const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
+    await expect(welcome).toBeVisible()
+    await welcome.getByRole('button', { name: 'Close', exact: true }).click()
     await testHelpers.clearWorkspaceViaUI()
     await mainWindow.locator('[data-testid="show-welcome-button"]').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toBeVisible()

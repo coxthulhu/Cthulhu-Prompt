@@ -6,15 +6,15 @@
     FileText,
     FolderOpen,
     FolderPlus,
-    FolderSymlink,
     Folders,
     X
   } from 'lucide-svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
-  import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
-  import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
-  import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
+  import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
+  import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
+  import CthulhuPromptWordmark from '@renderer/common/cthulhu-ui/layout/CthulhuPromptWordmark.svelte'
+  import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
@@ -38,7 +38,7 @@
     onWorkspaceCreate,
     onWorkspaceClear
   } = $props<{
-    /** Welcome visibility controlled by startup or the Get Started action. */
+    /** Welcome visibility controlled by startup or the Welcome action. */
     showWelcomeDialog?: boolean
     workspacePath: string | null
     isWorkspaceReady: boolean
@@ -59,9 +59,6 @@
     filePaths: string[]
   }
 
-  const secondaryTitleText = 'CTHULHU PROMPT'
-  const secondaryTitleWords = ['CTHULHU', 'PROMPT'] as const
-  const SECONDARY_TITLE_MEASURE_FONT_SIZE_PX = 100
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const workspaceOpenErrorFallbackText = 'Failed to open workspace. Please try again.'
 
@@ -69,10 +66,6 @@
   let showCreateWorkspaceDialog = $state(false)
   let showWorkspaceOpenErrorDialog = $state(false)
   let workspaceOpenErrorText = $state(workspaceOpenErrorFallbackText)
-  let secondaryTitleContainerElement: HTMLDivElement | null = $state(null)
-  let secondaryTitleMeasureElement: HTMLSpanElement | null = $state(null)
-  let secondaryTitleContainerWidth = $state(0)
-  let secondaryTitleMeasureWidth = $state(0)
 
   const openWorkspaceInfoFileDialog = async (): Promise<OpenWorkspaceInfoFileDialogResult> => {
     isOpeningWorkspaceDialog = true
@@ -135,265 +128,110 @@
       path: workspacePath
     }
   })
-  const displayedPromptCount = $derived(String(promptCount))
-  const displayedPromptFolderCount = $derived(String(promptFolderCount))
-  const homeCardClass = 'w-full min-w-0'
-  const secondaryTitleFontSizePx = $derived.by(() => {
-    if (!secondaryTitleContainerWidth || !secondaryTitleMeasureWidth) {
-      return null
-    }
-
-    return (
-      (secondaryTitleContainerWidth / secondaryTitleMeasureWidth) *
-      SECONDARY_TITLE_MEASURE_FONT_SIZE_PX
-    )
-  })
-
-  // Side effect: keep the home title scaled to the shared card/title container width.
-  $effect(() => {
-    const titleContainerElement = secondaryTitleContainerElement
-    const measureElement = secondaryTitleMeasureElement
-    if (!titleContainerElement || !measureElement) {
-      return
-    }
-
-    const updateSecondaryTitleSize = () => {
-      secondaryTitleContainerWidth = titleContainerElement.getBoundingClientRect().width
-      secondaryTitleMeasureWidth = measureElement.getBoundingClientRect().width
-    }
-
-    updateSecondaryTitleSize()
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateSecondaryTitleSize()
-    })
-
-    resizeObserver.observe(titleContainerElement)
-    resizeObserver.observe(measureElement)
-
-    return () => {
-      resizeObserver.disconnect()
-    }
-  })
 </script>
 
-<main class="flex min-w-0 flex-1 overflow-y-auto p-6" data-testid="home-screen">
-  <div class="flex min-h-full w-full min-w-0 items-start justify-center">
-    <section
-      class="cthulhuHomeLayout relative my-auto w-full max-w-5xl min-w-0"
-      data-testid="home-layout"
-    >
-      <header>
-        <div
-          bind:this={secondaryTitleContainerElement}
-          class="cthulhuHomeTitleContainer mx-auto w-full space-y-6"
-        >
-          <h2
-            class="cthulhuHomeSecondaryTitle"
-            data-testid="home-title"
-            aria-label={secondaryTitleText}
-            style:--home-title-size={secondaryTitleFontSizePx ? `${secondaryTitleFontSizePx}px` : undefined}
-          >
-            {#each secondaryTitleWords as word (word)}
-              <span aria-hidden="true" data-testid={`home-title-word-${word.toLowerCase()}`}>
-                {word}
-              </span>
-            {/each}
-          </h2>
-          <div class="cthulhuHomeTitleSeparator" data-testid="home-title-separator"></div>
-        </div>
-      </header>
-      <span
-        bind:this={secondaryTitleMeasureElement}
-        aria-hidden="true"
-        class="cthulhuHomeSecondaryTitle cthulhuHomeSecondaryTitleMeasure"
-      >
-        {#each secondaryTitleWords as word (word)}
-          <span>{word}</span>
-        {/each}
-      </span>
-
-      <div
-        class="cthulhuHomeCardGrid mt-7 grid w-full grid-cols-1 items-start gap-4"
-      >
-        {#if !currentWorkspaceDetails}
-          <Card label="Get Started" class={homeCardClass} data-testid="home-primary-card">
-            <div class="flex flex-col">
-              <DisplayRow
-                icon={BookOpen}
-                label="Welcome to Cthulhu Prompt"
-                detail="Learn to use Cthulhu Prompt."
-                wrapDetail
-              >
-                {#snippet trailing()}
-                  <Button
-                    icon={BookOpen}
-                    text="Welcome"
-                    variant="accent"
-                    testId="show-welcome-button"
-                    onclick={() => (showWelcomeDialog = true)}
-                  />
-                {/snippet}
-              </DisplayRow>
-
-              <Separator />
-
-              <DisplayRow
-                icon={Bug}
-                label="Report an Issue"
-                detail="Report bugs or request features!"
-              >
-                {#snippet trailing()}
-                  <LinkButton
-                    href={githubIssuesUrl}
-                    icon={Bug}
-                    text="Github"
-                    endIcon={ExternalLink}
-                    variant="accent"
-                    testId="get-started-github-issues-link"
-                    target="_blank"
-                    rel="noreferrer"
-                  />
-                {/snippet}
-              </DisplayRow>
-            </div>
-          </Card>
-        {:else}
-          <Card label="Current Workspace" class={homeCardClass} data-testid="home-primary-card">
-            <div class="flex flex-col">
-              <DisplayRow
-                icon={FolderOpen}
-                label={currentWorkspaceDetails.name}
-                detail="Workspace Name"
-                labelTitle={currentWorkspaceDetails.name}
-              >
-                {#snippet trailing()}
-                  <IconButton
-                    icon={ExternalLink}
-                    label="Open Workspace Folder"
-                    title="Open Workspace Folder"
-                    testId="home-open-workspace-folder-button"
-                    onclick={openWorkspaceFolder}
-                  />
-                {/snippet}
-              </DisplayRow>
-
-              <Separator />
-
-              <DisplayRow
-                icon={FolderSymlink}
-                label={currentWorkspaceDetails.path}
-                detail="Workspace Path"
-                labelTitle={currentWorkspaceDetails.path}
-                labelTestId="workspace-ready-path"
-              >
-                {#snippet trailing()}
-                  <CopyButton
-                    text={currentWorkspaceDetails.path}
-                    label="Copy workspace path"
-                    title="Copy workspace path"
-                    testId="copy-workspace-path-button"
-                  />
-                {/snippet}
-              </DisplayRow>
-
-              <Separator />
-
-              <div class="cthulhuHomeWorkspaceStats">
-                <DisplayRow
-                  icon={FileText}
-                  label={displayedPromptCount}
-                  detail="Prompts"
-                  testId="home-prompt-count-stat"
-                />
-                <Separator orientation="vertical" class="h-auto self-stretch" />
-                <DisplayRow
-                  icon={Folders}
-                  label={displayedPromptFolderCount}
-                  detail="Prompt Folders"
-                  testId="home-prompt-folder-count-stat"
-                />
-              </div>
-            </div>
-          </Card>
-        {/if}
-
-        <Card
-          label="Workspace Actions"
-          class={homeCardClass}
-          data-testid="home-workspace-actions-card"
-        >
-          <div class="flex flex-col">
-            <DisplayRow
-              icon={FolderOpen}
-              iconClass="translate-y-px"
-              label="Open Workspace"
-              detail="Open an existing workspace."
-            >
-              {#snippet trailing()}
-                <Button
-                  testId="open-workspace-button"
-                  class="cthulhuHomeWorkspaceActionButton"
-                  icon={FolderOpen}
-                  text="Open"
-                  variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
-                  appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
-                  onclick={handleSelectFolder}
-                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                />
-              {/snippet}
-            </DisplayRow>
-
-            <Separator />
-
-            <DisplayRow
-              icon={FolderPlus}
-              iconClass="translate-y-px"
-              label="Create Workspace"
-              detail="Choose a folder to set up a new workspace."
-            >
-              {#snippet trailing()}
-                <Button
-                  testId="create-workspace-button"
-                  class="cthulhuHomeWorkspaceActionButton"
-                  icon={FolderPlus}
-                  text="Create"
-                  variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
-                  appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
-                  onclick={handleCreateFolder}
-                  state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                />
-              {/snippet}
-            </DisplayRow>
-
-            {#if isWorkspaceReady}
-              <Separator />
-
-              <DisplayRow
-                icon={X}
-                iconClass="translate-y-px"
-                label="Close Workspace"
-                detail="Unload the current workspace folder."
-              >
-                {#snippet trailing()}
-                  <Button
-                    testId="close-workspace-button"
-                    class="cthulhuHomeWorkspaceActionButton"
-                    icon={X}
-                    text="Close"
-                    variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
-                    appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
-                    onclick={onWorkspaceClear}
-                    state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
-                  />
-                {/snippet}
-              </DisplayRow>
-            {/if}
-          </div>
-        </Card>
+<main class="flex min-w-0 flex-1 overflow-y-auto px-8 py-12" data-testid="home-screen">
+  <section
+    class="m-auto flex w-full max-w-[780px] min-w-0 flex-col gap-[30px]"
+    data-testid="home-layout"
+  >
+    <header class="flex flex-wrap items-end justify-between gap-5">
+      <CthulhuPromptWordmark data-testid="home-title" />
+      <div class="flex items-center gap-2">
+        <Button
+          icon={BookOpen}
+          text="Welcome"
+          variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+          appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
+          testId="show-welcome-button"
+          onclick={() => (showWelcomeDialog = true)}
+        />
+        <LinkButton
+          href={githubIssuesUrl}
+          icon={Bug}
+          text="Github"
+          endIcon={ExternalLink}
+          appearance="outline"
+          testId="get-started-github-issues-link"
+          target="_blank"
+          rel="noreferrer"
+        />
       </div>
-    </section>
-  </div>
+    </header>
+
+    <CardSurface
+      class="overflow-hidden"
+      role="region"
+      aria-label="Workspace"
+      data-testid="home-primary-card"
+    >
+      <Row
+        variant="workspace"
+        icon={FolderOpen}
+        label={currentWorkspaceDetails?.name ?? 'No workspace open'}
+        labelTitle={currentWorkspaceDetails?.name}
+        detail={currentWorkspaceDetails?.path ?? 'Open a workspace or create one to get started.'}
+        detailTitle={currentWorkspaceDetails?.path}
+        detailTestId={currentWorkspaceDetails ? 'workspace-ready-path' : undefined}
+        class="p-4"
+      >
+        {#snippet trailing()}
+          <IconButton
+            icon={ExternalLink}
+            label="Open Workspace Folder"
+            title="Open Workspace Folder"
+            testId="home-open-workspace-folder-button"
+            disabled={!currentWorkspaceDetails}
+            onclick={openWorkspaceFolder}
+          />
+        {/snippet}
+      </Row>
+      <Separator />
+      <div class="flex flex-wrap items-center justify-between gap-5 p-4">
+        <div class="flex flex-wrap items-center gap-[22px]">
+          <CountDisplay
+            icon={FileText}
+            count={promptCount}
+            label="Prompts"
+            data-testid="home-prompt-count-stat"
+          />
+          <CountDisplay
+            icon={Folders}
+            count={promptFolderCount}
+            label="Prompt Folders"
+            data-testid="home-prompt-folder-count-stat"
+          />
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <Button
+            testId="open-workspace-button"
+            icon={FolderOpen}
+            text="Open"
+            variant="accent"
+            onclick={handleSelectFolder}
+            state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+          />
+          <Button
+            testId="create-workspace-button"
+            icon={FolderPlus}
+            text="Create"
+            variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
+            appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
+            onclick={handleCreateFolder}
+            state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+          />
+          <Button
+            testId="close-workspace-button"
+            icon={X}
+            text="Close"
+            appearance="outline"
+            onclick={onWorkspaceClear}
+            state={!isWorkspaceReady || isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+          />
+        </div>
+      </div>
+    </CardSurface>
+  </section>
 
   {#if showWelcomeDialog}
     <WelcomeDialog
@@ -416,82 +254,3 @@
     errorText={workspaceOpenErrorText}
   />
 </main>
-
-<style>
-  .cthulhuHomeLayout {
-    container-name: cthulhu-home-layout;
-    container-type: inline-size;
-  }
-
-  .cthulhuHomeTitleContainer,
-  .cthulhuHomeCardGrid {
-    max-width: 31.5rem;
-  }
-
-  .cthulhuHomeCardGrid {
-    margin-inline: auto;
-  }
-
-  .cthulhuHomeSecondaryTitle {
-    /* The CTHULHU PROMPT title is explicitly excluded; its measured size follows its container. */
-    align-items: center;
-    color: var(--ui-normal-text);
-    display: flex;
-    flex-direction: column;
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: var(--home-title-size, clamp(64px, 9vw, 88px));
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: 0.14em;
-    line-height: var(--home-title-size, clamp(64px, 9vw, 88px));
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  @container cthulhu-home-layout (min-width: 64rem) {
-    .cthulhuHomeTitleContainer,
-    .cthulhuHomeCardGrid {
-      max-width: none;
-    }
-
-    .cthulhuHomeCardGrid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .cthulhuHomeSecondaryTitle {
-      column-gap: 1.14em;
-      flex-direction: row;
-      justify-content: center;
-    }
-  }
-
-  .cthulhuHomeSecondaryTitleMeasure {
-    left: -9999px;
-    pointer-events: none;
-    position: fixed;
-    top: -9999px;
-    visibility: hidden;
-    width: max-content;
-    --home-title-size: 100px;
-  }
-
-  .cthulhuHomeTitleSeparator {
-    background: var(--ui-neutral-muted-border);
-    height: 3px;
-    width: 100%;
-  }
-
-  .cthulhuHomeWorkspaceStats {
-    align-items: stretch;
-    display: flex;
-    min-width: 0;
-  }
-
-  .cthulhuHomeWorkspaceStats :global(.cthulhuUiRow) {
-    flex: 1 1 0;
-  }
-
-  :global(.cthulhuHomeWorkspaceActionButton) {
-    justify-content: center;
-    width: 108px;
-  }
-</style>
