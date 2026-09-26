@@ -4,7 +4,8 @@ export const APP_ICON_TOOLTIPS = [
   'Not for developing Eldritch Superintelligence!',
   'The Dead Internet Waits, Dreaming...',
   "Ph'nglui mglw'nafh Cthulhu Prompt R'lyeh wgah'nagl fhtagn",
-  'Works in my Dimension'
+  'Works in my Dimension',
+  'Prompt Your Shoggoth'
 ] as const
 
 export const INITIAL_APP_ICON_TOOLTIP = APP_ICON_TOOLTIPS[0]
