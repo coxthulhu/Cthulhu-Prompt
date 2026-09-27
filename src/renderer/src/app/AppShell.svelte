@@ -836,7 +836,6 @@
                   {screenRootFolderId}
                   screenMode={promptFolderScreenMode}
                   onScreenModeChange={setPromptFolderMode}
-                  onScreenRootFolderSelect={navigateToScreenRootFolder}
                   onRootPromptFolderDeleted={navigateAfterRootPromptFolderDelete}
                 />
               {/key}

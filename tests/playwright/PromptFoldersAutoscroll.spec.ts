@@ -184,6 +184,10 @@ describe('Prompt Folders Autoscroll', () => {
     }
 
     expect(Math.abs(finalDistance - 100)).toBeLessThanOrEqual(2)
+    // Automatic title visibility scrolling must retain the editor that received the text.
+    await expect(mainWindow.getByTestId(
+      `prompt-tree-active-prompt-${target.promptTestId.replace('prompt-editor-', '')}`
+    )).toHaveAttribute('aria-current', 'true')
   })
 
   test('scrolls Monaco cursor to 100px from bottom when typing', async ({ testSetup }) => {
@@ -323,6 +327,10 @@ describe('Prompt Folders Autoscroll', () => {
       },
       { timeout: 2000 }
     )
+    // Growing Monaco content must retain selection after the caret moves the main viewport.
+    await expect(mainWindow.getByTestId(
+      `prompt-tree-active-prompt-${target.promptTestId.replace('prompt-editor-', '')}`
+    )).toHaveAttribute('aria-current', 'true')
   })
 
   test('scrolls Monaco cursor within wrapped lines to 100px from bottom when navigating', async ({

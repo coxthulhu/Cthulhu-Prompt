@@ -1356,7 +1356,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     )
     // The created template folder identifies its type while individual template controls stay concise.
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-root-header"] .prompt-folder-root-subtitle')
+      mainWindow.getByTestId('prompt-folder-root-subtitle')
     ).toHaveText('Prompt Templates')
     await expect(mainWindow.locator('[data-testid="prompt-folder-active-filter"]')).toHaveText(
       'Active 0'

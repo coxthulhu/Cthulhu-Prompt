@@ -126,7 +126,7 @@ describe('Prompt folder storage', () => {
     await expect(selectorTrigger).toContainText(ALPHA_NAME)
     // The created task folder identifies its type in the overview header.
     await expect(
-      mainWindow.locator('[data-testid="prompt-folder-root-header"] .prompt-folder-root-subtitle')
+      mainWindow.getByTestId('prompt-folder-root-subtitle')
     ).toHaveText('Task Prompts')
     await expect(mainWindow.locator('[data-testid="prompt-folder-manage-categories-button"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category-"]')).toHaveCount(0)

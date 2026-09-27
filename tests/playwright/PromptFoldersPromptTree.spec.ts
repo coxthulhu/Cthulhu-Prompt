@@ -676,6 +676,8 @@ describe('Prompt folder prompt tree', () => {
     await expect.poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(promptId))).toBe(true)
     await expect(action).toHaveCount(0)
     await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toBeVisible()
+    // Creation holds sidebar selection after Monaco hydrates and receives focus.
+    await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toHaveAttribute('aria-current', 'true')
     await toggle.click()
     await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-${promptId}`)).toHaveCount(0)
     await toggle.click()

@@ -11,6 +11,8 @@
     copyText?: string
     modifiedAt?: string | null
     onTitleChange?: (value: string) => void
+    /** Selects the editor when a title-toolbar button is activated by mouse or keyboard. */
+    onToolbarInteraction?: () => void
     fallbackTitle?: string
     rowId?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
@@ -67,6 +69,7 @@
     copyText,
     modifiedAt = null,
     onTitleChange,
+    onToolbarInteraction,
     fallbackTitle = '',
     rowId,
     scrollToWithinWindowBand,
@@ -188,6 +191,23 @@
     const rowRect = rowElement.getBoundingClientRect()
     const centerOffsetPx = inputRect.top - rowRect.top + inputRect.height / 2
     scrollToWithinWindowBand(rowId, centerOffsetPx, 'minimal')
+  }
+
+  /** Captures button activation before dropdowns or destructive actions handle the click. */
+  const trackToolbarInteraction = (node: HTMLDivElement) => {
+    /** Native clicks include Enter/Space activation and clicks on nested button icons. */
+    const handleClick = (event: MouseEvent) => {
+      /** Only enabled controls count; clicking toolbar spacing does not select the editor. */
+      const button = (event.target as Element).closest('button')
+      if (button && !button.disabled) onToolbarInteraction?.()
+    }
+    node.addEventListener('click', handleClick, true)
+    return {
+      /** Releases the capture listener when this toolbar unmounts. */
+      destroy() {
+        node.removeEventListener('click', handleClick, true)
+      }
+    }
   }
 
   const handleTitleFocus = (event: FocusEvent) => {
@@ -382,7 +402,7 @@
     </div>
   </div>
 
-  <div class="prompt-editor-title-actions">
+  <div class="prompt-editor-title-actions" use:trackToolbarInteraction>
     <div class="prompt-editor-title-button-bar">
       <PromptEditorButtonBar
         {draftText}

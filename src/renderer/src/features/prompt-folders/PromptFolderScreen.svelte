@@ -26,21 +26,17 @@
     screenRootFolderId,
     screenMode = PromptFolderScreenMode.Active,
     onScreenModeChange,
-    onScreenRootFolderSelect,
     onRootPromptFolderDeleted
   } = $props<{
     screenRootFolderId: string
     screenMode?: PromptFolderScreenMode
     onScreenModeChange: (screenMode: PromptFolderScreenMode) => void
-    onScreenRootFolderSelect: (screenRootFolderId: string) => void
     onRootPromptFolderDeleted: () => void
   }>()
 
   const controller = createPromptFolderScreenController({
     getScreenRootFolderId: () => screenRootFolderId,
-    getScreenMode: () => screenMode,
-    onScreenRootFolderSelect: (nextScreenRootFolderId) =>
-      onScreenRootFolderSelect(nextScreenRootFolderId)
+    getScreenMode: () => screenMode
   })
 
   let didDeleteScreenRootFolder = $state(false)
@@ -274,6 +270,7 @@
             initialScrollTopPx={controller.initialPromptFolderScrollTopPx}
             scrollToWithinWindowBandForRows={controller.scrollToWithinWindowBandWithManualClear}
             onAddPrompt={controller.handleAddPrompt}
+            onPromptInteraction={controller.handlePromptInteraction}
             onManageCategories={openManageCategoriesDialog}
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptFolder={handleDeletePromptFolder}

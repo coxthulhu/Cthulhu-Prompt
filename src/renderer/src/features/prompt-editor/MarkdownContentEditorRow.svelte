@@ -80,6 +80,7 @@
     copyTemplateTexts = [],
     onTitleChange,
     onTextChange,
+    onInteraction,
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
@@ -135,6 +136,8 @@
     copyTemplateTexts?: readonly string[]
     onTitleChange: (title: string) => void
     onTextChange: (text: string, measurement: TextMeasurement) => void
+    /** Selects this editor after a content change or explicit control activation. */
+    onInteraction?: () => void
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
@@ -302,6 +305,7 @@
   })
 
   const handleTitleChange = (title: string) => {
+    if (title !== promptData.draft.title) onInteraction?.()
     promptData.setTitle(title)
     const startOffset = titleInputRef?.selectionStart ?? null
     const endOffset = titleInputRef?.selectionEnd ?? null
@@ -361,6 +365,7 @@
   }
 
   const handlePromptTextParameterClick = async () => {
+    onInteraction?.()
     if (!editorInstance) {
       await ensureHydrated()
       // Side effect: wait for Monaco lifecycle registration before editing or restoring focus.
@@ -532,9 +537,11 @@
   })
 
   const handleMoveUp = async () => {
+    onInteraction?.()
     void (await onMoveUp())
   }
   const handleMoveDown = async () => {
+    onInteraction?.()
     void (await onMoveDown())
   }
 </script>
@@ -574,6 +581,7 @@
     fallbackTitle={promptData.fallbackTitle}
     {tokenCount}
     onTitleChange={handleTitleChange}
+    onToolbarInteraction={onInteraction}
     onSelectionChange={reportTitleSelection}
     onTitleEditorFocus={focusEditorFromTitle}
     bind:inputRef={titleInputRef}
@@ -666,6 +674,8 @@
           }}
           onHydrationChange={handleHydrationChange}
           onChange={(text, meta) => {
+            // Monaco also reports hydration and size changes with unchanged content.
+            if (text !== promptData.draft.text) onInteraction?.()
             if (meta.heightPx !== monacoHeightPx) {
               monacoHeightPx = meta.heightPx
             }

@@ -150,6 +150,8 @@
     initialScrollTopPx: number
     scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
     onAddPrompt: (target: PromptFolderDividerTarget) => void
+    /** Holds sidebar selection after an editor edit or control activation. */
+    onPromptInteraction: (target: PromptFolderPromptTarget) => void
     onManageCategories: () => void
     onDeletePrompt: (target: PromptFolderPromptTarget) => void
     onDeletePromptFolder: (promptFolderId: string) => void
@@ -200,6 +202,7 @@
     initialScrollTopPx,
     scrollToWithinWindowBandForRows,
     onAddPrompt,
+    onPromptInteraction,
     onManageCategories,
     onDeletePrompt,
     onDeletePromptFolder,
@@ -936,6 +939,7 @@
       isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       onDelete={() => onDeletePrompt(promptTarget)}
+      onInteraction={() => onPromptInteraction(promptTarget)}
       onArchive={() => onSetPromptStatus(promptTarget, isTemplateFolder ? PromptTemplateStatus.Archived : PromptStatus.Archived)}
       onRestore={isTemplateFolder && promptMetadata.status === PromptTemplateStatus.Archived
         ? () => onSetPromptStatus(promptTarget, PromptTemplateStatus.Active)

@@ -143,13 +143,11 @@ export type MarkdownContentDraftRecord = {
 type PromptFolderScreenControllerOptions = {
   getScreenRootFolderId: () => string
   getScreenMode: () => PromptFolderScreenMode
-  onScreenRootFolderSelect: (screenRootFolderId: string) => void
 }
 
 export const createPromptFolderScreenController = ({
   getScreenRootFolderId,
-  getScreenMode,
-  onScreenRootFolderSelect
+  getScreenMode
 }: PromptFolderScreenControllerOptions) => {
   const workspaceSelection = getWorkspaceSelectionContext()
   const systemSettings = getSystemSettingsContext()
@@ -350,9 +348,6 @@ export const createPromptFolderScreenController = ({
         })
       : []
   )
-  // Categories belong to the current root while root-folder destinations own themselves.
-  const findContainingRootFolderId = (contentOwnerId: string): string =>
-    categoryById[contentOwnerId] ? screenRootFolderId : contentOwnerId
   /** Counts for every registered workflow shown in the root filter. */
   const statusGroupCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptTemplateStatus.Active })) : promptQuery.data))
   /** Finalized prompts in the selected group, ordered by finalization time. */
@@ -616,6 +611,7 @@ export const createPromptFolderScreenController = ({
 
     return (
       promptNavigation.selectionSource === 'tree-click' ||
+      promptNavigation.selectionSource === 'editor-interaction' ||
       promptNavigation.selectionSource === 'category-open' ||
       promptNavigation.selectionSource === 'prompt-create' ||
       promptNavigation.selectionSource === 'prompt-divider-create' ||
@@ -840,44 +836,6 @@ export const createPromptFolderScreenController = ({
     }
   }
 
-  const selectMovedPrompt = (
-    destinationPromptFolderId: string,
-    promptId: string,
-    shouldRevealContent = true
-  ): void => {
-    const row = promptIdToPromptNavigationRow(promptId)
-    const destinationRootFolderId = findContainingRootFolderId(destinationPromptFolderId)
-
-    promptNavigation.select({
-      screenRootFolderId: destinationRootFolderId,
-      contentOwnerId: destinationPromptFolderId,
-      row,
-      source: 'prompt-move',
-      forceRequest: true,
-      ...(shouldRevealContent
-        ? {
-            contentReveal: {
-              scrollType: 'vertical-bias' as const,
-              verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
-            }
-          }
-        : {}),
-      treeExpansion: 'owner'
-    })
-
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (workspaceId) {
-      setPromptFolderSelectedEntryIdWithAutosave(
-        workspaceId,
-        destinationRootFolderId,
-        destinationPromptFolderId,
-        promptNavigationRowToPersistedEntryId(row)
-      )
-    }
-
-    onScreenRootFolderSelect(destinationRootFolderId)
-  }
-
   const promptDragController = createPromptTreePromptDragController({
     getPromptFolders: () => promptFolderQuery.data
   })
@@ -887,8 +845,18 @@ export const createPromptFolderScreenController = ({
     offsetPx,
     scrollType
   ) => {
-    clearManualSelectionSource()
+    // Caret visibility adjustments must retain the editor selected by the user's input.
+    if (promptNavigation.selectionSource !== 'editor-interaction') clearManualSelectionSource()
     scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
+  }
+
+  /** Selects an edited prompt without moving content or expanding sidebar categories. */
+  const handlePromptInteraction = (target: PromptFolderPromptTarget): void => {
+    setCurrentFolderSelection({
+      kind: 'prompt',
+      contentOwnerId: target.contentOwnerId,
+      promptId: target.promptId
+    }, 'editor-interaction')
   }
 
   const isSameNavigationTarget = (
@@ -1312,8 +1280,12 @@ export const createPromptFolderScreenController = ({
       await setPromptLocation(screenRootFolderId, target.promptId, location)
       return true
     }, () => false)
-    if (didMove && target.categoryId !== location.categoryId) {
-      selectMovedPrompt(location.categoryId ?? screenRootFolderId, target.promptId, false)
+    if (didMove) {
+      handlePromptInteraction({
+        ...target,
+        categoryId: location.categoryId,
+        contentOwnerId: location.categoryId ?? screenRootFolderId
+      })
     }
     return didMove
   }
@@ -1553,6 +1525,7 @@ export const createPromptFolderScreenController = ({
     handleBreadcrumbCategoryChange,
     handleFindMatchReveal,
     handleAddPrompt,
+    handlePromptInteraction,
     handleDeletePrompt,
     handleSetPromptStatus,
     handleMovePromptUp,

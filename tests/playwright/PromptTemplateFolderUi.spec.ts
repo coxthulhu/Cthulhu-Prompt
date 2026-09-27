@@ -200,6 +200,8 @@ describe('Prompt template folder UI', () => {
     await expect.poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector(templateId))).toBe(true)
     await expect(action).toHaveCount(0)
     await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toBeVisible()
+    // Template creation holds sidebar selection after Monaco receives focus.
+    await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toHaveAttribute('aria-current', 'true')
     await toggle.click()
     await expect(mainWindow.getByTestId(`prompt-tree-template-prompt-${templateId}`)).toHaveCount(0)
     await toggle.click()

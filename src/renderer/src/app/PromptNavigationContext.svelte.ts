@@ -16,6 +16,8 @@ export const promptIdToPromptNavigationRow = (promptId: string): PromptNavigatio
 
 export type PromptNavigationSource =
   | 'tree-click'
+  /** Holds a prompt or template selected by editing or activating its controls. */
+  | 'editor-interaction'
   | 'category-open'
   | 'restore'
   | 'restore-hold'

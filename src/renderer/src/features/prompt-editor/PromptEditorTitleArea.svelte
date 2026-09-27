@@ -16,6 +16,7 @@
     copyText,
     modifiedAt = null,
     onTitleChange,
+    onToolbarInteraction,
     fallbackTitle = '',
     rowId,
     scrollToWithinWindowBand,
@@ -57,6 +58,7 @@
     {copyText}
     {modifiedAt}
     {onTitleChange}
+    {onToolbarInteraction}
     {fallbackTitle}
     {rowId}
     {scrollToWithinWindowBand}
