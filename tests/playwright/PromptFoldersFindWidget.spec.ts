@@ -911,6 +911,172 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toHaveValue(selectedText!)
   })
 
+  // Fresh Ctrl+F searches adopt the navigated result without losing title close selections.
+  for (const section of ['body', 'title'] as const) {
+    test(`seeds repeated Ctrl+F from the navigated ${section} result`, async ({ testSetup }) => {
+      /** Isolated workspace for the section whose search selection is retained. */
+      const workspacePath = `/ws/find-fresh-anchor-${section}`
+      await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, [{
+        folderName: 'Fresh Anchor',
+        displayName: 'Fresh Anchor',
+        promptFolderId: 'fresh-anchor-folder',
+        prompts: [{
+          id: 'fresh-anchor-prompt',
+          title: section === 'title' ? 'alpha beta beta beta' : 'Search Target',
+          promptText: section === 'body' ? 'alpha beta beta beta' : 'Unrelated text'
+        }]
+      }]))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Application and navigation helpers for this section's fixture. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Fresh Anchor')
+      /** Prompt containing the seed and three navigable matches. */
+      const editorSelector = promptEditorSelector('fresh-anchor-prompt')
+      /** Title input also verifies deferred selection when Find closes. */
+      const title = mainWindow.locator(`${editorSelector} ${PROMPT_TITLE_SELECTOR}`)
+      if (section === 'body') {
+        await waitForMonacoEditor(mainWindow, editorSelector)
+        await focusMonacoEditor(mainWindow, editorSelector)
+      } else {
+        await title.click()
+      }
+      await mainWindow.keyboard.press('Control+Home')
+      await mainWindow.keyboard.press('Control+F')
+      /** Find input remains focused throughout reseeding and navigation. */
+      const findInput = mainWindow.locator(FIND_INPUT)
+      await expect(findInput).toHaveValue('alpha')
+      await findInput.fill('beta')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+      await findInput.press('Enter')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+      await findInput.press('Control+F')
+      await expect(findInput).toHaveValue('beta')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+      await findInput.press('Enter')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('3 of 3')
+      await findInput.press('Control+F')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('3 of 3')
+      await findInput.press('Shift+Enter')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+
+      // Empty and unsuccessful queries leave the last selected editor result available to Ctrl+F.
+      for (const query of ['', 'missing-query']) {
+        await findInput.fill(query)
+        await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('No results')
+        await findInput.press('Control+F')
+        await expect(findInput).toHaveValue('beta')
+        await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+        await expect(findInput).toBeFocused()
+      }
+      await findInput.press('Escape')
+      if (section === 'body') {
+        await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+          selectedText: 'beta', startColumn: 12, positionColumn: 16
+        })
+        await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+      } else {
+        await expect(title).toBeFocused()
+        await expect.poll(() => title.evaluate((input: HTMLInputElement) => ({
+          start: input.selectionStart, end: input.selectionEnd
+        }))).toEqual({ start: 11, end: 15 })
+      }
+    })
+  }
+
+  // Query edits search from the actual cursor, including prefixes and suffixes of its word.
+  test('searches changed queries from the cursor without expanding its word', async ({ testSetup }) => {
+    /** Repeated prefixes and suffixes distinguish cursor-based lookup from wrapping. */
+    const workspacePath = '/ws/find-query-cursor-boundary'
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, [{
+      folderName: 'Query Cursor', displayName: 'Query Cursor', promptFolderId: 'query-cursor-folder',
+      prompts: [{ id: 'query-cursor-prompt', title: 'Search Target', promptText: 'foobar foo bar' }]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Application and navigation helpers for the cursor fixture. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Query Cursor')
+    /** Editor whose first word must not move the query's search anchor. */
+    const editorSelector = promptEditorSelector('query-cursor-prompt')
+    await waitForMonacoEditor(mainWindow, editorSelector)
+    /** Find input reused after opening from each cursor position. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    // Each case distinguishes the cursor offset from the containing word's boundaries.
+    for (const cursorCase of [
+      { inside: false, query: 'foo', column: 1 },
+      { inside: true, query: 'bar', column: 4 },
+      { inside: true, query: 'foo', column: 8 }
+    ]) {
+      await focusMonacoEditor(mainWindow, editorSelector)
+      await mainWindow.keyboard.press('Control+Home')
+      if (cursorCase.inside) await mainWindow.keyboard.press('ArrowRight')
+      await mainWindow.keyboard.press('Control+F')
+      await expect(findInput).toHaveValue('foobar')
+      await findInput.fill(cursorCase.query)
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+        selectedText: cursorCase.query, startColumn: cursorCase.column
+      })
+      await findInput.press('Escape')
+    }
+  })
+
+  // Previous excludes a match containing the cursor, but includes one ending exactly there.
+  test('navigates previous by match end across cursor boundaries and prompts', async ({ testSetup }) => {
+    /** Two prompts make backward wrap distinguishable from the current prompt's first match. */
+    const workspacePath = '/ws/find-previous-cursor-boundary'
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, [{
+      folderName: 'Previous Cursor', displayName: 'Previous Cursor', promptFolderId: 'previous-cursor-folder',
+      prompts: [
+        { id: 'previous-cursor-first', title: 'First', promptText: 'foo foo' },
+        { id: 'previous-cursor-last', title: 'Last', promptText: 'foo' }
+      ]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Application and navigation helpers for backward navigation. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Previous Cursor')
+    /** First editor contains the match whose start, interior, and end are exercised. */
+    const firstEditor = promptEditorSelector('previous-cursor-first')
+    /** Last editor supplies the folder's backward wrap destination. */
+    const lastEditor = promptEditorSelector('previous-cursor-last')
+    await waitForMonacoEditor(mainWindow, firstEditor)
+    await focusMonacoEditor(mainWindow, firstEditor)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Control+F')
+    /** Find input stays open while the user moves the editor cursor. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await expect(findInput).toHaveValue('foo')
+    // Cursor offsets cover match interior, start, end, and folder start in that order.
+    for (const boundary of [
+      { offset: 5, column: 1, index: 1 },
+      { offset: 4, column: 1, index: 1 },
+      { offset: 7, column: 5, index: 2 },
+      { offset: 0, column: 1, index: 3 }
+    ]) {
+      await focusMonacoEditor(mainWindow, firstEditor)
+      await mainWindow.keyboard.press('Control+Home')
+      // Move through real keyboard events so Find receives the user's updated anchor.
+      for (let step = 0; step < boundary.offset; step += 1) {
+        await mainWindow.keyboard.press('ArrowRight')
+      }
+      await findInput.focus()
+      await findInput.press('Shift+Enter')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe(`${boundary.index} of 3`)
+      await expect.poll(() => getMonacoSelectionState(
+        mainWindow, boundary.index === 3 ? lastEditor : firstEditor
+      )).toMatchObject({ selectedText: 'foo', startColumn: boundary.column })
+    }
+    await findInput.press('Shift+Enter')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+    await expect.poll(() => getMonacoSelectionState(mainWindow, firstEditor)).toMatchObject({
+      selectedText: 'foo', startColumn: 5
+    })
+  })
+
   // Navigation must follow a manually moved cursor even after find has selected a result.
   test('navigates from a manually moved cursor while find stays open', async ({ testSetup }) => {
     /** Isolated folder with three body matches on separate lines. */

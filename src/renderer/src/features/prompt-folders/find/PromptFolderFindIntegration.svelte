@@ -17,7 +17,7 @@
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import {
     findMatchIndexAtOrAfter,
-    findMatchIndexBefore,
+    findMatchIndexEndingAtOrBefore,
     findMatchRange
   } from './promptFolderFindText'
   import type {
@@ -147,18 +147,15 @@
         shouldSelectCurrentMatch = false
         return
       }
-      const effectiveSelectionAnchor = lastSelectionAnchor
-        ? getEffectiveSelectionAnchor(lastSelectionAnchor)
-        : null
-      const selectedAnchorIndex = effectiveSelectionAnchor
-        ? getSelectedMatchIndexFromAnchor(effectiveSelectionAnchor)
+      const selectedAnchorIndex = lastSelectionAnchor
+        ? getSelectedMatchIndexFromAnchor(lastSelectionAnchor)
         : null
       if (selectedAnchorIndex != null) {
         setCurrentMatchIndex(selectedAnchorIndex)
         return
       }
-      const navigationAnchor = effectiveSelectionAnchor ?? lastSelectionAnchor
-      const anchorIndex = navigationAnchor ? getNextMatchIndexFromAnchor(navigationAnchor) : null
+      // Query edits start at the stored cursor; word expansion only supplies the initial query.
+      const anchorIndex = lastSelectionAnchor ? getNextMatchIndexFromAnchor(lastSelectionAnchor) : null
       setCurrentMatchIndex(anchorIndex ?? 1)
       return
     }
@@ -209,7 +206,8 @@
     }
   }
 
-  const getEffectiveSelectionAnchor = (
+  /** Expands a collapsed cursor to its word only when seeding a fresh search. */
+  const getFindSeedAnchor = (
     anchor: PromptFolderFindAnchor
   ): PromptFolderFindAnchor | null => {
     const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
@@ -240,13 +238,14 @@
     const anchor = lastSelectionAnchor
     if (!anchor) return null
 
-    const effectiveSelectionAnchor = getEffectiveSelectionAnchor(anchor)
-    if (!effectiveSelectionAnchor) return null
+    /** Selected text or cursor word used to populate the Find input. */
+    const seedAnchor = getFindSeedAnchor(anchor)
+    if (!seedAnchor) return null
 
     const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
     const selectedText = sectionText.slice(
-      effectiveSelectionAnchor.startOffset,
-      effectiveSelectionAnchor.endOffset
+      seedAnchor.startOffset,
+      seedAnchor.endOffset
     )
     // Monaco StartFindAction only seeds from same-line selections.
     if (selectedText.includes('\n') || selectedText.includes('\r')) return null
@@ -254,6 +253,15 @@
   }
 
   const openFindDialogFromSelection = () => {
+    // Ctrl+F starts from the retained result; ordinary query edits keep their original anchor.
+    // Preserve the focus target because title selections are applied only when Find closes.
+    if (returnFocusTarget?.selection) {
+      lastSelectionAnchor = {
+        entityId: returnFocusTarget.entityId,
+        sectionKey: returnFocusTarget.sectionKey,
+        ...returnFocusTarget.selection
+      }
+    }
     const nextMatchText = getSelectionMatchText()
     preserveSelectionOnNextSearch = true
     if (nextMatchText && nextMatchText !== matchText) {
@@ -353,7 +361,7 @@
   ) =>
     direction === 1
       ? findMatchIndexAtOrAfter(sectionText, query, offset)
-      : findMatchIndexBefore(sectionText, query, offset)
+      : findMatchIndexEndingAtOrBefore(sectionText, query, offset)
 
   const findMatchInItemFromSection = (
     item: PromptFolderFindItem,

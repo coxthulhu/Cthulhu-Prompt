@@ -43,7 +43,8 @@ export const findMatchIndexAtOrAfter = (
   }
 }
 
-export const findMatchIndexBefore = (
+/** Finds the last complete match before the cursor, including one ending exactly at it. */
+export const findMatchIndexEndingAtOrBefore = (
   text: string,
   query: string,
   offset: number
@@ -58,7 +59,7 @@ export const findMatchIndexBefore = (
   while (true) {
     const startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
     if (startIndex < 0) break
-    if (startIndex >= offset) break
+    if (startIndex + query.length > offset) break
     lastMatchIndex = matchIndex
     fromIndex = startIndex + normalizedQuery.length
     matchIndex += 1
