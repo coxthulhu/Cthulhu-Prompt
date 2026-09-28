@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.0.33
+
+### New Features
+
+- Added a first-launch welcome guide, also accessible from Home.
+- Added archiving and restoring prompt templates.
+- Added prompt drag-and-drop onto sidebar status section headers.
+- Added one-click creation from empty Active, Backlog, and template sidebar sections.
+- Added saved status views and sidebar section visibility for each prompt folder.
+- Added persistent scroll positions for each folder's status views.
+- Added find-match highlighting in prompt titles.
+
+### Changes
+
+- Improved current find-match contrast.
+- Refined Home, Settings, prompt folder headers, and workspace and folder dialogs.
+- Require acknowledgement before deleting a prompt or template folder.
+- Expanded bundled example prompts and templates.
+- Updated Electron and SQLite and tightened resource access and Markdown metadata handling.
+
+### Fixed
+
+- Fixed find navigation after moving the cursor or reopening search.
+- Fixed empty-folder creation controls and flicker when adding prompts.
+- Improved drag, resize, and scrollbar reliability when the pointer leaves the window.
+- Fixed workspace creation being interrupted during validation.
+- Fixed sidebar highlighting when viewing a folder overview.
+- Fixed SQLite installation on Windows.
+
 ## 0.0.32
 
 ### New Features
