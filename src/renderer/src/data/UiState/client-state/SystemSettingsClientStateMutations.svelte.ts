@@ -1,4 +1,4 @@
-import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
+import type { NewPromptFocus, SystemSettings } from '@shared/domain/settings/SystemSettings'
 import {
   SYSTEM_SETTINGS_CLIENT_STATE_ID,
   type SystemSettingsClientStateRecord,
@@ -21,7 +21,8 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
       promptFontSizeInput: nextFormData.promptFontSizeInput,
       promptEditorMinLinesInput: nextFormData.promptEditorMinLinesInput,
       promptEditorMaxLinesInput: nextFormData.promptEditorMaxLinesInput,
-      showLineNumbers: nextFormData.showLineNumbers
+      showLineNumbers: nextFormData.showLineNumbers,
+      newPromptFocus: nextFormData.newPromptFocus
     })
     return
   }
@@ -31,6 +32,7 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
     clientState.promptEditorMinLinesInput = nextFormData.promptEditorMinLinesInput
     clientState.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
     clientState.showLineNumbers = nextFormData.showLineNumbers
+    clientState.newPromptFocus = nextFormData.newPromptFocus
   })
 }
 
@@ -92,5 +94,12 @@ export const setSystemSettingsClientStateShowLineNumbers = (value: boolean): voi
 
   mutateSystemSettingsClientStateWithAutosave((nextClientState) => {
     nextClientState.showLineNumbers = value
+  })
+}
+
+/** Updates the preferred initial focus for new prompts and templates. */
+export const setSystemSettingsClientStateNewPromptFocus = (value: NewPromptFocus): void => {
+  mutateSystemSettingsClientStateWithAutosave((clientState) => {
+    clientState.newPromptFocus = value
   })
 }

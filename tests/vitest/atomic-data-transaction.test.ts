@@ -727,7 +727,9 @@ describe('atomic data transaction', () => {
         promptFontSize: 16,
         promptEditorMinLines: 2,
         promptEditorMaxLines: 30,
-        showLineNumbers: true
+        showLineNumbers: true,
+        /** Default creation focus included in the complete settings record. */
+        newPromptFocus: 'editor' as const
       },
       persistenceFields: {}
     })
@@ -763,7 +765,9 @@ describe('atomic data transaction', () => {
       promptFontSize: 22,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 30,
-      showLineNumbers: true
+      showLineNumbers: true,
+      /** Default creation focus included in the complete settings record. */
+      newPromptFocus: 'editor' as const
     })
     expect(outcome.results.prompt.revision).toBeNull()
     expect(outcome.results.prompt.data).toBeNull()
@@ -777,7 +781,9 @@ describe('atomic data transaction', () => {
         promptFontSize: 18,
         promptEditorMinLines: 4,
         promptEditorMaxLines: 30,
-        showLineNumbers: true
+        showLineNumbers: true,
+        /** Default creation focus included in the complete settings record. */
+        newPromptFocus: 'editor' as const
       },
       persistenceFields: {}
     })
@@ -810,7 +816,9 @@ describe('atomic data transaction', () => {
           promptFontSize: 18,
           promptEditorMinLines: 4,
           promptEditorMaxLines: 30,
-          showLineNumbers: true
+          showLineNumbers: true,
+          /** Default creation focus included in the complete settings record. */
+          newPromptFocus: 'editor' as const
         }
       }
     })
@@ -860,7 +868,9 @@ describe('atomic data transaction', () => {
         promptFontSize: 16,
         promptEditorMinLines: 2,
         promptEditorMaxLines: 30,
-        showLineNumbers: true
+        showLineNumbers: true,
+        /** Default creation focus included in the complete settings record. */
+        newPromptFocus: 'editor' as const
       },
       persistenceFields: {}
     })

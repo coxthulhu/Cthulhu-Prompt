@@ -500,7 +500,7 @@
     })
   })
 
-  // Side effect: scroll newly created prompts into view and focus Monaco once hydrated.
+  // Side effect: reveal newly created prompts/templates and focus the preferred field once hydrated.
   $effect(() => {
     const request = promptNavigation.promptFocusRequests.pending
     if (
@@ -532,7 +532,11 @@
         }
       }
 
-      editorInstance!.focus()
+      if (systemSettings.newPromptFocus === 'title') {
+        titleInputRef!.focus({ preventScroll: true })
+      } else {
+        editorInstance!.focus()
+      }
     })
   })
 

@@ -645,7 +645,9 @@ describe('renderer domain mutation framework', () => {
       promptFontSizeInput: '16',
       promptEditorMinLinesInput: '2',
       promptEditorMaxLinesInput: '35',
-      showLineNumbers: true
+      showLineNumbers: true,
+      /** Default creation focus included in the complete settings record. */
+      newPromptFocus: 'editor' as const
     })
     /** IPC implementation returning the latest valid settings command as authoritative truth. */
     const invoke = vi.fn(
@@ -691,7 +693,9 @@ describe('renderer domain mutation framework', () => {
             promptFontSize: 20,
             promptEditorMinLines: 2,
             promptEditorMaxLines: 35,
-            showLineNumbers: false
+            showLineNumbers: false,
+            /** Default creation focus included in the complete settings record. */
+            newPromptFocus: 'editor' as const
           },
           expectations: [
             {
@@ -708,14 +712,18 @@ describe('renderer domain mutation framework', () => {
       promptFontSize: 20,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 35,
-      showLineNumbers: false
+      showLineNumbers: false,
+      /** Default creation focus included in the complete settings record. */
+      newPromptFocus: 'editor' as const
     })
     expect(systemSettingsClientStateCollection.get(SYSTEM_SETTINGS_CLIENT_STATE_ID)).toMatchObject({
       id: SYSTEM_SETTINGS_CLIENT_STATE_ID,
       promptFontSizeInput: '20',
       promptEditorMinLinesInput: '2',
       promptEditorMaxLinesInput: '35',
-      showLineNumbers: false
+      showLineNumbers: false,
+      /** Default creation focus included in the complete settings record. */
+      newPromptFocus: 'editor' as const
     })
   })
 

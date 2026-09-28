@@ -1,10 +1,15 @@
 import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/AuthoritativeSnapshot'
 
+/** Field focused after creating a prompt or prompt template. */
+export type NewPromptFocus = 'title' | 'editor'
+
 export interface SystemSettings {
   promptFontSize: number
   promptEditorMinLines: number
   promptEditorMaxLines: number
   showLineNumbers: boolean
+  /** Preferred initial focus for newly created prompts and templates. */
+  newPromptFocus: NewPromptFocus
 }
 
 export const SYSTEM_SETTINGS_ID = 'system-settings'
@@ -21,7 +26,8 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = Object.freeze({
   promptFontSize: 16,
   promptEditorMinLines: 2,
   promptEditorMaxLines: 35,
-  showLineNumbers: true
+  showLineNumbers: true,
+  newPromptFocus: 'editor'
 })
 
 const clampPromptFontSize = (value: number): number => {
@@ -72,7 +78,11 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
     showLineNumbers: resolveShowLineNumbers(
       payload.showLineNumbers,
       DEFAULT_SYSTEM_SETTINGS.showLineNumbers
-    )
+    ),
+    newPromptFocus:
+      payload.newPromptFocus === 'title' || payload.newPromptFocus === 'editor'
+        ? payload.newPromptFocus
+        : DEFAULT_SYSTEM_SETTINGS.newPromptFocus
   }
 }
 

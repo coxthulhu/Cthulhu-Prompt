@@ -1,5 +1,27 @@
 import { expect, type Page } from '@playwright/test'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
+import type { NewPromptFocus } from '@shared/domain/settings/SystemSettings'
+
+/** Chooses creation focus through the dropdown and waits for the authoritative setting. */
+export async function setNewPromptFocus(
+  mainWindow: Page,
+  testHelpers: { navigateToSettingsScreen: () => Promise<void> },
+  value: NewPromptFocus
+): Promise<void> {
+  await testHelpers.navigateToSettingsScreen()
+  await mainWindow.getByTestId('new-prompt-focus-selector').click()
+  await mainWindow.getByTestId(`new-prompt-focus-option-${value}`).click()
+  await expect(mainWindow.getByTestId('new-prompt-focus-selector')).toHaveText(
+    value === 'title' ? 'Title' : 'Editor'
+  )
+  await mainWindow.waitForFunction(async (expected) => {
+    /** Authoritative settings confirm that the dropdown change crossed IPC. */
+    const result = await window.electron.ipcRenderer.invoke('load-system-settings')
+    return result.snapshots.find(
+      (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
+    )?.data?.newPromptFocus === expected
+  }, value)
+}
 
 /** Waits for the same persisted max-lines value used by editor tests. */
 async function waitForStoredPromptMaxLines(mainWindow: Page, value: number): Promise<void> {

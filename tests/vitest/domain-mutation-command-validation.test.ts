@@ -286,11 +286,18 @@ describe('domain mutation command validation', () => {
       promptFontSize: 18,
       promptEditorMinLines: 3,
       promptEditorMaxLines: 30,
-      showLineNumbers: false
+      showLineNumbers: false,
+      /** Default creation focus included in the complete settings record. */
+      newPromptFocus: 'editor' as const
     }
     expect(parseSetSystemSettingsDomainCommand(command)).toEqual(command)
     expect(parseSetSystemSettingsDomainCommand({ ...command, promptFontSize: NaN })).toBeNull()
     expect(parseSetSystemSettingsDomainCommand({ ...command, legacy: true })).toBeNull()
+    expect(parseSetSystemSettingsDomainCommand({ ...command, newPromptFocus: 'title' })).toEqual({
+      ...command,
+      newPromptFocus: 'title'
+    })
+    expect(parseSetSystemSettingsDomainCommand({ ...command, newPromptFocus: 'invalid' })).toBeNull()
   })
 
   it('rejects extra location command fields', () => {

@@ -100,6 +100,10 @@
     },
     get showLineNumbers() {
       return systemSettingsQuery.data.showLineNumbers
+    },
+    /** Exposes the current creation focus preference to prompt and template editors. */
+    get newPromptFocus() {
+      return systemSettingsQuery.data.newPromptFocus
     }
   }
   const workspaceSelection: WorkspaceSelectionContext = {

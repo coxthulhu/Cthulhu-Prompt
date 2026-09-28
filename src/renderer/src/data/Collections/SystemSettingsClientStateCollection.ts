@@ -1,4 +1,5 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
+import type { NewPromptFocus } from '@shared/domain/settings/SystemSettings'
 
 /** Singleton key for renderer-session system-settings state. */
 export const SYSTEM_SETTINGS_CLIENT_STATE_ID = 'system-settings-client-state'
@@ -10,6 +11,8 @@ export type SystemSettingsClientStateRecord = {
   promptEditorMinLinesInput: string
   promptEditorMaxLinesInput: string
   showLineNumbers: boolean
+  /** Selected creation focus in the settings form. */
+  newPromptFocus: NewPromptFocus
 }
 
 /** Local-only renderer-session state for system settings. */

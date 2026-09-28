@@ -10,7 +10,8 @@
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
   import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
-  import { ExternalLink, Info, RefreshCcw, Settings, Type } from 'lucide-svelte'
+  import SimpleSelectorButton from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
+  import { ExternalLink, Info, RefreshCcw, Settings, TextCursorInput, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     getSystemSettingsAutosaveState,
@@ -22,7 +23,8 @@
     setSystemSettingsClientStateFontSizeInput,
     setSystemSettingsClientStatePromptEditorMaxLinesInput,
     setSystemSettingsClientStatePromptEditorMinLinesInput,
-    setSystemSettingsClientStateShowLineNumbers
+    setSystemSettingsClientStateShowLineNumbers,
+    setSystemSettingsClientStateNewPromptFocus
   } from '@renderer/data/UiState/client-state/SystemSettingsClientStateMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
@@ -39,7 +41,8 @@
     MAX_PROMPT_FONT_SIZE,
     MIN_PROMPT_EDITOR_MAX_LINES,
     MIN_PROMPT_EDITOR_MIN_LINES,
-    MIN_PROMPT_FONT_SIZE
+    MIN_PROMPT_FONT_SIZE,
+    type NewPromptFocus
   } from '@shared/domain/settings/SystemSettings'
 
   const systemSettingsClientStateQuery = useSystemSettingsClientStateQuery()
@@ -55,6 +58,31 @@
   const defaultMaxLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
   const defaultMaxLinesInput = formatPromptEditorMaxLinesInput(defaultMaxLines)
   const defaultShowLineNumbers = DEFAULT_SYSTEM_SETTINGS.showLineNumbers
+  /** Available initial focus targets for newly created prompts and templates. */
+  const newPromptFocusItems = [
+    {
+      id: 'title',
+      label: 'Title',
+      detail: 'Start by naming your prompt',
+      icon: TextCursorInput,
+      testId: 'new-prompt-focus-option-title'
+    },
+    {
+      id: 'editor',
+      label: 'Editor',
+      detail: 'Start by writing your prompt',
+      icon: Type,
+      testId: 'new-prompt-focus-option-editor'
+    }
+  ]
+  /** Dropdown label reflecting the current settings form choice. */
+  const selectedNewPromptFocusItem = $derived(
+    newPromptFocusItems.find((item) => item.id === systemSettingsClientState.newPromptFocus)!
+  )
+  /** Reset is available only when the choice differs from the default and saving has settled. */
+  const isNewPromptFocusResetDisabled = $derived(
+    isUpdating || systemSettingsClientState.newPromptFocus === DEFAULT_SYSTEM_SETTINGS.newPromptFocus
+  )
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const appVersionLabel = `v${getRuntimeConfig().appVersion}`
 
@@ -107,6 +135,14 @@
 
   const handleShowLineNumbersReset = async () => {
     await updateShowLineNumbers(defaultShowLineNumbers)
+  }
+
+  /** Saves a creation focus selection immediately, including resetting it to the default. */
+  const updateNewPromptFocus = async (value: NewPromptFocus): Promise<void> => {
+    await runIpcBestEffort(async () => {
+      setSystemSettingsClientStateNewPromptFocus(value)
+      await flushSystemSettingsAutosaves()
+    })
   }
 
   const validation = $derived(getSystemSettingsValidation(systemSettingsClientState))
@@ -176,7 +212,7 @@
     <Card
       label="Editor & Layout"
       icon={Type}
-      subtitle="Configure prompt editor text, sizing, and line numbers."
+      subtitle="Configure prompt editor text, sizing, line numbers, and initial focus."
     >
       <div class="flex flex-col">
         <ControlRow
@@ -209,6 +245,38 @@
               appearance="outline"
               onclick={handleFontSizeReset}
               state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
+            />
+          {/snippet}
+        </ControlRow>
+
+        <Separator />
+
+        <ControlRow
+          testId="editor-layout-new-prompt-focus-row"
+          label="New Prompt Focus"
+          detail="Choose which field receives focus when creating a prompt or prompt template."
+        >
+          {#snippet control()}
+            <SimpleSelectorButton
+              class="settingsNewPromptFocusSelector"
+              label="New prompt focus"
+              items={newPromptFocusItems}
+              selectedItem={selectedNewPromptFocusItem}
+              showIcon
+              menuWidth="260px"
+              testId="new-prompt-focus-selector"
+              disabled={isUpdating}
+              onselect={(item) => updateNewPromptFocus(item.id as NewPromptFocus)}
+            />
+          {/snippet}
+
+          {#snippet actions()}
+            <Button
+              icon={RefreshCcw}
+              text="Reset"
+              appearance="outline"
+              onclick={() => updateNewPromptFocus(DEFAULT_SYSTEM_SETTINGS.newPromptFocus)}
+              state={isNewPromptFocusResetDisabled ? 'disabled' : 'enabled'}
             />
           {/snippet}
         </ControlRow>
@@ -355,3 +423,17 @@
     <BottomSpacer scrollContainerHeightPx={settingsScrollContainerHeightPx} />
   </div>
 </section>
+
+<style>
+  /* Match this settings selector to its Reset button without resizing other selectors. */
+  section :global(.settingsNewPromptFocusSelector) {
+    height: 40px;
+  }
+
+  /* Fill the 38px interior inside this selector's top and bottom borders. */
+  section :global(.settingsNewPromptFocusSelector .cthulhuUiSimpleSelectorButtonValue),
+  section :global(.settingsNewPromptFocusSelector .cthulhuUiSimpleSelectorButtonValueContent),
+  section :global(.settingsNewPromptFocusSelector .cthulhuUiSimpleSelectorButtonMoreOptions) {
+    height: 38px;
+  }
+</style>

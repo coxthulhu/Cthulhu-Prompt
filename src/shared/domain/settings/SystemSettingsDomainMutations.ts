@@ -12,14 +12,15 @@ export const parseSetSystemSettingsDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 4 ||
+    Object.keys(record).length !== 5 ||
     typeof record.promptFontSize !== 'number' ||
     !Number.isFinite(record.promptFontSize) ||
     typeof record.promptEditorMinLines !== 'number' ||
     !Number.isFinite(record.promptEditorMinLines) ||
     typeof record.promptEditorMaxLines !== 'number' ||
     !Number.isFinite(record.promptEditorMaxLines) ||
-    typeof record.showLineNumbers !== 'boolean'
+    typeof record.showLineNumbers !== 'boolean' ||
+    (record.newPromptFocus !== 'title' && record.newPromptFocus !== 'editor')
   ) {
     return null
   }
@@ -27,7 +28,8 @@ export const parseSetSystemSettingsDomainCommand = (
     promptFontSize: record.promptFontSize,
     promptEditorMinLines: record.promptEditorMinLines,
     promptEditorMaxLines: record.promptEditorMaxLines,
-    showLineNumbers: record.showLineNumbers
+    showLineNumbers: record.showLineNumbers,
+    newPromptFocus: record.newPromptFocus
   }
 }
 

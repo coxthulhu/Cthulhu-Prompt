@@ -48,7 +48,8 @@ export const systemSettingsPersistence: PersistenceLayer<
       promptFontSize: after.data.promptFontSize,
       promptEditorMinLines: after.data.promptEditorMinLines,
       promptEditorMaxLines: after.data.promptEditorMaxLines,
-      showLineNumbers: after.data.showLineNumbers
+      showLineNumbers: after.data.showLineNumbers,
+      newPromptFocus: after.data.newPromptFocus
     })
     writeJsonFile(tempPath, normalizedSettings)
 

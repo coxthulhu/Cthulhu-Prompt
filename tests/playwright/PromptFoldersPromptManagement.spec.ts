@@ -1,3 +1,4 @@
+import { setNewPromptFocus } from '../helpers/SettingsHelpers'
 import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
 import { resolvePaletteColors } from '../helpers/PaletteHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -863,53 +864,61 @@ describe('Prompt folder prompt management', () => {
     ).toBeVisible()
   })
 
-  test('does not refocus a created prompt when its virtual row remounts', async ({
-    testSetup
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'virtual' }
+  // Creation focus must be consumed once for either configured field.
+  for (const target of ['title', 'editor'] as const) {
+    test(`does not refocus a created prompt's ${target} when its virtual row remounts`, async ({
+      testSetup
+    }) => {
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'virtual' }
+      })
+
+      await setNewPromptFocus(mainWindow, testHelpers, target)
+      await testHelpers.navigateToPromptFolders('Short')
+      await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
+
+      await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
+      await expect
+        .poll(async () => (await getPromptEditorIds(mainWindow)).some((id) => !id.startsWith('short-')))
+        .toBe(true)
+
+      const newPromptId = (await getPromptEditorIds(mainWindow)).find(
+        (id) => !id.startsWith('short-')
+      )!
+      const newEditorSelector = promptEditorSelector(newPromptId)
+      await waitForMonacoEditor(mainWindow, newEditorSelector)
+      if (target === 'title') {
+        await expect(mainWindow.locator(promptTitleSelector(newPromptId))).toBeFocused()
+      } else {
+        await expect
+          .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector))
+          .toBe(true)
+      }
+
+      const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(
+        PROMPT_FOLDER_HOST_SELECTOR
+      )
+      const viewportHeight = await testHelpers.getPromptRowHeight(PROMPT_FOLDER_HOST_SELECTOR)
+      await testHelpers.scrollVirtualWindowTo(
+        PROMPT_FOLDER_HOST_SELECTOR,
+        scrollHeight - viewportHeight
+      )
+      await expect(mainWindow.locator(newEditorSelector)).toHaveCount(0)
+
+      const headerSection = mainWindow.locator('[data-testid="prompt-folder-header-section"]')
+      await headerSection.focus()
+      await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+      await waitForMonacoEditor(mainWindow, newEditorSelector)
+      await mainWindow.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          })
+      )
+
+      await expect(headerSection).toBeFocused()
     })
-
-    await testHelpers.navigateToPromptFolders('Short')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
-
-    await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
-    await expect
-      .poll(async () => (await getPromptEditorIds(mainWindow)).some((id) => !id.startsWith('short-')))
-      .toBe(true)
-
-    const newPromptId = (await getPromptEditorIds(mainWindow)).find(
-      (id) => !id.startsWith('short-')
-    )!
-    const newEditorSelector = promptEditorSelector(newPromptId)
-    await waitForMonacoEditor(mainWindow, newEditorSelector)
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, newEditorSelector))
-      .toBe(true)
-
-    const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(
-      PROMPT_FOLDER_HOST_SELECTOR
-    )
-    const viewportHeight = await testHelpers.getPromptRowHeight(PROMPT_FOLDER_HOST_SELECTOR)
-    await testHelpers.scrollVirtualWindowTo(
-      PROMPT_FOLDER_HOST_SELECTOR,
-      scrollHeight - viewportHeight
-    )
-    await expect(mainWindow.locator(newEditorSelector)).toHaveCount(0)
-
-    const headerSection = mainWindow.locator('[data-testid="prompt-folder-header-section"]')
-    await headerSection.focus()
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
-    await waitForMonacoEditor(mainWindow, newEditorSelector)
-    await mainWindow.evaluate(
-      () =>
-        new Promise<void>((resolve) => {
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-        })
-    )
-
-    await expect(headerSection).toBeFocused()
-  })
+  }
 
   test('adds a prompt from a divider with minimal scroll and focuses it', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
