@@ -4,14 +4,22 @@
   import {
     AlertCircle,
     Archive,
+    Bookmark,
+    CalendarClock,
     Check,
     CircleCheckBig,
     ClipboardList,
+    Clock,
+    ClockArrowUp,
     Copy,
     Download,
     FileText,
     Folder,
     Folders,
+    Hourglass,
+    Inbox,
+    Layers,
+    ListPlus,
     ListTodo,
     Loader,
     MoreHorizontal,
@@ -24,6 +32,8 @@
     Settings,
     Sparkles,
     StickyNote,
+    Sunrise,
+    Telescope,
     Trash2
   } from 'lucide-svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
@@ -102,6 +112,63 @@
   ]
   const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'tiny', 'sidebar-rail']
   const categoryIconSizes = [14, 18, 24, 32] as const
+  const backlogIconSizes = [14, 16, 18, 24] as const
+  const backlogIconCandidates: {
+    name: string
+    description: string
+    icon: typeof Bookmark
+  }[] = [
+    {
+      name: 'Bookmark',
+      description: 'Saved for later; the previous Backlog icon.',
+      icon: Bookmark
+    },
+    {
+      name: 'ClockArrowUp',
+      description: 'Time moving forward; a candidate for future work.',
+      icon: ClockArrowUp
+    },
+    {
+      name: 'CalendarClock',
+      description: 'Work planned for later; can suggest a scheduled date.',
+      icon: CalendarClock
+    },
+    {
+      name: 'Clock (current)',
+      description: 'A simple reminder to return to this later; the current Backlog icon.',
+      icon: Clock
+    },
+    {
+      name: 'Hourglass',
+      description: 'Work waiting its turn; can also suggest a countdown.',
+      icon: Hourglass
+    },
+    {
+      name: 'Telescope',
+      description: 'Looking ahead to future ideas and possibilities.',
+      icon: Telescope
+    },
+    {
+      name: 'Sunrise',
+      description: 'Tomorrow or work on the horizon.',
+      icon: Sunrise
+    },
+    {
+      name: 'Inbox',
+      description: 'Collected work awaiting attention or prioritization.',
+      icon: Inbox
+    },
+    {
+      name: 'Layers',
+      description: 'A stack of work held in reserve.',
+      icon: Layers
+    },
+    {
+      name: 'ListPlus',
+      description: 'Ideas added to a growing list of future tasks.',
+      icon: ListPlus
+    }
+  ]
   const categoryIconCandidates: {
     name: string
     description: string
@@ -276,6 +343,43 @@
     </header>
 
     <section class="component-grid">
+      <div class="component-section icon-candidates-section" data-testid="backlog-icon-candidates">
+        <CardSurface>
+          <div class="component-section-content">
+            {@render componentTitle(
+              'Backlog Icon Candidates',
+              'Compare future-work and waiting-list icons at 14, 16, 18, and 24px, plus a Backlog button preview.'
+            )}
+
+            <div class="category-icon-grid">
+              {#each backlogIconCandidates as candidate (candidate.name)}
+                {@const CandidateIcon = candidate.icon}
+                <div class="category-icon-candidate">
+                  <div class="category-icon-heading text-sm">
+                    <CandidateIcon size={20} aria-hidden="true" />
+                    <span>{candidate.name}</span>
+                  </div>
+                  <p class="text-sm">{candidate.description}</p>
+                  <div class="category-icon-sizes">
+                    {#each backlogIconSizes as size (size)}
+                      <div class="category-icon-size-sample text-xs">
+                        <span class="category-icon-preview">
+                          <CandidateIcon {size} aria-hidden="true" />
+                        </span>
+                        <span>{size}px</span>
+                      </div>
+                    {/each}
+                  </div>
+                  <div class="variant-controls">
+                    <IconTextButton icon={CandidateIcon} text="Backlog" />
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        </CardSurface>
+      </div>
+
       <div class="component-section icon-candidates-section" data-testid="icon-candidates">
         <CardSurface>
           <div class="component-section-content">

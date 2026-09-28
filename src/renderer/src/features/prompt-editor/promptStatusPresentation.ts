@@ -1,4 +1,4 @@
-import { Archive, Bookmark, Check, CircleDashed, Play, Undo2 } from 'lucide-svelte'
+import { Archive, Check, CircleDashed, Clock, Play, Undo2 } from 'lucide-svelte'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
 
@@ -34,7 +34,7 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
     id: PromptStatus.Todo,
     forwardAction: completeAction,
     backwardAction: {
-      icon: Bookmark,
+      icon: Clock,
       label: 'Move prompt to Backlog',
       hoverVariant: 'neutral',
       testId: 'prompt-backlog-button',
@@ -77,7 +77,7 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
     },
     label: 'Backlog',
     detail: 'Save this prompt for future work',
-    icon: Bookmark,
+    icon: Clock,
     iconClass: 'prompt-editor-status-option-icon-todo',
     variant: 'todo',
     testId: 'prompt-status-option-backlog'
