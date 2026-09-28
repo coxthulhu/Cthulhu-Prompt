@@ -15,7 +15,10 @@
 ### Changes
 
 - Improved current find-match contrast.
-- Refined Home, Settings, prompt folder headers, and workspace and folder dialogs.
+- Redesigned Home with a compact workspace summary and grouped actions.
+- Refined Settings, prompt folder headers, and workspace and folder dialogs.
+- Open the My Prompts Active view after creating a workspace.
+- Keep sidebar selection synchronized when editing prompts or using their controls.
 - Require acknowledgement before deleting a prompt or template folder.
 - Expanded bundled example prompts and templates.
 - Updated Electron and SQLite and tightened resource access and Markdown metadata handling.
@@ -26,6 +29,7 @@
 - Fixed empty-folder creation controls and flicker when adding prompts.
 - Improved drag, resize, and scrollbar reliability when the pointer leaves the window.
 - Fixed workspace creation being interrupted during validation.
+- Restored the workspace picker’s last-used directory across restarts.
 - Fixed sidebar highlighting when viewing a folder overview.
 - Fixed SQLite installation on Windows.
 
