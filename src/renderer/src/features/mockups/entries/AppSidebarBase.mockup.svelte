@@ -1,19 +1,15 @@
 <script lang="ts">
   import {
-    Archive, ArrowRight, ArrowUpToLine, Bookmark, Check, ChevronsDownUp, ChevronsUpDown,
-    ChevronDown, ChevronRight, CircleCheckBig, ExternalLink, Folder, FolderPlus,
-    ListTodo, MoreHorizontal, Plus, Settings, Trash2
+    Archive, ArrowRight, ArrowUpToLine, Bookmark, Bug, Check, ChevronsDownUp, ChevronsUpDown,
+    ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, ExternalLink, FileText, Folder, FolderCog,
+    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, Settings, Trash2, X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import {
-    getNextAppIconTooltip,
-    INITIAL_APP_ICON_TOOLTIP
-  } from '@renderer/features/sidebar/appIconTooltip'
 
   // Visual sandbox: only icons, brand details, and palette tokens are shared with the app.
   // All sample data and interactions below are local and reset when this mockup unmounts.
   type MockPrompt = { id: string; title: string; status?: string; edited?: boolean }
-  type MockCategory = { id: string; title: string; prompts: MockPrompt[] }
+  type MockCategory = { id: string; title: string; prompts: MockPrompt[]; shortDescription?: string; description?: string }
   type MockGroup = {
     id: string
     label: string
@@ -38,6 +34,8 @@
     {
       id: 'research',
       title: 'Research',
+      shortDescription: 'Investigate requirements and compare implementation options.',
+      description: 'Collect findings before choosing an approach. Include accessibility and UI copy reviews.',
       prompts: [
         prompt('compare-patterns', 'Compare sidebar patterns'),
         prompt('prepare-ui-copy', 'Prepare the UI copy'),
@@ -60,11 +58,12 @@
         prompt('review-diff', 'Review the final diff'),
         prompt('implementation-handoff', 'Write the implementation handoff')
       ]
-    }
+    },
+    { id: 'ideas', title: 'Ideas', prompts: [] }
   ]
 
 
-  let groups = $state<MockGroup[]>([
+  const createGroups = (): MockGroup[] => [
     { id: 'completed', label: 'Completed', icon: CircleCheckBig, expanded: true, weight: 200,
       prompts: [{ ...prompt('completed-audit', 'Audit the existing sidebar'), status: 'Completed' }], categories: [] },
     { id: 'archived', label: 'Archived', icon: Archive, expanded: true, weight: 200,
@@ -73,64 +72,137 @@
       prompts: uncategorizedPrompts, categories },
     { id: 'backlog', label: 'Backlog', icon: Bookmark, expanded: true, weight: 200,
       prompts: [prompt('future-search', 'Explore prompt search'), prompt('future-shortcuts', 'Plan keyboard shortcuts')],
-      categories: [{ id: 'ideas', title: 'Ideas', prompts: [] }] }
+      categories: categories.map((category) => ({ ...category, prompts: [] })) }
+  ]
+  type MockFolder = { id: string; title: string; kind: 'prompt' | 'template'; groups: MockGroup[] }
+  const emptyGroups = (): MockGroup[] => createGroups().map((group) => ({ ...group, prompts: [], categories: [] }))
+  let folders = $state<MockFolder[]>([
+    { id: 'product', title: 'Product Work', kind: 'prompt', groups: createGroups() },
+    { id: 'personal', title: 'Personal Projects', kind: 'prompt', groups: emptyGroups().map((group) => ({
+      ...group, prompts: group.id === 'active' ? [prompt('website', 'Review the personal website'), prompt('backup', 'Automate workspace backups')] : []
+    })) },
+    { id: 'engineering', title: 'Engineering Templates', kind: 'template', groups: emptyGroups().map((group) => ({
+      ...group,
+      prompts: group.id === 'active' ? [prompt('template-plan', 'Plan an implementation'), prompt('template-review', 'Review a pull request')] :
+        group.id === 'archived' ? [{ ...prompt('template-old', 'Legacy release checklist'), status: 'Archived' }] : [],
+      categories: group.id === 'active' ? [{ id: 'template-quality', title: 'Quality', prompts: [prompt('template-test', 'Build a test plan'), prompt('template-security', 'Review security boundaries')] }] : []
+    })) }
   ])
+  const activities = [
+    { id: 'home', label: 'Home', icon: Home },
+    { id: 'prompt', label: 'Task Prompts', icon: FileText },
+    { id: 'template', label: 'Prompt Templates', icon: Layers },
+    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'mockups', label: 'Mockups', icon: PanelsTopLeft },
+    { id: 'test', label: 'Test Screen', icon: Bug }
+  ]
+  // Local navigation and fixture selection never touch the app's screen or workspace state.
+  let activeActivity = $state('prompt')
+  let folderKind = $state<'prompt' | 'template'>('prompt')
+  let selectedFolderId = $state('product')
+  const visibleFolders = $derived(folders.filter((folder) => folder.kind === folderKind))
+  const selectedFolder = $derived(visibleFolders.find((folder) => folder.id === selectedFolderId) ?? visibleFolders[0])
+  const groups = $derived(selectedFolder?.groups ?? [])
+  const isTemplateFolder = $derived(folderKind === 'template')
+  const FolderIcon = $derived(isTemplateFolder ? Layers : FileText)
+  const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
+  const isFolderActivity = $derived(activeActivity === 'prompt' || activeActivity === 'template')
+  const folderTitle = $derived(selectedFolder?.title ?? 'No folders')
   let showCompleted = $state(false)
   let showArchived = $state(false)
-  let expandedCategoryIds = $state<Record<string, boolean>>({ research: true, verification: true, ideas: true })
+  let expandedCategoryIds = $state<Record<string, boolean>>({ research: true, verification: true, ideas: true, 'template-quality': true })
   let selectedPromptId = $state('map-implementation')
   let selectedGroupId = $state('active')
-  let navigationGeneration = $state(0)
   let isOverviewActive = $state(false)
   let sidebarWidth = $state(275)
-  let categoryName = $state('')
   let categoryDialog: HTMLDialogElement
-  let folderTitle = $state('Product Work')
+  let folderDialog: HTMLDialogElement
+  let deleteDialog: HTMLDialogElement
+  let folderName = $state('')
+  let categoryDrafts = $state<MockCategory[]>([])
+  let draftId = $state('')
+  // Derive the selected draft and validation so dialog edits remain local until saved.
+  const selectedDraft = $derived(categoryDrafts.find((category) => category.id === draftId))
+  const validDrafts = $derived(categoryDrafts.every((category, index) => category.title.trim() &&
+    !categoryDrafts.some((other, otherIndex) => index !== otherIndex && other.title.trim().toLowerCase() === category.title.trim().toLowerCase())))
+  const validFolderName = $derived(folderName.trim().length > 0 && !visibleFolders.some((folder) => folder.title.toLowerCase() === folderName.trim().toLowerCase()))
   let folderMenuOpen = $state(false)
   let actionsMenuOpen = $state(false)
   let categoryMenu = $state<{ category: MockCategory; group: MockGroup; x: number; y: number } | null>(null)
   let selectedCategoryId = $state<string | null>(null)
+  // Folder reorder previews live entirely in this mockup's fixture array.
+  let draggedFolderId = $state<string | null>(null)
+  const reorderFolder = (targetId: string) => {
+    const sourceIndex = folders.findIndex((folder) => folder.id === draggedFolderId)
+    const targetIndex = folders.findIndex((folder) => folder.id === targetId)
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return
+    const [folder] = folders.splice(sourceIndex, 1)
+    folders.splice(targetIndex, 0, folder!)
+  }
   const closeMenus = (event: MouseEvent) => {
     if (event.target instanceof Element && event.target.closest('.local-menu, .folder-selector, .prompts-actions')) return
     folderMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
   }
+  // Templates expose Active and Archived only, matching the live sidebar's workflow filters.
   const visibleGroups = $derived(groups.filter((group) =>
-    group.id === 'active' || group.id === 'backlog' ||
-    (group.id === 'completed' && showCompleted) || (group.id === 'archived' && showArchived)))
+    group.id === 'active' || (!isTemplateFolder && group.id === 'backlog') ||
+    (!isTemplateFolder && group.id === 'completed' && showCompleted) || (group.id === 'archived' && showArchived)))
   const toolbarGroup = $derived(groups.find((group) => group.id ===
-    (selectedGroupId === 'backlog' ? 'backlog' : 'active'))!)
-  const areAllCategoriesCollapsed = $derived(toolbarGroup.categories.every((category) => !expandedCategoryIds[category.id]))
-  const folderPromptCount = $derived(groups.filter((group) => group.id === 'active' || group.id === 'backlog')
-    .reduce((sum, group) => sum + group.prompts.length + group.categories.reduce((n, category) => n + category.prompts.length, 0), 0))
+    (selectedGroupId === 'backlog' && !isTemplateFolder ? 'backlog' : 'active')))
+  const areAllCategoriesCollapsed = $derived(toolbarGroup?.categories.every((category) => !expandedCategoryIds[category.id]) ?? true)
+  const folderCount = (folder: MockFolder) => folder.groups.filter((group) => group.id === 'active' || (folder.kind === 'prompt' && group.id === 'backlog'))
+    .reduce((sum, group) => sum + group.prompts.length + group.categories.reduce((n, category) => n + category.prompts.length, 0), 0)
   const groupCount = (group: MockGroup) => group.prompts.length + group.categories.reduce((sum, category) => sum + category.prompts.length, 0)
 
   const selectPrompt = (entry: MockPrompt, group: MockGroup) => {
+    activeActivity = folderKind
     selectedCategoryId = null
     selectedPromptId = entry.id
     selectedGroupId = group.id
     isOverviewActive = false
-    navigationGeneration += 1
   }
   const addPrompt = (category: MockCategory, group: MockGroup) => {
-    const entry = prompt(window.crypto.randomUUID(), 'New Prompt')
+    const entry = prompt(window.crypto.randomUUID(), `New ${contentLabel}`)
     category.prompts.unshift(entry)
     expandedCategoryIds[category.id] = true
     selectPrompt(entry, group)
   }
-  const addCategory = () => {
-    if (!categoryName.trim()) return
-    const id = window.crypto.randomUUID()
-    toolbarGroup.categories.push({ id, title: categoryName.trim(), prompts: [] })
-    toolbarGroup.expanded = true
-    expandedCategoryIds[id] = true
-    categoryName = ''
+  const openCategories = (categoryId?: string) => {
+    const unique = new Map(groups.flatMap((group) => group.categories).map((category) => [category.id, category]))
+    categoryDrafts = [...unique.values()].map((category) => ({ ...category, prompts: [], shortDescription: category.shortDescription ?? '', description: category.description ?? '' }))
+    draftId = categoryId ?? categoryDrafts[0]?.id ?? ''
+    categoryDialog.showModal()
+  }
+  const saveCategories = () => {
+    if (!validDrafts) return
+    for (const group of groups.filter((entry) => entry.id === 'active' || entry.id === 'backlog')) {
+      group.prompts.push(...group.categories.filter((category) => !categoryDrafts.some((draft) => draft.id === category.id)).flatMap((category) => category.prompts))
+      group.categories = categoryDrafts.map((draft) => ({ ...draft, title: draft.title.trim(), prompts: group.categories.find((category) => category.id === draft.id)?.prompts ?? [] }))
+    }
     categoryDialog.close()
   }
+  const selectFolder = (folder: MockFolder) => {
+    selectedFolderId = folder.id
+    selectedPromptId = ''
+    selectedCategoryId = null
+    selectedGroupId = 'active'
+    isOverviewActive = true
+    activeActivity = folderKind
+    folderMenuOpen = false
+  }
+  const createFolder = () => {
+    if (!validFolderName) return
+    const folder: MockFolder = { id: window.crypto.randomUUID(), title: folderName.trim(), kind: folderKind, groups: emptyGroups() }
+    folders.push(folder)
+    selectFolder(folder)
+    folderDialog.close()
+  }
+  const openCreateFolder = () => { folderName = ''; folderMenuOpen = false; folderDialog.showModal() }
   const toggleAllCategories = () => {
     const expand = areAllCategoriesCollapsed
-    for (const category of toolbarGroup.categories) expandedCategoryIds[category.id] = expand
+    for (const category of toolbarGroup?.categories ?? []) expandedCategoryIds[category.id] = expand
   }
 
   type ScrollMetrics = { top: number; height: number; total: number; hovered: boolean; dragging: boolean }
@@ -212,15 +284,12 @@
 
 {#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean, group: MockGroup)}
   <div class="tree-prompt-row" style={`--tree-indent-count:${indentCount};`}>
-    {#key !isOverviewActive && selectedPromptId === promptEntry.id ? navigationGeneration : 0}
-      <span class="prompt-status-indicator" data-status={promptEntry.status} data-edited={promptEntry.edited}
-        data-highlight={!isOverviewActive && selectedPromptId === promptEntry.id && navigationGeneration > 0} aria-hidden="true"></span>
-    {/key}
+    <span class="prompt-status-indicator" data-status={promptEntry.status} data-edited={promptEntry.edited} aria-hidden="true"></span>
     <button
       class="tree-prompt-button"
-      data-active={!isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : 'false'}
+      data-active={isFolderActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : 'false'}
       type="button"
-      aria-current={!isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
+      aria-current={isFolderActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
       onclick={() => {
         selectPrompt(promptEntry, group)
       }}
@@ -233,7 +302,7 @@
 
 {#snippet CategoryRow(category: MockCategory, group: MockGroup)}
   <div class="tree-category-row">
-    <div class="tree-category-content" role="group" data-active={selectedCategoryId === category.id}
+    <div class="tree-category-content" role="group" data-active={isFolderActivity && selectedGroupId === group.id && selectedCategoryId === category.id}
       oncontextmenu={(event) => {
         event.preventDefault()
         categoryMenu = { category, group, x: event.clientX, y: event.clientY }
@@ -259,8 +328,8 @@
         <button
           class="tree-category-action"
           type="button"
-          aria-label={`Add Prompt to top of category ${category.title}`}
-          title={`Add Prompt to top of category ${category.title}`}
+          aria-label={`Add ${contentLabel} to top of category ${category.title}`}
+          title={`Add ${contentLabel} to top of category ${category.title}`}
           onclick={() => addPrompt(category, group)}
         >
           <Plus size={16} aria-hidden="true" />
@@ -273,7 +342,7 @@
     {#each category.prompts as promptEntry, promptIndex (promptEntry.id)}
       {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1, group)}
     {:else}
-      <button class="empty-category text-xs" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add.</button>
+      <button class="empty-category text-xs leading-4.5" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add.</button>
     {/each}
   {/if}
 {/snippet}
@@ -283,17 +352,31 @@
 }} />
 
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
+  <nav class="mock-activity-bar" aria-label="Mockup primary navigation">
+    {#each activities as activity (activity.id)}
+      <button class="activity-button" type="button" title={activity.label} aria-label={activity.label}
+        aria-current={activeActivity === activity.id ? 'page' : undefined}
+        onclick={() => {
+          activeActivity = activity.id
+          folderMenuOpen = false
+          actionsMenuOpen = false
+          if (activity.id === 'prompt' || activity.id === 'template') {
+            folderKind = activity.id
+            selectedGroupId = 'active'
+          }
+        }}>
+        <activity.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+      </button>
+    {/each}
+  </nav>
   <aside class="mock-sidebar" style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <header class="workspace-header">
       <div class="workspace-icon-cell">
         <img
           src={appIcon}
           alt="Cthulhu Prompt icon"
-          title={INITIAL_APP_ICON_TOOLTIP}
+          title="Cthulhu Prompt"
           draggable="false"
-          onmouseenter={(event) => {
-            event.currentTarget.title = getNextAppIconTooltip(event.currentTarget.title)
-          }}
           ondragstart={(event) => event.preventDefault()}
         />
       </div>
@@ -318,23 +401,36 @@
     <div class="separator"></div>
 
     <div class="folder-selector-wrap">
-      <button class="folder-selector" type="button" aria-label="Folder selector" aria-expanded={folderMenuOpen} onclick={() => { folderMenuOpen = !folderMenuOpen }}>
-        <span class="selector-icon-cell"><Folder size={20} aria-hidden="true" /></span>
+      <button class="folder-selector" type="button" aria-label={selectedFolder ? 'Folder selector' : 'Create Folder'} aria-expanded={folderMenuOpen} onclick={() => { if (selectedFolder) folderMenuOpen = !folderMenuOpen; else openCreateFolder() }}>
+        <span class="selector-icon-cell">{#if selectedFolder}<FolderIcon size={20} aria-hidden="true" />{:else}<Plus size={20} aria-hidden="true" />{/if}</span>
         <span class="selector-copy">
-          <span class="selector-title text-sm">{folderTitle}</span>
-          <span class="selector-detail text-xs">
-            <span>{folderPromptCount} prompts</span>
+          <span class="selector-title text-sm leading-5">{selectedFolder ? folderTitle : 'Create Folder'}</span>
+          <span class="selector-detail text-xs leading-4.5">
+            {#if selectedFolder}
+            <span>{folderCount(selectedFolder)} {contentLabel.toLowerCase()}{folderCount(selectedFolder) === 1 ? '' : 's'}</span>
             <span class="separator-dot" aria-hidden="true"></span>
             <span>Updated today</span>
+            {:else}<span>Create a {isTemplateFolder ? 'prompt template' : 'task prompt'} folder</span>{/if}
           </span>
         </span>
-        <span class="selector-chevron"><ChevronDown size={20} aria-hidden="true" /></span>
+        {#if selectedFolder}<span class="selector-chevron">{#if folderMenuOpen}<ChevronUp size={20} aria-hidden="true" />{:else}<ChevronDown size={20} aria-hidden="true" />{/if}</span>{/if}
       </button>
       {#if folderMenuOpen}
         <div class="local-menu folder-menu">
-          {#each ['Product Work', 'Personal Projects'] as title (title)}
-            <button class="text-sm" type="button" onclick={() => { folderTitle = title; folderMenuOpen = false }}><Folder size={20} /><span>{title}<small class="text-xs">{folderPromptCount} prompts · Updated today</small></span>{#if folderTitle === title}<Check size={16} />{/if}</button>
+          {#each visibleFolders as folder (folder.id)}
+            <button class="folder-option text-sm leading-5" type="button" data-selected={selectedFolder?.id === folder.id}
+              draggable="true" data-dragging={draggedFolderId === folder.id}
+              ondragstart={(event) => { draggedFolderId = folder.id; event.dataTransfer?.setData('text/plain', folder.id) }}
+              ondragover={(event) => { if (draggedFolderId) event.preventDefault() }}
+              ondrop={(event) => { event.preventDefault(); reorderFolder(folder.id); draggedFolderId = null }}
+              ondragend={() => { draggedFolderId = null }}
+              onclick={() => selectFolder(folder)}>
+              <GripVertical size={16} aria-hidden="true" /><FolderIcon size={20} aria-hidden="true" />
+              <span>{folder.title}<small class="text-xs leading-4.5">{folderCount(folder)} {contentLabel.toLowerCase()}{folderCount(folder) === 1 ? '' : 's'} · Updated today</small></span>
+              {#if selectedFolder?.id === folder.id}<ChevronRight size={20} aria-hidden="true" />{/if}
+            </button>
           {/each}
+          <div class="menu-footer"><button class="folder-option text-sm leading-5" type="button" onclick={openCreateFolder}><Plus size={20} aria-hidden="true" /><span>Create Folder<small class="text-xs leading-4.5">Create a {isTemplateFolder ? 'prompt template' : 'task prompt'} folder</small></span></button></div>
         </div>
       {/if}
     </div>
@@ -343,22 +439,28 @@
 
     <div class="prompts-header">
       <div class="prompts-actions">
-        {@render IconAction(ArrowUpToLine, 'Show Folder Overview', () => { isOverviewActive = true; selectedCategoryId = null }, isOverviewActive)}
-        {@render IconAction(Check, 'Show Completed Prompts', () => { showCompleted = !showCompleted; groups[0]!.expanded = true }, showCompleted)}
-        {@render IconAction(Archive, 'Show Archived Prompts', () => { showArchived = !showArchived; groups[1]!.expanded = true }, showArchived)}
+        {@render IconAction(ArrowUpToLine, 'Show Folder Overview', () => { activeActivity = folderKind; isOverviewActive = true; selectedCategoryId = null }, false, !selectedFolder)}
+        {#if selectedFolder && !isTemplateFolder}
+          {@render IconAction(Check, 'Show Completed Prompts', () => { showCompleted = !showCompleted }, showCompleted)}
+        {/if}
+        {#if selectedFolder}
+          {@render IconAction(Archive, `Show Archived ${contentLabel}s`, () => { showArchived = !showArchived }, showArchived)}
+        {/if}
         {@render IconAction(areAllCategoriesCollapsed ? ChevronsUpDown : ChevronsDownUp,
-          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories', toggleAllCategories, false, toolbarGroup.categories.length === 0)}
-        {@render IconAction(FolderPlus, 'Add Category', () => categoryDialog.showModal())}
-        {@render IconAction(MoreHorizontal, 'Selected Prompt Folder Actions', () => { actionsMenuOpen = !actionsMenuOpen }, actionsMenuOpen)}
+          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories', toggleAllCategories, false, !selectedFolder)}
+        {@render IconAction(FolderCog, 'Manage Categories', () => openCategories(), false, !selectedFolder)}
+        {@render IconAction(MoreHorizontal, 'Selected Folder Actions', () => { actionsMenuOpen = !actionsMenuOpen }, actionsMenuOpen, !selectedFolder)}
       </div>
       {#if actionsMenuOpen}
         <div class="local-menu actions-menu">
-          <button class="text-sm" type="button" onclick={() => { folderTitle = 'No prompt folder selected'; groups.forEach((group) => { group.prompts = []; group.categories = [] }); actionsMenuOpen = false }}><Trash2 size={16} />Delete Prompt Folder</button>
+          <button class="danger-action text-sm" type="button" onclick={() => { actionsMenuOpen = false; deleteDialog.showModal() }}><Trash2 size={16} />Delete Folder</button>
         </div>
       {/if}
     </div>
 
     <div class="status-accordion">
+      {#if !selectedFolder}<p class="empty-folders text-sm">Create a folder to get started.</p>{/if}
+      {#key selectedFolder?.id}
       {#each visibleGroups as group (group.id)}
         <section class="status-section" data-testid={`mock-status-section-${group.id}`} data-expanded={group.expanded}
           style={`flex:${group.expanded ? `${group.weight} 1 0px` : '0 0 36px'};`}>
@@ -371,8 +473,8 @@
             onclick={() => { group.expanded = !group.expanded }}>
             <span class="status-chevron"><ChevronRight size={20} /></span>
             <group.icon size={16} />
-            <span class="status-label text-sm">{group.label.toUpperCase()}</span>
-            <span class="status-count text-xs">{groupCount(group)}</span>
+            <span class="status-label text-sm leading-5">{group.label}</span>
+            <span class="status-count text-xs leading-4.5">{groupCount(group)}</span>
           </button>
           {#if group.expanded}
             <div class="prompt-tree-shell" role="presentation"
@@ -387,7 +489,14 @@
                     {@render CategoryRow(category, group)}
                   {/each}
                   {#if groupCount(group) === 0 && group.categories.length === 0}
-                    <button class="empty-status text-sm" type="button" onclick={() => { selectedGroupId = group.id }}>No {group.label.toLowerCase()} prompts. Click to view.</button>
+                    <button class="empty-status text-xs leading-4.5" type="button" onclick={() => {
+                      selectedGroupId = group.id
+                      if (group.id === 'active' || group.id === 'backlog') {
+                        const entry = prompt(window.crypto.randomUUID(), `New ${contentLabel}`)
+                        group.prompts.push(entry)
+                        selectPrompt(entry, group)
+                      } else { activeActivity = folderKind; isOverviewActive = true }
+                    }}>No {group.label.toLowerCase()} {contentLabel.toLowerCase()}s. Click to {group.id === 'active' || group.id === 'backlog' ? 'add' : 'view'}.</button>
                   {/if}
                   <div class="tree-bottom-spacer" aria-hidden="true"></div>
                 </div>
@@ -412,6 +521,7 @@
           {/if}
         </section>
       {/each}
+      {/key}
     </div>
     <button class="resize-handle" type="button" aria-label="Resize sidebar" tabindex="-1"
       onpointerdown={(event) => startResize(event)} onpointermove={moveDrag}
@@ -421,6 +531,12 @@
     <div class="local-menu category-menu" style={`left:${categoryMenu.x}px; top:${categoryMenu.y}px;`}>
       {#each [{ label: 'Open Category', icon: ArrowRight }, { label: 'Open Category Settings', icon: Settings }] as action (action.label)}
         <button class="text-sm" type="button" onclick={() => {
+          if (action.icon === Settings) {
+            openCategories(categoryMenu!.category.id)
+            categoryMenu = null
+            return
+          }
+          activeActivity = folderKind
           selectedCategoryId = categoryMenu!.category.id
           selectedGroupId = categoryMenu!.group.id
           selectedPromptId = ''
@@ -430,11 +546,41 @@
       {/each}
     </div>
   {/if}
-  <dialog bind:this={categoryDialog} class="category-dialog">
-    <form onsubmit={(event) => { event.preventDefault(); addCategory() }}>
-      <h2 class="text-lg">Create Category</h2>
-      <label>Category name<input bind:value={categoryName} required /></label>
-      <div><button type="button" onclick={() => categoryDialog.close()}>Cancel</button><button type="submit">Create Category</button></div>
+  <dialog bind:this={categoryDialog} class="mock-dialog category-dialog text-sm leading-5" aria-labelledby="mock-manage-title">
+    <form onsubmit={(event) => { event.preventDefault(); saveCategories() }}>
+      <header class="dialog-header"><FolderCog size={24} /><div><h2 id="mock-manage-title" class="text-lg font-semibold">Manage Categories</h2><p class="text-xs">{folderTitle}</p></div><button class="dialog-close" type="button" aria-label="Close" onclick={() => categoryDialog.close()}><X size={20} /></button></header>
+      <div class="management-body">
+        <div class="category-list">
+          <h3 class="text-xs font-semibold">All Categories</h3>
+          {#each categoryDrafts as draft (draft.id)}
+            <button class="text-sm" type="button" data-selected={draft.id === draftId} onclick={() => { draftId = draft.id }}><Folder size={20} /><span>{draft.title || 'New Category'}<small class="text-xs">{groups.reduce((total, group) => total + (group.categories.find((category) => category.id === draft.id)?.prompts.length ?? 0), 0)} {contentLabel.toLowerCase()}s</small></span></button>
+          {/each}
+          <button class="text-sm" type="button" onclick={() => { draftId = window.crypto.randomUUID(); categoryDrafts.push({ id: draftId, title: '', prompts: [], shortDescription: '', description: '' }) }}><Plus size={20} />New Category</button>
+        </div>
+        <div class="category-editor">
+          {#if selectedDraft}
+            <div class="category-editor-heading"><Folder size={20} /><span>{selectedDraft.title || 'New Category'}<small class="text-xs">Category settings</small></span><button class="danger-action" type="button" aria-label="Delete category" onclick={() => { categoryDrafts = categoryDrafts.filter((draft) => draft.id !== draftId); draftId = categoryDrafts[0]?.id ?? '' }}><Trash2 size={20} /></button></div>
+            <label>Category Name *<small class="text-xs">Required. Names must be unique in this folder.</small><input class="text-sm leading-5" bind:value={selectedDraft.title} required /></label>
+            <label>Short Description<small class="text-xs">A brief summary to help you recognize this category.</small><input class="text-sm leading-5" bind:value={selectedDraft.shortDescription} /></label>
+            <label>Full Description<small class="text-xs">Describe what belongs here and how to use these prompts.</small><textarea class="text-sm leading-5" bind:value={selectedDraft.description}></textarea></label>
+          {/if}
+        </div>
+      </div>
+      <footer class="dialog-footer"><button type="button" onclick={() => categoryDialog.close()}>Close</button><button class="accent-action" type="submit" disabled={!validDrafts}><Check size={16} />Save Changes</button></footer>
+    </form>
+  </dialog>
+  <dialog bind:this={folderDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-create-title">
+    <form onsubmit={(event) => { event.preventDefault(); createFolder() }}>
+      <header class="dialog-header"><FolderIcon size={24} /><div><h2 id="mock-create-title" class="text-lg font-semibold">Create {isTemplateFolder ? 'Prompt Template' : 'Task Prompt'} Folder</h2><p class="text-xs">{isTemplateFolder ? 'Organize reusable prompts for repeatable workflows.' : 'Organize one-time prompts for individual tasks.'}</p></div></header>
+      <div class="dialog-body"><label>Folder Name<input class="text-sm leading-5" bind:value={folderName} required /></label><p class="text-xs">Required. Names must be unique among {isTemplateFolder ? 'prompt template' : 'task prompt'} folders.</p></div>
+      <footer class="dialog-footer"><button type="button" onclick={() => folderDialog.close()}>Cancel</button><button class="accent-action" type="submit" disabled={!validFolderName}>Create Folder</button></footer>
+    </form>
+  </dialog>
+  <dialog bind:this={deleteDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-delete-title">
+    <form onsubmit={(event) => { event.preventDefault(); folders = folders.filter((folder) => folder.id !== selectedFolder?.id); selectedPromptId = ''; selectedCategoryId = null; deleteDialog.close() }}>
+      <header class="dialog-header"><Trash2 size={24} /><h2 id="mock-delete-title" class="text-lg font-semibold">Delete Folder</h2></header>
+      <p class="dialog-body">Delete “{folderTitle}” and its {contentLabel.toLowerCase()}s?</p>
+      <footer class="dialog-footer"><button type="button" onclick={() => deleteDialog.close()}>Cancel</button><button class="danger-action" type="submit">Delete Folder</button></footer>
     </form>
   </dialog>
 </main>
@@ -452,6 +598,50 @@
   .sidebar-base-stage {
     --cthulhu-ui-radius-card: 8px;
     --cthulhu-ui-radius-control: 6px;
+  }
+
+  .mock-activity-bar {
+    display: flex;
+    flex: 0 0 48px;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 0;
+    background: var(--ui-chrome-normal-surface);
+    border-right: 1px solid var(--ui-neutral-muted-border);
+    border-top: 1px solid var(--ui-neutral-hover-border);
+  }
+
+  .activity-button {
+    position: relative;
+    display: inline-flex;
+    height: 44px;
+    width: 100%;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0;
+    background: var(--ui-ghost-surface);
+    color: var(--ui-muted-icon-glyph);
+    cursor: pointer;
+  }
+
+  .activity-button:hover,
+  .activity-button:focus-visible,
+  .activity-button[aria-current='page'] {
+    color: var(--ui-normal-text);
+  }
+
+  .activity-button[aria-current='page']::before {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: var(--ui-accent-strong-border);
+    content: '';
   }
 
   .mock-sidebar {
@@ -545,7 +735,7 @@
 
   .workspace-open-button:hover,
   .workspace-open-button:focus-visible {
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .separator {
@@ -564,14 +754,14 @@
   .folder-selector {
     align-items: center;
     background: transparent;
-    border: 0;
+    border: 1px solid var(--ui-ghost-surface);
     border-radius: var(--cthulhu-ui-radius-card);
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
     grid-template-columns: 34px 8px minmax(0, 1fr) 22px;
     min-width: 0;
-    padding: 8px;
+    padding: 7px;
     text-align: left;
     width: 100%;
   }
@@ -579,6 +769,14 @@
   .folder-selector:hover,
   .folder-selector:focus-visible {
     background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
+  }
+
+  .folder-selector[aria-expanded='true'] {
+    background: var(--ui-neutral-action-hover-fill);
+    border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
   }
 
   .selector-icon-cell {
@@ -607,9 +805,8 @@
 
   .selector-detail {
     align-items: center;
-    color: var(--ui-normal-text);
+    color: inherit;
     display: flex;
-    line-height: 18px;
     gap: 6px;
     min-width: 0;
     white-space: nowrap;
@@ -665,7 +862,7 @@
   .icon-action:hover,
   .icon-action:focus-visible {
     background: var(--ui-neutral-action-fill);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .prompt-tree-shell {
@@ -978,7 +1175,8 @@
     color: var(--ui-secondary-icon-glyph);
   }
 
-  .status-header:hover, .status-header:focus-visible, .status-header:hover :global(svg) {
+  .status-header:hover, .status-header:focus-visible,
+  .status-header:hover :global(svg), .status-header:focus-visible :global(svg) {
     color: var(--ui-normal-text);
   }
 
@@ -991,7 +1189,6 @@
   }
 
   .status-count {
-    line-height: 18px;
     font-variant-numeric: tabular-nums;
   }
 
@@ -1049,11 +1246,6 @@
     --status-color: var(--ui-secondary-icon-glyph);
   }
 
-  .prompt-status-indicator[data-highlight='true'] {
-    animation: navigation-highlight 670ms linear;
-  }
-
-  @keyframes navigation-highlight { 0%, 100% { background: var(--status-color); } 7.4627%, 82.0896% { background: var(--ui-accent-strong-border); } }
   .empty-category, .empty-status {
     display: block;
     width: 100%;
@@ -1070,12 +1262,11 @@
   .empty-category {
     height: 24px;
     padding: 0 12px 0 24px;
-    line-height: 18px;
   }
 
   .empty-status {
-    height: 32px;
-    padding: 0 16px;
+    height: 24px;
+    padding: 0 12px;
   }
 
   .empty-category:hover, .empty-status:hover {
@@ -1092,14 +1283,16 @@
     padding: 4px;
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: 8px;
-    background: var(--ui-neutral-field-surface);
+    background: var(--ui-card-overlay-surface);
     color: var(--ui-normal-text);
+    box-shadow: 0 0 12px var(--ui-shadow-raised);
   }
 
   .folder-menu {
     top: 100%;
     left: 8px;
-    right: 8px;
+    width: max(320px, calc(100% - 16px));
+    padding: 6px;
   }
 
   .actions-menu {
@@ -1115,55 +1308,238 @@
     width: 100%;
     padding: 8px;
     background: transparent;
-    color: inherit;
+    color: var(--ui-hoverable-text);
     border: 0;
     text-align: left;
     cursor: pointer;
   }
 
-  .local-menu button:hover {
+  .local-menu button:hover, .local-menu button:focus-visible {
     background: var(--ui-neutral-normal-surface);
+    color: var(--ui-normal-text);
   }
 
   .local-menu small {
     display: block;
-    line-height: 18px;
   }
 
-  .category-dialog {
-    border: 1px solid var(--ui-neutral-normal-border);
+  .local-menu .folder-option {
+    display: grid;
+    grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
+    height: 58px;
+    border: 1px solid var(--ui-ghost-surface);
     border-radius: 8px;
-    padding: 24px;
-    background: var(--ui-neutral-field-surface);
+    gap: 8px;
+  }
+
+  .folder-option :global(svg) {
+    justify-self: center;
+  }
+
+  .local-menu .folder-option[data-dragging='true'] {
+    background: var(--ui-info-normal-surface);
+  }
+
+  .menu-footer .folder-option {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .empty-folders {
+    color: var(--ui-muted-text);
+    padding: 0 8px;
+    margin: 0;
+  }
+
+  .folder-option > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .folder-option small {
+    font-weight: var(--font-weight-normal);
+  }
+
+  .local-menu .folder-option[data-selected='true'] {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
     color: var(--ui-normal-text);
   }
 
-  .category-dialog h2 {
-    margin: 0 0 16px;
+  .local-menu .folder-option[data-selected='true']:hover,
+  .menu-footer button:hover, .menu-footer button:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+    color: var(--ui-normal-text);
   }
 
-  .category-dialog input {
+  .menu-footer {
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    margin-top: 5px;
+    padding-top: 5px;
+  }
+
+  .mock-dialog {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 8px;
+    padding: 0;
+    background: var(--ui-neutral-field-surface);
+    color: var(--ui-normal-text);
+    width: 560px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    margin: auto;
+  }
+
+  .mock-dialog::backdrop {
+    background: var(--ui-card-normal-shadow);
+  }
+
+  .category-dialog {
+    width: 1040px;
+  }
+
+  .dialog-header, .dialog-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+  }
+
+  .dialog-header {
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+  }
+
+  .dialog-header h2, .dialog-header p {
+    margin: 0;
+  }
+
+  .mock-dialog small, .mock-dialog p {
+    color: var(--ui-muted-text);
+  }
+
+  .mock-dialog small {
     display: block;
-    margin: 8px 0 20px;
+    font-weight: var(--font-weight-normal);
+  }
+
+  .mock-dialog input, .mock-dialog textarea {
+    display: block;
+    width: 100%;
+    margin: 8px 0 17px;
     padding: 8px;
     border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 6px;
     background: var(--ui-ghost-surface);
     color: inherit;
   }
 
-  .category-dialog form > div {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
+  .mock-dialog textarea {
+    height: 176px;
+    resize: vertical;
+    background: var(--ui-editor-content-surface);
   }
 
-  .category-dialog button {
+  .dialog-footer {
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--ui-neutral-muted-border);
+  }
+
+  .mock-dialog button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 12px;
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: 6px;
     background: var(--ui-neutral-action-fill);
-    color: inherit;
+    color: var(--ui-normal-text);
     cursor: pointer;
   }
 
+  .mock-dialog button:hover, .mock-dialog button:focus-visible {
+    background: var(--ui-neutral-action-hover-fill);
+  }
+
+  .mock-dialog button:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .mock-dialog .accent-action {
+    background: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-normal-border);
+  }
+
+  .mock-dialog .accent-action:hover, .mock-dialog .accent-action:focus-visible {
+    background: var(--ui-accent-action-hover-fill);
+  }
+
+  .mock-dialog .danger-action, .local-menu .danger-action {
+    color: var(--ui-danger-icon-glyph);
+  }
+
+  .mock-dialog .dialog-close {
+    margin-left: auto;
+  }
+
+  .management-body {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    height: min(570px, calc(100vh - 212px));
+    min-height: 240px;
+    padding: 0 24px;
+  }
+
+  .category-list {
+    padding: 16px 12px 16px 0;
+    overflow: auto;
+    border-right: 1px solid var(--ui-neutral-muted-border);
+  }
+
+  .category-list h3 {
+    color: var(--ui-muted-text);
+    margin: 0 0 12px;
+  }
+
+  .category-list button {
+    width: 100%;
+    min-height: 58px;
+    border-color: var(--ui-ghost-surface);
+    background: var(--ui-ghost-surface);
+    text-align: left;
+    color: var(--ui-hoverable-text);
+  }
+
+  .category-list button:hover, .category-list button:focus-visible {
+    color: var(--ui-normal-text);
+  }
+
+  .category-list button[data-selected='true'] {
+    background: var(--ui-accent-action-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .category-editor {
+    padding: 16px 8px 22px 26px;
+    min-width: 0;
+    overflow: auto;
+  }
+
+  .category-editor-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .category-editor-heading button {
+    margin-left: auto;
+  }
+
+  .dialog-body {
+    padding: 24px;
+  }
 </style>
