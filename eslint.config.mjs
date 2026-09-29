@@ -12,6 +12,8 @@ export default [
       'reporters/**',
       '.vscode/**',
       '.agents/**',
+      // Skip the agent sandbox's AWS directory mount, which is absent in Windows.
+      '.aws/**',
       '.git/**',
       '.gitignore',
       '.eslintignore',

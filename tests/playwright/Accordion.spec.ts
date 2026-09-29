@@ -59,6 +59,102 @@ const dragSashBy = async (
 }
 
 describe('Accordion', () => {
+  // Exercise first-show defaults at different splits and preserve each group's saved sizing.
+  for (const { groupId, activeShare } of [
+    { groupId: 'completed', activeShare: 0.5 },
+    { groupId: 'archived', activeShare: 0.6 }
+  ]) {
+    test(`scales unsaved ${groupId} after dragging and window resizing`, async ({
+      electronApp,
+      testSetup
+    }) => {
+      /** Real sidebar starts with only Active and Backlog registered. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'sample' }
+      })
+      await testHelpers.navigateToPromptFolders('Development')
+
+      /** Changes the real window height and waits for its renderer viewport to follow. */
+      const resizeWindow = async (heightPx: number): Promise<void> => {
+        await electronApp.evaluate(({ BrowserWindow }, height) => {
+          /** Main application window whose content area owns the sidebar. */
+          const window = BrowserWindow.getAllWindows()[0]!
+          window.setContentSize(window.getContentSize()[0], height)
+        }, heightPx)
+        await expect.poll(() => mainWindow.evaluate(() => window.innerHeight)).toBe(heightPx)
+      }
+      await resizeWindow(1000)
+
+      /** Sidebar root supplies the available height independently of window chrome. */
+      const accordion = mainWindow.getByTestId('sidebar-prompt-status-accordion')
+      /** Existing sections whose user-selected ratio must survive the new section. */
+      const active = mainWindow.getByTestId('sidebar-prompt-status-accordion-section-active')
+      /** Backlog shares the height remaining after the finalized group appears. */
+      const backlog = mainWindow.getByTestId('sidebar-prompt-status-accordion-section-backlog')
+      /** Initially unsaved finalized section mounted by its toolbar toggle. */
+      const finalized = mainWindow.getByTestId(`sidebar-prompt-status-accordion-section-${groupId}`)
+      /** Toolbar control used to hide and show the finalized section. */
+      const toggle = mainWindow.getByTestId(`toggle-${groupId}-prompts-button`)
+      await expect(finalized).toHaveCount(0)
+      await expect.poll(async () => Math.abs(
+        (await readBox(active)).height - (await readBox(accordion)).height * 2 / 3
+      )).toBeLessThanOrEqual(2)
+      /** Desired Active height before the new section changes the total weight. */
+      const splitHeightPx = (await readBox(accordion)).height * activeShare
+      await dragSashBy(
+        mainWindow,
+        mainWindow.getByTestId('sidebar-prompt-status-accordion-sash-backlog'),
+        splitHeightPx - (await readBox(active)).height
+      )
+      await expect.poll(async () => Math.abs(
+        (await readBox(active)).height - splitHeightPx
+      )).toBeLessThanOrEqual(2)
+
+      // A height change before first showing the group must not mix saved pixels with defaults.
+      await resizeWindow(800)
+      await toggle.click()
+      /** Checks the 200/(400+200+200) default share while preserving the resized split. */
+      const expectDefaultShares = async (): Promise<void> => {
+        await expect.poll(async () => {
+          /** Current available height used for all three proportional expectations. */
+          const heightPx = (await readBox(accordion)).height
+          return Math.max(
+            Math.abs((await readBox(finalized)).height - heightPx / 4),
+            Math.abs((await readBox(active)).height - heightPx * 0.75 * activeShare),
+            Math.abs((await readBox(backlog)).height - heightPx * 0.75 * (1 - activeShare))
+          )
+        }).toBeLessThanOrEqual(2)
+      }
+      await expectDefaultShares()
+      await resizeWindow(1000)
+      await expectDefaultShares()
+
+      /** Default height before a second drag gives the new section its own saved size. */
+      const defaultHeightPx = (await readBox(finalized)).height
+      await dragSashBy(
+        mainWindow,
+        mainWindow.getByTestId('sidebar-prompt-status-accordion-sash-active'),
+        30
+      )
+      await expect.poll(async () => Math.abs(
+        (await readBox(finalized)).height - defaultHeightPx - 30
+      )).toBeLessThanOrEqual(2)
+      /** Saved height must take priority over the default on subsequent mounts. */
+      const savedHeightPx = (await readBox(finalized)).height
+      await toggle.click()
+      await expect(finalized).toHaveCount(0)
+      await toggle.click()
+      await expect.poll(async () => Math.abs(
+        (await readBox(finalized)).height - savedHeightPx
+      )).toBeLessThanOrEqual(2)
+      await waitForRendererPersistence(mainWindow)
+      await mainWindow.reload()
+      await expect.poll(async () => Math.abs(
+        (await readBox(finalized)).height - savedHeightPx
+      )).toBeLessThanOrEqual(2)
+    })
+  }
+
   test('distributes configured heights and renders sashes only between expanded sections', async ({
     testSetup
   }) => {

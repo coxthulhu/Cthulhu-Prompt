@@ -79,16 +79,36 @@
 
   /** Registered sections merged with their saved state or component defaults. */
   const resolvedSections = $derived.by(() => {
+    /** Saved sections indexed for both scale calculation and state restoration. */
+    const savedSectionsById = new Map(
+      persistedAccordionViewEntry?.sections.map((section) => [section.id, section])
+    )
+    /** Saved weights of expanded sections participating in the current layout. */
+    let savedExpandedWeight = 0
+    /** Original weights of those same sections, used to scale unsaved defaults. */
+    let initialExpandedWeight = 0
+    for (const registration of registeredSections) {
+      /** Saved state contributes only while its section shares expanded space. */
+      const savedSection = savedSectionsById.get(registration.id)
+      if (savedSection?.isExpanded) {
+        savedExpandedWeight += savedSection.configuredExpandedHeightPx
+        initialExpandedWeight += registration.initialExpandedHeightPx
+      }
+    }
+    /** Converts a new section's default to the saved sections' current weight scale. */
+    const initialWeightScale = initialExpandedWeight > 0
+      ? savedExpandedWeight / initialExpandedWeight
+      : 1
+
     return registeredSections.map((registration): ResolvedAccordionSection => {
       /** Persisted state matching the registered section ID. */
-      const persistedSection = persistedAccordionViewEntry?.sections.find(
-        (section) => section.id === registration.id
-      )
+      const persistedSection = savedSectionsById.get(registration.id)
       return {
         ...registration,
         isExpanded: persistedSection?.isExpanded ?? true,
         configuredExpandedHeightPx:
-          persistedSection?.configuredExpandedHeightPx ?? registration.initialExpandedHeightPx
+          persistedSection?.configuredExpandedHeightPx ??
+          registration.initialExpandedHeightPx * initialWeightScale
       }
     })
   })
