@@ -1,0 +1,16 @@
+diff --git a/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/extension.js b/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/extension.js
+--- a/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/extension.js
++++ b/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/extension.js
+@@ -311,4 +311,3 @@
+    * Licensed under the MIT license.
+    *)
+ */
+-//# sourceMappingURL=extension.js.map
+diff --git a/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/serverWorkerMain.js b/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/serverWorkerMain.js
+--- a/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/serverWorkerMain.js
++++ b/node_modules/@codingame/monaco-vscode-markdown-language-features-default-extension/resources/serverWorkerMain.js
+@@ -23445,4 +23445,3 @@
+ he/he.js:
+   (*! https://mths.be/he v1.2.0 by @mathias | MIT license *)
+ */
+-//# sourceMappingURL=workerMain.js.map
