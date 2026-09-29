@@ -3,9 +3,6 @@ import { isAbsolute, relative, sep } from 'path'
 import { fileURLToPath } from 'url'
 import { isDevEnvironment } from './appEnvironment'
 
-/** The only website the application may open in the user's external browser. */
-const GITHUB_ISSUES_URL = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
-
 /** Resolves the development server without allowing an environment variable to enable remote content. */
 export function getRendererDevelopmentUrl(): URL | undefined {
   if (!isDevEnvironment() || !process.env['ELECTRON_RENDERER_URL']) return undefined
@@ -80,8 +77,9 @@ export function configureRendererSecurity(
   window.webContents.on('will-redirect', (event, url) => {
     if (!allowsResource(url)) event.preventDefault()
   })
+  // Hand popup URLs to the operating system while preventing windows inside the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (url === GITHUB_ISSUES_URL) void shell.openExternal(url)
+    void shell.openExternal(url)
     return { action: 'deny' }
   })
 }

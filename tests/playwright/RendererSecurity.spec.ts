@@ -3,6 +3,8 @@ import { once } from 'node:events'
 import { createHash } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { focusMonacoEditor } from '../helpers/MonacoHelpers'
+import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
 
 /** Uses the production Electron startup and existing workspace fixtures. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -284,8 +286,8 @@ describe('Renderer security', () => {
     expect(testSetup.getRendererErrors()).toEqual([])
   })
 
-  /** Navigation and popups must not replace the app or hand arbitrary URLs to the operating system. */
-  test('blocks navigation and opens only the GitHub issues link externally', async ({
+  /** All popup protocols open externally, including Monaco links, without navigating or creating app windows. */
+  test('opens all popup URLs externally while blocking in-app navigation', async ({
     electronApp,
     testSetup
   }) => {
@@ -298,7 +300,9 @@ describe('Renderer security', () => {
       }
     })
     /** The settings screen exposes the existing supported external link. */
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
     await testHelpers.navigateToSettingsScreen()
     await mainWindow.getByTestId('about-github-issues-link').click()
     await expect.poll(() => electronApp.evaluate(({ app }) => (app as any).externalUrls)).toEqual([
@@ -306,9 +310,40 @@ describe('Renderer security', () => {
     ])
     await mainWindow.evaluate(() => {
       window.open('https://example.invalid/')
-      window.open('https://github.com/coxthulhu/Cthulhu-Prompt/issues?unexpected=true')
+      window.open('http://example.invalid/?query=1#fragment')
+      window.open('https://github.com/coxthulhu/Cthulhu-Prompt/issues?query=1')
       window.open('file:///C:/Windows/win.ini')
+      window.open('mailto:example@example.invalid')
+      window.open('cthulhu-test://external/resource')
     })
+    /** The operating system receives every popup URL, including non-web protocols. */
+    const expectedExternalUrls = [
+      'https://github.com/coxthulhu/Cthulhu-Prompt/issues',
+      'https://example.invalid/',
+      'http://example.invalid/?query=1#fragment',
+      'https://github.com/coxthulhu/Cthulhu-Prompt/issues?query=1',
+      'file:///C:/Windows/win.ini',
+      'mailto:example@example.invalid',
+      'cthulhu-test://external/resource'
+    ]
+    await expect.poll(() => electronApp.evaluate(({ app }) => (app as any).externalUrls)).toEqual(
+      expectedExternalUrls
+    )
+
+    await testHelpers.navigateToPromptFolders('Development')
+    /** Replace one sample prompt through keyboard input to reproduce a user-entered link. */
+    const editorSelector = promptEditorSelector('dev-1')
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+A')
+    await mainWindow.keyboard.insertText('https://example.invalid/monaco?query=1#fragment')
+    /** Monaco decorates resolved links asynchronously; wait before performing a real Ctrl+click. */
+    const monacoLink = mainWindow.locator(`${editorSelector} .view-lines .detected-link`).first()
+    await expect(monacoLink).toBeVisible()
+    await monacoLink.click({ modifiers: ['Control'], position: { x: 10, y: 5 } })
+    expectedExternalUrls.push('https://example.invalid/monaco?query=1#fragment')
+    await expect.poll(() => electronApp.evaluate(({ app }) => (app as any).externalUrls)).toEqual(
+      expectedExternalUrls
+    )
     /** Observe the actual navigation event before checking that its default action was canceled. */
     await electronApp.evaluate(({ app, BrowserWindow }) => {
       BrowserWindow.getAllWindows()[0].webContents.once('will-frame-navigate', (event) => {
@@ -322,9 +357,9 @@ describe('Renderer security', () => {
     })
     await expect.poll(() => electronApp.evaluate(({ app }) => (app as any).navigationBlocked)).toBe(true)
     expect(mainWindow.url()).toBe(entryUrl)
-    expect(await electronApp.evaluate(({ app }) => (app as any).externalUrls)).toEqual([
-      'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
-    ])
+    expect(await electronApp.evaluate(({ app }) => (app as any).externalUrls)).toEqual(
+      expectedExternalUrls
+    )
     expect(electronApp.windows()).toHaveLength(1)
   })
 })
