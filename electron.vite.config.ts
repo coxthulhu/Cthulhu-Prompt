@@ -40,6 +40,10 @@ export default defineConfig(async (): Promise<UserConfig> => ({
     worker: {
       format: 'es'
     },
+    optimizeDeps: {
+      // Preserve the diff worker's relative URL for Vite's native worker handling in dev.
+      exclude: ['@vscode/diff']
+    },
     server: {
       host: '127.0.0.1',
       port: await findAvailablePort('127.0.0.1'),
