@@ -1,6 +1,8 @@
 <script module lang="ts">
   // Holds the closer for the single dropdown currently open across the renderer.
   let activeDropdownCloser: (() => void) | null = null
+  /** Gives each mounted trigger its own CSS anchor name across body portals. */
+  let nextAnchorId = 0
 </script>
 
 <script lang="ts">
@@ -12,12 +14,8 @@
   export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
   export type DropdownPopupMenuAlignment = 'left' | 'right'
 
-  type MenuPosition = {
-    left: number
-    top: number
-  }
-
-  type MenuAnchor = {
+  /** Opening cursor offset from the trigger's top-left corner, in CSS pixels. */
+  type CursorOffset = {
     x: number
     y: number
   }
@@ -83,74 +81,37 @@
 
   let menuLayerRef = $state<HTMLDivElement | null>(null)
   let anchorElement = $state<HTMLElement | null>(null)
-  let menuAnchor = $state<MenuAnchor | null>(null)
+  /** Stable CSS identity connecting this trigger to its portalled menu. */
+  const anchorName = `--cthulhu-dropdown-${++nextAnchorId}`
+  /** Null uses the trigger's live edges for keyboard and drag opening. */
+  let cursorOffset = $state<CursorOffset | null>(null)
   let open = $state(false)
   let openedByDrag = $state(false)
   let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
-  let triggerWidth = $state(fallbackMenuWidth)
-
-  const getMenuPosition = (
-    anchor: MenuAnchor,
-    menuWidthPx: number,
-    menuHeight: number
-  ): MenuPosition => {
-    const anchoredLeft = menuAlignment === 'right' ? anchor.x - menuWidthPx : anchor.x
-
-    return {
-      left: Math.max(
-        viewportMargin,
-        Math.min(anchoredLeft, window.innerWidth - menuWidthPx - viewportMargin)
-      ),
-      top: Math.max(
-        viewportMargin,
-        Math.min(
-          placement === 'below-trigger' ? anchor.y : anchor.y - firstItemCenterOffset,
-          window.innerHeight - menuHeight - bottomGap
-        )
-      )
-    }
-  }
-
-  const getTriggerAnchor = (element: HTMLElement): MenuAnchor => {
-    const triggerRect = element.getBoundingClientRect()
-
-    triggerWidth = triggerRect.width
-
-    if (placement === 'below-trigger') {
-      return {
-        x: menuAlignment === 'right' ? triggerRect.right : triggerRect.left,
-        y: triggerRect.bottom + belowTriggerGap
-      }
-    }
-
-    return {
-      x: triggerRect.right,
-      y: triggerRect.top + triggerRect.height / 2
-    }
-  }
-
-  const getOpenMenuAnchor = (event?: MouseEvent): MenuAnchor | null => {
-    if (placement === 'cursor' && event && event.detail !== 0) {
-      return { x: event.clientX, y: event.clientY }
-    }
-
-    return anchorElement ? getTriggerAnchor(anchorElement) : null
-  }
 
   const closeMenu = () => {
     open = false
     openedByDrag = false
-    menuAnchor = null
+    cursorOffset = null
 
     if (activeDropdownCloser === closeMenu) {
       activeDropdownCloser = null
     }
   }
 
-  const openMenu = (nextMenuAnchor: MenuAnchor, nextOpenedByDrag: boolean) => {
+  /** Opens against live trigger edges or captures a fixed cursor offset from that trigger. */
+  const openMenu = (nextOpenedByDrag: boolean, event?: MouseEvent, cursorGap = 0) => {
+    if (!anchorElement) return
     activeDropdownCloser?.()
     activeDropdownCloser = closeMenu
-    menuAnchor = nextMenuAnchor
+    if (placement === 'cursor' && event) {
+      /** Only the opening offset is measured; CSS tracks all subsequent trigger movement. */
+      const triggerRect = anchorElement.getBoundingClientRect()
+      cursorOffset = {
+        x: event.clientX + cursorGap - triggerRect.left,
+        y: event.clientY - triggerRect.top
+      }
+    }
     measuredMenuSize = { width: fallbackMenuWidth, height: fallbackMenuHeight }
     openedByDrag = nextOpenedByDrag
     open = true
@@ -158,9 +119,11 @@
 
   const triggerAction: DropdownPopupTriggerAction = (node) => {
     anchorElement = node
+    node.style.setProperty('anchor-name', anchorName)
 
     return {
       destroy() {
+        node.style.removeProperty('anchor-name')
         if (anchorElement === node) {
           anchorElement = null
           closeMenu()
@@ -175,18 +138,12 @@
       return
     }
 
-    const nextMenuAnchor = getOpenMenuAnchor(event)
-
-    if (!nextMenuAnchor) {
-      return
-    }
-
-    openMenu(nextMenuAnchor, false)
+    openMenu(false, event?.detail !== 0 ? event : undefined)
   }
 
   // Opens or repositions the popup from an explicit mouse interaction.
   const openMenuAt = (event: MouseEvent): void => {
-    openMenu({ x: event.clientX + cursorContextMenuGap, y: event.clientY }, false)
+    openMenu(false, event, cursorContextMenuGap)
   }
 
   const openMenuForDrag = () => {
@@ -194,7 +151,7 @@
       return
     }
 
-    openMenu(getTriggerAnchor(anchorElement), true)
+    openMenu(true)
   }
 
   const closeDragOpenedMenu = () => {
@@ -203,16 +160,27 @@
     }
   }
 
+  /** Below-trigger menus grow with their trigger as the surrounding layout changes. */
   const resolvedMenuWidth = $derived(
-    placement === 'below-trigger' ? `max(${menuWidth}, ${triggerWidth}px)` : menuWidth
+    placement === 'below-trigger' ? `max(${menuWidth}, anchor-size(width))` : menuWidth
   )
-  const menuPosition = $derived(
-    menuAnchor
-      ? getMenuPosition(menuAnchor, measuredMenuSize.width, measuredMenuSize.height)
-      : { left: 0, top: 0 }
+  /** Horizontal attachment preserves cursor offsets and existing left/right alignment. */
+  const anchorX = $derived(
+    cursorOffset
+      ? `anchor(left) + ${cursorOffset.x}px`
+      : placement === 'below-trigger' && menuAlignment === 'left' ? 'anchor(left)' : 'anchor(right)'
   )
+  /** Vertical attachment retains the first-item cursor alignment and below-trigger gap. */
+  const anchorY = $derived(
+    placement === 'below-trigger'
+      ? `anchor(bottom) + ${belowTriggerGap}px`
+      : `${cursorOffset ? `anchor(top) + ${cursorOffset.y}px` : 'anchor(center)'} - ${firstItemCenterOffset}px`
+  )
+  /** CSS clamps live anchor coordinates against the viewport using the observed menu size. */
   const menuLayerStyle = $derived(
-    `--cthulhu-ui-dropdown-popup-menu-width: ${resolvedMenuWidth}; left: ${menuPosition.left}px; top: ${menuPosition.top}px;`
+    `position-anchor: ${anchorName}; width: ${resolvedMenuWidth};
+    left: clamp(${viewportMargin}px, calc(${anchorX} - ${menuAlignment === 'right' ? measuredMenuSize.width : 0}px), calc(100vw - ${measuredMenuSize.width + viewportMargin}px));
+    top: clamp(${viewportMargin}px, calc(${anchorY}), calc(100vh - ${measuredMenuSize.height + bottomGap}px));`
   )
 
   const triggerContext = $derived({
@@ -277,6 +245,8 @@
       }
 
       event.preventDefault()
+      // Custom virtual scrolling must not receive a cancelled background gesture.
+      event.stopPropagation()
     }
 
     const handleKeydown = (event: KeyboardEvent) => {
@@ -287,11 +257,12 @@
 
       if (scrollKeys.has(event.key)) {
         event.preventDefault()
+        event.stopPropagation()
       }
     }
 
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeydown)
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('keydown', handleKeydown, true)
     document.addEventListener('wheel', preventBackgroundScroll, { capture: true, passive: false })
     document.addEventListener('touchmove', preventBackgroundScroll, {
       capture: true,
@@ -299,27 +270,49 @@
     })
 
     return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeydown)
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('keydown', handleKeydown, true)
       document.removeEventListener('wheel', preventBackgroundScroll, { capture: true })
       document.removeEventListener('touchmove', preventBackgroundScroll, { capture: true })
     }
   })
 
-  // Side effect: once rendered, clamp the fixed popup using its actual measured height.
+  // Side effect: update edge clamping when menu content, trigger width, or display scale changes.
   $effect(() => {
     if (!open || !menuLayerRef) {
       return
     }
 
-    const menuRect = menuLayerRef.getBoundingClientRect()
-    measuredMenuSize = { width: menuRect.width, height: menuRect.height }
+    /** The portal's border box includes any scrollbar and constrains viewport clamping. */
+    const menuNode = menuLayerRef
+    /** Refreshes dimensions without measuring or tracking the trigger's position. */
+    const measureMenu = () => {
+      /** Current rendered dimensions, including the menu's maximum-height constraint. */
+      const menuRect = menuNode.getBoundingClientRect()
+      measuredMenuSize = { width: menuRect.width, height: menuRect.height }
+    }
+    /** Tracks menu resizing independently of the event that caused it. */
+    const observer = new ResizeObserver(measureMenu)
+    measureMenu()
+    observer.observe(menuNode)
+    return () => observer.disconnect()
+  })
+
+  // Side effect: close fully clipped triggers, releasing scroll blocking and open-state visuals.
+  $effect(() => {
+    if (!open || !anchorElement) return
+    /** Includes viewport boundaries and clipping ancestors such as virtual windows. */
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) closeMenu()
+    })
+    observer.observe(anchorElement)
+    return () => observer.disconnect()
   })
 </script>
 
 {@render trigger(triggerContext)}
 
-{#if open && menuAnchor}
+{#if open}
   <div
     bind:this={menuLayerRef}
     class="cthulhuUiDropdownPopupLayer"
@@ -347,7 +340,6 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     position: fixed;
-    width: var(--cthulhu-ui-dropdown-popup-menu-width);
     z-index: var(--z-popup);
   }
 
