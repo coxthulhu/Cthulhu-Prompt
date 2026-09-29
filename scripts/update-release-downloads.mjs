@@ -38,7 +38,7 @@ export function updateReleaseDownloads(tag, repository) {
     startMarker,
     '## Downloads',
     '',
-    '| Version | Download |',
+    '| Platform | Link |',
     '| --- | --- |',
     ...rows,
     endMarker
