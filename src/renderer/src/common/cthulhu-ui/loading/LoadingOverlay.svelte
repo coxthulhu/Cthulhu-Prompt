@@ -17,7 +17,7 @@
     fullscreen?: boolean
   }>()
 
-  const positionClass = $derived(fullscreen ? 'fixed inset-0 z-50' : 'absolute inset-0 z-10')
+  const positionClass = $derived(fullscreen ? 'fixed inset-0' : 'absolute inset-0')
 </script>
 
 <div
@@ -37,6 +37,7 @@
 
 <style>
   .cthulhuUiLoadingOverlay {
+    z-index: var(--z-modal);
     background-color: var(--background);
     opacity: 1;
   }

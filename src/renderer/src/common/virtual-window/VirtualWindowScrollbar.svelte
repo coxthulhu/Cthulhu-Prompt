@@ -222,7 +222,7 @@
     opacity: 1;
     background: rgba(0, 0, 0, 0);
     transition: opacity var(--ui-animation-duration-standard) linear;
-    z-index: 11;
+    z-index: var(--z-chrome);
   }
 
   .virtual-window-scrollbar.invisible {

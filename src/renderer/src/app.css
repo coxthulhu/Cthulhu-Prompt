@@ -33,6 +33,20 @@
 }
 
 :root {
+  /* Base stacking contexts for controls that have raised siblings. */
+  --z-base: 0;
+  /* Local control details and scroll shadows above ordinary content. */
+  --z-raised: 10;
+  /* Fixed headers, Find, scrollbars, resize handles, and sidebar content. */
+  --z-chrome: 20;
+  /* Editor overflow widgets and floating validation above screen chrome. */
+  --z-overlay: 30;
+  /* Loading surfaces and dialogs above screen overlays. */
+  --z-modal: 40;
+  /* Portaled dropdowns, including menus opened inside dialogs. */
+  --z-popup: 50;
+  /* Drag previews above every interactive application layer. */
+  --z-drag: 60;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);

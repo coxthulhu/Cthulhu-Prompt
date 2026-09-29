@@ -114,7 +114,7 @@
 
         <button
           type="button"
-          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize touch-none bg-[var(--ui-ghost-surface)] z-10"
+          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize touch-none bg-[var(--ui-ghost-surface)] z-[var(--z-chrome)]"
           data-testid={handleTestId}
           aria-label="Resize sidebar"
           onpointerdown={handlePointerDown}

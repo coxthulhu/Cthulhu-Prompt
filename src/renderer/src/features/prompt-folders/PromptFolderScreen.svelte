@@ -360,6 +360,9 @@
 
 <style>
   .prompt-folder-header-bar {
+    /* Keep the fixed breadcrumb controls alongside Find and below editor popups. */
+    position: relative;
+    z-index: var(--z-chrome);
     border-bottom: 1px solid var(--ui-neutral-muted-border);
   }
 

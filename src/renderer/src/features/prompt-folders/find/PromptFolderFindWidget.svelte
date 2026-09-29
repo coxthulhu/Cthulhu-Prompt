@@ -167,7 +167,7 @@
     top: var(--prompt-folder-find-widget-top, 36px);
     right: 18px;
     width: 400px;
-    z-index: 40;
+    z-index: var(--z-chrome);
   }
 
   .prompt-find-widget {

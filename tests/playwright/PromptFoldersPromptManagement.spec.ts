@@ -1906,7 +1906,7 @@ describe('Prompt folder prompt management', () => {
     )
     await expect(activePromptStatusSelector).toHaveCSS('border-left-style', 'solid')
     await expect(activePromptStatusSelector).toHaveCSS('border-left-width', '1px')
-    await expect(inProgressPreviousButton).toHaveCSS('z-index', '1')
+    await expect(inProgressPreviousButton).toHaveCSS('z-index', '10')
     await expect(activePromptStatusSelector).toHaveCSS('z-index', 'auto')
     await inProgressCompleteButton.hover()
     await expect(inProgressCompleteButton).toHaveCSS('background-color', successHoverFill)
@@ -1920,7 +1920,7 @@ describe('Prompt folder prompt management', () => {
     )
     await expect(activePromptStatusSelector).toHaveCSS('border-right-style', 'solid')
     await expect(activePromptStatusSelector).toHaveCSS('border-right-width', '1px')
-    await expect(inProgressCompleteButton).toHaveCSS('z-index', '1')
+    await expect(inProgressCompleteButton).toHaveCSS('z-index', '10')
     await expect(activePromptStatusSelector).toHaveCSS('z-index', 'auto')
     await activePromptStatus.hover()
     await expect(activePromptStatusSelector).toHaveCSS('border-left-color', neutralHoverBorder)
@@ -1933,7 +1933,7 @@ describe('Prompt folder prompt management', () => {
       'border-left-color',
       'rgba(0, 0, 0, 0)'
     )
-    await expect(activePromptStatusSelector).toHaveCSS('z-index', '1')
+    await expect(activePromptStatusSelector).toHaveCSS('z-index', '10')
     await expect(mainWindow.locator(uncompleteSelector('completed-mode-active'))).toHaveCount(0)
 
     await inProgressPreviousButton.click()

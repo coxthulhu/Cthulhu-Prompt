@@ -290,6 +290,7 @@
     </div>
 
     <div
+      class="virtual-window-overlay"
       style={`position:absolute; top:0; right:${reservedScrollbarWidthPx}px; bottom:0; left:0; overflow:visible; pointer-events:none;`}
     >
       {#each visibleRows as row (row.id)}
@@ -330,6 +331,11 @@
 </div>
 
 <style>
+  /* Lift the entire transformed row stack above scrollbars, headers, and Find. */
+  .virtual-window-overlay {
+    z-index: var(--z-overlay);
+  }
+
   .virtual-window-scrollbar-theme {
     --vscode-scrollbar-shadow: #000000;
     --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
@@ -344,7 +350,7 @@
     width: 100%;
     display: none;
     pointer-events: none;
-    z-index: 10;
+    z-index: var(--z-raised);
     box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px inset;
   }
 

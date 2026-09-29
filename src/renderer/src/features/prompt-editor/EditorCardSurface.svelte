@@ -64,6 +64,6 @@
     display: grid;
     min-width: 0;
     position: relative;
-    z-index: 1;
+    z-index: var(--z-raised);
   }
 </style>

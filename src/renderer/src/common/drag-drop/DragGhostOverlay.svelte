@@ -20,6 +20,6 @@
   .dragGhostOverlay {
     pointer-events: none;
     position: fixed;
-    z-index: 2147483647;
+    z-index: var(--z-drag);
   }
 </style>

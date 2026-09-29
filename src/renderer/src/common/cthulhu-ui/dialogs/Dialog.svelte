@@ -211,7 +211,7 @@
     justify-content: center;
     padding: 16px;
     position: fixed;
-    z-index: 50;
+    z-index: var(--z-modal);
   }
 
   :global(.cthulhuUiDialog) {

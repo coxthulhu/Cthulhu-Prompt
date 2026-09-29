@@ -996,7 +996,7 @@
 
   .appSidebar :global(.sidebarPromptStatusAccordion .cthulhuUiAccordionContent) {
     position: relative;
-    z-index: 2;
+    z-index: var(--z-chrome);
   }
 
   .cthulhuSidebarWorkspaceName {

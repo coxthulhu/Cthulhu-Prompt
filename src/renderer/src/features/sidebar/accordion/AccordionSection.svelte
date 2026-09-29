@@ -178,7 +178,7 @@
     right: 0;
     top: 0;
     touch-action: none;
-    z-index: 1;
+    z-index: var(--z-raised);
   }
 
   .cthulhuUiAccordionSash[data-dragging='true'] {

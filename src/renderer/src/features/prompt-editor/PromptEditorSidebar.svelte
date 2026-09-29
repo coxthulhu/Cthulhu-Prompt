@@ -210,7 +210,7 @@
 
   .prompt-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-raised);
     /* Transparent borders preserve both separator space and rail sizing. */
     border-bottom-color: transparent;
     transition:

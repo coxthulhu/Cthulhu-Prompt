@@ -17,7 +17,7 @@
   {#if message}
     <!-- Anchor validation to the field so it floats outside the surrounding layout flow. -->
     <MessageRow
-      class="cthulhuUiFloatingValidationMessageRow absolute left-0 top-full z-10 mt-0.5 whitespace-nowrap"
+      class="cthulhuUiFloatingValidationMessageRow absolute left-0 top-full mt-0.5 whitespace-nowrap"
       {variant}
       text={message}
       {textTestId}
@@ -28,6 +28,7 @@
 <style>
   .cthulhuUiFloatingValidationMessage
     :global(.cthulhuUiFloatingValidationMessageRow.cthulhuUiMessageRow) {
+    z-index: var(--z-overlay);
     box-shadow: 0 8px 18px var(--ui-card-normal-shadow);
   }
 

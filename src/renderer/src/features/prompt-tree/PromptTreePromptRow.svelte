@@ -179,7 +179,7 @@
     top: 0;
     visibility: hidden;
     width: 2px;
-    z-index: 1;
+    z-index: var(--z-raised);
   }
 
   .prompt-tree-status-indicator[data-edited='true'] {

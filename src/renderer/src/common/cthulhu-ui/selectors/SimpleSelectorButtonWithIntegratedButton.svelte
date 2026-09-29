@@ -66,7 +66,7 @@
     > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:hover),
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton
     > :global(.cthulhuUiSimpleSelectorButtonWithIntegratedButtonSelector:has(:focus-visible)) {
-    z-index: 1;
+    z-index: var(--z-raised);
   }
 
   .cthulhuUiSimpleSelectorButtonWithIntegratedButton[data-leading-action='true']
