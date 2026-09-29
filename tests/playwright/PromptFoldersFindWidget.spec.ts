@@ -413,6 +413,8 @@ describe('Prompt folder find dialog', () => {
 
     /** Check rendered colors and selection together so navigation cannot leave stale styling. */
     const expectMatchAppearance = async (lineNumber: number) => {
+      await expect(findInput).toBeFocused()
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(false)
       await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
         selectedText: TYPING_ANCHOR_QUERY,
         startLineNumber: lineNumber

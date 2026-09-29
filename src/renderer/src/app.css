@@ -129,3 +129,20 @@
 .monaco-editor .suggest-widget > .message {
   @apply text-base leading-4;
 }
+
+/* Hide inactive selections and word occurrences while preserving Find decorations. */
+.monaco-editor:not(.focused) > .overflow-guard :is(
+  .selected-text,
+  .selectionHighlight,
+  .wordHighlight,
+  .wordHighlightText,
+  .wordHighlightStrong
+) {
+  background-color: var(--ui-ghost-surface);
+  border-color: var(--ui-ghost-surface);
+}
+
+/* Use the normal Monaco gutter color for the cursor's line number while unfocused. */
+.monaco-editor:not(.focused) > .overflow-guard .active-line-number {
+  color: var(--vscode-editorLineNumber-foreground);
+}

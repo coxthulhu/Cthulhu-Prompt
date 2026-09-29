@@ -472,6 +472,8 @@
         cursorSmoothCaretAnimation: 'off',
         smoothScrolling: false,
         renderLineHighlightOnlyWhenFocus: true,
+        // Keep whitespace markers hidden even when text is selected.
+        renderWhitespace: 'none',
         overflowWidgetsDomNode,
         dimension: { width: measuredWidthPx, height: initialMonacoHeightPx }
       })
