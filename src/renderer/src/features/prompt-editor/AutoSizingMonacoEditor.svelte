@@ -458,6 +458,8 @@
         model: modelReference.object.textEditorModel,
         ariaLabel,
         automaticLayout: false,
+        // Use ordinary paste to avoid snippet markers from enhanced paste edits.
+        pasteAs: { enabled: false },
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         wordWrap: 'on',
