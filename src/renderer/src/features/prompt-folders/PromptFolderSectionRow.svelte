@@ -55,9 +55,8 @@
   }
 
   .prompt-folder-section-middle-layer {
-    background: var(--ui-card-nested-surface);
-    border-left: 1px solid var(--ui-card-nested-border);
-    border-right: 1px solid var(--ui-card-nested-border);
+    border-left: 1px solid var(--ui-neutral-normal-border);
+    border-right: 1px solid var(--ui-neutral-normal-border);
     box-sizing: border-box;
     position: absolute;
   }

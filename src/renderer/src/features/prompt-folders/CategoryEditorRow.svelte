@@ -161,7 +161,7 @@
   }
 
   :global(.category-top-cap.editor-card-surface) {
-    border-color: var(--ui-card-nested-border);
+    border-color: var(--ui-neutral-normal-border);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
   }

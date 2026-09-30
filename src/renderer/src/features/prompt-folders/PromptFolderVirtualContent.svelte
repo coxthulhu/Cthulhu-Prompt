@@ -982,8 +982,7 @@
 
 <style>
   .category-bottom-cap {
-    background: var(--ui-card-nested-surface);
-    border: 1px solid var(--ui-card-nested-border);
+    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: 0 0 8px 8px;
     border-top: 0;
     box-sizing: border-box;
