@@ -1,7 +1,7 @@
 <script module lang="ts">
   import type { ComponentType } from 'svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
-  import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
+  import type { PromptFolderFindRequest, PromptFolderFindSelection } from '../prompt-folders/find/promptFolderFindTypes'
 
   export type PromptEditorTitleRowProps = {
     /** Folder search state used to decorate title occurrences without taking focus. */
@@ -25,7 +25,7 @@
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
     onStatusChange?: (status: import('@shared/domain/prompt/Prompt').PromptStatus) => void
-    onSelectionChange?: (startOffset: number, endOffset: number) => void
+    onSelectionChange?: (selection: PromptFolderFindSelection) => void
     onTitleEditorFocus?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataFolderLabel?: string | null
@@ -220,7 +220,11 @@
     const input = event.currentTarget as HTMLInputElement
     const startOffset = input.selectionStart ?? input.value.length
     const endOffset = input.selectionEnd ?? startOffset
-    onSelectionChange?.(startOffset, endOffset)
+    onSelectionChange?.({
+      startOffset,
+      endOffset,
+      cursorOffset: input.selectionDirection === 'backward' ? startOffset : endOffset
+    })
   }
 
   const handleTitleKeydown = (event: KeyboardEvent) => {

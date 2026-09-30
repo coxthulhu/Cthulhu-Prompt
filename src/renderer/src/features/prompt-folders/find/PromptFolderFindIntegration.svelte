@@ -17,8 +17,7 @@
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import {
     findMatchIndexAtOrAfter,
-    findMatchIndexEndingAtOrBefore,
-    findMatchRange
+    findMatchIndexEndingAtOrBefore
   } from './promptFolderFindText'
   import type {
     PromptFolderFindAnchor,
@@ -27,6 +26,7 @@
     PromptFolderFindMatch,
     PromptFolderFindRevealRequest,
     PromptFolderFindRowHandle,
+    PromptFolderFindSelection,
     PromptFolderFindState
   } from './promptFolderFindTypes'
 
@@ -64,7 +64,6 @@
   let preserveSelectionOnNextSearch = false
   let lastSearchInputs: SearchInputs = { queryKey: '', scopeKey: '', searchRevision: 0 }
   const query = $derived(matchText)
-  const normalizedQuery = $derived(query.toLowerCase())
 
   const rowHandlesByEntityId = new SvelteMap<string, PromptFolderFindRowHandle>()
   const searchModel = createPromptFolderFindSearchModel()
@@ -147,15 +146,10 @@
         shouldSelectCurrentMatch = false
         return
       }
-      const selectedAnchorIndex = lastSelectionAnchor
-        ? getSelectedMatchIndexFromAnchor(lastSelectionAnchor)
-        : null
-      if (selectedAnchorIndex != null) {
-        setCurrentMatchIndex(selectedAnchorIndex)
-        return
-      }
       // Query edits start at the stored cursor; word expansion only supplies the initial query.
-      const anchorIndex = lastSelectionAnchor ? getNextMatchIndexFromAnchor(lastSelectionAnchor) : null
+      const anchorIndex = lastSelectionAnchor
+        ? getMatchIndexFromAnchor(lastSelectionAnchor, 1, lastSelectionAnchor.cursorOffset)
+        : null
       setCurrentMatchIndex(anchorIndex ?? 1)
       return
     }
@@ -217,8 +211,7 @@
     const endOffset = Math.min(Math.max(anchor.endOffset, 0), sectionText.length)
     if (endOffset > startOffset) {
       return {
-        entityId: anchor.entityId,
-        sectionKey: anchor.sectionKey,
+        ...anchor,
         startOffset,
         endOffset
       }
@@ -227,8 +220,7 @@
     const wordAtOffset = searchModel.getWordAtOffset(sectionText, startOffset)
     if (!wordAtOffset) return null
     return {
-      entityId: anchor.entityId,
-      sectionKey: anchor.sectionKey,
+      ...anchor,
       startOffset: wordAtOffset.start,
       endOffset: wordAtOffset.end
     }
@@ -259,7 +251,8 @@
       lastSelectionAnchor = {
         entityId: returnFocusTarget.entityId,
         sectionKey: returnFocusTarget.sectionKey,
-        ...returnFocusTarget.selection
+        ...returnFocusTarget.selection,
+        cursorOffset: returnFocusTarget.selection.endOffset
       }
     }
     const nextMatchText = getSelectionMatchText()
@@ -287,17 +280,14 @@
     shouldSelectCurrentMatch = selectMatch
     const match = getPromptFolderFindMatchForIndex(nextIndex, matchCountsByEntity)
     if (!selectMatch) return
-    const matchRange = findMatchRange(
+    const matchRange = searchModel.findMatchesInText(
       getSectionText(match.entityId, match.sectionKey),
-      query,
-      match.sectionMatchIndex
-    )
+      query
+    )[match.sectionMatchIndex]
     returnFocusTarget = {
       entityId: match.entityId,
       sectionKey: match.sectionKey,
-      selection: matchRange
-        ? { startOffset: matchRange.start, endOffset: matchRange.end }
-        : null
+      selection: matchRange ?? null
     }
     requestMatchReveal(match)
   }
@@ -354,14 +344,18 @@
     return sectionRange.startMatchIndex + matchIndex
   }
 
+  /** Uses Monaco's original-text ranges for cursor-based navigation in either direction. */
   const findSectionMatchIndex = (
     sectionText: string,
     offset: number,
     direction: TraversalDirection
-  ) =>
-    direction === 1
-      ? findMatchIndexAtOrAfter(sectionText, query, offset)
-      : findMatchIndexEndingAtOrBefore(sectionText, query, offset)
+  ) => {
+    /** Shared match ordering for counts, reveals, and restored selections. */
+    const ranges = searchModel.findMatchesInText(sectionText, query)
+    return direction === 1
+      ? findMatchIndexAtOrAfter(ranges, offset)
+      : findMatchIndexEndingAtOrBefore(ranges, offset)
+  }
 
   const findMatchInItemFromSection = (
     item: PromptFolderFindItem,
@@ -399,31 +393,11 @@
     return findMatchInItemFromSection(item, startSectionIndex, direction, boundaryOffset)
   }
 
-  const getSelectedMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) => {
-    if (query.length === 0 || totalMatches <= 0) return null
-    const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
-    const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
-    if (endOffset <= startOffset) return null
-
-    const sectionText = getSectionText(anchor.entityId, anchor.sectionKey)
-    if (sectionText.length === 0) return null
-
-    const selectedText = sectionText.slice(startOffset, endOffset)
-    if (selectedText.toLowerCase() !== query.toLowerCase()) return null
-
-    const sectionMatchIndex = findMatchIndexAtOrAfter(sectionText, query, startOffset)
-    if (sectionMatchIndex == null) return null
-
-    const matchRange = findMatchRange(sectionText, query, sectionMatchIndex)
-    if (!matchRange) return null
-    if (matchRange.start !== startOffset || matchRange.end !== endOffset) return null
-
-    return getGlobalMatchIndex(anchor.entityId, anchor.sectionKey, sectionMatchIndex)
-  }
-
+  /** Traverses from the query caret or an explicit next/previous selection boundary. */
   const getMatchIndexFromAnchor = (
     anchor: PromptFolderFindAnchor,
-    direction: TraversalDirection
+    direction: TraversalDirection,
+    initialOffset: number
   ) => {
     if (query.length === 0 || totalMatches === 0) return null
     const startIndex = itemIndexByEntityId.get(anchor.entityId)
@@ -434,12 +408,11 @@
       (section) => section.key === anchor.sectionKey
     )
     if (startSectionIndex >= 0) {
-      const anchorOffset = direction === 1 ? anchor.endOffset : anchor.startOffset
       const anchoredMatch = findMatchInItemFromSection(
         startItem,
         startSectionIndex,
         direction,
-        anchorOffset
+        initialOffset
       )
       if (anchoredMatch) {
         return getGlobalMatchIndex(
@@ -465,10 +438,10 @@
   }
 
   const getNextMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) =>
-    getMatchIndexFromAnchor(anchor, 1)
+    getMatchIndexFromAnchor(anchor, 1, anchor.endOffset)
 
   const getPreviousMatchIndexFromAnchor = (anchor: PromptFolderFindAnchor) =>
-    getMatchIndexFromAnchor(anchor, -1)
+    getMatchIndexFromAnchor(anchor, -1, anchor.startOffset)
 
   // Move selection to the previous match and reveal it.
   const handlePrevious = () => {
@@ -500,7 +473,7 @@
     if (!isFindOpen) return
     // Scope key guards the full rescan against changes in findable entity IDs or query.
     const nextInputs = buildSearchInputs({
-      normalizedQuery,
+      query,
       entityIds,
       searchRevision
     })
@@ -587,7 +560,7 @@
     entityId: string,
     sectionKey: string,
     text: string,
-    selection: { startOffset: number; endOffset: number } | null = null
+    selection: PromptFolderFindSelection | null = null
   ) => {
     if (!isFindOpen || query.length === 0) return
     const groupIndex = matchCountsByEntity.findIndex((group) => group.entityId === entityId)

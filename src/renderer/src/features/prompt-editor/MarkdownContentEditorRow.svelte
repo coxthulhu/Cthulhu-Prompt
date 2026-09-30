@@ -27,7 +27,8 @@
   import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
   import type {
     PromptFolderFindRequest,
-    PromptFolderFindRowHandle
+    PromptFolderFindRowHandle,
+    PromptFolderFindSelection
   } from '../prompt-folders/find/promptFolderFindTypes'
   import {
     PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
@@ -313,7 +314,13 @@
       promptId,
       PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
       title,
-      startOffset == null || endOffset == null ? null : { startOffset, endOffset }
+      startOffset == null || endOffset == null
+        ? null
+        : {
+            startOffset,
+            endOffset,
+            cursorOffset: titleInputRef?.selectionDirection === 'backward' ? startOffset : endOffset
+          }
     )
   }
 
@@ -329,21 +336,21 @@
     onEditorLifecycle?.(editor, isActive)
   }
 
-  const reportTitleSelection = (startOffset: number, endOffset: number) => {
+  /** Retains title selection direction for subsequent query edits. */
+  const reportTitleSelection = (selection: PromptFolderFindSelection) => {
     findContext?.reportSelection({
       entityId: promptId,
       sectionKey: PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
-      startOffset,
-      endOffset
+      ...selection
     })
   }
 
-  const reportBodySelection = (startOffset: number, endOffset: number) => {
+  /** Retains Monaco's active caret independently of the selected range. */
+  const reportBodySelection = (selection: PromptFolderFindSelection) => {
     findContext?.reportSelection({
       entityId: promptId,
       sectionKey: PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-      startOffset,
-      endOffset
+      ...selection
     })
   }
 

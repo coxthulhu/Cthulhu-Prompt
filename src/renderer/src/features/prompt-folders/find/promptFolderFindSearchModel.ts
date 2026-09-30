@@ -1,12 +1,13 @@
 import { monaco } from '@renderer/common/Monaco'
 import { EditorOptions } from '@codingame/monaco-vscode-api/vscode/vs/editor/common/config/editorOptions'
 import { WordOperations } from '@codingame/monaco-vscode-api/vscode/vs/editor/common/cursor/cursorWordOperations'
+import type { FindMatchRange } from './promptFolderFindText'
 
 export type PromptFolderFindSearchModel = {
   findMatchesInText: (
     text: string,
     query: string
-  ) => Array<{ startOffset: number; endOffset: number }>
+  ) => FindMatchRange[]
   countMatchesInText: (text: string, query: string) => number
   getWordAtOffset: (
     text: string,
@@ -34,7 +35,7 @@ export const createPromptFolderFindSearchModel = (): PromptFolderFindSearchModel
   const findMatchesInText = (
     text: string,
     query: string
-  ): Array<{ startOffset: number; endOffset: number }> => {
+  ): FindMatchRange[] => {
     if (query.length === 0) return []
     const model = getSearchModel()
     model.setValue(text)

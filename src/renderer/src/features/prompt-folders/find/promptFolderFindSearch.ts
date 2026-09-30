@@ -1,4 +1,3 @@
-import { findMatchRange } from './promptFolderFindText'
 import type { PromptFolderFindItem, PromptFolderFindMatch } from './promptFolderFindTypes'
 
 export type PromptFolderFindSectionCount = {
@@ -24,15 +23,15 @@ type BuildMatchCountsArgs = {
 }
 
 export const buildSearchInputs = ({
-  normalizedQuery,
+  query,
   entityIds,
   searchRevision
 }: {
-  normalizedQuery: string
+  query: string
   entityIds: string[]
   searchRevision: number
 }): SearchInputs => ({
-  queryKey: normalizedQuery,
+  queryKey: query,
   scopeKey: entityIds.join('|'),
   searchRevision
 })
@@ -80,20 +79,4 @@ export const getPromptFolderFindMatchForIndex = (
     }
   }
   throw new Error('Match index out of range')
-}
-
-export const getMatchTextForCurrentMatch = (
-  match: PromptFolderFindMatch | null,
-  query: string,
-  getSectionText: (entityId: string, sectionKey: string) => string
-) => {
-  if (!match) return null
-  if (query.length === 0) return null
-
-  const targetText = getSectionText(match.entityId, match.sectionKey)
-
-  const matchRange = findMatchRange(targetText, query, match.sectionMatchIndex)
-  if (!matchRange) return null
-
-  return targetText.slice(matchRange.start, matchRange.end)
 }

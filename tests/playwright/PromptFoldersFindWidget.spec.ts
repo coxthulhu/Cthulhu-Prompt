@@ -201,6 +201,22 @@ const getMonacoSelectionState = async (
   }, editorSelector)
 }
 
+/** Isolates search parity cases in either a native title or a Monaco body. */
+const buildFindParityWorkspace = (
+  workspacePath: string,
+  section: 'title' | 'body',
+  text: string
+): Record<string, string | null> => createWorkspaceWithFolders(workspacePath, [{
+  folderName: 'Find Parity',
+  displayName: 'Find Parity',
+  promptFolderId: 'find-parity-folder',
+  prompts: [{
+    id: 'find-parity-prompt',
+    title: section === 'title' ? text : 'Search Target',
+    promptText: section === 'body' ? text : ''
+  }]
+}])
+
 const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, string | null> => {
   const promptIdsWithMatches = new Set(LOOP_MATCH_PROMPT_IDS)
   const basePromptBody = '\n'.repeat(80)
@@ -387,6 +403,190 @@ const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, str
 }
 
 describe('Prompt folder find dialog', () => {
+  // Exercise both selection producers through actual keyboard selection and search input.
+  for (const section of ['body', 'title'] as const) {
+    /** Backward selections must search from their active caret when the query changes. */
+    test(`searches query edits from a backward ${section} selection caret`, async ({ testSetup }) => {
+      /** Repeated suffix distinguishes the selection's start from its end. */
+      const workspacePath = `/ws/find-backward-query-${section}`
+      await testSetup.setupFilesystem(buildFindParityWorkspace(workspacePath, section, 'alpha beta / beta'))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Application and navigation helpers for the isolated selection fixture. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Find Parity')
+      /** Row whose title or body supplies the search anchor. */
+      const editorSelector = promptEditorSelector('find-parity-prompt')
+      /** Native input used for title selection and focus assertions. */
+      const title = mainWindow.locator(`${editorSelector} ${PROMPT_TITLE_SELECTOR}`)
+      if (section === 'body') await focusMonacoEditor(mainWindow, editorSelector)
+      else await title.focus()
+      await mainWindow.keyboard.press('Control+Home')
+      // Move to the end of the first phrase, then select it back to the beginning.
+      for (let step = 0; step < 10; step += 1) await mainWindow.keyboard.press('ArrowRight')
+      await mainWindow.keyboard.press('Shift+Home')
+      if (section === 'body') {
+        await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+          selectedText: 'alpha beta', selectionStartColumn: 11, positionColumn: 1
+        })
+      } else {
+        await expect.poll(() => title.evaluate((input: HTMLInputElement) => ({
+          start: input.selectionStart, end: input.selectionEnd, direction: input.selectionDirection
+        }))).toEqual({ start: 0, end: 10, direction: 'backward' })
+      }
+      await mainWindow.keyboard.press('Control+F')
+      /** Changing the seeded phrase must select its first suffix, not the later occurrence. */
+      const findInput = mainWindow.locator(FIND_INPUT)
+      await expect(findInput).toHaveValue('alpha beta')
+      await findInput.fill('beta')
+      await expect(mainWindow.locator(FIND_MATCHES_LABEL)).toHaveText('1 of 2')
+      await expect(findInput).toBeFocused()
+      if (section === 'body') {
+        await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+          selectedText: 'beta', startColumn: 7
+        })
+      } else {
+        await expect(mainWindow.locator(`${editorSelector} [data-testid="prompt-title-find-match"]`).first())
+          .toHaveAttribute('data-current', 'true')
+      }
+      await findInput.press('Escape')
+      if (section === 'body') {
+        await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+        await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+          selectedText: 'beta', startColumn: 7
+        })
+      } else {
+        await expect(title).toBeFocused()
+        await expect.poll(() => title.evaluate((input: HTMLInputElement) => ({
+          start: input.selectionStart, end: input.selectionEnd
+        }))).toEqual({ start: 6, end: 10 })
+      }
+    })
+
+    /** Exact query changes must navigate even when case-insensitive results are unchanged. */
+    test(`navigates case-only query edits from the ${section} caret`, async ({ testSetup }) => {
+      /** Two occurrences distinguish passive opening from active query-edit navigation. */
+      const workspacePath = `/ws/find-case-only-query-${section}`
+      await testSetup.setupFilesystem(buildFindParityWorkspace(workspacePath, section, 'foo foo'))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Application and navigation helpers for case-only edits. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Find Parity')
+      /** Row containing the repeated query. */
+      const editorSelector = promptEditorSelector('find-parity-prompt')
+      /** Native title target for the same keyboard flow as Monaco. */
+      const title = mainWindow.locator(`${editorSelector} ${PROMPT_TITLE_SELECTOR}`)
+      /** Find input is remounted for each caret case. */
+      const findInput = mainWindow.locator(FIND_INPUT)
+      // Cover passive opening from a collapsed caret and from a forward selection.
+      for (const selectWord of [false, true]) {
+        if (section === 'body') await focusMonacoEditor(mainWindow, editorSelector)
+        else await title.focus()
+        await mainWindow.keyboard.press('Control+Home')
+        if (selectWord) {
+          await mainWindow.keyboard.press('Shift+ArrowRight')
+          await mainWindow.keyboard.press('Shift+ArrowRight')
+          await mainWindow.keyboard.press('Shift+ArrowRight')
+        }
+        await mainWindow.keyboard.press('Control+F')
+        await expect(findInput).toHaveValue('foo')
+        await findInput.fill('FOO')
+        await expect(mainWindow.locator(FIND_MATCHES_LABEL)).toHaveText(selectWord ? '2 of 2' : '1 of 2')
+        await expect(findInput).toBeFocused()
+        if (section === 'body') {
+          await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+            selectedText: 'foo', startColumn: selectWord ? 5 : 1
+          })
+        } else {
+          await expect(mainWindow.locator(`${editorSelector} [data-testid="prompt-title-find-match"]`)
+            .nth(selectWord ? 1 : 0)).toHaveAttribute('data-current', 'true')
+        }
+        await findInput.press('Escape')
+        if (section === 'body') {
+          await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+        } else {
+          await expect(title).toBeFocused()
+          await expect.poll(() => title.evaluate((input: HTMLInputElement) => input.selectionStart))
+            .toBe(selectWord ? 4 : 0)
+        }
+      }
+    })
+
+    // Unicode cases exercise both offset expansion and Monaco's case-fold equivalence.
+    for (const unicodeCase of [
+      { name: 'dotted-I', text: 'İ foo foo', query: 'foo', caret: 5, start: 2, end: 5, selected: 'foo', nextStart: 6, nextEnd: 9, nextSelected: 'foo' },
+      { name: 'sigma', text: 'ς σ', query: 'σ', caret: 1, start: 0, end: 1, selected: 'ς', nextStart: 2, nextEnd: 3, nextSelected: 'σ' }
+    ]) {
+      /** Navigation and close must use the same original-text ranges as the highlights. */
+      test(`preserves ${unicodeCase.name} match ranges in the ${section}`, async ({ testSetup }) => {
+        /** Unicode fixture contains two matches and a cursor at the first match's end. */
+        const workspacePath = `/ws/find-unicode-${unicodeCase.name}-${section}`
+        await testSetup.setupFilesystem(buildFindParityWorkspace(workspacePath, section, unicodeCase.text))
+        await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+        /** Application and navigation helpers for Unicode matching. */
+        const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+        await testHelpers.setupWorkspaceViaUI()
+        await testHelpers.navigateToPromptFolders('Find Parity')
+        /** Prompt whose offsets must remain in the original text. */
+        const editorSelector = promptEditorSelector('find-parity-prompt')
+        /** Native title target for restored-selection assertions. */
+        const title = mainWindow.locator(`${editorSelector} ${PROMPT_TITLE_SELECTOR}`)
+        await mainWindow.keyboard.press('Control+F')
+        /** Establish the query before manually anchoring navigation in the edited section. */
+        const findInput = mainWindow.locator(FIND_INPUT)
+        await findInput.fill(unicodeCase.query)
+        await expect(mainWindow.locator(FIND_MATCHES_LABEL)).toHaveText('1 of 2')
+        if (section === 'body') await focusMonacoEditor(mainWindow, editorSelector)
+        else await title.focus()
+        await mainWindow.keyboard.press('Control+Home')
+        // Anchor exactly at the first match's end without changing the established query.
+        for (let step = 0; step < unicodeCase.caret; step += 1) await mainWindow.keyboard.press('ArrowRight')
+        await findInput.focus()
+        await findInput.press('Shift+Enter')
+        await expect(mainWindow.locator(FIND_MATCHES_LABEL)).toHaveText('1 of 2')
+        if (section === 'body') {
+          await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+            selectedText: unicodeCase.selected, startColumn: unicodeCase.start + 1
+          })
+        } else {
+          await expect(mainWindow.locator(`${editorSelector} [data-testid="prompt-title-find-match"]`).first())
+            .toHaveAttribute('data-current', 'true')
+        }
+        await findInput.press('Escape')
+        if (section === 'body') {
+          await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+          await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+            selectedText: unicodeCase.selected, startColumn: unicodeCase.start + 1
+          })
+        } else {
+          await expect(title).toBeFocused()
+          await expect.poll(() => title.evaluate((input: HTMLInputElement) => ({
+            start: input.selectionStart, end: input.selectionEnd
+          }))).toEqual({ start: unicodeCase.start, end: unicodeCase.end })
+        }
+
+        // Reopening seeds from the actual selected text; forward navigation must share Monaco's ranges too.
+        await mainWindow.keyboard.press('Control+F')
+        await expect(findInput).toHaveValue(unicodeCase.selected)
+        await findInput.press('Enter')
+        await expect(mainWindow.locator(FIND_MATCHES_LABEL)).toHaveText('2 of 2')
+        await findInput.press('Escape')
+        if (section === 'body') {
+          await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+          await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+            selectedText: unicodeCase.nextSelected, startColumn: unicodeCase.nextStart + 1
+          })
+        } else {
+          await expect(title).toBeFocused()
+          await expect.poll(() => title.evaluate((input: HTMLInputElement) => ({
+            start: input.selectionStart, end: input.selectionEnd
+          }))).toEqual({ start: unicodeCase.nextStart, end: unicodeCase.nextEnd })
+        }
+      })
+    }
+  }
+
   // Guard the visible match colors as the active result moves between occurrences.
   test('uses an amber fill without a border for the current match while navigating', async ({
     testSetup

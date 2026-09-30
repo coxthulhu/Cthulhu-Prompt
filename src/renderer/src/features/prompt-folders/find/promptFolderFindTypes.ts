@@ -17,11 +17,16 @@ export type PromptFolderFindMatch = {
   sectionMatchIndex: number
 }
 
-export type PromptFolderFindAnchor = {
-  entityId: string
-  sectionKey: string
+/** Ordered selection bounds plus the active caret used when editing the find query. */
+export type PromptFolderFindSelection = {
   startOffset: number
   endOffset: number
+  cursorOffset: number
+}
+
+export type PromptFolderFindAnchor = PromptFolderFindSelection & {
+  entityId: string
+  sectionKey: string
 }
 
 export type PromptFolderFindFocusRequest = {
@@ -62,7 +67,7 @@ export type PromptFolderFindState = {
     entityId: string,
     sectionKey: string,
     text: string,
-    selection?: { startOffset: number; endOffset: number } | null
+    selection?: PromptFolderFindSelection | null
   ) => void
   registerRow: (handle: PromptFolderFindRowHandle) => () => void
 }

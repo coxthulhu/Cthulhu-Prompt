@@ -15,7 +15,7 @@
     getMinMonacoHeightPx,
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
-  import type { PromptFolderFindRequest } from '../prompt-folders/find/promptFolderFindTypes'
+  import type { PromptFolderFindRequest, PromptFolderFindSelection } from '../prompt-folders/find/promptFolderFindTypes'
 
   type Props = {
     initialValue: string
@@ -36,7 +36,7 @@
       meta: {
         didResize: boolean
         heightPx: number
-        selection: { startOffset: number; endOffset: number } | null
+        selection: PromptFolderFindSelection | null
       }
     ) => void
     onBlur?: () => void
@@ -46,7 +46,7 @@
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
-    onSelectionChange?: (startOffset: number, endOffset: number) => void
+    onSelectionChange?: (selection: PromptFolderFindSelection) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
     /** Moves focus to the owning title input when backward tabbing from the first cursor position. */
     onBackwardTabAtStart?: () => void
@@ -155,7 +155,7 @@
     value: string,
     didResize: boolean,
     heightPx: number,
-    selection: { startOffset: number; endOffset: number } | null = null
+    selection: PromptFolderFindSelection | null = null
   ) => {
     onChange?.(value, { didResize, heightPx, selection })
   }
@@ -370,18 +370,21 @@
     pendingCursorPosition = null
   }
 
+  /** Reports the active caret separately so backward selections retain their query-edit anchor. */
   const reportSelectionAnchor = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     selection: monaco.Selection | null
-  ): { startOffset: number; endOffset: number } | null => {
+  ): PromptFolderFindSelection | null => {
     if (!onSelectionChange || !selection) return null
     const model = targetEditor.getModel()
     if (!model) return null
+    /** Original model offsets for the ordered range and its active endpoint. */
     const offsets = {
       startOffset: model.getOffsetAt(selection.getStartPosition()),
-      endOffset: model.getOffsetAt(selection.getEndPosition())
+      endOffset: model.getOffsetAt(selection.getEndPosition()),
+      cursorOffset: model.getOffsetAt(selection.getPosition())
     }
-    onSelectionChange(offsets.startOffset, offsets.endOffset)
+    onSelectionChange(offsets)
     return offsets
   }
 

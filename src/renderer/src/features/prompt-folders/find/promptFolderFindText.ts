@@ -1,69 +1,27 @@
+/** Original-text offsets returned by Monaco's search model. */
 export type FindMatchRange = {
-  start: number
-  end: number
+  startOffset: number
+  endOffset: number
 }
 
-export const findMatchRange = (
-  text: string,
-  query: string,
-  matchIndex: number
-): FindMatchRange | null => {
-  if (query.length === 0 || matchIndex < 0) return null
-  const normalizedText = text.toLowerCase()
-  const normalizedQuery = query.toLowerCase()
-  let startIndex = -1
-  let fromIndex = 0
-
-  for (let i = 0; i <= matchIndex; i += 1) {
-    startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
-    if (startIndex < 0) return null
-    fromIndex = startIndex + normalizedQuery.length
-  }
-
-  return { start: startIndex, end: startIndex + query.length }
-}
-
+/** Finds the first Monaco match beginning at or after the search anchor. */
 export const findMatchIndexAtOrAfter = (
-  text: string,
-  query: string,
+  ranges: FindMatchRange[],
   offset: number
 ): number | null => {
-  if (query.length === 0) return null
-  const normalizedText = text.toLowerCase()
-  const normalizedQuery = query.toLowerCase()
-  let fromIndex = 0
-  let matchIndex = 0
-
-  while (true) {
-    const startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
-    if (startIndex < 0) return null
-    if (startIndex >= offset) return matchIndex
-    fromIndex = startIndex + normalizedQuery.length
-    matchIndex += 1
-  }
+  /** Section-local result index, preserving Monaco's match ordering. */
+  const index = ranges.findIndex((range) => range.startOffset >= offset)
+  return index < 0 ? null : index
 }
 
-/** Finds the last complete match before the cursor, including one ending exactly at it. */
+/** Finds the last complete Monaco match before the cursor, including one ending exactly at it. */
 export const findMatchIndexEndingAtOrBefore = (
-  text: string,
-  query: string,
+  ranges: FindMatchRange[],
   offset: number
 ): number | null => {
-  if (query.length === 0) return null
-  const normalizedText = text.toLowerCase()
-  const normalizedQuery = query.toLowerCase()
-  let fromIndex = 0
-  let matchIndex = 0
-  let lastMatchIndex: number | null = null
-
-  while (true) {
-    const startIndex = normalizedText.indexOf(normalizedQuery, fromIndex)
-    if (startIndex < 0) break
-    if (startIndex + query.length > offset) break
-    lastMatchIndex = matchIndex
-    fromIndex = startIndex + normalizedQuery.length
-    matchIndex += 1
+  // Walk backward to find the nearest eligible result without copying the ranges.
+  for (let index = ranges.length - 1; index >= 0; index -= 1) {
+    if (ranges[index].endOffset <= offset) return index
   }
-
-  return lastMatchIndex
+  return null
 }
