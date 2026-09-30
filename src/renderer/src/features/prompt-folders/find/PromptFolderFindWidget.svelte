@@ -43,11 +43,6 @@
       }
       return
     }
-
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      onClose()
-    }
   }
 
   // Side effect: consume find-input focus once its mounted target is ready.

@@ -8,6 +8,7 @@
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
+  import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
 
   type Props = {
     open?: boolean
@@ -101,23 +102,16 @@
     }
   }
 
-  // Side effect: close the open dialog when the user presses Escape.
+  // Side effect: own dialog shortcuts and block underlying screen shortcuts while open.
   $effect(() => {
     if (!open) {
       return
     }
 
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeDialog()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeydown)
-
-    return () => {
-      document.removeEventListener('keydown', handleKeydown)
-    }
+    return registerKeyboardScope({
+      layer: 'dialog',
+      bindings: [{ matches: (event) => event.key === 'Escape', run: closeDialog }]
+    })
   })
 </script>
 

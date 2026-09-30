@@ -9,6 +9,7 @@
   import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
   import { registerDragDropDropdown } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
+  import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
 
   export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
@@ -249,20 +250,20 @@
       event.stopPropagation()
     }
 
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeMenu()
-        return
-      }
-
-      if (scrollKeys.has(event.key)) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-    }
+    /** Owns popup dismissal and scroll keys without invoking covered components. */
+    const unregisterKeyboardScope = registerKeyboardScope({
+      layer: 'dropdown',
+      bindings: [
+        { matches: (event) => event.key === 'Escape', run: closeMenu },
+        {
+          matches: (event) => scrollKeys.has(event.key),
+          // The router consumes scroll keys to preserve the existing background scroll lock.
+          run: null
+        }
+      ]
+    })
 
     document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('keydown', handleKeydown, true)
     document.addEventListener('wheel', preventBackgroundScroll, { capture: true, passive: false })
     document.addEventListener('touchmove', preventBackgroundScroll, {
       capture: true,
@@ -271,7 +272,7 @@
 
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('keydown', handleKeydown, true)
+      unregisterKeyboardScope()
       document.removeEventListener('wheel', preventBackgroundScroll, { capture: true })
       document.removeEventListener('touchmove', preventBackgroundScroll, { capture: true })
     }

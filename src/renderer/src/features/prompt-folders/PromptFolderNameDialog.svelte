@@ -196,8 +196,6 @@
           onkeydown={(event) => {
             if (event.key === 'Enter' && isValid) {
               handleSubmit()
-            } else if (event.key === 'Escape') {
-              handleCancel()
             }
           }}
         />
