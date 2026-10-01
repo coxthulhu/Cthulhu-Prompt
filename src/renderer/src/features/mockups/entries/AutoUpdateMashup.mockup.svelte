@@ -73,7 +73,7 @@
     simulateUpdate = false
     update.state = nextUpdateState[update.state]
     progress = update.state === 'downloading' ? 64 : update.state === 'installing' ? 42 :
-      update.state === 'current' || update.state === 'restarting' ? 100 : 0
+      update.state === 'restarting' ? 100 : 0
   }
 
   function handleUpdateAction(): void {
@@ -208,7 +208,6 @@
         appearance="outline"
         endIcon={ExternalLink}
         text="Open GitHub Releases"
-        state={isUpdating ? 'disabled' : 'enabled'}
         class="mt-2"
         style="width:100%;max-width:none;justify-content:center;"
       />
