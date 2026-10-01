@@ -1017,7 +1017,7 @@ describe('Prompt categories', () => {
       /Describe what belongs here and how to use these prompts\./
     )
     /** Rendered dialog width matches the requested desktop design. */
-    const dialogWidthPx = await categoryDialog.evaluate(
+    const dialogWidthPx = await categoryDialog.locator('.cthulhuUiPopupSurface').evaluate(
       (element) => element.getBoundingClientRect().width
     )
     expect(Math.abs(dialogWidthPx - 1040)).toBeLessThanOrEqual(1)

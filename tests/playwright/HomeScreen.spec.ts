@@ -365,7 +365,7 @@ Keep this partial body.`
       await expect(errorDialog).toBeVisible()
       await expect(errorDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
       await expect(errorDialog.locator('[data-testid="dialog-subtitle"]')).toHaveCount(0)
-      await expect(errorDialog).toHaveCSS('padding-top', '16px')
+      await expect(errorDialog.locator('.cthulhuUiPopupSurface')).toHaveCSS('padding-top', '16px')
       await expect(errorDialog.locator('.cthulhuUiDialogHeader')).toHaveCSS(
         'padding-bottom',
         '12px'
@@ -498,7 +498,7 @@ Keep this partial body.`
       await expect(createDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
         'Choose a name and location for your new workspace.'
       )
-      await expect(createDialog).toHaveCSS('padding-top', '18px')
+      await expect(createDialog.locator('.cthulhuUiPopupSurface')).toHaveCSS('padding-top', '18px')
       await expect(createDialog.locator('.cthulhuUiDialogHeader')).toHaveCSS(
         'padding-bottom',
         '16px'
@@ -555,7 +555,7 @@ Keep this partial body.`
         '[data-testid="create-workspace-examples-toggle"]'
       )
 
-      await expect(createDialog).toHaveCSS('width', '620px')
+      await expect(createDialog.locator('.cthulhuUiPopupSurface')).toHaveCSS('width', '620px')
       await expect(nameField.locator('.cthulhuUiTitle')).toHaveText('Workspace Name')
       await expect(nameField.locator('.cthulhuUiSubtitle')).toHaveText(
         'Enter a name for the new workspace.'

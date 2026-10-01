@@ -156,7 +156,7 @@ describe('Welcome Dialog', () => {
     await expect.poll(async () => mainWindow.evaluate(() => [window.innerWidth, window.innerHeight])).toEqual(contentSize)
     /** Dialog must fit inside the viewport without hiding its close or action buttons. */
     const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
-    await expect.poll(async () => welcome.evaluate((element) => {
+    await expect.poll(async () => welcome.locator('.cthulhuUiPopupSurface').evaluate((element) => {
       /** Visible dialog bounds after the Electron resize reaches the renderer. */
       const bounds = element.getBoundingClientRect()
       return bounds.top >= -1 && bounds.bottom <= window.innerHeight + 1

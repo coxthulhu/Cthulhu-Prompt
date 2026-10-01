@@ -7,7 +7,7 @@
   import appIcon from '@renderer/assets/cutethulhu.png'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
+  import Popup from '@renderer/common/cthulhu-ui/dialogs/Popup.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import ProgressBar from '@renderer/common/cthulhu-ui/loading/ProgressBar.svelte'
 
@@ -45,7 +45,6 @@
   let simulateUpdate = $state(false)
   let progress = $state(0)
   let mockupRoot = $state<HTMLElement>()
-  let blockingDialog = $state<HTMLDialogElement>()
 
   // Keep version styling, controls, and progress copy aligned with the previewed step.
   const hasUpdate = $derived(update.state !== 'checking' && update.state !== 'current')
@@ -106,20 +105,6 @@
     return () => window.clearInterval(interval)
   })
 
-  // Side effect: the native modal blocks pointer and keyboard interaction throughout the app
-  // during updating, while keeping the mockup's bug control available for preview navigation.
-  $effect(() => {
-    if (!blockingDialog || !mockupRoot) return
-    if (isUpdating) {
-      const bounds = mockupRoot.getBoundingClientRect()
-      blockingDialog.style.left = `${bounds.left + 58}px`
-      blockingDialog.style.bottom = `${window.innerHeight - bounds.bottom + 10}px`
-      blockingDialog.style.maxWidth = `${Math.max(0, bounds.width - 72)}px`
-      if (!blockingDialog.open) blockingDialog.showModal()
-    } else if (blockingDialog.open) {
-      blockingDialog.close()
-    }
-  })
   const iconStyle = 'display:flex;align-items:center;justify-content:center;flex:none;border:0;background:transparent;color:var(--ui-normal-text);padding:0;'
 </script>
 
@@ -132,7 +117,7 @@
       </button>
     {/each}
     <div style="flex:1;"></div>
-    <button class="downloadActivityButton" type="button" title="Check for updates" aria-label={hasUpdate ? 'Check for updates — update available' : 'Check for updates'} aria-expanded={updateOpen || isUpdating} onclick={() => { updateOpen = true }} style={`${iconStyle}position:relative;height:44px;width:100%;`}>
+    <button class="downloadActivityButton" type="button" title="Check for updates" aria-label={hasUpdate ? 'Check for updates — update available' : 'Check for updates'} aria-expanded={updateOpen} onclick={() => { updateOpen = true }} style={`${iconStyle}position:relative;height:44px;width:100%;`}>
       <Download size={24} strokeWidth={1.5} />
       {#if hasUpdate}<span style="position:absolute;right:7px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--ui-success-normal-text);border:2px solid var(--ui-chrome-normal-surface);box-sizing:content-box;"></span>{/if}
     </button>
@@ -167,8 +152,20 @@
     <div style="display:flex;align-items:center;gap:7px;min-height:36px;padding:0 12px 0 10px;border-top:1px solid var(--ui-neutral-muted-border);color:var(--ui-secondary-text);"><ChevronRight size={20} /><Bookmark size={16} /><span class="font-semibold" style="flex:1;">Backlog</span><span class="text-xs">2</span></div>
   </aside>
 
-  {#snippet updatePanel()}
-    <CardSurface variant="overlay" class="flex flex-col">
+  <!-- One shared popup retains its content while update progress toggles modality. -->
+  <Popup
+    bind:open={updateOpen}
+    title="App Updates"
+    backdrop={isUpdating}
+    closeDisabled={isUpdating}
+    busy={isUpdating}
+    placement="bottom-left"
+    anchor={mockupRoot}
+    offsetX={58}
+    offsetY={10}
+    class="flex w-[340px] flex-col text-sm leading-5"
+  >
+    {#snippet children(closeUpdates)}
     <header class="flex min-w-0 items-center gap-2 px-4 py-3">
       <Download size={24} class="shrink-0" aria-hidden="true" />
       <h2 class="m-0 flex-1 text-lg font-semibold">App Updates</h2>
@@ -179,7 +176,7 @@
         title={`Preview next update state: ${nextUpdateState[update.state]}`}
         onclick={cycleUpdateState}
       />
-      <IconButton icon={X} label="Close updates" disabled={isUpdating} onclick={() => { updateOpen = false }} />
+      <IconButton icon={X} label="Close updates" disabled={isUpdating} onclick={closeUpdates} />
     </header>
     <Separator />
     <div class="min-w-0 p-4">
@@ -212,19 +209,8 @@
         style="width:100%;max-width:none;justify-content:center;"
       />
     </div>
-    </CardSurface>
-  {/snippet}
-
-  {#if updateOpen && !isUpdating}
-    <section aria-label="App Updates" style="position:absolute;left:58px;bottom:10px;width:338px;max-width:calc(100% - 72px);z-index:5;">
-      {@render updatePanel()}
-    </section>
-  {/if}
-  <dialog bind:this={blockingDialog} class="updateDialog text-sm leading-5" aria-label="App Updates" aria-busy={isUpdating} oncancel={(event) => event.preventDefault()}>
-    {#if isUpdating}
-      {@render updatePanel()}
-    {/if}
-  </dialog>
+    {/snippet}
+  </Popup>
 </main>
 
 <style>
@@ -239,20 +225,4 @@
     opacity: 1;
   }
 
-  .updateDialog {
-    position: fixed;
-    top: auto;
-    width: 338px;
-    max-height: none;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--ui-normal-text);
-    overflow: visible;
-  }
-
-  .updateDialog::backdrop {
-    background: var(--ui-ghost-surface);
-  }
 </style>

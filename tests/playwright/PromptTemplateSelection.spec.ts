@@ -280,7 +280,7 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
       'Choose one template, or use the prompt exactly as written.'
     )
-    expect(Math.abs((await dialog.boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
+    expect(Math.abs((await dialog.locator('.cthulhuUiPopupSurface').boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
     const firstBaseFolderHeader = dialog.locator('.prompt-template-base-folder-header').first()
     const firstBaseFolderHeaderSpacer = dialog
       .locator('.prompt-template-base-folder-header-spacer')
@@ -378,7 +378,7 @@ describe('Prompt template selection', () => {
         return Math.abs((treeBox?.height ?? 0) - (spacerBox?.height ?? 0))
       })
       .toBeLessThanOrEqual(2)
-    const expandedDialogHeight = (await dialog.boundingBox())!.height
+    const expandedDialogHeight = (await dialog.locator('.cthulhuUiPopupSurface').boundingBox())!.height
     const expandedTreeHeight = (await templateTree.boundingBox())!.height
 
     await dialog
@@ -390,7 +390,7 @@ describe('Prompt template selection', () => {
     await expect
       .poll(async () => (await templateTree.boundingBox())?.height ?? Number.POSITIVE_INFINITY)
       .toBeLessThan(expandedTreeHeight)
-    const collapsedDialogHeight = (await dialog.boundingBox())!.height
+    const collapsedDialogHeight = (await dialog.locator('.cthulhuUiPopupSurface').boundingBox())!.height
     const collapsedTreeHeight = (await templateTree.boundingBox())!.height
     expect(
       Math.abs(

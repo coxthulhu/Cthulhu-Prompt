@@ -1,15 +1,14 @@
 <script lang="ts">
   import { X } from 'lucide-svelte'
   import type { ComponentType, Snippet } from 'svelte'
-  import type { Action } from 'svelte/action'
   import Button, { type ButtonVariant } from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
-  import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
+  import Popup from '@renderer/common/cthulhu-ui/dialogs/Popup.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
-  import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
 
+  /** Dialog content and footer actions presented by the shared Popup base. */
   type Props = {
     open?: boolean
     icon: ComponentType
@@ -40,6 +39,7 @@
     onsubmit?: () => void
   }
 
+  /** Reactive dialog content, actions, and cancellation state. */
   let {
     open = $bindable(false),
     icon: Icon,
@@ -58,7 +58,7 @@
     submitTestId,
     cancelTestId,
     class: className,
-    children,
+    children: body,
     secondaryActions,
     submitVariant = 'accent',
     submitIcon,
@@ -66,15 +66,7 @@
     onsubmit
   }: Props = $props()
 
-  const closeDialog = () => {
-    if (cancelDisabled) {
-      return
-    }
-
-    open = false
-    oncancel?.()
-  }
-
+  /** Invokes the primary action only while submission is enabled. */
   const submitDialog = () => {
     if (submitDisabled) {
       return
@@ -82,137 +74,80 @@
 
     onsubmit?.()
   }
-
-  const handleOutsideClick = () => {
-    if (!closeOnOutsideClick) {
-      return
-    }
-
-    closeDialog()
-  }
-
-  const portalToBody: Action<HTMLDivElement> = (node) => {
-    // Side effect: move overlays out of nested app containers so fixed positioning covers the viewport.
-    document.body.appendChild(node)
-
-    return {
-      destroy() {
-        node.remove()
-      }
-    }
-  }
-
-  // Side effect: own dialog shortcuts and block underlying screen shortcuts while open.
-  $effect(() => {
-    if (!open) {
-      return
-    }
-
-    return registerKeyboardScope({
-      layer: 'dialog',
-      bindings: [{ matches: (event) => event.key === 'Escape', run: closeDialog }]
-    })
-  })
 </script>
 
-{#snippet closeButton()}
-  <IconButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
-{/snippet}
+<!-- Dialog layout delegates all overlay and dismissal behavior to Popup. -->
+<Popup
+  bind:open
+  {title}
+  layerClass="cthulhuUiDialogLayer"
+  class={mergeClasses(
+    'cthulhuUiDialog flex flex-col pb-4',
+    subtitle ? 'pt-[18px]' : 'pt-4',
+    className
+  )}
+  closeDisabled={cancelDisabled}
+  {closeOnOutsideClick}
+  onclose={oncancel}
+>
+  {#snippet children(closeDialog)}
+    {#snippet closeButton()}
+      <IconButton icon={X} label="Close" disabled={cancelDisabled} onclick={closeDialog} />
+    {/snippet}
+    <div class="cthulhuUiDialogHeader" data-has-subtitle={subtitle ? 'true' : 'false'}>
+      <Row
+        variant="dialog-heading"
+        icon={Icon}
+        label={title}
+        detail={subtitle}
+        wrapDetail
+        iconTestId="dialog-header-icon"
+        detailTestId="dialog-subtitle"
+        trailing={showCloseButton ? closeButton : undefined}
+      />
+    </div>
 
-{#if open}
-  <div
-    class="cthulhuUiDialogLayer"
-    role="presentation"
-    use:portalToBody
-    onclick={handleOutsideClick}
-  >
-    <CardSurface
-      variant="overlay"
-      class={mergeClasses(
-        'cthulhuUiDialog flex flex-col pb-4',
-        subtitle ? 'pt-[18px]' : 'pt-4',
-        className
-      )}
-      role="dialog"
-      aria-label={title}
-      aria-modal="true"
-      onclick={(event) => event.stopPropagation()}
-    >
-      <div
-        class="cthulhuUiDialogHeader"
-        data-has-subtitle={subtitle ? 'true' : 'false'}
-      >
-        <Row
-          variant="dialog-heading"
-          icon={Icon}
-          label={title}
-          detail={subtitle}
-          wrapDetail
-          iconTestId="dialog-header-icon"
-          detailTestId="dialog-subtitle"
-          trailing={showCloseButton ? closeButton : undefined}
+    {#if showSeparators}
+      <Separator />
+    {/if}
+
+    {#if body}
+      <div class="cthulhuUiDialogBody" data-scrollable={scrollBody}>
+        {@render body()}
+      </div>
+    {/if}
+
+    {#if showSeparators}
+      <Separator />
+    {/if}
+
+    <div class="cthulhuUiDialogFooter">
+      {#if showCancelButton}
+        <Button
+          text={cancelText}
+          state={cancelDisabled ? 'disabled' : 'enabled'}
+          testId={cancelTestId}
+          onclick={closeDialog}
         />
-      </div>
-
-      {#if showSeparators}
-        <Separator />
       {/if}
-
-      {#if children}
-        <div class="cthulhuUiDialogBody" data-scrollable={scrollBody}>
-          {@render children()}
-        </div>
+      {#if secondaryActions}
+        {@render secondaryActions()}
       {/if}
-
-      {#if showSeparators}
-        <Separator />
+      {#if showSubmitButton}
+        <Button
+          icon={submitIcon}
+          text={submitText}
+          state={submitDisabled ? 'disabled' : 'enabled'}
+          variant={submitVariant}
+          testId={submitTestId}
+          onclick={submitDialog}
+        />
       {/if}
-
-      <div class="cthulhuUiDialogFooter">
-        {#if showCancelButton}
-          <Button
-            text={cancelText}
-            state={cancelDisabled ? 'disabled' : 'enabled'}
-            testId={cancelTestId}
-            onclick={closeDialog}
-          />
-        {/if}
-        {#if secondaryActions}
-          {@render secondaryActions()}
-        {/if}
-        {#if showSubmitButton}
-          <Button
-            icon={submitIcon}
-            text={submitText}
-            state={submitDisabled ? 'disabled' : 'enabled'}
-            variant={submitVariant}
-            testId={submitTestId}
-            onclick={submitDialog}
-          />
-        {/if}
-      </div>
-    </CardSurface>
-  </div>
-{/if}
+    </div>
+  {/snippet}
+</Popup>
 
 <style>
-  .cthulhuUiDialogLayer {
-    -webkit-app-region: no-drag;
-    align-items: center;
-    background-color: var(--ui-card-normal-shadow);
-    display: flex;
-    inset: 0;
-    justify-content: center;
-    padding: 16px;
-    position: fixed;
-    z-index: var(--z-modal);
-  }
-
-  :global(.cthulhuUiDialog) {
-    max-height: calc(100vh - 32px);
-    overflow: visible;
-  }
-
   .cthulhuUiDialogHeader {
     min-width: 0;
     padding: 0 20px 12px;

@@ -34,7 +34,8 @@
     StickyNote,
     Sunrise,
     Telescope,
-    Trash2
+    Trash2,
+    X
   } from 'lucide-svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
   import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
@@ -52,6 +53,7 @@
   import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
   import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
+  import Popup from '@renderer/common/cthulhu-ui/dialogs/Popup.svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import FolderInput from '@renderer/common/cthulhu-ui/FolderInput.svelte'
@@ -280,6 +282,16 @@
   let togglePressed = $state(true)
   let ErrorDialogOpen = $state(false)
   let ConfirmationDialogOpen = $state(false)
+  /** Gallery popup visibility remains controllable while user dismissal is disabled. */
+  let popupOpen = $state(false)
+  /** Live toggle demonstrates interaction blocking without replacing popup content. */
+  let popupBackdrop = $state(false)
+  /** Live toggle gates the close button, Escape, and outside clicks together. */
+  let popupCloseDisabled = $state(false)
+  /** Selects the gallery anchor instead of the viewport for bottom-left placement. */
+  let popupAnchored = $state(false)
+  /** Gallery sample whose live bounds supply the optional popup anchor. */
+  let popupAnchor = $state<HTMLElement>()
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
   let testLoadingOverlayActive = $state(false)
   // Gallery controls update the shared progress bar's value and percentage together.
@@ -954,6 +966,39 @@
         </CardSurface>
       </div>
 
+      <!-- Interactive Popup sample covers viewport and element anchoring with live modality. -->
+      <div class="component-section">
+        <CardSurface>
+          <div
+            bind:this={popupAnchor}
+            class="component-section-content min-h-[360px]"
+            data-testid="test-screen-popup-anchor"
+          >
+            {@render componentTitle('Popup', 'Bottom-left placement with optional interaction blocking.')}
+            <Button
+              text="Open Popup"
+              testId="test-screen-open-popup"
+              onclick={() => {
+                popupAnchored = false
+                popupBackdrop = false
+                popupCloseDisabled = false
+                popupOpen = true
+              }}
+            />
+            <Button
+              text="Open Anchored Popup"
+              testId="test-screen-open-anchored-popup"
+              onclick={() => {
+                popupAnchored = true
+                popupBackdrop = false
+                popupCloseDisabled = false
+                popupOpen = true
+              }}
+            />
+          </div>
+        </CardSurface>
+      </div>
+
       <div class="component-section">
         <CardSurface>
           <div class="component-section-content">
@@ -1072,6 +1117,64 @@
     ConfirmationDialogOpen = false
   }}
 />
+
+<!-- Popup controls stay reachable while the surrounding application is blocked. -->
+<Popup
+  bind:open={popupOpen}
+  title="Popup example"
+  backdrop={popupBackdrop}
+  closeDisabled={popupCloseDisabled}
+  closeOnOutsideClick
+  placement="bottom-left"
+  anchor={popupAnchored ? popupAnchor : undefined}
+  offsetX={58}
+  offsetY={10}
+  class="flex w-[338px] flex-col gap-2 p-4"
+  testId="test-screen-popup"
+>
+  {#snippet children(closePopup)}
+    <div class="flex items-center justify-between gap-2">
+      <Title title="Popup example" variant="dialog" />
+      <IconButton
+        icon={X}
+        label="Close popup"
+        disabled={popupCloseDisabled}
+        onclick={closePopup}
+      />
+    </div>
+    <Button
+      text={popupBackdrop ? 'Disable backdrop' : 'Enable backdrop'}
+      testId="test-screen-popup-toggle-backdrop"
+      onclick={() => { popupBackdrop = !popupBackdrop }}
+    />
+    <Button
+      text={popupCloseDisabled ? 'Enable closing' : 'Disable closing'}
+      testId="test-screen-popup-toggle-closing"
+      onclick={() => { popupCloseDisabled = !popupCloseDisabled }}
+    />
+    <TextInput
+      aria-label="Popup text"
+      data-testid="test-screen-popup-input"
+    />
+    <DropdownPopupSimple label="Popup menu" items={folderDropdownItems} testId="test-screen-popup-menu">
+      {#snippet trigger({ triggerAction, toggle, ariaHaspopup, ariaExpanded })}
+        <IconButton
+          icon={MoreHorizontal}
+          label="Popup menu"
+          buttonAction={triggerAction}
+          {ariaHaspopup}
+          {ariaExpanded}
+          onclick={toggle}
+        />
+      {/snippet}
+    </DropdownPopupSimple>
+    <Button
+      text="Close from parent"
+      testId="test-screen-popup-parent-close"
+      onclick={() => { popupOpen = false }}
+    />
+  {/snippet}
+</Popup>
 
 <style>
   .test-screen-shell {

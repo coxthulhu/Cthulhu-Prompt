@@ -876,7 +876,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       '[role="dialog"][aria-label="Create Task Prompt Folder"]'
     )
     await expect(createPromptFolderDialog).toBeVisible()
-    const createDialogBox = await createPromptFolderDialog.boundingBox()
+    const createDialogBox = await createPromptFolderDialog.locator('.cthulhuUiPopupSurface').boundingBox()
     expect(createDialogBox).not.toBeNull()
     expect(Math.abs(createDialogBox!.width - 520)).toBeLessThanOrEqual(2)
     await expect(
@@ -1505,7 +1505,7 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
     await expect(renameDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
       'Change the name shown in the app and on disk.'
     )
-    const renameDialogBox = await renameDialog.boundingBox()
+    const renameDialogBox = await renameDialog.locator('.cthulhuUiPopupSurface').boundingBox()
     expect(renameDialogBox).not.toBeNull()
     expect(Math.abs(renameDialogBox!.width - 520)).toBeLessThanOrEqual(2)
     await expect(nameInput).toBeVisible()

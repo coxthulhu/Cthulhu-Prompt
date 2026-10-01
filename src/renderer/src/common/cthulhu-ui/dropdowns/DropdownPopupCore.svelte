@@ -1,8 +1,6 @@
 <script module lang="ts">
   // Holds the closer for the single dropdown currently open across the renderer.
   let activeDropdownCloser: (() => void) | null = null
-  /** Gives each mounted trigger its own CSS anchor name across body portals. */
-  let nextAnchorId = 0
 </script>
 
 <script lang="ts">
@@ -11,6 +9,7 @@
   import { registerDragDropDropdown } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
+  import { createCssAnchor } from '@renderer/common/cthulhu-ui/cssAnchor'
 
   export type DropdownPopupPlacement = 'cursor' | 'below-trigger'
   export type DropdownPopupMenuAlignment = 'left' | 'right'
@@ -63,11 +62,7 @@
 
   const fallbackMenuWidth = 236
   const fallbackMenuHeight = 336
-  const firstItemCenterOffset = 25
   const cursorContextMenuGap = 4
-  const belowTriggerGap = 4
-  const bottomGap = 8
-  const viewportMargin = 16
   const scrollKeys = new Set([
     'ArrowDown',
     'ArrowLeft',
@@ -82,8 +77,8 @@
 
   let menuLayerRef = $state<HTMLDivElement | null>(null)
   let anchorElement = $state<HTMLElement | null>(null)
-  /** Stable CSS identity connecting this trigger to its portalled menu. */
-  const anchorName = `--cthulhu-dropdown-${++nextAnchorId}`
+  /** Shared anchor owns the identity, trigger registration, and positioning calculations. */
+  const cssAnchor = createCssAnchor()
   /** Null uses the trigger's live edges for keyboard and drag opening. */
   let cursorOffset = $state<CursorOffset | null>(null)
   let open = $state(false)
@@ -118,13 +113,15 @@
     open = true
   }
 
+  /** Registers the trigger's CSS anchor and closes its menu when the trigger unmounts. */
   const triggerAction: DropdownPopupTriggerAction = (node) => {
     anchorElement = node
-    node.style.setProperty('anchor-name', anchorName)
+    /** Shared cleanup restores the trigger's original anchor names on removal. */
+    const detachAnchor = cssAnchor.attach(node)
 
     return {
       destroy() {
-        node.style.removeProperty('anchor-name')
+        detachAnchor()
         if (anchorElement === node) {
           anchorElement = null
           closeMenu()
@@ -161,27 +158,15 @@
     }
   }
 
-  /** Below-trigger menus grow with their trigger as the surrounding layout changes. */
-  const resolvedMenuWidth = $derived(
-    placement === 'below-trigger' ? `max(${menuWidth}, anchor-size(width))` : menuWidth
-  )
-  /** Horizontal attachment preserves cursor offsets and existing left/right alignment. */
-  const anchorX = $derived(
-    cursorOffset
-      ? `anchor(left) + ${cursorOffset.x}px`
-      : placement === 'below-trigger' && menuAlignment === 'left' ? 'anchor(left)' : 'anchor(right)'
-  )
-  /** Vertical attachment retains the first-item cursor alignment and below-trigger gap. */
-  const anchorY = $derived(
-    placement === 'below-trigger'
-      ? `anchor(bottom) + ${belowTriggerGap}px`
-      : `${cursorOffset ? `anchor(top) + ${cursorOffset.y}px` : 'anchor(center)'} - ${firstItemCenterOffset}px`
-  )
   /** CSS clamps live anchor coordinates against the viewport using the observed menu size. */
   const menuLayerStyle = $derived(
-    `position-anchor: ${anchorName}; width: ${resolvedMenuWidth};
-    left: clamp(${viewportMargin}px, calc(${anchorX} - ${menuAlignment === 'right' ? measuredMenuSize.width : 0}px), calc(100vw - ${measuredMenuSize.width + viewportMargin}px));
-    top: clamp(${viewportMargin}px, calc(${anchorY}), calc(100vh - ${measuredMenuSize.height + bottomGap}px));`
+    cssAnchor.getStyle({
+      placement,
+      alignment: menuAlignment,
+      cursorOffset,
+      width: menuWidth,
+      size: measuredMenuSize
+    })
   )
 
   const triggerContext = $derived({
@@ -194,9 +179,11 @@
   })
   const contentContext = $derived({ close: closeMenu })
 
-  const portalToBody: Action<HTMLDivElement> = (node) => {
-    // Move fixed popups out of component containers so they are not clipped by local overflow.
-    document.body.appendChild(node)
+  /** Keeps portalled menus inside their owning modal, or in the document body. */
+  const portalToOverlay: Action<HTMLDivElement> = (node) => {
+    // Side effect: escape clipping while keeping modal-owned menus inside the native top layer.
+    const portalRoot = anchorElement?.closest('dialog') ?? document.body
+    portalRoot.appendChild(node)
 
     return {
       destroy() {
@@ -318,7 +305,7 @@
     bind:this={menuLayerRef}
     class="cthulhuUiDropdownPopupLayer"
     style={menuLayerStyle}
-    use:portalToBody
+    use:portalToOverlay
   >
     <CardSurface
       variant="overlay"
