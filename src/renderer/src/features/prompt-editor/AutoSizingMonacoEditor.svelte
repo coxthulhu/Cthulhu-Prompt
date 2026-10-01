@@ -485,7 +485,6 @@
 
       editor = nextEditor
       registerMonacoEditor({ container: targetContainer, editor: nextEditor })
-      onEditorLifecycle?.(nextEditor, true)
       findController = FindController.get(nextEditor)
       const captureViewState = () => {
         onViewStateCapture?.(serializeEditorViewState(nextEditor))
@@ -520,6 +519,8 @@
       emitChange(nextEditor.getValue(), false, monacoHeightPx)
       onFindMatchReveal?.(revealFindMatch)
       isEditorReady = true
+      // Notify hydration only after exact height and the match-reveal handler are available.
+      onEditorLifecycle?.(nextEditor, true)
 
       cleanupEditor = () => {
         isEditorReady = false

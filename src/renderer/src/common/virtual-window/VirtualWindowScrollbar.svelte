@@ -11,6 +11,8 @@
     isPointerOverWindow: boolean
     revealVersion: number
     onScrollTopChange: (nextScrollTop: number) => void
+    /** Cancels a pending measured reveal as soon as a scroll gesture starts. */
+    onScrollAttempt: () => void
   }
 
   let {
@@ -21,7 +23,8 @@
     overlay = false,
     isPointerOverWindow,
     revealVersion,
-    onScrollTopChange
+    onScrollTopChange,
+    onScrollAttempt
   }: Props = $props()
 
   const MIN_THUMB_PX = 20
@@ -94,6 +97,7 @@
   /** Captures a thumb or track press while preserving its initial thumb offset. */
   const startDragging = (event: PointerEvent, dragOffsetPx: number) => {
     if (!trackElement) return
+    onScrollAttempt()
     const rect = trackElement.getBoundingClientRect()
     revealScrollbar()
     isDragging = true

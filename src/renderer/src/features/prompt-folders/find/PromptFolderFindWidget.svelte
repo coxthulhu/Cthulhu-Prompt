@@ -9,6 +9,8 @@
     onNext: () => void
     onPrevious: () => void
     focusRequests: ConsumableRequestCoordinator<void>
+    /** Invalidates an older reveal immediately when the user changes or clears the query. */
+    onQueryChange: (query: string) => void
   }
 
   let {
@@ -18,7 +20,8 @@
     currentMatchIndex,
     onNext,
     onPrevious,
-    focusRequests
+    focusRequests,
+    onQueryChange
   }: FindWidgetProps = $props()
 
   let isInputFocused = $state(false)
@@ -78,6 +81,7 @@
                 spellcheck="false"
                 bind:this={inputRef}
                 bind:value={matchText}
+                oninput={(event) => onQueryChange(event.currentTarget.value)}
                 onkeydown={handleInputKeydown}
                 onfocus={() => {
                   isInputFocused = true

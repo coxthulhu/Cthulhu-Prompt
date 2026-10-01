@@ -607,6 +607,7 @@ export const createPromptFolderScreenController = ({
 
     return (
       promptNavigation.selectionSource === 'tree-click' ||
+      promptNavigation.selectionSource === 'find' ||
       promptNavigation.selectionSource === 'editor-interaction' ||
       promptNavigation.selectionSource === 'category-open' ||
       promptNavigation.selectionSource === 'prompt-create' ||
@@ -838,12 +839,16 @@ export const createPromptFolderScreenController = ({
 
   const scrollToWithinWindowBandWithManualClear: ScrollToWithinWindowBand = (
     rowId,
-    offsetPx,
-    scrollType
+    offset,
+    scrollType,
+    scrollPaddingPx
   ) => {
     // Caret visibility adjustments must retain the editor selected by the user's input.
-    if (promptNavigation.selectionSource !== 'editor-interaction') clearManualSelectionSource()
-    scrollApi?.scrollToWithinWindowBand(rowId, offsetPx, scrollType)
+    if (typeof offset === 'number' && promptNavigation.selectionSource !== 'editor-interaction') {
+      clearManualSelectionSource()
+    }
+    return scrollApi?.scrollToWithinWindowBand(rowId, offset, scrollType, scrollPaddingPx)
+      ?? (() => {})
   }
 
   /** Selects an edited prompt without moving content or expanding sidebar categories. */
@@ -1352,7 +1357,7 @@ export const createPromptFolderScreenController = ({
     breadcrumbCategoryId = categoryId
   }
 
-  /** Selects and reveals the screen row that owns one folder-level find match. */
+  /** Selects a find target and expands its content immediately without scrolling the main viewport. */
   const handleFindMatchReveal = (match: PromptFolderFindMatch) => {
     /** Navigation target for the prompt owning this folder-level find match. */
     const targetRow: ActivePromptScreenRow = {
@@ -1363,8 +1368,9 @@ export const createPromptFolderScreenController = ({
     }
     setCurrentFolderSelection(targetRow, 'find', {
       forceRequest: true,
-      contentReveal: { scrollType: 'center' }
+      treeExpansion: 'owner'
     })
+    expandSectionForRow(targetRow)
   }
 
   const setScrollApi = (nextScrollApi: VirtualWindowScrollApi | null) => {

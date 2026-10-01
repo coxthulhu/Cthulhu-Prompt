@@ -447,12 +447,6 @@
     const handle: PromptFolderFindRowHandle = {
       entityId: promptId,
       rowId,
-      isHydrated: () => isHydrated,
-      requestHydration: () => {
-        void ensureHydrated()
-      },
-      shouldEnsureHydratedForSection: (sectionKey) =>
-        sectionKey === PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
       isSectionReady: (sectionKey) =>
         sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
           ? titleInputRef !== null

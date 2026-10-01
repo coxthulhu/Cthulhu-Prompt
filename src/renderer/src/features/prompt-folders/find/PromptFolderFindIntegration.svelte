@@ -13,6 +13,7 @@
   } from './promptFolderFindSearch'
   import { createPromptFolderFindSearchModel } from './promptFolderFindSearchModel'
   import { registerPromptFolderFindShortcuts } from './promptFolderFindShortcuts'
+  import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import {
@@ -24,7 +25,6 @@
     PromptFolderFindFocusRequest,
     PromptFolderFindItem,
     PromptFolderFindMatch,
-    PromptFolderFindRevealRequest,
     PromptFolderFindRowHandle,
     PromptFolderFindSelection,
     PromptFolderFindState
@@ -55,7 +55,16 @@
   let matchCountsByEntity = $state<PromptFolderFindCounts[]>([])
   const findInputFocusRequests = createConsumableRequestCoordinator<void>()
   const focusRequests = createConsumableRequestCoordinator<PromptFolderFindFocusRequest>()
-  const revealRequests = createConsumableRequestCoordinator<PromptFolderFindRevealRequest>()
+  /** Scoped cancellation returned by the virtual window for this find reveal. */
+  let cancelReveal: (() => void) | null = null
+  /** Navigation notifications invalidate pending measurements before selection changes. */
+  const promptNavigation = getPromptNavigationContext()
+
+  /** Releases a pending exact scroll without affecting newer navigation. */
+  const cancelMatchReveal = (): void => {
+    cancelReveal?.()
+    cancelReveal = null
+  }
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
   let returnFocusTarget = $state<PromptFolderFindFocusRequest | null>(null)
@@ -86,7 +95,7 @@
   // Show the widget and request a fresh scan for the current query.
   const openFindDialog = () => {
     focusRequests.clear()
-    revealRequests.clear()
+    cancelMatchReveal()
     isFindOpen = true
     searchRevision += 1
     findInputFocusRequests.request(undefined)
@@ -96,7 +105,7 @@
   const closeFindDialog = () => {
     isFindOpen = false
     findInputFocusRequests.clear()
-    revealRequests.clear()
+    cancelMatchReveal()
     focusRequests.clear()
     if (!returnFocusTarget) return
     /** Mounted row whose target section must already be ready to receive focus. */
@@ -110,7 +119,7 @@
     if (query.length === 0) {
       preserveSelectionOnNextSearch = false
       shouldSelectCurrentMatch = true
-      revealRequests.clear()
+      cancelMatchReveal()
       matchCountsByEntity = []
       totalMatches = 0
       currentMatchIndex = 0
@@ -128,7 +137,7 @@
         sum + entry.sectionCounts.reduce((sectionSum, section) => sectionSum + section.count, 0),
       0
     )
-    if (totalMatches === 0) revealRequests.clear()
+    if (totalMatches === 0) cancelMatchReveal()
     if (resetSelection) {
       const preserveSelection = preserveSelectionOnNextSearch
       preserveSelectionOnNextSearch = false
@@ -173,6 +182,14 @@
       : getPromptFolderFindMatchForIndex(currentMatchIndex, matchCountsByEntity)
   )
 
+  /** Searches input edits immediately so hydrated targets measure within the same input event. */
+  const handleQueryChange = (nextQuery: string): void => {
+    cancelMatchReveal()
+    matchText = nextQuery
+    runSearch(true)
+    lastSearchInputs = buildSearchInputs({ query, entityIds, searchRevision })
+  }
+
   const getItem = (entityId: string): PromptFolderFindItem | null =>
     itemByEntityId.get(entityId) ?? null
   const getSectionText = (entityId: string, sectionKey: string): string => {
@@ -181,9 +198,23 @@
     return item.sections.find((section) => section.key === sectionKey)?.text ?? ''
   }
 
+  /** Prepares one target, then measures its match synchronously when the row is ready. */
   const requestMatchReveal = (match: PromptFolderFindMatch) => {
+    cancelMatchReveal()
     onRevealMatch?.(match)
-    revealRequests.request({ match, query })
+    /** Row identity is available even while its editor is unmounted. */
+    const item = getItem(match.entityId)
+    if (!item || !scrollToWithinWindowBand) return
+    /** Retained query prevents a changed input from completing an obsolete reveal. */
+    const requestedQuery = query
+    cancelReveal = scrollToWithinWindowBand(item.rowId, () => {
+      if (!isFindOpen || query !== requestedQuery) return null
+      /** Mounted section supplies a title midpoint or Monaco's exact selected-match position. */
+      const rowHandle = rowHandlesByEntityId.get(match.entityId)
+      if (!rowHandle?.isSectionReady(match.sectionKey)) return null
+      return rowHandle.getSectionCenterOffset(match.sectionKey)
+        ?? rowHandle.revealSectionMatch(match.sectionKey, requestedQuery, match.sectionMatchIndex)
+    }, 'center')
   }
 
   // Resume navigation from the user's cursor and cancel any older pending reveal.
@@ -192,7 +223,7 @@
     const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
     lastSelectionAnchor = { ...anchor, startOffset, endOffset }
     shouldSelectCurrentMatch = false
-    revealRequests.clear()
+    cancelMatchReveal()
     returnFocusTarget = {
       entityId: anchor.entityId,
       sectionKey: anchor.sectionKey,
@@ -486,31 +517,6 @@
     lastSearchInputs = nextInputs
   })
 
-  // Side effect: reveal and acknowledge the requested match once its row section is ready.
-  $effect(() => {
-    const request = revealRequests.pending
-    if (!request || !scrollToWithinWindowBand) return
-
-    const { match, query } = request.payload
-    const rowHandle = rowHandlesByEntityId.get(match.entityId)
-    if (!rowHandle) return
-
-    if (rowHandle.shouldEnsureHydratedForSection(match.sectionKey) && !rowHandle.isHydrated()) {
-      rowHandle.requestHydration()
-      return
-    }
-    if (!rowHandle.isSectionReady(match.sectionKey)) return
-
-    revealRequests.consume(request, () => {
-      const sectionCenterOffsetPx = rowHandle.getSectionCenterOffset(match.sectionKey)
-      const revealOffsetPx =
-        sectionCenterOffsetPx ??
-        rowHandle.revealSectionMatch(match.sectionKey, query, match.sectionMatchIndex)
-      if (revealOffsetPx == null) return
-      scrollToWithinWindowBand(rowHandle.rowId, revealOffsetPx, 'center')
-    })
-  })
-
   const getMatchIndexAtSelection = (
     groups: PromptFolderFindCounts[],
     entityId: string,
@@ -636,6 +642,8 @@
 
   // Side effect: capture global find/escape shortcuts while the prompt folder screen is active.
   onMount(() => {
+    /** Subscription cancels pending find work at the start of newer explicit navigation. */
+    const unregisterNavigation = promptNavigation.onNavigate(cancelMatchReveal)
     const unregisterShortcuts = registerPromptFolderFindShortcuts({
       getIsFindOpen: () => isFindOpen,
       openFindDialog: openFindDialogFromSelection,
@@ -643,6 +651,8 @@
     })
 
     return () => {
+      unregisterNavigation()
+      cancelMatchReveal()
       unregisterShortcuts()
       // Side effect: dispose the shared Monaco find model on teardown.
       searchModel.dispose()
@@ -662,6 +672,7 @@
       onClose={closeFindDialog}
       onPrevious={handlePrevious}
       onNext={handleNext}
+      onQueryChange={handleQueryChange}
     />
   {/if}
 </div>

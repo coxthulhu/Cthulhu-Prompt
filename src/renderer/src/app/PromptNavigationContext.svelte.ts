@@ -1,4 +1,5 @@
 import { getContext, setContext } from 'svelte'
+import { SvelteSet } from 'svelte/reactivity'
 import {
   createConsumableRequestCoordinator,
   type ConsumableRequest,
@@ -112,6 +113,8 @@ export type PromptNavigationContext = {
   /** Releases workspace selection, highlights, and pending navigation requests. */
   clear: () => void
   select: (options: SelectPromptNavigationOptions) => SelectPromptNavigationResult
+  /** Registers synchronous cancellation when explicit navigation supersedes a pending reveal. */
+  onNavigate: (cancel: () => void) => () => void
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
@@ -144,6 +147,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
   const promptFocusRequests = createConsumableRequestCoordinator<PromptFocusRequest>()
   const treeExpansionRequests = createConsumableRequestCoordinator<PromptTreeExpansionRequest>()
   const treeRevealRequests = createConsumableRequestCoordinator<PromptNavigationTarget>()
+  /** Mounted consumers that must release pending work before explicit selection changes. */
+  const navigationListeners = new SvelteSet<() => void>()
   /** Timeout that clears the completed highlight so remounted virtual rows do not replay it. */
   let navigationHighlightTimeoutId: number | null = null
 
@@ -167,6 +172,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     if (!hasChanged && !forceRequest) {
       return { contentRevealRequest: null }
     }
+
+    if (source !== 'scroll-follow') navigationListeners.forEach((cancel) => cancel())
 
     state.screenRootFolderId = screenRootFolderId
     state.contentOwnerId = contentOwnerId
@@ -261,7 +268,12 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     treeExpansionRequests,
     treeRevealRequests,
     select,
+    onNavigate: (cancel) => {
+      navigationListeners.add(cancel)
+      return () => navigationListeners.delete(cancel)
+    },
     clear: () => {
+      navigationListeners.forEach((cancel) => cancel())
       state.screenRootFolderId = null
       state.contentOwnerId = null
       state.selectedRow = null

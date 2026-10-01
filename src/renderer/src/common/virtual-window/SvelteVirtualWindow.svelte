@@ -111,6 +111,9 @@
     getScrollShadowActive,
     getScrollbarRevealVersion,
     scrollToWithinWindowBand,
+    completePendingMeasurement,
+    cancelPendingMeasurement,
+    getPendingMeasurementRowId,
     scrollToAndTrackRow,
     compensateForRowMove
   } = createVirtualWindowScrollState({
@@ -120,7 +123,8 @@
     getOnUserScroll: () => onUserScroll,
     getOnScrollTopChange: () => onScrollTopChange,
     windowBandPaddingPx: WINDOW_BAND_PADDING_PX,
-    getInitialScrollTopPx: () => initialScrollTopPx
+    getInitialScrollTopPx: () => initialScrollTopPx,
+    isRowHydrated: (row) => isRowHydrated(row)
   })
 
   const {
@@ -130,6 +134,7 @@
     registerOverlayRow,
     rowNeedsOverlay,
     shouldDehydrateRow,
+    isRowHydrated,
     getCenterRowId,
     getCenterRowData
   } = createVirtualWindowHydrationState({
@@ -142,7 +147,8 @@
     getResolvedScrollBottomPx,
     getWidthResizeActive,
     getScrollAnchorMode,
-    setScrollAnchorMode
+    setScrollAnchorMode,
+    getPendingMeasurementRowId
   })
 
   const totalHeightPx = $derived(getTotalHeightPx())
@@ -173,7 +179,10 @@
   })
 
   const scrollApiInternal: VirtualWindowScrollApi = {
-    scrollTo: (scrollTopPx: number) => applyProgrammaticScrollTop(scrollTopPx),
+    scrollTo: (scrollTopPx: number) => {
+      cancelPendingMeasurement()
+      applyProgrammaticScrollTop(scrollTopPx)
+    },
     getScrollTop: () => getScrollTopPx(),
     scrollToWithinWindowBand,
     scrollToAndTrackRow,
@@ -221,13 +230,17 @@
     overlayRowElement,
     scrollToWithinWindowBand,
     scrollToAndTrackRow,
-    onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
+    onHydrationChange: (isHydrated) => {
+      hydrationStateByRowId.set(row.id, isHydrated)
+      if (isHydrated) completePendingMeasurement()
+    }
   })
 
   const getOverlaySnippet = (row: TRow): VirtualWindowRowSnippet<TRow> | null =>
     rowRegistry[row.kind].overlayRow?.snippet ?? null
 
   const handleWheel = (event: WheelEvent) => {
+    cancelPendingMeasurement()
     if (viewportHeight <= 0) return
     applyUserScrollTop(scrollTopPx + event.deltaY * WHEEL_SCROLL_MULTIPLIER)
   }
@@ -314,6 +327,7 @@
       {isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
       onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
+      onScrollAttempt={cancelPendingMeasurement}
     />
   </div>
 

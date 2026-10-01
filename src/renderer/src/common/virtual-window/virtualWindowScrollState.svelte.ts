@@ -16,6 +16,8 @@ type VirtualWindowScrollStateOptions<TRow extends { kind: string }> = {
   getOnScrollTopChange: () => ((scrollTopPx: number) => void) | undefined
   windowBandPaddingPx: number
   getInitialScrollTopPx: () => number | null
+  /** Checks hydration before invoking an exact offset measurement. */
+  isRowHydrated?: (row: VirtualRowState<TRow>) => boolean
 }
 
 export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
@@ -39,6 +41,18 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   let lastScrollTop = 0
   /** Single row placement retained while virtual measurements settle. */
   let trackedRow = $state<{ rowId: string; placement: TrackedRowScrollPlacement } | null>(null)
+  /** One measured reveal whose row stays mounted until completion or cancellation. */
+  let pendingMeasurement = $state.raw<{
+    rowId: string
+    measure: () => number | null
+    scrollType: ScrollToWithinWindowBandType
+    scrollPaddingPx: number
+  } | null>(null)
+
+  /** Releases the extra mounted row without changing the viewport. */
+  const cancelPendingMeasurement = (): void => {
+    pendingMeasurement = null
+  }
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
   const anchorOffsetPx = $derived(scrollAnchorMode === 'center' ? getViewportHeight() / 2 : 0)
@@ -59,6 +73,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   }
 
   const applyUserScrollTop = (nextScrollTop: number) => {
+    cancelPendingMeasurement()
     trackedRow = null
     const didScroll = applyScrollTop(nextScrollTop, true)
     if (didScroll) {
@@ -105,7 +120,14 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   const visibleRows = $derived.by(() => {
     if (visibleStartIndex < 0 || visibleEndIndex < visibleStartIndex) return []
-    return getRowStates().slice(visibleStartIndex, visibleEndIndex + 1)
+    /** Normal overscan rows plus, at most, the row being prepared for exact measurement. */
+    const rows = getRowStates().slice(visibleStartIndex, visibleEndIndex + 1)
+    /** Distant target mounted at its actual content offset without moving the viewport. */
+    const pendingRow = pendingMeasurement
+      ? getRowStates().find((row) => row.id === pendingMeasurement!.rowId)
+      : null
+    if (pendingRow && !rows.includes(pendingRow)) rows.push(pendingRow)
+    return rows
   })
 
   const viewportStartIndex = $derived(findIndexAtOffset(getRowStates(), resolvedScrollTopPx))
@@ -130,6 +152,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     sourceTrailingRowId: string,
     destinationDividerRowId: string
   ): void => {
+    cancelPendingMeasurement()
     const rows = getRowStates()
     const sourceRow = rows.find((row) => row.id === sourceRowId)
     const sourceTrailingRow = rows.find((row) => row.id === sourceTrailingRowId)
@@ -145,7 +168,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     )
   }
 
-  const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
+  /** Applies the existing band rule to an available numeric measurement. */
+  const scrollToOffsetWithinWindowBand = (
     rowId: string,
     offsetPx: number,
     scrollType: ScrollToWithinWindowBandType,
@@ -191,6 +215,45 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     }
   }
 
+  /** Completes an exact reveal synchronously when mounting and hydration have finished. */
+  const completePendingMeasurement = (): void => {
+    /** Request identity protects a newer reveal from cancellation during measurement. */
+    const request = pendingMeasurement
+    if (!request) return
+    /** Latest row geometry, including the height reported by Monaco's initial layout. */
+    const row = getRowStates().find((candidate) => candidate.id === request.rowId)
+    if (!row || !(options.isRowHydrated?.(row) ?? true)) return
+    /** Exact target offset; null waits for another readiness notification. */
+    const offsetPx = request.measure()
+    if (pendingMeasurement !== request || offsetPx === null) return
+    pendingMeasurement = null
+    // Commit current anchoring before measuring the band so the layout is not applied twice.
+    scrollTopPx = resolvedScrollTopPx
+    previousRowStates = getRowStates()
+    scrollToOffsetWithinWindowBand(
+      request.rowId, offsetPx, request.scrollType, request.scrollPaddingPx
+    )
+  }
+
+  /** Keeps numeric reveals immediate and prepares callback targets without a preliminary scroll. */
+  const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
+    rowId, offset, scrollType, scrollPaddingPx = windowBandPaddingPx
+  ) => {
+    cancelPendingMeasurement()
+    trackedRow = null
+    if (typeof offset === 'number') {
+      scrollToOffsetWithinWindowBand(rowId, offset, scrollType, scrollPaddingPx)
+      return () => {}
+    }
+    /** Stable request object retained by its cancellation closure. */
+    const request = { rowId, measure: offset, scrollType, scrollPaddingPx }
+    pendingMeasurement = request
+    completePendingMeasurement()
+    return () => {
+      if (pendingMeasurement === request) cancelPendingMeasurement()
+    }
+  }
+
   const TRACKED_ROW_TOP_PADDING_PX = 100
   /** Minimum viewport-top offset retained by vertical-bias placement. */
   const MINIMUM_TRACKED_ROW_TOP_OFFSET_PX = 20
@@ -220,6 +283,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   /** Starts the one active tracked-row placement. */
   const scrollToAndTrackRow: ScrollToAndTrackRow = (rowId, placement) => {
+    cancelPendingMeasurement()
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
 
@@ -273,6 +337,10 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getScrollShadowActive: () => scrollShadowActive,
     getScrollbarRevealVersion: () => scrollbarRevealVersion,
     scrollToWithinWindowBand,
+    completePendingMeasurement,
+    cancelPendingMeasurement,
+    /** Pending target receives hydration priority ahead of ordinary overscan rows. */
+    getPendingMeasurementRowId: () => pendingMeasurement?.rowId ?? null,
     scrollToAndTrackRow,
     compensateForRowMove
   }

@@ -38,17 +38,9 @@ export type PromptFolderFindFocusRequest = {
   } | null
 }
 
-export type PromptFolderFindRevealRequest = {
-  match: PromptFolderFindMatch
-  query: string
-}
-
 export type PromptFolderFindRowHandle = {
   entityId: string
   rowId: string
-  isHydrated: () => boolean
-  requestHydration: () => void
-  shouldEnsureHydratedForSection: (sectionKey: string) => boolean
   isSectionReady: (sectionKey: string) => boolean
   revealSectionMatch: (sectionKey: string, query: string, matchIndex: number) => number | null
   getSectionCenterOffset: (sectionKey: string) => number | null

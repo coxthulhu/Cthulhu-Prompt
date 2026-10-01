@@ -27,12 +27,16 @@ export type VirtualWindowRowSnippet<TRow> = Snippet<[VirtualWindowRowComponentPr
 // Defines how a requested row position is placed within the virtual viewport.
 export type ScrollToWithinWindowBandType = 'center' | 'minimal'
 
+/** Exact row-relative offset, measured after the target row hydrates when supplied as a callback. */
+export type VirtualWindowScrollOffset = number | (() => number | null)
+
+/** Reveals an offset within the padded band and returns cancellation for this request only. */
 export type ScrollToWithinWindowBand = (
   rowId: string,
-  offsetPx: number,
+  offset: VirtualWindowScrollOffset,
   scrollType: ScrollToWithinWindowBandType,
   scrollPaddingPx?: number
-) => void
+) => () => void
 
 /** Placement retained while a tracked virtual row finishes measuring. */
 export type TrackedRowScrollPlacement =

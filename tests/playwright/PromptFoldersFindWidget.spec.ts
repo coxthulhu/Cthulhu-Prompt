@@ -37,28 +37,25 @@ const LIVE_POSITION_QUERY = 'cthulhu-live-find-position-marker'
 const SMALL_SIDEBAR_QUERY = 'qzxv-sidebar-center-marker'
 /** Prompt kept away from both tree boundaries during the small-viewport regression. */
 const SMALL_SIDEBAR_TARGET_PROMPT_ID = 'small-sidebar-prompt-30'
-const TRACKED_ROW_TOP_PADDING_PX = 100
+/** Wrapped-body sizes exercise exact title placement independently of the complete row height. */
 const CENTER_TRACKING_CASES = [
   {
     key: 'fits',
-    testName: 'keeps a fully fitting prompt row centered while its placeholder hydrates',
+    testName: 'centers a measured title after its fitting body hydrates',
     query: 'cthulhu-centered-row-fits-marker',
     promptText: 'W'.repeat(1500),
-    expectedPlacement: 'centered'
   },
   {
     key: 'padding-overflow',
-    testName: 'top-aligns a prompt row whose padding would overflow the viewport',
+    testName: 'centers a measured title after its nearly viewport-height body hydrates',
     query: 'cthulhu-centered-row-padding-overflow-marker',
     promptText: 'W'.repeat(2600),
-    expectedPlacement: 'top-padded-fits'
   },
   {
     key: 'row-overflow',
-    testName: 'top-aligns a prompt row taller than the viewport',
+    testName: 'centers a measured title after its taller-than-viewport body hydrates',
     query: 'cthulhu-centered-row-overflow-marker',
     promptText: 'W'.repeat(10000),
-    expectedPlacement: 'top-padded-overflow'
   }
 ] as const
 
@@ -2169,6 +2166,8 @@ describe('Prompt folder find dialog', () => {
 
       try {
         await testHelpers.navigateToPromptFolders(`Center Tracking ${trackingCase.key}`)
+        /** Original viewport must remain in place while the distant body is a placeholder. */
+        const originalScrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
 
         /** Find input that reveals the distant title match while its body remains a placeholder. */
         const findInput = mainWindow.locator(FIND_INPUT)
@@ -2187,27 +2186,10 @@ describe('Prompt folder find dialog', () => {
           .locator(targetSelector)
           .evaluate((row) => row.getBoundingClientRect().height)
 
-        /** Every estimated placeholder is small enough to begin centered. */
-        await expect
-          .poll(() =>
-            mainWindow.evaluate(
-              ({ hostSelector, targetSelector }) => {
-                const host = document.querySelector<HTMLElement>(hostSelector)
-                const target = document.querySelector<HTMLElement>(targetSelector)
-                if (!host || !target) return Number.POSITIVE_INFINITY
-                const hostRect = host.getBoundingClientRect()
-                const targetRect = target.getBoundingClientRect()
-                return Math.abs(
-                  targetRect.top + targetRect.height / 2 - (hostRect.top + hostRect.height / 2)
-                )
-              },
-              {
-                hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
-                targetSelector
-              }
-            )
-          )
-          .toBeLessThanOrEqual(1)
+        expect(await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR))
+          .toBe(originalScrollTop)
+        await expect(mainWindow.getByTestId(`prompt-tree-active-prompt-center-tracking-${trackingCase.key}-30`))
+          .toHaveAttribute('aria-current', 'true')
 
         await mainWindow.evaluate(() => {
           window.svelteVirtualWindowTestControls?.resumeMonacoHydration()
@@ -2218,44 +2200,26 @@ describe('Prompt folder find dialog', () => {
           )
           .toBe(0)
 
-        const hydratedGeometry = await mainWindow
-          .locator(targetSelector)
-          .evaluate((row, hostSelector) => {
-            const host = document.querySelector<HTMLElement>(hostSelector)
-            if (!host) return null
-            const hostRect = host.getBoundingClientRect()
-            const rowRect = row.getBoundingClientRect()
-            return {
-              centerDeltaPx:
-                rowRect.top + rowRect.height / 2 - (hostRect.top + hostRect.height / 2),
-              topOffsetPx: rowRect.top - hostRect.top,
-              bottomOverflowPx: rowRect.bottom - hostRect.bottom,
-              rowHeightPx: rowRect.height,
-              viewportHeightPx: hostRect.height
-            }
-          }, PROMPT_FOLDER_HOST_SELECTOR)
-        expect(hydratedGeometry).not.toBeNull()
-        expect(hydratedGeometry!.rowHeightPx).toBeGreaterThan(placeholderHeightPx)
-
-        const remainingViewportHeightPx =
-          hydratedGeometry!.viewportHeightPx - hydratedGeometry!.rowHeightPx
-        if (trackingCase.expectedPlacement === 'centered') {
-          expect(remainingViewportHeightPx).toBeGreaterThanOrEqual(TRACKED_ROW_TOP_PADDING_PX)
-          expect(Math.abs(hydratedGeometry!.centerDeltaPx)).toBeLessThanOrEqual(1)
-        } else if (trackingCase.expectedPlacement === 'top-padded-fits') {
-          expect(remainingViewportHeightPx).toBeGreaterThanOrEqual(0)
-          expect(remainingViewportHeightPx).toBeLessThan(TRACKED_ROW_TOP_PADDING_PX)
-          expect(hydratedGeometry!.bottomOverflowPx).toBeGreaterThan(0)
-          expect(
-            Math.abs(hydratedGeometry!.topOffsetPx - TRACKED_ROW_TOP_PADDING_PX)
-          ).toBeLessThanOrEqual(1)
-        } else {
-          expect(remainingViewportHeightPx).toBeLessThan(0)
-          expect(hydratedGeometry!.bottomOverflowPx).toBeGreaterThan(0)
-          expect(
-            Math.abs(hydratedGeometry!.topOffsetPx - TRACKED_ROW_TOP_PADDING_PX)
-          ).toBeLessThanOrEqual(1)
-        }
+        await expect.poll(() => mainWindow.locator(`${targetSelector} ${PROMPT_TITLE_SELECTOR}`)
+          .evaluate((title, hostSelector) => {
+            /** Hydrated title and viewport bounds define the exact match placement. */
+            const titleRect = title.getBoundingClientRect()
+            /** Main virtual viewport stays independent of the complete prompt height. */
+            const hostRect = document.querySelector(hostSelector)!.getBoundingClientRect()
+            return Math.abs(titleRect.top + titleRect.height / 2 - (hostRect.top + hostRect.height / 2))
+          }, PROMPT_FOLDER_HOST_SELECTOR)).toBeLessThanOrEqual(1)
+        expect(await mainWindow.locator(targetSelector).evaluate((row) => row.getBoundingClientRect().height))
+          .toBeGreaterThan(placeholderHeightPx)
+        /** Body sizing preconditions retain distinct fitting, nearly fitting, and oversized coverage. */
+        const remainingHeight = await mainWindow.locator(targetSelector).evaluate((row, hostSelector) =>
+          document.querySelector(hostSelector)!.getBoundingClientRect().height - row.getBoundingClientRect().height,
+        PROMPT_FOLDER_HOST_SELECTOR)
+        if (trackingCase.key === 'fits') expect(remainingHeight).toBeGreaterThanOrEqual(100)
+        else if (trackingCase.key === 'padding-overflow') {
+          expect(remainingHeight).toBeGreaterThanOrEqual(0)
+          expect(remainingHeight).toBeLessThan(100)
+        } else expect(remainingHeight).toBeLessThan(0)
+        await expect(findInput).toBeFocused()
       } finally {
         if (!mainWindow.isClosed()) {
           await mainWindow.evaluate(() => {

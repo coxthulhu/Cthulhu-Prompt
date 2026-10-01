@@ -15,6 +15,8 @@ type VirtualWindowHydrationStateOptions<TRow extends { kind: string }> = {
   getWidthResizeActive: () => boolean
   getScrollAnchorMode: () => 'top' | 'center'
   setScrollAnchorMode: (mode: 'top' | 'center') => void
+  /** Target being mounted for an exact reveal without changing the viewport. */
+  getPendingMeasurementRowId: () => string | null
 }
 
 export const createVirtualWindowHydrationState = <TRow extends { kind: string }>(
@@ -63,6 +65,9 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     candidates.forEach((candidate, priority) => {
       priorities.set(candidate.id, priority)
     })
+    /** Exact reveal target hydrates before ordinary visible and overscan rows. */
+    const pendingRowId = options.getPendingMeasurementRowId()
+    if (pendingRowId) priorities.set(pendingRowId, -1)
 
     return priorities
   })
@@ -96,6 +101,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
   }
 
   const shouldDehydrateRow = (row: VirtualRowState<TRow>): boolean =>
+    row.id !== options.getPendingMeasurementRowId() &&
     getWidthResizeActive() &&
     (getRowRegistry()[row.rowData.kind].dehydrateOnWidthResize ?? false) &&
     !rowTouchesViewport(row, getResolvedScrollTopPx(), getResolvedScrollBottomPx())
@@ -119,6 +125,7 @@ export const createVirtualWindowHydrationState = <TRow extends { kind: string }>
     registerOverlayRow,
     rowNeedsOverlay,
     shouldDehydrateRow,
+    isRowHydrated,
     getCenterRowId: () => centerRowId,
     getCenterRowData: () => centerRowData
   }

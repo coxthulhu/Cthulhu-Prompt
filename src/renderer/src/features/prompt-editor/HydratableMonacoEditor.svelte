@@ -110,8 +110,8 @@
     } else if (editorInstance === editor) {
       editorInstance = null
     }
-    reportHydration(isActive)
     onEditorLifecycle?.(editor, isActive)
+    reportHydration(isActive)
   }
 
   const reportHydration = (nextIsHydrated: boolean) => {
