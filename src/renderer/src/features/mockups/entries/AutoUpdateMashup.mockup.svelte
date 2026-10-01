@@ -132,9 +132,9 @@
       </button>
     {/each}
     <div style="flex:1;"></div>
-    <button type="button" title="Check for updates" aria-label={hasUpdate ? 'Check for updates — update available' : 'Check for updates'} aria-expanded={updateOpen} onclick={() => { updateOpen = true }} style={`${iconStyle}position:relative;width:36px;height:36px;border-radius:6px;background:var(--ui-accent-action-fill);border:1px solid var(--ui-accent-normal-border);`}>
-      <Download size={20} strokeWidth={1.75} />
-      {#if hasUpdate}<span style="position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--ui-success-normal-text);border:2px solid var(--ui-chrome-normal-surface);box-sizing:content-box;"></span>{/if}
+    <button class="downloadActivityButton" type="button" title="Check for updates" aria-label={hasUpdate ? 'Check for updates — update available' : 'Check for updates'} aria-expanded={updateOpen || isUpdating} onclick={() => { updateOpen = true }} style={`${iconStyle}position:relative;height:44px;width:100%;`}>
+      <Download size={24} strokeWidth={1.5} />
+      {#if hasUpdate}<span style="position:absolute;right:7px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--ui-success-normal-text);border:2px solid var(--ui-chrome-normal-surface);box-sizing:content-box;"></span>{/if}
     </button>
   </nav>
 
@@ -200,7 +200,7 @@
         variant="accent"
         state={update.state === 'current' || update.state === 'available' ? 'enabled' : 'disabled'}
         icon={RefreshCw}
-        text={update.state === 'current' ? 'Check for Updates' : 'Update & Restart'}
+        text={hasUpdate ? 'Update & Restart' : 'Check for Updates'}
         onclick={handleUpdateAction}
         style="width:100%;max-width:none;justify-content:center;"
       />
@@ -228,6 +228,17 @@
 </main>
 
 <style>
+  .downloadActivityButton {
+    opacity: 0.7;
+    cursor: pointer;
+  }
+
+  .downloadActivityButton:hover,
+  .downloadActivityButton:focus-visible,
+  .downloadActivityButton[aria-expanded='true'] {
+    opacity: 1;
+  }
+
   .updateDialog {
     position: fixed;
     top: auto;
