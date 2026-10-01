@@ -10,6 +10,7 @@
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
     icon?: ComponentType
+    endIcon?: ComponentType
     text: string
     variant?: ButtonVariant
     appearance?: ButtonAppearance
@@ -22,6 +23,7 @@
 
   let {
     icon: Icon,
+    endIcon: EndIcon,
     text,
     variant = 'neutral',
     appearance = 'filled',
@@ -51,6 +53,9 @@
     <Icon class={mergeClasses('cthulhuUiButtonIcon', iconClass)} size={16} aria-hidden="true" />
   {/if}
   <span>{text}</span>
+  {#if EndIcon}
+    <EndIcon class={mergeClasses('cthulhuUiButtonIcon', iconClass)} size={16} aria-hidden="true" />
+  {/if}
 </button>
 
 <style>

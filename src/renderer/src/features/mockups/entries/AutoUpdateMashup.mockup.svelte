@@ -115,8 +115,8 @@
       />
       <Button
         appearance="outline"
-        icon={ExternalLink}
-        text="View GitHub releases"
+        endIcon={ExternalLink}
+        text="Open GitHub Releases"
         class="mt-2"
         style="width:100%;max-width:none;justify-content:center;"
       />
