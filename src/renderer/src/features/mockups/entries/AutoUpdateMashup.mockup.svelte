@@ -9,6 +9,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import ProgressBar from '@renderer/common/cthulhu-ui/loading/ProgressBar.svelte'
 
   const activities = [
     { label: 'Home', icon: Home },
@@ -97,9 +98,12 @@
       </div>
       {#if update.state === 'downloading'}
         <div style="padding:14px 0 17px;border-top:1px solid var(--ui-neutral-muted-border);">
-          <div class="text-sm" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><span>Downloading update…</span><span class="font-semibold" style="font-variant-numeric:tabular-nums;">64%</span></div>
-          <div role="progressbar" aria-label="Download progress" aria-valuenow={64} aria-valuemin={0} aria-valuemax={100} style="height:5px;border-radius:3px;background:var(--ui-neutral-emphasis-surface);overflow:hidden;"><div style="width:64%;height:100%;background:var(--ui-accent-link-text);border-radius:3px;"></div></div>
-          <div class="text-sm" style="margin-top:8px;color:var(--ui-muted-text);">54.2 MB of 84.7 MB</div>
+          <ProgressBar
+            value={64}
+            label="Downloading update…"
+            detail="54.2 MB of 84.7 MB"
+            ariaLabel="Download progress"
+          />
         </div>
       {/if}
       <Button

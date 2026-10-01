@@ -67,6 +67,7 @@
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/layout/MessageRow.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
+  import ProgressBar from '@renderer/common/cthulhu-ui/loading/ProgressBar.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
   import DetailedSelectorButton from '@renderer/common/cthulhu-ui/selectors/DetailedSelectorButton.svelte'
@@ -281,6 +282,8 @@
   let ConfirmationDialogOpen = $state(false)
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
   let testLoadingOverlayActive = $state(false)
+  // Gallery controls update the shared progress bar's value and percentage together.
+  let progressBarValue = $state(64)
   let testLoadingOverlayTimeoutId: number | null = null
 
   const testLoadingOverlay = createLoadingOverlayState({
@@ -865,6 +868,40 @@
                 {@render componentLabel('MessageRow: danger')}
                 <MessageRow text="Folder name is required." variant="danger" />
               </div>
+            </div>
+          </div>
+        </CardSurface>
+      </div>
+
+      <div class="component-section">
+        <CardSurface>
+          <div class="component-section-content">
+            {@render componentTitle('ProgressBar', 'Status text, percentage, and optional detail text.')}
+
+            <div class="stack">
+              <ProgressBar
+                value={progressBarValue}
+                label={progressBarValue === 100 ? 'Download complete' : 'Downloading update…'}
+                detail="Sample download progress"
+                data-testid="test-screen-progress-bar"
+              />
+              <div class="variant-controls">
+                <Button
+                  text="Advance 10%"
+                  onclick={() => {
+                    progressBarValue = Math.min(100, progressBarValue + 10)
+                  }}
+                />
+                <Button
+                  text="Reset"
+                  appearance="outline"
+                  onclick={() => {
+                    progressBarValue = 0
+                  }}
+                />
+              </div>
+              <ProgressBar value={0} label="Waiting to start" />
+              <ProgressBar value={100} label="Complete" detail="All files downloaded." />
             </div>
           </div>
         </CardSurface>
