@@ -71,7 +71,7 @@
   import SvelteVirtualWindow from '@renderer/common/virtual-window/SvelteVirtualWindow.svelte'
   import {
     defineVirtualWindowRowRegistry,
-    type ScrollToWithinWindowBand,
+    type VirtualWindowScrollApi,
     type VirtualWindowItem,
     type VirtualWindowViewportMetrics
   } from '@renderer/common/virtual-window/virtualWindowTypes'
@@ -80,7 +80,7 @@
     items: VirtualWindowItem<PromptTreeRow>[]
     testId: string
     spacerTestId: string
-    scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
+    scrollApi?: VirtualWindowScrollApi | null
     viewportMetrics?: VirtualWindowViewportMetrics | null
     rootFolderRow: Snippet<[PromptTreeRootFolderRowProps]>
     promptTreeRootFolderRowOverlay?: Snippet<[PromptTreeRootFolderRowProps]>
@@ -99,7 +99,7 @@
     items,
     testId,
     spacerTestId,
-    scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
+    scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
     rootFolderRow,
     promptTreeRootFolderRowOverlay,
@@ -162,6 +162,6 @@
   rightScrollPaddingPx={0}
   {testId}
   {spacerTestId}
-  bind:scrollToWithinWindowBand
+  bind:scrollApi
   bind:viewportMetrics
 />

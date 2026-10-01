@@ -10,8 +10,6 @@
     type VirtualWindowRowComponentProps,
     type VirtualWindowRowSnippet,
     type VirtualWindowRowTypeRegistry,
-    type ScrollToWithinWindowBand,
-    type ScrollToAndTrackRow,
     type VirtualWindowScrollApi,
     type VirtualWindowViewportMetrics
   } from './virtualWindowTypes'
@@ -31,8 +29,6 @@
     rowRegistry: VirtualWindowRowTypeRegistry<TRow>
     overlayScrollbar?: boolean
     initialScrollTopPx?: number | null
-    scrollToWithinWindowBand?: ScrollToWithinWindowBand | null
-    scrollToAndTrackRow?: ScrollToAndTrackRow | null
     onCenterRowChange?: (row: TRow | null, rowId: string | null) => void
     /** Offset below the viewport top used to sample the current virtual row. */
     sampleRowOffsetPx?: number
@@ -62,8 +58,6 @@
     rowRegistry,
     overlayScrollbar = false,
     initialScrollTopPx = null,
-    scrollToWithinWindowBand = $bindable<ScrollToWithinWindowBand | null>(null),
-    scrollToAndTrackRow = $bindable<ScrollToAndTrackRow | null>(null),
     onCenterRowChange,
     sampleRowOffsetPx = 0,
     onSampleRowChange,
@@ -116,8 +110,8 @@
     getViewportRows,
     getScrollShadowActive,
     getScrollbarRevealVersion,
-    scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
-    scrollToAndTrackRow: scrollToAndTrackRowInternal,
+    scrollToWithinWindowBand,
+    scrollToAndTrackRow,
     compensateForRowMove
   } = createVirtualWindowScrollState({
     getRowStates,
@@ -181,11 +175,11 @@
   const scrollApiInternal: VirtualWindowScrollApi = {
     scrollTo: (scrollTopPx: number) => applyProgrammaticScrollTop(scrollTopPx),
     getScrollTop: () => getScrollTopPx(),
+    scrollToWithinWindowBand,
+    scrollToAndTrackRow,
     compensateForRowMove
   }
 
-  scrollToWithinWindowBand = scrollToWithinWindowBandInternal
-  scrollToAndTrackRow = scrollToAndTrackRowInternal
   scrollApi = scrollApiInternal
 
   useVirtualWindowCallbacks({
@@ -225,8 +219,8 @@
     hydrationPriority: hydrationPriorityByRowId.get(row.id) ?? Number.POSITIVE_INFINITY,
     shouldDehydrate: shouldDehydrateRow(row),
     overlayRowElement,
-    scrollToWithinWindowBand: scrollToWithinWindowBandInternal,
-    scrollToAndTrackRow: scrollToAndTrackRowInternal,
+    scrollToWithinWindowBand,
+    scrollToAndTrackRow,
     onHydrationChange: (isHydrated) => hydrationStateByRowId.set(row.id, isHydrated)
   })
 

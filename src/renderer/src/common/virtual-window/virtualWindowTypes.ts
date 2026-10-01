@@ -48,6 +48,8 @@ export type ScrollToAndTrackRow = (
 export type VirtualWindowScrollApi = {
   scrollTo: (scrollTopPx: number) => void
   getScrollTop: () => number
+  scrollToWithinWindowBand: ScrollToWithinWindowBand
+  scrollToAndTrackRow: ScrollToAndTrackRow
   compensateForRowMove: (
     sourceRowId: string,
     sourceTrailingRowId: string,

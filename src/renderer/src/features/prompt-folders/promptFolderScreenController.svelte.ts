@@ -71,7 +71,6 @@ import {
 } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
-  ScrollToAndTrackRow,
   ScrollToWithinWindowBand,
   VirtualWindowScrollApi,
   VirtualWindowViewportMetrics
@@ -388,9 +387,6 @@ export const createPromptFolderScreenController = ({
   let isCreatingPrompt = $state(false)
   let errorMessage = $state<string | null>(null)
 
-  let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
-  /** Tracked-row scroll function provided by the active virtual window. */
-  let scrollToAndTrackRow = $state<ScrollToAndTrackRow | null>(null)
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   /** Seeds the virtual window from this root's persisted status-mode offset. */
@@ -847,7 +843,7 @@ export const createPromptFolderScreenController = ({
   ) => {
     // Caret visibility adjustments must retain the editor selected by the user's input.
     if (promptNavigation.selectionSource !== 'editor-interaction') clearManualSelectionSource()
-    scrollToWithinWindowBand?.(rowId, offsetPx, scrollType)
+    scrollApi?.scrollToWithinWindowBand(rowId, offsetPx, scrollType)
   }
 
   /** Selects an edited prompt without moving content or expanding sidebar categories. */
@@ -1085,23 +1081,19 @@ export const createPromptFolderScreenController = ({
       return
     }
 
-    /** Whether this request must retain its placement while row measurements settle. */
-    const shouldTrackRow =
-      request.payload.scrollType === 'center' || request.payload.scrollType === 'vertical-bias'
-    if (shouldTrackRow && !scrollToAndTrackRow) return
-    if (!shouldTrackRow && !scrollToWithinWindowBand) return
+    if (!scrollApi) return
 
     promptNavigation.contentRevealRequests.consume(request, (payload) => {
       const rowId = toPromptFolderRowId(toActivePromptScreenTarget(payload))
       if (payload.scrollType === 'center') {
-        scrollToAndTrackRow!(rowId, { type: 'center' })
+        scrollApi!.scrollToAndTrackRow(rowId, { type: 'center' })
       } else if (payload.scrollType === 'vertical-bias') {
-        scrollToAndTrackRow!(rowId, {
+        scrollApi!.scrollToAndTrackRow(rowId, {
           type: 'vertical-bias',
           verticalBiasPx: payload.verticalBiasPx
         })
       } else {
-        scrollToWithinWindowBand!(rowId, 0, payload.scrollType)
+        scrollApi!.scrollToWithinWindowBand(rowId, 0, payload.scrollType)
       }
     })
   })
@@ -1329,13 +1321,13 @@ export const createPromptFolderScreenController = ({
 
   /** Aligns the current category without expanding it or selecting an editor. */
   const handleHeaderCategoryClick = () => {
-    if (!scrollToAndTrackRow) return
+    if (!scrollApi) return
     setCurrentFolderSelection(
       { kind: 'category-details', contentOwnerId: activeBreadcrumbCategory!.id },
       'header',
       { forceRequest: true }
     )
-    scrollToAndTrackRow(categoryEditorRowId(activeBreadcrumbCategory!.id), {
+    scrollApi.scrollToAndTrackRow(categoryEditorRowId(activeBreadcrumbCategory!.id), {
       type: 'vertical-bias',
       verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
     })
@@ -1343,13 +1335,13 @@ export const createPromptFolderScreenController = ({
 
   /** Returns folder and group breadcrumb clicks to the top without changing category expansion. */
   const handleHeaderFolderClick = () => {
-    if (!scrollToAndTrackRow) return
+    if (!scrollApi) return
     setCurrentFolderSelection(
       { kind: 'root-header', contentOwnerId: screenRootFolderId },
       'header',
       { forceRequest: true }
     )
-    scrollToAndTrackRow(PROMPT_FOLDER_ROOT_HEADER_ROW_ID, {
+    scrollApi.scrollToAndTrackRow(PROMPT_FOLDER_ROOT_HEADER_ROW_ID, {
       type: 'vertical-bias',
       verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
     })
@@ -1373,17 +1365,6 @@ export const createPromptFolderScreenController = ({
       forceRequest: true,
       contentReveal: { scrollType: 'center' }
     })
-  }
-
-  const setScrollToWithinWindowBand = (
-    nextScrollToWithinWindowBand: ScrollToWithinWindowBand | null
-  ) => {
-    scrollToWithinWindowBand = nextScrollToWithinWindowBand
-  }
-
-  /** Stores the tracked-row scroll function exposed by the virtual window. */
-  const setScrollToAndTrackRow = (nextScrollToAndTrackRow: ScrollToAndTrackRow | null) => {
-    scrollToAndTrackRow = nextScrollToAndTrackRow
   }
 
   const setScrollApi = (nextScrollApi: VirtualWindowScrollApi | null) => {
@@ -1532,8 +1513,6 @@ export const createPromptFolderScreenController = ({
     handleMovePromptDown,
     canMovePrompt,
     handlePromptTreeDrop,
-    setScrollToWithinWindowBand,
-    setScrollToAndTrackRow,
     setScrollApi,
     setViewportMetrics,
     handleVirtualScrollTopChange,

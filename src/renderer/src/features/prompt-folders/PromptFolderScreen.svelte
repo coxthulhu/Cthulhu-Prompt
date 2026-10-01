@@ -280,8 +280,6 @@
             canMovePrompt={controller.canMovePrompt}
             onPromptTreeDrop={controller.handlePromptTreeDrop}
             onMoveCategory={handleMoveCategory}
-            onScrollToWithinWindowBandChange={controller.setScrollToWithinWindowBand}
-            onScrollToAndTrackRowChange={controller.setScrollToAndTrackRow}
             onScrollApiChange={controller.setScrollApi}
             onViewportMetricsChange={controller.setViewportMetrics}
             onScrollTopChange={controller.handleVirtualScrollTopChange}

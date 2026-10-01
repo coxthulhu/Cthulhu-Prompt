@@ -56,7 +56,7 @@
     PromptFolderScreenMode
   } from '@renderer/features/prompt-folders/promptFolderScreenMode'
   import {
-    type ScrollToWithinWindowBand,
+    type VirtualWindowScrollApi,
     type VirtualWindowItem,
     type VirtualWindowViewportMetrics
   } from '@renderer/common/virtual-window/virtualWindowTypes'
@@ -126,7 +126,7 @@
   }>()
 
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
-  let scrollToWithinWindowBand = $state<ScrollToWithinWindowBand | null>(null)
+  let scrollApi = $state<VirtualWindowScrollApi | null>(null)
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   let categoryTreeExpandedStates = $state<Record<string, boolean>>({})
   /** Whether a prompt-tree creation action is waiting for persistence. */
@@ -824,7 +824,7 @@
       !isPromptFoldersScreenActive ||
       folderListState !== 'ready' ||
       request.payload.screenRootFolderId !== rootFolderId ||
-      !scrollToWithinWindowBand ||
+      !scrollApi ||
       !viewportMetrics?.heightPx ||
       (expansionRequest &&
         isSameNavigationTarget(expansionRequest.payload, request.payload))
@@ -842,7 +842,7 @@
     if (!virtualItems.some((item) => item.id === rowId)) return
 
     promptNavigation.treeRevealRequests.consume(request, () => {
-      scrollToWithinWindowBand!(rowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
+      scrollApi!.scrollToWithinWindowBand(rowId, PROMPT_TREE_ROW_CENTER_OFFSET_PX, 'minimal')
     })
   })
 </script>
@@ -890,7 +890,7 @@
         items={virtualItems}
         testId={virtualWindowTestId}
         spacerTestId={`${virtualWindowTestId}-spacer`}
-        bind:scrollToWithinWindowBand
+        bind:scrollApi
         bind:viewportMetrics
       >
 {#snippet rootFolderRow()}
