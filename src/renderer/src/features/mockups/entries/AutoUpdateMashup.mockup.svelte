@@ -32,9 +32,14 @@
     { title: 'Research', prompts: ['Compare sidebar patterns', 'Prepare the UI copy', 'Audit accessibility behavior'] },
     { title: 'Verification', prompts: ['Verify folder interactions', 'Create a regression checklist', 'Inspect performance risks', 'Document architecture decisions'] }
   ]
-  const update: { state: 'current' | 'available' | 'downloading' | 'ready'; currentVersion: string; latestVersion: string } = {
-    state: 'downloading', currentVersion: '1.8.2', latestVersion: '1.9.0'
+  type UpdateState = 'current' | 'available' | 'downloading' | 'ready'
+  const nextUpdateState: Record<UpdateState, UpdateState> = {
+    current: 'available', available: 'downloading', downloading: 'ready', ready: 'current'
   }
+  // Local mockup state lets the debug button preview each update presentation.
+  const update = $state<{ state: UpdateState; currentVersion: string; latestVersion: string }>({
+    state: 'downloading', currentVersion: '1.8.2', latestVersion: '1.9.0'
+  })
   const iconStyle = 'display:flex;align-items:center;justify-content:center;flex:none;border:0;background:transparent;color:var(--ui-normal-text);padding:0;'
 </script>
 
@@ -47,7 +52,7 @@
       </button>
     {/each}
     <div style="flex:1;"></div>
-    <button type="button" title="Check for updates" aria-label="Check for updates — update available" aria-expanded="true" style={`${iconStyle}position:relative;width:36px;height:36px;border-radius:6px;background:var(--ui-accent-action-fill);border:1px solid var(--ui-accent-normal-border);`}>
+    <button type="button" title="Check for updates" aria-label={update.state === 'current' ? 'Check for updates' : 'Check for updates — update available'} aria-expanded="true" style={`${iconStyle}position:relative;width:36px;height:36px;border-radius:6px;background:var(--ui-accent-action-fill);border:1px solid var(--ui-accent-normal-border);`}>
       <Download size={20} strokeWidth={1.75} />
       {#if update.state !== 'current'}<span style="position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--ui-success-normal-text);border:2px solid var(--ui-chrome-normal-surface);box-sizing:content-box;"></span>{/if}
     </button>
@@ -87,6 +92,15 @@
     <header class="flex min-w-0 items-center gap-2 px-4 py-3">
       <Download size={24} class="shrink-0" aria-hidden="true" />
       <h2 class="m-0 flex-1 text-lg font-semibold">App Updates</h2>
+      <IconButton
+        icon={Bug}
+        size="compact"
+        label={`Cycle update state (current: ${update.state})`}
+        title={`Preview next update state: ${nextUpdateState[update.state]}`}
+        onclick={() => {
+          update.state = nextUpdateState[update.state]
+        }}
+      />
       <IconButton icon={X} label="Close updates" />
     </header>
     <Separator />
