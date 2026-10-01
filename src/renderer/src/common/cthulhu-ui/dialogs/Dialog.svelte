@@ -129,7 +129,7 @@
     <CardSurface
       variant="overlay"
       class={mergeClasses(
-        'cthulhuUiDialog flex flex-col px-4 pb-4',
+        'cthulhuUiDialog flex flex-col pb-4',
         subtitle ? 'pt-[18px]' : 'pt-4',
         className
       )}
@@ -215,7 +215,7 @@
 
   .cthulhuUiDialogHeader {
     min-width: 0;
-    padding: 0 4px 12px;
+    padding: 0 20px 12px;
   }
 
   .cthulhuUiDialogHeader[data-has-subtitle='true'] {
@@ -224,6 +224,7 @@
 
   .cthulhuUiDialogBody {
     min-width: 0;
+    padding-inline: 16px;
   }
 
   .cthulhuUiDialogBody[data-scrollable='true'] {
@@ -236,6 +237,6 @@
     gap: 8px;
     justify-content: flex-end;
     min-width: 0;
-    padding-top: 16px;
+    padding: 16px 16px 0;
   }
 </style>
