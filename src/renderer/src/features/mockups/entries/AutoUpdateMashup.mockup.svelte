@@ -113,7 +113,7 @@
         appearance="outline"
         icon={ExternalLink}
         text="View GitHub releases"
-        class="mt-4"
+        class="mt-2"
         style="width:100%;max-width:none;justify-content:center;"
       />
     </div>
