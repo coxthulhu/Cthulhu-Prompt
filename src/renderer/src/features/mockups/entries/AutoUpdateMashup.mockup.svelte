@@ -32,9 +32,9 @@
     { title: 'Research', prompts: ['Compare sidebar patterns', 'Prepare the UI copy', 'Audit accessibility behavior'] },
     { title: 'Verification', prompts: ['Verify folder interactions', 'Create a regression checklist', 'Inspect performance risks', 'Document architecture decisions'] }
   ]
-  type UpdateState = 'checking' | 'current' | 'available' | 'downloading' | 'installing' | 'restarting'
+  type UpdateState = 'checking' | 'current' | 'available' | 'portable' | 'downloading' | 'installing' | 'restarting'
   const nextUpdateState: Record<UpdateState, UpdateState> = {
-    checking: 'current', current: 'available', available: 'downloading',
+    checking: 'current', current: 'available', available: 'portable', portable: 'downloading',
     downloading: 'installing', installing: 'restarting', restarting: 'checking'
   }
   // Local mockup state lets the debug button preview each update presentation.
@@ -55,6 +55,7 @@
     checking: 'Checking for updates…',
     current: 'No updates available',
     available: 'Update available',
+    portable: 'Update available',
     downloading: 'Downloading update…',
     installing: 'Installing update…',
     restarting: 'Restarting app…'
@@ -63,6 +64,7 @@
     checking: 'Looking for the latest release.',
     current: 'You are using the latest version.',
     available: 'Ready to update and restart.',
+    portable: 'A new portable version is available.',
     downloading: `${(84.7 * progress / 100).toFixed(1)} MB of 84.7 MB`,
     installing: 'Please wait while the update is installed.',
     restarting: 'Installation complete. The app will restart.'
@@ -193,14 +195,20 @@
             ariaLabel={update.state === 'downloading' ? 'Download progress' : update.state === 'installing' ? 'Installation progress' : 'Update progress'}
           />
         </div>
-      <Button
-        variant="accent"
-        state={update.state === 'current' || update.state === 'available' ? 'enabled' : 'disabled'}
-        icon={RefreshCw}
-        text={hasUpdate ? 'Update & Restart' : 'Check for Updates'}
-        onclick={handleUpdateAction}
-        style="width:100%;max-width:none;justify-content:center;"
-      />
+      {#if update.state === 'portable'}
+        <p class="m-0 text-sm leading-5" style="color:var(--ui-normal-text);">
+          Portable copies cannot auto-update. Go to GitHub Releases and download the new version.
+        </p>
+      {:else}
+        <Button
+          variant="accent"
+          state={update.state === 'current' || update.state === 'available' ? 'enabled' : 'disabled'}
+          icon={RefreshCw}
+          text={hasUpdate ? 'Update & Restart' : 'Check for Updates'}
+          onclick={handleUpdateAction}
+          style="width:100%;max-width:none;justify-content:center;"
+        />
+      {/if}
       <Button
         appearance="outline"
         endIcon={ExternalLink}
