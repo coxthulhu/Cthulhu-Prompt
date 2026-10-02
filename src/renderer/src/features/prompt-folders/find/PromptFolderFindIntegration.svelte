@@ -126,6 +126,8 @@
       return
     }
 
+    /** Stable result identity before a scope change replaces the grouped counts. */
+    const retainedMatch = resetSelection ? null : currentMatch
     const nextCounts = buildPromptFolderFindCounts({
       items,
       query,
@@ -163,16 +165,35 @@
       return
     }
 
-    if (currentMatchIndex > totalMatches) {
-      currentMatchIndex = totalMatches
-    }
-    if (currentMatchIndex <= 0 && totalMatches > 0) {
-      setCurrentMatchIndex(1)
+    if (totalMatches === 0) {
+      currentMatchIndex = 0
       return
     }
-    if (currentMatchIndex < 0) {
-      currentMatchIndex = 0
+
+    if (!shouldSelectCurrentMatch && lastSelectionAnchor) {
+      /** Passive numbering follows the editor position after prompts move around it. */
+      const anchoredIndex = getMatchIndexAtAnchor(lastSelectionAnchor, nextCounts)
+      if (anchoredIndex != null) {
+        currentMatchIndex = anchoredIndex
+        return
+      }
     }
+
+    /** A surviving result keeps its selection and focus target without another reveal. */
+    const retainedIndex = retainedMatch
+      ? getGlobalMatchIndex(
+          retainedMatch.entityId,
+          retainedMatch.sectionKey,
+          retainedMatch.sectionMatchIndex
+        )
+      : null
+    if (retainedIndex != null) {
+      currentMatchIndex = retainedIndex
+      return
+    }
+
+    // A removed result selects its successor, or the final remaining result at the end.
+    setCurrentMatchIndex(Math.min(Math.max(currentMatchIndex, 1), totalMatches))
   }
 
   // Derived current match based on the 1-based index and grouped counts.

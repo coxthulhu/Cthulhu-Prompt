@@ -33,6 +33,8 @@ const RAPID_LOOP_QUERY = 'cthulhu-rapid-loop-marker-fish'
 const TYPING_ANCHOR_QUERY = 'hello'
 const LIVE_COUNT_QUERY = 'cthulhu-live-find-count-marker'
 const LIVE_POSITION_QUERY = 'cthulhu-live-find-position-marker'
+/** One occurrence per prompt makes scope changes distinguish result identity from ordinal position. */
+const SCOPE_CHANGE_QUERY = 'scopefindmarker'
 /** Unique incremental query used to repeat sidebar reveals for one prompt-tree row. */
 const SMALL_SIDEBAR_QUERY = 'qzxv-sidebar-center-marker'
 /** Prompt kept away from both tree boundaries during the small-viewport regression. */
@@ -212,6 +214,21 @@ const buildFindParityWorkspace = (
     title: section === 'title' ? text : 'Search Target',
     promptText: section === 'body' ? text : ''
   }]
+}])
+
+/** Three short prompts expose reordered, removed, and passive results in either editable section. */
+const buildFindScopeWorkspace = (
+  workspacePath: string,
+  section: 'title' | 'body'
+): Record<string, string | null> => createWorkspaceWithFolders(workspacePath, [{
+  folderName: 'Find Scope',
+  displayName: 'Find Scope',
+  promptFolderId: 'find-scope-folder',
+  prompts: ['First', 'Second', 'Third'].map((name, index) => ({
+    id: `find-scope-${index + 1}`,
+    title: section === 'title' ? `${name} ${SCOPE_CHANGE_QUERY}` : name,
+    promptText: section === 'body' ? `${name} ${SCOPE_CHANGE_QUERY}` : ''
+  }))
 }])
 
 const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, string | null> => {
@@ -400,6 +417,140 @@ const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, str
 }
 
 describe('Prompt folder find dialog', () => {
+  for (const section of ['body', 'title'] as const) {
+    /** Scope rescans must retain the chosen occurrence and its closing focus target. */
+    test(`preserves the active ${section} result when prompts are reordered`, async ({ testSetup }) => {
+      /** Isolated three-result workspace for this section. */
+      const workspacePath = `/ws/find-reorder-${section}`
+      await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, section))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Window and navigation helpers for real move-button interactions. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Find Scope')
+      /** Initial editor supplies a predictable query-edit anchor before the first result. */
+      const firstEditor = promptEditorSelector('find-scope-1')
+      /** Second editor must retain its result even after its ordinal changes. */
+      const secondEditor = promptEditorSelector('find-scope-2')
+      if (section === 'body') await focusMonacoEditor(mainWindow, firstEditor)
+      else await mainWindow.locator(`${firstEditor} ${PROMPT_TITLE_SELECTOR}`).focus()
+      await mainWindow.keyboard.press('Control+Home')
+      await mainWindow.keyboard.press('Control+F')
+      /** Query input retains its contents while scope changes update the counter. */
+      const findInput = mainWindow.locator(FIND_INPUT)
+      await findInput.fill(SCOPE_CHANGE_QUERY)
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+      await findInput.press('Enter')
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+
+      await mainWindow.locator(`${secondEditor} [data-testid="prompt-move-up"]`).click()
+      await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual([
+        'find-scope-2', 'find-scope-1', 'find-scope-3'
+      ])
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+      if (section === 'body') {
+        await expect.poll(() => getCurrentFindMatchRowTestId(mainWindow)).toBe('prompt-editor-find-scope-2')
+      } else {
+        await expect(mainWindow.locator(`${secondEditor} [data-testid="prompt-title-find-match"]`))
+          .toHaveAttribute('data-current', 'true')
+        await expect(mainWindow.locator(`${firstEditor} [data-testid="prompt-title-find-match"]`))
+          .toHaveAttribute('data-current', 'false')
+      }
+
+      await findInput.focus()
+      await findInput.press('Escape')
+      if (section === 'body') {
+        await expect.poll(() => isMonacoEditorFocused(mainWindow, secondEditor)).toBe(true)
+        await expect.poll(() => getMonacoSelectedText(mainWindow, secondEditor)).toBe(SCOPE_CHANGE_QUERY)
+      } else {
+        /** Native title receives the selected match only when Find closes. */
+        const title = mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`)
+        await expect(title).toBeFocused()
+        await expect.poll(() => title.evaluate((input: HTMLInputElement) =>
+          input.value.slice(input.selectionStart!, input.selectionEnd!)
+        )).toBe(SCOPE_CHANGE_QUERY)
+      }
+    })
+
+    /** Passive rescans update numbering without selecting or revealing another occurrence. */
+    test(`preserves a passive ${section} anchor when prompts are reordered`, async ({ testSetup }) => {
+      /** Separate workspace keeps the passive opening independent of active navigation. */
+      const workspacePath = `/ws/find-passive-reorder-${section}`
+      await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, section))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Window and helpers for an actual selected-word opening. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Find Scope')
+      /** Selected word in the second prompt anchors passive numbering. */
+      const secondEditor = promptEditorSelector('find-scope-2')
+      if (section === 'body') await focusMonacoEditor(mainWindow, secondEditor)
+      else await mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`).focus()
+      await mainWindow.keyboard.press('Control+End')
+      await mainWindow.keyboard.press('Control+Shift+ArrowLeft')
+      await mainWindow.keyboard.press('Control+F')
+      /** Find opens from the selected word without activating a result. */
+      const findInput = mainWindow.locator(FIND_INPUT)
+      await expect(findInput).toHaveValue(SCOPE_CHANGE_QUERY)
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+      await mainWindow.locator(`${secondEditor} [data-testid="prompt-move-up"]`).click()
+      await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual([
+        'find-scope-2', 'find-scope-1', 'find-scope-3'
+      ])
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+      await expect(mainWindow.locator('.monaco-editor .currentFindMatch')).toHaveCount(0)
+      await expect(mainWindow.locator('[data-testid="prompt-title-find-match"][data-current="true"]'))
+        .toHaveCount(0)
+      await findInput.focus()
+      await findInput.press('Escape')
+      if (section === 'body') {
+        await expect.poll(() => isMonacoEditorFocused(mainWindow, secondEditor)).toBe(true)
+        await expect.poll(() => getMonacoSelectedText(mainWindow, secondEditor)).toBe(SCOPE_CHANGE_QUERY)
+      } else {
+        await expect(mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`)).toBeFocused()
+      }
+    })
+  }
+
+  /** Removing preceding and current prompts must keep the counter and return focus synchronized. */
+  test('preserves a surviving result and selects a successor when matching prompts are deleted', async ({ testSetup }) => {
+    /** Three body matches exercise both kinds of deletion in one real dialog flow. */
+    const workspacePath = '/ws/find-scope-delete'
+    await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, 'body'))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Window and helpers for find navigation and confirmed prompt deletion. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Find Scope')
+    await focusMonacoEditor(mainWindow, promptEditorSelector('find-scope-1'))
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Control+F')
+    /** Search chooses the middle prompt before an earlier prompt disappears. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await findInput.fill(SCOPE_CHANGE_QUERY)
+    await findInput.press('Enter')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+
+    for (const promptId of ['find-scope-1', 'find-scope-2']) {
+      await mainWindow.locator(`${promptEditorSelector(promptId)} [data-testid="prompt-delete-more-options-button"]`).click()
+      await mainWindow.getByTestId('prompt-delete-menu-item').click()
+      /** The foreground confirmation must finish before the folder scope changes. */
+      const dialog = mainWindow.getByRole('dialog', { name: 'Delete Prompt', exact: true })
+      await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
+      await expect(mainWindow.locator(promptEditorSelector(promptId))).toHaveCount(0)
+      await expect.poll(() => getFindMatchesLabelText(mainWindow))
+        .toBe(promptId === 'find-scope-1' ? '1 of 2' : '1 of 1')
+      await expect.poll(() => getCurrentFindMatchRowTestId(mainWindow))
+        .toBe(promptId === 'find-scope-1' ? 'prompt-editor-find-scope-2' : 'prompt-editor-find-scope-3')
+    }
+
+    await findInput.focus()
+    await findInput.press('Escape')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, promptEditorSelector('find-scope-3'))).toBe(true)
+    await expect.poll(() => getMonacoSelectedText(mainWindow, promptEditorSelector('find-scope-3')))
+      .toBe(SCOPE_CHANGE_QUERY)
+  })
+
   // Exercise both selection producers through actual keyboard selection and search input.
   for (const section of ['body', 'title'] as const) {
     /** Backward selections must search from their active caret when the query changes. */
