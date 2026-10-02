@@ -32,10 +32,11 @@
     { title: 'Research', prompts: ['Compare sidebar patterns', 'Prepare the UI copy', 'Audit accessibility behavior'] },
     { title: 'Verification', prompts: ['Verify folder interactions', 'Create a regression checklist', 'Inspect performance risks', 'Document architecture decisions'] }
   ]
-  type UpdateState = 'checking' | 'current' | 'available' | 'portable' | 'downloading' | 'installing' | 'restarting'
+  type UpdateState = 'checking' | 'current' | 'available' | 'portable' | 'downloading' | 'restarting' | 'check-error' | 'download-error'
   const nextUpdateState: Record<UpdateState, UpdateState> = {
     checking: 'current', current: 'available', available: 'portable', portable: 'downloading',
-    downloading: 'installing', installing: 'restarting', restarting: 'checking'
+    downloading: 'restarting', restarting: 'check-error', 'check-error': 'download-error',
+    'download-error': 'checking'
   }
   // Local mockup state lets the debug button preview each update presentation.
   const update = $state<{ state: UpdateState; currentVersion: string; latestVersion: string }>({
@@ -47,9 +48,11 @@
   let mockupRoot = $state<HTMLElement>()
 
   // Keep version styling, controls, and progress copy aligned with the previewed step.
-  const hasUpdate = $derived(update.state !== 'checking' && update.state !== 'current')
+  const latestVersionUnknown = $derived(update.state === 'checking' || update.state === 'check-error')
+  const hasUpdate = $derived(!latestVersionUnknown && update.state !== 'current')
+  const hasError = $derived(update.state === 'check-error' || update.state === 'download-error')
   const isUpdating = $derived(
-    update.state === 'downloading' || update.state === 'installing' || update.state === 'restarting'
+    update.state === 'downloading' || update.state === 'restarting'
   )
   const progressLabel = $derived({
     checking: 'Checking for updates…',
@@ -57,8 +60,9 @@
     available: 'Update available',
     portable: 'Update available',
     downloading: 'Downloading update…',
-    installing: 'Installing update…',
-    restarting: 'Restarting app…'
+    restarting: 'Restarting app…',
+    'check-error': 'Unable to check for updates',
+    'download-error': 'Update download failed'
   }[update.state])
   const progressDetail = $derived({
     checking: 'Looking for the latest release.',
@@ -66,39 +70,36 @@
     available: 'Ready to update and restart.',
     portable: 'A new portable version is available.',
     downloading: `${(84.7 * progress / 100).toFixed(1)} MB of 84.7 MB`,
-    installing: 'Please wait while the update is installed.',
-    restarting: 'Installation complete. The app will restart.'
+    restarting: 'The application will restart to install the update.',
+    'check-error': 'We couldn’t check for a new version. Try again or visit GitHub Releases.',
+    'download-error': 'The update couldn’t be downloaded. Try again or download it from GitHub Releases.'
   }[update.state])
 
   function cycleUpdateState(): void {
     simulateUpdate = false
     update.state = nextUpdateState[update.state]
-    progress = update.state === 'downloading' ? 64 : update.state === 'installing' ? 42 :
-      update.state === 'restarting' ? 100 : 0
+    progress = update.state === 'downloading' ? 64 : update.state === 'restarting' ? 100 : 0
   }
 
   function handleUpdateAction(): void {
-    if (update.state === 'current') {
+    if (update.state === 'current' || update.state === 'check-error') {
       update.state = 'checking'
       progress = 0
       return
     }
-    if (update.state !== 'available') return
+    if (update.state !== 'available' && update.state !== 'download-error') return
     update.state = 'downloading'
     progress = 0
     simulateUpdate = true
   }
 
-  // Side effect: simulate download and installation progress after the user starts the update;
+  // Side effect: simulate download progress, then preview the app restarting;
   // stop the timer when switching previews or leaving the mockup.
   $effect(() => {
     if (!simulateUpdate) return
     const interval = window.setInterval(() => {
       if (progress < 100) {
         progress = Math.min(100, progress + 8)
-      } else if (update.state === 'downloading') {
-        update.state = 'installing'
-        progress = 0
       } else {
         update.state = 'restarting'
         simulateUpdate = false
@@ -185,14 +186,14 @@
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
         <div style="flex:1;"><div class="text-sm" style="color:var(--ui-muted-text);margin-bottom:4px;">Current version</div><div class="text-xl leading-7 font-semibold" style="font-variant-numeric:tabular-nums;">{update.currentVersion}</div><div class="mt-1 text-sm" style="color:var(--ui-secondary-text);">Sep 14, 2026</div></div>
         <ChevronRight size={18} style="color:var(--ui-muted-icon-glyph);" />
-        <div style={`flex:1;padding:9px 13px;border:1px solid ${hasUpdate ? 'var(--ui-accent-muted-border)' : 'var(--ui-neutral-muted-border)'};border-radius:6px;background:${hasUpdate ? 'var(--ui-accent-action-fill)' : 'var(--ui-neutral-normal-surface)'};`}><div class="text-sm" style="color:var(--ui-secondary-text);margin-bottom:4px;">Latest version</div><div class="text-xl leading-7 font-semibold" style="font-variant-numeric:tabular-nums;">{update.state === 'checking' ? '—' : hasUpdate ? update.latestVersion : update.currentVersion}</div><div class="mt-1 text-sm" style="color:var(--ui-secondary-text);">{update.state === 'checking' ? '—' : hasUpdate ? 'Sep 28, 2026' : 'Sep 14, 2026'}</div></div>
+        <div style={`flex:1;padding:9px 13px;border:1px solid ${hasUpdate ? 'var(--ui-accent-muted-border)' : 'var(--ui-neutral-muted-border)'};border-radius:6px;background:${hasUpdate ? 'var(--ui-accent-action-fill)' : 'var(--ui-neutral-normal-surface)'};`}><div class="text-sm" style="color:var(--ui-secondary-text);margin-bottom:4px;">Latest version</div><div class="text-xl leading-7 font-semibold" style="font-variant-numeric:tabular-nums;">{latestVersionUnknown ? '—' : hasUpdate ? update.latestVersion : update.currentVersion}</div><div class="mt-1 text-sm" style="color:var(--ui-secondary-text);">{latestVersionUnknown ? '—' : hasUpdate ? 'Sep 28, 2026' : 'Sep 14, 2026'}</div></div>
       </div>
         <div aria-live="polite" style="padding:14px 0 17px;border-top:1px solid var(--ui-neutral-muted-border);">
           <ProgressBar
             value={progress}
             label={progressLabel}
             detail={progressDetail}
-            ariaLabel={update.state === 'downloading' ? 'Download progress' : update.state === 'installing' ? 'Installation progress' : 'Update progress'}
+            ariaLabel={update.state === 'downloading' ? 'Download progress' : 'Update progress'}
           />
         </div>
       {#if update.state === 'portable'}
@@ -202,7 +203,7 @@
       {:else}
         <Button
           variant="accent"
-          state={update.state === 'current' || update.state === 'available' ? 'enabled' : 'disabled'}
+          state={update.state === 'current' || update.state === 'available' || hasError ? 'enabled' : 'disabled'}
           icon={RefreshCw}
           text={hasUpdate ? 'Update & Restart' : 'Check for Updates'}
           onclick={handleUpdateAction}
