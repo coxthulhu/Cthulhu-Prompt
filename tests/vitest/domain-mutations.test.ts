@@ -674,7 +674,9 @@ describe('shared domain mutation planners', () => {
       promptEditorMaxLines: 35,
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
-      newPromptFocus: 'editor' as const
+      newPromptFocus: 'editor' as const,
+      /** Automatic updates default to enabled in complete settings records. */
+      automaticUpdates: true
     }
     /** Single-category description plan. */
     const categoryPlan = planSetCategoryDescriptionDomainMutation(
@@ -695,7 +697,9 @@ describe('shared domain mutation planners', () => {
         promptEditorMaxLines: 30,
         showLineNumbers: false,
         /** Default creation focus included in the complete settings record. */
-        newPromptFocus: 'editor' as const
+        newPromptFocus: 'editor' as const,
+        /** Automatic updates default to enabled in complete settings records. */
+        automaticUpdates: true
       }
     )
     expect(Array.isArray(settingsPlan)).toBe(true)
@@ -707,7 +711,9 @@ describe('shared domain mutation planners', () => {
       promptEditorMaxLines: 30,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
-      newPromptFocus: 'editor' as const
+      newPromptFocus: 'editor' as const,
+      /** Automatic updates default to enabled in complete settings records. */
+      automaticUpdates: true
     })
   })
 

@@ -83,7 +83,8 @@ const readValidatedSystemSettings = (
     promptEditorMaxLines: normalizePromptEditorMaxLinesInput(clientState.promptEditorMaxLinesInput)
       .rounded,
     showLineNumbers: clientState.showLineNumbers,
-    newPromptFocus: clientState.newPromptFocus
+    newPromptFocus: clientState.newPromptFocus,
+    automaticUpdates: clientState.automaticUpdates
   }
 }
 
@@ -127,6 +128,7 @@ export const mutateSystemSettingsClientStateWithAutosave = (
             nextClientState.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
             nextClientState.showLineNumbers = nextFormData.showLineNumbers
             nextClientState.newPromptFocus = nextFormData.newPromptFocus
+            nextClientState.automaticUpdates = nextFormData.automaticUpdates
           }
         )
       })

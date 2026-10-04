@@ -22,7 +22,8 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
       promptEditorMinLinesInput: nextFormData.promptEditorMinLinesInput,
       promptEditorMaxLinesInput: nextFormData.promptEditorMaxLinesInput,
       showLineNumbers: nextFormData.showLineNumbers,
-      newPromptFocus: nextFormData.newPromptFocus
+      newPromptFocus: nextFormData.newPromptFocus,
+      automaticUpdates: nextFormData.automaticUpdates
     })
     return
   }
@@ -33,6 +34,7 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
     clientState.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
     clientState.showLineNumbers = nextFormData.showLineNumbers
     clientState.newPromptFocus = nextFormData.newPromptFocus
+    clientState.automaticUpdates = nextFormData.automaticUpdates
   })
 }
 
@@ -101,5 +103,12 @@ export const setSystemSettingsClientStateShowLineNumbers = (value: boolean): voi
 export const setSystemSettingsClientStateNewPromptFocus = (value: NewPromptFocus): void => {
   mutateSystemSettingsClientStateWithAutosave((clientState) => {
     clientState.newPromptFocus = value
+  })
+}
+
+/** Updates automatic update discovery through the existing settings autosave. */
+export const setSystemSettingsClientStateAutomaticUpdates = (value: boolean): void => {
+  mutateSystemSettingsClientStateWithAutosave((clientState) => {
+    clientState.automaticUpdates = value
   })
 }

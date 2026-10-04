@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { gt, valid } from 'semver'
 import type { AppUpdateState } from '@shared/runtime/AppUpdates'
 import { createUpdateSource, type UpdateRelease, type UpdateSource } from './UpdateSource'
+import { getRequiredSystemSettingsEntry } from '../Data/SystemSettingsData'
 
 /** Single process-wide snapshot survives renderer reloads and window navigation. */
 let state: AppUpdateState
@@ -44,8 +45,13 @@ const updateFailed = (error: Error): void => {
   publish({ status: 'update-error' })
 }
 
-/** Checks stable releases; only automatic checks start downloading newly discovered updates. */
+/** Reads committed settings so changes apply to subsequent checks without restarting. */
+const automaticUpdatesEnabled = (): boolean =>
+  getRequiredSystemSettingsEntry().committed.automaticUpdates
+
+/** Checks stable releases; only enabled automatic checks start downloading new updates. */
 const check = async (automatic: boolean): Promise<void> => {
+  if (automatic && !automaticUpdatesEnabled()) return
   if (state.status === 'checking' || state.status === 'downloading' || isUpdateRestarting()) return
   /** A failed background check must preserve an existing ready update or manual retry. */
   const previousStatus = state.status
@@ -67,7 +73,9 @@ const check = async (automatic: boolean): Promise<void> => {
       latestReleaseDate: release?.publishedAt ?? null,
       hasUpdate
     })
-    if (automatic && hasUpdate && (!attemptedVersion || gt(release!.version, attemptedVersion))) void download()
+    // A check that began before automatic updates were disabled must not start a download.
+    if (automatic && automaticUpdatesEnabled() && hasUpdate &&
+      (!attemptedVersion || gt(release!.version, attemptedVersion))) void download()
   } catch (error) {
     console.error('Application update check failed:', error)
     publish({ status: previousStatus === 'ready' || previousStatus === 'update-error' ? previousStatus : 'check-error' })
@@ -121,7 +129,7 @@ export const setupAppUpdater = (substitute?: UpdateSource): void => {
   app.on('before-quit', (event) => {
     if (isUpdateRestarting() && !installing) event.preventDefault()
   })
-  /** Background checks keep running after notification dismissal, without overlapping downloads. */
+  /** Keep the schedule while disabled so re-enabling resumes at the next 15-minute tick. */
   const interval = setInterval(() => { void check(true) }, 15 * 60 * 1000)
   app.on('will-quit', () => {
     quitting = true

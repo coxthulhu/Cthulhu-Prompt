@@ -16,6 +16,8 @@ export type SystemSettingsFormData = {
   showLineNumbers: boolean
   /** Selected creation focus in the settings form. */
   newPromptFocus: NewPromptFocus
+  /** Current automatic-update selection in the settings form. */
+  automaticUpdates: boolean
 }
 
 export type SystemSettingsValidation = {
@@ -73,7 +75,8 @@ export const toSystemSettingsFormData = (
   promptEditorMinLinesInput: formatPromptEditorMinLinesInput(settings.promptEditorMinLines),
   promptEditorMaxLinesInput: formatPromptEditorMaxLinesInput(settings.promptEditorMaxLines),
   showLineNumbers: settings.showLineNumbers,
-  newPromptFocus: settings.newPromptFocus
+  newPromptFocus: settings.newPromptFocus,
+  automaticUpdates: settings.automaticUpdates
 })
 
 const validateFontSize = (value: string): string | null => {

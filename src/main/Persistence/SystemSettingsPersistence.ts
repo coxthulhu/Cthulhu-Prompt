@@ -49,7 +49,8 @@ export const systemSettingsPersistence: PersistenceLayer<
       promptEditorMinLines: after.data.promptEditorMinLines,
       promptEditorMaxLines: after.data.promptEditorMaxLines,
       showLineNumbers: after.data.showLineNumbers,
-      newPromptFocus: after.data.newPromptFocus
+      newPromptFocus: after.data.newPromptFocus,
+      automaticUpdates: after.data.automaticUpdates
     })
     writeJsonFile(tempPath, normalizedSettings)
 

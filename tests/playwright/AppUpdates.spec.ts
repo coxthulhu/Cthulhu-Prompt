@@ -3,10 +3,17 @@ import { controlUpdater } from '../helpers/AppUpdateHelpers'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { runSqlStatement, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
 import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
+import { readPersistedPromptTextById, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { join } from 'node:path'
+import { setAutomaticUpdates } from '../helpers/SettingsHelpers'
 
 /** Production updater UI and service run with controlled release/download/install boundaries. */
 const { test, describe, expect } = createPlaywrightTestSuite()
+
+// Isolate settings even when a test starts without creating a workspace or seeding files.
+test.beforeEach(async ({ testSetup }) => {
+  await testSetup.setupFilesystem({})
+})
 
 // Release window guards after assertions so a failed test cannot strand a controlled download.
 test.afterEach(async ({ electronApp }) => {
@@ -19,6 +26,99 @@ test.afterEach(async ({ electronApp }) => {
 })
 
 describe('App updates', () => {
+  // Settings written by older installations must inherit the enabled default.
+  test('defaults automatic updates to enabled, persists disabling, and resumes on the next tick after Reset', async ({ electronApp, testSetup }) => {
+    /** Existing settings file deliberately omits the new preference. */
+    const settingsPath = join(await electronApp.evaluate(({ app }) => app.getPath('userData')), 'SystemSettings.json')
+    await testSetup.setupFilesystem({ [settingsPath]: JSON.stringify({ promptFontSize: 18 }) })
+    /** Settings and updater run through the ordinary startup sequence. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.navigateToSettingsScreen()
+    /** About controls reuse the normal settings toggle and row-local Reset action. */
+    const toggle = mainWindow.getByTestId('automatic-updates-toggle')
+    /** Reset reflects whether the preference differs from the enabled default. */
+    const reset = mainWindow.getByTestId('about-automatic-updates-row').getByRole('button', { name: 'Reset', exact: true })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(reset).toBeDisabled()
+    expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(1)
+    await setAutomaticUpdates(mainWindow, testHelpers, false)
+    expect(JSON.parse(await readTextFile(electronApp, settingsPath)).automaticUpdates).toBe(false)
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    await controlUpdater(electronApp, { type: 'interval' })
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
+    await mainWindow.reload()
+    await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+    await testHelpers.navigateToSettingsScreen()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(reset).toBeEnabled()
+    await reset.click()
+    await expect(reset).toBeDisabled()
+    await expect.poll(async () => JSON.parse(await readTextFile(electronApp, settingsPath)).automaticUpdates).toBe(true)
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(2)
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Update & Restart')
+  })
+
+  // A saved opt-out must suppress startup discovery without disabling any explicit action.
+  test('skips startup and periodic checks when disabled but permits manual check, download, and restart', async ({ electronApp, testSetup }) => {
+    /** Persisted opt-out is present before main loads its settings singleton. */
+    const settingsPath = join(await electronApp.evaluate(({ app }) => app.getPath('userData')), 'SystemSettings.json')
+    await testSetup.setupFilesystem({ [settingsPath]: JSON.stringify({ automaticUpdates: false }) })
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    /** Manual actions use the production popup and updater bridge. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.navigateToSettingsScreen()
+    await expect(mainWindow.getByTestId('automatic-updates-toggle')).toHaveAttribute('aria-pressed', 'false')
+    await controlUpdater(electronApp, { type: 'interval' })
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 0, downloads: 0 })
+    await mainWindow.getByTestId('app-updates-button').click()
+    /** One primary action progresses through checking, downloading, and explicit installation. */
+    const action = mainWindow.getByTestId('update-action')
+    await expect(action).toHaveText('Check for Updates')
+    await action.click()
+    await expect(action).toHaveText('Download Update')
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
+    await action.click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(action).toHaveText('Update & Restart')
+    await action.click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(1)
+  })
+
+  // A check already in flight must reread the preference before starting an automatic download.
+  test('does not download when automatic updates are disabled during a check', async ({ electronApp, testSetup }) => {
+    await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: true, latestVersion: '1.1.0' } })
+    /** Hold startup discovery while the user turns automatic updates off. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await setAutomaticUpdates(mainWindow, testHelpers, false)
+    await controlUpdater(electronApp, { type: 'complete-check' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('available')
+    await controlUpdater(electronApp, { type: 'interval' })
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
+    await mainWindow.getByTestId('app-updates-button').click()
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Download Update')
+  })
+
+  // Disabling future discovery must preserve a transfer that has already started.
+  test('lets an active automatic download finish and remain installable after disabling', async ({ electronApp, testSetup }) => {
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    /** Startup begins a controlled automatic download before changing the setting. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await setAutomaticUpdates(mainWindow, testHelpers, false)
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Update & Restart')
+    await controlUpdater(electronApp, { type: 'interval' })
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 1, cancellations: 0, installs: 0 })
+    await expect(mainWindow.getByTestId('update-action')).toBeEnabled()
+    await mainWindow.getByTestId('update-action').click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).installedVersion).toBe('1.1.0')
+  })
+
   test('checks at startup, keeps progress visible, and supports manual checks and the release link', async ({ electronApp, testSetup }) => {
     await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: true } })
     /** Startup runs independently of the deliberately pending release check. */

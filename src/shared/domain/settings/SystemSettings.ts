@@ -10,6 +10,8 @@ export interface SystemSettings {
   showLineNumbers: boolean
   /** Preferred initial focus for newly created prompts and templates. */
   newPromptFocus: NewPromptFocus
+  /** Allows startup and periodic update checks with automatic downloads. */
+  automaticUpdates: boolean
 }
 
 export const SYSTEM_SETTINGS_ID = 'system-settings'
@@ -27,7 +29,9 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = Object.freeze({
   promptEditorMinLines: 2,
   promptEditorMaxLines: 35,
   showLineNumbers: true,
-  newPromptFocus: 'editor'
+  newPromptFocus: 'editor',
+  /** Automatic update discovery is enabled for new and existing installations. */
+  automaticUpdates: true
 })
 
 const clampPromptFontSize = (value: number): number => {
@@ -82,7 +86,11 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
     newPromptFocus:
       payload.newPromptFocus === 'title' || payload.newPromptFocus === 'editor'
         ? payload.newPromptFocus
-        : DEFAULT_SYSTEM_SETTINGS.newPromptFocus
+        : DEFAULT_SYSTEM_SETTINGS.newPromptFocus,
+    automaticUpdates:
+      typeof payload.automaticUpdates === 'boolean'
+        ? payload.automaticUpdates
+        : DEFAULT_SYSTEM_SETTINGS.automaticUpdates
   }
 }
 

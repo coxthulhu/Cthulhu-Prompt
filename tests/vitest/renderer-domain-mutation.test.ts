@@ -647,7 +647,9 @@ describe('renderer domain mutation framework', () => {
       promptEditorMaxLinesInput: '35',
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
-      newPromptFocus: 'editor' as const
+      newPromptFocus: 'editor' as const,
+      /** Automatic updates default to enabled in complete settings records. */
+      automaticUpdates: true
     })
     /** IPC implementation returning the latest valid settings command as authoritative truth. */
     const invoke = vi.fn(
@@ -695,7 +697,9 @@ describe('renderer domain mutation framework', () => {
             promptEditorMaxLines: 35,
             showLineNumbers: false,
             /** Default creation focus included in the complete settings record. */
-            newPromptFocus: 'editor' as const
+            newPromptFocus: 'editor' as const,
+            /** Automatic updates default to enabled in complete settings records. */
+            automaticUpdates: true
           },
           expectations: [
             {
@@ -714,7 +718,9 @@ describe('renderer domain mutation framework', () => {
       promptEditorMaxLines: 35,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
-      newPromptFocus: 'editor' as const
+      newPromptFocus: 'editor' as const,
+      /** Automatic updates default to enabled in complete settings records. */
+      automaticUpdates: true
     })
     expect(systemSettingsClientStateCollection.get(SYSTEM_SETTINGS_CLIENT_STATE_ID)).toMatchObject({
       id: SYSTEM_SETTINGS_CLIENT_STATE_ID,
@@ -723,7 +729,9 @@ describe('renderer domain mutation framework', () => {
       promptEditorMaxLinesInput: '35',
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
-      newPromptFocus: 'editor' as const
+      newPromptFocus: 'editor' as const,
+      /** Automatic updates default to enabled in complete settings records. */
+      automaticUpdates: true
     })
   })
 

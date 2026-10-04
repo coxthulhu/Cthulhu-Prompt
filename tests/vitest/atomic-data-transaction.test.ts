@@ -729,7 +729,9 @@ describe('atomic data transaction', () => {
         promptEditorMaxLines: 30,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
-        newPromptFocus: 'editor' as const
+        newPromptFocus: 'editor' as const,
+        /** Automatic updates default to enabled in complete settings records. */
+        automaticUpdates: true
       },
       persistenceFields: {}
     })
@@ -767,7 +769,9 @@ describe('atomic data transaction', () => {
       promptEditorMaxLines: 30,
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
-      newPromptFocus: 'editor' as const
+      newPromptFocus: 'editor' as const,
+      /** Automatic updates default to enabled in complete settings records. */
+      automaticUpdates: true
     })
     expect(outcome.results.prompt.revision).toBeNull()
     expect(outcome.results.prompt.data).toBeNull()
@@ -783,7 +787,9 @@ describe('atomic data transaction', () => {
         promptEditorMaxLines: 30,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
-        newPromptFocus: 'editor' as const
+        newPromptFocus: 'editor' as const,
+        /** Automatic updates default to enabled in complete settings records. */
+        automaticUpdates: true
       },
       persistenceFields: {}
     })
@@ -818,7 +824,9 @@ describe('atomic data transaction', () => {
           promptEditorMaxLines: 30,
           showLineNumbers: true,
           /** Default creation focus included in the complete settings record. */
-          newPromptFocus: 'editor' as const
+          newPromptFocus: 'editor' as const,
+          /** Automatic updates default to enabled in complete settings records. */
+          automaticUpdates: true
         }
       }
     })
@@ -870,7 +878,9 @@ describe('atomic data transaction', () => {
         promptEditorMaxLines: 30,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
-        newPromptFocus: 'editor' as const
+        newPromptFocus: 'editor' as const,
+        /** Automatic updates default to enabled in complete settings records. */
+        automaticUpdates: true
       },
       persistenceFields: {}
     })

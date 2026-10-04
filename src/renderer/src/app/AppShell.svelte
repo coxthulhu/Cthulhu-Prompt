@@ -106,6 +106,10 @@
     /** Exposes the current creation focus preference to prompt and template editors. */
     get newPromptFocus() {
       return systemSettingsQuery.data.newPromptFocus
+    },
+    /** Keeps the shared settings context consistent with the persisted settings shape. */
+    get automaticUpdates() {
+      return systemSettingsQuery.data.automaticUpdates
     }
   }
   const workspaceSelection: WorkspaceSelectionContext = {

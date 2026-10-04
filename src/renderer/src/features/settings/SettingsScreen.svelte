@@ -24,7 +24,8 @@
     setSystemSettingsClientStatePromptEditorMaxLinesInput,
     setSystemSettingsClientStatePromptEditorMinLinesInput,
     setSystemSettingsClientStateShowLineNumbers,
-    setSystemSettingsClientStateNewPromptFocus
+    setSystemSettingsClientStateNewPromptFocus,
+    setSystemSettingsClientStateAutomaticUpdates
   } from '@renderer/data/UiState/client-state/SystemSettingsClientStateMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
@@ -141,6 +142,14 @@
   const updateNewPromptFocus = async (value: NewPromptFocus): Promise<void> => {
     await runIpcBestEffort(async () => {
       setSystemSettingsClientStateNewPromptFocus(value)
+      await flushSystemSettingsAutosaves()
+    })
+  }
+
+  /** Saves the automatic-update toggle or its default immediately. */
+  const updateAutomaticUpdates = async (value: boolean): Promise<void> => {
+    await runIpcBestEffort(async () => {
+      setSystemSettingsClientStateAutomaticUpdates(value)
       await flushSystemSettingsAutosaves()
     })
   }
@@ -405,6 +414,34 @@
             />
           {/snippet}
         </DisplayRow>
+
+        <Separator />
+
+        <!-- Persist automatic update discovery alongside the other system settings. -->
+        <ControlRow
+          testId="about-automatic-updates-row"
+          label="Automatic Updates"
+          detail="Automatically check for updates at startup and every 15 minutes, and download them when available."
+        >
+          {#snippet control()}
+            <ToggleTextButton
+              testId="automatic-updates-toggle"
+              pressed={systemSettingsClientState.automaticUpdates}
+              onclick={() => updateAutomaticUpdates(!systemSettingsClientState.automaticUpdates)}
+              disabled={isUpdating}
+            />
+          {/snippet}
+
+          {#snippet actions()}
+            <Button
+              icon={RefreshCcw}
+              text="Reset"
+              appearance="outline"
+              onclick={() => updateAutomaticUpdates(DEFAULT_SYSTEM_SETTINGS.automaticUpdates)}
+              state={isUpdating || systemSettingsClientState.automaticUpdates === DEFAULT_SYSTEM_SETTINGS.automaticUpdates ? 'disabled' : 'enabled'}
+            />
+          {/snippet}
+        </ControlRow>
 
         <Separator />
 

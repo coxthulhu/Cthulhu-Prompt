@@ -63,6 +63,8 @@ const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSe
   showLineNumbers: true,
   /** Default creation focus included in the complete settings record. */
   newPromptFocus: 'editor' as const,
+  /** Automatic updates default to enabled in complete settings records. */
+  automaticUpdates: true,
   ...overrides
 })
 
@@ -131,7 +133,9 @@ describe('client-state sync contract', () => {
         promptEditorMaxLines: 29,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
-        newPromptFocus: 'editor' as const
+        newPromptFocus: 'editor' as const,
+        /** Automatic updates default to enabled in complete settings records. */
+        automaticUpdates: true
       })
     )
 

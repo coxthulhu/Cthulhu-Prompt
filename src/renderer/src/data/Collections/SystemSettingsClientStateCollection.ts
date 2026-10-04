@@ -13,6 +13,8 @@ export type SystemSettingsClientStateRecord = {
   showLineNumbers: boolean
   /** Selected creation focus in the settings form. */
   newPromptFocus: NewPromptFocus
+  /** Current automatic-update selection in the settings form. */
+  automaticUpdates: boolean
 }
 
 /** Local-only renderer-session state for system settings. */

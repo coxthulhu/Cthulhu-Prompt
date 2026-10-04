@@ -2,6 +2,26 @@ import { expect, type Page } from '@playwright/test'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import type { NewPromptFocus } from '@shared/domain/settings/SystemSettings'
 
+/** Changes automatic updates in Settings and waits until main has committed the preference. */
+export async function setAutomaticUpdates(
+  mainWindow: Page,
+  testHelpers: { navigateToSettingsScreen: () => Promise<void> },
+  enabled: boolean
+): Promise<void> {
+  await testHelpers.navigateToSettingsScreen()
+  /** Existing toggle exposes its value through its accessible pressed state. */
+  const toggle = mainWindow.getByTestId('automatic-updates-toggle')
+  if ((await toggle.getAttribute('aria-pressed')) !== String(enabled)) await toggle.click()
+  await expect(toggle).toHaveAttribute('aria-pressed', String(enabled))
+  await mainWindow.waitForFunction(async (expected) => {
+    /** Committed state is the same preference read by the main-process updater. */
+    const result = await window.electron.ipcRenderer.invoke('load-system-settings')
+    return result.snapshots.find(
+      (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
+    )?.data?.automaticUpdates === expected
+  }, enabled)
+}
+
 /** Chooses creation focus through the dropdown and waits for the authoritative setting. */
 export async function setNewPromptFocus(
   mainWindow: Page,
