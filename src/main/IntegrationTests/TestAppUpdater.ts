@@ -22,9 +22,16 @@ export type TestUpdateConfig = {
 export type TestUpdateStats = {
   checks: number
   downloads: number
+  /** Counts installer calls even when the controlled installer fails. */
   installs: number
   intervalMs: number
   installedAt: number | null
+  /** Requested versions prove replacement selects the newest installer. */
+  downloadedVersions: string[]
+  /** Installer target proves an older completed update cannot be installed after replacement. */
+  installedVersion: string | null
+  /** Exit cancellation is observable without a real network transfer. */
+  cancellations: number
 }
 
 /** Commands control external results, without writing application updater state directly. */
@@ -43,7 +50,12 @@ export const createTestAppUpdater = (): UpdateSource => {
     dateError: false, installError: false
   }
   /** Counts real service calls and records its actual interval configuration. */
-  const stats: TestUpdateStats = { checks: 0, downloads: 0, installs: 0, intervalMs: 0, installedAt: null }
+  const stats: TestUpdateStats = {
+    checks: 0, downloads: 0, installs: 0, intervalMs: 0, installedAt: null,
+    downloadedVersions: [], installedVersion: null, cancellations: 0
+  }
+  /** Mirrors the real source's installer target after a successful download. */
+  let downloadedVersion: string | null = null
   /** Pending GitHub response can be held through startup and native-dialog workflows. */
   let finishCheck: (() => void) | undefined
   /** Controlled completion and failure of the active download. */
@@ -90,15 +102,30 @@ export const createTestAppUpdater = (): UpdateSource => {
       if (config.dateError) throw new Error('Controlled date lookup failure')
       return config.currentDate
     },
-    download: async (_release, progress) => {
+    download: async (release, progress) => {
       stats.downloads += 1
+      stats.downloadedVersions.push(release.version)
+      downloadedVersion = null
       reportProgress = progress
-      await new Promise<void>((resolve, reject) => { finishDownload = resolve; failDownload = reject })
+      try {
+        await new Promise<void>((resolve, reject) => { finishDownload = resolve; failDownload = reject })
+        downloadedVersion = release.version
+      } finally {
+        finishDownload = undefined
+        failDownload = undefined
+        reportProgress = undefined
+      }
+    },
+    cancelDownload: () => {
+      if (!failDownload) return
+      stats.cancellations += 1
+      failDownload(new Error('Controlled download cancellation'))
     },
     install: () => {
-      if (config.installError) throw new Error('Controlled installation failure')
       stats.installs += 1
+      if (config.installError) throw new Error('Controlled installation failure')
       stats.installedAt = Date.now()
+      stats.installedVersion = downloadedVersion
     }
   }
 }

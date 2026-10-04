@@ -9,14 +9,19 @@
   import ProgressBar from '@renderer/common/cthulhu-ui/loading/ProgressBar.svelte'
 
   /** Main-process snapshot and shell-owned popup actions. */
-  let { open = $bindable(false), state, onclose, onstart } = $props<{
+  let { open = $bindable(false), state, onclose, ondownload, oninstall } = $props<{
     open?: boolean
     state: AppUpdateState
     onclose: () => void
-    onstart: () => void
+    /** Retries a failed download without blocking the workspace. */
+    ondownload: () => void
+    /** Installs the downloaded release after explicit user consent. */
+    oninstall: () => void
   }>()
-  /** Downloading and restart preparation make the native popup modal and non-dismissible. */
+  /** Both operations report activity, while only restart preparation blocks interaction. */
   const busy = $derived(state.status === 'downloading' || state.status === 'restarting')
+  /** Downloads remain dismissible; only an explicit restart makes the popup modal. */
+  const restarting = $derived(state.status === 'restarting')
   /** Failed checks retain their retry action even when an older check found an update. */
   const showUpdate = $derived(state.hasUpdate && state.status !== 'checking' && state.status !== 'check-error')
   /** Non-installed distributions may inspect releases but never launch an installer. */
@@ -24,7 +29,7 @@
   /** Progress messages remain visible at every stage. */
   const label = $derived({
     checking: 'Checking for updates…', current: 'No updates available', available: 'Update available',
-    downloading: 'Downloading update…', restarting: 'Restarting to install',
+    downloading: 'Downloading update…', ready: 'Update ready', restarting: 'Restarting to install',
     'check-error': 'Unable to check for updates', 'update-error': 'Update failed'
   }[state.status])
   /** Context for the current operation, including transfer measurements when known. */
@@ -36,8 +41,9 @@
       ? `${(state.transferred / 1048576).toFixed(1)} MB of ${(state.total / 1048576).toFixed(1)} MB`
       : 'Preparing the update download.'
     if (state.status === 'restarting') return 'The application will restart to install the update.'
+    if (state.status === 'ready') return 'Ready to update and restart.'
     if (state.mode === 'development') return 'Automatic updates are unavailable in development builds.'
-    if (state.hasUpdate) return state.mode === 'portable' ? 'A new portable version is available.' : 'Ready to update and restart.'
+    if (state.hasUpdate) return state.mode === 'portable' ? 'A new portable version is available.' : 'A new version is available to download.'
     return state.latestVersion === state.currentVersion ? 'You are using the latest version.' : 'No newer stable release is available.'
   })
 
@@ -52,14 +58,14 @@
 </script>
 
 <!-- Persistent update surface follows the approved mockup without its preview controls. -->
-<Popup bind:open title="App Updates" backdrop={busy} closeDisabled={busy} {busy}
+<Popup bind:open title="App Updates" backdrop={restarting} closeDisabled={restarting} {busy}
   placement="bottom-left" offsetX={58} offsetY={10}
   class="flex w-[340px] flex-col text-sm leading-5" testId="app-updates-popup" {onclose}>
   {#snippet children(closeUpdates)}
     <header class="flex min-w-0 items-center gap-2 px-4 py-3">
       <Download size={24} class="shrink-0" aria-hidden="true" />
       <h2 class="m-0 flex-1 text-lg font-semibold">App Updates</h2>
-      <IconButton icon={X} label="Close updates" disabled={busy} onclick={closeUpdates} />
+      <IconButton icon={X} label="Close updates" disabled={restarting} onclick={closeUpdates} />
     </header>
     <Separator />
     <div class="appUpdatesBody min-w-0 p-4">
@@ -83,8 +89,8 @@
         <p class="m-0 mb-2 text-sm leading-5">Portable copies cannot auto-update. Go to GitHub Releases and download the new version.</p>
       {/if}
       <Button variant="accent" state={disabled ? 'disabled' : 'enabled'} icon={RefreshCw}
-        text={showUpdate ? 'Update & Restart' : 'Check for Updates'} testId="update-action"
-        onclick={() => showUpdate ? onstart() : void window.appUpdates.check()}
+        text={state.status === 'ready' || restarting ? 'Update & Restart' : showUpdate ? 'Download Update' : 'Check for Updates'} testId="update-action"
+        onclick={() => state.status === 'ready' ? oninstall() : showUpdate ? ondownload() : void window.appUpdates.check()}
         style="width:100%;max-width:none;justify-content:center;" />
       <LinkButton href={APP_RELEASES_URL} appearance="outline" endIcon={ExternalLink}
         text="Open GitHub Releases" class="updateReleasesLink mt-2"

@@ -32,7 +32,7 @@ import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
 import { attachRendererLogging } from './logging'
 import { configureRendererSecurity, getRendererDevelopmentUrl } from './rendererSecurity'
-import { isUpdateBusy, isUpdateInstalling, setupAppUpdater } from './updates/AppUpdater'
+import { isUpdateRestarting, isUpdateInstalling, setupAppUpdater } from './updates/AppUpdater'
 import type { UpdateSource } from './updates/UpdateSource'
 
 const WINDOW_DEFAULT_WIDTH = 1366
@@ -85,7 +85,7 @@ function setupWindowControlHandlers(): void {
   })
 
   ipcMain.handle('window-confirm-close', (event) => {
-    if (isUpdateBusy()) return
+    if (isUpdateRestarting()) return
     const window = withWindow(event)
     if (!window) return
     const guard = windowCloseGuards.get(window)
@@ -256,7 +256,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
       persistWindowState(mainWindow)
       return
     }
-    if (isUpdateBusy()) {
+    if (isUpdateRestarting()) {
       event.preventDefault()
       return
     }

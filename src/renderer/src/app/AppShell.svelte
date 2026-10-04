@@ -876,5 +876,5 @@
 
 {#if updater.updates.snapshot}
   <AppUpdatesPopup bind:open={updater.updates.open} state={updater.updates.snapshot}
-    onclose={updater.dismiss} onstart={updater.start} />
+    onclose={updater.dismiss} ondownload={updater.download} oninstall={updater.install} />
 {/if}

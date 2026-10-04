@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { NsisUpdater } from 'electron-updater'
+import { CancellationToken, NsisUpdater } from 'electron-updater'
 import type { UpdateMode } from '@shared/runtime/AppUpdates'
 import { isDevEnvironment } from '../appEnvironment'
 
@@ -22,6 +22,8 @@ export interface UpdateSource {
   latestRelease: () => Promise<UpdateRelease | null>
   currentReleaseDate: () => Promise<string | null>
   download: (release: UpdateRelease, progress: (value: UpdateProgress) => void) => Promise<void>
+  /** Stops the active transfer when the application exits. */
+  cancelDownload: () => void
   install: () => void
 }
 
@@ -52,6 +54,8 @@ export const createUpdateSource = (onError: (error: Error) => void): UpdateSourc
       : 'installed'
   /** A fresh updater on each attempt also resets failed installation state for retries. */
   let updater: NsisUpdater | undefined
+  /** Each download owns a token that can be cancelled during ordinary application exit. */
+  let cancellationToken: CancellationToken | undefined
   return {
     mode,
     currentVersion,
@@ -68,6 +72,7 @@ export const createUpdateSource = (onError: (error: Error) => void): UpdateSourc
     },
     currentReleaseDate: async () => (await fetchRelease(`tags/v${currentVersion}`))?.published_at ?? null,
     download: async (release, progress) => {
+      cancellationToken = new CancellationToken()
       updater = new NsisUpdater({
         provider: 'generic',
         url: `https://github.com/coxthulhu/Cthulhu-Prompt/releases/download/${encodeURIComponent(release.tag)}/`
@@ -83,8 +88,9 @@ export const createUpdateSource = (onError: (error: Error) => void): UpdateSourc
       if (!result?.isUpdateAvailable || result.updateInfo.version !== release.version) {
         throw new Error('The selected update is no longer available.')
       }
-      await updater.downloadUpdate()
+      await updater.downloadUpdate(cancellationToken)
     },
+    cancelDownload: () => cancellationToken?.cancel(),
     install: () => updater!.quitAndInstall(true, true)
   }
 }

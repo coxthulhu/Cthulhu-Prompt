@@ -11,7 +11,8 @@ export const createAppUpdates = (canNotify: () => boolean, prepareRestart: () =>
 
   /** Requires successful discovery and an unobstructed application before notifying. */
   const shouldNotify = (): boolean => !!updates.snapshot &&
-    updates.snapshot.mode !== 'development' && updates.snapshot.status === 'available' &&
+    (updates.snapshot.status === 'ready' ||
+      (updates.snapshot.mode === 'portable' && updates.snapshot.status === 'available')) &&
     !updates.snapshot.notificationDismissed && !dismissed && !updates.open &&
     canNotify() && popupActivity.modalCount === 0
 
@@ -50,17 +51,20 @@ export const createAppUpdates = (canNotify: () => boolean, prepareRestart: () =>
 
   return {
     updates,
-    /** Dismissing any popup showing an available update silences notifications for this session. */
+    /** Closing a completed-update or portable notification silences this session. */
     dismiss: (): void => {
-      if (!updates.snapshot?.hasUpdate || updates.snapshot.status === 'checking' ||
-        updates.snapshot.status === 'check-error') return
+      if (updates.snapshot?.status !== 'ready' &&
+        !(updates.snapshot?.mode === 'portable' && updates.snapshot.status === 'available')) return
       dismissed = true
       void window.appUpdates.dismiss()
     },
-    /** Locks controls immediately while main starts the asynchronous download. */
-    start: (): void => {
-      if (updates.snapshot) updates.snapshot.status = 'downloading'
-      void window.appUpdates.start()
+    /** Main owns download progress and enables installation only after completion. */
+    download: (): void => {
+      void window.appUpdates.download()
+    },
+    /** Explicit user consent starts restart preparation and its save-flushing effect. */
+    install: (): void => {
+      void window.appUpdates.install()
     }
   }
 }

@@ -13,9 +13,15 @@ let source: UpdateSource
 let installing = false
 /** One restart timer prevents repeated renderer acknowledgements from restarting early. */
 let restartTimer: ReturnType<typeof setTimeout> | undefined
+/** Highest version attempted this session prevents automatic retries of failed downloads. */
+let attemptedVersion: string | null = null
+/** Only this fully downloaded version may be offered for installation. */
+let downloadedVersion: string | null = null
+/** Exit cancellation must not report a failed update to a closing renderer. */
+let quitting = false
 
-/** Reports whether user close requests and additional update operations must be blocked. */
-export const isUpdateBusy = (): boolean => state?.status === 'downloading' || state?.status === 'restarting'
+/** Only explicit restart preparation blocks ordinary window closing. */
+export const isUpdateRestarting = (): boolean => state?.status === 'restarting'
 
 /** Allows the installer handoff to pass through the normal window close guard. */
 export const isUpdateInstalling = (): boolean => installing
@@ -30,6 +36,7 @@ const publish = (changes: Partial<AppUpdateState>): void => {
 
 /** Releases interaction and restart guards when an update fails while the app is open. */
 const updateFailed = (error: Error): void => {
+  if (quitting) return
   console.error('Application update failed:', error)
   installing = false
   clearTimeout(restartTimer)
@@ -37,10 +44,12 @@ const updateFailed = (error: Error): void => {
   publish({ status: 'update-error' })
 }
 
-/** Checks stable releases without downloading or interrupting an existing operation. */
+/** Checks stable releases and automatically attempts newly discovered installed updates. */
 const check = async (): Promise<void> => {
-  if (state.status === 'checking' || isUpdateBusy()) return
-  publish({ status: 'checking', percent: 0 })
+  if (state.status === 'checking' || state.status === 'downloading' || isUpdateRestarting()) return
+  /** A failed background check must preserve an existing ready update or manual retry. */
+  const previousStatus = state.status
+  publish({ status: 'checking' })
   try {
     /** Date lookup failures never prevent release discovery. */
     const [latest, currentReleaseDate] = await Promise.all([
@@ -51,26 +60,33 @@ const check = async (): Promise<void> => {
     /** Semantic comparison prohibits downgrades even for unpublished running versions. */
     const hasUpdate = !!release && gt(release.version, source.currentVersion)
     publish({
-      status: hasUpdate ? 'available' : 'current',
+      status: !hasUpdate ? 'current' : downloadedVersion === release!.version ? 'ready'
+        : attemptedVersion === release!.version ? 'update-error' : 'available',
       currentReleaseDate,
       latestVersion: release?.version ?? null,
       latestReleaseDate: release?.publishedAt ?? null,
       hasUpdate
     })
+    if (hasUpdate && (!attemptedVersion || gt(release!.version, attemptedVersion))) void download()
   } catch (error) {
     console.error('Application update check failed:', error)
-    publish({ status: 'check-error' })
+    publish({ status: previousStatus === 'ready' || previousStatus === 'update-error' ? previousStatus : 'check-error' })
   }
 }
 
-/** Starts the user-authorized download and leaves restart timing to the rendered final state. */
-const start = async (): Promise<void> => {
+/** Downloads in the background, automatically once per newer version or on explicit retry. */
+const download = async (): Promise<void> => {
   if (source.mode !== 'installed' || !release || !state.hasUpdate ||
     (state.status !== 'available' && state.status !== 'update-error')) return
+  if (!attemptedVersion || gt(release.version, attemptedVersion)) attemptedVersion = release.version
+  downloadedVersion = null
   publish({ status: 'downloading', percent: 0, transferred: 0, total: 0 })
   try {
     await source.download(release, (progress) => publish(progress))
-    if (isUpdateBusy()) publish({ status: 'restarting', percent: 100 })
+    if (!quitting) {
+      downloadedVersion = release.version
+      publish({ status: 'ready', percent: 100 })
+    }
   } catch (error) {
     updateFailed(error as Error)
   }
@@ -86,9 +102,12 @@ export const setupAppUpdater = (substitute?: UpdateSource): void => {
   }
   ipcMain.handle('app-updates-state', () => state)
   ipcMain.handle('app-updates-check', () => { void check() })
-  ipcMain.handle('app-updates-start', () => { void start() })
+  ipcMain.handle('app-updates-download', () => { void download() })
+  ipcMain.handle('app-updates-install', () => {
+    if (state.status === 'ready') publish({ status: 'restarting' })
+  })
   ipcMain.handle('app-updates-dismiss', () => {
-    if (state.hasUpdate && state.status !== 'checking' && state.status !== 'check-error') {
+    if (state.status === 'ready' || (state.mode === 'portable' && state.status === 'available')) {
       publish({ notificationDismissed: true })
     }
   })
@@ -100,10 +119,15 @@ export const setupAppUpdater = (substitute?: UpdateSource): void => {
     }, 1000)
   })
   app.on('before-quit', (event) => {
-    if (isUpdateBusy() && !installing) event.preventDefault()
+    if (isUpdateRestarting() && !installing) event.preventDefault()
   })
   /** Background checks keep running after notification dismissal, without overlapping downloads. */
   const interval = setInterval(() => { void check() }, 15 * 60 * 1000)
-  app.on('will-quit', () => { clearInterval(interval); clearTimeout(restartTimer) })
+  app.on('will-quit', () => {
+    quitting = true
+    source.cancelDownload()
+    clearInterval(interval)
+    clearTimeout(restartTimer)
+  })
   void check()
 }

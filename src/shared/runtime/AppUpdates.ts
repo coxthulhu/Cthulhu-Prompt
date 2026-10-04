@@ -2,7 +2,7 @@
 export type UpdateMode = 'installed' | 'portable' | 'development'
 
 /** User-visible stages owned by the main-process updater. */
-export type UpdateStatus = 'checking' | 'current' | 'available' | 'downloading' | 'restarting' | 'check-error' | 'update-error'
+export type UpdateStatus = 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'restarting' | 'check-error' | 'update-error'
 
 /** Complete updater snapshot shared with the renderer. */
 export type AppUpdateState = {
@@ -23,7 +23,10 @@ export type AppUpdateState = {
 export type AppUpdatesApi = {
   getState: () => Promise<AppUpdateState>
   check: () => Promise<void>
-  start: () => Promise<void>
+  /** Explicitly retries downloading the latest discovered update. */
+  download: () => Promise<void>
+  /** Requests installation of the downloaded update after saving renderer changes. */
+  install: () => Promise<void>
   restart: () => Promise<void>
   dismiss: () => Promise<void>
   onChange: (callback: (state: AppUpdateState) => void) => () => void

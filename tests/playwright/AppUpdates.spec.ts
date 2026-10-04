@@ -11,6 +11,8 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 // Release window guards after assertions so a failed test cannot strand a controlled download.
 test.afterEach(async ({ electronApp }) => {
   await electronApp.evaluate(({ app, BrowserWindow }) => {
+    // Remove an unused test-only exit blocker if the close test failed before reaching will-quit.
+    if ((app as any).updateTestQuitBlocker) app.removeListener('will-quit', (app as any).updateTestQuitBlocker)
     app.removeAllListeners('before-quit')
     for (const window of BrowserWindow.getAllWindows()) window.removeAllListeners('close')
   })
@@ -76,7 +78,9 @@ describe('App updates', () => {
     const mainWindow = await electronApp.firstWindow()
     await mainWindow.waitForSelector('[data-testid="app-sidebar"]', { state: 'visible' })
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toBeVisible()
-    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('available')
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('downloading')
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
     await testSetup.resumeIpcChannel('load-workspace-by-path')
     /** The first-launch introduction takes over after restoration. */
@@ -109,7 +113,9 @@ describe('App updates', () => {
     await mainWindow.getByTestId('welcome-open-workspace-button').click()
     await expect.poll(() => electronApp.evaluate(({ app }) => !!(app as any).finishUpdatePicker)).toBe(true)
     await controlUpdater(electronApp, { type: 'complete-check' })
-    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('available')
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('downloading')
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
     await electronApp.evaluate(({ app }) => (app as any).finishUpdatePicker())
     /** Failed workspace loading still belongs to the Welcome flow. */
@@ -135,7 +141,9 @@ describe('App updates', () => {
     const mainWindow = await electronApp.firstWindow()
     await mainWindow.waitForSelector('[data-testid="app-sidebar"]', { state: 'visible' })
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toBeVisible()
-    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('available')
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('downloading')
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
     await mainWindow.evaluate(() => {
       /** Any overlap is retained even if it disappears before the final assertion. */
@@ -165,9 +173,11 @@ describe('App updates', () => {
         await mainWindow.getByTestId('app-updates-button').click()
       }
       await controlUpdater(electronApp, { type: 'complete-check' })
-      /** Both entry paths now display an actual update. */
+      await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+      await controlUpdater(electronApp, { type: 'complete-download' })
+      /** Both entry paths now display a downloaded update. */
       const popup = mainWindow.getByTestId('app-updates-popup')
-      await expect(popup).toContainText('Update available')
+      await expect(popup).toContainText('Update ready')
       if (manuallyOpened) {
         await popup.getByRole('button', { name: 'Close updates' }).focus()
         await mainWindow.keyboard.press('Escape')
@@ -178,9 +188,14 @@ describe('App updates', () => {
       await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: false, latestVersion: '1.2.0' } })
       expect((await controlUpdater(electronApp, { type: 'interval' })).intervalMs).toBe(900000)
       await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.latestVersion))).toBe('1.2.0')
+      await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(2)
+      await controlUpdater(electronApp, { type: 'complete-download' })
+      await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
       await expect(popup).toHaveCount(0)
       await mainWindow.reload()
+      await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+      await expect(popup).toHaveCount(0)
       await mainWindow.getByTestId('app-updates-button').click()
       await expect(popup.getByTestId('update-latest-version')).toHaveText('1.2.0')
     })
@@ -195,6 +210,9 @@ describe('App updates', () => {
     await mainWindow.getByRole('button', { name: 'Close updates' }).click()
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
     await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
+    await controlUpdater(electronApp, { type: 'complete-download' })
     await expect(mainWindow.getByTestId('app-updates-popup')).toBeVisible()
   })
 
@@ -214,10 +232,10 @@ describe('App updates', () => {
       await expect(popup.getByTestId('update-latest-version')).toHaveText('1.1.0')
       await expect(popup.getByTestId('update-current-date')).toHaveText('—')
       await expect(popup.getByTestId('update-latest-date')).toHaveText('—')
-      await expect(popup.getByTestId('update-action')).toHaveText('Update & Restart')
+      await expect(popup.getByTestId('update-action')).toHaveText('Download Update')
       await expect(popup.getByTestId('update-action')).toBeDisabled()
       if (mode === 'portable') await expect(popup).toContainText('Portable copies cannot auto-update.')
-      await mainWindow.evaluate(() => window.appUpdates.start())
+      await mainWindow.evaluate(() => window.appUpdates.download())
       expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(0)
     })
   }
@@ -232,12 +250,12 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('update-latest-version')).toHaveText('1.9.0')
     await expect(mainWindow.getByTestId('update-action')).toHaveText('Check for Updates')
     await expect(mainWindow.getByTestId('update-latest-card')).toHaveAttribute('data-available', 'false')
-    await mainWindow.evaluate(() => window.appUpdates.start())
+    await mainWindow.evaluate(() => window.appUpdates.download())
     expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(0)
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '3.0.0-beta.1', prerelease: true } })
     await mainWindow.getByTestId('update-action').click()
     await expect(mainWindow.getByTestId('app-updates-popup')).toContainText('No updates available')
-    await mainWindow.evaluate(() => window.appUpdates.start())
+    await mainWindow.evaluate(() => window.appUpdates.download())
     expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(0)
   })
 
@@ -254,49 +272,144 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('app-updates-popup')).toContainText('No updates available')
   })
 
-  test('blocks interaction and Windows closing during download, restores interaction on errors, and retries', async ({ electronApp, testSetup }) => {
+  test('downloads at startup without blocking, reopens on completion, and restarts only on request', async ({ electronApp, testSetup }) => {
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0', installError: true } })
-    /** Available installed update enters the real blocking download flow. */
+    /** Startup downloads without interrupting the workspace. */
     const { mainWindow } = await testSetup.setupAndStart()
-    /** Same popup remains mounted when switching between nonmodal and modal presentation. */
+    /** The same surface shows background progress and the final restart action. */
     const popup = mainWindow.getByTestId('app-updates-popup')
-    await popup.getByTestId('update-action').click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await expect(popup).toHaveCount(0)
+    await expect(mainWindow.getByTestId('update-available-dot')).toBeVisible()
+    await mainWindow.getByTestId('app-updates-button').click()
     try {
-      await expect(popup).toHaveAttribute('aria-modal', 'true')
-      await expect(popup.getByRole('button', { name: 'Close updates' })).toBeDisabled()
+      await expect(popup).toHaveAttribute('aria-modal', 'false')
+      await expect(popup.getByRole('button', { name: 'Close updates' })).toBeEnabled()
       await expect(popup.getByTestId('update-action')).toBeDisabled()
-      await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
       await controlUpdater(electronApp, { type: 'progress', progress: { percent: 42, transferred: 42 * 1048576, total: 100 * 1048576 } })
       await expect(popup.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '42')
       await expect(popup).toContainText('42.0 MB of 100.0 MB')
-      await mainWindow.keyboard.press('Escape')
-      await mainWindow.getByTestId('nav-button-settings').focus()
-      await expect(mainWindow.getByTestId('nav-button-settings')).not.toBeFocused()
-      /** Real pointer coordinates exercise the modal backdrop, without forced DOM clicks. */
-      const settingsBounds = (await mainWindow.getByTestId('nav-button-settings').boundingBox())!
-      await mainWindow.mouse.click(settingsBounds.x + settingsBounds.width / 2, settingsBounds.y + settingsBounds.height / 2)
-      await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
-      await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close())
-      await mainWindow.evaluate(() => window.windowControls.confirmClose())
-      await expect(popup).toBeVisible()
-      await controlUpdater(electronApp, { type: 'interval' })
-      expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(1)
-      await controlUpdater(electronApp, { type: 'fail-download' })
-      await expect(popup).toContainText('Update failed')
-      await expect(popup).toHaveAttribute('aria-modal', 'false')
       await mainWindow.getByTestId('nav-button-settings').click()
       await expect(mainWindow.getByTestId('settings-screen')).toBeVisible()
-      await popup.getByTestId('update-action').click()
-      await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(2)
+      await expect(popup).toBeVisible()
+      await popup.getByRole('button', { name: 'Close updates' }).focus()
+      await mainWindow.keyboard.press('Escape')
+      await expect(popup).toHaveCount(0)
+      expect((await mainWindow.evaluate(() => window.appUpdates.getState())).notificationDismissed).toBe(false)
+      await controlUpdater(electronApp, { type: 'interval' })
+      await mainWindow.evaluate(() => window.appUpdates.check())
+      expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(1)
       await controlUpdater(electronApp, { type: 'complete-download' })
+      await expect(popup).toContainText('Update ready')
+      await expect(popup.getByTestId('update-action')).toHaveText('Update & Restart')
+      await expect(popup.getByTestId('update-action')).toBeEnabled()
+      // Exceed the old automatic restart delay to prove completion alone never installs.
+      await mainWindow.waitForTimeout(1100)
+      expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
+      await popup.getByTestId('update-action').click()
       await expect(popup).toContainText('Restarting to install')
+      await expect(popup).toHaveAttribute('aria-modal', 'true')
+      await expect(popup.getByRole('button', { name: 'Close updates' })).toBeDisabled()
       await expect(popup.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
       await expect(popup).toContainText('Update failed')
       await expect(popup).toHaveAttribute('aria-modal', 'false')
       await expect(popup.getByTestId('update-action')).toBeEnabled()
-      expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(2)
+      expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+      expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(1)
     } finally {
       await controlUpdater(electronApp, { type: 'fail-download' })
+    }
+  })
+
+  test('does not retry failed downloads on checks or reload, but allows manual retry and a newer release', async ({ electronApp, testSetup }) => {
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    /** A real startup check begins the first automatic attempt. */
+    const { mainWindow } = await testSetup.setupAndStart()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await controlUpdater(electronApp, { type: 'fail-download' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('update-error')
+    await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('update-error')
+    await mainWindow.reload()
+    await mainWindow.getByTestId('app-updates-button').click()
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Download Update')
+    await mainWindow.evaluate(() => window.appUpdates.check())
+    await expect(mainWindow.getByTestId('app-updates-popup')).toContainText('Update failed')
+    expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await mainWindow.getByTestId('update-action').click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(2)
+    await controlUpdater(electronApp, { type: 'fail-download' })
+    await expect(mainWindow.getByTestId('app-updates-popup')).toContainText('Update failed')
+    await mainWindow.getByRole('button', { name: 'Close updates' }).click()
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.2.0' } })
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(3)
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(mainWindow.getByTestId('update-latest-version')).toHaveText('1.2.0')
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Update & Restart')
+  })
+
+  test('keeps a downloaded update across checks and replaces it with a newer installer', async ({ electronApp, testSetup }) => {
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    /** Leave the completion notification open while later releases are discovered. */
+    const { mainWindow } = await testSetup.setupAndStart()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Update & Restart')
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
+    expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await controlUpdater(electronApp, { type: 'configure', config: { checkError: true } })
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.2.0', checkError: false } })
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(2)
+    await expect(mainWindow.getByTestId('update-latest-version')).toHaveText('1.2.0')
+    await expect(mainWindow.getByTestId('update-action')).toBeDisabled()
+    await mainWindow.evaluate(() => window.appUpdates.install())
+    expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Update & Restart')
+    await mainWindow.getByTestId('update-action').click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).installedVersion).toBe('1.2.0')
+    expect((await controlUpdater(electronApp, { type: 'stats' })).downloadedVersions).toEqual(['1.1.0', '1.2.0'])
+  })
+
+  test('flushes edits and closes the window during a download, cancelling the transfer without installing', async ({ electronApp, testSetup }) => {
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    /** Pending editor writes exercise the ordinary close-time save guard during a download. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    await testHelpers.navigateToPromptFolders('Development')
+    /** Existing prompt keeps this test on the production autosave path. */
+    const editor = '[data-testid="prompt-editor-dev-1"]'
+    await waitForMonacoEditor(mainWindow, editor)
+    await testSetup.pauseIpcChannel('update-prompt')
+    try {
+      await focusMonacoEditor(mainWindow, editor)
+      await mainWindow.keyboard.insertText('[download-close-save]')
+      await expect.poll(() => getMonacoEditorText(mainWindow, editor)).toContain('[download-close-save]')
+      await electronApp.evaluate(({ app }) => {
+        /** Keeps the test transport alive after real window closing and production exit cancellation. */
+        const preventTestExit = (event: { preventDefault: () => void }): void => event.preventDefault()
+        ;(app as any).updateTestQuitBlocker = preventTestExit
+        app.once('will-quit', preventTestExit)
+      })
+      await mainWindow.evaluate(() => window.windowControls.close())
+      expect(mainWindow.isClosed()).toBe(false)
+      expect((await controlUpdater(electronApp, { type: 'stats' })).cancellations).toBe(0)
+      /** Observe the real window close after its pending save is released. */
+      const closed = mainWindow.waitForEvent('close')
+      await testSetup.resumeIpcChannel('update-prompt')
+      await closed
+      await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).cancellations).toBe(1)
+      expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
+      expect(await readPersistedPromptTextById(electronApp, {
+        workspacePath: '/ws/sample', folderName: 'Development', promptId: 'dev-1', promptTitle: 'Code Review'
+      })).toContain('[download-close-save]')
+    } finally {
+      await testSetup.resumeIpcChannel('update-prompt')
     }
   })
 
@@ -315,10 +428,11 @@ describe('App updates', () => {
     await controlUpdater(electronApp, { type: 'interval' })
     /** Update popup appears above the still-mounted editor. */
     const popup = mainWindow.getByTestId('app-updates-popup')
-    await popup.getByTestId('update-action').click()
     try {
       await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
       await controlUpdater(electronApp, { type: 'complete-download' })
+      await expect(popup).toContainText('Update ready')
+      await popup.getByTestId('update-action').click()
       await expect(popup).toContainText('Restarting to install')
       await expect(popup.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
       await electronApp.evaluate(({ BrowserWindow, app }) => {
@@ -364,9 +478,10 @@ describe('App updates', () => {
     await mainWindow.keyboard.insertText('[update-save-failure]')
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
     await controlUpdater(electronApp, { type: 'interval' })
-    await mainWindow.getByTestId('update-action').click()
     await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
     await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(mainWindow.getByTestId('update-action')).toHaveText('Update & Restart')
+    await mainWindow.getByTestId('update-action').click()
     await expect(mainWindow.getByTestId('app-updates-popup')).toContainText('Restarting to install')
     await expect.poll(() => electronApp.evaluate(({ app }) => !!(app as any).failUpdateSave)).toBe(true)
     // Prove save completion is awaited before the one-second installation countdown.
