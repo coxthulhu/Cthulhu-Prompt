@@ -197,19 +197,18 @@
           />
         </div>
       {#if update.state === 'portable'}
-        <p class="m-0 text-sm leading-5" style="color:var(--ui-normal-text);">
+        <p class="m-0 mb-2 text-sm leading-5" style="color:var(--ui-normal-text);">
           Portable copies cannot auto-update. Go to GitHub Releases and download the new version.
         </p>
-      {:else}
-        <Button
-          variant="accent"
-          state={update.state === 'current' || update.state === 'available' || hasError ? 'enabled' : 'disabled'}
-          icon={RefreshCw}
-          text={hasUpdate ? 'Update & Restart' : 'Check for Updates'}
-          onclick={handleUpdateAction}
-          style="width:100%;max-width:none;justify-content:center;"
-        />
       {/if}
+      <Button
+        variant="accent"
+        state={update.state === 'current' || update.state === 'available' || hasError ? 'enabled' : 'disabled'}
+        icon={RefreshCw}
+        text={hasUpdate ? 'Update & Restart' : 'Check for Updates'}
+        onclick={handleUpdateAction}
+        style="width:100%;max-width:none;justify-content:center;"
+      />
       <Button
         appearance="outline"
         endIcon={ExternalLink}
