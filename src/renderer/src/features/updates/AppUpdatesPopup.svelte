@@ -13,7 +13,7 @@
     open?: boolean
     state: AppUpdateState
     onclose: () => void
-    /** Retries a failed download without blocking the workspace. */
+    /** Starts or retries a download without blocking the workspace. */
     ondownload: () => void
     /** Installs the downloaded release after explicit user consent. */
     oninstall: () => void

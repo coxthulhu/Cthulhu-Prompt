@@ -44,8 +44,8 @@ const updateFailed = (error: Error): void => {
   publish({ status: 'update-error' })
 }
 
-/** Checks stable releases and automatically attempts newly discovered installed updates. */
-const check = async (): Promise<void> => {
+/** Checks stable releases; only automatic checks start downloading newly discovered updates. */
+const check = async (automatic: boolean): Promise<void> => {
   if (state.status === 'checking' || state.status === 'downloading' || isUpdateRestarting()) return
   /** A failed background check must preserve an existing ready update or manual retry. */
   const previousStatus = state.status
@@ -67,14 +67,14 @@ const check = async (): Promise<void> => {
       latestReleaseDate: release?.publishedAt ?? null,
       hasUpdate
     })
-    if (hasUpdate && (!attemptedVersion || gt(release!.version, attemptedVersion))) void download()
+    if (automatic && hasUpdate && (!attemptedVersion || gt(release!.version, attemptedVersion))) void download()
   } catch (error) {
     console.error('Application update check failed:', error)
     publish({ status: previousStatus === 'ready' || previousStatus === 'update-error' ? previousStatus : 'check-error' })
   }
 }
 
-/** Downloads in the background, automatically once per newer version or on explicit retry. */
+/** Downloads automatically once per newer version or after an explicit download or retry. */
 const download = async (): Promise<void> => {
   if (source.mode !== 'installed' || !release || !state.hasUpdate ||
     (state.status !== 'available' && state.status !== 'update-error')) return
@@ -101,7 +101,7 @@ export const setupAppUpdater = (substitute?: UpdateSource): void => {
     percent: 0, transferred: 0, total: 0, notificationDismissed: false
   }
   ipcMain.handle('app-updates-state', () => state)
-  ipcMain.handle('app-updates-check', () => { void check() })
+  ipcMain.handle('app-updates-check', () => { void check(false) })
   ipcMain.handle('app-updates-download', () => { void download() })
   ipcMain.handle('app-updates-install', () => {
     if (state.status === 'ready') publish({ status: 'restarting' })
@@ -122,12 +122,12 @@ export const setupAppUpdater = (substitute?: UpdateSource): void => {
     if (isUpdateRestarting() && !installing) event.preventDefault()
   })
   /** Background checks keep running after notification dismissal, without overlapping downloads. */
-  const interval = setInterval(() => { void check() }, 15 * 60 * 1000)
+  const interval = setInterval(() => { void check(true) }, 15 * 60 * 1000)
   app.on('will-quit', () => {
     quitting = true
     source.cancelDownload()
     clearInterval(interval)
     clearTimeout(restartTimer)
   })
-  void check()
+  void check(true)
 }

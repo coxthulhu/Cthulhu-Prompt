@@ -66,6 +66,29 @@ describe('App updates', () => {
     await expect(popup).toHaveCount(0)
   })
 
+  // Manual discovery must wait for the separate download action before starting a transfer.
+  test('waits for Download Update after a manual check finds a newer release', async ({ electronApp, testSetup }) => {
+    /** Start with the current release so automatic startup discovery finishes without a download. */
+    const { mainWindow } = await testSetup.setupAndStart()
+    await mainWindow.getByTestId('app-updates-button').click()
+    /** Existing popup action changes from checking to explicit downloading. */
+    const action = mainWindow.getByTestId('update-action')
+    await expect(action).toHaveText('Check for Updates')
+    await expect(action).toBeEnabled()
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
+    await action.click()
+    await expect(action).toHaveText('Download Update')
+    await expect(action).toBeEnabled()
+    expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(2)
+    expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(0)
+    await action.click()
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
+    await expect(action).toBeDisabled()
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    await expect(action).toHaveText('Update & Restart')
+    expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
+  })
+
   test('waits for startup overlay and the Welcome creation dialog before automatically opening', async ({ electronApp, testSetup }) => {
     /** Restoring a seeded workspace gives startup a real asynchronous loading gate. */
     const workspacePath = '/ws/update-startup'
