@@ -1,4 +1,5 @@
 import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
+import { shouldMonacoHandleEscape } from '@renderer/common/monacoKeyboardContext'
 
 /** Find state and actions supplied by the active prompt-folder screen. */
 type PromptFolderFindShortcutHandlers = {
@@ -17,7 +18,8 @@ export const registerPromptFolderFindShortcuts = ({
     layer: 'screen',
     bindings: [
       {
-        matches: (event) => event.key === 'Escape' && getIsFindOpen(),
+        matches: (event) =>
+          event.key === 'Escape' && getIsFindOpen() && !shouldMonacoHandleEscape(event),
         run: closeFindDialog
       },
       {

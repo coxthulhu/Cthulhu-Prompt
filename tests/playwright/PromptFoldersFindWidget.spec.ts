@@ -551,6 +551,60 @@ describe('Prompt folder find dialog', () => {
       .toBe(SCOPE_CHANGE_QUERY)
   })
 
+  for (const escapeKey of ['Escape', 'Shift+Escape']) {
+    test(`dismisses Monaco suggestions before closing find with ${escapeKey}`, async ({ testSetup }) => {
+      const workspacePath = '/ws/find-suggestion-escape'
+      await testSetup.setupFilesystem(buildFindParityWorkspace(
+        workspacePath, 'body', `${SCOPE_CHANGE_QUERY}\n\n${SCOPE_CHANGE_QUERY}`
+      ))
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await testHelpers.setupWorkspaceViaUI()
+      await testHelpers.navigateToPromptFolders('Find Parity')
+      const editorSelector = promptEditorSelector('find-parity-prompt')
+      await focusMonacoEditor(mainWindow, editorSelector)
+      await mainWindow.evaluate((selector) => {
+        const entry = window.__cthulhuMonacoEditors!.find((item) => item.container.closest(selector))!
+        // Document words provide deterministic suggestions without enabling automatic popups.
+        entry.editor.updateOptions({ wordBasedSuggestions: 'currentDocument', quickSuggestions: false })
+      }, editorSelector)
+      await mainWindow.keyboard.press('Control+Home')
+      await mainWindow.keyboard.press('Control+F')
+      const findInput = mainWindow.locator(FIND_INPUT)
+      await expect(findInput).toHaveValue(SCOPE_CHANGE_QUERY)
+      await focusMonacoEditor(mainWindow, editorSelector)
+      await mainWindow.keyboard.press('Control+Home')
+      await mainWindow.keyboard.press('ArrowDown')
+      await mainWindow.keyboard.press('Control+Space')
+      const suggestions = mainWindow.locator('.suggest-widget.visible')
+      await expect(suggestions).toBeVisible()
+      const selection = await getMonacoSelectionState(mainWindow, editorSelector)
+      await mainWindow.keyboard.press(escapeKey)
+      await expect(suggestions).toBeHidden()
+      await expect(findInput).toBeVisible()
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(selection)
+      await mainWindow.keyboard.press(escapeKey)
+      await expect(findInput).toHaveCount(0)
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+      await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toEqual(selection)
+
+      // Closing Find precedes selection cancellation; the next Escape restores native behavior.
+      await mainWindow.keyboard.press('Control+Home')
+      await mainWindow.keyboard.press('Control+Shift+ArrowRight')
+      await mainWindow.keyboard.press('Control+F')
+      await expect(findInput).toHaveValue(SCOPE_CHANGE_QUERY)
+      await mainWindow.evaluate((selector) => {
+        const entry = window.__cthulhuMonacoEditors!.find((item) => item.container.closest(selector))!
+        entry.editor.focus()
+      }, editorSelector)
+      await mainWindow.keyboard.press(escapeKey)
+      await expect(findInput).toHaveCount(0)
+      await expect.poll(() => getMonacoSelectedText(mainWindow, editorSelector)).toBe(SCOPE_CHANGE_QUERY)
+      await mainWindow.keyboard.press(escapeKey)
+      await expect.poll(() => getMonacoSelectedText(mainWindow, editorSelector)).toBe('')
+    })
+  }
+
   // Exercise both selection producers through actual keyboard selection and search input.
   for (const section of ['body', 'title'] as const) {
     /** Backward selections must search from their active caret when the query changes. */

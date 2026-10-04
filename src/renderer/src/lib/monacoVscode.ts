@@ -24,6 +24,7 @@ import getExtensionsServiceOverride from '@codingame/monaco-vscode-extensions-se
 import getModelServiceOverride from '@codingame/monaco-vscode-model-service-override'
 import ExtensionHostWorkerUrl from '@codingame/monaco-vscode-api/workers/extensionHost.worker?worker&url'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import { initializeMonacoKeyboardContext } from '@renderer/common/monacoKeyboardContext'
 
 const PROMPT_EDITOR_THEME = 'Dark 2026'
 
@@ -75,6 +76,7 @@ export const initMonacoVscode = async (): Promise<void> => {
       ...getModelServiceOverride(),
       ...getExtensionsServiceOverride({ enableWorkerExtensionHost: true })
     })
+    await initializeMonacoKeyboardContext()
     await whenThemeDefaultsReady()
 
     const extensionService = await getService(IExtensionService)
