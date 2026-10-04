@@ -75,6 +75,8 @@
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
   import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/domain/workspace/Workspace'
   import { preparePromptFolderName } from '@shared/domain/prompt-folder/promptFolderName'
+  import AppUpdatesPopup from '@renderer/features/updates/AppUpdatesPopup.svelte'
+  import { createAppUpdates } from '@renderer/features/updates/appUpdates.svelte'
 
   type PromptFolderScreenHandle = {
     openDeletePromptFolderDialog: (promptFolderId: string) => void
@@ -199,6 +201,17 @@
     startsVisible: true,
     isLoading: () => startupRestorePhase !== 'ready'
   })
+  /** Native pickers and Welcome follow-up actions defer unsolicited update notifications. */
+  let homeWorkflowBusy = $state(false)
+  /** Shell-owned updater survives screen changes and shares close-time save preparation. */
+  const updater = createAppUpdates(
+    () => !startupRestoreOverlay.isVisible() && !showWelcomeDialog && !homeWorkflowBusy && !isWorkspaceLoading,
+    async () => {
+      persistPromptNavigationSelection()
+      captureRegisteredMonacoViewStates()
+      await flushAllAutosaves()
+    }
+  )
   const windowTitle = $derived(
     isDevMode && executionFolderName
       ? `${baseWindowTitle} — ${executionFolderName}`
@@ -779,7 +792,9 @@
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar {activeScreen} {isWorkspaceReady} {isDevMode} onNavigate={navigateToScreen} />
+    <AppActivityBar {activeScreen} {isWorkspaceReady} {isDevMode} onNavigate={navigateToScreen}
+      updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
+      onOpenUpdates={() => { updater.updates.open = true }} />
 
     <ResizableSidebar
       isSidebarVisible={isAppSidebarExpanded}
@@ -827,6 +842,7 @@
               onWorkspaceSelect={selectWorkspace}
               onWorkspaceCreate={createWorkspace}
               onWorkspaceClear={() => void closeWorkspace()}
+              onWorkflowBusy={(busy) => { homeWorkflowBusy = busy }}
             />
           {:else if activeScreen === 'settings'}
             <SettingsScreen />
@@ -857,3 +873,8 @@
   {startupRestoreOverlay}
   startupLoadingOverlayFadeMs={STARTUP_LOADING_OVERLAY_FADE_MS}
 />
+
+{#if updater.updates.snapshot}
+  <AppUpdatesPopup bind:open={updater.updates.open} state={updater.updates.snapshot}
+    onclose={updater.dismiss} onstart={updater.start} />
+{/if}

@@ -36,7 +36,8 @@
     promptFolderCount,
     onWorkspaceSelect,
     onWorkspaceCreate,
-    onWorkspaceClear
+    onWorkspaceClear,
+    onWorkflowBusy
   } = $props<{
     /** Welcome visibility controlled by startup or the Welcome action. */
     showWelcomeDialog?: boolean
@@ -52,6 +53,8 @@
       includeExamplePrompts: boolean
     ) => Promise<WorkspaceCreationResult>
     onWorkspaceClear: () => void
+    /** Defers update notifications throughout native pickers and their follow-up loading/errors. */
+    onWorkflowBusy: (busy: boolean) => void
   }>()
 
   type OpenWorkspaceInfoFileDialogResult = {
@@ -66,6 +69,17 @@
   let showCreateWorkspaceDialog = $state(false)
   let showWorkspaceOpenErrorDialog = $state(false)
   let workspaceOpenErrorText = $state(workspaceOpenErrorFallbackText)
+  /** Covers the native picker through the final workspace-selection result. */
+  let isSelectingWorkspace = $state(false)
+
+  // Side effect: keep the shell informed across Welcome-to-picker/dialog transitions.
+  $effect(() => {
+    onWorkflowBusy(showWelcomeDialog || showCreateWorkspaceDialog ||
+      showWorkspaceOpenErrorDialog || isSelectingWorkspace || isWorkspaceLoading)
+  })
+
+  // Side effect: release the workflow block if navigation unmounts Home.
+  $effect(() => () => onWorkflowBusy(false))
 
   const openWorkspaceInfoFileDialog = async (): Promise<OpenWorkspaceInfoFileDialogResult> => {
     isOpeningWorkspaceDialog = true
@@ -85,21 +99,26 @@
   }
 
   const handleSelectFolder = async () => {
-    let result: OpenWorkspaceInfoFileDialogResult
+    isSelectingWorkspace = true
     try {
-      result = await openWorkspaceInfoFileDialog()
-    } catch (error) {
-      showWorkspaceOpenError(getErrorMessage(error))
-      return
-    }
-
-    if (!result.dialogCancelled && result.filePaths.length > 0) {
-      const selectedPath = result.filePaths[0]
-      const selectionResult = await onWorkspaceSelect(selectedPath)
-
-      if (!selectionResult.success) {
-        showWorkspaceOpenError(selectionResult.message)
+      let result: OpenWorkspaceInfoFileDialogResult
+      try {
+        result = await openWorkspaceInfoFileDialog()
+      } catch (error) {
+        showWorkspaceOpenError(getErrorMessage(error))
+        return
       }
+
+      if (!result.dialogCancelled && result.filePaths.length > 0) {
+        const selectedPath = result.filePaths[0]
+        const selectionResult = await onWorkspaceSelect(selectedPath)
+
+        if (!selectionResult.success) {
+          showWorkspaceOpenError(selectionResult.message)
+        }
+      }
+    } finally {
+      isSelectingWorkspace = false
     }
   }
 

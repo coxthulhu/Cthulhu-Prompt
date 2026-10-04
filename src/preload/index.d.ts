@@ -1,6 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { RuntimeConfig } from '@shared/runtime/runtimeConfig'
 import type { RendererErrorReport } from '@shared/ipc/RendererErrorReport'
+import type { AppUpdatesApi } from '@shared/runtime/AppUpdates'
 
 interface WindowControls {
   minimize: () => Promise<void>
@@ -24,5 +25,6 @@ declare global {
     ipcClientId: string
     windowControls: WindowControls
     rendererLogging: RendererLogging
+    appUpdates: AppUpdatesApi
   }
 }

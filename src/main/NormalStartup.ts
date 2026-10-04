@@ -32,6 +32,8 @@ import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
 import { attachRendererLogging } from './logging'
 import { configureRendererSecurity, getRendererDevelopmentUrl } from './rendererSecurity'
+import { isUpdateBusy, isUpdateInstalling, setupAppUpdater } from './updates/AppUpdater'
+import type { UpdateSource } from './updates/UpdateSource'
 
 const WINDOW_DEFAULT_WIDTH = 1366
 const WINDOW_DEFAULT_HEIGHT = 768
@@ -83,6 +85,7 @@ function setupWindowControlHandlers(): void {
   })
 
   ipcMain.handle('window-confirm-close', (event) => {
+    if (isUpdateBusy()) return
     const window = withWindow(event)
     if (!window) return
     const guard = windowCloseGuards.get(window)
@@ -249,6 +252,14 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
   windowCloseGuards.set(mainWindow, closeGuard)
 
   mainWindow.on('close', (event) => {
+    if (isUpdateInstalling()) {
+      persistWindowState(mainWindow)
+      return
+    }
+    if (isUpdateBusy()) {
+      event.preventDefault()
+      return
+    }
     if (closeGuard.allowClose) {
       closeGuard.allowClose = false
       // Side effect: capture final window geometry and state after autosaves complete.
@@ -284,7 +295,7 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
   }
 }
 
-export function startupNormally(): void {
+export function startupNormally(updateSource?: UpdateSource): void {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
@@ -337,6 +348,7 @@ export function startupNormally(): void {
 
     const runtimeConfig = buildRuntimeConfig()
 
+    setupAppUpdater(updateSource)
     createWindow(runtimeConfig)
 
     app.on('activate', function () {

@@ -1,6 +1,7 @@
 import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { compactGuid } from '@shared/utilities/compactGuid'
+import type { AppUpdatesApi, AppUpdateState } from '@shared/runtime/AppUpdates'
 import {
   DEFAULT_RUNTIME_CONFIG,
   RUNTIME_ARG_PREFIX,
@@ -17,6 +18,20 @@ import {
 const rendererLogging = {
   reportError: (report: RendererErrorReport): void => {
     electronAPI.ipcRenderer.send(RENDERER_ERROR_CHANNEL, report)
+  }
+}
+
+/** Typed updater bridge keeps release fetching and installation in the main process. */
+const appUpdates: AppUpdatesApi = {
+  getState: () => electronAPI.ipcRenderer.invoke('app-updates-state'),
+  check: () => electronAPI.ipcRenderer.invoke('app-updates-check'),
+  start: () => electronAPI.ipcRenderer.invoke('app-updates-start'),
+  restart: () => electronAPI.ipcRenderer.invoke('app-updates-restart'),
+  dismiss: () => electronAPI.ipcRenderer.invoke('app-updates-dismiss'),
+  onChange: (callback) => {
+    /** Electron's event object stays inside preload. */
+    const listener = (_event: unknown, state: AppUpdateState): void => callback(state)
+    return electronAPI.ipcRenderer.on('app-updates-changed', listener)
   }
 }
 
@@ -63,19 +78,13 @@ const windowControls = {
     const listener = (_event: unknown, isMaximized: boolean) => {
       callback(isMaximized)
     }
-    electronAPI.ipcRenderer.on('window-maximize-changed', listener)
-    return () => {
-      electronAPI.ipcRenderer.removeListener('window-maximize-changed', listener)
-    }
+    return electronAPI.ipcRenderer.on('window-maximize-changed', listener)
   },
   onCloseRequested: (callback: () => void) => {
     const listener = () => {
       callback()
     }
-    electronAPI.ipcRenderer.on('window-close-requested', listener)
-    return () => {
-      electronAPI.ipcRenderer.removeListener('window-close-requested', listener)
-    }
+    return electronAPI.ipcRenderer.on('window-close-requested', listener)
   }
 }
 
@@ -89,6 +98,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('ipcClientId', ipcClientId)
     contextBridge.exposeInMainWorld('windowControls', windowControls)
     contextBridge.exposeInMainWorld('rendererLogging', rendererLogging)
+    contextBridge.exposeInMainWorld('appUpdates', appUpdates)
   } catch (error) {
     console.error(error)
   }
@@ -103,4 +113,6 @@ if (process.contextIsolated) {
   window.windowControls = windowControls
   // @ts-expect-error (define in dts)
   window.rendererLogging = rendererLogging
+  // @ts-expect-error (define in dts)
+  window.appUpdates = appUpdates
 }

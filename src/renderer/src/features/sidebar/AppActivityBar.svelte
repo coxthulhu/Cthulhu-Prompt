@@ -2,17 +2,27 @@
   import type { ComponentType } from 'svelte'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
+  import { Download } from 'lucide-svelte'
 
   let {
     activeScreen,
     isWorkspaceReady = false,
     isDevMode = false,
-    onNavigate
+    onNavigate,
+    updatesOpen,
+    updateAvailable,
+    onOpenUpdates
   } = $props<{
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
     isDevMode?: boolean
     onNavigate: (screen: ScreenId) => void
+    /** Reflects the updater popup independently of screen navigation. */
+    updatesOpen: boolean
+    /** Shows a notification dot while a newer public release exists. */
+    updateAvailable: boolean
+    /** Opens the shell-owned updater surface. */
+    onOpenUpdates: () => void
   }>()
 
   type ActivityItem = {
@@ -66,4 +76,41 @@
       onclick={() => onNavigate(item.id)}
     />
   {/each}
+  <div class="mt-auto w-full relative">
+    <button type="button" class="updatesButton" aria-label={updateAvailable ? 'App updates — update available' : 'App updates'}
+      aria-expanded={updatesOpen} title="App updates" data-testid="app-updates-button" onclick={onOpenUpdates}>
+      <Download size={24} strokeWidth={1.5} aria-hidden="true" />
+      {#if updateAvailable}<span class="updateDot" data-testid="update-available-dot"></span>{/if}
+    </button>
+  </div>
 </nav>
+
+<style>
+  .updatesButton {
+    display: flex;
+    position: relative;
+    width: 100%;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    padding: 0;
+    background: var(--ui-ghost-surface);
+    color: var(--ui-muted-icon-glyph);
+    cursor: pointer;
+  }
+  .updatesButton:hover,
+  .updatesButton:focus-visible,
+  .updatesButton[aria-expanded='true'] { color: var(--ui-normal-text); }
+  .updateDot {
+    position: absolute;
+    right: 7px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ui-success-normal-text);
+    border: 2px solid var(--ui-chrome-normal-surface);
+    box-sizing: content-box;
+  }
+</style>

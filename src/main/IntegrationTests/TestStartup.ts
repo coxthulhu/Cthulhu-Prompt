@@ -5,6 +5,7 @@ import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
 import { isPlaywrightEnvironment } from '../appEnvironment'
 import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
 import { initializePersistentLogging } from '../logging'
+import { createTestAppUpdater } from './TestAppUpdater'
 
 interface TestFixtures {
   fileDialogResults?: string[]
@@ -219,6 +220,8 @@ function parseWindowStatePayload(payload: unknown): WindowStatePayload | null {
 }
 
 export function setupTestStartupListener(): void {
+  /** Every Playwright launch replaces release fetching and installer execution before startup. */
+  const updateSource = createTestAppUpdater()
   initializeIpcGatingForE2E()
   // Side effect: allow the persistent logging integration test to opt in without cross-test logs.
   ;(app as any).on('test-initialize-persistent-logging', () => {
@@ -358,7 +361,7 @@ export function setupTestStartupListener(): void {
         appRef._testStartupStarted = true
         // Side effect: defer startup to avoid tearing down the current evaluate context.
         setImmediate(() => {
-          startupNormally()
+          startupNormally(updateSource)
         })
       }
 

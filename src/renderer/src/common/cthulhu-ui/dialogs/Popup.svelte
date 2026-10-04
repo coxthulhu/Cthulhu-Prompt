@@ -5,6 +5,8 @@
   import { createCssAnchor } from '@renderer/common/cthulhu-ui/cssAnchor'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
+  import { popupActivity } from './popupActivity.svelte'
+  import { untrack } from 'svelte'
 
   /** Shared overlay behavior with caller-owned content and close controls. */
   type Props = {
@@ -50,6 +52,13 @@
   let hasFocus = $state(false)
   /** Shared anchor owns the identity, element registration, and positioning calculations. */
   const cssAnchor = createCssAnchor()
+
+  // Side effect: announce modal visibility so background update notifications wait their turn.
+  $effect(() => {
+    if (!open || !backdrop) return
+    untrack(() => { popupActivity.modalCount += 1 })
+    return () => { popupActivity.modalCount -= 1 }
+  })
   /** Live CSS anchor edges keep placement aligned through scrolling and resizing. */
   const surfaceStyle = $derived(
     placement === 'bottom-left'
