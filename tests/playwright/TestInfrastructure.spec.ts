@@ -1,15 +1,35 @@
 import { test as playwrightTest, expect as playwrightExpect } from '@playwright/test'
 import type { LoadSystemSettingsResult } from '@shared/domain/settings/SystemSettings'
-import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
+import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import type { LoadUserPersistenceResult } from '@shared/domain/user-persistence/UserPersistence'
 import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
+import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { join } from 'node:path'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 describe('Test Infrastructure', () => {
   describe('Controlled Startup Framework', () => {
+    // Starting without a workspace or explicit filesystem setup must never select the host disk.
+    test('uses an empty in-memory filesystem before setup and persists startup settings there', async ({
+      testSetup,
+      electronApp
+    }) => {
+      /** Running executable exists on disk and must be invisible to the empty test volume. */
+      const executablePath = await electronApp.evaluate(({ app }) => app.getPath('exe'))
+      expect(await checkFileExists(electronApp, executablePath)).toBe(false)
+      /** Settings must be absent before startup regardless of the shared Windows test profile. */
+      const settingsPath = join(await electronApp.evaluate(({ app }) => app.getPath('userData')), 'SystemSettings.json')
+      expect(await checkFileExists(electronApp, settingsPath)).toBe(false)
+
+      await testSetup.setupAndStart()
+
+      expect(JSON.parse(await readTextFile(electronApp, settingsPath))).toEqual(DEFAULT_SYSTEM_SETTINGS)
+      expect(await checkFileExists(electronApp, executablePath)).toBe(false)
+    })
+
     /** Verifies both migrated startup queries expose the shared authoritative snapshot contract. */
     test('returns startup settings and persistence as authoritative snapshots', async ({
       testSetup

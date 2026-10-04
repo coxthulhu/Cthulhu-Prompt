@@ -1,27 +1,24 @@
-import * as fs from 'node:fs'
+import { Volume } from 'memfs'
 import * as path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { PersistentLogWriter } from '../../src/main/PersistentLogWriter'
+import { getFs, setFs } from '../../src/main/fs-provider'
 
-const temporaryDirectories: string[] = []
+/** Each test reads and writes application logs entirely in memory. */
+const filesystem = new Volume()
 
-const createTemporaryDirectory = (): string => {
-  const temporaryRoot = path.resolve('temp', 'vitest-persistent-logging')
-  fs.mkdirSync(temporaryRoot, { recursive: true })
-  const directory = fs.mkdtempSync(path.join(temporaryRoot, 'cthulhu-prompt-log-test-'))
-  temporaryDirectories.push(directory)
-  return directory
-}
-
-afterEach(() => {
-  temporaryDirectories.splice(0).forEach((directory) => {
-    fs.rmSync(directory, { recursive: true, force: true })
-  })
+// Select a clean volume before constructing the production log writer.
+beforeEach(() => {
+  filesystem.reset()
+  setFs(filesystem)
 })
 
 describe('PersistentLogWriter', () => {
   it('writes readable diagnostic context and stack details', () => {
-    const directory = createTemporaryDirectory()
+    /** Reads the files written through the selected in-memory provider. */
+    const fs = getFs()
+    /** In-memory directory created by the writer. */
+    const directory = '/logs'
     const writer = new PersistentLogWriter(directory, '1.2.3')
 
     writer.write({
@@ -40,7 +37,10 @@ describe('PersistentLogWriter', () => {
   })
 
   it('retains only the configured number of rotated files', () => {
-    const directory = createTemporaryDirectory()
+    /** Lists and reads the retained files through the selected in-memory provider. */
+    const fs = getFs()
+    /** In-memory directory used to inspect rotated files. */
+    const directory = '/logs'
     const writer = new PersistentLogWriter(directory, '1.2.3', {
       maxFileSizeBytes: 180,
       retainedFileCount: 3

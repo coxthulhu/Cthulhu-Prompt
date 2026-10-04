@@ -13,6 +13,8 @@ interface UnifiedFs {
   renameSync: typeof nodeFs.renameSync
   utimesSync: typeof nodeFs.utimesSync
   writeFileSync: typeof nodeFs.writeFileSync
+  /** Appends application log entries through the selected filesystem. */
+  appendFileSync: typeof nodeFs.appendFileSync
   // Add other fs methods as needed
 }
 
@@ -45,7 +47,8 @@ export function getFs(): UnifiedFs {
       rmSync: fs.rmSync.bind(fs) as typeof nodeFs.rmSync,
       renameSync: fs.renameSync.bind(fs) as typeof nodeFs.renameSync,
       utimesSync: fs.utimesSync.bind(fs) as typeof nodeFs.utimesSync,
-      writeFileSync: fs.writeFileSync.bind(fs) as typeof nodeFs.writeFileSync
+      writeFileSync: fs.writeFileSync.bind(fs) as typeof nodeFs.writeFileSync,
+      appendFileSync: fs.appendFileSync.bind(fs) as typeof nodeFs.appendFileSync
     }
   }
 

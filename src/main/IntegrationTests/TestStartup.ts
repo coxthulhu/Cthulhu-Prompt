@@ -1,4 +1,5 @@
 import { app, ipcMain, BrowserWindow } from 'electron'
+import { Volume } from 'memfs'
 import { startupNormally } from '../NormalStartup'
 import { getFs, setFs } from '../fs-provider'
 import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
@@ -220,6 +221,9 @@ function parseWindowStatePayload(payload: unknown): WindowStatePayload | null {
 }
 
 export function setupTestStartupListener(): void {
+  /** Every test app starts with its own empty filesystem before any setup or persistence runs. */
+  const filesystem = new Volume()
+  setFs(filesystem)
   /** Every Playwright launch replaces release fetching and installer execution before startup. */
   const updateSource = createTestAppUpdater()
   initializeIpcGatingForE2E()
@@ -227,7 +231,7 @@ export function setupTestStartupListener(): void {
   ;(app as any).on('test-initialize-persistent-logging', () => {
     initializePersistentLogging()
   })
-  ;(app as any).on('test-setup-filesystem', async (payload: unknown) => {
+  ;(app as any).on('test-setup-filesystem', (payload: unknown) => {
     const typedPayload = parseFilesystemSetupPayload(payload)
 
     if (!typedPayload) {
@@ -249,10 +253,8 @@ export function setupTestStartupListener(): void {
     }
 
     try {
-      const { vol } = await import('memfs')
-      vol.reset()
-      vol.fromJSON(typedPayload.filesystem)
-      setFs(vol)
+      filesystem.reset()
+      filesystem.fromJSON(typedPayload.filesystem)
 
       if (typedPayload.fileModifiedTimes) {
         const fs = getFs()

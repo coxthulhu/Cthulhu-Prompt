@@ -1,5 +1,5 @@
-import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { getFs } from './fs-provider'
 
 export type PersistentLogLevel = 'info' | 'warning' | 'error'
 
@@ -29,6 +29,9 @@ const truncateLogValue = (value: string): string => {
 const normalizeMetadataValue = (value: string): string => value.replaceAll(/\s+/g, ' ').trim()
 
 export class PersistentLogWriter {
+  /** Uses the application's selected filesystem, including memfs during tests. */
+  private readonly fs = getFs()
+
   readonly currentLogPath: string
 
   private readonly maxFileSizeBytes: number
@@ -49,7 +52,7 @@ export class PersistentLogWriter {
       throw new Error('Persistent log retained file count must be a positive integer.')
     }
 
-    fs.mkdirSync(logDirectory, { recursive: true })
+    this.fs.mkdirSync(logDirectory, { recursive: true })
     this.currentLogPath = path.join(logDirectory, LOG_FILE_NAME)
   }
 
@@ -57,7 +60,7 @@ export class PersistentLogWriter {
     try {
       const formattedEntry = this.formatEntry(entry)
       this.rotateIfNeeded(Buffer.byteLength(formattedEntry, 'utf8'))
-      fs.appendFileSync(this.currentLogPath, formattedEntry, 'utf8')
+      this.fs.appendFileSync(this.currentLogPath, formattedEntry, 'utf8')
     } catch (error) {
       const message = error instanceof Error ? error.stack || error.message : String(error)
       process.stderr.write(`Failed to write Cthulhu Prompt log: ${message}\n`)
@@ -86,29 +89,29 @@ export class PersistentLogWriter {
   }
 
   private rotateIfNeeded(nextEntrySize: number): void {
-    if (!fs.existsSync(this.currentLogPath)) return
+    if (!this.fs.existsSync(this.currentLogPath)) return
 
-    const currentSize = fs.statSync(this.currentLogPath).size
+    const currentSize = this.fs.statSync(this.currentLogPath).size
     if (currentSize === 0 || currentSize + nextEntrySize <= this.maxFileSizeBytes) return
 
     if (this.retainedFileCount === 1) {
-      fs.unlinkSync(this.currentLogPath)
+      this.fs.rmSync(this.currentLogPath)
       return
     }
 
     const oldestArchivePath = this.getArchivePath(this.retainedFileCount - 1)
-    if (fs.existsSync(oldestArchivePath)) {
-      fs.unlinkSync(oldestArchivePath)
+    if (this.fs.existsSync(oldestArchivePath)) {
+      this.fs.rmSync(oldestArchivePath)
     }
 
     for (let archiveIndex = this.retainedFileCount - 2; archiveIndex >= 1; archiveIndex -= 1) {
       const sourcePath = this.getArchivePath(archiveIndex)
-      if (fs.existsSync(sourcePath)) {
-        fs.renameSync(sourcePath, this.getArchivePath(archiveIndex + 1))
+      if (this.fs.existsSync(sourcePath)) {
+        this.fs.renameSync(sourcePath, this.getArchivePath(archiveIndex + 1))
       }
     }
 
-    fs.renameSync(this.currentLogPath, this.getArchivePath(1))
+    this.fs.renameSync(this.currentLogPath, this.getArchivePath(1))
   }
 
   private getArchivePath(archiveIndex: number): string {

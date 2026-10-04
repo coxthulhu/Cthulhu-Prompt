@@ -10,11 +10,6 @@ import { setAutomaticUpdates } from '../helpers/SettingsHelpers'
 /** Production updater UI and service run with controlled release/download/install boundaries. */
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-// Isolate settings even when a test starts without creating a workspace or seeding files.
-test.beforeEach(async ({ testSetup }) => {
-  await testSetup.setupFilesystem({})
-})
-
 // Release window guards after assertions so a failed test cannot strand a controlled download.
 test.afterEach(async ({ electronApp }) => {
   await electronApp.evaluate(({ app, BrowserWindow }) => {
