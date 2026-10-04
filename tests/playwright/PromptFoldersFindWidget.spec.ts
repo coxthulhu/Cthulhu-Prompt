@@ -417,6 +417,148 @@ const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, str
 }
 
 describe('Prompt folder find dialog', () => {
+  // Keyboard navigation must retain widget focus and reopen only the previously entered query.
+  test('navigates with F3 in the widget and reopens the previous query', async ({ testSetup }) => {
+    /** Three body occurrences provide distinct forward, backward, and wrap destinations. */
+    const workspacePath = '/ws/find-f3-widget'
+    await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Application and helpers exercise native keyboard events. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Anchor')
+    /** Body focus must survive opening Find without an existing query. */
+    const editorSelector = promptEditorSelector('typing-anchor-1')
+    await focusMonacoEditor(mainWindow, editorSelector)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('F3')
+    /** F3 does not replace the retained query with the word under the cursor. */
+    const findInput = mainWindow.locator(FIND_INPUT)
+    await expect(findInput).toHaveValue('')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+    await findInput.fill(TYPING_ANCHOR_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await findInput.press('F3')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+    await expect(findInput).toBeFocused()
+    await findInput.press('Shift+F3')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await findInput.press('Shift+F3')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('3 of 3')
+    await expect(findInput).toBeFocused()
+    await findInput.press('Escape')
+    await expect(findInput).toHaveCount(0)
+    await mainWindow.keyboard.press('F3')
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+    await expect(mainWindow.locator(`${editorSelector} .find-widget.visible`)).toHaveCount(0)
+
+    await findInput.fill('no-matching-result')
+    await findInput.press('F3')
+    await findInput.press('Shift+F3')
+    await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('No results')
+    await expect(findInput).toBeFocused()
+  })
+
+  // Focus and selection must follow results through title fields and virtualized body editors.
+  test('moves F3 focus across virtualized editors and keeps current matches yellow', async ({ testSetup }) => {
+    /** Distant results require real row mounting and Monaco hydration. */
+    const workspacePath = '/ws/find-f3-editor'
+    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, [{
+      folderName: 'Keyboard Find', displayName: 'Keyboard Find', promptFolderId: 'keyboard-find-folder',
+      prompts: [
+        { id: 'keyboard-find-first', title: 'First', promptText: 'needle needle' },
+        ...Array.from({ length: 30 }, (_, index) => ({
+          id: `keyboard-find-spacer-${index}`, title: `Spacer ${index}`, promptText: 'Ordinary text'
+        })),
+        { id: 'keyboard-find-last', title: 'Last needle', promptText: 'needle' }
+      ]
+    }]))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Application and helpers drive the actual editor selection behavior. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders('Keyboard Find')
+    /** First and last rows span an unmounted portion of the virtual window. */
+    const firstEditor = promptEditorSelector('keyboard-find-first')
+    /** Last row supplies both a native title and Monaco body destination. */
+    const lastEditor = promptEditorSelector('keyboard-find-last')
+    await expect(mainWindow.locator(lastEditor)).toHaveCount(0)
+    await focusMonacoEditor(mainWindow, firstEditor)
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Control+F')
+    await mainWindow.locator(FIND_INPUT).press('Enter')
+    await mainWindow.keyboard.press('Escape')
+    await mainWindow.keyboard.press('F3')
+
+    /** Selected body matches must retain focus and expose the amber decoration without a blue tint. */
+    const expectBodyMatch = async (selector: string, column: number, index: number) => {
+      await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe(`${index} of 4`)
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, selector)).toBe(true)
+      await expect.poll(() => getMonacoSelectionState(mainWindow, selector)).toMatchObject({
+        selectedText: 'needle', startColumn: column
+      })
+      await expect(mainWindow.locator(`${selector} .currentFindMatch`)).toHaveCSS('background-color', 'rgba(240, 177, 53, 0.3)')
+      await expect(mainWindow.locator(`${selector} .selected-text`).first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+    }
+    await expectBodyMatch(firstEditor, 8, 2)
+    /** Monaco adds word-occurrence decorations asynchronously after the editor gains focus. */
+    const occurrenceHighlights = mainWindow.locator(
+      `${firstEditor} :is(.selectionHighlight, .wordHighlight, .wordHighlightText, .wordHighlightStrong)`
+    )
+    await expect.poll(() => occurrenceHighlights.count()).toBeGreaterThan(0)
+    /** Require a nonempty snapshot even if Monaco replaces decorations after the count check. */
+    const renderedHighlights = await occurrenceHighlights.all()
+    expect(renderedHighlights.length).toBeGreaterThan(0)
+    // Check real overlapping decorations, not only the yellow layer's own computed color.
+    for (const highlight of renderedHighlights) {
+      await expect(highlight).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+      await expect(highlight).toHaveCSS('border-top-color', 'rgba(0, 0, 0, 0)')
+    }
+    // Closing from an already-focused editor must retain the current result as the reopen anchor.
+    await mainWindow.keyboard.press('Escape')
+    await expect(mainWindow.locator(FIND_INPUT)).toHaveCount(0)
+    await mainWindow.keyboard.press('Shift+F3')
+    await expectBodyMatch(firstEditor, 1, 1)
+    await mainWindow.keyboard.press('F3')
+    await expectBodyMatch(firstEditor, 8, 2)
+    await mainWindow.keyboard.press('F3')
+    /** Native title selection must move immediately, before Find is closed. */
+    const lastTitle = mainWindow.locator(`${lastEditor} ${PROMPT_TITLE_SELECTOR}`)
+    await expect(lastTitle).toBeFocused()
+    await expect.poll(() => lastTitle.evaluate((input: HTMLInputElement) =>
+      input.value.slice(input.selectionStart!, input.selectionEnd!)
+    )).toBe('needle')
+    await expect(mainWindow.locator(`${lastEditor} [data-current="true"]`)).toHaveCount(1)
+    await expect.poll(() => lastTitle.evaluate((input) =>
+      getComputedStyle(input, '::selection').backgroundColor
+    )).toBe('rgba(0, 0, 0, 0)')
+    await mainWindow.keyboard.press('F3')
+    await expectBodyMatch(lastEditor, 1, 4)
+    await mainWindow.keyboard.press('F3')
+    await expectBodyMatch(firstEditor, 1, 1)
+    await mainWindow.keyboard.press('Shift+F3')
+    await expectBodyMatch(lastEditor, 1, 4)
+    await mainWindow.keyboard.press('Shift+F3')
+    await expect(lastTitle).toBeFocused()
+    // A manual title selection restores native selection color and supplies the backward anchor.
+    await lastTitle.press('Control+Home')
+    await lastTitle.press('Control+Shift+End')
+    await expect(mainWindow.locator(`${lastEditor} [data-current="true"]`)).toHaveCount(0)
+    await expect.poll(() => lastTitle.evaluate((input: HTMLInputElement) =>
+      input.value.slice(input.selectionStart!, input.selectionEnd!)
+    )).toBe('Last needle')
+    await mainWindow.keyboard.press('Shift+F3')
+    await expectBodyMatch(firstEditor, 8, 2)
+
+    // Ordinary manual selections must regain their normal selection styling.
+    await mainWindow.keyboard.press('Control+Home')
+    await mainWindow.keyboard.press('Control+Shift+End')
+    await expect(mainWindow.locator(`${firstEditor} .currentFindMatch`)).toHaveCount(0)
+    await expect(mainWindow.locator(`${firstEditor} .selected-text`).first()).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  })
+
   for (const section of ['body', 'title'] as const) {
     /** Scope rescans must retain the chosen occurrence and its closing focus target. */
     test(`preserves the active ${section} result when prompts are reordered`, async ({ testSetup }) => {

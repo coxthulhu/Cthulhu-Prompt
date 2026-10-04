@@ -64,6 +64,7 @@
   const cancelMatchReveal = (): void => {
     cancelReveal?.()
     cancelReveal = null
+    focusRequests.clear()
   }
   let searchRevision = $state(0)
   let lastSelectionAnchor = $state<PromptFolderFindAnchor | null>(null)
@@ -240,6 +241,17 @@
 
   // Resume navigation from the user's cursor and cancel any older pending reveal.
   const recordSelectionAnchor = (anchor: PromptFolderFindAnchor) => {
+    // Find-driven focus and title selection events must retain the active result and reveal.
+    if (
+      isFindOpen &&
+      returnFocusTarget?.entityId === anchor.entityId &&
+      returnFocusTarget.sectionKey === anchor.sectionKey &&
+      (focusRequests.pending || (
+        shouldSelectCurrentMatch &&
+        returnFocusTarget.selection?.startOffset === anchor.startOffset &&
+        returnFocusTarget.selection.endOffset === anchor.endOffset
+      ))
+    ) return
     const startOffset = Math.min(anchor.startOffset, anchor.endOffset)
     const endOffset = Math.max(anchor.startOffset, anchor.endOffset)
     lastSelectionAnchor = { ...anchor, startOffset, endOffset }
@@ -296,9 +308,8 @@
     return selectedText
   }
 
-  const openFindDialogFromSelection = () => {
-    // Ctrl+F starts from the retained result; ordinary query edits keep their original anchor.
-    // Preserve the focus target because title selections are applied only when Find closes.
+  /** Resumes from the last navigated result even when focusing it emitted no cursor change. */
+  const retainMatchSelectionAnchor = (): void => {
     if (returnFocusTarget?.selection) {
       lastSelectionAnchor = {
         entityId: returnFocusTarget.entityId,
@@ -307,6 +318,11 @@
         cursorOffset: returnFocusTarget.selection.endOffset
       }
     }
+  }
+
+  const openFindDialogFromSelection = () => {
+    // Ctrl+F starts from the retained result; ordinary query edits keep their original anchor.
+    retainMatchSelectionAnchor()
     const nextMatchText = getSelectionMatchText()
     preserveSelectionOnNextSearch = true
     if (nextMatchText && nextMatchText !== matchText) {
@@ -520,6 +536,26 @@
     setCurrentMatchIndex(nextIndex)
   }
 
+  /** Reopens the retained query and carries editor focus through folder-wide keyboard navigation. */
+  const navigateFind = (event: KeyboardEvent): void => {
+    /** Pending focus preserves editor-origin navigation while a virtualized result hydrates. */
+    const moveEditorFocus = focusRequests.pending !== null ||
+      (event.target instanceof Element &&
+        event.target.closest('.monaco-editor, .prompt-editor-title-input') !== null)
+    if (!isFindOpen) {
+      retainMatchSelectionAnchor()
+      isFindOpen = true
+      preserveSelectionOnNextSearch = true
+      runSearch(true)
+      lastSearchInputs = buildSearchInputs({ query, entityIds, searchRevision })
+    }
+    if (event.shiftKey) handlePrevious()
+    else handleNext()
+    if (moveEditorFocus && totalMatches > 0 && returnFocusTarget) {
+      focusRequests.request(returnFocusTarget)
+    }
+  }
+
   // Side effect: refresh the placeholder search state while the find widget is open.
   $effect(() => {
     if (!isFindOpen) return
@@ -668,7 +704,8 @@
     const unregisterShortcuts = registerPromptFolderFindShortcuts({
       getIsFindOpen: () => isFindOpen,
       openFindDialog: openFindDialogFromSelection,
-      closeFindDialog
+      closeFindDialog,
+      navigateFind
     })
 
     return () => {

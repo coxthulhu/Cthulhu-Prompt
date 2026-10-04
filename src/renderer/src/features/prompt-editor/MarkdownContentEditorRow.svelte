@@ -463,7 +463,7 @@
     return findContext.registerRow(handle)
   })
 
-  // Side effect: focus the match target after the find widget closes.
+  // Side effect: focus a navigated match or restore its selection when Find closes.
   $effect(() => {
     if (!findContext) return
     const request = findContext.focusRequests.pending

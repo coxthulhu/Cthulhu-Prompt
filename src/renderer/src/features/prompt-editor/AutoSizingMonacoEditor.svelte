@@ -622,12 +622,8 @@
     if (!syncFindState(query, { shouldClearSelection })) return
 
     if (activeSectionMatchIndex != null && activeSectionMatchIndex >= 0) {
-      const didActiveMatchChange = lastActiveMatchIndex !== activeSectionMatchIndex
-      const shouldRefreshUnfocusedMatch = !didActiveMatchChange && !editor.hasTextFocus()
-      if (
-        findRequest.shouldSelectActiveMatch &&
-        (didActiveMatchChange || shouldRefreshUnfocusedMatch)
-      ) {
+      // Research rebuilds decorations, so restore the active highlight even in a focused editor.
+      if (findRequest.shouldSelectActiveMatch) {
         findModel?.moveToMatch(activeSectionMatchIndex)
       }
       lastActiveMatchIndex = activeSectionMatchIndex

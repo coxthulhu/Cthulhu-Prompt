@@ -130,8 +130,8 @@
   @apply text-base leading-4;
 }
 
-/* Hide inactive selections and word occurrences while preserving Find decorations. */
-.monaco-editor:not(.focused) > .overflow-guard :is(
+/* Keep selection and occurrence layers from tinting Find matches, regardless of editor focus. */
+.monaco-editor:is(:not(.focused), :has(.currentFindMatch)) > .overflow-guard :is(
   .selected-text,
   .selectionHighlight,
   .wordHighlight,

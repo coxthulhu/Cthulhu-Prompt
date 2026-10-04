@@ -51,7 +51,8 @@ describe('folder Find Escape routing', () => {
     cleanup.push(registerPromptFolderFindShortcuts({
       getIsFindOpen: () => isFindOpen,
       openFindDialog: vi.fn(),
-      closeFindDialog: closeFind
+      closeFindDialog: closeFind,
+      navigateFind: vi.fn()
     }))
   })
 

@@ -217,6 +217,8 @@
   }
 
   const handleSelectionChange = (event: Event) => {
+    // Releasing a find shortcut or modifier does not move the title cursor or cancel its pending reveal.
+    if (event instanceof KeyboardEvent && ['F3', 'Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) return
     const input = event.currentTarget as HTMLInputElement
     const startOffset = input.selectionStart ?? input.value.length
     const endOffset = input.selectionEnd ?? startOffset
@@ -641,6 +643,11 @@
 
   .prompt-editor-title-input::placeholder {
     color: var(--ui-secondary-text);
+  }
+
+  /* Find-selected title text exposes the yellow mirror instead of the native selection tint. */
+  .prompt-editor-title-field:has(.prompt-editor-title-match[data-current='true']) .prompt-editor-title-input::selection {
+    background-color: var(--ui-ghost-surface);
   }
 
   .prompt-editor-metadata-row {

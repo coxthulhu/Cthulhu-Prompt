@@ -6,17 +6,25 @@ type PromptFolderFindShortcutHandlers = {
   getIsFindOpen: () => boolean
   openFindDialog: () => void
   closeFindDialog: () => void
+  /** Navigates folder results without letting Monaco open its own find widget. */
+  navigateFind: (event: KeyboardEvent) => void
 }
 
 /** Registers screen shortcuts that yield to open dialogs and dropdowns. */
 export const registerPromptFolderFindShortcuts = ({
   getIsFindOpen,
   openFindDialog,
-  closeFindDialog
+  closeFindDialog,
+  navigateFind
 }: PromptFolderFindShortcutHandlers) =>
   registerKeyboardScope({
     layer: 'screen',
     bindings: [
+      {
+        matches: (event) =>
+          event.key === 'F3' && !event.ctrlKey && !event.altKey && !event.metaKey,
+        run: navigateFind
+      },
       {
         matches: (event) =>
           event.key === 'Escape' && getIsFindOpen() && !shouldMonacoHandleEscape(event),

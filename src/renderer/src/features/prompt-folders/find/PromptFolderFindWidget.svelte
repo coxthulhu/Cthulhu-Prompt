@@ -102,7 +102,7 @@
           class="prompt-find-widget__button codicon codicon-find-previous-match"
           class:prompt-find-widget__button--disabled={isNavigationDisabled}
           data-testid="prompt-find-prev"
-          title="Find Previous"
+          title="Find Previous (Shift+F3)"
           aria-label="Find Previous"
           role="button"
           tabindex={isNavigationDisabled ? -1 : 0}
@@ -118,7 +118,7 @@
           class="prompt-find-widget__button codicon codicon-find-next-match"
           class:prompt-find-widget__button--disabled={isNavigationDisabled}
           data-testid="prompt-find-next"
-          title="Find Next"
+          title="Find Next (F3)"
           aria-label="Find Next"
           role="button"
           tabindex={isNavigationDisabled ? -1 : 0}
