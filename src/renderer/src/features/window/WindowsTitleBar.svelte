@@ -1,16 +1,10 @@
 <script lang="ts">
-  import { PanelLeftClose, PanelLeftOpen } from 'lucide-svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   // Application artwork shared with the sidebar accent icon.
   import appIcon from '@renderer/assets/cutethulhu.png'
 
-  let { title, isDevBuild = false, isAppSidebarExpanded, onAppSidebarToggle } = $props<{
+  let { title, isDevBuild = false } = $props<{
     title: string
     isDevBuild?: boolean
-    /** Whether the resizable application sidebar is currently visible. */
-    isAppSidebarExpanded: boolean
-    /** Toggles the resizable application sidebar without affecting the activity bar. */
-    onAppSidebarToggle: () => void
   }>()
 
   const windowControls = window.windowControls
@@ -80,20 +74,6 @@
       draggable="false"
       ondragstart={(event) => event.preventDefault()}
     />
-    <IconButton
-      icon={isAppSidebarExpanded ? PanelLeftClose : PanelLeftOpen}
-      label={isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-      title={isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-      size="compact"
-      iconSize={18}
-      baseVariant="muted"
-      hoverVariant="glyph"
-      ariaExpanded={isAppSidebarExpanded}
-      testId="app-sidebar-toggle-button"
-      iconTestId={isAppSidebarExpanded ? 'app-sidebar-close-icon' : 'app-sidebar-open-icon'}
-      class="titlebar__sidebar-toggle"
-      onclick={onAppSidebarToggle}
-    />
   </div>
   <div class="titlebar__title" data-dev-build={isDevBuild} {title}>{title}</div>
   <div class="titlebar__controls">
@@ -157,10 +137,6 @@
     height: 16px;
     margin: 0 22px 0 10px;
     object-fit: contain;
-  }
-
-  .titlebar__actions :global(.titlebar__sidebar-toggle) {
-    -webkit-app-region: no-drag;
   }
 
   /* Windows title bar typography is explicitly excluded from Tailwind standardization. */

@@ -6,11 +6,14 @@
     icon: ComponentType
     label: string
     active?: boolean
+    /** Shortens the active indicator while its sidebar is hidden. */
+    compactIndicator?: boolean
     class?: string
     iconClass?: string
     testId?: string
     title?: string
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
+    ariaExpanded?: boolean
     disabled?: boolean
     onclick?: (event: MouseEvent) => void
   }
@@ -19,11 +22,13 @@
     icon: Icon,
     label,
     active = false,
+    compactIndicator = false,
     class: className,
     iconClass,
     testId,
     title,
     ariaCurrent,
+    ariaExpanded,
     disabled = false,
     onclick
   }: Props = $props()
@@ -34,7 +39,9 @@
   class={mergeClasses('cthulhuUiActivityBarButton', className)}
   aria-label={label}
   aria-current={ariaCurrent}
+  aria-expanded={ariaExpanded}
   data-active={active ? 'true' : 'false'}
+  data-compact-indicator={compactIndicator ? 'true' : 'false'}
   data-testid={testId}
   {title}
   {disabled}
@@ -82,6 +89,11 @@
     border-radius: 0 2px 2px 0;
     background-color: var(--ui-accent-strong-border);
     content: '';
+  }
+
+  .cthulhuUiActivityBarButton[data-active='true'][data-compact-indicator='true']::before {
+    top: 8px;
+    bottom: 8px;
   }
 
   .cthulhuUiActivityBarButton:disabled {

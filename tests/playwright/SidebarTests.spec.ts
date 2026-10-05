@@ -118,122 +118,90 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.assertHomeActive()
   })
 
-  test('toggles the sidebar from the Windows title bar without hiding the activity bar', async ({
+  test('toggles the sidebar from the active activity and opens it when switching activities', async ({
     testSetup
   }) => {
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'minimal' }
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
     })
+    await testHelpers.navigateToPromptFolders('Development')
+    const selectedPrompt = mainWindow.getByTestId('prompt-tree-active-prompt-dev-1')
+    await selectedPrompt.click()
+    await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
 
-    // The left title-bar action region aligns the app icon and control with the activity-bar edge.
-    const titleBarActions = mainWindow.locator('.titlebar__actions')
-    // The title-bar app icon reuses the application artwork at the requested compact size.
-    const titleBarAppIcon = titleBarActions.locator('.titlebar__app-icon')
-    // The title-bar control exposes the current action and swaps its directional icon.
-    const toggleButton = titleBarActions.locator('[data-testid="app-sidebar-toggle-button"]')
-    // These surfaces distinguish the collapsible sidebar from persistent primary navigation.
-    const sidebar = mainWindow.locator('.appSidebar')
-    const activityBar = mainWindow.locator('[data-testid="app-activity-bar"]')
-    // The inactive activity button provides the toggle's default glyph color.
-    const inactiveActivityButton = mainWindow.locator('[data-testid="nav-button-settings"]')
-    // The pane is the layout element removed instantly when the sidebar is collapsed.
+    const activityBar = mainWindow.getByTestId('app-activity-bar')
+    const activity = mainWindow.getByTestId('nav-button-prompt-task-folders')
+    const sidebar = mainWindow.getByTestId('app-sidebar')
     const sidebarPane = mainWindow.locator('.resizableSidebarPane')
-    // The sidebar frame owns its right separator so the border disappears with the pane.
-    const sidebarFrame = sidebarPane.locator('.sidebarFrameBorder')
-    // The main surface should immediately consume the space released by the sidebar pane.
     const mainSurface = mainWindow.locator('.mainScreenSurface')
-    // Title-bar geometry verifies the compact button's vertical two-pixel inset.
-    const titleBarActionsBox = (await titleBarActions.boundingBox())!
-    // The rendered image box verifies the requested icon size and top-left inset.
-    const titleBarAppIconBox = (await titleBarAppIcon.boundingBox())!
-    const toggleButtonBox = (await toggleButton.boundingBox())!
-    // Expanded geometry is the exact layout that must be restored after reopening.
+    const titleBarAppIcon = mainWindow.locator('.titlebar__app-icon')
     const expandedSidebarPaneBox = (await sidebarPane.boundingBox())!
     const expandedMainSurfaceBox = (await mainSurface.boundingBox())!
     const activityBarBox = (await activityBar.boundingBox())!
-    // Motion styles guard the pane against CSS transitions or animations during either toggle.
-    const sidebarPaneMotion = await sidebarPane.evaluate((element) => {
-      const styles = getComputedStyle(element)
-      return {
-        transitionDuration: styles.transitionDuration,
-        animationName: styles.animationName
-      }
-    })
-    // Effective hit testing proves the button remains clickable inside the draggable title bar.
-    const toggleAppRegion = await toggleButton.evaluate((element) =>
-      getComputedStyle(element).getPropertyValue('-webkit-app-region')
-    )
-    // The default activity color and full-white hover token verify the toggle's two glyph states.
-    const inactiveActivityColor = await inactiveActivityButton.evaluate(
-      (element) => getComputedStyle(element).color
-    )
-    const normalTextColor = await toggleButton.evaluate((element) => {
-      // Temporary glyph resolves the custom palette property to the browser's computed format.
-      const colorProbe = document.createElement('span')
-      colorProbe.style.color = 'var(--ui-normal-text)'
-      element.append(colorProbe)
-      // Computed probe color matches the serialization used by the hovered button.
-      const computedColor = getComputedStyle(colorProbe).color
-      colorProbe.remove()
-      return computedColor
+    const activeIconColor = await activity.evaluate((element) => getComputedStyle(element).color)
+    const folderTitle = mainWindow.getByTestId('prompt-folder-root-title')
+    const selectedFolderTitle = await folderTitle.textContent()
+    const readIndicator = () => activity.evaluate((element) => {
+      const styles = getComputedStyle(element, '::before')
+      return { height: styles.height, width: styles.width }
     })
 
-    expect(titleBarAppIconBox.width).toBe(16)
-    expect(titleBarAppIconBox.height).toBe(16)
-    expect(Math.abs(titleBarAppIconBox.x - (titleBarActionsBox.x + 10))).toBeLessThanOrEqual(1)
-    expect(Math.abs(titleBarAppIconBox.y - (titleBarActionsBox.y + 8))).toBeLessThanOrEqual(1)
-    expect(
-      Math.abs(toggleButtonBox.x - (activityBarBox.x + activityBarBox.width))
-    ).toBeLessThanOrEqual(1)
-    expect(Math.abs(toggleButtonBox.y - (titleBarActionsBox.y + 2))).toBeLessThanOrEqual(1)
-    expect(sidebarPaneMotion).toEqual({ transitionDuration: '0s', animationName: 'none' })
-    expect(toggleAppRegion).toBe('no-drag')
-
-    await expect(toggleButton).toHaveAttribute('aria-label', 'Collapse sidebar')
+    await expect(mainWindow.getByTestId('app-sidebar-toggle-button')).toHaveCount(0)
     await expect(titleBarAppIcon).toHaveAttribute('alt', 'Cthulhu Prompt icon')
-    await expect(toggleButton).toHaveAttribute('aria-expanded', 'true')
-    await expect(toggleButton.locator('[data-testid="app-sidebar-close-icon"]')).toBeVisible()
-    await expect(toggleButton).toHaveCSS('border-top-style', 'none')
-    await expect(toggleButton).toHaveCSS('color', inactiveActivityColor)
-    await expect(sidebarFrame).toHaveCSS('border-right-width', '1px')
-    await expect(mainSurface).toHaveCSS('border-left-width', '0px')
-    await expect(sidebar).toBeVisible()
-    await expect(activityBar).toBeVisible()
+    await expect(titleBarAppIcon).toHaveCSS('width', '16px')
+    await expect(titleBarAppIcon).toHaveCSS('height', '16px')
+    await expect(activity).toHaveAttribute('aria-current', 'page')
+    await expect(activity).toHaveAttribute('aria-expanded', 'true')
+    await expect(activity).toHaveAttribute('title', 'Task Prompts — Hide sidebar')
+    expect(await readIndicator()).toEqual({ height: '36px', width: '2px' })
+    await expect(sidebarPane).toHaveCSS('transition-duration', '0s')
+    await expect(sidebarPane).toHaveCSS('animation-name', 'none')
 
-    await toggleButton.hover()
-    await expect
-      .poll(() => toggleButton.evaluate((element) => getComputedStyle(element).color))
-      .toBe(normalTextColor)
-
-    await toggleButton.click()
-    // Collapsed geometry is sampled before any visibility assertion can wait for motion to finish.
+    await activity.click()
+    // Sample geometry immediately to catch unwanted collapse animations.
     const collapsedSidebarPaneBox = await sidebarPane.boundingBox()
     const collapsedMainSurfaceBox = (await mainSurface.boundingBox())!
-
     expect(collapsedSidebarPaneBox).toBeNull()
     expect(
       Math.abs(collapsedMainSurfaceBox.x - (activityBarBox.x + activityBarBox.width))
     ).toBeLessThanOrEqual(1)
-    await expect(toggleButton).toHaveAttribute('aria-label', 'Expand sidebar')
-    await expect(toggleButton).toHaveAttribute('aria-expanded', 'false')
-    await expect(toggleButton.locator('[data-testid="app-sidebar-open-icon"]')).toBeVisible()
     await expect(sidebar).toBeHidden()
-    await expect(mainWindow.locator('[data-testid="app-sidebar-resize-handle"]')).toBeHidden()
+    await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeHidden()
     await expect(activityBar).toBeVisible()
-    await expect(activityBar).toHaveCSS('border-right-width', '1px')
+    await expect(activity).toHaveAttribute('aria-current', 'page')
+    await expect(activity).toHaveAttribute('aria-expanded', 'false')
+    await expect(activity).toHaveAttribute('title', 'Task Prompts — Show sidebar')
+    await expect(activity).toHaveCSS('color', activeIconColor)
+    await expect(folderTitle).toHaveText(selectedFolderTitle!)
+    expect(await readIndicator()).toEqual({ height: '28px', width: '2px' })
 
-    await toggleButton.click()
-    // Restored geometry is sampled immediately so an in-progress width animation would fail.
+    // Keyboard activation restores the sidebar without navigating away from the prompt.
+    await activity.press('Enter')
     const restoredSidebarPaneBox = (await sidebarPane.boundingBox())!
     const restoredMainSurfaceBox = (await mainSurface.boundingBox())!
-
-    expect(Math.abs(restoredSidebarPaneBox.width - expandedSidebarPaneBox.width)).toBeLessThanOrEqual(
-      1
-    )
+    expect(Math.abs(restoredSidebarPaneBox.width - expandedSidebarPaneBox.width)).toBeLessThanOrEqual(1)
     expect(Math.abs(restoredMainSurfaceBox.x - expandedMainSurfaceBox.x)).toBeLessThanOrEqual(1)
-    await expect(toggleButton).toHaveAttribute('aria-label', 'Collapse sidebar')
-    await expect(sidebar).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="app-sidebar-resize-handle"]')).toBeVisible()
-    await expect(activityBar).toBeVisible()
+    await expect(activity).toHaveAttribute('aria-expanded', 'true')
+    await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
+    await expect(folderTitle).toHaveText(selectedFolderTitle!)
+    await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeVisible()
+    expect(await readIndicator()).toEqual({ height: '36px', width: '2px' })
+
+    await activity.press('Space')
+    await expect(sidebar).toBeHidden()
+    // Every primary screen opens its sidebar on navigation and toggles on a repeat click.
+    for (const screen of ['settings', 'home', 'prompt-template-folders', 'prompt-task-folders']) {
+      const nextActivity = mainWindow.getByTestId(`nav-button-${screen}`)
+      await nextActivity.click()
+      await expect(nextActivity).toHaveAttribute('aria-current', 'page')
+      await expect(nextActivity).toHaveAttribute('aria-expanded', 'true')
+      await expect(sidebar).toBeVisible()
+      await expect(activityBar.locator('[aria-current="page"]')).toHaveCount(1)
+      await nextActivity.click()
+      await expect(nextActivity).toHaveAttribute('aria-current', 'page')
+      await expect(nextActivity).toHaveAttribute('aria-expanded', 'false')
+      await expect(sidebar).toBeHidden()
+      await expect(activityBar).toBeVisible()
+    }
   })
 })

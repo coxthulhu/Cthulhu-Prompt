@@ -6,6 +6,7 @@
 
   let {
     activeScreen,
+    isAppSidebarExpanded,
     isWorkspaceReady = false,
     isDevMode = false,
     onNavigate,
@@ -14,6 +15,7 @@
     onOpenUpdates
   } = $props<{
     activeScreen: ScreenId
+    isAppSidebarExpanded: boolean
     isWorkspaceReady?: boolean
     isDevMode?: boolean
     onNavigate: (screen: ScreenId) => void
@@ -69,10 +71,14 @@
     <ActivityBarButton
       icon={item.icon}
       label={item.label}
-      title={item.label}
+      title={activeScreen === item.id
+        ? `${item.label} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar`
+        : item.label}
       testId={item.testId}
       active={activeScreen === item.id}
+      compactIndicator={!isAppSidebarExpanded}
       ariaCurrent={activeScreen === item.id ? 'page' : undefined}
+      ariaExpanded={activeScreen === item.id ? isAppSidebarExpanded : undefined}
       onclick={() => onNavigate(item.id)}
     />
   {/each}

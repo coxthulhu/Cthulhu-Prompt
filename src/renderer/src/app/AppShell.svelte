@@ -128,10 +128,6 @@
   let showWelcomeDialog = $state(false)
   // Session-only visibility starts expanded whenever the application launches.
   let isAppSidebarExpanded = $state(true)
-  // Toggles only the resizable sidebar while leaving primary navigation visible.
-  const toggleAppSidebar = (): void => {
-    isAppSidebarExpanded = !isAppSidebarExpanded
-  }
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
@@ -701,6 +697,17 @@
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
 
+  /** Re-clicking an activity changes visibility without resetting its screen selection. */
+  const activateActivity = (screen: ScreenId): void => {
+    if (screen === activeScreen) {
+      isAppSidebarExpanded = !isAppSidebarExpanded
+      return
+    }
+
+    navigateToScreen(screen)
+    isAppSidebarExpanded = true
+  }
+
   const navigateToScreenRootFolder = (promptFolderId: string): void => {
     if (!isWorkspaceReady) return
     /** Loaded root used to choose the matching split activity. */
@@ -790,13 +797,11 @@
     <WindowsTitleBar
       title={windowTitle}
       {isDevBuild}
-      {isAppSidebarExpanded}
-      onAppSidebarToggle={toggleAppSidebar}
     />
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar {activeScreen} {isWorkspaceReady} {isDevMode} onNavigate={navigateToScreen}
+    <AppActivityBar {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} onNavigate={activateActivity}
       updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onOpenUpdates={() => { updater.updates.open = true }} />
 

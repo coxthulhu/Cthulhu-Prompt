@@ -113,13 +113,17 @@ export async function getPromptFolderScreenInfo(page: Page): Promise<{
 
 /** Opens the task-prompt activity before selecting one task-prompt root. */
 export async function navigateToPromptFolders(page: Page, folderName: string): Promise<void> {
-  await page.locator('[data-testid="nav-button-prompt-task-folders"]').click()
+  const activity = page.getByTestId('nav-button-prompt-task-folders')
+  // An already expanded activity must not be clicked again before using its sidebar.
+  if (await activity.getAttribute('aria-expanded') !== 'true') await activity.click()
   await clickPromptFolderItem(page, folderName)
 }
 
 /** Opens the template activity before selecting one prompt-template root. */
 export async function navigateToTemplateFolder(page: Page, folderName: string): Promise<void> {
-  await page.locator('[data-testid="nav-button-prompt-template-folders"]').click()
+  const activity = page.getByTestId('nav-button-prompt-template-folders')
+  // Navigation helpers open the sidebar; raw activity clicks exercise toggling.
+  if (await activity.getAttribute('aria-expanded') !== 'true') await activity.click()
   await clickPromptFolderItem(page, folderName)
 }
 
