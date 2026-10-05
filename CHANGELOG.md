@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.0.34
+
+### New Features
+
+- Added App Updates with optional automatic checks and background downloads, restart-to-install for installed Windows copies, and release links for portable copies.
+- Added a setting to focus the title or editor when creating prompts and templates.
+- Added F3 and Shift+F3 navigation through find results.
+
+### Changes
+
+- Updated the prompt editor and refined find highlighting, inactive selections, and whitespace display.
+- Simplified category styling and changed Backlog icons to clocks.
+- Allow external links to open in their associated applications.
+- Added direct Windows installer and portable download links to release notes.
+
+### Fixed
+
+- Fixed find selection, cursor navigation, and Unicode matching.
+- Preserved find results when reordering or deleting prompts and improved scrolling to offscreen matches.
+- Fixed keyboard shortcuts and Escape handling across editors, dialogs, and menus.
+- Fixed pasted text gaining unwanted snippet markers.
+- Fixed dropdown positioning during layout changes and editor popups appearing behind screen controls.
+- Fixed initial sidebar section sizing alongside previously saved sections.
+
 ## 0.0.33
 
 ### New Features
