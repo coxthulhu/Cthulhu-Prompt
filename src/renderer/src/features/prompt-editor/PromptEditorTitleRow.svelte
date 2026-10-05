@@ -24,6 +24,8 @@
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
+    /** Confirms prompt workflow changes before copying. */
+    onBeforeCopy?: () => Promise<boolean>
     onStatusChange?: (status: import('@shared/domain/prompt/Prompt').PromptStatus) => void
     onSelectionChange?: (selection: PromptFolderFindSelection) => void
     onTitleEditorFocus?: () => void | Promise<void>
@@ -79,6 +81,7 @@
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
+    onBeforeCopy,
     onStatusChange,
     onSelectionChange,
     onTitleEditorFocus,
@@ -419,7 +422,7 @@
         {copyLabel}
         {copyTitle}
         onCopySuccess={handleCopySuccess}
-        showCopyActions={status !== PromptStatus.Backlog}
+        {onBeforeCopy}
       />
     </div>
 

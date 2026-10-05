@@ -84,20 +84,17 @@ export const PROMPT_STATUS_FOLDERS = Object.values(PROMPT_STATUS_FOLDER_REGISTRY
 export type PromptStatusBehavior = {
   /** Status assigned after successfully copying this prompt. */
   copyStatus?: PromptStatus
-  /** Status assigned after selecting prompt templates. */
-  templateSelectionStatus?: PromptStatus
 }
 
-/** Explicit automatic transitions keep unrelated groups within their own workflow. */
+/** Successful copying starts or resumes work regardless of the prompt's current workflow. */
 export const PROMPT_STATUS_BEHAVIORS: Record<PromptStatus, PromptStatusBehavior> = {
   [PromptStatus.Todo]: {
-    copyStatus: PromptStatus.InProgress,
-    templateSelectionStatus: PromptStatus.InProgress
+    copyStatus: PromptStatus.InProgress
   },
   [PromptStatus.InProgress]: {},
-  [PromptStatus.Backlog]: {},
-  [PromptStatus.Completed]: {},
-  [PromptStatus.Archived]: {}
+  [PromptStatus.Backlog]: { copyStatus: PromptStatus.InProgress },
+  [PromptStatus.Completed]: { copyStatus: PromptStatus.InProgress },
+  [PromptStatus.Archived]: { copyStatus: PromptStatus.InProgress }
 }
 
 /** Default group selected when opening a prompt workspace. */

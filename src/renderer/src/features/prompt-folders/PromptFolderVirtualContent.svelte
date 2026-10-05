@@ -21,6 +21,8 @@
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
+  import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
+  import { Copy } from 'lucide-svelte'
   import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
   import { setPromptTemplates } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
   import {
@@ -227,6 +229,29 @@
   let isTemplateSelectionDialogOpen = $state(false)
   let templateSelectionTarget = $state<PromptFolderPromptTarget | null>(null)
   let templateSelectionMode = $state<'select' | 'select-and-copy'>('select')
+  /** Suspends either copy action until the user accepts its status change. */
+  let pendingCopyConfirmation = $state<{
+    status: PromptContentStatus
+    resolve: (confirmed: boolean) => void
+  } | null>(null)
+
+  /** Confirms copying only when it moves a prompt out of an inactive workflow. */
+  const confirmPromptCopy = (promptId: string): Promise<boolean> => {
+    /** Current status supplies both the confirmation condition and its explanation. */
+    const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
+    if (status !== PromptStatus.Backlog && status !== PromptStatus.Completed && status !== PromptStatus.Archived) {
+      return Promise.resolve(true)
+    }
+    return new Promise((resolve) => {
+      pendingCopyConfirmation = { status, resolve }
+    })
+  }
+
+  /** Closes the confirmation and resumes or cancels the suspended copy action. */
+  const resolveCopyConfirmation = (confirmed: boolean): void => {
+    pendingCopyConfirmation!.resolve(confirmed)
+    pendingCopyConfirmation = null
+  }
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   /** Category-only divider target state keyed by virtual row ID. */
   const categoryDividerDroppableState = createDroppableStateRegistry<string>()
@@ -309,19 +334,22 @@
     templates: PromptTemplateReference[] | null
   ): Promise<void> => {
     if (!templateSelectionTarget) return
-    const { promptId } = templateSelectionTarget
+    /** Retains the selected prompt while confirmation is open. */
+    const target = templateSelectionTarget
+    const { promptId } = target
+    if (!(await confirmPromptCopy(promptId))) return
     const promptDraft = promptDraftById[promptId]!
-    setPromptTemplates(promptId, templates)
     await window.navigator.clipboard.writeText(
       applyPromptTemplates(
         promptDraft.text,
         getCopyTemplateTexts(templates)
       )
     )
-    /** Explicit workflow transition triggered by selecting templates. */
+    setPromptTemplates(promptId, templates)
+    /** Both copy actions share the same successful-copy status transition. */
     const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
-    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].templateSelectionStatus : undefined
-    if (nextStatus) onSetPromptStatus(templateSelectionTarget, nextStatus)
+    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].copyStatus : undefined
+    if (nextStatus) onSetPromptStatus(target, nextStatus)
   }
 
   const handlePromptCopySuccess = (promptId: string): void => {
@@ -931,6 +959,7 @@
         ? undefined
         : () => openTemplateSelectionDialog(promptTarget, 'select-and-copy')}
       onCopySuccess={isTemplateFolder ? undefined : () => handlePromptCopySuccess(row.promptId)}
+      onBeforeCopy={isTemplateFolder ? undefined : () => confirmPromptCopy(row.promptId)}
       onStatusChange={isTemplateFolder ? undefined : (status) => {
         onSetPromptStatus(promptTarget, status)
       }}
@@ -959,6 +988,23 @@
     ? handleTemplateSelectAndCopy
     : handleTemplateSelect}
 />
+
+<!-- Informational confirmation is shared by direct copy and quick template selection. -->
+<Dialog
+  open={pendingCopyConfirmation !== null}
+  class="w-full max-w-[520px]"
+  icon={Copy}
+  title="Copy Prompt"
+  submitText="Copy and Move"
+  submitIcon={Copy}
+  submitTestId="prompt-confirm-copy-button"
+  oncancel={() => resolveCopyConfirmation(false)}
+  onsubmit={() => resolveCopyConfirmation(true)}
+>
+  <p class="px-3 py-3 text-base">
+    Copying this prompt will move it from {pendingCopyConfirmation?.status} to In Progress.
+  </p>
+</Dialog>
 
 <style>
   .category-bottom-cap {

@@ -26,6 +26,7 @@
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
+    onBeforeCopy,
     onStatusChange,
     onSelectionChange,
     onTitleEditorFocus,
@@ -68,6 +69,7 @@
     {onTemplateSelect}
     {onTemplateSelectAndCopy}
     {onCopySuccess}
+    {onBeforeCopy}
     {onStatusChange}
     {onSelectionChange}
     {onTitleEditorFocus}

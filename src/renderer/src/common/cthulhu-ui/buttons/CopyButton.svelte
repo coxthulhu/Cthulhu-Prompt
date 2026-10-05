@@ -14,6 +14,8 @@
     iconClass?: string
     testId?: string
     onCopied?: () => void | Promise<void>
+    /** Allows the caller to confirm copying before touching the clipboard. */
+    onBeforeCopy?: () => Promise<boolean>
   }
 
   let {
@@ -27,7 +29,8 @@
     class: className,
     iconClass,
     testId,
-    onCopied
+    onCopied,
+    onBeforeCopy
   }: Props = $props()
 
   let isCopied = $state(false)
@@ -43,6 +46,7 @@
   }
 
   const handleClick = async () => {
+    if (onBeforeCopy && !(await onBeforeCopy())) return
     await window.navigator.clipboard.writeText(text)
     isCopied = true
 

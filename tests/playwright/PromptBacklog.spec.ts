@@ -360,15 +360,15 @@ describe('Backlog prompts', () => {
     await expect.poll(() => readEntries(electronApp, 'Backlog')).toEqual(['second', 'first'])
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['third'])
     await selectGroup(mainWindow, 'backlog')
-    /** Backlog editor retains template selection while hiding both ways to copy. */
+    /** Backlog exposes quick copy until Set Template makes a template decision. */
     const secondEditor = mainWindow.locator(promptEditorSelector('second'))
     await expect(secondEditor.locator('[data-testid="prompt-copy-button"]')).toHaveCount(0)
-    await expect(secondEditor.locator('[data-testid="prompt-template-and-copy-button"]')).toHaveCount(0)
+    await expect(secondEditor.locator('[data-testid="prompt-template-and-copy-button"]')).toBeVisible()
     await secondEditor.locator('[data-testid="prompt-template-button"]').click()
     await mainWindow.locator('[data-testid="prompt-template-option-none"]').click()
     await mainWindow.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(secondEditor.locator('[data-testid="prompt-status-pill"]')).toHaveText('Backlog')
-    await expect(secondEditor.locator('[data-testid="prompt-copy-button"]')).toHaveCount(0)
+    await expect(secondEditor.locator('[data-testid="prompt-copy-button"]')).toBeVisible()
     await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Backlog/second.prompt.md`)))
       .toMatchObject({ status: 'Backlog', category: 'alpha', templates: null })
     /** Right-hand quick action joins Active after its existing prompt. */

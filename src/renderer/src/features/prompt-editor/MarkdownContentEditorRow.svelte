@@ -85,6 +85,7 @@
     onTemplateSelect,
     onTemplateSelectAndCopy,
     onCopySuccess,
+    onBeforeCopy,
     copyLabel,
     copyTitle,
     deleteLabel,
@@ -142,6 +143,8 @@
     onTemplateSelect?: () => void
     onTemplateSelectAndCopy?: () => void
     onCopySuccess?: () => void | Promise<void>
+    /** Confirms prompt workflow changes before copying. */
+    onBeforeCopy?: () => Promise<boolean>
     copyLabel?: string
     copyTitle?: string
     deleteLabel?: string
@@ -598,6 +601,7 @@
     {onTemplateSelect}
     {onTemplateSelectAndCopy}
     {onCopySuccess}
+    {onBeforeCopy}
     {onStatusChange}
     {metadataFolderLabel}
     {metadataFolderState}
