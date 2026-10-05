@@ -1,13 +1,17 @@
 <script lang="ts">
   import { Check, Trash2 } from 'lucide-svelte'
+  import type { ComponentType } from 'svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
 
-  /** Destructive confirmation with an optional required acknowledgement. */
+  /** Shared confirmation with an optional required acknowledgement. */
   type Props = {
     open?: boolean
     title: string
     description: string
     confirmText: string
+    variant?: 'destructive' | 'informational'
+    icon?: ComponentType
+    closeOnOutsideClick?: boolean
     /** Shows the red acknowledgement section and gates confirmation when supplied. */
     confirmationText?: string
     confirmTestId?: string
@@ -21,6 +25,9 @@
     title,
     description,
     confirmText,
+    variant = 'destructive',
+    icon = Trash2,
+    closeOnOutsideClick = true,
     confirmationText,
     confirmTestId,
     oncancel,
@@ -40,20 +47,23 @@
 <Dialog
   bind:open
   class="w-full max-w-[520px]"
-  icon={Trash2}
+  {icon}
   {title}
   submitText={confirmText}
-  submitIcon={Trash2}
+  submitIcon={icon}
   submitDisabled={!!confirmationText && !acknowledged}
-  submitVariant="danger"
+  submitVariant={variant === 'destructive' ? 'danger' : 'accent'}
   submitTestId={confirmTestId}
-  showSeparators={!!confirmationText}
-  closeOnOutsideClick
+  showSeparators={confirmationText || variant === 'informational' ? 'hidden' : false}
+  {closeOnOutsideClick}
   scrollBody
   {oncancel}
   onsubmit={onconfirm}
 >
-  <div class="cthulhuUiConfirmationDialogContent" data-has-acknowledgement={!!confirmationText}>
+  <div
+    class="cthulhuUiConfirmationDialogContent"
+    data-compact={variant === 'destructive' && !confirmationText}
+  >
     <p class="cthulhuUiConfirmationDialogMessage text-base">{description}</p>
     {#if confirmationText}
       <label class="cthulhuUiConfirmationDialogAcknowledgement text-base">
@@ -81,7 +91,7 @@
     padding: 12px;
   }
 
-  .cthulhuUiConfirmationDialogContent[data-has-acknowledgement='false'] {
+  .cthulhuUiConfirmationDialogContent[data-compact='true'] {
     padding: 0 12px 4px;
   }
 

@@ -22,7 +22,8 @@
     showCancelButton?: boolean
     /** Keeps long content scrollable within the available dialog height. */
     scrollBody?: boolean
-    showSeparators?: boolean
+    /** 'hidden' preserves divider space without drawing the lines; false removes them. */
+    showSeparators?: boolean | 'hidden'
     closeOnOutsideClick?: boolean
     submitDisabled?: boolean
     cancelDisabled?: boolean
@@ -108,7 +109,7 @@
     </div>
 
     {#if showSeparators}
-      <Separator />
+      <Separator class="cthulhuUiDialogSeparator" data-hidden={showSeparators === 'hidden'} />
     {/if}
 
     {#if body}
@@ -118,7 +119,7 @@
     {/if}
 
     {#if showSeparators}
-      <Separator />
+      <Separator class="cthulhuUiDialogSeparator" data-hidden={showSeparators === 'hidden'} />
     {/if}
 
     <div class="cthulhuUiDialogFooter">
@@ -148,6 +149,10 @@
 </Popup>
 
 <style>
+  :global(.cthulhuUiDialogSeparator[data-hidden='true']) {
+    visibility: hidden;
+  }
+
   .cthulhuUiDialogHeader {
     min-width: 0;
     padding: 0 20px 12px;

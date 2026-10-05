@@ -21,7 +21,7 @@
   import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
   import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
   import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
-  import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import { Copy } from 'lucide-svelte'
   import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
   import { setPromptTemplates } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
@@ -990,21 +990,18 @@
 />
 
 <!-- Informational confirmation is shared by direct copy and quick template selection. -->
-<Dialog
+<ConfirmationDialog
   open={pendingCopyConfirmation !== null}
-  class="w-full max-w-[520px]"
+  variant="informational"
   icon={Copy}
   title="Copy Prompt"
-  submitText="Copy and Move"
-  submitIcon={Copy}
-  submitTestId="prompt-confirm-copy-button"
+  description={`Copying this prompt will move it from ${pendingCopyConfirmation?.status} to In Progress.`}
+  confirmText="Copy and Move"
+  confirmTestId="prompt-confirm-copy-button"
+  closeOnOutsideClick={false}
   oncancel={() => resolveCopyConfirmation(false)}
-  onsubmit={() => resolveCopyConfirmation(true)}
->
-  <p class="px-3 py-3 text-base">
-    Copying this prompt will move it from {pendingCopyConfirmation?.status} to In Progress.
-  </p>
-</Dialog>
+  onconfirm={() => resolveCopyConfirmation(true)}
+/>
 
 <style>
   .category-bottom-cap {
