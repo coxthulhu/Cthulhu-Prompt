@@ -417,6 +417,68 @@ const buildConfiguredWordWorkspace = (workspacePath: string): Record<string, str
 }
 
 describe('Prompt folder find dialog', () => {
+  // Empty searches seed from the second occurrence and navigate exactly once in either direction.
+  for (const seed of ['selection', 'cursor word'] as const) {
+    // Each shortcut exercises both a closed widget and an already-open empty widget.
+    for (const shortcut of ['F3', 'Shift+F3'] as const) {
+      /** Native selection boundaries determine the expected neighboring occurrence. */
+      test(`seeds empty find from ${seed} with ${shortcut}`, async ({ testSetup }) => {
+        /** Isolated workspace contains three matches separated by a nonmatching line. */
+        const workspacePath = `/ws/find-seed-${seed.replace(' ', '-')}-${shortcut}`
+        await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
+        await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+        /** Real editor events exercise selection tracking and focus restoration. */
+        const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+        await testHelpers.setupWorkspaceViaUI()
+        await testHelpers.navigateToPromptFolders('Anchor')
+        /** Body containing the initial selection and both navigation destinations. */
+        const editorSelector = promptEditorSelector('typing-anchor-1')
+        /** Shared input is cleared between the closed and open widget scenarios. */
+        const findInput = mainWindow.locator(FIND_INPUT)
+
+        // Reuse the open widget on the second pass to exercise empty-query reseeding.
+        for (const isInitiallyOpen of [false, true]) {
+          if (isInitiallyOpen) await findInput.fill('')
+          else await expect(findInput).toHaveCount(0)
+          await focusMonacoEditor(mainWindow, editorSelector)
+          await mainWindow.keyboard.press('Control+Home')
+          await mainWindow.keyboard.press('ArrowDown')
+          await mainWindow.keyboard.press('ArrowDown')
+          await mainWindow.keyboard.press('Home')
+          if (seed === 'selection') {
+            await mainWindow.keyboard.press('Shift+ArrowRight')
+            await mainWindow.keyboard.press('Shift+ArrowRight')
+            await mainWindow.keyboard.press('Shift+ArrowRight')
+            await mainWindow.keyboard.press('Shift+ArrowRight')
+            await mainWindow.keyboard.press('Shift+ArrowRight')
+          } else {
+            await mainWindow.keyboard.press('ArrowRight')
+            await mainWindow.keyboard.press('ArrowRight')
+          }
+          await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+            selectedText: seed === 'selection' ? TYPING_ANCHOR_QUERY : '',
+            startLineNumber: 3,
+            startColumn: seed === 'selection' ? 1 : 3
+          })
+
+          await mainWindow.keyboard.press(shortcut)
+
+          await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
+          await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe(
+            shortcut === 'F3' ? '3 of 3' : '1 of 3'
+          )
+          await expect.poll(() => getMonacoSelectionState(mainWindow, editorSelector)).toMatchObject({
+            selectedText: TYPING_ANCHOR_QUERY,
+            startLineNumber: shortcut === 'F3' ? 4 : 1,
+            startColumn: 1
+          })
+          await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
+          await expect(mainWindow.locator(`${editorSelector} .find-widget.visible`)).toHaveCount(0)
+        }
+      })
+    }
+  }
+
   // Keyboard navigation must retain widget focus and reopen only the previously entered query.
   test('navigates with F3 in the widget and reopens the previous query', async ({ testSetup }) => {
     /** Three body occurrences provide distinct forward, backward, and wrap destinations. */
@@ -432,12 +494,12 @@ describe('Prompt folder find dialog', () => {
     await focusMonacoEditor(mainWindow, editorSelector)
     await mainWindow.keyboard.press('Control+Home')
     await mainWindow.keyboard.press('F3')
-    /** F3 does not replace the retained query with the word under the cursor. */
+    /** An empty query is seeded from the cursor word without focusing the widget. */
     const findInput = mainWindow.locator(FIND_INPUT)
-    await expect(findInput).toHaveValue('')
+    await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
     await expect.poll(() => isMonacoEditorFocused(mainWindow, editorSelector)).toBe(true)
-    await findInput.fill(TYPING_ANCHOR_QUERY)
     await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
+    await findInput.focus()
     await findInput.press('F3')
     await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
     await expect(findInput).toBeFocused()
@@ -448,6 +510,10 @@ describe('Prompt folder find dialog', () => {
     await expect(findInput).toBeFocused()
     await findInput.press('Escape')
     await expect(findInput).toHaveCount(0)
+    // A different selected word must not overwrite a nonempty retained query.
+    await mainWindow.keyboard.press('Control+End')
+    await mainWindow.keyboard.press('Control+Shift+ArrowLeft')
+    await expect.poll(() => getMonacoSelectedText(mainWindow, editorSelector)).toBe('marker')
     await mainWindow.keyboard.press('F3')
     await expect(findInput).toHaveValue(TYPING_ANCHOR_QUERY)
     await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')

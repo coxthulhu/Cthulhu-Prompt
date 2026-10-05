@@ -536,14 +536,16 @@
     setCurrentMatchIndex(nextIndex)
   }
 
-  /** Reopens the retained query and carries editor focus through folder-wide keyboard navigation. */
+  /** Seeds an empty query or reopens the retained query while preserving keyboard navigation focus. */
   const navigateFind = (event: KeyboardEvent): void => {
     /** Pending focus preserves editor-origin navigation while a virtualized result hydrates. */
     const moveEditorFocus = focusRequests.pending !== null ||
       (event.target instanceof Element &&
         event.target.closest('.monaco-editor, .prompt-editor-title-input') !== null)
-    if (!isFindOpen) {
+    if (!isFindOpen || query.length === 0) {
       retainMatchSelectionAnchor()
+      // F3 adopts the selection or cursor word only when there is no retained search text.
+      if (query.length === 0) matchText = getSelectionMatchText() ?? ''
       isFindOpen = true
       preserveSelectionOnNextSearch = true
       runSearch(true)
