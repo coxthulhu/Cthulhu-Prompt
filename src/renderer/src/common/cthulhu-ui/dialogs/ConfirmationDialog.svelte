@@ -95,7 +95,7 @@
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    padding: 16px;
+    padding: 8px 16px;
     border: 1px solid var(--ui-danger-muted-border);
     border-radius: 8px;
     background: var(--ui-danger-normal-surface);
