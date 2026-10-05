@@ -180,6 +180,77 @@ async function alignFirstTwoLinesOfEditorAtViewportBottom(
 }
 
 describe('Monaco editor clicks', () => {
+  // Both wheel targets must preserve the menu and release scrolling after dismissal.
+  for (const wheelTarget of ['editor', 'title'] as const) {
+    test(`context menu blocks scrolling over the ${wheelTarget} until dismissed`, async ({ testSetup }) => {
+      /** Forty lines make both Monaco and the surrounding folder viewport scrollable. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'height' }
+      })
+      await testHelpers.navigateToPromptFolders('Forty Line Prompt')
+      await waitForMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
+      /** Editor content opens Monaco's native context menu away from the wheel target. */
+      const editor = mainWindow.locator(`${FORTY_LINE_EDITOR} .view-lines`).first()
+      /** Title is outside Monaco but inside the same virtual scrolling surface. */
+      const title = mainWindow.locator(`${FORTY_LINE_EDITOR} ${PROMPT_TITLE_SELECTOR}`)
+      /** Playwright locators pierce the menu's open shadow root. */
+      const menu = mainWindow.locator('.monaco-menu-container').getByRole('menu')
+      await editor.click({ button: 'right', position: { x: 160, y: 40 } })
+      await expect(menu).toBeVisible()
+      /** Original offsets catch either internal editor scrolling or virtual row movement. */
+      const editorScrollTop = await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)
+      /** Original folder offset must remain stable for both wheel target locations. */
+      const folderScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
+      /** Menu geometry must stay fixed while background gestures are blocked. */
+      const menuBox = (await menu.boundingBox())!
+      await (wheelTarget === 'editor' ? editor : title).hover({ position: { x: 20, y: 10 } })
+      await mainWindow.mouse.wheel(0, 200)
+      // Let browser input and two layout frames complete before asserting unchanged state.
+      await mainWindow.evaluate(() => new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      }))
+      await expect(menu).toBeVisible()
+      expect(await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBe(editorScrollTop)
+      expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBe(folderScrollTop)
+      /** Current menu position also detects unintended movement of its transformed ancestor. */
+      const currentMenuBox = (await menu.boundingBox())!
+      expect(Math.abs(currentMenuBox.x - menuBox.x)).toBeLessThanOrEqual(2)
+      expect(Math.abs(currentMenuBox.y - menuBox.y)).toBeLessThanOrEqual(2)
+      expect(await editor.evaluate((element) => element.dispatchEvent(
+        new Event('touchmove', { bubbles: true, cancelable: true, composed: true })
+      ))).toBe(false)
+      // Composed menu events must cross its shadow boundary without being cancelled.
+      expect(await menu.evaluate((element) => element.dispatchEvent(
+        new Event('touchmove', { bubbles: true, cancelable: true, composed: true })
+      ))).toBe(true)
+      await menu.hover()
+      await mainWindow.mouse.wheel(0, 200)
+      // Menu wheel handling must remain available without moving the surrounding prompt list.
+      await mainWindow.evaluate(() => new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      }))
+      await expect(menu).toBeVisible()
+      expect(await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBe(editorScrollTop)
+      expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBe(folderScrollTop)
+      // Exercise both keyboard dismissal and an outside click releasing the same scroll lock.
+      if (wheelTarget === 'editor') await mainWindow.keyboard.press('Escape')
+      else await title.click()
+      await expect(menu).toBeHidden()
+      expect(await editor.evaluate((element) => element.dispatchEvent(
+        new Event('touchmove', { bubbles: true, cancelable: true, composed: true })
+      ))).toBe(true)
+      if (wheelTarget === 'editor') {
+        await focusMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
+        await editor.hover({ position: { x: 20, y: 10 } })
+      }
+      await mainWindow.mouse.wheel(0, 200)
+      await expect.poll(() => wheelTarget === 'editor'
+        ? getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)
+        : testHelpers.getElementScrollTop(HOST_SELECTOR)
+      ).toBeGreaterThan(wheelTarget === 'editor' ? editorScrollTop! : folderScrollTop)
+    })
+  }
+
   test('routes wheel scrolling according to Monaco focus and scroll boundaries', async ({
     testSetup
   }) => {
