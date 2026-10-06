@@ -1,4 +1,5 @@
 import type { EventEmitter } from 'node:events'
+import { rm } from 'node:fs/promises'
 import { test as baseTest } from '@playwright/test'
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright'
 import { createPageHelpers, type PageHelpers } from './PageHelpers'
@@ -81,6 +82,11 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
   const playwrightTest = baseTest.extend<PlaywrightTestFixtures>({
     electronApp: async ({}, use) => {
       let app: ElectronApplication | null = null
+      /** The runner supplies one identifier shared by all launches in this invocation. */
+      const runId = process.env.PLAYWRIGHT_RUN_ID
+      if (!runId) throw new Error('Run Playwright through npm run test:playwright')
+      /** Capture the real profile before the test can close Electron itself. */
+      let profilePath: string | undefined
 
       try {
         const electronLaunchConfig = {
@@ -92,10 +98,15 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
             DEV_ENVIRONMENT: 'PLAYWRIGHT'
           },
           ...config.launchOptions,
-          args: [...DEFAULT_ELECTRON_LAUNCH_ARGS, ...(config.launchOptions.args ?? [])]
+          args: [
+            ...DEFAULT_ELECTRON_LAUNCH_ARGS,
+            ...(config.launchOptions.args ?? []),
+            `--playwright-run-id=${runId}`
+          ]
         }
 
         app = await electron.launch(electronLaunchConfig)
+        profilePath = await app.evaluate(({ app }) => app.getPath('userData'))
 
         // At this point, the app is launched but hung - no UI appears yet
         // Tests can now call electronApp.evaluate to invoke TestStartup functions
@@ -104,6 +115,10 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
       } finally {
         if (app) {
           await app.close()
+          if (profilePath) {
+            // Electron has exited; briefly retry any lingering Windows file locks.
+            await rm(profilePath, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+          }
         }
       }
     },

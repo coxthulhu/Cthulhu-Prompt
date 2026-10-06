@@ -7,10 +7,49 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 describe('Test Infrastructure', () => {
+  describe('Temporary Chromium profiles', () => {
+    /** Profiles observed by this worker must disappear during test fixture teardown. */
+    const profilePaths: string[] = []
+
+    test.afterAll(() => {
+      // Test-scoped Electron fixtures finish teardown before this hook runs.
+      for (const profilePath of profilePaths) {
+        expect(existsSync(profilePath), `Profile remains after Electron shutdown: ${profilePath}`).toBe(false)
+      }
+    })
+
+    // Exercise cleanup both with Chromium storage in use and before a window is created.
+    for (const completeStartup of [false, true]) {
+      test(`isolates and removes the profile ${completeStartup ? 'after startup' : 'before startup'}`, async ({
+        electronApp,
+        testSetup
+      }) => {
+        if (completeStartup) await testSetup.setupAndStart()
+        /** Inspect Electron's configured paths and the actual Chromium session storage location. */
+        const profile = await electronApp.evaluate(({ app, session }) => ({
+          userData: app.getPath('userData'),
+          sessionData: app.getPath('sessionData'),
+          storagePath: session.defaultSession.storagePath,
+          runId: app.commandLine.getSwitchValue('playwright-run-id'),
+          pid: process.pid
+        }))
+        profilePaths.push(profile.userData)
+        expect(profile.runId).toMatch(/^[a-f0-9]{32}$/)
+        expect(profile.runId).toBe(process.env.PLAYWRIGHT_RUN_ID)
+        expect(profile.userData).toBe(join(tmpdir(), 'CthulhuPromptPlaywright', profile.runId, String(profile.pid)))
+        expect(profile.sessionData).toBe(profile.userData)
+        expect(profile.storagePath).toBe(profile.userData)
+        expect(existsSync(profile.userData)).toBe(true)
+      })
+    }
+  })
+
   describe('Controlled Startup Framework', () => {
     // Starting without a workspace or explicit filesystem setup must never select the host disk.
     test('uses an empty in-memory filesystem before setup and persists startup settings there', async ({
@@ -20,7 +59,7 @@ describe('Test Infrastructure', () => {
       /** Running executable exists on disk and must be invisible to the empty test volume. */
       const executablePath = await electronApp.evaluate(({ app }) => app.getPath('exe'))
       expect(await checkFileExists(electronApp, executablePath)).toBe(false)
-      /** Settings must be absent before startup regardless of the shared Windows test profile. */
+      /** Settings must be absent before startup regardless of Chromium's on-disk profile. */
       const settingsPath = join(await electronApp.evaluate(({ app }) => app.getPath('userData')), 'SystemSettings.json')
       expect(await checkFileExists(electronApp, settingsPath)).toBe(false)
 

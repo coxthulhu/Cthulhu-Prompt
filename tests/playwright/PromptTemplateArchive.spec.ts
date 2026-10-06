@@ -69,6 +69,9 @@ describe('Template archive', () => {
     const order = await readTextFile(electronApp, orderPath)
     expect(JSON.parse(order).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual(['archive-predecessor', TEMPLATE_ID])
     await mainWindow.reload()
+    // Finish restoring the active screen before navigation decides whether to toggle its sidebar.
+    await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
+    await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
     await testHelpers.navigateToPromptTemplateFolders('Library')
     await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toContainText('Active 2')
     expect(await readTextFile(electronApp, orderPath)).toBe(order)

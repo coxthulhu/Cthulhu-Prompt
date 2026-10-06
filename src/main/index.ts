@@ -1,5 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { mkdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { startupNormally } from './NormalStartup'
 import { setupTestStartupListener } from './IntegrationTests/TestStartup'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
@@ -7,13 +9,19 @@ import { initializePersistentLogging } from './logging'
 
 const PRODUCTION_USER_DATA_DIRECTORY_NAME = 'CthulhuPrompt'
 const DEV_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptDev'
-const PLAYWRIGHT_USER_DATA_DIRECTORY_NAME = 'CthulhuPromptPlaywright'
 
 const configureUserDataPath = (): void => {
   const appDataPath = app.getPath('appData')
 
   if (isPlaywrightEnvironment()) {
-    app.setPath('userData', join(appDataPath, PLAYWRIGHT_USER_DATA_DIRECTORY_NAME))
+    /** The test runner owns the run directory; each Electron process owns one profile. */
+    const runId = app.commandLine.getSwitchValue('playwright-run-id')
+    if (!runId) throw new Error('Playwright requires --playwright-run-id from RunPlaywrightCompact.py')
+    /** Chromium writes to the real filesystem even while application persistence uses memfs. */
+    const profilePath = join(tmpdir(), 'CthulhuPromptPlaywright', runId, String(process.pid))
+    mkdirSync(profilePath, { recursive: true })
+    app.setPath('userData', profilePath)
+    app.setPath('sessionData', profilePath)
     return
   }
 
