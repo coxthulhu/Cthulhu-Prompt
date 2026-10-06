@@ -1,5 +1,5 @@
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
-import { getPromptStatusFolderDefinition, PromptStatus, PromptStatusFolderId, type PromptContentStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
+import { getPromptStatusFolderDefinition, PromptStatus, type PromptContentStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
 import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { promptCollection } from '@renderer/data/Collections/PromptCollection'
@@ -29,13 +29,13 @@ export const getPromptLocation = (promptFolderId: string, promptId: string): Pro
   }
 }
 
-/** Resolves status controls to a complete location using existing restore and insertion rules. */
+/** Preserves placement within a status folder; moves into category-ordered folders insert at the top. */
 export const getPromptStatusLocation = (promptFolderId: string, promptId: string, status: PromptContentStatus): PromptLocation => {
   /** Current placement retained when the status stays within the same physical layout. */
   const current = getPromptLocation(promptFolderId, promptId)
-  /** Loaded root supplies destination categories and template restoration behavior. */
+  /** Loaded root supplies destination categories for prompts and templates. */
   const folder = promptFolderCollection.get(promptFolderId)!
-  /** Destination workflow determines whether an explicit predecessor applies. */
+  /** Physical status folder determines whether the current placement can be retained. */
   const destinationStatus = getPromptStatusFolderDefinition(status)
   if (getPromptStatusFolderDefinition(current.status).id === destinationStatus.id) return { ...current, status }
   /** Destination layout used to select the retained or Uncategorized group. */
@@ -47,9 +47,7 @@ export const getPromptStatusLocation = (promptFolderId: string, promptId: string
   return {
     promptFolderId,
     categoryId: group.categoryId,
-    previousEntryId: folder.kind === 'prompt' && destinationStatus.id === PromptStatusFolderId.Active
-      ? group.entries.at(-1)?.id ?? null
-      : null,
+    previousEntryId: null,
     status
   }
 }

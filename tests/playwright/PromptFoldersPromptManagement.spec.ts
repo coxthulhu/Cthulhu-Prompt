@@ -2667,11 +2667,11 @@ describe('Prompt folder prompt management', () => {
     ).toHaveAttribute('data-active', 'true')
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
-      .toEqual(['completed-mode-active', 'completed-mode-newest'])
+      .toEqual(['completed-mode-newest', 'completed-mode-active'])
     await expect(mainWindow.locator(statusPillSelector('completed-mode-newest'))).toHaveText('Todo')
     expect(await getPromptTreePromptRowIds(mainWindow, 'active')).toEqual([
-      'completed-mode-active',
-      'completed-mode-newest'
+      'completed-mode-newest',
+      'completed-mode-active'
     ])
     await mainWindow
       .locator(
@@ -2691,7 +2691,7 @@ describe('Prompt folder prompt management', () => {
     )
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
-      .toEqual(['completed-mode-active', 'completed-mode-newest'])
+      .toEqual(['completed-mode-newest', 'completed-mode-active'])
     await expect
       .poll(
         async () => {
@@ -2736,8 +2736,8 @@ describe('Prompt folder prompt management', () => {
           )
       )
       .toEqual([
-        { kind: 'prompt', id: 'completed-mode-active' },
-        { kind: 'prompt', id: 'completed-mode-newest' }
+        { kind: 'prompt', id: 'completed-mode-newest' },
+        { kind: 'prompt', id: 'completed-mode-active' }
       ])
 
     await testHelpers.navigateToPromptFolders('No Completed')
