@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.0.35
+
+### Changes
+
+- Allow copying Backlog prompts and confirm moving Backlog, Completed, or Archived prompts to In Progress when copied.
+- Toggle the sidebar by clicking the current activity button; switching activities opens the sidebar.
+- Place prompts moved into Active at the top of their category.
+- Refined confirmation dialog styling and spacing.
+
+### Fixed
+
+- Fixed F3 starting an empty search from the selected text or word at the cursor.
+- Fixed background scrolling while editor context menus are open.
+- Fixed folder renaming when only capitalization or display-name spacing changes.
+- Removed redundant Tab stops from prompt and template dividers.
+
 ## 0.0.34
 
 ### New Features
