@@ -1523,6 +1523,34 @@ describe('Prompt Folder Navigation (non-virtual)', () => {
       .toBe(true)
 
     await nameInput.fill('Development')
+    await expect(renameButton).toBeEnabled()
+    await renameButton.click()
+    await expect(renameDialog).toHaveCount(0)
+    await expect(rootTitle).toHaveText('Development')
+
+    await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
+    await expect(renameButton).toBeDisabled()
+    await nameInput.fill(' Development ')
+    await expect(renameButton).toBeDisabled()
+
+    // Inserting an internal space changes only the display name, leaving the disk path intact.
+    await nameInput.fill('Devel opment')
+    await expect(renameButton).toBeEnabled()
+    await renameButton.click()
+    await expect(renameDialog).toHaveCount(0)
+    await expect(rootTitle).toHaveText('Devel opment')
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_FOLDER_SELECTOR_TRIGGER)).toContainText(
+      'Devel opment'
+    )
+    await expect
+      .poll(async () => JSON.parse(await readTextFile(
+        electronApp,
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_FolderInfo/FolderInfo.json`
+      )).displayName)
+      .toBe('Devel opment')
+
+    await rootHeader.locator('[data-testid="prompt-folder-root-title-edit"]').click()
+    await expect(nameInput).toHaveValue('Devel opment')
     await expect(renameButton).toBeDisabled()
 
     await nameInput.fill('Examples')

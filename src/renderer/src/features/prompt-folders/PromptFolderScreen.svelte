@@ -333,7 +333,6 @@
   rowDetail="Required. Names must be unique among folders of the same type."
   initialDisplayName={renamePromptFolderTarget?.displayName ?? ''}
   unchangedDisplayName={renamePromptFolderTarget?.displayName ?? null}
-  unchangedFolderName={renamePromptFolderTarget?.folderName ?? null}
   duplicatePromptFolderId={renamePromptFolderTarget?.id ?? null}
   failureMessage="Failed to rename folder. Please try again."
   onsubmit={handleRenamePromptFolder}

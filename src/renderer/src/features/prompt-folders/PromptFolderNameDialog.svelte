@@ -32,7 +32,6 @@
     rowDetail,
     initialDisplayName = '',
     unchangedDisplayName = null,
-    unchangedFolderName = null,
     duplicatePromptFolderId = null,
     failureMessage,
     icon = FolderPlus,
@@ -52,7 +51,6 @@
     rowDetail: string
     initialDisplayName?: string
     unchangedDisplayName?: string | null
-    unchangedFolderName?: string | null
     duplicatePromptFolderId?: string | null
     failureMessage: string
     icon?: ComponentType
@@ -79,10 +77,9 @@
   const validation = $derived(preparedName.validation)
   const normalizedDisplayName = $derived(preparedName.displayName)
   const preparedFolderName = $derived(preparedName.folderName)
-  const isUnchangedFolderName = $derived(
-    (unchangedDisplayName !== null && normalizedDisplayName === unchangedDisplayName) ||
-      (unchangedFolderName !== null &&
-        preparedFolderName.toLowerCase() === unchangedFolderName.toLowerCase())
+  // Display-name edits remain meaningful when the sanitized disk name stays the same.
+  const isUnchangedDisplayName = $derived(
+    unchangedDisplayName !== null && normalizedDisplayName === unchangedDisplayName
   )
   const hasDuplicateFolderName = $derived.by(
     () =>
@@ -108,7 +105,7 @@
       validation.isValid &&
       isWorkspaceReady &&
       !isPromptFolderListLoading &&
-      !isUnchangedFolderName
+      !isUnchangedDisplayName
     )
   )
 
