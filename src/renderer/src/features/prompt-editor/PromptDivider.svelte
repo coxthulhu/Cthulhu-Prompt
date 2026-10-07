@@ -80,9 +80,11 @@
         />
       {:else}
         <!-- The centered line buttons limit separator clicks without moving the visible lines. -->
+        <!-- Both separator buttons skip Tab navigation so the add action has one Tab stop. -->
         <button
           class="promptDividerSeparatorButton"
           type="button"
+          tabindex="-1"
           aria-label={`Add ${contentLabel} from left separator`}
           title={dividerText}
           {disabled}
@@ -112,6 +114,7 @@
         <button
           class="promptDividerSeparatorButton"
           type="button"
+          tabindex="-1"
           aria-label={`Add ${contentLabel} from right separator`}
           title={dividerText}
           {disabled}
