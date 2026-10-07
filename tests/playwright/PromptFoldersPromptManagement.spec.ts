@@ -1157,12 +1157,16 @@ describe('Prompt folder prompt management', () => {
     await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
     await dividerButton.focus()
     await expect(dividerActions).toHaveCSS('opacity', '1')
+    // The center button is the divider's only Tab stop in either direction.
     await mainWindow.keyboard.press('Tab')
+    await expect(dividerRow.locator(':focus')).toHaveCount(0)
+    await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
+    await mainWindow.keyboard.press('Shift+Tab')
+    await expect(dividerButton).toBeFocused()
     await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
     await mainWindow.keyboard.press('Shift+Tab')
-    await mainWindow.keyboard.press('Shift+Tab')
-    await expect(dividerSeparators.first()).toBeFocused()
-    await expect.poll(readSeparatorColors).toEqual([accentSeparatorColor, accentSeparatorColor])
+    await expect(dividerRow.locator(':focus')).toHaveCount(0)
+    await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
   })
 
   test('reorders prompts with move buttons', async ({ testSetup }) => {

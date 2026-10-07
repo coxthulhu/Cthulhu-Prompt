@@ -371,7 +371,7 @@ describe('Backlog prompts', () => {
     await expect(secondEditor.locator('[data-testid="prompt-copy-button"]')).toBeVisible()
     await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Backlog/second.prompt.md`)))
       .toMatchObject({ status: 'Backlog', category: 'alpha', templates: null })
-    /** Right-hand quick action joins Active after its existing prompt. */
+    /** Right-hand quick action inserts at the top of its Active category. */
     const todoButton = secondEditor.locator('[data-testid="prompt-todo-button"]')
     /** Selector geometry verifies the quick action is on its right edge. */
     const statusBox = await secondEditor.locator('[data-testid="prompt-status-pill"]').boundingBox()
@@ -379,20 +379,20 @@ describe('Backlog prompts', () => {
     const todoBox = await todoButton.boundingBox()
     expect(Math.abs(statusBox!.x + statusBox!.width - todoBox!.x)).toBeLessThanOrEqual(2)
     await todoButton.click()
-    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['third', 'second'])
+    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'third'])
     await selectStatus(mainWindow, 'first', 'in-progress')
-    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['third', 'second', 'first'])
+    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['first', 'second', 'third'])
     await selectGroup(mainWindow, 'active')
     await selectStatus(mainWindow, 'third', 'in-progress')
     await selectStatus(mainWindow, 'third', 'todo')
-    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['third', 'second', 'first'])
+    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['first', 'second', 'third'])
     await selectStatus(mainWindow, 'second', 'completed')
     await selectGroup(mainWindow, 'completed')
     await mainWindow.locator(`${promptEditorSelector('second')} [data-testid="prompt-status-more-options-button"]`).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-more-options-menu"] .cthulhuUiDropdownPopupMoreOptionsTitle'))
       .toHaveText(['Todo', 'In Progress', 'Backlog'])
     await mainWindow.locator('[data-testid="prompt-status-option-todo"]').click()
-    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['third', 'first', 'second'])
+    await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'first', 'third'])
 
     await selectGroup(mainWindow, 'backlog')
     await mainWindow.locator('[data-testid="prompt-folder-divider-backlog-root-initial"] [data-testid="prompt-divider-add-initial"]').click()
