@@ -5,7 +5,6 @@ import {
   type PromptPersisted
 } from '@shared/domain/prompt/Prompt'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
 import {
   parsePromptMarkdown,
   serializePromptMarkdown
@@ -73,7 +72,6 @@ export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields)
 
 export const promptPersistence = createMarkdownPersistence<PromptPersisted>({
   kind: 'prompt',
-  getDisplayTitle: getPromptDisplayTitle,
   parseMarkdown: parsePromptMarkdown,
   serializeMarkdown: serializePromptMarkdown,
   normalizeLoadedData: (prompt, folderPath) =>

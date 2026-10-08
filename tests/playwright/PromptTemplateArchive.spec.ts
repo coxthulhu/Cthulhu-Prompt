@@ -62,7 +62,7 @@ describe('Template archive', () => {
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH.replace('/Active/', '/'))).toBe(false)
     expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/Library/_FolderInfo/Description.md`)).toBe('Keep root description')
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(3)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(4)
     /** Persisted order compared after a fresh renderer reload exercises idempotent migration. */
     const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_FolderInfo/FolderOrder.json`
     /** Original categorized order remains byte-for-byte stable after reopening. */

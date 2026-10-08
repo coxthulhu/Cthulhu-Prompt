@@ -5,24 +5,27 @@ import { folderEntryRef, type FolderEntryRef } from '@shared/domain/OrderContain
 import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
 import type { WorkspaceInfoFile } from './WorkspaceDiskTypes'
 import { getFs } from '../../fs-provider'
-import { isCategory } from '../CategoryPersistence'
-import { readJsonFile, writeJsonFile } from '../FilePersistenceHelpers'
+import { isCategory, parseCategoryJson } from '../CategoryPersistence'
+import { allocateFilenameStem } from '@shared/domain/prompt/promptFilename'
+import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
+import { readJsonFile, resolveTempPath, writeJsonFile } from '../FilePersistenceHelpers'
 import {
   CATEGORY_FILENAME_SUFFIX,
   PROMPT_FOLDER_INFO_DIRECTORY_NAME,
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPTS_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
+  PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   TEMPLATES_DIRECTORY_NAME,
   resolveLegacyWorkspaceFolderOrderPath,
   resolvePromptRootDirectoryName,
   resolveWorkspaceFolderOrderPath,
   resolveWorkspacePathFromInfoPath
 } from '../PromptPersistencePaths'
-import { parsePromptMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
+import { parsePromptMarkdown, parsePromptTemplateMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 3
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 4
 
 /** Workspace metadata accepted only while determining which migrations to run. */
 type MigratableWorkspaceInfoFile = Omit<WorkspaceInfoFile, 'schemaVersion'> & {
@@ -343,11 +346,75 @@ const migrateSchemaVersionTwoToThree: WorkspaceMigration = (workspacePath, works
   writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 3 })
 }
 
+/** Renames workspace content with numeric allocation while preserving bytes and timestamps. */
+const migrateSchemaVersionThreeToFour: WorkspaceMigration = (workspacePath, workspaceInfoPath) => {
+  /** Filesystem used to validate and rename every source before committing the version. */
+  const fs = getFs()
+  /** Complete migration plan grouped by physical directory, including unreferenced files. */
+  const directories = new Map<string, Array<{ source: string; title: string; suffix: string }>>()
+  for (const rootName of [PROMPTS_DIRECTORY_NAME, TEMPLATES_DIRECTORY_NAME]) {
+    for (const suffix of [PROMPT_MARKDOWN_FILENAME_SUFFIX, PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX, CATEGORY_FILENAME_SUFFIX]) {
+      for (const source of collectWorkspaceFiles(path.join(workspacePath, rootName), suffix)) {
+        /** Original file is parsed only to obtain its display title; its bytes are never rewritten. */
+        const text = fs.readFileSync(source, 'utf8')
+        /** Current content parser validates the record before any migration rename occurs. */
+        const content = suffix === CATEGORY_FILENAME_SUFFIX
+          ? parseCategoryJson(text)
+          : suffix === PROMPT_MARKDOWN_FILENAME_SUFFIX ? parsePromptMarkdown(text) : parsePromptTemplateMarkdown(text)
+        if (!content) throw new Error(`Invalid workspace content file: ${source}`)
+        /** Parent directory owns an independent filename namespace. */
+        const directory = path.dirname(source)
+        /** Files to allocate together after freeing only this migration's own source names. */
+        const files = directories.get(directory) ?? []
+        files.push({ source, title: 'displayName' in content ? content.displayName : getPromptDisplayTitle(content), suffix })
+        directories.set(directory, files)
+      }
+    }
+  }
+  /** Planned renames use temporary paths so filename swaps cannot overwrite source content. */
+  const renames: Array<{ source: string; target: string; temporary: string }> = []
+  for (const [directory, files] of directories) {
+    /** Only files participating in this migration release their existing names. */
+    const sources = new Set(files.map((file) => path.basename(file.source).toLowerCase()))
+    /** Other directory entries remain unavailable, including directories with matching names. */
+    const occupied = new Set(fs.readdirSync(directory).map((name) => name.toLowerCase()).filter((name) => !sources.has(name)))
+    for (const file of files.sort((left, right) => left.source.localeCompare(right.source))) {
+      /** Numeric filename allocated against both existing entries and earlier migration targets. */
+      const stem = allocateFilenameStem(file.title, file.suffix, occupied)
+      /** Destination retains the exact type extension and title casing. */
+      const target = path.join(directory, `${stem}${file.suffix}`)
+      if (target !== file.source) renames.push({ source: file.source, target, temporary: resolveTempPath(file.source) })
+    }
+  }
+  /** Sources staged successfully, retained for restoration if any rename fails. */
+  const staged: typeof renames = []
+  /** Destinations committed successfully, moved back to temporary paths before restoring sources. */
+  const committed: typeof renames = []
+  try {
+    for (const rename of renames) {
+      fs.renameSync(rename.source, rename.temporary)
+      staged.push(rename)
+    }
+    for (const rename of renames) {
+      fs.renameSync(rename.temporary, rename.target)
+      committed.push(rename)
+    }
+    /** Schema version advances only after every content filename has been migrated. */
+    const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+    writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 4 })
+  } catch (error) {
+    for (const rename of committed) fs.renameSync(rename.target, rename.temporary)
+    for (const rename of staged) fs.renameSync(rename.temporary, rename.source)
+    throw error
+  }
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   0: migrateSchemaVersionZeroToOne,
   1: migrateSchemaVersionOneToTwo,
-  2: migrateSchemaVersionTwoToThree
+  2: migrateSchemaVersionTwoToThree,
+  3: migrateSchemaVersionThreeToFour
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

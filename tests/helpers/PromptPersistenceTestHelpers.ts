@@ -1,14 +1,13 @@
 import type { EventEmitter } from 'node:events'
 import { expect, type ElectronApplication } from '@playwright/test'
 import { createTestRequestId } from './TestRequestId'
-import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
+import { sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
 
 type PersistedPromptLookup = {
   workspacePath: string
   folderName: string
   promptId: string
   promptTitle: string
-  needsFilenameIdSuffix?: boolean
 }
 
 type PersistedPromptFilePaths = {
@@ -52,11 +51,7 @@ export const resolvePersistedPromptFilePathsByTitle = (
       ? [rootFolderName, ...folderSegments]
       : [rootFolderName, 'Active', ...folderSegments]
   const folderPath = `${lookup.workspacePath}/Prompts/${persistedFolderSegments.join('/')}`
-  const promptStem = buildPromptStem(
-    lookup.promptTitle,
-    lookup.promptId,
-    lookup.needsFilenameIdSuffix ?? false
-  )
+  const promptStem = sanitizePromptTitleForFilename(lookup.promptTitle)
   return {
     markdownPath: `${folderPath}/${promptStem}.prompt.md`
   }

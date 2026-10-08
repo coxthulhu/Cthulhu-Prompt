@@ -1,4 +1,5 @@
-import type { Category } from '@shared/domain/category/Category'
+import * as path from 'path'
+import { createFilenameAllocator } from './FilenameAllocation'
 import { isDeepStrictEqual } from 'node:util'
 import type { DomainEntityMap, DomainEntityType } from '@shared/domain/DomainChanges'
 import {
@@ -11,7 +12,7 @@ import {
   type PromptStatusFolderId
 } from '@shared/domain/prompt/Prompt'
 import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
-import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
+import { sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
 import type {
   DomainGraph,
   DomainGraphEntryFor,
@@ -24,6 +25,11 @@ import type {
 } from './PersistenceTypes'
 import type { PromptFolderPersistenceFields } from './PromptFolderPersistence'
 import {
+  CATEGORY_FILENAME_SUFFIX,
+  PROMPT_MARKDOWN_FILENAME_SUFFIX,
+  PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
+  resolveCategoriesDirectoryPath,
+  resolvePromptFolderPath,
   resolvePromptStatusFolderName,
   resolveWorkspaceInfoPath
 } from './PromptPersistencePaths'
@@ -108,26 +114,6 @@ const findCategoryOwner = (graph: DomainGraph, categoryId: string): PromptFolder
     .map((entry) => entry.data)
     .find((folder) => getPromptFolderCategoryIds(folder).includes(categoryId))
 
-/** Calculates the collision suffix required by one category in its projected root. */
-const needsCategoryFilenameIdSuffix = (
-  graph: DomainGraph,
-  owner: PromptFolder,
-  category: Category
-): boolean => {
-  /** Case-insensitive sanitized boundary shared by colliding category filenames. */
-  const boundary = sanitizePromptTitleForFilename(category.displayName).toLocaleLowerCase()
-  /** Projected categories with the same filename boundary in this root. */
-  const collisionCount = getPromptFolderCategoryIds(owner).filter((categoryId) => {
-    /** Projected category associated with one root-owned category identity. */
-    const candidate = graph.get('category', categoryId)?.data
-    return (
-      candidate !== undefined &&
-      sanitizePromptTitleForFilename(candidate.displayName).toLocaleLowerCase() === boundary
-    )
-  }).length
-  return collisionCount > 1
-}
-
 /** Derives category ownership and its complete desired filename metadata. */
 const deriveCategoryFields = (
   graph: DomainGraph,
@@ -139,23 +125,19 @@ const deriveCategoryFields = (
   if (!owner) throw new Error(`Category storage owner not found: ${id}`)
   /** Canonical storage metadata for the owning root folder. */
   const ownerFields = derivePromptFolderFields(graph, owner.id, graph.get('promptFolder', owner.id)!)
-  /** Whether the desired category name collides at the sanitized filename boundary. */
-  const needsFilenameIdSuffix = needsCategoryFilenameIdSuffix(graph, owner, entry.data)
   return {
     workspaceId: ownerFields.workspaceId,
     workspacePath: ownerFields.workspacePath,
     rootPromptFolderId: owner.id,
     rootFolderName: owner.folderName,
     kind: owner.kind,
-    categoryStem: buildPromptStem(entry.data.displayName, id, needsFilenameIdSuffix),
-    needsFilenameIdSuffix
+    categoryStem: entry.persistenceFields?.categoryStem ?? sanitizePromptTitleForFilename(entry.data.displayName)
   }
 }
 
 /** Projected markdown owner and physical group selected for filename planning. */
 type MarkdownOwner = {
   folder: PromptFolder
-  contentIds: string[]
   folderPath: string
 }
 
@@ -182,7 +164,6 @@ const findMarkdownOwner = (
       if (promptIds.includes(contentId)) {
         return {
           folder,
-          contentIds: promptIds,
           folderPath: resolvePromptStatusFolderName(
             folder.folderName,
             statusFolderId as PromptStatusFolderId
@@ -192,40 +173,6 @@ const findMarkdownOwner = (
     }
   }
   return undefined
-}
-
-/** Reads a prompt or template record through one markdown adapter boundary. */
-const getMarkdownData = (
-  graph: DomainGraph,
-  kind: PromptFolderContentKind,
-  contentId: string
-): DomainEntityMap['prompt'] | DomainEntityMap['promptTemplate'] | undefined =>
-  kind === 'prompt'
-    ? graph.get('prompt', contentId)?.data
-    : graph.get('promptTemplate', contentId)?.data
-
-/** Calculates the filename suffix required within one projected markdown group. */
-const needsMarkdownFilenameIdSuffix = (
-  graph: DomainGraph,
-  kind: PromptFolderContentKind,
-  owner: MarkdownOwner,
-  content: DomainEntityMap['prompt'] | DomainEntityMap['promptTemplate']
-): boolean => {
-  /** Sanitized display-title boundary used for collision counting. */
-  const boundary = sanitizePromptTitleForFilename(
-    getPromptDisplayTitle(content)
-  ).toLocaleLowerCase()
-  /** Projected same-boundary content count within the desired physical group. */
-  const collisionCount = owner.contentIds.filter((contentId) => {
-    /** Projected markdown record for one group member. */
-    const candidate = getMarkdownData(graph, kind, contentId)
-    return (
-      candidate !== undefined &&
-      sanitizePromptTitleForFilename(getPromptDisplayTitle(candidate)).toLocaleLowerCase() ===
-        boundary
-    )
-  }).length
-  return collisionCount > 1
 }
 
 /** Creates a prompt or template adapter that derives ownership and desired filenames. */
@@ -243,25 +190,13 @@ const createMarkdownStorageAdapter = <TEntityType extends 'prompt' | 'promptTemp
       owner.folder.id,
       graph.get('promptFolder', owner.folder.id)!
     )
-    /** Collision policy calculated across the complete desired group. */
-    const needsFilenameIdSuffix = needsMarkdownFilenameIdSuffix(
-      graph,
-      kind,
-      owner,
-      entry.data
-    )
     return {
       workspaceId: ownerFields.workspaceId,
       workspacePath: ownerFields.workspacePath,
       folderPath: owner.folderPath,
       promptFolderId: owner.folder.id,
       promptId: id,
-      promptStem: buildPromptStem(
-        getPromptDisplayTitle(entry.data),
-        id,
-        needsFilenameIdSuffix
-      ),
-      needsFilenameIdSuffix
+      promptStem: entry.persistenceFields?.promptStem ?? sanitizePromptTitleForFilename(getPromptDisplayTitle(entry.data))
     } as DomainPersistenceFieldsMap[TEntityType]
   }
 })
@@ -405,6 +340,32 @@ const isRelocatedByRootDirectoryRename = (
     return false
   })
 
+/** File-backed entities whose filenames are independent of their domain identity. */
+type FilenameEntityType = 'category' | 'prompt' | 'promptTemplate'
+
+/** Resolves the directory, extension, and persisted stem for one file-backed entity. */
+const getFilenameLocation = (
+  entityType: FilenameEntityType,
+  fields: DomainPersistenceFieldsMap[FilenameEntityType]
+): { directory: string; stem: string; suffix: string } => {
+  if (entityType === 'category') {
+    /** Category metadata owns its root-level category directory. */
+    const category = fields as CategoryPersistenceFields
+    return {
+      directory: resolveCategoriesDirectoryPath(category.workspacePath, category.rootFolderName, category.kind),
+      stem: category.categoryStem,
+      suffix: CATEGORY_FILENAME_SUFFIX
+    }
+  }
+  /** Markdown metadata owns one physical status directory. */
+  const markdown = fields as DomainPersistenceFieldsMap['prompt']
+  return {
+    directory: resolvePromptFolderPath(markdown.workspacePath, markdown.folderPath, entityType === 'prompt' ? 'prompt' : 'template'),
+    stem: markdown.promptStem,
+    suffix: entityType === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
+  }
+}
+
 /** Calculates desired storage first, then diffs it against every current entity location. */
 export const planDomainStorageTransitions = (
   beforeGraph: DomainGraph,
@@ -415,10 +376,38 @@ export const planDomainStorageTransitions = (
   const domainTargetKeys = new Set(
     domainTransitions.map((transition) => `${transition.entityType}:${transition.id}`)
   )
-  /** Storage transitions containing domain writes and location-only sibling moves. */
+  /** Storage transitions containing domain writes and descendant path updates. */
   const storageTransitions: DomainStorageTransition[] = []
   /** Root directory moves that cover their descendants' physical relocation. */
   const rootDirectoryRenames = collectRootDirectoryRenames(domainTransitions)
+  /** Shared disk snapshot and reservations for all file writes in this transaction. */
+  const filenames = createFilenameAllocator()
+  /** File-backed types reserved before any new destination is allocated. */
+  const filenameTypes: FilenameEntityType[] = ['category', 'prompt', 'promptTemplate']
+  /** Maps a descendant directory through a root rename without reallocating its filename. */
+  const relocatedDirectory = (directory: string): string => {
+    for (const rename of rootDirectoryRenames) {
+      /** Existing root metadata identifies the absolute source directory. */
+      const root = beforeGraph.get('promptFolder', rename.promptFolderId)!.persistenceFields!
+      /** Absolute source and destination of this root move. */
+      const source = resolvePromptFolderPath(root.workspacePath, rename.beforeFolderName, rename.kind)
+      /** Relative child path retained by the directory rename. */
+      const relative = path.relative(source, directory)
+      if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+        return path.join(resolvePromptFolderPath(root.workspacePath, rename.afterFolderName, rename.kind), relative)
+      }
+    }
+    return directory
+  }
+  for (const entityType of filenameTypes) {
+    for (const entry of beforeGraph.getAll(entityType)) {
+      if (!entry.persistenceFields) continue
+      /** Existing file remains reserved even when this transaction will remove it. */
+      const location = getFilenameLocation(entityType, entry.persistenceFields)
+      filenames.reserve(path.join(location.directory, `${location.stem}${location.suffix}`))
+      filenames.reserve(path.join(relocatedDirectory(location.directory), `${location.stem}${location.suffix}`))
+    }
+  }
   /** Domain entity types dispatched through their storage adapters. */
   const entityTypes: DomainEntityType[] = [
     'systemSettings',
@@ -479,6 +468,35 @@ export const planDomainStorageTransitions = (
         id,
         afterEntry as never
       ) as DomainPersistenceFieldsMap[typeof entityType]
+      if (entityType === 'category' || entityType === 'prompt' || entityType === 'promptTemplate') {
+        /** Destination directory derived from the projected owner, independent of the title. */
+        const destination = getFilenameLocation(entityType, desiredFields as DomainPersistenceFieldsMap[FilenameEntityType])
+        /** Existing location follows an ancestor rename while retaining its allocated stem. */
+        const current = beforeEntry?.persistenceFields
+          ? getFilenameLocation(entityType, beforeEntry.persistenceFields as DomainPersistenceFieldsMap[FilenameEntityType])
+          : null
+        /** Whether the entity stays in its current physical directory. */
+        const sameDirectory = current !== null && relocatedDirectory(current.directory).toLowerCase() === destination.directory.toLowerCase()
+        /** Current and desired title fields determine whether allocation must run again. */
+        const beforeData = beforeEntry?.data as DomainEntityMap[FilenameEntityType] | undefined
+        /** Desired domain data supplies the readable filename without changing its full ID. */
+        const afterData = afterEntry.data as DomainEntityMap[FilenameEntityType]
+        /** Category names and Markdown title/fallback pairs retain their existing domain behavior. */
+        const sameTitle = beforeData && ('displayName' in afterData
+          ? 'displayName' in beforeData && beforeData.displayName === afterData.displayName
+          : 'title' in beforeData && beforeData.title === afterData.title && beforeData.fallbackTitle === afterData.fallbackTitle)
+        /** Stable files bypass allocation; renamed and moved files claim the lowest available name. */
+        const stem = sameDirectory && sameTitle
+          ? current!.stem
+          : filenames.allocate(
+              destination.directory,
+              'displayName' in afterData ? afterData.displayName : getPromptDisplayTitle(afterData),
+              destination.suffix,
+              sameDirectory ? `${current!.stem}${current!.suffix}` : undefined
+            )
+        if (entityType === 'category') (desiredFields as CategoryPersistenceFields).categoryStem = stem
+        else (desiredFields as DomainPersistenceFieldsMap['prompt']).promptStem = stem
+      }
       /** Current persistence record when this entity already exists. */
       const beforeRecord =
         beforeEntry?.persistenceFields == null

@@ -5,7 +5,7 @@ import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/doma
 import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { PROMPT_STATUS_FOLDERS, PromptStatus } from '@shared/domain/prompt/Prompt'
-import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
+import { createFilenameAllocator } from '../Persistence/FilenameAllocation'
 import { preparePromptFolderName } from '@shared/domain/prompt-folder/promptFolderName'
 import { folderEntryRef, promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
 import { getFs } from '../fs-provider'
@@ -25,6 +25,7 @@ import {
   PROMPT_FOLDER_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
+  CATEGORY_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
   resolveActivePromptFolderName,
   resolveCategoriesDirectoryPath,
@@ -104,19 +105,6 @@ const writeWorkspaceFolderOrderFile = (
   )
 }
 
-const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> => {
-  const titleStemCounts = new Map<string, number>()
-
-  for (const prompt of prompts) {
-    const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
-    titleStemCounts.set(titleStem, (titleStemCounts.get(titleStem) ?? 0) + 1)
-  }
-
-  return new Set(
-    [...titleStemCounts.entries()].filter(([, count]) => count > 1).map(([titleStem]) => titleStem)
-  )
-}
-
 const writeMyProjectFolder = (
   workspacePath: string,
   includeExamplePrompts: boolean,
@@ -184,7 +172,8 @@ const writeMyProjectFolder = (
         }
       })
     : []
-  const duplicateTitleStems = getDuplicateTitleStems(examplePrompts)
+  /** Names reserved across every bundled file written into this root. */
+  const filenames = createFilenameAllocator()
 
   fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
   fs.mkdirSync(path.join(activeFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
@@ -196,7 +185,7 @@ const writeMyProjectFolder = (
   })
 
   for (const category of exampleCategories) {
-    const categoryStem = buildPromptStem(category.displayName, category.id, false)
+    const categoryStem = filenames.allocate(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'), category.displayName, CATEGORY_FILENAME_SUFFIX)
     fs.writeFileSync(
       resolveCategoryPathFromStem(
         workspacePath,
@@ -210,8 +199,7 @@ const writeMyProjectFolder = (
   }
 
   for (const prompt of examplePrompts) {
-    const titleStem = sanitizePromptTitleForFilename(prompt.title).toLowerCase()
-    const promptStem = buildPromptStem(prompt.title, prompt.id, duplicateTitleStems.has(titleStem))
+    const promptStem = filenames.allocate(activeFolderPath, prompt.title, PROMPT_MARKDOWN_FILENAME_SUFFIX)
     const markdownPath = path.join(
       activeFolderPath,
       `${promptStem}${PROMPT_MARKDOWN_FILENAME_SUFFIX}`
@@ -322,8 +310,10 @@ const writeMyTemplatesFolder = (
   fs.mkdirSync(path.join(templateFolderPath, 'Active', '_FolderInfo'), { recursive: true })
   fs.mkdirSync(path.join(templateFolderPath, 'Archived'), { recursive: true })
 
+  /** Template names share the same allocation policy as prompts and categories. */
+  const filenames = createFilenameAllocator()
   for (const template of templates) {
-    const templateStem = buildPromptStem(template.title, template.id, false)
+    const templateStem = filenames.allocate(path.join(templateFolderPath, 'Active'), template.title, PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX)
     fs.writeFileSync(
       path.join(
         templateFolderPath,

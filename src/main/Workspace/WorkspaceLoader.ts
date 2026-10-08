@@ -210,7 +210,6 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
           rootFolderName,
           kind: promptFolder.kind,
           categoryStem,
-          needsFilenameIdSuffix: categoryStem.endsWith(`-${categoryId.slice(0, 8)}`)
         })
       ]
     })
@@ -247,7 +246,6 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
             promptFolderId: promptFolder.id,
             promptId,
             promptStem,
-            needsFilenameIdSuffix: promptStem.endsWith(`-${promptId.slice(0, 8)}`)
           })
         ]
         })
@@ -270,7 +268,6 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
           promptFolderId: promptFolder.id,
           promptId: templateId,
           promptStem: templateStem,
-          needsFilenameIdSuffix: templateStem.endsWith(`-${templateId.slice(0, 8)}`)
         })
       )
     })

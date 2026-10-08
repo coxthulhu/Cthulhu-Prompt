@@ -1,7 +1,6 @@
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
 import {
   parsePromptTemplateMarkdown,
   serializePromptTemplateMarkdown
@@ -20,7 +19,6 @@ export const readPromptTemplateModifiedAt = (
 
 export const promptTemplatePersistence = createMarkdownPersistence<PromptTemplatePersisted>({
   kind: 'template',
-  getDisplayTitle: getPromptDisplayTitle,
   parseMarkdown: parsePromptTemplateMarkdown,
   serializeMarkdown: serializePromptTemplateMarkdown,
   normalizeLoadedData: (template, folderPath) => {

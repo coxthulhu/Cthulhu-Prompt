@@ -241,11 +241,11 @@ Keep this body.`
       /** Canonical workspace metadata committed only after all file migrations succeed. */
       const migratedInfoText = await readTextFile(electronApp, workspaceInfoPath)
       /** Canonical prompt source produced from the singular template reference. */
-      const migratedPromptText = await readTextFile(electronApp, promptPath)
+      const migratedPromptText = await readTextFile(electronApp, promptPath.replace('Legacy.prompt.md', 'Legacy Prompt.prompt.md'))
       /** Canonical unreferenced category data produced by the recursive scan. */
-      const migratedCategoryText = await readTextFile(electronApp, categoryPath)
+      const migratedCategoryText = await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))
       expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 3,
+        schemaVersion: 4,
         workspaceId: unversionedInfo.workspaceId,
         workspaceName: unversionedInfo.workspaceName
       })
@@ -263,8 +263,8 @@ Keep this body.`
       await testSetup.setupFileDialog([workspaceInfoPath])
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
       expect(await readTextFile(electronApp, workspaceInfoPath)).toBe(migratedInfoText)
-      expect(await readTextFile(electronApp, promptPath)).toBe(migratedPromptText)
-      expect(await readTextFile(electronApp, categoryPath)).toBe(migratedCategoryText)
+      expect(await readTextFile(electronApp, promptPath.replace('Legacy.prompt.md', 'Legacy Prompt.prompt.md'))).toBe(migratedPromptText)
+      expect(await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))).toBe(migratedCategoryText)
       await expect(
         mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
       ).toHaveCount(0)
@@ -291,7 +291,7 @@ Keep this body.`
       })
 
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(3)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(4)
     })
 
     test('leaves schema version zero when a workspace migration file is malformed', async ({
@@ -482,7 +482,7 @@ Keep this partial body.`
             `${workspacePath}\\TestWorkspace.cthulhuprompt.json`
           )
         ).schemaVersion
-      ).toBe(3)
+      ).toBe(4)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {

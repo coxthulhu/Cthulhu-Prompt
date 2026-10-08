@@ -1,7 +1,7 @@
 import { createDeterministicId } from './FixtureIds'
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/domain/prompt/promptFallbackTitle'
-import { buildPromptStem, sanitizePromptTitleForFilename } from '@shared/domain/prompt/promptFilename'
+import { allocateFilenameStem } from '@shared/domain/prompt/promptFilename'
 import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/domain/prompt-folder/PromptFolder'
 import {
   isFinalPromptStatus,
@@ -166,19 +166,6 @@ export interface WorkspaceOptions {
 
 const DEFAULT_PROMPT_TIMESTAMP = '2023-01-01T00:00:00.000Z'
 
-const getDuplicateTitleStems = (prompts: Array<{ title: string; fallbackTitle: string }>) => {
-  const titleStemCounts = new Map<string, number>()
-
-  for (const prompt of prompts) {
-    const titleStem = sanitizePromptTitleForFilename(getPromptDisplayTitle(prompt)).toLowerCase()
-    titleStemCounts.set(titleStem, (titleStemCounts.get(titleStem) ?? 0) + 1)
-  }
-
-  return new Set(
-    [...titleStemCounts.entries()].filter(([, count]) => count > 1).map(([titleStem]) => titleStem)
-  )
-}
-
 const normalizePrompts = (prompts: PromptFixture[] | undefined) => {
   const normalized: Array<PromptFixture & { title: string; fallbackTitle: string }> = []
 
@@ -209,7 +196,8 @@ const createPromptFiles = (
   promptFiles: Record<string, string>
 } => {
   const promptFiles: Record<string, string> = {}
-  const duplicateTitleStems = getDuplicateTitleStems(prompts)
+  /** Full filenames reserved while constructing this physical fixture directory. */
+  const occupiedNames = new Set<string>()
 
   for (const prompt of prompts) {
     const promptData: PromptPersisted = {
@@ -227,8 +215,7 @@ const createPromptFiles = (
         : {})
     }
     const displayTitle = getPromptDisplayTitle(promptData)
-    const titleStem = sanitizePromptTitleForFilename(displayTitle).toLowerCase()
-    const promptStem = buildPromptStem(displayTitle, prompt.id, duplicateTitleStems.has(titleStem))
+    const promptStem = allocateFilenameStem(displayTitle, '.prompt.md', occupiedNames)
 
     promptFiles[`${folderPath}/${promptStem}.prompt.md`] = serializePromptMarkdown(promptData)
   }
@@ -465,6 +452,8 @@ export function createWorkspaceWithTemplateFolders(
       2
     )
 
+    /** Template fixtures must retain every duplicate-title record. */
+    const occupiedNames = new Set<string>()
     for (const template of templates) {
       const title = template.title ?? ''
       const fallbackTitle = template.fallbackTitle ?? ''
@@ -478,7 +467,7 @@ export function createWorkspaceWithTemplateFolders(
         ...(template.category !== undefined ? { category: template.category } : {})
       }
       const displayTitle = getPromptDisplayTitle(templateData)
-      structure[`${folderPath}/Active/${buildPromptStem(displayTitle, template.id, false)}.template.md`] =
+      structure[`${folderPath}/Active/${allocateFilenameStem(displayTitle, '.template.md', occupiedNames)}.template.md`] =
         serializePromptTemplateMarkdown(templateData)
     }
 

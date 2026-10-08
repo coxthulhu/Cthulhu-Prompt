@@ -461,7 +461,6 @@ describe('atomic data transaction', () => {
         rootFolderName: promptFolder.folderName,
         kind: promptFolder.kind,
         categoryStem: 'Created',
-        needsFilenameIdSuffix: false
       }
     })
   })
@@ -539,7 +538,6 @@ describe('atomic data transaction', () => {
         rootFolderName: promptFolder.folderName,
         kind: promptFolder.kind,
         categoryStem: category.displayName,
-        needsFilenameIdSuffix: false
       }
     })
     mockTransactionState.seedEntry('prompt', prompt.id, {
@@ -552,7 +550,6 @@ describe('atomic data transaction', () => {
         promptFolderId: promptFolder.id,
         promptId: prompt.id,
         promptStem: prompt.title,
-        needsFilenameIdSuffix: false
       }
     })
     /** Domain state backed by the same committed entries used by the atomic transaction. */
@@ -669,7 +666,6 @@ describe('atomic data transaction', () => {
         promptFolderId: promptFolder.id,
         promptId: promptTemplate.id,
         promptStem: promptTemplate.title,
-        needsFilenameIdSuffix: false
       }
     })
     /** Domain state backed by the seeded template-root graph. */
@@ -838,7 +834,6 @@ describe('atomic data transaction', () => {
       committed: { id: PROMPT_ID, title: 'Duplicate title' },
       persistenceFields: {
         promptStem: 'Duplicate title',
-        needsFilenameIdSuffix: false
       }
     })
 
@@ -846,8 +841,7 @@ describe('atomic data transaction', () => {
       promptFilename: tx.prompt.updatePersistenceFields({
         id: PROMPT_ID,
         persistenceFields: {
-          promptStem: 'Duplicate title-prompt-1',
-          needsFilenameIdSuffix: true
+          promptStem: 'Duplicate title 1',
         } as Parameters<typeof tx.prompt.updatePersistenceFields>[0]['persistenceFields']
       })
     }))
@@ -863,8 +857,7 @@ describe('atomic data transaction', () => {
       revision: 4,
       committed: { id: PROMPT_ID, title: 'Duplicate title' },
       persistenceFields: {
-        promptStem: 'Duplicate title-prompt-1',
-        needsFilenameIdSuffix: true
+        promptStem: 'Duplicate title 1',
       }
     })
   })

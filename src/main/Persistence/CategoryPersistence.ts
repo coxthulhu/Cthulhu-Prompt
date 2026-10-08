@@ -1,6 +1,5 @@
 import { normalizeCategoryShortDescription, type Category } from '@shared/domain/category/Category'
 import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
-import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
 import { getFs } from '../fs-provider'
 import {
   commitStagedFileChanges,
@@ -27,7 +26,6 @@ export type CategoryPersistenceFields = {
   rootFolderName: string
   kind: PromptFolderKind
   categoryStem: string
-  needsFilenameIdSuffix: boolean
 }
 
 /** Validates the exact JSON shape used by persisted category files. */
@@ -87,11 +85,8 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
     /** Desired category persistence metadata. */
     const fields = after.persistenceFields
 
-    const stem = buildPromptStem(
-      after.data.displayName,
-      after.data.id,
-      fields.needsFilenameIdSuffix
-    )
+    /** Filename allocated once by the storage planner. */
+    const stem = fields.categoryStem
     const categoriesPath = resolveCategoriesDirectoryPath(
       fields.workspacePath,
       fields.rootFolderName,
@@ -118,10 +113,7 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
       createStagedEnsureDirectory(categoriesPath, !directoryAlreadyExists)
     )
 
-    return createPersistenceStageResult(stagedChanges, {
-      ...fields,
-      categoryStem: stem
-    })
+    return createPersistenceStageResult(stagedChanges)
   },
   commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)

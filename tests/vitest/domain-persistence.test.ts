@@ -139,7 +139,6 @@ const createMarkdownPersistenceFields = (promptFolderId: string, promptId: strin
   promptFolderId,
   promptId,
   promptStem: 'Same',
-  needsFilenameIdSuffix: false
 })
 
 describe('domain persistence planning', () => {
@@ -219,12 +218,12 @@ describe('domain persistence planning', () => {
         rootPromptFolderId: root.id,
         rootFolderName: root.folderName,
         kind,
-        categoryStem: category.displayName,
-        needsFilenameIdSuffix: false
+        // Free base names must not cause reallocation during a root rename.
+        categoryStem: 'Category 3',
       })
       mockDomainData.seed(contentEntityType, content.id, content, {
         ...createMarkdownPersistenceFields(root.id, content.id),
-        promptStem: content.title,
+        promptStem: 'Content 3',
         folderPath:
           kind === 'template'
             ? `${root.folderName}\\Active`
@@ -267,12 +266,13 @@ describe('domain persistence planning', () => {
       })
       expect(categoryTransition).toMatchObject({
         persistenceMode: 'metadataOnly',
-        after: { persistenceFields: { rootFolderName: 'RenamedRoot' } }
+        after: { persistenceFields: { rootFolderName: 'RenamedRoot', categoryStem: 'Category 3' } }
       })
       expect(contentTransition).toMatchObject({
         persistenceMode: 'metadataOnly',
         after: {
           persistenceFields: {
+            promptStem: 'Content 3',
             folderPath:
               kind === 'template'
                 ? 'RenamedRoot\\Active'
@@ -298,7 +298,6 @@ describe('domain persistence planning', () => {
       rootFolderName: 'Root',
       kind: 'prompt',
       categoryStem: 'Before',
-      needsFilenameIdSuffix: false
     })
     /** Recipe invocation count proving main projection does not replay domain changes. */
     let recipeInvocationCount = 0
@@ -325,7 +324,7 @@ describe('domain persistence planning', () => {
     })
   })
 
-  it('adds persistence-only sibling filename changes during prompt movement', () => {
+  it('allocates a numeric filename during movement without changing its sibling', () => {
     /** Source root initially owning the moved prompt. */
     const source = createRootFolder('Source', 'prompt', [{ kind: 'prompt', id: 'moving' }])
     /** Destination root containing one same-title prompt. */
@@ -375,7 +374,7 @@ describe('domain persistence planning', () => {
     if (!Array.isArray(plan)) return
     /** Immutable projection produced by applying each movement recipe once. */
     const projection = projectDomainTransitions(plan, [])
-    /** Storage transitions including the non-domain sibling filename adjustment. */
+    /** Storage transitions include the moved file without rewriting its sibling. */
     const storageTransitions = planDomainStorageTransitions(
       projection.beforeGraph,
       projection.afterGraph,
@@ -385,7 +384,7 @@ describe('domain persistence planning', () => {
     const moving = storageTransitions.find(
       (change) => change.entityType === 'prompt' && change.id === 'moving'
     )
-    /** Same-title destination sibling adjusted only by the storage diff. */
+    /** Same-title destination sibling must retain its current filename. */
     const sibling = storageTransitions.find(
       (change) => change.entityType === 'prompt' && change.id === 'sibling'
     )
@@ -393,17 +392,15 @@ describe('domain persistence planning', () => {
       after: {
         persistenceFields: {
           promptFolderId: destination.id,
-          needsFilenameIdSuffix: true
+          promptStem: 'Same 1'
         }
       }
     })
-    expect(sibling).toMatchObject({
-      after: { persistenceFields: { needsFilenameIdSuffix: true } }
-    })
+    expect(sibling).toBeUndefined()
     expect(plan.some((change) => change.id === 'sibling')).toBe(false)
   })
 
-  it('removes the surviving category filename suffix after deleting its duplicate', () => {
+  it('preserves the surviving category filename after deleting its duplicate', () => {
     /** Root containing two duplicate-named category groups. */
     const root = createRootFolder('Root', 'prompt', [], ['delete', 'survivor'])
     /** Workspace establishing ownership required by category deletion. */
@@ -425,7 +422,7 @@ describe('domain persistence planning', () => {
       createFolderPersistenceFields(root.id, 'prompt')
     )
     for (const categoryId of ['delete', 'survivor']) {
-      /** Duplicate-named category with an existing ID-suffixed filename. */
+      /** Duplicate-named category with an independently allocated numeric filename. */
       const category = {
         id: categoryId,
         displayName: 'Same',
@@ -438,8 +435,7 @@ describe('domain persistence planning', () => {
         rootPromptFolderId: root.id,
         rootFolderName: root.id,
         kind: 'prompt',
-        categoryStem: `Same-${categoryId}`,
-        needsFilenameIdSuffix: true
+        categoryStem: categoryId === 'delete' ? 'Same' : 'Same 1',
       })
     }
 
@@ -454,7 +450,7 @@ describe('domain persistence planning', () => {
     if (!Array.isArray(plan)) return
     /** Immutable deletion projection used by category storage adapters. */
     const projection = projectDomainTransitions(plan, [])
-    /** Storage-only transition for the surviving category filename. */
+    /** No storage transition should be emitted for the surviving category. */
     const survivor = planDomainStorageTransitions(
       projection.beforeGraph,
       projection.afterGraph,
@@ -462,18 +458,11 @@ describe('domain persistence planning', () => {
     ).find(
       (change) => change.entityType === 'category' && change.id === 'survivor'
     )
-    expect(survivor).toMatchObject({
-      after: {
-        persistenceFields: {
-          categoryStem: 'Same',
-          needsFilenameIdSuffix: false
-        }
-      }
-    })
+    expect(survivor).toBeUndefined()
     expect(plan.some((change) => change.id === 'survivor')).toBe(false)
   })
 
-  it('derives category insertion and colliding sibling storage without placeholders', () => {
+  it('allocates category insertion without renaming an existing sibling', () => {
     /** Root that owns one category at the inserted category's sanitized filename boundary. */
     const root = createRootFolder('Root', 'prompt', [], ['existing'])
     mockDomainData.seed(
@@ -498,7 +487,6 @@ describe('domain persistence planning', () => {
         rootFolderName: root.id,
         kind: 'prompt',
         categoryStem: 'Same',
-        needsFilenameIdSuffix: false
       }
     )
     /** Shared category insertion plan projected by the main process. */
@@ -530,7 +518,7 @@ describe('domain persistence planning', () => {
     const storage = storageTransitions.find(
       (transition) => transition.entityType === 'category' && transition.id === 'created'
     )
-    /** Existing category storage transition caused only by the new collision. */
+    /** Existing category must not receive a storage transition for the new collision. */
     const siblingStorage = storageTransitions.find(
       (transition) => transition.entityType === 'category' && transition.id === 'existing'
     )
@@ -541,18 +529,10 @@ describe('domain persistence planning', () => {
       after: {
         persistenceFields: {
           rootPromptFolderId: root.id,
-          categoryStem: 'Same-created',
-          needsFilenameIdSuffix: true
+          categoryStem: 'Same 1',
         }
       }
     })
-    expect(siblingStorage).toMatchObject({
-      after: {
-        persistenceFields: {
-          categoryStem: 'Same-existing',
-          needsFilenameIdSuffix: true
-        }
-      }
-    })
+    expect(siblingStorage).toBeUndefined()
   })
 })

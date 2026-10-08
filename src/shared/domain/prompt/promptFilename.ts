@@ -11,16 +11,26 @@ export const sanitizePromptTitleForFilename = (title: string): string => {
   return normalizedTitle.slice(0, MAX_PROMPT_FILENAME_TITLE_LENGTH)
 }
 
-export const buildPromptStem = (
+/** Allocates and reserves a readable stem against complete case-insensitive filenames. */
+export const allocateFilenameStem = (
   title: string,
-  promptId: string,
-  needsFilenameIdSuffix: boolean
+  suffix: string,
+  occupiedNames: Set<string>,
+  currentFilename?: string
 ): string => {
+  /** Sanitized title retained even when it already ends in a number. */
   const titleStem = sanitizePromptTitleForFilename(title)
-
-  if (!needsFilenameIdSuffix) {
-    return titleStem
+  /** Lowest available suffix; zero represents the unnumbered filename. */
+  let index = 0
+  /** Candidate stem checked together with its complete file extension. */
+  let stem = titleStem
+  while (
+    occupiedNames.has(`${stem}${suffix}`.toLowerCase()) &&
+    `${stem}${suffix}`.toLowerCase() !== currentFilename?.toLowerCase()
+  ) {
+    index += 1
+    stem = `${titleStem} ${index}`
   }
-
-  return `${titleStem}-${promptId.slice(0, 8)}`
+  occupiedNames.add(`${stem}${suffix}`.toLowerCase())
+  return stem
 }

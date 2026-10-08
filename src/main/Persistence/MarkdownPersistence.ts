@@ -1,5 +1,4 @@
 import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
-import { buildPromptStem } from '@shared/domain/prompt/promptFilename'
 import {
   commitStagedFileChanges,
   createStagedEnsureDirectory,
@@ -20,7 +19,6 @@ export type MarkdownPersistenceFields = {
   promptFolderId: string
   promptId: string
   promptStem: string
-  needsFilenameIdSuffix: boolean
 }
 
 type MarkdownData = {
@@ -30,7 +28,6 @@ type MarkdownData = {
 
 type MarkdownPersistenceOptions<TData extends MarkdownData> = {
   kind: PromptFolderContentKind
-  getDisplayTitle: (data: TData) => string
   parseMarkdown: (fileText: string) => TData | null
   serializeMarkdown: (data: TData) => string
   normalizeLoadedData?: (data: TData, folderPath: string) => TData
@@ -56,7 +53,6 @@ export const readMarkdownModifiedAt = (
 
 export const createMarkdownPersistence = <TData extends MarkdownData>({
   kind,
-  getDisplayTitle,
   parseMarkdown,
   serializeMarkdown,
   normalizeLoadedData = (data) => data,
@@ -97,11 +93,8 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
       fields.folderPath,
       kind
     )
-    const stem = buildPromptStem(
-      getDisplayTitle(after.data),
-      after.data.id,
-      fields.needsFilenameIdSuffix
-    )
+    /** Filename allocated once by the storage planner. */
+    const stem = fields.promptStem
     const targetPaths = resolvePromptPathsFromStem(targetFolderPath, stem, kind)
     const markdownTempPath = resolveTempPath(targetPaths.markdownPath)
     const fs = getFs()
@@ -118,10 +111,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     fileChanges.push(createStagedFileUpsert(targetPaths.markdownPath, markdownTempPath))
     fileChanges.push(createStagedEnsureDirectory(targetFolderPath, !targetFolderAlreadyExists))
 
-    return createPersistenceStageResult(fileChanges, {
-      ...fields,
-      promptStem: stem
-    })
+    return createPersistenceStageResult(fileChanges)
   },
   commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)

@@ -1,8 +1,9 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import { focusMonacoEditor, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
 import {
   checkFileExists,
+  readTextFile,
   checkPersistedPromptFilesExistByTitle
 } from '../helpers/PromptPersistenceTestHelpers'
 import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
@@ -16,7 +17,7 @@ const ORIGINAL_TITLE = 'Code Review'
 const COLLISION_WORKSPACE_PATH = '/ws/filename-collisions'
 const COLLISION_FOLDER_NAME = 'FilenameCollisions'
 const COLLISION_FIRST_PROMPT_ID = 'abcdef1234567890-first'
-const COLLISION_SECOND_PROMPT_ID = '1234567890abcdef-second'
+const COLLISION_SECOND_PROMPT_ID = 'abcdef1234567890-second'
 
 const promptTitleSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} ${PROMPT_TITLE_SELECTOR}`
@@ -119,7 +120,7 @@ describe('Prompt persistence filenames', () => {
       })
   })
 
-  test('adds id suffixes for duplicate stems and deletes a renamed sibling', async ({
+  test('allocates duplicate titles with identical ID prefixes and keeps surviving filenames stable', async ({
     testSetup,
     electronApp
   }) => {
@@ -162,29 +163,11 @@ describe('Prompt persistence filenames', () => {
     await setPromptTitle(mainWindow, COLLISION_FIRST_PROMPT_ID, firstCollisionTitle)
     await setPromptTitle(mainWindow, COLLISION_SECOND_PROMPT_ID, secondCollisionTitle)
 
-    await expect
-      .poll(
-        async () => {
-          const [firstUnsuffixed, firstSuffixed, secondUnsuffixed, secondSuffixed, oldSecond] =
-            await Promise.all([
-              checkFileExists(electronApp, `${folderPath}/CaseName.prompt.md`),
-              checkFileExists(electronApp, `${folderPath}/CaseName-abcdef12.prompt.md`),
-              checkFileExists(electronApp, `${folderPath}/casename.prompt.md`),
-              checkFileExists(electronApp, `${folderPath}/casename-12345678.prompt.md`),
-              checkFileExists(electronApp, `${folderPath}/Starter Two.prompt.md`)
-            ])
-
-          return { firstUnsuffixed, firstSuffixed, secondUnsuffixed, secondSuffixed, oldSecond }
-        },
-        { timeout: 8000 }
-      )
-      .toEqual({
-        firstUnsuffixed: false,
-        firstSuffixed: true,
-        secondUnsuffixed: false,
-        secondSuffixed: true,
-        oldSecond: false
-      })
+    await expect.poll(() => checkFileExists(electronApp, `${folderPath}/casename 1.prompt.md`)).toBe(true)
+    expect(await readTextFile(electronApp, `${folderPath}/CaseName.prompt.md`)).toContain(`id: ${COLLISION_FIRST_PROMPT_ID}`)
+    expect(await readTextFile(electronApp, `${folderPath}/casename 1.prompt.md`)).toContain(`id: ${COLLISION_SECOND_PROMPT_ID}`)
+    expect(await readTextFile(electronApp, `${folderPath}/CaseName.prompt.md`)).toContain('First collision prompt')
+    expect(await readTextFile(electronApp, `${folderPath}/casename 1.prompt.md`)).toContain('Second collision prompt')
 
     await mainWindow
       .locator(
@@ -195,22 +178,20 @@ describe('Prompt persistence filenames', () => {
     await mainWindow.locator('[data-testid="prompt-confirm-delete-button"]').click()
 
     await expect(mainWindow.locator(promptEditorSelector(COLLISION_FIRST_PROMPT_ID))).toHaveCount(0)
-    await expect
-      .poll(
-        async () => {
-          const [firstSuffixed, secondUnsuffixed, secondSuffixed] = await Promise.all([
-            checkFileExists(electronApp, `${folderPath}/CaseName-abcdef12.prompt.md`),
-            checkFileExists(electronApp, `${folderPath}/casename.prompt.md`),
-            checkFileExists(electronApp, `${folderPath}/casename-12345678.prompt.md`)
-          ])
-          return { firstSuffixed, secondUnsuffixed, secondSuffixed }
-        },
-        { timeout: 8000 }
-      )
-      .toEqual({
-        firstSuffixed: false,
-        secondUnsuffixed: true,
-        secondSuffixed: false
-      })
+    await expect.poll(() => checkFileExists(electronApp, `${folderPath}/CaseName.prompt.md`)).toBe(false)
+    await focusMonacoEditor(mainWindow, promptEditorSelector(COLLISION_SECOND_PROMPT_ID))
+    await mainWindow.keyboard.type('Content edit preserves filename. ')
+    await expect.poll(() => readTextFile(electronApp, `${folderPath}/casename 1.prompt.md`)).toContain('Content edit preserves filename.')
+    expect(await checkFileExists(electronApp, `${folderPath}/casename.prompt.md`)).toBe(false)
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.clearWorkspaceViaUI()
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(COLLISION_WORKSPACE_PATH)])
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptFolders(COLLISION_FOLDER_NAME)
+    expect(await readTextFile(electronApp, `${folderPath}/casename 1.prompt.md`)).toContain(`id: ${COLLISION_SECOND_PROMPT_ID}`)
+    // A case-only title change reallocates the now-available base filename.
+    await setPromptTitle(mainWindow, COLLISION_SECOND_PROMPT_ID, 'CaseName')
+    await expect.poll(() => checkFileExists(electronApp, `${folderPath}/CaseName.prompt.md`)).toBe(true)
+    expect(await checkFileExists(electronApp, `${folderPath}/casename 1.prompt.md`)).toBe(false)
   })
 })
