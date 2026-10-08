@@ -272,7 +272,7 @@
           {#if pathMessage}{@render message(pathMessage, folderScenario === 'nonempty', 'create-workspace-final-path-message')}{/if}
           {#if submissionError}{@render message('Failed to create workspace. Please try again.', false, 'create-workspace-submit-error')}{/if}
           <div>
-            <div class="field-heading"><span class="text-sm font-semibold">Add Examples</span><span class="muted text-sm">Include example prompts and templates in the My Prompts and My Templates folders.</span></div>
+            <div class="field-heading"><span class="text-sm font-semibold">Add Examples</span><span class="muted text-sm">Include example prompts and templates in the My Project and My Templates folders.</span></div>
             <button class="examples-toggle text-sm leading-5" type="button" aria-pressed={includeExamples} data-testid="create-workspace-examples-toggle" disabled={creating} onclick={() => { includeExamples = !includeExamples }}>
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
               <span class="toggle-label">{includeExamples ? 'Enabled' : 'Disabled'}</span>

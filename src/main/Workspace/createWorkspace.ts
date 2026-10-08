@@ -36,8 +36,8 @@ import {
 } from '../Persistence/PromptPersistencePaths'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/workspace/WorkspaceMigrations'
 
-const EXAMPLE_FOLDER_NAME = 'MyPrompts'
-const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Prompts'
+const EXAMPLE_FOLDER_NAME = 'MyProject'
+const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Project'
 // Ordered categories created with the bundled example prompts.
 const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
   'Features & Improvements',
@@ -117,7 +117,7 @@ const getDuplicateTitleStems = (prompts: Array<{ title: string }>): Set<string> 
   )
 }
 
-const writeMyPromptsFolder = (
+const writeMyProjectFolder = (
   workspacePath: string,
   includeExamplePrompts: boolean,
   templateIdByKey: ReadonlyMap<BundledTemplateKey, string>
@@ -410,7 +410,7 @@ export const createWorkspace = async (
       includeExamplePrompts
     )
     /** Initial task-prompt root persisted in prompt-folder order. */
-    const promptFolderId = writeMyPromptsFolder(
+    const promptFolderId = writeMyProjectFolder(
       workspacePath,
       includeExamplePrompts,
       templateIdByKey
