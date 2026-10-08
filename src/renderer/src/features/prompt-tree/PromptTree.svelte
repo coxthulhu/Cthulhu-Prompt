@@ -994,7 +994,7 @@
 <!-- Offers the category's existing creation action with the compact inline-row appearance. -->
 {#snippet emptyCategoryRow({ row })}
   <PromptTreeInlineActionRow
-    text="Category is empty, click to add."
+    text="Category is empty. Click to add."
     indentCount={row.indentCount}
     isLastRow={row.isLastRow}
     testId={categoryEmptyActionTestId(row.category, testIdGroup)}

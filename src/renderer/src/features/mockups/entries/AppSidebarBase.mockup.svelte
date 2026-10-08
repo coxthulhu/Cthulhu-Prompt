@@ -441,7 +441,7 @@
     {:else}
       <div class="empty-category-row">
         {@render TreeGutter(1, true)}
-        <button class="empty-category text-sm leading-4.5" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add.</button>
+        <button class="empty-category text-sm leading-4.5" type="button" onclick={() => addPrompt(category, group)}>Category is empty. Click to add.</button>
       </div>
     {/each}
   {/if}
