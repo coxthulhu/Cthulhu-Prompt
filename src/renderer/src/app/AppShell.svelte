@@ -803,7 +803,11 @@
   <div class="sidebarSurface flex min-h-0 flex-1">
     <AppActivityBar {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} onNavigate={activateActivity}
       updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
-      onOpenUpdates={() => { updater.updates.open = true }} />
+      onToggleUpdates={() => {
+        if (updater.updates.snapshot?.status === 'restarting') return
+        if (updater.updates.open) updater.dismiss()
+        updater.updates.open = !updater.updates.open
+      }} />
 
     <ResizableSidebar
       isSidebarVisible={isAppSidebarExpanded}

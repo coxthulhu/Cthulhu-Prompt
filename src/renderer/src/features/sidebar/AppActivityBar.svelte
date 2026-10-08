@@ -12,7 +12,7 @@
     onNavigate,
     updatesOpen,
     updateAvailable,
-    onOpenUpdates
+    onToggleUpdates
   } = $props<{
     activeScreen: ScreenId
     isAppSidebarExpanded: boolean
@@ -23,8 +23,8 @@
     updatesOpen: boolean
     /** Shows a notification dot while a newer public release exists. */
     updateAvailable: boolean
-    /** Opens the shell-owned updater surface. */
-    onOpenUpdates: () => void
+    /** Toggles the shell-owned updater surface. */
+    onToggleUpdates: () => void
   }>()
 
   type ActivityItem = {
@@ -84,7 +84,7 @@
   {/each}
   <div class="mt-auto w-full relative">
     <button type="button" class="updatesButton" aria-label={updateAvailable ? 'App updates — update available' : 'App updates'}
-      aria-expanded={updatesOpen} title="App updates" data-testid="app-updates-button" onclick={onOpenUpdates}>
+      aria-expanded={updatesOpen} title="App updates" data-testid="app-updates-button" onclick={onToggleUpdates}>
       <Download size={24} strokeWidth={1.5} aria-hidden="true" />
       {#if updateAvailable}<span class="updateDot" data-testid="update-available-dot"></span>{/if}
     </button>

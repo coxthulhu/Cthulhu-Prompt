@@ -123,6 +123,12 @@ describe('App updates', () => {
     /** Nonmodal popup is placed beside the activity rail, matching the approved mockup. */
     const popup = mainWindow.getByTestId('app-updates-popup')
     await expect(popup).toHaveAttribute('aria-modal', 'false')
+    await expect(mainWindow.getByTestId('app-updates-button')).toHaveAttribute('aria-expanded', 'true')
+    await mainWindow.getByTestId('app-updates-button').click()
+    await expect(popup).toHaveCount(0)
+    await expect(mainWindow.getByTestId('app-updates-button')).toHaveAttribute('aria-expanded', 'false')
+    await mainWindow.getByTestId('app-updates-button').click()
+    await expect(popup).toBeVisible()
     await expect(popup.getByTestId('update-action')).toBeDisabled()
     await expect(popup).toContainText('Checking for updates')
     await expect(popup.getByRole('progressbar')).toBeVisible()
@@ -279,12 +285,12 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
   })
 
-  for (const manuallyOpened of [false, true]) {
-    test(`keeps 15-minute checks after ${manuallyOpened ? 'manual' : 'automatic'} notification dismissal without reopening`, async ({ electronApp, testSetup }) => {
+  for (const dismissal of ['close button', 'Escape', 'activity bar'] as const) {
+    test(`keeps 15-minute checks after notification dismissal with ${dismissal} without reopening`, async ({ electronApp, testSetup }) => {
       await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: true, latestVersion: '1.1.0' } })
       /** The manually opened variant first closes during checking, which must not mute notifications. */
       const { mainWindow } = await testSetup.setupAndStart()
-      if (manuallyOpened) {
+      if (dismissal === 'Escape') {
         await mainWindow.getByTestId('app-updates-button').click()
         await mainWindow.getByRole('button', { name: 'Close updates' }).click()
         expect((await mainWindow.evaluate(() => window.appUpdates.getState())).notificationDismissed).toBe(false)
@@ -296,9 +302,11 @@ describe('App updates', () => {
       /** Both entry paths now display a downloaded update. */
       const popup = mainWindow.getByTestId('app-updates-popup')
       await expect(popup).toContainText('Update ready')
-      if (manuallyOpened) {
+      if (dismissal === 'Escape') {
         await popup.getByRole('button', { name: 'Close updates' }).focus()
         await mainWindow.keyboard.press('Escape')
+      } else if (dismissal === 'activity bar') {
+        await mainWindow.getByTestId('app-updates-button').click()
       } else {
         await popup.getByRole('button', { name: 'Close updates' }).click()
       }
