@@ -1,8 +1,8 @@
 <script lang="ts">
   import {
-    Archive, ArrowRight, ArrowUpToLine, Bookmark, Bug, Check, ChevronsDownUp, ChevronsUpDown,
-    ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, ExternalLink, FileText, Folder, FolderCog,
-    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, Settings, Trash2, X
+    Archive, ArrowRight, ArrowUpToLine, Bug, Check, ChevronsDownUp, ChevronsUpDown,
+    ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, Clock, Download, ExternalLink, FileText, Folder, FolderCog,
+    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Trash2, X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
@@ -70,22 +70,27 @@
       prompts: [{ ...prompt('archived-layout', 'Explore the previous layout'), status: 'Archived' }], categories: [] },
     { id: 'active', label: 'Active', icon: ListTodo, expanded: true, weight: 400,
       prompts: uncategorizedPrompts, categories },
-    { id: 'backlog', label: 'Backlog', icon: Bookmark, expanded: true, weight: 200,
+    { id: 'backlog', label: 'Backlog', icon: Clock, expanded: true, weight: 200,
       prompts: [prompt('future-search', 'Explore prompt search'), prompt('future-shortcuts', 'Plan keyboard shortcuts')],
-      categories: categories.map((category) => ({ ...category, prompts: [] })) }
+      categories: categories.map((category) => ({ ...category, prompts: category.id === 'research'
+        ? [prompt('future-import', 'Investigate importing prompts from Markdown')] : [] })) }
   ]
-  type MockFolder = { id: string; title: string; kind: 'prompt' | 'template'; groups: MockGroup[] }
+  type MockFolder = { id: string; title: string; kind: 'prompt' | 'template'; groups: MockGroup[]; modified?: string }
   const emptyGroups = (): MockGroup[] => createGroups().map((group) => ({ ...group, prompts: [], categories: [] }))
   let folders = $state<MockFolder[]>([
-    { id: 'product', title: 'Product Work', kind: 'prompt', groups: createGroups() },
-    { id: 'personal', title: 'Personal Projects', kind: 'prompt', groups: emptyGroups().map((group) => ({
+    { id: 'product', title: 'Product Work', kind: 'prompt', modified: 'Today', groups: createGroups() },
+    { id: 'personal', title: 'Personal Projects', kind: 'prompt', modified: 'Last week', groups: emptyGroups().map((group) => ({
       ...group, prompts: group.id === 'active' ? [prompt('website', 'Review the personal website'), prompt('backup', 'Automate workspace backups')] : []
     })) },
-    { id: 'engineering', title: 'Engineering Templates', kind: 'template', groups: emptyGroups().map((group) => ({
+    { id: 'empty-project', title: 'New Project', kind: 'prompt', groups: emptyGroups() },
+    { id: 'engineering', title: 'Engineering Templates', kind: 'template', modified: 'Yesterday', groups: emptyGroups().map((group) => ({
       ...group,
       prompts: group.id === 'active' ? [prompt('template-plan', 'Plan an implementation'), prompt('template-review', 'Review a pull request')] :
         group.id === 'archived' ? [{ ...prompt('template-old', 'Legacy release checklist'), status: 'Archived' }] : [],
       categories: group.id === 'active' ? [{ id: 'template-quality', title: 'Quality', prompts: [prompt('template-test', 'Build a test plan'), prompt('template-security', 'Review security boundaries')] }] : []
+    })) },
+    { id: 'writing', title: 'Writing Templates', kind: 'template', modified: '3 days ago', groups: emptyGroups().map((group) => ({
+      ...group, prompts: group.id === 'active' ? [prompt('template-docs', 'Write developer documentation'), prompt('template-summary', 'Summarize a technical decision')] : []
     })) }
   ])
   const activities = [
@@ -98,10 +103,15 @@
   ]
   // Local navigation and fixture selection never touch the app's screen or workspace state.
   let activeActivity = $state('prompt')
+  let sidebarExpanded = $state(true)
+  let updatesOpen = $state(false)
+  // This fixed release snapshot previews the updater without contacting release services.
+  const mockRelease = { current: '0.0.35', latest: '0.0.36', currentDate: 'Oct 1, 2026', latestDate: 'Oct 7, 2026' }
+  let updateReady = $state(false)
   let folderKind = $state<'prompt' | 'template'>('prompt')
-  let selectedFolderId = $state('product')
+  let selectedFolderIds = $state({ prompt: 'product', template: 'engineering' })
   const visibleFolders = $derived(folders.filter((folder) => folder.kind === folderKind))
-  const selectedFolder = $derived(visibleFolders.find((folder) => folder.id === selectedFolderId) ?? visibleFolders[0])
+  const selectedFolder = $derived(visibleFolders.find((folder) => folder.id === selectedFolderIds[folderKind]) ?? visibleFolders[0])
   const groups = $derived(selectedFolder?.groups ?? [])
   const isTemplateFolder = $derived(folderKind === 'template')
   const FolderIcon = $derived(isTemplateFolder ? Layers : FileText)
@@ -110,7 +120,10 @@
   const folderTitle = $derived(selectedFolder?.title ?? 'No folders')
   let showCompleted = $state(false)
   let showArchived = $state(false)
-  let expandedCategoryIds = $state<Record<string, boolean>>({ research: true, verification: true, ideas: true, 'template-quality': true })
+  // Expansion belongs to a folder and workflow, so Active and Backlog can be explored independently.
+  let expandedCategoryIds = $state<Record<string, boolean>>({})
+  const categoryKey = (group: MockGroup, category: MockCategory) => `${selectedFolder?.id}:${group.id}:${category.id}`
+  const categoryExpanded = (group: MockGroup, category: MockCategory) => expandedCategoryIds[categoryKey(group, category)] ?? true
   let selectedPromptId = $state('map-implementation')
   let selectedGroupId = $state('active')
   let isOverviewActive = $state(false)
@@ -140,10 +153,11 @@
     folders.splice(targetIndex, 0, folder!)
   }
   const closeMenus = (event: MouseEvent) => {
-    if (event.target instanceof Element && event.target.closest('.local-menu, .folder-selector, .prompts-actions')) return
+    if (event.target instanceof Element && event.target.closest('.local-menu, .folder-selector, .prompts-actions, .updates-button, .updates-popup')) return
     folderMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
+    updatesOpen = false
   }
   // Templates expose Active and Archived only, matching the live sidebar's workflow filters.
   const visibleGroups = $derived(groups.filter((group) =>
@@ -151,7 +165,7 @@
     (!isTemplateFolder && group.id === 'completed' && showCompleted) || (group.id === 'archived' && showArchived)))
   const toolbarGroup = $derived(groups.find((group) => group.id ===
     (selectedGroupId === 'backlog' && !isTemplateFolder ? 'backlog' : 'active')))
-  const areAllCategoriesCollapsed = $derived(toolbarGroup?.categories.every((category) => !expandedCategoryIds[category.id]) ?? true)
+  const areAllCategoriesCollapsed = $derived(toolbarGroup?.categories.every((category) => !categoryExpanded(toolbarGroup, category)) ?? true)
   const folderCount = (folder: MockFolder) => folder.groups.filter((group) => group.id === 'active' || (folder.kind === 'prompt' && group.id === 'backlog'))
     .reduce((sum, group) => sum + group.prompts.length + group.categories.reduce((n, category) => n + category.prompts.length, 0), 0)
   const groupCount = (group: MockGroup) => group.prompts.length + group.categories.reduce((sum, category) => sum + category.prompts.length, 0)
@@ -166,7 +180,8 @@
   const addPrompt = (category: MockCategory, group: MockGroup) => {
     const entry = prompt(window.crypto.randomUUID(), `New ${contentLabel}`)
     category.prompts.unshift(entry)
-    expandedCategoryIds[category.id] = true
+    expandedCategoryIds[categoryKey(group, category)] = true
+    if (selectedFolder) selectedFolder.modified = 'Today'
     selectPrompt(entry, group)
   }
   const openCategories = (categoryId?: string) => {
@@ -184,7 +199,7 @@
     categoryDialog.close()
   }
   const selectFolder = (folder: MockFolder) => {
-    selectedFolderId = folder.id
+    selectedFolderIds[folder.kind] = folder.id
     selectedPromptId = ''
     selectedCategoryId = null
     selectedGroupId = 'active'
@@ -202,7 +217,68 @@
   const openCreateFolder = () => { folderName = ''; folderMenuOpen = false; folderDialog.showModal() }
   const toggleAllCategories = () => {
     const expand = areAllCategoriesCollapsed
-    for (const category of toolbarGroup?.categories ?? []) expandedCategoryIds[category.id] = expand
+    if (!toolbarGroup) return
+    for (const category of toolbarGroup.categories) expandedCategoryIds[categoryKey(toolbarGroup, category)] = expand
+  }
+
+  // Native drag previews mutate only local fixtures, including status and category membership.
+  let draggedPrompt = $state<{ entry: MockPrompt; group: MockGroup; source: MockPrompt[] } | null>(null)
+  let dropTarget = $state<string | null>(null)
+  let dropAfter = $state(false)
+  const finishPromptDrag = () => { draggedPrompt = null; dropTarget = null }
+  const previewPromptDrop = (event: DragEvent, target: string, row = false) => {
+    if (!draggedPrompt) return
+    event.preventDefault()
+    event.stopPropagation()
+    dropTarget = target
+    const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    dropAfter = row && event.clientY > bounds.top + bounds.height / 2
+  }
+  const movePrompt = (event: DragEvent, group: MockGroup, category?: MockCategory, before?: MockPrompt, folder = selectedFolder) => {
+    if (!draggedPrompt || !folder) return
+    event.preventDefault()
+    event.stopPropagation()
+    const { entry, source, group: sourceGroup } = draggedPrompt
+    if (before?.id === entry.id) { finishPromptDrag(); return }
+    const sourceIndex = source.findIndex((candidate) => candidate.id === entry.id)
+    if (sourceIndex < 0) { finishPromptDrag(); return }
+    source.splice(sourceIndex, 1)
+    const destination = category?.prompts ?? group.prompts
+    const isFinalGroup = group.id === 'completed' || group.id === 'archived'
+    const index = before && !isFinalGroup ? destination.findIndex((candidate) => candidate.id === before.id) + (dropAfter ? 1 : 0) : 0
+    destination.splice(Math.max(0, index), 0, entry)
+    if (sourceGroup.id !== group.id) {
+      entry.status = group.id === 'completed' ? 'Completed' : group.id === 'archived' ? 'Archived' : undefined
+    }
+    folder.modified = 'Today'
+    group.expanded = true
+    if (category) expandedCategoryIds[`${folder.id}:${group.id}:${category.id}`] = true
+    finishPromptDrag()
+  }
+
+  const toggleSection = (group: MockGroup) => {
+    // Preserve rendered proportions when collapsing; the last open section receives the freed space.
+    const expanded = visibleGroups.filter((entry) => entry.expanded)
+    for (const entry of expanded) entry.weight = (viewports[entry.id]?.clientHeight ?? entry.weight - 36) + 36
+    if (group.expanded) {
+      const recipient = expanded.findLast((entry) => entry !== group)
+      if (recipient) recipient.weight += group.weight - 36
+    } else {
+      const groupIndex = visibleGroups.indexOf(group)
+      // Reclaim space below first, then above, retaining the live accordion's 100px minimum.
+      const donors = [
+        ...visibleGroups.slice(groupIndex + 1).reverse(),
+        ...visibleGroups.slice(0, groupIndex).reverse()
+      ].filter((entry) => entry.expanded)
+      let remaining = Math.max(0, group.weight - 36)
+      for (const donor of donors) {
+        const reclaimed = Math.min(remaining, Math.max(0, donor.weight - 100))
+        donor.weight -= reclaimed
+        remaining -= reclaimed
+      }
+      if (donors.length > 0) group.weight = Math.max(100, group.weight - remaining)
+    }
+    group.expanded = !group.expanded
   }
 
   type ScrollMetrics = { top: number; height: number; total: number; hovered: boolean; dragging: boolean }
@@ -282,13 +358,23 @@
   </span>
 {/snippet}
 
-{#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean, group: MockGroup)}
+{#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean, group: MockGroup, category?: MockCategory)}
   <div class="tree-prompt-row" style={`--tree-indent-count:${indentCount};`}>
-    <span class="prompt-status-indicator" data-status={promptEntry.status} data-edited={promptEntry.edited} aria-hidden="true"></span>
+    <span class="prompt-status-indicator" data-status={isTemplateFolder ? undefined : promptEntry.status} data-edited={promptEntry.edited} aria-hidden="true"></span>
     <button
       class="tree-prompt-button"
       data-active={isFolderActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : 'false'}
       type="button"
+      draggable="true"
+      data-dragging={draggedPrompt?.entry.id === promptEntry.id}
+      ondragstart={(event) => {
+        draggedPrompt = { entry: promptEntry, group, source: category?.prompts ?? group.prompts }
+        event.dataTransfer?.setData('text/plain', promptEntry.title)
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+      }}
+      ondragover={(event) => previewPromptDrop(event, promptEntry.id, true)}
+      ondrop={(event) => movePrompt(event, group, category, promptEntry)}
+      ondragend={finishPromptDrag}
       aria-current={isFolderActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
       onclick={() => {
         selectPrompt(promptEntry, group)
@@ -297,6 +383,11 @@
       {@render TreeGutter(indentCount, isLastRow)}
       <span class="tree-label text-sm">{promptEntry.title}</span>
     </button>
+    {#if dropTarget === promptEntry.id && group.id !== 'completed' && group.id !== 'archived'}
+      <span class="drop-indicator" data-after={dropAfter} aria-hidden="true">
+        <svg width="100%" height="10"><path d="M3 1.5 L8 5 L3 8.5" /><line x1="8" y1="5" x2="100%" y2="5" /></svg>
+      </span>
+    {/if}
   </div>
 {/snippet}
 
@@ -310,13 +401,19 @@
       <button
         class="tree-category-toggle"
         type="button"
-        aria-label={`${expandedCategoryIds[category.id] ? 'Collapse' : 'Expand'} category ${category.title}`}
-        aria-expanded={expandedCategoryIds[category.id]}
-        onclick={() => { expandedCategoryIds[category.id] = !expandedCategoryIds[category.id] }}
+        aria-label={`${categoryExpanded(group, category) ? 'Collapse' : 'Expand'} category ${category.title}`}
+        aria-expanded={categoryExpanded(group, category)}
+        data-drop-over={dropTarget === `${group.id}:${category.id}`}
+        ondragover={(event) => previewPromptDrop(event, `${group.id}:${category.id}`)}
+        ondrop={(event) => movePrompt(event, group, category)}
+        onclick={(event) => {
+          expandedCategoryIds[categoryKey(group, category)] = !categoryExpanded(group, category)
+          if (event.detail !== 0) event.currentTarget.blur()
+        }}
       >
         <span
           class="tree-chevron"
-          data-expanded={expandedCategoryIds[category.id] ? 'true' : 'false'}
+          data-expanded={categoryExpanded(group, category) ? 'true' : 'false'}
         >
           <ChevronRight size={20} aria-hidden="true" />
         </span>
@@ -338,25 +435,31 @@
     </div>
   </div>
 
-  {#if expandedCategoryIds[category.id]}
+  {#if categoryExpanded(group, category)}
     {#each category.prompts as promptEntry, promptIndex (promptEntry.id)}
-      {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1, group)}
+      {@render PromptRow(promptEntry, 1, promptIndex === category.prompts.length - 1, group, category)}
     {:else}
-      <button class="empty-category text-xs leading-4.5" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add.</button>
+      <div class="empty-category-row">
+        {@render TreeGutter(1, true)}
+        <button class="empty-category text-sm leading-4.5" type="button" onclick={() => addPrompt(category, group)}>Category is empty, click to add.</button>
+      </div>
     {/each}
   {/if}
 {/snippet}
 
-<svelte:window onclick={closeMenus} onkeydown={(event) => {
-  if (event.key === 'Escape') { folderMenuOpen = false; actionsMenuOpen = false; categoryMenu = null }
+<svelte:window onclick={closeMenus} ondragover={() => { dropTarget = null }} ondragend={finishPromptDrag} onkeydown={(event) => {
+  if (event.key === 'Escape') { folderMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag() }
 }} />
 
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
   <nav class="mock-activity-bar" aria-label="Mockup primary navigation">
     {#each activities as activity (activity.id)}
-      <button class="activity-button" type="button" title={activity.label} aria-label={activity.label}
+      <button class="activity-button" type="button" title={activeActivity === activity.id ? `${activity.label} — ${sidebarExpanded ? 'Hide' : 'Show'} sidebar` : activity.label} aria-label={activity.label}
         aria-current={activeActivity === activity.id ? 'page' : undefined}
+        aria-expanded={activeActivity === activity.id ? sidebarExpanded : undefined}
+        data-compact={!sidebarExpanded}
         onclick={() => {
+          sidebarExpanded = activeActivity === activity.id ? !sidebarExpanded : true
           activeActivity = activity.id
           folderMenuOpen = false
           actionsMenuOpen = false
@@ -368,8 +471,12 @@
         <activity.icon size={24} strokeWidth={1.5} aria-hidden="true" />
       </button>
     {/each}
+    <button class="activity-button updates-button" type="button" title="App updates" aria-label="App updates — update available"
+      aria-expanded={updatesOpen} onclick={() => { updatesOpen = !updatesOpen }}>
+      <Download size={24} strokeWidth={1.5} aria-hidden="true" /><span class="update-dot"></span>
+    </button>
   </nav>
-  <aside class="mock-sidebar" style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
+  <aside class="mock-sidebar" hidden={!sidebarExpanded} style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <header class="workspace-header">
       <div class="workspace-icon-cell">
         <img
@@ -401,15 +508,17 @@
     <div class="separator"></div>
 
     <div class="folder-selector-wrap">
-      <button class="folder-selector" type="button" aria-label={selectedFolder ? 'Folder selector' : 'Create Folder'} aria-expanded={folderMenuOpen} onclick={() => { if (selectedFolder) folderMenuOpen = !folderMenuOpen; else openCreateFolder() }}>
+      <button class="folder-selector" type="button" aria-label={selectedFolder ? 'Folder selector' : 'Create Folder'} aria-expanded={folderMenuOpen}
+        ondragover={(event) => { if (draggedPrompt) { event.preventDefault(); folderMenuOpen = true } }}
+        onclick={() => { if (selectedFolder) folderMenuOpen = !folderMenuOpen; else openCreateFolder() }}>
         <span class="selector-icon-cell">{#if selectedFolder}<FolderIcon size={20} aria-hidden="true" />{:else}<Plus size={20} aria-hidden="true" />{/if}</span>
         <span class="selector-copy">
           <span class="selector-title text-sm leading-5">{selectedFolder ? folderTitle : 'Create Folder'}</span>
           <span class="selector-detail text-xs leading-4.5">
             {#if selectedFolder}
             <span>{folderCount(selectedFolder)} {contentLabel.toLowerCase()}{folderCount(selectedFolder) === 1 ? '' : 's'}</span>
-            <span class="separator-dot" aria-hidden="true"></span>
-            <span>Updated today</span>
+            {#if selectedFolder.modified}<span class="separator-dot" aria-hidden="true"></span>
+            <span>{selectedFolder.modified}</span>{/if}
             {:else}<span>Create a {isTemplateFolder ? 'prompt template' : 'task prompt'} folder</span>{/if}
           </span>
         </span>
@@ -419,14 +528,17 @@
         <div class="local-menu folder-menu">
           {#each visibleFolders as folder (folder.id)}
             <button class="folder-option text-sm leading-5" type="button" data-selected={selectedFolder?.id === folder.id}
-              draggable="true" data-dragging={draggedFolderId === folder.id}
+              draggable="true" data-dragging={draggedFolderId === folder.id} data-drop-over={dropTarget === folder.id}
               ondragstart={(event) => { draggedFolderId = folder.id; event.dataTransfer?.setData('text/plain', folder.id) }}
-              ondragover={(event) => { if (draggedFolderId) event.preventDefault() }}
-              ondrop={(event) => { event.preventDefault(); reorderFolder(folder.id); draggedFolderId = null }}
+              ondragover={(event) => { if (draggedFolderId) event.preventDefault(); else previewPromptDrop(event, folder.id) }}
+              ondrop={(event) => {
+                if (draggedPrompt) { movePrompt(event, folder.groups.find((group) => group.id === 'active')!, undefined, undefined, folder); return }
+                event.preventDefault(); reorderFolder(folder.id); draggedFolderId = null
+              }}
               ondragend={() => { draggedFolderId = null }}
               onclick={() => selectFolder(folder)}>
               <GripVertical size={16} aria-hidden="true" /><FolderIcon size={20} aria-hidden="true" />
-              <span>{folder.title}<small class="text-xs leading-4.5">{folderCount(folder)} {contentLabel.toLowerCase()}{folderCount(folder) === 1 ? '' : 's'} · Updated today</small></span>
+              <span>{folder.title}<small class="text-xs leading-4.5">{folderCount(folder)} {contentLabel.toLowerCase()}{folderCount(folder) === 1 ? '' : 's'}{folder.modified ? ` · ${folder.modified}` : ''}</small></span>
               {#if selectedFolder?.id === folder.id}<ChevronRight size={20} aria-hidden="true" />{/if}
             </button>
           {/each}
@@ -470,7 +582,10 @@
               onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></button>
           {/if}
           <button class="status-header" type="button" aria-expanded={group.expanded}
-            onclick={() => { group.expanded = !group.expanded }}>
+            data-drop-over={dropTarget === group.id}
+            ondragover={(event) => previewPromptDrop(event, group.id)}
+            ondrop={(event) => movePrompt(event, group)}
+            onclick={() => toggleSection(group)}>
             <span class="status-chevron"><ChevronRight size={20} /></span>
             <group.icon size={16} />
             <span class="status-label text-sm leading-5">{group.label}</span>
@@ -482,21 +597,24 @@
               onmouseleave={() => { if (scrollMetrics[group.id]) scrollMetrics[group.id]!.hovered = false }}>
               <div class="prompt-tree" use:observeTree={group.id}>
                 <div>
+                  {#if groupCount(group) > 0 || (isTemplateFolder && group.id === 'active' && group.categories.length > 0)}
                   {#each group.prompts as entry, index (entry.id)}
                     {@render PromptRow(entry, 0, index === group.prompts.length - 1, group)}
                   {/each}
                   {#each group.categories as category (category.id)}
                     {@render CategoryRow(category, group)}
                   {/each}
-                  {#if groupCount(group) === 0 && group.categories.length === 0}
-                    <button class="empty-status text-xs leading-4.5" type="button" onclick={() => {
+                  {:else}
+                    <button class="empty-status text-sm leading-4.5" type="button"
+                      ondragover={(event) => previewPromptDrop(event, group.id)} ondrop={(event) => movePrompt(event, group)} onclick={() => {
                       selectedGroupId = group.id
                       if (group.id === 'active' || group.id === 'backlog') {
                         const entry = prompt(window.crypto.randomUUID(), `New ${contentLabel}`)
                         group.prompts.push(entry)
+                        if (selectedFolder) selectedFolder.modified = 'Today'
                         selectPrompt(entry, group)
                       } else { activeActivity = folderKind; isOverviewActive = true }
-                    }}>No {group.label.toLowerCase()} {contentLabel.toLowerCase()}s. Click to {group.id === 'active' || group.id === 'backlog' ? 'add' : 'view'}.</button>
+                    }}>{isTemplateFolder && group.id === 'active' ? 'No templates' : `No ${group.label.toLowerCase()} prompts`}. Click to {group.id === 'active' || group.id === 'backlog' ? 'add' : 'view'}.</button>
                   {/if}
                   <div class="tree-bottom-spacer" aria-hidden="true"></div>
                 </div>
@@ -527,6 +645,27 @@
       onpointerdown={(event) => startResize(event)} onpointermove={moveDrag}
       onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></button>
   </aside>
+  {#if updatesOpen}
+    <div class="updates-popup text-sm leading-5" role="dialog" aria-label="App Updates" tabindex="-1">
+      <header class="updates-heading"><Download size={24} /><h2 class="text-lg font-semibold">App Updates</h2>
+        {@render IconAction(X, 'Close updates', () => { updatesOpen = false })}
+      </header>
+      <div class="updates-body">
+        <div class="release-comparison">
+          <div><div class="release-label">Current version</div><div class="text-xl leading-7 font-semibold">{mockRelease.current}</div><div class="release-date">{mockRelease.currentDate}</div></div>
+          <ChevronRight size={18} />
+          <div class="latest-release"><div class="release-label">Latest version</div><div class="text-xl leading-7 font-semibold">{mockRelease.latest}</div><div class="release-date">{mockRelease.latestDate}</div></div>
+        </div>
+        <div class="update-progress" aria-live="polite">
+          <div class="progress-heading"><span>{updateReady ? 'Update ready' : 'Update available'}</span><span class="font-semibold tabular-nums">{updateReady ? 100 : 0}%</span></div>
+          <div class="progress-track" role="progressbar" aria-label="Update progress" aria-valuenow={updateReady ? 100 : 0} aria-valuemin={0} aria-valuemax={100}><span style={`width:${updateReady ? 100 : 0}%`}></span></div>
+          <p>{updateReady ? 'Ready to update and restart.' : 'A new version is available to download.'}</p>
+        </div>
+        <button class="update-action" type="button" onclick={() => { if (updateReady) updatesOpen = false; else updateReady = true }}><RefreshCw size={20} />{updateReady ? 'Update & Restart' : 'Download Update'}</button>
+        <button class="release-link" type="button" onclick={() => { updatesOpen = false }}>Open GitHub Releases<ExternalLink size={16} /></button>
+      </div>
+    </div>
+  {/if}
   {#if categoryMenu}
     <div class="local-menu category-menu" style={`left:${categoryMenu.x}px; top:${categoryMenu.y}px;`}>
       {#each [{ label: 'Open Category', icon: ArrowRight }, { label: 'Open Category Settings', icon: Settings }] as action (action.label)}
@@ -593,6 +732,7 @@
     min-height: 0;
     min-width: 0;
     width: 100%;
+    position: relative;
   }
 
   .sidebar-base-stage {
@@ -644,6 +784,58 @@
     content: '';
   }
 
+  .activity-button[data-compact='true']::before {
+    top: 8px;
+    bottom: 8px;
+  }
+
+  .updates-button { margin-top: auto; }
+  .updates-button[aria-expanded='true'] { color: var(--ui-normal-text); }
+  .update-dot {
+    position: absolute;
+    right: 7px;
+    top: 7px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ui-success-normal-text);
+    border: 2px solid var(--ui-chrome-normal-surface);
+    box-sizing: content-box;
+  }
+
+  .updates-popup {
+    position: absolute;
+    bottom: 10px;
+    left: 58px;
+    width: 340px;
+    max-width: calc(100% - 68px);
+    border: 1px solid var(--ui-card-normal-border);
+    border-radius: 8px;
+    background: var(--ui-card-overlay-surface);
+    box-shadow: 0 8px 12px var(--ui-card-normal-shadow);
+    color: var(--ui-normal-text);
+    z-index: 25;
+  }
+
+  .updates-heading { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--ui-neutral-muted-border); }
+  .updates-heading h2 { margin: 0; flex: 1; }
+  .updates-body { padding: 16px; }
+  .release-comparison { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .release-comparison > div { min-width: 0; flex: 1; }
+  .release-label { color: var(--ui-muted-text); margin-bottom: 4px; }
+  .release-date { color: var(--ui-secondary-text); margin-top: 4px; }
+  .latest-release { padding: 9px 13px; border-radius: 6px; border: 1px solid var(--ui-accent-muted-border); background: var(--ui-accent-action-fill); }
+  .update-progress { border-top: 1px solid var(--ui-neutral-muted-border); padding: 14px 0 17px; }
+  .update-progress p { margin: 8px 0 0; color: var(--ui-muted-text); }
+  .progress-heading { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .progress-track { height: 5px; background: var(--ui-neutral-emphasis-surface); border-radius: 3px; overflow: hidden; }
+  .progress-track span { display: block; height: 100%; background: var(--ui-accent-link-text); border-radius: inherit; }
+  .update-action, .release-link { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 36px; border-radius: 6px; cursor: pointer; }
+  .update-action { border: 1px solid var(--ui-accent-normal-border); background: var(--ui-accent-action-fill); color: var(--ui-normal-text); }
+  .update-action:hover, .update-action:focus-visible { background: var(--ui-accent-action-hover-fill); }
+  .release-link { margin-top: 8px; border: 1px solid var(--ui-neutral-normal-border); background: var(--ui-ghost-surface); color: var(--ui-hoverable-text); }
+  .release-link:hover, .release-link:focus-visible { color: var(--ui-normal-text); background: var(--ui-neutral-action-fill); }
+
   .mock-sidebar {
     background: var(--ui-chrome-normal-surface);
     border-right: 1px solid var(--ui-neutral-hover-border);
@@ -661,6 +853,8 @@
     user-select: none;
     width: var(--sidebar-width);
   }
+
+  .mock-sidebar[hidden] { display: none; }
 
 
   .workspace-header {
@@ -809,16 +1003,23 @@
     display: flex;
     gap: 6px;
     min-width: 0;
+    overflow: hidden;
     white-space: nowrap;
   }
 
+  .selector-detail > span:not(.separator-dot) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .separator-dot {
-    background: var(--ui-muted-icon-glyph);
+    background: currentColor;
     border-radius: 50%;
     display: inline-block;
     height: 3px;
-    opacity: 0.7;
     width: 3px;
+    flex-shrink: 0;
   }
 
   .selector-chevron {
@@ -929,6 +1130,26 @@
     background: var(--ui-neutral-selection-surface);
   }
 
+  .tree-prompt-button[data-dragging='true'],
+  .tree-category-toggle[data-drop-over='true'],
+  .local-menu .folder-option[data-drop-over='true'] {
+    background: var(--ui-info-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .drop-indicator {
+    position: absolute;
+    left: calc(5px + 12px * var(--tree-indent-count));
+    right: 2px;
+    top: 0;
+    height: 10px;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .drop-indicator[data-after='true'] { top: 100%; }
+  .drop-indicator svg { display: block; overflow: visible; fill: none; stroke: var(--ui-info-strong-border); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
   .tree-category-content {
     align-items: center;
     background: transparent;
@@ -943,6 +1164,11 @@
     background: var(--ui-neutral-emphasis-surface);
     color: var(--ui-normal-text);
   }
+
+  .tree-category-content[data-active='true']:hover { background: var(--ui-neutral-selection-surface); }
+  .tree-category-content:hover .tree-chevron,
+  .tree-category-content:focus-within .tree-chevron,
+  .tree-category-content[data-active='true'] .tree-chevron { color: var(--ui-normal-text); }
 
   .local-menu.category-menu {
     position: fixed;
@@ -1180,6 +1406,11 @@
     color: var(--ui-normal-text);
   }
 
+  .status-header[data-drop-over='true'] {
+    background: var(--ui-info-normal-surface);
+    box-shadow: inset 0 0 0 1px var(--ui-info-strong-border);
+  }
+
   .status-label {
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.01em;
@@ -1251,7 +1482,7 @@
     width: 100%;
     border: 0;
     background: transparent;
-    color: var(--ui-secondary-text);
+    color: var(--ui-muted-text);
     text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1260,9 +1491,12 @@
   }
 
   .empty-category {
-    height: 24px;
-    padding: 0 12px 0 24px;
+    height: 22px;
+    padding: 0 12px;
   }
+
+  .empty-category-row { display: grid; grid-template-columns: 12px minmax(0, 1fr); align-items: center; height: 24px; }
+  .empty-category-row .tree-gutter { height: 22px; min-height: 22px; }
 
   .empty-status {
     height: 24px;
@@ -1326,7 +1560,7 @@
   .local-menu .folder-option {
     display: grid;
     grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
-    height: 58px;
+    min-height: 58px;
     border: 1px solid var(--ui-ghost-surface);
     border-radius: 8px;
     gap: 8px;
@@ -1369,8 +1603,13 @@
   }
 
   .local-menu .folder-option[data-selected='true']:hover,
-  .menu-footer button:hover, .menu-footer button:focus-visible {
+  .local-menu .folder-option[data-selected='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .menu-footer button:hover, .menu-footer button:focus-visible {
+    background: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
   }
 
