@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupWorkspaceDialogHandlers } from './workspaceDialog'
 import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
-import { setupPromptFolderMutationHandlers } from './Mutations/PromptFolderMutations'
+import { setupPromptCollectionMutationHandlers } from './Mutations/PromptCollectionMutations'
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
 import { setupPromptTemplateMutationHandlers } from './Mutations/PromptTemplateMutations'
 import { setupCategoryMutationHandlers } from './Mutations/CategoryMutations'
@@ -13,7 +13,7 @@ import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsM
 import { setupUserPersistenceMutationHandlers } from './Mutations/UserPersistenceMutations'
 import { setupUiStateMutationHandlers } from './Mutations/UiStateMutations'
 import { setupWorkspaceQueryHandlers } from './Queries/WorkspaceQuery'
-import { setupPromptFolderQueryHandlers } from './Queries/PromptFolderQuery'
+import { setupPromptCollectionQueryHandlers } from './Queries/PromptCollectionQuery'
 import { setupSystemSettingsQueryHandlers } from './Queries/SystemSettingsQuery'
 import { setupUserPersistenceQueryHandlers } from './Queries/UserPersistenceQuery'
 import { setupUiStateQueryHandlers } from './Queries/UiStateQuery'
@@ -44,7 +44,7 @@ function getWorkingDirectoryName(): string | null {
   try {
     return basename(process.cwd())
   } catch (error) {
-    console.error('Error resolving execution folder name:', error)
+    console.error('Error resolving working directory name:', error)
     return null
   }
 }
@@ -338,8 +338,8 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupUiStateMutationHandlers()
     setupWorkspaceQueryHandlers()
     setupWorkspaceMutationHandlers()
-    setupPromptFolderQueryHandlers()
-    setupPromptFolderMutationHandlers()
+    setupPromptCollectionQueryHandlers()
+    setupPromptCollectionMutationHandlers()
     setupPromptMutationHandlers()
     setupPromptTemplateMutationHandlers()
     setupCategoryMutationHandlers()

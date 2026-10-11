@@ -2,7 +2,7 @@ import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTempl
 import { PromptStatus } from '../../src/shared/domain/prompt/Prompt'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  createWorkspaceWithTemplateFolders,
+  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
@@ -12,8 +12,8 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/template-mutations'
 const WORKSPACE_ID = '000000000000000000000000b22e429b'
-const SOURCE_FOLDER_ID = 'template-source'
-const DESTINATION_FOLDER_ID = 'template-destination'
+const SOURCE_COLLECTION_ID = 'template-source'
+const DESTINATION_COLLECTION_ID = 'template-destination'
 
 describe('Prompt template mutations', () => {
   test('creates, updates, moves, and deletes a template through IPC', async ({
@@ -21,16 +21,16 @@ describe('Prompt template mutations', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(
-      createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [
+      createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [
         {
           folderName: 'Source',
           displayName: 'Source',
-          folderId: SOURCE_FOLDER_ID
+          collectionId: SOURCE_COLLECTION_ID
         },
         {
           folderName: 'Destination',
           displayName: 'Destination',
-          folderId: DESTINATION_FOLDER_ID
+          collectionId: DESTINATION_COLLECTION_ID
         }
       ])
     )
@@ -50,24 +50,24 @@ describe('Prompt template mutations', () => {
           }),
         { ipcChannel: channel, ipcPayload: payload }
       )
-    const loadFolder = async (promptFolderId: string) =>
-      await invoke('load-prompt-folder-initial', {
+    const loadCollection = async (promptCollectionId: string) =>
+      await invoke('load-prompt-collection-initial', {
         workspaceId: WORKSPACE_ID,
-        promptFolderId
+        promptCollectionId
       })
 
-    const sourceLoad = await loadFolder(SOURCE_FOLDER_ID)
-    const destinationLoad = await loadFolder(DESTINATION_FOLDER_ID)
-    const sourceFolder = sourceLoad.promptFolders.find(
-      (folder: { id: string }) => folder.id === SOURCE_FOLDER_ID
+    const sourceLoad = await loadCollection(SOURCE_COLLECTION_ID)
+    const destinationLoad = await loadCollection(DESTINATION_COLLECTION_ID)
+    const sourceCollection = sourceLoad.promptCollections.find(
+      (collection: { id: string }) => collection.id === SOURCE_COLLECTION_ID
     )
-    const destinationFolder = destinationLoad.promptFolders.find(
-      (folder: { id: string }) => folder.id === DESTINATION_FOLDER_ID
+    const destinationCollection = destinationLoad.promptCollections.find(
+      (collection: { id: string }) => collection.id === DESTINATION_COLLECTION_ID
     )
     const templateId = 'ipc-template'
     const createResult = await invoke('create-prompt-template', {
       command: {
-        promptFolderId: SOURCE_FOLDER_ID,
+        promptCollectionId: SOURCE_COLLECTION_ID,
         contentId: templateId,
         title: '',
         fallbackTitle: '',
@@ -78,10 +78,10 @@ describe('Prompt template mutations', () => {
       },
       expectations: [
         {
-          entityType: 'promptFolder',
-          id: SOURCE_FOLDER_ID,
+          entityType: 'promptCollection',
+          id: SOURCE_COLLECTION_ID,
           expected: 'revision',
-          revision: sourceFolder.revision
+          revision: sourceCollection.revision
         },
         {
           entityType: 'promptTemplate',
@@ -95,7 +95,7 @@ describe('Prompt template mutations', () => {
       success: true,
       payload: {
         snapshots: expect.arrayContaining([
-          expect.objectContaining({ entityType: 'promptFolder', id: SOURCE_FOLDER_ID }),
+          expect.objectContaining({ entityType: 'promptCollection', id: SOURCE_COLLECTION_ID }),
           expect.objectContaining({
             entityType: 'promptTemplate',
             id: templateId,
@@ -113,10 +113,10 @@ describe('Prompt template mutations', () => {
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'promptTemplate' && snapshot.id === templateId
     )
-    /** Source folder snapshot after template creation. */
-    const createdSourceFolder = createResult.payload.snapshots.find(
+    /** Source collection snapshot after template creation. */
+    const createdSourceCollection = createResult.payload.snapshots.find(
       (snapshot: { entityType: string; id: string }) =>
-        snapshot.entityType === 'promptFolder' && snapshot.id === SOURCE_FOLDER_ID
+        snapshot.entityType === 'promptCollection' && snapshot.id === SOURCE_COLLECTION_ID
     )
     expect(createdTemplate.data.status).toBe(PromptTemplateStatus.Active)
     expect(
@@ -129,7 +129,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/Active/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Source/Active/_CollectionInfo/CategoryOrder.json`
         )
       )
     ).toEqual({
@@ -190,9 +190,9 @@ describe('Prompt template mutations', () => {
     /** Complete template destination accepted by the shared prompt-location channel. */
     const locationCommand = {
       kind: 'template',
-      sourcePromptFolderId: SOURCE_FOLDER_ID,
+      sourcePromptCollectionId: SOURCE_COLLECTION_ID,
       promptId: updatedTemplate.id,
-      location: { promptFolderId: DESTINATION_FOLDER_ID, categoryId: null, previousEntryId: null, status: PromptTemplateStatus.Active },
+      location: { promptCollectionId: DESTINATION_COLLECTION_ID, categoryId: null, previousEntryId: null, status: PromptTemplateStatus.Active },
       modifiedAt: '2026-08-30T12:00:00Z'
     }
     /** Invalid kinds, template statuses, and nested fields must fail before persistence. */
@@ -213,16 +213,16 @@ describe('Prompt template mutations', () => {
       command: locationCommand,
       expectations: [
         {
-          entityType: 'promptFolder',
-          id: SOURCE_FOLDER_ID,
+          entityType: 'promptCollection',
+          id: SOURCE_COLLECTION_ID,
           expected: 'revision',
-          revision: createdSourceFolder.revision
+          revision: createdSourceCollection.revision
         },
         {
-          entityType: 'promptFolder',
-          id: DESTINATION_FOLDER_ID,
+          entityType: 'promptCollection',
+          id: DESTINATION_COLLECTION_ID,
           expected: 'revision',
-          revision: destinationFolder.revision
+          revision: destinationCollection.revision
         },
         {
           entityType: 'promptTemplate',
@@ -238,15 +238,15 @@ describe('Prompt template mutations', () => {
       payload: {
         snapshots: expect.arrayContaining([
           expect.objectContaining({
-            entityType: 'promptFolder',
-            id: SOURCE_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: SOURCE_COLLECTION_ID,
             data: expect.objectContaining({
               statusFolders: expect.objectContaining({ active: expect.objectContaining({ categoryOrder: { categories: [{ categoryId: null, entries: [] }] } }) })
             })
           }),
           expect.objectContaining({
-            entityType: 'promptFolder',
-            id: DESTINATION_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: DESTINATION_COLLECTION_ID,
             data: expect.objectContaining({
               statusFolders: expect.objectContaining({ active: expect.objectContaining({ categoryOrder: {
                 categories: [
@@ -261,10 +261,10 @@ describe('Prompt template mutations', () => {
         ])
       }
     })
-    /** Destination folder snapshot returned by the generic domain response. */
-    const movedDestinationFolder = moveResult.payload.snapshots.find(
+    /** Destination collection snapshot returned by the generic domain response. */
+    const movedDestinationCollection = moveResult.payload.snapshots.find(
       (snapshot: { entityType: string; id: string }) =>
-        snapshot.entityType === 'promptFolder' && snapshot.id === DESTINATION_FOLDER_ID
+        snapshot.entityType === 'promptCollection' && snapshot.id === DESTINATION_COLLECTION_ID
     )
     /** Moved template snapshot returned by the generic domain response. */
     const movedTemplate = moveResult.payload.snapshots.find(
@@ -287,7 +287,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/Active/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Source/Active/_CollectionInfo/CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
@@ -295,7 +295,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/Active/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Destination/Active/_CollectionInfo/CategoryOrder.json`
         )
       )
     ).toEqual({
@@ -323,15 +323,15 @@ describe('Prompt template mutations', () => {
     const deleteResult = await invoke('delete-prompt-template', {
       command: {
         workspaceId: WORKSPACE_ID,
-        promptFolderId: DESTINATION_FOLDER_ID,
+        promptCollectionId: DESTINATION_COLLECTION_ID,
         contentId: templateId
       },
       expectations: [
         {
-          entityType: 'promptFolder',
-          id: DESTINATION_FOLDER_ID,
+          entityType: 'promptCollection',
+          id: DESTINATION_COLLECTION_ID,
           expected: 'revision',
-          revision: movedDestinationFolder.revision
+          revision: movedDestinationCollection.revision
         },
         {
           entityType: 'promptTemplate',
@@ -347,8 +347,8 @@ describe('Prompt template mutations', () => {
       payload: {
         snapshots: expect.arrayContaining([
           expect.objectContaining({
-            entityType: 'promptFolder',
-            id: DESTINATION_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: DESTINATION_COLLECTION_ID,
             data: expect.objectContaining({
               statusFolders: expect.objectContaining({ active: expect.objectContaining({ categoryOrder: { categories: [{ categoryId: null, entries: [] }] } }) })
             })
@@ -372,7 +372,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/Active/_FolderInfo/FolderOrder.json`
+          `${WORKSPACE_PATH}/Templates/Destination/Active/_CollectionInfo/CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

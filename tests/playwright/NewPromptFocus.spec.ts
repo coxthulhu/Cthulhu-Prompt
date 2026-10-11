@@ -2,12 +2,12 @@ import { join } from 'node:path'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { setNewPromptFocus } from '../helpers/SettingsHelpers'
 import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
+import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
 import { isMonacoEditorFocused, waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import {
-  createWorkspaceWithFolders,
-  createWorkspaceWithTemplateFolders,
+  createWorkspaceWithCollections,
+  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
@@ -53,8 +53,8 @@ describe('New prompt focus', () => {
         const workspacePath = '/ws/new-prompt-focus'
         await testSetup.setupFilesystem(
           kind === 'prompt'
-            ? createWorkspaceWithFolders(workspacePath, [{ folderName: 'Focus', displayName: 'Focus' }])
-            : createWorkspaceWithTemplateFolders(workspacePath, [{ folderName: 'Focus', displayName: 'Focus' }])
+            ? createWorkspaceWithCollections(workspacePath, [{ folderName: 'Focus', displayName: 'Focus' }])
+            : createWorkspaceWithTemplateCollections(workspacePath, [{ folderName: 'Focus', displayName: 'Focus' }])
         )
         await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
         /** Window and navigation helpers for the selected content kind. */
@@ -62,16 +62,16 @@ describe('New prompt focus', () => {
         expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
         await setNewPromptFocus(mainWindow, testHelpers, target)
         if (kind === 'prompt') {
-          await testHelpers.navigateToPromptFolders('Focus')
+          await testHelpers.navigateToPromptCollections('Focus')
           await testHelpers.navigateToHomeScreen()
         } else {
-          await testHelpers.navigateToPromptTemplateFolders('Focus')
+          await testHelpers.navigateToPromptTemplateCollections('Focus')
         }
         /** Sidebar group owning the newly created rows. */
         const group = kind === 'prompt' ? 'active' : 'template'
         /** Task prompts have a status action; templates have a root empty-state action. */
         const sidebarAction = kind === 'prompt' ? 'prompt-tree-active-empty-status' : 'prompt-tree-template-empty-state'
-        // Prompt creation also opens the editor from Home; Home itself always shows task folders.
+        // Prompt creation also opens the editor from Home; Home itself always shows task collections.
         for (const action of [sidebarAction, 'prompt-divider-add-initial']) {
           /** Existing IDs distinguish the inserted row without relying on fallback-title text. */
           const previousIds = await getPromptEditorIds(mainWindow)

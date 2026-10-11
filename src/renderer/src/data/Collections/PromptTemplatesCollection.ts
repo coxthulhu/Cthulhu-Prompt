@@ -1,0 +1,14 @@
+import { createCollection } from '@tanstack/svelte-db'
+import { isPromptTemplateFull, type PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
+import { revisionCollectionOptions } from './RevisionCollection'
+
+export const promptTemplatesCollection = createCollection(
+  revisionCollectionOptions<PromptTemplate>({
+    id: 'prompt-templates',
+    getKey: (template) => template.id,
+    shouldAcceptEqualRevision: ({ currentRecord, nextRecord }) => {
+      // Allow a collection load to replace a template summary with its full record.
+      return !isPromptTemplateFull(currentRecord) && isPromptTemplateFull(nextRecord)
+    }
+  })
+)

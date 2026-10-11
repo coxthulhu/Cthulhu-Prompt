@@ -6,8 +6,8 @@ import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { PROMPT_STATUS_FOLDERS, PromptStatus } from '@shared/domain/prompt/Prompt'
 import { createFilenameAllocator } from '../Persistence/FilenameAllocation'
-import { preparePromptFolderName } from '@shared/domain/prompt-folder/promptFolderName'
-import { folderEntryRef, promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
+import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
+import { collectionEntryRef, promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
 import { getFs } from '../fs-provider'
 import {
   serializePromptMarkdown,
@@ -21,24 +21,24 @@ import exampleFeatureTemplateSource from '../BundledPrompts/ExampleFeatureTempla
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
-  PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-  PROMPT_FOLDER_INFO_FILENAME,
+  PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
+  PROMPT_COLLECTION_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
-  resolveActivePromptFolderName,
+  resolveActivePromptStatusFolderName,
   resolveCategoriesDirectoryPath,
   resolveCategoryPathFromStem,
   resolvePromptStatusFolderName,
-  resolvePromptFolderCategoryOrderPath,
-  resolvePromptFolderPath,
-  resolveWorkspaceFolderOrderPath
+  resolvePromptCollectionCategoryOrderPath,
+  resolvePromptDirectoryPath,
+  resolveWorkspaceCollectionOrderPath
 } from '../Persistence/PromptPersistencePaths'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/workspace/WorkspaceMigrations'
 
-const EXAMPLE_FOLDER_NAME = 'MyProject'
-const EXAMPLE_FOLDER_DISPLAY_NAME = 'My Project'
+const EXAMPLE_COLLECTION_NAME = 'MyProject'
+const EXAMPLE_COLLECTION_DISPLAY_NAME = 'My Project'
 // Ordered categories created with the bundled example prompts.
 const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
   'Features & Improvements',
@@ -62,15 +62,15 @@ const BUNDLED_TEMPLATE_SOURCES: Array<{
   { key: 'feature', source: exampleFeatureTemplateSource },
   { key: 'bugFix', source: exampleBugFixTemplateSource }
 ]
-// Default on-disk directory name for the template folder created with each workspace.
-const DEFAULT_TEMPLATE_FOLDER_NAME = 'MyTemplates'
-// Default display name for the template folder created with each workspace.
-const DEFAULT_TEMPLATE_FOLDER_DISPLAY_NAME = 'My Templates'
+// Default on-disk directory name for the template collection created with each workspace.
+const DEFAULT_TEMPLATE_COLLECTION_NAME = 'MyTemplates'
+// Default display name for the template collection created with each workspace.
+const DEFAULT_TEMPLATE_COLLECTION_DISPLAY_NAME = 'My Templates'
 
 type CreateWorkspaceResult = { success: true } | { success: false; error: string }
 
 const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
-  const preparedWorkspaceName = preparePromptFolderName(workspaceName)
+  const preparedWorkspaceName = preparePromptCollectionName(workspaceName)
   const workspaceRootPath = workspacePath.replace(/[\\/]+$/, '')
   return `${workspaceRootPath}\\${preparedWorkspaceName.folderName}${WORKSPACE_INFO_FILENAME_SUFFIX}`
 }
@@ -90,51 +90,51 @@ const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): v
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
 }
 
-const writeWorkspaceFolderOrderFile = (
+const writeWorkspaceCollectionOrderFile = (
   workspacePath: string,
   kind: 'prompt' | 'template',
-  folderIds: string[]
+  collectionIds: string[]
 ): void => {
   const fs = getFs()
-  /** Type-owned root order initialized for the new workspace. */
-  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath, kind)
+  /** Type-owned collection order initialized for the new workspace. */
+  const orderPath = resolveWorkspaceCollectionOrderPath(workspacePath, kind)
   fs.writeFileSync(
     orderPath,
-    JSON.stringify({ entries: folderIds.map(folderEntryRef) }, null, 2),
+    JSON.stringify({ entries: collectionIds.map(collectionEntryRef) }, null, 2),
     'utf8'
   )
 }
 
-const writeMyProjectFolder = (
+const writeMyProjectCollection = (
   workspacePath: string,
   includeExamplePrompts: boolean,
   templateIdByKey: ReadonlyMap<BundledTemplateKey, string>
 ): string => {
   const fs = getFs()
-  const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_FOLDER_NAME)
-  // Canonical directory that owns active prompts and root ordering.
-  const activeFolderPath = resolvePromptFolderPath(
+  const exampleFolderPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME, EXAMPLE_COLLECTION_NAME)
+  // Canonical directory that owns active prompts and collection ordering.
+  const activeFolderPath = resolvePromptDirectoryPath(
     workspacePath,
-    resolveActivePromptFolderName(EXAMPLE_FOLDER_NAME, 'prompt'),
+    resolveActivePromptStatusFolderName(EXAMPLE_COLLECTION_NAME),
     'prompt'
   )
   /** Canonical flat directories owned by automatically ordered final statuses. */
   const finalStatusFolderPaths = PROMPT_STATUS_FOLDERS.filter(
     (statusFolder) => statusFolder.ordering === 'finalizedAt'
   ).map((statusFolder) =>
-    resolvePromptFolderPath(
+    resolvePromptDirectoryPath(
       workspacePath,
-      resolvePromptStatusFolderName(EXAMPLE_FOLDER_NAME, statusFolder.id),
+      resolvePromptStatusFolderName(EXAMPLE_COLLECTION_NAME, statusFolder.id),
       'prompt'
     )
   )
-  const folderInfoPath = path.join(
+  const collectionInfoPath = path.join(
     exampleFolderPath,
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-    PROMPT_FOLDER_INFO_FILENAME
+    PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
+    PROMPT_COLLECTION_INFO_FILENAME
   )
   const now = getCurrentIsoSecondTimestamp()
-  const promptFolderId = compactGuid(randomUUID())
+  const promptCollectionId = compactGuid(randomUUID())
   const exampleCategories = includeExamplePrompts
     ? BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES.map((displayName) => ({
         id: compactGuid(randomUUID()),
@@ -172,24 +172,24 @@ const writeMyProjectFolder = (
         }
       })
     : []
-  /** Names reserved across every bundled file written into this root. */
+  /** Names reserved across every bundled file written into this collection. */
   const filenames = createFilenameAllocator()
 
-  fs.mkdirSync(path.join(exampleFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
-  fs.mkdirSync(path.join(activeFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), { recursive: true })
+  fs.mkdirSync(path.join(exampleFolderPath, PROMPT_COLLECTION_INFO_DIRECTORY_NAME), { recursive: true })
+  fs.mkdirSync(path.join(activeFolderPath, PROMPT_COLLECTION_INFO_DIRECTORY_NAME), { recursive: true })
   for (const finalStatusFolderPath of finalStatusFolderPaths) {
     fs.mkdirSync(finalStatusFolderPath, { recursive: true })
   }
-  fs.mkdirSync(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'), {
+  fs.mkdirSync(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_COLLECTION_NAME, 'prompt'), {
     recursive: true
   })
 
   for (const category of exampleCategories) {
-    const categoryStem = filenames.allocate(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'), category.displayName, CATEGORY_FILENAME_SUFFIX)
+    const categoryStem = filenames.allocate(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_COLLECTION_NAME, 'prompt'), category.displayName, CATEGORY_FILENAME_SUFFIX)
     fs.writeFileSync(
       resolveCategoryPathFromStem(
         workspacePath,
-        EXAMPLE_FOLDER_NAME,
+        EXAMPLE_COLLECTION_NAME,
         'prompt',
         categoryStem
       ),
@@ -209,11 +209,11 @@ const writeMyProjectFolder = (
   }
 
   fs.writeFileSync(
-    folderInfoPath,
+    collectionInfoPath,
     JSON.stringify(
       {
-        displayName: EXAMPLE_FOLDER_DISPLAY_NAME,
-        folderId: promptFolderId,
+        displayName: EXAMPLE_COLLECTION_DISPLAY_NAME,
+        collectionId: promptCollectionId,
         kind: 'prompt'
       },
       null,
@@ -223,7 +223,7 @@ const writeMyProjectFolder = (
   )
   // Side effect: initialize the bundled category order and assign each example prompt.
   fs.writeFileSync(
-    resolvePromptFolderCategoryOrderPath(workspacePath, EXAMPLE_FOLDER_NAME, 'prompt'),
+    resolvePromptCollectionCategoryOrderPath(workspacePath, EXAMPLE_COLLECTION_NAME, 'prompt'),
     JSON.stringify(
       {
         categories: [
@@ -241,29 +241,29 @@ const writeMyProjectFolder = (
     ),
     'utf8'
   )
-  return promptFolderId
+  return promptCollectionId
 }
 
-/** Creates the default template folder and returns its persisted folder ID. */
-type WriteMyTemplatesFolderResult = {
-  folderId: string
+/** Creates the default template collection and returns its persisted collection ID. */
+type WriteMyTemplatesCollectionResult = {
+  collectionId: string
   templateIdByKey: Map<BundledTemplateKey, string>
 }
 
-const writeMyTemplatesFolder = (
+const writeMyTemplatesCollection = (
   workspacePath: string,
   includeExampleTemplates: boolean
-): WriteMyTemplatesFolderResult => {
-  // Filesystem used to persist the default template folder.
+): WriteMyTemplatesCollectionResult => {
+  // Filesystem used to persist the default template collection.
   const fs = getFs()
-  // Root path for the default template folder.
-  const templateFolderPath = path.join(
+  // Directory path for the default template collection.
+  const templateCollectionPath = path.join(
     workspacePath,
     TEMPLATES_DIRECTORY_NAME,
-    DEFAULT_TEMPLATE_FOLDER_NAME
+    DEFAULT_TEMPLATE_COLLECTION_NAME
   )
-  // Unique identity persisted for this newly created template folder.
-  const templateFolderId = compactGuid(randomUUID())
+  // Unique identity persisted for this newly created template collection.
+  const templateCollectionId = compactGuid(randomUUID())
   const now = getCurrentIsoSecondTimestamp()
   const templates = includeExampleTemplates
     ? BUNDLED_TEMPLATE_SOURCES.map(({ key, source }) => {
@@ -281,23 +281,23 @@ const writeMyTemplatesFolder = (
       })
     : []
 
-  fs.mkdirSync(path.join(templateFolderPath, PROMPT_FOLDER_INFO_DIRECTORY_NAME), {
+  fs.mkdirSync(path.join(templateCollectionPath, PROMPT_COLLECTION_INFO_DIRECTORY_NAME), {
     recursive: true
   })
   fs.mkdirSync(
-    resolveCategoriesDirectoryPath(workspacePath, DEFAULT_TEMPLATE_FOLDER_NAME, 'template'),
+    resolveCategoriesDirectoryPath(workspacePath, DEFAULT_TEMPLATE_COLLECTION_NAME, 'template'),
     { recursive: true }
   )
   fs.writeFileSync(
     path.join(
-      templateFolderPath,
-      PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-      PROMPT_FOLDER_INFO_FILENAME
+      templateCollectionPath,
+      PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
+      PROMPT_COLLECTION_INFO_FILENAME
     ),
     JSON.stringify(
       {
-        displayName: DEFAULT_TEMPLATE_FOLDER_DISPLAY_NAME,
-        folderId: templateFolderId,
+        displayName: DEFAULT_TEMPLATE_COLLECTION_DISPLAY_NAME,
+        collectionId: templateCollectionId,
         kind: 'template'
       },
       null,
@@ -307,16 +307,16 @@ const writeMyTemplatesFolder = (
   )
 
   // Side effect: create template status directories before writing examples and order metadata.
-  fs.mkdirSync(path.join(templateFolderPath, 'Active', '_FolderInfo'), { recursive: true })
-  fs.mkdirSync(path.join(templateFolderPath, 'Archived'), { recursive: true })
+  fs.mkdirSync(path.join(templateCollectionPath, 'Active', '_CollectionInfo'), { recursive: true })
+  fs.mkdirSync(path.join(templateCollectionPath, 'Archived'), { recursive: true })
 
   /** Template names share the same allocation policy as prompts and categories. */
   const filenames = createFilenameAllocator()
   for (const template of templates) {
-    const templateStem = filenames.allocate(path.join(templateFolderPath, 'Active'), template.title, PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX)
+    const templateStem = filenames.allocate(path.join(templateCollectionPath, 'Active'), template.title, PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX)
     fs.writeFileSync(
       path.join(
-        templateFolderPath,
+        templateCollectionPath,
         'Active',
         `${templateStem}${PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX}`
       ),
@@ -325,11 +325,11 @@ const writeMyTemplatesFolder = (
     )
   }
 
-  // Side effect: initialize template category-view ordering at the template root.
+  // Side effect: initialize template category-view ordering for the template collection.
   fs.writeFileSync(
-    resolvePromptFolderCategoryOrderPath(
+    resolvePromptCollectionCategoryOrderPath(
       workspacePath,
-      DEFAULT_TEMPLATE_FOLDER_NAME,
+      DEFAULT_TEMPLATE_COLLECTION_NAME,
       'template'
     ),
     JSON.stringify(
@@ -348,7 +348,7 @@ const writeMyTemplatesFolder = (
   )
 
   return {
-    folderId: templateFolderId,
+    collectionId: templateCollectionId,
     templateIdByKey: new Map(templates.map((template) => [template.key, template.id]))
   }
 }
@@ -394,19 +394,19 @@ export const createWorkspace = async (
     fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
-    /** Initial prompt-template root persisted in template-folder order. */
-    const { folderId: templateFolderId, templateIdByKey } = writeMyTemplatesFolder(
+    /** Initial template collection persisted in template-collection order. */
+    const { collectionId: templateCollectionId, templateIdByKey } = writeMyTemplatesCollection(
       workspacePath,
       includeExamplePrompts
     )
-    /** Initial task-prompt root persisted in prompt-folder order. */
-    const promptFolderId = writeMyProjectFolder(
+    /** Initial prompt collection persisted in prompt-collection order. */
+    const promptCollectionId = writeMyProjectCollection(
       workspacePath,
       includeExamplePrompts,
       templateIdByKey
     )
-    writeWorkspaceFolderOrderFile(workspacePath, 'prompt', [promptFolderId])
-    writeWorkspaceFolderOrderFile(workspacePath, 'template', [templateFolderId])
+    writeWorkspaceCollectionOrderFile(workspacePath, 'prompt', [promptCollectionId])
+    writeWorkspaceCollectionOrderFile(workspacePath, 'template', [templateCollectionId])
 
     return { success: true }
   } catch (error) {

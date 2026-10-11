@@ -1,7 +1,7 @@
 import type { Category } from '@shared/domain/category/Category'
 import type { Draft } from 'immer'
 import type { PromptPersisted, PromptSummaryData } from '@shared/domain/prompt/Prompt'
-import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import type { PromptTemplatePersisted, PromptTemplateSummaryData } from '@shared/domain/prompt-template/PromptTemplate'
 import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
 import type { Workspace } from '@shared/domain/workspace/Workspace'
@@ -9,7 +9,7 @@ import type { MarkdownContentUiState } from '@shared/domain/ui-state/MarkdownCon
 import type { UserPersistence } from '@shared/domain/user-persistence/UserPersistence'
 import type {
   AccordionUiState,
-  WorkspacePromptFolderUiState,
+  WorkspacePromptCollectionUiState,
   WorkspaceUiState
 } from '@shared/domain/ui-state/UiState'
 import type { AuthoritativeSnapshotPayload } from '@shared/ipc/AuthoritativeSnapshot'
@@ -21,14 +21,14 @@ export type DomainTargetPolicy = 'requirePresent' | 'deleteIfPresent'
 export type DomainEntityMap = {
   systemSettings: SystemSettings
   workspace: Workspace
-  promptFolder: PromptFolder
+  promptCollection: PromptCollection
   category: Category
   prompt: PromptPersisted
   promptTemplate: PromptTemplatePersisted
   userPersistence: UserPersistence
   markdownContentUiState: MarkdownContentUiState
   workspaceUiState: WorkspaceUiState
-  workspacePromptFolderUiState: WorkspacePromptFolderUiState
+  workspacePromptCollectionUiState: WorkspacePromptCollectionUiState
   accordionUiState: AccordionUiState
 }
 export type DomainEntityType = keyof DomainEntityMap

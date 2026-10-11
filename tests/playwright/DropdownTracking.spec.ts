@@ -1,14 +1,14 @@
 import type { Locator, Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
-  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector,
-  promptFolderSelectorMenuSelector,
-  promptFolderSelectorTriggerSelector,
+  promptCollectionSelectorMenuSelector,
+  promptCollectionSelectorTriggerSelector,
   promptTreeCategorySelector
-} from '../helpers/PromptFolderSelectors'
+} from '../helpers/PromptCollectionSelectors'
 
 /** Real Electron fixtures exercise browser positioning and input dispatch. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -44,7 +44,7 @@ describe('Dropdown tracking', () => {
   test('status menu follows layout movement and window resizing with right-aligned placement', async ({ testSetup, electronApp }) => {
     /** Virtual prompts reproduce status controls inside transformed rows. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'virtual' } })
-    await testHelpers.navigateToPromptFolders('Short')
+    await testHelpers.navigateToPromptCollections('Short')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
     /** Status selector wrapper is the dropdown's actual anchor. */
     const trigger = mainWindow.locator(`${promptEditorSelector('short-1')} .cthulhuUiSimpleSelectorButton`)
@@ -100,9 +100,9 @@ describe('Dropdown tracking', () => {
     /** Root selector uses below-trigger placement and trigger-dependent minimum width. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
     /** Actual root selector anchor. */
-    const trigger = mainWindow.locator(promptFolderSelectorTriggerSelector)
+    const trigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
     /** Detailed menu whose width must follow the resized trigger. */
-    const menu = mainWindow.locator(promptFolderSelectorMenuSelector)
+    const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
     await trigger.click()
     await trigger.evaluate((element: HTMLElement) => {
       element.style.width = '380px'
@@ -141,7 +141,7 @@ describe('Dropdown tracking', () => {
   test('category context menu retains its cursor gap while the category row moves', async ({ testSetup }) => {
     /** Category rows open the shared dropdown through an explicit right-click. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'categories' } })
-    await testHelpers.navigateToPromptFolders('Main')
+    await testHelpers.navigateToPromptCollections('Main')
     /** The entire category row owns the context-menu anchor. */
     const trigger = mainWindow.locator(promptTreeCategorySelector('Category')).locator('xpath=ancestor::div[contains(@class,"sidebarPromptTreeRow")][1]')
     /** Context menu is the sole open menu in this isolated window. */
@@ -177,10 +177,10 @@ describe('Dropdown tracking', () => {
   })
 
   test('menus retain edge clamping as the trigger and menu dimensions change', async ({ testSetup }) => {
-    /** The real folder selector supplies a resizable below-trigger menu. */
+    /** The real collection selector supplies a resizable below-trigger menu. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
     /** Move the real trigger into an unclipped geometry fixture without replacing its handlers. */
-    const trigger = mainWindow.locator(promptFolderSelectorTriggerSelector)
+    const trigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
     await trigger.evaluate((element: HTMLElement) => {
       document.body.appendChild(element)
       element.style.cssText += ';position:fixed;left:calc(100vw - 150px);top:calc(100vh - 60px);width:120px;height:40px;'
@@ -196,7 +196,7 @@ describe('Dropdown tracking', () => {
       return Math.max(Math.abs(viewport.width - menuBox.x - menuBox.width - 16), Math.abs(viewport.height - menuBox.y - menuBox.height - 8))
     }).toBeLessThanOrEqual(2)
     // Content changes exercise the menu observer without a window or trigger resize event.
-    await mainWindow.locator(promptFolderSelectorMenuSelector).evaluate((element: HTMLElement) => { element.style.minHeight = '400px' })
+    await mainWindow.locator(promptCollectionSelectorMenuSelector).evaluate((element: HTMLElement) => { element.style.minHeight = '400px' })
     await expect.poll(async () => {
       /** New bottom position must reflect the taller menu. */
       const menuBox = await box(layer)
@@ -222,7 +222,7 @@ describe('Dropdown tracking', () => {
   test('closes when a virtual viewport fully clips the trigger and releases wheel blocking', async ({ testSetup }) => {
     /** Short prompts provide both partial and full virtual-viewport clipping. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'virtual' } })
-    await testHelpers.navigateToPromptFolders('Short')
+    await testHelpers.navigateToPromptCollections('Short')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
     /** Status anchor moves with the first transformed virtual row. */
     const trigger = mainWindow.locator(`${promptEditorSelector('short-1')} .cthulhuUiSimpleSelectorButton`)
@@ -230,23 +230,23 @@ describe('Dropdown tracking', () => {
     const menu = mainWindow.getByTestId('prompt-status-more-options-menu')
     await trigger.locator('button').click()
     /** Initial geometry locates the viewport's clipping edge. */
-    const [triggerBox, hostBox] = await Promise.all([box(trigger), box(mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR))])
-    await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, triggerBox.y - hostBox.y + triggerBox.height / 2)
+    const [triggerBox, hostBox] = await Promise.all([box(trigger), box(mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR))])
+    await testHelpers.scrollVirtualWindowTo(PROMPT_COLLECTION_HOST_SELECTOR, triggerBox.y - hostBox.y + triggerBox.height / 2)
     await settle(mainWindow)
     await expect(menu).toBeVisible()
-    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, triggerBox.height + 10)
+    await testHelpers.scrollVirtualWindowBy(PROMPT_COLLECTION_HOST_SELECTOR, triggerBox.height + 10)
     await expect(menu).toHaveCount(0)
     /** Wheel scrolling must resume once the observer closes the menu. */
-    const before = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+    const before = await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)
     await mainWindow.mouse.move(hostBox.x + 10, hostBox.y + hostBox.height / 2)
     await mainWindow.mouse.wheel(0, 400)
-    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)).toBeGreaterThan(before)
+    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)).toBeGreaterThan(before)
   })
 
   test('blocks background virtual scrolling and lets the first scrollbar press close and drag', async ({ testSetup }) => {
     /** Both virtual windows have enough content to detect unintended wheel movement. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'virtual' } })
-    await testHelpers.navigateToPromptFolders('Short')
+    await testHelpers.navigateToPromptCollections('Short')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
     /** Opening the status menu should block both independent background viewports. */
     const trigger = mainWindow.locator(`${promptEditorSelector('short-1')} [data-testid="prompt-status-pill"]`)
@@ -254,7 +254,7 @@ describe('Dropdown tracking', () => {
     const menu = mainWindow.getByTestId('prompt-status-more-options-menu')
     await trigger.click()
     /** Each real viewport receives a wheel event outside the popup. */
-    for (const selector of [treeSelector, PROMPT_FOLDER_HOST_SELECTOR]) {
+    for (const selector of [treeSelector, PROMPT_COLLECTION_HOST_SELECTOR]) {
       /** Viewport geometry provides an uncovered wheel target. */
       const hostBox = await box(mainWindow.locator(selector))
       /** Stored position must remain exactly unchanged while the menu is open. */
@@ -266,7 +266,7 @@ describe('Dropdown tracking', () => {
       await expect(menu).toBeVisible()
     }
     /** Real custom scrollbar must retain pointer capture from this first press. */
-    const thumb = mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR).locator('..').locator('.virtual-window-scrollbar-thumb')
+    const thumb = mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).locator('..').locator('.virtual-window-scrollbar-thumb')
     await thumb.hover()
     /** Press coordinates precede the scrollbar's own movement. */
     const thumbBox = await box(thumb)
@@ -276,14 +276,14 @@ describe('Dropdown tracking', () => {
     await expect(thumb).toHaveClass(/active/)
     await mainWindow.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2 + 40)
     await mainWindow.mouse.up()
-    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)).toBeGreaterThan(0)
+    await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)).toBeGreaterThan(0)
   })
 
   test('allows menu scrolling while blocking native background scrolling and restores it on close', async ({ testSetup }) => {
-    /** Many real root folders make the detailed selector itself scrollable. */
+    /** Many real collections make the detailed selector itself scrollable. */
     const workspacePath = '/ws/dropdown-scroll'
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, Array.from({ length: 30 }, (_, index) => ({
-      folderName: `Folder ${index}`, displayName: `Folder ${index}`, prompts: []
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, Array.from({ length: 30 }, (_, index) => ({
+      folderName: `Collection ${index}`, displayName: `Collection ${index}`, prompts: []
     }))))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
     /** Test Screen supplies an existing native scrolling surface, without adding a mock component. */
@@ -292,13 +292,13 @@ describe('Dropdown tracking', () => {
     await testHelpers.clickNavButton('Test Screen')
     /** Native background scroll container. */
     const background = mainWindow.getByTestId('test-screen')
-    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     /** Detailed menu scrolls its item list independently of the background. */
-    const items = mainWindow.getByTestId('sidebar-prompt-folder-selector-menu-items')
+    const items = mainWindow.getByTestId('sidebar-prompt-collection-selector-menu-items')
     await items.hover()
     await mainWindow.mouse.wheel(0, 500)
     await expect.poll(() => items.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
-    /** Right side of the Test Screen lies outside the folder menu. */
+    /** Right side of the Test Screen lies outside the collection menu. */
     const backgroundBox = await box(background)
     await mainWindow.mouse.move(backgroundBox.x + backgroundBox.width - 30, backgroundBox.y + 100)
     await mainWindow.mouse.wheel(0, 500)
@@ -315,7 +315,7 @@ describe('Dropdown tracking', () => {
     expect(await background.evaluate((element) => element.dispatchEvent(new Event('touchmove', { bubbles: true, cancelable: true })))).toBe(false)
     expect(await items.evaluate((element) => element.dispatchEvent(new Event('touchmove', { bubbles: true, cancelable: true })))).toBe(true)
     await mainWindow.keyboard.press('Escape')
-    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toHaveCount(0)
+    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toHaveCount(0)
     expect(await background.evaluate((element) => element.dispatchEvent(new Event('touchmove', { bubbles: true, cancelable: true })))).toBe(true)
     await mainWindow.keyboard.press('PageDown')
     await expect.poll(() => background.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
@@ -324,9 +324,9 @@ describe('Dropdown tracking', () => {
     await expect.poll(() => background.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
     // Native scrollbar track presses must also dismiss the menu and scroll on the same press.
     await background.evaluate((element) => { element.scrollTop = 0 })
-    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     await mainWindow.mouse.click(backgroundBox.x + backgroundBox.width - 6, backgroundBox.y + backgroundBox.height - 30)
-    await expect(mainWindow.locator(promptFolderSelectorMenuSelector)).toHaveCount(0)
+    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toHaveCount(0)
     await expect.poll(() => background.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
   })
 })

@@ -4,7 +4,7 @@
   import AutoSizingMonacoEditor from './AutoSizingMonacoEditor.svelte'
   import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
-  import type { PromptFolderFindRequest, PromptFolderFindSelection } from '../prompt-folders/find/promptFolderFindTypes'
+  import type { PromptCollectionFindRequest, PromptCollectionFindSelection } from '../prompt-collections/find/promptCollectionFindTypes'
   import type { PromptEditorSizingConfig } from './promptEditorSizing'
   import {
     cancelMonacoHydration,
@@ -35,17 +35,17 @@
       meta: {
         didResize: boolean
         heightPx: number
-        selection: PromptFolderFindSelection | null
+        selection: PromptCollectionFindSelection | null
       }
     ) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findSectionKey: string
-    findRequest?: PromptFolderFindRequest | null
+    findRequest?: PromptCollectionFindRequest | null
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
-    onSelectionChange?: (selection: PromptFolderFindSelection) => void
+    onSelectionChange?: (selection: PromptCollectionFindSelection) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
     /** Moves focus to the owning title input when backward tabbing from the first cursor position. */
     onBackwardTabAtStart?: () => void

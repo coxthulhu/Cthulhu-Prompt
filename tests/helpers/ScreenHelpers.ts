@@ -14,9 +14,9 @@ import { clickNavButton } from './ButtonHelpers'
  */
 export async function getActiveScreen(page: Page): Promise<string> {
   return await page.evaluate(() => {
-    const promptFolderScreen = document.querySelector('[data-testid="prompt-folder-screen"]')
-    if (promptFolderScreen) {
-      return 'prompt-folder'
+    const promptCollectionScreen = document.querySelector('[data-testid="prompt-collection-screen"]')
+    if (promptCollectionScreen) {
+      return 'prompt-collection'
     }
 
     // Check data-active on icon-only activity buttons and any remaining nav buttons.
@@ -30,7 +30,7 @@ export async function getActiveScreen(page: Page): Promise<string> {
       if (text.includes('settings')) return 'settings'
       if (text.includes('mockups')) return 'mockups'
       if (text.includes('test screen')) return 'test-screen'
-      if (text.includes('test folder') || text.includes('project prompts')) return 'prompt-folder'
+      if (text.includes('test collection') || text.includes('project prompts')) return 'prompt-collection'
     }
 
     return 'unknown'

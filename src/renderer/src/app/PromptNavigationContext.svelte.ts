@@ -10,8 +10,8 @@ const PROMPT_NAVIGATION_CONTEXT = Symbol('prompt-navigation')
 /** Full tree-navigation highlight duration: 50ms transition, 500ms hold, and 450ms fade. */
 const PROMPT_NAVIGATION_HIGHLIGHT_DURATION_MS = 1000
 
-/** Selectable row identities within one root prompt-folder screen. */
-export type PromptNavigationRow = 'root-header' | 'category-details' | `prompt:${string}`
+/** Selectable row identities within one prompt-collection screen. */
+export type PromptNavigationRow = 'collection-header' | 'category-details' | `prompt:${string}`
 export const promptIdToPromptNavigationRow = (promptId: string): PromptNavigationRow =>
   `prompt:${promptId}`
 
@@ -32,7 +32,7 @@ export type PromptNavigationSource =
   | 'category-move'
 
 type PromptNavigationState = {
-  screenRootFolderId: string | null
+  screenCollectionId: string | null
   contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
@@ -49,7 +49,7 @@ export type PromptNavigationHighlight = {
 }
 
 export type PromptNavigationTarget = {
-  screenRootFolderId: string
+  screenCollectionId: string
   contentOwnerId: string
   row: PromptNavigationRow
 }
@@ -59,10 +59,10 @@ export type PromptContentExpansionRequest = PromptNavigationTarget & {
   expandContent: boolean
 }
 
-// Defines non-biased placement modes for content navigation in the prompt-folder viewport.
+// Defines non-biased placement modes for content navigation in the prompt-collection viewport.
 export type PromptContentRevealScrollType = 'center' | 'minimal'
 
-/** Configurable placement requested for one prompt-folder content reveal. */
+/** Configurable placement requested for one prompt-collection content reveal. */
 export type PromptContentRevealPlacement =
   | { scrollType: PromptContentRevealScrollType }
   | { scrollType: 'vertical-bias'; verticalBiasPx: number }
@@ -70,7 +70,7 @@ export type PromptContentRevealPlacement =
 export type PromptContentRevealRequest = PromptNavigationTarget & PromptContentRevealPlacement
 
 export type PromptFocusRequest = {
-  screenRootFolderId: string
+  screenCollectionId: string
   promptId: string
 }
 
@@ -79,7 +79,7 @@ export type PromptTreeExpansionRequest = PromptNavigationTarget & {
 }
 
 type SelectPromptNavigationOptions = {
-  screenRootFolderId: string
+  screenCollectionId: string
   contentOwnerId: string
   row: PromptNavigationRow
   source: PromptNavigationSource
@@ -99,7 +99,7 @@ type SelectPromptNavigationResult = {
 }
 
 export type PromptNavigationContext = {
-  screenRootFolderId: string | null
+  screenCollectionId: string | null
   contentOwnerId: string | null
   selectedRow: PromptNavigationRow | null
   selectionSource: PromptNavigationSource | null
@@ -118,7 +118,7 @@ export type PromptNavigationContext = {
 }
 
 export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow): string => {
-  if (row === 'root-header' || row === 'category-details') {
+  if (row === 'collection-header' || row === 'category-details') {
     return row
   }
 
@@ -128,14 +128,14 @@ export const promptNavigationRowToPersistedEntryId = (row: PromptNavigationRow):
 export const persistedPromptTreeEntryIdToPromptNavigationRow = (
   entryId: string
 ): PromptNavigationRow => {
-  return entryId === 'root-header' || entryId === 'category-details'
+  return entryId === 'collection-header' || entryId === 'category-details'
     ? entryId
     : `prompt:${entryId}`
 }
 
 export const createPromptNavigationContextValue = (): PromptNavigationContext => {
   const state = $state<PromptNavigationState>({
-    screenRootFolderId: null,
+    screenCollectionId: null,
     contentOwnerId: null,
     selectedRow: null,
     selectionSource: null,
@@ -153,7 +153,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
   let navigationHighlightTimeoutId: number | null = null
 
   const select = ({
-    screenRootFolderId,
+    screenCollectionId,
     contentOwnerId,
     row,
     source,
@@ -164,7 +164,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     treeExpansion
   }: SelectPromptNavigationOptions): SelectPromptNavigationResult => {
     const hasChanged =
-      state.screenRootFolderId !== screenRootFolderId ||
+      state.screenCollectionId !== screenCollectionId ||
       state.contentOwnerId !== contentOwnerId ||
       state.selectedRow !== row ||
       state.selectionSource !== source
@@ -175,7 +175,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
 
     if (source !== 'scroll-follow') navigationListeners.forEach((cancel) => cancel())
 
-    state.screenRootFolderId = screenRootFolderId
+    state.screenCollectionId = screenCollectionId
     state.contentOwnerId = contentOwnerId
     state.selectedRow = row
     state.selectionSource = source
@@ -204,7 +204,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     }
 
     const target: PromptNavigationTarget = {
-      screenRootFolderId,
+      screenCollectionId,
       contentOwnerId,
       row
     }
@@ -238,7 +238,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
       : null
 
     if (focusPromptId) {
-      promptFocusRequests.request({ screenRootFolderId, promptId: focusPromptId })
+      promptFocusRequests.request({ screenCollectionId, promptId: focusPromptId })
     } else {
       promptFocusRequests.clear()
     }
@@ -247,8 +247,8 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
   }
 
   return {
-    get screenRootFolderId() {
-      return state.screenRootFolderId
+    get screenCollectionId() {
+      return state.screenCollectionId
     },
     get contentOwnerId() {
       return state.contentOwnerId
@@ -274,7 +274,7 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
     },
     clear: () => {
       navigationListeners.forEach((cancel) => cancel())
-      state.screenRootFolderId = null
+      state.screenCollectionId = null
       state.contentOwnerId = null
       state.selectedRow = null
       state.selectionSource = null

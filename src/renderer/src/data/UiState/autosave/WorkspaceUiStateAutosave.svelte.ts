@@ -1,37 +1,37 @@
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
-  isPromptFolderScreenSelection,
+  isPromptCollectionScreenSelection,
   type WorkspaceAccordionSectionViewEntry
 } from '@shared/domain/user-persistence/UserPersistence'
 import {
   createAccordionUiStateKey,
-  createWorkspacePromptFolderUiStateKey,
+  createWorkspacePromptCollectionUiStateKey,
   type AccordionUiState,
-  type WorkspacePromptFolderUiState
+  type WorkspacePromptCollectionUiState
 } from '@shared/domain/ui-state/UiState'
 import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
-import { workspacePromptFolderUiStateCollection } from '@renderer/data/Collections/WorkspacePromptFolderUiStateCollection'
+import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
 import { submitPacedUpdateTransactionAndWait } from '@renderer/data/IpcFramework/RevisionCollections'
 import {
   setAccordionUiStateWithAutosave,
-  setWorkspacePromptFolderUiStateWithAutosave,
+  setWorkspacePromptCollectionUiStateWithAutosave,
   setWorkspaceUiStateWithAutosave
 } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
 
 /** Default selection stored before a content owner has an explicit row selection. */
-const DEFAULT_SELECTED_ENTRY_ID = 'root-header'
+const DEFAULT_SELECTED_ENTRY_ID = 'collection-header'
 /** Default sidebar expansion for a newly observed content owner. */
 const DEFAULT_TREE_IS_EXPANDED = true
 /** Default content expansion for a newly observed content owner. */
 const DEFAULT_CONTENT_SECTION_IS_EXPANDED = true
 
-/** Creates default prompt-folder view state for one root or category owner. */
-const createPromptFolderUiState = (
+/** Creates default prompt-collection view state for one collection or category owner. */
+const createPromptCollectionUiState = (
   workspaceId: string,
   contentOwnerId: string
-): WorkspacePromptFolderUiState => ({
+): WorkspacePromptCollectionUiState => ({
   workspaceId,
   contentOwnerId,
   selectedEntryId: DEFAULT_SELECTED_ENTRY_ID,
@@ -42,22 +42,22 @@ const createPromptFolderUiState = (
   shownFinalStatusGroups: {}
 })
 
-/** Reads one root or category prompt-folder view state by its composite key. */
-export const lookupPromptFolderUiState = (
+/** Reads one collection or category prompt-collection view state by its composite key. */
+export const lookupPromptCollectionUiState = (
   workspaceId: string,
   contentOwnerId: string
-): WorkspacePromptFolderUiState | null =>
-  workspacePromptFolderUiStateCollection.get(
-    createWorkspacePromptFolderUiStateKey(workspaceId, contentOwnerId)
+): WorkspacePromptCollectionUiState | null =>
+  workspacePromptCollectionUiStateCollection.get(
+    createWorkspacePromptCollectionUiStateKey(workspaceId, contentOwnerId)
   ) ?? null
 
 /** Queues one content owner's changed view fields and optional active-owner pointer. */
-const setPromptFolderUiStateFieldsWithAutosave = (
+const setPromptCollectionUiStateFieldsWithAutosave = (
   workspaceId: string,
   contentOwnerId: string,
   updates: Partial<
     Pick<
-      WorkspacePromptFolderUiState,
+      WorkspacePromptCollectionUiState,
       | 'selectedEntryId'
       | 'treeIsExpanded'
       | 'contentSectionIsExpanded'
@@ -66,29 +66,29 @@ const setPromptFolderUiStateFieldsWithAutosave = (
       | 'shownFinalStatusGroups'
     >
   >,
-  selectedPromptFolderId?: string
+  selectedPromptCollectionId?: string
 ): void => {
   /** Current or default owner state used to build a complete replacement command. */
   const current =
-    lookupPromptFolderUiState(workspaceId, contentOwnerId) ??
-    createPromptFolderUiState(workspaceId, contentOwnerId)
+    lookupPromptCollectionUiState(workspaceId, contentOwnerId) ??
+    createPromptCollectionUiState(workspaceId, contentOwnerId)
   /** Complete desired owner state after applying the requested fields. */
   const next = { ...current, ...updates }
   /** Whether at least one persisted owner field changed. */
   const hasOwnerChange = Object.entries(updates).some(
-    ([key, value]) => current[key as keyof WorkspacePromptFolderUiState] !== value
+    ([key, value]) => current[key as keyof WorkspacePromptCollectionUiState] !== value
   )
   if (hasOwnerChange) {
-    setWorkspacePromptFolderUiStateWithAutosave(next, AUTOSAVE_MS)
+    setWorkspacePromptCollectionUiStateWithAutosave(next, AUTOSAVE_MS)
   }
 
   /** Current workspace screen state whose active owner may change separately. */
   const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
   if (
-    selectedPromptFolderId &&
+    selectedPromptCollectionId &&
     workspaceUiState &&
-    isPromptFolderScreenSelection(workspaceUiState) &&
-    workspaceUiState.selectedScreenData.promptFolderId === selectedPromptFolderId &&
+    isPromptCollectionScreenSelection(workspaceUiState) &&
+    workspaceUiState.selectedScreenData.promptCollectionId === selectedPromptCollectionId &&
     workspaceUiState.selectedScreenData.contentOwnerId !== contentOwnerId
   ) {
     setWorkspaceUiStateWithAutosave(
@@ -104,20 +104,20 @@ const setPromptFolderUiStateFieldsWithAutosave = (
   }
 }
 
-/** Saves root-specific navigation without changing selection, scroll, or accordion sizing. */
-export const setPromptFolderStatusNavigationWithAutosave = (
+/** Saves collection-specific navigation without changing selection, scroll, or accordion sizing. */
+export const setPromptCollectionStatusNavigationWithAutosave = (
   workspaceId: string,
-  promptFolderId: string,
+  promptCollectionId: string,
   selectedMode: PromptStatusFolderId,
-  shownFinalStatusGroups: WorkspacePromptFolderUiState['shownFinalStatusGroups']
+  shownFinalStatusGroups: WorkspacePromptCollectionUiState['shownFinalStatusGroups']
 ): void => {
-  setPromptFolderUiStateFieldsWithAutosave(workspaceId, promptFolderId, {
+  setPromptCollectionUiStateFieldsWithAutosave(workspaceId, promptCollectionId, {
     selectedMode,
     shownFinalStatusGroups: { ...shownFinalStatusGroups }
   })
 }
 
-/** Workspace-wide accordion shared by the root folders' status trees. */
+/** Workspace-wide accordion shared by the collections' status trees. */
 export const PROMPT_STATUS_ACCORDION_PERSISTENCE_ID = 'sidebar-prompt-statuses'
 
 /** Expands a navigation destination while retaining every configured section height. */
@@ -139,24 +139,24 @@ export const expandPromptStatusSectionWithAutosave = (
 }
 
 /** Reads the saved offset without treating an unvisited mode as a saved top position. */
-export const lookupPromptFolderScrollTop = (
+export const lookupPromptCollectionScrollTop = (
   workspaceId: string,
-  promptFolderId: string,
+  promptCollectionId: string,
   mode: PromptStatusFolderId
 ): number | null =>
-  lookupPromptFolderUiState(workspaceId, promptFolderId)?.scrollTopByMode[mode] ?? null
+  lookupPromptCollectionUiState(workspaceId, promptCollectionId)?.scrollTopByMode[mode] ?? null
 
-/** Saves one mode's reachable offset while retaining the folder's other UI state. */
-export const setPromptFolderScrollTopWithAutosave = (
+/** Saves one mode's reachable offset while retaining the collection's other UI state. */
+export const setPromptCollectionScrollTopWithAutosave = (
   workspaceId: string,
-  promptFolderId: string,
+  promptCollectionId: string,
   mode: PromptStatusFolderId,
   scrollTopPx: number
 ): void => {
   /** Latest optimistic offsets include other mode changes still awaiting autosave. */
-  const current = lookupPromptFolderUiState(workspaceId, promptFolderId)?.scrollTopByMode ?? {}
+  const current = lookupPromptCollectionUiState(workspaceId, promptCollectionId)?.scrollTopByMode ?? {}
   if (current[mode] === scrollTopPx) return
-  setPromptFolderUiStateFieldsWithAutosave(workspaceId, promptFolderId, {
+  setPromptCollectionUiStateFieldsWithAutosave(workspaceId, promptCollectionId, {
     scrollTopByMode: { ...current, [mode]: scrollTopPx }
   })
 }
@@ -192,23 +192,23 @@ export const setAccordionViewEntryWithAutosave = (
   setAccordionUiStateWithAutosave(next, AUTOSAVE_MS)
 }
 
-/** Persisted row selection and its root-folder or category owner. */
-export type WorkspacePersistedPromptFolderSelection = {
+/** Persisted row selection and its collection or category owner. */
+export type WorkspacePersistedPromptCollectionSelection = {
   contentOwnerId: string
   selectedEntryId: string
 }
 
-/** Looks up the selected prompt-folder screen row and its persisted content owner. */
-export const lookupWorkspacePersistedPromptFolderSelection = (
+/** Looks up the selected prompt-collection screen row and its persisted content owner. */
+export const lookupWorkspacePersistedPromptCollectionSelection = (
   workspaceId: string,
-  promptFolderId: string
-): WorkspacePersistedPromptFolderSelection | null => {
+  promptCollectionId: string
+): WorkspacePersistedPromptCollectionSelection | null => {
   /** Workspace screen state containing the active content-owner pointer. */
   const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
   if (
     !workspaceUiState ||
-    !isPromptFolderScreenSelection(workspaceUiState) ||
-    workspaceUiState.selectedScreenData.promptFolderId !== promptFolderId
+    !isPromptCollectionScreenSelection(workspaceUiState) ||
+    workspaceUiState.selectedScreenData.promptCollectionId !== promptCollectionId
   ) {
     return null
   }
@@ -216,7 +216,7 @@ export const lookupWorkspacePersistedPromptFolderSelection = (
   const contentOwnerId = workspaceUiState.selectedScreenData.contentOwnerId
   if (!contentOwnerId) return null
   /** Per-owner state containing the saved row selection. */
-  const entry = lookupPromptFolderUiState(workspaceId, contentOwnerId)
+  const entry = lookupPromptCollectionUiState(workspaceId, contentOwnerId)
   return entry ? { contentOwnerId, selectedEntryId: entry.selectedEntryId } : null
 }
 
@@ -224,27 +224,27 @@ export const lookupWorkspacePersistedPromptFolderSelection = (
 export const lookupWorkspacePersistedCategoryTreeExpandedState = (
   workspaceId: string,
   categoryId: string
-): boolean | null => lookupPromptFolderUiState(workspaceId, categoryId)?.treeIsExpanded ?? null
+): boolean | null => lookupPromptCollectionUiState(workspaceId, categoryId)?.treeIsExpanded ?? null
 
 /** Looks up whether one content owner's content section is expanded. */
-export const lookupWorkspacePersistedPromptFolderContentSectionExpandedState = (
+export const lookupWorkspacePersistedPromptCollectionContentSectionExpandedState = (
   workspaceId: string,
   contentOwnerId: string
 ): boolean | null =>
-  lookupPromptFolderUiState(workspaceId, contentOwnerId)?.contentSectionIsExpanded ?? null
+  lookupPromptCollectionUiState(workspaceId, contentOwnerId)?.contentSectionIsExpanded ?? null
 
-/** Persists the selected row and active owner for one root prompt-folder screen. */
-export const setPromptFolderSelectedEntryIdWithAutosave = (
+/** Persists the selected row and active owner for one prompt-collection screen. */
+export const setPromptCollectionSelectedEntryIdWithAutosave = (
   workspaceId: string,
-  promptFolderId: string,
+  promptCollectionId: string,
   contentOwnerId: string,
   selectedEntryId: string
 ): void => {
-  setPromptFolderUiStateFieldsWithAutosave(
+  setPromptCollectionUiStateFieldsWithAutosave(
     workspaceId,
     contentOwnerId,
     { selectedEntryId },
-    promptFolderId
+    promptCollectionId
   )
 }
 
@@ -254,16 +254,16 @@ export const setCategoryTreeExpandedStateWithAutosave = (
   categoryId: string,
   treeIsExpanded: boolean
 ): void => {
-  setPromptFolderUiStateFieldsWithAutosave(workspaceId, categoryId, { treeIsExpanded })
+  setPromptCollectionUiStateFieldsWithAutosave(workspaceId, categoryId, { treeIsExpanded })
 }
 
 /** Persists whether one content owner's content section is expanded. */
-export const setPromptFolderContentSectionExpandedStateWithAutosave = (
+export const setPromptCollectionContentSectionExpandedStateWithAutosave = (
   workspaceId: string,
   contentOwnerId: string,
   contentSectionIsExpanded: boolean
 ): void => {
-  setPromptFolderUiStateFieldsWithAutosave(workspaceId, contentOwnerId, {
+  setPromptCollectionUiStateFieldsWithAutosave(workspaceId, contentOwnerId, {
     contentSectionIsExpanded
   })
 }
@@ -273,9 +273,9 @@ export const flushWorkspaceUiStateAutosaves = async (): Promise<void> => {
   /** Pending autosave keys collected from every split workspace UI-state collection. */
   const targets = [
     ...workspaceUiStateCollection.toArray.map((record) => [workspaceUiStateCollection.id, record.workspaceId]),
-    ...workspacePromptFolderUiStateCollection.toArray.map((record) => [
-      workspacePromptFolderUiStateCollection.id,
-      createWorkspacePromptFolderUiStateKey(record.workspaceId, record.contentOwnerId)
+    ...workspacePromptCollectionUiStateCollection.toArray.map((record) => [
+      workspacePromptCollectionUiStateCollection.id,
+      createWorkspacePromptCollectionUiStateKey(record.workspaceId, record.contentOwnerId)
     ]),
     ...accordionUiStateCollection.toArray.map((record) => [
       accordionUiStateCollection.id,

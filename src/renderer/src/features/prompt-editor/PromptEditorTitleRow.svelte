@@ -1,11 +1,11 @@
 <script module lang="ts">
   import type { ComponentType } from 'svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
-  import type { PromptFolderFindRequest, PromptFolderFindSelection } from '../prompt-folders/find/promptFolderFindTypes'
+  import type { PromptCollectionFindRequest, PromptCollectionFindSelection } from '../prompt-collections/find/promptCollectionFindTypes'
 
   export type PromptEditorTitleRowProps = {
-    /** Folder search state used to decorate title occurrences without taking focus. */
-    findRequest?: PromptFolderFindRequest | null
+    /** Collection search state used to decorate title occurrences without taking focus. */
+    findRequest?: PromptCollectionFindRequest | null
     title: string
     draftText: string
     copyText?: string
@@ -27,11 +27,11 @@
     /** Confirms prompt workflow changes before copying. */
     onBeforeCopy?: () => Promise<boolean>
     onStatusChange?: (status: import('@shared/domain/prompt/Prompt').PromptStatus) => void
-    onSelectionChange?: (selection: PromptFolderFindSelection) => void
+    onSelectionChange?: (selection: PromptCollectionFindSelection) => void
     onTitleEditorFocus?: () => void | Promise<void>
     inputRef?: HTMLInputElement | null
-    metadataFolderLabel?: string | null
-    metadataFolderState?: 'not-selected' | 'no-template' | 'selected'
+    metadataTemplateLabel?: string | null
+    metadataTemplateState?: 'not-selected' | 'no-template' | 'selected'
     tokenCount: number
     icon?: ComponentType
     copyLabel?: string
@@ -61,8 +61,8 @@
   import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
   import { isPromptStatus, PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
-  import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
-  import { PROMPT_FOLDER_FIND_TITLE_SECTION_KEY } from '../prompt-folders/find/promptFolderFindSectionKeys'
+  import { getPromptCollectionFindContext } from '../prompt-collections/find/promptCollectionFindContext'
+  import { PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY } from '../prompt-collections/find/promptCollectionFindSectionKeys'
 
   let {
     findRequest,
@@ -86,8 +86,8 @@
     onSelectionChange,
     onTitleEditorFocus,
     inputRef = $bindable(null),
-    metadataFolderLabel = 'Template',
-    metadataFolderState = 'not-selected',
+    metadataTemplateLabel = 'Template',
+    metadataTemplateState = 'not-selected',
     tokenCount,
     icon = FileText,
     copyLabel,
@@ -102,7 +102,7 @@
   }: PromptEditorTitleRowProps = $props()
 
   /** Shared Monaco search implementation keeps title decoration ranges consistent with counts. */
-  const findContext = getPromptFolderFindContext()
+  const findContext = getPromptCollectionFindContext()
   /** Invisible text mirror whose backgrounds show through the native input. */
   let titleMirror = $state<HTMLDivElement | null>(null)
   /** Horizontal input offset applied to the highlight mirror. */
@@ -118,7 +118,7 @@
   /** Only explicit find navigation decorates a current match, matching Monaco's passive opening. */
   const currentTitleMatchIndex = $derived(
     findRequest?.shouldSelectActiveMatch &&
-      findRequest.activeSectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
+      findRequest.activeSectionKey === PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY
       ? findRequest.activeSectionMatchIndex
       : null
   )
@@ -170,7 +170,7 @@
   )
   /** Full finalization timestamp exposed as metadata hover text. */
   const finalizedFullLabel = $derived(finalizedAt ? formatPromptModifiedFull(finalizedAt) : '')
-  // Side effect: keep the relative modified label fresh while the prompt folder stays open.
+  // Side effect: keep the relative modified label fresh while the prompt collection stays open.
   onMount(() => {
     const intervalId = window.setInterval(() => {
       nowMs = Date.now()
@@ -379,17 +379,17 @@
       {/if}
 
       <div class="prompt-editor-metadata-row text-xs">
-        {#if metadataFolderLabel}
+        {#if metadataTemplateLabel}
           <span
-            class="prompt-editor-metadata-folder"
-            data-template-state={metadataFolderState}
-            title={metadataFolderLabel}
+            class="prompt-editor-metadata-template"
+            data-template-state={metadataTemplateState}
+            title={metadataTemplateLabel}
           >
-            <Layers class="prompt-editor-metadata-folder-icon h-3 w-3 shrink-0" />
-            {metadataFolderLabel}
+            <Layers class="prompt-editor-metadata-template-icon h-3 w-3 shrink-0" />
+            {metadataTemplateLabel}
           </span>
         {/if}
-        {#if metadataFolderLabel && modifiedAt}
+        {#if metadataTemplateLabel && modifiedAt}
           <SeparatorDot />
         {/if}
         {#if modifiedAt}
@@ -397,7 +397,7 @@
             {modifiedUpdatedLabel}
           </span>
         {/if}
-        {#if metadataFolderLabel || modifiedAt}
+        {#if metadataTemplateLabel || modifiedAt}
           <SeparatorDot />
         {/if}
         <span data-testid="prompt-token-count">{tokenCountLabel}</span>
@@ -418,7 +418,7 @@
         {copyText}
         {onTemplateSelect}
         {onTemplateSelectAndCopy}
-        templateSelectionState={metadataFolderState}
+        templateSelectionState={metadataTemplateState}
         {copyLabel}
         {copyTitle}
         onCopySuccess={handleCopySuccess}
@@ -664,21 +664,21 @@
     white-space: nowrap;
   }
 
-  .prompt-editor-metadata-folder {
+  .prompt-editor-metadata-template {
     align-items: center;
     display: inline-flex;
     gap: 4px;
   }
 
-  .prompt-editor-metadata-folder[data-template-state='not-selected'] {
+  .prompt-editor-metadata-template[data-template-state='not-selected'] {
     color: var(--ui-secondary-text);
   }
 
-  .prompt-editor-metadata-folder[data-template-state='no-template'] {
+  .prompt-editor-metadata-template[data-template-state='no-template'] {
     color: var(--ui-muted-text);
   }
 
-  .prompt-editor-metadata-folder[data-template-state='selected'] {
+  .prompt-editor-metadata-template[data-template-state='selected'] {
     color: var(--ui-normal-text);
   }
 

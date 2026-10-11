@@ -2,9 +2,9 @@ import type { DomainChange, DomainPlanner } from '@shared/domain/DomainChanges'
 import { isPromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createAccordionUiStateKey,
-  createWorkspacePromptFolderUiStateKey,
+  createWorkspacePromptCollectionUiStateKey,
   type AccordionUiState,
-  type WorkspacePromptFolderUiState,
+  type WorkspacePromptCollectionUiState,
   type WorkspaceUiState
 } from '@shared/domain/ui-state/UiState'
 import {
@@ -16,9 +16,9 @@ import {
 const planUiStateUpsert = <
   TEntityType extends
     | 'workspaceUiState'
-    | 'workspacePromptFolderUiState'
+    | 'workspacePromptCollectionUiState'
     | 'accordionUiState',
-  TCommand extends WorkspaceUiState | WorkspacePromptFolderUiState | AccordionUiState
+  TCommand extends WorkspaceUiState | WorkspacePromptCollectionUiState | AccordionUiState
 >(
   state: Parameters<DomainPlanner<TCommand>>[0],
   entityType: TEntityType,
@@ -56,25 +56,25 @@ export const parseSetWorkspaceUiStateDomainCommand = (
   )
   if (
     !selection ||
-    (record.lastPromptTaskFolderId !== null &&
-      typeof record.lastPromptTaskFolderId !== 'string') ||
-    (record.lastPromptTemplateFolderId !== null &&
-      typeof record.lastPromptTemplateFolderId !== 'string')
+    (record.lastPromptTaskCollectionId !== null &&
+      typeof record.lastPromptTaskCollectionId !== 'string') ||
+    (record.lastPromptTemplateCollectionId !== null &&
+      typeof record.lastPromptTemplateCollectionId !== 'string')
   ) {
     return null
   }
   return {
     workspaceId: record.workspaceId,
     ...selection,
-    lastPromptTaskFolderId: record.lastPromptTaskFolderId,
-    lastPromptTemplateFolderId: record.lastPromptTemplateFolderId
+    lastPromptTaskCollectionId: record.lastPromptTaskCollectionId,
+    lastPromptTemplateCollectionId: record.lastPromptTemplateCollectionId
   }
 }
 
-/** Strict runtime parser for prompt-folder view UI-state replacement commands. */
-export const parseSetWorkspacePromptFolderUiStateDomainCommand = (
+/** Strict runtime parser for prompt-collection view UI-state replacement commands. */
+export const parseSetWorkspacePromptCollectionUiStateDomainCommand = (
   value: unknown
-): WorkspacePromptFolderUiState | null => {
+): WorkspacePromptCollectionUiState | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
@@ -102,7 +102,7 @@ export const parseSetWorkspacePromptFolderUiStateDomainCommand = (
   ) {
     return null
   }
-  return record as WorkspacePromptFolderUiState
+  return record as WorkspacePromptCollectionUiState
 }
 
 /** Strict runtime parser for complete accordion UI-state replacement commands. */
@@ -130,15 +130,15 @@ export const planSetWorkspaceUiStateDomainMutation: DomainPlanner<WorkspaceUiSta
   command
 ) => planUiStateUpsert(state, 'workspaceUiState', command.workspaceId, command)
 
-/** Plans one insert-or-update prompt-folder view UI-state replacement. */
-export const planSetWorkspacePromptFolderUiStateDomainMutation: DomainPlanner<WorkspacePromptFolderUiState> = (
+/** Plans one insert-or-update prompt-collection view UI-state replacement. */
+export const planSetWorkspacePromptCollectionUiStateDomainMutation: DomainPlanner<WorkspacePromptCollectionUiState> = (
   state,
   command
 ) =>
   planUiStateUpsert(
     state,
-    'workspacePromptFolderUiState',
-    createWorkspacePromptFolderUiStateKey(command.workspaceId, command.contentOwnerId),
+    'workspacePromptCollectionUiState',
+    createWorkspacePromptCollectionUiStateKey(command.workspaceId, command.contentOwnerId),
     command
   )
 

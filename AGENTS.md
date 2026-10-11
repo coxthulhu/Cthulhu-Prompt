@@ -7,10 +7,10 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Major Application Components
 
 - **App Activity Bar** — The persistent icon rail used to navigate between available screens.
-- **App Sidebar** — The collapsible, resizable workspace panel used to select root prompt folders or root prompt template folders, then create, reorder, and navigate to the prompts or templates within them.
-- **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a root prompt/template folder.
+- **App Sidebar** — The collapsible, resizable workspace panel used to select prompt collections or template collections, then create, reorder, and navigate to the prompts or templates within them.
+- **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
-- **Prompt Folders Screen** — Manages and edits prompt folders, categories, prompts, and prompt templates.
+- **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.
 - **Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
 - **Mockups Screen** — Provides a development-only interface for previewing UI mockups.
@@ -79,8 +79,8 @@ Console/page errors captured during Playwright runs are written to `temp/test-re
 
 - WSL wrapper, all tests: `./scripts/wsl-playwright.sh`
 - WSL wrapper, single file: `./scripts/wsl-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
-- WSL wrapper, multiple files: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
-- WSL wrapper, single test with spaces: `./scripts/wsl-playwright.sh tests/playwright/PromptFoldersPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
+- WSL wrapper, multiple files: `./scripts/wsl-playwright.sh tests/playwright/PromptCollectionsMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
+- WSL wrapper, single test with spaces: `./scripts/wsl-playwright.sh tests/playwright/PromptCollectionsPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
 
 ## Coding Style & Naming Conventions
 

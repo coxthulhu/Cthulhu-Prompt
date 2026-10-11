@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DomainState } from '@shared/domain/DomainChanges'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 
 /** Ordered persistence events shared by filesystem and SQLite transaction mocks. */
 const persistenceEvents = vi.hoisted(() => [] as string[])
@@ -10,14 +10,14 @@ const mockTransactionState = vi.hoisted(() => {
   const storeNames = [
     'systemSettings',
     'workspace',
-    'promptFolder',
+    'promptCollection',
     'category',
     'prompt',
     'promptTemplate',
     'userPersistence',
     'markdownContentUiState',
     'workspaceUiState',
-    'workspacePromptFolderUiState',
+    'workspacePromptCollectionUiState',
     'accordionUiState'
   ] as const
   type StoreName = (typeof storeNames)[number]
@@ -30,14 +30,14 @@ const mockTransactionState = vi.hoisted(() => {
   const entriesByStore: Record<StoreName, Map<string, Entry>> = {
     systemSettings: new Map(),
     workspace: new Map(),
-    promptFolder: new Map(),
+    promptCollection: new Map(),
     category: new Map(),
     prompt: new Map(),
     promptTemplate: new Map(),
     userPersistence: new Map(),
     markdownContentUiState: new Map(),
     workspaceUiState: new Map(),
-    workspacePromptFolderUiState: new Map(),
+    workspacePromptCollectionUiState: new Map(),
     accordionUiState: new Map()
   }
   /** Persistence staging counts recorded independently for each authoritative store. */
@@ -116,7 +116,7 @@ const mockTransactionState = vi.hoisted(() => {
       store === 'userPersistence' ||
       store === 'markdownContentUiState' ||
       store === 'workspaceUiState' ||
-      store === 'workspacePromptFolderUiState' ||
+      store === 'workspacePromptCollectionUiState' ||
       store === 'accordionUiState'
     return {
       committedStore: createCommittedStore(store),
@@ -150,7 +150,7 @@ const mockTransactionState = vi.hoisted(() => {
       targetPolicy:
         store === 'markdownContentUiState' ||
         store === 'workspaceUiState' ||
-        store === 'workspacePromptFolderUiState' ||
+        store === 'workspacePromptCollectionUiState' ||
         store === 'accordionUiState'
           ? ('deleteIfPresent' as const)
           : ('requirePresent' as const)
@@ -161,14 +161,14 @@ const mockTransactionState = vi.hoisted(() => {
     data: {
       systemSettings: createRevisionData('systemSettings'),
       workspace: createRevisionData('workspace'),
-      promptFolder: createRevisionData('promptFolder'),
+      promptCollection: createRevisionData('promptCollection'),
       category: createRevisionData('category'),
       prompt: createRevisionData('prompt'),
       promptTemplate: createRevisionData('promptTemplate'),
       userPersistence: createRevisionData('userPersistence'),
       markdownContentUiState: createRevisionData('markdownContentUiState'),
       workspaceUiState: createRevisionData('workspaceUiState'),
-      workspacePromptFolderUiState: createRevisionData('workspacePromptFolderUiState'),
+      workspacePromptCollectionUiState: createRevisionData('workspacePromptCollectionUiState'),
       accordionUiState: createRevisionData('accordionUiState')
     },
     reset,
@@ -220,7 +220,7 @@ vi.mock('../../src/main/Persistence/sqlite/SqliteDataAccess', () => ({
 }))
 
 import { planCreateCategoryDomainMutation } from '@shared/domain/category/CategoryDomainMutations'
-import { planRenamePromptFolderDomainMutation } from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+import { planRenamePromptCollectionDomainMutation } from '@shared/domain/prompt-collection/PromptCollectionDomainMutations'
 import {
   runAtomicDataTransaction,
   runAtomicDomainTransitionTransaction
@@ -381,16 +381,16 @@ describe('atomic data transaction', () => {
   })
 
   it('commits a domain insertion with graph-derived storage metadata', async () => {
-    /** Workspace and root folder graph required to derive category storage. */
+    /** Workspace and collection graph required to derive category storage. */
     const workspace = {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: 'root' }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: 'root' }],
+      templateCollectionEntries: []
     }
-    /** Root folder updated to own the inserted category. */
-    const promptFolder = {
+    /** collection updated to own the inserted category. */
+    const promptCollection = {
       id: 'root',
       kind: 'prompt' as const,
       folderName: 'Root',
@@ -400,7 +400,7 @@ describe('atomic data transaction', () => {
           [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
         }
       }),
-      settings: { folderDescription: null }
+      settings: { collectionDescription: null }
     }
     mockTransactionState.seedEntry('workspace', workspace.id, {
       revision: 1,
@@ -410,27 +410,27 @@ describe('atomic data transaction', () => {
         workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
       }
     })
-    mockTransactionState.seedEntry('promptFolder', promptFolder.id, {
+    mockTransactionState.seedEntry('promptCollection', promptCollection.id, {
       revision: 1,
-      committed: promptFolder,
+      committed: promptCollection,
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        folderName: promptFolder.folderName,
-        folderPath: promptFolder.folderName,
-        kind: promptFolder.kind
+        folderName: promptCollection.folderName,
+        folderPath: promptCollection.folderName,
+        kind: promptCollection.kind
       }
     })
     /** Main-like domain state backed by the seeded committed graph. */
     const state = {
-      get: (entityType: 'promptFolder', id: string) =>
-        entityType === 'promptFolder' && id === promptFolder.id ? promptFolder : undefined,
+      get: (entityType: 'promptCollection', id: string) =>
+        entityType === 'promptCollection' && id === promptCollection.id ? promptCollection : undefined,
       getAll: () => []
     } as unknown as DomainState
     /** Shared category creation plan containing one update and one insert. */
     const plan = planCreateCategoryDomainMutation(state, {
       categoryId: 'created',
-      promptFolderId: promptFolder.id,
+      promptCollectionId: promptCollection.id,
       displayName: 'Created',
       shortDescription: null,
       description: null
@@ -439,7 +439,7 @@ describe('atomic data transaction', () => {
     if (!Array.isArray(plan)) return
     /** Projected transition transaction with explicit present and absent expectations. */
     const projection = projectDomainTransitions(plan, [
-      { entityType: 'promptFolder', id: promptFolder.id, expected: 'revision', revision: 1 },
+      { entityType: 'promptCollection', id: promptCollection.id, expected: 'revision', revision: 1 },
       { entityType: 'category', id: 'created', expected: 'absent' }
     ])
     const outcome = await runAtomicDomainTransitionTransaction(projection, {
@@ -457,9 +457,9 @@ describe('atomic data transaction', () => {
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        rootPromptFolderId: promptFolder.id,
-        rootFolderName: promptFolder.folderName,
-        kind: promptFolder.kind,
+        promptCollectionId: promptCollection.id,
+        collectionFolderName: promptCollection.folderName,
+        kind: promptCollection.kind,
         categoryStem: 'Created',
       }
     })
@@ -471,11 +471,11 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: 'root' }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: 'root' }],
+      templateCollectionEntries: []
     }
     /** Prompt root containing one category and one active prompt. */
-    const promptFolder = {
+    const promptCollection = {
       id: 'root',
       kind: 'prompt' as const,
       folderName: 'Root',
@@ -490,7 +490,7 @@ describe('atomic data transaction', () => {
           }
         }
       }),
-      settings: { folderDescription: null }
+      settings: { collectionDescription: null }
     }
     /** Category stored beneath the renamed root. */
     const category = {
@@ -517,15 +517,15 @@ describe('atomic data transaction', () => {
         workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
       }
     })
-    mockTransactionState.seedEntry('promptFolder', promptFolder.id, {
+    mockTransactionState.seedEntry('promptCollection', promptCollection.id, {
       revision: 4,
-      committed: promptFolder,
+      committed: promptCollection,
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        folderName: promptFolder.folderName,
-        folderPath: promptFolder.folderName,
-        kind: promptFolder.kind
+        folderName: promptCollection.folderName,
+        folderPath: promptCollection.folderName,
+        kind: promptCollection.kind
       }
     })
     mockTransactionState.seedEntry('category', category.id, {
@@ -534,9 +534,9 @@ describe('atomic data transaction', () => {
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        rootPromptFolderId: promptFolder.id,
-        rootFolderName: promptFolder.folderName,
-        kind: promptFolder.kind,
+        promptCollectionId: promptCollection.id,
+        collectionFolderName: promptCollection.folderName,
+        kind: promptCollection.kind,
         categoryStem: category.displayName,
       }
     })
@@ -547,7 +547,7 @@ describe('atomic data transaction', () => {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
         folderPath: 'Root\\Active',
-        promptFolderId: promptFolder.id,
+        promptCollectionId: promptCollection.id,
         promptId: prompt.id,
         promptStem: prompt.title,
       }
@@ -560,29 +560,29 @@ describe('atomic data transaction', () => {
         mockTransactionState.readEntries(entityType).map((entry) => entry.committed) as never
     }
     /** Shared rename plan whose descendants are storage-only transitions. */
-    const plan = planRenamePromptFolderDomainMutation(state, {
-      promptFolderId: promptFolder.id,
+    const plan = planRenamePromptCollectionDomainMutation(state, {
+      promptCollectionId: promptCollection.id,
       displayName: 'Renamed Root'
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
-    /** Projected rename with concurrency protection only on the root folder. */
+    /** Projected rename with concurrency protection only on the collection. */
     const projection = projectDomainTransitions(plan, [
-      { entityType: 'promptFolder', id: promptFolder.id, expected: 'revision', revision: 4 }
+      { entityType: 'promptCollection', id: promptCollection.id, expected: 'revision', revision: 4 }
     ])
     /** Atomic result after one physical root write and metadata-only descendant updates. */
     const outcome = await runAtomicDomainTransitionTransaction(projection, {
       mode: 'immediate'
     })
     expect(outcome.status).toBe('success')
-    expect(mockTransactionState.readEntry('promptFolder', promptFolder.id)).toMatchObject({
+    expect(mockTransactionState.readEntry('promptCollection', promptCollection.id)).toMatchObject({
       revision: 5,
       committed: { displayName: 'Renamed Root', folderName: 'RenamedRoot' },
       persistenceFields: { folderPath: 'RenamedRoot' }
     })
     expect(mockTransactionState.readEntry('category', category.id)).toMatchObject({
       revision: 7,
-      persistenceFields: { rootFolderName: 'RenamedRoot' }
+      persistenceFields: { collectionFolderName: 'RenamedRoot' }
     })
     expect(mockTransactionState.readEntry('prompt', prompt.id)).toMatchObject({
       revision: 9,
@@ -591,14 +591,14 @@ describe('atomic data transaction', () => {
     expect(mockTransactionState.stageCounts).toEqual({
       systemSettings: 0,
       workspace: 0,
-      promptFolder: 1,
+      promptCollection: 1,
       category: 0,
       prompt: 0,
       promptTemplate: 0,
       userPersistence: 0,
       markdownContentUiState: 0,
       workspaceUiState: 0,
-      workspacePromptFolderUiState: 0,
+      workspacePromptCollectionUiState: 0,
       accordionUiState: 0
     })
   })
@@ -609,11 +609,11 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [],
-      templateFolderEntries: [{ kind: 'folder' as const, id: 'templates' }]
+      promptCollectionEntries: [],
+      templateCollectionEntries: [{ kind: 'collection' as const, id: 'templates' }]
     }
     /** Template root containing one active template. */
-    const promptFolder = {
+    const promptCollection = {
       id: 'templates',
       kind: 'template' as const,
       folderName: 'Templates',
@@ -626,7 +626,7 @@ describe('atomic data transaction', () => {
           }
         ]
       } } }),
-      settings: { folderDescription: null }
+      settings: { collectionDescription: null }
     }
     /** Template markdown stored directly beneath its root directory. */
     const promptTemplate = {
@@ -645,15 +645,15 @@ describe('atomic data transaction', () => {
         workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
       }
     })
-    mockTransactionState.seedEntry('promptFolder', promptFolder.id, {
+    mockTransactionState.seedEntry('promptCollection', promptCollection.id, {
       revision: 2,
-      committed: promptFolder,
+      committed: promptCollection,
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        folderName: promptFolder.folderName,
-        folderPath: promptFolder.folderName,
-        kind: promptFolder.kind
+        folderName: promptCollection.folderName,
+        folderPath: promptCollection.folderName,
+        kind: promptCollection.kind
       }
     })
     mockTransactionState.seedEntry('promptTemplate', promptTemplate.id, {
@@ -662,8 +662,8 @@ describe('atomic data transaction', () => {
       persistenceFields: {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        folderPath: `${promptFolder.folderName}\\Active`,
-        promptFolderId: promptFolder.id,
+        folderPath: `${promptCollection.folderName}\\Active`,
+        promptCollectionId: promptCollection.id,
         promptId: promptTemplate.id,
         promptStem: promptTemplate.title,
       }
@@ -676,22 +676,22 @@ describe('atomic data transaction', () => {
         mockTransactionState.readEntries(entityType).map((entry) => entry.committed) as never
     }
     /** Shared template-root rename plan. */
-    const plan = planRenamePromptFolderDomainMutation(state, {
-      promptFolderId: promptFolder.id,
+    const plan = planRenamePromptCollectionDomainMutation(state, {
+      promptCollectionId: promptCollection.id,
       displayName: 'Renamed Templates'
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Projected rename carrying a revision expectation only for the root. */
     const projection = projectDomainTransitions(plan, [
-      { entityType: 'promptFolder', id: promptFolder.id, expected: 'revision', revision: 2 }
+      { entityType: 'promptCollection', id: promptCollection.id, expected: 'revision', revision: 2 }
     ])
     /** Atomic template-root rename result. */
     const outcome = await runAtomicDomainTransitionTransaction(projection, {
       mode: 'immediate'
     })
     expect(outcome.status).toBe('success')
-    expect(mockTransactionState.readEntry('promptFolder', promptFolder.id)).toMatchObject({
+    expect(mockTransactionState.readEntry('promptCollection', promptCollection.id)).toMatchObject({
       revision: 3,
       persistenceFields: { folderPath: 'RenamedTemplates' }
     })
@@ -704,14 +704,14 @@ describe('atomic data transaction', () => {
     expect(mockTransactionState.stageCounts).toEqual({
       systemSettings: 0,
       workspace: 0,
-      promptFolder: 1,
+      promptCollection: 1,
       category: 0,
       prompt: 0,
       promptTemplate: 0,
       userPersistence: 0,
       markdownContentUiState: 0,
       workspaceUiState: 0,
-      workspacePromptFolderUiState: 0,
+      workspacePromptCollectionUiState: 0,
       accordionUiState: 0
     })
   })

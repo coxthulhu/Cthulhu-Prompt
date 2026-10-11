@@ -5,7 +5,7 @@ import {
   PROMPT_TITLE_SELECTOR,
   PROMPT_TOKEN_COUNT_SELECTOR,
   promptEditorSelector
-} from '../helpers/PromptFolderSelectors'
+} from '../helpers/PromptCollectionSelectors'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -28,10 +28,10 @@ describe('Prompt editor metadata', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    await testHelpers.navigateToPromptFolders('Empty')
+    await testHelpers.navigateToPromptCollections('Empty')
 
     const templateItem = mainWindow.locator(
-      `${EMPTY_PROMPT_EDITOR} .prompt-editor-metadata-folder`
+      `${EMPTY_PROMPT_EDITOR} .prompt-editor-metadata-template`
     )
     await expect(templateItem).toHaveText('Not selected')
     const initialWindowWidth = await mainWindow.evaluate(() => window.innerWidth)
@@ -60,7 +60,7 @@ describe('Prompt editor metadata', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    await testHelpers.navigateToPromptFolders('Empty')
+    await testHelpers.navigateToPromptCollections('Empty')
     await waitForMonacoEditor(mainWindow, EMPTY_PROMPT_EDITOR)
 
     await expect(mainWindow.locator(promptTokenCountSelector)).toHaveText('0 tokens')
@@ -76,7 +76,7 @@ describe('Prompt editor metadata', () => {
       workspace: { scenario: 'virtual' }
     })
 
-    await testHelpers.navigateToPromptFolders('Empty')
+    await testHelpers.navigateToPromptCollections('Empty')
 
     const modifiedTime = mainWindow.locator(promptModifiedTimeSelector)
     await expect(modifiedTime).toHaveText('Updated today')
@@ -100,7 +100,7 @@ describe('Prompt editor metadata', () => {
     })
     await testHelpers.pauseIpcChannel('update-prompt')
 
-    await testHelpers.navigateToPromptFolders('Examples')
+    await testHelpers.navigateToPromptCollections('Examples')
 
     const simpleModifiedTime = mainWindow.locator(simplePromptModifiedTimeSelector)
     await expect(simpleModifiedTime).not.toHaveText('Updated today')
@@ -108,7 +108,7 @@ describe('Prompt editor metadata', () => {
     await mainWindow.locator(simplePromptTitleSelector).fill('Simple Greeting Updated')
     await expect(simpleModifiedTime).toHaveText('Updated today')
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     await waitForMonacoEditor(mainWindow, DEVELOPMENT_PROMPT_EDITOR)
 
     const developmentModifiedTime = mainWindow.locator(developmentPromptModifiedTimeSelector)

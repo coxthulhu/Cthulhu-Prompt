@@ -3,10 +3,10 @@ import { createFilenameAllocator } from './FilenameAllocation'
 import { isDeepStrictEqual } from 'node:util'
 import type { DomainEntityMap, DomainEntityType } from '@shared/domain/DomainChanges'
 import {
-  getPromptFolderCategoryIds,
-  type PromptFolder,
-  type PromptFolderContentKind
-} from '@shared/domain/prompt-folder/PromptFolder'
+  getPromptCollectionCategoryIds,
+  type PromptCollection,
+  type PromptCollectionContentKind
+} from '@shared/domain/prompt-collection/PromptCollection'
 import {
   PROMPT_STATUS_FOLDERS,
   type PromptStatusFolderId
@@ -23,17 +23,17 @@ import type {
   DomainPersistenceFieldsMap,
   PersistenceRecord
 } from './PersistenceTypes'
-import type { PromptFolderPersistenceFields } from './PromptFolderPersistence'
+import type { PromptCollectionPersistenceFields } from './PromptCollectionPersistence'
 import {
   CATEGORY_FILENAME_SUFFIX,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   resolveCategoriesDirectoryPath,
-  resolvePromptFolderPath,
+  resolvePromptDirectoryPath,
   resolvePromptStatusFolderName,
   resolveWorkspaceInfoPath
 } from './PromptPersistencePaths'
-import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
+import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import type { WorkspacePersistenceFields } from './WorkspacePersistence'
 
 /** One typed storage transition staged without inventing a domain mutation. */
@@ -66,37 +66,37 @@ type DomainStorageAdapter<TEntityType extends DomainEntityType> = {
   ) => DomainPersistenceFieldsMap[TEntityType]
 }
 
-/** One root directory rename that physically relocates every descendant file. */
-type RootDirectoryRename = {
-  promptFolderId: string
-  kind: PromptFolderContentKind
+/** One collection directory rename that physically relocates every descendant file. */
+type CollectionDirectoryRename = {
+  promptCollectionId: string
+  kind: PromptCollectionContentKind
   beforeFolderName: string
   afterFolderName: string
 }
 
-/** Finds the workspace graph node that owns one root prompt folder. */
+/** Finds the workspace graph node that owns one prompt collection. */
 const findOwningWorkspace = (
   graph: DomainGraph,
-  promptFolderId: string
+  promptCollectionId: string
 ): DomainGraphEntryFor<'workspace'> | undefined =>
   graph
     .getAll('workspace')
     .find((workspace) =>
-      getAllWorkspaceFolderEntries(workspace.data).some((entry) => entry.id === promptFolderId)
+      getAllWorkspaceCollectionEntries(workspace.data).some((entry) => entry.id === promptCollectionId)
     )
 
-/** Derives canonical prompt-folder metadata from its owning workspace and after data. */
-const derivePromptFolderFields = (
+/** Derives canonical prompt-collection metadata from its owning workspace and after data. */
+const derivePromptCollectionFields = (
   graph: DomainGraph,
   id: string,
-  entry: DomainGraphEntryFor<'promptFolder'>
-): PromptFolderPersistenceFields => {
-  /** Workspace that owns this projected root folder. */
+  entry: DomainGraphEntryFor<'promptCollection'>
+): PromptCollectionPersistenceFields => {
+  /** Workspace that owns this projected collection. */
   const workspace = findOwningWorkspace(graph, id)
   /** Existing metadata retained only when a partial test graph omits workspace ownership. */
   const currentFields = entry.persistenceFields
   if (!workspace && !currentFields) {
-    throw new Error(`Prompt-folder storage owner not found: ${id}`)
+    throw new Error(`Prompt-collection storage owner not found: ${id}`)
   }
   return {
     workspaceId: workspace?.data.id ?? currentFields!.workspaceId,
@@ -107,12 +107,12 @@ const derivePromptFolderFields = (
   }
 }
 
-/** Finds the projected root folder that owns one category. */
-const findCategoryOwner = (graph: DomainGraph, categoryId: string): PromptFolder | undefined =>
+/** Finds the projected collection that owns one category. */
+const findCategoryOwner = (graph: DomainGraph, categoryId: string): PromptCollection | undefined =>
   graph
-    .getAll('promptFolder')
+    .getAll('promptCollection')
     .map((entry) => entry.data)
-    .find((folder) => getPromptFolderCategoryIds(folder).includes(categoryId))
+    .find((collection) => getPromptCollectionCategoryIds(collection).includes(categoryId))
 
 /** Derives category ownership and its complete desired filename metadata. */
 const deriveCategoryFields = (
@@ -120,16 +120,16 @@ const deriveCategoryFields = (
   id: string,
   entry: DomainGraphEntryFor<'category'>
 ): CategoryPersistenceFields => {
-  /** Projected root folder owning this category group. */
+  /** Projected collection owning this category group. */
   const owner = findCategoryOwner(graph, id)
   if (!owner) throw new Error(`Category storage owner not found: ${id}`)
-  /** Canonical storage metadata for the owning root folder. */
-  const ownerFields = derivePromptFolderFields(graph, owner.id, graph.get('promptFolder', owner.id)!)
+  /** Canonical storage metadata for the owning collection. */
+  const ownerFields = derivePromptCollectionFields(graph, owner.id, graph.get('promptCollection', owner.id)!)
   return {
     workspaceId: ownerFields.workspaceId,
     workspacePath: ownerFields.workspacePath,
-    rootPromptFolderId: owner.id,
-    rootFolderName: owner.folderName,
+    promptCollectionId: owner.id,
+    collectionFolderName: owner.folderName,
     kind: owner.kind,
     categoryStem: entry.persistenceFields?.categoryStem ?? sanitizePromptTitleForFilename(entry.data.displayName)
   }
@@ -137,21 +137,21 @@ const deriveCategoryFields = (
 
 /** Projected markdown owner and physical group selected for filename planning. */
 type MarkdownOwner = {
-  folder: PromptFolder
+  collection: PromptCollection
   folderPath: string
 }
 
 /** Finds the projected active or final-status group that owns markdown content. */
 const findMarkdownOwner = (
   graph: DomainGraph,
-  kind: PromptFolderContentKind,
+  kind: PromptCollectionContentKind,
   contentId: string
 ): MarkdownOwner | undefined => {
-  for (const entry of graph.getAll('promptFolder')) {
-    /** Projected root inspected for channel-specific content ownership. */
-    const folder = entry.data
-    if (folder.kind !== kind) continue
-    for (const [statusFolderId, layout] of Object.entries(folder.statusFolders)) {
+  for (const entry of graph.getAll('promptCollection')) {
+    /** Projected collection inspected for channel-specific content ownership. */
+    const collection = entry.data
+    if (collection.kind !== kind) continue
+    for (const [statusFolderId, layout] of Object.entries(collection.statusFolders)) {
       /** Prompt IDs sharing this exact physical status-folder filename group. */
       const promptIds =
         layout.ordering === 'category'
@@ -163,9 +163,9 @@ const findMarkdownOwner = (
           : layout.promptIds
       if (promptIds.includes(contentId)) {
         return {
-          folder,
+          collection,
           folderPath: resolvePromptStatusFolderName(
-            folder.folderName,
+            collection.folderName,
             statusFolderId as PromptStatusFolderId
           )
         }
@@ -178,23 +178,23 @@ const findMarkdownOwner = (
 /** Creates a prompt or template adapter that derives ownership and desired filenames. */
 const createMarkdownStorageAdapter = <TEntityType extends 'prompt' | 'promptTemplate'>(
   entityType: TEntityType,
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): DomainStorageAdapter<TEntityType> => ({
   deriveDesiredFields: (graph, id, entry) => {
-    /** Projected root and physical filename group owning this content. */
+    /** Projected collection and physical filename group owning this content. */
     const owner = findMarkdownOwner(graph, kind, id)
     if (!owner) throw new Error(`Markdown storage owner not found: ${entityType}:${id}`)
-    /** Canonical root metadata supplying workspace ownership. */
-    const ownerFields = derivePromptFolderFields(
+    /** Canonical collection metadata supplying workspace ownership. */
+    const ownerFields = derivePromptCollectionFields(
       graph,
-      owner.folder.id,
-      graph.get('promptFolder', owner.folder.id)!
+      owner.collection.id,
+      graph.get('promptCollection', owner.collection.id)!
     )
     return {
       workspaceId: ownerFields.workspaceId,
       workspacePath: ownerFields.workspacePath,
       folderPath: owner.folderPath,
-      promptFolderId: owner.folder.id,
+      promptCollectionId: owner.collection.id,
       promptId: id,
       promptStem: entry.persistenceFields?.promptStem ?? sanitizePromptTitleForFilename(getPromptDisplayTitle(entry.data))
     } as DomainPersistenceFieldsMap[TEntityType]
@@ -218,14 +218,14 @@ const domainStorageAdapters: {
       } satisfies WorkspacePersistenceFields
     }
   },
-  promptFolder: { deriveDesiredFields: derivePromptFolderFields },
+  promptCollection: { deriveDesiredFields: derivePromptCollectionFields },
   category: { deriveDesiredFields: deriveCategoryFields },
   prompt: createMarkdownStorageAdapter('prompt', 'prompt'),
   promptTemplate: createMarkdownStorageAdapter('promptTemplate', 'template'),
   userPersistence: { deriveDesiredFields: () => ({}) },
   markdownContentUiState: { deriveDesiredFields: () => ({}) },
   workspaceUiState: { deriveDesiredFields: () => ({}) },
-  workspacePromptFolderUiState: { deriveDesiredFields: () => ({}) },
+  workspacePromptCollectionUiState: { deriveDesiredFields: () => ({}) },
   accordionUiState: { deriveDesiredFields: () => ({}) }
 }
 
@@ -244,13 +244,13 @@ const hasEqualPersistenceFields = (
   desired: DomainPersistenceFieldsMap[DomainEntityType]
 ): boolean => isDeepStrictEqual(current, desired)
 
-/** Collects root directory renames from revision-bearing prompt-folder transitions. */
-const collectRootDirectoryRenames = (
+/** Collects collection directory renames from revision-bearing prompt-collection transitions. */
+const collectCollectionDirectoryRenames = (
   domainTransitions: readonly DomainTransition[]
-): RootDirectoryRename[] =>
+): CollectionDirectoryRename[] =>
   domainTransitions.flatMap((transition) => {
     if (
-      transition.entityType !== 'promptFolder' ||
+      transition.entityType !== 'promptCollection' ||
       !transition.before ||
       !transition.after ||
       transition.before.data.kind !== transition.after.data.kind ||
@@ -260,7 +260,7 @@ const collectRootDirectoryRenames = (
     }
     return [
       {
-        promptFolderId: transition.id,
+        promptCollectionId: transition.id,
         kind: transition.after.data.kind,
         beforeFolderName: transition.before.data.folderName,
         afterFolderName: transition.after.data.folderName
@@ -268,44 +268,44 @@ const collectRootDirectoryRenames = (
     ]
   })
 
-/** Reports whether category metadata changed only because its owning root directory moved. */
-const isCategoryRelocatedByRootRename = (
+/** Reports whether category metadata changed only because its owning collection directory moved. */
+const isCategoryRelocatedByCollectionRename = (
   transition: DomainStorageTransitionFor<'category'>,
-  rename: RootDirectoryRename
+  rename: CollectionDirectoryRename
 ): boolean => {
   if (!transition.before || !transition.after) return false
-  /** Current category persistence fields before the root rename. */
+  /** Current category persistence fields before the collection rename. */
   const beforeFields = transition.before.persistenceFields
-  /** Desired category persistence fields after the root rename. */
+  /** Desired category persistence fields after the collection rename. */
   const afterFields = transition.after.persistenceFields
-  /** Current fields excluding the root directory segment. */
-  const { rootFolderName: _beforeRootFolderName, ...beforeRest } = beforeFields
-  /** Desired fields excluding the root directory segment. */
-  const { rootFolderName: _afterRootFolderName, ...afterRest } = afterFields
+  /** Current fields excluding the collection directory segment. */
+  const { collectionFolderName: _beforeCollectionFolderName, ...beforeRest } = beforeFields
+  /** Desired fields excluding the collection directory segment. */
+  const { collectionFolderName: _afterCollectionFolderName, ...afterRest } = afterFields
   return (
     isDeepStrictEqual(transition.before.data, transition.after.data) &&
-    beforeFields.rootPromptFolderId === rename.promptFolderId &&
-    afterFields.rootPromptFolderId === rename.promptFolderId &&
+    beforeFields.promptCollectionId === rename.promptCollectionId &&
+    afterFields.promptCollectionId === rename.promptCollectionId &&
     beforeFields.kind === rename.kind &&
-    beforeFields.rootFolderName === rename.beforeFolderName &&
-    afterFields.rootFolderName === rename.afterFolderName &&
+    beforeFields.collectionFolderName === rename.beforeFolderName &&
+    afterFields.collectionFolderName === rename.afterFolderName &&
     isDeepStrictEqual(beforeRest, afterRest)
   )
 }
 
-/** Reports whether one markdown path changed only because its owning root directory moved. */
-const isMarkdownRelocatedByRootRename = (
+/** Reports whether one markdown path changed only because its owning collection directory moved. */
+const isMarkdownRelocatedByCollectionRename = (
   transition: DomainStorageTransitionFor<'prompt'> | DomainStorageTransitionFor<'promptTemplate'>,
-  rename: RootDirectoryRename
+  rename: CollectionDirectoryRename
 ): boolean => {
   if (!transition.before || !transition.after) return false
-  /** Current markdown persistence fields before the root rename. */
+  /** Current markdown persistence fields before the collection rename. */
   const beforeFields = transition.before.persistenceFields
-  /** Desired markdown persistence fields after the root rename. */
+  /** Desired markdown persistence fields after the collection rename. */
   const afterFields = transition.after.persistenceFields
-  /** Current fields excluding the root-relative content directory. */
+  /** Current fields excluding the collection-relative content directory. */
   const { folderPath: _beforeFolderPath, ...beforeRest } = beforeFields
-  /** Desired fields excluding the root-relative content directory. */
+  /** Desired fields excluding the collection-relative content directory. */
   const { folderPath: _afterFolderPath, ...afterRest } = afterFields
   /** Whether prompt content follows the same registry-backed status directory through the rename. */
   const followsPromptStatusDirectory =
@@ -318,24 +318,24 @@ const isMarkdownRelocatedByRootRename = (
     )
   return (
     isDeepStrictEqual(transition.before.data, transition.after.data) &&
-    beforeFields.promptFolderId === rename.promptFolderId &&
-    afterFields.promptFolderId === rename.promptFolderId &&
+    beforeFields.promptCollectionId === rename.promptCollectionId &&
+    afterFields.promptCollectionId === rename.promptCollectionId &&
     followsPromptStatusDirectory &&
     isDeepStrictEqual(beforeRest, afterRest)
   )
 }
 
-/** Reports whether an ancestor root rename already performs this descendant's disk move. */
-const isRelocatedByRootDirectoryRename = (
+/** Reports whether an ancestor collection rename already performs this descendant's disk move. */
+const isRelocatedByCollectionDirectoryRename = (
   transition: DomainStorageTransition,
-  renames: readonly RootDirectoryRename[]
+  renames: readonly CollectionDirectoryRename[]
 ): boolean =>
   renames.some((rename) => {
     if (transition.entityType === 'category') {
-      return isCategoryRelocatedByRootRename(transition, rename)
+      return isCategoryRelocatedByCollectionRename(transition, rename)
     }
     if (transition.entityType === 'prompt' || transition.entityType === 'promptTemplate') {
-      return isMarkdownRelocatedByRootRename(transition, rename)
+      return isMarkdownRelocatedByCollectionRename(transition, rename)
     }
     return false
   })
@@ -349,10 +349,10 @@ const getFilenameLocation = (
   fields: DomainPersistenceFieldsMap[FilenameEntityType]
 ): { directory: string; stem: string; suffix: string } => {
   if (entityType === 'category') {
-    /** Category metadata owns its root-level category directory. */
+    /** Category metadata owns its collection-level category directory. */
     const category = fields as CategoryPersistenceFields
     return {
-      directory: resolveCategoriesDirectoryPath(category.workspacePath, category.rootFolderName, category.kind),
+      directory: resolveCategoriesDirectoryPath(category.workspacePath, category.collectionFolderName, category.kind),
       stem: category.categoryStem,
       suffix: CATEGORY_FILENAME_SUFFIX
     }
@@ -360,7 +360,7 @@ const getFilenameLocation = (
   /** Markdown metadata owns one physical status directory. */
   const markdown = fields as DomainPersistenceFieldsMap['prompt']
   return {
-    directory: resolvePromptFolderPath(markdown.workspacePath, markdown.folderPath, entityType === 'prompt' ? 'prompt' : 'template'),
+    directory: resolvePromptDirectoryPath(markdown.workspacePath, markdown.folderPath, entityType === 'prompt' ? 'prompt' : 'template'),
     stem: markdown.promptStem,
     suffix: entityType === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
   }
@@ -378,23 +378,23 @@ export const planDomainStorageTransitions = (
   )
   /** Storage transitions containing domain writes and descendant path updates. */
   const storageTransitions: DomainStorageTransition[] = []
-  /** Root directory moves that cover their descendants' physical relocation. */
-  const rootDirectoryRenames = collectRootDirectoryRenames(domainTransitions)
+  /** Collection directory moves that cover their descendants' physical relocation. */
+  const collectionDirectoryRenames = collectCollectionDirectoryRenames(domainTransitions)
   /** Shared disk snapshot and reservations for all file writes in this transaction. */
   const filenames = createFilenameAllocator()
   /** File-backed types reserved before any new destination is allocated. */
   const filenameTypes: FilenameEntityType[] = ['category', 'prompt', 'promptTemplate']
-  /** Maps a descendant directory through a root rename without reallocating its filename. */
+  /** Maps a descendant directory through a collection rename without reallocating its filename. */
   const relocatedDirectory = (directory: string): string => {
-    for (const rename of rootDirectoryRenames) {
-      /** Existing root metadata identifies the absolute source directory. */
-      const root = beforeGraph.get('promptFolder', rename.promptFolderId)!.persistenceFields!
-      /** Absolute source and destination of this root move. */
-      const source = resolvePromptFolderPath(root.workspacePath, rename.beforeFolderName, rename.kind)
+    for (const rename of collectionDirectoryRenames) {
+      /** Existing collection metadata identifies the absolute source directory. */
+      const collectionFields = beforeGraph.get('promptCollection', rename.promptCollectionId)!.persistenceFields!
+      /** Absolute source and destination of this collection move. */
+      const source = resolvePromptDirectoryPath(collectionFields.workspacePath, rename.beforeFolderName, rename.kind)
       /** Relative child path retained by the directory rename. */
       const relative = path.relative(source, directory)
       if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
-        return path.join(resolvePromptFolderPath(root.workspacePath, rename.afterFolderName, rename.kind), relative)
+        return path.join(resolvePromptDirectoryPath(collectionFields.workspacePath, rename.afterFolderName, rename.kind), relative)
       }
     }
     return directory
@@ -412,14 +412,14 @@ export const planDomainStorageTransitions = (
   const entityTypes: DomainEntityType[] = [
     'systemSettings',
     'workspace',
-    'promptFolder',
+    'promptCollection',
     'category',
     'prompt',
     'promptTemplate',
     'userPersistence',
     'markdownContentUiState',
     'workspaceUiState',
-    'workspacePromptFolderUiState',
+    'workspacePromptCollectionUiState',
     'accordionUiState'
   ]
 
@@ -517,9 +517,9 @@ export const planDomainStorageTransitions = (
         before: beforeRecord,
         after: toPersistenceRecord(afterEntry, desiredFields)
       } as DomainStorageTransition
-      storageTransition.persistenceMode = isRelocatedByRootDirectoryRename(
+      storageTransition.persistenceMode = isRelocatedByCollectionDirectoryRename(
         storageTransition,
-        rootDirectoryRenames
+        collectionDirectoryRenames
       )
         ? 'metadataOnly'
         : 'stage'

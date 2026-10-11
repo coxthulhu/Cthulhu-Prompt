@@ -10,7 +10,7 @@ import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersist
 import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 import {
   createAccordionUiStateKey,
-  createWorkspacePromptFolderUiStateKey
+  createWorkspacePromptCollectionUiStateKey
 } from '@shared/domain/ui-state/UiState'
 import { data } from './Data'
 import type { DomainPersistenceFieldsMap } from '../Persistence/PersistenceTypes'
@@ -64,14 +64,14 @@ export type DomainTransitionProjection = {
 const createEmptyGraphEntries = (): DomainGraphEntries => ({
   systemSettings: new Map(),
   workspace: new Map(),
-  promptFolder: new Map(),
+  promptCollection: new Map(),
   category: new Map(),
   prompt: new Map(),
   promptTemplate: new Map(),
   userPersistence: new Map(),
   markdownContentUiState: new Map(),
   workspaceUiState: new Map(),
-  workspacePromptFolderUiState: new Map(),
+  workspacePromptCollectionUiState: new Map(),
   accordionUiState: new Map()
 })
 
@@ -103,10 +103,10 @@ const getDomainEntityId = <TEntityType extends DomainEntityType>(
       const uiState = entity as DomainEntityMap['markdownContentUiState']
       return createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId)
     }
-    case 'workspacePromptFolderUiState': {
-      /** Prompt-folder UI state whose workspace and owner IDs form its authoritative key. */
-      const uiState = entity as DomainEntityMap['workspacePromptFolderUiState']
-      return createWorkspacePromptFolderUiStateKey(uiState.workspaceId, uiState.contentOwnerId)
+    case 'workspacePromptCollectionUiState': {
+      /** Prompt-collection UI state whose workspace and owner IDs form its authoritative key. */
+      const uiState = entity as DomainEntityMap['workspacePromptCollectionUiState']
+      return createWorkspacePromptCollectionUiStateKey(uiState.workspaceId, uiState.contentOwnerId)
     }
     case 'accordionUiState': {
       /** Accordion UI state whose workspace and persistence IDs form its authoritative key. */
@@ -126,14 +126,14 @@ const captureCommittedDomainGraph = (): DomainGraph => {
   const entityTypes: DomainEntityType[] = [
     'systemSettings',
     'workspace',
-    'promptFolder',
+    'promptCollection',
     'category',
     'prompt',
     'promptTemplate',
     'userPersistence',
     'markdownContentUiState',
     'workspaceUiState',
-    'workspacePromptFolderUiState',
+    'workspacePromptCollectionUiState',
     'accordionUiState'
   ]
 
@@ -162,14 +162,14 @@ const copyDomainGraph = (graph: DomainGraph): DomainGraph =>
   createDomainGraph({
     systemSettings: new Map(graph.entries.systemSettings),
     workspace: new Map(graph.entries.workspace),
-    promptFolder: new Map(graph.entries.promptFolder),
+    promptCollection: new Map(graph.entries.promptCollection),
     category: new Map(graph.entries.category),
     prompt: new Map(graph.entries.prompt),
     promptTemplate: new Map(graph.entries.promptTemplate),
     userPersistence: new Map(graph.entries.userPersistence),
     markdownContentUiState: new Map(graph.entries.markdownContentUiState),
     workspaceUiState: new Map(graph.entries.workspaceUiState),
-    workspacePromptFolderUiState: new Map(graph.entries.workspacePromptFolderUiState),
+    workspacePromptCollectionUiState: new Map(graph.entries.workspacePromptCollectionUiState),
     accordionUiState: new Map(graph.entries.accordionUiState)
   })
 

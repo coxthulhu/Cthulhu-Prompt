@@ -1,0 +1,170 @@
+import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import {
+  waitForMonacoEditor,
+  focusMonacoEditor,
+  getMonacoEditorText,
+  getMonacoCursorPosition,
+  isMonacoEditorFocused
+} from '../helpers/MonacoHelpers'
+import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
+import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
+
+const { test, describe, expect } = createPlaywrightTestSuite()
+
+const DEVELOPMENT_EDITOR = '[data-testid="prompt-editor-dev-1"]'
+
+describe('Prompt Collections Autosave (Svelte)', () => {
+  test('keeps the Monaco editor focused after autosave completes', async ({ testSetup, electronApp }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptCollections('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    const marker = '[autosave-focus-check]'
+
+    await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+    await mainWindow.keyboard.type(marker, { delay: 50 })
+
+    const contentAfterTyping = await getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR)
+    expect(contentAfterTyping).toContain(marker)
+
+    const cursorBeforeAutosave = await getMonacoCursorPosition(mainWindow, DEVELOPMENT_EDITOR)
+    expect(cursorBeforeAutosave).not.toBeNull()
+    expect(cursorBeforeAutosave?.column ?? 0).toBeGreaterThan(1)
+
+    await expect.poll(() => readPersistedPromptTextById(electronApp, {
+      workspacePath: '/ws/sample',
+      folderName: 'Development',
+      promptId: 'dev-1',
+      promptTitle: 'Code Review'
+    })).toContain(marker)
+    await waitForRendererPersistence(mainWindow)
+
+    const cursorAfterAutosave = await getMonacoCursorPosition(mainWindow, DEVELOPMENT_EDITOR)
+    expect(cursorAfterAutosave).toEqual(cursorBeforeAutosave)
+
+    const stillFocused = await isMonacoEditorFocused(mainWindow, DEVELOPMENT_EDITOR)
+    expect(stillFocused).toBe(true)
+
+    await mainWindow.keyboard.type('!', { delay: 50 })
+
+    const cursorAfterSecondType = await getMonacoCursorPosition(mainWindow, DEVELOPMENT_EDITOR)
+    expect(cursorAfterSecondType?.lineNumber).toBe(cursorBeforeAutosave?.lineNumber)
+    expect(cursorAfterSecondType?.column ?? 0).toBe((cursorBeforeAutosave?.column ?? 0) + 1)
+  })
+
+  test('retains typed content when switching collections immediately after typing', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptCollections('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    const marker = '[autosave-switch-immediate]'
+    await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+    await mainWindow.keyboard.type(marker, { delay: 50 })
+
+    const contentAfterTyping = await getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR)
+    expect(contentAfterTyping).toContain(marker)
+
+    await testHelpers.navigateToPromptCollections('Examples')
+    await expect
+      .poll(async () => (await testHelpers.verifyPromptVisible('Simple Greeting')).found)
+      .toBe(true)
+
+    await testHelpers.navigateToPromptCollections('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    await expect
+      .poll(
+        async () => {
+          return await readPersistedPromptTextById(electronApp, {
+            workspacePath: '/ws/sample',
+            folderName: 'Development',
+            promptId: 'dev-1',
+            promptTitle: 'Code Review'
+          })
+        },
+        { timeout: 5000 }
+      )
+      .toContain(marker)
+
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR), {
+        timeout: 5000
+      })
+      .toContain(marker)
+  })
+
+  test('retains typed content when switching collections after autosave completes', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptCollections('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    const marker = '[autosave-switch-after-save]'
+    await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+    await mainWindow.keyboard.type(marker, { delay: 50 })
+
+    await expect.poll(() => readPersistedPromptTextById(electronApp, {
+      workspacePath: '/ws/sample',
+      folderName: 'Development',
+      promptId: 'dev-1',
+      promptTitle: 'Code Review'
+    })).toContain(marker)
+    await waitForRendererPersistence(mainWindow)
+
+    await testHelpers.navigateToPromptCollections('Examples')
+    await expect
+      .poll(async () => (await testHelpers.verifyPromptVisible('Simple Greeting')).found)
+      .toBe(true)
+
+    await testHelpers.navigateToPromptCollections('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    await expect
+      .poll(async () => getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR), {
+        timeout: 5000
+      })
+      .toContain(marker)
+  })
+
+  test('flushes pending prompt autosave before closing the workspace', async ({
+    testSetup,
+    electronApp
+  }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+
+    await testHelpers.navigateToPromptCollections('Development')
+    await waitForMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+
+    const marker = '[autosave-close-immediate]'
+    await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
+    await mainWindow.keyboard.insertText(marker)
+    await expect.poll(() => getMonacoEditorText(mainWindow, DEVELOPMENT_EDITOR)).toContain(marker)
+
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.clearWorkspaceViaUI()
+
+    const persistedPrompt = await readPersistedPromptTextById(electronApp, {
+      workspacePath: '/ws/sample',
+      folderName: 'Development',
+      promptId: 'dev-1',
+      promptTitle: 'Code Review'
+    })
+    expect(persistedPrompt).toContain(marker)
+  })
+})

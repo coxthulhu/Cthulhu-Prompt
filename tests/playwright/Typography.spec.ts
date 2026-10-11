@@ -42,13 +42,13 @@ describe('Typography', () => {
     }
   })
 
-  // Larger folder headings must fit their fixed row, and find text must use its own default scale.
-  test('fits standardized folder headings and find text inside their fixed controls', async ({ testSetup }) => {
+  // Larger collection headings must fit their fixed row, and find text must use its own default scale.
+  test('fits standardized collection headings and find text inside their fixed controls', async ({ testSetup }) => {
     // A real workspace exercises feature styles that are absent from the component gallery.
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     // The heading must leave room for Windows font glyphs beyond the standard line height.
-    const title = mainWindow.getByTestId('prompt-folder-root-title')
+    const title = mainWindow.getByTestId('prompt-collection-title')
     await expect(title).toHaveCSS('font-size', '30px')
     await expect(title).toHaveCSS('line-height', '36px')
     // Include padding to detect clipping even when the outer title height stays unchanged.
@@ -64,7 +64,7 @@ describe('Typography', () => {
     expect(titleMetrics.required).toBeLessThanOrEqual(titleMetrics.available + 1)
     expect(titleMetrics.scrollHeight).toBeLessThanOrEqual(titleMetrics.available + 1)
 
-    await mainWindow.getByTestId('prompt-folder-find-button').click()
+    await mainWindow.getByTestId('prompt-collection-find-button').click()
     // The input and match count have different font sizes and must not inherit each other's line height.
     const input = mainWindow.getByTestId('prompt-find-input')
     await expect(input).toBeVisible()

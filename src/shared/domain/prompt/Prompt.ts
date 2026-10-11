@@ -17,7 +17,7 @@ export enum PromptStatusFolderId {
   Active = 'active',
   Completed = 'completed',
   Archived = 'archived',
-  /** Independently ordered future work within a prompt root. */
+  /** Independently ordered future work within a prompt collection. */
   Backlog = 'backlog'
 }
 
@@ -212,7 +212,7 @@ export const isPromptFull = (prompt: Prompt): prompt is PromptFull => {
 
 /** Complete location of a prompt or template; final statuses have no manual predecessor. */
 export type PromptLocation = {
-  promptFolderId: string
+  promptCollectionId: string
   categoryId: string | null
   previousEntryId: string | null
   status: PromptContentStatus
@@ -231,7 +231,7 @@ export const getContentStatusFolderEntryStatus = (
   return PROMPT_STATUS_FOLDER_REGISTRY[folderId].entryStatus
 }
 
-/** Returns workflow groups exposed by a task or template root. */
+/** Returns workflow groups exposed by a task or template collection. */
 export const getContentStatusFolders = (kind: 'prompt' | 'template'): PromptStatusFolderDefinition[] =>
   PROMPT_STATUS_FOLDERS.filter((group) => kind === 'prompt' ||
     group.id === PromptStatusFolderId.Active || group.id === PromptStatusFolderId.Archived)

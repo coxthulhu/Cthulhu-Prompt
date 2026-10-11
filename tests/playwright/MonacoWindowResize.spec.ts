@@ -2,14 +2,14 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
-  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector
-} from '../helpers/PromptFolderSelectors'
+} from '../helpers/PromptCollectionSelectors'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
-const FOLDER_NAME = 'Wrapped Single Line Prompt'
+const HOST_SELECTOR = PROMPT_COLLECTION_HOST_SELECTOR
+const COLLECTION_NAME = 'Wrapped Single Line Prompt'
 const PROMPT_SELECTOR = promptEditorSelector('height-test-11')
 const PLACEHOLDER_SELECTOR = `${PROMPT_SELECTOR} ${MONACO_PLACEHOLDER_SELECTOR}`
 
@@ -68,8 +68,8 @@ describe('Monaco window resize', () => {
       workspace: { scenario: 'height' }
     })
 
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: FOLDER_NAME,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: COLLECTION_NAME,
       hostSelector: HOST_SELECTOR,
       promptSelector: PROMPT_SELECTOR,
       placeholderSelector: PLACEHOLDER_SELECTOR

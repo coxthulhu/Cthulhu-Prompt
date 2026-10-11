@@ -1,4 +1,4 @@
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import * as path from 'path'
 import {
   PROMPT_STATUS_FOLDERS,
@@ -11,24 +11,24 @@ import type {
   PromptTemplateSummaryData
 } from '@shared/domain/prompt-template/PromptTemplate'
 import {
-  folderEntryRef,
+  collectionEntryRef,
   promptEntryRef,
   promptTemplateEntryRef,
   type EntryRef,
-  type FolderEntryRef
+  type CollectionEntryRef
 } from '@shared/domain/OrderContainer'
 import {
-  copyPromptFolderSettings,
+  copyPromptCollectionSettings,
   type CategoryOrder,
   type CategoryOrderEntryRef,
-  type PromptFolder,
-  type PromptFolderContentKind,
-  type PromptFolderKind,
-  type PromptFolderSettings,
+  type PromptCollection,
+  type PromptCollectionContentKind,
+  type PromptCollectionKind,
+  type PromptCollectionSettings,
   type PromptStatusFolderLayouts
-} from '@shared/domain/prompt-folder/PromptFolder'
+} from '@shared/domain/prompt-collection/PromptCollection'
 import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
-import type { PromptFolderInfoFile, WorkspaceInfoFile } from './WorkspaceDiskTypes'
+import type { PromptCollectionInfoFile, WorkspaceInfoFile } from './WorkspaceDiskTypes'
 import { getFs } from '../../fs-provider'
 import { readJsonFile } from '../FilePersistenceHelpers'
 import { parseCategoryJson } from '../CategoryPersistence'
@@ -41,14 +41,14 @@ import {
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
   resolvePromptStatusFolderName,
-  resolvePromptFolderPath,
+  resolvePromptDirectoryPath,
   resolvePromptRootDirectoryName,
-  resolvePromptFolderInfoPath,
-  resolvePromptFolderCategoryOrderPath,
-  resolvePromptFolderSettingsTextPath,
+  resolvePromptCollectionInfoPath,
+  resolvePromptCollectionCategoryOrderPath,
+  resolvePromptCollectionSettingsTextPath,
   resolvePromptPathsFromStem,
   resolveCategoriesDirectoryPath,
-  resolveWorkspaceFolderOrderPath
+  resolveWorkspaceCollectionOrderPath
 } from '../PromptPersistencePaths'
 import {
   serializePromptMarkdown,
@@ -79,13 +79,13 @@ export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile 
   return parsed as WorkspaceInfoFile
 }
 
-const readPromptFolderInfo = (
+const readPromptCollectionInfo = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind
-): PromptFolderInfoFile => {
-  const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName, kind)
-  return readJsonFile<PromptFolderInfoFile>(infoPath)
+  kind: PromptCollectionKind
+): PromptCollectionInfoFile => {
+  const infoPath = resolvePromptCollectionInfoPath(workspacePath, folderName, kind)
+  return readJsonFile<PromptCollectionInfoFile>(infoPath)
 }
 
 const readOptionalTextFile = (filePath: string): string | null => {
@@ -101,15 +101,15 @@ const readOptionalTextFile = (filePath: string): string | null => {
 const readContentIds = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind,
+  kind: PromptCollectionKind,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): string[] => {
   const contentKind = kind
-  /** Physical ordered directory selected for prompts or the direct template root. */
+  /** Physical ordered directory selected for prompts or the direct template collection. */
   const orderedFolderName =
     resolvePromptStatusFolderName(folderName, statusFolderId)
   const contentStemById = readContentStemById(workspacePath, orderedFolderName, contentKind)
-  return readPromptFolderCategoryOrder(
+  return readPromptCollectionCategoryOrder(
     workspacePath,
     folderName,
     kind,
@@ -124,7 +124,7 @@ const isEntryRef = (value: unknown): value is EntryRef => {
   if (!value || typeof value !== 'object') return false
   const entry = value as Record<string, unknown>
   return (
-    (entry.kind === 'prompt' || entry.kind === 'template' || entry.kind === 'folder') &&
+    (entry.kind === 'prompt' || entry.kind === 'template' || entry.kind === 'collection') &&
     typeof entry.id === 'string'
   )
 }
@@ -171,44 +171,44 @@ const writeRepairedOrder = <TEntry extends EntryRef>(
   return entries
 }
 
-/** Discovers one kind of root folder in deterministic disk-name order. */
-const readDirectWorkspaceFolderRefs = (
+/** Discovers one kind of collection in deterministic disk-name order. */
+const readDirectWorkspaceCollectionRefs = (
   workspacePath: string,
-  kind: PromptFolderKind
-): FolderEntryRef[] => {
+  kind: PromptCollectionKind
+): CollectionEntryRef[] => {
   const fs = getFs()
-  /** Type directory containing every discoverable root in this order. */
+  /** Type directory containing every discoverable collection in this order. */
   const diskPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
-  /** Valid root folders paired with their stable references. */
-  const folders = fs
+  /** Valid collections paired with their stable references. */
+  const collections = fs
     .readdirSync(diskPath, { withFileTypes: true })
     .filter(
-      (entry) => entry.isDirectory() && isPromptFolderDirectory(workspacePath, entry.name, kind)
+      (entry) => entry.isDirectory() && isPromptCollectionDirectory(workspacePath, entry.name, kind)
     )
     .map((entry) => ({
       folderName: entry.name,
-      ref: folderEntryRef(readPromptFolderInfo(workspacePath, entry.name, kind).folderId)
+      ref: collectionEntryRef(readPromptCollectionInfo(workspacePath, entry.name, kind).collectionId)
     }))
 
-  return folders
+  return collections
     .sort((left, right) =>
       left.folderName.toLowerCase().localeCompare(right.folderName.toLowerCase())
     )
-    .map((folder) => folder.ref)
+    .map((collection) => collection.ref)
 }
 
-/** Reads and repairs the workspace root-folder order for one kind. */
-export const readWorkspaceFolderEntries = (
+/** Reads and repairs the workspace collection order for one kind. */
+export const readWorkspaceCollectionEntries = (
   workspacePath: string,
-  kind: PromptFolderKind
-): FolderEntryRef[] => {
-  /** Type-owned order file repaired against folders currently on disk. */
-  const orderPath = resolveWorkspaceFolderOrderPath(workspacePath, kind)
-  const persistedEntries = readOrderEntries<FolderEntryRef>(orderPath)
+  kind: PromptCollectionKind
+): CollectionEntryRef[] => {
+  /** Type-owned order file repaired against collections currently on disk. */
+  const orderPath = resolveWorkspaceCollectionOrderPath(workspacePath, kind)
+  const persistedEntries = readOrderEntries<CollectionEntryRef>(orderPath)
   return writeRepairedOrder(
     orderPath,
     persistedEntries,
-    readDirectWorkspaceFolderRefs(workspacePath, kind)
+    readDirectWorkspaceCollectionRefs(workspacePath, kind)
   )
 }
 
@@ -220,10 +220,10 @@ const readFileModifiedAt = (filePath: string): string => {
 const readContentStemById = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): Map<string, string> => {
   const fs = getFs()
-  const folderPath = resolvePromptFolderPath(workspacePath, folderName, kind)
+  const folderPath = resolvePromptDirectoryPath(workspacePath, folderName, kind)
   const contentStemById = new Map<string, string>()
 
   if (!fs.existsSync(folderPath)) {
@@ -264,14 +264,14 @@ export const readPromptTemplateStemById = (
   folderName: string
 ): Map<string, string> => readContentStemById(workspacePath, folderName, 'template')
 
-/** Reads category IDs and their persisted filename stems from one root folder. */
+/** Reads category IDs and their persisted filename stems from one collection. */
 export const readCategoryStemById = (
   workspacePath: string,
-  rootFolderName: string,
-  kind: PromptFolderKind
+  collectionFolderName: string,
+  kind: PromptCollectionKind
 ): Map<string, string> => {
   const fs = getFs()
-  const categoriesPath = resolveCategoriesDirectoryPath(workspacePath, rootFolderName, kind)
+  const categoriesPath = resolveCategoriesDirectoryPath(workspacePath, collectionFolderName, kind)
   const categoryStemById = new Map<string, string>()
   if (!fs.existsSync(categoriesPath)) return categoryStemById
 
@@ -294,10 +294,10 @@ type CategoryOrderContent = {
   markdownPath: string
 }
 
-/** Reports whether a persisted value is a category-order entry of the root's content kind. */
+/** Reports whether a persisted value is a category-order entry of the collection's content kind. */
 const isCategoryOrderEntry = (
   value: unknown,
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): value is CategoryOrderEntryRef => {
   if (!value || typeof value !== 'object') return false
   /** Candidate persisted entry being validated. */
@@ -305,10 +305,10 @@ const isCategoryOrderEntry = (
   return entry.kind === kind && typeof entry.id === 'string'
 }
 
-/** Reads and validates one existing FolderOrder file. */
+/** Reads and validates one existing CategoryOrder file. */
 const readCategoryOrderFile = (
   orderPath: string,
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): CategoryOrder => {
   /** Untrusted JSON shape read from the category ordering file. */
   const value = readJsonFile<{ categories?: unknown }>(orderPath)
@@ -344,34 +344,34 @@ const readCategoryOrderFile = (
   return { categories }
 }
 
-/** Discovers all content in one ordered prompt status folder or template root. */
-const readRootCategoryOrderContents = (
+/** Discovers all content in one ordered prompt status folder or template collection. */
+const readCollectionCategoryOrderContents = (
   workspacePath: string,
-  rootFolderName: string,
-  kind: PromptFolderContentKind,
+  collectionFolderName: string,
+  kind: PromptCollectionContentKind,
   statusFolderId: PromptStatusFolderId
 ): CategoryOrderContent[] => {
   /** Filesystem used for ordered-content discovery. */
   const fs = getFs()
-  /** Physical root containing every item covered by the category order. */
-  const orderedRootPath = resolvePromptFolderPath(
+  /** Physical collection containing every item covered by the category order. */
+  const orderedCollectionPath = resolvePromptDirectoryPath(
     workspacePath,
-    resolvePromptStatusFolderName(rootFolderName, statusFolderId),
+    resolvePromptStatusFolderName(collectionFolderName, statusFolderId),
     kind
   )
-  /** Filename suffix identifying the root's content kind. */
+  /** Filename suffix identifying the collection's content kind. */
   const filenameSuffix =
     kind === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
   /** First valid discovered record for each stable content ID. */
   const contentById = new Map<string, CategoryOrderContent>()
 
-  if (fs.existsSync(orderedRootPath)) {
+  if (fs.existsSync(orderedCollectionPath)) {
     for (const entry of fs
-      .readdirSync(orderedRootPath, { withFileTypes: true })
+      .readdirSync(orderedCollectionPath, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))) {
       if (!entry.isFile() || !entry.name.endsWith(filenameSuffix)) continue
       /** Full path of one ordered prompt or template markdown file. */
-      const entryPath = path.join(orderedRootPath, entry.name)
+      const entryPath = path.join(orderedCollectionPath, entry.name)
       /** Parsed content whose stable ID participates in category ordering. */
       const content =
         kind === 'prompt'
@@ -394,17 +394,17 @@ const readRootCategoryOrderContents = (
   })
 }
 
-/** Repairs root category groups, entry ownership, and matching content front matter. */
-export const readPromptFolderCategoryOrder = (
+/** Repairs collection category groups, entry ownership, and matching content front matter. */
+export const readPromptCollectionCategoryOrder = (
   workspacePath: string,
-  rootFolderName: string,
-  kind: PromptFolderContentKind,
+  collectionFolderName: string,
+  kind: PromptCollectionContentKind,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): CategoryOrder => {
-  /** Canonical FolderOrder path for the root. */
-  const orderPath = resolvePromptFolderCategoryOrderPath(
+  /** Canonical CategoryOrder path for the collection's selected status folder. */
+  const orderPath = resolvePromptCollectionCategoryOrderPath(
     workspacePath,
-    rootFolderName,
+    collectionFolderName,
     kind,
     statusFolderId
   )
@@ -416,18 +416,18 @@ export const readPromptFolderCategoryOrder = (
     : kind === 'prompt' && statusFolderId === PromptStatusFolderId.Backlog
       ? {
           // Seed future work with Active's repaired category order, without its prompts.
-          categories: readPromptFolderCategoryOrder(workspacePath, rootFolderName, kind)
+          categories: readPromptCollectionCategoryOrder(workspacePath, collectionFolderName, kind)
             .categories.map(({ categoryId }) => ({ categoryId, entries: [] }))
         }
       : { categories: [] }
-  /** Category IDs backed by valid category files for this root. */
+  /** Category IDs backed by valid category files for this collection. */
   const discoveredCategoryIds = [
-    ...readCategoryStemById(workspacePath, rootFolderName, kind).keys()
+    ...readCategoryStemById(workspacePath, collectionFolderName, kind).keys()
   ]
   /** Valid ordered content sorted by displayed name and stable ID. */
-  const discoveredContents = readRootCategoryOrderContents(
+  const discoveredContents = readCollectionCategoryOrderContents(
     workspacePath,
-    rootFolderName,
+    collectionFolderName,
     kind,
     statusFolderId
   )
@@ -486,16 +486,16 @@ export const readPromptFolderCategoryOrder = (
     fs.writeFileSync(orderPath, JSON.stringify(categoryOrder, null, 2), 'utf8')
   }
 
-  /** Authoritative category membership assigned by the repaired folder order. */
+  /** Authoritative category membership assigned by the repaired collection order. */
   const categoryIdByContentId = new Map<string, string | null>()
   for (const category of categoryOrder.categories) {
     for (const entry of category.entries) categoryIdByContentId.set(entry.id, category.categoryId)
   }
   for (const discoveredContent of discoveredContents) {
-    /** Category ID that FolderOrder assigns to this content. */
+    /** Category ID that CategoryOrder assigns to this content. */
     const categoryId = categoryIdByContentId.get(discoveredContent.entry.id) ?? null
     if ((discoveredContent.content.category ?? null) === categoryId) continue
-    /** Content copy whose front matter is synchronized to the folder order. */
+    /** Content copy whose front matter is synchronized to the collection order. */
     const synchronizedContent = { ...discoveredContent.content }
     if (categoryId === null) delete synchronizedContent.category
     else synchronizedContent.category = categoryId
@@ -511,35 +511,35 @@ export const readPromptFolderCategoryOrder = (
   return categoryOrder
 }
 
-export const readPromptFolder = (
+export const readPromptCollection = (
   workspacePath: string,
   folderPath: string,
   folderName: string = folderPath,
-  kind: PromptFolderKind = 'prompt'
-): PromptFolder => {
-  const info = readPromptFolderInfo(workspacePath, folderPath, kind)
-  const folderDescription = readOptionalTextFile(
-    resolvePromptFolderSettingsTextPath(workspacePath, folderPath, 'folderDescription', kind)
+  kind: PromptCollectionKind = 'prompt'
+): PromptCollection => {
+  const info = readPromptCollectionInfo(workspacePath, folderPath, kind)
+  const collectionDescription = readOptionalTextFile(
+    resolvePromptCollectionSettingsTextPath(workspacePath, folderPath, 'collectionDescription', kind)
   )
-  const baseFolder = {
-    id: info.folderId,
+  const baseCollection = {
+    id: info.collectionId,
     folderName,
     displayName: info.displayName
   }
 
   if (kind === 'template') {
     return {
-      ...baseFolder,
+      ...baseCollection,
       kind,
       statusFolders: createPromptStatusFolderLayouts({
-        categoryOrders: { active: readPromptFolderCategoryOrder(workspacePath, folderPath, kind) },
+        categoryOrders: { active: readPromptCollectionCategoryOrder(workspacePath, folderPath, kind) },
         promptIds: { archived: [...readPromptTemplateStemById(workspacePath, resolvePromptStatusFolderName(folderPath, PromptStatusFolderId.Archived)).keys()] }
       }),
-      settings: { folderDescription }
+      settings: { collectionDescription }
     }
   }
 
-  const folderSettings: PromptFolderSettings = { folderDescription }
+  const collectionSettings: PromptCollectionSettings = { collectionDescription }
   /** Registry-backed prompt status-folder layouts loaded from their physical directories. */
   const statusFolders = Object.fromEntries(
     PROMPT_STATUS_FOLDERS.map((statusFolder) => [
@@ -547,7 +547,7 @@ export const readPromptFolder = (
       statusFolder.ordering === 'category'
         ? {
             ordering: 'category' as const,
-            categoryOrder: readPromptFolderCategoryOrder(
+            categoryOrder: readPromptCollectionCategoryOrder(
               workspacePath,
               folderPath,
               kind,
@@ -567,27 +567,27 @@ export const readPromptFolder = (
   ) as PromptStatusFolderLayouts
 
   return {
-    ...baseFolder,
+    ...baseCollection,
     kind,
     statusFolders,
-    settings: copyPromptFolderSettings(folderSettings)
+    settings: copyPromptCollectionSettings(collectionSettings)
   }
 }
 
 const readMarkdownContents = <TContent>(
   workspacePath: string,
   folderName: string,
-  folderKind: PromptFolderKind,
+  collectionKind: PromptCollectionKind,
   parseMarkdown: (fileText: string, modifiedAt: string) => TContent | null
 ): TContent[] => {
   const fs = getFs()
-  const contentKind = folderKind
+  const contentKind = collectionKind
   /** Ordered source directory used by this active-compatible reader. */
   const orderedFolderName =
     resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
-  const contentIds = readContentIds(workspacePath, folderName, folderKind)
+  const contentIds = readContentIds(workspacePath, folderName, collectionKind)
   const contentStemById = readContentStemById(workspacePath, orderedFolderName, contentKind)
-  const folderPath = resolvePromptFolderPath(workspacePath, orderedFolderName, folderKind)
+  const folderPath = resolvePromptDirectoryPath(workspacePath, orderedFolderName, collectionKind)
   const contents: TContent[] = []
   for (const contentId of contentIds) {
     const contentStem = contentStemById.get(contentId)
@@ -606,9 +606,9 @@ const readMarkdownContents = <TContent>(
 export const readPrompts = (
   workspacePath: string,
   folderName: string,
-  folderKind: 'prompt' = 'prompt'
+  collectionKind: 'prompt' = 'prompt'
 ): PromptPersisted[] =>
-  readMarkdownContents(workspacePath, folderName, folderKind, parsePromptMarkdown)
+  readMarkdownContents(workspacePath, folderName, collectionKind, parsePromptMarkdown)
 
 export const readPromptTemplates = (
   workspacePath: string,
@@ -619,9 +619,9 @@ export const readPromptTemplates = (
 export const readPromptSummaries = (
   workspacePath: string,
   folderName: string,
-  folderKind: 'prompt' = 'prompt'
+  collectionKind: 'prompt' = 'prompt'
 ): PromptSummaryData[] => {
-  const prompts = readPrompts(workspacePath, folderName, folderKind)
+  const prompts = readPrompts(workspacePath, folderName, collectionKind)
   return prompts.map((prompt) => ({
     id: prompt.id,
     title: prompt.title,
@@ -644,14 +644,14 @@ export const readPromptTemplateSummaries = (
   }))
 }
 
-export const readPromptFolders = (
+export const readPromptCollections = (
   workspacePath: string,
-  kind: PromptFolderKind = 'prompt'
-): PromptFolder[] => {
+  kind: PromptCollectionKind = 'prompt'
+): PromptCollection[] => {
   const fs = getFs()
   const promptsPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
   const entries = fs.readdirSync(promptsPath, { withFileTypes: true })
-  const promptFolders: PromptFolder[] = []
+  const promptCollections: PromptCollection[] = []
 
   for (const entry of entries) {
     if (!entry.isDirectory()) {
@@ -659,33 +659,33 @@ export const readPromptFolders = (
     }
 
     const folderPath = entry.name
-    if (!isPromptFolderDirectory(workspacePath, folderPath, kind)) {
+    if (!isPromptCollectionDirectory(workspacePath, folderPath, kind)) {
       continue
     }
 
-    promptFolders.push(readPromptFolder(workspacePath, folderPath, folderPath, kind))
+    promptCollections.push(readPromptCollection(workspacePath, folderPath, folderPath, kind))
   }
 
-  const promptFolderById = new Map(promptFolders.map((folder) => [folder.id, folder]))
-  return readWorkspaceFolderEntries(workspacePath, kind).flatMap((entry) => {
-    const folder = promptFolderById.get(entry.id)
-    return folder ? [folder] : []
+  const promptCollectionById = new Map(promptCollections.map((collection) => [collection.id, collection]))
+  return readWorkspaceCollectionEntries(workspacePath, kind).flatMap((entry) => {
+    const collection = promptCollectionById.get(entry.id)
+    return collection ? [collection] : []
   })
 }
 
-const isPromptFolderDirectory = (
+const isPromptCollectionDirectory = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind
+  kind: PromptCollectionKind
 ): boolean => {
   const fs = getFs()
-  const infoPath = resolvePromptFolderInfoPath(workspacePath, folderName, kind)
-  return fs.existsSync(infoPath) && readJsonFile<PromptFolderInfoFile>(infoPath).kind === kind
+  const infoPath = resolvePromptCollectionInfoPath(workspacePath, folderName, kind)
+  return fs.existsSync(infoPath) && readJsonFile<PromptCollectionInfoFile>(infoPath).kind === kind
 }
 
-export const readAllPromptFolders = (
+export const readAllPromptCollections = (
   workspacePath: string,
-  kind: PromptFolderKind = 'prompt'
-): PromptFolder[] => {
-  return readPromptFolders(workspacePath, kind)
+  kind: PromptCollectionKind = 'prompt'
+): PromptCollection[] => {
+  return readPromptCollections(workspacePath, kind)
 }

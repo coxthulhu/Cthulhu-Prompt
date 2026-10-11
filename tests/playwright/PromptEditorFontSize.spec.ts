@@ -4,9 +4,9 @@ import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   MONACO_PLACEHOLDER_SELECTOR,
-  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector
-} from '../helpers/PromptFolderSelectors'
+} from '../helpers/PromptCollectionSelectors'
 import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -154,9 +154,9 @@ describe('Prompt editor settings', () => {
     const rowSelector = promptEditorSelector(prompt.id)
     const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
 
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: prompt.title,
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: prompt.title,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       promptSelector: rowSelector,
       placeholderSelector
     })
@@ -180,9 +180,9 @@ describe('Prompt editor settings', () => {
     const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
 
     await setPromptFontSize(mainWindow, testHelpers, 12)
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: prompt.title,
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: prompt.title,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       promptSelector: rowSelector,
       placeholderSelector
     })
@@ -190,9 +190,9 @@ describe('Prompt editor settings', () => {
     const smallLineHeight = await getMonacoLineHeight(mainWindow, rowSelector)
 
     await setPromptFontSize(mainWindow, testHelpers, 32)
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: prompt.title,
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: prompt.title,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       promptSelector: rowSelector,
       placeholderSelector
     })
@@ -268,9 +268,9 @@ describe('Prompt editor settings', () => {
     const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
 
     await setPromptEditorMaxLines(mainWindow, testHelpers, 10)
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: prompt.title,
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: prompt.title,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       promptSelector: rowSelector,
       placeholderSelector
     })
@@ -292,9 +292,9 @@ describe('Prompt editor settings', () => {
     const rowSelector = promptEditorSelector(prompt.id)
     const placeholderSelector = `${rowSelector} ${MONACO_PLACEHOLDER_SELECTOR}`
 
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: prompt.title,
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: prompt.title,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       promptSelector: rowSelector,
       placeholderSelector
     })
@@ -307,9 +307,9 @@ describe('Prompt editor settings', () => {
     await expect(toggle).toContainText('Disabled')
     await waitForStoredShowLineNumbers(mainWindow, false)
 
-    await testHelpers.openPromptFolderAndWaitForHydrationReady({
-      folderName: prompt.title,
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+    await testHelpers.openPromptCollectionAndWaitForHydrationReady({
+      collectionName: prompt.title,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       promptSelector: rowSelector,
       placeholderSelector
     })

@@ -6,7 +6,7 @@ import {
   type CreatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import type { DomainCommandParser, DomainPlanner } from '@shared/domain/DomainChanges'
-import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { handleMainDomainMutation } from './DomainMutation'
 
 /** Shared main-process registration for prompt and prompt-template mutation channels. */
@@ -14,7 +14,7 @@ export type MarkdownContentMutationConfig<
   TCreateCommand extends CreatePromptDomainCommand | CreatePromptTemplateDomainCommand,
   TUpdateCommand
 > = {
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
   channels: {
     create: string
     update: string

@@ -193,12 +193,12 @@
       icon: StickyNote
     }
   ]
-  const folderDropdownItems: DropdownPopupItem[] = [
+  const collectionDropdownItems: DropdownPopupItem[] = [
     { id: 'open', label: 'Open', icon: Folder, variant: 'accent' },
     { id: 'pin', label: 'Pin to sidebar', icon: Pin },
-    { id: 'export', label: 'Export folder', icon: Download },
-    { id: 'archive', label: 'Archive folder', icon: Archive },
-    { id: 'delete', label: 'Delete folder', icon: Trash2, variant: 'danger' }
+    { id: 'export', label: 'Export collection', icon: Download },
+    { id: 'archive', label: 'Archive collection', icon: Archive },
+    { id: 'delete', label: 'Delete collection', icon: Trash2, variant: 'danger' }
   ]
   const promptDropdownItems: DropdownPopupItem[] = [
     { id: 'improve', label: 'Improve wording', icon: Sparkles, variant: 'accent' },
@@ -243,9 +243,9 @@
     }
   ]
   const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
-    id: 'add-folder',
-    label: 'Add Folder',
-    detail: 'Create a new folder',
+    id: 'add-collection',
+    label: 'Add Collection',
+    detail: 'Create a new collection',
     icon: Plus
   }
   const iconButtonMoreOptionsItems: DropdownPopupDetailedItem[] = [
@@ -258,7 +258,7 @@
     {
       id: 'duplicate-prompt',
       label: 'Duplicate Prompt',
-      detail: 'Create a copy in this folder',
+      detail: 'Create a copy in this collection',
       icon: Copy
     },
     {
@@ -623,7 +623,7 @@
             <Card label="Card: Workspace details">
               <div class="flex flex-wrap items-center gap-6 p-4">
                 <CountDisplay icon={FileText} count={24} label="Prompts" />
-                <CountDisplay icon={Folders} count={3} label="Prompt Folders" />
+                <CountDisplay icon={Folders} count={3} label="Prompt Collections" />
                 <CountDisplay count={0} label="Templates" />
               </div>
               <DisplayRow
@@ -667,17 +667,17 @@
             <div class="stack">
               <div class="button-matrix">
                 <div class="variant-row">
-                  <span class="text-sm">DropdownPopupSimple: folders</span>
+                  <span class="text-sm">DropdownPopupSimple: collections</span>
                   <div class="variant-controls">
                     <DropdownPopupSimple
-                      label="Folder options"
-                      items={folderDropdownItems}
-                      testId="folder-dropdown-menu"
+                      label="Collection options"
+                      items={collectionDropdownItems}
+                      testId="collection-dropdown-menu"
                     >
                       {#snippet trigger(dropdown)}
                         <IconButton
                           icon={MoreHorizontal}
-                          label="Folder options"
+                          label="Collection options"
                           active={dropdown.open}
                           ariaHaspopup={dropdown.ariaHaspopup}
                           ariaExpanded={dropdown.ariaExpanded}
@@ -725,7 +725,7 @@
               <div class="component-sample">
                 {@render componentLabel('SimpleSelectorButton')}
                 <SimpleSelectorButton
-                  label="Select folder"
+                  label="Select collection"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
                   showIcon
@@ -759,7 +759,7 @@
               <div class="component-sample">
                 {@render componentLabel('DetailedSelectorButton')}
                 <DetailedSelectorButton
-                  label="Folder selector"
+                  label="Collection selector"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
                   footerItem={detailedDropdownFooterItem}
@@ -878,7 +878,7 @@
               </div>
               <div class="component-sample">
                 {@render componentLabel('MessageRow: danger')}
-                <MessageRow text="Folder name is required." variant="danger" />
+                <MessageRow text="Collection name is required." variant="danger" />
               </div>
             </div>
           </div>
@@ -1156,7 +1156,7 @@
       aria-label="Popup text"
       data-testid="test-screen-popup-input"
     />
-    <DropdownPopupSimple label="Popup menu" items={folderDropdownItems} testId="test-screen-popup-menu">
+    <DropdownPopupSimple label="Popup menu" items={collectionDropdownItems} testId="test-screen-popup-menu">
       {#snippet trigger({ triggerAction, toggle, ariaHaspopup, ariaExpanded })}
         <IconButton
           icon={MoreHorizontal}

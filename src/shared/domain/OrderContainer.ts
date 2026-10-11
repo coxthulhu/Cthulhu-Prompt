@@ -2,9 +2,9 @@ export type PromptEntryRef = { kind: 'prompt'; id: string }
 
 export type PromptTemplateEntryRef = { kind: 'template'; id: string }
 
-export type FolderEntryRef = { kind: 'folder'; id: string }
+export type CollectionEntryRef = { kind: 'collection'; id: string }
 
-export type EntryRef = PromptEntryRef | PromptTemplateEntryRef | FolderEntryRef
+export type EntryRef = PromptEntryRef | PromptTemplateEntryRef | CollectionEntryRef
 
 export interface OrderContainer<TEntry extends EntryRef> {
   entries: TEntry[]
@@ -17,7 +17,7 @@ export const promptTemplateEntryRef = (id: string): PromptTemplateEntryRef => ({
   id
 })
 
-export const folderEntryRef = (id: string): FolderEntryRef => ({ kind: 'folder', id })
+export const collectionEntryRef = (id: string): CollectionEntryRef => ({ kind: 'collection', id })
 
 export const findEntryIndex = <TEntry extends EntryRef>(
   entries: readonly TEntry[],

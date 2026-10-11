@@ -9,9 +9,9 @@ import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/Promp
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
-  type PromptFolder
-} from '@shared/domain/prompt-folder/PromptFolder'
-import { planRenamePromptFolderDomainMutation } from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+  type PromptCollection
+} from '@shared/domain/prompt-collection/PromptCollection'
+import { planRenamePromptCollectionDomainMutation } from '@shared/domain/prompt-collection/PromptCollectionDomainMutations'
 
 /** Hoisted authoritative stores used by the main persistence planner. */
 const mockDomainData = vi.hoisted(() => {
@@ -25,14 +25,14 @@ const mockDomainData = vi.hoisted(() => {
   const entries = {
     systemSettings: new Map<string, Entry>(),
     workspace: new Map<string, Entry>(),
-    promptFolder: new Map<string, Entry>(),
+    promptCollection: new Map<string, Entry>(),
     category: new Map<string, Entry>(),
     prompt: new Map<string, Entry>(),
     promptTemplate: new Map<string, Entry>(),
     userPersistence: new Map<string, Entry>(),
     markdownContentUiState: new Map<string, Entry>(),
     workspaceUiState: new Map<string, Entry>(),
-    workspacePromptFolderUiState: new Map<string, Entry>(),
+    workspacePromptCollectionUiState: new Map<string, Entry>(),
     accordionUiState: new Map<string, Entry>()
   }
   /** Creates the committed-store reads used by domain persistence planning. */
@@ -44,15 +44,15 @@ const mockDomainData = vi.hoisted(() => {
   const data = {
     systemSettings: { committedStore: createStore('systemSettings') },
     workspace: { committedStore: createStore('workspace') },
-    promptFolder: { committedStore: createStore('promptFolder') },
+    promptCollection: { committedStore: createStore('promptCollection') },
     category: { committedStore: createStore('category') },
     prompt: { committedStore: createStore('prompt') },
     promptTemplate: { committedStore: createStore('promptTemplate') },
     userPersistence: { committedStore: createStore('userPersistence') },
     markdownContentUiState: { committedStore: createStore('markdownContentUiState') },
     workspaceUiState: { committedStore: createStore('workspaceUiState') },
-    workspacePromptFolderUiState: {
-      committedStore: createStore('workspacePromptFolderUiState'),
+    workspacePromptCollectionUiState: {
+      committedStore: createStore('workspacePromptCollectionUiState'),
       targetPolicy: 'deleteIfPresent'
     },
     accordionUiState: { committedStore: createStore('accordionUiState') }
@@ -90,13 +90,13 @@ const createMainLikeDomainState = (): DomainState => ({
     >
 })
 
-/** Creates a root folder with explicit active content entries. */
-const createRootFolder = (
+/** Creates a collection with explicit active content entries. */
+const createCollection = (
   id: string,
-  kind: PromptFolder['kind'],
-  entries: Array<{ kind: PromptFolder['kind']; id: string }>,
+  kind: PromptCollection['kind'],
+  entries: Array<{ kind: PromptCollection['kind']; id: string }>,
   categoryIds: string[] = []
-): PromptFolder => {
+): PromptCollection => {
   /** Category order shared by the selected prompt status folder or template root. */
   const categoryOrder = {
     categories: [
@@ -105,25 +105,25 @@ const createRootFolder = (
     ]
   }
   /** Common root fields shared across the prompt/template union. */
-  const baseFolder = {
+  const baseCollection = {
     id,
     folderName: id,
     displayName: id,
-    settings: { folderDescription: null }
+    settings: { collectionDescription: null }
   }
   return kind === 'prompt'
     ? {
-        ...baseFolder,
+        ...baseCollection,
         kind,
         statusFolders: createPromptStatusFolderLayouts({
           categoryOrders: { [PromptStatusFolderId.Active]: categoryOrder }
         })
       }
-    : { ...baseFolder, kind, statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: categoryOrder } }) }
+    : { ...baseCollection, kind, statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: categoryOrder } }) }
 }
 
-/** Creates persistence fields for one root folder. */
-const createFolderPersistenceFields = (folderPath: string, kind: PromptFolder['kind']) => ({
+/** Creates persistence fields for one collection. */
+const createCollectionPersistenceFields = (folderPath: string, kind: PromptCollection['kind']) => ({
   workspaceId: 'workspace',
   workspacePath: 'C:\\Workspace',
   folderName: folderPath,
@@ -132,11 +132,11 @@ const createFolderPersistenceFields = (folderPath: string, kind: PromptFolder['k
 })
 
 /** Creates persistence fields for one active prompt or template. */
-const createMarkdownPersistenceFields = (promptFolderId: string, promptId: string) => ({
+const createMarkdownPersistenceFields = (promptCollectionId: string, promptId: string) => ({
   workspaceId: 'workspace',
   workspacePath: 'C:\\Workspace',
-  folderPath: `${promptFolderId}\\Active`,
-  promptFolderId,
+  folderPath: `${promptCollectionId}\\Active`,
+  promptCollectionId,
   promptId,
   promptStem: 'Same',
 })
@@ -151,8 +151,8 @@ describe('domain persistence planning', () => {
   ] as const)(
     'treats %s root descendant relocation as metadata-only storage',
     (_caseName, kind, contentEntityType, location) => {
-      /** Root folder whose directory and loaded descendants will move together. */
-      const root = createRootFolder(
+      /** collection whose directory and loaded descendants will move together. */
+      const root = createCollection(
         'Root',
         kind,
         [{ kind, id: 'content' }],
@@ -168,10 +168,10 @@ describe('domain persistence planning', () => {
         id: 'workspace',
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        promptFolderEntries:
-          kind === 'prompt' ? [{ kind: 'folder' as const, id: root.id }] : [],
-        templateFolderEntries:
-          kind === 'template' ? [{ kind: 'folder' as const, id: root.id }] : []
+        promptCollectionEntries:
+          kind === 'prompt' ? [{ kind: 'collection' as const, id: root.id }] : [],
+        templateCollectionEntries:
+          kind === 'template' ? [{ kind: 'collection' as const, id: root.id }] : []
       }
       /** Loaded category physically contained by the renamed root. */
       const category = {
@@ -207,16 +207,16 @@ describe('domain persistence planning', () => {
         workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
       })
       mockDomainData.seed(
-        'promptFolder',
+        'promptCollection',
         root.id,
         root,
-        createFolderPersistenceFields(root.folderName, kind)
+        createCollectionPersistenceFields(root.folderName, kind)
       )
       mockDomainData.seed('category', category.id, category, {
         workspaceId: workspace.id,
         workspacePath: workspace.workspacePath,
-        rootPromptFolderId: root.id,
-        rootFolderName: root.folderName,
+        promptCollectionId: root.id,
+        collectionFolderName: root.folderName,
         kind,
         // Free base names must not cause reallocation during a root rename.
         categoryStem: 'Category 3',
@@ -231,15 +231,15 @@ describe('domain persistence planning', () => {
       })
 
       /** Shared rename plan projected into root and descendant storage transitions. */
-      const plan = planRenamePromptFolderDomainMutation(createMainLikeDomainState(), {
-        promptFolderId: root.id,
+      const plan = planRenamePromptCollectionDomainMutation(createMainLikeDomainState(), {
+        promptCollectionId: root.id,
         displayName: 'Renamed Root'
       })
       expect(Array.isArray(plan)).toBe(true)
       if (!Array.isArray(plan)) return
       /** Complete storage plan after deriving every loaded descendant's new path. */
       const projection = projectDomainTransitions(plan, [
-        { entityType: 'promptFolder', id: root.id, expected: 'revision', revision: 1 }
+        { entityType: 'promptCollection', id: root.id, expected: 'revision', revision: 1 }
       ])
       /** Root and descendant persistence transitions classified by physical work. */
       const storageTransitions = planDomainStorageTransitions(
@@ -249,7 +249,7 @@ describe('domain persistence planning', () => {
       )
       /** Revision-bearing root transition that performs the directory rename. */
       const rootTransition = storageTransitions.find(
-        (transition) => transition.entityType === 'promptFolder' && transition.id === root.id
+        (transition) => transition.entityType === 'promptCollection' && transition.id === root.id
       )
       /** Category transition updating only its in-memory root path. */
       const categoryTransition = storageTransitions.find(
@@ -266,7 +266,7 @@ describe('domain persistence planning', () => {
       })
       expect(categoryTransition).toMatchObject({
         persistenceMode: 'metadataOnly',
-        after: { persistenceFields: { rootFolderName: 'RenamedRoot', categoryStem: 'Category 3' } }
+        after: { persistenceFields: { collectionFolderName: 'RenamedRoot', categoryStem: 'Category 3' } }
       })
       expect(contentTransition).toMatchObject({
         persistenceMode: 'metadataOnly',
@@ -294,8 +294,8 @@ describe('domain persistence planning', () => {
     mockDomainData.seed('category', category.id, category, {
       workspaceId: 'workspace',
       workspacePath: 'C:\\Workspace',
-      rootPromptFolderId: 'Root',
-      rootFolderName: 'Root',
+      promptCollectionId: 'Root',
+      collectionFolderName: 'Root',
       kind: 'prompt',
       categoryStem: 'Before',
     })
@@ -326,22 +326,22 @@ describe('domain persistence planning', () => {
 
   it('allocates a numeric filename during movement without changing its sibling', () => {
     /** Source root initially owning the moved prompt. */
-    const source = createRootFolder('Source', 'prompt', [{ kind: 'prompt', id: 'moving' }])
+    const source = createCollection('Source', 'prompt', [{ kind: 'prompt', id: 'moving' }])
     /** Destination root containing one same-title prompt. */
-    const destination = createRootFolder('Destination', 'prompt', [
+    const destination = createCollection('Destination', 'prompt', [
       { kind: 'prompt', id: 'sibling' }
     ])
     mockDomainData.seed(
-      'promptFolder',
+      'promptCollection',
       source.id,
       source,
-      createFolderPersistenceFields(source.id, 'prompt')
+      createCollectionPersistenceFields(source.id, 'prompt')
     )
     mockDomainData.seed(
-      'promptFolder',
+      'promptCollection',
       destination.id,
       destination,
-      createFolderPersistenceFields(destination.id, 'prompt')
+      createCollectionPersistenceFields(destination.id, 'prompt')
     )
     for (const promptId of ['moving', 'sibling']) {
       /** Full authoritative prompt persisted by the main process. */
@@ -365,9 +365,9 @@ describe('domain persistence planning', () => {
     /** Shared movement changes projected into main persistence writes. */
     const plan = planSetPromptLocationDomainMutation(createMainLikeDomainState(), {
       kind: 'prompt',
-      sourcePromptFolderId: source.id,
+      sourcePromptCollectionId: source.id,
       promptId: 'moving',
-      location: { promptFolderId: destination.id, categoryId: null, previousEntryId: 'sibling', status: PromptStatus.Todo },
+      location: { promptCollectionId: destination.id, categoryId: null, previousEntryId: 'sibling', status: PromptStatus.Todo },
       modifiedAt: '2026-08-30T12:00:00Z'
     })
     expect(Array.isArray(plan)).toBe(true)
@@ -391,7 +391,7 @@ describe('domain persistence planning', () => {
     expect(moving).toMatchObject({
       after: {
         persistenceFields: {
-          promptFolderId: destination.id,
+          promptCollectionId: destination.id,
           promptStem: 'Same 1'
         }
       }
@@ -402,24 +402,24 @@ describe('domain persistence planning', () => {
 
   it('preserves the surviving category filename after deleting its duplicate', () => {
     /** Root containing two duplicate-named category groups. */
-    const root = createRootFolder('Root', 'prompt', [], ['delete', 'survivor'])
+    const root = createCollection('Root', 'prompt', [], ['delete', 'survivor'])
     /** Workspace establishing ownership required by category deletion. */
     const workspace = {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: root.id }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: root.id }],
+      templateCollectionEntries: []
     }
     mockDomainData.seed('workspace', workspace.id, workspace, {
       workspacePath: workspace.workspacePath,
       workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
     })
     mockDomainData.seed(
-      'promptFolder',
+      'promptCollection',
       root.id,
       root,
-      createFolderPersistenceFields(root.id, 'prompt')
+      createCollectionPersistenceFields(root.id, 'prompt')
     )
     for (const categoryId of ['delete', 'survivor']) {
       /** Duplicate-named category with an independently allocated numeric filename. */
@@ -432,8 +432,8 @@ describe('domain persistence planning', () => {
       mockDomainData.seed('category', categoryId, category, {
         workspaceId: 'workspace',
         workspacePath: 'C:\\Workspace',
-        rootPromptFolderId: root.id,
-        rootFolderName: root.id,
+        promptCollectionId: root.id,
+        collectionFolderName: root.id,
         kind: 'prompt',
         categoryStem: categoryId === 'delete' ? 'Same' : 'Same 1',
       })
@@ -442,7 +442,7 @@ describe('domain persistence planning', () => {
     /** Shared deletion plan used to calculate category file cleanup. */
     const plan = planDeleteCategoryDomainMutation(createMainLikeDomainState(), {
       categoryId: 'delete',
-      promptFolderId: root.id,
+      promptCollectionId: root.id,
       workspaceId: workspace.id,
       modifiedAt: 'renderer-time'
     })
@@ -464,12 +464,12 @@ describe('domain persistence planning', () => {
 
   it('allocates category insertion without renaming an existing sibling', () => {
     /** Root that owns one category at the inserted category's sanitized filename boundary. */
-    const root = createRootFolder('Root', 'prompt', [], ['existing'])
+    const root = createCollection('Root', 'prompt', [], ['existing'])
     mockDomainData.seed(
-      'promptFolder',
+      'promptCollection',
       root.id,
       root,
-      createFolderPersistenceFields(root.id, 'prompt')
+      createCollectionPersistenceFields(root.id, 'prompt')
     )
     mockDomainData.seed(
       'category',
@@ -483,8 +483,8 @@ describe('domain persistence planning', () => {
       {
         workspaceId: 'workspace',
         workspacePath: 'C:\\Workspace',
-        rootPromptFolderId: root.id,
-        rootFolderName: root.id,
+        promptCollectionId: root.id,
+        collectionFolderName: root.id,
         kind: 'prompt',
         categoryStem: 'Same',
       }
@@ -492,7 +492,7 @@ describe('domain persistence planning', () => {
     /** Shared category insertion plan projected by the main process. */
     const plan = planCreateCategoryDomainMutation(createMainLikeDomainState(), {
       categoryId: 'created',
-      promptFolderId: root.id,
+      promptCollectionId: root.id,
       displayName: 'Same*',
       shortDescription: null,
       description: null
@@ -501,7 +501,7 @@ describe('domain persistence planning', () => {
     if (!Array.isArray(plan)) return
     /** Insert transition whose before side proves authoritative absence. */
     const projection = projectDomainTransitions(plan, [
-      { entityType: 'promptFolder', id: root.id, expected: 'revision', revision: 1 },
+      { entityType: 'promptCollection', id: root.id, expected: 'revision', revision: 1 },
       { entityType: 'category', id: 'created', expected: 'absent' }
     ])
     /** Inserted category domain transition before storage planning. */
@@ -528,7 +528,7 @@ describe('domain persistence planning', () => {
       before: null,
       after: {
         persistenceFields: {
-          rootPromptFolderId: root.id,
+          promptCollectionId: root.id,
           categoryStem: 'Same 1',
         }
       }

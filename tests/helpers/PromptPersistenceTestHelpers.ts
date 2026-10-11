@@ -41,16 +41,16 @@ export const checkFileExists = async (electronApp: ElectronApplication, filePath
 export const resolvePersistedPromptFilePathsByTitle = (
   lookup: PersistedPromptLookup
 ): PersistedPromptFilePaths => {
-  // Logical folder segments used to insert the canonical Active directory when needed.
-  const [rootFolderName, ...folderSegments] = lookup.folderName.split('/')
+  // Logical collection segments used to insert the canonical Active directory when needed.
+  const [collectionFolderName, ...collectionSegments] = lookup.folderName.split('/')
   // Explicit status paths remain direct while logical active paths are nested beneath Active.
-  const persistedFolderSegments =
-    folderSegments[0] === 'Active' ||
-    folderSegments[0] === 'Completed' ||
-    folderSegments[0] === 'Archived'
-      ? [rootFolderName, ...folderSegments]
-      : [rootFolderName, 'Active', ...folderSegments]
-  const folderPath = `${lookup.workspacePath}/Prompts/${persistedFolderSegments.join('/')}`
+  const persistedCollectionSegments =
+    collectionSegments[0] === 'Active' ||
+    collectionSegments[0] === 'Completed' ||
+    collectionSegments[0] === 'Archived'
+      ? [collectionFolderName, ...collectionSegments]
+      : [collectionFolderName, 'Active', ...collectionSegments]
+  const folderPath = `${lookup.workspacePath}/Prompts/${persistedCollectionSegments.join('/')}`
   const promptStem = sanitizePromptTitleForFilename(lookup.promptTitle)
   return {
     markdownPath: `${folderPath}/${promptStem}.prompt.md`
@@ -78,35 +78,35 @@ export async function checkPersistedPromptFilesExistByTitle(
 }
 
 /** Reads persisted entries across the root’s category groups. */
-export const readPromptFolderEntries = async (
+export const readPromptCollectionEntries = async (
   electronApp: ElectronApplication,
-  folderOrderPath: string
-): Promise<Array<{ kind: 'prompt' | 'folder'; id: string }>> => {
+  collectionOrderPath: string
+): Promise<Array<{ kind: 'prompt' | 'collection'; id: string }>> => {
   /** Raw ordering file read through the existing Electron test event. */
-  const fileContents = await readTextFile(electronApp, folderOrderPath)
+  const fileContents = await readTextFile(electronApp, collectionOrderPath)
   /** Current root ordering groups active content beneath category ownership. */
   const order = JSON.parse(fileContents) as {
     categories: Array<{
-      entries: Array<{ kind: 'prompt' | 'folder'; id: string }>
+      entries: Array<{ kind: 'prompt' | 'collection'; id: string }>
     }>
   }
   return order.categories.flatMap((category) => category.entries)
 }
 
 /** Projects persisted category entries to their ordered IDs. */
-export const readPromptFolderEntryIds = async (
+export const readPromptCollectionEntryIds = async (
   electronApp: ElectronApplication,
-  folderOrderPath: string
+  collectionOrderPath: string
 ): Promise<string[]> =>
-  (await readPromptFolderEntries(electronApp, folderOrderPath)).map((entry) => entry.id)
+  (await readPromptCollectionEntries(electronApp, collectionOrderPath)).map((entry) => entry.id)
 
-/** Polls the existing persisted-folder ordering assertion. */
-export const expectPersistedFolderPromptIds = async (
+/** Polls the existing persisted-collection ordering assertion. */
+export const expectPersistedCollectionPromptIds = async (
   electronApp: ElectronApplication,
-  folderOrderPath: string,
+  collectionOrderPath: string,
   expectedPromptIds: string[]
 ): Promise<void> => {
   await expect
-    .poll(async () => await readPromptFolderEntryIds(electronApp, folderOrderPath))
+    .poll(async () => await readPromptCollectionEntryIds(electronApp, collectionOrderPath))
     .toEqual(expectedPromptIds)
 }

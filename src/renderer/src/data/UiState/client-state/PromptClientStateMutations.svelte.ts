@@ -6,8 +6,8 @@ import type { Draft } from 'immer'
 import { resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { mutatePacedPromptAutosaveUpdate } from '@renderer/data/Mutations/PromptMutations'
 import { promptClientState, upsertPromptClientState } from '@renderer/data/UiState/client-state/PromptClientState'
 import { recordPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
@@ -22,11 +22,11 @@ const getPromptModifiedAt = (): string => getCurrentIsoSecondTimestamp()
 
 /** Returns same-group sibling prompt IDs used to resolve fallback-title collisions. */
 const getPromptIdsForPrompt = (promptId: string): string[] => {
-  for (const promptFolder of promptFolderCollection.values()) {
-    if (promptFolder.kind !== 'prompt') continue
+  for (const promptCollection of promptCollectionsCollection.values()) {
+    if (promptCollection.kind !== 'prompt') continue
     /** Siblings in the edited prompt's exact status group. */
     const promptIds = getPromptStatusFolderContentIds(
-      promptFolder, getPromptStatusFolderDefinition(promptCollection.get(promptId)!.status).id
+      promptCollection, getPromptStatusFolderDefinition(promptsCollection.get(promptId)!.status).id
     )
     if (promptIds.includes(promptId)) return promptIds
   }
@@ -52,10 +52,10 @@ export const upsertPromptClientStates = promptClientState.upsertClientStates
 /** Updates a prompt title and schedules its autosave. */
 export const setPromptTitle = (promptId: string, title: string): void => {
   /** Canonical prompt receiving the title edit. */
-  const prompt = promptCollection.get(promptId)!
+  const prompt = promptsCollection.get(promptId)!
   const nextTitleFields = resolvePromptTitleUpdateForPromptIds({
     promptIds: getPromptIdsForPrompt(promptId),
-    lookupPrompt: (currentPromptId) => promptCollection.get(currentPromptId),
+    lookupPrompt: (currentPromptId) => promptsCollection.get(currentPromptId),
     promptId,
     currentTitle: prompt.title,
     currentFallbackTitle: prompt.fallbackTitle,
@@ -85,7 +85,7 @@ export const setPromptText = (
   measurement: TextMeasurement
 ): void => {
   /** Canonical full prompt receiving the text edit. */
-  const prompt = promptCollection.get(promptId) as PromptFull
+  const prompt = promptsCollection.get(promptId) as PromptFull
   const textChanged = prompt.promptText !== promptText
   recordPromptEditorMeasuredHeight(promptId, measurement, textChanged)
   if (!textChanged) return

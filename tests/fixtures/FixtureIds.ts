@@ -1,4 +1,4 @@
-/** Derives stable workspace, folder, and category identities from fixture seeds. */
+/** Derives stable workspace, collection, and category identities from fixture seeds. */
 export const createDeterministicId = (seed: string): string => {
   /** Unsigned rolling hash of the fixture seed. */
   let hash = 0

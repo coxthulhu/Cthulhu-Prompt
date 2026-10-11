@@ -1,10 +1,10 @@
 import * as path from 'path'
 import {
-  PROMPT_FOLDER_SETTINGS_DISK_FILENAMES,
-  type PromptFolderContentKind,
-  type PromptFolderKind,
-  type PromptFolderSettingsField
-} from '@shared/domain/prompt-folder/PromptFolder'
+  PROMPT_COLLECTION_SETTINGS_DISK_FILENAMES,
+  type PromptCollectionContentKind,
+  type PromptCollectionKind,
+  type PromptCollectionSettingsField
+} from '@shared/domain/prompt-collection/PromptCollection'
 import {
   PROMPT_STATUS_FOLDER_REGISTRY,
   PromptStatusFolderId
@@ -13,68 +13,58 @@ import {
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
-/** Legacy combined root-folder order removed by workspace schema migration two. */
-export const LEGACY_WORKSPACE_FOLDER_ORDER_FILENAME = 'WorkspaceFolderOrder.json'
-/** Filename for category-view ordering owned by a root folder. */
-export const PROMPT_FOLDER_CATEGORY_ORDER_FILENAME = 'FolderOrder.json'
-export const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
-export const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
+/** Filename for category-view ordering owned by a collection. */
+export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = 'CategoryOrder.json'
+/** Filename for the workspace's ordered collection references. */
+export const WORKSPACE_COLLECTION_ORDER_FILENAME = 'CollectionOrder.json'
+export const PROMPT_COLLECTION_INFO_DIRECTORY_NAME = '_CollectionInfo'
+export const PROMPT_COLLECTION_INFO_FILENAME = 'CollectionInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 export const PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX = '.template.md'
-/** Canonical directory containing categories owned by one root folder. */
+/** Canonical directory containing categories owned by one collection. */
 export const CATEGORIES_DIRECTORY_NAME = 'Categories'
 /** File suffix used by persisted category records. */
 export const CATEGORY_FILENAME_SUFFIX = '.category.json'
 
-export const PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES = PROMPT_FOLDER_SETTINGS_DISK_FILENAMES
+export const PROMPT_COLLECTION_SETTINGS_TEXT_FILENAMES = PROMPT_COLLECTION_SETTINGS_DISK_FILENAMES
 
 export type PromptFilePaths = {
   markdownPath: string
 }
 
-export const resolvePromptRootDirectoryName = (kind: PromptFolderKind): string =>
+export const resolvePromptRootDirectoryName = (kind: PromptCollectionKind): string =>
   kind === 'template' ? TEMPLATES_DIRECTORY_NAME : PROMPTS_DIRECTORY_NAME
 
-export const resolvePromptFolderPath = (
+/** Resolves a collection or status directory beneath the selected content library. */
+export const resolvePromptDirectoryPath = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind
+  kind: PromptCollectionKind
 ): string => {
   return path.join(workspacePath, resolvePromptRootDirectoryName(kind), folderName)
 }
 
-/** Maps a prompt root and stable status-folder identity to its physical directory. */
+/** Maps a prompt collection and stable status-folder identity to its physical directory. */
 export const resolvePromptStatusFolderName = (
-  rootFolderName: string,
+  collectionFolderName: string,
   statusFolderId: PromptStatusFolderId
 ): string =>
   path.join(
-    rootFolderName,
+    collectionFolderName,
     PROMPT_STATUS_FOLDER_REGISTRY[statusFolderId].directoryName
   )
 
-// Maps a logical prompt-folder path into the canonical active hierarchy.
-export const resolveActivePromptFolderName = (
-  folderName: string,
-  _kind: PromptFolderKind
+/** Resolves the physical Active status directory within a prompt collection. */
+export const resolveActivePromptStatusFolderName = (
+  collectionFolderName: string
 ): string => {
-  return resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Active)
+  return resolvePromptStatusFolderName(collectionFolderName, PromptStatusFolderId.Active)
 }
 
-// Maps every logical prompt-folder path to its root folder's flat Completed directory.
-export const resolveCompletedPromptFolderName = (
+// Resolves the physical directory that owns one prompt-collection entity's metadata.
+export const resolvePromptCollectionStorageName = (
   folderName: string,
-  kind: PromptFolderKind = 'prompt'
-): string => {
-  if (kind === 'template') return folderName
-
-  return resolvePromptStatusFolderName(folderName, PromptStatusFolderId.Completed)
-}
-
-// Resolves the physical directory that owns one prompt-folder entity's metadata.
-export const resolvePromptFolderStorageName = (
-  folderName: string,
-  _kind: PromptFolderKind
+  _kind: PromptCollectionKind
 ): string => {
   return folderName
 }
@@ -94,96 +84,92 @@ export const isWorkspaceInfoPath = (workspaceInfoPath: string): boolean => {
   return workspaceInfoPath.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX)
 }
 
-/** Resolves the root-owned category ordering file for prompts or templates. */
-export const resolvePromptFolderCategoryOrderPath = (
+/** Resolves the collection-owned category ordering file for prompts or templates. */
+export const resolvePromptCollectionCategoryOrderPath = (
   workspacePath: string,
-  rootFolderName: string,
-  kind: PromptFolderKind,
+  collectionFolderName: string,
+  kind: PromptCollectionKind,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): string => {
-  /** Prompt roots store metadata below the selected ordered status folder. */
+  /** Prompt collections store metadata below the selected ordered status folder. */
   const orderFolderName =
-    resolvePromptStatusFolderName(rootFolderName, statusFolderId)
+    resolvePromptStatusFolderName(collectionFolderName, statusFolderId)
   return path.join(
-    resolvePromptFolderPath(workspacePath, orderFolderName, kind),
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-    PROMPT_FOLDER_CATEGORY_ORDER_FILENAME
+    resolvePromptDirectoryPath(workspacePath, orderFolderName, kind),
+    PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
+    PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME
   )
 }
 
-/** Resolves the root-folder order owned by the selected type directory. */
-export const resolveWorkspaceFolderOrderPath = (
+/** Resolves the collection order owned by the selected type directory. */
+export const resolveWorkspaceCollectionOrderPath = (
   workspacePath: string,
-  kind: PromptFolderKind
+  kind: PromptCollectionKind
 ): string =>
   path.join(
     workspacePath,
     resolvePromptRootDirectoryName(kind),
-    PROMPT_FOLDER_CATEGORY_ORDER_FILENAME
+    WORKSPACE_COLLECTION_ORDER_FILENAME
   )
 
-/** Resolves the retired schema-one combined root-folder order. */
-export const resolveLegacyWorkspaceFolderOrderPath = (workspacePath: string): string =>
-  path.join(workspacePath, LEGACY_WORKSPACE_FOLDER_ORDER_FILENAME)
-
-export const resolvePromptFolderInfoDirectoryPath = (
+export const resolvePromptCollectionInfoDirectoryPath = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind
+  kind: PromptCollectionKind
 ): string => {
   return path.join(
-    resolvePromptFolderPath(
+    resolvePromptDirectoryPath(
       workspacePath,
-      resolvePromptFolderStorageName(folderName, kind),
+      resolvePromptCollectionStorageName(folderName, kind),
       kind
     ),
-    PROMPT_FOLDER_INFO_DIRECTORY_NAME
+    PROMPT_COLLECTION_INFO_DIRECTORY_NAME
   )
 }
 
-export const resolvePromptFolderInfoPath = (
+export const resolvePromptCollectionInfoPath = (
   workspacePath: string,
   folderName: string,
-  kind: PromptFolderKind
+  kind: PromptCollectionKind
 ): string => {
   return path.join(
-    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName, kind),
-    PROMPT_FOLDER_INFO_FILENAME
+    resolvePromptCollectionInfoDirectoryPath(workspacePath, folderName, kind),
+    PROMPT_COLLECTION_INFO_FILENAME
   )
 }
 
-export const resolvePromptFolderSettingsTextPath = (
+export const resolvePromptCollectionSettingsTextPath = (
   workspacePath: string,
   folderName: string,
-  field: PromptFolderSettingsField,
-  kind: PromptFolderKind
+  field: PromptCollectionSettingsField,
+  kind: PromptCollectionKind
 ): string => {
   return path.join(
-    resolvePromptFolderInfoDirectoryPath(workspacePath, folderName, kind),
-    PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]
+    resolvePromptCollectionInfoDirectoryPath(workspacePath, folderName, kind),
+    PROMPT_COLLECTION_SETTINGS_TEXT_FILENAMES[field]
   )
 }
 
-/** Resolves the category directory owned by one root prompt or template folder. */
+/** Resolves the category directory owned by one collection prompt or template collection. */
 export const resolveCategoriesDirectoryPath = (
   workspacePath: string,
-  rootFolderName: string,
-  kind: PromptFolderKind
+  collectionFolderName: string,
+  kind: PromptCollectionKind
 ): string =>
-  path.join(resolvePromptFolderPath(workspacePath, rootFolderName, kind), CATEGORIES_DIRECTORY_NAME)
+  path.join(resolvePromptDirectoryPath(workspacePath, collectionFolderName, kind), CATEGORIES_DIRECTORY_NAME)
 
 /** Resolves one category JSON path from its prompt-style filename stem. */
 export const resolveCategoryPathFromStem = (
   workspacePath: string,
-  rootFolderName: string,
-  kind: PromptFolderKind,
+  collectionFolderName: string,
+  kind: PromptCollectionKind,
   stem: string
-): string => path.join(resolveCategoriesDirectoryPath(workspacePath, rootFolderName, kind), `${stem}${CATEGORY_FILENAME_SUFFIX}`)
+): string => path.join(resolveCategoriesDirectoryPath(workspacePath, collectionFolderName, kind), `${stem}${CATEGORY_FILENAME_SUFFIX}`)
 
 export const resolvePromptPathsFromStem = (
   folderPath: string,
   stem: string,
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): PromptFilePaths => {
   return {
     markdownPath: path.join(

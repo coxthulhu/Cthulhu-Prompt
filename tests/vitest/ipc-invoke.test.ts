@@ -13,7 +13,7 @@ describe('IPC invoke logging', () => {
       conflict: true,
       requestId: 'request-1',
       clientId: 'client-1',
-      payload: { promptFolders: [] }
+      payload: { promptCollections: [] }
     }
     const invoke = vi.fn().mockResolvedValue(response)
     vi.stubGlobal('window', { electron: { ipcRenderer: { invoke } } })

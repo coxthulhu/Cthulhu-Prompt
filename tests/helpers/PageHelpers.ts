@@ -3,7 +3,7 @@ import * as screenHelpers from './ScreenHelpers'
 import * as buttonHelpers from './ButtonHelpers'
 import * as workspaceHelpers from './WorkspaceHelpers'
 import * as virtualWindowHelpers from './VirtualWindowHelpers'
-import * as promptFolderHelpers from './PromptFolderHelpers'
+import * as promptCollectionHelpers from './PromptCollectionHelpers'
 import * as uiValidationHelpers from './UiValidationHelpers'
 
 /** IPC gates exposed through both setup and page-bound helpers. */
@@ -50,9 +50,9 @@ export function createPageHelpers(mainWindow: Page, ipcControls: IpcControls) {
       baseExpect(await workspaceHelpers.getDisplayedWorkspacePath(mainWindow)).toBe(path)
       baseExpect(await workspaceHelpers.isWorkspaceReady(mainWindow)).toBe(true)
     },
-    /** Click prompt folder item using this test’s main window. */
-    clickPromptFolderItem: (folderName: string, timeout?: number) =>
-      promptFolderHelpers.clickPromptFolderItem(mainWindow, folderName, timeout),
+    /** Click prompt collection item using this test’s main window. */
+    clickPromptCollectionItem: (folderName: string, timeout?: number) =>
+      promptCollectionHelpers.clickPromptCollectionItem(mainWindow, folderName, timeout),
     /** Get prompt row height using this test’s main window. */
     getPromptRowHeight: (selector: string) =>
       virtualWindowHelpers.getPromptRowHeight(mainWindow, selector),
@@ -83,33 +83,33 @@ export function createPageHelpers(mainWindow: Page, ipcControls: IpcControls) {
         targetSelector,
         paddingPx
       ),
-    /** Open prompt folder and wait for hydration ready using this test’s main window. */
-    openPromptFolderAndWaitForHydrationReady: (options: {
-      folderName: string
+    /** Open prompt collection and wait for hydration ready using this test’s main window. */
+    openPromptCollectionAndWaitForHydrationReady: (options: {
+      collectionName: string
       hostSelector: string
       promptSelector: string
       placeholderSelector: string
-    }) => promptFolderHelpers.openPromptFolderAndWaitForHydrationReady(mainWindow, options),
+    }) => promptCollectionHelpers.openPromptCollectionAndWaitForHydrationReady(mainWindow, options),
     /** Drag sidebar handle by using this test’s main window. */
     dragSidebarHandleBy: (distance: number) =>
-      promptFolderHelpers.dragSidebarHandleBy(mainWindow, distance),
+      promptCollectionHelpers.dragSidebarHandleBy(mainWindow, distance),
     /** Verify prompt visible using this test’s main window. */
     verifyPromptVisible: (promptTitle: string) =>
-      promptFolderHelpers.verifyPromptVisible(mainWindow, promptTitle),
-    /** Get prompt folder screen info using this test’s main window. */
-    getPromptFolderScreenInfo: () =>
-      promptFolderHelpers.getPromptFolderScreenInfo(mainWindow),
+      promptCollectionHelpers.verifyPromptVisible(mainWindow, promptTitle),
+    /** Get prompt collection screen info using this test’s main window. */
+    getPromptCollectionScreenInfo: () =>
+      promptCollectionHelpers.getPromptCollectionScreenInfo(mainWindow),
     // Screen navigation utilities
     /** Navigate to home screen using this test’s main window. */
     navigateToHomeScreen: () => screenHelpers.navigateToHomeScreen(mainWindow),
     /** Navigate to settings screen using this test’s main window. */
     navigateToSettingsScreen: () => screenHelpers.navigateToSettingsScreen(mainWindow),
-    /** Navigate to prompt folders using this test’s main window. */
-    navigateToPromptFolders: (folderName: string) =>
-      promptFolderHelpers.navigateToPromptFolders(mainWindow, folderName),
+    /** Navigate to prompt collections using this test’s main window. */
+    navigateToPromptCollections: (folderName: string) =>
+      promptCollectionHelpers.navigateToPromptCollections(mainWindow, folderName),
     /** Opens one prompt-template root through its dedicated activity. */
-    navigateToPromptTemplateFolders: (folderName: string) =>
-      promptFolderHelpers.navigateToTemplateFolder(mainWindow, folderName),
+    navigateToPromptTemplateCollections: (folderName: string) =>
+      promptCollectionHelpers.navigateToTemplateCollection(mainWindow, folderName),
     /** Pause ipc channel using this test’s main window. */
     pauseIpcChannel: async (channel: string) => {
       await ipcControls.pauseIpcChannel(channel)

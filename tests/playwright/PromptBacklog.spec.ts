@@ -1,8 +1,8 @@
 import type { Page } from '@playwright/test'
 import type { ElectronApplication } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptTreeCategoryRowDrag,
@@ -11,7 +11,7 @@ import {
   finishActiveDrag,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
-import type { CategoryOrder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { CategoryOrder } from '@shared/domain/prompt-collection/PromptCollection'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 
 /** Repository test fixtures and assertions for the Backlog workflow. */
@@ -24,10 +24,10 @@ const ROOT_PATH = `${WORKSPACE_PATH}/Prompts/Work`
 /** Builds an existing workspace whose Active category order differs from alphabetical order. */
 const createBacklogWorkspace = () => {
   /** Existing prompts begin in Active, with no Backlog directory or order file. */
-  const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [{
+  const filesystem = createWorkspaceWithCollections(WORKSPACE_PATH, [{
     folderName: 'Work',
     displayName: 'Work',
-    promptFolderId: 'backlog-root',
+    promptCollectionId: 'backlog-root',
     prompts: ['first', 'second', 'third'].map((id) => ({
       id, title: id, promptText: `Work on ${id}`, category: 'alpha'
     }))
@@ -37,7 +37,7 @@ const createBacklogWorkspace = () => {
       id: categoryId, displayName: categoryId, shortDescription: null, description: null
     })
   }
-  filesystem[`${ROOT_PATH}/Active/_FolderInfo/FolderOrder.json`] = JSON.stringify({
+  filesystem[`${ROOT_PATH}/Active/_CollectionInfo/CategoryOrder.json`] = JSON.stringify({
     categories: [
       { categoryId: null, entries: [] },
       { categoryId: 'beta', entries: [] },
@@ -52,7 +52,7 @@ const createBacklogWorkspace = () => {
 
 /** Reads the authoritative order for one workflow, including empty categories. */
 const readOrder = async (electronApp: ElectronApplication, group: 'Active' | 'Backlog'): Promise<CategoryOrder> =>
-  JSON.parse(await readTextFile(electronApp, `${ROOT_PATH}/${group}/_FolderInfo/FolderOrder.json`))
+  JSON.parse(await readTextFile(electronApp, `${ROOT_PATH}/${group}/_CollectionInfo/CategoryOrder.json`))
 
 /** Reads one category's persisted prompt IDs to distinguish append, prepend, and exact drops. */
 const readEntries = async (
@@ -63,9 +63,9 @@ const readEntries = async (
   (await readOrder(electronApp, group)).categories.find((category) => category.categoryId === categoryId)!
     .entries.map((entry) => entry.id)
 
-/** Changes workflow through the visible folder filter. */
+/** Changes workflow through the visible collection filter. */
 const selectGroup = async (page: Page, group: 'active' | 'backlog' | 'completed') => {
-  await page.locator(`[data-testid="prompt-folder-${group}-filter"]`).click()
+  await page.locator(`[data-testid="prompt-collection-${group}-filter"]`).click()
 }
 
 /** Exercises the editor dropdown instead of bypassing its mutation callback. */
@@ -82,7 +82,7 @@ describe('Backlog prompts', () => {
     /** Running editor and sidebar sharing the same categorized prompts. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
     /** Collapsed destination remains usable without revealing its tree. */
     const backlogHeader = mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog')
     /** Same-section target must block nearby row snap targets. */
@@ -124,7 +124,7 @@ describe('Backlog prompts', () => {
         promptId === 'second' ? ['second'] : ['first', 'second']
       )
     }
-    await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toHaveAttribute('aria-pressed', 'true')
+    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
     await backlogHeader.click()
     await beginPromptTreeRowDrag(mainWindow, 'second', 'backlog')
     await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-active"]')
@@ -141,7 +141,7 @@ describe('Backlog prompts', () => {
       await mainWindow.clock.setFixedTime(new Date(
         group === 'completed' ? '2030-01-01T12:00:00Z' : '2030-01-01T12:00:02Z'
       ))
-      await mainWindow.getByTestId(`prompt-folder-${group}-filter`).click()
+      await mainWindow.getByTestId(`prompt-collection-${group}-filter`).click()
       await beginPromptTreeRowDrag(mainWindow, 'second', group === 'completed' ? 'active' : 'completed')
       await moveActiveDragToTarget(mainWindow, `[data-testid="sidebar-prompt-status-accordion-header-${group}"]`)
       await finishActiveDrag(mainWindow)
@@ -176,10 +176,10 @@ describe('Backlog prompts', () => {
 
   // Verifies an empty Backlog action creates content in Backlog rather than the default Active group.
   test('creates a Backlog prompt from its empty status action', async ({ testSetup }) => {
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(WORKSPACE_PATH, [{
       folderName: 'Work',
       displayName: 'Work',
-      promptFolderId: 'backlog-root',
+      promptCollectionId: 'backlog-root',
       prompts: [{ id: 'active-prompt', title: 'Active prompt', promptText: 'Active work' }]
     }]))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
@@ -188,14 +188,14 @@ describe('Backlog prompts', () => {
       workspace: { scenario: 'none' }
     })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
 
     /** Backlog ghost action whose workflow identity must drive prompt creation. */
     const action = mainWindow.locator('[data-testid="prompt-tree-backlog-empty-status"]')
     await expect(action).toHaveText('No backlog prompts. Click to add.')
     await action.click()
 
-    await expect(mainWindow.locator('[data-testid="prompt-folder-backlog-filter"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="prompt-collection-backlog-filter"]')).toHaveAttribute(
       'aria-pressed',
       'true'
     )
@@ -210,10 +210,10 @@ describe('Backlog prompts', () => {
   })
 
   test('fills Active after collapsing Backlog from an equal sidebar split', async ({ testSetup }) => {
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(WORKSPACE_PATH, [{
       folderName: 'Work',
       displayName: 'Work',
-      promptFolderId: 'backlog-root',
+      promptCollectionId: 'backlog-root',
       prompts: Array.from({ length: 40 }, (_, index) => ({
         id: `prompt-${index}`, title: `Prompt ${index}`, promptText: `Work on ${index}`
       }))
@@ -222,7 +222,7 @@ describe('Backlog prompts', () => {
     /** Running sidebar with enough Active prompts to require scrolling. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
 
     /** Accordion bounds used to place the split halfway down the sidebar. */
     const accordion = mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')
@@ -283,7 +283,7 @@ describe('Backlog prompts', () => {
     /** Window and helpers for a workspace created before Backlog existed. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
     await expect.poll(() => readOrder(electronApp, 'Backlog')).toEqual({
       categories: [
         { categoryId: null, entries: [] },
@@ -331,7 +331,7 @@ describe('Backlog prompts', () => {
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
     await expect.poll(async () => (await readOrder(electronApp, 'Backlog')).categories.map((category) => category.categoryId))
       .toEqual([null, newCategory.id, 'alpha', 'beta'])
     await expect(mainWindow.locator('[data-testid="prompt-tree-backlog-category-toggle-button-newcategory"]')).toBeVisible()
@@ -343,7 +343,7 @@ describe('Backlog prompts', () => {
     /** Window and navigation helpers for real editor transitions. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
     /** Todo's Backlog action meets the selector's left edge. */
     const backlogButton = mainWindow.locator(`${promptEditorSelector('first')} [data-testid="prompt-backlog-button"]`)
     /** Left quick-action geometry verifies the direction of the transition control. */
@@ -395,7 +395,7 @@ describe('Backlog prompts', () => {
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'first', 'third'])
 
     await selectGroup(mainWindow, 'backlog')
-    await mainWindow.locator('[data-testid="prompt-folder-divider-backlog-root-initial"] [data-testid="prompt-divider-add-initial"]').click()
+    await mainWindow.locator('[data-testid="prompt-collection-divider-backlog-root-initial"] [data-testid="prompt-divider-add-initial"]').click()
     /** Creation in Backlog owns an Uncategorized entry and persists the Backlog status. */
     const createdEditor = mainWindow.locator('[data-testid^="prompt-editor-"]').filter({ has: mainWindow.locator('[data-testid="prompt-status-pill"]') })
     await expect(createdEditor.locator('[data-testid="prompt-status-pill"]')).toHaveText('Backlog')
@@ -411,7 +411,7 @@ describe('Backlog prompts', () => {
     /** Window and navigation helpers for simultaneous Active and Backlog trees. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
     await beginPromptTreeRowDrag(mainWindow, 'first')
     await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-backlog-category-toggle-button-beta"]', 'bottom')
     await finishActiveDrag(mainWindow)
@@ -438,7 +438,7 @@ describe('Backlog prompts', () => {
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders('Work')
+    await testHelpers.navigateToPromptCollections('Work')
     await mainWindow.locator('[data-testid="prompt-tree-backlog-prompt-second"]').click()
     await expect(mainWindow.locator(`${promptEditorSelector('second')} [data-testid="prompt-status-pill"]`)).toHaveText('Backlog')
     expect(await readEntries(electronApp, 'Active')).toEqual(['first', 'third'])

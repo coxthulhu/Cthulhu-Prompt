@@ -2,9 +2,9 @@ import { ipcMain } from 'electron'
 import { data } from '../Data/Data'
 import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
 import {
-  parseMovePromptFolderDomainCommand,
-  planMovePromptFolderDomainMutation
-} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+  parseMovePromptCollectionDomainCommand,
+  planMovePromptCollectionDomainMutation
+} from '@shared/domain/prompt-collection/PromptCollectionDomainMutations'
 import { createWorkspace } from '../Workspace/createWorkspace'
 import {
   parseCloseWorkspaceRequest,
@@ -13,7 +13,7 @@ import {
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { handleMainDomainMutation } from './DomainMutation'
 
-/** Registers workspace lifecycle and root-folder ordering mutations. */
+/** Registers workspace lifecycle and collection ordering mutations. */
 export const setupWorkspaceMutationHandlers = (): void => {
   ipcMain.handle(
     'create-workspace',
@@ -43,10 +43,10 @@ export const setupWorkspaceMutationHandlers = (): void => {
   )
 
   handleMainDomainMutation({
-    ipc: { channel: 'move-prompt-folder' },
+    ipc: { channel: 'move-prompt-collection' },
     mutation: {
-      parseCommand: parseMovePromptFolderDomainCommand,
-      plan: planMovePromptFolderDomainMutation
+      parseCommand: parseMovePromptCollectionDomainCommand,
+      plan: planMovePromptCollectionDomainMutation
     }
   })
 }

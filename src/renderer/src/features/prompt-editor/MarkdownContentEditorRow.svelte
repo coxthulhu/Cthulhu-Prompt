@@ -24,16 +24,16 @@
   } from '@renderer/data/UiState/autosave/MarkdownContentUiStateAutosave.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
-  import { getPromptFolderFindContext } from '../prompt-folders/find/promptFolderFindContext'
+  import { getPromptCollectionFindContext } from '../prompt-collections/find/promptCollectionFindContext'
   import type {
-    PromptFolderFindRequest,
-    PromptFolderFindRowHandle,
-    PromptFolderFindSelection
-  } from '../prompt-folders/find/promptFolderFindTypes'
+    PromptCollectionFindRequest,
+    PromptCollectionFindRowHandle,
+    PromptCollectionFindSelection
+  } from '../prompt-collections/find/promptCollectionFindTypes'
   import {
-    PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
-    PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
-  } from '../prompt-folders/find/promptFolderFindSectionKeys'
+    PROMPT_COLLECTION_FIND_BODY_SECTION_KEY,
+    PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY
+  } from '../prompt-collections/find/promptCollectionFindSectionKeys'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
@@ -52,21 +52,21 @@
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
   import { getPromptTokenCount } from './promptEditorCounts'
-  import { PromptFolderScreenMode } from '../prompt-folders/promptFolderScreenMode'
+  import { PromptCollectionScreenMode } from '../prompt-collections/promptCollectionScreenMode'
   import { PROMPT_TEXT_TEMPLATE_PARAMETER } from './promptTemplateParameters'
   import { applyPromptTemplates } from './promptTemplatingEngine'
 
   // Shared editor implementation; prompt and template wrappers provide the variant behavior.
   let {
     promptId,
-    promptFolderId,
-    screenRootFolderId,
+    promptCollectionId,
+    screenCollectionId,
     workspaceId,
     promptDraftRecord,
     contentKind = 'prompt',
     contentLabel = 'prompt',
-    metadataFolderLabel = 'Template',
-    metadataFolderState = 'not-selected',
+    metadataTemplateLabel = 'Template',
+    metadataTemplateState = 'not-selected',
     modelUri = createPromptEditorModelUri(promptId),
     compactLayoutMaxWidthPx,
     rowId,
@@ -91,7 +91,7 @@
     deleteLabel,
     deleteDialogTitle,
     deleteDialogDescription,
-    screenMode = PromptFolderScreenMode.Active,
+    screenMode = PromptCollectionScreenMode.Active,
     status = PromptStatus.Todo,
     finalizedAt = null,
     scrollToWithinWindowBand,
@@ -108,8 +108,8 @@
     onPromptTreeDrop
   }: {
     promptId: string
-    promptFolderId: string
-    screenRootFolderId: string
+    promptCollectionId: string
+    screenCollectionId: string
     workspaceId: string | null
     promptDraftRecord: {
       title: string
@@ -120,10 +120,10 @@
       templateState?: 'not-selected' | 'no-template' | 'selected'
       isEdited: boolean
     }
-    contentKind?: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
+    contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
     contentLabel?: string
-    metadataFolderLabel?: string | null
-    metadataFolderState?: 'not-selected' | 'no-template' | 'selected'
+    metadataTemplateLabel?: string | null
+    metadataTemplateState?: 'not-selected' | 'no-template' | 'selected'
     modelUri?: monaco.Uri
     compactLayoutMaxWidthPx?: number
     rowId: string
@@ -150,7 +150,7 @@
     deleteLabel?: string
     deleteDialogTitle?: string
     deleteDialogDescription?: string
-    screenMode?: PromptFolderScreenMode
+    screenMode?: PromptCollectionScreenMode
     status?: PromptContentStatus
     finalizedAt?: string | null
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
@@ -232,7 +232,7 @@
     const draggedEntry = promptEntryDragState.draggedEntry
     return (
       draggedEntry?.kind === 'content' &&
-      draggedEntry.location.promptFolderId === promptFolderId &&
+      draggedEntry.location.promptCollectionId === promptCollectionId &&
       draggedEntry.contentId === promptId
     )
   })
@@ -252,7 +252,7 @@
     requestImmediateHydration: null,
     revealSectionMatch: null
   })
-  const findContext = getPromptFolderFindContext()
+  const findContext = getPromptCollectionFindContext()
 
   const MONACO_VERTICAL_PADDING_PX = MONACO_PADDING_PX / 2
 
@@ -294,7 +294,7 @@
     onHydrationChange?.(nextIsHydrated)
   }
 
-  const findRequest = $derived.by<PromptFolderFindRequest | null>(() => {
+  const findRequest = $derived.by<PromptCollectionFindRequest | null>(() => {
     if (!findContext) return null
     const activeMatch =
       findContext.currentMatch?.entityId === promptId ? findContext.currentMatch : null
@@ -315,7 +315,7 @@
     const endOffset = titleInputRef?.selectionEnd ?? null
     findContext?.reportSectionTextChange(
       promptId,
-      PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
+      PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY,
       title,
       startOffset == null || endOffset == null
         ? null
@@ -340,19 +340,19 @@
   }
 
   /** Retains title selection direction for subsequent query edits. */
-  const reportTitleSelection = (selection: PromptFolderFindSelection) => {
+  const reportTitleSelection = (selection: PromptCollectionFindSelection) => {
     findContext?.reportSelection({
       entityId: promptId,
-      sectionKey: PROMPT_FOLDER_FIND_TITLE_SECTION_KEY,
+      sectionKey: PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY,
       ...selection
     })
   }
 
   /** Retains Monaco's active caret independently of the selected range. */
-  const reportBodySelection = (selection: PromptFolderFindSelection) => {
+  const reportBodySelection = (selection: PromptCollectionFindSelection) => {
     findContext?.reportSelection({
       entityId: promptId,
-      sectionKey: PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+      sectionKey: PROMPT_COLLECTION_FIND_BODY_SECTION_KEY,
       ...selection
     })
   }
@@ -447,21 +447,21 @@
   // Side effect: register this row with the find integration for navigation.
   onMount(() => {
     if (!findContext) return
-    const handle: PromptFolderFindRowHandle = {
+    const handle: PromptCollectionFindRowHandle = {
       entityId: promptId,
       rowId,
       isSectionReady: (sectionKey) =>
-        sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY
+        sectionKey === PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY
           ? titleInputRef !== null
-          : sectionKey === PROMPT_FOLDER_FIND_BODY_SECTION_KEY &&
+          : sectionKey === PROMPT_COLLECTION_FIND_BODY_SECTION_KEY &&
             editorInstance !== null &&
             findRowHandlers.revealSectionMatch !== null,
       revealSectionMatch: (sectionKey, query, matchIndex) => {
-        if (sectionKey !== PROMPT_FOLDER_FIND_BODY_SECTION_KEY) return null
+        if (sectionKey !== PROMPT_COLLECTION_FIND_BODY_SECTION_KEY) return null
         return findRowHandlers.revealSectionMatch?.(query, matchIndex) ?? null
       },
       getSectionCenterOffset: (sectionKey) =>
-        sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY ? getTitleCenterOffset() : null
+        sectionKey === PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY ? getTitleCenterOffset() : null
     }
     return findContext.registerRow(handle)
   })
@@ -474,7 +474,7 @@
     const focusTarget = request.payload
     if (focusTarget.entityId !== promptId) return
 
-    if (focusTarget.sectionKey === PROMPT_FOLDER_FIND_TITLE_SECTION_KEY) {
+    if (focusTarget.sectionKey === PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY) {
       const input = titleInputRef
       if (!input) return
       findContext.focusRequests.consume(request, ({ selection }) => {
@@ -485,7 +485,7 @@
       return
     }
 
-    if (focusTarget.sectionKey !== PROMPT_FOLDER_FIND_BODY_SECTION_KEY) return
+    if (focusTarget.sectionKey !== PROMPT_COLLECTION_FIND_BODY_SECTION_KEY) return
     if (!editorInstance) return
     findContext.focusRequests.consume(request, ({ selection }) => {
       const editor = editorInstance!
@@ -509,7 +509,7 @@
     const request = promptNavigation.promptFocusRequests.pending
     if (
       !request ||
-      request.payload.screenRootFolderId !== screenRootFolderId ||
+      request.payload.screenCollectionId !== screenCollectionId ||
       request.payload.promptId !== promptId
     ) {
       return
@@ -519,7 +519,7 @@
     promptNavigation.promptFocusRequests.consume(request, () => {
       if (scrollToWithinWindowBand && rowElement) {
         const viewport = rowElement.closest(
-          '[data-testid="prompt-folder-virtual-window"]'
+          '[data-testid="prompt-collection-virtual-window"]'
         ) as HTMLElement | null
         if (viewport) {
           const rowRect = rowElement.getBoundingClientRect()
@@ -565,7 +565,7 @@
   {#snippet sidebar()}
     <PromptEditorSidebar
       {promptId}
-      {promptFolderId}
+      {promptCollectionId}
       {contentKind}
       {contentLabel}
       title={promptTreeTitle}
@@ -603,8 +603,8 @@
     {onCopySuccess}
     {onBeforeCopy}
     {onStatusChange}
-    {metadataFolderLabel}
-    {metadataFolderState}
+    {metadataTemplateLabel}
+    {metadataTemplateState}
     {copyLabel}
     {copyTitle}
     {deleteLabel}
@@ -667,7 +667,7 @@
           {rowId}
           {scrollToWithinWindowBand}
           onEditorLifecycle={handleEditorLifecycle}
-          findSectionKey={PROMPT_FOLDER_FIND_BODY_SECTION_KEY}
+          findSectionKey={PROMPT_COLLECTION_FIND_BODY_SECTION_KEY}
           {findRequest}
           onFindMatchReveal={(handler) => {
             findRowHandlers.revealSectionMatch = handler
@@ -700,7 +700,7 @@
             })
             findContext?.reportSectionTextChange(
               promptId,
-              PROMPT_FOLDER_FIND_BODY_SECTION_KEY,
+              PROMPT_COLLECTION_FIND_BODY_SECTION_KEY,
               text,
               meta.selection
             )

@@ -1,4 +1,4 @@
-/** Persisted category metadata owned by one root prompt or template folder. */
+/** Persisted category metadata owned by one collection prompt or template collection. */
 export type Category = {
   id: string
   displayName: string
@@ -15,7 +15,7 @@ export const normalizeCategoryShortDescription = (
   shortDescription: string | null
 ): string | null => shortDescription?.trim() || null
 
-/** Reports a case-insensitive category-name conflict within one root folder. */
+/** Reports a case-insensitive category-name conflict within one collection. */
 export const hasCategoryDisplayNameConflict = (
   categories: readonly Pick<Category, 'id' | 'displayName'>[],
   displayName: string,

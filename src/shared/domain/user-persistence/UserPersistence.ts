@@ -20,26 +20,26 @@ export type PersistedWorkspaceScreen =
   | 'settings'
   | 'mockups'
   | 'test-screen'
-  | 'prompt-task-folders'
-  | 'prompt-template-folders'
+  | 'prompt-task-collections'
+  | 'prompt-template-collections'
 
-/** Persisted screen IDs that display one kind of root prompt folder. */
-export type PromptFolderScreenId =
-  | 'prompt-task-folders'
-  | 'prompt-template-folders'
+/** Persisted screen IDs that display one kind of prompt collection. */
+export type PromptCollectionScreenId =
+  | 'prompt-task-collections'
+  | 'prompt-template-collections'
 
-/** Reports whether a screen displays task-prompt or prompt-template folders. */
-export const isPromptFolderScreen = (
+/** Reports whether a screen displays task-prompt or prompt-template collections. */
+export const isPromptCollectionScreen = (
   screen: PersistedWorkspaceScreen
-): screen is PromptFolderScreenId =>
-  screen === 'prompt-task-folders' || screen === 'prompt-template-folders'
+): screen is PromptCollectionScreenId =>
+  screen === 'prompt-task-collections' || screen === 'prompt-template-collections'
 
-/** Persisted selection data shared by both split folder activities. */
-export type PromptFolderWorkspaceScreenSelection = {
-  selectedScreen: PromptFolderScreenId
+/** Persisted selection data shared by both split collection activities. */
+export type PromptCollectionWorkspaceScreenSelection = {
+  selectedScreen: PromptCollectionScreenId
   selectedScreenData: {
-    promptFolderId: string | null
-    /** Root-folder or category owner containing the selected prompt-folder screen row. */
+    promptCollectionId: string | null
+    /** collection or category owner containing the selected prompt-collection screen row. */
     contentOwnerId: string | null
   }
 }
@@ -63,13 +63,13 @@ export type WorkspaceScreenSelection =
         mockupId: string | null
       }
     }
-  | PromptFolderWorkspaceScreenSelection
+  | PromptCollectionWorkspaceScreenSelection
 
-/** Narrows a complete screen selection to either folder activity. */
-export const isPromptFolderScreenSelection = (
+/** Narrows a complete screen selection to either collection activity. */
+export const isPromptCollectionScreenSelection = (
   selection: WorkspaceScreenSelection
-): selection is PromptFolderWorkspaceScreenSelection =>
-  isPromptFolderScreen(selection.selectedScreen)
+): selection is PromptCollectionWorkspaceScreenSelection =>
+  isPromptCollectionScreen(selection.selectedScreen)
 
 /** Persisted collapse and configured sizing state for one accordion section. */
 export type WorkspaceAccordionSectionViewEntry = {
@@ -86,9 +86,9 @@ export const isWorkspaceScreenSelectionSame = (
     return false
   }
 
-  if (isPromptFolderScreenSelection(left) && isPromptFolderScreenSelection(right)) {
+  if (isPromptCollectionScreenSelection(left) && isPromptCollectionScreenSelection(right)) {
     return (
-      left.selectedScreenData.promptFolderId === right.selectedScreenData.promptFolderId &&
+      left.selectedScreenData.promptCollectionId === right.selectedScreenData.promptCollectionId &&
       left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId
     )
   }
@@ -139,8 +139,8 @@ const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen
     value === 'settings' ||
     value === 'mockups' ||
     value === 'test-screen' ||
-    value === 'prompt-task-folders' ||
-    value === 'prompt-template-folders'
+    value === 'prompt-task-collections' ||
+    value === 'prompt-template-collections'
   ) {
     return value
   }
@@ -187,13 +187,13 @@ export const parseWorkspaceScreenSelection = (
     return null
   }
 
-  const promptFolderId = selectedScreenData.promptFolderId
-  if (promptFolderId !== null && typeof promptFolderId !== 'string') {
+  const promptCollectionId = selectedScreenData.promptCollectionId
+  if (promptCollectionId !== null && typeof promptCollectionId !== 'string') {
     return null
   }
 
-  /** Selected content owner, defaulting old persisted data to the root prompt folder. */
-  const contentOwnerId = selectedScreenData.contentOwnerId ?? promptFolderId
+  /** Selected content owner, defaulting old persisted data to the prompt collection. */
+  const contentOwnerId = selectedScreenData.contentOwnerId ?? promptCollectionId
   if (contentOwnerId !== null && typeof contentOwnerId !== 'string') {
     return null
   }
@@ -201,7 +201,7 @@ export const parseWorkspaceScreenSelection = (
   return {
     selectedScreen,
     selectedScreenData: {
-      promptFolderId,
+      promptCollectionId,
       contentOwnerId
     }
   }

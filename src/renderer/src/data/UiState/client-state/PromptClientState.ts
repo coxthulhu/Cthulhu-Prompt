@@ -3,13 +3,13 @@ import {
   type PromptClientStateRecord,
   promptClientStateCollection
 } from '@renderer/data/Collections/PromptClientStateCollection'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { createMarkdownContentClientState } from './MarkdownContentClientState'
 import { clearPromptEditorMeasuredHeights } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
 
 /** Lifecycle helpers for prompt client state and prompt editor measurements. */
 export const promptClientState = createMarkdownContentClientState<PromptClientStateRecord>({
-  authoritativeCollectionId: promptCollection.id,
+  authoritativeCollectionId: promptsCollection.id,
   getClientState: (promptId) => promptClientStateCollection.get(promptId),
   getClientStates: () => promptClientStateCollection.toArray,
   getClientStateIds: () => Array.from(promptClientStateCollection.keys(), (id) => String(id)),

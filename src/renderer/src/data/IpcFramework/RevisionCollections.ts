@@ -2,12 +2,12 @@ import {
   createPacedRevisionUpdateMutationRunner,
   createRevisionMutationRunner
 } from './RevisionMutation'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
-import { promptFolderClientStateCollection } from '@renderer/data/Collections/PromptFolderClientStateCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptCollectionClientStateCollection } from '@renderer/data/Collections/PromptCollectionClientStateCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import { systemSettingsClientStateCollection } from '@renderer/data/Collections/SystemSettingsClientStateCollection'
@@ -15,7 +15,7 @@ import { userPersistenceCollection } from '@renderer/data/Collections/UserPersis
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
-import { workspacePromptFolderUiStateCollection } from '@renderer/data/Collections/WorkspacePromptFolderUiStateCollection'
+import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
 import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
 
 export {
@@ -29,20 +29,20 @@ const revisionCollections = {
   userPersistence: userPersistenceCollection,
   systemSettings: systemSettingsCollection,
   workspace: workspaceCollection,
-  promptFolder: promptFolderCollection,
+  promptCollection: promptCollectionsCollection,
   category: categoryCollection,
-  prompt: promptCollection,
-  promptTemplate: promptTemplateCollection,
+  prompt: promptsCollection,
+  promptTemplate: promptTemplatesCollection,
   markdownContentUiState: markdownContentUiStateCollection,
   workspaceUiState: workspaceUiStateCollection,
-  workspacePromptFolderUiState: workspacePromptFolderUiStateCollection,
+  workspacePromptCollectionUiState: workspacePromptCollectionUiStateCollection,
   accordionUiState: accordionUiStateCollection
 }
 
 const clientStateCollections = {
   promptClientState: promptClientStateCollection,
   promptTemplateClientState: promptTemplateClientStateCollection,
-  promptFolderClientState: promptFolderClientStateCollection,
+  promptCollectionClientState: promptCollectionClientStateCollection,
   systemSettingsClientState: systemSettingsClientStateCollection
 }
 

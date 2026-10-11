@@ -1,0 +1,16 @@
+import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+
+/** Screen modes use the same identities as persisted status groups. */
+export const PromptCollectionScreenMode = PromptStatusFolderId
+
+/** Status group selected by the prompt-collection screen. */
+export type PromptCollectionScreenMode = PromptStatusFolderId
+
+/** Returns registry metadata for a finalized view, or null for a category-ordered view. */
+export const getFinalPromptCollectionScreenModeDefinition = (mode: PromptCollectionScreenMode) => {
+  /** Shared group definition that owns the selected screen. */
+  const definition = PROMPT_STATUS_FOLDER_REGISTRY[mode]
+  return definition.ordering === 'finalizedAt'
+    ? { ...definition, status: definition.entryStatus }
+    : null
+}

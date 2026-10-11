@@ -29,8 +29,8 @@
     type PromptClientStateRecord,
     promptClientStateCollection
   } from '@renderer/data/Collections/PromptClientStateCollection'
-  import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-  import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/domain/prompt/promptFallbackTitle'
   import {
@@ -45,16 +45,16 @@
   import {
     lookupWorkspacePersistedCategoryTreeExpandedState,
     setCategoryTreeExpandedStateWithAutosave,
-    setPromptFolderSelectedEntryIdWithAutosave
+    setPromptCollectionSelectedEntryIdWithAutosave
   } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
-  import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDER_REGISTRY, type Prompt } from '@shared/domain/prompt/Prompt'
   import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import {
-    getFinalPromptFolderScreenModeDefinition,
-    PromptFolderScreenMode
-  } from '@renderer/features/prompt-folders/promptFolderScreenMode'
+    getFinalPromptCollectionScreenModeDefinition,
+    PromptCollectionScreenMode
+  } from '@renderer/features/prompt-collections/promptCollectionScreenMode'
   import {
     type VirtualWindowScrollApi,
     type VirtualWindowItem,
@@ -74,55 +74,55 @@
   import {
     categoryDropIndicatorTestId,
     categoryEmptyActionTestId,
-    folderPromptDropIndicatorTestId,
+    collectionPromptDropIndicatorTestId,
     promptTreeBottomSpacerDropIndicatorTestId,
     promptTreeBottomSpacerDropTargetTestId
   } from './promptTreeTestIds'
-  import { collectFinalizedPrompts } from '../prompt-folders/promptFolderCompletedPrompts'
+  import { collectFinalizedPrompts } from '../prompt-collections/promptCollectionCompletedPrompts'
   import { moveCategory } from '@renderer/data/Mutations/CategoryMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     createPromptTreePromptDragController,
     resolvePromptTreePromptMove
   } from './promptTreeDrag'
-  import { createBlankPromptInFolder } from '../prompt-folders/createBlankPromptInFolder'
-  import { createBlankPromptTemplateInFolder } from '../prompt-folders/createBlankPromptTemplateInFolder'
+  import { createBlankPromptInCollection } from '../prompt-collections/createBlankPromptInCollection'
+  import { createBlankPromptTemplateInCollection } from '../prompt-collections/createBlankPromptTemplateInCollection'
   import {
-    PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX,
-    PROMPT_FOLDER_VERTICAL_BIAS_PX
-  } from '../prompt-folders/promptFolderScrollOffsets'
+    PROMPT_COLLECTION_CATEGORY_TOP_OFFSET_PX,
+    PROMPT_COLLECTION_VERTICAL_BIAS_PX
+  } from '../prompt-collections/promptCollectionScrollOffsets'
 
-  type FolderListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
+  type CollectionListState = 'no-workspace' | 'loading' | 'empty' | 'ready'
   type PromptTreeBulkExpansionRequest = {
     /** Exact category workflow receiving this toolbar request. */
-    statusFolderId: PromptFolderScreenMode
-    screenRootFolderId: string
+    statusFolderId: PromptCollectionScreenMode
+    screenCollectionId: string
     isExpanded: boolean
   }
 
   let {
-    promptFolders,
-    folderListState,
-    screenRootFolderId = null,
+    promptCollections,
+    collectionListState,
+    screenCollectionId = null,
     expansionRequests,
-    isPromptFoldersScreenActive = false,
-    screenMode = PromptFolderScreenMode.Active,
+    isPromptCollectionsScreenActive = false,
+    screenMode = PromptCollectionScreenMode.Active,
     onAllCategoriesCollapsedChange,
     onScreenModeSelect,
     onManageCategory,
-    onScreenRootFolderSelect
+    onScreenCollectionSelect
   } = $props<{
-    promptFolders: PromptFolder[]
-    folderListState: FolderListState
-    screenRootFolderId?: string | null
+    promptCollections: PromptCollection[]
+    collectionListState: CollectionListState
+    screenCollectionId?: string | null
     expansionRequests: ConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>
-    isPromptFoldersScreenActive?: boolean
-    screenMode?: PromptFolderScreenMode
+    isPromptCollectionsScreenActive?: boolean
+    screenMode?: PromptCollectionScreenMode
     onAllCategoriesCollapsedChange: (isCollapsed: boolean) => void
-    onScreenModeSelect: (screenMode: PromptFolderScreenMode) => void
+    onScreenModeSelect: (screenMode: PromptCollectionScreenMode) => void
     /** Opens category management to one tree category. */
     onManageCategory: (categoryId: string) => void
-    onScreenRootFolderSelect: (screenRootFolderId: string) => void
+    onScreenCollectionSelect: (screenCollectionId: string) => void
   }>()
 
   const PROMPT_TREE_ROW_CENTER_OFFSET_PX = 14
@@ -136,13 +136,13 @@
   const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
     data: PromptClientStateRecord[]
   }
-  const promptQuery = useLiveQuery(promptCollection) as {
+  const promptQuery = useLiveQuery(promptsCollection) as {
     data: Prompt[]
   }
-  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
     data: PromptTemplate[]
   }
-  /** Live category metadata used by the selected root folder's tree projection. */
+  /** Live category metadata used by the selected collection's tree projection. */
   const categoryQuery = useLiveQuery(categoryCollection)
 
   const promptTreeTitleById = $derived.by(() => {
@@ -180,14 +180,14 @@
 
     return promptsById
   })
-  const promptFolderById = $derived.by(() => {
-    const promptFoldersById: Record<string, PromptFolder> = {}
+  const promptCollectionById = $derived.by(() => {
+    const promptCollectionsById: Record<string, PromptCollection> = {}
 
-    for (const promptFolder of promptFolders) {
-      promptFoldersById[promptFolder.id] = promptFolder
+    for (const promptCollection of promptCollections) {
+      promptCollectionsById[promptCollection.id] = promptCollection
     }
 
-    return promptFoldersById
+    return promptCollectionsById
   })
   const templateById = $derived.by(() =>
     Object.fromEntries(promptTemplateQuery.data.map((template) => [template.id, template]))
@@ -197,31 +197,31 @@
     Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
   )
 
-  const screenRootFolder = $derived.by((): PromptFolder | null => {
-    if (promptFolders.length === 0) {
+  const screenCollection = $derived.by((): PromptCollection | null => {
+    if (promptCollections.length === 0) {
       return null
     }
 
     return (
-      promptFolders.find((promptFolder) => promptFolder.id === screenRootFolderId) ??
-      promptFolders[0]!
+      promptCollections.find((promptCollection) => promptCollection.id === screenCollectionId) ??
+      promptCollections[0]!
     )
   })
   /** Registry metadata for this exact workflow tree. */
   const statusGroup = $derived(PROMPT_STATUS_FOLDER_REGISTRY[screenMode])
   /** Template trees have their own selector namespace. */
-  const testIdGroup = $derived(screenRootFolder?.kind === 'template' && screenMode === 'active' ? 'template' : screenMode)
+  const testIdGroup = $derived(screenCollection?.kind === 'template' && screenMode === 'active' ? 'template' : screenMode)
   /** Virtualization test identity distinguishes simultaneously mounted trees. */
   const virtualWindowTestId = $derived(`prompt-tree-${testIdGroup}-virtual-window`)
   /** Final-status metadata for this tree, or null for a category-ordered tree. */
-  const finalModeDefinition = $derived(getFinalPromptFolderScreenModeDefinition(screenMode))
+  const finalModeDefinition = $derived(getFinalPromptCollectionScreenModeDefinition(screenMode))
   /** Whether this tree renders an automatically ordered final status. */
   const isFinalMode = $derived(finalModeDefinition !== null)
   /** Drag payload section identity for this fixed status tree. */
   const dragStatusSection = $derived(screenMode)
   /** Finalized prompts belonging to this tree's exact final status. */
   const selectedFinalizedPrompts = $derived.by(() => {
-    if (!screenRootFolder) {
+    if (!screenCollection) {
       return []
     }
 
@@ -230,21 +230,21 @@
     }
 
     return collectFinalizedPrompts({
-      rootFolder: screenRootFolder,
+      collection: screenCollection,
       statusFolderId: screenMode,
       statusByPromptId: Object.fromEntries(
-        Object.values(screenRootFolder.kind === 'template' ? templateById : promptById).map((prompt) => [prompt.id, prompt.status])
+        Object.values(screenCollection.kind === 'template' ? templateById : promptById).map((prompt) => [prompt.id, prompt.status])
       ),
       finalizedAtByPromptId: Object.fromEntries(
-        Object.values(screenRootFolder.kind === 'template' ? templateById : promptById).map((prompt) => [prompt.id, prompt.finalizedAt ?? null])
+        Object.values(screenCollection.kind === 'template' ? templateById : promptById).map((prompt) => [prompt.id, prompt.finalizedAt ?? null])
       )
     })
   })
   /** Loaded active prompt count used to replace an empty status tree with its navigation link. */
   const selectedOrderedPromptCount = $derived.by(() => {
-    if (!screenRootFolder || isFinalMode) return 0
+    if (!screenCollection || isFinalMode) return 0
 
-    return getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories.reduce(
+    return getMarkdownContentCategoryOrder(screenCollection, screenMode).categories.reduce(
       (count, group) =>
         count +
         group.entries.filter(
@@ -268,7 +268,7 @@
 
   /** Returns the virtual-row ID for a category header. */
   const categoryRowId = (categoryId: string): string => `${categoryId}:category`
-  /** Returns the virtual-row ID for content owned by a root group or category. */
+  /** Returns the virtual-row ID for content owned by a collection group or category. */
   const contentPromptRowId = (contentOwnerId: string, promptId: string): string =>
     `${contentOwnerId}:prompt:${promptId}`
   const promptTreePromptDroppableState = createDroppableStateRegistry<string>()
@@ -313,8 +313,8 @@
   }
 
   const categoryTreeIds = $derived.by((): string[] => {
-    if (!screenRootFolder || isFinalMode) return []
-    return getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories.flatMap((group) =>
+    if (!screenCollection || isFinalMode) return []
+    return getMarkdownContentCategoryOrder(screenCollection, screenMode).categories.flatMap((group) =>
       group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
     )
   })
@@ -324,24 +324,24 @@
   )
 
   const findContentOwnerPath = (
-    rootFolder: PromptFolder,
+    collection: PromptCollection,
     contentOwnerId: string
   ): string[] | null => {
-    if (rootFolder.id === contentOwnerId) return [rootFolder.id]
-    return categoryById[contentOwnerId] ? [rootFolder.id, contentOwnerId] : null
+    if (collection.id === contentOwnerId) return [collection.id]
+    return categoryById[contentOwnerId] ? [collection.id, contentOwnerId] : null
   }
 
   const isSameNavigationTarget = (
     left: PromptNavigationTarget,
     right: PromptNavigationTarget
   ): boolean =>
-    left.screenRootFolderId === right.screenRootFolderId &&
+    left.screenCollectionId === right.screenCollectionId &&
     left.contentOwnerId === right.contentOwnerId &&
     left.row === right.row
 
   /** Maps overview navigation to the first content entry in this status tree. */
   const getPromptTreeRowId = (target: PromptNavigationTarget): string | null => {
-    if (target.row === 'root-header') {
+    if (target.row === 'collection-header') {
       return virtualItems.find((item) => item.row.kind === 'prompt' || item.row.kind === 'category')?.id ?? null
     }
     if (target.row === 'category-details') {
@@ -369,19 +369,19 @@
     payload: PromptHandleDragPayload,
     dropPayload: PromptHandleDropPayload
   ): boolean => {
-    const destinationFolder = promptFolderById[dropPayload.folderId]
-    if (!destinationFolder) return false
+    const destinationCollection = promptCollectionById[dropPayload.collectionId]
+    if (!destinationCollection) return false
 
-    const sourceFolder = promptFolderById[payload.location.promptFolderId]
-    if (!sourceFolder) return false
+    const sourceCollection = promptCollectionById[payload.location.promptCollectionId]
+    if (!sourceCollection) return false
     if (
-      payload.contentKind !== destinationFolder.kind ||
-      sourceFolder.kind !== destinationFolder.kind
+      payload.contentKind !== destinationCollection.kind ||
+      sourceCollection.kind !== destinationCollection.kind
     ) {
       return false
     }
 
-    return resolvePromptTreePromptMove(promptFolders, payload, dropPayload) !== null
+    return resolvePromptTreePromptMove(promptCollections, payload, dropPayload) !== null
   }
 
   /** Builds a category-only target for the boundary before a category or at tree bottom. */
@@ -410,7 +410,7 @@
     /** Top edge of the first header is the empty Uncategorized start boundary. */
     const destinationCategoryId = isFirstTreeRow && edge === 'top' ? null : categoryId
     return {
-      folderId: screenRootFolder!.id,
+      collectionId: screenCollection!.id,
       categoryId: destinationCategoryId,
       targetEntryId: null,
       position: 'after',
@@ -426,19 +426,19 @@
     promptTreeCategoryDroppableState.edge(rowId)
 
   const promptDragController = createPromptTreePromptDragController({
-    getPromptFolders: () => promptFolders
+    getPromptCollections: () => promptCollections
   })
 
   const getPromptRowDragOptions = (
-    folderId: string,
+    collectionId: string,
     promptId: string,
     title: string,
-    contentKind: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
+    contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
   ): DraggableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
-      location: getPromptLocation(folderId, promptId),
+      location: getPromptLocation(collectionId, promptId),
       contentKind
     },
     createGhost: () => createPromptDragGhost(title, contentKind),
@@ -459,7 +459,7 @@
     },
     onDragFinish: ({ sourcePayload, dropPayload }) => {
       clearPromptEntryDrag()
-      if (!screenRootFolder || !dropPayload) return
+      if (!screenCollection || !dropPayload) return
       /** Category predecessor represented by the selected boundary. */
       const previousCategoryId = resolveCategoryDropPreviousCategoryId(
         categoryTreeIds,
@@ -468,7 +468,7 @@
       )
       if (previousCategoryId === undefined) return
       void runIpcBestEffort(() =>
-        moveCategory(screenRootFolder.id, sourcePayload.categoryId, previousCategoryId, screenMode)
+        moveCategory(screenCollection.id, sourcePayload.categoryId, previousCategoryId, screenMode)
       )
     }
   })
@@ -476,14 +476,14 @@
   /** Highlights the first entry for the overview, or the explicitly selected content row. */
   const isTreeEntryActive = (contentOwnerId: string, row: PromptNavigationRow): boolean => {
     if (
-      !isPromptFoldersScreenActive ||
-      promptNavigation.screenRootFolderId !== screenRootFolder?.id ||
+      !isPromptCollectionsScreenActive ||
+      promptNavigation.screenCollectionId !== screenCollection?.id ||
       !promptNavigation.selectedRow
     ) {
       return false
     }
 
-    if (promptNavigation.selectedRow === 'root-header') {
+    if (promptNavigation.selectedRow === 'collection-header') {
       return virtualItems[0]?.id === (
         row === 'category-details'
           ? categoryRowId(contentOwnerId)
@@ -497,11 +497,11 @@
     )
   }
 
-  const isPromptRowDragging = (folderId: string, promptId: string): boolean => {
+  const isPromptRowDragging = (collectionId: string, promptId: string): boolean => {
     const draggedEntry = promptEntryDragState.draggedEntry
     return (
       draggedEntry?.kind === 'content' &&
-      draggedEntry.location.promptFolderId === folderId &&
+      draggedEntry.location.promptCollectionId === collectionId &&
       draggedEntry.contentId === promptId
     )
   }
@@ -517,13 +517,13 @@
     source: 'tree-click' | 'category-open' = 'tree-click',
     navigationHighlightPromptId?: string
   ) => {
-    const rootFolderId = screenRootFolder?.id
-    if (!rootFolderId) return
-    const isSameRootActive = isPromptFoldersScreenActive
+    const collectionId = screenCollection?.id
+    if (!collectionId) return
+    const isSameCollectionActive = isPromptCollectionsScreenActive
 
     onScreenModeSelect(screenMode)
     promptNavigation.select({
-      screenRootFolderId: rootFolderId,
+      screenCollectionId: collectionId,
       contentOwnerId,
       row,
       source,
@@ -533,23 +533,23 @@
         ...(row === 'category-details'
           ? {
               scrollType: 'vertical-bias' as const,
-              verticalBiasPx: PROMPT_FOLDER_CATEGORY_TOP_OFFSET_PX
+              verticalBiasPx: PROMPT_COLLECTION_CATEGORY_TOP_OFFSET_PX
             }
           : {
               scrollType: 'vertical-bias' as const,
-              verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+              verticalBiasPx: PROMPT_COLLECTION_VERTICAL_BIAS_PX
             }),
         expandContent: source === 'category-open'
       },
       treeExpansion: source === 'category-open' ? 'owner' : undefined
     })
 
-    if (!isSameRootActive) {
-      onScreenRootFolderSelect(rootFolderId)
+    if (!isSameCollectionActive) {
+      onScreenCollectionSelect(collectionId)
     }
   }
 
-  /** Selects a prompt owned by either the root folder or a category. */
+  /** Selects a prompt owned by either the collection or a category. */
   const handlePromptTreePromptSelect = (contentOwnerId: string, promptId: string) => {
     handlePromptTreeEntrySelect(
       contentOwnerId,
@@ -572,18 +572,18 @@
     onManageCategory(categoryId)
   }
 
-  /** Creates content at the start of the root or a category and reveals its editor. */
+  /** Creates content at the start of the collection or a category and reveals its editor. */
   const handleTreeContentAddToTop = async (categoryId: string | null): Promise<void> => {
-    /** Root folder that owns the destination and its new content. */
-    const rootFolder = screenRootFolder
-    if (!rootFolder || isFinalMode || isCreatingTreeContent) return
+    /** collection that owns the destination and its new content. */
+    const collection = screenCollection
+    if (!collection || isFinalMode || isCreatingTreeContent) return
 
     isCreatingTreeContent = true
     /** Optimistic creation and its matching persistence promise. */
     const creation =
-      rootFolder.kind === 'template'
-        ? createBlankPromptTemplateInFolder(rootFolder.id, null, categoryId)
-        : createBlankPromptInFolder(rootFolder.id, null, categoryId, screenMode)
+      collection.kind === 'template'
+        ? createBlankPromptTemplateInCollection(collection.id, null, categoryId)
+        : createBlankPromptInCollection(collection.id, null, categoryId, screenMode)
     /** Stable ID generated for the new prompt or template. */
     const contentId = 'templateId' in creation ? creation.templateId : creation.promptId
     /** Navigation row that selects the new content. */
@@ -591,14 +591,14 @@
 
     onScreenModeSelect(screenMode)
     promptNavigation.select({
-      screenRootFolderId: rootFolder.id,
-      contentOwnerId: categoryId ?? rootFolder.id,
+      screenCollectionId: collection.id,
+      contentOwnerId: categoryId ?? collection.id,
       row,
       source: 'prompt-tree-create',
       forceRequest: true,
       contentReveal: {
         scrollType: 'vertical-bias',
-        verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+        verticalBiasPx: PROMPT_COLLECTION_VERTICAL_BIAS_PX
       },
       focusPromptId: contentId,
       treeExpansion: 'owner'
@@ -607,23 +607,23 @@
     /** Selected workspace whose category selection is persisted. */
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setPromptFolderSelectedEntryIdWithAutosave(
+      setPromptCollectionSelectedEntryIdWithAutosave(
         workspaceId,
-        rootFolder.id,
-        categoryId ?? rootFolder.id,
+        collection.id,
+        categoryId ?? collection.id,
         promptNavigationRowToPersistedEntryId(row)
       )
     }
 
-    if (!isPromptFoldersScreenActive) {
-      onScreenRootFolderSelect(rootFolder.id)
+    if (!isPromptCollectionsScreenActive) {
+      onScreenCollectionSelect(collection.id)
     }
 
     await runIpcBestEffort(() => creation.persistence)
     isCreatingTreeContent = false
   }
 
-  /** Opens this empty tree's status view while retaining the root folder selection. */
+  /** Opens this empty tree's status view while retaining the collection selection. */
   const handleEmptyStatusSelect = (): void => {
     onScreenModeSelect(screenMode)
   }
@@ -646,9 +646,9 @@
     if (
       isFinalMode ||
       !request ||
-      folderListState !== 'ready' ||
+      collectionListState !== 'ready' ||
       request.payload.statusFolderId !== screenMode ||
-      request.payload.screenRootFolderId !== screenRootFolder?.id
+      request.payload.screenCollectionId !== screenCollection?.id
     ) {
       return
     }
@@ -660,21 +660,21 @@
     })
   })
 
-  // Side effect: expose a requested tree row once its folder path is available.
+  // Side effect: expose a requested tree row once its collection path is available.
   $effect(() => {
     const request = promptNavigation.treeExpansionRequests.pending
-    const rootFolder = screenRootFolder
+    const collection = screenCollection
     if (
       !request ||
-      !rootFolder ||
-      !isPromptFoldersScreenActive ||
-      folderListState !== 'ready' ||
-      request.payload.screenRootFolderId !== rootFolder.id
+      !collection ||
+      !isPromptCollectionsScreenActive ||
+      collectionListState !== 'ready' ||
+      request.payload.screenCollectionId !== collection.id
     ) {
       return
     }
 
-    const contentOwnerPath = findContentOwnerPath(rootFolder, request.payload.contentOwnerId)
+    const contentOwnerPath = findContentOwnerPath(collection, request.payload.contentOwnerId)
     if (!contentOwnerPath) return
 
     promptNavigation.treeExpansionRequests.consume(request, ({ expandPath }) => {
@@ -691,16 +691,16 @@
   const virtualItems = $derived.by((): VirtualWindowItem<PromptTreeRow>[] => {
     const items: VirtualWindowItem<PromptTreeRow>[] = []
 
-    if (screenRootFolder) {
+    if (screenCollection) {
       if (isFinalMode) {
         for (const [promptIndex, finalizedPrompt] of selectedFinalizedPrompts.entries()) {
-          const ownerFolder = promptFolderById[finalizedPrompt.contentOwnerId]
-          if (!ownerFolder) continue
+          const ownerCollection = promptCollectionById[finalizedPrompt.contentOwnerId]
+          if (!ownerCollection) continue
           items.push({
-            id: contentPromptRowId(ownerFolder.id, finalizedPrompt.promptId),
+            id: contentPromptRowId(ownerCollection.id, finalizedPrompt.promptId),
             row: {
               kind: 'prompt',
-              folder: ownerFolder,
+              collection: ownerCollection,
               categoryId: null,
               promptId: finalizedPrompt.promptId,
               indentCount: 0,
@@ -710,8 +710,8 @@
           })
         }
       } else {
-        /** Loaded active entries projected in FolderOrder group order. */
-        const groups = getMarkdownContentCategoryOrder(screenRootFolder, screenMode).categories
+        /** Loaded active entries projected in CategoryOrder group order. */
+        const groups = getMarkdownContentCategoryOrder(screenCollection, screenMode).categories
         /** Uncategorized content shown without a category header. */
         const uncategorizedEntries = groups[0]?.entries.filter((entry) =>
           entry.kind === 'template'
@@ -721,10 +721,10 @@
         ) ?? []
         for (const [entryIndex, entry] of uncategorizedEntries.entries()) {
           items.push({
-            id: contentPromptRowId(screenRootFolder.id, entry.id),
+            id: contentPromptRowId(screenCollection.id, entry.id),
             row: {
               kind: 'prompt',
-              folder: screenRootFolder,
+              collection: screenCollection,
               categoryId: null,
               promptId: entry.id,
               indentCount: 0,
@@ -752,7 +752,7 @@
             row: {
               kind: 'category',
               category,
-              rootFolder: screenRootFolder,
+              collection: screenCollection,
               indentCount: 0,
               isFirstTreeRow,
               endsVisibleBranch: groupIndex === groups.length - 2 &&
@@ -776,7 +776,7 @@
               id: contentPromptRowId(category.id, entry.id),
               row: {
                 kind: 'prompt',
-                folder: screenRootFolder,
+                collection: screenCollection,
                 categoryId: category.id,
                 promptId: entry.id,
                 indentCount: 1,
@@ -788,12 +788,12 @@
         }
 
         if (
-          screenRootFolder.kind === 'template' &&
+          screenCollection.kind === 'template' &&
           uncategorizedEntries.length === 0 &&
           groups.length === 1
         ) {
           items.push({
-            id: `${screenRootFolder.id}:empty-state`,
+            id: `${screenCollection.id}:empty-state`,
             row: {
               kind: 'empty-state'
             }
@@ -816,14 +816,14 @@
   // Side effect: reveal a requested tree row after any matching path expansion is consumed.
   $effect(() => {
     const request = promptNavigation.treeRevealRequests.pending
-    const rootFolderId = screenRootFolder?.id
+    const collectionId = screenCollection?.id
     const expansionRequest = promptNavigation.treeExpansionRequests.pending
     if (
       !request ||
-      !rootFolderId ||
-      !isPromptFoldersScreenActive ||
-      folderListState !== 'ready' ||
-      request.payload.screenRootFolderId !== rootFolderId ||
+      !collectionId ||
+      !isPromptCollectionsScreenActive ||
+      collectionListState !== 'ready' ||
+      request.payload.screenCollectionId !== collectionId ||
       !scrollApi ||
       !viewportMetrics?.heightPx ||
       (expansionRequest &&
@@ -832,7 +832,7 @@
       return
     }
 
-    if (request.payload.row === 'root-header' && isSelectedStatusTreeEmpty) {
+    if (request.payload.row === 'collection-header' && isSelectedStatusTreeEmpty) {
       promptNavigation.treeRevealRequests.consume(request, () => undefined)
       return
     }
@@ -848,19 +848,19 @@
 </script>
 
 <div class="sidebarPromptTree flex min-h-0 flex-1 flex-col">
-  {#if folderListState === 'loading'}
+  {#if collectionListState === 'loading'}
     <div class="sidebarPromptTreeStatus flex items-center gap-2 px-2 text-sm">
       <Loader class="size-4 animate-spin" />
-      Loading folders...
+      Loading collections...
     </div>
-  {:else if folderListState === 'empty'}
-    <div class="sidebarPromptTreeStatus px-2 text-sm">Create a folder to get started.</div>
-  {:else if folderListState === 'ready'}
-    {#if screenRootFolder && isSelectedStatusTreeEmpty && (screenRootFolder.kind === 'prompt' || isFinalMode)}
+  {:else if collectionListState === 'empty'}
+    <div class="sidebarPromptTreeStatus px-2 text-sm">Create a collection to get started.</div>
+  {:else if collectionListState === 'ready'}
+    {#if screenCollection && isSelectedStatusTreeEmpty && (screenCollection.kind === 'prompt' || isFinalMode)}
       <DropTarget
         getOptions={() =>
           getPromptTreePromptDroppableOptions('empty-status', 'top', () => ({
-            folderId: screenRootFolder!.id,
+            collectionId: screenCollection!.id,
             categoryId: null,
             targetEntryId: null,
             position: 'after',
@@ -893,8 +893,8 @@
         bind:scrollApi
         bind:viewportMetrics
       >
-{#snippet rootFolderRow()}
-  <!-- Root navigation lives in the sidebar toolbar, so this shared row renderer stays empty. -->
+{#snippet collectionRow()}
+  <!-- Collection navigation lives in the sidebar toolbar, so this shared row renderer stays empty. -->
 {/snippet}
 
 {#snippet categoryRow(props: PromptTreeCategoryRowProps)}
@@ -912,7 +912,7 @@
       isExpanded={getPromptTreeCategoryExpandedState(props.row.category.id)}
       indentCount={props.row.indentCount}
       endsVisibleBranch={props.row.endsVisibleBranch}
-      contentLabel={screenRootFolder?.kind === 'template' ? 'Template' : 'Prompt'}
+      contentLabel={screenCollection?.kind === 'template' ? 'Template' : 'Prompt'}
       isAddToTopDisabled={isCreatingTreeContent}
       getCategoryContentDroppableOptions={isFinalMode
         ? undefined
@@ -943,11 +943,11 @@
 
 {#snippet promptRow(props: PromptTreePromptRowProps)}
   {@const isActive = isTreeEntryActive(
-    props.row.categoryId ?? props.row.folder.id,
+    props.row.categoryId ?? props.row.collection.id,
     promptIdToPromptNavigationRow(props.row.promptId)
   )}
-  {@const isDragging = isPromptRowDragging(props.row.folder.id, props.row.promptId)}
-  {@const promptContent = props.row.folder.kind === 'template'
+  {@const isDragging = isPromptRowDragging(props.row.collection.id, props.row.promptId)}
+  {@const promptContent = props.row.collection.kind === 'template'
     ? templateById[props.row.promptId]!
     : promptById[props.row.promptId]!}
   {@const promptTitle =
@@ -957,7 +957,7 @@
   {#key props.row.isFirstTreeRow}
     <PromptTreePromptRow
       {testIdGroup}
-      folderId={props.row.categoryId ?? props.row.folder.id}
+      collectionId={props.row.categoryId ?? props.row.collection.id}
       promptId={props.row.promptId}
       {promptTitle}
       status={promptById[props.row.promptId]?.status}
@@ -973,7 +973,7 @@
           props.rowId,
           props.row.isFirstTreeRow ? 'top-and-bottom' : 'bottom',
           (edge) => ({
-            folderId: props.row.folder.id,
+            collectionId: props.row.collection.id,
             categoryId: props.row.categoryId,
             targetEntryId: props.row.promptId,
             position: edge === 'top' ? 'before' : 'after',
@@ -981,10 +981,10 @@
           })
         )}
       promptDragOptions={getPromptRowDragOptions(
-        props.row.folder.id,
+        props.row.collection.id,
         props.row.promptId,
         promptTitle,
-        props.row.folder.kind
+        props.row.collection.kind
       )}
       onPromptSelect={handlePromptTreePromptSelect}
     />
@@ -1006,7 +1006,7 @@
   <DropTarget
     getOptions={() =>
       getPromptTreePromptDroppableOptions('empty-state', 'top', () => ({
-        folderId: screenRootFolder!.id,
+        collectionId: screenCollection!.id,
         categoryId: null,
         targetEntryId: null,
         position: 'after',
@@ -1055,7 +1055,7 @@
 {#snippet promptTreeRowOverlay({ row, rowId }: PromptTreePromptRowProps)}
   {@const hoveredEdge = getPromptTreeDropTargetEdge(rowId)}
   {@const isBlocked = promptTreePromptDroppableState.isBlocked(rowId)}
-  {@const testId = folderPromptDropIndicatorTestId(row.promptId, testIdGroup)}
+  {@const testId = collectionPromptDropIndicatorTestId(row.promptId, testIdGroup)}
 
   {#if hoveredEdge}
     <DropIndicator
@@ -1072,7 +1072,7 @@
     <DropTarget
       getOptions={() =>
         getPromptTreePromptDroppableOptions('bottom-spacer', 'top', () => ({
-          folderId: screenRootFolder!.id,
+          collectionId: screenCollection!.id,
           categoryId: null,
           targetEntryId: null,
           position: 'after',

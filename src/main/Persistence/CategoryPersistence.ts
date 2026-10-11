@@ -1,5 +1,5 @@
 import { normalizeCategoryShortDescription, type Category } from '@shared/domain/category/Category'
-import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { getFs } from '../fs-provider'
 import {
   commitStagedFileChanges,
@@ -22,9 +22,9 @@ import {
 export type CategoryPersistenceFields = {
   workspaceId: string
   workspacePath: string
-  rootPromptFolderId: string
-  rootFolderName: string
-  kind: PromptFolderKind
+  promptCollectionId: string
+  collectionFolderName: string
+  kind: PromptCollectionKind
   categoryStem: string
 }
 
@@ -62,7 +62,7 @@ export const parseCategoryJson = (fileText: string): Category | null => {
   }
 }
 
-/** Revision-aware persistence layer for root-owned category JSON files. */
+/** Revision-aware persistence layer for collection-owned category JSON files. */
 export const categoryPersistence: PersistenceLayer<Category, CategoryPersistenceFields> = {
   kind: 'filesystem',
   stageChanges: async (transition) => {
@@ -75,7 +75,7 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
     const currentPath = before
       ? resolveCategoryPathFromStem(
           before.persistenceFields.workspacePath,
-          before.persistenceFields.rootFolderName,
+          before.persistenceFields.collectionFolderName,
           before.persistenceFields.kind,
           before.persistenceFields.categoryStem
         )
@@ -89,12 +89,12 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
     const stem = fields.categoryStem
     const categoriesPath = resolveCategoriesDirectoryPath(
       fields.workspacePath,
-      fields.rootFolderName,
+      fields.collectionFolderName,
       fields.kind
     )
     const targetPath = resolveCategoryPathFromStem(
       fields.workspacePath,
-      fields.rootFolderName,
+      fields.collectionFolderName,
       fields.kind,
       stem
     )
@@ -124,7 +124,7 @@ export const categoryPersistence: PersistenceLayer<Category, CategoryPersistence
   loadData: async (fields) => {
     const categoryPath = resolveCategoryPathFromStem(
       fields.workspacePath,
-      fields.rootFolderName,
+      fields.collectionFolderName,
       fields.kind,
       fields.categoryStem
     )

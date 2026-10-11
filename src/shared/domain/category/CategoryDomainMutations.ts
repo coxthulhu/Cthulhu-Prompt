@@ -13,24 +13,24 @@ import {
 } from '@shared/domain/category/Category'
 import {
   deleteCategoryOrderGroup,
-  getPromptFolderCategoryIds,
+  getPromptCollectionCategoryIds,
   insertCategoryOrderGroup,
   moveCategoryOrderGroup,
   type CategoryOrder,
-  type PromptFolder
-} from '@shared/domain/prompt-folder/PromptFolder'
+  type PromptCollection
+} from '@shared/domain/prompt-collection/PromptCollection'
 import { isPromptStatusFolderId, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
-  createWorkspacePromptFolderUiStateKey,
-  type WorkspacePromptFolderUiState
+  createWorkspacePromptCollectionUiStateKey,
+  type WorkspacePromptCollectionUiState
 } from '@shared/domain/ui-state/UiState'
-import { isPromptFolderScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
-import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
+import { isPromptCollectionScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
+import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 
-/** Renderer-authored command for creating one root-owned category. */
+/** Renderer-authored command for creating one collection-owned category. */
 export type CreateCategoryDomainCommand = {
   categoryId: string
-  promptFolderId: string
+  promptCollectionId: string
   displayName: string
   shortDescription: string | null
   description: string | null
@@ -44,10 +44,10 @@ export type SaveCategoriesDomainValue = {
   description: string | null
 }
 
-/** Renderer-authored command for atomically saving one root folder's category drafts. */
+/** Renderer-authored command for atomically saving one collection's category drafts. */
 export type SaveCategoriesDomainCommand = {
   workspaceId: string
-  promptFolderId: string
+  promptCollectionId: string
   categories: SaveCategoriesDomainValue[]
   modifiedAt: string
 }
@@ -62,7 +62,7 @@ export const parseSaveCategoriesDomainCommand = (
   if (
     Object.keys(record).length !== 4 ||
     typeof record.workspaceId !== 'string' ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     !Array.isArray(record.categories) ||
     typeof record.modifiedAt !== 'string'
   ) {
@@ -95,7 +95,7 @@ export const parseSaveCategoriesDomainCommand = (
   }
   return {
     workspaceId: record.workspaceId,
-    promptFolderId: record.promptFolderId,
+    promptCollectionId: record.promptCollectionId,
     categories,
     modifiedAt: record.modifiedAt
   }
@@ -111,7 +111,7 @@ export const parseCreateCategoryDomainCommand = (
   if (
     Object.keys(record).length !== 5 ||
     typeof record.categoryId !== 'string' ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     typeof record.displayName !== 'string' ||
     (record.shortDescription !== null && typeof record.shortDescription !== 'string') ||
     (record.description !== null && typeof record.description !== 'string')
@@ -120,17 +120,17 @@ export const parseCreateCategoryDomainCommand = (
   }
   return {
     categoryId: record.categoryId,
-    promptFolderId: record.promptFolderId,
+    promptCollectionId: record.promptCollectionId,
     displayName: record.displayName,
     shortDescription: record.shortDescription,
     description: record.description
   }
 }
 
-/** Renderer-authored command for deleting one root-owned category. */
+/** Renderer-authored command for deleting one collection-owned category. */
 export type DeleteCategoryDomainCommand = {
   categoryId: string
-  promptFolderId: string
+  promptCollectionId: string
   workspaceId: string
   modifiedAt: string
 }
@@ -150,7 +150,7 @@ export type SetCategoryDescriptionDomainCommand = {
 
 /** Renderer-authored command for reordering one category group. */
 export type MoveCategoryDomainCommand = {
-  promptFolderId: string
+  promptCollectionId: string
   statusFolderId: PromptStatusFolderId | null
   categoryId: string
   previousCategoryId: string | null
@@ -166,7 +166,7 @@ export const parseDeleteCategoryDomainCommand = (
   if (
     Object.keys(record).length !== 4 ||
     typeof record.categoryId !== 'string' ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     typeof record.workspaceId !== 'string' ||
     typeof record.modifiedAt !== 'string'
   ) {
@@ -174,7 +174,7 @@ export const parseDeleteCategoryDomainCommand = (
   }
   return {
     categoryId: record.categoryId,
-    promptFolderId: record.promptFolderId,
+    promptCollectionId: record.promptCollectionId,
     workspaceId: record.workspaceId,
     modifiedAt: record.modifiedAt
   }
@@ -228,7 +228,7 @@ export const parseMoveCategoryDomainCommand = (
   const record = value as Record<string, unknown>
   if (
     Object.keys(record).length !== 4 ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     (record.statusFolderId !== null && !isPromptStatusFolderId(record.statusFolderId)) ||
     typeof record.categoryId !== 'string' ||
     (record.previousCategoryId !== null && typeof record.previousCategoryId !== 'string')
@@ -236,7 +236,7 @@ export const parseMoveCategoryDomainCommand = (
     return null
   }
   return {
-    promptFolderId: record.promptFolderId,
+    promptCollectionId: record.promptCollectionId,
     statusFolderId: record.statusFolderId,
     categoryId: record.categoryId,
     previousCategoryId: record.previousCategoryId
@@ -258,12 +258,12 @@ const createConflict = (reason: string, targets: DomainTarget[]): DomainMutation
   targets
 })
 
-/** Plans category insertion and root ownership against the supplied domain graph. */
+/** Plans category insertion and collection ownership against the supplied domain graph. */
 export const planCreateCategoryDomainMutation: DomainPlanner<
   CreateCategoryDomainCommand
 > = (state, command) => {
-  /** Requested root folder that will own the new category group. */
-  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Requested collection that will own the new category group. */
+  const promptCollection = state.get('promptCollection', command.promptCollectionId)
   /** Existing entity occupying the requested stable category ID. */
   const existingCategory = state.get('category', command.categoryId)
   /** Normalized category name persisted by both renderer and main projections. */
@@ -272,14 +272,14 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
   const shortDescription = normalizeCategoryShortDescription(command.shortDescription)
   /** Optional Markdown description, represented as absent when it contains only whitespace. */
   const description = command.description?.trim() ? command.description : null
-  /** Authoritative folder and category targets returned for any conflict. */
+  /** Authoritative collection and category targets returned for any conflict. */
   const targets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.promptFolderId },
+    { entityType: 'promptCollection', id: command.promptCollectionId },
     { entityType: 'category', id: command.categoryId }
   ]
-  /** Categories currently owned by the requested root folder. */
-  const categories = promptFolder
-    ? getPromptFolderCategoryIds(promptFolder).flatMap((categoryId) => {
+  /** Categories currently owned by the requested collection. */
+  const categories = promptCollection
+    ? getPromptCollectionCategoryIds(promptCollection).flatMap((categoryId) => {
         /** Loaded category associated with one ordered group. */
         const category = state.get('category', categoryId)
         return category ? [category] : []
@@ -287,8 +287,8 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
     : []
 
   if (
-    !promptFolder ||
-    /[\\/]/.test(promptFolder.folderName) ||
+    !promptCollection ||
+    /[\\/]/.test(promptCollection.folderName) ||
     existingCategory ||
     !displayName ||
     hasCategoryDisplayNameConflict(categories, displayName)
@@ -306,8 +306,8 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
   return [
     {
       type: 'update',
-      entityType: 'promptFolder',
-      id: promptFolder.id,
+      entityType: 'promptCollection',
+      id: promptCollection.id,
       recipe: (draft) => {
         if (draft.kind === 'template') {
           draft.statusFolders.active.categoryOrder = insertCategoryOrderGroup(draft.statusFolders.active.categoryOrder, category.id)
@@ -331,14 +331,14 @@ export const planCreateCategoryDomainMutation: DomainPlanner<
 const collectCategoryDeletionTargets = (
   state: DomainState,
   categoryId: string,
-  owningFolder: PromptFolder | undefined,
-  fallbackFolderId: string
+  owningCollection: PromptCollection | undefined,
+  fallbackCollectionId: string
 ): DomainTarget[] => {
   /** Correct authoritative target set for the deletion attempt. */
   const targets: DomainTarget[] = []
   addUniqueTarget(targets, {
-    entityType: 'promptFolder',
-    id: owningFolder?.id ?? fallbackFolderId
+    entityType: 'promptCollection',
+    id: owningCollection?.id ?? fallbackCollectionId
   })
   addUniqueTarget(targets, { entityType: 'category', id: categoryId })
   for (const prompt of state.getAll('prompt')) {
@@ -378,16 +378,16 @@ const applyManagedCategoryOrderChanges = (
   }
 }
 
-/** Plans one atomic insert, update, and deletion set for root-owned categories. */
+/** Plans one atomic insert, update, and deletion set for collection-owned categories. */
 export const planSaveCategoriesDomainMutation: DomainPlanner<
   SaveCategoriesDomainCommand
 > = (state, command) => {
-  /** Root folder whose complete retained category set is being saved. */
-  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** collection whose complete retained category set is being saved. */
+  const promptCollection = state.get('promptCollection', command.promptCollectionId)
   /** Workspace required for deleted-category navigation cleanup. */
   const workspace = state.get('workspace', command.workspaceId)
-  /** Existing category IDs currently owned by the requested root folder. */
-  const ownedCategoryIds = promptFolder ? getPromptFolderCategoryIds(promptFolder) : []
+  /** Existing category IDs currently owned by the requested collection. */
+  const ownedCategoryIds = promptCollection ? getPromptCollectionCategoryIds(promptCollection) : []
   /** Existing category ID set used to distinguish retained records from new records. */
   const ownedCategoryIdSet = new Set(ownedCategoryIds)
   /** Requested retained category IDs used for completeness and deletion resolution. */
@@ -402,7 +402,7 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   )
   /** Unique authoritative targets returned if ownership or draft validation fails. */
   const conflictTargets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.promptFolderId },
+    { entityType: 'promptCollection', id: command.promptCollectionId },
     { entityType: 'workspace', id: command.workspaceId }
   ]
   for (const categoryId of new Set([...ownedCategoryIds, ...retainedCategoryIdSet])) {
@@ -412,8 +412,8 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
     for (const target of collectCategoryDeletionTargets(
       state,
       categoryId,
-      promptFolder,
-      command.promptFolderId
+      promptCollection,
+      command.promptCollectionId
     )) {
       addUniqueTarget(conflictTargets, target)
     }
@@ -426,11 +426,11 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
     shortDescription: normalizeCategoryShortDescription(category.shortDescription),
     description: category.description?.trim() ? category.description : null
   }))
-  /** Case-insensitive retained names checked for root-local uniqueness. */
+  /** Case-insensitive retained names checked for collection-local uniqueness. */
   const normalizedNames = normalizedCategories.map((category) =>
     category.displayName.toLocaleLowerCase()
   )
-  /** Whether requested IDs and existing records describe this root's full retained set. */
+  /** Whether requested IDs and existing records describe this collection's full retained set. */
   const hasInvalidOwnership = command.categories.some((category) => {
     /** Existing category with the requested stable identity, if any. */
     const existing = state.get('category', category.id)
@@ -438,12 +438,12 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   })
 
   if (
-    !promptFolder ||
+    !promptCollection ||
     !workspace ||
-    !getAllWorkspaceFolderEntries(workspace).some(
-      (entry) => entry.id === command.promptFolderId
+    !getAllWorkspaceCollectionEntries(workspace).some(
+      (entry) => entry.id === command.promptCollectionId
     ) ||
-    /[\\/]/.test(promptFolder.folderName) ||
+    /[\\/]/.test(promptCollection.folderName) ||
     retainedCategoryIdSet.size !== command.categories.length ||
     normalizedCategories.some((category) => category.displayName.length === 0) ||
     new Set(normalizedNames).size !== normalizedNames.length ||
@@ -457,8 +457,8 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   if (deletedCategoryIds.length > 0 || newCategoryIds.length > 0) {
     changes.push({
       type: 'update',
-      entityType: 'promptFolder',
-      id: promptFolder.id,
+      entityType: 'promptCollection',
+      id: promptCollection.id,
       recipe: (draft) => {
         if (draft.kind === 'template') {
           draft.statusFolders.active.categoryOrder = applyManagedCategoryOrderChanges(
@@ -546,11 +546,11 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
 
   /** Workspace navigation currently pointing at a staged deleted category. */
   const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
-  /** Deleted active category whose selected row must transfer to the root owner. */
+  /** Deleted active category whose selected row must transfer to the collection owner. */
   const selectedDeletedCategoryId =
     workspaceUiState &&
-    isPromptFolderScreenSelection(workspaceUiState) &&
-    workspaceUiState.selectedScreenData.promptFolderId === command.promptFolderId &&
+    isPromptCollectionScreenSelection(workspaceUiState) &&
+    workspaceUiState.selectedScreenData.promptCollectionId === command.promptCollectionId &&
     workspaceUiState.selectedScreenData.contentOwnerId &&
     deletedCategoryIds.includes(workspaceUiState.selectedScreenData.contentOwnerId)
       ? workspaceUiState.selectedScreenData.contentOwnerId
@@ -558,47 +558,47 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   if (selectedDeletedCategoryId && workspaceUiState) {
     /** Deleted owner's prior selection used to retain a selected prompt when possible. */
     const deletedUiState = state.get(
-      'workspacePromptFolderUiState',
-      createWorkspacePromptFolderUiStateKey(command.workspaceId, selectedDeletedCategoryId)
+      'workspacePromptCollectionUiState',
+      createWorkspacePromptCollectionUiStateKey(command.workspaceId, selectedDeletedCategoryId)
     )
-    /** Root owner's prompt-folder view state receiving the transferred selection. */
-    const rootUiStateId = createWorkspacePromptFolderUiStateKey(
+    /** Collection owner's prompt-collection view state receiving the transferred selection. */
+    const collectionUiStateId = createWorkspacePromptCollectionUiStateKey(
       command.workspaceId,
-      command.promptFolderId
+      command.promptCollectionId
     )
-    /** Existing root state retained except for its selected row. */
-    const rootUiState = state.get('workspacePromptFolderUiState', rootUiStateId)
-    /** Selected row normalized from category details to the root header. */
+    /** Existing collection state retained except for its selected row. */
+    const collectionUiState = state.get('workspacePromptCollectionUiState', collectionUiStateId)
+    /** Selected row normalized from category details to the collection header. */
     const selectedEntryId =
       !deletedUiState ||
       deletedUiState.selectedEntryId === 'category-details' ||
-      deletedUiState.selectedEntryId === 'root-header'
-        ? 'root-header'
+      deletedUiState.selectedEntryId === 'collection-header'
+        ? 'collection-header'
         : deletedUiState.selectedEntryId
     changes.push({
       type: 'update',
       entityType: 'workspaceUiState',
       id: command.workspaceId,
       recipe: (draft) => {
-        if (isPromptFolderScreenSelection(draft)) {
-          draft.selectedScreenData.contentOwnerId = command.promptFolderId
+        if (isPromptCollectionScreenSelection(draft)) {
+          draft.selectedScreenData.contentOwnerId = command.promptCollectionId
         }
       }
     })
-    if (rootUiState) {
+    if (collectionUiState) {
       changes.push({
         type: 'update',
-        entityType: 'workspacePromptFolderUiState',
-        id: rootUiStateId,
+        entityType: 'workspacePromptCollectionUiState',
+        id: collectionUiStateId,
         recipe: (draft) => {
           draft.selectedEntryId = selectedEntryId
         }
       })
     } else {
-      /** Default root view state created when active selection transfers from a category. */
-      const nextRootUiState: WorkspacePromptFolderUiState = {
+      /** Default collection view state created when active selection transfers from a category. */
+      const nextCollectionUiState: WorkspacePromptCollectionUiState = {
         workspaceId: command.workspaceId,
-        contentOwnerId: command.promptFolderId,
+        contentOwnerId: command.promptCollectionId,
         selectedEntryId,
         treeIsExpanded: true,
         contentSectionIsExpanded: true,
@@ -608,17 +608,17 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
       }
       changes.push({
         type: 'insert',
-        entityType: 'workspacePromptFolderUiState',
-        id: rootUiStateId,
-        data: nextRootUiState
+        entityType: 'workspacePromptCollectionUiState',
+        id: collectionUiStateId,
+        data: nextCollectionUiState
       })
     }
   }
   for (const categoryId of deletedCategoryIds) {
     changes.push({
       type: 'delete',
-      entityType: 'workspacePromptFolderUiState',
-      id: createWorkspacePromptFolderUiStateKey(command.workspaceId, categoryId)
+      entityType: 'workspacePromptCollectionUiState',
+      id: createWorkspacePromptCollectionUiStateKey(command.workspaceId, categoryId)
     })
   }
   return changes
@@ -630,30 +630,30 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
 > = (state, command) => {
   /** Category selected by the renderer-authored command. */
   const category = state.get('category', command.categoryId)
-  /** Authoritative root currently owning the category group. */
-  const owningFolder = state
-    .getAll('promptFolder')
-    .find((folder) =>
-      getPromptFolderCategoryIds(folder).includes(command.categoryId)
+  /** Authoritative collection currently owning the category group. */
+  const owningCollection = state
+    .getAll('promptCollection')
+    .find((collection) =>
+      getPromptCollectionCategoryIds(collection).includes(command.categoryId)
     )
-  /** Workspace that owns the category's root prompt folder. */
+  /** Workspace that owns the category's prompt collection. */
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === owningFolder?.id)
+      getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === owningCollection?.id)
     )
   /** Correct target set used by successful planning and invariant conflicts. */
   const targets = collectCategoryDeletionTargets(
     state,
     command.categoryId,
-    owningFolder,
-    command.promptFolderId
+    owningCollection,
+    command.promptCollectionId
   )
 
   if (
     !category ||
-    !owningFolder ||
-    owningFolder.id !== command.promptFolderId ||
+    !owningCollection ||
+    owningCollection.id !== command.promptCollectionId ||
     !workspace ||
     workspace.id !== command.workspaceId
   ) {
@@ -664,8 +664,8 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   const changes: DomainChange[] = [
     {
       type: 'update',
-      entityType: 'promptFolder',
-      id: owningFolder.id,
+      entityType: 'promptCollection',
+      id: owningCollection.id,
       recipe: (draft) => {
         if (draft.kind === 'template') {
           draft.statusFolders.active.categoryOrder = deleteCategoryOrderGroup(
@@ -714,59 +714,59 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
 
   /** Workspace-level navigation state used to identify an actively selected category. */
   const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
-  /** Whether the deleted category currently owns the visible prompt-folder selection. */
+  /** Whether the deleted category currently owns the visible prompt-collection selection. */
   const isActiveCategory =
     workspaceUiState &&
-    isPromptFolderScreenSelection(workspaceUiState) &&
-    workspaceUiState.selectedScreenData.promptFolderId === command.promptFolderId &&
+    isPromptCollectionScreenSelection(workspaceUiState) &&
+    workspaceUiState.selectedScreenData.promptCollectionId === command.promptCollectionId &&
     workspaceUiState.selectedScreenData.contentOwnerId === command.categoryId
-  /** Composite key for the deleted category's prompt-folder view state. */
-  const categoryUiStateId = createWorkspacePromptFolderUiStateKey(
+  /** Composite key for the deleted category's prompt-collection view state. */
+  const categoryUiStateId = createWorkspacePromptCollectionUiStateKey(
     command.workspaceId,
     command.categoryId
   )
   /** Persisted row selection last owned by the deleted category. */
-  const categoryUiState = state.get('workspacePromptFolderUiState', categoryUiStateId)
+  const categoryUiState = state.get('workspacePromptCollectionUiState', categoryUiStateId)
 
   if (isActiveCategory && workspaceUiState) {
-    /** Root owner state receiving the transferred selected prompt or template. */
-    const rootUiStateId = createWorkspacePromptFolderUiStateKey(
+    /** Collection owner state receiving the transferred selected prompt or template. */
+    const collectionUiStateId = createWorkspacePromptCollectionUiStateKey(
       command.workspaceId,
-      command.promptFolderId
+      command.promptCollectionId
     )
-    /** Existing root expansion state preserved while its selection changes. */
-    const rootUiState = state.get('workspacePromptFolderUiState', rootUiStateId)
-    /** Selected entry normalized from category-only details to the root header. */
+    /** Existing collection expansion state preserved while its selection changes. */
+    const collectionUiState = state.get('workspacePromptCollectionUiState', collectionUiStateId)
+    /** Selected entry normalized from category-only details to the collection header. */
     const selectedEntryId =
       !categoryUiState ||
       categoryUiState.selectedEntryId === 'category-details' ||
-      categoryUiState.selectedEntryId === 'root-header'
-        ? 'root-header'
+      categoryUiState.selectedEntryId === 'collection-header'
+        ? 'collection-header'
         : categoryUiState.selectedEntryId
     changes.push({
       type: 'update',
       entityType: 'workspaceUiState',
       id: command.workspaceId,
       recipe: (draft) => {
-        if (isPromptFolderScreenSelection(draft)) {
-          draft.selectedScreenData.contentOwnerId = command.promptFolderId
+        if (isPromptCollectionScreenSelection(draft)) {
+          draft.selectedScreenData.contentOwnerId = command.promptCollectionId
         }
       }
     })
-    if (rootUiState) {
+    if (collectionUiState) {
       changes.push({
         type: 'update',
-        entityType: 'workspacePromptFolderUiState',
-        id: rootUiStateId,
+        entityType: 'workspacePromptCollectionUiState',
+        id: collectionUiStateId,
         recipe: (draft) => {
           draft.selectedEntryId = selectedEntryId
         }
       })
     } else {
-      /** Default root state created only when an active category selection must transfer. */
-      const nextRootUiState: WorkspacePromptFolderUiState = {
+      /** Default collection state created only when an active category selection must transfer. */
+      const nextCollectionUiState: WorkspacePromptCollectionUiState = {
         workspaceId: command.workspaceId,
-        contentOwnerId: command.promptFolderId,
+        contentOwnerId: command.promptCollectionId,
         selectedEntryId,
         treeIsExpanded: true,
         contentSectionIsExpanded: true,
@@ -776,16 +776,16 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       }
       changes.push({
         type: 'insert',
-        entityType: 'workspacePromptFolderUiState',
-        id: rootUiStateId,
-        data: nextRootUiState
+        entityType: 'workspacePromptCollectionUiState',
+        id: collectionUiStateId,
+        data: nextCollectionUiState
       })
     }
   }
 
   changes.push({
     type: 'delete',
-    entityType: 'workspacePromptFolderUiState',
+    entityType: 'workspacePromptCollectionUiState',
     id: categoryUiStateId
   })
   return changes
@@ -797,10 +797,10 @@ export const planUpdateCategoryDetailsDomainMutation: DomainPlanner<
 > = (state, command) => {
   /** Category selected by the details command. */
   const category = state.get('category', command.categoryId)
-  /** Root folder currently owning the selected category. */
-  const owningFolder = state
-    .getAll('promptFolder')
-    .find((folder) => getPromptFolderCategoryIds(folder).includes(command.categoryId))
+  /** collection currently owning the selected category. */
+  const owningCollection = state
+    .getAll('promptCollection')
+    .find((collection) => getPromptCollectionCategoryIds(collection).includes(command.categoryId))
   /** Stable target returned for any details conflict. */
   const targets: DomainTarget[] = [{ entityType: 'category', id: command.categoryId }]
   /** Normalized display name shared by renderer and main projections. */
@@ -808,8 +808,8 @@ export const planUpdateCategoryDetailsDomainMutation: DomainPlanner<
   /** Normalized optional summary stored atomically with the display name. */
   const shortDescription = normalizeCategoryShortDescription(command.shortDescription)
   /** Loaded sibling categories participating in name-conflict validation. */
-  const siblings = owningFolder
-    ? getPromptFolderCategoryIds(owningFolder).flatMap((categoryId) => {
+  const siblings = owningCollection
+    ? getPromptCollectionCategoryIds(owningCollection).flatMap((categoryId) => {
         /** Loaded category referenced by one sibling group. */
         const sibling = state.get('category', categoryId)
         return sibling ? [sibling] : []
@@ -818,7 +818,7 @@ export const planUpdateCategoryDetailsDomainMutation: DomainPlanner<
 
   if (
     !category ||
-    !owningFolder ||
+    !owningCollection ||
     !displayName ||
     hasCategoryDisplayNameConflict(siblings, displayName, command.categoryId)
   ) {
@@ -860,30 +860,30 @@ export const planSetCategoryDescriptionDomainMutation: DomainPlanner<
   ]
 }
 
-/** Plans one category-group reorder inside its owning root folder. */
+/** Plans one category-group reorder inside its owning collection. */
 export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCommand> = (
   state,
   command
 ) => {
-  /** Root folder whose category order is changing. */
-  const promptFolder = state.get('promptFolder', command.promptFolderId)
-  /** Stable folder target returned for ordering conflicts. */
+  /** collection whose category order is changing. */
+  const promptCollection = state.get('promptCollection', command.promptCollectionId)
+  /** Stable collection target returned for ordering conflicts. */
   const targets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.promptFolderId }
+    { entityType: 'promptCollection', id: command.promptCollectionId }
   ]
-  if (!promptFolder) return createConflict('Category move conflict', targets)
+  if (!promptCollection) return createConflict('Category move conflict', targets)
 
-  /** Category order selected by the template root or prompt status-folder identity. */
+  /** Category order selected by the template collection or prompt status-folder identity. */
   const currentCategoryOrder =
-    promptFolder.kind === 'template'
+    promptCollection.kind === 'template'
       ? command.statusFolderId === null
-        ? promptFolder.statusFolders.active.categoryOrder
+        ? promptCollection.statusFolders.active.categoryOrder
         : null
       : command.statusFolderId === null
         ? null
         : (() => {
             /** Prompt status-folder layout selected for category movement. */
-            const layout = promptFolder.statusFolders[command.statusFolderId]
+            const layout = promptCollection.statusFolders[command.statusFolderId]
             return layout.ordering === 'category' ? layout.categoryOrder : null
           })()
   if (!currentCategoryOrder) return createConflict('Category move conflict', targets)
@@ -898,8 +898,8 @@ export const planMoveCategoryDomainMutation: DomainPlanner<MoveCategoryDomainCom
     return [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.promptFolderId,
+        entityType: 'promptCollection',
+        id: command.promptCollectionId,
         recipe: (draft) => {
           if (draft.kind === 'template') {
             draft.statusFolders.active.categoryOrder = categoryOrder

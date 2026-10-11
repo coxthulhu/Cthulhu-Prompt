@@ -1,4 +1,4 @@
-import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 import {
   commitStagedFileChanges,
   createStagedEnsureDirectory,
@@ -9,14 +9,14 @@ import {
   resolveTempPath
 } from './FilePersistenceHelpers'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
-import { resolvePromptFolderPath, resolvePromptPathsFromStem } from './PromptPersistencePaths'
+import { resolvePromptDirectoryPath, resolvePromptPathsFromStem } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 
 export type MarkdownPersistenceFields = {
   workspaceId: string
   workspacePath: string
   folderPath: string
-  promptFolderId: string
+  promptCollectionId: string
   promptId: string
   promptStem: string
 }
@@ -27,7 +27,7 @@ type MarkdownData = {
 }
 
 type MarkdownPersistenceOptions<TData extends MarkdownData> = {
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
   parseMarkdown: (fileText: string) => TData | null
   serializeMarkdown: (data: TData) => string
   normalizeLoadedData?: (data: TData, folderPath: string) => TData
@@ -40,9 +40,9 @@ type MarkdownPersistenceOptions<TData extends MarkdownData> = {
 
 export const readMarkdownModifiedAt = (
   persistenceFields: MarkdownPersistenceFields,
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): string => {
-  const folderPath = resolvePromptFolderPath(
+  const folderPath = resolvePromptDirectoryPath(
     persistenceFields.workspacePath,
     persistenceFields.folderPath,
     kind
@@ -67,7 +67,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     if (!before && !after) throw new Error('Markdown persistence transition is empty')
     /** Current markdown folder path when the entity already exists. */
     const currentFolderPath = before
-      ? resolvePromptFolderPath(
+      ? resolvePromptDirectoryPath(
           before.persistenceFields.workspacePath,
           before.persistenceFields.folderPath,
           kind
@@ -88,7 +88,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
 
     /** Desired markdown persistence metadata. */
     const fields = after.persistenceFields
-    const targetFolderPath = resolvePromptFolderPath(
+    const targetFolderPath = resolvePromptDirectoryPath(
       fields.workspacePath,
       fields.folderPath,
       kind
@@ -120,7 +120,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     revertStagedFileChanges(stagedChange)
   },
   loadData: async (persistenceFields) => {
-    const folderPath = resolvePromptFolderPath(
+    const folderPath = resolvePromptDirectoryPath(
       persistenceFields.workspacePath,
       persistenceFields.folderPath,
       kind

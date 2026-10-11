@@ -25,15 +25,15 @@ import {
 } from '@shared/domain/prompt-template/PromptTemplate'
 import type { IpcMutationPayloadResult } from '@shared/ipc/IpcResult'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
 import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
-import { workspacePromptFolderUiStateCollection } from '@renderer/data/Collections/WorkspacePromptFolderUiStateCollection'
+import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
 import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
 import {
   getRendererRevisionCollection,
@@ -140,20 +140,20 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
       return systemSettingsCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'workspace':
       return workspaceCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
-    case 'promptFolder':
-      return promptFolderCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
+    case 'promptCollection':
+      return promptCollectionsCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'category':
       return categoryCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'prompt': {
       /** Renderer prompt projected into its shared domain representation. */
-      const prompt = promptCollection.get(id)
+      const prompt = promptsCollection.get(id)
       return (prompt ? toPromptDomainProjection(prompt) : undefined) as
         | DomainPlannerEntityMap[TEntityType]
         | undefined
     }
     case 'promptTemplate': {
       /** Renderer template projected into its shared domain representation. */
-      const promptTemplate = promptTemplateCollection.get(id)
+      const promptTemplate = promptTemplatesCollection.get(id)
       return (promptTemplate ? toPromptTemplateDomainProjection(promptTemplate) : undefined) as
         | DomainPlannerEntityMap[TEntityType]
         | undefined
@@ -168,8 +168,8 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
       return workspaceUiStateCollection.get(id) as
         | DomainPlannerEntityMap[TEntityType]
         | undefined
-    case 'workspacePromptFolderUiState':
-      return workspacePromptFolderUiStateCollection.get(id) as
+    case 'workspacePromptCollectionUiState':
+      return workspacePromptCollectionUiStateCollection.get(id) as
         | DomainPlannerEntityMap[TEntityType]
         | undefined
     case 'accordionUiState':
@@ -192,8 +192,8 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
       return workspaceCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
-    case 'promptFolder':
-      return promptFolderCollection.toArray as unknown as Array<
+    case 'promptCollection':
+      return promptCollectionsCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
     case 'category':
@@ -201,11 +201,11 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
         DomainPlannerEntityMap[TEntityType]
       >
     case 'prompt':
-      return promptCollection.toArray.map(toPromptDomainProjection) as Array<
+      return promptsCollection.toArray.map(toPromptDomainProjection) as Array<
         DomainPlannerEntityMap[TEntityType]
       >
     case 'promptTemplate':
-      return promptTemplateCollection.toArray.map(toPromptTemplateDomainProjection) as Array<
+      return promptTemplatesCollection.toArray.map(toPromptTemplateDomainProjection) as Array<
         DomainPlannerEntityMap[TEntityType]
       >
     case 'userPersistence':
@@ -220,8 +220,8 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
       return workspaceUiStateCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
-    case 'workspacePromptFolderUiState':
-      return workspacePromptFolderUiStateCollection.toArray as unknown as Array<
+    case 'workspacePromptCollectionUiState':
+      return workspacePromptCollectionUiStateCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
     case 'accordionUiState':

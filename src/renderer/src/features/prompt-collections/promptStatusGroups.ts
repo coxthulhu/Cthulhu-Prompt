@@ -1,0 +1,46 @@
+import { Archive, Check, CircleCheckBig, Clock, ListTodo } from 'lucide-svelte'
+import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDERS, PromptStatusFolderId, type PromptContentStatus } from '@shared/domain/prompt/Prompt'
+
+import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
+import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content/MarkdownContent'
+
+/** Renderer icons kept outside the shared workflow definitions. */
+const groupIcons = {
+  [PromptStatusFolderId.Active]: { icon: ListTodo, toggleIcon: ListTodo },
+  [PromptStatusFolderId.Completed]: { icon: CircleCheckBig, toggleIcon: Check },
+  [PromptStatusFolderId.Archived]: { icon: Archive, toggleIcon: Archive },
+  [PromptStatusFolderId.Backlog]: { icon: Clock, toggleIcon: Clock }
+}
+
+/** Header filters show category workflows before finalized groups, with their renderer icons. */
+export const promptStatusGroups = [
+  ...PROMPT_STATUS_FOLDERS.filter((group) => group.ordering === 'category'),
+  ...PROMPT_STATUS_FOLDERS.filter((group) => group.ordering === 'finalizedAt')
+].map((group) => ({
+  ...group,
+  ...groupIcons[group.id]
+}))
+
+/** Sidebar retains finalized sections above the category-ordered workflows. */
+export const sidebarPromptStatusGroups = [
+  ...promptStatusGroups.filter((group) => group.ordering === 'finalizedAt'),
+  ...promptStatusGroups.filter((group) => group.ordering === 'category')
+]
+/** Counts loaded prompts in each exact group owned by the selected collection. */
+export const getPromptStatusGroupCounts = (
+  collection: PromptCollection | null,
+  prompts: readonly { id: string; status: PromptContentStatus }[]
+): Record<PromptStatusFolderId, number> => {
+  /** Loaded membership keyed once for all group counts. */
+  const groupByPromptId = new Map(
+    prompts.map((prompt) => [prompt.id, getPromptStatusFolderDefinition(prompt.status).id])
+  )
+  return Object.fromEntries(PROMPT_STATUS_FOLDERS.map((group) => [
+    group.id,
+    collection
+      ? getPromptStatusFolderContentIds(collection, group.id).filter(
+          (id) => groupByPromptId.get(id) === group.id
+        ).length
+      : 0
+  ])) as Record<PromptStatusFolderId, number>
+}

@@ -10,7 +10,7 @@
   const sampleParent = 'C:\\Users\\Alex\\Documents\\Prompt Workspaces'
   const samplePath = `${sampleParent}\\Product Development`
   // Close the sample workspace to preview the empty state; Open restores these counts.
-  const sampleCounts = { prompts: 24, folders: 3 }
+  const sampleCounts = { prompts: 24, collections: 3 }
   const welcomeSteps = [
     { icon: Home, title: 'Create a workspace', description: 'Choose a folder on your computer. Your tasks and templates live here as simple Markdown files, ready to commit to source control.' },
     { icon: Layers, title: 'Build a prompt template', description: "Use Prompt Templates to write a reusable workflow: investigate a bug, implement a feature with Q&A, or create mockups. Your task's text is added when you copy." },
@@ -23,7 +23,7 @@
   // Local sample state keeps the screen and its dialog variants independent of the workspace.
   let workspacePath = $state<string | null>(samplePath)
   let promptCount = $state(sampleCounts.prompts)
-  let promptFolderCount = $state(sampleCounts.folders)
+  let promptCollectionCount = $state(sampleCounts.collections)
   // Edit these local switches to preview disabled actions, folder warnings, and open errors.
   let loading = $state(false)
   let folderScenario = $state<FolderScenario>('empty')
@@ -81,7 +81,7 @@
     dialog = null
     workspacePath = samplePath
     promptCount = sampleCounts.prompts
-    promptFolderCount = sampleCounts.folders
+    promptCollectionCount = sampleCounts.collections
   }
 
   const createWorkspace = () => {
@@ -96,7 +96,7 @@
       }
       workspacePath = finalPath
       promptCount = includeExamples ? 2 : 0
-      promptFolderCount = 2
+      promptCollectionCount = 2
       closeDialog()
     }, 1200)
   }
@@ -104,7 +104,7 @@
   const closeWorkspace = () => {
     workspacePath = null
     promptCount = 0
-    promptFolderCount = 0
+    promptCollectionCount = 0
   }
 
   // Side effect cleanup: a discarded mockup must not finish a pending creation.
@@ -210,10 +210,10 @@
               <strong class="text-base leading-6 font-semibold">{promptCount}</strong>
               <span>Prompts</span>
             </span>
-            <span class="count-display text-sm leading-5" data-testid="home-prompt-folder-count-stat">
+            <span class="count-display text-sm leading-5" data-testid="home-prompt-collection-count-stat">
               <Folders size={18} class="shrink-0" aria-hidden="true" />
-              <strong class="text-base leading-6 font-semibold">{promptFolderCount}</strong>
-              <span>Prompt Folders</span>
+              <strong class="text-base leading-6 font-semibold">{promptCollectionCount}</strong>
+              <span>Prompt Collections</span>
             </span>
           </div>
           <div class="ml-auto flex items-center gap-2">
@@ -272,7 +272,7 @@
           {#if pathMessage}{@render message(pathMessage, folderScenario === 'nonempty', 'create-workspace-final-path-message')}{/if}
           {#if submissionError}{@render message('Failed to create workspace. Please try again.', false, 'create-workspace-submit-error')}{/if}
           <div>
-            <div class="field-heading"><span class="text-sm font-semibold">Add Examples</span><span class="muted text-sm">Include example prompts and templates in the My Project and My Templates folders.</span></div>
+            <div class="field-heading"><span class="text-sm font-semibold">Add Examples</span><span class="muted text-sm">Include example prompts and templates in the My Project and My Templates collections.</span></div>
             <button class="examples-toggle text-sm leading-5" type="button" aria-pressed={includeExamples} data-testid="create-workspace-examples-toggle" disabled={creating} onclick={() => { includeExamples = !includeExamples }}>
               <span class="toggle-track"><span class="toggle-thumb"></span></span>
               <span class="toggle-label">{includeExamples ? 'Enabled' : 'Disabled'}</span>

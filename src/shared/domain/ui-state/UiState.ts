@@ -6,27 +6,27 @@ import type { IpcResult } from '@shared/ipc/IpcResult'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
-/** Persisted screen selection and last-root state for one workspace. */
+/** Persisted screen selection and last-collection state for one workspace. */
 export type WorkspaceUiState = WorkspaceScreenSelection & {
   workspaceId: string
-  /** Last task-prompt root selected in this workspace. */
-  lastPromptTaskFolderId: string | null
-  /** Last prompt-template root selected in this workspace. */
-  lastPromptTemplateFolderId: string | null
+  /** Last task-prompt collection selected in this workspace. */
+  lastPromptTaskCollectionId: string | null
+  /** Last prompt-template collection selected in this workspace. */
+  lastPromptTemplateCollectionId: string | null
 }
 
-/** Persisted prompt-folder screen state for one root or category content owner. */
-export type WorkspacePromptFolderUiState = {
+/** Persisted prompt-collection screen state for one collection or category content owner. */
+export type WorkspacePromptCollectionUiState = {
   workspaceId: string
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded: boolean
   contentSectionIsExpanded: boolean
-  /** Last reachable viewport offset for each visited status mode of a root folder. */
+  /** Last reachable viewport offset for each visited status mode of a collection. */
   scrollTopByMode: Partial<Record<PromptStatusFolderId, number>>
-  /** Last selected status mode for this root folder. */
+  /** Last selected status mode for this collection. */
   selectedMode: PromptStatusFolderId
-  /** Toggleable sidebar sections shown for this root folder. */
+  /** Toggleable sidebar sections shown for this collection. */
   shownFinalStatusGroups: Partial<Record<PromptStatusFolderId, boolean>>
 }
 
@@ -42,8 +42,8 @@ export const createDefaultWorkspaceUiState = (workspaceId: string): WorkspaceUiS
   workspaceId,
   selectedScreen: 'home',
   selectedScreenData: null,
-  lastPromptTaskFolderId: null,
-  lastPromptTemplateFolderId: null
+  lastPromptTaskCollectionId: null,
+  lastPromptTemplateCollectionId: null
 })
 
 /** IPC channel that loads every split UI-state collection for one workspace. */
@@ -57,12 +57,12 @@ export type LoadWorkspaceUiStateRequest = {
 /** Authoritative split UI-state snapshots loaded when a workspace is selected. */
 export type LoadWorkspaceUiStateResult = IpcResult<{
   workspaceUiState: RevisionEnvelope<WorkspaceUiState>
-  workspacePromptFolderUiStates: RevisionEnvelope<WorkspacePromptFolderUiState>[]
+  workspacePromptCollectionUiStates: RevisionEnvelope<WorkspacePromptCollectionUiState>[]
   accordionUiStates: RevisionEnvelope<AccordionUiState>[]
 }>
 
-/** Builds the authoritative key for one workspace prompt-folder UI-state record. */
-export const createWorkspacePromptFolderUiStateKey = (
+/** Builds the authoritative key for one workspace prompt-collection UI-state record. */
+export const createWorkspacePromptCollectionUiStateKey = (
   workspaceId: string,
   contentOwnerId: string
 ): string => `${workspaceId}:${contentOwnerId}`

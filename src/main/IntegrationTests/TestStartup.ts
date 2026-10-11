@@ -345,6 +345,15 @@ export function setupTestStartupListener(): void {
       emitSqlQueryResult(typedPayload.requestId, { success: false, error: message })
     }
   })
+  // Exercise the real startup migrations against explicitly seeded legacy SQLite state.
+  ;(app as any).on('test-migrate-database', (payload: { requestId: string }) => {
+    try {
+      SqliteDataAccess.migrateDatabaseForTests()
+      app.emit(`test-migrate-database-ready:${payload.requestId}`, { success: true })
+    } catch (error) {
+      app.emit(`test-migrate-database-ready:${payload.requestId}`, { success: false, error: String(error) })
+    }
+  })
   ;(app as any).on('test-complete-startup', (payload: unknown) => {
     const typedPayload = parseStartupCompletionPayload(payload)
     if (!typedPayload) {

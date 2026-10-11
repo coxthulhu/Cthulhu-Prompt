@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, createWorkspaceWithTemplateFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
@@ -23,8 +23,8 @@ const invoke = async (page: Page, channel: string, payload: object) =>
   }), { channel, payload })
 
 /** Loads current revisions and full metadata after each committed mutation. */
-const loadRoot = (page: Page) => invoke(page, 'load-prompt-folder-initial', {
-  workspaceId: WORKSPACE_ID, promptFolderId: ROOT_ID
+const loadRoot = (page: Page) => invoke(page, 'load-prompt-collection-initial', {
+  workspaceId: WORKSPACE_ID, promptCollectionId: ROOT_ID
 })
 
 describe('Filename allocation', () => {
@@ -42,14 +42,14 @@ describe('Filename allocation', () => {
       const statusDirectory = kind === 'prompt' ? 'Completed' : 'Archived'
       /** Fixture starts at the latest schema so unrelated uppercase-extension files stay untouched. */
       const filesystem = kind === 'prompt'
-        ? createWorkspaceWithFolders(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptFolderId: ROOT_ID,
+        ? createWorkspaceWithCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptCollectionId: ROOT_ID,
             prompts: ids.map((id, index) => ({ id, title: titles[index], promptText: `Body ${id}` }))
-          }], { settings: { schemaVersion: 4, workspaceId: WORKSPACE_ID } })
-        : createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', folderId: ROOT_ID,
+          }], { settings: { schemaVersion: 5, workspaceId: WORKSPACE_ID } })
+        : createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', collectionId: ROOT_ID,
             templates: ids.map((id, index) => ({ id, title: titles[index], templateText: `Body ${id}` }))
           }])
       filesystem[getWorkspaceInfoPath(WORKSPACE_PATH)] = JSON.stringify({
-        schemaVersion: 4, workspaceId: WORKSPACE_ID, workspaceName: 'Filename Allocation'
+        schemaVersion: 5, workspaceId: WORKSPACE_ID, workspaceName: 'Filename Allocation'
       })
       /** Destination directory contains unparsed files that must still reserve complete names. */
       const destination = `${WORKSPACE_PATH}/${namespace}/Root/${statusDirectory}`
@@ -66,14 +66,14 @@ describe('Filename allocation', () => {
         const loaded = await loadRoot(mainWindow)
         /** Current record being moved from Active to its final-status directory. */
         const content = (kind === 'prompt' ? loaded.prompts : loaded.promptTemplates).find((entry: { id: string }) => entry.id === id)
-        /** The folder and record are the complete authoritative targets for this status move. */
+        /** The collection and record are the complete authoritative targets for this status move. */
         const result = await invoke(mainWindow, 'set-prompt-location', {
-          command: { kind, sourcePromptFolderId: ROOT_ID, promptId: id,
-            location: { promptFolderId: ROOT_ID, categoryId: null, previousEntryId: null,
+          command: { kind, sourcePromptCollectionId: ROOT_ID, promptId: id,
+            location: { promptCollectionId: ROOT_ID, categoryId: null, previousEntryId: null,
               status: kind === 'prompt' ? PromptStatus.Completed : PromptTemplateStatus.Archived },
             modifiedAt: '2026-10-08T12:00:00Z' },
           expectations: [
-            { entityType: 'promptFolder', id: ROOT_ID, expected: 'revision', revision: loaded.promptFolders[0].revision },
+            { entityType: 'promptCollection', id: ROOT_ID, expected: 'revision', revision: loaded.promptCollections[0].revision },
             { entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate', id, expected: 'revision', revision: content.revision }
           ]
         })
@@ -92,18 +92,18 @@ describe('Filename allocation', () => {
       expect(await readTextFile(electronApp, `${destination}/NEW PROMPT 1${suffix.toUpperCase()}`)).toBe('Unrelated numbered file')
       expect(await readTextFile(electronApp, `${destination}/NEW PROMPT 2${suffix.toUpperCase()}/marker.txt`)).toBe('Directory must survive')
       // Restore one record to prove allocation runs again in the destination directory.
-      /** Current final-status record and folder revisions used by restoration. */
+      /** Current final-status record and collection revisions used by restoration. */
       const loaded = await loadRoot(mainWindow)
       /** First moved record whose original Active filename is available again. */
       const content = (kind === 'prompt' ? loaded.prompts : loaded.promptTemplates).find((entry: { id: string }) => entry.id === ids[0])
       /** Restoration crosses the same storage boundary in the opposite direction. */
       const restored = await invoke(mainWindow, 'set-prompt-location', {
-        command: { kind, sourcePromptFolderId: ROOT_ID, promptId: ids[0],
-          location: { promptFolderId: ROOT_ID, categoryId: null, previousEntryId: null,
+        command: { kind, sourcePromptCollectionId: ROOT_ID, promptId: ids[0],
+          location: { promptCollectionId: ROOT_ID, categoryId: null, previousEntryId: null,
             status: kind === 'prompt' ? PromptStatus.Todo : PromptTemplateStatus.Active },
           modifiedAt: '2026-10-08T12:01:00Z' },
         expectations: [
-          { entityType: 'promptFolder', id: ROOT_ID, expected: 'revision', revision: loaded.promptFolders[0].revision },
+          { entityType: 'promptCollection', id: ROOT_ID, expected: 'revision', revision: loaded.promptCollections[0].revision },
           { entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate', id: ids[0], expected: 'revision', revision: content.revision }
         ]
       })
@@ -115,8 +115,8 @@ describe('Filename allocation', () => {
   }
 
   test('reserves category filenames across one batch and does not reuse another category source path', async ({ testSetup, electronApp }) => {
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptFolderId: ROOT_ID }], {
-      settings: { schemaVersion: 4, workspaceId: WORKSPACE_ID }
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptCollectionId: ROOT_ID }], {
+      settings: { schemaVersion: 5, workspaceId: WORKSPACE_ID }
     }))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     /** Real category management command writes all retained drafts in one transaction. */
@@ -126,13 +126,13 @@ describe('Filename allocation', () => {
     const categories = ['Same?', 'same*', 'Same 1'].map((displayName, index) => ({
       id: `abcdef12-category-${index}`, displayName, shortDescription: null, description: `Category ${index}`
     }))
-    /** Initial folder revision required when inserting new categories. */
+    /** Initial collection revision required when inserting new categories. */
     const loaded = await loadRoot(mainWindow)
     /** Batch response must succeed without collisions among pending writes. */
     const created = await invoke(mainWindow, 'save-categories', {
-      command: { workspaceId: WORKSPACE_ID, promptFolderId: ROOT_ID, categories, modifiedAt: '2026-10-08T12:00:00Z' },
+      command: { workspaceId: WORKSPACE_ID, promptCollectionId: ROOT_ID, categories, modifiedAt: '2026-10-08T12:00:00Z' },
       expectations: [
-        { entityType: 'promptFolder', id: ROOT_ID, expected: 'revision', revision: loaded.promptFolders[0].revision },
+        { entityType: 'promptCollection', id: ROOT_ID, expected: 'revision', revision: loaded.promptCollections[0].revision },
         ...categories.map(({ id }) => ({ entityType: 'category', id, expected: 'absent' }))
       ]
     })
@@ -152,7 +152,7 @@ describe('Filename allocation', () => {
     const current = await loadRoot(mainWindow)
     /** Only changed categories participate in this mutation's expected target set. */
     const result = await invoke(mainWindow, 'save-categories', {
-      command: { workspaceId: WORKSPACE_ID, promptFolderId: ROOT_ID, categories: renamed, modifiedAt: '2026-10-08T12:01:00Z' },
+      command: { workspaceId: WORKSPACE_ID, promptCollectionId: ROOT_ID, categories: renamed, modifiedAt: '2026-10-08T12:01:00Z' },
       expectations: categories.slice(0, 2).map(({ id }) => ({ entityType: 'category', id, expected: 'revision',
         revision: current.categories.find((entry: { id: string }) => entry.id === id).revision }))
     })
@@ -165,7 +165,7 @@ describe('Filename allocation', () => {
 
   test('migrates legacy names without changing bytes or modification times and stays stable on reopen', async ({ testSetup, electronApp }) => {
     /** Existing prompt records provide parseable full IDs with deliberately matching short prefixes. */
-    const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptFolderId: ROOT_ID,
+    const filesystem = createWorkspaceWithCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptCollectionId: ROOT_ID,
       prompts: [
         { id: 'abcdef12-first', title: 'New Prompt', promptText: 'First body' },
         { id: 'abcdef12-second', title: 'New Prompt', promptText: 'Second body' },
@@ -213,7 +213,7 @@ describe('Filename allocation', () => {
     expect(await readTextFile(electronApp, `${orphanDirectory}/Legacy Category.category.json`)).toBe(category)
     expect(await readTextFile(electronApp, `${orphanDirectory}/Alpha.template.md`)).toBe(alphaTemplate)
     expect(await readTextFile(electronApp, `${orphanDirectory}/Beta.template.md`)).toBe(betaTemplate)
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(4)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(5)
     /** Loaded prompt timestamps verify rename-only migration preserved historical mtimes. */
     const loaded = await loadRoot(mainWindow)
     expect(loaded.prompts.map((entry: { data: { modifiedAt: string } }) => entry.data.modifiedAt)).toEqual([modifiedAt, modifiedAt, modifiedAt])
@@ -227,8 +227,8 @@ describe('Filename allocation', () => {
 
   test('leaves schema three and legacy files intact when migration finds malformed content', async ({ testSetup, electronApp }) => {
     /** Valid record precedes malformed recursive content in the migration scan. */
-    const filesystem = createWorkspaceWithFolders(WORKSPACE_PATH, [{
-      folderName: 'Root', displayName: 'Root', promptFolderId: ROOT_ID,
+    const filesystem = createWorkspaceWithCollections(WORKSPACE_PATH, [{
+      folderName: 'Root', displayName: 'Root', promptCollectionId: ROOT_ID,
       prompts: [{ id: 'abcdef12-valid', title: 'Valid', promptText: 'Preserve valid source' }]
     }], { settings: { schemaVersion: 3, workspaceId: WORKSPACE_ID } })
     /** Legacy path must remain unchanged when validation prevents migration. */

@@ -2,20 +2,20 @@ import { createDeterministicId } from './FixtureIds'
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/domain/prompt/promptFallbackTitle'
 import { allocateFilenameStem } from '@shared/domain/prompt/promptFilename'
-import { PROMPT_FOLDER_SETTINGS_FIELDS, type PromptFolderSettings } from '@shared/domain/prompt-folder/PromptFolder'
+import { PROMPT_COLLECTION_SETTINGS_FIELDS, type PromptCollectionSettings } from '@shared/domain/prompt-collection/PromptCollection'
 import {
   isFinalPromptStatus,
   PromptStatus,
   type PromptPersisted,
   type PromptTemplateReference
 } from '@shared/domain/prompt/Prompt'
-import type { PromptFolderInfoFile } from '../../src/main/Persistence/workspace/WorkspaceDiskTypes'
+import type { PromptCollectionInfoFile } from '../../src/main/Persistence/workspace/WorkspaceDiskTypes'
 import {
   serializePromptMarkdown,
   serializePromptTemplateMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import { PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
+import { PROMPT_COLLECTION_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
   VIRTUAL_FIND_LAST_PROMPT_INDEX,
@@ -23,20 +23,20 @@ import {
   virtualFindPromptId
 } from '../helpers/VirtualFindTestConstants'
 
-const createPromptFolderInfo = (
+const createPromptCollectionInfo = (
   displayName: string,
-  folderId: string,
+  collectionId: string,
   kind: 'prompt' | 'template' = 'prompt'
-): PromptFolderInfoFile => {
-  return { displayName, folderId, kind }
+): PromptCollectionInfoFile => {
+  return { displayName, collectionId, kind }
 }
 
-/** Returns the FolderOrder path owned by one prompt or template root. */
-const getPromptFolderCategoryOrderPath = (folderPath: string): string =>
-  `${folderPath}/_FolderInfo/FolderOrder.json`
+/** Returns the CategoryOrder path for one prompt or template status folder. */
+const getPromptCollectionCategoryOrderPath = (folderPath: string): string =>
+  `${folderPath}/_CollectionInfo/CategoryOrder.json`
 
-const folderOrderFile = (promptFolderIds: string[]) => ({
-  entries: promptFolderIds.map((id) => ({ kind: 'folder' as const, id }))
+const collectionOrderFile = (promptCollectionIds: string[]) => ({
+  entries: promptCollectionIds.map((id) => ({ kind: 'collection' as const, id }))
 })
 
 /** Builds root category groups while preserving configured fixture order. */
@@ -76,13 +76,13 @@ const categoryOrderFile = (
 }
 
 /**
- * Configuration for creating a prompt folder
+ * Configuration for creating a prompt collection
  */
-export interface PromptFolderConfig {
+export interface PromptCollectionConfig {
   folderName: string
   displayName: string
-  promptFolderId?: string
-  folderSettings?: Partial<PromptFolderSettings>
+  promptCollectionId?: string
+  collectionSettings?: Partial<PromptCollectionSettings>
   prompts?: Array<{
     id: string
     title?: string
@@ -96,7 +96,7 @@ export interface PromptFolderConfig {
   }>
 }
 
-/** Template content owned by a fixture root folder or category. */
+/** Template content owned by a fixture collection or category. */
 export interface PromptTemplateFixture {
   id: string
   title?: string
@@ -106,7 +106,7 @@ export interface PromptTemplateFixture {
   category?: string
 }
 
-/** Category fixture owned directly by a template root folder. */
+/** Category fixture owned directly by a template collection. */
 export interface PromptTemplateCategoryConfig {
   categoryName: string
   displayName: string
@@ -115,36 +115,36 @@ export interface PromptTemplateCategoryConfig {
   templates?: PromptTemplateFixture[]
 }
 
-/** Root prompt-template folder fixture. */
-export interface PromptTemplateFolderConfig {
+/** prompt-template collection fixture. */
+export interface PromptTemplateCollectionConfig {
   folderName: string
   displayName: string
-  folderId?: string
+  collectionId?: string
   description?: string
   categories?: PromptTemplateCategoryConfig[]
   templates?: PromptTemplateFixture[]
 }
 
 /** Task-prompt input accepted by workspace fixture builders. */
-type PromptFixture = NonNullable<PromptFolderConfig['prompts']>[number]
+type PromptFixture = NonNullable<PromptCollectionConfig['prompts']>[number]
 
-const addPromptFolderSettingsFiles = (
+const addPromptCollectionSettingsFiles = (
   structure: Record<string, string | null>,
   folderPath: string,
-  folder: PromptFolderConfig
+  collection: PromptCollectionConfig
 ): void => {
-  for (const field of PROMPT_FOLDER_SETTINGS_FIELDS) {
-    const value = folder.folderSettings?.[field]
+  for (const field of PROMPT_COLLECTION_SETTINGS_FIELDS) {
+    const value = collection.collectionSettings?.[field]
     if (value == null) continue
-    structure[`${folderPath}/_FolderInfo/${PROMPT_FOLDER_SETTINGS_TEXT_FILENAMES[field]}`] =
+    structure[`${folderPath}/_CollectionInfo/${PROMPT_COLLECTION_SETTINGS_TEXT_FILENAMES[field]}`] =
       value
   }
 }
 
-function createSinglePromptFoldersFromPromptCollection(
-  promptCollection: Record<string, PromptFixture>
-): PromptFolderConfig[] {
-  return Object.values(promptCollection).map((prompt) => {
+function createSinglePromptCollectionsFromPromptCollection(
+  promptsCollection: Record<string, PromptFixture>
+): PromptCollectionConfig[] {
+  return Object.values(promptsCollection).map((prompt) => {
     const safeTitle = prompt.title?.trim() ?? ''
     const sanitizedTitle = safeTitle.replace(/[^A-Za-z0-9]/g, '')
     const folderName = sanitizedTitle || prompt.id
@@ -227,17 +227,17 @@ const createPromptFiles = (
 }
 
 /**
- * Complete test scenarios with folders and prompts
+ * Complete test scenarios with collections and prompts
  */
 const workspaceScenarios = {
   populated: {
     description: 'Workspace with sample prompts for integration testing',
-    examplesFolder: {
+    examplesCollection: {
       folderName: 'Examples',
       displayName: 'Example Prompts',
       prompts: [samplePrompts.simple]
     },
-    developmentFolder: {
+    developmentCollection: {
       folderName: 'Development',
       displayName: 'Development Tools',
       prompts: [
@@ -264,13 +264,13 @@ const workspaceScenarios = {
 export type WorkspaceScenario =
   | 'empty' // Truly empty (just directory)
   | 'minimal' // Basic workspace structure with settings
-  | 'sample' // Workspace with Examples and Development prompt folders
-  | 'height' // Workspace with folders for height tests
-  | 'categories' // Workspace with a prompt folder containing one category
+  | 'sample' // Workspace with Examples and Development prompt collections
+  | 'height' // Workspace with collections for height tests
+  | 'categories' // Workspace with a prompt collection containing one category
   | 'categories-ui' // Dedicated category screen rendering fixture
   | 'categories-controls' // Dedicated category two-prompt movement-control fixture
   | 'categories-single-level' // Dedicated single-level category fixture
-  | 'virtual' // Workspace with folders for virtualization/overscan tests
+  | 'virtual' // Workspace with collections for virtualization/overscan tests
   | 'long-wrapped-lines' // Workspace with wrapped prompts that overflow default estimations
   | 'virtual-placeholder' // Workspace with prompts tailored for placeholder hydration tests
 
@@ -317,7 +317,7 @@ export function createBasicWorkspace(
     typeof settings.workspaceId === 'string'
       ? settings.workspaceId
       : createDeterministicId(workspacePath)
-  const settingsPayload = { schemaVersion: 2, ...settings, workspaceId }
+  const settingsPayload = { schemaVersion: 5, ...settings, workspaceId }
   const workspaceName =
     typeof settings.workspaceName === 'string'
       ? settings.workspaceName
@@ -329,8 +329,8 @@ export function createBasicWorkspace(
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
     [`${workspacePath}/Templates`]: null,
-    [`${workspacePath}/Prompts/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
-    [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify(folderOrderFile([]), null, 2),
+    [`${workspacePath}/Prompts/CollectionOrder.json`]: JSON.stringify(collectionOrderFile([]), null, 2),
+    [`${workspacePath}/Templates/CollectionOrder.json`]: JSON.stringify(collectionOrderFile([]), null, 2),
     [getWorkspaceInfoPath(workspacePath)]: JSON.stringify(
       { ...settingsPayload, workspaceName },
       null,
@@ -342,55 +342,86 @@ export function createBasicWorkspace(
 }
 
 /**
- * Creates a workspace with specified prompt folders
+ * Creates a workspace with specified prompt collections
  *
  * @param workspacePath - The path where the workspace should be created
- * @param folderConfigs - Array of folder configurations to create
+ * @param collectionConfigs - Array of collection configurations to create
  * @param workspaceOptions - Optional workspace configuration
  * @returns The filesystem structure object
  */
-export function createWorkspaceWithFolders(
+export function createWorkspaceWithCollections(
   workspacePath: string,
-  folderConfigs: PromptFolderConfig[],
+  collectionConfigs: PromptCollectionConfig[],
   workspaceOptions: WorkspaceOptions = {}
 ): Record<string, string | null> {
   // First create basic workspace
   const structure = createBasicWorkspace(workspacePath, workspaceOptions)
-  const promptFolderIds: string[] = []
+  const promptCollectionIds: string[] = []
 
-  // Add each folder
-  for (const folder of folderConfigs) {
-    /** Root identity matches the metadata generated by the shared folder builder. */
-    const promptFolderId =
-      typeof folder.promptFolderId === 'string'
-        ? folder.promptFolderId
-        : createDeterministicId(`${workspacePath}:${folder.folderName}`)
-    promptFolderIds.push(promptFolderId)
-    Object.assign(structure, addFolderToWorkspace(workspacePath, folder))
+  // Add each collection
+  for (const collection of collectionConfigs) {
+    /** Root identity matches the metadata generated by the shared collection builder. */
+    const promptCollectionId =
+      typeof collection.promptCollectionId === 'string'
+        ? collection.promptCollectionId
+        : createDeterministicId(`${workspacePath}:${collection.folderName}`)
+    promptCollectionIds.push(promptCollectionId)
+    Object.assign(structure, addCollectionToWorkspace(workspacePath, collection))
   }
-  structure[`${workspacePath}/Prompts/FolderOrder.json`] = JSON.stringify(
-    folderOrderFile(promptFolderIds),
+  structure[`${workspacePath}/Prompts/CollectionOrder.json`] = JSON.stringify(
+    collectionOrderFile(promptCollectionIds),
     null,
     2
   )
 
-  return structure
+  return typeof workspaceOptions.settings?.schemaVersion === 'number' && workspaceOptions.settings.schemaVersion < 5
+    ? createLegacyWorkspaceFilesystem(structure, workspaceOptions.settings.schemaVersion)
+    : structure
 }
 
-export function createWorkspaceWithTemplateFolders(
+/** Converts current fixture metadata into the exact folder-era format for migration tests. */
+export function createLegacyWorkspaceFilesystem(
+  filesystem: Record<string, string | null>,
+  schemaVersion: number
+): Record<string, string | null> {
+  return Object.fromEntries(Object.entries(filesystem).map(([filePath, content]) => {
+    /** Historical metadata path; prompt, template, category, and description bytes are unchanged. */
+    const legacyPath = filePath.replaceAll('_CollectionInfo', '_FolderInfo')
+      .replaceAll('CollectionInfo.json', 'FolderInfo.json')
+      .replaceAll('CategoryOrder.json', 'FolderOrder.json')
+      .replaceAll('CollectionOrder.json', 'FolderOrder.json')
+    if (content === null) return [legacyPath, content]
+    if (filePath.endsWith('.cthulhuprompt.json')) {
+      return [legacyPath, JSON.stringify({ ...JSON.parse(content), schemaVersion }, null, 2)]
+    }
+    if (filePath.endsWith('/CollectionInfo.json')) {
+      /** Root metadata retains its stable identity under the old field name. */
+      const { collectionId, ...info } = JSON.parse(content)
+      return [legacyPath, JSON.stringify({ ...info, folderId: collectionId }, null, 2)]
+    }
+    if (filePath.endsWith('CollectionOrder.json')) {
+      /** Root entries use the discriminator understood by the historical migrations. */
+      const order = JSON.parse(content)
+      return [legacyPath, JSON.stringify({ ...order, entries: order.entries.map((entry: { id: string }) => ({ ...entry, kind: 'folder' })) }, null, 2)]
+    }
+    return [legacyPath, content]
+  }))
+}
+
+export function createWorkspaceWithTemplateCollections(
   workspacePath: string,
-  folderConfigs: PromptTemplateFolderConfig[]
+  collectionConfigs: PromptTemplateCollectionConfig[]
 ): Record<string, string | null> {
   const structure = createBasicWorkspace(workspacePath)
   /** Creates one flat template root with direct category fixtures. */
-  const addFolder = (folder: PromptTemplateFolderConfig): string => {
-    const folderPath = `${workspacePath}/Templates/${folder.folderName}`
-    const folderId =
-      folder.folderId ?? createDeterministicId(`${workspacePath}:template:${folderPath}`)
+  const addCollection = (collection: PromptTemplateCollectionConfig): string => {
+    const folderPath = `${workspacePath}/Templates/${collection.folderName}`
+    const collectionId =
+      collection.collectionId ?? createDeterministicId(`${workspacePath}:template:${folderPath}`)
     /** Root-owned templates that remain Uncategorized. */
-    const rootTemplates = folder.templates ?? []
+    const rootTemplates = collection.templates ?? []
     /** Category fixtures owned by this template root. */
-    const categoryFixtures = (folder.categories ?? []).map((category) => ({
+    const categoryFixtures = (collection.categories ?? []).map((category) => ({
       categoryId:
         category.categoryId ??
         createDeterministicId(`${workspacePath}:template:${folderPath}/${category.categoryName}`),
@@ -399,13 +430,13 @@ export function createWorkspaceWithTemplateFolders(
       templates: category.templates ?? []
     }))
 
-    structure[`${folderPath}/_FolderInfo/FolderInfo.json`] = JSON.stringify(
-      createPromptFolderInfo(folder.displayName, folderId, 'template'),
+    structure[`${folderPath}/_CollectionInfo/CollectionInfo.json`] = JSON.stringify(
+      createPromptCollectionInfo(collection.displayName, collectionId, 'template'),
       null,
       2
     )
-    if (folder.description !== undefined) {
-      structure[`${folderPath}/_FolderInfo/Description.md`] = folder.description
+    if (collection.description !== undefined) {
+      structure[`${folderPath}/_CollectionInfo/Description.md`] = collection.description
     }
     structure[`${folderPath}/Categories`] = null
     for (const categoryFixture of categoryFixtures) {
@@ -432,7 +463,7 @@ export function createWorkspaceWithTemplateFolders(
         }))
       )
     ]
-    structure[getPromptFolderCategoryOrderPath(`${folderPath}/Active`)] = JSON.stringify(
+    structure[getPromptCollectionCategoryOrderPath(`${folderPath}/Active`)] = JSON.stringify(
       {
         categories: [
           {
@@ -471,13 +502,13 @@ export function createWorkspaceWithTemplateFolders(
         serializePromptTemplateMarkdown(templateData)
     }
 
-    return folderId
+    return collectionId
   }
 
-  const folderIds = folderConfigs.map(addFolder)
+  const collectionIds = collectionConfigs.map(addCollection)
 
-  structure[`${workspacePath}/Templates/FolderOrder.json`] = JSON.stringify(
-    folderOrderFile(folderIds),
+  structure[`${workspacePath}/Templates/CollectionOrder.json`] = JSON.stringify(
+    collectionOrderFile(collectionIds),
     null,
     2
   )
@@ -503,20 +534,20 @@ export function setupWorkspaceScenario(
       return createBasicWorkspace(workspacePath)
 
     case 'sample':
-      return createWorkspaceWithFolders(workspacePath, [
-        { ...workspaceScenarios.populated.examplesFolder },
-        { ...workspaceScenarios.populated.developmentFolder }
+      return createWorkspaceWithCollections(workspacePath, [
+        { ...workspaceScenarios.populated.examplesCollection },
+        { ...workspaceScenarios.populated.developmentCollection }
       ])
 
     case 'height': {
-      const heightPromptFolders = createSinglePromptFoldersFromPromptCollection(heightTestPrompts)
-      return createWorkspaceWithFolders(workspacePath, heightPromptFolders)
+      const heightPromptCollections = createSinglePromptCollectionsFromPromptCollection(heightTestPrompts)
+      return createWorkspaceWithCollections(workspacePath, heightPromptCollections)
     }
 
     case 'categories': {
-      /** Category fixture owned directly by the Main root folder. */
+      /** Category fixture owned directly by the Main collection. */
       const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
-      const structure = createWorkspaceWithFolders(workspacePath, [
+      const structure = createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'Main',
           displayName: 'Main',
@@ -553,12 +584,12 @@ export function setupWorkspaceScenario(
       /** Category IDs provide deterministic identities for category UI tests. */
       const primaryCategoryId = createDeterministicId(`${workspacePath}:Hierarchy/Primary`)
       const emptyCategoryId = createDeterministicId(`${workspacePath}:Hierarchy/Empty`)
-      const structure = createWorkspaceWithFolders(workspacePath, [
+      const structure = createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'Hierarchy',
           displayName: 'Hierarchy',
-          folderSettings: {
-            folderDescription: 'Root hierarchy folder description.'
+          collectionSettings: {
+            collectionDescription: 'Root hierarchy collection description.'
           },
           prompts: [
             {
@@ -586,7 +617,7 @@ export function setupWorkspaceScenario(
             {
               id: 'categories-ui-root-completed',
               title: 'Root Completed',
-              promptText: 'Completed prompt directly inside the root folder.',
+              promptText: 'Completed prompt directly inside the collection.',
               status: PromptStatus.Completed,
               finalizedAt: '2026-07-09T10:00:00.000Z'
             },
@@ -627,7 +658,7 @@ export function setupWorkspaceScenario(
           null,
           2
         )
-      structure[getPromptFolderCategoryOrderPath(`${workspacePath}/Prompts/Hierarchy/Active`)] =
+      structure[getPromptCollectionCategoryOrderPath(`${workspacePath}/Prompts/Hierarchy/Active`)] =
         JSON.stringify(
           {
             categories: [
@@ -659,7 +690,7 @@ export function setupWorkspaceScenario(
       const rootName = 'CategoryRoot'
       /** Single supported category used to verify the flat category model. */
       const categoryId = createDeterministicId(`${workspacePath}:${rootName}/Category`)
-      const structure = createWorkspaceWithFolders(workspacePath, [
+      const structure = createWorkspaceWithCollections(workspacePath, [
         { folderName: rootName, displayName: 'Category Root' }
       ])
       structure[`${workspacePath}/Prompts/${rootName}/Categories/Category.category.json`] =
@@ -668,7 +699,7 @@ export function setupWorkspaceScenario(
           null,
           2
         )
-      structure[getPromptFolderCategoryOrderPath(`${workspacePath}/Prompts/${rootName}/Active`)] =
+      structure[getPromptCollectionCategoryOrderPath(`${workspacePath}/Prompts/${rootName}/Active`)] =
         JSON.stringify(
           {
             categories: [
@@ -687,7 +718,7 @@ export function setupWorkspaceScenario(
       /** Two categories used by the prompt movement fixture. */
       const primaryCategoryId = createDeterministicId(`${workspacePath}:Controls/Primary`)
       const secondaryCategoryId = createDeterministicId(`${workspacePath}:Controls/Secondary`)
-      const structure = createWorkspaceWithFolders(workspacePath, [
+      const structure = createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'Controls',
           displayName: 'Controls',
@@ -719,7 +750,7 @@ export function setupWorkspaceScenario(
           null,
           2
         )
-      structure[getPromptFolderCategoryOrderPath(`${workspacePath}/Prompts/Controls/Active`)] =
+      structure[getPromptCollectionCategoryOrderPath(`${workspacePath}/Prompts/Controls/Active`)] =
         JSON.stringify(
           {
             categories: [
@@ -800,7 +831,7 @@ export function setupWorkspaceScenario(
         }
       })
 
-      return createWorkspaceWithFolders(workspacePath, [
+      return createWorkspaceWithCollections(workspacePath, [
         { folderName: 'Short', displayName: 'Short', prompts: shortPrompts },
         { folderName: 'Empty', displayName: 'Empty', prompts: emptyPrompts },
         { folderName: 'Mixed', displayName: 'Mixed', prompts: mixedPrompts },
@@ -818,7 +849,7 @@ export function setupWorkspaceScenario(
         createdAt: twentyLineBase.createdAt
       }))
 
-      return createWorkspaceWithFolders(workspacePath, [
+      return createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'PlaceholderHeight',
           displayName: 'Placeholder Height',
@@ -836,7 +867,7 @@ export function setupWorkspaceScenario(
         createdAt: base.createdAt
       }))
 
-      return createWorkspaceWithFolders(workspacePath, [
+      return createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'LongWrappedSingles',
           displayName: 'Long Wrapped Singles',
@@ -851,20 +882,20 @@ export function setupWorkspaceScenario(
 }
 
 /**
- * Adds a single folder to an existing workspace
+ * Adds a single collection to an existing workspace
  *
  * @param workspacePath - The path to the existing workspace
- * @param folderConfig - Configuration for the folder to add
- * @returns The filesystem structure for the new folder
+ * @param collectionConfig - Configuration for the collection to add
+ * @returns The filesystem structure for the new collection
  */
-export function addFolderToWorkspace(
+export function addCollectionToWorkspace(
   workspacePath: string,
-  folderConfig: PromptFolderConfig
+  collectionConfig: PromptCollectionConfig
 ): Record<string, string | null> {
-  const folderPath = `${workspacePath}/Prompts/${folderConfig.folderName}`
+  const folderPath = `${workspacePath}/Prompts/${collectionConfig.folderName}`
   // Canonical root directory that owns active prompt files and ordering.
   const activeFolderPath = `${folderPath}/Active`
-  const { prompts } = normalizePrompts(folderConfig.prompts)
+  const { prompts } = normalizePrompts(collectionConfig.prompts)
   // Active fixture prompts remain in the hierarchy and its authoritative order.
   const activePrompts = prompts.filter(
     (prompt) => !isFinalPromptStatus(prompt.status ?? PromptStatus.Todo)
@@ -883,19 +914,19 @@ export function addFolderToWorkspace(
     `${folderPath}/Archived`,
     archivedPrompts
   )
-  const promptFolderId =
-    typeof folderConfig.promptFolderId === 'string'
-      ? folderConfig.promptFolderId
-      : createDeterministicId(`${workspacePath}:${folderConfig.folderName}`)
+  const promptCollectionId =
+    typeof collectionConfig.promptCollectionId === 'string'
+      ? collectionConfig.promptCollectionId
+      : createDeterministicId(`${workspacePath}:${collectionConfig.folderName}`)
 
   const structure: Record<string, string | null> = {
-    [getPromptFolderCategoryOrderPath(activeFolderPath)]: JSON.stringify(
+    [getPromptCollectionCategoryOrderPath(activeFolderPath)]: JSON.stringify(
       categoryOrderFile('prompt', activePrompts),
       null,
       2
     ),
-    [`${folderPath}/_FolderInfo/FolderInfo.json`]: JSON.stringify(
-      createPromptFolderInfo(folderConfig.displayName, promptFolderId),
+    [`${folderPath}/_CollectionInfo/CollectionInfo.json`]: JSON.stringify(
+      createPromptCollectionInfo(collectionConfig.displayName, promptCollectionId),
       null,
       2
     ),
@@ -906,7 +937,7 @@ export function addFolderToWorkspace(
     ...completedPromptFiles,
     ...archivedPromptFiles
   }
-  addPromptFolderSettingsFiles(structure, folderPath, folderConfig)
+  addPromptCollectionSettingsFiles(structure, folderPath, collectionConfig)
 
   return structure
 }
@@ -920,9 +951,9 @@ export const testHelpers = {
    */
   createWorkspaceWithSamplePrompts(
     workspacePath: string,
-    folderName: string = 'TestFolder'
+    folderName: string = 'TestCollection'
   ): Record<string, string | null> {
-    return createWorkspaceWithFolders(workspacePath, [
+    return createWorkspaceWithCollections(workspacePath, [
       {
         folderName,
         displayName: folderName.replace(/([A-Z])/g, ' $1').trim(),
@@ -946,7 +977,7 @@ export const testHelpers = {
     folderName: string,
     promptData: any
   ): Record<string, string | null> {
-    return createWorkspaceWithFolders(workspacePath, [
+    return createWorkspaceWithCollections(workspacePath, [
       {
         folderName,
         displayName: folderName,
@@ -958,7 +989,7 @@ export const testHelpers = {
 
 /**
  * Creates a workspace used for virtualization stress tests.
- * Generates a folder with many large prompts (e.g., 50 two-hundred-line prompts).
+ * Generates a collection with many large prompts (e.g., 50 two-hundred-line prompts).
  */
 export function createVirtualizationTestWorkspace(
   workspacePath: string,
@@ -970,7 +1001,7 @@ export function createVirtualizationTestWorkspace(
     title: `Large Prompt ${i + 1}`
   }))
 
-  return createWorkspaceWithFolders(workspacePath, [
+  return createWorkspaceWithCollections(workspacePath, [
     {
       folderName: 'Examples',
       displayName: 'Example Prompts',
@@ -980,7 +1011,7 @@ export function createVirtualizationTestWorkspace(
 }
 
 /**
- * Creates a workspace with prompts but no folder structure (for testing edge cases)
+ * Creates a workspace with prompts but no collection structure (for testing edge cases)
  *
  * @param workspacePath - The path where the workspace should be created
  */
@@ -1016,7 +1047,7 @@ export function createCorruptedWorkspace(
     case 'missing-prompts':
       structure[getWorkspaceInfoPath(workspacePath)] = JSON.stringify(
         {
-          schemaVersion: 2,
+          schemaVersion: 5,
           workspaceId: createDeterministicId(workspacePath),
           workspaceName: getWorkspaceInfoPath(workspacePath)
             .split('/')

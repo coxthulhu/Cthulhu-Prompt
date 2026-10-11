@@ -7,12 +7,12 @@
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
-  import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-  import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import { type PromptTemplateReference } from '@shared/domain/prompt/Prompt'
-  import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Category } from '@shared/domain/category/Category'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
@@ -31,16 +31,16 @@
   // Dialog behavior selected by the prompt editor action that opened it.
   type TemplateDialogMode = 'select' | 'select-and-copy'
 
-  // Virtual rows used to render complete root-folder cards and their category entries.
+  // Virtual rows used to render complete collection cards and their category entries.
   type TemplateDialogRow =
     | {
-        kind: 'base-folder-header'
-        folder: PromptFolder
+        kind: 'base-collection-header'
+        collection: PromptCollection
         templateCount: number
       }
     | {
-        kind: 'base-folder-header-spacer'
-        folderId: string
+        kind: 'base-collection-header-spacer'
+        collectionId: string
       }
     | {
         kind: 'category'
@@ -50,24 +50,24 @@
       }
     | {
         kind: 'template'
-        folderId: string
+        collectionId: string
         templateId: string
         indentCount: number
         isLastRow: boolean
       }
     | {
-        kind: 'base-folder-footer'
-        folderId: string
+        kind: 'base-collection-footer'
+        collectionId: string
       }
 
-  // Props received by a virtualized base-folder header snippet.
-  type BaseFolderHeaderRowProps = VirtualWindowRowComponentProps<
-    Extract<TemplateDialogRow, { kind: 'base-folder-header' }>
+  // Props received by a virtualized base-collection header snippet.
+  type BaseCollectionHeaderRowProps = VirtualWindowRowComponentProps<
+    Extract<TemplateDialogRow, { kind: 'base-collection-header' }>
   >
 
-  // Props received by the spacing row between a base-folder header and its content.
-  type BaseFolderHeaderSpacerRowProps = VirtualWindowRowComponentProps<
-    Extract<TemplateDialogRow, { kind: 'base-folder-header-spacer' }>
+  // Props received by the spacing row between a base-collection header and its content.
+  type BaseCollectionHeaderSpacerRowProps = VirtualWindowRowComponentProps<
+    Extract<TemplateDialogRow, { kind: 'base-collection-header-spacer' }>
   >
 
   // Props received by a virtualized category snippet.
@@ -80,9 +80,9 @@
     Extract<TemplateDialogRow, { kind: 'template' }>
   >
 
-  // Props received by a virtualized base-folder footer snippet.
-  type BaseFolderFooterRowProps = VirtualWindowRowComponentProps<
-    Extract<TemplateDialogRow, { kind: 'base-folder-footer' }>
+  // Props received by a virtualized base-collection footer snippet.
+  type BaseCollectionFooterRowProps = VirtualWindowRowComponentProps<
+    Extract<TemplateDialogRow, { kind: 'base-collection-footer' }>
   >
 
   // Public inputs and ordered-selection callback for the two dialog variants.
@@ -102,17 +102,17 @@
     onselect
   }: Props = $props()
 
-  // Reactive workspaces determine which root template folders appear in the dialog.
+  // Reactive workspaces determine which template collections appear in the dialog.
   const workspaceQuery = useLiveQuery(workspaceCollection) as { data: Workspace[] }
-  // Reactive root folders provide the complete template-category hierarchy.
-  const promptFolderQuery = useLiveQuery(promptFolderCollection) as { data: PromptFolder[] }
+  // Reactive collections provide the complete template-category hierarchy.
+  const promptCollectionQuery = useLiveQuery(promptCollectionsCollection) as { data: PromptCollection[] }
   // Reactive authoritative templates keep picker titles and token eligibility current.
-  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
     data: PromptTemplate[]
   }
-  // Reactive category metadata supplies folder-style rows inside each template root.
+  // Reactive category metadata supplies category rows inside each template collection.
   const categoryQuery = useLiveQuery(categoryCollection)
-  // Folder expansion is local to one opening of the dialog.
+  // Collection expansion is local to one opening of the dialog.
   /** Category IDs collapsed within the template picker. */
   const collapsedCategoryIds = new SvelteSet<string>()
   // Ordered available IDs stage full-dialog edits until confirmation.
@@ -131,11 +131,11 @@
   const selectedWorkspace = $derived(
     workspaceQuery.data.find((workspace) => workspace.id === workspaceId) ?? null
   )
-  // Constant-time folder lookup used while flattening the hierarchy into rows.
-  const promptFolderById = $derived.by(() =>
-    Object.fromEntries(promptFolderQuery.data.map((folder) => [folder.id, folder]))
+  // Constant-time collection lookup used while flattening the hierarchy into rows.
+  const promptCollectionById = $derived.by(() =>
+    Object.fromEntries(promptCollectionQuery.data.map((collection) => [collection.id, collection]))
   )
-  // Constant-time category lookup resolves FolderOrder groups into display rows.
+  // Constant-time category lookup resolves CategoryOrder groups into display rows.
   const categoryById = $derived.by(() =>
     Object.fromEntries(categoryQuery.data.map((category) => [category.id, category]))
   )
@@ -149,35 +149,35 @@
       )
     )
   )
-  // Recursive usable-template totals drive both folder visibility and header summaries.
-  const availableTemplateCountByFolderId = $derived.by(() => {
+  // Recursive usable-template totals drive both collection visibility and header summaries.
+  const availableTemplateCountByCollectionId = $derived.by(() => {
     const counts: Record<string, number> = {}
 
-    const countAvailableTemplates = (folder: PromptFolder): number => {
-      if (counts[folder.id] !== undefined) return counts[folder.id]
+    const countAvailableTemplates = (collection: PromptCollection): number => {
+      if (counts[collection.id] !== undefined) return counts[collection.id]
 
-      const count = getMarkdownContentCategoryOrder(folder).categories
+      const count = getMarkdownContentCategoryOrder(collection).categories
         .flatMap((group) => group.entries)
         .reduce(
           (total, entry) =>
             total + (entry.kind === 'template' && templateTitleById[entry.id] ? 1 : 0),
           0
         )
-      counts[folder.id] = count
+      counts[collection.id] = count
       return count
     }
 
-    for (const folder of promptFolderQuery.data) {
-      if (folder.kind === 'template') countAvailableTemplates(folder)
+    for (const collection of promptCollectionQuery.data) {
+      if (collection.kind === 'template') countAvailableTemplates(collection)
     }
     return counts
   })
-  // Root template folders with usable descendants retain workspace ordering.
-  const rootTemplateFolders = $derived.by(() =>
-    (selectedWorkspace?.templateFolderEntries ?? []).flatMap((entry) => {
-      const folder = promptFolderById[entry.id]
-      return folder?.kind === 'template' && availableTemplateCountByFolderId[folder.id] > 0
-        ? [folder]
+  // template collections with usable descendants retain workspace ordering.
+  const templateCollections = $derived.by(() =>
+    (selectedWorkspace?.templateCollectionEntries ?? []).flatMap((entry) => {
+      const collection = promptCollectionById[entry.id]
+      return collection?.kind === 'template' && availableTemplateCountByCollectionId[collection.id] > 0
+        ? [collection]
         : []
     })
   )
@@ -211,7 +211,7 @@
   // Staged selection projected against the templates currently available in the library.
   const normalizedStagedTemplateIds = $derived(normalizeTemplateIds(stagedTemplateIds))
 
-  // Side effect: every dialog opening expands folders and initializes independent staging.
+  // Side effect: every dialog opening expands collections and initializes independent staging.
   $effect(() => {
     if (open && !wasOpen) {
       collapsedCategoryIds.clear()
@@ -233,15 +233,15 @@
     !collapsedCategoryIds.has(categoryId)
 
   // Updates local expansion without changing prompt-tree persistence.
-  /** Updates template category expansion without affecting root prompt folders. */
+  /** Updates template category expansion without affecting prompt collections. */
   const handleCategoryExpandedChange = (categoryId: string, isExpanded: boolean): void => {
     if (isExpanded) collapsedCategoryIds.delete(categoryId)
     else collapsedCategoryIds.add(categoryId)
   }
 
   // Filters one category group to usable template drafts.
-  const getAvailableEntries = (folder: PromptFolder, categoryId: string | null) =>
-    getMarkdownContentCategoryOrder(folder).categories
+  const getAvailableEntries = (collection: PromptCollection, categoryId: string | null) =>
+    getMarkdownContentCategoryOrder(collection).categories
       .find((group) => group.categoryId === categoryId)
       ?.entries.filter(
         (entry) => entry.kind === 'template' && Boolean(templateTitleById[entry.id])
@@ -286,38 +286,38 @@
   const virtualItems = $derived.by((): VirtualWindowItem<TemplateDialogRow>[] => {
     const items: VirtualWindowItem<TemplateDialogRow>[] = []
 
-    for (const rootFolder of rootTemplateFolders) {
+    for (const collection of templateCollections) {
       items.push({
-        id: `${rootFolder.id}:header`,
+        id: `${collection.id}:header`,
         row: {
-          kind: 'base-folder-header',
-          folder: rootFolder,
-          templateCount: availableTemplateCountByFolderId[rootFolder.id]
+          kind: 'base-collection-header',
+          collection: collection,
+          templateCount: availableTemplateCountByCollectionId[collection.id]
         }
       })
       items.push({
-        id: `${rootFolder.id}:header-spacer`,
-        row: { kind: 'base-folder-header-spacer', folderId: rootFolder.id }
+        id: `${collection.id}:header-spacer`,
+        row: { kind: 'base-collection-header-spacer', collectionId: collection.id }
       })
 
-      const rootEntries = getAvailableEntries(rootFolder, null)
-      for (const [entryIndex, entry] of rootEntries.entries()) {
+      const uncategorizedEntries = getAvailableEntries(collection, null)
+      for (const [entryIndex, entry] of uncategorizedEntries.entries()) {
         items.push({
-          id: `${rootFolder.id}:template:${entry.id}`,
+          id: `${collection.id}:template:${entry.id}`,
           row: {
             kind: 'template',
-            folderId: rootFolder.id,
+            collectionId: collection.id,
             templateId: entry.id,
             indentCount: 0,
-            isLastRow: entryIndex === rootEntries.length - 1
+            isLastRow: entryIndex === uncategorizedEntries.length - 1
           }
         })
       }
 
-      for (const [groupIndex, group] of getMarkdownContentCategoryOrder(rootFolder).categories.slice(1).entries()) {
+      for (const [groupIndex, group] of getMarkdownContentCategoryOrder(collection).categories.slice(1).entries()) {
         if (!group.categoryId) continue
         const category = categoryById[group.categoryId]
-        const categoryEntries = getAvailableEntries(rootFolder, group.categoryId)
+        const categoryEntries = getAvailableEntries(collection, group.categoryId)
         if (!category || categoryEntries.length === 0) continue
         const isExpanded = getCategoryExpanded(category.id)
         items.push({
@@ -327,7 +327,7 @@
             category,
             indentCount: 0,
             endsVisibleBranch:
-              groupIndex === getMarkdownContentCategoryOrder(rootFolder).categories.length - 2 &&
+              groupIndex === getMarkdownContentCategoryOrder(collection).categories.length - 2 &&
               (!isExpanded || categoryEntries.length === 0)
           }
         })
@@ -337,7 +337,7 @@
             id: `${category.id}:template:${entry.id}`,
             row: {
               kind: 'template',
-              folderId: rootFolder.id,
+              collectionId: collection.id,
               templateId: entry.id,
               indentCount: 1,
               isLastRow: entryIndex === categoryEntries.length - 1
@@ -347,23 +347,23 @@
       }
 
       items.push({
-        id: `${rootFolder.id}:footer`,
-        row: { kind: 'base-folder-footer', folderId: rootFolder.id }
+        id: `${collection.id}:footer`,
+        row: { kind: 'base-collection-footer', collectionId: collection.id }
       })
     }
 
     return items
   })
 
-  // Fixed-height registry lets all base-folder structure participate in virtualization.
+  // Fixed-height registry lets all base-collection structure participate in virtualization.
   const rowRegistry = defineVirtualWindowRowRegistry<TemplateDialogRow>({
-    'base-folder-header': {
+    'base-collection-header': {
       estimateHeight: () => 51,
-      snippet: baseFolderHeaderRow
+      snippet: baseCollectionHeaderRow
     },
-    'base-folder-header-spacer': {
+    'base-collection-header-spacer': {
       estimateHeight: () => 6,
-      snippet: baseFolderHeaderSpacerRow
+      snippet: baseCollectionHeaderSpacerRow
     },
     category: {
       estimateHeight: () => 32,
@@ -373,9 +373,9 @@
       estimateHeight: () => 32,
       snippet: templateRow
     },
-    'base-folder-footer': {
+    'base-collection-footer': {
       estimateHeight: () => 18,
-      snippet: baseFolderFooterRow
+      snippet: baseCollectionFooterRow
     }
   })
 </script>
@@ -445,29 +445,29 @@
   </div>
 </Dialog>
 
-{#snippet baseFolderHeaderRow({ row }: BaseFolderHeaderRowProps)}
+{#snippet baseCollectionHeaderRow({ row }: BaseCollectionHeaderRowProps)}
   <div
-    class="prompt-template-base-folder-header"
-    data-testid={`prompt-template-base-folder-header-${row.folder.id}`}
+    class="prompt-template-base-collection-header"
+    data-testid={`prompt-template-base-collection-header-${row.collection.id}`}
   >
-    <IconCell icon={FolderOpen} variant="standard" class="prompt-template-base-folder-icon" />
-    <span class="prompt-template-base-folder-copy">
-      <span class="prompt-template-base-folder-name text-sm">{row.folder.displayName}</span>
-      <span class="prompt-template-base-folder-count text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
+    <IconCell icon={FolderOpen} variant="standard" class="prompt-template-base-collection-icon" />
+    <span class="prompt-template-base-collection-copy">
+      <span class="prompt-template-base-collection-name text-sm">{row.collection.displayName}</span>
+      <span class="prompt-template-base-collection-count text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
     </span>
   </div>
 {/snippet}
 
-{#snippet baseFolderHeaderSpacerRow({ row }: BaseFolderHeaderSpacerRowProps)}
+{#snippet baseCollectionHeaderSpacerRow({ row }: BaseCollectionHeaderSpacerRowProps)}
   <div
-    class="prompt-template-base-folder-header-spacer"
-    data-testid={`prompt-template-base-folder-header-spacer-${row.folderId}`}
+    class="prompt-template-base-collection-header-spacer"
+    data-testid={`prompt-template-base-collection-header-spacer-${row.collectionId}`}
     aria-hidden="true"
   ></div>
 {/snippet}
 
 {#snippet categoryRow({ row }: CategoryRowProps)}
-  <div class="prompt-template-base-folder-content-row">
+  <div class="prompt-template-base-collection-content-row">
     <PromptTreeCategoryRow
       category={row.category}
       isActive={false}
@@ -486,9 +486,9 @@
 {/snippet}
 
 {#snippet templateRow({ row }: TemplateRowProps)}
-  <div class="prompt-template-base-folder-content-row">
+  <div class="prompt-template-base-collection-content-row">
     <PromptTreePromptRow
-      folderId={row.folderId}
+      collectionId={row.collectionId}
       promptId={row.templateId}
       promptTitle={templateTitleById[row.templateId]!}
       isActive={mode === 'select' && normalizedStagedTemplateIds.includes(row.templateId)}
@@ -497,15 +497,15 @@
       indentCount={row.indentCount}
       isLastRow={row.isLastRow}
       {selectionControl}
-      onPromptSelect={(_folderId, templateId) => handleTemplateSelect(templateId)}
+      onPromptSelect={(_collectionId, templateId) => handleTemplateSelect(templateId)}
     />
   </div>
 {/snippet}
 
-{#snippet baseFolderFooterRow({ row }: BaseFolderFooterRowProps)}
+{#snippet baseCollectionFooterRow({ row }: BaseCollectionFooterRowProps)}
   <div
-    class="prompt-template-base-folder-footer"
-    data-testid={`prompt-template-base-folder-footer-${row.folderId}`}
+    class="prompt-template-base-collection-footer"
+    data-testid={`prompt-template-base-collection-footer-${row.collectionId}`}
     aria-hidden="true"
   ></div>
 {/snippet}
@@ -648,7 +648,7 @@
     width: 100%;
   }
 
-  .prompt-template-base-folder-header {
+  .prompt-template-base-collection-header {
     align-items: center;
     background: var(--ui-card-normal-surface);
     border: 1px solid var(--ui-card-nested-border);
@@ -661,14 +661,14 @@
     padding: 7px 12px;
   }
 
-  .prompt-template-base-folder-copy {
+  .prompt-template-base-collection-copy {
     display: grid;
     flex: 1 1 auto;
     gap: 1px;
     min-width: 0;
   }
 
-  .prompt-template-base-folder-name {
+  .prompt-template-base-collection-name {
     color: var(--ui-normal-text);
     font-weight: var(--font-weight-semibold);
     overflow: hidden;
@@ -676,11 +676,11 @@
     white-space: nowrap;
   }
 
-  .prompt-template-base-folder-count {
+  .prompt-template-base-collection-count {
     color: var(--ui-muted-text);
   }
 
-  .prompt-template-base-folder-header-spacer {
+  .prompt-template-base-collection-header-spacer {
     background: var(--ui-card-solid-surface);
     border-left: 1px solid var(--ui-card-nested-border);
     border-right: 1px solid var(--ui-card-nested-border);
@@ -688,7 +688,7 @@
     height: 6px;
   }
 
-  .prompt-template-base-folder-content-row {
+  .prompt-template-base-collection-content-row {
     background: var(--ui-card-solid-surface);
     border-left: 1px solid var(--ui-card-nested-border);
     border-right: 1px solid var(--ui-card-nested-border);
@@ -697,7 +697,7 @@
     padding-inline: 5px;
   }
 
-  .prompt-template-base-folder-footer {
+  .prompt-template-base-collection-footer {
     background: var(--ui-card-solid-surface);
     border: 1px solid var(--ui-card-nested-border);
     border-radius: 0 0 var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card);

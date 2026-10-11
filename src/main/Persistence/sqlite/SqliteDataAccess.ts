@@ -7,7 +7,7 @@ import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPe
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 24
+const LATEST_SCHEMA_VERSION = 26
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -754,6 +754,43 @@ const applyStartupMigrations = (db: Database.Database): void => {
       continue
     }
 
+    if (schemaVersion === 24) {
+      // Preserve collection selection and view state while renaming the persisted domain.
+      db.transaction(() => {
+        db.exec(`
+          ALTER TABLE prompt_folder_view_state RENAME TO prompt_collection_view_state;
+          ALTER TABLE workspace_ui_state RENAME COLUMN last_prompt_task_folder_id TO last_prompt_task_collection_id;
+          ALTER TABLE workspace_ui_state RENAME COLUMN last_prompt_template_folder_id TO last_prompt_template_collection_id;
+          UPDATE workspace_ui_state SET selected_screen = CASE selected_screen
+            WHEN 'prompt-task-folders' THEN 'prompt-task-collections'
+            WHEN 'prompt-template-folders' THEN 'prompt-template-collections'
+            ELSE selected_screen END;
+          UPDATE workspace_ui_state
+          SET selected_screen_data_json = json_remove(
+            json_set(selected_screen_data_json, '$.promptCollectionId', json_extract(selected_screen_data_json, '$.promptFolderId')),
+            '$.promptFolderId'
+          )
+          WHERE json_valid(selected_screen_data_json)
+            AND json_type(selected_screen_data_json, '$.promptFolderId') IS NOT NULL;
+        `)
+        db.prepare('UPDATE schema_version SET version = ?').run(25)
+      })()
+      schemaVersion = 25
+      continue
+    }
+
+    if (schemaVersion === 25) {
+      // Rename only collection-header selections; prompt and category IDs remain unchanged.
+      db.transaction(() => {
+        db.prepare(`UPDATE prompt_collection_view_state
+          SET selected_entry_id = 'collection-header'
+          WHERE selected_entry_id = 'root-header'`).run()
+        db.prepare('UPDATE schema_version SET version = ?').run(26)
+      })()
+      schemaVersion = 26
+      continue
+    }
+
     throw new Error(`No SQLite migration found for schema version ${schemaVersion}.`)
   }
 }
@@ -796,6 +833,12 @@ export class SqliteDataAccess {
 
     statement.run()
     return {}
+  }
+
+  /** Applies startup migrations to a legacy in-memory database seeded by Playwright. */
+  static migrateDatabaseForTests(): void {
+    if (!inMemoryDatabase) throw new Error('Migration test requires an in-memory database')
+    applyStartupMigrations(this.getDatabase())
   }
 
   /** Runs synchronous SQLite commands inside one database transaction. */

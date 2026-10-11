@@ -16,9 +16,9 @@
   import MockupsScreen from '@renderer/features/mockups/MockupsScreen.svelte'
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
-  import PromptFolderScreen from '../features/prompt-folders/PromptFolderScreen.svelte'
+  import PromptCollectionScreen from '../features/prompt-collections/PromptCollectionScreen.svelte'
   import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-  import { PromptFolderScreenMode } from '../features/prompt-folders/promptFolderScreenMode'
+  import { PromptCollectionScreenMode } from '../features/prompt-collections/promptCollectionScreenMode'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import type {
     WorkspaceCreationResult,
@@ -27,7 +27,7 @@
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
   import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
-  import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
   import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
@@ -57,29 +57,29 @@
   import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import {
-    setPromptFolderSelectedEntryIdWithAutosave,
-    setPromptFolderScrollTopWithAutosave,
-    lookupPromptFolderUiState,
-    setPromptFolderStatusNavigationWithAutosave,
+    setPromptCollectionSelectedEntryIdWithAutosave,
+    setPromptCollectionScrollTopWithAutosave,
+    lookupPromptCollectionUiState,
+    setPromptCollectionStatusNavigationWithAutosave,
     expandPromptStatusSectionWithAutosave
   } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
-    isPromptFolderScreen,
-    isPromptFolderScreenSelection,
+    isPromptCollectionScreen,
+    isPromptCollectionScreenSelection,
     isWorkspaceScreenSelectionSame,
-    type PromptFolderScreenId,
+    type PromptCollectionScreenId,
     type WorkspaceScreenSelection
   } from '@shared/domain/user-persistence/UserPersistence'
-  import type { PromptFolder, PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
-  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/domain/workspace/Workspace'
-  import { preparePromptFolderName } from '@shared/domain/prompt-folder/promptFolderName'
+  import { getAllWorkspaceCollectionEntries, type Workspace } from '@shared/domain/workspace/Workspace'
+  import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
   import AppUpdatesPopup from '@renderer/features/updates/AppUpdatesPopup.svelte'
   import { createAppUpdates } from '@renderer/features/updates/appUpdates.svelte'
 
-  type PromptFolderScreenHandle = {
-    openDeletePromptFolderDialog: (promptFolderId: string) => void
+  type PromptCollectionScreenHandle = {
+    openDeletePromptCollectionDialog: (promptCollectionId: string) => void
   }
 
   const runtimeConfig = getRuntimeConfig()
@@ -132,9 +132,9 @@
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
   }
-  const promptFolderQuery = useLiveQuery((q) =>
-    q.from({ promptFolder: promptFolderCollection })
-  ) as { data: PromptFolder[] }
+  const promptCollectionQuery = useLiveQuery((q) =>
+    q.from({ promptCollection: promptCollectionsCollection })
+  ) as { data: PromptCollection[] }
 
   setSystemSettingsContext(systemSettings)
   setWorkspaceSelectionContext(workspaceSelection)
@@ -154,42 +154,42 @@
     return null
   })
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
-  const selectedWorkspacePromptFolders = $derived.by(() => {
+  const selectedWorkspacePromptCollections = $derived.by(() => {
     if (!selectedWorkspace) {
       return []
     }
 
-    const promptFolderById = new SvelteMap<string, PromptFolder>()
-    for (const promptFolder of promptFolderQuery.data) {
-      if (promptFolder) {
-        promptFolderById.set(promptFolder.id, promptFolder)
+    const promptCollectionById = new SvelteMap<string, PromptCollection>()
+    for (const promptCollection of promptCollectionQuery.data) {
+      if (promptCollection) {
+        promptCollectionById.set(promptCollection.id, promptCollection)
       }
     }
 
-    return getAllWorkspaceFolderEntries(selectedWorkspace)
+    return getAllWorkspaceCollectionEntries(selectedWorkspace)
       .map((entry) => entry.id)
-      .map((promptFolderId) => promptFolderById.get(promptFolderId))
-      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+      .map((promptCollectionId) => promptCollectionById.get(promptCollectionId))
+      .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
   })
   const workspacePromptCount = $derived.by(() => {
     const promptIds = new SvelteSet<string>()
-    for (const promptFolder of selectedWorkspacePromptFolders) {
-      for (const promptId of getMarkdownContentIds(promptFolder, promptFolder.kind)) {
+    for (const promptCollection of selectedWorkspacePromptCollections) {
+      for (const promptId of getMarkdownContentIds(promptCollection, promptCollection.kind)) {
         promptIds.add(promptId)
       }
     }
 
     return promptIds.size
   })
-  const workspacePromptFolderCount = $derived(selectedWorkspacePromptFolders.length)
-  let screenRootFolderId = $state<string | null>(null)
-  /** Mounted prompt-folder screen used for sidebar actions owned by that screen. */
-  let promptFolderScreen = $state<PromptFolderScreenHandle | null>(null)
-  let promptFolderScreenMode = $state(PromptFolderScreenMode.Active)
-  /** Selected root's persisted visibility for toggleable finalized status groups. */
+  const workspacePromptCollectionCount = $derived(selectedWorkspacePromptCollections.length)
+  let screenCollectionId = $state<string | null>(null)
+  /** Mounted prompt-collection screen used for sidebar actions owned by that screen. */
+  let promptCollectionScreen = $state<PromptCollectionScreenHandle | null>(null)
+  let promptCollectionScreenMode = $state(PromptCollectionScreenMode.Active)
+  /** Selected collection's persisted visibility for toggleable finalized status groups. */
   let shownFinalStatusGroups = $state<Partial<Record<PromptStatusFolderId, boolean>>>({})
-  /** Most recently visited modes first, independently for each root in the open workspace. */
-  let modeHistoryByFolder = $state<Record<string, PromptStatusFolderId[]>>({})
+  /** Most recently visited modes first, independently for each collection in the open workspace. */
+  let modeHistoryByCollection = $state<Record<string, PromptStatusFolderId[]>>({})
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -230,106 +230,106 @@
     workspaceActionCount -= 1
   }
 
-  const clearPromptFolderSelection = () => {
-    screenRootFolderId = null
-    promptFolderScreenMode = PromptFolderScreenMode.Active
+  const clearPromptCollectionSelection = () => {
+    screenCollectionId = null
+    promptCollectionScreenMode = PromptCollectionScreenMode.Active
     shownFinalStatusGroups = {}
   }
 
-  /** Records a visit without accumulating duplicate entries in a folder's return history. */
-  const rememberPromptFolderMode = (): void => {
-    if (!screenRootFolderId) return
-    modeHistoryByFolder[screenRootFolderId] = [
-      promptFolderScreenMode,
-      ...(modeHistoryByFolder[screenRootFolderId] ?? []).filter(
-        (mode) => mode !== promptFolderScreenMode
+  /** Records a visit without accumulating duplicate entries in a collection's return history. */
+  const rememberPromptCollectionMode = (): void => {
+    if (!screenCollectionId) return
+    modeHistoryByCollection[screenCollectionId] = [
+      promptCollectionScreenMode,
+      ...(modeHistoryByCollection[screenCollectionId] ?? []).filter(
+        (mode) => mode !== promptCollectionScreenMode
       )
     ]
   }
 
-  /** Restores the selected root before its screen mounts, including template-root state. */
-  const restorePromptFolderMode = (expandSection = true): void => {
-    /** Workspace whose loaded collection contains the selected root's navigation settings. */
+  /** Restores the selected collection before its screen mounts, including template-collection state. */
+  const restorePromptCollectionMode = (expandSection = true): void => {
+    /** Workspace whose loaded collection contains the selected collection's navigation settings. */
     const workspaceId = getSelectedWorkspaceId()
     /** Saved navigation defaults to Active with both optional sections hidden. */
-    const saved = workspaceId && screenRootFolderId
-      ? lookupPromptFolderUiState(workspaceId, screenRootFolderId)
+    const saved = workspaceId && screenCollectionId
+      ? lookupPromptCollectionUiState(workspaceId, screenCollectionId)
       : null
-    promptFolderScreenMode = saved?.selectedMode ?? PromptFolderScreenMode.Active
+    promptCollectionScreenMode = saved?.selectedMode ?? PromptCollectionScreenMode.Active
     shownFinalStatusGroups = { ...saved?.shownFinalStatusGroups }
-    rememberPromptFolderMode()
-    if (expandSection && workspaceId && screenRootFolderId &&
-      promptFolderCollection.has(screenRootFolderId)) {
-      expandPromptStatusSectionWithAutosave(workspaceId, promptFolderScreenMode)
+    rememberPromptCollectionMode()
+    if (expandSection && workspaceId && screenCollectionId &&
+      promptCollectionsCollection.has(screenCollectionId)) {
+      expandPromptStatusSectionWithAutosave(workspaceId, promptCollectionScreenMode)
     }
   }
 
-  /** Queues both navigation fields together through the existing folder autosave. */
-  const persistPromptFolderMode = (): void => {
-    /** Workspace owning this root's independent navigation preferences. */
+  /** Queues both navigation fields together through the existing collection autosave. */
+  const persistPromptCollectionMode = (): void => {
+    /** Workspace owning this collection's independent navigation preferences. */
     const workspaceId = getSelectedWorkspaceId()
-    if (!workspaceId || !screenRootFolderId) return
-    setPromptFolderStatusNavigationWithAutosave(
-      workspaceId, screenRootFolderId, promptFolderScreenMode, shownFinalStatusGroups
+    if (!workspaceId || !screenCollectionId) return
+    setPromptCollectionStatusNavigationWithAutosave(
+      workspaceId, screenCollectionId, promptCollectionScreenMode, shownFinalStatusGroups
     )
   }
 
-  /** Maps a folder activity to its authoritative root kind. */
-  const getPromptFolderScreenKind = (screen: PromptFolderScreenId): PromptFolderKind =>
-    screen === 'prompt-template-folders' ? 'template' : 'prompt'
+  /** Maps a collection activity to its authoritative collection kind. */
+  const getPromptCollectionScreenKind = (screen: PromptCollectionScreenId): PromptCollectionKind =>
+    screen === 'prompt-template-collections' ? 'template' : 'prompt'
 
-  /** Resolves the persisted screen used to display one root-folder kind. */
-  const getPromptFolderKindScreen = (kind: PromptFolderKind): PromptFolderScreenId =>
-    kind === 'template' ? 'prompt-template-folders' : 'prompt-task-folders'
+  /** Resolves the persisted screen used to display one collection kind. */
+  const getPromptCollectionKindScreen = (kind: PromptCollectionKind): PromptCollectionScreenId =>
+    kind === 'template' ? 'prompt-template-collections' : 'prompt-task-collections'
 
-  /** Resolves the selected or fallback root for one folder activity. */
-  const resolvePromptFolderNavigationId = (screen: PromptFolderScreenId): string | null => {
+  /** Resolves the selected or fallback collection for one collection activity. */
+  const resolvePromptCollectionNavigationId = (screen: PromptCollectionScreenId): string | null => {
     const workspaceId = getSelectedWorkspaceId()
     const workspaceUiState = workspaceId
       ? workspaceUiStateCollection.get(workspaceId)
       : null
-    /** Folder kind displayed by the requested activity. */
-    const kind = getPromptFolderScreenKind(screen)
-    /** Roots eligible for selection within this activity. */
-    const matchingFolders = selectedWorkspacePromptFolders.filter((folder) => folder.kind === kind)
-    /** First root in the repaired type-specific order. */
-    const firstPromptFolderId = matchingFolders[0]?.id ?? null
-    /** Last root persisted independently for the requested activity. */
-    const persistedLastPromptFolderId =
+    /** Collection kind displayed by the requested activity. */
+    const kind = getPromptCollectionScreenKind(screen)
+    /** Collections eligible for selection within this activity. */
+    const matchingCollections = selectedWorkspacePromptCollections.filter((collection) => collection.kind === kind)
+    /** First collection in the repaired type-specific order. */
+    const firstPromptCollectionId = matchingCollections[0]?.id ?? null
+    /** Last collection persisted independently for the requested activity. */
+    const persistedLastPromptCollectionId =
       kind === 'template'
-        ? (workspaceUiState?.lastPromptTemplateFolderId ?? null)
-        : (workspaceUiState?.lastPromptTaskFolderId ?? null)
-    /** Current root retained only when it belongs to the requested activity. */
-    const currentPromptFolderId = matchingFolders.some(
-      (folder) => folder.id === screenRootFolderId
+        ? (workspaceUiState?.lastPromptTemplateCollectionId ?? null)
+        : (workspaceUiState?.lastPromptTaskCollectionId ?? null)
+    /** Current collection retained only when it belongs to the requested activity. */
+    const currentPromptCollectionId = matchingCollections.some(
+      (collection) => collection.id === screenCollectionId
     )
-      ? screenRootFolderId
+      ? screenCollectionId
       : null
 
-    return currentPromptFolderId
-      ? currentPromptFolderId
-      : matchingFolders.some((folder) => folder.id === persistedLastPromptFolderId)
-        ? persistedLastPromptFolderId
-        : firstPromptFolderId
+    return currentPromptCollectionId
+      ? currentPromptCollectionId
+      : matchingCollections.some((collection) => collection.id === persistedLastPromptCollectionId)
+        ? persistedLastPromptCollectionId
+        : firstPromptCollectionId
   }
 
-  /** Selects the remembered task root used by every non-folder activity sidebar. */
-  const selectPromptTaskSidebarRoot = (): void => {
-    screenRootFolderId = resolvePromptFolderNavigationId('prompt-task-folders')
-    restorePromptFolderMode(false)
+  /** Selects the remembered task collection used by every non-collection activity sidebar. */
+  const selectPromptTaskSidebarCollection = (): void => {
+    screenCollectionId = resolvePromptCollectionNavigationId('prompt-task-collections')
+    restorePromptCollectionMode(false)
   }
 
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
-    if (isPromptFolderScreen(screen)) {
-      /** Current owner retained when rebuilding persistence for the already-selected root. */
+    if (isPromptCollectionScreen(screen)) {
+      /** Current owner retained when rebuilding persistence for the already-selected collection. */
       const contentOwnerId =
-        promptNavigation.screenRootFolderId === screenRootFolderId
-          ? (promptNavigation.contentOwnerId ?? screenRootFolderId)
-          : screenRootFolderId
+        promptNavigation.screenCollectionId === screenCollectionId
+          ? (promptNavigation.contentOwnerId ?? screenCollectionId)
+          : screenCollectionId
       return {
         selectedScreen: screen,
         selectedScreenData: {
-          promptFolderId: screenRootFolderId,
+          promptCollectionId: screenCollectionId,
           contentOwnerId
         }
       }
@@ -355,9 +355,9 @@
     persistPromptNavigationSelection()
     captureRegisteredMonacoViewStates()
     await closeWorkspaceMutation()
-    clearPromptFolderSelection()
+    clearPromptCollectionSelection()
     promptNavigation.clear()
-    modeHistoryByFolder = {}
+    modeHistoryByCollection = {}
     // Side effect: let workspace editors unmount before releasing their Monaco models.
     await tick()
     await clearWorkspaceMonacoModels()
@@ -368,7 +368,7 @@
   }
 
   const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
-    const workspaceFileName = preparePromptFolderName(workspaceName).folderName
+    const workspaceFileName = preparePromptCollectionName(workspaceName).folderName
     return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cthulhuprompt.json`
   }
 
@@ -403,7 +403,7 @@
   }
 
   const restoreWorkspaceHomeScreen = async (workspaceId: string): Promise<void> => {
-    selectPromptTaskSidebarRoot()
+    selectPromptTaskSidebarCollection()
     activeScreen = 'home'
     await syncWorkspaceScreenSelection(workspaceId, {
       selectedScreen: 'home',
@@ -428,51 +428,51 @@
       return
     }
 
-    if (isPromptFolderScreenSelection(workspaceUiState)) {
+    if (isPromptCollectionScreenSelection(workspaceUiState)) {
       const workspaceRecord = workspaceCollection.get(workspaceId)
-      const persistedPromptFolderId = workspaceUiState.selectedScreenData.promptFolderId
-      /** Root kind required by the persisted split activity. */
-      const persistedFolderKind = getPromptFolderScreenKind(workspaceUiState.selectedScreen)
-      /** Type-specific workspace order used to validate the persisted root. */
-      const persistedFolderEntries =
-        persistedFolderKind === 'template'
-          ? workspaceRecord?.templateFolderEntries
-          : workspaceRecord?.promptFolderEntries
-      /** Last type-specific root retained when the selected screen root is unavailable. */
-      const persistedLastPromptFolderId =
-        persistedFolderKind === 'template'
-          ? workspaceUiState.lastPromptTemplateFolderId
-          : workspaceUiState.lastPromptTaskFolderId
-      /** Root selected from screen data, remembered state, or type-specific order. */
-      const restoredPromptFolderId =
-        persistedFolderEntries?.find((entry) => entry.id === persistedPromptFolderId)?.id ??
-        persistedFolderEntries?.find((entry) => entry.id === persistedLastPromptFolderId)?.id ??
-        persistedFolderEntries?.[0]?.id ??
+      const persistedPromptCollectionId = workspaceUiState.selectedScreenData.promptCollectionId
+      /** Collection kind required by the persisted split activity. */
+      const persistedCollectionKind = getPromptCollectionScreenKind(workspaceUiState.selectedScreen)
+      /** Type-specific workspace order used to validate the persisted collection. */
+      const persistedCollectionEntries =
+        persistedCollectionKind === 'template'
+          ? workspaceRecord?.templateCollectionEntries
+          : workspaceRecord?.promptCollectionEntries
+      /** Last type-specific collection retained when the selected screen collection is unavailable. */
+      const persistedLastPromptCollectionId =
+        persistedCollectionKind === 'template'
+          ? workspaceUiState.lastPromptTemplateCollectionId
+          : workspaceUiState.lastPromptTaskCollectionId
+      /** Collection selected from screen data, remembered state, or type-specific order. */
+      const restoredPromptCollectionId =
+        persistedCollectionEntries?.find((entry) => entry.id === persistedPromptCollectionId)?.id ??
+        persistedCollectionEntries?.find((entry) => entry.id === persistedLastPromptCollectionId)?.id ??
+        persistedCollectionEntries?.[0]?.id ??
         null
 
-      if (restoredPromptFolderId) {
-        screenRootFolderId = restoredPromptFolderId
-        restorePromptFolderMode()
+      if (restoredPromptCollectionId) {
+        screenCollectionId = restoredPromptCollectionId
+        restorePromptCollectionMode()
         activeScreen = workspaceUiState.selectedScreen
         if (
-          persistedPromptFolderId !== restoredPromptFolderId ||
-          persistedLastPromptFolderId !== restoredPromptFolderId
+          persistedPromptCollectionId !== restoredPromptCollectionId ||
+          persistedLastPromptCollectionId !== restoredPromptCollectionId
         ) {
           await syncWorkspaceScreenSelection(workspaceId, {
             selectedScreen: workspaceUiState.selectedScreen,
             selectedScreenData: {
-              promptFolderId: restoredPromptFolderId,
+              promptCollectionId: restoredPromptCollectionId,
               contentOwnerId:
-                persistedPromptFolderId === restoredPromptFolderId
+                persistedPromptCollectionId === restoredPromptCollectionId
                   ? workspaceUiState.selectedScreenData.contentOwnerId
-                  : restoredPromptFolderId
+                  : restoredPromptCollectionId
             }
           })
         }
         return
       }
 
-      clearPromptFolderSelection()
+      clearPromptCollectionSelection()
       activeScreen = workspaceUiState.selectedScreen
       return
     }
@@ -480,7 +480,7 @@
     if (workspaceUiState.selectedScreen === 'mockups') {
       const persistedMockupId = workspaceUiState.selectedScreenData.mockupId
       if (persistedMockupId === null || hasMockup(persistedMockupId)) {
-        selectPromptTaskSidebarRoot()
+        selectPromptTaskSidebarCollection()
         selectedMockupId = persistedMockupId
         activeScreen = 'mockups'
         return
@@ -490,7 +490,7 @@
       return
     }
 
-    selectPromptTaskSidebarRoot()
+    selectPromptTaskSidebarCollection()
     activeScreen = workspaceUiState.selectedScreen
   }
 
@@ -500,17 +500,17 @@
 
   const persistPromptNavigationSelection = () => {
     const workspaceId = getSelectedWorkspaceId()
-    /** Root prompt folder containing the current navigation selection. */
-    const promptFolderId = promptNavigation.screenRootFolderId
+    /** prompt collection containing the current navigation selection. */
+    const promptCollectionId = promptNavigation.screenCollectionId
     const contentOwnerId = promptNavigation.contentOwnerId
     const selectedRow = promptNavigation.selectedRow
-    if (!workspaceId || !promptFolderId || !contentOwnerId || !selectedRow) {
+    if (!workspaceId || !promptCollectionId || !contentOwnerId || !selectedRow) {
       return
     }
 
-    setPromptFolderSelectedEntryIdWithAutosave(
+    setPromptCollectionSelectedEntryIdWithAutosave(
       workspaceId,
-      promptFolderId,
+      promptCollectionId,
       contentOwnerId,
       promptNavigationRowToPersistedEntryId(selectedRow)
     )
@@ -587,7 +587,7 @@
 
           if (result.success) {
             await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
-            navigateToScreen('prompt-task-folders')
+            navigateToScreen('prompt-task-collections')
             return { success: true }
           }
 
@@ -686,12 +686,12 @@
       return
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
-    if (isPromptFolderScreen(screen)) {
-      const promptFolderId = resolvePromptFolderNavigationId(screen)
-      screenRootFolderId = promptFolderId
-      restorePromptFolderMode()
+    if (isPromptCollectionScreen(screen)) {
+      const promptCollectionId = resolvePromptCollectionNavigationId(screen)
+      screenCollectionId = promptCollectionId
+      restorePromptCollectionMode()
     } else {
-      selectPromptTaskSidebarRoot()
+      selectPromptTaskSidebarCollection()
     }
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
@@ -708,86 +708,86 @@
     isAppSidebarExpanded = true
   }
 
-  const navigateToScreenRootFolder = (promptFolderId: string): void => {
+  const navigateToScreenCollection = (promptCollectionId: string): void => {
     if (!isWorkspaceReady) return
-    /** Loaded root used to choose the matching split activity. */
-    const promptFolder = selectedWorkspacePromptFolders.find(
-      (folder) => folder.id === promptFolderId
+    /** Loaded collection used to choose the matching split activity. */
+    const promptCollection = selectedWorkspacePromptCollections.find(
+      (collection) => collection.id === promptCollectionId
     )
-    if (!promptFolder) return
-    /** Activity dedicated to the selected root's kind. */
-    const targetScreen = getPromptFolderKindScreen(promptFolder.kind)
-    if (activeScreen === targetScreen && screenRootFolderId === promptFolderId) {
+    if (!promptCollection) return
+    /** Activity dedicated to the selected collection's kind. */
+    const targetScreen = getPromptCollectionKindScreen(promptCollection.kind)
+    if (activeScreen === targetScreen && screenCollectionId === promptCollectionId) {
       return
     }
-    screenRootFolderId = promptFolderId
+    screenCollectionId = promptCollectionId
     navigateToScreen(targetScreen)
   }
 
-  const setPromptFolderMode = (nextMode: PromptFolderScreenMode): void => {
-    if (screenRootFolderId) {
-      const folder = selectedWorkspacePromptFolders.find(
-        (candidate) => candidate.id === screenRootFolderId
+  const setPromptCollectionMode = (nextMode: PromptCollectionScreenMode): void => {
+    if (screenCollectionId) {
+      const collection = selectedWorkspacePromptCollections.find(
+        (candidate) => candidate.id === screenCollectionId
       )
-      if (folder?.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
+      if (collection?.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
     }
     if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') {
       shownFinalStatusGroups[nextMode] = true
     }
-    promptFolderScreenMode = nextMode
-    rememberPromptFolderMode()
-    persistPromptFolderMode()
+    promptCollectionScreenMode = nextMode
+    rememberPromptCollectionMode()
+    persistPromptCollectionMode()
     /** Every selected destination must be reachable in the sidebar, including restored modes. */
     const workspaceId = getSelectedWorkspaceId()
     if (workspaceId) expandPromptStatusSectionWithAutosave(workspaceId, nextMode)
   }
 
-  /** Hides the selected group by returning to this root's most recently visited visible mode. */
+  /** Hides the selected group by returning to this collection's most recently visited visible mode. */
   const setFinalStatusGroupShown = (groupId: PromptStatusFolderId, isShown: boolean): void => {
     shownFinalStatusGroups[groupId] = isShown
     if (isShown) {
-      /** Enabling a sidebar section resets only this root's destination mode. */
+      /** Enabling a sidebar section resets only this collection's destination mode. */
       const workspaceId = workspaceSelection.selectedWorkspaceId
-      if (workspaceId && screenRootFolderId) {
-        setPromptFolderScrollTopWithAutosave(workspaceId, screenRootFolderId, groupId, 0)
+      if (workspaceId && screenCollectionId) {
+        setPromptCollectionScrollTopWithAutosave(workspaceId, screenCollectionId, groupId, 0)
       }
-      setPromptFolderMode(groupId)
-    } else if (promptFolderScreenMode === groupId) {
+      setPromptCollectionMode(groupId)
+    } else if (promptCollectionScreenMode === groupId) {
       /** Hidden finalized groups are skipped; category workflows always remain available. */
-      const returnMode = (modeHistoryByFolder[screenRootFolderId ?? ''] ?? []).find(
+      const returnMode = (modeHistoryByCollection[screenCollectionId ?? ''] ?? []).find(
         (mode) => mode !== groupId &&
           (PROMPT_STATUS_FOLDER_REGISTRY[mode].ordering === 'category' || shownFinalStatusGroups[mode])
-      ) ?? PromptFolderScreenMode.Active
-      setPromptFolderMode(returnMode)
+      ) ?? PromptCollectionScreenMode.Active
+      setPromptCollectionMode(returnMode)
     } else {
-      persistPromptFolderMode()
+      persistPromptCollectionMode()
     }
   }
 
-  /** Selects the first remaining same-kind root or retains the empty folder activity. */
-  const navigateAfterRootPromptFolderDelete = (): void => {
-    /** Kind retained from the activity that owned the deleted root. */
-    const kind = activeScreen === 'prompt-template-folders' ? 'template' : 'prompt'
-    /** First remaining folder in the activity's type-specific order. */
-    const nextPromptFolderId = selectedWorkspacePromptFolders.find(
-      (folder) => folder.kind === kind
+  /** Selects the first remaining same-kind collection or retains the empty collection activity. */
+  const navigateAfterPromptCollectionDelete = (): void => {
+    /** Kind retained from the activity that owned the deleted collection. */
+    const kind = activeScreen === 'prompt-template-collections' ? 'template' : 'prompt'
+    /** First remaining collection in the activity's type-specific order. */
+    const nextPromptCollectionId = selectedWorkspacePromptCollections.find(
+      (collection) => collection.kind === kind
     )?.id ?? null
-    if (!nextPromptFolderId) {
-      clearPromptFolderSelection()
+    if (!nextPromptCollectionId) {
+      clearPromptCollectionSelection()
       return
     }
 
-    navigateToScreenRootFolder(nextPromptFolderId)
+    navigateToScreenCollection(nextPromptCollectionId)
   }
 
-  /** Navigates to the selected folder and opens its screen-owned deletion flow after it mounts. */
-  const requestSelectedPromptFolderDelete = (promptFolderId: string): void => {
-    if (!selectedWorkspacePromptFolders.some((folder) => folder.id === promptFolderId)) return
-    navigateToScreenRootFolder(promptFolderId)
-    // Side effect: wait for navigation to mount the selected folder screen before opening its dialog.
+  /** Navigates to the selected collection and opens its screen-owned deletion flow after it mounts. */
+  const requestSelectedPromptCollectionDelete = (promptCollectionId: string): void => {
+    if (!selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) return
+    navigateToScreenCollection(promptCollectionId)
+    // Side effect: wait for navigation to mount the selected collection screen before opening its dialog.
     void (async () => {
       await tick()
-      promptFolderScreen?.openDeletePromptFolderDialog(promptFolderId)
+      promptCollectionScreen?.openDeletePromptCollectionDialog(promptCollectionId)
     })()
   }
 </script>
@@ -827,16 +827,16 @@
           {isWorkspaceReady}
           {isWorkspaceLoading}
           {workspacePath}
-          {screenRootFolderId}
-          {promptFolderScreenMode}
+          {screenCollectionId}
+          {promptCollectionScreenMode}
           {shownFinalStatusGroups}
-          folderKind={activeScreen === 'prompt-template-folders' ? 'template' : 'prompt'}
-          onPromptFolderModeChange={setPromptFolderMode}
+          collectionKind={activeScreen === 'prompt-template-collections' ? 'template' : 'prompt'}
+          onPromptCollectionModeChange={setPromptCollectionMode}
           onFinalStatusGroupShownChange={setFinalStatusGroupShown}
-          onScreenRootFolderSelect={(promptFolderId) => {
-            navigateToScreenRootFolder(promptFolderId)
+          onScreenCollectionSelect={(promptCollectionId) => {
+            navigateToScreenCollection(promptCollectionId)
           }}
-          onDeleteSelectedPromptFolder={requestSelectedPromptFolderDelete}
+          onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
         />
       {/snippet}
 
@@ -851,7 +851,7 @@
               {isWorkspaceReady}
               {isWorkspaceLoading}
               promptCount={workspacePromptCount}
-              promptFolderCount={workspacePromptFolderCount}
+              promptCollectionCount={workspacePromptCollectionCount}
               onWorkspaceSelect={selectWorkspace}
               onWorkspaceCreate={createWorkspace}
               onWorkspaceClear={() => void closeWorkspace()}
@@ -861,15 +861,15 @@
             <SettingsScreen />
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
-          {:else if isPromptFolderScreen(activeScreen)}
-            {#if screenRootFolderId && workspacePath}
-              {#key `${screenRootFolderId}:${promptFolderScreenMode}`}
-                <PromptFolderScreen
-                  bind:this={promptFolderScreen}
-                  {screenRootFolderId}
-                  screenMode={promptFolderScreenMode}
-                  onScreenModeChange={setPromptFolderMode}
-                  onRootPromptFolderDeleted={navigateAfterRootPromptFolderDelete}
+          {:else if isPromptCollectionScreen(activeScreen)}
+            {#if screenCollectionId && workspacePath}
+              {#key `${screenCollectionId}:${promptCollectionScreenMode}`}
+                <PromptCollectionScreen
+                  bind:this={promptCollectionScreen}
+                  {screenCollectionId}
+                  screenMode={promptCollectionScreenMode}
+                  onScreenModeChange={setPromptCollectionMode}
+                  onPromptCollectionDeleted={navigateAfterPromptCollectionDelete}
                 />
               {/key}
             {/if}

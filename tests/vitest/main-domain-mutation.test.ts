@@ -4,7 +4,7 @@ import type {
   DomainPlanner
 } from '@shared/domain/DomainChanges'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 
 /** Minimal committed entry accepted by mocked snapshot normalizers. */
 type MockSnapshotEntry = { revision: number; committed: { id: string } }
@@ -22,11 +22,11 @@ const mockMainData = vi.hoisted(() => {
   const entries = {
     systemSettings: new Map<string, Entry>(),
     workspace: new Map<string, Entry>(),
-    promptFolder: new Map<string, Entry>(),
+    promptCollection: new Map<string, Entry>(),
     category: new Map<string, Entry>(),
     prompt: new Map<string, Entry>(),
     promptTemplate: new Map<string, Entry>(),
-    workspacePromptFolderUiState: new Map<string, Entry>()
+    workspacePromptCollectionUiState: new Map<string, Entry>()
   }
   /** Creates committed reads required by the generic main framework. */
   const createStore = (entityType: keyof typeof entries) => ({
@@ -37,12 +37,12 @@ const mockMainData = vi.hoisted(() => {
   const data = {
     systemSettings: { committedStore: createStore('systemSettings'), targetPolicy: 'requirePresent' },
     workspace: { committedStore: createStore('workspace'), targetPolicy: 'requirePresent' },
-    promptFolder: { committedStore: createStore('promptFolder'), targetPolicy: 'requirePresent' },
+    promptCollection: { committedStore: createStore('promptCollection'), targetPolicy: 'requirePresent' },
     category: { committedStore: createStore('category'), targetPolicy: 'requirePresent' },
     prompt: { committedStore: createStore('prompt'), targetPolicy: 'requirePresent' },
     promptTemplate: { committedStore: createStore('promptTemplate'), targetPolicy: 'requirePresent' },
-    workspacePromptFolderUiState: {
-      committedStore: createStore('workspacePromptFolderUiState'),
+    workspacePromptCollectionUiState: {
+      committedStore: createStore('workspacePromptCollectionUiState'),
       targetPolicy: 'deleteIfPresent'
     }
   }
@@ -84,7 +84,7 @@ vi.mock('../../src/main/Data/DataSnapshotHelpers', () => ({
     revision: entry.revision,
     data: entry.committed
   }),
-  buildPromptFolderSnapshot: (entry: MockSnapshotEntry) => ({
+  buildPromptCollectionSnapshot: (entry: MockSnapshotEntry) => ({
     id: entry.committed.id,
     revision: entry.revision,
     data: entry.committed
@@ -109,7 +109,7 @@ vi.mock('../../src/main/Data/DataSnapshotHelpers', () => ({
 import { handleMainDomainMutation } from '../../src/main/Mutations/DomainMutation'
 
 /** Minimal command used by generic handler tests. */
-type TestCommand = { folderId: string }
+type TestCommand = { collectionId: string }
 
 /** Response subset inspected by generic handler tests. */
 type TestHandlerResponse = {
@@ -119,8 +119,8 @@ type TestHandlerResponse = {
   payload: { snapshots: Array<Record<string, unknown>> }
 }
 
-/** Root prompt-folder record used by handler snapshots. */
-const promptFolder = {
+/** prompt-collection record used by handler snapshots. */
+const promptCollection = {
   id: 'root',
   kind: 'prompt' as const,
   folderName: 'Root',
@@ -130,7 +130,7 @@ const promptFolder = {
       [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
     }
   }),
-  settings: { folderDescription: null }
+  settings: { collectionDescription: null }
 }
 
 /** Strict runtime parser supplied by the test mutation definition. */
@@ -138,8 +138,8 @@ const parseTestCommand: DomainCommandParser<TestCommand> = (value) => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw test command fields validated as an exact object. */
   const record = value as Record<string, unknown>
-  return Object.keys(record).length === 1 && typeof record.folderId === 'string'
-    ? { folderId: record.folderId }
+  return Object.keys(record).length === 1 && typeof record.collectionId === 'string'
+    ? { collectionId: record.collectionId }
     : null
 }
 
@@ -162,20 +162,20 @@ describe('main domain mutation framework', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockMainData.reset()
-    mockMainData.entries.promptFolder.set('root', {
+    mockMainData.entries.promptCollection.set('root', {
       revision: 4,
-      committed: promptFolder,
+      committed: promptCollection,
       persistenceFields: {}
     })
   })
 
   it('returns the main-computed target set when renderer targets differ', async () => {
-    /** Planner whose correct target set contains the root folder. */
+    /** Planner whose correct target set contains the collection. */
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.folderId,
+        entityType: 'promptCollection',
+        id: command.collectionId,
         recipe: (draft) => {
           draft.displayName = 'Changed'
         }
@@ -187,14 +187,14 @@ describe('main domain mutation framework', () => {
     const result = await handler(null, {
       requestId: 'request',
       clientId: 'client',
-      payload: { command: { folderId: 'root' }, expectations: [] }
+      payload: { command: { collectionId: 'root' }, expectations: [] }
     })
     expect(result).toMatchObject({
       success: false,
       conflict: true,
       payload: {
         snapshots: [
-          { entityType: 'promptFolder', id: 'root', revision: 4, data: promptFolder }
+          { entityType: 'promptCollection', id: 'root', revision: 4, data: promptCollection }
         ]
       }
     })
@@ -209,7 +209,7 @@ describe('main domain mutation framework', () => {
       requestId: 'request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root', extra: true },
+        command: { collectionId: 'root', extra: true },
         expectations: []
       }
     })
@@ -225,9 +225,9 @@ describe('main domain mutation framework', () => {
       requestId: 'request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
-          { entityType: 'promptFolder', id: 'root', expected: 'revision' }
+          { entityType: 'promptCollection', id: 'root', expected: 'revision' }
         ]
       }
     })
@@ -245,10 +245,10 @@ describe('main domain mutation framework', () => {
       requestId: 'absent-request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
           {
-            entityType: 'promptFolder',
+            entityType: 'promptCollection',
             id: 'root',
             expected: 'absent',
             revision: 0
@@ -261,10 +261,10 @@ describe('main domain mutation framework', () => {
       requestId: 'revision-request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
           {
-            entityType: 'promptFolder',
+            entityType: 'promptCollection',
             id: 'root',
             expected: 'revision',
             revision: 4,
@@ -289,7 +289,7 @@ describe('main domain mutation framework', () => {
     const result = await registerHandler(planner)(null, {
       requestId: 'request',
       clientId: 'client',
-      payload: { command: { folderId: 'root' }, expectations: [] }
+      payload: { command: { collectionId: 'root' }, expectations: [] }
     })
     expect(result.payload.snapshots).toEqual([
       { entityType: 'category', id: 'missing', deleted: true }
@@ -298,12 +298,12 @@ describe('main domain mutation framework', () => {
   })
 
   it('returns authoritative snapshots without committing for a stale revision', async () => {
-    /** Valid folder planner whose renderer revision is stale. */
+    /** Valid collection planner whose renderer revision is stale. */
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.folderId,
+        entityType: 'promptCollection',
+        id: command.collectionId,
         recipe: (draft) => {
           draft.displayName = 'Changed'
         }
@@ -314,10 +314,10 @@ describe('main domain mutation framework', () => {
       requestId: 'request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
           {
-            entityType: 'promptFolder',
+            entityType: 'promptCollection',
             id: 'root',
             expected: 'revision',
             revision: 3
@@ -328,19 +328,19 @@ describe('main domain mutation framework', () => {
     expect(result).toMatchObject({
       success: false,
       conflict: true,
-      payload: { snapshots: [{ entityType: 'promptFolder', id: 'root', revision: 4 }] }
+      payload: { snapshots: [{ entityType: 'promptCollection', id: 'root', revision: 4 }] }
     })
     expect(projectDomainTransitions).not.toHaveBeenCalled()
     expect(runAtomicDomainTransitionTransaction).not.toHaveBeenCalled()
   })
 
   it('returns authoritative snapshots when a renderer expects a present target to be absent', async () => {
-    /** Valid folder planner whose renderer incorrectly expects insertion. */
+    /** Valid collection planner whose renderer incorrectly expects insertion. */
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.folderId,
+        entityType: 'promptCollection',
+        id: command.collectionId,
         recipe: (draft) => {
           draft.displayName = 'Changed'
         }
@@ -351,10 +351,10 @@ describe('main domain mutation framework', () => {
       requestId: 'request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
           {
-            entityType: 'promptFolder',
+            entityType: 'promptCollection',
             id: 'root',
             expected: 'absent'
           }
@@ -362,18 +362,18 @@ describe('main domain mutation framework', () => {
       }
     })
     expect(result.payload.snapshots).toEqual([
-      { entityType: 'promptFolder', id: 'root', revision: 4, data: promptFolder }
+      { entityType: 'promptCollection', id: 'root', revision: 4, data: promptCollection }
     ])
     expect(runAtomicDomainTransitionTransaction).not.toHaveBeenCalled()
   })
 
   it('projects transitions once and uses immediate atomic mode after revision validation', async () => {
-    /** Valid folder update planner. */
+    /** Valid collection update planner. */
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.folderId,
+        entityType: 'promptCollection',
+        id: command.collectionId,
         recipe: (draft) => {
           draft.displayName = 'Changed'
         }
@@ -384,10 +384,10 @@ describe('main domain mutation framework', () => {
       requestId: 'request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
           {
-            entityType: 'promptFolder',
+            entityType: 'promptCollection',
             id: 'root',
             expected: 'revision',
             revision: 4
@@ -398,7 +398,7 @@ describe('main domain mutation framework', () => {
     expect(result.success).toBe(true)
     expect(projectDomainTransitions).toHaveBeenCalledWith(
       expect.any(Array),
-      [{ entityType: 'promptFolder', id: 'root', expected: 'revision', revision: 4 }]
+      [{ entityType: 'promptCollection', id: 'root', expected: 'revision', revision: 4 }]
     )
     expect(runAtomicDomainTransitionTransaction).toHaveBeenCalledWith(
       projectedDomainMutation,
@@ -407,13 +407,13 @@ describe('main domain mutation framework', () => {
       }
     )
     expect(result.payload.snapshots).toEqual([
-      { entityType: 'promptFolder', id: 'root', revision: 4, data: promptFolder }
+      { entityType: 'promptCollection', id: 'root', revision: 4, data: promptCollection }
     ])
   })
 
   it('uses collection delete policy for the required expectation target set', async () => {
     const optionalUiStateId = 'workspace:category'
-    mockMainData.entries.workspacePromptFolderUiState.set(optionalUiStateId, {
+    mockMainData.entries.workspacePromptCollectionUiState.set(optionalUiStateId, {
       revision: 7,
       committed: {
         workspaceId: 'workspace',
@@ -431,15 +431,15 @@ describe('main domain mutation framework', () => {
     const planner: DomainPlanner<TestCommand> = (_state, command) => [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.folderId,
+        entityType: 'promptCollection',
+        id: command.collectionId,
         recipe: (draft) => {
           draft.displayName = 'Changed'
         }
       },
       {
         type: 'delete',
-        entityType: 'workspacePromptFolderUiState',
+        entityType: 'workspacePromptCollectionUiState',
         id: optionalUiStateId
       }
     ]
@@ -448,10 +448,10 @@ describe('main domain mutation framework', () => {
       requestId: 'request',
       clientId: 'client',
       payload: {
-        command: { folderId: 'root' },
+        command: { collectionId: 'root' },
         expectations: [
           {
-            entityType: 'promptFolder',
+            entityType: 'promptCollection',
             id: 'root',
             expected: 'revision',
             revision: 4
@@ -463,19 +463,19 @@ describe('main domain mutation framework', () => {
     expect(result.success).toBe(true)
     expect(projectDomainTransitions).toHaveBeenCalledWith(
       expect.arrayContaining([
-        expect.objectContaining({ entityType: 'promptFolder', id: 'root' }),
+        expect.objectContaining({ entityType: 'promptCollection', id: 'root' }),
         expect.objectContaining({
-          entityType: 'workspacePromptFolderUiState',
+          entityType: 'workspacePromptCollectionUiState',
           id: optionalUiStateId
         })
       ]),
-      [{ entityType: 'promptFolder', id: 'root', expected: 'revision', revision: 4 }]
+      [{ entityType: 'promptCollection', id: 'root', expected: 'revision', revision: 4 }]
     )
     expect(
       result.payload.snapshots.map((snapshot) => `${snapshot.entityType}:${snapshot.id}`)
     ).toEqual([
-      'promptFolder:root',
-      `workspacePromptFolderUiState:${optionalUiStateId}`
+      'promptCollection:root',
+      `workspacePromptCollectionUiState:${optionalUiStateId}`
     ])
   })
 })

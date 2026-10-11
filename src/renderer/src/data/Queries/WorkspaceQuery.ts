@@ -1,16 +1,16 @@
 import {
-  getAllWorkspaceFolderEntries,
+  getAllWorkspaceCollectionEntries,
   type LoadWorkspaceByPathRequest,
   type LoadWorkspaceByPathResult
 } from '@shared/domain/workspace/Workspace'
 import { ipcInvokeWithPayload } from '@renderer/data/IpcFramework/IpcRequestInvoke'
 import { runLoad } from '@renderer/data/IpcFramework/Load'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { collectPromptFolderGraphIds } from '@renderer/data/Collections/PromptFolderGraph'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { collectPromptCollectionGraphIds } from '@renderer/data/Collections/PromptCollectionGraph'
 import {
-  deletePromptFolderClientStates,
-  upsertPromptFolderClientStates
-} from '@renderer/data/UiState/client-state/PromptFolderClientState'
+  deletePromptCollectionClientStates,
+  upsertPromptCollectionClientStates
+} from '@renderer/data/UiState/client-state/PromptCollectionClientState'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
@@ -27,34 +27,34 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
 
   const previousWorkspace = workspaceCollection.get(result.workspace.id)
   const previousGraph = previousWorkspace
-    ? collectPromptFolderGraphIds(
-        getAllWorkspaceFolderEntries(previousWorkspace).map((entry) => entry.id)
+    ? collectPromptCollectionGraphIds(
+        getAllWorkspaceCollectionEntries(previousWorkspace).map((entry) => entry.id)
       )
     : null
 
   workspaceCollection.utils.upsertAuthoritative(result.workspace)
   categoryCollection.utils.upsertManyAuthoritative(result.categories)
 
-  for (const promptFolder of result.promptFolders) {
-    promptFolderCollection.utils.upsertAuthoritative(promptFolder)
+  for (const promptCollection of result.promptCollections) {
+    promptCollectionsCollection.utils.upsertAuthoritative(promptCollection)
   }
-  upsertPromptFolderClientStates(result.promptFolders.map((promptFolder) => promptFolder.id))
+  upsertPromptCollectionClientStates(result.promptCollections.map((promptCollection) => promptCollection.id))
   for (const adapter of markdownContentQueryAdapters) adapter.applyWorkspaceResult(result)
 
   if (!previousGraph) {
     return result.workspace.id
   }
 
-  const nextPromptFolderIds = new Set(result.promptFolders.map((folder) => folder.id))
-  const removedPromptFolderIds: string[] = []
+  const nextPromptCollectionIds = new Set(result.promptCollections.map((collection) => collection.id))
+  const removedPromptCollectionIds: string[] = []
 
-  for (const promptFolderId of previousGraph.promptFolderIds) {
-    if (!nextPromptFolderIds.has(promptFolderId)) {
-      promptFolderCollection.utils.deleteAuthoritative(promptFolderId)
-      removedPromptFolderIds.push(promptFolderId)
+  for (const promptCollectionId of previousGraph.promptCollectionIds) {
+    if (!nextPromptCollectionIds.has(promptCollectionId)) {
+      promptCollectionsCollection.utils.deleteAuthoritative(promptCollectionId)
+      removedPromptCollectionIds.push(promptCollectionId)
     }
   }
-  deletePromptFolderClientStates(removedPromptFolderIds)
+  deletePromptCollectionClientStates(removedPromptCollectionIds)
 
   const nextCategoryIds = new Set(result.categories.map((category) => category.id))
   const removedCategoryIds = [...previousGraph.categoryIds].filter(

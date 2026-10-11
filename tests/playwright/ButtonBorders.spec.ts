@@ -235,43 +235,43 @@ describe('Button styling', () => {
     await expect(selectedSelectorItem).toHaveCSS('background-color', neutralFilledHover)
     await mainWindow.keyboard.press('Escape')
 
-    const folderSelectorTrigger = mainWindow.locator(
-      '[data-testid="sidebar-prompt-folder-selector-trigger"]'
+    const collectionSelectorTrigger = mainWindow.locator(
+      '[data-testid="sidebar-prompt-collection-selector-trigger"]'
     )
     await mainWindow.mouse.move(0, 0)
-    await expect(folderSelectorTrigger).toHaveCSS('background-color', transparent)
-    await folderSelectorTrigger.hover()
-    await expect(folderSelectorTrigger).toHaveCSS('background-color', neutralFill)
-    await expect(folderSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
-    await folderSelectorTrigger.click()
-    await expect(folderSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
-    await expect(folderSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(collectionSelectorTrigger).toHaveCSS('background-color', transparent)
+    await collectionSelectorTrigger.hover()
+    await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFill)
+    await expect(collectionSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await collectionSelectorTrigger.click()
+    await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
+    await expect(collectionSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
 
-    const folderSelectorMenu = mainWindow.locator(
-      '[data-testid="sidebar-prompt-folder-selector-menu"]'
+    const collectionSelectorMenu = mainWindow.locator(
+      '[data-testid="sidebar-prompt-collection-selector-menu"]'
     )
-    const selectedFolder = folderSelectorMenu.locator('[role="menuitem"][aria-selected="true"]')
-    await expect(selectedFolder).toHaveCSS('background-color', accentFill)
-    await expect(selectedFolder).toHaveCSS('border-top-color', accentBorder)
-    await selectedFolder.hover()
-    await expect(folderSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
-    await expect(folderSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
-    await expect(selectedFolder).toHaveCSS('background-color', accentHoverFill)
-    await expect(selectedFolder).toHaveCSS('border-top-color', accentHoverBorder)
+    const selectedCollection = collectionSelectorMenu.locator('[role="menuitem"][aria-selected="true"]')
+    await expect(selectedCollection).toHaveCSS('background-color', accentFill)
+    await expect(selectedCollection).toHaveCSS('border-top-color', accentBorder)
+    await selectedCollection.hover()
+    await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
+    await expect(collectionSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(selectedCollection).toHaveCSS('background-color', accentHoverFill)
+    await expect(selectedCollection).toHaveCSS('border-top-color', accentHoverBorder)
 
-    const unselectedFolder = folderSelectorMenu
+    const unselectedCollection = collectionSelectorMenu
       .locator('[role="menuitem"][aria-selected="false"]')
       .first()
-    await unselectedFolder.hover()
-    await expect(unselectedFolder).toHaveCSS('background-color', neutralFill)
-    await expect(unselectedFolder).toHaveCSS('border-top-color', neutralHoverBorder)
+    await unselectedCollection.hover()
+    await expect(unselectedCollection).toHaveCSS('background-color', neutralFill)
+    await expect(unselectedCollection).toHaveCSS('border-top-color', neutralHoverBorder)
 
-    const createFolderItem = folderSelectorMenu.locator(
-      '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
+    const createCollectionItem = collectionSelectorMenu.locator(
+      '[data-testid="sidebar-prompt-collection-dropdown-add-item"]'
     )
-    await createFolderItem.hover()
-    await expect(createFolderItem).toHaveCSS('background-color', accentHoverFill)
-    await expect(createFolderItem).toHaveCSS('border-top-color', accentHoverBorder)
+    await createCollectionItem.hover()
+    await expect(createCollectionItem).toHaveCSS('background-color', accentHoverFill)
+    await expect(createCollectionItem).toHaveCSS('border-top-color', accentHoverBorder)
     await mainWindow.keyboard.press('Escape')
 
     const sidebarRailButton = mainWindow.getByRole('button', {

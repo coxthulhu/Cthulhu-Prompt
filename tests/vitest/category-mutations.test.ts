@@ -4,13 +4,13 @@ import {
   PromptStatusFolderId,
   createPromptSummary
 } from '@shared/domain/prompt/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 
@@ -34,7 +34,7 @@ const SIBLING_CATEGORY_ID = 'category-a'
 /** Stable new category ID used by atomic retained-set renderer coverage. */
 const NEW_CATEGORY_ID = 'category-new'
 /** Stable category owner ID used by the deletion payload. */
-const ROOT_FOLDER_ID = 'category-delete-root'
+const ROOT_COLLECTION_ID = 'category-delete-root'
 /** Stable prompt ID affected by deletion. */
 const PROMPT_ID = 'category-delete-prompt'
 /** Stable template ID affected by deletion. */
@@ -49,9 +49,9 @@ describe('category mutations', () => {
     categoryCollection.utils.deleteAuthoritative(CATEGORY_ID)
     categoryCollection.utils.deleteAuthoritative(SIBLING_CATEGORY_ID)
     categoryCollection.utils.deleteAuthoritative(NEW_CATEGORY_ID)
-    promptFolderCollection.utils.deleteAuthoritative(ROOT_FOLDER_ID)
-    promptCollection.utils.deleteAuthoritative(PROMPT_ID)
-    promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
+    promptCollectionsCollection.utils.deleteAuthoritative(ROOT_COLLECTION_ID)
+    promptsCollection.utils.deleteAuthoritative(PROMPT_ID)
+    promptTemplatesCollection.utils.deleteAuthoritative(TEMPLATE_ID)
     workspaceCollection.utils.deleteAuthoritative(WORKSPACE_ID)
     if (promptClientStateCollection.has(PROMPT_ID)) promptClientStateCollection.delete(PROMPT_ID)
     if (promptTemplateClientStateCollection.has(TEMPLATE_ID)) {
@@ -78,11 +78,11 @@ describe('category mutations', () => {
         description: null
       }
     })
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: ROOT_FOLDER_ID,
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: ROOT_COLLECTION_ID,
       revision: 3,
       data: {
-        id: ROOT_FOLDER_ID,
+        id: ROOT_COLLECTION_ID,
         kind: 'prompt',
         folderName: 'Root',
         displayName: 'Root',
@@ -96,7 +96,7 @@ describe('category mutations', () => {
             }
           }
         }),
-        settings: { folderDescription: null }
+        settings: { collectionDescription: null }
       }
     })
     workspaceCollection.utils.upsertAuthoritative({
@@ -106,11 +106,11 @@ describe('category mutations', () => {
         id: WORKSPACE_ID,
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        promptFolderEntries: [{ kind: 'folder', id: ROOT_FOLDER_ID }],
-        templateFolderEntries: []
+        promptCollectionEntries: [{ kind: 'collection', id: ROOT_COLLECTION_ID }],
+        templateCollectionEntries: []
       }
     })
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 4,
       data: createPromptSummary({
@@ -122,7 +122,7 @@ describe('category mutations', () => {
         status: PromptStatus.Todo
       })
     })
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: TEMPLATE_ID,
       revision: 5,
       data: createPromptTemplateFull({
@@ -139,7 +139,7 @@ describe('category mutations', () => {
   })
 
   it('sends one atomic request for all retained category values', async () => {
-    await saveCategories(WORKSPACE_ID, ROOT_FOLDER_ID, [
+    await saveCategories(WORKSPACE_ID, ROOT_COLLECTION_ID, [
       {
         id: CATEGORY_ID,
         displayName: ' Updated ',
@@ -163,7 +163,7 @@ describe('category mutations', () => {
       payload: {
         command: {
           workspaceId: WORKSPACE_ID,
-          promptFolderId: ROOT_FOLDER_ID,
+          promptCollectionId: ROOT_COLLECTION_ID,
           categories: [
             {
               id: CATEGORY_ID,
@@ -182,8 +182,8 @@ describe('category mutations', () => {
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: ROOT_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: ROOT_COLLECTION_ID,
             expected: 'revision',
             revision: 3
           },
@@ -206,30 +206,30 @@ describe('category mutations', () => {
   it('sends an absent expectation for the optimistic category insertion', async () => {
     /** Stable category ID returned by the renderer mutation. */
     const categoryId = await createCategory(
-      ROOT_FOLDER_ID,
+      ROOT_COLLECTION_ID,
       'Created',
       '  Created category summary.  ',
       '# Created\n\nCategory guidance.'
     )
     /** Domain mutation options registered by category creation. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
-    /** Mutable root order used to verify the shared optimistic folder recipe. */
-    const folderState = structuredClone(promptFolderCollection.get(ROOT_FOLDER_ID)!)
+    /** Mutable root order used to verify the shared optimistic collection recipe. */
+    const collectionState = structuredClone(promptCollectionsCollection.get(ROOT_COLLECTION_ID)!)
     /** Optimistic category insertion spy. */
     const insertCategoryOptimistically = vi.fn()
     options.mutateOptimistically({
       collections: {
-        promptFolder: {
-          update: (id: string, update: (draft: typeof folderState) => void) => {
-            expect(id).toBe(ROOT_FOLDER_ID)
-            update(folderState)
+        promptCollection: {
+          update: (id: string, update: (draft: typeof collectionState) => void) => {
+            expect(id).toBe(ROOT_COLLECTION_ID)
+            update(collectionState)
           }
         },
         category: { insert: insertCategoryOptimistically }
       }
     })
     expect(
-      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
+      collectionState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
         ?.categoryId
     ).toBe(categoryId)
     expect(insertCategoryOptimistically).toHaveBeenCalledWith({
@@ -246,15 +246,15 @@ describe('category mutations', () => {
       payload: {
         command: {
           categoryId,
-          promptFolderId: ROOT_FOLDER_ID,
+          promptCollectionId: ROOT_COLLECTION_ID,
           displayName: 'Created',
           shortDescription: '  Created category summary.  ',
           description: '# Created\n\nCategory guidance.'
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: ROOT_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: ROOT_COLLECTION_ID,
             expected: 'revision',
             revision: 3
           },
@@ -268,8 +268,8 @@ describe('category mutations', () => {
     })
 
     /** Authoritative reconciliation spies kept side-effect free for test isolation. */
-    const upsertFolder = vi
-      .spyOn(promptFolderCollection.utils, 'upsertAuthoritative')
+    const upsertCollection = vi
+      .spyOn(promptCollectionsCollection.utils, 'upsertAuthoritative')
       .mockImplementation(() => undefined)
     const upsertCategory = vi
       .spyOn(categoryCollection.utils, 'upsertAuthoritative')
@@ -277,12 +277,12 @@ describe('category mutations', () => {
     options.handleSuccessOrConflictResponse({
       snapshots: [
         {
-          entityType: 'promptFolder',
-          id: ROOT_FOLDER_ID,
+          entityType: 'promptCollection',
+          id: ROOT_COLLECTION_ID,
           revision: 4,
           data: {
-            ...promptFolderCollection.get(ROOT_FOLDER_ID),
-            statusFolders: folderState.statusFolders
+            ...promptCollectionsCollection.get(ROOT_COLLECTION_ID),
+            statusFolders: collectionState.statusFolders
           }
         },
         {
@@ -298,7 +298,7 @@ describe('category mutations', () => {
         }
       ]
     })
-    expect(upsertFolder).toHaveBeenCalledOnce()
+    expect(upsertCollection).toHaveBeenCalledOnce()
     expect(upsertCategory).toHaveBeenCalledOnce()
   })
 
@@ -364,8 +364,8 @@ describe('category mutations', () => {
 
     /** Revision mutation options registered by deleteCategory. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
-    /** Mutable folder state used to observe the optimistic recipe. */
-    const folderState = structuredClone(promptFolderCollection.get(ROOT_FOLDER_ID)!)
+    /** Mutable collection state used to observe the optimistic recipe. */
+    const collectionState = structuredClone(promptCollectionsCollection.get(ROOT_COLLECTION_ID)!)
     /** Mutable prompt state used to observe category and timestamp cleanup. */
     const promptState = {
       id: PROMPT_ID,
@@ -383,10 +383,10 @@ describe('category mutations', () => {
 
     options.mutateOptimistically({
       collections: {
-        promptFolder: {
-          update: (id: string, update: (draft: typeof folderState) => void) => {
-            expect(id).toBe(ROOT_FOLDER_ID)
-            update(folderState)
+        promptCollection: {
+          update: (id: string, update: (draft: typeof collectionState) => void) => {
+            expect(id).toBe(ROOT_COLLECTION_ID)
+            update(collectionState)
           }
         },
         category: { delete: deleteCategoryOptimistically },
@@ -406,7 +406,7 @@ describe('category mutations', () => {
     })
 
     expect(
-      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories
+      collectionState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories
     ).toEqual([
       { categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }
     ])
@@ -423,14 +423,14 @@ describe('category mutations', () => {
       payload: {
         command: {
           categoryId: CATEGORY_ID,
-          promptFolderId: ROOT_FOLDER_ID,
+          promptCollectionId: ROOT_COLLECTION_ID,
           workspaceId: WORKSPACE_ID,
           modifiedAt: promptState.modifiedAt
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: ROOT_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: ROOT_COLLECTION_ID,
             expected: 'revision',
             revision: 3
           },
@@ -468,11 +468,11 @@ describe('category mutations', () => {
     const payload = {
       snapshots: [
         {
-          entityType: 'promptFolder',
-          id: ROOT_FOLDER_ID,
+          entityType: 'promptCollection',
+          id: ROOT_COLLECTION_ID,
           revision: 4,
           data: {
-            ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
+            ...promptCollectionsCollection.get(ROOT_COLLECTION_ID)!,
             statusFolders: createPromptStatusFolderLayouts({
               categoryOrders: {
                 [PromptStatusFolderId.Active]: {
@@ -513,7 +513,7 @@ describe('category mutations', () => {
           }
         },
         {
-          entityType: 'workspacePromptFolderUiState',
+          entityType: 'workspacePromptCollectionUiState',
           id: `${WORKSPACE_ID}:${CATEGORY_ID}`,
           deleted: true
         }
@@ -526,8 +526,8 @@ describe('category mutations', () => {
     options.handleSuccessOrConflictResponse(payload)
     expect(categoryCollection.get(CATEGORY_ID)).toBeUndefined()
     expect(
-      promptFolderCollection.get(ROOT_FOLDER_ID)?.kind === 'prompt'
-        ? promptFolderCollection.get(ROOT_FOLDER_ID)?.statusFolders[
+      promptCollectionsCollection.get(ROOT_COLLECTION_ID)?.kind === 'prompt'
+        ? promptCollectionsCollection.get(ROOT_COLLECTION_ID)?.statusFolders[
             PromptStatusFolderId.Active
           ].categoryOrder.categories
         : undefined
@@ -542,22 +542,22 @@ describe('category mutations', () => {
       id: TEMPLATE_ID,
       isEdited: true
     })
-    expect(promptCollection.get(PROMPT_ID)).toMatchObject({
+    expect(promptsCollection.get(PROMPT_ID)).toMatchObject({
       loadingState: 'full',
       modifiedAt: '2026-08-16T12:00:00.000Z'
     })
-    expect(promptTemplateCollection.get(TEMPLATE_ID)).toMatchObject({
+    expect(promptTemplatesCollection.get(TEMPLATE_ID)).toMatchObject({
       loadingState: 'full',
       modifiedAt: '2026-08-16T12:00:00.000Z'
     })
   })
 
-  it('reorders a complete category group through one root-folder revision', async () => {
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: ROOT_FOLDER_ID,
+  it('reorders a complete category group through one collection revision', async () => {
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: ROOT_COLLECTION_ID,
       revision: 4,
       data: {
-        ...promptFolderCollection.get(ROOT_FOLDER_ID)!,
+        ...promptCollectionsCollection.get(ROOT_COLLECTION_ID)!,
         statusFolders: createPromptStatusFolderLayouts({
           categoryOrders: {
             [PromptStatusFolderId.Active]: {
@@ -572,22 +572,22 @@ describe('category mutations', () => {
       }
     })
 
-    await moveCategory(ROOT_FOLDER_ID, CATEGORY_ID, null)
+    await moveCategory(ROOT_COLLECTION_ID, CATEGORY_ID, null)
     /** Revision mutation contract registered by category reorder. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Mutable order used to observe the category-group recipe. */
-    const folderState = structuredClone(promptFolderCollection.get(ROOT_FOLDER_ID)!)
+    const collectionState = structuredClone(promptCollectionsCollection.get(ROOT_COLLECTION_ID)!)
     options.mutateOptimistically({
       collections: {
-        promptFolder: {
-          update: (_id: string, update: (draft: typeof folderState) => void) =>
-            update(folderState)
+        promptCollection: {
+          update: (_id: string, update: (draft: typeof collectionState) => void) =>
+            update(collectionState)
         }
       }
     })
 
     expect(
-      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories.map(
+      collectionState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories.map(
         (group) => group.categoryId
       )
     ).toEqual([
@@ -596,7 +596,7 @@ describe('category mutations', () => {
       SIBLING_CATEGORY_ID
     ])
     expect(
-      folderState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
+      collectionState.statusFolders[PromptStatusFolderId.Active].categoryOrder.categories[1]
         ?.entries
     ).toEqual([
       { kind: 'prompt', id: PROMPT_ID }

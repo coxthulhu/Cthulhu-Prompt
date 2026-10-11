@@ -1,7 +1,7 @@
-import { promptTreePromptSelector, promptTreeCategorySelector } from './PromptFolderSelectors'
+import { promptTreePromptSelector, promptTreeCategorySelector } from './PromptCollectionSelectors'
 import { expect, type Page } from '@playwright/test'
 import type { Locator } from 'playwright'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from './PromptFolderSelectors'
+import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector } from './PromptCollectionSelectors'
 
 type ElementBox = {
   x: number
@@ -10,7 +10,7 @@ type ElementBox = {
   height: number
 }
 
-type PromptFolderScrollHelpers = {
+type PromptCollectionScrollHelpers = {
   getElementScrollTop: (selector: string) => Promise<number>
   scrollVirtualWindowBy: (selector: string, deltaPx: number) => Promise<void>
   scrollVirtualWindowTo: (selector: string, topPx: number) => Promise<void>
@@ -235,7 +235,7 @@ export const getRowViewportOffsets = async (
       }
     },
     {
-      hostSelector: PROMPT_FOLDER_HOST_SELECTOR,
+      hostSelector: PROMPT_COLLECTION_HOST_SELECTOR,
       rowSelector: selector
     }
   )
@@ -243,7 +243,7 @@ export const getRowViewportOffsets = async (
 
 export const scrollUntilPromptEditorVisible = async (
   page: Page,
-  testHelpers: PromptFolderScrollHelpers,
+  testHelpers: PromptCollectionScrollHelpers,
   promptId: string
 ): Promise<void> => {
   const selector = promptEditorSelector(promptId)
@@ -253,7 +253,7 @@ export const scrollUntilPromptEditorVisible = async (
       return
     }
 
-    await testHelpers.scrollVirtualWindowBy(PROMPT_FOLDER_HOST_SELECTOR, 600)
+    await testHelpers.scrollVirtualWindowBy(PROMPT_COLLECTION_HOST_SELECTOR, 600)
   }
 
   throw new Error(`Prompt editor did not become visible: ${promptId}`)
@@ -261,7 +261,7 @@ export const scrollUntilPromptEditorVisible = async (
 
 export const scrollPromptEditorAcrossViewportTop = async (
   page: Page,
-  testHelpers: PromptFolderScrollHelpers,
+  testHelpers: PromptCollectionScrollHelpers,
   promptId: string,
   overlapPx = 24
 ): Promise<void> => {
@@ -273,9 +273,9 @@ export const scrollPromptEditorAcrossViewportTop = async (
     throw new Error(`Missing viewport offsets for ${promptId}`)
   }
 
-  const currentScrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+  const currentScrollTop = await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)
   await testHelpers.scrollVirtualWindowTo(
-    PROMPT_FOLDER_HOST_SELECTOR,
+    PROMPT_COLLECTION_HOST_SELECTOR,
     currentScrollTop + offsets.top + overlapPx
   )
 

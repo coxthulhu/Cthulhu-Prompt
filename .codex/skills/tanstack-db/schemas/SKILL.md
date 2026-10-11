@@ -30,9 +30,9 @@ Keep renderer collection records free of revision metadata. `RevisionEnvelope<T>
 Persisted collections use shared domain types:
 
 ```ts
-revisionCollectionOptions<PromptFolder>({
-  id: 'prompt-folders',
-  getKey: (promptFolder) => promptFolder.id
+revisionCollectionOptions<PromptCollection>({
+  id: 'prompt-collections',
+  getKey: (promptCollection) => promptCollection.id
 })
 ```
 

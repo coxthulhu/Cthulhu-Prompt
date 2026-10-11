@@ -63,14 +63,14 @@ const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value
   const entityType =
     record.entityType === 'systemSettings' ||
     record.entityType === 'workspace' ||
-    record.entityType === 'promptFolder' ||
+    record.entityType === 'promptCollection' ||
     record.entityType === 'category' ||
     record.entityType === 'prompt' ||
     record.entityType === 'promptTemplate' ||
     record.entityType === 'userPersistence' ||
     record.entityType === 'markdownContentUiState' ||
     record.entityType === 'workspaceUiState' ||
-    record.entityType === 'workspacePromptFolderUiState' ||
+    record.entityType === 'workspacePromptCollectionUiState' ||
     record.entityType === 'accordionUiState'
       ? record.entityType
       : null

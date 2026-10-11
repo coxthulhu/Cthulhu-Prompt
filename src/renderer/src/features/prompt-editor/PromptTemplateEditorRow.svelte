@@ -12,8 +12,8 @@
     ComponentProps<typeof MarkdownContentEditorRow>,
     | 'contentKind'
     | 'contentLabel'
-    | 'metadataFolderLabel'
-    | 'metadataFolderState'
+    | 'metadataTemplateLabel'
+    | 'metadataTemplateState'
     | 'modelUri'
     | 'compactLayoutMaxWidthPx'
     | 'copyLabel'
@@ -33,7 +33,7 @@
   {promptId}
   contentKind="template"
   contentLabel="template"
-  metadataFolderLabel={null}
+  metadataTemplateLabel={null}
   modelUri={createPromptTemplateEditorModelUri(promptId)}
   compactLayoutMaxWidthPx={PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX}
   copyLabel="Copy template"

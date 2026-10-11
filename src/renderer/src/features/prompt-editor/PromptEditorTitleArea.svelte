@@ -31,8 +31,8 @@
     onSelectionChange,
     onTitleEditorFocus,
     inputRef = $bindable(null),
-    metadataFolderLabel = 'Template',
-    metadataFolderState = 'not-selected',
+    metadataTemplateLabel = 'Template',
+    metadataTemplateState = 'not-selected',
     tokenCount,
     icon,
     copyLabel,
@@ -74,8 +74,8 @@
     {onSelectionChange}
     {onTitleEditorFocus}
     bind:inputRef
-    {metadataFolderLabel}
-    {metadataFolderState}
+    {metadataTemplateLabel}
+    {metadataTemplateState}
     {tokenCount}
     {icon}
     {copyLabel}

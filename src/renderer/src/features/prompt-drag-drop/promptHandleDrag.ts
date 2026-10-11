@@ -11,7 +11,7 @@ export type PromptDragStatusSection = `${PromptStatusFolderId}`
 export type PromptHandleDragPayload = {
   fromId: string
   location: PromptLocation
-  contentKind: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
+  contentKind: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
 }
 
 /** Drag payload for reordering one category. */
@@ -25,7 +25,7 @@ export type CategoryDropPayload = {
 }
 
 export type PromptHandleDropPayload = {
-  folderId: string
+  collectionId: string
   categoryId?: string | null
   targetEntryId: string | null
   position: 'before' | 'after'
@@ -84,13 +84,13 @@ export const resolveEntryDropPreviousEntryId = (
 }
 
 export const doesEntryDropChangeOrder = (
-  sourceFolderId: string,
-  destinationFolderId: string,
+  sourceCollectionId: string,
+  destinationCollectionId: string,
   sourceEntryIds: string[],
   draggedEntryId: string,
   previousEntryId: string | null
 ): boolean => {
-  if (sourceFolderId !== destinationFolderId) return true
+  if (sourceCollectionId !== destinationCollectionId) return true
   const nextEntryIds = reorderEntryIds(sourceEntryIds, draggedEntryId, previousEntryId)
   return Boolean(nextEntryIds && !areEntryIdOrdersEqual(sourceEntryIds, nextEntryIds))
 }
@@ -124,7 +124,7 @@ const reorderEntryIds = (
 
 /** Resolves a drop boundary to a predecessor, excluding invalid and unchanged placements. */
 export const resolvePromptDropPreviousEntryId = (
-  sourcePromptFolderId: string,
+  sourcePromptCollectionId: string,
   sourceEntryIds: string[],
   promptId: string,
   dropPayload: PromptHandleDropPayload | null,
@@ -156,8 +156,8 @@ export const resolvePromptDropPreviousEntryId = (
 
   if (
     !doesEntryDropChangeOrder(
-      sourcePromptFolderId,
-      dropPayload.folderId,
+      sourcePromptCollectionId,
+      dropPayload.collectionId,
       sourceEntryIds,
       promptId,
       previousEntryId

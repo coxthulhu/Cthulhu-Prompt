@@ -1,8 +1,8 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
-import { PROMPT_FOLDER_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
-import { createWorkspaceWithFolders, createWorkspaceWithTemplateFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
+import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 
 /** Real Electron coverage of temporary editor-driven sidebar selection. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -16,8 +16,8 @@ const createSelectionWorkspace = (kind: 'prompt' | 'template', categorized = fal
     id: `entry-${index}`, title: `Entry ${index}`, text: `Body ${index}.`
   }))
   if (kind === 'template') {
-    return createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [{
-      folderName: 'Content', displayName: 'Content', folderId: 'content',
+    return createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [{
+      folderName: 'Content', displayName: 'Content', collectionId: 'content',
       templates: entries.filter((_, index) => !categorized || index === 0).map((entry) => ({
         id: entry.id, title: entry.title, templateText: entry.text
       })),
@@ -30,8 +30,8 @@ const createSelectionWorkspace = (kind: 'prompt' | 'template', categorized = fal
     }])
   }
   /** Task fixture metadata places the later entries in a real sidebar category. */
-  const structure = createWorkspaceWithFolders(WORKSPACE_PATH, [{
-    folderName: 'Content', displayName: 'Content', promptFolderId: 'content',
+  const structure = createWorkspaceWithCollections(WORKSPACE_PATH, [{
+    folderName: 'Content', displayName: 'Content', promptCollectionId: 'content',
     prompts: entries.map((entry, index) => ({
       id: entry.id, title: entry.title, promptText: entry.text, templates: [],
       ...(categorized && index > 0 ? { category: 'category' } : {})
@@ -54,8 +54,8 @@ describe('Editor-driven prompt tree selection', () => {
       /** Window and virtual-scroll helpers for this content kind. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders('Content')
-      else await testHelpers.navigateToPromptFolders('Content')
+      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
+      else await testHelpers.navigateToPromptCollections('Content')
       await stubClipboard(mainWindow)
       /** Sidebar namespace distinguishes the two content kinds. */
       const group = kind === 'template' ? 'template' : 'active'
@@ -82,8 +82,8 @@ describe('Editor-driven prompt tree selection', () => {
       await expect(secondTreeRow).toHaveAttribute('aria-current', 'true')
 
       // Scrolling the main viewport restores ordinary selection, including its overview behavior.
-      await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 100)
-      await testHelpers.scrollVirtualWindowTo(PROMPT_FOLDER_HOST_SELECTOR, 0)
+      await testHelpers.scrollVirtualWindowTo(PROMPT_COLLECTION_HOST_SELECTOR, 100)
+      await testHelpers.scrollVirtualWindowTo(PROMPT_COLLECTION_HOST_SELECTOR, 0)
       await expect(firstTreeRow).toHaveAttribute('aria-current', 'true')
       await focusMonacoEditor(mainWindow, promptEditorSelector('entry-1'))
       await expect(firstTreeRow).toHaveAttribute('aria-current', 'true')
@@ -137,8 +137,8 @@ describe('Editor-driven prompt tree selection', () => {
       /** Window and navigation helpers for a root with a categorized editor. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders('Content')
-      else await testHelpers.navigateToPromptFolders('Content')
+      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
+      else await testHelpers.navigateToPromptCollections('Content')
       /** Content kind determines the sidebar test IDs. */
       const group = kind === 'template' ? 'template' : 'active'
       /** Collapsing the sidebar must leave the main editors available. */
@@ -169,14 +169,14 @@ describe('Editor-driven prompt tree selection', () => {
       /** Long second body ensures that the editor has its own scrollbar. */
       const body = Array.from({ length: 100 }, (_, index) => `Line ${index}`).join('\n')
       await testSetup.setupFilesystem(kind === 'template'
-        ? createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [{
-            folderName: 'Content', displayName: 'Content', folderId: 'content', templates: [
+        ? createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [{
+            folderName: 'Content', displayName: 'Content', collectionId: 'content', templates: [
               { id: 'first', title: 'First', templateText: 'Short.' },
               { id: 'second', title: 'Second', templateText: body }
             ]
           }])
-        : createWorkspaceWithFolders(WORKSPACE_PATH, [{
-            folderName: 'Content', displayName: 'Content', promptFolderId: 'content', prompts: [
+        : createWorkspaceWithCollections(WORKSPACE_PATH, [{
+            folderName: 'Content', displayName: 'Content', promptCollectionId: 'content', prompts: [
               { id: 'first', title: 'First', promptText: 'Short.' },
               { id: 'second', title: 'Second', promptText: body }
             ]
@@ -185,15 +185,15 @@ describe('Editor-driven prompt tree selection', () => {
       /** Window and virtual-scroll helpers for the long-body fixture. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders('Content')
-      else await testHelpers.navigateToPromptFolders('Content')
+      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
+      else await testHelpers.navigateToPromptCollections('Content')
       /** Sidebar namespace for the long editor's selected row. */
       const group = kind === 'template' ? 'template' : 'active'
       await focusMonacoEditor(mainWindow, promptEditorSelector('second'))
       await mainWindow.getByTestId('prompt-editor-second').getByTestId('prompt-title').fill('Edited')
       await focusMonacoEditor(mainWindow, promptEditorSelector('second'))
       /** Main virtual offset must remain stationary while Monaco consumes the wheel. */
-      const mainScrollTop = await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)
+      const mainScrollTop = await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)
       await mainWindow.mouse.wheel(0, 240)
       await expect.poll(() => mainWindow.evaluate(() => {
         /** Registered editor exposes its actual internal scroll position. */
@@ -201,7 +201,7 @@ describe('Editor-driven prompt tree selection', () => {
           item.container?.closest('[data-testid="prompt-editor-second"]'))
         return entry?.editor.getScrollTop() ?? 0
       })).toBeGreaterThan(0)
-      expect(await testHelpers.getElementScrollTop(PROMPT_FOLDER_HOST_SELECTOR)).toBe(mainScrollTop)
+      expect(await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)).toBe(mainScrollTop)
       await expect(mainWindow.getByTestId(`prompt-tree-${group}-prompt-second`)).toHaveAttribute('aria-current', 'true')
     })
   }

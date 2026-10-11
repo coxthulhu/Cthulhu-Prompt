@@ -20,14 +20,14 @@ export type PromptPersistenceFields = MarkdownPersistenceFields
 const getPromptStatusFolderForDirectory = (folderName: string) => {
   const folderNameParts = folderName.split(/[\\/]/)
   const finalFolderName = folderNameParts[folderNameParts.length - 1]
-  /** Registry definition whose directory name matches the persisted parent folder. */
+  /** Registry definition whose directory name matches the persisted parent status folder. */
   const statusFolder = PROMPT_STATUS_FOLDERS.find(
     (candidate) => candidate.directoryName === finalFolderName
   )
   return statusFolder ?? getPromptStatusFolderDefinition(PromptStatus.Todo)
 }
 
-const normalizePromptStatusForFolder = (
+const normalizePromptStatusForStatusFolder = (
   prompt: PromptPersisted,
   folderName: string
 ): PromptPersisted => {
@@ -75,7 +75,7 @@ export const promptPersistence = createMarkdownPersistence<PromptPersisted>({
   parseMarkdown: parsePromptMarkdown,
   serializeMarkdown: serializePromptMarkdown,
   normalizeLoadedData: (prompt, folderPath) =>
-    normalizePromptStatusForFolder(prompt, folderPath),
+    normalizePromptStatusForStatusFolder(prompt, folderPath),
   shouldRewriteNormalizedData: (loaded, normalized) =>
     !hasSameStatusMetadata(loaded, normalized)
 })

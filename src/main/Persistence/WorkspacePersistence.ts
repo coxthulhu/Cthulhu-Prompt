@@ -1,7 +1,7 @@
 import type { Workspace } from '@shared/domain/workspace/Workspace'
-import type { FolderEntryRef } from '@shared/domain/OrderContainer'
-import type { WorkspaceFolderOrderFile } from './workspace/WorkspaceDiskTypes'
-import { readWorkspaceFolderEntries, readWorkspaceInfo } from './workspace/WorkspaceReads'
+import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
+import type { WorkspaceCollectionOrderFile } from './workspace/WorkspaceDiskTypes'
+import { readWorkspaceCollectionEntries, readWorkspaceInfo } from './workspace/WorkspaceReads'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
   commitStagedFileChanges,
@@ -11,7 +11,7 @@ import {
   resolveTempPath,
   writeJsonFile
 } from './FilePersistenceHelpers'
-import { resolveWorkspaceFolderOrderPath } from './PromptPersistencePaths'
+import { resolveWorkspaceCollectionOrderPath } from './PromptPersistencePaths'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from './workspace/WorkspaceMigrations'
 
 export type WorkspacePersistenceFields = {
@@ -19,7 +19,7 @@ export type WorkspacePersistenceFields = {
   workspaceInfoPath: string
 }
 
-const toWorkspaceFolderOrderFile = (entries: FolderEntryRef[]): WorkspaceFolderOrderFile => {
+const toWorkspaceCollectionOrderFile = (entries: CollectionEntryRef[]): WorkspaceCollectionOrderFile => {
   return { entries }
 }
 
@@ -34,10 +34,10 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     /** Persistence metadata selected from the present transition side. */
     const fields = (after ?? before)!.persistenceFields
     const infoPath = fields.workspaceInfoPath
-    /** Task-prompt root order stored below the Prompts directory. */
-    const promptFolderOrderPath = resolveWorkspaceFolderOrderPath(fields.workspacePath, 'prompt')
-    /** Prompt-template root order stored below the Templates directory. */
-    const templateFolderOrderPath = resolveWorkspaceFolderOrderPath(
+    /** Task-prompt collection order stored below the Prompts directory. */
+    const promptCollectionOrderPath = resolveWorkspaceCollectionOrderPath(fields.workspacePath, 'prompt')
+    /** Prompt-template collection order stored below the Templates directory. */
+    const templateCollectionOrderPath = resolveWorkspaceCollectionOrderPath(
       fields.workspacePath,
       'template'
     )
@@ -45,8 +45,8 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     if (!after) {
       return createPersistenceStageResult([
         createStagedFileRemove(infoPath),
-        createStagedFileRemove(promptFolderOrderPath),
-        createStagedFileRemove(templateFolderOrderPath)
+        createStagedFileRemove(promptCollectionOrderPath),
+        createStagedFileRemove(templateCollectionOrderPath)
       ])
     }
 
@@ -57,22 +57,22 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
       workspaceName: after.data.workspaceName
     })
     /** Staged task-prompt order written atomically with the workspace record. */
-    const promptFolderOrderTempPath = resolveTempPath(promptFolderOrderPath)
+    const promptCollectionOrderTempPath = resolveTempPath(promptCollectionOrderPath)
     writeJsonFile(
-      promptFolderOrderTempPath,
-      toWorkspaceFolderOrderFile(after.data.promptFolderEntries)
+      promptCollectionOrderTempPath,
+      toWorkspaceCollectionOrderFile(after.data.promptCollectionEntries)
     )
     /** Staged prompt-template order written atomically with the workspace record. */
-    const templateFolderOrderTempPath = resolveTempPath(templateFolderOrderPath)
+    const templateCollectionOrderTempPath = resolveTempPath(templateCollectionOrderPath)
     writeJsonFile(
-      templateFolderOrderTempPath,
-      toWorkspaceFolderOrderFile(after.data.templateFolderEntries)
+      templateCollectionOrderTempPath,
+      toWorkspaceCollectionOrderFile(after.data.templateCollectionEntries)
     )
 
     return createPersistenceStageResult([
       createStagedFileUpsert(infoPath, infoTempPath),
-      createStagedFileUpsert(promptFolderOrderPath, promptFolderOrderTempPath),
-      createStagedFileUpsert(templateFolderOrderPath, templateFolderOrderTempPath)
+      createStagedFileUpsert(promptCollectionOrderPath, promptCollectionOrderTempPath),
+      createStagedFileUpsert(templateCollectionOrderPath, templateCollectionOrderTempPath)
     ])
   },
   commitChanges: (stagedChange) => {
@@ -89,8 +89,8 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
       id: workspaceInfo.workspaceId,
       workspacePath,
       workspaceName: workspaceInfo.workspaceName,
-      promptFolderEntries: readWorkspaceFolderEntries(workspacePath, 'prompt'),
-      templateFolderEntries: readWorkspaceFolderEntries(workspacePath, 'template')
+      promptCollectionEntries: readWorkspaceCollectionEntries(workspacePath, 'prompt'),
+      templateCollectionEntries: readWorkspaceCollectionEntries(workspacePath, 'template')
     }
   }
 }

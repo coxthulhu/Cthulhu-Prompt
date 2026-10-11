@@ -10,7 +10,7 @@
   import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { WorkspaceFolderStatus } from '@shared/domain/workspace/Workspace'
-  import { preparePromptFolderName } from '@shared/domain/prompt-folder/promptFolderName'
+  import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
   import { FolderPlus } from 'lucide-svelte'
   import type { WorkspaceCreationResult } from '@renderer/features/workspace/types'
 
@@ -35,11 +35,11 @@
   let hasInteractedWithName = $state(false)
   let submissionError = $state<string | null>(null)
 
-  const preparedWorkspaceName = $derived(preparePromptFolderName(workspaceName))
+  const preparedWorkspaceName = $derived(preparePromptCollectionName(workspaceName))
   const workspaceNameValidation = $derived(preparedWorkspaceName.validation)
   const workspaceNameError = $derived(
     !workspaceNameValidation.isValid
-      ? (workspaceNameValidation.errorMessage ?? '').replaceAll('Folder name', 'Workspace name')
+      ? (workspaceNameValidation.errorMessage ?? '').replaceAll('Collection name', 'Workspace name')
       : null
   )
   const displayedWorkspaceNameError = $derived(hasInteractedWithName ? workspaceNameError : null)
@@ -241,7 +241,7 @@
       <TitleSubtitleStack class="mb-[7px]">
         <Title title="Add Examples" variant="small" />
         <Subtitle
-          text="Include example prompts and templates in the My Project and My Templates folders."
+          text="Include example prompts and templates in the My Project and My Templates collections."
         />
       </TitleSubtitleStack>
       <ToggleTextButton

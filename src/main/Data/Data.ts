@@ -2,7 +2,7 @@ import type { Draft } from 'immer'
 import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import type { CommittedStore } from './CommittedStore'
 import { promptData } from './PromptData'
-import { promptFolderData } from './PromptFolderData'
+import { promptCollectionData } from './PromptCollectionData'
 import { promptTemplateData } from './PromptTemplateData'
 import { systemSettingsData } from './SystemSettingsData'
 import { workspaceData } from './WorkspaceData'
@@ -12,7 +12,7 @@ import {
   accordionUiStateData,
   markdownContentUiStateData,
   userPersistenceData,
-  workspacePromptFolderUiStateData,
+  workspacePromptCollectionUiStateData,
   workspaceUiStateData
 } from './UiStateData'
 
@@ -30,13 +30,13 @@ export type RevisionData<TData, TPersistenceFields> = {
 export const data = {
   systemSettings: systemSettingsData,
   workspace: workspaceData,
-  promptFolder: promptFolderData,
+  promptCollection: promptCollectionData,
   category: categoryData,
   prompt: promptData,
   promptTemplate: promptTemplateData,
   userPersistence: userPersistenceData,
   markdownContentUiState: markdownContentUiStateData,
   workspaceUiState: workspaceUiStateData,
-  workspacePromptFolderUiState: workspacePromptFolderUiStateData,
+  workspacePromptCollectionUiState: workspacePromptCollectionUiStateData,
   accordionUiState: accordionUiStateData
 }

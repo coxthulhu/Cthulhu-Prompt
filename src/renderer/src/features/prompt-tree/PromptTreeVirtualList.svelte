@@ -1,17 +1,17 @@
 <script module lang="ts">
-  import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Category } from '@shared/domain/category/Category'
   import type { VirtualWindowRowComponentProps } from '@renderer/common/virtual-window/virtualWindowTypes'
 
   export type PromptTreeRow =
     | {
-        kind: 'root-folder'
-        folder: PromptFolder
+        kind: 'collection'
+        collection: PromptCollection
       }
     | {
         kind: 'category'
         category: Category
-        rootFolder: PromptFolder
+        collection: PromptCollection
         indentCount: number
         endsVisibleBranch: boolean
         /** Whether this row owns the unique prompt drop target at tree start. */
@@ -19,7 +19,7 @@
       }
     | {
         kind: 'prompt'
-        folder: PromptFolder
+        collection: PromptCollection
         categoryId: string | null
         promptId: string
         indentCount: number
@@ -44,8 +44,8 @@
         kind: 'bottom-spacer'
       }
 
-  export type PromptTreeRootFolderRowProps = VirtualWindowRowComponentProps<
-    Extract<PromptTreeRow, { kind: 'root-folder' }>
+  export type PromptTreeCollectionRowProps = VirtualWindowRowComponentProps<
+    Extract<PromptTreeRow, { kind: 'collection' }>
   >
   /** Virtual-row props for one category header. */
   export type PromptTreeCategoryRowProps = VirtualWindowRowComponentProps<
@@ -82,8 +82,8 @@
     spacerTestId: string
     scrollApi?: VirtualWindowScrollApi | null
     viewportMetrics?: VirtualWindowViewportMetrics | null
-    rootFolderRow: Snippet<[PromptTreeRootFolderRowProps]>
-    promptTreeRootFolderRowOverlay?: Snippet<[PromptTreeRootFolderRowProps]>
+    collectionRow: Snippet<[PromptTreeCollectionRowProps]>
+    promptTreeCollectionRowOverlay?: Snippet<[PromptTreeCollectionRowProps]>
     categoryRow: Snippet<[PromptTreeCategoryRowProps]>
     promptTreeCategoryRowOverlay?: Snippet<[PromptTreeCategoryRowProps]>
     promptRow: Snippet<[PromptTreePromptRowProps]>
@@ -101,8 +101,8 @@
     spacerTestId,
     scrollApi = $bindable<VirtualWindowScrollApi | null>(null),
     viewportMetrics = $bindable<VirtualWindowViewportMetrics | null>(null),
-    rootFolderRow,
-    promptTreeRootFolderRowOverlay,
+    collectionRow,
+    promptTreeCollectionRowOverlay,
     categoryRow,
     promptTreeCategoryRowOverlay,
     promptRow,
@@ -119,11 +119,11 @@
   const PROMPT_TREE_BOTTOM_SPACER_HEIGHT_PX = 16
   const rowRegistry = $derived.by(() =>
     defineVirtualWindowRowRegistry<PromptTreeRow>({
-      'root-folder': {
+      'collection': {
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,
         centerRowEligible: true,
-        overlayRow: { snippet: promptTreeRootFolderRowOverlay },
-        snippet: rootFolderRow
+        overlayRow: { snippet: promptTreeCollectionRowOverlay },
+        snippet: collectionRow
       },
       category: {
         estimateHeight: () => PROMPT_TREE_ROW_HEIGHT_PX,

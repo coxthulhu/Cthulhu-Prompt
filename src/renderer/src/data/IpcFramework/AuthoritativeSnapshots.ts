@@ -6,14 +6,14 @@ import { accordionUiStateCollection } from '@renderer/data/Collections/Accordion
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-import { workspacePromptFolderUiStateCollection } from '@renderer/data/Collections/WorkspacePromptFolderUiStateCollection'
+import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
 import { clearPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
 
@@ -24,22 +24,22 @@ export const getRendererRevisionCollection = (entityType: DomainEntityType) => {
       return systemSettingsCollection
     case 'workspace':
       return workspaceCollection
-    case 'promptFolder':
-      return promptFolderCollection
+    case 'promptCollection':
+      return promptCollectionsCollection
     case 'category':
       return categoryCollection
     case 'prompt':
-      return promptCollection
+      return promptsCollection
     case 'promptTemplate':
-      return promptTemplateCollection
+      return promptTemplatesCollection
     case 'userPersistence':
       return userPersistenceCollection
     case 'markdownContentUiState':
       return markdownContentUiStateCollection
     case 'workspaceUiState':
       return workspaceUiStateCollection
-    case 'workspacePromptFolderUiState':
-      return workspacePromptFolderUiStateCollection
+    case 'workspacePromptCollectionUiState':
+      return workspacePromptCollectionUiStateCollection
     case 'accordionUiState':
       return accordionUiStateCollection
   }
@@ -70,15 +70,15 @@ const reconcileRendererAuthoritativeSnapshot = (
     case 'workspace':
       workspaceCollection.utils.upsertAuthoritative(snapshot)
       return
-    case 'promptFolder':
-      promptFolderCollection.utils.upsertAuthoritative(snapshot)
+    case 'promptCollection':
+      promptCollectionsCollection.utils.upsertAuthoritative(snapshot)
       return
     case 'category':
       categoryCollection.utils.upsertAuthoritative(snapshot)
       return
     case 'prompt': {
       /** Current renderer prompt inspected before authoritative text reconciliation. */
-      const currentPrompt = promptCollection.get(snapshot.id)
+      const currentPrompt = promptsCollection.get(snapshot.id)
       if (
         !currentPrompt ||
         !isPromptFull(currentPrompt) ||
@@ -88,7 +88,7 @@ const reconcileRendererAuthoritativeSnapshot = (
       }
       /** Full prompt snapshot normalized for the renderer collection and client state. */
       const promptSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
-      promptCollection.utils.upsertAuthoritative(promptSnapshot)
+      promptsCollection.utils.upsertAuthoritative(promptSnapshot)
       if (!promptClientStateCollection.has(snapshot.id)) {
         promptClientStateCollection.insert({ id: snapshot.id, isEdited: false })
       }
@@ -96,7 +96,7 @@ const reconcileRendererAuthoritativeSnapshot = (
     }
     case 'promptTemplate': {
       /** Current renderer template inspected before authoritative text reconciliation. */
-      const currentTemplate = promptTemplateCollection.get(snapshot.id)
+      const currentTemplate = promptTemplatesCollection.get(snapshot.id)
       if (
         !currentTemplate ||
         !isPromptTemplateFull(currentTemplate) ||
@@ -109,7 +109,7 @@ const reconcileRendererAuthoritativeSnapshot = (
         ...snapshot,
         data: createPromptTemplateFull(snapshot.data)
       }
-      promptTemplateCollection.utils.upsertAuthoritative(promptTemplateSnapshot)
+      promptTemplatesCollection.utils.upsertAuthoritative(promptTemplateSnapshot)
       if (!promptTemplateClientStateCollection.has(snapshot.id)) {
         promptTemplateClientStateCollection.insert({ id: snapshot.id, isEdited: false })
       }
@@ -124,8 +124,8 @@ const reconcileRendererAuthoritativeSnapshot = (
     case 'workspaceUiState':
       workspaceUiStateCollection.utils.upsertAuthoritative(snapshot)
       return
-    case 'workspacePromptFolderUiState':
-      workspacePromptFolderUiStateCollection.utils.upsertAuthoritative(snapshot)
+    case 'workspacePromptCollectionUiState':
+      workspacePromptCollectionUiStateCollection.utils.upsertAuthoritative(snapshot)
       return
     case 'accordionUiState':
       accordionUiStateCollection.utils.upsertAuthoritative(snapshot)

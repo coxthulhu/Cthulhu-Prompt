@@ -1,13 +1,13 @@
 import { vol } from 'memfs'
 import {
   createBasicWorkspace,
-  createWorkspaceWithFolders,
+  createWorkspaceWithCollections,
   setupWorkspaceScenario,
-  addFolderToWorkspace,
+  addCollectionToWorkspace,
   createInvalidWorkspace,
   createCorruptedWorkspace,
   testHelpers,
-  type PromptFolderConfig,
+  type PromptCollectionConfig,
   type WorkspaceOptions,
   type WorkspaceScenario
 } from '../fixtures/WorkspaceFixtures'
@@ -26,14 +26,14 @@ export const vitestHelpers = {
   },
 
   /**
-   * Creates a workspace with folders and applies it to the mock filesystem (for vitest)
+   * Creates a workspace with collections and applies it to the mock filesystem (for vitest)
    */
-  createWorkspaceWithFolders(
+  createWorkspaceWithCollections(
     workspacePath: string,
-    folderConfigs: PromptFolderConfig[],
+    collectionConfigs: PromptCollectionConfig[],
     workspaceOptions: WorkspaceOptions = {}
   ): void {
-    const structure = createWorkspaceWithFolders(workspacePath, folderConfigs, workspaceOptions)
+    const structure = createWorkspaceWithCollections(workspacePath, collectionConfigs, workspaceOptions)
     vol.fromJSON(structure)
   },
 
@@ -48,7 +48,7 @@ export const vitestHelpers = {
   /**
    * Creates a workspace with sample prompts using predefined data and applies it to the mock filesystem (for vitest)
    */
-  createWorkspaceWithSamplePrompts(workspacePath: string, folderName: string = 'TestFolder'): void {
+  createWorkspaceWithSamplePrompts(workspacePath: string, folderName: string = 'TestCollection'): void {
     const structure = testHelpers.createWorkspaceWithSamplePrompts(workspacePath, folderName)
     vol.fromJSON(structure)
   },
@@ -70,15 +70,15 @@ export const vitestHelpers = {
   },
 
   /**
-   * Adds a single folder to an existing workspace and applies it to the mock filesystem (for vitest)
+   * Adds a single collection to an existing workspace and applies it to the mock filesystem (for vitest)
    */
-  addFolderToWorkspace(workspacePath: string, folderConfig: PromptFolderConfig): void {
-    const structure = addFolderToWorkspace(workspacePath, folderConfig)
+  addCollectionToWorkspace(workspacePath: string, collectionConfig: PromptCollectionConfig): void {
+    const structure = addCollectionToWorkspace(workspacePath, collectionConfig)
     vol.fromJSON(structure)
   },
 
   /**
-   * Creates a workspace with prompts but no folder structure (for testing edge cases) and applies it to the mock filesystem (for vitest)
+   * Creates a workspace with prompts but no collection structure (for testing edge cases) and applies it to the mock filesystem (for vitest)
    */
   createInvalidWorkspace(workspacePath: string): void {
     const structure = createInvalidWorkspace(workspacePath)

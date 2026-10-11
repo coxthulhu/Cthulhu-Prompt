@@ -11,8 +11,8 @@
     ComponentProps<typeof MarkdownContentEditorRow>,
     | 'contentKind'
     | 'contentLabel'
-    | 'metadataFolderLabel'
-    | 'metadataFolderState'
+    | 'metadataTemplateLabel'
+    | 'metadataTemplateState'
     | 'modelUri'
     | 'compactLayoutMaxWidthPx'
     | 'copyLabel'
@@ -32,8 +32,8 @@
   {promptId}
   contentKind="prompt"
   contentLabel="prompt"
-  metadataFolderLabel={props.promptDraftRecord.templateName ?? TEMPLATE_NOT_SELECTED_LABEL}
-  metadataFolderState={props.promptDraftRecord.templateState ?? 'not-selected'}
+  metadataTemplateLabel={props.promptDraftRecord.templateName ?? TEMPLATE_NOT_SELECTED_LABEL}
+  metadataTemplateState={props.promptDraftRecord.templateState ?? 'not-selected'}
   onTitleChange={(title) => setPromptTitle(promptId, title)}
   onTextChange={(text, measurement) => setPromptText(promptId, text, measurement)}
 />

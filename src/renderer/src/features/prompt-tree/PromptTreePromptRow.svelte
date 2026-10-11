@@ -4,7 +4,7 @@
   import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
   import type { PromptStatus } from '@shared/domain/prompt/Prompt'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
-  import { folderPromptTestId } from './promptTreeTestIds'
+  import { collectionPromptTestId } from './promptTreeTestIds'
   import type { PromptRowDragOptions, PromptRowDropOptions } from './promptTreeRowOptions'
 
   // Optional control displayed before a prompt label when the row is reused by a picker.
@@ -13,7 +13,7 @@
   type Props = {
     /** Status or template namespace used by this reusable row. */
     testIdGroup?: import('./promptTreeTestIds').PromptTreeTestIdGroup
-    folderId: string
+    collectionId: string
     promptId: string
     promptTitle: string
     status?: PromptStatus
@@ -29,12 +29,12 @@
     selectionControl?: SelectionControl
     getPromptDroppableOptions?: () => PromptRowDropOptions
     promptDragOptions?: PromptRowDragOptions
-    onPromptSelect: (folderId: string, promptId: string) => void
+    onPromptSelect: (collectionId: string, promptId: string) => void
   }
 
   let {
     testIdGroup = 'template',
-    folderId,
+    collectionId,
     promptId,
     promptTitle,
     status,
@@ -52,7 +52,7 @@
   }: Props = $props()
 
   const handlePromptSelect = (event: MouseEvent) => {
-    onPromptSelect(folderId, promptId)
+    onPromptSelect(collectionId, promptId)
 
     const button = event.currentTarget
     if (button instanceof HTMLButtonElement) {
@@ -112,7 +112,7 @@
 {#snippet promptButton()}
   <button
     type="button"
-    data-testid={folderPromptTestId(promptId, testIdGroup)}
+    data-testid={collectionPromptTestId(promptId, testIdGroup)}
     data-row-state={rowState}
     data-selection-control={selectionControl}
     aria-current={isActive ? 'true' : undefined}
@@ -135,7 +135,7 @@
     <button
       use:draggable={promptDragOptions}
       type="button"
-      data-testid={folderPromptTestId(promptId, testIdGroup)}
+      data-testid={collectionPromptTestId(promptId, testIdGroup)}
       data-row-state={rowState}
       data-selection-control={selectionControl}
       aria-current={isActive ? 'true' : undefined}

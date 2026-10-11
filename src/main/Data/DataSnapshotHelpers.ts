@@ -1,11 +1,11 @@
 import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
-import type { CategoryOrder, PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { CategoryOrder, PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import type { FolderEntryRef } from '@shared/domain/OrderContainer'
+import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { Workspace } from '@shared/domain/workspace/Workspace'
 import type { Category } from '@shared/domain/category/Category'
-import type { PromptFolderPersistenceFields } from '../Persistence/PromptFolderPersistence'
+import type { PromptCollectionPersistenceFields } from '../Persistence/PromptCollectionPersistence'
 import {
   readPromptModifiedAt,
   type PromptPersistenceFields
@@ -20,7 +20,7 @@ import type { CommittedEntry } from './CommittedStore'
 import { data } from './Data'
 
 export type WorkspaceCommittedEntry = CommittedEntry<Workspace, WorkspacePersistenceFields>
-export type PromptFolderCommittedEntry = CommittedEntry<PromptFolder, PromptFolderPersistenceFields>
+export type PromptCollectionCommittedEntry = CommittedEntry<PromptCollection, PromptCollectionPersistenceFields>
 export type PromptCommittedEntry = CommittedEntry<PromptPersisted, PromptPersistenceFields>
 export type PromptTemplateCommittedEntry = CommittedEntry<
   PromptTemplatePersisted,
@@ -94,8 +94,8 @@ export const getLoadedCategoryEntries = (categoryIds: string[]): CategoryCommitt
   )
 }
 
-export const filterLoadedPromptFolderEntries = (entries: FolderEntryRef[]): FolderEntryRef[] => {
-  return entries.filter((entry) => data.promptFolder.committedStore.getEntry(entry.id) !== null)
+export const filterLoadedPromptCollectionEntries = (entries: CollectionEntryRef[]): CollectionEntryRef[] => {
+  return entries.filter((entry) => data.promptCollection.committedStore.getEntry(entry.id) !== null)
 }
 
 export const buildWorkspaceSnapshot = (
@@ -106,28 +106,28 @@ export const buildWorkspaceSnapshot = (
     revision: workspaceEntry.revision,
     data: {
       ...workspaceEntry.committed,
-      promptFolderEntries: filterLoadedPromptFolderEntries(
-        workspaceEntry.committed.promptFolderEntries
+      promptCollectionEntries: filterLoadedPromptCollectionEntries(
+        workspaceEntry.committed.promptCollectionEntries
       ),
-      templateFolderEntries: filterLoadedPromptFolderEntries(
-        workspaceEntry.committed.templateFolderEntries
+      templateCollectionEntries: filterLoadedPromptCollectionEntries(
+        workspaceEntry.committed.templateCollectionEntries
       )
     }
   }
 }
 
-export const buildPromptFolderSnapshot = (
-  promptFolderEntry: PromptFolderCommittedEntry
-): RevisionEnvelope<PromptFolder> => {
-  /** Authoritative folder data filtered to entities currently loaded in committed stores. */
-  const promptFolder = promptFolderEntry.committed
+export const buildPromptCollectionSnapshot = (
+  promptCollectionEntry: PromptCollectionCommittedEntry
+): RevisionEnvelope<PromptCollection> => {
+  /** Authoritative collection data filtered to entities currently loaded in committed stores. */
+  const promptCollection = promptCollectionEntry.committed
   return {
-    id: promptFolder.id,
-    revision: promptFolderEntry.revision,
+    id: promptCollection.id,
+    revision: promptCollectionEntry.revision,
     data: {
-      ...promptFolder,
+      ...promptCollection,
       statusFolders: Object.fromEntries(
-        Object.entries(promptFolder.statusFolders).map(([statusFolderId, layout]) => [
+        Object.entries(promptCollection.statusFolders).map(([statusFolderId, layout]) => [
           statusFolderId,
           layout.ordering === 'category'
             ? {
@@ -136,12 +136,12 @@ export const buildPromptFolderSnapshot = (
               }
             : {
                 ...layout,
-                promptIds: promptFolder.kind === 'template'
+                promptIds: promptCollection.kind === 'template'
                   ? layout.promptIds.filter((id) => data.promptTemplate.committedStore.getEntry(id))
                   : filterLoadedPromptIds(layout.promptIds)
               }
         ])
-      ) as typeof promptFolder.statusFolders
+      ) as typeof promptCollection.statusFolders
     }
   }
 }

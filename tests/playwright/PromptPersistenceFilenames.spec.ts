@@ -1,21 +1,21 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor, waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import {
   checkFileExists,
   readTextFile,
   checkPersistedPromptFilesExistByTitle
 } from '../helpers/PromptPersistenceTestHelpers'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/sample'
-const FOLDER_NAME = 'Development'
+const COLLECTION_NAME = 'Development'
 const PROMPT_ID = 'dev-1'
 const ORIGINAL_TITLE = 'Code Review'
 const COLLISION_WORKSPACE_PATH = '/ws/filename-collisions'
-const COLLISION_FOLDER_NAME = 'FilenameCollisions'
+const COLLISION_COLLECTION_NAME = 'FilenameCollisions'
 const COLLISION_FIRST_PROMPT_ID = 'abcdef1234567890-first'
 const COLLISION_SECOND_PROMPT_ID = 'abcdef1234567890-second'
 
@@ -34,7 +34,7 @@ describe('Prompt persistence filenames', () => {
       workspace: { scenario: 'sample' }
     })
 
-    await testHelpers.navigateToPromptFolders(FOLDER_NAME)
+    await testHelpers.navigateToPromptCollections(COLLECTION_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(PROMPT_ID))
 
     const renamedTitle = 'Renamed Prompt Title'
@@ -42,7 +42,7 @@ describe('Prompt persistence filenames', () => {
     await expect(
       await checkPersistedPromptFilesExistByTitle(electronApp, {
         workspacePath: WORKSPACE_PATH,
-        folderName: FOLDER_NAME,
+        folderName: COLLECTION_NAME,
         promptId: PROMPT_ID,
         promptTitle: ORIGINAL_TITLE
       })
@@ -56,13 +56,13 @@ describe('Prompt persistence filenames', () => {
           const [originalFiles, renamedFiles] = await Promise.all([
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: WORKSPACE_PATH,
-              folderName: FOLDER_NAME,
+              folderName: COLLECTION_NAME,
               promptId: PROMPT_ID,
               promptTitle: ORIGINAL_TITLE
             }),
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: WORKSPACE_PATH,
-              folderName: FOLDER_NAME,
+              folderName: COLLECTION_NAME,
               promptId: PROMPT_ID,
               promptTitle: renamedTitle
             })
@@ -86,7 +86,7 @@ describe('Prompt persistence filenames', () => {
       workspace: { scenario: 'sample' }
     })
 
-    await testHelpers.navigateToPromptFolders(FOLDER_NAME)
+    await testHelpers.navigateToPromptCollections(COLLECTION_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(PROMPT_ID))
 
     const fallbackTitle = 'New Prompt'
@@ -98,13 +98,13 @@ describe('Prompt persistence filenames', () => {
           const [originalFiles, fallbackFiles] = await Promise.all([
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: WORKSPACE_PATH,
-              folderName: FOLDER_NAME,
+              folderName: COLLECTION_NAME,
               promptId: PROMPT_ID,
               promptTitle: ORIGINAL_TITLE
             }),
             checkPersistedPromptFilesExistByTitle(electronApp, {
               workspacePath: WORKSPACE_PATH,
-              folderName: FOLDER_NAME,
+              folderName: COLLECTION_NAME,
               promptId: PROMPT_ID,
               promptTitle: fallbackTitle
             })
@@ -125,10 +125,10 @@ describe('Prompt persistence filenames', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(
-      createWorkspaceWithFolders(COLLISION_WORKSPACE_PATH, [
+      createWorkspaceWithCollections(COLLISION_WORKSPACE_PATH, [
         {
-          folderName: COLLISION_FOLDER_NAME,
-          displayName: COLLISION_FOLDER_NAME,
+          folderName: COLLISION_COLLECTION_NAME,
+          displayName: COLLISION_COLLECTION_NAME,
           prompts: [
             {
               id: COLLISION_FIRST_PROMPT_ID,
@@ -153,12 +153,12 @@ describe('Prompt persistence filenames', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders(COLLISION_FOLDER_NAME)
+    await testHelpers.navigateToPromptCollections(COLLISION_COLLECTION_NAME)
     await waitForMonacoEditor(mainWindow, promptEditorSelector(COLLISION_FIRST_PROMPT_ID))
 
     const firstCollisionTitle = 'Case/Name'
     const secondCollisionTitle = 'casename'
-    const folderPath = `${COLLISION_WORKSPACE_PATH}/Prompts/${COLLISION_FOLDER_NAME}/Active`
+    const folderPath = `${COLLISION_WORKSPACE_PATH}/Prompts/${COLLISION_COLLECTION_NAME}/Active`
 
     await setPromptTitle(mainWindow, COLLISION_FIRST_PROMPT_ID, firstCollisionTitle)
     await setPromptTitle(mainWindow, COLLISION_SECOND_PROMPT_ID, secondCollisionTitle)
@@ -187,7 +187,7 @@ describe('Prompt persistence filenames', () => {
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(COLLISION_WORKSPACE_PATH)])
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptFolders(COLLISION_FOLDER_NAME)
+    await testHelpers.navigateToPromptCollections(COLLISION_COLLECTION_NAME)
     expect(await readTextFile(electronApp, `${folderPath}/casename 1.prompt.md`)).toContain(`id: ${COLLISION_SECOND_PROMPT_ID}`)
     // A case-only title change reallocates the now-available base filename.
     await setPromptTitle(mainWindow, COLLISION_SECOND_PROMPT_ID, 'CaseName')

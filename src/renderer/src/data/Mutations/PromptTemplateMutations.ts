@@ -10,7 +10,7 @@ import {
   type CreatePromptTemplateDomainCommand,
   type UpdatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import {
   markPromptTemplateClientStateEdited
 } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
@@ -42,14 +42,14 @@ const mutations = createMarkdownContentRendererMutations<
     delete: 'delete-prompt-template'
   },
   getFullPersisted: (templateId) => {
-    const template = promptTemplateCollection.get(templateId)
+    const template = promptTemplatesCollection.get(templateId)
     return template && isPromptTemplateFull(template) ? toPersisted(template) : null
   },
   createDomain: {
     plan: planCreatePromptTemplateDomainMutation,
     /** Builds the deterministic template-creation command sent through generic IPC. */
-    createCommand: (promptFolderId, template, previousEntryId, categoryId) => ({
-      promptFolderId,
+    createCommand: (promptCollectionId, template, previousEntryId, categoryId) => ({
+      promptCollectionId,
       contentId: template.id,
       title: template.title,
       fallbackTitle: template.fallbackTitle,

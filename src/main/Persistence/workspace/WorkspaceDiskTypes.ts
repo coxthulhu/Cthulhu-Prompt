@@ -5,17 +5,17 @@ export type WorkspaceInfoFile = {
   workspaceName: string
 }
 
-export type PromptFolderInfoFile = {
+export type PromptCollectionInfoFile = {
   displayName: string
-  folderId: string
+  collectionId: string
   kind: 'prompt' | 'template'
 }
 
-export type PromptFolderOrderFile = OrderContainer<EntryRef>
+export type PromptCollectionOrderFile = OrderContainer<EntryRef>
 
-/** Root prompt or template category ordering stored in FolderOrder.json. */
-export type PromptFolderCategoryOrderFile = import('@shared/domain/prompt-folder/PromptFolder').CategoryOrder
+/** Collection prompt or template category ordering stored in CategoryOrder.json. */
+export type PromptCollectionCategoryOrderFile = import('@shared/domain/prompt-collection/PromptCollection').CategoryOrder
 
-/** Root-folder ordering stored independently below Prompts or Templates. */
-export type WorkspaceFolderOrderFile = OrderContainer<FolderEntryRef>
-import type { EntryRef, FolderEntryRef, OrderContainer } from '@shared/domain/OrderContainer'
+/** collection ordering stored independently below Prompts or Templates. */
+export type WorkspaceCollectionOrderFile = OrderContainer<CollectionEntryRef>
+import type { EntryRef, CollectionEntryRef, OrderContainer } from '@shared/domain/OrderContainer'

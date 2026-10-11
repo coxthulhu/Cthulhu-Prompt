@@ -3,7 +3,7 @@ import type { DomainTarget } from '@shared/domain/DomainChanges'
 import { data } from '../Data/Data'
 import {
   buildCategorySnapshot,
-  buildPromptFolderSnapshot,
+  buildPromptCollectionSnapshot,
   buildPromptSnapshot,
   buildPromptTemplateSnapshot,
   buildWorkspaceSnapshot
@@ -31,12 +31,12 @@ const buildMainAuthoritativeSnapshot = (target: DomainTarget): AuthoritativeSnap
         ? { entityType: 'workspace', ...buildWorkspaceSnapshot(entry) }
         : { entityType: 'workspace', id: target.id, deleted: true }
     }
-    case 'promptFolder': {
-      /** Current prompt-folder entry used by the established graph filter. */
-      const entry = data.promptFolder.committedStore.getEntry(target.id)
+    case 'promptCollection': {
+      /** Current prompt-collection entry used by the established graph filter. */
+      const entry = data.promptCollection.committedStore.getEntry(target.id)
       return entry
-        ? { entityType: 'promptFolder', ...buildPromptFolderSnapshot(entry) }
-        : { entityType: 'promptFolder', id: target.id, deleted: true }
+        ? { entityType: 'promptCollection', ...buildPromptCollectionSnapshot(entry) }
+        : { entityType: 'promptCollection', id: target.id, deleted: true }
     }
     case 'category': {
       /** Current category entry selected for generic reconciliation. */
@@ -62,7 +62,7 @@ const buildMainAuthoritativeSnapshot = (target: DomainTarget): AuthoritativeSnap
     case 'userPersistence':
     case 'markdownContentUiState':
     case 'workspaceUiState':
-    case 'workspacePromptFolderUiState':
+    case 'workspacePromptCollectionUiState':
     case 'accordionUiState': {
       /** Current SQLite-backed entry selected by its authoritative target ID. */
       const entry = data[target.entityType].committedStore.getEntry(target.id)

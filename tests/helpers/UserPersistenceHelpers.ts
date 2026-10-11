@@ -2,17 +2,17 @@ import type { ElectronApplication } from 'playwright'
 import type { EventEmitter } from 'node:events'
 import { createTestRequestId } from './TestRequestId'
 
-/** Seed values for one root-folder or category view-state entry. */
-export type WorkspacePromptFolderUiStateSeedEntry = {
+/** Seed values for one collection or category view-state entry. */
+export type WorkspacePromptCollectionUiStateSeedEntry = {
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded?: boolean
   contentSectionIsExpanded?: boolean
-  /** Saved root-folder viewport offsets seeded for startup restoration tests. */
+  /** Saved collection viewport offsets seeded for startup restoration tests. */
   scrollTopByMode?: Partial<Record<'active' | 'backlog' | 'completed' | 'archived', number>>
-  /** Root mode selected before startup. */
+  /** Collection mode selected before startup. */
   selectedMode?: 'active' | 'backlog' | 'completed' | 'archived'
-  /** Root-specific optional sections visible before startup. */
+  /** Collection-specific optional sections visible before startup. */
   shownFinalStatusGroups?: Partial<Record<'completed' | 'archived', boolean>>
 }
 
@@ -34,19 +34,19 @@ export type WorkspaceUiStateSnapshot = {
     | 'settings'
     | 'mockups'
     | 'test-screen'
-    | 'prompt-task-folders'
-    | 'prompt-template-folders'
+    | 'prompt-task-collections'
+    | 'prompt-template-collections'
   selectedScreenData:
     | null
     | { mockupId: string | null }
     | {
-        promptFolderId: string | null
-        /** Root-folder or category owner containing the selected row. */
+        promptCollectionId: string | null
+        /** collection or category owner containing the selected row. */
         contentOwnerId?: string | null
       }
-  lastPromptTaskFolderId: string | null
-  lastPromptTemplateFolderId: string | null
-  promptFolderViewEntries: Array<{
+  lastPromptTaskCollectionId: string | null
+  lastPromptTemplateCollectionId: string | null
+  promptCollectionViewEntries: Array<{
     contentOwnerId: string
     selectedEntryId: string
     treeIsExpanded: boolean
@@ -108,6 +108,20 @@ export const runSqlStatement = async (electronApp: ElectronApplication, sql: str
   if (!result.success) {
     throw new Error(result.error ?? 'SQL query failed')
   }
+}
+
+/** Runs production startup migrations on the seeded in-memory SQLite database. */
+export const migrateSqliteDatabase = async (electronApp: ElectronApplication): Promise<void> => {
+  /** Correlation ID isolates this migration request from other test events. */
+  const requestId = createTestRequestId('migrate-database')
+  /** Main-process response reports migration failures to the test immediately. */
+  const result = await electronApp.evaluate(async ({ app }, id) => {
+    return await new Promise<{ success: boolean; error?: string }>((resolve) => {
+      ;(app as EventEmitter).once(`test-migrate-database-ready:${id}`, resolve)
+      app.emit('test-migrate-database', { requestId: id })
+    })
+  }, requestId)
+  if (!result.success) throw new Error(result.error)
 }
 
 export const seedUserPersistence = async (
@@ -176,19 +190,19 @@ export const seedWorkspaceUiState = async (
       | 'settings'
       | 'mockups'
       | 'test-screen'
-      | 'prompt-task-folders'
-      | 'prompt-template-folders'
+      | 'prompt-task-collections'
+      | 'prompt-template-collections'
     selectedScreenData:
       | null
       | { mockupId: string | null }
       | {
-          promptFolderId: string | null
-          /** Root-folder or category owner containing the selected row. */
+          promptCollectionId: string | null
+          /** collection or category owner containing the selected row. */
           contentOwnerId?: string | null
         }
-    lastPromptTaskFolderId?: string | null
-    lastPromptTemplateFolderId?: string | null
-    promptFolderViewEntries: WorkspacePromptFolderUiStateSeedEntry[]
+    lastPromptTaskCollectionId?: string | null
+    lastPromptTemplateCollectionId?: string | null
+    promptCollectionViewEntries: WorkspacePromptCollectionUiStateSeedEntry[]
     accordionViewEntries?: AccordionUiStateSeedEntry[]
   }
 ): Promise<void> => {
@@ -199,38 +213,38 @@ export const seedWorkspaceUiState = async (
       workspace_id,
       selected_screen,
       selected_screen_data_json,
-      last_prompt_task_folder_id,
-      last_prompt_template_folder_id
+      last_prompt_task_collection_id,
+      last_prompt_template_collection_id
     )
     VALUES (
       ${toSqlText(data.workspaceId)},
       ${toSqlText(data.selectedScreen)},
       ${toSqlJson(data.selectedScreenData)},
-      ${toSqlNullableText(data.lastPromptTaskFolderId)},
-      ${toSqlNullableText(data.lastPromptTemplateFolderId)}
+      ${toSqlNullableText(data.lastPromptTaskCollectionId)},
+      ${toSqlNullableText(data.lastPromptTemplateCollectionId)}
     )
     ON CONFLICT(workspace_id) DO UPDATE SET
       selected_screen = excluded.selected_screen,
       selected_screen_data_json = excluded.selected_screen_data_json,
-      last_prompt_task_folder_id = excluded.last_prompt_task_folder_id,
-      last_prompt_template_folder_id = excluded.last_prompt_template_folder_id
+      last_prompt_task_collection_id = excluded.last_prompt_task_collection_id,
+      last_prompt_template_collection_id = excluded.last_prompt_template_collection_id
     `
   )
 
   await runSqlStatement(
     electronApp,
-    `DELETE FROM prompt_folder_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
+    `DELETE FROM prompt_collection_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
   await runSqlStatement(
     electronApp,
     `DELETE FROM accordion_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
   )
 
-  for (const entry of data.promptFolderViewEntries) {
+  for (const entry of data.promptCollectionViewEntries) {
     await runSqlStatement(
       electronApp,
       `
-      INSERT INTO prompt_folder_view_state (
+      INSERT INTO prompt_collection_view_state (
         workspace_id,
         content_owner_id,
         selected_entry_id,
@@ -315,8 +329,8 @@ export const readWorkspaceUiState = async (
     SELECT
       selected_screen AS selectedScreen,
       selected_screen_data_json AS selectedScreenDataJson,
-      last_prompt_task_folder_id AS lastPromptTaskFolderId,
-      last_prompt_template_folder_id AS lastPromptTemplateFolderId
+      last_prompt_task_collection_id AS lastPromptTaskCollectionId,
+      last_prompt_template_collection_id AS lastPromptTemplateCollectionId
     FROM workspace_ui_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
@@ -326,7 +340,7 @@ export const readWorkspaceUiState = async (
     throw new Error(workspaceStateResult.error ?? 'Failed to read workspace state')
   }
 
-  const promptFolderViewResult = await runSqlQuery(
+  const promptCollectionViewResult = await runSqlQuery(
     electronApp,
     `
     SELECT
@@ -334,13 +348,13 @@ export const readWorkspaceUiState = async (
       selected_entry_id AS selectedEntryId,
       tree_is_expanded AS treeIsExpanded,
       content_section_is_expanded AS contentSectionIsExpanded
-    FROM prompt_folder_view_state
+    FROM prompt_collection_view_state
     WHERE workspace_id = ${toSqlText(workspaceId)}
     `
   )
 
-  if (!promptFolderViewResult.success) {
-    throw new Error(promptFolderViewResult.error ?? 'Failed to read prompt folder view state')
+  if (!promptCollectionViewResult.success) {
+    throw new Error(promptCollectionViewResult.error ?? 'Failed to read prompt collection view state')
   }
 
   /** Complete accordion section rows persisted for this workspace. */
@@ -363,8 +377,8 @@ export const readWorkspaceUiState = async (
     | {
         selectedScreen: WorkspaceUiStateSnapshot['selectedScreen']
         selectedScreenDataJson: string | null
-        lastPromptTaskFolderId: string | null
-        lastPromptTemplateFolderId: string | null
+        lastPromptTaskCollectionId: string | null
+        lastPromptTemplateCollectionId: string | null
       }
     | undefined
 
@@ -374,9 +388,9 @@ export const readWorkspaceUiState = async (
     selectedScreenData: workspaceRow?.selectedScreenDataJson
       ? JSON.parse(workspaceRow.selectedScreenDataJson)
       : null,
-    lastPromptTaskFolderId: workspaceRow?.lastPromptTaskFolderId ?? null,
-    lastPromptTemplateFolderId: workspaceRow?.lastPromptTemplateFolderId ?? null,
-    promptFolderViewEntries: (promptFolderViewResult.rows ?? []).map((entry) => ({
+    lastPromptTaskCollectionId: workspaceRow?.lastPromptTaskCollectionId ?? null,
+    lastPromptTemplateCollectionId: workspaceRow?.lastPromptTemplateCollectionId ?? null,
+    promptCollectionViewEntries: (promptCollectionViewResult.rows ?? []).map((entry) => ({
       contentOwnerId: String(entry.contentOwnerId),
       selectedEntryId: String(entry.selectedEntryId),
       treeIsExpanded: entry.treeIsExpanded !== 0,

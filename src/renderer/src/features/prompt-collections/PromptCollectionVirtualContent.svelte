@@ -1,0 +1,1015 @@
+<script lang="ts">
+  import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
+  import { emptyCollectionMessage, createFirstItemMessage } from '@renderer/common/emptyStateText'
+  import {
+    type PromptCollection,
+    type PromptCollectionContentKind
+  } from '@shared/domain/prompt-collection/PromptCollection'
+  import type { Category } from '@shared/domain/category/Category'
+  import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
+  import type { MarkdownContentDraftRecord } from './promptCollectionScreenController.svelte.ts'
+  import {
+    getPromptStatusFolderDefinition,
+    PROMPT_STATUS_FOLDER_REGISTRY,
+    PROMPT_STATUS_BEHAVIORS,
+    type PromptStatusFolderId,
+    PromptStatus,
+    isPromptStatus,
+    type PromptContentStatus,
+    type PromptTemplateReference
+  } from '@shared/domain/prompt/Prompt'
+  import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
+  import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
+  import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
+  import { Copy } from 'lucide-svelte'
+  import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
+  import { setPromptTemplates } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
+  import {
+    clampMonacoHeightPx,
+    EDITOR_SUBTITLE_BAR_HEIGHT_PX,
+    estimatePromptEditorHeight,
+    getMonacoHeightFromRowPx,
+    getPromptEditorTitleAreaWidthPx,
+    getRowHeightPx,
+    PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX,
+    type PromptEditorSizingConfig
+  } from '../prompt-editor/promptEditorSizing'
+  import PromptDivider from '../prompt-editor/PromptDivider.svelte'
+  import { PROMPT_DIVIDER_ROW_HEIGHT_PX } from '../prompt-editor/promptDividerSizing'
+  import BottomSpacer, { getBottomSpacerHeightPx } from '../prompt-editor/BottomSpacer.svelte'
+  import SvelteVirtualWindow from '@renderer/common/virtual-window/SvelteVirtualWindow.svelte'
+  import {
+    defineVirtualWindowRowRegistry,
+    type ScrollToWithinWindowBand,
+    type VirtualWindowItem,
+    type VirtualWindowRowComponentProps,
+    type VirtualWindowScrollApi,
+    type VirtualWindowViewportMetrics
+  } from '@renderer/common/virtual-window/virtualWindowTypes'
+  import CategoryEditorRow from './CategoryEditorRow.svelte'
+  import PromptCollectionHeaderRow, {
+    PROMPT_COLLECTION_HEADER_ROW_HEIGHT_PX
+  } from './PromptCollectionHeaderRow.svelte'
+  import {
+    PROMPT_COLLECTION_HEADER_ROW_ID,
+    promptDividerRowId,
+    promptEditorRowId,
+    promptCollectionDividerRowId,
+    categoryEditorRowId
+  } from './promptCollectionRowIds'
+  import PromptCollectionSectionRow from './PromptCollectionSectionRow.svelte'
+  import {
+    getPromptCollectionSectionContentOffsetPx,
+    getPromptCollectionSectionContentWidthPx
+  } from './promptCollectionSectionGutterMetrics'
+  import { getCategoryEditorCollapsedRowHeightPx } from './categoryEditorSizing'
+  import {
+    createDroppableStateRegistry,
+    type DragFinishResult,
+    type DraggableOptions,
+    type DroppableOptions
+  } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
+  import {
+    CATEGORY_DRAG_TYPE,
+    PROMPT_HANDLE_DRAG_TYPE,
+    resolveCategoryDropPreviousCategoryId,
+    type CategoryDragPayload,
+    type CategoryDropPayload,
+    type PromptHandleDragPayload,
+    type PromptHandleDropPayload
+  } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
+  import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
+  import {
+    clearPromptEntryDrag,
+    startCategoryDrag
+  } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
+  import type { ActivePromptScreenRow } from './promptCollectionScreenController.svelte.ts'
+  import InlineTextButton from '@renderer/common/cthulhu-ui/buttons/InlineTextButton.svelte'
+  import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
+  import {
+    getFinalPromptCollectionScreenModeDefinition,
+    PromptCollectionScreenMode
+  } from './promptCollectionScreenMode'
+  import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
+  import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+  import type {
+    PromptCollectionDividerTarget,
+    PromptCollectionPromptTarget,
+    PromptCollectionScreenCategoryBottomCapRow,
+    PromptCollectionScreenCategorySeparatorRow,
+    PromptCollectionScreenCollapsedSummaryRow,
+    PromptCollectionScreenDividerRow,
+    PromptCollectionScreenCategoryEditorRow,
+    PromptCollectionScreenPlaceholderRow,
+    PromptCollectionScreenPromptEditorRow,
+    PromptCollectionScreenHeaderRow,
+    PromptCollectionScreenRow
+  } from './promptCollectionScreenRows'
+
+  type PromptCollectionRow =
+    | PromptCollectionScreenHeaderRow
+    | (PromptCollectionScreenCategoryEditorRow & {
+        isContentSectionExpanded: boolean
+      })
+    | PromptCollectionScreenPlaceholderRow
+    | PromptCollectionScreenCollapsedSummaryRow
+    | PromptCollectionScreenCategoryBottomCapRow
+    | PromptCollectionScreenCategorySeparatorRow
+    | PromptCollectionScreenDividerRow
+    | PromptCollectionScreenPromptEditorRow
+    | { kind: 'bottom-spacer' }
+
+  type PromptEditorRowProps = VirtualWindowRowComponentProps<
+    Extract<PromptCollectionRow, { kind: 'prompt-editor' }>
+  >
+
+  type PromptMetadata = {
+    status: PromptContentStatus
+    finalizedAt: string | null
+  }
+
+  type PromptCollectionVirtualContentProps = {
+    workspaceId: string | null
+    screenCollectionId: string
+    contentKind: PromptCollectionContentKind
+    promptEditorSizingConfig: PromptEditorSizingConfig
+    promptDraftById: Record<string, MarkdownContentDraftRecord>
+    promptTemplateTextById: Record<string, string>
+    promptMetadataByPromptId: Record<string, PromptMetadata>
+    promptCollections: PromptCollection[]
+    categories: Category[]
+    orderedScreenRows: PromptCollectionScreenRow[]
+    visiblePromptIds: string[]
+    orderedPromptCount: number
+    /** Loaded prompt totals for each registered status group. */
+    statusGroupCounts: Record<PromptStatusFolderId, number>
+    finalizedPromptContentOwnerByPromptId: Record<string, string>
+    screenMode: PromptCollectionScreenMode
+    isCreatingPrompt: boolean
+    contentSectionExpandedByOwnerId: Record<string, boolean>
+    initialScrollTopPx: number
+    scrollToWithinWindowBandForRows: ScrollToWithinWindowBand
+    onAddPrompt: (target: PromptCollectionDividerTarget) => void
+    /** Holds sidebar selection after an editor edit or control activation. */
+    onPromptInteraction: (target: PromptCollectionPromptTarget) => void
+    onManageCategories: () => void
+    onDeletePrompt: (target: PromptCollectionPromptTarget) => void
+    onDeletePromptCollection: (promptCollectionId: string) => void
+    onSetPromptStatus: (target: PromptCollectionPromptTarget, status: PromptContentStatus) => void
+    canMovePrompt: (target: PromptCollectionPromptTarget, direction: 'up' | 'down') => boolean
+    onMovePromptUp: (target: PromptCollectionPromptTarget) => Promise<boolean>
+    onMovePromptDown: (target: PromptCollectionPromptTarget) => Promise<boolean>
+    onPromptTreeDrop: (
+      target: PromptCollectionPromptTarget,
+      dropPayload: PromptHandleDropPayload | null
+    ) => void | Promise<void>
+    onMoveCategory: (categoryId: string, previousCategoryId: string | null) => void
+    onRenamePromptCollection: (promptCollectionId: string) => void
+    onManageCategory: (categoryId: string, focusName: boolean) => void
+    onScreenModeChange: (screenMode: PromptCollectionScreenMode) => void
+    onScrollApiChange: (next: VirtualWindowScrollApi | null) => void
+    onViewportMetricsChange: (next: VirtualWindowViewportMetrics | null) => void
+    onScrollTopChange: (nextScrollTop: number) => void
+    onCenterRowChange: (row: ActivePromptScreenRow | null) => void
+    /** Pixel offset below the viewport top used to resolve the breadcrumb category. */
+    breadcrumbSampleOffsetPx: number
+    /** Reports the category owning the row at the breadcrumb sample point. */
+    onBreadcrumbCategoryChange: (categoryId: string | null) => void
+    onUserScroll: () => void
+    onContentSectionToggle: (contentOwnerId: string) => void
+  }
+
+  let {
+    workspaceId,
+    contentKind,
+    screenCollectionId,
+    promptEditorSizingConfig,
+    promptDraftById,
+    promptTemplateTextById,
+    promptMetadataByPromptId,
+    promptCollections,
+    categories,
+    orderedScreenRows,
+    visiblePromptIds,
+    orderedPromptCount,
+    statusGroupCounts,
+    finalizedPromptContentOwnerByPromptId,
+    screenMode,
+    isCreatingPrompt,
+    contentSectionExpandedByOwnerId,
+    initialScrollTopPx,
+    scrollToWithinWindowBandForRows,
+    onAddPrompt,
+    onPromptInteraction,
+    onManageCategories,
+    onDeletePrompt,
+    onDeletePromptCollection,
+    onSetPromptStatus,
+    onMovePromptUp,
+    onMovePromptDown,
+    canMovePrompt,
+    onPromptTreeDrop,
+    onMoveCategory,
+    onRenamePromptCollection,
+    onManageCategory,
+    onScreenModeChange,
+    onScrollApiChange,
+    onViewportMetricsChange,
+    onScrollTopChange,
+    onCenterRowChange,
+    breadcrumbSampleOffsetPx,
+    onBreadcrumbCategoryChange,
+    onUserScroll,
+    onContentSectionToggle
+  }: PromptCollectionVirtualContentProps = $props()
+
+  let scrollApi = $state<VirtualWindowScrollApi | null>(null)
+  let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
+  let isTemplateSelectionDialogOpen = $state(false)
+  let templateSelectionTarget = $state<PromptCollectionPromptTarget | null>(null)
+  let templateSelectionMode = $state<'select' | 'select-and-copy'>('select')
+  /** Suspends either copy action until the user accepts its status change. */
+  let pendingCopyConfirmation = $state<{
+    status: PromptContentStatus
+    resolve: (confirmed: boolean) => void
+  } | null>(null)
+
+  /** Confirms copying only when it moves a prompt out of an inactive workflow. */
+  const confirmPromptCopy = (promptId: string): Promise<boolean> => {
+    /** Current status supplies both the confirmation condition and its explanation. */
+    const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
+    if (status !== PromptStatus.Backlog && status !== PromptStatus.Completed && status !== PromptStatus.Archived) {
+      return Promise.resolve(true)
+    }
+    return new Promise((resolve) => {
+      pendingCopyConfirmation = { status, resolve }
+    })
+  }
+
+  /** Closes the confirmation and resumes or cancels the suspended copy action. */
+  const resolveCopyConfirmation = (confirmed: boolean): void => {
+    pendingCopyConfirmation!.resolve(confirmed)
+    pendingCopyConfirmation = null
+  }
+  const promptDividerDroppableState = createDroppableStateRegistry<string>()
+  /** Category-only divider target state keyed by virtual row ID. */
+  const categoryDividerDroppableState = createDroppableStateRegistry<string>()
+  /** Final-status metadata for the selected screen mode, or null for Active. */
+  const finalModeDefinition = $derived(getFinalPromptCollectionScreenModeDefinition(screenMode))
+  /** Whether this virtual list renders a final-status view. */
+  const isFinalMode = $derived(finalModeDefinition !== null)
+  const todoPromptMetadata: PromptMetadata = {
+    status: PromptStatus.Todo,
+    finalizedAt: null
+  }
+  const isTemplateCollection = $derived(contentKind === 'template')
+  const compactLayoutMaxWidthPx = $derived(
+    isTemplateCollection ? PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX : undefined
+  )
+  const ContentEditorRow = $derived(
+    isTemplateCollection ? PromptTemplateEditorRow : PromptEditorRow
+  )
+  const promptCollectionById = $derived.by(
+    () =>
+      Object.fromEntries(promptCollections.map((collection) => [collection.id, collection])) as Record<
+        string,
+        PromptCollection
+      >
+  )
+  /** Loaded category metadata indexed for category cards. */
+  const categoryById = $derived(
+    Object.fromEntries(categories.map((category) => [category.id, category])) as Record<
+      string,
+      Category
+    >
+  )
+  /** Authoritative category order used to resolve every category boundary. */
+  const orderedCategoryIds = $derived(
+    (promptCollectionById[screenCollectionId] && !isFinalMode
+      ? getMarkdownContentCategoryOrder(promptCollectionById[screenCollectionId], screenMode).categories
+      : []).flatMap((group) =>
+      group.categoryId && categoryById[group.categoryId] ? [group.categoryId] : []
+    ) ?? []
+  )
+  // Side effect: expose the virtual window scroll API to the controller.
+  $effect(() => {
+    onScrollApiChange(scrollApi)
+  })
+
+  // Side effect: expose viewport readiness to deferred content requests.
+  $effect(() => {
+    onViewportMetricsChange(viewportMetrics)
+  })
+
+  const getCopyTemplateTexts = (
+    selectedTemplates: PromptTemplateReference[] | null | undefined
+  ): string[] => {
+    if (isTemplateCollection) return []
+
+    const templateTexts: string[] = []
+
+    for (const template of selectedTemplates ?? []) {
+      const selectedTemplateText = promptTemplateTextById[template.id]
+      if (selectedTemplateText !== undefined) templateTexts.push(selectedTemplateText)
+    }
+    return templateTexts
+  }
+
+  const openTemplateSelectionDialog = (
+    target: PromptCollectionPromptTarget,
+    mode: 'select' | 'select-and-copy'
+  ): void => {
+    templateSelectionTarget = target
+    templateSelectionMode = mode
+    isTemplateSelectionDialogOpen = true
+  }
+
+  const handleTemplateSelect = (templates: PromptTemplateReference[] | null): void => {
+    if (!templateSelectionTarget) return
+    setPromptTemplates(templateSelectionTarget.promptId, templates)
+  }
+
+  const handleTemplateSelectAndCopy = async (
+    templates: PromptTemplateReference[] | null
+  ): Promise<void> => {
+    if (!templateSelectionTarget) return
+    /** Retains the selected prompt while confirmation is open. */
+    const target = templateSelectionTarget
+    const { promptId } = target
+    if (!(await confirmPromptCopy(promptId))) return
+    const promptDraft = promptDraftById[promptId]!
+    await window.navigator.clipboard.writeText(
+      applyPromptTemplates(
+        promptDraft.text,
+        getCopyTemplateTexts(templates)
+      )
+    )
+    setPromptTemplates(promptId, templates)
+    /** Both copy actions share the same successful-copy status transition. */
+    const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
+    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].copyStatus : undefined
+    if (nextStatus) onSetPromptStatus(target, nextStatus)
+  }
+
+  const handlePromptCopySuccess = (promptId: string): void => {
+    if (promptDraftById[promptId]!.templates === undefined) {
+      setPromptTemplates(promptId, null)
+    }
+  }
+
+  const rowRegistry = defineVirtualWindowRowRegistry<PromptCollectionRow>({
+    'collection-header': {
+      estimateHeight: () => PROMPT_COLLECTION_HEADER_ROW_HEIGHT_PX,
+      centerRowEligible: true,
+      snippet: collectionHeaderRow
+    },
+    'category-editor': {
+      estimateHeight: () => getCategoryEditorCollapsedRowHeightPx(),
+      centerRowEligible: true,
+      snippet: categoryEditorRow
+    },
+    placeholder: {
+      estimateHeight: () => 120,
+      snippet: placeholderRow
+    },
+    'collapsed-summary': {
+      estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
+      snippet: collapsedSummaryRow
+    },
+    'category-bottom-cap': {
+      estimateHeight: () => 8,
+      snippet: categoryBottomCapRow
+    },
+    'category-separator': {
+      estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
+      snippet: categorySeparatorRow
+    },
+    'prompt-divider': {
+      // Match the rendered add prompt divider height used by the virtual row.
+      estimateHeight: () => PROMPT_DIVIDER_ROW_HEIGHT_PX,
+      snippet: dividerRow
+    },
+    'prompt-editor': {
+      estimateHeight: (row, widthPx, heightPx) => {
+        const cardWidthPx = getPromptCollectionSectionContentWidthPx(widthPx, row.indentLevel)
+        return estimatePromptEditorHeight(
+          promptDraftById[row.promptId]!.text,
+          getPromptEditorTitleAreaWidthPx(cardWidthPx, true),
+          heightPx,
+          promptEditorSizingConfig,
+          compactLayoutMaxWidthPx,
+          isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
+        )
+      },
+      lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
+        const cardWidthPx = getPromptCollectionSectionContentWidthPx(widthPx, row.indentLevel)
+        const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
+          row.promptId,
+          cardWidthPx,
+          devicePixelRatio
+        )
+        if (measuredRowHeightPx == null) return null
+
+        const titleAreaWidthPx = getPromptEditorTitleAreaWidthPx(cardWidthPx, true)
+        return getRowHeightPx(
+          clampMonacoHeightPx(
+            getMonacoHeightFromRowPx(
+              measuredRowHeightPx,
+              titleAreaWidthPx,
+              compactLayoutMaxWidthPx,
+              isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
+            ),
+            promptEditorSizingConfig
+          ),
+          titleAreaWidthPx,
+          compactLayoutMaxWidthPx,
+          isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
+        )
+      },
+      hydrationPriorityEligible: true,
+      centerRowEligible: true,
+      overlayRow: {},
+      dehydrateOnWidthResize: true,
+      snippet: promptEditorRow
+    },
+    'bottom-spacer': {
+      estimateHeight: (_row, _widthPx, heightPx) => getBottomSpacerHeightPx(heightPx),
+      snippet: bottomSpacerRow
+    }
+  })
+
+  const virtualItems = $derived.by((): VirtualWindowItem<PromptCollectionRow>[] => {
+    if (!isFinalMode) {
+      const orderedRows = orderedScreenRows.map((row): VirtualWindowItem<PromptCollectionRow> => {
+        if (row.kind === 'collection-header') {
+          return { id: PROMPT_COLLECTION_HEADER_ROW_ID, row }
+        }
+
+        if (row.kind === 'category-editor') {
+          return {
+            id: categoryEditorRowId(row.categoryId),
+            row: {
+              ...row,
+              isContentSectionExpanded:
+                contentSectionExpandedByOwnerId[row.contentOwnerId] ?? true
+            }
+          }
+        }
+
+        if (row.kind === 'prompt-editor') {
+          return {
+            id: promptEditorRowId(row.promptId),
+            row
+          }
+        }
+
+        if (row.kind === 'prompt-divider') {
+          return {
+            id: promptCollectionDividerRowId(
+              screenCollectionId,
+              row.contentOwnerId,
+              row.previousEntryId
+            ),
+            row
+          }
+        }
+
+        if (row.kind === 'category-separator') {
+          return { id: `category-separator:${row.categoryId}`, row }
+        }
+
+        if (row.kind === 'category-bottom-cap') {
+          return { id: `category-bottom-cap:${row.categoryId}`, row }
+        }
+
+        if (row.kind === 'collapsed-summary') {
+          return { id: `category-collapsed-summary:${row.categoryId}`, row }
+        }
+
+        return { id: 'placeholder-empty', row }
+      })
+
+      orderedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+      return orderedRows
+    }
+
+    /** Flat virtual rows for the currently selected final status. */
+    const finalizedRows: VirtualWindowItem<PromptCollectionRow>[] = [
+      {
+        id: PROMPT_COLLECTION_HEADER_ROW_ID,
+        row: { kind: 'collection-header' }
+      }
+    ]
+
+    if (visiblePromptIds.length === 0) {
+      finalizedRows.push({
+        id: 'placeholder-empty',
+        row: {
+          kind: 'placeholder',
+          contentOwnerId: screenCollectionId,
+          categoryId: null,
+          indentLevel: 0
+        }
+      })
+    } else {
+      finalizedRows.push({
+        id: 'divider-initial',
+        row: {
+          kind: 'prompt-divider',
+          contentOwnerId: screenCollectionId,
+          categoryId: null,
+          previousEntryId: null,
+          indentLevel: 0
+        }
+      })
+
+      visiblePromptIds.forEach((promptId, promptIndex) => {
+        const contentOwnerId =
+          finalizedPromptContentOwnerByPromptId[promptId] ?? screenCollectionId
+        finalizedRows.push({
+          id: promptEditorRowId(promptId),
+          row: {
+            kind: 'prompt-editor',
+            contentOwnerId,
+            categoryId: null,
+            promptId,
+            indentLevel: 0,
+            isFirstPrompt: promptIndex === 0,
+            isLastPrompt: promptIndex === visiblePromptIds.length - 1
+          }
+        })
+        finalizedRows.push({
+          id: promptDividerRowId(promptId),
+          row: {
+            kind: 'prompt-divider',
+            contentOwnerId: screenCollectionId,
+            categoryId: null,
+            previousEntryId: promptId,
+            indentLevel: 0
+          }
+        })
+      })
+    }
+
+    finalizedRows.push({ id: 'bottom-spacer', row: { kind: 'bottom-spacer' } })
+    return finalizedRows
+  })
+
+  const handleCenterRowChange = (row: PromptCollectionRow | null) => {
+    if (row?.kind === 'collection-header') {
+      onCenterRowChange({ kind: 'collection-header', contentOwnerId: screenCollectionId })
+      return
+    }
+    if (row?.kind === 'prompt-editor') {
+      onCenterRowChange({
+        kind: 'prompt',
+        contentOwnerId: row.contentOwnerId,
+        promptId: row.promptId
+      })
+      return
+    }
+    if (!isFinalMode && row?.kind === 'category-editor') {
+      onCenterRowChange({
+        kind: 'category-details',
+        contentOwnerId: row.contentOwnerId
+      })
+      return
+    }
+    onCenterRowChange(null)
+  }
+
+  /** Reports the category at the breadcrumb sample point while retaining the final category in trailing space. */
+  const handleBreadcrumbSampleRowChange = (row: PromptCollectionRow | null): void => {
+    if (isFinalMode) {
+      onBreadcrumbCategoryChange(null)
+      return
+    }
+    if (!row || row.kind === 'bottom-spacer') return
+    onBreadcrumbCategoryChange('categoryId' in row ? row.categoryId : null)
+  }
+
+  const getPromptDividerDropPayload = (
+    categoryId: string | null,
+    previousEntryId: string | null
+  ): PromptHandleDropPayload => {
+    return {
+      collectionId: screenCollectionId,
+      categoryId,
+      targetEntryId: previousEntryId,
+      position: 'after',
+      statusSection: screenMode
+    }
+  }
+
+  const canDropOnPromptDivider = (
+    categoryId: string | null,
+    previousEntryId: string | null,
+    payload: PromptHandleDragPayload
+  ): boolean => {
+    const destinationCollection = promptCollectionById[screenCollectionId]
+    if (!destinationCollection) return false
+    const dropPayload = getPromptDividerDropPayload(categoryId, previousEntryId)
+
+    const sourceCollection = promptCollectionById[payload.location.promptCollectionId]
+    if (!sourceCollection) return false
+    if (
+      payload.contentKind !== destinationCollection.kind ||
+      sourceCollection.kind !== destinationCollection.kind
+    ) {
+      return false
+    }
+    return (
+      resolvePromptTreePromptMove(promptCollections, payload, dropPayload) !== null
+    )
+  }
+
+  const getPromptDividerDropOptions = (
+    rowId: string,
+    categoryId: string | null,
+    previousPromptId: string | null
+  ): DroppableOptions<PromptHandleDragPayload, PromptHandleDropPayload> => ({
+    dragType: PROMPT_HANDLE_DRAG_TYPE,
+    allowedEdges: 'none',
+    payload: () => getPromptDividerDropPayload(categoryId, previousPromptId),
+    canDrop: (payload) => canDropOnPromptDivider(categoryId, previousPromptId, payload),
+    indicator: promptDividerDroppableState.getState(rowId)
+  })
+
+  /** Returns group-ordered content IDs from one exact CategoryOrder group. */
+  const getCategoryEntryIds = (categoryId: string | null): string[] =>
+    (promptCollectionById[screenCollectionId] && !isFinalMode
+      ? getMarkdownContentCategoryOrder(promptCollectionById[screenCollectionId], screenMode).categories
+      : [])
+      .find((group) => group.categoryId === categoryId)
+      ?.entries.filter((entry) => entry.kind === contentKind)
+      .map((entry) => entry.id) ?? []
+
+  /** Builds a category-only target for a full-width divider boundary. */
+  const getCategoryDividerDropOptions = (
+    rowId: string,
+    nextCategoryId: string | null
+  ): DroppableOptions<CategoryDragPayload, CategoryDropPayload> => ({
+    dragType: `${CATEGORY_DRAG_TYPE}:${screenMode}`,
+    allowedEdges: 'none',
+    payload: { nextCategoryId },
+    canDrop: (payload) =>
+      resolveCategoryDropPreviousCategoryId(
+        orderedCategoryIds,
+        payload.categoryId,
+        nextCategoryId
+      ) !== undefined,
+    indicator: categoryDividerDroppableState.getState(rowId)
+  })
+
+  /** Builds the draggable category handle while preserving the existing ghost icon. */
+  const getCategoryDragOptions = (
+    category: Category
+  ): DraggableOptions<CategoryDragPayload, CategoryDropPayload> => ({
+    dragType: `${CATEGORY_DRAG_TYPE}:${screenMode}`,
+    payload: { categoryId: category.id },
+    createGhost: () => createPromptDragGhost(category.displayName, 'category'),
+    onDragStart: () => {
+      startCategoryDrag(category.id)
+    },
+    onDragFinish: ({
+      sourcePayload,
+      dropPayload
+    }: DragFinishResult<CategoryDragPayload, CategoryDropPayload>) => {
+      clearPromptEntryDrag()
+      if (!dropPayload) return
+      /** Category predecessor represented by the selected divider boundary. */
+      const previousCategoryId = resolveCategoryDropPreviousCategoryId(
+        orderedCategoryIds,
+        sourcePayload.categoryId,
+        dropPayload.nextCategoryId
+      )
+      if (previousCategoryId === undefined) return
+      onMoveCategory(sourcePayload.categoryId, previousCategoryId)
+    }
+  })
+
+  /** Returns the selected group's content count displayed by a category card. */
+  const getCategoryContentCount = (row: PromptCollectionScreenCategoryEditorRow): number => {
+    return getCategoryEntryIds(row.categoryId).filter(
+      (entryId) => {
+        /** Loaded status used to count only this group's prompts. */
+        const status = promptMetadataByPromptId[entryId]?.status
+        return isTemplateCollection || (status !== undefined && getPromptStatusFolderDefinition(status).id === screenMode)
+      }
+    ).length
+  }
+
+</script>
+
+<SvelteVirtualWindow
+  items={virtualItems}
+  {rowRegistry}
+  {initialScrollTopPx}
+  rightScrollPaddingPx={12}
+  scrollbarWidthPx={14}
+  testId="prompt-collection-virtual-window"
+  spacerTestId="prompt-collection-virtual-window-spacer"
+  bind:scrollApi
+  bind:viewportMetrics
+  {onScrollTopChange}
+  onCenterRowChange={(row) => {
+    handleCenterRowChange(row)
+  }}
+  sampleRowOffsetPx={breadcrumbSampleOffsetPx}
+  onSampleRowChange={(row) => {
+    handleBreadcrumbSampleRowChange(row)
+  }}
+  onUserScroll={() => {
+    onUserScroll()
+  }}
+/>
+
+{#snippet collectionHeaderRow()}
+  <PromptCollectionHeaderRow
+    collectionDisplayName={promptCollectionById[screenCollectionId]!.displayName}
+    {orderedPromptCount}
+    {statusGroupCounts}
+    {screenMode}
+    {contentKind}
+    onRenamePromptCollection={() => onRenamePromptCollection(screenCollectionId)}
+    onDeletePromptCollection={() => onDeletePromptCollection(screenCollectionId)}
+    {onManageCategories}
+    {onScreenModeChange}
+  />
+{/snippet}
+
+{#snippet categoryEditorRow(props)}
+  {@const category = categoryById[props.row.categoryId]}
+  {#if category}
+    <PromptCollectionSectionRow rowHeightPx={props.rowHeightPx} indentLevel={props.row.indentLevel}>
+      <CategoryEditorRow
+        categoryId={category.id}
+        displayName={category.displayName}
+        contentCount={getCategoryContentCount(props.row)}
+        rowHeightPx={props.rowHeightPx}
+        {contentKind}
+        isContentSectionExpanded={props.row.isContentSectionExpanded}
+        isReadOnly={isFinalMode}
+        canRename={!isFinalMode}
+        showSidebar
+        dragOptions={!isFinalMode ? getCategoryDragOptions(category) : undefined}
+        onContentSectionToggle={() => onContentSectionToggle(category.id)}
+        onManageCategory={(focusName) => onManageCategory(category.id, focusName)}
+      />
+    </PromptCollectionSectionRow>
+  {/if}
+{/snippet}
+
+{#snippet placeholderRow({ rowHeightPx })}
+  <PromptCollectionSectionRow
+    {rowHeightPx}
+    contentClass="text-center py-12 text-[var(--ui-secondary-text)]"
+  >
+    <p>
+      {emptyCollectionMessage(
+        contentKind,
+        isFinalMode
+          ? finalModeDefinition!.label
+          : isTemplateCollection
+            ? undefined
+            : PROMPT_STATUS_FOLDER_REGISTRY[screenMode].label
+      )}
+    </p>
+    {#if !isFinalMode}
+      <p class="text-sm mt-2">
+        {createFirstItemMessage(contentKind)}
+      </p>
+    {/if}
+  </PromptCollectionSectionRow>
+{/snippet}
+
+{#snippet collapsedSummaryRow({ row, rowId, rowHeightPx })}
+  {@const summaryText = `${row.promptCount} ${
+    row.promptCount === 1
+      ? isTemplateCollection
+        ? 'template'
+        : 'prompt'
+      : isTemplateCollection
+        ? 'templates'
+        : 'prompts'
+  } hidden. Click to expand...`}
+  <DropTarget
+    getOptions={() => getPromptDividerDropOptions(rowId, row.categoryId, null)}
+    class="h-full"
+  >
+    {#snippet children(targetState)}
+      <PromptCollectionSectionRow
+        {rowHeightPx}
+        indentLevel={row.indentLevel}
+        contentClass="flex items-center justify-center text-center"
+        testId={`category-collapsed-summary-${row.categoryId}`}
+      >
+        {#if targetState.isOver}
+          <PromptDivider
+            mode="add"
+            contentLabel={isTemplateCollection ? 'Template' : 'Prompt'}
+            indicatorState={targetState}
+            testId={`category-collapsed-drop-indicator-${row.categoryId}`}
+          />
+        {:else}
+          <InlineTextButton
+            text={summaryText}
+            size="default"
+            baseVariant="secondary"
+            onclick={() => onContentSectionToggle(row.contentOwnerId)}
+          />
+        {/if}
+      </PromptCollectionSectionRow>
+    {/snippet}
+  </DropTarget>
+{/snippet}
+
+{#snippet categoryBottomCapRow({ row, rowHeightPx })}
+  <PromptCollectionSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
+    <div
+      class="category-bottom-cap"
+      data-testid={`category-bottom-cap-${row.categoryId}`}
+    ></div>
+  </PromptCollectionSectionRow>
+{/snippet}
+
+<!-- Renders the category boundary without add controls or a drag/drop target. -->
+{#snippet categorySeparatorRow({ row, rowId, rowHeightPx })}
+  <PromptCollectionSectionRow
+    {rowHeightPx}
+    indentLevel={0}
+    testId={`prompt-collection-category-separator-${row.categoryId}`}
+  >
+    <!-- Recreate the category action when reordering changes this divider's next category. -->
+    {#key row.nextCategoryId}
+      <PromptDivider
+        mode="separator"
+        contentLabel={isTemplateCollection ? 'Template' : 'Prompt'}
+        getCategoryDropOptions={() =>
+          getCategoryDividerDropOptions(rowId, row.nextCategoryId)}
+        testId={`category-divider-drop-${row.categoryId}`}
+      />
+    {/key}
+  </PromptCollectionSectionRow>
+{/snippet}
+
+{#snippet dividerRow({ row, rowId, rowHeightPx })}
+  {@const target = {
+    contentOwnerId: row.contentOwnerId,
+    categoryId: row.categoryId,
+    previousEntryId: row.previousEntryId
+  }}
+  {@const showsActions = !isFinalMode}
+  <PromptCollectionSectionRow
+    {rowHeightPx}
+    indentLevel={row.indentLevel}
+    testId={`prompt-collection-divider-${row.contentOwnerId}-${row.previousEntryId ?? 'initial'}`}
+  >
+    <!-- Update the drop boundary in place so adding the first prompt retains the button. -->
+    <PromptDivider
+      disabled={isCreatingPrompt}
+      revealed={orderedPromptCount === 0}
+      mode={showsActions ? 'add' : 'separator'}
+      contentLabel={isTemplateCollection ? 'Template' : 'Prompt'}
+      onAddPrompt={showsActions ? () => onAddPrompt(target) : undefined}
+      getDropOptions={!showsActions
+        ? undefined
+        : () => getPromptDividerDropOptions(rowId, row.categoryId, row.previousEntryId)}
+      getCategoryDropOptions={!showsActions || row.categoryDropNextCategoryId === undefined
+        ? undefined
+        : () =>
+            getCategoryDividerDropOptions(rowId, row.categoryDropNextCategoryId ?? null)}
+      testId={showsActions
+        ? row.previousEntryId
+          ? `prompt-divider-add-after-${row.previousEntryId}`
+          : 'prompt-divider-add-initial'
+        : undefined}
+    />
+  </PromptCollectionSectionRow>
+{/snippet}
+
+{#snippet promptEditorRow({
+  row,
+  rowId,
+  virtualWindowWidthPx,
+  devicePixelRatio,
+  rowHeightPx,
+  hydrationPriority,
+  shouldDehydrate,
+  overlayRowElement,
+  onHydrationChange
+}: PromptEditorRowProps)}
+  {@const promptMetadata = promptMetadataByPromptId[row.promptId] ?? todoPromptMetadata}
+  {@const contentWidthPx = getPromptCollectionSectionContentWidthPx(
+    virtualWindowWidthPx,
+    row.indentLevel
+  )}
+  {@const contentOffsetPx = getPromptCollectionSectionContentOffsetPx(row.indentLevel)}
+  {@const promptTarget = {
+    contentOwnerId: row.contentOwnerId,
+    categoryId: row.categoryId,
+    promptId: row.promptId
+  }}
+  <PromptCollectionSectionRow {rowHeightPx} indentLevel={row.indentLevel}>
+    <ContentEditorRow
+      {workspaceId}
+      {screenCollectionId}
+      promptCollectionId={screenCollectionId}
+      promptId={row.promptId}
+      promptDraftRecord={{
+        title: promptDraftById[row.promptId]!.title,
+        fallbackTitle: promptDraftById[row.promptId]!.fallbackTitle,
+        modifiedAt: promptDraftById[row.promptId]!.modifiedAt,
+        text: promptDraftById[row.promptId]!.text,
+        ...(promptDraftById[row.promptId]!.templateName
+          ? { templateName: promptDraftById[row.promptId]!.templateName }
+          : {}),
+        ...(promptDraftById[row.promptId]!.templateState
+          ? { templateState: promptDraftById[row.promptId]!.templateState }
+          : {}),
+        isEdited: promptDraftById[row.promptId]!.isEdited
+      }}
+      {rowId}
+      virtualWindowWidthPx={contentWidthPx}
+      rowContentLeftOffsetPx={contentOffsetPx}
+      {devicePixelRatio}
+      {rowHeightPx}
+      {hydrationPriority}
+      {shouldDehydrate}
+      {overlayRowElement}
+      {onHydrationChange}
+      copyTemplateTexts={getCopyTemplateTexts(promptDraftById[row.promptId]!.templates)}
+      {screenMode}
+      status={promptMetadata.status}
+      finalizedAt={promptMetadata.finalizedAt}
+      scrollToWithinWindowBand={scrollToWithinWindowBandForRows}
+      isFirstPrompt={!canMovePrompt(promptTarget, 'up')}
+      isLastPrompt={!canMovePrompt(promptTarget, 'down')}
+      onDelete={() => onDeletePrompt(promptTarget)}
+      onInteraction={() => onPromptInteraction(promptTarget)}
+      onArchive={() => onSetPromptStatus(promptTarget, isTemplateCollection ? PromptTemplateStatus.Archived : PromptStatus.Archived)}
+      onRestore={isTemplateCollection && promptMetadata.status === PromptTemplateStatus.Archived
+        ? () => onSetPromptStatus(promptTarget, PromptTemplateStatus.Active)
+        : undefined}
+      onTemplateSelect={isTemplateCollection
+        ? undefined
+        : () => openTemplateSelectionDialog(promptTarget, 'select')}
+      onTemplateSelectAndCopy={isTemplateCollection
+        ? undefined
+        : () => openTemplateSelectionDialog(promptTarget, 'select-and-copy')}
+      onCopySuccess={isTemplateCollection ? undefined : () => handlePromptCopySuccess(row.promptId)}
+      onBeforeCopy={isTemplateCollection ? undefined : () => confirmPromptCopy(row.promptId)}
+      onStatusChange={isTemplateCollection ? undefined : (status) => {
+        onSetPromptStatus(promptTarget, status)
+      }}
+      onMoveUp={() => (isFinalMode ? Promise.resolve(false) : onMovePromptUp(promptTarget))}
+      onMoveDown={() =>
+        isFinalMode ? Promise.resolve(false) : onMovePromptDown(promptTarget)}
+      onPromptTreeDrop={(dropPayload) => {
+        return onPromptTreeDrop(promptTarget, dropPayload)
+      }}
+    />
+  </PromptCollectionSectionRow>
+{/snippet}
+
+{#snippet bottomSpacerRow({ virtualWindowHeightPx })}
+  <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
+{/snippet}
+
+<PromptTemplateSelectionDialog
+  bind:open={isTemplateSelectionDialogOpen}
+  {workspaceId}
+  mode={templateSelectionMode}
+  selectedTemplates={templateSelectionTarget
+    ? promptDraftById[templateSelectionTarget.promptId]?.templates
+    : undefined}
+  onselect={templateSelectionMode === 'select-and-copy'
+    ? handleTemplateSelectAndCopy
+    : handleTemplateSelect}
+/>
+
+<!-- Informational confirmation is shared by direct copy and quick template selection. -->
+<ConfirmationDialog
+  open={pendingCopyConfirmation !== null}
+  variant="informational"
+  icon={Copy}
+  title="Copy Prompt"
+  description={`Copying this prompt will move it from ${pendingCopyConfirmation?.status} to In Progress.`}
+  confirmText="Copy and Move"
+  confirmTestId="prompt-confirm-copy-button"
+  closeOnOutsideClick={false}
+  oncancel={() => resolveCopyConfirmation(false)}
+  onconfirm={() => resolveCopyConfirmation(true)}
+/>
+
+<style>
+  .category-bottom-cap {
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 0 0 8px 8px;
+    border-top: 0;
+    box-sizing: border-box;
+    height: 8px;
+    width: 100%;
+  }
+</style>

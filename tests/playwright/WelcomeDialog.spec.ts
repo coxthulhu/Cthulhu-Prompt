@@ -1,5 +1,5 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
   readUserPersistence,
   readWorkspaceUiState,
@@ -50,7 +50,7 @@ describe('Welcome Dialog', () => {
     /** Existing workspace with a previously selected non-Home screen. */
     const workspacePath = '/ws/welcome-existing'
     /** Disk fixture supplies the same workspace ID used by SQLite screen persistence. */
-    const filesystem = createWorkspaceWithFolders(workspacePath, [])
+    const filesystem = createWorkspaceWithCollections(workspacePath, [])
     /** Workspace identity read from its on-disk metadata. */
     const { workspaceId } = JSON.parse(filesystem[getWorkspaceInfoPath(workspacePath)]!)
     await testSetup.setupFilesystem(filesystem)
@@ -62,7 +62,7 @@ describe('Welcome Dialog', () => {
       workspaceId,
       selectedScreen: 'settings',
       selectedScreenData: null,
-      promptFolderViewEntries: []
+      promptCollectionViewEntries: []
     })
     /** Startup must restore the workspace without immediately returning to Settings. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
@@ -117,7 +117,7 @@ describe('Welcome Dialog', () => {
   test('keeps Welcome available before and after closing an existing workspace', async ({ testSetup }) => {
     /** Existing workspace offered by the native file picker. */
     const workspacePath = '/ws/welcome-open'
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, []))
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
     /** First-launch user chooses an existing workspace from Welcome. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })

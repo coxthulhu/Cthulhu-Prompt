@@ -114,7 +114,7 @@
   color: var(--ui-hoverable-icon-glyph);
 }
 
-.sidebarPromptTreeFolderIcon,
+.sidebarPromptTreeCollectionIcon,
 .sidebarPromptTreeCategoryIcon {
   color: var(--ui-secondary-icon-glyph);
 }
@@ -306,13 +306,13 @@
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRootButton {
+.sidebarPromptTreeOverviewButton {
   display: flex;
   padding-left: 13px;
   font-weight: var(--font-weight-semibold);
 }
 
-.sidebarPromptTreeBaseFolderButton {
+.sidebarPromptTreeBaseCollectionButton {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
   gap: 8px;
@@ -320,7 +320,7 @@
   font-weight: var(--font-weight-normal);
 }
 
-.sidebarPromptTreeBaseFolderButton .sidebarPromptTreeFolderIcon {
+.sidebarPromptTreeBaseCollectionButton .sidebarPromptTreeCollectionIcon {
   justify-self: center;
 }
 

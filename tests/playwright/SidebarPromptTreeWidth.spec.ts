@@ -118,7 +118,7 @@ const getSidebarWidthByHandle = async (mainWindow: any, handleTestId: string): P
 }
 
 test.describe('Sidebar Prompt Tree Width', () => {
-  test('keeps the app sidebar width stable while switching prompt folders in a small window', async ({
+  test('keeps the app sidebar width stable while switching prompt collections in a small window', async ({
     electronApp,
     testSetup
   }) => {
@@ -138,11 +138,11 @@ test.describe('Sidebar Prompt Tree Width', () => {
       workspace: { scenario: 'sample' }
     })
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-dev-2"]')).toBeVisible()
     const developmentWidth = await getSidebarWidthByHandle(mainWindow, APP_SIDEBAR_HANDLE_TEST_ID)
 
-    await testHelpers.navigateToPromptFolders('Examples')
+    await testHelpers.navigateToPromptCollections('Examples')
     await expect(mainWindow.locator('[data-testid="prompt-tree-active-prompt-simple-1"]')).toBeVisible()
     const examplesWidth = await getSidebarWidthByHandle(mainWindow, APP_SIDEBAR_HANDLE_TEST_ID)
 

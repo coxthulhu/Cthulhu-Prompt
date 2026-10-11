@@ -6,16 +6,16 @@ import {
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import {
-  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_COLLECTION_HOST_SELECTOR,
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
-} from '../helpers/PromptFolderSelectors'
+} from '../helpers/PromptCollectionSelectors'
 import type { Page } from '@playwright/test'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const HOST_SELECTOR = PROMPT_FOLDER_HOST_SELECTOR
-const TWENTY_LINE_FOLDER_NAME = 'Placeholder Height'
+const HOST_SELECTOR = PROMPT_COLLECTION_HOST_SELECTOR
+const TWENTY_LINE_COLLECTION_NAME = 'Placeholder Height'
 const PENULTIMATE_TWENTY_LINE_EDITOR = promptEditorSelector('placeholder-99')
 const LAST_TWENTY_LINE_EDITOR = promptEditorSelector('placeholder-100')
 /** Prompt whose content exceeds the default Monaco maximum height. */
@@ -183,11 +183,11 @@ describe('Monaco editor clicks', () => {
   // Both wheel targets must preserve the menu and release scrolling after dismissal.
   for (const wheelTarget of ['editor', 'title'] as const) {
     test(`context menu blocks scrolling over the ${wheelTarget} until dismissed`, async ({ testSetup }) => {
-      /** Forty lines make both Monaco and the surrounding folder viewport scrollable. */
+      /** Forty lines make both Monaco and the surrounding collection viewport scrollable. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'height' }
       })
-      await testHelpers.navigateToPromptFolders('Forty Line Prompt')
+      await testHelpers.navigateToPromptCollections('Forty Line Prompt')
       await waitForMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
       /** Editor content opens Monaco's native context menu away from the wheel target. */
       const editor = mainWindow.locator(`${FORTY_LINE_EDITOR} .view-lines`).first()
@@ -199,8 +199,8 @@ describe('Monaco editor clicks', () => {
       await expect(menu).toBeVisible()
       /** Original offsets catch either internal editor scrolling or virtual row movement. */
       const editorScrollTop = await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)
-      /** Original folder offset must remain stable for both wheel target locations. */
-      const folderScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
+      /** Original collection offset must remain stable for both wheel target locations. */
+      const collectionScrollTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
       /** Menu geometry must stay fixed while background gestures are blocked. */
       const menuBox = (await menu.boundingBox())!
       await (wheelTarget === 'editor' ? editor : title).hover({ position: { x: 20, y: 10 } })
@@ -211,7 +211,7 @@ describe('Monaco editor clicks', () => {
       }))
       await expect(menu).toBeVisible()
       expect(await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBe(editorScrollTop)
-      expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBe(folderScrollTop)
+      expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBe(collectionScrollTop)
       /** Current menu position also detects unintended movement of its transformed ancestor. */
       const currentMenuBox = (await menu.boundingBox())!
       expect(Math.abs(currentMenuBox.x - menuBox.x)).toBeLessThanOrEqual(2)
@@ -231,7 +231,7 @@ describe('Monaco editor clicks', () => {
       }))
       await expect(menu).toBeVisible()
       expect(await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBe(editorScrollTop)
-      expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBe(folderScrollTop)
+      expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBe(collectionScrollTop)
       // Exercise both keyboard dismissal and an outside click releasing the same scroll lock.
       if (wheelTarget === 'editor') await mainWindow.keyboard.press('Escape')
       else await title.click()
@@ -247,21 +247,21 @@ describe('Monaco editor clicks', () => {
       await expect.poll(() => wheelTarget === 'editor'
         ? getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)
         : testHelpers.getElementScrollTop(HOST_SELECTOR)
-      ).toBeGreaterThan(wheelTarget === 'editor' ? editorScrollTop! : folderScrollTop)
+      ).toBeGreaterThan(wheelTarget === 'editor' ? editorScrollTop! : collectionScrollTop)
     })
   }
 
   test('routes wheel scrolling according to Monaco focus and scroll boundaries', async ({
     testSetup
   }) => {
-    /** Height fixture supplies a prompt that overflows Monaco and the folder viewport. */
+    /** Height fixture supplies a prompt that overflows Monaco and the collection viewport. */
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'height' }
     })
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders('Forty Line Prompt')
+    await testHelpers.navigateToPromptCollections('Forty Line Prompt')
     await waitForMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
 
     /** Monaco root receives each synthetic wheel input at a stable visible point. */
@@ -272,7 +272,7 @@ describe('Monaco editor clicks', () => {
     await expect.poll(() => isMonacoEditorFocused(mainWindow, FORTY_LINE_EDITOR)).toBe(false)
     await monacoRoot.hover({ position: { x: 40, y: 20 } })
 
-    /** Unfocused Monaco scroll offset must remain fixed while the folder screen moves. */
+    /** Unfocused Monaco scroll offset must remain fixed while the collection screen moves. */
     const unfocusedEditorScrollTop = await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)
     await mainWindow.mouse.wheel(0, 200)
     await expect
@@ -308,7 +308,7 @@ describe('Monaco editor clicks', () => {
       workspace: { scenario: 'sample' }
     })
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
 
     const editorSelector = promptEditorSelector('dev-1')
     const monacoSelector = await waitForMonacoEditor(mainWindow, editorSelector)
@@ -355,7 +355,7 @@ describe('Monaco editor clicks', () => {
 
     expect(workspaceSetupResult?.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptFolders(TWENTY_LINE_FOLDER_NAME)
+    await testHelpers.navigateToPromptCollections(TWENTY_LINE_COLLECTION_NAME)
     await mainWindow.waitForSelector(HOST_SELECTOR, { state: 'attached' })
 
     const scrollHeight = await testHelpers.getVirtualWindowScrollHeight(HOST_SELECTOR)

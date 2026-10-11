@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor, isMonacoEditorFocused } from '../helpers/MonacoHelpers'
-import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 
 /** Shared Electron fixtures and assertions for rendered highlight coverage. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -56,7 +56,7 @@ describe('Monaco inactive highlights', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     await focusMonacoEditor(mainWindow, FIRST_EDITOR)
     await mainWindow.keyboard.press('Control+A')
     await mainWindow.keyboard.insertText(MULTILINE_TEXT)
@@ -101,7 +101,7 @@ describe('Monaco inactive highlights', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     await focusMonacoEditor(mainWindow, FIRST_EDITOR)
     await mainWindow.keyboard.press('Control+A')
     await mainWindow.keyboard.insertText(MULTILINE_TEXT)
@@ -149,7 +149,7 @@ describe('Monaco inactive highlights', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     await focusMonacoEditor(mainWindow, FIRST_EDITOR)
     await mainWindow.keyboard.press('Control+Home')
     await mainWindow.keyboard.press('ArrowRight')

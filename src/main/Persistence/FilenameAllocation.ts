@@ -23,7 +23,7 @@ export const createFilenameAllocator = () => {
     return names
   }
   return {
-    /** Reserves known persisted paths, including files carried by a root-directory rename. */
+    /** Reserves known persisted paths, including files carried by a collection-directory rename. */
     reserve: (filePath: string): void => {
       namesIn(path.dirname(filePath)).add(path.basename(filePath).toLowerCase())
     },

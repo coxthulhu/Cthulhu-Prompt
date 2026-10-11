@@ -1,13 +1,13 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, createWorkspaceWithTemplateFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import {
   beginPromptTreeRowDrag,
   finishActiveDrag,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
-import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
+import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
 
 /** Electron integration suite exercises persisted archive transfers and selection behavior. */
@@ -24,29 +24,29 @@ const ARCHIVED_PATH = `${WORKSPACE_PATH}/Templates/Library/Archived/Wrapper.temp
 /** Builds categorized templates plus a task that already references the first template. */
 const createArchiveWorkspace = (): Record<string, string | null> => {
   /** Task fixture retains a selected template across its archive transition. */
-  const tasks = createWorkspaceWithFolders(WORKSPACE_PATH, [{
-    folderName: 'Tasks', displayName: 'Tasks', promptFolderId: 'archive-tasks',
+  const tasks = createWorkspaceWithCollections(WORKSPACE_PATH, [{
+    folderName: 'Tasks', displayName: 'Tasks', promptCollectionId: 'archive-tasks',
     prompts: [
       { id: 'archive-task', title: 'Task', promptText: 'Body', templates: [{ id: TEMPLATE_ID }] },
       { id: 'archive-quick-task', title: 'Quick Task', promptText: 'Quick body' }
     ]
   }])
   /** Template fixture includes a predecessor to verify restoration at the category top. */
-  const templates = createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [{
-    folderName: 'Library', displayName: 'Library', folderId: 'archive-library',
+  const templates = createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [{
+    folderName: 'Library', displayName: 'Library', collectionId: 'archive-library',
     description: 'Keep root description',
     categories: [{ categoryName: 'Code', displayName: 'Code', categoryId: 'archive-category', templates: [
       { id: 'archive-predecessor', title: 'Other', templateText: 'Other [[PROMPT_TEXT]]' },
       { id: TEMPLATE_ID, title: 'Wrapper', templateText: 'Wrapped [[PROMPT_TEXT]]' }
     ] }]
   }])
-  return { ...tasks, ...templates, [`${WORKSPACE_PATH}/Prompts/FolderOrder.json`]: tasks[`${WORKSPACE_PATH}/Prompts/FolderOrder.json`] }
+  return { ...tasks, ...templates, [`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]: tasks[`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`] }
 }
 
 describe('Template archive', () => {
   test('migrates legacy templates and preserves category order and root metadata on reopen', async ({ electronApp, testSetup }) => {
     /** Schema-two fixture moved back to its former flat template layout. */
-    const filesystem = createArchiveWorkspace()
+    const filesystem = createLegacyWorkspaceFilesystem(createArchiveWorkspace(), 2)
     for (const filePath of Object.keys(filesystem)) {
       if (!filePath.includes('/Templates/Library/Active/')) continue
       filesystem[filePath.replace('/Active/', '/')] = filesystem[filePath]
@@ -57,14 +57,14 @@ describe('Template archive', () => {
     /** First open runs the real workspace migration before hydration. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateFolders('Library')
-    await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toContainText('Active 2')
+    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 2')
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH.replace('/Active/', '/'))).toBe(false)
-    expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/Library/_FolderInfo/Description.md`)).toBe('Keep root description')
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(4)
+    expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/Library/_CollectionInfo/Description.md`)).toBe('Keep root description')
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(5)
     /** Persisted order compared after a fresh renderer reload exercises idempotent migration. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_FolderInfo/FolderOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CollectionInfo/CategoryOrder.json`
     /** Original categorized order remains byte-for-byte stable after reopening. */
     const order = await readTextFile(electronApp, orderPath)
     expect(JSON.parse(order).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual(['archive-predecessor', TEMPLATE_ID])
@@ -72,8 +72,8 @@ describe('Template archive', () => {
     // Finish restoring the active screen before navigation decides whether to toggle its sidebar.
     await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-    await testHelpers.navigateToPromptTemplateFolders('Library')
-    await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toContainText('Active 2')
+    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 2')
     expect(await readTextFile(electronApp, orderPath)).toBe(order)
   })
 
@@ -83,7 +83,7 @@ describe('Template archive', () => {
     /** Shared editor remains addressable as its status changes. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateFolders('Library')
+    await testHelpers.navigateToPromptTemplateCollections('Library')
     /** Populated template defaults to Archive without a confirmation dialog. */
     const editor = mainWindow.locator(promptEditorSelector(TEMPLATE_ID))
     await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Active')
@@ -91,9 +91,9 @@ describe('Template archive', () => {
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(false)
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
-    await expect(mainWindow.getByTestId('prompt-folder-active-filter')).toContainText('Active 1')
-    await expect(mainWindow.getByTestId('prompt-folder-archived-filter')).toContainText('Archived 1')
-    await expect(mainWindow.getByTestId('prompt-folder-completed-filter')).toHaveCount(0)
+    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 1')
+    await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toContainText('Archived 1')
+    await expect(mainWindow.getByTestId('prompt-collection-completed-filter')).toHaveCount(0)
     await expect(mainWindow.getByTestId('toggle-completed-prompts-button')).toHaveCount(0)
     await expect(editor.getByTestId('template-restore-button')).toBeVisible()
     await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Archived')
@@ -102,7 +102,7 @@ describe('Template archive', () => {
     await editor.getByTestId('template-restore-button').click()
     await expect.poll(() => checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     /** Restored order proves this is a first-position insertion rather than an append. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_FolderInfo/FolderOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CollectionInfo/CategoryOrder.json`
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, orderPath)).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual([TEMPLATE_ID, 'archive-predecessor'])
     await beginPromptTreeRowDrag(mainWindow, TEMPLATE_ID, 'template')
     await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-archived"]')
@@ -113,10 +113,10 @@ describe('Template archive', () => {
     await finishActiveDrag(mainWindow)
     await expect.poll(() => checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ARCHIVED_PATH)).toBe(false)
-    await mainWindow.getByTestId('prompt-folder-active-filter').click()
+    await mainWindow.getByTestId('prompt-collection-active-filter').click()
     await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Active')
     await editor.getByTestId('prompt-archive-button').click()
-    await mainWindow.getByTestId('prompt-folder-archived-filter').click()
+    await mainWindow.getByTestId('prompt-collection-archived-filter').click()
     await editor.getByTestId('prompt-delete-button').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Delete Template' })).toBeVisible()
     await mainWindow.getByTestId('prompt-confirm-delete-button').click()
@@ -129,11 +129,11 @@ describe('Template archive', () => {
     /** Task and template views share the same loaded authoritative template identity. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateFolders('Library')
+    await testHelpers.navigateToPromptTemplateCollections('Library')
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
     await mainWindow.reload()
-    await testHelpers.navigateToPromptFolders('Tasks')
+    await testHelpers.navigateToPromptCollections('Tasks')
     await stubClipboard(mainWindow)
     /** Existing task reference stays selected despite being unavailable in the picker. */
     const editor = mainWindow.locator(promptEditorSelector('archive-task'))
@@ -173,7 +173,7 @@ describe('Template archive', () => {
     /** Category deletion is performed through the same UI used for active templates. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateFolders('Library')
+    await testHelpers.navigateToPromptTemplateCollections('Library')
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
     await mainWindow.getByTestId('sidebar-manage-categories-button').click()
@@ -183,13 +183,13 @@ describe('Template archive', () => {
     await dialog.getByTestId('manage-categories-delete-button').click()
     await dialog.getByTestId('manage-categories-save-button').click()
     await expect(dialog).not.toBeVisible()
-    await mainWindow.getByTestId('prompt-folder-archived-filter').click()
+    await mainWindow.getByTestId('prompt-collection-archived-filter').click()
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('template-restore-button').click()
     /** Existing uncategorized template must follow the restored template. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_FolderInfo/FolderOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CollectionInfo/CategoryOrder.json`
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, orderPath)).categories[0].entries.map((entry: { id: string }) => entry.id)).toEqual([TEMPLATE_ID, 'archive-predecessor'])
     expect(await readTextFile(electronApp, ACTIVE_PATH)).not.toContain('category:')
-    await mainWindow.getByTestId('prompt-folder-active-filter').click()
+    await mainWindow.getByTestId('prompt-collection-active-filter').click()
     await mainWindow.getByTestId('prompt-divider-add-initial').click()
     await expect.poll(() => getPromptEditorIds(mainWindow)).toHaveLength(3)
     /** Newly created blank template uses immediate Delete with Archive in its dropdown. */

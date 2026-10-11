@@ -72,7 +72,7 @@ describe('Accordion', () => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'sample' }
       })
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.navigateToPromptCollections('Development')
 
       /** Changes the real window height and waits for its renderer viewport to follow. */
       const resizeWindow = async (heightPx: number): Promise<void> => {
@@ -366,7 +366,7 @@ describe('Accordion', () => {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
-      promptFolderViewEntries: [],
+      promptCollectionViewEntries: [],
       accordionViewEntries: [
         { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, sections: seededSections }
       ]
@@ -526,7 +526,7 @@ describe('Accordion', () => {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
-      promptFolderViewEntries: [],
+      promptCollectionViewEntries: [],
       accordionViewEntries: [
         { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, sections: seededSections }
       ]
@@ -671,7 +671,7 @@ describe('Accordion', () => {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
-      promptFolderViewEntries: [],
+      promptCollectionViewEntries: [],
       accordionViewEntries: [
         { persistenceId: TEST_ACCORDION_PERSISTENCE_ID, sections: primarySections },
         {
@@ -686,7 +686,7 @@ describe('Accordion', () => {
       workspaceId: otherWorkspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
-      promptFolderViewEntries: [],
+      promptCollectionViewEntries: [],
       accordionViewEntries: [
         {
           persistenceId: TEST_ACCORDION_PERSISTENCE_ID,

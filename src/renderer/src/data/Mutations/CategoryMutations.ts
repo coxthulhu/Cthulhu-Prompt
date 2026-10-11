@@ -9,27 +9,27 @@ import {
   type SaveCategoriesDomainValue
 } from '@shared/domain/category/CategoryDomainMutations'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { getPromptFolderCategoryIds } from '@shared/domain/prompt-folder/PromptFolder'
+import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection/PromptCollection'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
+import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
 } from '@renderer/data/IpcFramework/RendererDomainMutation'
 
-/** Atomically persists every retained category draft for one root folder. */
+/** Atomically persists every retained category draft for one collection. */
 export const saveCategories = async (
   workspaceId: string,
-  promptFolderId: string,
+  promptCollectionId: string,
   categories: SaveCategoriesDomainValue[]
 ): Promise<void> => {
   /** Shared complete-set command projected optimistically and persisted atomically. */
   const command = {
     workspaceId,
-    promptFolderId,
+    promptCollectionId,
     categories,
     modifiedAt: getCurrentIsoSecondTimestamp()
   }
@@ -60,21 +60,21 @@ export const setCategoryDescriptionWithAutosave = (
   })
 }
 
-/** Creates a root-owned category and returns its stable client-generated ID. */
+/** Creates a collection-owned category and returns its stable client-generated ID. */
 export const createCategory = async (
-  promptFolderId: string,
+  promptCollectionId: string,
   displayName: string,
   shortDescription: string | null = null,
   description: string | null = null
 ): Promise<string> => {
-  const promptFolder = promptFolderCollection.get(promptFolderId)
-  if (!promptFolder) throw new Error('Root prompt folder not loaded')
+  const promptCollection = promptCollectionsCollection.get(promptCollectionId)
+  if (!promptCollection) throw new Error('prompt collection not loaded')
   /** Stable client-generated identity used by renderer and main insertion projections. */
   const categoryId = compactGuid(crypto.randomUUID())
   /** Shared command projected optimistically and persisted through domain transitions. */
   const command = {
     categoryId,
-    promptFolderId,
+    promptCollectionId,
     displayName,
     shortDescription,
     description
@@ -107,22 +107,22 @@ export const updateCategoryDetails = async (
   })
 }
 
-/** Reorders one category group within its owning root folder. */
+/** Reorders one category group within its owning collection. */
 export const moveCategory = async (
-  promptFolderId: string,
+  promptCollectionId: string,
   categoryId: string,
   previousCategoryId: string | null,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): Promise<void> => {
-  /** Root folder whose FolderOrder category sequence changes. */
-  const promptFolder = promptFolderCollection.get(promptFolderId)
-  if (!promptFolder) throw new Error('Root prompt folder not loaded')
+  /** Collection whose category order changes. */
+  const promptCollection = promptCollectionsCollection.get(promptCollectionId)
+  if (!promptCollection) throw new Error('prompt collection not loaded')
 
-  /** Ordered status-folder identity, omitted only for status-free template roots. */
-  const resolvedStatusFolderId = promptFolder.kind === 'prompt' ? statusFolderId : null
+  /** Ordered status-folder identity, omitted only for status-free template collections. */
+  const resolvedStatusFolderId = promptCollection.kind === 'prompt' ? statusFolderId : null
   /** Shared category movement command scoped to one independent category order. */
   const command = {
-    promptFolderId,
+    promptCollectionId,
     statusFolderId: resolvedStatusFolderId,
     categoryId,
     previousCategoryId
@@ -136,20 +136,20 @@ export const moveCategory = async (
 
 /** Deletes a category and clears every matching prompt and template reference. */
 export const deleteCategory = async (categoryId: string): Promise<void> => {
-  /** Root folder that currently owns the category. */
-  const promptFolder = promptFolderCollection.toArray.find((folder) =>
-    getPromptFolderCategoryIds(folder).includes(categoryId)
+  /** collection that currently owns the category. */
+  const promptCollection = promptCollectionsCollection.toArray.find((collection) =>
+    getPromptCollectionCategoryIds(collection).includes(categoryId)
   )
-  if (!promptFolder) throw new Error('Category root prompt folder not loaded')
-  /** Workspace that directly owns the category root folder. */
+  if (!promptCollection) throw new Error('Category prompt collection not loaded')
+  /** Workspace that directly owns the category collection. */
   const workspace = workspaceCollection.toArray.find((candidate) =>
-    getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === promptFolder.id)
+    getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === promptCollection.id)
   )
   if (!workspace) throw new Error('Category workspace not loaded')
   /** Renderer-authored command shared with the main-process planner. */
   const command = {
     categoryId,
-    promptFolderId: promptFolder.id,
+    promptCollectionId: promptCollection.id,
     workspaceId: workspace.id,
     modifiedAt: getCurrentIsoSecondTimestamp()
   }

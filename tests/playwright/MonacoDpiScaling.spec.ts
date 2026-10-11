@@ -15,7 +15,7 @@ describe('Monaco DPI scaling', () => {
       workspace: { scenario: 'sample' }
     })
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     const selector = '[data-testid="prompt-editor-dev-1"]'
     await waitForMonacoEditor(mainWindow, selector)
     await focusMonacoEditor(mainWindow, selector)

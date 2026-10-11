@@ -7,11 +7,11 @@ test.describe('Sidebar Tests', () => {
   // Each finalized group must reopen expanded after its saved state was collapsed.
   for (const groupId of ['completed', 'archived']) {
     test(`shows ${groupId} expanded at its previous resized height`, async ({ testSetup }) => {
-      /** Workspace with a selectable prompt folder and the real sidebar accordion. */
+      /** Workspace with a selectable prompt collection and the real sidebar accordion. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'sample' }
       })
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.navigateToPromptCollections('Development')
 
       /** Toolbar control that removes and remounts this section. */
       const toggle = mainWindow.getByTestId(`toggle-${groupId}-prompts-button`)
@@ -108,7 +108,7 @@ test.describe('Sidebar Tests', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    expect(await testHelpers.getActiveScreen()).toBe('prompt-folder')
+    expect(await testHelpers.getActiveScreen()).toBe('prompt-collection')
 
     await testHelpers.navigateToSettingsScreen()
     expect(await testHelpers.getActiveScreen()).toBe('settings')
@@ -124,13 +124,13 @@ test.describe('Sidebar Tests', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     const selectedPrompt = mainWindow.getByTestId('prompt-tree-active-prompt-dev-1')
     await selectedPrompt.click()
     await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
 
     const activityBar = mainWindow.getByTestId('app-activity-bar')
-    const activity = mainWindow.getByTestId('nav-button-prompt-task-folders')
+    const activity = mainWindow.getByTestId('nav-button-prompt-task-collections')
     const sidebar = mainWindow.getByTestId('app-sidebar')
     const sidebarPane = mainWindow.locator('.resizableSidebarPane')
     const mainSurface = mainWindow.locator('.mainScreenSurface')
@@ -139,8 +139,8 @@ test.describe('Sidebar Tests', () => {
     const expandedMainSurfaceBox = (await mainSurface.boundingBox())!
     const activityBarBox = (await activityBar.boundingBox())!
     const activeIconColor = await activity.evaluate((element) => getComputedStyle(element).color)
-    const folderTitle = mainWindow.getByTestId('prompt-folder-root-title')
-    const selectedFolderTitle = await folderTitle.textContent()
+    const collectionTitle = mainWindow.getByTestId('prompt-collection-title')
+    const selectedCollectionTitle = await collectionTitle.textContent()
     const readIndicator = () => activity.evaluate((element) => {
       const styles = getComputedStyle(element, '::before')
       return { height: styles.height, width: styles.width }
@@ -172,7 +172,7 @@ test.describe('Sidebar Tests', () => {
     await expect(activity).toHaveAttribute('aria-expanded', 'false')
     await expect(activity).toHaveAttribute('title', 'Task Prompts — Show sidebar')
     await expect(activity).toHaveCSS('color', activeIconColor)
-    await expect(folderTitle).toHaveText(selectedFolderTitle!)
+    await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
     expect(await readIndicator()).toEqual({ height: '28px', width: '2px' })
 
     // Keyboard activation restores the sidebar without navigating away from the prompt.
@@ -183,14 +183,14 @@ test.describe('Sidebar Tests', () => {
     expect(Math.abs(restoredMainSurfaceBox.x - expandedMainSurfaceBox.x)).toBeLessThanOrEqual(1)
     await expect(activity).toHaveAttribute('aria-expanded', 'true')
     await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
-    await expect(folderTitle).toHaveText(selectedFolderTitle!)
+    await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
     await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeVisible()
     expect(await readIndicator()).toEqual({ height: '36px', width: '2px' })
 
     await activity.press('Space')
     await expect(sidebar).toBeHidden()
     // Every primary screen opens its sidebar on navigation and toggles on a repeat click.
-    for (const screen of ['settings', 'home', 'prompt-template-folders', 'prompt-task-folders']) {
+    for (const screen of ['settings', 'home', 'prompt-template-collections', 'prompt-task-collections']) {
       const nextActivity = mainWindow.getByTestId(`nav-button-${screen}`)
       await nextActivity.click()
       await expect(nextActivity).toHaveAttribute('aria-current', 'page')

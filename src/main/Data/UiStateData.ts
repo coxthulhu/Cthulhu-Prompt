@@ -2,7 +2,7 @@ import {
   accordionUiStateSqlitePersistence,
   markdownContentUiStateSqlitePersistence,
   userPersistenceSqlitePersistence,
-  workspacePromptFolderUiStateSqlitePersistence,
+  workspacePromptCollectionUiStateSqlitePersistence,
   workspaceUiStateSqlitePersistence
 } from '../Persistence/sqlite/UiStateSqlitePersistence'
 import { createRevisionData } from './RevisionDataFactory'
@@ -25,9 +25,9 @@ export const workspaceUiStateData = createRevisionData({
   targetPolicy: 'deleteIfPresent'
 })
 
-/** Authoritative workspace prompt-folder UI state backed by SQLite. */
-export const workspacePromptFolderUiStateData = createRevisionData({
-  persistence: workspacePromptFolderUiStateSqlitePersistence,
+/** Authoritative workspace prompt-collection UI state backed by SQLite. */
+export const workspacePromptCollectionUiStateData = createRevisionData({
+  persistence: workspacePromptCollectionUiStateSqlitePersistence,
   emitCommittedRevisionChanged,
   targetPolicy: 'deleteIfPresent'
 })

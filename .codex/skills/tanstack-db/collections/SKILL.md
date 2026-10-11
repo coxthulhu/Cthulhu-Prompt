@@ -12,8 +12,8 @@ Use one of the repository's two established collection types. Do not substitute 
 
 | Role | Options creator | Examples |
 | --- | --- | --- |
-| Persisted authoritative entity | `revisionCollectionOptions<T>()` | workspace, prompt folder, prompt, settings, persistence |
-| Renderer-session client state | `localOnlyCollectionOptions<T>()` | prompt edit markers, folder load markers, settings inputs |
+| Persisted authoritative entity | `revisionCollectionOptions<T>()` | workspace, prompt collection, prompt, settings, persistence |
+| Renderer-session client state | `localOnlyCollectionOptions<T>()` | prompt edit markers, collection load markers, settings inputs |
 
 Create singleton collections in `src/renderer/src/data/Collections`.
 
@@ -23,13 +23,13 @@ Define persisted entity collections with the shared revision adapter:
 
 ```ts
 import { createCollection } from '@tanstack/svelte-db'
-import type { PromptFolder } from '@shared/PromptFolder'
+import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import { revisionCollectionOptions } from './RevisionCollection'
 
-export const promptFolderCollection = createCollection(
-  revisionCollectionOptions<PromptFolder>({
-    id: 'prompt-folders',
-    getKey: (promptFolder) => promptFolder.id
+export const promptCollectionsCollection = createCollection(
+  revisionCollectionOptions<PromptCollection>({
+    id: 'prompt-collections',
+    getKey: (promptCollection) => promptCollection.id
   })
 )
 ```
@@ -47,9 +47,9 @@ The adapter owns these responsibilities:
 Use the utilities for IPC results:
 
 ```ts
-promptCollection.utils.upsertManyAuthoritative(promptSnapshots)
-promptCollection.utils.deleteManyAuthoritative(removedPromptIds)
-const hasAuthoritativePrompt = promptCollection.utils.hasAuthoritative(promptId)
+promptsCollection.utils.upsertManyAuthoritative(promptSnapshots)
+promptsCollection.utils.deleteManyAuthoritative(removedPromptIds)
+const hasAuthoritativePrompt = promptsCollection.utils.hasAuthoritative(promptId)
 ```
 
 Do not use ordinary `insert`, `update`, or `delete` to apply server truth. Those methods are for optimistic transaction changes.

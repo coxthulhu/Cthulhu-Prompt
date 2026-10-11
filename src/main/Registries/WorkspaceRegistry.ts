@@ -1,5 +1,5 @@
 const workspacePathById = new Map<string, string>()
-const promptFolderLocationById = new Map<
+const promptCollectionLocationById = new Map<
   string,
   {
     workspaceId: string
@@ -7,21 +7,21 @@ const promptFolderLocationById = new Map<
     folderName: string
   }
 >()
-const promptFolderIdsByWorkspaceId = new Map<string, Set<string>>()
+const promptCollectionIdsByWorkspaceId = new Map<string, Set<string>>()
 const promptLocationById = new Map<
   string,
   {
     workspaceId: string
     workspacePath: string
     folderName: string
-    promptFolderId: string
+    promptCollectionId: string
   }
 >()
 const promptIdsByWorkspaceId = new Map<string, Set<string>>()
-const promptIdsByPromptFolderId = new Map<string, Set<string>>()
+const promptIdsByPromptCollectionId = new Map<string, Set<string>>()
 
-const clearPromptMappingsForPromptFolder = (promptFolderId: string): void => {
-  const promptIds = promptIdsByPromptFolderId.get(promptFolderId)
+const clearPromptMappingsForPromptCollection = (promptCollectionId: string): void => {
+  const promptIds = promptIdsByPromptCollectionId.get(promptCollectionId)
 
   if (!promptIds) {
     return
@@ -42,89 +42,89 @@ const clearPromptMappingsForPromptFolder = (promptFolderId: string): void => {
     promptLocationById.delete(promptId)
   }
 
-  promptIdsByPromptFolderId.delete(promptFolderId)
+  promptIdsByPromptCollectionId.delete(promptCollectionId)
 }
 
 export const registerWorkspace = (workspaceId: string, workspacePath: string): void => {
   workspacePathById.set(workspaceId, workspacePath)
 }
 
-export const registerPromptFolder = (
+export const registerPromptCollection = (
   workspaceId: string,
   workspacePath: string,
-  promptFolder: { id: string; folderName: string }
+  promptCollection: { id: string; folderName: string }
 ): void => {
-  const existingLocation = promptFolderLocationById.get(promptFolder.id)
+  const existingLocation = promptCollectionLocationById.get(promptCollection.id)
 
   if (existingLocation && existingLocation.workspaceId !== workspaceId) {
-    const previousWorkspacePromptFolderIds = promptFolderIdsByWorkspaceId.get(
+    const previousWorkspacePromptCollectionIds = promptCollectionIdsByWorkspaceId.get(
       existingLocation.workspaceId
     )
-    previousWorkspacePromptFolderIds?.delete(promptFolder.id)
+    previousWorkspacePromptCollectionIds?.delete(promptCollection.id)
 
-    if (previousWorkspacePromptFolderIds && previousWorkspacePromptFolderIds.size === 0) {
-      promptFolderIdsByWorkspaceId.delete(existingLocation.workspaceId)
+    if (previousWorkspacePromptCollectionIds && previousWorkspacePromptCollectionIds.size === 0) {
+      promptCollectionIdsByWorkspaceId.delete(existingLocation.workspaceId)
     }
 
-    clearPromptMappingsForPromptFolder(promptFolder.id)
+    clearPromptMappingsForPromptCollection(promptCollection.id)
   }
 
-  promptFolderLocationById.set(promptFolder.id, {
+  promptCollectionLocationById.set(promptCollection.id, {
     workspaceId,
     workspacePath,
-    folderName: promptFolder.folderName
+    folderName: promptCollection.folderName
   })
 
-  let workspacePromptFolderIds = promptFolderIdsByWorkspaceId.get(workspaceId)
+  let workspacePromptCollectionIds = promptCollectionIdsByWorkspaceId.get(workspaceId)
 
-  if (!workspacePromptFolderIds) {
-    workspacePromptFolderIds = new Set<string>()
-    promptFolderIdsByWorkspaceId.set(workspaceId, workspacePromptFolderIds)
+  if (!workspacePromptCollectionIds) {
+    workspacePromptCollectionIds = new Set<string>()
+    promptCollectionIdsByWorkspaceId.set(workspaceId, workspacePromptCollectionIds)
   }
 
-  workspacePromptFolderIds.add(promptFolder.id)
+  workspacePromptCollectionIds.add(promptCollection.id)
 }
 
-export const registerPromptFolders = (
+export const registerPromptCollections = (
   workspaceId: string,
   workspacePath: string,
-  promptFolders: Array<{ id: string; folderName: string }>
+  promptCollections: Array<{ id: string; folderName: string }>
 ): void => {
-  const existingPromptFolderIds = promptFolderIdsByWorkspaceId.get(workspaceId)
+  const existingPromptCollectionIds = promptCollectionIdsByWorkspaceId.get(workspaceId)
 
-  if (existingPromptFolderIds) {
-    for (const promptFolderId of existingPromptFolderIds) {
-      promptFolderLocationById.delete(promptFolderId)
-      clearPromptMappingsForPromptFolder(promptFolderId)
+  if (existingPromptCollectionIds) {
+    for (const promptCollectionId of existingPromptCollectionIds) {
+      promptCollectionLocationById.delete(promptCollectionId)
+      clearPromptMappingsForPromptCollection(promptCollectionId)
     }
   }
 
-  const nextPromptFolderIds = new Set<string>()
+  const nextPromptCollectionIds = new Set<string>()
 
-  for (const promptFolder of promptFolders) {
-    promptFolderLocationById.set(promptFolder.id, {
+  for (const promptCollection of promptCollections) {
+    promptCollectionLocationById.set(promptCollection.id, {
       workspaceId,
       workspacePath,
-      folderName: promptFolder.folderName
+      folderName: promptCollection.folderName
     })
-    nextPromptFolderIds.add(promptFolder.id)
+    nextPromptCollectionIds.add(promptCollection.id)
   }
 
-  promptFolderIdsByWorkspaceId.set(workspaceId, nextPromptFolderIds)
+  promptCollectionIdsByWorkspaceId.set(workspaceId, nextPromptCollectionIds)
 }
 
-export const getPromptFolderIds = (workspaceId: string): string[] => {
-  return Array.from(promptFolderIdsByWorkspaceId.get(workspaceId) ?? [])
+export const getPromptCollectionIds = (workspaceId: string): string[] => {
+  return Array.from(promptCollectionIdsByWorkspaceId.get(workspaceId) ?? [])
 }
 
 export const registerPrompts = (
   workspaceId: string,
   workspacePath: string,
-  promptFolderId: string,
+  promptCollectionId: string,
   folderName: string,
   promptIds: string[]
 ): void => {
-  clearPromptMappingsForPromptFolder(promptFolderId)
+  clearPromptMappingsForPromptCollection(promptCollectionId)
 
   const nextPromptIds = new Set<string>()
   let workspacePromptIds = promptIdsByWorkspaceId.get(workspaceId)
@@ -139,23 +139,23 @@ export const registerPrompts = (
       workspaceId,
       workspacePath,
       folderName,
-      promptFolderId
+      promptCollectionId
     })
     workspacePromptIds.add(promptId)
     nextPromptIds.add(promptId)
   }
 
-  promptIdsByPromptFolderId.set(promptFolderId, nextPromptIds)
+  promptIdsByPromptCollectionId.set(promptCollectionId, nextPromptIds)
 }
 
 export const getWorkspacePath = (workspaceId: string): string | null => {
   return workspacePathById.get(workspaceId) ?? null
 }
 
-export const getPromptFolderLocation = (
-  promptFolderId: string
+export const getPromptCollectionLocation = (
+  promptCollectionId: string
 ): { workspaceId: string; workspacePath: string; folderName: string } | null => {
-  return promptFolderLocationById.get(promptFolderId) ?? null
+  return promptCollectionLocationById.get(promptCollectionId) ?? null
 }
 
 export const getPromptLocation = (
@@ -164,7 +164,7 @@ export const getPromptLocation = (
   workspaceId: string
   workspacePath: string
   folderName: string
-  promptFolderId: string
+  promptCollectionId: string
 } | null => {
   return promptLocationById.get(promptId) ?? null
 }

@@ -14,8 +14,8 @@ import {
   promptTemplateClientStateCollection,
   type PromptTemplateClientStateRecord
 } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { mutatePacedPromptTemplateAutosaveUpdate } from '@renderer/data/Mutations/PromptTemplateMutations'
 import {
   clearPromptEditorMeasuredHeights,
@@ -25,7 +25,7 @@ import { createMarkdownContentClientState } from './MarkdownContentClientState'
 
 /** Lifecycle helpers for prompt-template client state and editor measurements. */
 const clientState = createMarkdownContentClientState<PromptTemplateClientStateRecord>({
-  authoritativeCollectionId: promptTemplateCollection.id,
+  authoritativeCollectionId: promptTemplatesCollection.id,
   getClientState: (templateId) => promptTemplateClientStateCollection.get(templateId),
   getClientStates: () => promptTemplateClientStateCollection.toArray,
   getClientStateIds: () =>
@@ -55,11 +55,11 @@ export const clearPromptTemplateClientStateCollection = clientState.clearClientS
 const getSiblingTemplateIds = (templateId: string): string[] => {
   /** Current template status selects Active or Archived collision scope. */
   const statusFolderId = getPromptStatusFolderDefinition(
-    promptTemplateCollection.get(templateId)?.status ?? PromptTemplateStatus.Active
+    promptTemplatesCollection.get(templateId)?.status ?? PromptTemplateStatus.Active
   ).id
-  for (const folder of promptFolderCollection.values()) {
-    if (folder.kind !== 'template') continue
-    const templateIds = getPromptStatusFolderContentIds(folder, statusFolderId)
+  for (const collection of promptCollectionsCollection.values()) {
+    if (collection.kind !== 'template') continue
+    const templateIds = getPromptStatusFolderContentIds(collection, statusFolderId)
     if (templateIds.includes(templateId)) return templateIds
   }
   return [templateId]
@@ -80,10 +80,10 @@ const mutatePromptTemplate = (
 /** Updates a prompt template title and schedules its autosave. */
 export const setPromptTemplateTitle = (templateId: string, title: string): void => {
   /** Canonical template receiving the title edit. */
-  const template = promptTemplateCollection.get(templateId)!
+  const template = promptTemplatesCollection.get(templateId)!
   const nextTitleFields = resolvePromptTitleUpdateForPromptIds({
     promptIds: getSiblingTemplateIds(templateId),
-    lookupPrompt: (contentId) => promptTemplateCollection.get(contentId),
+    lookupPrompt: (contentId) => promptTemplatesCollection.get(contentId),
     promptId: templateId,
     currentTitle: template.title,
     currentFallbackTitle: template.fallbackTitle,
@@ -110,7 +110,7 @@ export const setPromptTemplateText = (
   measurement: TextMeasurement
 ): void => {
   /** Canonical full template receiving the text edit. */
-  const template = promptTemplateCollection.get(templateId) as PromptTemplateFull
+  const template = promptTemplatesCollection.get(templateId) as PromptTemplateFull
   const textChanged = template.templateText !== templateText
   recordPromptEditorMeasuredHeight(templateId, measurement, textChanged)
   if (!textChanged) return

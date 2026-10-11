@@ -1,7 +1,7 @@
 ---
 name: tanstack-db-live-queries
 description: |
-  Cthulhu Prompt Svelte 5 live-query patterns. Use when subscribing renderer components or .svelte.ts controllers to TanStack collections, building reactive lookup maps, deriving hierarchical prompt-folder views, choosing between live queries and imperative collection reads, or handling reactive query inputs.
+  Cthulhu Prompt Svelte 5 live-query patterns. Use when subscribing renderer components or .svelte.ts controllers to TanStack collections, building reactive lookup maps, deriving hierarchical prompt-collection views, choosing between live queries and imperative collection reads, or handling reactive query inputs.
 ---
 
 # Live Queries and Svelte-Derived Views
@@ -14,10 +14,10 @@ Follow the nearest existing style:
 
 ```ts
 import { useLiveQuery } from '@tanstack/svelte-db'
-import type { Prompt } from '@shared/Prompt'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import type { Prompt } from '@shared/domain/prompt/Prompt'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 
-const promptQuery = useLiveQuery(promptCollection) as { data: Prompt[] }
+const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
 ```
 
 The query result is reactive through Svelte 5 getters. Access `query.data` directly; never use a `$` store prefix.
@@ -50,8 +50,8 @@ const promptById = $derived.by(() => {
 
 Keep these operations in Svelte-derived code when they depend on application structure rather than relational filtering:
 
-- Preserve workspace and prompt-folder entry order.
-- Traverse nested prompt-folder entries recursively.
+- Preserve workspace and prompt-collection entry order.
+- Traverse categories and their ordered prompts within each prompt collection.
 - Merge authoritative entities with local client-state records.
 - Build status, title, completion, and owner lookup objects.
 - Combine TanStack data with component props, navigation context, or local preview state.
@@ -70,10 +70,10 @@ import { eq } from '@tanstack/svelte-db'
 const selectedQuery = useLiveQuery(
   (query) =>
     query
-      .from({ promptFolder: promptFolderCollection })
-      .where(({ promptFolder }) => eq(promptFolder.id, promptFolderId))
+      .from({ promptCollection: promptCollectionsCollection })
+      .where(({ promptCollection }) => eq(promptCollection.id, promptCollectionId))
       .findOne(),
-  [() => promptFolderId]
+  [() => promptCollectionId]
 )
 ```
 
@@ -93,7 +93,7 @@ An imperative collection read is not reactive. Do not use it as the sole source 
 
 ## Loading and Errors
 
-Revision collections install their sync bridge before feature data loads. Track workspace and prompt-folder loading/error state in the owning Svelte controller or component, as the current renderer does. Do not assume `query.isLoading` represents an IPC request made outside the collection sync callback.
+Revision collections install their sync bridge before feature data loads. Track workspace and prompt-collection loading/error state in the owning Svelte controller or component, as the current renderer does. Do not assume `query.isLoading` represents an IPC request made outside the collection sync callback.
 
 ## Performance Guidance
 

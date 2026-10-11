@@ -1,8 +1,7 @@
 import * as path from 'path'
 import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from '../MarkdownFrontmatter'
 import type { Category } from '@shared/domain/category/Category'
-import { folderEntryRef, type FolderEntryRef } from '@shared/domain/OrderContainer'
-import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
 import type { WorkspaceInfoFile } from './WorkspaceDiskTypes'
 import { getFs } from '../../fs-provider'
 import { isCategory, parseCategoryJson } from '../CategoryPersistence'
@@ -11,21 +10,32 @@ import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle
 import { readJsonFile, resolveTempPath, writeJsonFile } from '../FilePersistenceHelpers'
 import {
   CATEGORY_FILENAME_SUFFIX,
-  PROMPT_FOLDER_INFO_DIRECTORY_NAME,
-  PROMPT_FOLDER_INFO_FILENAME,
   PROMPTS_DIRECTORY_NAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   TEMPLATES_DIRECTORY_NAME,
-  resolveLegacyWorkspaceFolderOrderPath,
   resolvePromptRootDirectoryName,
-  resolveWorkspaceFolderOrderPath,
   resolveWorkspacePathFromInfoPath
 } from '../PromptPersistencePaths'
 import { parsePromptMarkdown, parsePromptTemplateMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 4
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 5
+
+/** Historical metadata names used only by pre-collection migrations. */
+const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
+/** Historical root identity filename. */
+const PROMPT_FOLDER_INFO_FILENAME = 'FolderInfo.json'
+/** Historical root-order entry, deliberately independent of the current domain type. */
+type FolderEntryRef = { kind: 'folder'; id: string }
+/** Constructs an entry in the historical schema-two order. */
+const folderEntryRef = (id: string): FolderEntryRef => ({ kind: 'folder', id })
+/** Resolves schema one's combined root order. */
+const resolveLegacyWorkspaceFolderOrderPath = (workspacePath: string): string =>
+  path.join(workspacePath, 'WorkspaceFolderOrder.json')
+/** Resolves the historical per-kind root order. */
+const resolveWorkspaceFolderOrderPath = (workspacePath: string, kind: PromptCollectionKind): string =>
+  path.join(workspacePath, resolvePromptRootDirectoryName(kind), 'FolderOrder.json')
 
 /** Workspace metadata accepted only while determining which migrations to run. */
 type MigratableWorkspaceInfoFile = Omit<WorkspaceInfoFile, 'schemaVersion'> & {
@@ -235,7 +245,7 @@ const readSchemaVersionOneFolderOrder = (workspacePath: string): FolderEntryRef[
 /** Discovers stable root-folder IDs for one kind in alphabetical disk order. */
 const collectSchemaVersionOneFolderIds = (
   workspacePath: string,
-  kind: PromptFolderKind
+  kind: PromptCollectionKind
 ): string[] => {
   /** Root type directory inspected by this migration. */
   const rootPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
@@ -409,12 +419,91 @@ const migrateSchemaVersionThreeToFour: WorkspaceMigration = (workspacePath, work
   }
 }
 
+/** Renames collection metadata while preserving content, identities, and category ordering. */
+const migrateSchemaVersionFourToFive: WorkspaceMigration = (workspacePath, workspaceInfoPath) => {
+  /** Filesystem containing the workspace being upgraded. */
+  const fs = getFs()
+  /** Validated file changes prepared before any metadata is modified. */
+  const files: Array<{ source: string; target: string; data?: unknown }> = []
+  /** Metadata directories renamed after their files have been converted. */
+  const directories = new Set<string>()
+  for (const kind of ['prompt', 'template'] as const) {
+    /** Workspace-owned root for this content kind. */
+    const rootPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
+    /** Historical status directories are fixed to the schema being migrated. */
+    const statusDirectoryNames = kind === 'template'
+      ? ['Active', 'Archived']
+      : ['Active', 'Backlog', 'Completed', 'Archived']
+    for (const entry of fs.readdirSync(rootPath, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      /** Only immediate children with identity metadata are collection directories. */
+      const collectionPath = path.join(rootPath, entry.name)
+      const infoDirectory = path.join(collectionPath, '_FolderInfo')
+      const source = path.join(infoDirectory, 'FolderInfo.json')
+      if (!fs.existsSync(source)) continue
+      /** Historical root identity validated before rewriting its field name. */
+      const info = readJsonFile<unknown>(source)
+      if (!isRecord(info) || typeof info.folderId !== 'string' || info.kind !== kind) {
+        throw new Error(`Invalid collection metadata: ${source}`)
+      }
+      /** Preserve all metadata except the renamed identity key. */
+      const { folderId, ...metadata } = info
+      files.push({
+        source,
+        target: path.join(infoDirectory, 'CollectionInfo.json'),
+        data: { ...metadata, collectionId: folderId }
+      })
+      directories.add(infoDirectory)
+      for (const statusDirectoryName of statusDirectoryNames) {
+        /** Only known status folders own category-order metadata below a collection. */
+        const directory = path.join(collectionPath, statusDirectoryName, '_FolderInfo')
+        if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) continue
+        directories.add(directory)
+        const orderPath = path.join(directory, 'FolderOrder.json')
+        if (fs.existsSync(orderPath)) {
+          files.push({ source: orderPath, target: path.join(directory, 'CategoryOrder.json') })
+        }
+      }
+    }
+    /** Root collection references whose discriminator changes with the domain name. */
+    const orderPath = path.join(rootPath, 'FolderOrder.json')
+    if (fs.existsSync(orderPath)) {
+      const order = readJsonFile<{ entries: FolderEntryRef[] }>(orderPath)
+      files.push({ source: orderPath, target: path.join(rootPath, 'CollectionOrder.json'), data: {
+        entries: order.entries.map((entry) => ({ ...entry, kind: 'collection' }))
+      } })
+    }
+  }
+  for (const file of files) {
+    if (fs.existsSync(file.target)) throw new Error(`Collection metadata already exists: ${file.target}`)
+  }
+  for (const directory of directories) {
+    if (fs.existsSync(path.join(path.dirname(directory), '_CollectionInfo'))) {
+      throw new Error(`Collection metadata already exists: ${directory}`)
+    }
+  }
+  for (const file of files) {
+    if (file.data === undefined) fs.renameSync(file.source, file.target)
+    else {
+      writeJsonFile(file.target, file.data)
+      fs.rmSync(file.source)
+    }
+  }
+  for (const directory of directories) {
+    fs.renameSync(directory, path.join(path.dirname(directory), '_CollectionInfo'))
+  }
+  /** Commit the version only after every legacy path has been replaced. */
+  const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+  writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 5 })
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   0: migrateSchemaVersionZeroToOne,
   1: migrateSchemaVersionOneToTwo,
   2: migrateSchemaVersionTwoToThree,
-  3: migrateSchemaVersionThreeToFour
+  3: migrateSchemaVersionThreeToFour,
+  4: migrateSchemaVersionFourToFive
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

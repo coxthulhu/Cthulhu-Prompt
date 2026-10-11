@@ -10,16 +10,16 @@
   } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import { createDroppableStateRegistry } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import {
-    PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
-    type PromptFolderDragPayload
-  } from '@renderer/features/prompt-drag-drop/promptFolderDrag'
+    PROMPT_COLLECTION_SELECTOR_DRAG_TYPE,
+    type PromptCollectionDragPayload
+  } from '@renderer/features/prompt-drag-drop/promptCollectionDrag'
   import {
     PROMPT_HANDLE_DRAG_TYPE,
     type PromptHandleDragPayload,
     type PromptHandleDropPayload,
   } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
   import type { ScreenId } from '@renderer/app/screens'
-  import { isPromptFolderScreen } from '@shared/domain/user-persistence/UserPersistence'
+  import { isPromptCollectionScreen } from '@shared/domain/user-persistence/UserPersistence'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import {
@@ -34,17 +34,17 @@
     Plus,
     Trash2
   } from 'lucide-svelte'
-  import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
   import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-  import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-  import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import { movePromptFolder } from '@renderer/data/Mutations/WorkspaceMutations'
+  import { movePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
   import {
     PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
   } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
-  import { PROMPT_FOLDER_VERTICAL_BIAS_PX } from '../prompt-folders/promptFolderScrollOffsets'
+  import { PROMPT_COLLECTION_VERTICAL_BIAS_PX } from '../prompt-collections/promptCollectionScrollOffsets'
   import {
     PROMPT_STATUS_FOLDER_REGISTRY,
     PromptStatusFolderId,
@@ -52,15 +52,15 @@
   } from '@shared/domain/prompt/Prompt'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import {
-    type PromptFolder,
-    type PromptFolderKind
-  } from '@shared/domain/prompt-folder/PromptFolder'
+    type PromptCollection,
+    type PromptCollectionKind
+  } from '@shared/domain/prompt-collection/PromptCollection'
   import {
     getMarkdownContentCategoryOrder,
     getOrderedMarkdownContentIds
   } from '@shared/domain/markdown-content/MarkdownContent'
   import type { Category } from '@shared/domain/category/Category'
-  import { getAllWorkspaceFolderEntries, type Workspace } from '@shared/domain/workspace/Workspace'
+  import { getAllWorkspaceCollectionEntries, type Workspace } from '@shared/domain/workspace/Workspace'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
@@ -75,23 +75,23 @@
   import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
   import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
-  import { getPromptStatusGroupCounts, promptStatusGroups, sidebarPromptStatusGroups } from '../prompt-folders/promptStatusGroups'
+  import { getPromptStatusGroupCounts, promptStatusGroups, sidebarPromptStatusGroups } from '../prompt-collections/promptStatusGroups'
   import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
-  import { PromptFolderScreenMode } from '@renderer/features/prompt-folders/promptFolderScreenMode'
+  import { PromptCollectionScreenMode } from '@renderer/features/prompt-collections/promptCollectionScreenMode'
   import { saveCategories } from '@renderer/data/Mutations/CategoryMutations'
-  import CreatePromptFolderDialog from '../prompt-folders/CreatePromptFolderDialog.svelte'
+  import CreatePromptCollectionDialog from '../prompt-collections/CreatePromptCollectionDialog.svelte'
   import ManageCategoriesDialog, {
     type ManagedCategoryInput,
     type ManageCategoriesDialogOpenOptions
-  } from '../prompt-folders/ManageCategoriesDialog.svelte'
+  } from '../prompt-collections/ManageCategoriesDialog.svelte'
   import PromptTree from '@renderer/features/prompt-tree/PromptTree.svelte'
   import {
     getNextAppIconTooltip,
     INITIAL_APP_ICON_TOOLTIP
   } from './appIconTooltip'
 
-  type CreatePromptFolderDialogHandle = {
+  type CreatePromptCollectionDialogHandle = {
     openDialog: () => void
   }
 
@@ -103,7 +103,7 @@
   type PromptTreeBulkExpansionRequest = {
     /** Category workflow that owns this toolbar request. */
     statusFolderId: PromptStatusFolderId
-    screenRootFolderId: string
+    screenCollectionId: string
     isExpanded: boolean
   }
 
@@ -112,30 +112,30 @@
     isWorkspaceReady = false,
     isWorkspaceLoading = false,
     workspacePath = null,
-    screenRootFolderId = null,
-    promptFolderScreenMode = PromptFolderScreenMode.Active,
+    screenCollectionId = null,
+    promptCollectionScreenMode = PromptCollectionScreenMode.Active,
     shownFinalStatusGroups = {},
-    folderKind = 'prompt',
-    onPromptFolderModeChange,
+    collectionKind = 'prompt',
+    onPromptCollectionModeChange,
     onFinalStatusGroupShownChange,
-    onScreenRootFolderSelect,
-    onDeleteSelectedPromptFolder
+    onScreenCollectionSelect,
+    onDeleteSelectedPromptCollection
   } = $props<{
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
     isWorkspaceLoading?: boolean
     workspacePath?: string | null
-    screenRootFolderId?: string | null
-    promptFolderScreenMode?: PromptFolderScreenMode
+    screenCollectionId?: string | null
+    promptCollectionScreenMode?: PromptCollectionScreenMode
     /** Visibility for each toggleable finalized group. */
     shownFinalStatusGroups?: Partial<Record<PromptStatusFolderId, boolean>>
-    /** Root-folder kind displayed by this sidebar instance. */
-    folderKind?: PromptFolderKind
-    onPromptFolderModeChange: (nextMode: PromptFolderScreenMode) => void
+    /** collection kind displayed by this sidebar instance. */
+    collectionKind?: PromptCollectionKind
+    onPromptCollectionModeChange: (nextMode: PromptCollectionScreenMode) => void
     /** Updates one finalized group's visibility. */
     onFinalStatusGroupShownChange: (groupId: PromptStatusFolderId, isShown: boolean) => void
-    onScreenRootFolderSelect: (screenRootFolderId: string) => void
-    onDeleteSelectedPromptFolder: (screenRootFolderId: string) => void
+    onScreenCollectionSelect: (screenCollectionId: string) => void
+    onDeleteSelectedPromptCollection: (screenCollectionId: string) => void
   }>()
 
   const workspaceSelection = getWorkspaceSelectionContext()
@@ -143,12 +143,12 @@
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
   }
-  const promptFolderQuery = useLiveQuery((q) =>
-    q.from({ promptFolder: promptFolderCollection })
-  ) as { data: PromptFolder[] }
+  const promptCollectionQuery = useLiveQuery((q) =>
+    q.from({ promptCollection: promptCollectionsCollection })
+  ) as { data: PromptCollection[] }
   const categoryQuery = useLiveQuery(categoryCollection) as { data: Category[] }
-  const promptQuery = useLiveQuery(promptCollection) as { data: Prompt[] }
-  const promptTemplateQuery = useLiveQuery(promptTemplateCollection) as {
+  const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
+  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
     data: PromptTemplate[]
   }
 
@@ -164,67 +164,67 @@
     return null
   })
 
-  /** Every workspace root resolved in task-then-template order. */
-  const workspacePromptFolders = $derived.by((): PromptFolder[] => {
+  /** Every workspace collection resolved in task-then-template order. */
+  const workspacePromptCollections = $derived.by((): PromptCollection[] => {
     if (!selectedWorkspace) {
       return []
     }
 
-    const promptFolderById = new SvelteMap<string, PromptFolder>()
-    for (const promptFolder of promptFolderQuery.data) {
-      if (!promptFolder) {
+    const promptCollectionById = new SvelteMap<string, PromptCollection>()
+    for (const promptCollection of promptCollectionQuery.data) {
+      if (!promptCollection) {
         continue
       }
 
-      promptFolderById.set(promptFolder.id, promptFolder)
+      promptCollectionById.set(promptCollection.id, promptCollection)
     }
 
-    return getAllWorkspaceFolderEntries(selectedWorkspace)
-      .map((entry) => promptFolderById.get(entry.id))
-      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+    return getAllWorkspaceCollectionEntries(selectedWorkspace)
+      .map((entry) => promptCollectionById.get(entry.id))
+      .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
   })
-  /** Roots eligible for the current activity's selector and tree. */
-  const rootPromptFolders = $derived(
-    workspacePromptFolders.filter((folder) => folder.kind === folderKind)
+  /** Collections eligible for the current activity's selector and tree. */
+  const promptCollections = $derived(
+    workspacePromptCollections.filter((collection) => collection.kind === collectionKind)
   )
-  const folderListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
+  const collectionListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     isWorkspaceLoading
       ? 'loading'
       : !isWorkspaceReady
         ? 'no-workspace'
-        : rootPromptFolders.length === 0
+        : promptCollections.length === 0
           ? 'empty'
           : 'ready'
   )
 
-  /** Empty selector item specialized to the active root kind. */
-  const promptFolderSelectorPlaceholder = $derived<DropdownPopupDetailedItem>({
-    id: 'no-prompt-folders',
-    label: 'No folders',
+  /** Empty selector item specialized to the active collection kind. */
+  const promptCollectionSelectorPlaceholder = $derived<DropdownPopupDetailedItem>({
+    id: 'no-prompt-collections',
+    label: 'No collections',
     detail: 'Create one from the menu',
-    icon: folderKind === 'template' ? Layers : FileText
+    icon: collectionKind === 'template' ? Layers : FileText
   })
-  /** Folder-creation action specialized to the active root kind. */
-  const promptFolderSelectorFooterItem = $derived<DropdownPopupDetailedItem>({
-    id: 'add-prompt-folder',
-    label: 'Create Folder',
+  /** Collection-creation action specialized to the active collection kind. */
+  const promptCollectionSelectorFooterItem = $derived<DropdownPopupDetailedItem>({
+    id: 'add-prompt-collection',
+    label: 'Create Collection',
     detail:
-      folderKind === 'template'
-        ? 'Create a prompt template folder'
-        : 'Create a task prompt folder',
+      collectionKind === 'template'
+        ? 'Create a prompt template collection'
+        : 'Create a task prompt collection',
     icon: Plus,
-    testId: 'sidebar-prompt-folder-dropdown-add-item'
+    testId: 'sidebar-prompt-collection-dropdown-add-item'
   })
-  let draggedPromptFolderSelectorId = $state<string | null>(null)
+  let draggedPromptCollectionSelectorId = $state<string | null>(null)
   // Local preview order lets the dropdown reorder live without persisting until drop.
-  let promptFolderSelectorDragSourceIds = $state<string[] | null>(null)
-  let promptFolderSelectorPreviewIds = $state<string[] | null>(null)
-  let promptFolderSelectorItemsElement = $state<HTMLElement | null>(null)
-  let createPromptFolderDialog = $state<CreatePromptFolderDialogHandle | null>(null)
+  let promptCollectionSelectorDragSourceIds = $state<string[] | null>(null)
+  let promptCollectionSelectorPreviewIds = $state<string[] | null>(null)
+  let promptCollectionSelectorItemsElement = $state<HTMLElement | null>(null)
+  let createPromptCollectionDialog = $state<CreatePromptCollectionDialogHandle | null>(null)
   let manageCategoriesDialog = $state<ManageCategoriesDialogHandle | null>(null)
   let nowMs = $state(Date.now())
 
-  // Side effect: keep folder-selector relative modified labels fresh while the app is open.
+  // Side effect: keep collection-selector relative modified labels fresh while the app is open.
   onMount(() => {
     const intervalId = window.setInterval(() => {
       nowMs = Date.now()
@@ -233,46 +233,46 @@
     return () => window.clearInterval(intervalId)
   })
 
-  const formatPromptFolderModifiedRelative = (modifiedAt: string): string => {
+  const formatPromptCollectionModifiedRelative = (modifiedAt: string): string => {
     const relativeTime = formatPromptModifiedRelative(modifiedAt, nowMs)
     return `${relativeTime[0]!.toUpperCase()}${relativeTime.slice(1)}`
   }
 
-  const promptFolderDropdownFolders = $derived.by((): PromptFolder[] => {
-    if (!promptFolderSelectorPreviewIds) {
-      return rootPromptFolders
+  const promptCollectionDropdownCollections = $derived.by((): PromptCollection[] => {
+    if (!promptCollectionSelectorPreviewIds) {
+      return promptCollections
     }
 
-    const promptFolderById = new SvelteMap<string, PromptFolder>()
-    for (const promptFolder of rootPromptFolders) {
-      promptFolderById.set(promptFolder.id, promptFolder)
+    const promptCollectionById = new SvelteMap<string, PromptCollection>()
+    for (const promptCollection of promptCollections) {
+      promptCollectionById.set(promptCollection.id, promptCollection)
     }
 
-    return promptFolderSelectorPreviewIds
-      .map((promptFolderId) => promptFolderById.get(promptFolderId))
-      .filter((promptFolder): promptFolder is PromptFolder => promptFolder !== undefined)
+    return promptCollectionSelectorPreviewIds
+      .map((promptCollectionId) => promptCollectionById.get(promptCollectionId))
+      .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
   })
-  const promptFolderDropdownItems = $derived.by((): DropdownPopupDetailedItem[] => {
+  const promptCollectionDropdownItems = $derived.by((): DropdownPopupDetailedItem[] => {
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
     const templateById = new Map(
       promptTemplateQuery.data.map((template) => [template.id, template])
     )
 
-    const getFolderMetadata = (
-      promptFolder: PromptFolder
+    const getCollectionMetadata = (
+      promptCollection: PromptCollection
     ): { promptCount: number; newestModifiedAt: string | null } => {
       let promptCount = 0
       let newestModifiedAt: string | null = null
 
-      for (const entryId of (promptFolder.kind === 'template'
-        ? getOrderedMarkdownContentIds(promptFolder, 'template')
-        : Object.values(promptFolder.statusFolders).flatMap((layout) => layout.ordering === 'category'
+      for (const entryId of (promptCollection.kind === 'template'
+        ? getOrderedMarkdownContentIds(promptCollection, 'template')
+        : Object.values(promptCollection.statusFolders).flatMap((layout) => layout.ordering === 'category'
           ? layout.categoryOrder.categories.flatMap((group) => group.entries.map((entry) => entry.id))
           : []))) {
 
         promptCount += 1
         const modifiedAt =
-          promptFolder.kind === 'template'
+          promptCollection.kind === 'template'
             ? templateById.get(entryId)?.modifiedAt
             : promptById.get(entryId)?.modifiedAt
         if (!modifiedAt) continue
@@ -282,55 +282,55 @@
       return { promptCount, newestModifiedAt }
     }
 
-    return promptFolderDropdownFolders.map((promptFolder) => {
-      const { promptCount, newestModifiedAt } = getFolderMetadata(promptFolder)
+    return promptCollectionDropdownCollections.map((promptCollection) => {
+      const { promptCount, newestModifiedAt } = getCollectionMetadata(promptCollection)
       const detailParts: DropdownPopupDetailedItem['detailParts'] = [
-        `${promptCount} ${promptFolder.kind === 'template' ? 'template' : 'prompt'}${promptCount === 1 ? '' : 's'}`
+        `${promptCount} ${promptCollection.kind === 'template' ? 'template' : 'prompt'}${promptCount === 1 ? '' : 's'}`
       ]
 
       if (newestModifiedAt) {
         detailParts.push({
-          text: formatPromptFolderModifiedRelative(newestModifiedAt),
-          testId: 'sidebar-prompt-folder-modified-time'
+          text: formatPromptCollectionModifiedRelative(newestModifiedAt),
+          testId: 'sidebar-prompt-collection-modified-time'
         })
       }
 
       return {
-        id: promptFolder.id,
-        label: promptFolder.displayName,
+        id: promptCollection.id,
+        label: promptCollection.displayName,
         detailParts,
-        icon: promptFolder.kind === 'template' ? Layers : FileText,
-        testId: `sidebar-prompt-folder-dropdown-item-${promptFolder.id}`
+        icon: promptCollection.kind === 'template' ? Layers : FileText,
+        testId: `sidebar-prompt-collection-dropdown-item-${promptCollection.id}`
       }
     })
   })
-  const screenRootFolderDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
-    if (promptFolderDropdownItems.length === 0) {
-      return promptFolderSelectorPlaceholder
+  const screenCollectionDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
+    if (promptCollectionDropdownItems.length === 0) {
+      return promptCollectionSelectorPlaceholder
     }
 
     return (
-      promptFolderDropdownItems.find((item) => item.id === screenRootFolderId) ??
-      promptFolderDropdownItems[0]!
+      promptCollectionDropdownItems.find((item) => item.id === screenCollectionId) ??
+      promptCollectionDropdownItems[0]!
     )
   })
-  const screenRootFolder = $derived.by((): PromptFolder | null => {
-    if (rootPromptFolders.length === 0) {
+  const screenCollection = $derived.by((): PromptCollection | null => {
+    if (promptCollections.length === 0) {
       return null
     }
 
     return (
-      rootPromptFolders.find((promptFolder) => promptFolder.id === screenRootFolderId) ??
-      rootPromptFolders[0]!
+      promptCollections.find((promptCollection) => promptCollection.id === screenCollectionId) ??
+      promptCollections[0]!
     )
   })
-  /** Categories owned by the selected root folder, preserved in Active-folder order. */
-  const selectedRootFolderCategories = $derived.by((): Category[] => {
-    if (!screenRootFolder) return []
+  /** Categories owned by the selected collection, preserved in Active status-folder order. */
+  const selectedCollectionCategories = $derived.by((): Category[] => {
+    if (!screenCollection) return []
 
     const categoryById = new Map(categoryQuery.data.map((category) => [category.id, category]))
     return getMarkdownContentCategoryOrder(
-      screenRootFolder,
+      screenCollection,
       PromptStatusFolderId.Active
     ).categories.flatMap(({ categoryId }) => {
       if (categoryId === null) return []
@@ -338,28 +338,28 @@
       return category ? [category] : []
     })
   })
-  const promptFolderSelectorState = $derived(
+  const promptCollectionSelectorState = $derived(
     isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
   )
   const canToggleCategories = $derived(
-    folderListState === 'ready' &&
-      screenRootFolder !== null
+    collectionListState === 'ready' &&
+      screenCollection !== null
   )
   /** Category toolbar acts on the selected workflow, or the default while viewing final prompts. */
   const categoryToolbarGroupId = $derived(
-    PROMPT_STATUS_FOLDER_REGISTRY[promptFolderScreenMode].ordering === 'category'
-      ? promptFolderScreenMode
-      : PromptFolderScreenMode.Active
+    PROMPT_STATUS_FOLDER_REGISTRY[promptCollectionScreenMode].ordering === 'category'
+      ? promptCollectionScreenMode
+      : PromptCollectionScreenMode.Active
   )
   const promptTreeExpansionRequests =
     createConsumableRequestCoordinator<PromptTreeBulkExpansionRequest>()
   let areAllCategoriesCollapsed = $state(false)
-  const promptFolderSelectorPromptDroppableState = createDroppableStateRegistry<string>()
-  const promptFolderSelectorDragOpenTypes = [
-    PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
+  const promptCollectionSelectorPromptDroppableState = createDroppableStateRegistry<string>()
+  const promptCollectionSelectorDragOpenTypes = [
+    PROMPT_COLLECTION_SELECTOR_DRAG_TYPE,
     PROMPT_HANDLE_DRAG_TYPE
   ]
-  /** Icon for expanding or collapsing every category in the active root folder. */
+  /** Icon for expanding or collapsing every category in the active collection. */
   const categoryExpansionActionIcon = $derived(
     areAllCategoriesCollapsed ? ChevronsUpDown : ChevronsDownUp
   )
@@ -369,41 +369,41 @@
       ? 'Expand All Categories'
       : 'Collapse All Categories'
   )
-  const isTemplateFolder = $derived(screenRootFolder?.kind === 'template')
+  const isTemplateCollection = $derived(screenCollection?.kind === 'template')
   /** Exact group counts shown in the accordion headers. */
-  const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenRootFolder, isTemplateFolder ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptTemplateStatus.Active })) : promptQuery.data))
+  const selectedPromptStatusCounts = $derived(getPromptStatusGroupCounts(screenCollection, isTemplateCollection ? promptTemplateQuery.data.map((template) => ({ ...template, status: template.status ?? PromptTemplateStatus.Active })) : promptQuery.data))
   /** Category workflows are always present; finalized groups follow their toggles. */
   const visibleStatusGroups = $derived(
     sidebarPromptStatusGroups.filter((group) =>
-      (!isTemplateFolder || group.id === 'active' || group.id === 'archived') && (group.ordering === 'category' || shownFinalStatusGroups[group.id])
+      (!isTemplateCollection || group.id === 'active' || group.id === 'archived') && (group.ordering === 'category' || shownFinalStatusGroups[group.id])
     )
   )
-  // Keep selected-folder overflow actions together as the toolbar gets tighter.
-  const selectedPromptFolderActionsItems = $derived.by((): DropdownPopupItem[] => [
+  // Keep selected-collection overflow actions together as the toolbar gets tighter.
+  const selectedPromptCollectionActionsItems = $derived.by((): DropdownPopupItem[] => [
     {
-      id: 'delete-folder',
-      label: 'Delete Folder',
+      id: 'delete-collection',
+      label: 'Delete Collection',
       icon: Trash2,
-      testId: 'delete-selected-prompt-folder-menu-item',
+      testId: 'delete-selected-prompt-collection-menu-item',
       variant: 'danger'
     }
   ])
 
-  /** Toggles this root's finalized section through the shared navigation handler. */
+  /** Toggles this collection's finalized section through the shared navigation handler. */
   const toggleFinalStatusGroup = (groupId: PromptStatusFolderId): void => {
     /** Visibility requested by this toolbar click. */
     const isShown = !shownFinalStatusGroups[groupId]
     onFinalStatusGroupShownChange(groupId, isShown)
   }
 
-  /** Expands or collapses every category under the selected root folder. */
+  /** Expands or collapses every category under the selected collection. */
   const handleCategoryExpansionAction = () => {
-    const selectedRootFolderId = screenRootFolder?.id
-    if (!selectedRootFolderId) return
+    const selectedCollectionId = screenCollection?.id
+    if (!selectedCollectionId) return
 
     if (areAllCategoriesCollapsed) {
       promptTreeExpansionRequests.request({
-        screenRootFolderId: selectedRootFolderId,
+        screenCollectionId: selectedCollectionId,
         statusFolderId: categoryToolbarGroupId,
         isExpanded: true
       })
@@ -411,15 +411,15 @@
     }
 
     promptTreeExpansionRequests.request({
-      screenRootFolderId: selectedRootFolderId,
+      screenCollectionId: selectedCollectionId,
       statusFolderId: categoryToolbarGroupId,
       isExpanded: false
     })
   }
 
-  const handleSelectedPromptFolderActionsSelect = (item: DropdownPopupItem) => {
-    if (item.id === 'delete-folder' && screenRootFolder) {
-      onDeleteSelectedPromptFolder(screenRootFolder.id)
+  const handleSelectedPromptCollectionActionsSelect = (item: DropdownPopupItem) => {
+    if (item.id === 'delete-collection' && screenCollection) {
+      onDeleteSelectedPromptCollection(screenCollection.id)
     }
   }
 
@@ -433,30 +433,30 @@
     )
   }
 
-  // Selects and reveals the root folder overview formerly represented by the first tree row.
-  const selectFolderRoot = () => {
-    // The selected root owns both the toolbar state and the overview navigation target.
-    const rootFolderId = screenRootFolder?.id
-    if (!rootFolderId) return
+  // Selects and reveals the collection overview formerly represented by the first tree row.
+  const selectCollectionOverview = () => {
+    // The selected collection owns both the toolbar state and the overview navigation target.
+    const collectionId = screenCollection?.id
+    if (!collectionId) return
 
     promptNavigation.select({
-      screenRootFolderId: rootFolderId,
-      contentOwnerId: rootFolderId,
-      row: 'root-header',
+      screenCollectionId: collectionId,
+      contentOwnerId: collectionId,
+      row: 'collection-header',
       source: 'tree-click',
       forceRequest: true,
       contentReveal: {
         scrollType: 'vertical-bias',
-        verticalBiasPx: PROMPT_FOLDER_VERTICAL_BIAS_PX
+        verticalBiasPx: PROMPT_COLLECTION_VERTICAL_BIAS_PX
       }
     })
 
-    if (!isPromptFolderScreen(activeScreen)) {
-      onScreenRootFolderSelect(rootFolderId)
+    if (!isPromptCollectionScreen(activeScreen)) {
+      onScreenCollectionSelect(collectionId)
     }
   }
 
-  /** Opens category management for the currently selected root folder. */
+  /** Opens category management for the currently selected collection. */
   const openManageCategoriesDialog = (): void => {
     manageCategoriesDialog?.openDialog()
   }
@@ -470,15 +470,15 @@
   const handleSaveCategories = async (
     categories: ManagedCategoryInput[]
   ): Promise<boolean> => {
-    const promptFolder = screenRootFolder
+    const promptCollection = screenCollection
     const workspaceId = selectedWorkspace?.id
-    if (!promptFolder || !workspaceId) return false
+    if (!promptCollection || !workspaceId) return false
 
     return await runIpcBestEffort(
       async () => {
         await saveCategories(
           workspaceId,
-          promptFolder.id,
+          promptCollection.id,
           categories
         )
         return true
@@ -502,67 +502,67 @@
     }
   })
 
-  const openCreatePromptFolderDialog = () => {
-    createPromptFolderDialog?.openDialog()
+  const openCreatePromptCollectionDialog = () => {
+    createPromptCollectionDialog?.openDialog()
   }
 
-  const handlePromptFolderDropdownSelect = (item: DropdownPopupDetailedItem) => {
-    if (item.id === promptFolderSelectorFooterItem.id) {
-      openCreatePromptFolderDialog()
+  const handlePromptCollectionDropdownSelect = (item: DropdownPopupDetailedItem) => {
+    if (item.id === promptCollectionSelectorFooterItem.id) {
+      openCreatePromptCollectionDialog()
       return
     }
 
-    if (rootPromptFolders.some((promptFolder) => promptFolder.id === item.id)) {
-      onScreenRootFolderSelect(item.id)
+    if (promptCollections.some((promptCollection) => promptCollection.id === item.id)) {
+      onScreenCollectionSelect(item.id)
     }
   }
 
-  const arePromptFolderIdOrdersEqual = (left: string[], right: string[]): boolean => {
+  const arePromptCollectionIdOrdersEqual = (left: string[], right: string[]): boolean => {
     return (
-      left.length === right.length && left.every((folderId, index) => folderId === right[index])
+      left.length === right.length && left.every((collectionId, index) => collectionId === right[index])
     )
   }
 
-  const reorderPromptFolderIds = (
-    folderIds: string[],
-    draggedFolderId: string,
+  const reorderPromptCollectionIds = (
+    collectionIds: string[],
+    draggedCollectionId: string,
     targetIndex: number
   ): string[] => {
-    const nextFolderIds = folderIds.filter((folderId) => folderId !== draggedFolderId)
-    if (nextFolderIds.length === folderIds.length) {
-      return folderIds
+    const nextCollectionIds = collectionIds.filter((collectionId) => collectionId !== draggedCollectionId)
+    if (nextCollectionIds.length === collectionIds.length) {
+      return collectionIds
     }
 
-    nextFolderIds.splice(Math.min(targetIndex, nextFolderIds.length), 0, draggedFolderId)
-    return nextFolderIds
+    nextCollectionIds.splice(Math.min(targetIndex, nextCollectionIds.length), 0, draggedCollectionId)
+    return nextCollectionIds
   }
 
-  const getPromptFolderPreviousEntryId = (folderIds: string[], folderId: string): string | null => {
-    const folderIndex = folderIds.indexOf(folderId)
-    return folderIndex <= 0 ? null : folderIds[folderIndex - 1]!
+  const getPromptCollectionPreviousEntryId = (collectionIds: string[], collectionId: string): string | null => {
+    const collectionIndex = collectionIds.indexOf(collectionId)
+    return collectionIndex <= 0 ? null : collectionIds[collectionIndex - 1]!
   }
 
-  const isHoveringPromptFolderSelectorFooter = (clientX: number, clientY: number): boolean => {
-    const footerSelector = '[data-testid="sidebar-prompt-folder-dropdown-add-item"]'
+  const isHoveringPromptCollectionSelectorFooter = (clientX: number, clientY: number): boolean => {
+    const footerSelector = '[data-testid="sidebar-prompt-collection-dropdown-add-item"]'
 
     return document
       .elementsFromPoint(clientX, clientY)
       .some((element) => element instanceof Element && element.closest(footerSelector) !== null)
   }
 
-  const resetPromptFolderSelectorPreview = (): void => {
-    const sourceIds = promptFolderSelectorDragSourceIds
-    const previewIds = promptFolderSelectorPreviewIds
-    if (sourceIds && previewIds && !arePromptFolderIdOrdersEqual(sourceIds, previewIds)) {
-      promptFolderSelectorPreviewIds = sourceIds
+  const resetPromptCollectionSelectorPreview = (): void => {
+    const sourceIds = promptCollectionSelectorDragSourceIds
+    const previewIds = promptCollectionSelectorPreviewIds
+    if (sourceIds && previewIds && !arePromptCollectionIdOrdersEqual(sourceIds, previewIds)) {
+      promptCollectionSelectorPreviewIds = sourceIds
     }
   }
 
-  const getPromptFolderSelectorTargetIndex = (
+  const getPromptCollectionSelectorTargetIndex = (
     clientY: number,
     itemCount: number
   ): number | null => {
-    const itemsElement = promptFolderSelectorItemsElement
+    const itemsElement = promptCollectionSelectorItemsElement
     if (!itemsElement || itemCount === 0) {
       return null
     }
@@ -575,77 +575,77 @@
     return Math.max(0, Math.min(rawIndex, itemCount - 1))
   }
 
-  const previewPromptFolderSelectorReorder = (
-    draggedFolderId: string,
+  const previewPromptCollectionSelectorReorder = (
+    draggedCollectionId: string,
     clientX: number,
     clientY: number
   ): void => {
-    if (isHoveringPromptFolderSelectorFooter(clientX, clientY)) {
-      resetPromptFolderSelectorPreview()
+    if (isHoveringPromptCollectionSelectorFooter(clientX, clientY)) {
+      resetPromptCollectionSelectorPreview()
       return
     }
 
     const currentPreviewIds =
-      promptFolderSelectorPreviewIds ?? rootPromptFolders.map((promptFolder) => promptFolder.id)
-    const targetIndex = getPromptFolderSelectorTargetIndex(clientY, currentPreviewIds.length)
+      promptCollectionSelectorPreviewIds ?? promptCollections.map((promptCollection) => promptCollection.id)
+    const targetIndex = getPromptCollectionSelectorTargetIndex(clientY, currentPreviewIds.length)
     if (targetIndex === null) {
       return
     }
 
-    const nextPreviewIds = reorderPromptFolderIds(currentPreviewIds, draggedFolderId, targetIndex)
+    const nextPreviewIds = reorderPromptCollectionIds(currentPreviewIds, draggedCollectionId, targetIndex)
 
-    if (!arePromptFolderIdOrdersEqual(currentPreviewIds, nextPreviewIds)) {
-      promptFolderSelectorPreviewIds = nextPreviewIds
+    if (!arePromptCollectionIdOrdersEqual(currentPreviewIds, nextPreviewIds)) {
+      promptCollectionSelectorPreviewIds = nextPreviewIds
     }
   }
 
-  const persistPromptFolderSelectorReorder = (draggedFolderId: string): void => {
+  const persistPromptCollectionSelectorReorder = (draggedCollectionId: string): void => {
     const workspaceId = workspaceSelection.selectedWorkspaceId
-    const sourceIds = promptFolderSelectorDragSourceIds
-    const previewIds = promptFolderSelectorPreviewIds
+    const sourceIds = promptCollectionSelectorDragSourceIds
+    const previewIds = promptCollectionSelectorPreviewIds
     if (
       !workspaceId ||
       !sourceIds ||
       !previewIds ||
-      arePromptFolderIdOrdersEqual(sourceIds, previewIds)
+      arePromptCollectionIdOrdersEqual(sourceIds, previewIds)
     ) {
       return
     }
 
-    const previousEntryId = getPromptFolderPreviousEntryId(previewIds, draggedFolderId)
+    const previousEntryId = getPromptCollectionPreviousEntryId(previewIds, draggedCollectionId)
     void runIpcBestEffort(async () => {
-      await movePromptFolder(workspaceId, draggedFolderId, previousEntryId)
+      await movePromptCollection(workspaceId, draggedCollectionId, previousEntryId)
     })
   }
 
-  const getPromptFolderSelectorDraggableOptions = (
+  const getPromptCollectionSelectorDraggableOptions = (
     item: DropdownPopupDetailedItem
   ): DraggableOptions<unknown, unknown> => ({
-    dragType: PROMPT_FOLDER_SELECTOR_DRAG_TYPE,
+    dragType: PROMPT_COLLECTION_SELECTOR_DRAG_TYPE,
     payload: {
-      folderId: item.id
+      collectionId: item.id
     },
     onDragStart: (payload) => {
-      const folderIds = rootPromptFolders.map((promptFolder) => promptFolder.id)
-      const draggedFolderId = (payload as PromptFolderDragPayload).folderId
-      draggedPromptFolderSelectorId = draggedFolderId
-      promptFolderSelectorDragSourceIds = folderIds
-      promptFolderSelectorPreviewIds = folderIds
+      const collectionIds = promptCollections.map((promptCollection) => promptCollection.id)
+      const draggedCollectionId = (payload as PromptCollectionDragPayload).collectionId
+      draggedPromptCollectionSelectorId = draggedCollectionId
+      promptCollectionSelectorDragSourceIds = collectionIds
+      promptCollectionSelectorPreviewIds = collectionIds
     },
     onDragMove: (payload, clientX, clientY) => {
-      previewPromptFolderSelectorReorder(
-        (payload as PromptFolderDragPayload).folderId,
+      previewPromptCollectionSelectorReorder(
+        (payload as PromptCollectionDragPayload).collectionId,
         clientX,
         clientY
       )
     },
     onDragFinish: (result) => {
       if (!result.cancelled) {
-        persistPromptFolderSelectorReorder((result.sourcePayload as PromptFolderDragPayload).folderId)
+        persistPromptCollectionSelectorReorder((result.sourcePayload as PromptCollectionDragPayload).collectionId)
       }
-      draggedPromptFolderSelectorId = null
-      promptFolderSelectorDragSourceIds = null
-      promptFolderSelectorPreviewIds = null
+      draggedPromptCollectionSelectorId = null
+      promptCollectionSelectorDragSourceIds = null
+      promptCollectionSelectorPreviewIds = null
     }
   })
 
@@ -657,9 +657,9 @@
     /** Current prompt identity shared by editor and tree drag sources. */
     const draggedEntry = promptEntryDragState.draggedEntry
     return {
-      folderId: screenRootFolderId,
+      collectionId: screenCollectionId,
       categoryId: draggedEntry?.kind === 'content'
-        ? promptCollection.get(draggedEntry.contentId)?.category ?? null
+        ? promptsCollection.get(draggedEntry.contentId)?.category ?? null
         : null,
       targetEntryId: null,
       position: 'before',
@@ -677,60 +677,60 @@
       /** Typed prompt source supplied by the shared prompt drag type. */
       const source = payload as PromptHandleDragPayload
       return getPromptStatusFolderDefinition(source.location.status).id !== statusSection &&
-        resolvePromptTreePromptMove(promptFolderQuery.data, source, getStatusHeaderDropPayload(statusSection)) !== null
+        resolvePromptTreePromptMove(promptCollectionQuery.data, source, getStatusHeaderDropPayload(statusSection)) !== null
     },
     indicator: statusHeaderDroppableState.getState(statusSection)
   })
 
-  const getPromptFolderSelectorPromptDroppableOptions = (
+  const getPromptCollectionSelectorPromptDroppableOptions = (
     item: DropdownPopupDetailedItem
   ): DroppableOptions<unknown, unknown> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
-    // Folder selection requires the pointer to remain within the visible dropdown row.
+    // Collection selection requires the pointer to remain within the visible dropdown row.
     snapDimensions: { x: 0, y: 0 },
     payload: (): PromptHandleDropPayload => ({
-      folderId: item.id,
+      collectionId: item.id,
       targetEntryId: null,
       position: 'after',
       statusSection: promptEntryDragState.draggedEntry?.kind === 'content'
         ? getPromptStatusFolderDefinition(promptEntryDragState.draggedEntry.location.status).id
-        : PromptFolderScreenMode.Active
+        : PromptCollectionScreenMode.Active
     }),
     canDrop: (payload) => {
       const entryPayload = payload as PromptHandleDragPayload
       if (getPromptStatusFolderDefinition(entryPayload.location.status).ordering !== 'category') return false
-      const allFolders = promptFolderQuery.data
-      const destinationFolder = allFolders.find((folder) => folder.id === item.id)
-      if (!destinationFolder) return false
+      const allCollections = promptCollectionQuery.data
+      const destinationCollection = allCollections.find((collection) => collection.id === item.id)
+      if (!destinationCollection) return false
       const dropPayload: PromptHandleDropPayload = {
-        folderId: item.id,
+        collectionId: item.id,
         targetEntryId: null,
         position: 'after',
         statusSection: getPromptStatusFolderDefinition(entryPayload.location.status).id
       }
-      const sourceFolder = allFolders.find(
-        (folder) => folder.id === entryPayload.location.promptFolderId
+      const sourceCollection = allCollections.find(
+        (collection) => collection.id === entryPayload.location.promptCollectionId
       )
-      if (!sourceFolder) return false
-      // The dropdown would move a same-folder prompt to the top, but that route is too confusing.
-      if (sourceFolder.id === destinationFolder.id) return false
+      if (!sourceCollection) return false
+      // The dropdown would move a same-collection prompt to the top, but that route is too confusing.
+      if (sourceCollection.id === destinationCollection.id) return false
       return (
-        resolvePromptTreePromptMove(allFolders, entryPayload, dropPayload) !== null
+        resolvePromptTreePromptMove(allCollections, entryPayload, dropPayload) !== null
       )
     },
-    indicator: promptFolderSelectorPromptDroppableState.getState(item.id)
+    indicator: promptCollectionSelectorPromptDroppableState.getState(item.id)
   })
 
-  const promptFolderSelectorItemDragOptions = {
-    getDraggableOptions: getPromptFolderSelectorDraggableOptions,
-    getRowDroppableOptions: getPromptFolderSelectorPromptDroppableOptions,
+  const promptCollectionSelectorItemDragOptions = {
+    getDraggableOptions: getPromptCollectionSelectorDraggableOptions,
+    getRowDroppableOptions: getPromptCollectionSelectorPromptDroppableOptions,
     getDragHandleTestId: (item: DropdownPopupDetailedItem) =>
-      `sidebar-prompt-folder-dropdown-drag-handle-${item.id}`,
-    isDragging: (item: DropdownPopupDetailedItem) => draggedPromptFolderSelectorId === item.id,
-    isDraggingAny: () => draggedPromptFolderSelectorId !== null,
+      `sidebar-prompt-collection-dropdown-drag-handle-${item.id}`,
+    isDragging: (item: DropdownPopupDetailedItem) => draggedPromptCollectionSelectorId === item.id,
+    isDraggingAny: () => draggedPromptCollectionSelectorId !== null,
     onItemsElementChange: (element: HTMLElement | null) => {
-      promptFolderSelectorItemsElement = element
+      promptCollectionSelectorItemsElement = element
     }
   }
 </script>
@@ -789,31 +789,31 @@
   </div>
   <Separator />
 
-  {#if folderListState !== 'no-workspace'}
+  {#if collectionListState !== 'no-workspace'}
     <div class="sidebarTopLevelInsetWithInnerPadding py-1">
-      {#if folderListState === 'empty'}
+      {#if collectionListState === 'empty'}
         <SelectorButton
-          icon={promptFolderSelectorFooterItem.icon}
-          text={promptFolderSelectorFooterItem.label}
-          detail={promptFolderSelectorFooterItem.detail}
+          icon={promptCollectionSelectorFooterItem.icon}
+          text={promptCollectionSelectorFooterItem.label}
+          detail={promptCollectionSelectorFooterItem.detail}
           showChevron={false}
-          state={promptFolderSelectorState}
-          testId="sidebar-prompt-folder-add-button"
-          onclick={openCreatePromptFolderDialog}
+          state={promptCollectionSelectorState}
+          testId="sidebar-prompt-collection-add-button"
+          onclick={openCreatePromptCollectionDialog}
         />
       {:else}
         <DetailedSelectorButton
-          label="Folder selector"
-          items={promptFolderDropdownItems}
-          selectedItem={screenRootFolderDropdownItem}
-          footerItem={promptFolderSelectorFooterItem}
-          state={promptFolderSelectorState}
-          itemDragOptions={promptFolderSelectorItemDragOptions}
+          label="Collection selector"
+          items={promptCollectionDropdownItems}
+          selectedItem={screenCollectionDropdownItem}
+          footerItem={promptCollectionSelectorFooterItem}
+          state={promptCollectionSelectorState}
+          itemDragOptions={promptCollectionSelectorItemDragOptions}
           selectionVariant="accent"
-          dragOpenTypes={promptFolderSelectorDragOpenTypes}
-          testId="sidebar-prompt-folder-selector-menu"
-          triggerTestId="sidebar-prompt-folder-selector-trigger"
-          onselect={handlePromptFolderDropdownSelect}
+          dragOpenTypes={promptCollectionSelectorDragOpenTypes}
+          testId="sidebar-prompt-collection-selector-menu"
+          triggerTestId="sidebar-prompt-collection-selector-trigger"
+          onselect={handlePromptCollectionDropdownSelect}
         />
       {/if}
     </div>
@@ -825,23 +825,23 @@
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
           icon={ArrowUpToLine}
-          label="Show Folder Overview"
-          title="Show Folder Overview"
+          label="Show Collection Overview"
+          title="Show Collection Overview"
           borderless
           baseVariant="dim"
-          disabled={!screenRootFolder}
-          testId="sidebar-folder-root-button"
-          onclick={selectFolderRoot}
+          disabled={!screenCollection}
+          testId="sidebar-collection-overview-button"
+          onclick={selectCollectionOverview}
         />
-        {#if screenRootFolder}
-          {#each promptStatusGroups.filter((group) => group.ordering === 'finalizedAt' && (!isTemplateFolder || group.id === 'archived')) as group (group.id)}
+        {#if screenCollection}
+          {#each promptStatusGroups.filter((group) => group.ordering === 'finalizedAt' && (!isTemplateCollection || group.id === 'archived')) as group (group.id)}
             <IconButton
               icon={group.toggleIcon}
-              label={`Show ${group.label} ${isTemplateFolder ? 'Templates' : 'Prompts'}`}
-              title={`Show ${group.label} ${isTemplateFolder ? 'Templates' : 'Prompts'}`}
+              label={`Show ${group.label} ${isTemplateCollection ? 'Templates' : 'Prompts'}`}
+              title={`Show ${group.label} ${isTemplateCollection ? 'Templates' : 'Prompts'}`}
               borderless
               baseVariant="dim"
-              disabled={!screenRootFolder}
+              disabled={!screenCollection}
               active={shownFinalStatusGroups[group.id] ?? false}
               testId={`toggle-${group.id}-prompts-button`}
               onclick={() => toggleFinalStatusGroup(group.id)}
@@ -864,42 +864,42 @@
           title="Manage Categories"
           borderless
           baseVariant="dim"
-          disabled={!screenRootFolder}
+          disabled={!screenCollection}
           testId="sidebar-manage-categories-button"
           onclick={openManageCategoriesDialog}
         />
         <DropdownPopupSimple
-          label="Selected Folder Actions"
-          items={selectedPromptFolderActionsItems}
+          label="Selected Collection Actions"
+          items={selectedPromptCollectionActionsItems}
           menuWidth="204px"
-          testId="selected-prompt-folder-actions-menu"
-          onselect={handleSelectedPromptFolderActionsSelect}
+          testId="selected-prompt-collection-actions-menu"
+          onselect={handleSelectedPromptCollectionActionsSelect}
         >
           {#snippet trigger(dropdown)}
             <IconButton
               icon={MoreHorizontal}
-              label="Selected Folder Actions"
-              title="Selected Folder Actions"
+              label="Selected Collection Actions"
+              title="Selected Collection Actions"
               borderless
               baseVariant="dim"
-              disabled={!screenRootFolder}
+              disabled={!screenCollection}
               active={dropdown.open}
               ariaHaspopup={dropdown.ariaHaspopup}
               ariaExpanded={dropdown.ariaExpanded}
               buttonAction={dropdown.triggerAction}
               onclick={dropdown.toggle}
-              testId="selected-prompt-folder-actions-button"
+              testId="selected-prompt-collection-actions-button"
             />
           {/snippet}
         </DropdownPopupSimple>
-        <CreatePromptFolderDialog
-          bind:this={createPromptFolderDialog}
+        <CreatePromptCollectionDialog
+          bind:this={createPromptCollectionDialog}
           {isWorkspaceReady}
-          promptFolders={rootPromptFolders}
-          kind={folderKind}
-          isPromptFolderListLoading={isWorkspaceLoading}
-          onCreated={(promptFolderId) => {
-            onScreenRootFolderSelect(promptFolderId)
+          promptCollections={promptCollections}
+          kind={collectionKind}
+          isPromptCollectionListLoading={isWorkspaceLoading}
+          onCreated={(promptCollectionId) => {
+            onScreenCollectionSelect(promptCollectionId)
           }}
         />
       </div>
@@ -907,20 +907,20 @@
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col overflow-visible">
-    {#if !screenRootFolder}
+    {#if !screenCollection}
       <PromptTree
-        promptFolders={rootPromptFolders}
-        {folderListState}
-        {screenRootFolderId}
-        screenMode={PromptFolderScreenMode.Active}
+        promptCollections={promptCollections}
+        {collectionListState}
+        {screenCollectionId}
+        screenMode={PromptCollectionScreenMode.Active}
         expansionRequests={promptTreeExpansionRequests}
-        isPromptFoldersScreenActive={isPromptFolderScreen(activeScreen)}
+        isPromptCollectionsScreenActive={isPromptCollectionScreen(activeScreen)}
         onAllCategoriesCollapsedChange={(isCollapsed) => {
           areAllCategoriesCollapsed = isCollapsed
         }}
-        onScreenModeSelect={onPromptFolderModeChange}
+        onScreenModeSelect={onPromptCollectionModeChange}
         onManageCategory={openManageCategoryDialog}
-        {onScreenRootFolderSelect}
+        {onScreenCollectionSelect}
       />
     {:else}
       <!-- Recreate the owner so conditionally visible sections register in rendered order. -->
@@ -940,19 +940,19 @@
               headerDroppableOptions={getStatusHeaderDroppableOptions(group.id)}
             >
               <PromptTree
-                promptFolders={rootPromptFolders}
-                {folderListState}
-                {screenRootFolderId}
+                promptCollections={promptCollections}
+                {collectionListState}
+                {screenCollectionId}
                 screenMode={group.id}
                 expansionRequests={promptTreeExpansionRequests}
-                isPromptFoldersScreenActive={isPromptFolderScreen(activeScreen) &&
-                  promptFolderScreenMode === group.id}
+                isPromptCollectionsScreenActive={isPromptCollectionScreen(activeScreen) &&
+                  promptCollectionScreenMode === group.id}
                 onAllCategoriesCollapsedChange={(isCollapsed) => {
                   if (group.id === categoryToolbarGroupId) areAllCategoriesCollapsed = isCollapsed
                 }}
-                onScreenModeSelect={onPromptFolderModeChange}
+                onScreenModeSelect={onPromptCollectionModeChange}
                 onManageCategory={openManageCategoryDialog}
-                {onScreenRootFolderSelect}
+                {onScreenCollectionSelect}
               />
             </AccordionSection>
           {/each}
@@ -964,10 +964,10 @@
 
 <ManageCategoriesDialog
   bind:this={manageCategoriesDialog}
-  categories={selectedRootFolderCategories}
-  folderDisplayName={screenRootFolder?.displayName ?? ''}
-  contentKind={screenRootFolder?.kind ?? 'prompt'}
-  isWorkspaceReady={screenRootFolder !== null}
+  categories={selectedCollectionCategories}
+  collectionDisplayName={screenCollection?.displayName ?? ''}
+  contentKind={screenCollection?.kind ?? 'prompt'}
+  isWorkspaceReady={screenCollection !== null}
   onsubmit={handleSaveCategories}
 />
 

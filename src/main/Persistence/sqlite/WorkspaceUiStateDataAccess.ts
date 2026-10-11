@@ -5,21 +5,21 @@ import { SqliteDataAccess } from './SqliteDataAccess'
 type WorkspaceUiStateRow = {
   selectedScreen: string
   selectedScreenDataJson: string | null
-  lastPromptTaskFolderId: string | null
-  lastPromptTemplateFolderId: string | null
+  lastPromptTaskCollectionId: string | null
+  lastPromptTemplateCollectionId: string | null
 }
 
-/** Persisted prompt-folder state for one root or category owner. */
-type PromptFolderViewRow = {
+/** Persisted prompt-collection state for one collection or category owner. */
+type PromptCollectionViewRow = {
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded: number
   contentSectionIsExpanded: number
   /** Serialized offsets retained during stale-owner cleanup. */
   scrollTopByModeJson: string
-  /** Last root mode retained when stale owners are pruned. */
+  /** Last collection mode retained when stale owners are pruned. */
   selectedMode: string
-  /** Root-specific visibility retained when stale owners are pruned. */
+  /** Collection-specific visibility retained when stale owners are pruned. */
   shownFinalStatusGroupsJson: string
 }
 
@@ -33,7 +33,7 @@ const parseSelectedScreenDataJson = (value: string | null): unknown => {
   }
 }
 
-/** Resets stale workspace navigation while preserving valid per-kind root memories. */
+/** Resets stale workspace navigation while preserving valid per-kind collection memories. */
 const resetWorkspaceScreenSelection = (workspaceId: string): void => {
   SqliteDataAccess.getDatabase()
     .prepare(
@@ -46,30 +46,30 @@ const resetWorkspaceScreenSelection = (workspaceId: string): void => {
 
 /** SQLite cleanup operations for split workspace UI-state tables. */
 export class WorkspaceUiStateDataAccess {
-  /** Removes root/category UI state whose owner no longer exists. */
-  static cleanupWorkspacePromptFolderUiState(
+  /** Removes collection/category UI state whose owner no longer exists. */
+  static cleanupWorkspacePromptCollectionUiState(
     workspaceId: string,
-    workspacePromptTaskFolderIds: string[],
-    workspacePromptTemplateFolderIds: string[],
+    workspacePromptTaskCollectionIds: string[],
+    workspacePromptTemplateCollectionIds: string[],
     workspaceCategoryIds: string[]
   ): void {
     /** SQLite database containing split workspace UI state. */
     const db = SqliteDataAccess.getDatabase()
-    /** Valid root IDs used to validate screen and last-root state. */
-    const validPromptTaskFolderIds = new Set(workspacePromptTaskFolderIds)
-    /** Valid prompt-template roots used to validate template navigation state. */
-    const validPromptTemplateFolderIds = new Set(workspacePromptTemplateFolderIds)
-    /** Every valid root ID used to retain root-owned view state. */
-    const validPromptFolderIds = new Set([
-      ...workspacePromptTaskFolderIds,
-      ...workspacePromptTemplateFolderIds
+    /** Valid collection IDs used to validate screen and last-collection state. */
+    const validPromptTaskCollectionIds = new Set(workspacePromptTaskCollectionIds)
+    /** Valid prompt-template collections used to validate template navigation state. */
+    const validPromptTemplateCollectionIds = new Set(workspacePromptTemplateCollectionIds)
+    /** Every valid collection ID used to retain collection-owned view state. */
+    const validPromptCollectionIds = new Set([
+      ...workspacePromptTaskCollectionIds,
+      ...workspacePromptTemplateCollectionIds
     ])
-    /** Valid root and category IDs used to prune owner-scoped state. */
-    const validContentOwnerIds = new Set([...validPromptFolderIds, ...workspaceCategoryIds])
+    /** Valid collection and category IDs used to prune owner-scoped state. */
+    const validContentOwnerIds = new Set([...validPromptCollectionIds, ...workspaceCategoryIds])
     /** Atomic cleanup preserving every still-valid row. */
     const cleanup = db.transaction(() => {
       /** Existing owner rows inspected before pruning. */
-      const promptFolderRows = db
+      const promptCollectionRows = db
         .prepare(
           `SELECT content_owner_id AS contentOwnerId,
                   selected_entry_id AS selectedEntryId,
@@ -78,21 +78,21 @@ export class WorkspaceUiStateDataAccess {
                   scroll_top_by_mode_json AS scrollTopByModeJson,
                   selected_mode AS selectedMode,
                   shown_final_status_groups_json AS shownFinalStatusGroupsJson
-           FROM prompt_folder_view_state WHERE workspace_id = ?`
+           FROM prompt_collection_view_state WHERE workspace_id = ?`
         )
-        .all(workspaceId) as PromptFolderViewRow[]
-      db.prepare('DELETE FROM prompt_folder_view_state WHERE workspace_id = ?').run(workspaceId)
+        .all(workspaceId) as PromptCollectionViewRow[]
+      db.prepare('DELETE FROM prompt_collection_view_state WHERE workspace_id = ?').run(workspaceId)
       /** Prepared insert for one retained owner row. */
-      const insertPromptFolder = db.prepare(
-        `INSERT INTO prompt_folder_view_state (
+      const insertPromptCollection = db.prepare(
+        `INSERT INTO prompt_collection_view_state (
            workspace_id, content_owner_id, selected_entry_id,
            tree_is_expanded, content_section_is_expanded, scroll_top_by_mode_json,
            selected_mode, shown_final_status_groups_json
          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      for (const row of promptFolderRows) {
+      for (const row of promptCollectionRows) {
         if (!validContentOwnerIds.has(row.contentOwnerId)) continue
-        insertPromptFolder.run(
+        insertPromptCollection.run(
           workspaceId,
           row.contentOwnerId,
           row.selectedEntryId,
@@ -109,8 +109,8 @@ export class WorkspaceUiStateDataAccess {
         .prepare(
           `SELECT selected_screen AS selectedScreen,
                   selected_screen_data_json AS selectedScreenDataJson,
-                  last_prompt_task_folder_id AS lastPromptTaskFolderId,
-                  last_prompt_template_folder_id AS lastPromptTemplateFolderId
+                  last_prompt_task_collection_id AS lastPromptTaskCollectionId,
+                  last_prompt_template_collection_id AS lastPromptTemplateCollectionId
            FROM workspace_ui_state WHERE workspace_id = ?`
         )
         .get(workspaceId) as WorkspaceUiStateRow | undefined
@@ -123,30 +123,30 @@ export class WorkspaceUiStateDataAccess {
       if (!selection) {
         resetWorkspaceScreenSelection(workspaceId)
       } else if (
-        (selection.selectedScreen === 'prompt-task-folders' ||
-          selection.selectedScreen === 'prompt-template-folders') &&
-        selection.selectedScreenData.promptFolderId &&
-        !(selection.selectedScreen === 'prompt-template-folders'
-          ? validPromptTemplateFolderIds
-          : validPromptTaskFolderIds
-        ).has(selection.selectedScreenData.promptFolderId)
+        (selection.selectedScreen === 'prompt-task-collections' ||
+          selection.selectedScreen === 'prompt-template-collections') &&
+        selection.selectedScreenData.promptCollectionId &&
+        !(selection.selectedScreen === 'prompt-template-collections'
+          ? validPromptTemplateCollectionIds
+          : validPromptTaskCollectionIds
+        ).has(selection.selectedScreenData.promptCollectionId)
       ) {
         resetWorkspaceScreenSelection(workspaceId)
       }
       if (
-        workspaceRow.lastPromptTaskFolderId &&
-        !validPromptTaskFolderIds.has(workspaceRow.lastPromptTaskFolderId)
+        workspaceRow.lastPromptTaskCollectionId &&
+        !validPromptTaskCollectionIds.has(workspaceRow.lastPromptTaskCollectionId)
       ) {
         db.prepare(
-          'UPDATE workspace_ui_state SET last_prompt_task_folder_id = NULL WHERE workspace_id = ?'
+          'UPDATE workspace_ui_state SET last_prompt_task_collection_id = NULL WHERE workspace_id = ?'
         ).run(workspaceId)
       }
       if (
-        workspaceRow.lastPromptTemplateFolderId &&
-        !validPromptTemplateFolderIds.has(workspaceRow.lastPromptTemplateFolderId)
+        workspaceRow.lastPromptTemplateCollectionId &&
+        !validPromptTemplateCollectionIds.has(workspaceRow.lastPromptTemplateCollectionId)
       ) {
         db.prepare(
-          'UPDATE workspace_ui_state SET last_prompt_template_folder_id = NULL WHERE workspace_id = ?'
+          'UPDATE workspace_ui_state SET last_prompt_template_collection_id = NULL WHERE workspace_id = ?'
         ).run(workspaceId)
       }
     })

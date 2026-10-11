@@ -4,13 +4,13 @@ import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { getPromptStatusFolderContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
 import { promptTemplateEntryRef, promptEntryRef } from '@shared/domain/OrderContainer'
 import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, PromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
-import { removeCategoryOrderEntry, type PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import { removeCategoryOrderEntry, type PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE, resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 
 /** Renderer-authored command setting the complete location of one prompt or template. */
 export type SetPromptLocationDomainCommand = {
-  kind: PromptFolderContentKind
-  sourcePromptFolderId: string
+  kind: PromptCollectionContentKind
+  sourcePromptCollectionId: string
   promptId: string
   location: PromptLocation
   modifiedAt: string
@@ -23,7 +23,7 @@ const parsePromptLocation = (value: unknown): PromptLocation | null => {
   const record = value as Record<string, unknown>
   if (
     Object.keys(record).length !== 4 ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     (record.categoryId !== null && typeof record.categoryId !== 'string') ||
     (record.previousEntryId !== null && typeof record.previousEntryId !== 'string') ||
     (!isPromptStatus(record.status) && !isPromptTemplateStatus(record.status)) ||
@@ -42,7 +42,7 @@ export const parseSetPromptLocationDomainCommand = (value: unknown): SetPromptLo
   if (
     Object.keys(record).length !== 5 ||
     (record.kind !== 'prompt' && record.kind !== 'template') ||
-    typeof record.sourcePromptFolderId !== 'string' ||
+    typeof record.sourcePromptCollectionId !== 'string' ||
     typeof record.promptId !== 'string' ||
     !location ||
     (record.kind === 'template' ? !isPromptTemplateStatus(location.status) : !isPromptStatus(location.status)) ||
@@ -59,20 +59,20 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
   const entityType = kind === 'prompt' ? 'prompt' : 'promptTemplate'
   /** Canonical content whose current status determines its source layout. */
   const prompt = state.get(entityType, promptId)
-  /** Claimed source root used to verify ownership. */
-  const source = state.get('promptFolder', command.sourcePromptFolderId)
-  /** Root receiving the complete location. */
-  const destination = state.get('promptFolder', location.promptFolderId)
+  /** Claimed source collection used to verify ownership. */
+  const source = state.get('promptCollection', command.sourcePromptCollectionId)
+  /** Collection receiving the complete location. */
+  const destination = state.get('promptCollection', location.promptCollectionId)
   /** Current physical status folder, including older template records with no status. */
   const sourceStatus = getPromptStatusFolderDefinition(prompt?.status ?? (kind === 'template' ? PromptTemplateStatus.Active : PromptStatus.Todo))
   /** Actual owner included in conflict snapshots when the renderer source is stale. */
-  const actualSource = state.getAll('promptFolder').find((folder) =>
-    folder.kind === kind && getPromptStatusFolderContentIds(folder, sourceStatus.id).includes(promptId)
+  const actualSource = state.getAll('promptCollection').find((collection) =>
+    collection.kind === kind && getPromptStatusFolderContentIds(collection, sourceStatus.id).includes(promptId)
   )
-  /** Unique root targets needed to reconcile an ownership or placement conflict. */
+  /** Unique collection targets needed to reconcile an ownership or placement conflict. */
   const targets: DomainTarget[] = [
-    ...Array.from(new Set([actualSource?.id ?? command.sourcePromptFolderId, location.promptFolderId]))
-      .map((id) => ({ entityType: 'promptFolder' as const, id })),
+    ...Array.from(new Set([actualSource?.id ?? command.sourcePromptCollectionId, location.promptCollectionId]))
+      .map((id) => ({ entityType: 'promptCollection' as const, id })),
     { entityType, id: promptId }
   ]
   if (
@@ -85,7 +85,7 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
   const destinationStatus = getPromptStatusFolderDefinition(location.status)
   /** Destination layout used for exact placement validation. */
   const destinationLayout = destination.statusFolders[destinationStatus.id]
-  /** Whether the physical owning root or status folder changes. */
+  /** Whether the physical owning collection or status folder changes. */
   const transfersOwnership = source.id !== destination.id || sourceStatus.id !== destinationStatus.id
   /** Source layout used to resolve the current ordered category. */
   const sourceLayout = source.statusFolders[sourceStatus.id]
@@ -95,7 +95,7 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
     : undefined
   /** Current predecessor within the source category. */
   const sourcePreviousEntryId = sourceCategory?.entries[sourceCategory.entries.findIndex((entry) => entry.id === promptId) - 1]?.id ?? null
-  /** Whether this command changes any root ordering or ownership. */
+  /** Whether this command changes any collection ordering or ownership. */
   const changesOrdering = transfersOwnership || (destinationLayout.ordering === 'category' &&
     (sourceCategory?.categoryId !== location.categoryId || sourcePreviousEntryId !== location.previousEntryId))
   /** Status changes own modified/finalized timestamps; pure moves retain their timestamps. */
@@ -104,7 +104,7 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
   const finalizedAt = isFinalPromptStatus(location.status)
     ? !changesStatus && prompt.finalizedAt ? prompt.finalizedAt : command.modifiedAt
     : undefined
-  /** Destination-safe fallback title preserves existing cross-root move behavior. */
+  /** Destination-safe fallback title preserves existing cross-collection move behavior. */
   const fallbackTitle = source.id !== destination.id && prompt.title.trim().length === 0
     ? resolvePromptTitleUpdateForPromptIds({
         promptIds: getPromptStatusFolderContentIds(destination, destinationStatus.id).filter((id) => id !== promptId),
@@ -127,11 +127,11 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
     if (destinationLayout.ordering === 'finalizedAt' && location.previousEntryId !== null) {
       return { status: 'conflict', reason: 'Prompt location placement conflict', targets }
     }
-    /** One update per affected root, even for moves between layouts in the same root. */
+    /** One update per affected collection, even for moves between layouts in the same collection. */
     const changes: DomainChange[] = changesOrdering
       ? Array.from(new Set([source.id, destination.id])).map((id) => ({
           type: 'update' as const,
-          entityType: 'promptFolder' as const,
+          entityType: 'promptCollection' as const,
           id,
           recipe: (draft) => {
             if (id === source.id) {

@@ -1,17 +1,17 @@
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import { vol } from 'memfs'
 import { describe, expect, it, vi } from 'vitest'
 import { setFs } from '../../src/main/fs-provider'
 import { loadWorkspaceByPath } from '../../src/main/Workspace/WorkspaceLoader'
-import { loadPromptFolderInitialData } from '../../src/main/Queries/PromptFolderQuery'
+import { loadPromptCollectionInitialData } from '../../src/main/Queries/PromptCollectionQuery'
 import {
-  createWorkspaceWithTemplateFolders,
+  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
 vi.mock('../../src/main/Persistence/sqlite/WorkspaceUiStateDataAccess', () => ({
   WorkspaceUiStateDataAccess: {
-    cleanupWorkspacePromptFolderUiState: vi.fn()
+    cleanupWorkspacePromptCollectionUiState: vi.fn()
   }
 }))
 
@@ -27,11 +27,11 @@ describe('prompt template workspace loading', () => {
   it('loads a flat template root and sends full templates to the renderer', async () => {
     const workspacePath = '/ws/template-loading'
     vol.fromJSON(
-      createWorkspaceWithTemplateFolders(workspacePath, [
+      createWorkspaceWithTemplateCollections(workspacePath, [
         {
           folderName: 'Root',
           displayName: 'Root Templates',
-          folderId: 'template-root',
+          collectionId: 'template-root',
           description: 'Root description',
           templates: [
             {
@@ -48,15 +48,15 @@ describe('prompt template workspace loading', () => {
     const result = await loadWorkspaceByPath(getWorkspaceInfoPath(workspacePath))
     if (!result.success) throw new Error(result.error)
 
-    expect(result.workspace.data.promptFolderEntries).toEqual([])
-    expect(result.workspace.data.templateFolderEntries).toEqual([
-      { kind: 'folder', id: 'template-root' }
+    expect(result.workspace.data.promptCollectionEntries).toEqual([])
+    expect(result.workspace.data.templateCollectionEntries).toEqual([
+      { kind: 'collection', id: 'template-root' }
     ])
-    expect(result.promptFolders.map((folder) => folder.id)).toEqual(['template-root'])
-    const rootTemplateFolder = result.promptFolders.find(
-      (folder) => folder.id === 'template-root'
+    expect(result.promptCollections.map((collection) => collection.id)).toEqual(['template-root'])
+    const rootTemplateCollection = result.promptCollections.find(
+      (collection) => collection.id === 'template-root'
     )?.data
-    expect(rootTemplateFolder).toMatchObject({
+    expect(rootTemplateCollection).toMatchObject({
       kind: 'template',
       statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
         categories: [
@@ -67,8 +67,8 @@ describe('prompt template workspace loading', () => {
         ]
       } } })
     })
-    expect(rootTemplateFolder?.settings).toEqual({
-      folderDescription: 'Root description'
+    expect(rootTemplateCollection?.settings).toEqual({
+      collectionDescription: 'Root description'
     })
     expect(result.promptTemplates).toHaveLength(1)
     const templateModifiedAt = vol
@@ -82,16 +82,16 @@ describe('prompt template workspace loading', () => {
       templateText: 'Use {{value}}.'
     })
 
-    const folderResult = await loadPromptFolderInitialData({
+    const collectionResult = await loadPromptCollectionInitialData({
       workspaceId: result.workspace.id,
-      promptFolderId: 'template-root'
+      promptCollectionId: 'template-root'
     })
-    if (!folderResult.success) throw new Error(folderResult.error)
+    if (!collectionResult.success) throw new Error(collectionResult.error)
 
-    expect(folderResult.prompts).toEqual([])
-    expect(folderResult.markdownContentUiStates).toEqual([])
-    expect(folderResult.promptTemplates).toHaveLength(1)
-    expect(folderResult.promptTemplates[0]?.data).toMatchObject({
+    expect(collectionResult.prompts).toEqual([])
+    expect(collectionResult.markdownContentUiStates).toEqual([])
+    expect(collectionResult.promptTemplates).toHaveLength(1)
+    expect(collectionResult.promptTemplates[0]?.data).toMatchObject({
       id: 'category-template',
       title: 'Category Template',
       templateText: 'Use {{value}}.'

@@ -10,7 +10,7 @@ import {
 } from '@shared/domain/user-persistence/UserPersistence'
 import type {
   AccordionUiState,
-  WorkspacePromptFolderUiState,
+  WorkspacePromptCollectionUiState,
   WorkspaceUiState
 } from '@shared/domain/ui-state/UiState'
 import { MarkdownContentUiStateDataAccess } from './MarkdownContentUiStateDataAccess'
@@ -31,22 +31,22 @@ type WorkspaceCompositeKey = {
 type WorkspaceUiStateRow = {
   selectedScreen: string
   selectedScreenDataJson: string | null
-  lastPromptTaskFolderId: string | null
-  lastPromptTemplateFolderId: string | null
+  lastPromptTaskCollectionId: string | null
+  lastPromptTemplateCollectionId: string | null
 }
 
-/** SQLite row containing one prompt-folder screen view state. */
-type WorkspacePromptFolderUiStateRow = {
+/** SQLite row containing one prompt-collection screen view state. */
+type WorkspacePromptCollectionUiStateRow = {
   workspaceId: string
   contentOwnerId: string
   selectedEntryId: string
   treeIsExpanded: number
   contentSectionIsExpanded: number
-  /** Serialized offsets for the root folder's visited status modes. */
+  /** Serialized offsets for the collection's visited status modes. */
   scrollTopByModeJson: string
-  /** Selected root mode retained across application launches. */
-  selectedMode: WorkspacePromptFolderUiState['selectedMode']
-  /** Serialized visibility of the root's optional status sections. */
+  /** Selected collection mode retained across application launches. */
+  selectedMode: WorkspacePromptCollectionUiState['selectedMode']
+  /** Serialized visibility of the collection's optional status sections. */
   shownFinalStatusGroupsJson: string
 }
 
@@ -108,8 +108,8 @@ export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
         SELECT
           selected_screen AS selectedScreen,
           selected_screen_data_json AS selectedScreenDataJson,
-          last_prompt_task_folder_id AS lastPromptTaskFolderId,
-          last_prompt_template_folder_id AS lastPromptTemplateFolderId
+          last_prompt_task_collection_id AS lastPromptTaskCollectionId,
+          last_prompt_template_collection_id AS lastPromptTemplateCollectionId
         FROM workspace_ui_state
         WHERE workspace_id = ?
         `
@@ -125,8 +125,8 @@ export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
       ? {
           workspaceId,
           ...selection,
-          lastPromptTaskFolderId: row.lastPromptTaskFolderId,
-          lastPromptTemplateFolderId: row.lastPromptTemplateFolderId
+          lastPromptTaskCollectionId: row.lastPromptTaskCollectionId,
+          lastPromptTemplateCollectionId: row.lastPromptTemplateCollectionId
         }
       : null
   },
@@ -145,36 +145,36 @@ export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
         workspace_id,
         selected_screen,
         selected_screen_data_json,
-        last_prompt_task_folder_id,
-        last_prompt_template_folder_id
+        last_prompt_task_collection_id,
+        last_prompt_template_collection_id
       )
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(workspace_id) DO UPDATE SET
         selected_screen = excluded.selected_screen,
         selected_screen_data_json = excluded.selected_screen_data_json,
-        last_prompt_task_folder_id = excluded.last_prompt_task_folder_id,
-        last_prompt_template_folder_id = excluded.last_prompt_template_folder_id
+        last_prompt_task_collection_id = excluded.last_prompt_task_collection_id,
+        last_prompt_template_collection_id = excluded.last_prompt_template_collection_id
       `
     ).run(
       workspaceId,
       uiState.selectedScreen,
       uiState.selectedScreenData === null ? null : JSON.stringify(uiState.selectedScreenData),
-      uiState.lastPromptTaskFolderId,
-      uiState.lastPromptTemplateFolderId
+      uiState.lastPromptTaskCollectionId,
+      uiState.lastPromptTemplateCollectionId
     )
   }
 }
 
-/** SQLite query/command adapter for prompt-folder view UI state. */
-export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLayer<
-  WorkspacePromptFolderUiState,
+/** SQLite query/command adapter for prompt-collection view UI state. */
+export const workspacePromptCollectionUiStateSqlitePersistence: SqlitePersistenceLayer<
+  WorkspacePromptCollectionUiState,
   SqlitePersistenceFields
 > = {
   kind: 'sqlite',
   query: (id) => {
     /** Composite workspace and content-owner key decoded for the SQL query. */
     const { workspaceId, localId: contentOwnerId } = parseWorkspaceCompositeKey(id)
-    /** Stored prompt-folder view state selected by its composite key. */
+    /** Stored prompt-collection view state selected by its composite key. */
     const row = SqliteDataAccess.getDatabase()
       .prepare(
         `
@@ -187,11 +187,11 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
           scroll_top_by_mode_json AS scrollTopByModeJson,
           selected_mode AS selectedMode,
           shown_final_status_groups_json AS shownFinalStatusGroupsJson
-        FROM prompt_folder_view_state
+        FROM prompt_collection_view_state
         WHERE workspace_id = ? AND content_owner_id = ?
         `
       )
-      .get(workspaceId, contentOwnerId) as WorkspacePromptFolderUiStateRow | undefined
+      .get(workspaceId, contentOwnerId) as WorkspacePromptCollectionUiStateRow | undefined
     return row
       ? {
           workspaceId: row.workspaceId,
@@ -208,19 +208,19 @@ export const workspacePromptFolderUiStateSqlitePersistence: SqlitePersistenceLay
   command: (id, transition) => {
     /** Composite workspace and content-owner key decoded for the SQL command. */
     const { workspaceId, localId: contentOwnerId } = parseWorkspaceCompositeKey(id)
-    /** Database receiving the prompt-folder UI-state command. */
+    /** Database receiving the prompt-collection UI-state command. */
     const db = SqliteDataAccess.getDatabase()
     if (!transition.after) {
       db.prepare(
-        'DELETE FROM prompt_folder_view_state WHERE workspace_id = ? AND content_owner_id = ?'
+        'DELETE FROM prompt_collection_view_state WHERE workspace_id = ? AND content_owner_id = ?'
       ).run(workspaceId, contentOwnerId)
       return
     }
-    /** Authoritative prompt-folder view state written by the command. */
+    /** Authoritative prompt-collection view state written by the command. */
     const uiState = transition.after.data
     db.prepare(
       `
-      INSERT INTO prompt_folder_view_state (
+      INSERT INTO prompt_collection_view_state (
         workspace_id,
         content_owner_id,
         selected_entry_id,

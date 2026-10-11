@@ -14,7 +14,7 @@ describe('Prompt tree DPI scaling', () => {
       workspace: { scenario: 'categories-ui' }
     })
 
-    await testHelpers.navigateToPromptFolders('Hierarchy')
+    await testHelpers.navigateToPromptCollections('Hierarchy')
     const guide = mainWindow
       .locator('[data-testid="prompt-tree-active-prompt-categories-ui-second-category-prompt"]')
       .locator('[data-indent-guide-line]')

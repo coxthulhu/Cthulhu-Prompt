@@ -1,6 +1,6 @@
 import type { ElectronApplication } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { runSqlQuery, runSqlStatement, toSqlText } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -41,7 +41,7 @@ describe('Workspace Open dialog persistence', () => {
     electronApp,
     testSetup
   }) => {
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, []))
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -83,7 +83,7 @@ describe('Workspace Open dialog persistence', () => {
       electronApp,
       testSetup
     }) => {
-      await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, []))
+      await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
       const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await runSqlStatement(
         electronApp,

@@ -1,6 +1,6 @@
 import type { FilePersistenceStagedChange } from './FilePersistenceHelpers'
 import type { CategoryPersistenceFields } from './CategoryPersistence'
-import type { PromptFolderPersistenceFields } from './PromptFolderPersistence'
+import type { PromptCollectionPersistenceFields } from './PromptCollectionPersistence'
 import type { PromptPersistenceFields } from './PromptPersistence'
 import type { PromptTemplatePersistenceFields } from './PromptTemplatePersistence'
 import type { SystemSettingsPersistenceFields } from './SystemSettingsPersistence'
@@ -22,14 +22,14 @@ export type PersistenceTransition<TData, TPersistenceFields> = {
 export type DomainPersistenceFieldsMap = {
   systemSettings: SystemSettingsPersistenceFields
   workspace: WorkspacePersistenceFields
-  promptFolder: PromptFolderPersistenceFields
+  promptCollection: PromptCollectionPersistenceFields
   category: CategoryPersistenceFields
   prompt: PromptPersistenceFields
   promptTemplate: PromptTemplatePersistenceFields
   userPersistence: Record<string, never>
   markdownContentUiState: Record<string, never>
   workspaceUiState: Record<string, never>
-  workspacePromptFolderUiState: Record<string, never>
+  workspacePromptCollectionUiState: Record<string, never>
   accordionUiState: Record<string, never>
 }
 

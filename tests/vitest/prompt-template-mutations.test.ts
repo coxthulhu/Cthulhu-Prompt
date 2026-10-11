@@ -1,10 +1,10 @@
 import { setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 
@@ -25,7 +25,7 @@ import {
   mutatePacedPromptTemplateAutosaveUpdate
 } from '@renderer/data/Mutations/PromptTemplateMutations'
 
-const templateFolder = (id: string, templateIds: string[] = []) => ({
+const templateCollection = (id: string, templateIds: string[] = []) => ({
   id,
   kind: 'template' as const,
   folderName: id,
@@ -38,7 +38,7 @@ const templateFolder = (id: string, templateIds: string[] = []) => ({
       }
     ]
   } } }),
-  settings: { folderDescription: null }
+  settings: { collectionDescription: null }
 })
 
 describe('prompt template mutations', () => {
@@ -46,19 +46,19 @@ describe('prompt template mutations', () => {
     vi.clearAllMocks()
     mutatePacedRevisionUpdateTransaction.mockReturnValue(pacedTransaction)
     for (const id of ['paced-template', 'new-template']) {
-      promptTemplateCollection.utils.deleteAuthoritative(id)
+      promptTemplatesCollection.utils.deleteAuthoritative(id)
       if (promptTemplateClientStateCollection.has(id)) {
         promptTemplateClientStateCollection.delete(id)
       }
     }
-    for (const id of ['source-folder', 'destination-folder']) {
-      promptFolderCollection.utils.deleteAuthoritative(id)
+    for (const id of ['source-collection', 'destination-collection']) {
+      promptCollectionsCollection.utils.deleteAuthoritative(id)
     }
     workspaceCollection.utils.deleteAuthoritative('template-workspace')
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: 'source-folder',
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: 'source-collection',
       revision: 1,
-      data: templateFolder('source-folder', ['paced-template'])
+      data: templateCollection('source-collection', ['paced-template'])
     })
     workspaceCollection.utils.upsertAuthoritative({
       id: 'template-workspace',
@@ -67,19 +67,19 @@ describe('prompt template mutations', () => {
         id: 'template-workspace',
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
-        promptFolderEntries: [],
-        templateFolderEntries: [
-          { kind: 'folder', id: 'source-folder' },
-          { kind: 'folder', id: 'destination-folder' }
+        promptCollectionEntries: [],
+        templateCollectionEntries: [
+          { kind: 'collection', id: 'source-collection' },
+          { kind: 'collection', id: 'destination-collection' }
         ]
       }
     })
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: 'destination-folder',
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: 'destination-collection',
       revision: 1,
-      data: templateFolder('destination-folder')
+      data: templateCollection('destination-collection')
     })
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: 'paced-template',
       revision: 3,
       data: createPromptTemplateFull({
@@ -149,23 +149,23 @@ describe('prompt template mutations', () => {
       templateText: ''
     })
 
-    await createPromptTemplate('source-folder', template, null)
+    await createPromptTemplate('source-collection', template, null)
 
     const options = runRevisionMutation.mock.calls[0]?.[0]
     const insertedTemplates: object[] = []
     const insertedClientStates: object[] = []
-    const sourceFolder = templateFolder('source-folder', ['paced-template'])
+    const sourceCollection = templateCollection('source-collection', ['paced-template'])
     options.mutateOptimistically({
       collections: {
         promptTemplate: { insert: (value: object) => insertedTemplates.push(value) },
         promptTemplateClientState: {
           insert: (value: object) => insertedClientStates.push(value)
         },
-        promptFolder: {
+        promptCollection: {
           update: (
             _id: string,
-            mutate: (draft: ReturnType<typeof templateFolder>) => void
-          ) => mutate(sourceFolder)
+            mutate: (draft: ReturnType<typeof templateCollection>) => void
+          ) => mutate(sourceCollection)
         }
       }
     })
@@ -178,7 +178,7 @@ describe('prompt template mutations', () => {
       id: 'new-template',
       isEdited: true
     })
-    expect(sourceFolder.statusFolders.active.categoryOrder.categories[0]?.entries).toEqual([
+    expect(sourceCollection.statusFolders.active.categoryOrder.categories[0]?.entries).toEqual([
       { kind: 'template', id: 'new-template' },
       { kind: 'template', id: 'paced-template' }
     ])
@@ -189,7 +189,7 @@ describe('prompt template mutations', () => {
     expect(invoke).toHaveBeenCalledWith('create-prompt-template', {
       payload: {
         command: {
-          promptFolderId: 'source-folder',
+          promptCollectionId: 'source-collection',
           contentId: 'new-template',
           title: '',
           fallbackTitle: '',
@@ -200,8 +200,8 @@ describe('prompt template mutations', () => {
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: 'source-folder',
+            entityType: 'promptCollection',
+            id: 'source-collection',
             expected: 'revision',
             revision: 1
           },
@@ -216,7 +216,7 @@ describe('prompt template mutations', () => {
   })
 
   it('reconciles the latest template snapshot from a delete conflict', async () => {
-    await deletePromptTemplate('source-folder', 'paced-template')
+    await deletePromptTemplate('source-collection', 'paced-template')
     const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
 
     deleteOptions.handleSuccessOrConflictResponse({
@@ -237,8 +237,8 @@ describe('prompt template mutations', () => {
       ]
     })
 
-    expect(promptTemplateCollection.utils.getAuthoritativeRevision('paced-template')).toBe(4)
-    expect(promptTemplateCollection.get('paced-template')).toMatchObject({
+    expect(promptTemplatesCollection.utils.getAuthoritativeRevision('paced-template')).toBe(4)
+    expect(promptTemplatesCollection.get('paced-template')).toMatchObject({
       title: 'Authoritative Template',
       templateText: 'Latest server text.',
       loadingState: 'full'
@@ -253,19 +253,19 @@ describe('prompt template mutations', () => {
   })
 
   it('sends template deletion and location changes through their IPC channels', async () => {
-    await deletePromptTemplate('source-folder', 'paced-template')
+    await deletePromptTemplate('source-collection', 'paced-template')
     const deleteOptions = runRevisionMutation.mock.calls[0]?.[0]
-    const sourceAfterDelete = templateFolder('source-folder', ['paced-template'])
+    const sourceAfterDelete = templateCollection('source-collection', ['paced-template'])
     const deleteTemplate = vi.fn()
     const deleteClientState = vi.fn()
     deleteOptions.mutateOptimistically({
       collections: {
         promptTemplate: { delete: deleteTemplate },
         promptTemplateClientState: { delete: deleteClientState },
-        promptFolder: {
+        promptCollection: {
           update: (
             _id: string,
-            mutate: (draft: ReturnType<typeof templateFolder>) => void
+            mutate: (draft: ReturnType<typeof templateCollection>) => void
           ) => mutate(sourceAfterDelete)
         }
       }
@@ -280,13 +280,13 @@ describe('prompt template mutations', () => {
       payload: {
         command: {
           workspaceId: 'template-workspace',
-          promptFolderId: 'source-folder',
+          promptCollectionId: 'source-collection',
           contentId: 'paced-template'
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: 'source-folder',
+            entityType: 'promptCollection',
+            id: 'source-collection',
             expected: 'revision',
             revision: 1
           },
@@ -300,15 +300,15 @@ describe('prompt template mutations', () => {
       }
     })
 
-    await setPromptLocation('source-folder', 'paced-template', {
-      promptFolderId: 'destination-folder',
+    await setPromptLocation('source-collection', 'paced-template', {
+      promptCollectionId: 'destination-collection',
       categoryId: null,
       previousEntryId: null,
       status: PromptTemplateStatus.Active
     })
     const moveOptions = runRevisionMutation.mock.calls[1]?.[0]
-    const sourceAfterMove = templateFolder('source-folder', ['paced-template'])
-    const destinationAfterMove = templateFolder('destination-folder')
+    const sourceAfterMove = templateCollection('source-collection', ['paced-template'])
+    const destinationAfterMove = templateCollection('destination-collection')
     const updateTemplate = vi.fn()
     const movedClientState = {
       id: 'paced-template',
@@ -320,11 +320,11 @@ describe('prompt template mutations', () => {
     )
     moveOptions.mutateOptimistically({
       collections: {
-        promptFolder: {
+        promptCollection: {
           update: (
             id: string,
-            mutate: (draft: ReturnType<typeof templateFolder>) => void
-          ) => mutate(id === 'source-folder' ? sourceAfterMove : destinationAfterMove)
+            mutate: (draft: ReturnType<typeof templateCollection>) => void
+          ) => mutate(id === 'source-collection' ? sourceAfterMove : destinationAfterMove)
         },
         promptTemplate: { update: updateTemplate },
         promptTemplateClientState: { update: updateClientState }
@@ -344,21 +344,21 @@ describe('prompt template mutations', () => {
       payload: {
         command: {
           kind: 'template',
-          sourcePromptFolderId: 'source-folder',
+          sourcePromptCollectionId: 'source-collection',
           promptId: 'paced-template',
-          location: { promptFolderId: 'destination-folder', categoryId: null, previousEntryId: null, status: PromptTemplateStatus.Active },
+          location: { promptCollectionId: 'destination-collection', categoryId: null, previousEntryId: null, status: PromptTemplateStatus.Active },
           modifiedAt: expect.any(String)
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: 'source-folder',
+            entityType: 'promptCollection',
+            id: 'source-collection',
             expected: 'revision',
             revision: 1
           },
           {
-            entityType: 'promptFolder',
-            id: 'destination-folder',
+            entityType: 'promptCollection',
+            id: 'destination-collection',
             expected: 'revision',
             revision: 1
           },

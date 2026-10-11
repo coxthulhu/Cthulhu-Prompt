@@ -1,16 +1,16 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import {
-  PROMPT_FOLDER_HOST_SELECTOR,
+  PROMPT_COLLECTION_HOST_SELECTOR,
   promptTreePromptSelector
-} from '../helpers/PromptFolderSelectors'
+} from '../helpers/PromptCollectionSelectors'
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
   dragGhostSelector,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
-import { readPromptFolderEntryIds } from '../helpers/PromptPersistenceTestHelpers'
+import { readPromptCollectionEntryIds } from '../helpers/PromptPersistenceTestHelpers'
 
 /** Electron fixtures and browser assertions for real pointer-capture sessions. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -57,7 +57,7 @@ describe('Pointer capture', () => {
       await sendPointer('up', x, y + 30)
       await expect(sash).toHaveAttribute('data-dragging', 'false')
 
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.navigateToPromptCollections('Development')
       /** Source row whose implicit touch capture must transfer to its virtual frame. */
       const row = mainWindow.locator(promptTreePromptSelector('dev-1'))
       /** Stable ancestor receives capture after the four-pixel drag threshold. */
@@ -88,10 +88,10 @@ describe('Pointer capture', () => {
           workspace: { scenario: 'virtual' }
         })
         if (control === 'accordion') await testHelpers.clickNavButton('Test Screen')
-        else await testHelpers.navigateToPromptFolders('Long')
+        else await testHelpers.navigateToPromptCollections('Long')
 
         /** Stable virtual frame containing the editor scrollbar. */
-        const frame = mainWindow.locator(PROMPT_FOLDER_HOST_SELECTOR).locator('..')
+        const frame = mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).locator('..')
         if (control === 'scrollbar') await frame.hover()
         /** Actual control that must own capture, including the moving accordion sash. */
         const handle = control === 'accordion'
@@ -147,15 +147,15 @@ describe('Pointer capture', () => {
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({
           workspace: { scenario: 'sample' }
         })
-        await testHelpers.navigateToPromptFolders('Development')
+        await testHelpers.navigateToPromptCollections('Development')
         /** Capture belongs to the source virtual frame, never the recycled row. */
         const frame = mainWindow.locator(source === 'editor'
-          ? PROMPT_FOLDER_HOST_SELECTOR
+          ? PROMPT_COLLECTION_HOST_SELECTOR
           : '[data-testid="prompt-tree-active-virtual-window"]').locator('..')
         /** Existing persisted ordering must survive browser interruption unchanged. */
-        const orderPath = '/ws/sample/Prompts/Development/Active/_FolderInfo/FolderOrder.json'
+        const orderPath = '/ws/sample/Prompts/Development/Active/_CollectionInfo/CategoryOrder.json'
         /** Persisted order before the drag. */
-        const before = await readPromptFolderEntryIds(electronApp, orderPath)
+        const before = await readPromptCollectionEntryIds(electronApp, orderPath)
         await recordPointerId(frame)
         if (source === 'editor') await beginPromptHandleDrag(mainWindow, 'dev-1')
         else await beginPromptTreeRowDrag(mainWindow, 'dev-1')
@@ -170,7 +170,7 @@ describe('Pointer capture', () => {
         await moveActiveDragToTarget(mainWindow, promptTreePromptSelector('dev-2'), 'bottom')
         await mainWindow.mouse.up()
         await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', 'grabbing')
-        expect(await readPromptFolderEntryIds(electronApp, orderPath)).toEqual(before)
+        expect(await readPromptCollectionEntryIds(electronApp, orderPath)).toEqual(before)
       })
     }
   }

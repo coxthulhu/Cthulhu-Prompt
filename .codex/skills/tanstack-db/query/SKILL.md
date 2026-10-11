@@ -1,7 +1,7 @@
 ---
 name: tanstack-db-query
 description: |
-  Cthulhu Prompt renderer IPC load and authoritative reconciliation patterns. Use when adding or changing functions under data/Queries, loading revision envelopes through preload APIs, normalizing prompt representations, hydrating client state, pruning removed entities, or coordinating startup and folder-level loading state.
+  Cthulhu Prompt renderer IPC load and authoritative reconciliation patterns. Use when adding or changing functions under data/Queries, loading revision envelopes through preload APIs, normalizing prompt representations, hydrating client state, pruning removed entities, or coordinating startup and collection-level loading state.
 ---
 
 # IPC Loads and Reconciliation
@@ -13,14 +13,14 @@ In this repository, a “query” is a preload-backed renderer-to-main IPC load 
 Put renderer load functions under `src/renderer/src/data/Queries` and use the shared request/result types:
 
 ```ts
-export const loadPromptFolderInitial = async (
+export const loadPromptCollectionInitial = async (
   workspaceId: string,
-  promptFolderId: string
+  promptCollectionId: string
 ): Promise<void> => {
   const result = await runLoad(() =>
-    ipcInvokeWithPayload<LoadPromptFolderInitialResult, LoadPromptFolderInitialPayload>(
-      'load-prompt-folder-initial',
-      { workspaceId, promptFolderId }
+    ipcInvokeWithPayload<LoadPromptCollectionInitialResult, LoadPromptCollectionInitialPayload>(
+      'load-prompt-collection-initial',
+      { workspaceId, promptCollectionId }
     )
   )
 
@@ -38,8 +38,8 @@ Responses contain authoritative revision envelopes. Apply them with revision col
 
 ```ts
 workspaceCollection.utils.upsertAuthoritative(result.workspace)
-promptFolderCollection.utils.upsertManyAuthoritative(result.promptFolders)
-promptCollection.utils.upsertManyAuthoritative(promptSnapshots)
+promptCollectionsCollection.utils.upsertManyAuthoritative(result.promptCollections)
+promptsCollection.utils.upsertManyAuthoritative(promptSnapshots)
 ```
 
 Do not unwrap an envelope and call ordinary collection `insert` or `update`; that would bypass revision ordering and optimistic reconciliation.
@@ -51,7 +51,7 @@ The revision adapter ignores stale snapshots. Prompt loads additionally allow a 
 Normalize IPC data before authoritative insertion when the shared domain has distinct renderer representations:
 
 - Use `createPromptSummary` for workspace-level prompt lists.
-- Use `createPromptFull` for prompt-folder initial loads and mutation responses.
+- Use `createPromptFull` for prompt-collection initial loads and mutation responses.
 - Use the equivalent prompt-template constructor when loading template summaries.
 - Serialize full prompt data with the established persisted conversion before mutation IPC.
 
@@ -64,7 +64,7 @@ After applying authoritative snapshots, call the appropriate `data/UiState` upse
 Examples include:
 
 - prompt and template edit markers
-- prompt-folder load markers
+- prompt-collection load markers
 - system-settings form inputs
 
 Do not construct duplicate client-state shapes in query modules or components.
@@ -79,7 +79,7 @@ For graph or subset reloads:
 4. Delete those IDs through authoritative bulk delete utilities.
 5. Delete matching client state.
 
-Reconcile only the entities owned by the load contract. For example, the current prompt-folder initial load prunes removed prompts and prompt client state, while other associated collections have their own lifecycle. Do not infer cross-entity deletes that the response does not establish.
+Reconcile only the entities owned by the load contract. For example, the current prompt-collection initial load prunes removed prompts and prompt client state, while other associated collections have their own lifecycle. Do not infer cross-entity deletes that the response does not establish.
 
 Do not clear whole authoritative singleton collections when switching or reloading a workspace; preserve revision-aware reconciliation and delete only records proven absent. Workspace-scoped client-state collections are cleared through `WorkspaceStoreBridge.ts` after their autosaves flush.
 
@@ -101,7 +101,7 @@ For mutation command/parser/planner registration, target/revision conflicts, ato
 
 - Load system settings and user persistence before the first Svelte mount in `main.ts`.
 - Load workspaces on explicit select/create/restore flows.
-- Load full prompt-folder data on navigation, while workspace loads retain prompt summaries.
+- Load full prompt-collection data on navigation, while workspace loads retain prompt summaries.
 - Track active request IDs and feature loading/error state in the owning Svelte component or controller.
 - Do not rely on revision collection `isReady()` or live-query `isLoading` for IPC requests made outside collection sync.
 

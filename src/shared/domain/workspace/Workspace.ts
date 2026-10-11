@@ -1,45 +1,45 @@
-import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import type { PromptSummaryData } from '@shared/domain/prompt/Prompt'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { IpcResult } from '@shared/ipc/IpcResult'
-import type { FolderEntryRef } from '@shared/domain/OrderContainer'
-import type { PromptFolderKind } from '@shared/domain/prompt-folder/PromptFolder'
+import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
+import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
 
-export interface WorkspaceRoot {
+export interface WorkspaceCollections {
   id: string
-  /** Ordered task-prompt root folders owned by this workspace. */
-  promptFolderEntries: FolderEntryRef[]
-  /** Ordered prompt-template root folders owned by this workspace. */
-  templateFolderEntries: FolderEntryRef[]
+  /** Ordered task-prompt collections owned by this workspace. */
+  promptCollectionEntries: CollectionEntryRef[]
+  /** Ordered prompt-template collections owned by this workspace. */
+  templateCollectionEntries: CollectionEntryRef[]
 }
 
-export interface Workspace extends WorkspaceRoot {
+export interface Workspace extends WorkspaceCollections {
   workspacePath: string
   workspaceName: string
 }
 
-/** Returns the workspace root-folder order for one folder kind. */
-export const getWorkspaceFolderEntries = (
-  workspace: WorkspaceRoot,
-  kind: PromptFolderKind
-): FolderEntryRef[] =>
-  kind === 'template' ? workspace.templateFolderEntries : workspace.promptFolderEntries
+/** Returns the workspace collection order for one collection kind. */
+export const getWorkspaceCollectionEntries = (
+  workspace: WorkspaceCollections,
+  kind: PromptCollectionKind
+): CollectionEntryRef[] =>
+  kind === 'template' ? workspace.templateCollectionEntries : workspace.promptCollectionEntries
 
-/** Returns both workspace root-folder orders with task prompts first. */
-export const getAllWorkspaceFolderEntries = (workspace: WorkspaceRoot): FolderEntryRef[] => [
-  ...workspace.promptFolderEntries,
-  ...workspace.templateFolderEntries
+/** Returns both workspace collection orders with task prompts first. */
+export const getAllWorkspaceCollectionEntries = (workspace: WorkspaceCollections): CollectionEntryRef[] => [
+  ...workspace.promptCollectionEntries,
+  ...workspace.templateCollectionEntries
 ]
 
-/** Replaces the workspace root-folder order for one folder kind. */
-export const setWorkspaceFolderEntries = (
-  workspace: WorkspaceRoot,
-  kind: PromptFolderKind,
-  entries: FolderEntryRef[]
+/** Replaces the workspace collection order for one collection kind. */
+export const setWorkspaceCollectionEntries = (
+  workspace: WorkspaceCollections,
+  kind: PromptCollectionKind,
+  entries: CollectionEntryRef[]
 ): void => {
-  if (kind === 'template') workspace.templateFolderEntries = entries
-  else workspace.promptFolderEntries = entries
+  if (kind === 'template') workspace.templateCollectionEntries = entries
+  else workspace.promptCollectionEntries = entries
 }
 
 // Special-case create payload. This is command data for workspace setup,
@@ -64,7 +64,7 @@ export type WorkspaceFolderStatus = {
 
 export type LoadWorkspaceByPathResult = IpcResult<{
   workspace: RevisionEnvelope<Workspace>
-  promptFolders: Array<RevisionEnvelope<PromptFolder>>
+  promptCollections: Array<RevisionEnvelope<PromptCollection>>
   categories: Array<RevisionEnvelope<import('@shared/domain/category/Category').Category>>
   prompts: Array<RevisionEnvelope<PromptSummaryData>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>

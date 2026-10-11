@@ -1,14 +1,14 @@
 import type { WorkspaceScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
 import {
   createAccordionUiStateKey,
-  createWorkspacePromptFolderUiStateKey,
+  createWorkspacePromptCollectionUiStateKey,
   type AccordionUiState,
-  type WorkspacePromptFolderUiState,
+  type WorkspacePromptCollectionUiState,
   type WorkspaceUiState
 } from '@shared/domain/ui-state/UiState'
 import {
   planSetAccordionUiStateDomainMutation,
-  planSetWorkspacePromptFolderUiStateDomainMutation,
+  planSetWorkspacePromptCollectionUiStateDomainMutation,
   planSetWorkspaceUiStateDomainMutation
 } from '@shared/domain/ui-state/UiStateDomainMutations'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
@@ -33,22 +33,22 @@ export const setWorkspaceUiStateWithAutosave = (
   })
 }
 
-/** Queues one complete prompt-folder view UI-state replacement. */
-export const setWorkspacePromptFolderUiStateWithAutosave = (
-  uiState: WorkspacePromptFolderUiState,
+/** Queues one complete prompt-collection view UI-state replacement. */
+export const setWorkspacePromptCollectionUiStateWithAutosave = (
+  uiState: WorkspacePromptCollectionUiState,
   debounceMs: number
 ): void => {
   /** Composite target ID shared with the revision collection. */
-  const id = createWorkspacePromptFolderUiStateKey(
+  const id = createWorkspacePromptCollectionUiStateKey(
     uiState.workspaceId,
     uiState.contentOwnerId
   )
   mutatePacedRendererDomainMutation({
-    mutation: { command: uiState, plan: planSetWorkspacePromptFolderUiStateDomainMutation },
-    ipc: { channel: 'set-workspace-prompt-folder-ui-state' },
+    mutation: { command: uiState, plan: planSetWorkspacePromptCollectionUiStateDomainMutation },
+    ipc: { channel: 'set-workspace-prompt-collection-ui-state' },
     renderer: {},
     pacing: {
-      target: { entityType: 'workspacePromptFolderUiState', id },
+      target: { entityType: 'workspacePromptCollectionUiState', id },
       debounceMs
     }
   })
@@ -72,7 +72,7 @@ export const setAccordionUiStateWithAutosave = (
   })
 }
 
-/** Immediately synchronizes the workspace screen selection and last-root pointer. */
+/** Immediately synchronizes the workspace screen selection and last-collection pointer. */
 export const syncWorkspaceScreenSelection = async (
   workspaceId: string,
   workspaceScreenSelection: WorkspaceScreenSelection
@@ -84,14 +84,14 @@ export const syncWorkspaceScreenSelection = async (
   const command: WorkspaceUiState = {
     workspaceId,
     ...workspaceScreenSelection,
-    lastPromptTaskFolderId:
-      workspaceScreenSelection.selectedScreen === 'prompt-task-folders'
-        ? workspaceScreenSelection.selectedScreenData.promptFolderId
-        : current.lastPromptTaskFolderId,
-    lastPromptTemplateFolderId:
-      workspaceScreenSelection.selectedScreen === 'prompt-template-folders'
-        ? workspaceScreenSelection.selectedScreenData.promptFolderId
-        : current.lastPromptTemplateFolderId
+    lastPromptTaskCollectionId:
+      workspaceScreenSelection.selectedScreen === 'prompt-task-collections'
+        ? workspaceScreenSelection.selectedScreenData.promptCollectionId
+        : current.lastPromptTaskCollectionId,
+    lastPromptTemplateCollectionId:
+      workspaceScreenSelection.selectedScreen === 'prompt-template-collections'
+        ? workspaceScreenSelection.selectedScreenData.promptCollectionId
+        : current.lastPromptTemplateCollectionId
   }
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planSetWorkspaceUiStateDomainMutation },

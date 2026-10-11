@@ -15,7 +15,7 @@
     getMinMonacoHeightPx,
     type PromptEditorSizingConfig
   } from './promptEditorSizing'
-  import type { PromptFolderFindRequest, PromptFolderFindSelection } from '../prompt-folders/find/promptFolderFindTypes'
+  import type { PromptCollectionFindRequest, PromptCollectionFindSelection } from '../prompt-collections/find/promptCollectionFindTypes'
 
   type Props = {
     initialValue: string
@@ -36,17 +36,17 @@
       meta: {
         didResize: boolean
         heightPx: number
-        selection: PromptFolderFindSelection | null
+        selection: PromptCollectionFindSelection | null
       }
     ) => void
     onBlur?: () => void
     onEditorLifecycle?: (editor: monaco.editor.IStandaloneCodeEditor, isActive: boolean) => void
     findSectionKey: string
-    findRequest?: PromptFolderFindRequest | null
+    findRequest?: PromptCollectionFindRequest | null
     onFindMatchReveal?: (
       handler: ((query: string, matchIndex: number) => number | null) | null
     ) => void
-    onSelectionChange?: (selection: PromptFolderFindSelection) => void
+    onSelectionChange?: (selection: PromptCollectionFindSelection) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
     /** Moves focus to the owning title input when backward tabbing from the first cursor position. */
     onBackwardTabAtStart?: () => void
@@ -155,7 +155,7 @@
     value: string,
     didResize: boolean,
     heightPx: number,
-    selection: PromptFolderFindSelection | null = null
+    selection: PromptCollectionFindSelection | null = null
   ) => {
     onChange?.(value, { didResize, heightPx, selection })
   }
@@ -374,7 +374,7 @@
   const reportSelectionAnchor = (
     targetEditor: monaco.editor.IStandaloneCodeEditor,
     selection: monaco.Selection | null
-  ): PromptFolderFindSelection | null => {
+  ): PromptCollectionFindSelection | null => {
     if (!onSelectionChange || !selection) return null
     const model = targetEditor.getModel()
     if (!model) return null
@@ -606,7 +606,7 @@
     emitChange(editor.getValue(), nextHeightPx !== previousHeightPx, nextHeightPx)
   })
 
-  // Side effect: sync Monaco find highlights and active-match reveal with the folder results.
+  // Side effect: sync Monaco find highlights and active-match reveal with the collection results.
   $effect(() => {
     if (!isEditorReady || !editor) return
     const query = findRequest?.query ?? ''

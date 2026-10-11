@@ -1,11 +1,12 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  createWorkspaceWithFolders,
-  createWorkspaceWithTemplateFolders,
+  createLegacyWorkspaceFilesystem,
+  createWorkspaceWithCollections,
+  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { stubClipboard, readClipboardText } from '../helpers/ClipboardHelpers'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
@@ -13,23 +14,23 @@ import {
   getMonacoEditorText,
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
-import { getPromptEditorIds } from '../helpers/PromptFolderHelpers'
+import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/template-selection'
-const PROMPT_FOLDER_ID = 'selection-prompts'
-const SECOND_TEMPLATE_FOLDER_ID = 'selection-templates-second'
-const FIRST_TEMPLATE_FOLDER_ID = 'selection-templates-first'
+const PROMPT_COLLECTION_ID = 'selection-prompts'
+const SECOND_TEMPLATE_COLLECTION_ID = 'selection-templates-second'
+const FIRST_TEMPLATE_COLLECTION_ID = 'selection-templates-first'
 const TEMPLATE_CATEGORY_ID = 'selection-templates-category'
-const EMPTY_TEMPLATE_FOLDER_ID = 'selection-templates-empty'
+const EMPTY_TEMPLATE_COLLECTION_ID = 'selection-templates-empty'
 const UNUSABLE_CATEGORY_ID = 'selection-templates-unusable-category'
 const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Select Template.prompt.md`
 const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Explicit No Template.prompt.md`
 const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Stale Template.prompt.md`
 const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Multiple Templates.prompt.md`
 const PROMPT_ORDER_PATH =
-  `${WORKSPACE_PATH}/Prompts/Prompts/Active/_FolderInfo/FolderOrder.json`
+  `${WORKSPACE_PATH}/Prompts/Prompts/Active/_CollectionInfo/CategoryOrder.json`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'
@@ -50,7 +51,7 @@ const expectTemplateIndicator = async (
   state: 'not-selected' | 'no-template' | 'selected',
   colorToken: TemplateIndicatorColorToken
 ) => {
-  const indicator = promptEditor.locator('.prompt-editor-metadata-folder')
+  const indicator = promptEditor.locator('.prompt-editor-metadata-template')
   await expect(indicator).toHaveAttribute('data-template-state', state)
   const colors = await indicator.evaluate((element: Element, token: string) => {
     const reference = document.createElement('span')
@@ -69,11 +70,11 @@ const expectTemplateIndicator = async (
 }
 
 const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
-  const promptWorkspace = createWorkspaceWithFolders(WORKSPACE_PATH, [
+  const promptWorkspace = createWorkspaceWithCollections(WORKSPACE_PATH, [
     {
       folderName: 'Prompts',
       displayName: 'Prompts',
-      promptFolderId: PROMPT_FOLDER_ID,
+      promptCollectionId: PROMPT_COLLECTION_ID,
       prompts: [
         {
           id: 'select-template-prompt',
@@ -107,11 +108,11 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
       ]
     }
   ])
-  const templateWorkspace = createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [
+  const templateWorkspace = createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [
     {
       folderName: 'Second',
       displayName: 'Second Templates',
-      folderId: SECOND_TEMPLATE_FOLDER_ID,
+      collectionId: SECOND_TEMPLATE_COLLECTION_ID,
       templates: [
         {
           id: 'template-second',
@@ -128,7 +129,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
     {
       folderName: 'First',
       displayName: 'First Templates',
-      folderId: FIRST_TEMPLATE_FOLDER_ID,
+      collectionId: FIRST_TEMPLATE_COLLECTION_ID,
       templates: [
         {
           id: 'template-first',
@@ -166,7 +167,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
     {
       folderName: 'Empty',
       displayName: 'Empty Templates',
-      folderId: EMPTY_TEMPLATE_FOLDER_ID
+      collectionId: EMPTY_TEMPLATE_COLLECTION_ID
     }
   ])
   /** Workspace metadata path downgraded because this fixture contains legacy prompt fields. */
@@ -178,7 +179,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
     workspaceName: string
   }
 
-  return {
+  return createLegacyWorkspaceFilesystem({
     ...promptWorkspace,
     ...templateWorkspace,
     [workspaceInfoPath]: JSON.stringify({ ...workspaceInfo, schemaVersion: 0 }, null, 2),
@@ -198,19 +199,19 @@ templateId: null
 status: Todo
 ---
 Copy without a template.`,
-    [`${WORKSPACE_PATH}/WorkspaceFolderOrder.json`]: JSON.stringify(
+    [`${WORKSPACE_PATH}/WorkspaceCollectionOrder.json`]: JSON.stringify(
       {
         entries: [
-          { kind: 'folder', id: PROMPT_FOLDER_ID },
-          { kind: 'folder', id: SECOND_TEMPLATE_FOLDER_ID },
-          { kind: 'folder', id: FIRST_TEMPLATE_FOLDER_ID },
-          { kind: 'folder', id: EMPTY_TEMPLATE_FOLDER_ID }
+          { kind: 'collection', id: PROMPT_COLLECTION_ID },
+          { kind: 'collection', id: SECOND_TEMPLATE_COLLECTION_ID },
+          { kind: 'collection', id: FIRST_TEMPLATE_COLLECTION_ID },
+          { kind: 'collection', id: EMPTY_TEMPLATE_COLLECTION_ID }
         ]
       },
       null,
       2
     )
-  }
+  }, 0)
 }
 
 describe('Prompt template selection', () => {
@@ -224,7 +225,7 @@ describe('Prompt template selection', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Prompts')
+    await testHelpers.navigateToPromptCollections('Prompts')
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-active-prompt-select-template-prompt"]')
     ).not.toHaveCSS('cursor', 'pointer')
@@ -237,16 +238,16 @@ describe('Prompt template selection', () => {
     const multiTemplatePromptEditor = mainWindow.locator(
       promptEditorSelector('multi-template-prompt')
     )
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'Not selected'
     )
-    await expect(stalePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(stalePromptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'No template'
     )
-    await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'No template'
     )
-    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'Second Root Template + 2 More'
     )
     await expectTemplateIndicator(promptEditor, 'not-selected', '--ui-secondary-text')
@@ -281,30 +282,30 @@ describe('Prompt template selection', () => {
       'Choose one template, or use the prompt exactly as written.'
     )
     expect(Math.abs((await dialog.locator('.cthulhuUiPopupSurface').boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
-    const firstBaseFolderHeader = dialog.locator('.prompt-template-base-folder-header').first()
-    const firstBaseFolderHeaderSpacer = dialog
-      .locator('.prompt-template-base-folder-header-spacer')
+    const firstBaseCollectionHeader = dialog.locator('.prompt-template-base-collection-header').first()
+    const firstBaseCollectionHeaderSpacer = dialog
+      .locator('.prompt-template-base-collection-header-spacer')
       .first()
-    const firstBaseFolderContentRow = dialog
-      .locator('.prompt-template-base-folder-content-row')
+    const firstBaseCollectionContentRow = dialog
+      .locator('.prompt-template-base-collection-content-row')
       .first()
-    const firstBaseFolderHeaderBox = (await firstBaseFolderHeader.boundingBox())!
-    const firstBaseFolderHeaderSpacerBox = (await firstBaseFolderHeaderSpacer.boundingBox())!
-    const firstBaseFolderContentRowBox = (await firstBaseFolderContentRow.boundingBox())!
+    const firstBaseCollectionHeaderBox = (await firstBaseCollectionHeader.boundingBox())!
+    const firstBaseCollectionHeaderSpacerBox = (await firstBaseCollectionHeaderSpacer.boundingBox())!
+    const firstBaseCollectionContentRowBox = (await firstBaseCollectionContentRow.boundingBox())!
     expect(
       Math.abs(
-        firstBaseFolderHeaderSpacerBox.y -
-          (firstBaseFolderHeaderBox.y + firstBaseFolderHeaderBox.height)
+        firstBaseCollectionHeaderSpacerBox.y -
+          (firstBaseCollectionHeaderBox.y + firstBaseCollectionHeaderBox.height)
       )
     ).toBeLessThanOrEqual(2)
-    expect(Math.abs(firstBaseFolderHeaderSpacerBox.height - 6)).toBeLessThanOrEqual(2)
+    expect(Math.abs(firstBaseCollectionHeaderSpacerBox.height - 6)).toBeLessThanOrEqual(2)
     expect(
       Math.abs(
-        firstBaseFolderContentRowBox.y -
-          (firstBaseFolderHeaderSpacerBox.y + firstBaseFolderHeaderSpacerBox.height)
+        firstBaseCollectionContentRowBox.y -
+          (firstBaseCollectionHeaderSpacerBox.y + firstBaseCollectionHeaderSpacerBox.height)
       )
     ).toBeLessThanOrEqual(2)
-    await expect(dialog.locator('.prompt-template-base-folder-name')).toHaveText([
+    await expect(dialog.locator('.prompt-template-base-collection-name')).toHaveText([
       'Second Templates',
       'First Templates'
     ])
@@ -317,7 +318,7 @@ describe('Prompt template selection', () => {
       'Category Templates'
     ])
     await expect(
-      dialog.locator(`[data-testid="prompt-template-base-folder-header-${EMPTY_TEMPLATE_FOLDER_ID}"]`)
+      dialog.locator(`[data-testid="prompt-template-base-collection-header-${EMPTY_TEMPLATE_COLLECTION_ID}"]`)
     ).toHaveCount(0)
     await expect(
       dialog.locator(
@@ -340,10 +341,10 @@ describe('Prompt template selection', () => {
         .locator('.sidebarPromptTreeCategoryIcon')
     ).toBeVisible()
     await expect(
-      dialog.locator('.prompt-template-base-folder-header .prompt-template-base-folder-icon')
+      dialog.locator('.prompt-template-base-collection-header .prompt-template-base-collection-icon')
     ).toHaveCount(2)
     await expect(
-      dialog.locator('.prompt-template-base-folder-header .sidebarPromptTreeChevronWrap')
+      dialog.locator('.prompt-template-base-collection-header .sidebarPromptTreeChevronWrap')
     ).toHaveCount(0)
     await expect(
       dialog.locator('[data-testid="prompt-template-option-none"] .sidebarPromptTreeCategoryIcon')
@@ -428,7 +429,7 @@ describe('Prompt template selection', () => {
     expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templates:')
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(dialog).toBeHidden()
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'Category Template'
     )
     await expectTemplateIndicator(promptEditor, 'selected', '--ui-normal-text')
@@ -471,7 +472,7 @@ describe('Prompt template selection', () => {
     await dialog.locator('[data-testid="prompt-template-option-none"]').click()
     await expect(dialog).toBeVisible()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText('No template')
+    await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText('No template')
     await expectTemplateIndicator(promptEditor, 'no-template', '--ui-muted-text')
     await expect
       .poll(() => readTextFile(electronApp, PROMPT_PATH))
@@ -540,7 +541,7 @@ describe('Prompt template selection', () => {
       dialog.locator('[data-testid="prompt-tree-template-prompt-template-second"]')
     ).toHaveAttribute('aria-pressed', 'true')
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
-    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'Second Root Template'
     )
     await expect
@@ -552,13 +553,13 @@ describe('Prompt template selection', () => {
       )
       .toEqual([{ id: 'template-second' }])
 
-    await testHelpers.navigateToPromptTemplateFolders('First Templates')
+    await testHelpers.navigateToPromptTemplateCollections('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
     await expect(templateEditor.locator('[data-testid="prompt-template-button"]')).toHaveCount(0)
     await expect(
       templateEditor.locator('[data-testid="prompt-template-and-copy-button"]')
     ).toHaveCount(0)
-    await expect(templateEditor.locator('.prompt-editor-metadata-folder')).toHaveCount(0)
+    await expect(templateEditor.locator('.prompt-editor-metadata-template')).toHaveCount(0)
   })
 
   test('copies prompts after a template decision and quick-selects before copying', async ({
@@ -571,7 +572,7 @@ describe('Prompt template selection', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Prompts')
+    await testHelpers.navigateToPromptCollections('Prompts')
     await stubClipboard(mainWindow)
 
     const initialPromptOrder = [
@@ -590,7 +591,7 @@ describe('Prompt template selection', () => {
     const multiTemplatePromptEditor = mainWindow.locator(
       promptEditorSelector('multi-template-prompt')
     )
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'Not selected'
     )
     await expect(promptEditor.locator('[data-testid="prompt-copy-button"]')).toHaveCount(0)
@@ -603,7 +604,7 @@ describe('Prompt template selection', () => {
     await expect
       .poll(() => readClipboardText(mainWindow))
       .toBe('Category Second root Second root Copy with several templates....')
-    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(multiTemplatePromptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'Second Root Template + 2 More'
     )
     expect(
@@ -622,7 +623,7 @@ describe('Prompt template selection', () => {
     await expect
       .poll(() => readClipboardText(mainWindow))
       .toBe('Copy without a template.')
-    await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(noTemplatePromptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'No template'
     )
     await expect(
@@ -668,7 +669,7 @@ describe('Prompt template selection', () => {
     await expect
       .poll(() => readClipboardText(mainWindow))
       .toBe('First root Choose a template..')
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'First Root Template'
     )
     await expect
@@ -683,16 +684,16 @@ describe('Prompt template selection', () => {
     ).toHaveCount(0)
   })
 
-  test('virtualizes the complete template library folder cards', async ({
+  test('virtualizes the complete template library collection cards', async ({
     electronApp,
     testSetup
   }) => {
     const virtualWorkspacePath = '/ws/template-selection-virtual'
-    const promptWorkspace = createWorkspaceWithFolders(virtualWorkspacePath, [
+    const promptWorkspace = createWorkspaceWithCollections(virtualWorkspacePath, [
       {
         folderName: 'Prompts',
         displayName: 'Prompts',
-        promptFolderId: 'virtual-selection-prompts',
+        promptCollectionId: 'virtual-selection-prompts',
         prompts: [
           {
             id: 'virtual-selection-prompt',
@@ -702,11 +703,11 @@ describe('Prompt template selection', () => {
         ]
       }
     ])
-    const templateWorkspace = createWorkspaceWithTemplateFolders(virtualWorkspacePath, [
+    const templateWorkspace = createWorkspaceWithTemplateCollections(virtualWorkspacePath, [
       {
         folderName: 'Templates',
         displayName: 'Virtual Templates',
-        folderId: 'virtual-selection-templates',
+        collectionId: 'virtual-selection-templates',
         templates: Array.from({ length: 60 }, (_value, index) => ({
           id: `virtual-template-${index + 1}`,
           title: `Virtual Template ${index + 1}`,
@@ -723,7 +724,7 @@ describe('Prompt template selection', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Prompts')
+    await testHelpers.navigateToPromptCollections('Prompts')
 
     const promptEditor = mainWindow.locator(promptEditorSelector('virtual-selection-prompt'))
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
@@ -731,9 +732,9 @@ describe('Prompt template selection', () => {
     const virtualWindowSelector = '[data-testid="prompt-template-selection-tree"]'
     const spacerSelector = '[data-testid="prompt-template-selection-tree-spacer"]'
     const headerSelector =
-      '[data-testid="prompt-template-base-folder-header-virtual-selection-templates"]'
+      '[data-testid="prompt-template-base-collection-header-virtual-selection-templates"]'
     const footerSelector =
-      '[data-testid="prompt-template-base-folder-footer-virtual-selection-templates"]'
+      '[data-testid="prompt-template-base-collection-footer-virtual-selection-templates"]'
     await expect(dialog.locator(headerSelector)).toBeVisible()
     await expect(dialog.locator(footerSelector)).toHaveCount(0)
     await expect(dialog.locator('[data-testid="prompt-tree-template-prompt-virtual-template-1"]')).toBeVisible()
@@ -855,7 +856,7 @@ describe('Prompt template selection', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptFolders('Prompts')
+    await testHelpers.navigateToPromptCollections('Prompts')
 
     const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
@@ -863,7 +864,7 @@ describe('Prompt template selection', () => {
     await dialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]').click()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
 
-    await testHelpers.navigateToPromptTemplateFolders('First Templates')
+    await testHelpers.navigateToPromptTemplateCollections('First Templates')
     const templateEditorSelector = promptEditorSelector('template-first')
     await waitForMonacoEditor(mainWindow, templateEditorSelector)
     await focusMonacoEditor(mainWindow, templateEditorSelector)
@@ -873,7 +874,7 @@ describe('Prompt template selection', () => {
       'Draft [[PROMPT_TEXT]] wrapper'
     )
 
-    await testHelpers.navigateToPromptFolders('Prompts')
+    await testHelpers.navigateToPromptCollections('Prompts')
     await waitForMonacoEditor(mainWindow, promptEditorSelector('select-template-prompt'))
     await stubClipboard(mainWindow)
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
@@ -881,7 +882,7 @@ describe('Prompt template selection', () => {
       .poll(() => readClipboardText(mainWindow))
       .toBe('Draft Choose a template. wrapper')
 
-    await testHelpers.navigateToPromptTemplateFolders('First Templates')
+    await testHelpers.navigateToPromptTemplateCollections('First Templates')
     await focusMonacoEditor(mainWindow, templateEditorSelector)
     await mainWindow.keyboard.press('Control+A')
     await mainWindow.keyboard.insertText('Draft without a token')
@@ -889,13 +890,13 @@ describe('Prompt template selection', () => {
       'Draft without a token'
     )
 
-    await testHelpers.navigateToPromptFolders('Prompts')
+    await testHelpers.navigateToPromptCollections('Prompts')
     await stubClipboard(mainWindow)
     await promptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
       .poll(() => readClipboardText(mainWindow))
       .toBe('Choose a template.')
-    await expect(promptEditor.locator('.prompt-editor-metadata-folder')).toHaveText(
+    await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
       'First Root Template'
     )
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()

@@ -7,10 +7,10 @@ import {
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import type { DomainPlanner } from '@shared/domain/DomainChanges'
 import { type MarkdownContentPersisted } from '@shared/domain/markdown-content/MarkdownContent'
-import { type PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { type PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
+import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
@@ -31,14 +31,14 @@ export type MarkdownContentRendererMutationConfig<
   TCreateCommand,
   TUpdateCommand
 > = {
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
   label: string
   channels: { create: string; update: string; delete: string }
   getFullPersisted: (contentId: string) => TPersisted | null
   createDomain: {
     plan: DomainPlanner<TCreateCommand>
     createCommand: (
-      promptFolderId: string,
+      promptCollectionId: string,
       content: TFull,
       previousEntryId: string | null,
       categoryId: string | null
@@ -76,19 +76,19 @@ export const createMarkdownContentRendererMutations = <
 
   /** Creates content at one exact position in Uncategorized or a category. */
   const create = async (
-    promptFolderId: string,
+    promptCollectionId: string,
     content: TFull,
     previousEntryId: string | null,
     categoryId: string | null = null
   ): Promise<void> => {
-    /** Root folder that owns the new content and category order. */
-    const promptFolder = promptFolderCollection.get(promptFolderId)
-    if (!promptFolder || promptFolder.kind !== config.kind) {
-      throw new Error(`${config.label} folder not loaded`)
+    /** collection that owns the new content and category order. */
+    const promptCollection = promptCollectionsCollection.get(promptCollectionId)
+    if (!promptCollection || promptCollection.kind !== config.kind) {
+      throw new Error(`${config.label} collection not loaded`)
     }
     /** Shared content-creation command projected in both processes. */
     const command = config.createDomain.createCommand(
-      promptFolderId,
+      promptCollectionId,
       content,
       previousEntryId,
       categoryId
@@ -138,22 +138,22 @@ export const createMarkdownContentRendererMutations = <
     })
   }
 
-  /** Deletes root-owned content and removes it from category ordering. */
-  const deleteContent = async (promptFolderId: string, contentId: string): Promise<void> => {
-    /** Root folder that owns the content. */
-    const promptFolder = promptFolderCollection.get(promptFolderId)
+  /** Deletes collection-owned content and removes it from category ordering. */
+  const deleteContent = async (promptCollectionId: string, contentId: string): Promise<void> => {
+    /** collection that owns the content. */
+    const promptCollection = promptCollectionsCollection.get(promptCollectionId)
     /** Full persisted content selected for deletion. */
     const content = config.getFullPersisted(contentId)
-    if (!promptFolder || promptFolder.kind !== config.kind || !content) {
+    if (!promptCollection || promptCollection.kind !== config.kind || !content) {
       throw new Error(`${config.label} not loaded`)
     }
-    /** Workspace that owns the deleted content's root folder. */
+    /** Workspace that owns the deleted content's collection. */
     const workspace = workspaceCollection.toArray.find((candidate) =>
-      getAllWorkspaceFolderEntries(candidate).some((entry) => entry.id === promptFolderId)
+      getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === promptCollectionId)
     )
     if (!workspace) throw new Error(`${config.label} workspace not loaded`)
     /** Shared deletion command projected by renderer and main process. */
-    const command = { workspaceId: workspace.id, promptFolderId, contentId }
+    const command = { workspaceId: workspace.id, promptCollectionId, contentId }
     await runImmediateRendererDomainMutation({
       mutation: {
         command,

@@ -1,9 +1,9 @@
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithFolders, createWorkspaceWithTemplateFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { readClipboardText, stubClipboard } from '../helpers/ClipboardHelpers'
 
 /** Real Electron workflows verify confirmation before clipboard and persistence changes. */
@@ -16,8 +16,8 @@ const ROOT_PATH = `${WORKSPACE_PATH}/Prompts/Tasks`
 /** Builds direct-copy and undecided prompts in the requested workflow with a usable template. */
 const createCopyWorkspace = (status: PromptStatus) => {
   /** Task data preserves an explicit no-template choice for the direct-copy prompt. */
-  const tasks = createWorkspaceWithFolders(WORKSPACE_PATH, [{
-    folderName: 'Tasks', displayName: 'Tasks', promptFolderId: 'copy-tasks',
+  const tasks = createWorkspaceWithCollections(WORKSPACE_PATH, [{
+    folderName: 'Tasks', displayName: 'Tasks', promptCollectionId: 'copy-tasks',
     prompts: [
       { id: 'direct', title: 'Direct', promptText: 'Direct body', templates: null, status },
       { id: 'quick-template', title: 'Quick Template', promptText: 'Template body', status },
@@ -33,16 +33,16 @@ const createCopyWorkspace = (status: PromptStatus) => {
       tasks[path.replace('/Active/', '/Backlog/')] = tasks[path]
       delete tasks[path]
     }
-    tasks[`${ROOT_PATH}/Active/_FolderInfo/FolderOrder.json`] = JSON.stringify({
+    tasks[`${ROOT_PATH}/Active/_CollectionInfo/CategoryOrder.json`] = JSON.stringify({
       categories: [{ categoryId: null, entries: [] }]
     })
   }
   /** Template fixture makes the selected choice observable in copied output. */
-  const templates = createWorkspaceWithTemplateFolders(WORKSPACE_PATH, [{
-    folderName: 'Library', displayName: 'Library', folderId: 'copy-library',
+  const templates = createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [{
+    folderName: 'Library', displayName: 'Library', collectionId: 'copy-library',
     templates: [{ id: 'wrapper', title: 'Wrapper', templateText: 'Wrapped [[PROMPT_TEXT]]' }]
   }])
-  return { ...tasks, ...templates, [`${WORKSPACE_PATH}/Prompts/FolderOrder.json`]: tasks[`${WORKSPACE_PATH}/Prompts/FolderOrder.json`] }
+  return { ...tasks, ...templates, [`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]: tasks[`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`] }
 }
 
 describe('Prompt copy confirmation', () => {
@@ -54,14 +54,14 @@ describe('Prompt copy confirmation', () => {
       /** Real window and navigation helpers exercise the visible status view. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      await testHelpers.navigateToPromptFolders('Tasks')
+      await testHelpers.navigateToPromptCollections('Tasks')
       await stubClipboard(mainWindow)
       await mainWindow.evaluate(() => navigator.clipboard.writeText('Keep clipboard'))
       if (status !== PromptStatus.Backlog) {
         await mainWindow.getByTestId(`toggle-${status.toLowerCase()}-prompts-button`).click()
       }
       /** Selected filter must remain selected even after its copied prompt leaves the view. */
-      const filter = mainWindow.getByTestId(`prompt-folder-${status.toLowerCase()}-filter`)
+      const filter = mainWindow.getByTestId(`prompt-collection-${status.toLowerCase()}-filter`)
       await filter.click()
       /** Direct-copy editor begins with an explicit no-template choice. */
       const editor = mainWindow.locator(promptEditorSelector('direct'))
@@ -108,13 +108,13 @@ describe('Prompt copy confirmation', () => {
       /** Real window and navigation helpers exercise both quick-copy decisions. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      await testHelpers.navigateToPromptFolders('Tasks')
+      await testHelpers.navigateToPromptCollections('Tasks')
       await stubClipboard(mainWindow)
       if (status !== PromptStatus.Backlog) {
         await mainWindow.getByTestId(`toggle-${status.toLowerCase()}-prompts-button`).click()
       }
       /** Source filter remains selected after both confirmed moves. */
-      const filter = mainWindow.getByTestId(`prompt-folder-${status.toLowerCase()}-filter`)
+      const filter = mainWindow.getByTestId(`prompt-collection-${status.toLowerCase()}-filter`)
       await filter.click()
       // Both a real template and No template must wait for the same confirmation boundary.
       for (const choice of [
@@ -145,7 +145,7 @@ describe('Prompt copy confirmation', () => {
         if (choice.templates) await mainWindow.keyboard.press('Escape')
         else await confirmation.getByRole('button', { name: 'Close', exact: true }).click()
         await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
-        await expect(editor.locator('.prompt-editor-metadata-folder')).toHaveText('Not selected')
+        await expect(editor.locator('.prompt-editor-metadata-template')).toHaveText('Not selected')
         await expect(editor.getByTestId('prompt-status-pill')).toHaveText(status)
         expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
         expect(await readTextFile(electronApp, sourcePath)).toBe(original)

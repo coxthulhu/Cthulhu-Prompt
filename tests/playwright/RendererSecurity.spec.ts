@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
-import { promptEditorSelector } from '../helpers/PromptFolderSelectors'
+import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 
 /** Uses the production Electron startup and existing workspace fixtures. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -163,7 +163,7 @@ describe('Renderer security', () => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'sample' }
       })
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.navigateToPromptCollections('Development')
       await expect(mainWindow.locator('iframe.web-worker-ext-host-iframe')).toBeAttached()
       expect(testSetup.getRendererErrors()).toEqual([])
 
@@ -172,7 +172,7 @@ describe('Renderer security', () => {
       await cdp.send('Page.enable')
       await cdp.send('Page.setBypassCSP', { enabled: true })
       await mainWindow.reload()
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.navigateToPromptCollections('Development')
       await expect(mainWindow.locator('iframe.web-worker-ext-host-iframe')).toBeAttached()
 
       /** Captured failures distinguish Electron cancellation from DNS or connection failures. */
@@ -330,7 +330,7 @@ describe('Renderer security', () => {
       expectedExternalUrls
     )
 
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** Replace one sample prompt through keyboard input to reproduce a user-entered link. */
     const editorSelector = promptEditorSelector('dev-1')
     await focusMonacoEditor(mainWindow, editorSelector)

@@ -26,21 +26,21 @@ import {
 import {
   removeCategoryOrderEntry,
   type CategoryOrderEntryRef,
-  type PromptFolderContentKind
-} from '@shared/domain/prompt-folder/PromptFolder'
+  type PromptCollectionContentKind
+} from '@shared/domain/prompt-collection/PromptCollection'
 import {
   DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE,
   resolvePromptTitleUpdateForPromptIds
 } from '@shared/domain/prompt/promptFallbackTitle'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import { getAllWorkspaceFolderEntries } from '@shared/domain/workspace/Workspace'
+import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 
-/** Renderer-authored command for creating one prompt at an exact root position. */
+/** Renderer-authored command for creating one prompt at an exact collection position. */
 export type CreatePromptDomainCommand = {
   /** Category-ordered group receiving the new prompt. */
   statusFolderId: PromptStatusFolderId
-  promptFolderId: string
+  promptCollectionId: string
   contentId: string
   title: string
   fallbackTitle: string
@@ -51,9 +51,9 @@ export type CreatePromptDomainCommand = {
   templates?: PromptTemplateReference[] | null
 }
 
-/** Renderer-authored command for creating one template at an exact root position. */
+/** Renderer-authored command for creating one template at an exact collection position. */
 export type CreatePromptTemplateDomainCommand = {
-  promptFolderId: string
+  promptCollectionId: string
   contentId: string
   title: string
   fallbackTitle: string
@@ -66,7 +66,7 @@ export type CreatePromptTemplateDomainCommand = {
 /** Renderer-authored command for deleting one prompt or template and its editor state. */
 export type DeleteMarkdownContentDomainCommand = {
   workspaceId: string
-  promptFolderId: string
+  promptCollectionId: string
   contentId: string
 }
 
@@ -80,7 +80,7 @@ export const parseDeleteMarkdownContentDomainCommand = (
   if (
     Object.keys(record).length !== 3 ||
     typeof record.workspaceId !== 'string' ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     typeof record.contentId !== 'string'
   ) {
     return null
@@ -145,7 +145,7 @@ export const parseCreatePromptDomainCommand = (
   const hasUnknownField = Object.keys(record).some(
     (key) =>
       ![
-        'promptFolderId',
+        'promptCollectionId',
         'contentId',
         'title',
         'fallbackTitle',
@@ -162,7 +162,7 @@ export const parseCreatePromptDomainCommand = (
     hasUnknownField ||
     !isPromptStatusFolderId(record.statusFolderId) ||
     PROMPT_STATUS_FOLDER_REGISTRY[record.statusFolderId].ordering !== 'category' ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     typeof record.contentId !== 'string' ||
     typeof record.title !== 'string' ||
     typeof record.fallbackTitle !== 'string' ||
@@ -175,7 +175,7 @@ export const parseCreatePromptDomainCommand = (
     return null
   }
   return {
-    promptFolderId: record.promptFolderId,
+    promptCollectionId: record.promptCollectionId,
     contentId: record.contentId,
     title: record.title,
     fallbackTitle: record.fallbackTitle,
@@ -197,7 +197,7 @@ export const parseCreatePromptTemplateDomainCommand = (
   const record = value as Record<string, unknown>
   if (
     Object.keys(record).length !== 8 ||
-    typeof record.promptFolderId !== 'string' ||
+    typeof record.promptCollectionId !== 'string' ||
     typeof record.contentId !== 'string' ||
     typeof record.title !== 'string' ||
     typeof record.fallbackTitle !== 'string' ||
@@ -209,7 +209,7 @@ export const parseCreatePromptTemplateDomainCommand = (
     return null
   }
   return {
-    promptFolderId: record.promptFolderId,
+    promptCollectionId: record.promptCollectionId,
     contentId: record.contentId,
     title: record.title,
     fallbackTitle: record.fallbackTitle,
@@ -291,28 +291,28 @@ export const parseUpdatePromptTemplateDomainCommand = (
   }
 }
 
-/** Plans creation of one prompt and its synchronized root-folder entry. */
+/** Plans creation of one prompt and its synchronized collection entry. */
 export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCommand> = (
   state,
   command
 ) => {
-  /** Prompt root that will own the new content. */
-  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Prompt collection that will own the new content. */
+  const promptCollection = state.get('promptCollection', command.promptCollectionId)
   /** Existing entity occupying the requested stable prompt ID. */
   const existingPrompt = state.get('prompt', command.contentId)
-  /** Folder and prompt targets returned for creation conflicts. */
+  /** Collection and prompt targets returned for creation conflicts. */
   const targets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.promptFolderId },
+    { entityType: 'promptCollection', id: command.promptCollectionId },
     { entityType: 'prompt', id: command.contentId }
   ]
-  if (!promptFolder || promptFolder.kind !== 'prompt' || existingPrompt) {
+  if (!promptCollection || promptCollection.kind !== 'prompt' || existingPrompt) {
     return createConflict('Prompt creation conflict', targets)
   }
 
   /** Collision-free title fields for the new prompt. */
   const titleFields = resolvePromptTitleUpdateForPromptIds({
     promptIds: getOrderedMarkdownContentIds(
-      promptFolder,
+      promptCollection,
       'prompt',
       command.statusFolderId
     ),
@@ -333,7 +333,7 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
   }
 
   /** Destination layout resolved from the creation group. */
-  const layout = promptFolder.statusFolders[command.statusFolderId]
+  const layout = promptCollection.statusFolders[command.statusFolderId]
   if (layout.ordering !== 'category') return createConflict('Prompt creation group conflict', targets)
 
   try {
@@ -348,8 +348,8 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
     return [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.promptFolderId,
+        entityType: 'promptCollection',
+        id: command.promptCollectionId,
         recipe: (draft) => {
           if (draft.kind === 'prompt') {
             /** Ordered draft layout receiving the created prompt. */
@@ -370,26 +370,26 @@ export const planCreatePromptDomainMutation: DomainPlanner<CreatePromptDomainCom
   }
 }
 
-/** Plans creation of one prompt template and its synchronized root-folder entry. */
+/** Plans creation of one prompt template and its synchronized collection entry. */
 export const planCreatePromptTemplateDomainMutation: DomainPlanner<
   CreatePromptTemplateDomainCommand
 > = (state, command) => {
-  /** Template root that will own the new content. */
-  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Template collection that will own the new content. */
+  const promptCollection = state.get('promptCollection', command.promptCollectionId)
   /** Existing entity occupying the requested stable template ID. */
   const existingTemplate = state.get('promptTemplate', command.contentId)
-  /** Folder and template targets returned for creation conflicts. */
+  /** Collection and template targets returned for creation conflicts. */
   const targets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.promptFolderId },
+    { entityType: 'promptCollection', id: command.promptCollectionId },
     { entityType: 'promptTemplate', id: command.contentId }
   ]
-  if (!promptFolder || promptFolder.kind !== 'template' || existingTemplate) {
+  if (!promptCollection || promptCollection.kind !== 'template' || existingTemplate) {
     return createConflict('Prompt template creation conflict', targets)
   }
 
   /** Collision-free title fields for the new template. */
   const titleFields = resolvePromptTitleUpdateForPromptIds({
-    promptIds: getOrderedMarkdownContentIds(promptFolder, 'template'),
+    promptIds: getOrderedMarkdownContentIds(promptCollection, 'template'),
     lookupPrompt: (templateId) => state.get('promptTemplate', templateId),
     promptId: command.contentId,
     currentFallbackTitle: command.fallbackTitle,
@@ -409,7 +409,7 @@ export const planCreatePromptTemplateDomainMutation: DomainPlanner<
   try {
     /** Validated template data and category order for the requested placement. */
     const placement = placeMarkdownContentInCategoryOrder(
-      promptFolder.statusFolders.active.categoryOrder,
+      promptCollection.statusFolders.active.categoryOrder,
       template,
       promptTemplateEntryRef(command.contentId),
       command.categoryId,
@@ -418,8 +418,8 @@ export const planCreatePromptTemplateDomainMutation: DomainPlanner<
     return [
       {
         type: 'update',
-        entityType: 'promptFolder',
-        id: command.promptFolderId,
+        entityType: 'promptCollection',
+        id: command.promptCollectionId,
         recipe: (draft) => {
           if (draft.kind === 'template') draft.statusFolders.active.categoryOrder = placement.categoryOrder
         }
@@ -445,7 +445,7 @@ const createConflict = (reason: string, targets: DomainTarget[]): DomainMutation
 
 /** Returns the ordered reference corresponding to a prompt or template channel. */
 const createContentEntryRef = (
-  kind: PromptFolderContentKind,
+  kind: PromptCollectionContentKind,
   contentId: string
 ): CategoryOrderEntryRef =>
   kind === 'prompt' ? promptEntryRef(contentId) : promptTemplateEntryRef(contentId)
@@ -463,55 +463,55 @@ type MarkdownContentDomainProjection = {
 /** Reads one prompt or template projection from shared domain state. */
 const getMarkdownContent = (
   state: DomainState,
-  kind: PromptFolderContentKind,
+  kind: PromptCollectionContentKind,
   contentId: string
 ): MarkdownContentDomainProjection | undefined =>
   kind === 'prompt'
     ? state.get('prompt', contentId)
     : state.get('promptTemplate', contentId)
 
-/** Finds the root folder that owns one prompt or template. */
+/** Finds the collection that owns one prompt or template. */
 const findMarkdownContentOwner = (
   state: DomainState,
-  kind: PromptFolderContentKind,
+  kind: PromptCollectionContentKind,
   contentId: string
 ) =>
   state
-    .getAll('promptFolder')
+    .getAll('promptCollection')
     .find(
-      (folder) =>
-        folder.kind === kind && getMarkdownContentIds(folder, kind).includes(contentId)
+      (collection) =>
+        collection.kind === kind && getMarkdownContentIds(collection, kind).includes(contentId)
     )
 
 /** Creates a prompt- or template-specific shared deletion planner. */
 const createDeletePlanner = (
-  kind: PromptFolderContentKind
+  kind: PromptCollectionContentKind
 ): DomainPlanner<DeleteMarkdownContentDomainCommand> => (state, command) => {
-  /** Requested root folder that should own the deleted content. */
-  const promptFolder = state.get('promptFolder', command.promptFolderId)
+  /** Requested collection that should own the deleted content. */
+  const promptCollection = state.get('promptCollection', command.promptCollectionId)
   /** Requested prompt or template projection. */
   const content = getMarkdownContent(state, kind, command.contentId)
-  /** Workspace expected to own the requested root folder. */
+  /** Workspace expected to own the requested collection. */
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      getAllWorkspaceFolderEntries(candidate).some(
-        (entry) => entry.id === command.promptFolderId
+      getAllWorkspaceCollectionEntries(candidate).some(
+        (entry) => entry.id === command.promptCollectionId
       )
     )
-  /** Required folder and content targets returned for ownership conflicts. */
+  /** Required collection and content targets returned for ownership conflicts. */
   const targets: DomainTarget[] = [
-    { entityType: 'promptFolder', id: command.promptFolderId },
+    { entityType: 'promptCollection', id: command.promptCollectionId },
     {
       entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
       id: command.contentId
     }
   ]
   if (
-    !promptFolder ||
-    promptFolder.kind !== kind ||
+    !promptCollection ||
+    promptCollection.kind !== kind ||
     !content ||
-    !getMarkdownContentIds(promptFolder, kind).includes(command.contentId) ||
+    !getMarkdownContentIds(promptCollection, kind).includes(command.contentId) ||
     !workspace ||
     workspace.id !== command.workspaceId
   ) {
@@ -522,8 +522,8 @@ const createDeletePlanner = (
   return [
     {
       type: 'update',
-      entityType: 'promptFolder',
-      id: command.promptFolderId,
+      entityType: 'promptCollection',
+      id: command.promptCollectionId,
       recipe: (draft) => {
         for (const layout of Object.values(draft.statusFolders)) {
           if (layout.ordering === 'category') {
@@ -560,7 +560,7 @@ export const planPromptUpdate: DomainPlanner<UpdatePromptDomainCommand> = (
 ) => {
   /** Prompt selected by the update command. */
   const prompt = state.get('prompt', command.contentId)
-  /** Root folder owning the prompt and its filename-collision group. */
+  /** collection owning the prompt and its filename-collision group. */
   const owner = findMarkdownContentOwner(state, 'prompt', command.contentId)
   /** Stable prompt target returned for missing-content conflicts. */
   const targets: DomainTarget[] = [{ entityType: 'prompt', id: command.contentId }]
@@ -607,7 +607,7 @@ export const planPromptTemplateUpdate: DomainPlanner<UpdatePromptTemplateDomainC
 ) => {
   /** Prompt template selected by the update command. */
   const template = state.get('promptTemplate', command.contentId)
-  /** Root folder owning the template and its filename-collision group. */
+  /** collection owning the template and its filename-collision group. */
   const owner = findMarkdownContentOwner(state, 'template', command.contentId)
   /** Stable template target returned for missing-content conflicts. */
   const targets: DomainTarget[] = [

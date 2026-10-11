@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 
 /** Paced mutation spy exposing authoritative editor update recipes. */
 const mutatePacedRevisionUpdateTransaction = vi.hoisted(() => vi.fn())
@@ -37,12 +37,12 @@ const MEASUREMENT = { measuredHeightPx: 100, widthPx: 500, devicePixelRatio: 1 }
 describe('prompt editor mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    promptCollection.utils.deleteAuthoritative(PROMPT_ID)
-    promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
-    promptFolderCollection.utils.deleteAuthoritative('prompt-editor-root')
-    promptFolderCollection.utils.deleteAuthoritative('template-editor-root')
+    promptsCollection.utils.deleteAuthoritative(PROMPT_ID)
+    promptTemplatesCollection.utils.deleteAuthoritative(TEMPLATE_ID)
+    promptCollectionsCollection.utils.deleteAuthoritative('prompt-editor-root')
+    promptCollectionsCollection.utils.deleteAuthoritative('template-editor-root')
     mutatePacedRevisionUpdateTransaction.mockReturnValue(pacedTransaction)
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 1,
       data: createPromptFull({
@@ -55,7 +55,7 @@ describe('prompt editor mutations', () => {
         status: PromptStatus.Todo
       })
     })
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: TEMPLATE_ID,
       revision: 1,
       data: createPromptTemplateFull({
@@ -67,7 +67,7 @@ describe('prompt editor mutations', () => {
         templateText: 'Original template text.'
       })
     })
-    promptFolderCollection.utils.upsertAuthoritative({
+    promptCollectionsCollection.utils.upsertAuthoritative({
       id: 'prompt-editor-root',
       revision: 1,
       data: {
@@ -82,10 +82,10 @@ describe('prompt editor mutations', () => {
             }
           }
         }),
-        settings: { folderDescription: null }
+        settings: { collectionDescription: null }
       }
     })
-    promptFolderCollection.utils.upsertAuthoritative({
+    promptCollectionsCollection.utils.upsertAuthoritative({
       id: 'template-editor-root',
       revision: 1,
       data: {
@@ -98,14 +98,14 @@ describe('prompt editor mutations', () => {
             { categoryId: null, entries: [{ kind: 'template', id: TEMPLATE_ID }] }
           ]
         } } }),
-        settings: { folderDescription: null }
+        settings: { collectionDescription: null }
       }
     })
   })
 
   it('updates canonical prompt fields while keeping client state marker-only', () => {
     /** Mutable canonical prompt receiving the optimistic setter recipes. */
-    const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
+    const prompt = structuredClone(promptsCollection.get(PROMPT_ID)!)
     /** Marker-only prompt client state receiving the shared edited latch. */
     const promptClientState = { id: PROMPT_ID, isEdited: false }
     /** Optimistic collections used to apply each registered prompt setter recipe. */
@@ -123,7 +123,7 @@ describe('prompt editor mutations', () => {
     mutatePacedRevisionUpdateTransaction.mock.calls.at(-1)?.[0].mutateOptimistically({
       collections
     })
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 2,
       data: createPromptFull({
@@ -140,7 +140,7 @@ describe('prompt editor mutations', () => {
     mutatePacedRevisionUpdateTransaction.mock.calls.at(-1)?.[0].mutateOptimistically({
       collections
     })
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 3,
       data: createPromptFull({
@@ -168,7 +168,7 @@ describe('prompt editor mutations', () => {
 
   it('updates canonical template fields while keeping client state marker-only', () => {
     /** Mutable canonical template receiving the optimistic setter recipes. */
-    const template = structuredClone(promptTemplateCollection.get(TEMPLATE_ID)!)
+    const template = structuredClone(promptTemplatesCollection.get(TEMPLATE_ID)!)
     /** Marker-only template client state receiving the shared edited latch. */
     const templateClientState = { id: TEMPLATE_ID, isEdited: false }
     /** Optimistic collections used to apply each registered template setter recipe. */
@@ -186,7 +186,7 @@ describe('prompt editor mutations', () => {
     mutatePacedRevisionUpdateTransaction.mock.calls.at(-1)?.[0].mutateOptimistically({
       collections
     })
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: TEMPLATE_ID,
       revision: 2,
       data: createPromptTemplateFull({

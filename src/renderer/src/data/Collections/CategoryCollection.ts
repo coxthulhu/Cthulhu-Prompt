@@ -2,7 +2,7 @@ import { createCollection } from '@tanstack/svelte-db'
 import type { Category } from '@shared/domain/category/Category'
 import { revisionCollectionOptions } from './RevisionCollection'
 
-/** Authoritative renderer collection for root-owned categories. */
+/** Authoritative renderer collection for collection-owned categories. */
 export const categoryCollection = createCollection(
   revisionCollectionOptions<Category>({
     id: 'categories',

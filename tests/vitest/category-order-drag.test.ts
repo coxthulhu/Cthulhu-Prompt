@@ -3,8 +3,8 @@ import {
   createPromptStatusFolderLayouts,
   insertCategoryOrderEntry,
   moveCategoryOrderGroup
-} from '@shared/domain/prompt-folder/PromptFolder'
-import type { PromptFolder } from '@shared/domain/prompt-folder/PromptFolder'
+} from '@shared/domain/prompt-collection/PromptCollection'
+import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   resolveCategoryDropPreviousCategoryId,
@@ -94,7 +94,7 @@ describe('category ordering and drag placement', () => {
         ['prompt-a'],
         'prompt-a',
         {
-          folderId: 'category-b',
+          collectionId: 'category-b',
           categoryId: 'category-b',
           targetEntryId: null,
           position: 'after',
@@ -109,7 +109,7 @@ describe('category ordering and drag placement', () => {
         ['prompt-a'],
         'prompt-a',
         {
-          folderId: 'category-a',
+          collectionId: 'category-a',
           categoryId: 'category-a',
           targetEntryId: null,
           position: 'after',
@@ -121,13 +121,13 @@ describe('category ordering and drag placement', () => {
   })
 
   it('resolves cross-status drops without treating completed ordering as active ordering', () => {
-    /** Prompt folder shared by both status sections in the sidebar. */
-    const promptFolder: PromptFolder = {
-      id: 'root-folder',
+    /** Prompt collection shared by both status sections in the sidebar. */
+    const promptCollection: PromptCollection = {
+      id: 'collection',
       kind: 'prompt',
       folderName: 'Root',
       displayName: 'Root',
-      settings: { folderDescription: null },
+      settings: { collectionDescription: null },
       statusFolders: createPromptStatusFolderLayouts({
         categoryOrders: {
           [PromptStatusFolderId.Active]: {
@@ -148,14 +148,14 @@ describe('category ordering and drag placement', () => {
 
     expect(
       resolvePromptTreePromptMove(
-        [promptFolder],
+        [promptCollection],
         {
           fromId: 'active-first',
-          location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
+          location: { promptCollectionId: promptCollection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
           contentKind: 'prompt'
         },
         {
-          folderId: promptFolder.id,
+          collectionId: promptCollection.id,
           categoryId: null,
           targetEntryId: 'completed-prompt',
           position: 'after',
@@ -164,19 +164,19 @@ describe('category ordering and drag placement', () => {
       )
     ).toMatchObject({
       promptId: 'active-first',
-      location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed }
+      location: { promptCollectionId: promptCollection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed }
     })
 
     expect(
       resolvePromptTreePromptMove(
-        [promptFolder],
+        [promptCollection],
         {
           fromId: 'completed-prompt',
-          location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+          location: { promptCollectionId: promptCollection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
           contentKind: 'prompt'
         },
         {
-          folderId: promptFolder.id,
+          collectionId: promptCollection.id,
           categoryId: null,
           targetEntryId: 'active-second',
           position: 'before',
@@ -185,18 +185,18 @@ describe('category ordering and drag placement', () => {
       )
     ).toMatchObject({
       promptId: 'completed-prompt',
-      location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: 'active-first', status: PromptStatus.Todo }
+      location: { promptCollectionId: promptCollection.id, categoryId: null, previousEntryId: 'active-first', status: PromptStatus.Todo }
     })
   })
 
   it('rejects same-tree completed drops', () => {
-    /** Minimal prompt folder used to prove Completed ordering never changes. */
-    const promptFolder: PromptFolder = {
-      id: 'root-folder',
+    /** Minimal prompt collection used to prove Completed ordering never changes. */
+    const promptCollection: PromptCollection = {
+      id: 'collection',
       kind: 'prompt',
       folderName: 'Root',
       displayName: 'Root',
-      settings: { folderDescription: null },
+      settings: { collectionDescription: null },
       statusFolders: createPromptStatusFolderLayouts({
         categoryOrders: {
           [PromptStatusFolderId.Active]: { categories: [{ categoryId: null, entries: [] }] }
@@ -209,14 +209,14 @@ describe('category ordering and drag placement', () => {
 
     expect(
       resolvePromptTreePromptMove(
-        [promptFolder],
+        [promptCollection],
         {
           fromId: 'completed-first',
-          location: { promptFolderId: promptFolder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+          location: { promptCollectionId: promptCollection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
           contentKind: 'prompt'
         },
         {
-          folderId: promptFolder.id,
+          collectionId: promptCollection.id,
           targetEntryId: 'completed-second',
           position: 'after',
           statusSection: 'completed'

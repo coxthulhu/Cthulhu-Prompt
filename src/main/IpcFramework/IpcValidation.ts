@@ -1,4 +1,4 @@
-import type { LoadPromptFolderInitialPayload } from '@shared/domain/prompt-folder/PromptFolder'
+import type { LoadPromptCollectionInitialPayload } from '@shared/domain/prompt-collection/PromptCollection'
 import type { IpcRequestContext, IpcRequestWithPayload } from '@shared/ipc/IpcRequest'
 import type { LoadWorkspaceUiStateRequest } from '@shared/domain/ui-state/UiState'
 import type {
@@ -176,14 +176,14 @@ const parseLoadWorkspaceUiStateWireRequest: Parser<
   parseLoadWorkspaceUiStatePayload
 )
 
-const parseLoadPromptFolderInitialPayload = parseObject<LoadPromptFolderInitialPayload>({
+const parseLoadPromptCollectionInitialPayload = parseObject<LoadPromptCollectionInitialPayload>({
   workspaceId: parseString,
-  promptFolderId: parseString
+  promptCollectionId: parseString
 })
 
-const parseLoadPromptFolderInitialWireRequest: Parser<
-  IpcRequestWithPayload<LoadPromptFolderInitialPayload>
-> = parseWireRequestWithPayload<LoadPromptFolderInitialPayload>(parseLoadPromptFolderInitialPayload)
+const parseLoadPromptCollectionInitialWireRequest: Parser<
+  IpcRequestWithPayload<LoadPromptCollectionInitialPayload>
+> = parseWireRequestWithPayload<LoadPromptCollectionInitialPayload>(parseLoadPromptCollectionInitialPayload)
 
 export const parseCreateWorkspaceRequest = createRequestParser(parseCreateWorkspaceWireRequest)
 
@@ -197,6 +197,6 @@ export const parseLoadWorkspaceUiStateRequest = createRequestParser(
   parseLoadWorkspaceUiStateWireRequest
 )
 
-export const parseLoadPromptFolderInitialRequest = createRequestParser(
-  parseLoadPromptFolderInitialWireRequest
+export const parseLoadPromptCollectionInitialRequest = createRequestParser(
+  parseLoadPromptCollectionInitialWireRequest
 )

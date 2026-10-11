@@ -33,7 +33,7 @@
     isWorkspaceReady,
     isWorkspaceLoading,
     promptCount,
-    promptFolderCount,
+    promptCollectionCount,
     onWorkspaceSelect,
     onWorkspaceCreate,
     onWorkspaceClear,
@@ -45,7 +45,7 @@
     isWorkspaceReady: boolean
     isWorkspaceLoading: boolean
     promptCount: number
-    promptFolderCount: number
+    promptCollectionCount: number
     onWorkspaceSelect: (workspaceInfoPath: string) => Promise<WorkspaceSelectionResult>
     onWorkspaceCreate: (
       path: string,
@@ -216,9 +216,9 @@
           />
           <CountDisplay
             icon={Folders}
-            count={promptFolderCount}
-            label="Prompt Folders"
-            data-testid="home-prompt-folder-count-stat"
+            count={promptCollectionCount}
+            label="Prompt Collections"
+            data-testid="home-prompt-collection-count-stat"
           />
         </div>
         <div class="ml-auto flex items-center gap-2">

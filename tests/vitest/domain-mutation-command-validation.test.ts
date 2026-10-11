@@ -16,60 +16,60 @@ import {
   parseUpdatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import {
-  parseCreatePromptFolderDomainCommand,
-  parseDeletePromptFolderDomainCommand,
-  parseMovePromptFolderDomainCommand,
-  parseRenamePromptFolderDomainCommand
-} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+  parseCreatePromptCollectionDomainCommand,
+  parseDeletePromptCollectionDomainCommand,
+  parseMovePromptCollectionDomainCommand,
+  parseRenamePromptCollectionDomainCommand
+} from '@shared/domain/prompt-collection/PromptCollectionDomainMutations'
 import { parseSetPromptLocationDomainCommand } from '@shared/domain/prompt/PromptDomainMutations'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import { parseSetSystemSettingsDomainCommand } from '@shared/domain/settings/SystemSettingsDomainMutations'
 
 describe('domain mutation command validation', () => {
-  it('accepts a root-folder rename command and rejects legacy payload fields', () => {
-    /** Valid root-folder rename command containing domain intent only. */
-    const command = { promptFolderId: 'root', displayName: 'Renamed Root' }
-    expect(parseRenamePromptFolderDomainCommand(command)).toEqual(command)
+  it('accepts a collection rename command and rejects legacy payload fields', () => {
+    /** Valid collection rename command containing domain intent only. */
+    const command = { promptCollectionId: 'root', displayName: 'Renamed Root' }
+    expect(parseRenamePromptCollectionDomainCommand(command)).toEqual(command)
     expect(
-      parseRenamePromptFolderDomainCommand({
+      parseRenamePromptCollectionDomainCommand({
         ...command,
-        promptFolder: { id: 'legacy', expectedRevision: 1 }
+        promptCollection: { id: 'legacy', expectedRevision: 1 }
       })
     ).toBeNull()
   })
 
-  it('accepts root-folder creation and reorder commands', () => {
-    /** Valid root-folder creation command carrying stable intent only. */
+  it('accepts collection creation and reorder commands', () => {
+    /** Valid collection creation command carrying stable intent only. */
     const createCommand = {
       workspaceId: 'workspace',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       displayName: 'Root',
       previousEntryId: null,
       kind: 'prompt' as const
     }
-    /** Valid root-folder reorder command carrying its requested predecessor. */
+    /** Valid collection reorder command carrying its requested predecessor. */
     const moveCommand = {
       workspaceId: 'workspace',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       previousEntryId: 'sibling'
     }
-    expect(parseCreatePromptFolderDomainCommand(createCommand)).toEqual(createCommand)
-    expect(parseMovePromptFolderDomainCommand(moveCommand)).toEqual(moveCommand)
+    expect(parseCreatePromptCollectionDomainCommand(createCommand)).toEqual(createCommand)
+    expect(parseMovePromptCollectionDomainCommand(moveCommand)).toEqual(moveCommand)
   })
 
   it('accepts root and markdown deletion commands and rejects legacy entity payloads', () => {
     /** Valid root deletion command carrying only workspace ownership intent. */
-    const rootCommand = { workspaceId: 'workspace', promptFolderId: 'root' }
+    const rootCommand = { workspaceId: 'workspace', promptCollectionId: 'root' }
     /** Valid prompt or template deletion command carrying its exact owner. */
     const contentCommand = {
       workspaceId: 'workspace',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       contentId: 'content'
     }
-    expect(parseDeletePromptFolderDomainCommand(rootCommand)).toEqual(rootCommand)
+    expect(parseDeletePromptCollectionDomainCommand(rootCommand)).toEqual(rootCommand)
     expect(parseDeleteMarkdownContentDomainCommand(contentCommand)).toEqual(contentCommand)
     expect(
-      parseDeletePromptFolderDomainCommand({
+      parseDeletePromptCollectionDomainCommand({
         ...rootCommand,
         workspace: { id: 'legacy', expectedRevision: 1 }
       })
@@ -86,7 +86,7 @@ describe('domain mutation command validation', () => {
     /** Valid creation command carrying only stable domain intent. */
     const command = {
       categoryId: 'category',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       displayName: 'Category',
       shortDescription: null,
       description: 'Category guidance.'
@@ -99,7 +99,7 @@ describe('domain mutation command validation', () => {
     expect(
       parseCreateCategoryDomainCommand({
         categoryId: 'category',
-        promptFolderId: 'root',
+        promptCollectionId: 'root',
         displayName: 'Category',
         shortDescription: null
       })
@@ -111,7 +111,7 @@ describe('domain mutation command validation', () => {
     /** Valid atomic retained-set command containing two complete category values. */
     const command = {
       workspaceId: 'workspace',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       categories: [
         {
           id: 'category-a',
@@ -147,7 +147,7 @@ describe('domain mutation command validation', () => {
     }
     /** Valid category reorder command. */
     const moveCommand = {
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       categoryId: 'category',
       statusFolderId: PromptStatusFolderId.Active,
       previousCategoryId: null
@@ -171,7 +171,7 @@ describe('domain mutation command validation', () => {
     /** Valid prompt creation command with ordered template references. */
     const promptCommand = {
       statusFolderId: PromptStatusFolderId.Active,
-      promptFolderId: 'prompts',
+      promptCollectionId: 'prompts',
       contentId: 'prompt',
       title: '',
       fallbackTitle: 'New Prompt',
@@ -183,7 +183,7 @@ describe('domain mutation command validation', () => {
     }
     /** Valid template creation command without prompt-only fields. */
     const templateCommand = {
-      promptFolderId: 'templates',
+      promptCollectionId: 'templates',
       contentId: 'template',
       title: '',
       fallbackTitle: 'New Template',
@@ -210,9 +210,9 @@ describe('domain mutation command validation', () => {
     /** Valid prompt-status command carrying domain intent only. */
     const command = {
       kind: 'prompt',
-      sourcePromptFolderId: 'source-prompts',
+      sourcePromptCollectionId: 'source-prompts',
       promptId: 'prompt',
-      location: { promptFolderId: 'destination-prompts', categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+      location: { promptCollectionId: 'destination-prompts', categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
       modifiedAt: '2026-08-30T12:00:00Z'
     }
     expect(parseSetPromptLocationDomainCommand(command)).toEqual(command)
@@ -223,9 +223,9 @@ describe('domain mutation command validation', () => {
     /** Valid template location command sent through the same channel as prompts. */
     const command = {
       kind: 'template',
-      sourcePromptFolderId: 'source',
+      sourcePromptCollectionId: 'source',
       promptId: 'content',
-      location: { promptFolderId: 'destination', categoryId: null, previousEntryId: null, status },
+      location: { promptCollectionId: 'destination', categoryId: null, previousEntryId: null, status },
       modifiedAt: '2026-08-30T12:00:00Z'
     }
     expect(parseSetPromptLocationDomainCommand(command)).toEqual(command)
@@ -240,9 +240,9 @@ describe('domain mutation command validation', () => {
   ])('rejects %s location status %s', (kind, status) => {
     expect(parseSetPromptLocationDomainCommand({
       kind,
-      sourcePromptFolderId: 'source',
+      sourcePromptCollectionId: 'source',
       promptId: 'content',
-      location: { promptFolderId: 'destination', categoryId: null, previousEntryId: null, status },
+      location: { promptCollectionId: 'destination', categoryId: null, previousEntryId: null, status },
       modifiedAt: '2026-08-30T12:00:00Z'
     })).toBeNull()
   })
@@ -313,9 +313,9 @@ describe('domain mutation command validation', () => {
     const command = {
       extra: true,
       kind: 'prompt',
-      sourcePromptFolderId: 'source',
+      sourcePromptCollectionId: 'source',
       promptId: 'prompt',
-      location: { promptFolderId: 'destination', categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
+      location: { promptCollectionId: 'destination', categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
       modifiedAt: '2026-08-30T12:00:00Z'
     }
     expect(parseSetPromptLocationDomainCommand(command)).toBeNull()
@@ -325,7 +325,7 @@ describe('domain mutation command validation', () => {
     /** Valid category command colocated with its shared planner. */
     const command = {
       categoryId: 'category',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       workspaceId: 'workspace',
       modifiedAt: 'timestamp'
     }
@@ -336,7 +336,7 @@ describe('domain mutation command validation', () => {
     /** Category command containing an unrecognized legacy payload field. */
     const command = {
       categoryId: 'category',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       workspaceId: 'workspace',
       modifiedAt: 'timestamp',
       category: { id: 'legacy' }

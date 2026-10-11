@@ -46,7 +46,7 @@
       id: 'verification',
       title: 'Verification',
       prompts: [
-        prompt('verify-interactions', 'Verify folder interactions'),
+        prompt('verify-interactions', 'Verify collection interactions'),
         prompt('regression-checklist', 'Create a regression checklist'),
         prompt('performance-risks', 'Inspect performance risks'),
         prompt('architecture-decisions', 'Document architecture decisions'),
@@ -75,9 +75,9 @@
       categories: categories.map((category) => ({ ...category, prompts: category.id === 'research'
         ? [prompt('future-import', 'Investigate importing prompts from Markdown')] : [] })) }
   ]
-  type MockFolder = { id: string; title: string; kind: 'prompt' | 'template'; groups: MockGroup[]; modified?: string }
+  type MockCollection = { id: string; title: string; kind: 'prompt' | 'template'; groups: MockGroup[]; modified?: string }
   const emptyGroups = (): MockGroup[] => createGroups().map((group) => ({ ...group, prompts: [], categories: [] }))
-  let folders = $state<MockFolder[]>([
+  let collections = $state<MockCollection[]>([
     { id: 'product', title: 'Product Work', kind: 'prompt', modified: 'Today', groups: createGroups() },
     { id: 'personal', title: 'Personal Projects', kind: 'prompt', modified: 'Last week', groups: emptyGroups().map((group) => ({
       ...group, prompts: group.id === 'active' ? [prompt('website', 'Review the personal website'), prompt('backup', 'Automate workspace backups')] : []
@@ -108,70 +108,70 @@
   // This fixed release snapshot previews the updater without contacting release services.
   const mockRelease = { current: '0.0.35', latest: '0.0.36', currentDate: 'Oct 1, 2026', latestDate: 'Oct 7, 2026' }
   let updateReady = $state(false)
-  let folderKind = $state<'prompt' | 'template'>('prompt')
-  let selectedFolderIds = $state({ prompt: 'product', template: 'engineering' })
-  const visibleFolders = $derived(folders.filter((folder) => folder.kind === folderKind))
-  const selectedFolder = $derived(visibleFolders.find((folder) => folder.id === selectedFolderIds[folderKind]) ?? visibleFolders[0])
-  const groups = $derived(selectedFolder?.groups ?? [])
-  const isTemplateFolder = $derived(folderKind === 'template')
-  const FolderIcon = $derived(isTemplateFolder ? Layers : FileText)
-  const contentLabel = $derived(isTemplateFolder ? 'Template' : 'Prompt')
-  const isFolderActivity = $derived(activeActivity === 'prompt' || activeActivity === 'template')
-  const folderTitle = $derived(selectedFolder?.title ?? 'No folders')
+  let collectionKind = $state<'prompt' | 'template'>('prompt')
+  let selectedCollectionIds = $state({ prompt: 'product', template: 'engineering' })
+  const visibleCollections = $derived(collections.filter((collection) => collection.kind === collectionKind))
+  const selectedCollection = $derived(visibleCollections.find((collection) => collection.id === selectedCollectionIds[collectionKind]) ?? visibleCollections[0])
+  const groups = $derived(selectedCollection?.groups ?? [])
+  const isTemplateCollection = $derived(collectionKind === 'template')
+  const CollectionIcon = $derived(isTemplateCollection ? Layers : FileText)
+  const contentLabel = $derived(isTemplateCollection ? 'Template' : 'Prompt')
+  const isCollectionActivity = $derived(activeActivity === 'prompt' || activeActivity === 'template')
+  const collectionTitle = $derived(selectedCollection?.title ?? 'No collections')
   let showCompleted = $state(false)
   let showArchived = $state(false)
-  // Expansion belongs to a folder and workflow, so Active and Backlog can be explored independently.
+  // Expansion belongs to a collection and workflow, so Active and Backlog can be explored independently.
   let expandedCategoryIds = $state<Record<string, boolean>>({})
-  const categoryKey = (group: MockGroup, category: MockCategory) => `${selectedFolder?.id}:${group.id}:${category.id}`
+  const categoryKey = (group: MockGroup, category: MockCategory) => `${selectedCollection?.id}:${group.id}:${category.id}`
   const categoryExpanded = (group: MockGroup, category: MockCategory) => expandedCategoryIds[categoryKey(group, category)] ?? true
   let selectedPromptId = $state('map-implementation')
   let selectedGroupId = $state('active')
   let isOverviewActive = $state(false)
   let sidebarWidth = $state(275)
   let categoryDialog: HTMLDialogElement
-  let folderDialog: HTMLDialogElement
+  let collectionDialog: HTMLDialogElement
   let deleteDialog: HTMLDialogElement
-  let folderName = $state('')
+  let collectionName = $state('')
   let categoryDrafts = $state<MockCategory[]>([])
   let draftId = $state('')
   // Derive the selected draft and validation so dialog edits remain local until saved.
   const selectedDraft = $derived(categoryDrafts.find((category) => category.id === draftId))
   const validDrafts = $derived(categoryDrafts.every((category, index) => category.title.trim() &&
     !categoryDrafts.some((other, otherIndex) => index !== otherIndex && other.title.trim().toLowerCase() === category.title.trim().toLowerCase())))
-  const validFolderName = $derived(folderName.trim().length > 0 && !visibleFolders.some((folder) => folder.title.toLowerCase() === folderName.trim().toLowerCase()))
-  let folderMenuOpen = $state(false)
+  const validCollectionName = $derived(collectionName.trim().length > 0 && !visibleCollections.some((collection) => collection.title.toLowerCase() === collectionName.trim().toLowerCase()))
+  let collectionMenuOpen = $state(false)
   let actionsMenuOpen = $state(false)
   let categoryMenu = $state<{ category: MockCategory; group: MockGroup; x: number; y: number } | null>(null)
   let selectedCategoryId = $state<string | null>(null)
-  // Folder reorder previews live entirely in this mockup's fixture array.
-  let draggedFolderId = $state<string | null>(null)
-  const reorderFolder = (targetId: string) => {
-    const sourceIndex = folders.findIndex((folder) => folder.id === draggedFolderId)
-    const targetIndex = folders.findIndex((folder) => folder.id === targetId)
+  // Collection reorder previews live entirely in this mockup's fixture array.
+  let draggedCollectionId = $state<string | null>(null)
+  const reorderCollection = (targetId: string) => {
+    const sourceIndex = collections.findIndex((collection) => collection.id === draggedCollectionId)
+    const targetIndex = collections.findIndex((collection) => collection.id === targetId)
     if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return
-    const [folder] = folders.splice(sourceIndex, 1)
-    folders.splice(targetIndex, 0, folder!)
+    const [collection] = collections.splice(sourceIndex, 1)
+    collections.splice(targetIndex, 0, collection!)
   }
   const closeMenus = (event: MouseEvent) => {
-    if (event.target instanceof Element && event.target.closest('.local-menu, .folder-selector, .prompts-actions, .updates-button, .updates-popup')) return
-    folderMenuOpen = false
+    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .prompts-actions, .updates-button, .updates-popup')) return
+    collectionMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
     updatesOpen = false
   }
   // Templates expose Active and Archived only, matching the live sidebar's workflow filters.
   const visibleGroups = $derived(groups.filter((group) =>
-    group.id === 'active' || (!isTemplateFolder && group.id === 'backlog') ||
-    (!isTemplateFolder && group.id === 'completed' && showCompleted) || (group.id === 'archived' && showArchived)))
+    group.id === 'active' || (!isTemplateCollection && group.id === 'backlog') ||
+    (!isTemplateCollection && group.id === 'completed' && showCompleted) || (group.id === 'archived' && showArchived)))
   const toolbarGroup = $derived(groups.find((group) => group.id ===
-    (selectedGroupId === 'backlog' && !isTemplateFolder ? 'backlog' : 'active')))
+    (selectedGroupId === 'backlog' && !isTemplateCollection ? 'backlog' : 'active')))
   const areAllCategoriesCollapsed = $derived(toolbarGroup?.categories.every((category) => !categoryExpanded(toolbarGroup, category)) ?? true)
-  const folderCount = (folder: MockFolder) => folder.groups.filter((group) => group.id === 'active' || (folder.kind === 'prompt' && group.id === 'backlog'))
+  const collectionCount = (collection: MockCollection) => collection.groups.filter((group) => group.id === 'active' || (collection.kind === 'prompt' && group.id === 'backlog'))
     .reduce((sum, group) => sum + group.prompts.length + group.categories.reduce((n, category) => n + category.prompts.length, 0), 0)
   const groupCount = (group: MockGroup) => group.prompts.length + group.categories.reduce((sum, category) => sum + category.prompts.length, 0)
 
   const selectPrompt = (entry: MockPrompt, group: MockGroup) => {
-    activeActivity = folderKind
+    activeActivity = collectionKind
     selectedCategoryId = null
     selectedPromptId = entry.id
     selectedGroupId = group.id
@@ -181,7 +181,7 @@
     const entry = prompt(window.crypto.randomUUID(), `New ${contentLabel}`)
     category.prompts.unshift(entry)
     expandedCategoryIds[categoryKey(group, category)] = true
-    if (selectedFolder) selectedFolder.modified = 'Today'
+    if (selectedCollection) selectedCollection.modified = 'Today'
     selectPrompt(entry, group)
   }
   const openCategories = (categoryId?: string) => {
@@ -198,23 +198,23 @@
     }
     categoryDialog.close()
   }
-  const selectFolder = (folder: MockFolder) => {
-    selectedFolderIds[folder.kind] = folder.id
+  const selectCollection = (collection: MockCollection) => {
+    selectedCollectionIds[collection.kind] = collection.id
     selectedPromptId = ''
     selectedCategoryId = null
     selectedGroupId = 'active'
     isOverviewActive = true
-    activeActivity = folderKind
-    folderMenuOpen = false
+    activeActivity = collectionKind
+    collectionMenuOpen = false
   }
-  const createFolder = () => {
-    if (!validFolderName) return
-    const folder: MockFolder = { id: window.crypto.randomUUID(), title: folderName.trim(), kind: folderKind, groups: emptyGroups() }
-    folders.push(folder)
-    selectFolder(folder)
-    folderDialog.close()
+  const createCollection = () => {
+    if (!validCollectionName) return
+    const collection: MockCollection = { id: window.crypto.randomUUID(), title: collectionName.trim(), kind: collectionKind, groups: emptyGroups() }
+    collections.push(collection)
+    selectCollection(collection)
+    collectionDialog.close()
   }
-  const openCreateFolder = () => { folderName = ''; folderMenuOpen = false; folderDialog.showModal() }
+  const openCreateCollection = () => { collectionName = ''; collectionMenuOpen = false; collectionDialog.showModal() }
   const toggleAllCategories = () => {
     const expand = areAllCategoriesCollapsed
     if (!toolbarGroup) return
@@ -234,8 +234,8 @@
     const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect()
     dropAfter = row && event.clientY > bounds.top + bounds.height / 2
   }
-  const movePrompt = (event: DragEvent, group: MockGroup, category?: MockCategory, before?: MockPrompt, folder = selectedFolder) => {
-    if (!draggedPrompt || !folder) return
+  const movePrompt = (event: DragEvent, group: MockGroup, category?: MockCategory, before?: MockPrompt, collection = selectedCollection) => {
+    if (!draggedPrompt || !collection) return
     event.preventDefault()
     event.stopPropagation()
     const { entry, source, group: sourceGroup } = draggedPrompt
@@ -250,9 +250,9 @@
     if (sourceGroup.id !== group.id) {
       entry.status = group.id === 'completed' ? 'Completed' : group.id === 'archived' ? 'Archived' : undefined
     }
-    folder.modified = 'Today'
+    collection.modified = 'Today'
     group.expanded = true
-    if (category) expandedCategoryIds[`${folder.id}:${group.id}:${category.id}`] = true
+    if (category) expandedCategoryIds[`${collection.id}:${group.id}:${category.id}`] = true
     finishPromptDrag()
   }
 
@@ -360,10 +360,10 @@
 
 {#snippet PromptRow(promptEntry: MockPrompt, indentCount: number, isLastRow: boolean, group: MockGroup, category?: MockCategory)}
   <div class="tree-prompt-row" style={`--tree-indent-count:${indentCount};`}>
-    <span class="prompt-status-indicator" data-status={isTemplateFolder ? undefined : promptEntry.status} data-edited={promptEntry.edited} aria-hidden="true"></span>
+    <span class="prompt-status-indicator" data-status={isTemplateCollection ? undefined : promptEntry.status} data-edited={promptEntry.edited} aria-hidden="true"></span>
     <button
       class="tree-prompt-button"
-      data-active={isFolderActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : 'false'}
+      data-active={isCollectionActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : 'false'}
       type="button"
       draggable="true"
       data-dragging={draggedPrompt?.entry.id === promptEntry.id}
@@ -375,7 +375,7 @@
       ondragover={(event) => previewPromptDrop(event, promptEntry.id, true)}
       ondrop={(event) => movePrompt(event, group, category, promptEntry)}
       ondragend={finishPromptDrag}
-      aria-current={isFolderActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
+      aria-current={isCollectionActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
       onclick={() => {
         selectPrompt(promptEntry, group)
       }}
@@ -393,7 +393,7 @@
 
 {#snippet CategoryRow(category: MockCategory, group: MockGroup)}
   <div class="tree-category-row">
-    <div class="tree-category-content" role="group" data-active={isFolderActivity && selectedGroupId === group.id && selectedCategoryId === category.id}
+    <div class="tree-category-content" role="group" data-active={isCollectionActivity && selectedGroupId === group.id && selectedCategoryId === category.id}
       oncontextmenu={(event) => {
         event.preventDefault()
         categoryMenu = { category, group, x: event.clientX, y: event.clientY }
@@ -448,7 +448,7 @@
 {/snippet}
 
 <svelte:window onclick={closeMenus} ondragover={() => { dropTarget = null }} ondragend={finishPromptDrag} onkeydown={(event) => {
-  if (event.key === 'Escape') { folderMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag() }
+  if (event.key === 'Escape') { collectionMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag() }
 }} />
 
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
@@ -461,10 +461,10 @@
         onclick={() => {
           sidebarExpanded = activeActivity === activity.id ? !sidebarExpanded : true
           activeActivity = activity.id
-          folderMenuOpen = false
+          collectionMenuOpen = false
           actionsMenuOpen = false
           if (activity.id === 'prompt' || activity.id === 'template') {
-            folderKind = activity.id
+            collectionKind = activity.id
             selectedGroupId = 'active'
           }
         }}>
@@ -507,42 +507,42 @@
 
     <div class="separator"></div>
 
-    <div class="folder-selector-wrap">
-      <button class="folder-selector" type="button" aria-label={selectedFolder ? 'Folder selector' : 'Create Folder'} aria-expanded={folderMenuOpen}
-        ondragover={(event) => { if (draggedPrompt) { event.preventDefault(); folderMenuOpen = true } }}
-        onclick={() => { if (selectedFolder) folderMenuOpen = !folderMenuOpen; else openCreateFolder() }}>
-        <span class="selector-icon-cell">{#if selectedFolder}<FolderIcon size={20} aria-hidden="true" />{:else}<Plus size={20} aria-hidden="true" />{/if}</span>
+    <div class="collection-selector-wrap">
+      <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={collectionMenuOpen}
+        ondragover={(event) => { if (draggedPrompt) { event.preventDefault(); collectionMenuOpen = true } }}
+        onclick={() => { if (selectedCollection) collectionMenuOpen = !collectionMenuOpen; else openCreateCollection() }}>
+        <span class="selector-icon-cell">{#if selectedCollection}<CollectionIcon size={20} aria-hidden="true" />{:else}<Plus size={20} aria-hidden="true" />{/if}</span>
         <span class="selector-copy">
-          <span class="selector-title text-sm leading-5">{selectedFolder ? folderTitle : 'Create Folder'}</span>
+          <span class="selector-title text-sm leading-5">{selectedCollection ? collectionTitle : 'Create Collection'}</span>
           <span class="selector-detail text-xs leading-4.5">
-            {#if selectedFolder}
-            <span>{folderCount(selectedFolder)} {contentLabel.toLowerCase()}{folderCount(selectedFolder) === 1 ? '' : 's'}</span>
-            {#if selectedFolder.modified}<span class="separator-dot" aria-hidden="true"></span>
-            <span>{selectedFolder.modified}</span>{/if}
-            {:else}<span>Create a {isTemplateFolder ? 'prompt template' : 'task prompt'} folder</span>{/if}
+            {#if selectedCollection}
+            <span>{collectionCount(selectedCollection)} {contentLabel.toLowerCase()}{collectionCount(selectedCollection) === 1 ? '' : 's'}</span>
+            {#if selectedCollection.modified}<span class="separator-dot" aria-hidden="true"></span>
+            <span>{selectedCollection.modified}</span>{/if}
+            {:else}<span>Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</span>{/if}
           </span>
         </span>
-        {#if selectedFolder}<span class="selector-chevron">{#if folderMenuOpen}<ChevronUp size={20} aria-hidden="true" />{:else}<ChevronDown size={20} aria-hidden="true" />{/if}</span>{/if}
+        {#if selectedCollection}<span class="selector-chevron">{#if collectionMenuOpen}<ChevronUp size={20} aria-hidden="true" />{:else}<ChevronDown size={20} aria-hidden="true" />{/if}</span>{/if}
       </button>
-      {#if folderMenuOpen}
-        <div class="local-menu folder-menu">
-          {#each visibleFolders as folder (folder.id)}
-            <button class="folder-option text-sm leading-5" type="button" data-selected={selectedFolder?.id === folder.id}
-              draggable="true" data-dragging={draggedFolderId === folder.id} data-drop-over={dropTarget === folder.id}
-              ondragstart={(event) => { draggedFolderId = folder.id; event.dataTransfer?.setData('text/plain', folder.id) }}
-              ondragover={(event) => { if (draggedFolderId) event.preventDefault(); else previewPromptDrop(event, folder.id) }}
+      {#if collectionMenuOpen}
+        <div class="local-menu collection-menu">
+          {#each visibleCollections as collection (collection.id)}
+            <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
+              draggable="true" data-dragging={draggedCollectionId === collection.id} data-drop-over={dropTarget === collection.id}
+              ondragstart={(event) => { draggedCollectionId = collection.id; event.dataTransfer?.setData('text/plain', collection.id) }}
+              ondragover={(event) => { if (draggedCollectionId) event.preventDefault(); else previewPromptDrop(event, collection.id) }}
               ondrop={(event) => {
-                if (draggedPrompt) { movePrompt(event, folder.groups.find((group) => group.id === 'active')!, undefined, undefined, folder); return }
-                event.preventDefault(); reorderFolder(folder.id); draggedFolderId = null
+                if (draggedPrompt) { movePrompt(event, collection.groups.find((group) => group.id === 'active')!, undefined, undefined, collection); return }
+                event.preventDefault(); reorderCollection(collection.id); draggedCollectionId = null
               }}
-              ondragend={() => { draggedFolderId = null }}
-              onclick={() => selectFolder(folder)}>
-              <GripVertical size={16} aria-hidden="true" /><FolderIcon size={20} aria-hidden="true" />
-              <span>{folder.title}<small class="text-xs leading-4.5">{folderCount(folder)} {contentLabel.toLowerCase()}{folderCount(folder) === 1 ? '' : 's'}{folder.modified ? ` · ${folder.modified}` : ''}</small></span>
-              {#if selectedFolder?.id === folder.id}<ChevronRight size={20} aria-hidden="true" />{/if}
+              ondragend={() => { draggedCollectionId = null }}
+              onclick={() => selectCollection(collection)}>
+              <GripVertical size={16} aria-hidden="true" /><CollectionIcon size={20} aria-hidden="true" />
+              <span>{collection.title}<small class="text-xs leading-4.5">{collectionCount(collection)} {contentLabel.toLowerCase()}{collectionCount(collection) === 1 ? '' : 's'}{collection.modified ? ` · ${collection.modified}` : ''}</small></span>
+              {#if selectedCollection?.id === collection.id}<ChevronRight size={20} aria-hidden="true" />{/if}
             </button>
           {/each}
-          <div class="menu-footer"><button class="folder-option text-sm leading-5" type="button" onclick={openCreateFolder}><Plus size={20} aria-hidden="true" /><span>Create Folder<small class="text-xs leading-4.5">Create a {isTemplateFolder ? 'prompt template' : 'task prompt'} folder</small></span></button></div>
+          <div class="menu-footer"><button class="collection-option text-sm leading-5" type="button" onclick={openCreateCollection}><Plus size={20} aria-hidden="true" /><span>Create Collection<small class="text-xs leading-4.5">Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</small></span></button></div>
         </div>
       {/if}
     </div>
@@ -551,28 +551,28 @@
 
     <div class="prompts-header">
       <div class="prompts-actions">
-        {@render IconAction(ArrowUpToLine, 'Show Folder Overview', () => { activeActivity = folderKind; isOverviewActive = true; selectedCategoryId = null }, false, !selectedFolder)}
-        {#if selectedFolder && !isTemplateFolder}
+        {@render IconAction(ArrowUpToLine, 'Show Collection Overview', () => { activeActivity = collectionKind; isOverviewActive = true; selectedCategoryId = null }, false, !selectedCollection)}
+        {#if selectedCollection && !isTemplateCollection}
           {@render IconAction(Check, 'Show Completed Prompts', () => { showCompleted = !showCompleted }, showCompleted)}
         {/if}
-        {#if selectedFolder}
+        {#if selectedCollection}
           {@render IconAction(Archive, `Show Archived ${contentLabel}s`, () => { showArchived = !showArchived }, showArchived)}
         {/if}
         {@render IconAction(areAllCategoriesCollapsed ? ChevronsUpDown : ChevronsDownUp,
-          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories', toggleAllCategories, false, !selectedFolder)}
-        {@render IconAction(FolderCog, 'Manage Categories', () => openCategories(), false, !selectedFolder)}
-        {@render IconAction(MoreHorizontal, 'Selected Folder Actions', () => { actionsMenuOpen = !actionsMenuOpen }, actionsMenuOpen, !selectedFolder)}
+          areAllCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories', toggleAllCategories, false, !selectedCollection)}
+        {@render IconAction(FolderCog, 'Manage Categories', () => openCategories(), false, !selectedCollection)}
+        {@render IconAction(MoreHorizontal, 'Selected Collection Actions', () => { actionsMenuOpen = !actionsMenuOpen }, actionsMenuOpen, !selectedCollection)}
       </div>
       {#if actionsMenuOpen}
         <div class="local-menu actions-menu">
-          <button class="danger-action text-sm" type="button" onclick={() => { actionsMenuOpen = false; deleteDialog.showModal() }}><Trash2 size={16} />Delete Folder</button>
+          <button class="danger-action text-sm" type="button" onclick={() => { actionsMenuOpen = false; deleteDialog.showModal() }}><Trash2 size={16} />Delete Collection</button>
         </div>
       {/if}
     </div>
 
     <div class="status-accordion">
-      {#if !selectedFolder}<p class="empty-folders text-sm">Create a folder to get started.</p>{/if}
-      {#key selectedFolder?.id}
+      {#if !selectedCollection}<p class="empty-collections text-sm">Create a collection to get started.</p>{/if}
+      {#key selectedCollection?.id}
       {#each visibleGroups as group (group.id)}
         <section class="status-section" data-testid={`mock-status-section-${group.id}`} data-expanded={group.expanded}
           style={`flex:${group.expanded ? `${group.weight} 1 0px` : '0 0 36px'};`}>
@@ -597,7 +597,7 @@
               onmouseleave={() => { if (scrollMetrics[group.id]) scrollMetrics[group.id]!.hovered = false }}>
               <div class="prompt-tree" use:observeTree={group.id}>
                 <div>
-                  {#if groupCount(group) > 0 || (isTemplateFolder && group.id === 'active' && group.categories.length > 0)}
+                  {#if groupCount(group) > 0 || (isTemplateCollection && group.id === 'active' && group.categories.length > 0)}
                   {#each group.prompts as entry, index (entry.id)}
                     {@render PromptRow(entry, 0, index === group.prompts.length - 1, group)}
                   {/each}
@@ -611,10 +611,10 @@
                       if (group.id === 'active' || group.id === 'backlog') {
                         const entry = prompt(window.crypto.randomUUID(), `New ${contentLabel}`)
                         group.prompts.push(entry)
-                        if (selectedFolder) selectedFolder.modified = 'Today'
+                        if (selectedCollection) selectedCollection.modified = 'Today'
                         selectPrompt(entry, group)
-                      } else { activeActivity = folderKind; isOverviewActive = true }
-                    }}>{isTemplateFolder && group.id === 'active' ? 'No templates' : `No ${group.label.toLowerCase()} prompts`}. Click to {group.id === 'active' || group.id === 'backlog' ? 'add' : 'view'}.</button>
+                      } else { activeActivity = collectionKind; isOverviewActive = true }
+                    }}>{isTemplateCollection && group.id === 'active' ? 'No templates' : `No ${group.label.toLowerCase()} prompts`}. Click to {group.id === 'active' || group.id === 'backlog' ? 'add' : 'view'}.</button>
                   {/if}
                   <div class="tree-bottom-spacer" aria-hidden="true"></div>
                 </div>
@@ -675,7 +675,7 @@
             categoryMenu = null
             return
           }
-          activeActivity = folderKind
+          activeActivity = collectionKind
           selectedCategoryId = categoryMenu!.category.id
           selectedGroupId = categoryMenu!.group.id
           selectedPromptId = ''
@@ -687,7 +687,7 @@
   {/if}
   <dialog bind:this={categoryDialog} class="mock-dialog category-dialog text-sm leading-5" aria-labelledby="mock-manage-title">
     <form onsubmit={(event) => { event.preventDefault(); saveCategories() }}>
-      <header class="dialog-header"><FolderCog size={24} /><div><h2 id="mock-manage-title" class="text-lg font-semibold">Manage Categories</h2><p class="text-xs">{folderTitle}</p></div><button class="dialog-close" type="button" aria-label="Close" onclick={() => categoryDialog.close()}><X size={20} /></button></header>
+      <header class="dialog-header"><FolderCog size={24} /><div><h2 id="mock-manage-title" class="text-lg font-semibold">Manage Categories</h2><p class="text-xs">{collectionTitle}</p></div><button class="dialog-close" type="button" aria-label="Close" onclick={() => categoryDialog.close()}><X size={20} /></button></header>
       <div class="management-body">
         <div class="category-list">
           <h3 class="text-xs font-semibold">All Categories</h3>
@@ -699,7 +699,7 @@
         <div class="category-editor">
           {#if selectedDraft}
             <div class="category-editor-heading"><Folder size={20} /><span>{selectedDraft.title || 'New Category'}<small class="text-xs">Category settings</small></span><button class="danger-action" type="button" aria-label="Delete category" onclick={() => { categoryDrafts = categoryDrafts.filter((draft) => draft.id !== draftId); draftId = categoryDrafts[0]?.id ?? '' }}><Trash2 size={20} /></button></div>
-            <label>Category Name *<small class="text-xs">Required. Names must be unique in this folder.</small><input class="text-sm leading-5" bind:value={selectedDraft.title} required /></label>
+            <label>Category Name *<small class="text-xs">Required. Names must be unique in this collection.</small><input class="text-sm leading-5" bind:value={selectedDraft.title} required /></label>
             <label>Short Description<small class="text-xs">A brief summary to help you recognize this category.</small><input class="text-sm leading-5" bind:value={selectedDraft.shortDescription} /></label>
             <label>Full Description<small class="text-xs">Describe what belongs here and how to use these prompts.</small><textarea class="text-sm leading-5" bind:value={selectedDraft.description}></textarea></label>
           {/if}
@@ -708,18 +708,18 @@
       <footer class="dialog-footer"><button type="button" onclick={() => categoryDialog.close()}>Close</button><button class="accent-action" type="submit" disabled={!validDrafts}><Check size={16} />Save Changes</button></footer>
     </form>
   </dialog>
-  <dialog bind:this={folderDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-create-title">
-    <form onsubmit={(event) => { event.preventDefault(); createFolder() }}>
-      <header class="dialog-header"><FolderIcon size={24} /><div><h2 id="mock-create-title" class="text-lg font-semibold">Create {isTemplateFolder ? 'Prompt Template' : 'Task Prompt'} Folder</h2><p class="text-xs">{isTemplateFolder ? 'Organize reusable prompts for repeatable workflows.' : 'Organize one-time prompts for individual tasks.'}</p></div></header>
-      <div class="dialog-body"><label>Folder Name<input class="text-sm leading-5" bind:value={folderName} required /></label><p class="text-xs">Required. Names must be unique among {isTemplateFolder ? 'prompt template' : 'task prompt'} folders.</p></div>
-      <footer class="dialog-footer"><button type="button" onclick={() => folderDialog.close()}>Cancel</button><button class="accent-action" type="submit" disabled={!validFolderName}>Create Folder</button></footer>
+  <dialog bind:this={collectionDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-create-title">
+    <form onsubmit={(event) => { event.preventDefault(); createCollection() }}>
+      <header class="dialog-header"><CollectionIcon size={24} /><div><h2 id="mock-create-title" class="text-lg font-semibold">Create {isTemplateCollection ? 'Prompt Template' : 'Task Prompt'} Collection</h2><p class="text-xs">{isTemplateCollection ? 'Organize reusable prompts for repeatable workflows.' : 'Organize one-time prompts for individual tasks.'}</p></div></header>
+      <div class="dialog-body"><label>Collection Name<input class="text-sm leading-5" bind:value={collectionName} required /></label><p class="text-xs">Required. Names must be unique among {isTemplateCollection ? 'prompt template' : 'task prompt'} collections.</p></div>
+      <footer class="dialog-footer"><button type="button" onclick={() => collectionDialog.close()}>Cancel</button><button class="accent-action" type="submit" disabled={!validCollectionName}>Create Collection</button></footer>
     </form>
   </dialog>
   <dialog bind:this={deleteDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-delete-title">
-    <form onsubmit={(event) => { event.preventDefault(); folders = folders.filter((folder) => folder.id !== selectedFolder?.id); selectedPromptId = ''; selectedCategoryId = null; deleteDialog.close() }}>
-      <header class="dialog-header"><Trash2 size={24} /><h2 id="mock-delete-title" class="text-lg font-semibold">Delete Folder</h2></header>
-      <p class="dialog-body">Delete “{folderTitle}” and its {contentLabel.toLowerCase()}s?</p>
-      <footer class="dialog-footer"><button type="button" onclick={() => deleteDialog.close()}>Cancel</button><button class="danger-action" type="submit">Delete Folder</button></footer>
+    <form onsubmit={(event) => { event.preventDefault(); collections = collections.filter((collection) => collection.id !== selectedCollection?.id); selectedPromptId = ''; selectedCategoryId = null; deleteDialog.close() }}>
+      <header class="dialog-header"><Trash2 size={24} /><h2 id="mock-delete-title" class="text-lg font-semibold">Delete Collection</h2></header>
+      <p class="dialog-body">Delete “{collectionTitle}” and its {contentLabel.toLowerCase()}s?</p>
+      <footer class="dialog-footer"><button type="button" onclick={() => deleteDialog.close()}>Cancel</button><button class="danger-action" type="submit">Delete Collection</button></footer>
     </form>
   </dialog>
 </main>
@@ -940,12 +940,12 @@
     width: 100%;
   }
 
-  .folder-selector-wrap {
+  .collection-selector-wrap {
     flex: 0 0 auto;
     padding: 4px 8px;
   }
 
-  .folder-selector {
+  .collection-selector {
     align-items: center;
     background: transparent;
     border: 1px solid var(--ui-ghost-surface);
@@ -960,14 +960,14 @@
     width: 100%;
   }
 
-  .folder-selector:hover,
-  .folder-selector:focus-visible {
+  .collection-selector:hover,
+  .collection-selector:focus-visible {
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
   }
 
-  .folder-selector[aria-expanded='true'] {
+  .collection-selector[aria-expanded='true'] {
     background: var(--ui-neutral-action-hover-fill);
     border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
@@ -1132,7 +1132,7 @@
 
   .tree-prompt-button[data-dragging='true'],
   .tree-category-toggle[data-drop-over='true'],
-  .local-menu .folder-option[data-drop-over='true'] {
+  .local-menu .collection-option[data-drop-over='true'] {
     background: var(--ui-info-normal-surface);
     color: var(--ui-normal-text);
   }
@@ -1507,7 +1507,7 @@
     color: var(--ui-normal-text);
   }
 
-  .folder-selector-wrap, .prompts-header {
+  .collection-selector-wrap, .prompts-header {
     position: relative;
   }
 
@@ -1522,7 +1522,7 @@
     box-shadow: 0 0 12px var(--ui-shadow-raised);
   }
 
-  .folder-menu {
+  .collection-menu {
     top: 100%;
     left: 8px;
     width: max(320px, calc(100% - 16px));
@@ -1557,7 +1557,7 @@
     display: block;
   }
 
-  .local-menu .folder-option {
+  .local-menu .collection-option {
     display: grid;
     grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
     min-height: 58px;
@@ -1566,25 +1566,25 @@
     gap: 8px;
   }
 
-  .folder-option :global(svg) {
+  .collection-option :global(svg) {
     justify-self: center;
   }
 
-  .local-menu .folder-option[data-dragging='true'] {
+  .local-menu .collection-option[data-dragging='true'] {
     background: var(--ui-info-normal-surface);
   }
 
-  .menu-footer .folder-option {
+  .menu-footer .collection-option {
     grid-template-columns: 34px minmax(0, 1fr);
   }
 
-  .empty-folders {
+  .empty-collections {
     color: var(--ui-muted-text);
     padding: 0 8px;
     margin: 0;
   }
 
-  .folder-option > span {
+  .collection-option > span {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1592,18 +1592,18 @@
     font-weight: var(--font-weight-semibold);
   }
 
-  .folder-option small {
+  .collection-option small {
     font-weight: var(--font-weight-normal);
   }
 
-  .local-menu .folder-option[data-selected='true'] {
+  .local-menu .collection-option[data-selected='true'] {
     background: var(--ui-accent-action-fill);
     border-color: var(--ui-accent-muted-border);
     color: var(--ui-normal-text);
   }
 
-  .local-menu .folder-option[data-selected='true']:hover,
-  .local-menu .folder-option[data-selected='true']:focus-visible {
+  .local-menu .collection-option[data-selected='true']:hover,
+  .local-menu .collection-option[data-selected='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
     color: var(--ui-normal-text);
   }

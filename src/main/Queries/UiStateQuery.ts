@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import {
   createAccordionUiStateKey,
   createDefaultWorkspaceUiState,
-  createWorkspacePromptFolderUiStateKey,
+  createWorkspacePromptCollectionUiStateKey,
   LOAD_WORKSPACE_UI_STATE_CHANNEL,
   type LoadWorkspaceUiStateResult
 } from '@shared/domain/ui-state/UiState'
@@ -16,10 +16,10 @@ type WorkspaceLocalIdRow = {
   localId: string
 }
 
-/** Loads one prompt-folder UI-state record into its committed store. */
-const loadWorkspacePromptFolderUiStateEntry = async (id: string) => {
-  await data.workspacePromptFolderUiState.loadDataFromPersistence(id, {})
-  return data.workspacePromptFolderUiState.committedStore.getEntry(id)
+/** Loads one prompt-collection UI-state record into its committed store. */
+const loadWorkspacePromptCollectionUiStateEntry = async (id: string) => {
+  await data.workspacePromptCollectionUiState.loadDataFromPersistence(id, {})
+  return data.workspacePromptCollectionUiState.committedStore.getEntry(id)
 }
 
 /** Loads one accordion UI-state record into its committed store. */
@@ -51,11 +51,11 @@ export const setupUiStateQueryHandlers = (): void => {
               )
             }
 
-            /** Prompt-folder view row IDs owned by the selected workspace. */
-            const promptFolderRows = db
+            /** Prompt-collection view row IDs owned by the selected workspace. */
+            const promptCollectionRows = db
               .prepare(
                 `SELECT content_owner_id AS localId
-                 FROM prompt_folder_view_state WHERE workspace_id = ?`
+                 FROM prompt_collection_view_state WHERE workspace_id = ?`
               )
               .all(workspaceId) as WorkspaceLocalIdRow[]
             /** Accordion row IDs owned by the selected workspace. */
@@ -66,11 +66,11 @@ export const setupUiStateQueryHandlers = (): void => {
               )
               .all(workspaceId) as WorkspaceLocalIdRow[]
 
-            /** Loaded prompt-folder UI-state committed entries. */
-            const promptFolderEntries = await Promise.all(
-              promptFolderRows.map((row) =>
-                loadWorkspacePromptFolderUiStateEntry(
-                  createWorkspacePromptFolderUiStateKey(workspaceId, row.localId)
+            /** Loaded prompt-collection UI-state committed entries. */
+            const promptCollectionEntries = await Promise.all(
+              promptCollectionRows.map((row) =>
+                loadWorkspacePromptCollectionUiStateEntry(
+                  createWorkspacePromptCollectionUiStateKey(workspaceId, row.localId)
                 )
               )
             )
@@ -92,11 +92,11 @@ export const setupUiStateQueryHandlers = (): void => {
                 revision: workspaceEntry.revision,
                 data: workspaceEntry.committed
               },
-              workspacePromptFolderUiStates: promptFolderEntries.flatMap((entry) =>
+              workspacePromptCollectionUiStates: promptCollectionEntries.flatMap((entry) =>
                 entry
                   ? [
                       {
-                        id: createWorkspacePromptFolderUiStateKey(
+                        id: createWorkspacePromptCollectionUiStateKey(
                           entry.committed.workspaceId,
                           entry.committed.contentOwnerId
                         ),

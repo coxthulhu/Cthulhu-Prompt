@@ -167,7 +167,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 24 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 26 })
 
       /** Welcome remains eligible by default when the preference column is migrated. */
       const appPersistenceColumnsResult = await runSqlQuery(
@@ -197,7 +197,7 @@ describe('Test Infrastructure', () => {
             'app_persistence',
             'workspace_ui_state',
             'accordion_view_state',
-            'prompt_folder_view_state',
+            'prompt_collection_view_state',
             'category_description_editor_view_state',
             'markdown_content_ui_state'
           )
@@ -210,22 +210,22 @@ describe('Test Infrastructure', () => {
       const persistenceTableNames = (persistenceTablesResult.rows ?? []).map((row) => row.name)
       expect(persistenceTableNames).not.toContain('category_description_editor_view_state')
 
-      const promptFolderViewStateColumnsResult = await runSqlQuery(
+      const promptCollectionViewStateColumnsResult = await runSqlQuery(
         electronApp,
-        'PRAGMA table_info(prompt_folder_view_state)'
+        'PRAGMA table_info(prompt_collection_view_state)'
       )
-      const promptFolderViewStateColumnNames = (promptFolderViewStateColumnsResult.rows ?? []).map(
+      const promptCollectionViewStateColumnNames = (promptCollectionViewStateColumnsResult.rows ?? []).map(
         (row) => row.name
       )
 
-      expect(promptFolderViewStateColumnsResult.success).toBe(true)
-      expect(promptFolderViewStateColumnsResult.rows).toEqual(expect.arrayContaining([
+      expect(promptCollectionViewStateColumnsResult.success).toBe(true)
+      expect(promptCollectionViewStateColumnsResult.rows).toEqual(expect.arrayContaining([
         expect.objectContaining({ name: 'selected_mode', type: 'TEXT', notnull: 1, dflt_value: "'active'" }),
         expect.objectContaining({ name: 'shown_final_status_groups_json', type: 'TEXT', notnull: 1, dflt_value: "'{}'" })
       ]))
-      expect(promptFolderViewStateColumnNames).toContain('tree_is_expanded')
-      expect(promptFolderViewStateColumnNames).not.toContain('details_section_is_expanded')
-      expect(promptFolderViewStateColumnNames).not.toContain(
+      expect(promptCollectionViewStateColumnNames).toContain('tree_is_expanded')
+      expect(promptCollectionViewStateColumnNames).not.toContain('details_section_is_expanded')
+      expect(promptCollectionViewStateColumnNames).not.toContain(
         'prompt_tree_is_showing_all_prompts'
       )
 
@@ -238,9 +238,9 @@ describe('Test Infrastructure', () => {
       const workspaceUiStateColumnNames = (workspaceUiStateColumnsResult.rows ?? []).map(
         (row) => row.name
       )
-      expect(workspaceUiStateColumnNames).toContain('last_prompt_task_folder_id')
-      expect(workspaceUiStateColumnNames).toContain('last_prompt_template_folder_id')
-      expect(workspaceUiStateColumnNames).not.toContain('last_prompt_folder_id')
+      expect(workspaceUiStateColumnNames).toContain('last_prompt_task_collection_id')
+      expect(workspaceUiStateColumnNames).toContain('last_prompt_template_collection_id')
+      expect(workspaceUiStateColumnNames).not.toContain('last_prompt_collection_id')
 
       /** Current accordion columns after replacing expansion-only persistence. */
       const accordionViewStateColumnsResult = await runSqlQuery(

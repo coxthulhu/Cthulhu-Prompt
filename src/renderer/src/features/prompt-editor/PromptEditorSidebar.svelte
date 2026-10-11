@@ -19,7 +19,7 @@
 
   let {
     promptId,
-    promptFolderId,
+    promptCollectionId,
     contentKind = 'prompt',
     contentLabel = 'prompt',
     title,
@@ -32,8 +32,8 @@
     onPromptTreeDrop
   }: {
     promptId: string
-    promptFolderId: string
-    contentKind?: import('@shared/domain/prompt-folder/PromptFolder').PromptFolderContentKind
+    promptCollectionId: string
+    contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
     contentLabel?: string
     title: string
     isFirstPrompt: boolean
@@ -86,7 +86,7 @@
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     payload: {
       fromId: promptId,
-      location: getPromptLocation(promptFolderId, promptId),
+      location: getPromptLocation(promptCollectionId, promptId),
       contentKind
     },
     createGhost: () => createPromptDragGhost(title, contentKind),

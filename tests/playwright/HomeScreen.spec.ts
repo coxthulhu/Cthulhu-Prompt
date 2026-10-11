@@ -1,7 +1,7 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  createWorkspaceWithFolders,
-  createWorkspaceWithTemplateFolders,
+  createWorkspaceWithCollections,
+  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
@@ -9,8 +9,8 @@ import { PromptStatus } from '@shared/domain/prompt/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const workspaceFolderOrderPath = (workspacePath: string): string =>
-  `${workspacePath}/Prompts/FolderOrder.json`
+const workspaceCollectionOrderPath = (workspacePath: string): string =>
+  `${workspacePath}/Prompts/CollectionOrder.json`
 
 describe('Home Screen', () => {
   test('shows the get started state on launch without a workspace', async ({ testSetup }) => {
@@ -92,16 +92,16 @@ describe('Home Screen', () => {
   })
 
   describe('Workspace Management', () => {
-    test('counts every prompt and folder type in the workspace statistics', async ({
+    test('counts every prompt and collection type in the workspace statistics', async ({
       testSetup
     }) => {
       const workspacePath = '/ws/home-workspace-statistics'
       const filesystem = {
-        ...createWorkspaceWithFolders(workspacePath, [
+        ...createWorkspaceWithCollections(workspacePath, [
           {
             folderName: 'Tasks',
             displayName: 'Tasks',
-            promptFolderId: 'home-task-folder',
+            promptCollectionId: 'home-task-collection',
             prompts: [
               { id: 'home-active', title: 'Active', promptText: 'Active prompt' },
               {
@@ -121,22 +121,22 @@ describe('Home Screen', () => {
             ]
           }
         ]),
-        ...createWorkspaceWithTemplateFolders(workspacePath, [
+        ...createWorkspaceWithTemplateCollections(workspacePath, [
           {
             folderName: 'Templates',
             displayName: 'Templates',
-            folderId: 'home-template-folder',
+            collectionId: 'home-template-collection',
             templates: [
               { id: 'home-template-one', title: 'Template One', templateText: 'First template' },
               { id: 'home-template-two', title: 'Template Two', templateText: 'Second template' }
             ]
           }
         ]),
-        [workspaceFolderOrderPath(workspacePath)]: JSON.stringify({
-          entries: [{ kind: 'folder', id: 'home-task-folder' }]
+        [workspaceCollectionOrderPath(workspacePath)]: JSON.stringify({
+          entries: [{ kind: 'collection', id: 'home-task-collection' }]
         }),
-        [`${workspacePath}/Templates/FolderOrder.json`]: JSON.stringify({
-          entries: [{ kind: 'folder', id: 'home-template-folder' }]
+        [`${workspacePath}/Templates/CollectionOrder.json`]: JSON.stringify({
+          entries: [{ kind: 'collection', id: 'home-template-collection' }]
         })
       }
 
@@ -151,11 +151,11 @@ describe('Home Screen', () => {
       const promptStat = mainWindow.locator('[data-testid="home-prompt-count-stat"]')
       await expect(promptStat.locator('strong')).toHaveText('5')
       await expect(promptStat).toContainText('Prompts')
-      const promptFolderStat = mainWindow.locator(
-        '[data-testid="home-prompt-folder-count-stat"]'
+      const promptCollectionStat = mainWindow.locator(
+        '[data-testid="home-prompt-collection-count-stat"]'
       )
-      await expect(promptFolderStat.locator('strong')).toHaveText('2')
-      await expect(promptFolderStat).toContainText('Prompt Folders')
+      await expect(promptCollectionStat.locator('strong')).toHaveText('2')
+      await expect(promptCollectionStat).toContainText('Prompt Collections')
     })
 
     test('closes a workspace after category management has mounted', async ({ testSetup }) => {
@@ -167,8 +167,8 @@ describe('Home Screen', () => {
       expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
       await testHelpers.assertWorkspaceReadyPath('/ws/categories')
-      await testHelpers.navigateToPromptFolders('Main')
-      await mainWindow.locator('[data-testid="prompt-folder-manage-categories-button"]').click()
+      await testHelpers.navigateToPromptCollections('Main')
+      await mainWindow.locator('[data-testid="prompt-collection-manage-categories-button"]').click()
       await expect(mainWindow.getByRole('dialog', { name: 'Manage Categories' })).toBeVisible()
       await mainWindow.locator('[data-testid="manage-categories-close-button"]').click()
       await testHelpers.navigateToHomeScreen()
@@ -198,13 +198,13 @@ describe('Home Screen', () => {
       /** Version-zero workspace used to verify both compatibility migrations. */
       const workspacePath = '/ws/unversioned-migration'
       /** Current fixture structure downgraded below to the original workspace schema. */
-      const filesystem = createWorkspaceWithFolders(workspacePath, [
+      const filesystem = createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'Examples',
           displayName: 'Examples',
-          promptFolderId: 'migration-folder'
+          promptCollectionId: 'migration-collection'
         }
-      ])
+      ], { settings: { schemaVersion: 0 } })
       /** Workspace metadata path whose omitted version must be interpreted as zero. */
       const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
       /** Unversioned metadata derived from the otherwise current fixture. */
@@ -245,7 +245,7 @@ Keep this body.`
       /** Canonical unreferenced category data produced by the recursive scan. */
       const migratedCategoryText = await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))
       expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 4,
+        schemaVersion: 5,
         workspaceId: unversionedInfo.workspaceId,
         workspaceName: unversionedInfo.workspaceName
       })
@@ -277,7 +277,7 @@ Keep this body.`
       /** Explicitly versioned legacy workspace accepted by the migration runner. */
       const workspacePath = '/ws/explicit-zero-migration'
       /** Empty version-zero workspace fixture requiring only the metadata migration. */
-      const filesystem = createWorkspaceWithFolders(workspacePath, [], {
+      const filesystem = createWorkspaceWithCollections(workspacePath, [], {
         settings: { schemaVersion: 0 }
       })
       /** Explicitly versioned workspace metadata selected through the open dialog. */
@@ -291,7 +291,7 @@ Keep this body.`
       })
 
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(4)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(5)
     })
 
     test('leaves schema version zero when a workspace migration file is malformed', async ({
@@ -301,7 +301,7 @@ Keep this body.`
       /** Version-zero workspace that must fail before committing its schema version. */
       const workspacePath = '/ws/failed-migration'
       /** Legacy fixture containing one category the migration cannot parse. */
-      const filesystem = createWorkspaceWithFolders(workspacePath, [], {
+      const filesystem = createWorkspaceWithCollections(workspacePath, [], {
         settings: { schemaVersion: 0 }
       })
       /** Legacy prompt converted before the later category failure interrupts migration. */
@@ -380,9 +380,9 @@ Keep this partial body.`
 
     test('rejects a workspace without a Templates directory', async ({ testSetup }) => {
       const workspacePath = '/ws/missing-templates'
-      const filesystem = createWorkspaceWithFolders(workspacePath, [])
+      const filesystem = createWorkspaceWithCollections(workspacePath, [])
       delete filesystem[`${workspacePath}/Templates`]
-      delete filesystem[`${workspacePath}/Templates/FolderOrder.json`]
+      delete filesystem[`${workspacePath}/Templates/CollectionOrder.json`]
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -401,19 +401,19 @@ Keep this partial body.`
       await expect(errorDialog).toBeHidden()
     })
 
-    test('repairs a missing workspace folder order during load', async ({
+    test('repairs a missing workspace collection order during load', async ({
       electronApp,
       testSetup
     }) => {
-      const workspacePath = '/ws/missing-folder-order'
-      const filesystem = createWorkspaceWithFolders(workspacePath, [
+      const workspacePath = '/ws/missing-collection-order'
+      const filesystem = createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'Examples',
           displayName: 'Examples',
-          promptFolderId: 'folder-examples'
+          promptCollectionId: 'collection-examples'
         }
       ])
-      delete filesystem[workspaceFolderOrderPath(workspacePath)]
+      delete filesystem[workspaceCollectionOrderPath(workspacePath)]
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -428,19 +428,19 @@ Keep this partial body.`
         mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
       ).toHaveCount(0)
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
-      expect(await checkFileExists(electronApp, workspaceFolderOrderPath(workspacePath))).toBe(true)
+      expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(true)
     })
 
-    test('rejects malformed workspace folder order JSON', async ({ testSetup }) => {
-      const workspacePath = '/ws/malformed-folder-order'
-      const filesystem = createWorkspaceWithFolders(workspacePath, [
+    test('rejects malformed workspace collection order JSON', async ({ testSetup }) => {
+      const workspacePath = '/ws/malformed-collection-order'
+      const filesystem = createWorkspaceWithCollections(workspacePath, [
         {
           folderName: 'Examples',
           displayName: 'Examples',
-          promptFolderId: 'folder-examples'
+          promptCollectionId: 'collection-examples'
         }
       ])
-      filesystem[workspaceFolderOrderPath(workspacePath)] = '{ malformed'
+      filesystem[workspaceCollectionOrderPath(workspacePath)] = '{ malformed'
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -469,8 +469,8 @@ Keep this partial body.`
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
-      await expect(mainWindow.getByTestId('prompt-folder-header-folder')).toHaveText('My Project')
-      await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Project')
+      await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
       await testHelpers.navigateToHomeScreen()
       /** Created workspace root shown by the ready-state home screen. */
       const workspacePath = await testHelpers.getDisplayedWorkspacePath()
@@ -482,7 +482,7 @@ Keep this partial body.`
             `${workspacePath}\\TestWorkspace.cthulhuprompt.json`
           )
         ).schemaVersion
-      ).toBe(4)
+      ).toBe(5)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {
@@ -568,7 +568,7 @@ Keep this partial body.`
       )
       await expect(finalPathField.locator('.cthulhuUiTitle')).toHaveText('Workspace Path')
       await expect(examplesField.locator('.cthulhuUiSubtitle')).toHaveText(
-        'Include example prompts and templates in the My Project and My Templates folders.'
+        'Include example prompts and templates in the My Project and My Templates collections.'
       )
       await expect(createDialog.locator('.cthulhuUiTitleSubtitleStack svg')).toHaveCount(0)
       await expect(containingFolderInput).toBeDisabled()
@@ -651,16 +651,16 @@ Keep this partial body.`
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
       ).toBeEnabled()
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', {
+      await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
         timeout: 5000
       })
 
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
 
-      await expect(mainWindow.getByTestId('prompt-folder-header-folder')).toHaveText('My Project')
-      await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
-      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', { state: 'visible' })
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Project')
+      await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
+      await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', { state: 'visible' })
       await mainWindow.waitForSelector('[data-testid^="prompt-editor-"]', {
         state: 'attached'
       })
@@ -686,7 +686,7 @@ Keep this partial body.`
           return (
             titleInput
               ?.closest('[data-testid^="prompt-editor-"]')
-              ?.querySelector('.prompt-editor-metadata-folder')
+              ?.querySelector('.prompt-editor-metadata-template')
               ?.textContent?.trim() ?? null
           )
         }, promptTitle)
@@ -697,7 +697,7 @@ Keep this partial body.`
         .poll(() => getTemplateLabel('Example: Investigate Category Persistence Bug'))
         .toBe('Example: Bug Fix Template')
 
-      const screenInfo = await testHelpers.getPromptFolderScreenInfo()
+      const screenInfo = await testHelpers.getPromptCollectionScreenInfo()
       expect(screenInfo.promptCount).toBe(3)
 
       const categoryToggles = mainWindow.locator(
@@ -728,26 +728,26 @@ Keep this partial body.`
       await categoryToggles.nth(1).click()
       await expect(mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]')).toHaveCount(0)
 
-      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
       ).toHaveCount(1)
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('My Project')
-      await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
-      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+      await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
+      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
       ).toHaveCount(1)
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('2 templates')
       await mainWindow
-        .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
         .nth(0)
         .click()
       const exampleFeatureTemplate = await testHelpers.verifyPromptVisible(
@@ -758,10 +758,10 @@ Keep this partial body.`
       )
       expect(exampleFeatureTemplate.found).toBe(true)
       expect(exampleBugFixTemplate.found).toBe(true)
-      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(2)
+      expect((await testHelpers.getPromptCollectionScreenInfo()).promptCount).toBe(2)
     })
 
-    test('creates a blank My Project folder when examples are disabled', async ({ testSetup }) => {
+    test('creates a blank My Project collection when examples are disabled', async ({ testSetup }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-without-examples', autoSetup: false }
       })
@@ -782,49 +782,49 @@ Keep this partial body.`
       await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'false')
 
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.waitForSelector('[data-testid="prompt-folder-screen"]', {
+      await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
         timeout: 5000
       })
 
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
 
-      await expect(mainWindow.getByTestId('prompt-folder-header-section')).toHaveText('Active')
-      await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toHaveText(
+      await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
+      await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toHaveText(
         'My Project'
       )
 
-      const screenInfo = await testHelpers.getPromptFolderScreenInfo()
+      const screenInfo = await testHelpers.getPromptCollectionScreenInfo()
       expect(screenInfo.hasPromptEditors).toBe(false)
       expect(screenInfo.promptCount).toBe(0)
 
-      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
       ).toHaveCount(1)
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('My Project')
-      await mainWindow.locator('[data-testid="nav-button-prompt-template-folders"]').click()
-      await mainWindow.locator('[data-testid="sidebar-prompt-folder-selector-trigger"]').click()
+      await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
+      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
       ).toHaveCount(1)
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('0 templates')
 
       await mainWindow
-        .locator('[data-testid^="sidebar-prompt-folder-dropdown-item-"]')
+        .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
         .nth(0)
         .click()
-      await expect(mainWindow.locator('[data-testid="prompt-folder-header-folder"]')).toHaveText(
+      await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toHaveText(
         'My Templates'
       )
-      expect((await testHelpers.getPromptFolderScreenInfo()).promptCount).toBe(0)
+      expect((await testHelpers.getPromptCollectionScreenInfo()).promptCount).toBe(0)
     })
 
     test('disables Create Workspace for invalid workspace names', async ({ testSetup }) => {

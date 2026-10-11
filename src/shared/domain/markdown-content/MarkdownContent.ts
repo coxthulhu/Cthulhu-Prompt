@@ -2,9 +2,9 @@ import {
   insertCategoryOrderEntry,
   type CategoryOrder,
   type CategoryOrderEntryRef,
-  type PromptFolder,
-  type PromptFolderContentKind
-} from '@shared/domain/prompt-folder/PromptFolder'
+  type PromptCollection,
+  type PromptCollectionContentKind
+} from '@shared/domain/prompt-collection/PromptCollection'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
 export type MarkdownContentPersisted = {
@@ -45,48 +45,48 @@ export const placeMarkdownContentInCategoryOrder = <TContent extends { category?
 
 export const MARKDOWN_CONTENT_KINDS = ['prompt', 'template'] as const
 
-/** Returns the category order owned by one ordered prompt or template folder. */
+/** Returns the category order owned by one ordered prompt or template collection. */
 export const getMarkdownContentCategoryOrder = (
-  promptFolder: PromptFolder,
+  promptCollection: PromptCollection,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): CategoryOrder => {
   /** Prompt status-folder layout selected by stable registry identity. */
-  const layout = promptFolder.statusFolders[statusFolderId]
+  const layout = promptCollection.statusFolders[statusFolderId]
   if (layout.ordering !== 'category') throw new Error('Prompt status folder is unordered')
   return layout.categoryOrder
 }
 
-/** Returns manually ordered content IDs from one prompt status folder or template root. */
+/** Returns manually ordered content IDs from one prompt status folder or template collection. */
 export const getOrderedMarkdownContentIds = (
-  promptFolder: PromptFolder,
-  kind: PromptFolderContentKind,
+  promptCollection: PromptCollection,
+  kind: PromptCollectionContentKind,
   statusFolderId: PromptStatusFolderId = PromptStatusFolderId.Active
 ): string[] =>
-  getMarkdownContentCategoryOrder(promptFolder, statusFolderId).categories.flatMap((category) =>
+  getMarkdownContentCategoryOrder(promptCollection, statusFolderId).categories.flatMap((category) =>
     category.entries.flatMap((entry) => (entry.kind === kind ? [entry.id] : []))
   )
 
 /** Returns prompt IDs owned by one exact status folder regardless of ordering behavior. */
 export const getPromptStatusFolderContentIds = (
-  promptFolder: PromptFolder,
+  promptCollection: PromptCollection,
   statusFolderId: PromptStatusFolderId
 ): string[] => {
-  /** Layout selected from the root's status-folder data. */
-  const layout = promptFolder.statusFolders[statusFolderId]
+  /** Layout selected from the collection's status-folder data. */
+  const layout = promptCollection.statusFolders[statusFolderId]
   return layout.ordering === 'category'
     ? layout.categoryOrder.categories.flatMap((category) =>
-        category.entries.flatMap((entry) => (entry.kind === promptFolder.kind ? [entry.id] : []))
+        category.entries.flatMap((entry) => (entry.kind === promptCollection.kind ? [entry.id] : []))
       )
     : [...layout.promptIds]
 }
 
-/** Returns every content ID owned by one prompt or template root. */
+/** Returns every content ID owned by one prompt or template collection. */
 export const getMarkdownContentIds = (
-  promptFolder: PromptFolder,
-  kind: PromptFolderContentKind
+  promptCollection: PromptCollection,
+  kind: PromptCollectionContentKind
 ): string[] => {
-  if (promptFolder.kind !== kind) return []
-  return Object.values(promptFolder.statusFolders).flatMap((layout) =>
+  if (promptCollection.kind !== kind) return []
+  return Object.values(promptCollection.statusFolders).flatMap((layout) =>
     layout.ordering === 'category'
       ? layout.categoryOrder.categories.flatMap((category) =>
           category.entries.flatMap((entry) => (entry.kind === kind ? [entry.id] : []))

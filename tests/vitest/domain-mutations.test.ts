@@ -27,13 +27,13 @@ import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
-  type PromptFolder
-} from '@shared/domain/prompt-folder/PromptFolder'
+  type PromptCollection
+} from '@shared/domain/prompt-collection/PromptCollection'
 import {
-  planCreatePromptFolderDomainMutation,
-  planMovePromptFolderDomainMutation,
-  planRenamePromptFolderDomainMutation
-} from '@shared/domain/prompt-folder/PromptFolderDomainMutations'
+  planCreatePromptCollectionDomainMutation,
+  planMovePromptCollectionDomainMutation,
+  planRenamePromptCollectionDomainMutation
+} from '@shared/domain/prompt-collection/PromptCollectionDomainMutations'
 import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
@@ -60,7 +60,7 @@ const hasTestDomainEntityId = (
   if (entityType === 'markdownContentUiState') {
     return `${record.workspaceId}:${record.contentId}` === id
   }
-  if (entityType === 'workspacePromptFolderUiState') {
+  if (entityType === 'workspacePromptCollectionUiState') {
     return `${record.workspaceId}:${record.contentOwnerId}` === id
   }
   if (entityType === 'accordionUiState') {
@@ -77,14 +77,14 @@ const createDomainState = (
   const entities = {
     systemSettings: [],
     workspace: [],
-    promptFolder: [],
+    promptCollection: [],
     category: [],
     prompt: [],
     promptTemplate: [],
     userPersistence: [],
     markdownContentUiState: [],
     workspaceUiState: [],
-    workspacePromptFolderUiState: [],
+    workspacePromptCollectionUiState: [],
     accordionUiState: [],
     ...overrides
   } as TestDomainEntities
@@ -99,13 +99,13 @@ const createDomainState = (
   }
 }
 
-/** Creates one root folder with an optional category and ordered content entry. */
-const createRootFolder = (
+/** Creates one collection with an optional category and ordered content entry. */
+const createCollection = (
   id: string,
-  kind: PromptFolder['kind'],
+  kind: PromptCollection['kind'],
   categoryId: string | null,
   entryId?: string
-): PromptFolder => {
+): PromptCollection => {
   /** Category order shared by the selected prompt status folder or template root. */
   const categoryOrder = {
     categories: [
@@ -121,69 +121,69 @@ const createRootFolder = (
     ]
   }
   /** Common root fields shared across the prompt/template union. */
-  const baseFolder = {
+  const baseCollection = {
     id,
     folderName: id,
     displayName: id,
-    settings: { folderDescription: null }
+    settings: { collectionDescription: null }
   }
   return kind === 'prompt'
     ? {
-        ...baseFolder,
+        ...baseCollection,
         kind,
         statusFolders: createPromptStatusFolderLayouts({
           categoryOrders: { [PromptStatusFolderId.Active]: categoryOrder }
         })
       }
-    : { ...baseFolder, kind, statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: categoryOrder } }) }
+    : { ...baseCollection, kind, statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: categoryOrder } }) }
 }
 
 describe('shared domain mutation planners', () => {
-  it('plans a normalized root-folder rename as one folder update', () => {
-    /** Root folder selected for the rename. */
-    const folder = createRootFolder('root', 'prompt', null)
-    /** Workspace establishing the folder's sibling scope. */
+  it('plans a normalized collection rename as one collection update', () => {
+    /** collection selected for the rename. */
+    const collection = createCollection('root', 'prompt', null)
+    /** Workspace establishing the collection's sibling scope. */
     const workspace = {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
+      templateCollectionEntries: []
     }
     /** Shared rename plan applied in renderer and main process. */
-    const plan = planRenamePromptFolderDomainMutation(
-      createDomainState({ workspace: [workspace], promptFolder: [folder] }),
-      { promptFolderId: folder.id, displayName: '  Renamed Root  ' }
+    const plan = planRenamePromptCollectionDomainMutation(
+      createDomainState({ workspace: [workspace], promptCollection: [collection] }),
+      { promptCollectionId: collection.id, displayName: '  Renamed Root  ' }
     )
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     expect(plan).toHaveLength(1)
-    /** Folder projection after applying the shared rename recipe. */
-    const renamedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
-    expect(renamedFolder).toMatchObject({
-      id: folder.id,
+    /** Collection projection after applying the shared rename recipe. */
+    const renamedCollection = produce(collection, getUpdateRecipe<'promptCollection'>(plan[0]!))
+    expect(renamedCollection).toMatchObject({
+      id: collection.id,
       displayName: 'Renamed Root',
       folderName: 'RenamedRoot'
     })
   })
 
-  it('plans root-folder creation and exact workspace reordering', () => {
+  it('plans collection creation and exact workspace reordering', () => {
     /** Existing sibling root used as the creation predecessor. */
-    const sibling = createRootFolder('sibling', 'prompt', null)
+    const sibling = createCollection('sibling', 'prompt', null)
     /** Workspace receiving the new root after its sibling. */
     const workspace = {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: sibling.id }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: sibling.id }],
+      templateCollectionEntries: []
     }
     /** Root creation plan shared by renderer and main. */
-    const createPlan = planCreatePromptFolderDomainMutation(
-      createDomainState({ workspace: [workspace], promptFolder: [sibling] }),
+    const createPlan = planCreatePromptCollectionDomainMutation(
+      createDomainState({ workspace: [workspace], promptCollection: [sibling] }),
       {
         workspaceId: workspace.id,
-        promptFolderId: 'created',
+        promptCollectionId: 'created',
         displayName: ' Created Root ',
         previousEntryId: sibling.id,
         kind: 'prompt'
@@ -193,13 +193,13 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(createPlan)) return
     /** Workspace projection after the creation placement recipe. */
     const workspaceAfterCreate = produce(workspace, getUpdateRecipe<'workspace'>(createPlan[0]!))
-    expect(workspaceAfterCreate.promptFolderEntries.map((entry) => entry.id)).toEqual([
+    expect(workspaceAfterCreate.promptCollectionEntries.map((entry) => entry.id)).toEqual([
       sibling.id,
       'created'
     ])
     expect(createPlan[1]).toMatchObject({
       type: 'insert',
-      entityType: 'promptFolder',
+      entityType: 'promptCollection',
       id: 'created',
       data: { displayName: 'Created Root', folderName: 'CreatedRoot' }
     })
@@ -207,25 +207,25 @@ describe('shared domain mutation planners', () => {
     /** Workspace containing both roots for the reorder plan. */
     const populatedWorkspace = {
       ...workspace,
-      promptFolderEntries: [
-        { kind: 'folder' as const, id: sibling.id },
-        { kind: 'folder' as const, id: 'created' }
+      promptCollectionEntries: [
+        { kind: 'collection' as const, id: sibling.id },
+        { kind: 'collection' as const, id: 'created' }
       ]
     }
     /** Created root projected from the insertion plan. */
-    const createdRoot = (createPlan[1]! as Extract<DomainChangeFor<'promptFolder'>, { type: 'insert' }>).data
+    const createdRoot = (createPlan[1]! as Extract<DomainChangeFor<'promptCollection'>, { type: 'insert' }>).data
     /** Root reorder plan moving the created root to the beginning. */
-    const movePlan = planMovePromptFolderDomainMutation(
+    const movePlan = planMovePromptCollectionDomainMutation(
       createDomainState({
         workspace: [populatedWorkspace],
-        promptFolder: [sibling, createdRoot]
+        promptCollection: [sibling, createdRoot]
       }),
-      { workspaceId: workspace.id, promptFolderId: 'created', previousEntryId: null }
+      { workspaceId: workspace.id, promptCollectionId: 'created', previousEntryId: null }
     )
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      produce(populatedWorkspace, getUpdateRecipe<'workspace'>(movePlan[0]!)).promptFolderEntries.map(
+      produce(populatedWorkspace, getUpdateRecipe<'workspace'>(movePlan[0]!)).promptCollectionEntries.map(
         (entry) => entry.id
       )
     ).toEqual(['created', sibling.id])
@@ -233,13 +233,13 @@ describe('shared domain mutation planners', () => {
 
   it('plans category creation as one root update and one insertion', () => {
     /** Root that will own the new category group. */
-    const folder = createRootFolder('root', 'prompt', null)
+    const collection = createCollection('root', 'prompt', null)
     /** Shared creation plan produced against an absent stable category ID. */
     const plan = planCreateCategoryDomainMutation(
-      createDomainState({ promptFolder: [folder] }),
+      createDomainState({ promptCollection: [collection] }),
       {
         categoryId: 'created',
-        promptFolderId: folder.id,
+        promptCollectionId: collection.id,
         displayName: '  Created  ',
         shortDescription: '  New category summary.  ',
         description: '  # Created\n\nCategory guidance.  '
@@ -247,9 +247,9 @@ describe('shared domain mutation planners', () => {
     )
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
-    /** Folder projection after applying the ownership recipe. */
-    const projectedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
-    expect(getMarkdownContentCategoryOrder(projectedFolder).categories[1]?.categoryId).toBe(
+    /** Collection projection after applying the ownership recipe. */
+    const projectedCollection = produce(collection, getUpdateRecipe<'promptCollection'>(plan[0]!))
+    expect(getMarkdownContentCategoryOrder(projectedCollection).categories[1]?.categoryId).toBe(
       'created'
     )
     expect(plan[1]).toEqual({
@@ -266,10 +266,10 @@ describe('shared domain mutation planners', () => {
 
     /** Separate creation plan verifies whitespace-only Markdown is represented as absent. */
     const whitespaceDescriptionPlan = planCreateCategoryDomainMutation(
-      createDomainState({ promptFolder: [folder] }),
+      createDomainState({ promptCollection: [collection] }),
       {
         categoryId: 'whitespace-description',
-        promptFolderId: folder.id,
+        promptCollectionId: collection.id,
         displayName: 'Whitespace Description',
         shortDescription: null,
         description: '  \n  '
@@ -282,19 +282,19 @@ describe('shared domain mutation planners', () => {
 
   it('plans category deletion from summary projections with one renderer timestamp', () => {
     /** Root owning the category and its prompt reference. */
-    const folder = createRootFolder('root', 'prompt', 'category', 'prompt')
+    const collection = createCollection('root', 'prompt', 'category', 'prompt')
     /** Workspace establishing ownership of the deleted category's root. */
     const workspace = {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
+      templateCollectionEntries: []
     }
     /** Planner state containing summary-compatible prompt and template projections. */
     const state = createDomainState({
       workspace: [workspace],
-      promptFolder: [folder],
+      promptCollection: [collection],
       category: [
         { id: 'category', displayName: 'Shared', shortDescription: null, description: null }
       ],
@@ -321,18 +321,18 @@ describe('shared domain mutation planners', () => {
     /** Shared category deletion plan. */
     const plan = planDeleteCategoryDomainMutation(state, {
       categoryId: 'category',
-      promptFolderId: 'root',
+      promptCollectionId: 'root',
       workspaceId: workspace.id,
       modifiedAt: 'renderer-time'
     })
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
-      'promptFolder:root',
+      'promptCollection:root',
       'category:category',
       'prompt:prompt',
       'promptTemplate:template',
-      'workspacePromptFolderUiState:workspace:category'
+      'workspacePromptCollectionUiState:workspace:category'
     ])
 
     /** Prompt projection after applying the shared cleanup recipe. */
@@ -347,8 +347,8 @@ describe('shared domain mutation planners', () => {
 
   it('plans one deterministic multi-category save and rejects duplicate retained IDs', () => {
     /** Root containing the retained and deleted category groups. */
-    const folder = createRootFolder('root', 'prompt', 'category-a', 'prompt-a')
-    getMarkdownContentCategoryOrder(folder).categories.push({
+    const collection = createCollection('root', 'prompt', 'category-a', 'prompt-a')
+    getMarkdownContentCategoryOrder(collection).categories.push({
       categoryId: 'category-b',
       entries: [{ kind: 'prompt', id: 'prompt-b' }]
     })
@@ -357,8 +357,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
+      templateCollectionEntries: []
     }
     /** Existing category records split between retention and staged deletion. */
     const categories = [
@@ -397,14 +397,14 @@ describe('shared domain mutation planners', () => {
     /** Domain graph used for both the valid and duplicate-ID plans. */
     const state = createDomainState({
       workspace: [workspace],
-      promptFolder: [folder],
+      promptCollection: [collection],
       category: categories,
       prompt: prompts
     })
     /** Atomic command updating one category, inserting two, and deleting one. */
     const command = {
       workspaceId: workspace.id,
-      promptFolderId: folder.id,
+      promptCollectionId: collection.id,
       categories: [
         {
           id: 'category-a',
@@ -432,18 +432,18 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
-      'promptFolder:root',
+      'promptCollection:root',
       'category:category-a',
       'category:new-one',
       'category:new-two',
       'category:category-b',
       'prompt:prompt-b',
-      'workspacePromptFolderUiState:workspace:category-b'
+      'workspacePromptCollectionUiState:workspace:category-b'
     ])
     /** Root projection after deleted content moves and new groups prepend as a block. */
-    const projectedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
+    const projectedCollection = produce(collection, getUpdateRecipe<'promptCollection'>(plan[0]!))
     expect(
-      getMarkdownContentCategoryOrder(projectedFolder).categories.map((group) => ({
+      getMarkdownContentCategoryOrder(projectedCollection).categories.map((group) => ({
         categoryId: group.categoryId,
         entries: group.entries.map((entry) => entry.id)
       }))
@@ -474,19 +474,19 @@ describe('shared domain mutation planners', () => {
 
   it('maps active category navigation to the root and preserves inactive root selection', () => {
     /** Root owning the category whose view state is deleted. */
-    const folder = createRootFolder('root', 'prompt', 'category')
+    const collection = createCollection('root', 'prompt', 'category')
     /** Workspace establishing root ownership for both deletion plans. */
     const workspace = {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
-      promptFolderEntries: [{ kind: 'folder' as const, id: folder.id }],
-      templateFolderEntries: []
+      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
+      templateCollectionEntries: []
     }
     /** Existing root state whose expansion fields must survive selection transfer. */
     const rootUiState = {
       workspaceId: workspace.id,
-      contentOwnerId: folder.id,
+      contentOwnerId: collection.id,
       selectedEntryId: 'existing-root-selection',
       treeIsExpanded: false,
       contentSectionIsExpanded: false,
@@ -508,25 +508,25 @@ describe('shared domain mutation planners', () => {
     /** Active workspace navigation pointing at the deleted category owner. */
     const activeWorkspaceUiState = {
       workspaceId: workspace.id,
-      selectedScreen: 'prompt-task-folders' as const,
-      selectedScreenData: { promptFolderId: folder.id, contentOwnerId: 'category' },
-      lastPromptTaskFolderId: folder.id,
-      lastPromptTemplateFolderId: null
+      selectedScreen: 'prompt-task-collections' as const,
+      selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: 'category' },
+      lastPromptTaskCollectionId: collection.id,
+      lastPromptTemplateCollectionId: null
     }
     /** Shared planner state containing active split UI-state records. */
     const activeState = createDomainState({
       workspace: [workspace],
-      promptFolder: [folder],
+      promptCollection: [collection],
       category: [
         { id: 'category', displayName: 'Category', shortDescription: null, description: null }
       ],
       workspaceUiState: [activeWorkspaceUiState],
-      workspacePromptFolderUiState: [rootUiState, categoryUiState]
+      workspacePromptCollectionUiState: [rootUiState, categoryUiState]
     })
     /** Active-category deletion plan containing workspace and root selection updates. */
     const activePlan = planDeleteCategoryDomainMutation(activeState, {
       categoryId: 'category',
-      promptFolderId: folder.id,
+      promptCollectionId: collection.id,
       workspaceId: workspace.id,
       modifiedAt: 'renderer-time'
     })
@@ -536,35 +536,35 @@ describe('shared domain mutation planners', () => {
     const rootUpdate = activePlan.find(
       (change) =>
         change.type === 'update' &&
-        change.entityType === 'workspacePromptFolderUiState' &&
-        change.id === `${workspace.id}:${folder.id}`
+        change.entityType === 'workspacePromptCollectionUiState' &&
+        change.id === `${workspace.id}:${collection.id}`
     )
     expect(rootUpdate?.type).toBe('update')
     if (rootUpdate?.type !== 'update') return
-    expect(produce(rootUiState, getUpdateRecipe<'workspacePromptFolderUiState'>(rootUpdate))).toEqual({
+    expect(produce(rootUiState, getUpdateRecipe<'workspacePromptCollectionUiState'>(rootUpdate))).toEqual({
       ...rootUiState,
-      selectedEntryId: 'root-header'
+      selectedEntryId: 'collection-header'
     })
 
     /** Inactive navigation already owned by the root and retaining its selection. */
     const inactiveWorkspaceUiState = {
       ...activeWorkspaceUiState,
-      selectedScreenData: { promptFolderId: folder.id, contentOwnerId: folder.id }
+      selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: collection.id }
     }
     /** Inactive-category plan that must not update workspace or root UI state. */
     const inactivePlan = planDeleteCategoryDomainMutation(
       createDomainState({
         workspace: [workspace],
-        promptFolder: [folder],
+        promptCollection: [collection],
         category: [
           { id: 'category', displayName: 'Category', shortDescription: null, description: null }
         ],
         workspaceUiState: [inactiveWorkspaceUiState],
-        workspacePromptFolderUiState: [rootUiState, categoryUiState]
+        workspacePromptCollectionUiState: [rootUiState, categoryUiState]
       }),
       {
         categoryId: 'category',
-        promptFolderId: folder.id,
+        promptCollectionId: collection.id,
         workspaceId: workspace.id,
         modifiedAt: 'renderer-time'
       }
@@ -576,15 +576,15 @@ describe('shared domain mutation planners', () => {
         (change) =>
           change.type === 'update' &&
           (change.entityType === 'workspaceUiState' ||
-            change.entityType === 'workspacePromptFolderUiState')
+            change.entityType === 'workspacePromptCollectionUiState')
       )
     ).toBe(false)
   })
 
   it('plans category details and group reordering', () => {
     /** Root containing two categorized groups. */
-    const folder = createRootFolder('root', 'prompt', 'category-a')
-    getMarkdownContentCategoryOrder(folder).categories.push({
+    const collection = createCollection('root', 'prompt', 'category-a')
+    getMarkdownContentCategoryOrder(collection).categories.push({
       categoryId: 'category-b',
       entries: []
     })
@@ -600,7 +600,7 @@ describe('shared domain mutation planners', () => {
     ]
     /** Shared category-details plan. */
     const detailsPlan = planUpdateCategoryDetailsDomainMutation(
-      createDomainState({ promptFolder: [folder], category: categories }),
+      createDomainState({ promptCollection: [collection], category: categories }),
       {
         categoryId: 'category-b',
         displayName: ' Renamed ',
@@ -618,9 +618,9 @@ describe('shared domain mutation planners', () => {
 
     /** Shared category reorder plan moving B before A. */
     const movePlan = planMoveCategoryDomainMutation(
-      createDomainState({ promptFolder: [folder], category: categories }),
+      createDomainState({ promptCollection: [collection], category: categories }),
       {
-        promptFolderId: folder.id,
+        promptCollectionId: collection.id,
         statusFolderId: PromptStatusFolderId.Active,
         categoryId: 'category-b',
         previousCategoryId: null
@@ -629,22 +629,22 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      getMarkdownContentCategoryOrder(produce(folder, getUpdateRecipe<'promptFolder'>(movePlan[0]!))).categories.map(
+      getMarkdownContentCategoryOrder(produce(collection, getUpdateRecipe<'promptCollection'>(movePlan[0]!))).categories.map(
         (group) => group.categoryId
       )
     ).toEqual([null, 'category-b', 'category-a'])
 
     /** Template root proving status-free roots use the same category reorder planner. */
-    const templateFolder = createRootFolder('templates', 'template', 'category-a')
-    getMarkdownContentCategoryOrder(templateFolder).categories.push({
+    const templateCollection = createCollection('templates', 'template', 'category-a')
+    getMarkdownContentCategoryOrder(templateCollection).categories.push({
       categoryId: 'category-b',
       entries: []
     })
     /** Shared template category reorder plan using its null status-folder identity. */
     const templateMovePlan = planMoveCategoryDomainMutation(
-      createDomainState({ promptFolder: [templateFolder], category: categories }),
+      createDomainState({ promptCollection: [templateCollection], category: categories }),
       {
-        promptFolderId: templateFolder.id,
+        promptCollectionId: templateCollection.id,
         statusFolderId: null,
         categoryId: 'category-b',
         previousCategoryId: null
@@ -654,7 +654,7 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(templateMovePlan)) return
     expect(
       getMarkdownContentCategoryOrder(
-        produce(templateFolder, getUpdateRecipe<'promptFolder'>(templateMovePlan[0]!))
+        produce(templateCollection, getUpdateRecipe<'promptCollection'>(templateMovePlan[0]!))
       ).categories.map((group) => group.categoryId)
     ).toEqual([null, 'category-b', 'category-a'])
   })
@@ -719,14 +719,14 @@ describe('shared domain mutation planners', () => {
 
   it('plans prompt and template creation with synchronized root placement', () => {
     /** Prompt root receiving one newly created prompt. */
-    const promptRoot = createRootFolder('prompts', 'prompt', null)
+    const promptRoot = createCollection('prompts', 'prompt', null)
     /** Template root receiving one newly created template. */
-    const templateRoot = createRootFolder('templates', 'template', null)
+    const templateRoot = createCollection('templates', 'template', null)
     /** Shared prompt creation plan. */
     const promptPlan = planCreatePromptDomainMutation(
-      createDomainState({ promptFolder: [promptRoot] }),
+      createDomainState({ promptCollection: [promptRoot] }),
       {
-        promptFolderId: promptRoot.id,
+        promptCollectionId: promptRoot.id,
         statusFolderId: PromptStatusFolderId.Active,
         contentId: 'prompt',
         title: '',
@@ -747,15 +747,15 @@ describe('shared domain mutation planners', () => {
     })
     expect(
       getMarkdownContentCategoryOrder(
-        produce(promptRoot, getUpdateRecipe<'promptFolder'>(promptPlan[0]!))
+        produce(promptRoot, getUpdateRecipe<'promptCollection'>(promptPlan[0]!))
       ).categories[0]?.entries
     ).toEqual([{ kind: 'prompt', id: 'prompt' }])
 
     /** Shared template creation plan. */
     const templatePlan = planCreatePromptTemplateDomainMutation(
-      createDomainState({ promptFolder: [templateRoot] }),
+      createDomainState({ promptCollection: [templateRoot] }),
       {
-        promptFolderId: templateRoot.id,
+        promptCollectionId: templateRoot.id,
         contentId: 'template',
         title: '',
         fallbackTitle: '',
@@ -777,13 +777,13 @@ describe('shared domain mutation planners', () => {
 
   it('plans prompt and template autosaves as single content targets', () => {
     /** Prompt root owning the full prompt update target. */
-    const promptRoot = createRootFolder('prompts', 'prompt', null)
+    const promptRoot = createCollection('prompts', 'prompt', null)
     getMarkdownContentCategoryOrder(promptRoot).categories[0]!.entries.push({
       kind: 'prompt',
       id: 'prompt'
     })
     /** Template root owning the full template update target. */
-    const templateRoot = createRootFolder('templates', 'template', null)
+    const templateRoot = createCollection('templates', 'template', null)
     getMarkdownContentCategoryOrder(templateRoot).categories[0]!.entries.push({
       kind: 'template',
       id: 'template'
@@ -809,7 +809,7 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared prompt autosave plan. */
     const promptPlan = planPromptUpdate(
-      createDomainState({ promptFolder: [promptRoot], prompt: [prompt] }),
+      createDomainState({ promptCollection: [promptRoot], prompt: [prompt] }),
       {
         contentId: prompt.id,
         title: 'Updated Prompt',
@@ -832,7 +832,7 @@ describe('shared domain mutation planners', () => {
 
     /** Shared prompt-template autosave plan. */
     const templatePlan = planPromptTemplateUpdate(
-      createDomainState({ promptFolder: [templateRoot], promptTemplate: [template] }),
+      createDomainState({ promptCollection: [templateRoot], promptTemplate: [template] }),
       {
         contentId: template.id,
         title: 'Updated Template',
@@ -854,8 +854,8 @@ describe('shared domain mutation planners', () => {
 
   it('plans prompt completion from a summary projection', () => {
     /** Active prompt root containing the status target. */
-    const folder = createRootFolder('root', 'prompt', null)
-    getMarkdownContentCategoryOrder(folder).categories[0]!.entries.push({
+    const collection = createCollection('root', 'prompt', null)
+    getMarkdownContentCategoryOrder(collection).categories[0]!.entries.push({
       kind: 'prompt',
       id: 'prompt'
     })
@@ -869,26 +869,26 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared status plan moving the prompt into Completed. */
     const plan = planSetPromptLocationDomainMutation(
-      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      createDomainState({ promptCollection: [collection], prompt: [prompt] }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: folder.id,
+        sourcePromptCollectionId: collection.id,
         promptId: prompt.id,
-        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+        location: { promptCollectionId: collection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Root projection after completion ownership changes. */
-    const completedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
+    const completedCollection = produce(collection, getUpdateRecipe<'promptCollection'>(plan[0]!))
     /** Prompt projection after completion fields are applied. */
     const completedPrompt = produce(prompt, getUpdateRecipe<'prompt'>(plan[1]!))
     expect(
-      completedFolder.statusFolders[PromptStatusFolderId.Completed].promptIds
+      completedCollection.statusFolders[PromptStatusFolderId.Completed].promptIds
     ).toEqual([prompt.id])
     expect(
-      completedFolder.statusFolders[PromptStatusFolderId.Active].categoryOrder
+      completedCollection.statusFolders[PromptStatusFolderId.Active].categoryOrder
         .categories[0]?.entries
     ).toEqual([])
     expect(completedPrompt).toMatchObject({
@@ -900,8 +900,8 @@ describe('shared domain mutation planners', () => {
 
   it('resets finalization time when moving between final statuses', () => {
     /** Prompt root whose Completed layout currently owns the prompt. */
-    const folder = createRootFolder('root', 'prompt', null)
-    folder.statusFolders[PromptStatusFolderId.Completed].promptIds = ['prompt']
+    const collection = createCollection('root', 'prompt', null)
+    collection.statusFolders[PromptStatusFolderId.Completed].promptIds = ['prompt']
     /** Completed prompt carrying the timestamp that Archived must replace. */
     const prompt = {
       id: 'prompt',
@@ -913,12 +913,12 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared status plan moving the prompt into Archived with a new timestamp. */
     const plan = planSetPromptLocationDomainMutation(
-      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      createDomainState({ promptCollection: [collection], prompt: [prompt] }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: folder.id,
+        sourcePromptCollectionId: collection.id,
         promptId: prompt.id,
-        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Archived },
+        location: { promptCollectionId: collection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Archived },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -926,11 +926,11 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     /** Root projection after ownership moves from Completed to Archived. */
-    const archivedFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
+    const archivedCollection = produce(collection, getUpdateRecipe<'promptCollection'>(plan[0]!))
     /** Prompt projection after Archived replaces its finalization timestamp. */
     const archivedPrompt = produce(prompt, getUpdateRecipe<'prompt'>(plan[1]!))
-    expect(archivedFolder.statusFolders[PromptStatusFolderId.Completed].promptIds).toEqual([])
-    expect(archivedFolder.statusFolders[PromptStatusFolderId.Archived].promptIds).toEqual([
+    expect(archivedCollection.statusFolders[PromptStatusFolderId.Completed].promptIds).toEqual([])
+    expect(archivedCollection.statusFolders[PromptStatusFolderId.Archived].promptIds).toEqual([
       prompt.id
     ])
     expect(archivedPrompt).toMatchObject({
@@ -942,8 +942,8 @@ describe('shared domain mutation planners', () => {
 
   it('preserves ordering when a status changes within one status folder', () => {
     /** Active prompt root whose ordering must not be targeted by the status update. */
-    const folder = createRootFolder('root', 'prompt', null)
-    getMarkdownContentCategoryOrder(folder).categories[0]!.entries.push({
+    const collection = createCollection('root', 'prompt', null)
+    getMarkdownContentCategoryOrder(collection).categories[0]!.entries.push({
       kind: 'prompt',
       id: 'prompt'
     })
@@ -957,12 +957,12 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared status plan expected to update only the prompt entity. */
     const plan = planSetPromptLocationDomainMutation(
-      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      createDomainState({ promptCollection: [collection], prompt: [prompt] }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: folder.id,
+        sourcePromptCollectionId: collection.id,
         promptId: prompt.id,
-        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.InProgress },
+        location: { promptCollectionId: collection.id, categoryId: null, previousEntryId: null, status: PromptStatus.InProgress },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -980,13 +980,13 @@ describe('shared domain mutation planners', () => {
 
   it('transfers ordering when the root changes within one status folder', () => {
     /** Source root owning the prompt in its Active status folder. */
-    const source = createRootFolder('source', 'prompt', null)
+    const source = createCollection('source', 'prompt', null)
     getMarkdownContentCategoryOrder(source).categories[0]!.entries.push({
       kind: 'prompt',
       id: 'prompt'
     })
     /** Destination root receiving the prompt in its own Active status folder. */
-    const destination = createRootFolder('destination', 'prompt', null)
+    const destination = createCollection('destination', 'prompt', null)
     /** Todo prompt changing roots while remaining inside the Active status-folder identity. */
     const prompt = {
       id: 'prompt',
@@ -997,12 +997,12 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared status plan expected to transfer both root orderings and update the prompt. */
     const plan = planSetPromptLocationDomainMutation(
-      createDomainState({ promptFolder: [source, destination], prompt: [prompt] }),
+      createDomainState({ promptCollection: [source, destination], prompt: [prompt] }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: source.id,
+        sourcePromptCollectionId: source.id,
         promptId: prompt.id,
-        location: { promptFolderId: destination.id, categoryId: null, previousEntryId: null, status: PromptStatus.InProgress },
+        location: { promptCollectionId: destination.id, categoryId: null, previousEntryId: null, status: PromptStatus.InProgress },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -1010,29 +1010,29 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
-      'promptFolder:source',
-      'promptFolder:destination',
+      'promptCollection:source',
+      'promptCollection:destination',
       'prompt:prompt'
     ])
     /** Source root after its Active ordering loses the prompt. */
-    const projectedSource = produce(source, getUpdateRecipe<'promptFolder'>(plan[0]!))
+    const projectedSource = produce(source, getUpdateRecipe<'promptCollection'>(plan[0]!))
     /** Destination root after its Active ordering receives the prompt. */
-    const projectedDestination = produce(destination, getUpdateRecipe<'promptFolder'>(plan[1]!))
+    const projectedDestination = produce(destination, getUpdateRecipe<'promptCollection'>(plan[1]!))
     expect(getMarkdownContentCategoryOrder(projectedSource).categories[0]?.entries).toEqual([])
     expect(getMarkdownContentCategoryOrder(projectedDestination).categories[0]?.entries).toEqual([
       { kind: 'prompt', id: prompt.id }
     ])
   })
 
-  it('transfers prompt status ownership across root folders', () => {
+  it('transfers prompt status ownership across collections', () => {
     /** Source root currently owning the active prompt. */
-    const source = createRootFolder('source', 'prompt', null)
+    const source = createCollection('source', 'prompt', null)
     getMarkdownContentCategoryOrder(source).categories[0]!.entries.push({
       kind: 'prompt',
       id: 'prompt'
     })
     /** Destination root receiving the completed prompt. */
-    const destination = createRootFolder('destination', 'prompt', null)
+    const destination = createCollection('destination', 'prompt', null)
     /** Summary-compatible prompt selected for cross-root completion. */
     const prompt = {
       id: 'prompt',
@@ -1043,26 +1043,26 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared status plan transferring ownership into the destination Completed hierarchy. */
     const plan = planSetPromptLocationDomainMutation(
-      createDomainState({ promptFolder: [source, destination], prompt: [prompt] }),
+      createDomainState({ promptCollection: [source, destination], prompt: [prompt] }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: source.id,
+        sourcePromptCollectionId: source.id,
         promptId: prompt.id,
-        location: { promptFolderId: destination.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+        location: { promptCollectionId: destination.id, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
     expect(Array.isArray(plan)).toBe(true)
     if (!Array.isArray(plan)) return
     expect(plan.map(({ entityType, id }) => `${entityType}:${id}`)).toEqual([
-      'promptFolder:source',
-      'promptFolder:destination',
+      'promptCollection:source',
+      'promptCollection:destination',
       'prompt:prompt'
     ])
     /** Source projection after active ownership is removed. */
-    const projectedSource = produce(source, getUpdateRecipe<'promptFolder'>(plan[0]!))
+    const projectedSource = produce(source, getUpdateRecipe<'promptCollection'>(plan[0]!))
     /** Destination projection after completed ownership is inserted. */
-    const projectedDestination = produce(destination, getUpdateRecipe<'promptFolder'>(plan[1]!))
+    const projectedDestination = produce(destination, getUpdateRecipe<'promptCollection'>(plan[1]!))
     expect(getMarkdownContentCategoryOrder(projectedSource).categories[0]?.entries).toEqual([])
     expect(
       projectedDestination.statusFolders[PromptStatusFolderId.Completed].promptIds
@@ -1071,8 +1071,8 @@ describe('shared domain mutation planners', () => {
 
   it('clears stale category metadata when restoring a prompt to Uncategorized', () => {
     /** Root whose completed prompt retains its former category metadata. */
-    const folder = createRootFolder('root', 'prompt', 'category')
-    folder.statusFolders[PromptStatusFolderId.Completed].promptIds = ['prompt']
+    const collection = createCollection('root', 'prompt', 'category')
+    collection.statusFolders[PromptStatusFolderId.Completed].promptIds = ['prompt']
     /** Completed prompt being restored to the Uncategorized group. */
     const prompt = {
       id: 'prompt',
@@ -1085,12 +1085,12 @@ describe('shared domain mutation planners', () => {
     }
     /** Shared restoration plan targeting the Uncategorized group. */
     const plan = planSetPromptLocationDomainMutation(
-      createDomainState({ promptFolder: [folder], prompt: [prompt] }),
+      createDomainState({ promptCollection: [collection], prompt: [prompt] }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: folder.id,
+        sourcePromptCollectionId: collection.id,
         promptId: prompt.id,
-        location: { promptFolderId: folder.id, categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
+        location: { promptCollectionId: collection.id, categoryId: null, previousEntryId: null, status: PromptStatus.Todo },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -1099,11 +1099,11 @@ describe('shared domain mutation planners', () => {
     /** Restored prompt projection after applying the shared recipe. */
     const restoredPrompt = produce(prompt, getUpdateRecipe<'prompt'>(plan[1]!))
     /** Root projection after restoring Active-tree ownership. */
-    const restoredFolder = produce(folder, getUpdateRecipe<'promptFolder'>(plan[0]!))
+    const restoredCollection = produce(collection, getUpdateRecipe<'promptCollection'>(plan[0]!))
     expect(restoredPrompt).not.toHaveProperty('category')
     expect(restoredPrompt).not.toHaveProperty('finalizedAt')
     expect(
-      restoredFolder.statusFolders[PromptStatusFolderId.Active].categoryOrder
+      restoredCollection.statusFolders[PromptStatusFolderId.Active].categoryOrder
         .categories[0]?.entries
     ).toEqual([
       { kind: 'prompt', id: prompt.id }
@@ -1112,15 +1112,15 @@ describe('shared domain mutation planners', () => {
 
   it('returns the actual source in movement conflict targets', () => {
     /** Actual source containing the prompt despite the stale renderer command. */
-    const actualSource = createRootFolder('actual-source', 'prompt', 'source-category', 'prompt')
+    const actualSource = createCollection('actual-source', 'prompt', 'source-category', 'prompt')
     /** Stale claimed source containing no prompt reference. */
-    const claimedSource = createRootFolder('claimed-source', 'prompt', null)
+    const claimedSource = createCollection('claimed-source', 'prompt', null)
     /** Valid destination for the attempted movement. */
-    const destination = createRootFolder('destination', 'prompt', 'destination-category')
+    const destination = createCollection('destination', 'prompt', 'destination-category')
     /** Planner conflict produced from authoritative ownership. */
     const conflict = planSetPromptLocationDomainMutation(
       createDomainState({
-        promptFolder: [actualSource, claimedSource, destination],
+        promptCollection: [actualSource, claimedSource, destination],
         prompt: [
           {
             id: 'prompt',
@@ -1133,9 +1133,9 @@ describe('shared domain mutation planners', () => {
       }),
       {
         kind: 'prompt',
-        sourcePromptFolderId: 'claimed-source',
+        sourcePromptCollectionId: 'claimed-source',
         promptId: 'prompt',
-        location: { promptFolderId: 'destination', categoryId: 'destination-category', previousEntryId: null, status: PromptStatus.Todo },
+        location: { promptCollectionId: 'destination', categoryId: 'destination-category', previousEntryId: null, status: PromptStatus.Todo },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )
@@ -1143,8 +1143,8 @@ describe('shared domain mutation planners', () => {
       status: 'conflict',
       reason: 'Prompt location ownership conflict',
       targets: [
-        { entityType: 'promptFolder', id: 'actual-source' },
-        { entityType: 'promptFolder', id: 'destination' },
+        { entityType: 'promptCollection', id: 'actual-source' },
+        { entityType: 'promptCollection', id: 'destination' },
         { entityType: 'prompt', id: 'prompt' }
       ]
     })
@@ -1152,13 +1152,13 @@ describe('shared domain mutation planners', () => {
 
   it('plans cross-root template movement and destination fallback resolution', () => {
     /** Source template root containing the blank-title template. */
-    const source = createRootFolder('source', 'template', null)
+    const source = createCollection('source', 'template', null)
     getMarkdownContentCategoryOrder(source).categories[0]!.entries.push({
       kind: 'template',
       id: 'moving'
     })
     /** Destination template root already containing the preferred fallback title. */
-    const destination = createRootFolder('destination', 'template', null)
+    const destination = createCollection('destination', 'template', null)
     getMarkdownContentCategoryOrder(destination).categories[0]!.entries.push({
       kind: 'template',
       id: 'existing'
@@ -1166,7 +1166,7 @@ describe('shared domain mutation planners', () => {
     /** Shared template movement plan. */
     const plan = planSetPromptLocationDomainMutation(
       createDomainState({
-        promptFolder: [source, destination],
+        promptCollection: [source, destination],
         promptTemplate: [
           {
             id: 'moving',
@@ -1184,9 +1184,9 @@ describe('shared domain mutation planners', () => {
       }),
       {
         kind: 'template',
-        sourcePromptFolderId: 'source',
+        sourcePromptCollectionId: 'source',
         promptId: 'moving',
-        location: { promptFolderId: 'destination', categoryId: null, previousEntryId: 'existing', status: PromptTemplateStatus.Active },
+        location: { promptCollectionId: 'destination', categoryId: null, previousEntryId: 'existing', status: PromptTemplateStatus.Active },
         modifiedAt: '2026-08-30T12:00:00Z'
       }
     )

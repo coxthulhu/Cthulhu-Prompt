@@ -27,14 +27,14 @@ export const categoryAddToTopTestId = (category: PromptTreeCategoryIdentity, gro
   `prompt-tree-${group}-category-add-to-top-button-${getCategoryTestKey(category)}`
 
 /** Returns a prompt or template row's group-qualified identity. */
-export const folderPromptTestId = (promptId: string, group: PromptTreeTestIdGroup): string => `prompt-tree-${group}-prompt-${promptId}`
+export const collectionPromptTestId = (promptId: string, group: PromptTreeTestIdGroup): string => `prompt-tree-${group}-prompt-${promptId}`
 
 /** Returns the creation button identity for an expanded empty category. */
 export const categoryEmptyActionTestId = (category: PromptTreeCategoryIdentity, group: PromptTreeTestIdGroup): string =>
   `prompt-tree-${group}-category-empty-action-${getCategoryTestKey(category)}`
 
 /** Returns a group-qualified prompt placement indicator. */
-export const folderPromptDropIndicatorTestId = (promptId: string, group: PromptTreeTestIdGroup): string =>
+export const collectionPromptDropIndicatorTestId = (promptId: string, group: PromptTreeTestIdGroup): string =>
   `prompt-tree-${group}-drop-indicator-prompt-${promptId}`
 
 /** Returns the reorder drop-indicator test ID for one category. */

@@ -38,7 +38,7 @@ export async function createWorkspaceViaUI(page: Page): Promise<{
   await page.click('[data-testid="create-workspace-button"]')
 
   const createDialog = page.locator('[role="dialog"][aria-label="Create Workspace"]')
-  const promptFolderScreen = page.locator('[data-testid="prompt-folder-screen"]')
+  const promptCollectionScreen = page.locator('[data-testid="prompt-collection-screen"]')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
   await createDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
@@ -51,7 +51,7 @@ export async function createWorkspaceViaUI(page: Page): Promise<{
     return button && !button.disabled
   })
   await page.click('[data-testid="create-workspace-submit-button"]')
-  await promptFolderScreen.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
+  await promptCollectionScreen.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
 
   const workspaceReady = await isWorkspaceReady(page)
 
@@ -83,7 +83,7 @@ export async function clearWorkspaceViaUI(page: Page): Promise<void> {
 export async function isWorkspaceReady(page: Page): Promise<boolean> {
   return await page.evaluate(() => {
     return !!document.querySelector(
-      '[data-testid="workspace-ready-path"], [data-testid="prompt-folder-screen"]'
+      '[data-testid="workspace-ready-path"], [data-testid="prompt-collection-screen"]'
     )
   })
 }

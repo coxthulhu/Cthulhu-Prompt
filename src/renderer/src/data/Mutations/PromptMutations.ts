@@ -12,7 +12,7 @@ import {
   type PromptFull,
   type PromptPersisted
 } from '@shared/domain/prompt/Prompt'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import {
   markPromptClientStateEdited
 } from '@renderer/data/Collections/PromptClientStateCollection'
@@ -47,14 +47,14 @@ const mutations = createMarkdownContentRendererMutations<
     delete: 'delete-prompt'
   },
   getFullPersisted: (promptId) => {
-    const prompt = promptCollection.get(promptId)
+    const prompt = promptsCollection.get(promptId)
     return prompt && isPromptFull(prompt) ? toPersisted(prompt) : null
   },
   createDomain: {
     plan: planCreatePromptDomainMutation,
     /** Builds the deterministic prompt-creation command sent through generic IPC. */
-    createCommand: (promptFolderId, prompt, previousEntryId, categoryId) => ({
-      promptFolderId,
+    createCommand: (promptCollectionId, prompt, previousEntryId, categoryId) => ({
+      promptCollectionId,
       statusFolderId: getPromptStatusFolderDefinition(prompt.status).id,
       contentId: prompt.id,
       title: prompt.title,

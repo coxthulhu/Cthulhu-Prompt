@@ -30,7 +30,7 @@
   )
 </script>
 
-<!-- Compact action rows align root and nested ghost actions without changing their behavior. -->
+<!-- Compact action rows align collection and nested ghost actions without changing their behavior. -->
 <div class="sidebarPromptTreeInlineActionRow" style={rowStyle}>
   {#if indentCount > 0}
     <PromptTreeGutter {indentCount} {isLastRow} />

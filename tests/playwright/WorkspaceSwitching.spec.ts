@@ -1,7 +1,7 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  createWorkspaceWithFolders,
-  createWorkspaceWithTemplateFolders,
+  createWorkspaceWithCollections,
+  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { focusMonacoEditor, getMonacoEditorText, getMonacoCursorPosition, waitForMonacoEditor } from '../helpers/MonacoHelpers'
@@ -11,23 +11,23 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 /** Builds workspaces with matching entity IDs to expose stale records and revisions. */
 const createSwitchingWorkspace = (path: string, label: string): Record<string, string | null> => ({
-  ...createWorkspaceWithFolders(path, [{
+  ...createWorkspaceWithCollections(path, [{
     folderName: 'Prompts',
     displayName: `${label} Prompts`,
-    promptFolderId: 'shared-prompt-folder',
+    promptCollectionId: 'shared-prompt-collection',
     prompts: [{ id: 'shared-prompt', title: `${label} Prompt`, promptText: `${label} prompt body` }]
   }]),
-  ...createWorkspaceWithTemplateFolders(path, [{
+  ...createWorkspaceWithTemplateCollections(path, [{
     folderName: 'Templates',
     displayName: `${label} Templates`,
-    folderId: 'shared-template-folder',
+    collectionId: 'shared-template-collection',
     templates: [{ id: 'shared-template', title: `${label} Template`, templateText: `${label} template body` }]
   }]),
-  [`${path}/Prompts/FolderOrder.json`]: JSON.stringify({
-    entries: [{ kind: 'folder', id: 'shared-prompt-folder' }]
+  [`${path}/Prompts/CollectionOrder.json`]: JSON.stringify({
+    entries: [{ kind: 'collection', id: 'shared-prompt-collection' }]
   }),
-  [`${path}/Templates/FolderOrder.json`]: JSON.stringify({
-    entries: [{ kind: 'folder', id: 'shared-template-folder' }]
+  [`${path}/Templates/CollectionOrder.json`]: JSON.stringify({
+    entries: [{ kind: 'collection', id: 'shared-template-collection' }]
   })
 })
 
@@ -43,13 +43,13 @@ describe('Workspace switching', () => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       /** Shared content editor whose persisted text must survive every teardown. */
       const editor = `[data-testid="prompt-editor-shared-${kind}"]`
-      /** Root folder containing this content type. */
-      const folder = kind === 'prompt' ? 'A Prompts' : 'A Templates'
+      /** collection containing this content type. */
+      const collection = kind === 'prompt' ? 'A Prompts' : 'A Templates'
       await testHelpers.setupWorkspaceViaUI()
 
       for (const cycle of [1, 2]) {
-        if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders(folder)
-        else await testHelpers.navigateToPromptFolders(folder)
+        if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections(collection)
+        else await testHelpers.navigateToPromptCollections(collection)
         await focusMonacoEditor(mainWindow, editor)
         await mainWindow.keyboard.press('Control+End')
         /** Block persistence so closing must wait for this edit before clearing memory. */
@@ -70,8 +70,8 @@ describe('Workspace switching', () => {
         await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveCount(0)
         await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
         await testHelpers.setupWorkspaceViaUI()
-        if (kind === 'template') await testHelpers.navigateToPromptTemplateFolders(folder)
-        else await testHelpers.navigateToPromptFolders(folder)
+        if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections(collection)
+        else await testHelpers.navigateToPromptCollections(collection)
         await waitForMonacoEditor(mainWindow, editor)
         await expect.poll(() => getMonacoEditorText(mainWindow, editor)).toBe(
           `A ${kind} body saved-1${cycle === 2 ? ' saved-2' : ''}`
@@ -107,9 +107,9 @@ describe('Workspace switching', () => {
         /** Displayed root name selected through its kind-specific activity. */
         const folderName = `${label} ${kind === 'prompt' ? 'Prompts' : 'Templates'}`
         if (kind === 'template') {
-          await testHelpers.navigateToPromptTemplateFolders(folderName)
+          await testHelpers.navigateToPromptTemplateCollections(folderName)
         } else {
-          await testHelpers.navigateToPromptFolders(folderName)
+          await testHelpers.navigateToPromptCollections(folderName)
         }
         /** Editor reused across workspaces to expose stale full-content snapshots. */
         const editor = `[data-testid="prompt-editor-shared-${kind}"]`

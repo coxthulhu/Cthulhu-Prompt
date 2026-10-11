@@ -1,8 +1,8 @@
-import type { PromptFolderContentKind } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 
 /** Compact sentence-case labels for empty sidebar content. */
 export const emptyItemsLabel = (
-  kind: PromptFolderContentKind,
+  kind: PromptCollectionContentKind,
   statusLabel?: string
 ): string => {
   const items = kind === 'template' ? 'templates' : 'prompts'
@@ -10,14 +10,14 @@ export const emptyItemsLabel = (
   return `No ${status}${items}`
 }
 
-/** Folder views add context to the same compact label used by the sidebar. */
-export const emptyFolderMessage = (
-  kind: PromptFolderContentKind,
+/** Collection views add context to the same compact label used by the sidebar. */
+export const emptyCollectionMessage = (
+  kind: PromptCollectionContentKind,
   statusLabel?: string
-): string => `${emptyItemsLabel(kind, statusLabel)} in this folder.`
+): string => `${emptyItemsLabel(kind, statusLabel)} in this collection.`
 
 /** Keep typed creation instructions identical apart from the element name. */
-export const createFirstItemMessage = (kind: PromptFolderContentKind): string => {
+export const createFirstItemMessage = (kind: PromptCollectionContentKind): string => {
   const buttonLabel = kind === 'template' ? 'Template' : 'Prompt'
   return `Click the Add ${buttonLabel} button to create your first ${kind}.`
 }

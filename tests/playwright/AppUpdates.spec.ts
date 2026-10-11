@@ -1,6 +1,6 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { controlUpdater } from '../helpers/AppUpdateHelpers'
-import { createWorkspaceWithFolders, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { runSqlStatement, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
 import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { readPersistedPromptTextById, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
@@ -193,7 +193,7 @@ describe('App updates', () => {
   test('waits for startup overlay and the Welcome creation dialog before automatically opening', async ({ electronApp, testSetup }) => {
     /** Restoring a seeded workspace gives startup a real asynchronous loading gate. */
     const workspacePath = '/ws/update-startup'
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, []))
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
     await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath) })
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
     await testSetup.pauseIpcChannel('load-workspace-by-path')
@@ -255,7 +255,7 @@ describe('App updates', () => {
   test('waits until the returning-user startup overlay finishes fading', async ({ electronApp, testSetup }) => {
     /** A returning user has no Welcome dialog to mask overlay gating. */
     const workspacePath = '/ws/update-overlay'
-    await testSetup.setupFilesystem(createWorkspaceWithFolders(workspacePath, []))
+    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
     await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath) })
     await runSqlStatement(electronApp, 'UPDATE app_persistence SET has_shown_welcome = 1 WHERE id = 1')
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
@@ -507,7 +507,7 @@ describe('App updates', () => {
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
     /** Pending editor writes exercise the ordinary close-time save guard during a download. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** Existing prompt keeps this test on the production autosave path. */
     const editor = '[data-testid="prompt-editor-dev-1"]'
     await waitForMonacoEditor(mainWindow, editor)
@@ -542,7 +542,7 @@ describe('App updates', () => {
   test('flushes pending edits, shows 100 percent for a second, and blocks closing until installer handoff', async ({ electronApp, testSetup }) => {
     /** Start without an update so the fixture can open its workspace and editor normally. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** The existing sample editor has real pending autosaves to flush during restart. */
     const editor = '[data-testid="prompt-editor-dev-1"]'
     await waitForMonacoEditor(mainWindow, editor)
@@ -589,7 +589,7 @@ describe('App updates', () => {
   test('continues restarting after a pending prompt save fails', async ({ electronApp, testSetup }) => {
     /** Real editor and mutation machinery provide a failing pending save. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** Hold the real IPC save boundary, then return a controlled persistence failure. */
     await electronApp.evaluate(({ app, ipcMain }) => {
       ipcMain.removeHandler('update-prompt')

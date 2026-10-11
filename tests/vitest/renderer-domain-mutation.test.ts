@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import {
   SYSTEM_SETTINGS_CLIENT_STATE_ID,
   systemSettingsClientStateCollection
@@ -31,7 +31,7 @@ import type {
   UpdatePromptTemplateDomainCommand
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
 import { createPromptFull, PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import { createPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import {
@@ -46,11 +46,11 @@ const CATEGORY_ID = 'renderer-domain-framework'
 const PROMPT_ID = 'renderer-domain-prompt'
 /** Stable template ID used by autosave and reconciliation framework tests. */
 const TEMPLATE_ID = 'renderer-domain-template'
-/** Prompt-folder ID establishing prompt ownership for shared update planning. */
-const PROMPT_FOLDER_ID = 'renderer-domain-prompt-folder'
-/** Template-folder ID establishing template ownership for shared update planning. */
-const TEMPLATE_FOLDER_ID = 'renderer-domain-template-folder'
-/** Absent prompt-folder UI-state ID used to verify optional renderer deletion. */
+/** Prompt-collection ID establishing prompt ownership for shared update planning. */
+const PROMPT_COLLECTION_ID = 'renderer-domain-prompt-collection'
+/** Template-collection ID establishing template ownership for shared update planning. */
+const TEMPLATE_COLLECTION_ID = 'renderer-domain-template-collection'
+/** Absent prompt-collection UI-state ID used to verify optional renderer deletion. */
 const OPTIONAL_UI_STATE_ID = 'renderer-domain-workspace:absent-category'
 /** Editor measurement reused for prompt and template autosave assertions. */
 const EDITOR_MEASUREMENT = {
@@ -89,7 +89,7 @@ const planRenameCategoryWithOptionalDelete: DomainPlanner<RenameTestCommand> = (
   },
   {
     type: 'delete',
-    entityType: 'workspacePromptFolderUiState',
+    entityType: 'workspacePromptCollectionUiState',
     id: OPTIONAL_UI_STATE_ID
   }
 ]
@@ -99,11 +99,11 @@ const planDeleteCategory: DomainPlanner<Record<string, never>> = () => [
   { type: 'delete', entityType: 'category', id: CATEGORY_ID }
 ]
 
-/** Shared test planner deleting optional prompt-folder state that is not loaded. */
+/** Shared test planner deleting optional prompt-collection state that is not loaded. */
 const planDeleteAbsentUiState: DomainPlanner<Record<string, never>> = () => [
   {
     type: 'delete',
-    entityType: 'workspacePromptFolderUiState',
+    entityType: 'workspacePromptCollectionUiState',
     id: OPTIONAL_UI_STATE_ID
   }
 ]
@@ -175,10 +175,10 @@ describe('renderer domain mutation framework', () => {
     if (systemSettingsClientStateCollection.has(SYSTEM_SETTINGS_CLIENT_STATE_ID)) {
       systemSettingsClientStateCollection.delete(SYSTEM_SETTINGS_CLIENT_STATE_ID)
     }
-    promptCollection.utils.deleteAuthoritative(PROMPT_ID)
-    promptTemplateCollection.utils.deleteAuthoritative(TEMPLATE_ID)
-    promptFolderCollection.utils.deleteAuthoritative(PROMPT_FOLDER_ID)
-    promptFolderCollection.utils.deleteAuthoritative(TEMPLATE_FOLDER_ID)
+    promptsCollection.utils.deleteAuthoritative(PROMPT_ID)
+    promptTemplatesCollection.utils.deleteAuthoritative(TEMPLATE_ID)
+    promptCollectionsCollection.utils.deleteAuthoritative(PROMPT_COLLECTION_ID)
+    promptCollectionsCollection.utils.deleteAuthoritative(TEMPLATE_COLLECTION_ID)
     systemSettingsCollection.utils.deleteAuthoritative(SYSTEM_SETTINGS_ID)
     clearPromptEditorMeasuredHeight(PROMPT_ID)
     clearPromptEditorMeasuredHeight(TEMPLATE_ID)
@@ -283,7 +283,7 @@ describe('renderer domain mutation framework', () => {
       payload: {
         snapshots: [
           {
-            entityType: 'workspacePromptFolderUiState',
+            entityType: 'workspacePromptCollectionUiState',
             id: OPTIONAL_UI_STATE_ID,
             deleted: true
           }
@@ -327,7 +327,7 @@ describe('renderer domain mutation framework', () => {
   })
 
   it('clears cached editor measurements when authoritative prompt text differs', async () => {
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 1,
       data: createPromptFull({
@@ -390,11 +390,11 @@ describe('renderer domain mutation framework', () => {
     })
 
     expect(lookupPromptEditorMeasuredHeight(PROMPT_ID, 500, 1)).toBeNull()
-    expect(promptCollection.get(PROMPT_ID)).toMatchObject({ promptText: 'Server text.' })
+    expect(promptsCollection.get(PROMPT_ID)).toMatchObject({ promptText: 'Server text.' })
   })
 
   it('merges prompt and template editor fields into their latest paced commands', async () => {
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 1,
       data: createPromptFull({
@@ -407,7 +407,7 @@ describe('renderer domain mutation framework', () => {
         status: PromptStatus.Todo
       })
     })
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: TEMPLATE_ID,
       revision: 1,
       data: createPromptTemplateFull({
@@ -419,11 +419,11 @@ describe('renderer domain mutation framework', () => {
         templateText: 'Original template text.'
       })
     })
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: PROMPT_FOLDER_ID,
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: PROMPT_COLLECTION_ID,
       revision: 1,
       data: {
-        id: PROMPT_FOLDER_ID,
+        id: PROMPT_COLLECTION_ID,
         kind: 'prompt',
         folderName: 'Prompts',
         displayName: 'Prompts',
@@ -434,14 +434,14 @@ describe('renderer domain mutation framework', () => {
             }
           }
         }),
-        settings: { folderDescription: null }
+        settings: { collectionDescription: null }
       }
     })
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: TEMPLATE_FOLDER_ID,
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: TEMPLATE_COLLECTION_ID,
       revision: 1,
       data: {
-        id: TEMPLATE_FOLDER_ID,
+        id: TEMPLATE_COLLECTION_ID,
         kind: 'template',
         folderName: 'Templates',
         displayName: 'Templates',
@@ -450,7 +450,7 @@ describe('renderer domain mutation framework', () => {
             { categoryId: null, entries: [{ kind: 'template', id: TEMPLATE_ID }] }
           ]
         } } }),
-        settings: { folderDescription: null }
+        settings: { collectionDescription: null }
       }
     })
     promptClientStateCollection.insert({ id: PROMPT_ID, isEdited: false })
@@ -572,7 +572,7 @@ describe('renderer domain mutation framework', () => {
   })
 
   it('clears cached editor measurements when authoritative template text differs', async () => {
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: TEMPLATE_ID,
       revision: 1,
       data: createPromptTemplateFull({
@@ -629,7 +629,7 @@ describe('renderer domain mutation framework', () => {
     })
 
     expect(lookupPromptEditorMeasuredHeight(TEMPLATE_ID, 500, 1)).toBeNull()
-    expect(promptTemplateCollection.get(TEMPLATE_ID)).toMatchObject({
+    expect(promptTemplatesCollection.get(TEMPLATE_ID)).toMatchObject({
       templateText: 'Server text.'
     })
   })

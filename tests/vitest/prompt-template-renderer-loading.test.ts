@@ -1,13 +1,13 @@
-import type { PromptTemplateFolder } from '@shared/domain/prompt-folder/PromptFolder'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
+import type { PromptTemplateCollection } from '@shared/domain/prompt-collection/PromptCollection'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { promptTemplateCollection } from '@renderer/data/Collections/PromptTemplateCollection'
+import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { createPromptTemplateSummary } from '@shared/domain/prompt-template/PromptTemplate'
 import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
-import { loadPromptFolderInitial } from '@renderer/data/Queries/PromptFolderQuery'
+import { loadPromptCollectionInitial } from '@renderer/data/Queries/PromptCollectionQuery'
 import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
-import { promptFolderClientStateCollection } from '@renderer/data/Collections/PromptFolderClientStateCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { promptCollectionClientStateCollection } from '@renderer/data/Collections/PromptCollectionClientStateCollection'
 import { upsertPromptTemplateClientStates } from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
 
 const ipcInvokeWithPayload = vi.hoisted(() => vi.fn())
@@ -18,13 +18,13 @@ vi.mock('@renderer/data/IpcFramework/IpcRequestInvoke', () => ({
 
 describe('prompt template renderer loading', () => {
   beforeEach(() => {
-    promptTemplateCollection.utils.deleteAuthoritative('renderer-template')
+    promptTemplatesCollection.utils.deleteAuthoritative('renderer-template')
     if (promptTemplateClientStateCollection.has('renderer-template')) {
       promptTemplateClientStateCollection.delete('renderer-template')
     }
-    promptFolderCollection.utils.deleteAuthoritative('renderer-template-folder')
-    if (promptFolderClientStateCollection.has('renderer-template-folder')) {
-      promptFolderClientStateCollection.delete('renderer-template-folder')
+    promptCollectionsCollection.utils.deleteAuthoritative('renderer-template-collection')
+    if (promptCollectionClientStateCollection.has('renderer-template-collection')) {
+      promptCollectionClientStateCollection.delete('renderer-template-collection')
     }
   })
 
@@ -38,16 +38,16 @@ describe('prompt template renderer loading', () => {
           id: 'renderer-template-workspace',
           workspacePath: 'C:\\Templates',
           workspaceName: 'Templates',
-          promptFolderEntries: [],
-          templateFolderEntries: [{ kind: 'folder', id: 'renderer-template-folder' }]
+          promptCollectionEntries: [],
+          templateCollectionEntries: [{ kind: 'collection', id: 'renderer-template-collection' }]
         }
       },
-      promptFolders: [
+      promptCollections: [
         {
-          id: 'renderer-template-folder',
+          id: 'renderer-template-collection',
           revision: 0,
           data: {
-            id: 'renderer-template-folder',
+            id: 'renderer-template-collection',
             kind: 'template',
             folderName: 'Templates',
             displayName: 'Templates',
@@ -61,7 +61,7 @@ describe('prompt template renderer loading', () => {
               ]
             } } }),
             settings: {
-              folderDescription: 'Template description'
+              collectionDescription: 'Template description'
             }
           }
         }
@@ -86,7 +86,7 @@ describe('prompt template renderer loading', () => {
 
     await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt.json')
 
-    expect(promptTemplateCollection.get('renderer-template')).toMatchObject({
+    expect(promptTemplatesCollection.get('renderer-template')).toMatchObject({
       id: 'renderer-template',
       title: 'Renderer Template',
       fallbackTitle: '',
@@ -101,32 +101,32 @@ describe('prompt template renderer loading', () => {
     expect(promptTemplateClientStateCollection.get('renderer-template')).not.toHaveProperty(
       'templateText'
     )
-    expect(promptFolderClientStateCollection.get('renderer-template-folder')).toMatchObject({
-      id: 'renderer-template-folder',
+    expect(promptCollectionClientStateCollection.get('renderer-template-collection')).toMatchObject({
+      id: 'renderer-template-collection',
       hasLoadedInitialData: false
     })
-    expect(promptFolderClientStateCollection.get('renderer-template-folder')).not.toHaveProperty(
+    expect(promptCollectionClientStateCollection.get('renderer-template-collection')).not.toHaveProperty(
       'settings'
     )
-    expect(promptFolderCollection.get('renderer-template-folder')?.settings.folderDescription).toBe(
+    expect(promptCollectionsCollection.get('renderer-template-collection')?.settings.collectionDescription).toBe(
       'Template description'
     )
 
-    promptFolderClientStateCollection.update('renderer-template-folder', (clientState) => {
+    promptCollectionClientStateCollection.update('renderer-template-collection', (clientState) => {
       clientState.hasLoadedInitialData = true
     })
     await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt.json')
-    expect(promptFolderClientStateCollection.get('renderer-template-folder')).toMatchObject({
+    expect(promptCollectionClientStateCollection.get('renderer-template-collection')).toMatchObject({
       hasLoadedInitialData: true
     })
   })
 
   it('replaces a template summary while preserving its edited marker', async () => {
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: 'renderer-template-folder',
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: 'renderer-template-collection',
       revision: 0,
       data: {
-        id: 'renderer-template-folder',
+        id: 'renderer-template-collection',
         kind: 'template',
         folderName: 'Templates',
         displayName: 'Templates',
@@ -139,8 +139,8 @@ describe('prompt template renderer loading', () => {
             }
           ]
         } } }),
-        settings: { folderDescription: 'Template description' }
-      } as PromptTemplateFolder
+        settings: { collectionDescription: 'Template description' }
+      } as PromptTemplateCollection
     })
     const summary = {
       id: 'renderer-template',
@@ -148,7 +148,7 @@ describe('prompt template renderer loading', () => {
       fallbackTitle: '',
       modifiedAt: '2026-07-22T12:00:00.000Z'
     }
-    promptTemplateCollection.utils.upsertAuthoritative({
+    promptTemplatesCollection.utils.upsertAuthoritative({
       id: summary.id,
       revision: 0,
       data: createPromptTemplateSummary(summary)
@@ -157,16 +157,16 @@ describe('prompt template renderer loading', () => {
     promptTemplateClientStateCollection.update(summary.id, (clientState) => {
       clientState.isEdited = true
     })
-    expect(promptTemplateCollection.get(summary.id)?.loadingState).toBe('summary')
+    expect(promptTemplatesCollection.get(summary.id)?.loadingState).toBe('summary')
 
     ipcInvokeWithPayload.mockResolvedValue({
       success: true,
-      promptFolders: [
+      promptCollections: [
         {
-          id: 'renderer-template-folder',
+          id: 'renderer-template-collection',
           revision: 0,
           data: {
-            id: 'renderer-template-folder',
+            id: 'renderer-template-collection',
             kind: 'template',
             folderName: 'Templates',
             displayName: 'Templates',
@@ -179,7 +179,7 @@ describe('prompt template renderer loading', () => {
                 }
               ]
             } } }),
-            settings: { folderDescription: 'Template description' }
+            settings: { collectionDescription: 'Template description' }
           }
         }
       ],
@@ -202,14 +202,14 @@ describe('prompt template renderer loading', () => {
       markdownContentUiStates: []
     })
 
-    await loadPromptFolderInitial('renderer-template-workspace', 'renderer-template-folder')
+    await loadPromptCollectionInitial('renderer-template-workspace', 'renderer-template-collection')
 
-    expect(ipcInvokeWithPayload).toHaveBeenCalledWith('load-prompt-folder-initial', {
+    expect(ipcInvokeWithPayload).toHaveBeenCalledWith('load-prompt-collection-initial', {
       workspaceId: 'renderer-template-workspace',
-      promptFolderId: 'renderer-template-folder'
+      promptCollectionId: 'renderer-template-collection'
     })
 
-    expect(promptTemplateCollection.get('renderer-template')).toMatchObject({
+    expect(promptTemplatesCollection.get('renderer-template')).toMatchObject({
       loadingState: 'full',
       templateText: 'Review {{change}}.'
     })
@@ -220,8 +220,8 @@ describe('prompt template renderer loading', () => {
     expect(promptTemplateClientStateCollection.get('renderer-template')).not.toHaveProperty(
       'title'
     )
-    expect(promptFolderClientStateCollection.get('renderer-template-folder')).toMatchObject({
-      id: 'renderer-template-folder',
+    expect(promptCollectionClientStateCollection.get('renderer-template-collection')).toMatchObject({
+      id: 'renderer-template-collection',
       hasLoadedInitialData: true
     })
   })

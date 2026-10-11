@@ -2,9 +2,9 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   promptEditorSelector,
-  promptFolderSelectorMenuSelector,
-  promptFolderSelectorTriggerSelector
-} from '../helpers/PromptFolderSelectors'
+  promptCollectionSelectorMenuSelector,
+  promptCollectionSelectorTriggerSelector
+} from '../helpers/PromptCollectionSelectors'
 
 /** Real Electron fixtures exercise the shared router through production UI surfaces. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -17,11 +17,11 @@ describe('Keyboard routing', () => {
   // Both native fields and Monaco must yield the same dialog-level dismissal behavior.
   for (const focusTarget of ['name', 'description'] as const) {
     test(`dismisses category management before Find with ${focusTarget} focused`, async ({ testSetup }) => {
-      /** Sample folder provides stable searchable content and the actual management entry point. */
+      /** Sample collection provides stable searchable content and the actual management entry point. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'sample' }
       })
-      await testHelpers.navigateToPromptFolders('Development')
+      await testHelpers.navigateToPromptCollections('Development')
       await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toBeVisible()
       /** Find input whose query must survive closing the overlaid dialog. */
       const findInput = mainWindow.getByTestId('prompt-find-input')
@@ -33,7 +33,7 @@ describe('Keyboard routing', () => {
       /** Search position before an unrelated dialog takes keyboard ownership. */
       const originalMatches = await matches.innerText()
 
-      await mainWindow.getByTestId('prompt-folder-manage-categories-button').click()
+      await mainWindow.getByTestId('prompt-collection-manage-categories-button').click()
       /** Foreground modal must receive Escape even when Find has an active result. */
       const dialog = mainWindow.locator(CATEGORY_DIALOG)
       await dialog.getByTestId('manage-categories-new-button').click()
@@ -66,10 +66,10 @@ describe('Keyboard routing', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** Absent Find input must stay absent for both overlay kinds. */
     const findInput = mainWindow.getByTestId('prompt-find-input')
-    await mainWindow.getByTestId('prompt-folder-manage-categories-button').click()
+    await mainWindow.getByTestId('prompt-collection-manage-categories-button').click()
     /** Category modal containing an ordinary text input. */
     const dialog = mainWindow.locator(CATEGORY_DIALOG)
     await dialog.getByTestId('manage-categories-new-button').click()
@@ -84,9 +84,9 @@ describe('Keyboard routing', () => {
     await expect(name).toHaveValue('Replacement')
     await dialog.getByTestId('manage-categories-close-button').click()
 
-    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
-    /** Actual root-folder dropdown supplies the higher popup layer. */
-    const menu = mainWindow.locator(promptFolderSelectorMenuSelector)
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    /** Actual collection dropdown supplies the higher popup layer. */
+    const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
     await expect(menu).toBeVisible()
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toHaveCount(0)
@@ -98,18 +98,18 @@ describe('Keyboard routing', () => {
   })
 
   test('dismisses a dropdown before Find and releases shortcuts when leaving the screen', async ({ testSetup }) => {
-    /** Sample folder allows the screen registration to be mounted and unmounted through navigation. */
+    /** Sample collection allows the screen registration to be mounted and unmounted through navigation. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** Search remains open behind the root selector until the following Escape. */
     const findInput = mainWindow.getByTestId('prompt-find-input')
     await mainWindow.keyboard.press('Control+F')
     await findInput.fill('code')
-    await mainWindow.locator(promptFolderSelectorTriggerSelector).click()
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     /** Popup must keep ownership of both Escape and the blocked Find shortcut. */
-    const menu = mainWindow.locator(promptFolderSelectorMenuSelector)
+    const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
     await expect(menu).toBeVisible()
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).not.toBeFocused()
@@ -124,7 +124,7 @@ describe('Keyboard routing', () => {
     await testHelpers.navigateToHomeScreen()
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toHaveCount(0)
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toBeFocused()
     await mainWindow.keyboard.press('Escape')
@@ -136,12 +136,12 @@ describe('Keyboard routing', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptFolders('Development')
+    await testHelpers.navigateToPromptCollections('Development')
     /** Background Find must remain open while the dialog consumes Escape without closing. */
     const findInput = mainWindow.getByTestId('prompt-find-input')
     await mainWindow.keyboard.press('Control+F')
     await findInput.fill('code')
-    await mainWindow.getByTestId('prompt-folder-manage-categories-button').click()
+    await mainWindow.getByTestId('prompt-collection-manage-categories-button').click()
     /** Saving modal owns Escape even though its cancellation action cannot run. */
     const dialog = mainWindow.locator(CATEGORY_DIALOG)
     await dialog.getByTestId('manage-categories-new-button').click()

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPromptSummary, PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-folder/PromptFolder'
-import { promptCollection } from '@renderer/data/Collections/PromptCollection'
+import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
+import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
-import { promptFolderCollection } from '@renderer/data/Collections/PromptFolderCollection'
+import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 
 /** Revision runner spy exposing optimistic prompt mutation contracts. */
 const runRevisionMutation = vi.hoisted(() => vi.fn())
@@ -18,15 +18,15 @@ import { setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutati
 
 /** Stable prompt used by move and status mutation tests. */
 const PROMPT_ID = 'prompt-mutation-test'
-/** Stable source folder used by move and status mutation tests. */
-const SOURCE_FOLDER_ID = 'prompt-mutation-source'
-/** Stable destination folder used by cross-root move tests. */
-const DESTINATION_FOLDER_ID = 'prompt-mutation-destination'
+/** Stable source collection used by move and status mutation tests. */
+const SOURCE_COLLECTION_ID = 'prompt-mutation-source'
+/** Stable destination collection used by cross-root move tests. */
+const DESTINATION_COLLECTION_ID = 'prompt-mutation-destination'
 /** Stable destination category proving canonical summary metadata is updated. */
 const DESTINATION_CATEGORY_ID = 'prompt-mutation-category'
 
-/** Creates one prompt-folder record with the requested active prompts. */
-const promptFolder = (
+/** Creates one prompt-collection record with the requested active prompts. */
+const promptCollection = (
   id: string,
   promptIds: string[] = [],
   categoryId: string | null = null
@@ -48,18 +48,18 @@ const promptFolder = (
       }
     }
   }),
-  settings: { folderDescription: null }
+  settings: { collectionDescription: null }
 })
 
 describe('prompt mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    promptCollection.utils.deleteAuthoritative(PROMPT_ID)
-    promptFolderCollection.utils.deleteAuthoritative(SOURCE_FOLDER_ID)
-    promptFolderCollection.utils.deleteAuthoritative(DESTINATION_FOLDER_ID)
+    promptsCollection.utils.deleteAuthoritative(PROMPT_ID)
+    promptCollectionsCollection.utils.deleteAuthoritative(SOURCE_COLLECTION_ID)
+    promptCollectionsCollection.utils.deleteAuthoritative(DESTINATION_COLLECTION_ID)
     if (promptClientStateCollection.has(PROMPT_ID)) promptClientStateCollection.delete(PROMPT_ID)
 
-    promptCollection.utils.upsertAuthoritative({
+    promptsCollection.utils.upsertAuthoritative({
       id: PROMPT_ID,
       revision: 3,
       data: createPromptSummary({
@@ -71,22 +71,22 @@ describe('prompt mutations', () => {
       })
     })
     promptClientStateCollection.insert({ id: PROMPT_ID, isEdited: false })
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: SOURCE_FOLDER_ID,
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: SOURCE_COLLECTION_ID,
       revision: 2,
-      data: promptFolder(SOURCE_FOLDER_ID, [PROMPT_ID])
+      data: promptCollection(SOURCE_COLLECTION_ID, [PROMPT_ID])
     })
-    promptFolderCollection.utils.upsertAuthoritative({
-      id: DESTINATION_FOLDER_ID,
+    promptCollectionsCollection.utils.upsertAuthoritative({
+      id: DESTINATION_COLLECTION_ID,
       revision: 4,
-      data: promptFolder(DESTINATION_FOLDER_ID, [], DESTINATION_CATEGORY_ID)
+      data: promptCollection(DESTINATION_COLLECTION_ID, [], DESTINATION_CATEGORY_ID)
     })
     runRevisionMutation.mockResolvedValue(undefined)
   })
 
   it('moves canonical prompt state while sending only its revision reference', async () => {
-    await setPromptLocation(SOURCE_FOLDER_ID, PROMPT_ID, {
-      promptFolderId: DESTINATION_FOLDER_ID,
+    await setPromptLocation(SOURCE_COLLECTION_ID, PROMPT_ID, {
+      promptCollectionId: DESTINATION_COLLECTION_ID,
       categoryId: DESTINATION_CATEGORY_ID,
       previousEntryId: null,
       status: PromptStatus.Todo
@@ -94,20 +94,20 @@ describe('prompt mutations', () => {
 
     /** Revision mutation options registered by the prompt move. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
-    /** Mutable source folder receiving the optimistic removal. */
-    const source = promptFolder(SOURCE_FOLDER_ID, [PROMPT_ID])
-    /** Mutable destination folder receiving the optimistic insertion. */
-    const destination = promptFolder(DESTINATION_FOLDER_ID, [], DESTINATION_CATEGORY_ID)
+    /** Mutable source collection receiving the optimistic removal. */
+    const source = promptCollection(SOURCE_COLLECTION_ID, [PROMPT_ID])
+    /** Mutable destination collection receiving the optimistic insertion. */
+    const destination = promptCollection(DESTINATION_COLLECTION_ID, [], DESTINATION_CATEGORY_ID)
     /** Mutable canonical prompt receiving move-owned metadata. */
-    const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
+    const prompt = structuredClone(promptsCollection.get(PROMPT_ID)!)
     /** Prompt client state receiving the edited latch. */
     const promptClientState = { id: PROMPT_ID, isEdited: false }
 
     options.mutateOptimistically({
       collections: {
-        promptFolder: {
+        promptCollection: {
           update: (id: string, update: (draft: typeof source) => void) =>
-            update(id === SOURCE_FOLDER_ID ? source : destination)
+            update(id === SOURCE_COLLECTION_ID ? source : destination)
         },
         prompt: {
           update: (_id: string, update: (draft: typeof prompt) => void) => update(prompt)
@@ -138,21 +138,21 @@ describe('prompt mutations', () => {
       payload: {
         command: {
           kind: 'prompt',
-          sourcePromptFolderId: SOURCE_FOLDER_ID,
+          sourcePromptCollectionId: SOURCE_COLLECTION_ID,
           promptId: PROMPT_ID,
-          location: { promptFolderId: DESTINATION_FOLDER_ID, categoryId: DESTINATION_CATEGORY_ID, previousEntryId: null, status: PromptStatus.Todo },
+          location: { promptCollectionId: DESTINATION_COLLECTION_ID, categoryId: DESTINATION_CATEGORY_ID, previousEntryId: null, status: PromptStatus.Todo },
           modifiedAt: expect.any(String)
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: SOURCE_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: SOURCE_COLLECTION_ID,
             expected: 'revision',
             revision: 2
           },
           {
-            entityType: 'promptFolder',
-            id: DESTINATION_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: DESTINATION_COLLECTION_ID,
             expected: 'revision',
             revision: 4
           },
@@ -168,8 +168,8 @@ describe('prompt mutations', () => {
   })
 
   it('transfers canonical prompt status across roots while latching the edited marker', async () => {
-    await setPromptLocation(SOURCE_FOLDER_ID, PROMPT_ID, {
-      promptFolderId: DESTINATION_FOLDER_ID,
+    await setPromptLocation(SOURCE_COLLECTION_ID, PROMPT_ID, {
+      promptCollectionId: DESTINATION_COLLECTION_ID,
       categoryId: null,
       previousEntryId: null,
       status: PromptStatus.Completed
@@ -178,19 +178,19 @@ describe('prompt mutations', () => {
     /** Revision mutation options registered by the prompt status change. */
     const options = runRevisionMutation.mock.calls[0]?.[0]
     /** Mutable source root losing active ownership. */
-    const source = promptFolder(SOURCE_FOLDER_ID, [PROMPT_ID])
+    const source = promptCollection(SOURCE_COLLECTION_ID, [PROMPT_ID])
     /** Mutable destination root receiving completed ownership. */
-    const destination = promptFolder(DESTINATION_FOLDER_ID, [], DESTINATION_CATEGORY_ID)
+    const destination = promptCollection(DESTINATION_COLLECTION_ID, [], DESTINATION_CATEGORY_ID)
     /** Mutable canonical prompt receiving status fields. */
-    const prompt = structuredClone(promptCollection.get(PROMPT_ID)!)
+    const prompt = structuredClone(promptsCollection.get(PROMPT_ID)!)
     /** Prompt client state receiving the edited latch. */
     const promptClientState = { id: PROMPT_ID, isEdited: false }
 
     options.mutateOptimistically({
       collections: {
-        promptFolder: {
+        promptCollection: {
           update: (id: string, update: (draft: typeof source) => void) =>
-            update(id === SOURCE_FOLDER_ID ? source : destination)
+            update(id === SOURCE_COLLECTION_ID ? source : destination)
         },
         prompt: {
           update: (_id: string, update: (draft: typeof prompt) => void) => update(prompt)
@@ -220,21 +220,21 @@ describe('prompt mutations', () => {
       payload: {
         command: {
           kind: 'prompt',
-          sourcePromptFolderId: SOURCE_FOLDER_ID,
+          sourcePromptCollectionId: SOURCE_COLLECTION_ID,
           promptId: PROMPT_ID,
-          location: { promptFolderId: DESTINATION_FOLDER_ID, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
+          location: { promptCollectionId: DESTINATION_COLLECTION_ID, categoryId: null, previousEntryId: null, status: PromptStatus.Completed },
           modifiedAt: prompt.modifiedAt
         },
         expectations: [
           {
-            entityType: 'promptFolder',
-            id: SOURCE_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: SOURCE_COLLECTION_ID,
             expected: 'revision',
             revision: 2
           },
           {
-            entityType: 'promptFolder',
-            id: DESTINATION_FOLDER_ID,
+            entityType: 'promptCollection',
+            id: DESTINATION_COLLECTION_ID,
             expected: 'revision',
             revision: 4
           },

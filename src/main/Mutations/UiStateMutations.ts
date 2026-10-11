@@ -1,9 +1,9 @@
 import {
   parseSetAccordionUiStateDomainCommand,
-  parseSetWorkspacePromptFolderUiStateDomainCommand,
+  parseSetWorkspacePromptCollectionUiStateDomainCommand,
   parseSetWorkspaceUiStateDomainCommand,
   planSetAccordionUiStateDomainMutation,
-  planSetWorkspacePromptFolderUiStateDomainMutation,
+  planSetWorkspacePromptCollectionUiStateDomainMutation,
   planSetWorkspaceUiStateDomainMutation
 } from '@shared/domain/ui-state/UiStateDomainMutations'
 import { handleMainDomainMutation } from './DomainMutation'
@@ -18,10 +18,10 @@ export const setupUiStateMutationHandlers = (): void => {
     }
   })
   handleMainDomainMutation({
-    ipc: { channel: 'set-workspace-prompt-folder-ui-state' },
+    ipc: { channel: 'set-workspace-prompt-collection-ui-state' },
     mutation: {
-      parseCommand: parseSetWorkspacePromptFolderUiStateDomainCommand,
-      plan: planSetWorkspacePromptFolderUiStateDomainMutation
+      parseCommand: parseSetWorkspacePromptCollectionUiStateDomainCommand,
+      plan: planSetWorkspacePromptCollectionUiStateDomainMutation
     }
   })
   handleMainDomainMutation({
