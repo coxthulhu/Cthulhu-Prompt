@@ -66,23 +66,30 @@
   )
 </script>
 
+{#snippet activityButton(item: ActivityItem)}
+  <ActivityBarButton
+    icon={item.icon}
+    label={item.label}
+    title={activeScreen === item.id
+      ? `${item.label} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar`
+      : item.label}
+    testId={item.testId}
+    active={activeScreen === item.id}
+    compactIndicator={!isAppSidebarExpanded}
+    ariaCurrent={activeScreen === item.id ? 'page' : undefined}
+    ariaExpanded={activeScreen === item.id ? isAppSidebarExpanded : undefined}
+    onclick={() => onNavigate(item.id)}
+  />
+{/snippet}
+
 <nav class="appActivityBar" aria-label="Primary navigation" data-testid="app-activity-bar">
-  {#each activityItems as item (item.id)}
-    <ActivityBarButton
-      icon={item.icon}
-      label={item.label}
-      title={activeScreen === item.id
-        ? `${item.label} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar`
-        : item.label}
-      testId={item.testId}
-      active={activeScreen === item.id}
-      compactIndicator={!isAppSidebarExpanded}
-      ariaCurrent={activeScreen === item.id ? 'page' : undefined}
-      ariaExpanded={activeScreen === item.id ? isAppSidebarExpanded : undefined}
-      onclick={() => onNavigate(item.id)}
-    />
+  {#each activityItems.filter((item) => item.id !== 'settings') as item (item.id)}
+    {@render activityButton(item)}
   {/each}
-  <div class="mt-auto w-full relative">
+  <div class="mt-auto flex w-full flex-col gap-1 relative">
+    {#each activityItems.filter((item) => item.id === 'settings') as item (item.id)}
+      {@render activityButton(item)}
+    {/each}
     <button type="button" class="updatesButton" aria-label={updateAvailable ? 'App updates — update available' : 'App updates'}
       aria-expanded={updatesOpen} title="App updates" data-testid="app-updates-button" onclick={onToggleUpdates}>
       <Download size={24} strokeWidth={1.5} aria-hidden="true" />

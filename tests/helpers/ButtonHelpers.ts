@@ -77,7 +77,7 @@ export async function clickNavButton(
     Home: 'nav-button-home',
     'Task Prompts': 'nav-button-prompt-task-collections',
     'Prompt Templates': 'nav-button-prompt-template-collections',
-    Settings: 'nav-button-settings',
+    'System Settings': 'nav-button-settings',
     Mockups: 'nav-button-mockups',
     'Test Screen': 'nav-button-test-screen'
   }

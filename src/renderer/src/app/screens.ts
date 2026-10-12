@@ -27,7 +27,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     icon: Home
   },
   settings: {
-    label: 'Settings',
+    label: 'System Settings',
     testId: 'nav-button-settings',
     requiresWorkspace: false,
     showInNav: true,

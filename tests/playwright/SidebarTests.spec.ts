@@ -96,7 +96,7 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.navigateToSettingsScreen()
     expect(await testHelpers.getActiveScreen()).toBe('settings')
 
-    expect(await testHelpers.isNavButtonActive('Settings')).toBe(true)
+    expect(await testHelpers.isNavButtonActive('System Settings')).toBe(true)
     await expect(mainWindow.locator('[data-testid="about-version-display-value"]')).toHaveText(
       `v${expectedVersion}`
     )
@@ -112,7 +112,7 @@ test.describe('Sidebar Tests', () => {
 
     await testHelpers.navigateToSettingsScreen()
     expect(await testHelpers.getActiveScreen()).toBe('settings')
-    expect(await testHelpers.isNavButtonActive('Settings')).toBe(true)
+    expect(await testHelpers.isNavButtonActive('System Settings')).toBe(true)
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.assertHomeActive()

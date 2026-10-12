@@ -56,5 +56,5 @@ export async function navigateToHomeScreen(page: Page): Promise<void> {
  * @param window - The Playwright window instance
  */
 export async function navigateToSettingsScreen(page: Page): Promise<void> {
-  await clickNavButton(page, 'Settings')
+  await clickNavButton(page, 'System Settings')
 }

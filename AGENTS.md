@@ -11,7 +11,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
 - **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.
-- **Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
+- **System Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
 - **Mockups Screen** — Provides a development-only interface for previewing UI mockups.
 - **Test Screen** — Provides a development-only interactive gallery for shared UI components.
