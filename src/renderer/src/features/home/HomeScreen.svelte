@@ -1,6 +1,5 @@
 <script lang="ts">
   import {
-    Bug,
     BookOpen,
     ExternalLink,
     FileText,
@@ -167,9 +166,8 @@
         />
         <LinkButton
           href={githubIssuesUrl}
-          icon={Bug}
+          icon={ExternalLink}
           text="Github"
-          endIcon={ExternalLink}
           appearance="outline"
           testId="get-started-github-issues-link"
           target="_blank"

@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    AlertCircle, AlertTriangle, ArrowRight, BookOpen, Bug, Check, ExternalLink, FileText,
+    AlertCircle, AlertTriangle, ArrowRight, BookOpen, Check, ExternalLink, FileText,
     FolderOpen, FolderPlus, Folders, Home, Layers, X, Zap
   } from 'lucide-svelte'
 
@@ -177,7 +177,7 @@
             target="_blank"
             rel="noreferrer"
             data-testid="get-started-github-issues-link"
-          ><Bug size={16} aria-hidden="true" /><span>Github</span><ExternalLink size={16} aria-hidden="true" /></a>
+          ><ExternalLink size={16} aria-hidden="true" /><span>Github</span></a>
         </div>
       </header>
 

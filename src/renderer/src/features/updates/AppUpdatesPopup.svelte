@@ -92,7 +92,7 @@
         text={state.status === 'ready' || restarting ? 'Update & Restart' : showUpdate ? 'Download Update' : 'Check for Updates'} testId="update-action"
         onclick={() => state.status === 'ready' ? oninstall() : showUpdate ? ondownload() : void window.appUpdates.check()}
         style="width:100%;max-width:none;justify-content:center;" />
-      <LinkButton href={APP_RELEASES_URL} appearance="outline" endIcon={ExternalLink}
+      <LinkButton href={APP_RELEASES_URL} appearance="outline" icon={ExternalLink}
         text="Open GitHub Releases" class="updateReleasesLink mt-2"
         target="_blank" rel="noreferrer" testId="update-releases-link" />
     </div>

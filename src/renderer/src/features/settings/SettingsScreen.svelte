@@ -406,7 +406,7 @@
             <LinkButton
               href={githubIssuesUrl}
               text="Open Github Issues"
-              endIcon={ExternalLink}
+              icon={ExternalLink}
               variant="accent"
               testId="about-github-issues-link"
               target="_blank"

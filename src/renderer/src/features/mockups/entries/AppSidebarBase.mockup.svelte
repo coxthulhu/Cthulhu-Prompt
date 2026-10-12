@@ -758,7 +758,7 @@
           <p>{updateReady ? 'Ready to update and restart.' : 'A new version is available to download.'}</p>
         </div>
         <button class="update-action" type="button" onclick={() => { if (updateReady) updatesOpen = false; else updateReady = true }}><RefreshCw size={20} />{updateReady ? 'Update & Restart' : 'Download Update'}</button>
-        <button class="release-link" type="button" onclick={() => { updatesOpen = false }}>Open GitHub Releases<ExternalLink size={16} /></button>
+        <button class="release-link" type="button" onclick={() => { updatesOpen = false }}><ExternalLink size={16} />Open GitHub Releases</button>
       </div>
     </div>
   {/if}

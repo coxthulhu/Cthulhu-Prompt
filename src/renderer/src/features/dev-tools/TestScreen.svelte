@@ -535,7 +535,7 @@
               </div>
               <div class="component-sample">
                 {@render componentLabel('LinkButton')}
-                <LinkButton href="#action-buttons" text="Anchor link" endIcon={Download} />
+                <LinkButton href="#action-buttons" text="Anchor link" icon={Download} />
               </div>
               <div class="component-sample">
                 {@render componentLabel('IconCell')}
