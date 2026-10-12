@@ -92,8 +92,8 @@
   }
 
   .cthulhuUiActivityBarButton[data-active='true'][data-compact-indicator='true']::before {
-    top: 8px;
-    bottom: 8px;
+    top: 9px;
+    bottom: 9px;
   }
 
   .cthulhuUiActivityBarButton:disabled {
