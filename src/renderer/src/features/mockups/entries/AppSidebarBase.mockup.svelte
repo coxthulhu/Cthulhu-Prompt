@@ -6,7 +6,8 @@
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
-  // Visual sandbox: only icons, brand details, and palette tokens are shared with the app.
+  // Visual snapshot of AppSidebar, AppActivityBar, PromptTree, and their controls.
+  // Only Lucide icons, the brand image, and global palette/typography tokens are shared.
   // All sample data and interactions below are local and reset when this mockup unmounts.
   type MockPrompt = { id: string; title: string; status?: string; edited?: boolean }
   type MockCategory = { id: string; title: string; prompts: MockPrompt[]; shortDescription?: string; description?: string }
@@ -24,10 +25,7 @@
   const uncategorizedPrompts: MockPrompt[] = [
     { ...prompt('map-implementation', 'Map the current implementation'), status: 'InProgress' },
     { ...prompt('clarify-requirements', 'Clarify product requirements'), edited: true },
-    prompt('draft-plan', 'Draft an implementation plan'),
-    prompt('identify-edge-cases', 'Identify edge cases'),
-    prompt('acceptance-criteria', 'Define acceptance criteria'),
-    prompt('review-data-flow', 'Review the data flow')
+    prompt('draft-plan', 'Draft an implementation plan')
   ]
 
   const categories: MockCategory[] = [
@@ -37,7 +35,7 @@
       shortDescription: 'Investigate requirements and compare implementation options.',
       description: 'Collect findings before choosing an approach. Include accessibility and UI copy reviews.',
       prompts: [
-        prompt('compare-patterns', 'Compare sidebar patterns'),
+        { ...prompt('compare-patterns', 'Compare sidebar patterns'), edited: true },
         prompt('prepare-ui-copy', 'Prepare the UI copy'),
         prompt('audit-accessibility', 'Audit accessibility behavior')
       ]
@@ -52,7 +50,7 @@
         prompt('architecture-decisions', 'Document architecture decisions'),
         prompt('error-handling', 'Review error handling'),
         prompt('keyboard-navigation', 'Validate keyboard navigation'),
-        prompt('responsive-behavior', 'Check responsive behavior'),
+        prompt('responsive-behavior', 'Check responsive behavior at narrow sidebar widths'),
         prompt('test-coverage', 'Summarize test coverage'),
         prompt('release-notes', 'Prepare release notes'),
         prompt('review-diff', 'Review the final diff'),
@@ -65,7 +63,10 @@
 
   const createGroups = (): MockGroup[] => [
     { id: 'completed', label: 'Completed', icon: CircleCheckBig, expanded: true, weight: 200,
-      prompts: [{ ...prompt('completed-audit', 'Audit the existing sidebar'), status: 'Completed' }], categories: [] },
+      prompts: [
+        { ...prompt('completed-audit', 'Audit the existing sidebar'), status: 'Completed' },
+        { ...prompt('completed-keyboard', 'Verify keyboard focus styles'), status: 'Completed' }
+      ], categories: [] },
     { id: 'archived', label: 'Archived', icon: Archive, expanded: true, weight: 200,
       prompts: [{ ...prompt('archived-layout', 'Explore the previous layout'), status: 'Archived' }], categories: [] },
     { id: 'active', label: 'Active', icon: ListTodo, expanded: true, weight: 400,
@@ -85,7 +86,7 @@
     { id: 'empty-project', title: 'New Project', kind: 'prompt', groups: emptyGroups() },
     { id: 'engineering', title: 'Engineering Templates', kind: 'template', modified: 'Yesterday', groups: emptyGroups().map((group) => ({
       ...group,
-      prompts: group.id === 'active' ? [prompt('template-plan', 'Plan an implementation'), prompt('template-review', 'Review a pull request')] :
+      prompts: group.id === 'active' ? [{ ...prompt('template-plan', 'Plan an implementation'), edited: true }, prompt('template-review', 'Review a pull request')] :
         group.id === 'archived' ? [{ ...prompt('template-old', 'Legacy release checklist'), status: 'Archived' }] : [],
       categories: group.id === 'active' ? [{ id: 'template-quality', title: 'Quality', prompts: [prompt('template-test', 'Build a test plan'), prompt('template-security', 'Review security boundaries')] }] : []
     })) },
@@ -97,7 +98,7 @@
     { id: 'home', label: 'Home', icon: Home },
     { id: 'prompt', label: 'Task Prompts', icon: FileText },
     { id: 'template', label: 'Prompt Templates', icon: Layers },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'settings', label: 'System Settings', icon: Settings },
     { id: 'mockups', label: 'Mockups', icon: PanelsTopLeft },
     { id: 'test', label: 'Test Screen', icon: Bug }
   ]
@@ -128,6 +129,8 @@
   let selectedGroupId = $state('active')
   let isOverviewActive = $state(false)
   let sidebarWidth = $state(275)
+  // Measured locally so accordion proportions match the live 36px headers and 100px minimums.
+  let accordionHeight = $state(0)
   let categoryDialog: HTMLDialogElement
   let collectionDialog: HTMLDialogElement
   let deleteDialog: HTMLDialogElement
@@ -169,6 +172,25 @@
   const collectionCount = (collection: MockCollection) => collection.groups.filter((group) => group.id === 'active' || (collection.kind === 'prompt' && group.id === 'backlog'))
     .reduce((sum, group) => sum + group.prompts.length + group.categories.reduce((n, category) => n + category.prompts.length, 0), 0)
   const groupCount = (group: MockGroup) => group.prompts.length + group.categories.reduce((sum, category) => sum + category.prompts.length, 0)
+
+  // Allocate whole section heights, including headers, before fixing sections at their minimum.
+  const sectionHeights = $derived.by(() => {
+    const heights: Record<string, number> = {}
+    let pending = visibleGroups.filter((group) => group.expanded)
+    let remaining = Math.max(pending.length * 100, accordionHeight - (visibleGroups.length - pending.length) * 36)
+    for (const group of visibleGroups) if (!group.expanded) heights[group.id] = 36
+    while (pending.length) {
+      const scale = remaining / pending.reduce((sum, group) => sum + group.weight, 0)
+      const constrained = pending.filter((group) => group.weight * scale < 100)
+      if (!constrained.length) {
+        for (const group of pending) heights[group.id] = group.weight * scale
+        break
+      }
+      for (const group of constrained) { heights[group.id] = 100; remaining -= 100 }
+      pending = pending.filter((group) => !constrained.includes(group))
+    }
+    return heights
+  })
 
   const selectPrompt = (entry: MockPrompt, group: MockGroup) => {
     activeActivity = collectionKind
@@ -223,9 +245,28 @@
 
   // Native drag previews mutate only local fixtures, including status and category membership.
   let draggedPrompt = $state<{ entry: MockPrompt; group: MockGroup; source: MockPrompt[] } | null>(null)
+  let draggedCategory = $state<{ category: MockCategory; group: MockGroup } | null>(null)
   let dropTarget = $state<string | null>(null)
   let dropAfter = $state(false)
-  const finishPromptDrag = () => { draggedPrompt = null; dropTarget = null }
+  const finishPromptDrag = () => { draggedPrompt = null; draggedCategory = null; dropTarget = null }
+  const previewCategoryDrop = (event: DragEvent, group: MockGroup, category?: MockCategory) => {
+    if (!draggedCategory || draggedCategory.group !== group) return
+    event.preventDefault()
+    event.stopPropagation()
+    dropTarget = `${group.id}:order:${category?.id ?? 'end'}`
+  }
+  const reorderCategory = (event: DragEvent, group: MockGroup, category?: MockCategory) => {
+    if (!draggedCategory || draggedCategory.group !== group) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (draggedCategory.category !== category) {
+      const sourceIndex = group.categories.findIndex((entry) => entry.id === draggedCategory!.category.id)
+      const [source] = group.categories.splice(sourceIndex, 1)
+      const targetIndex = category ? group.categories.findIndex((entry) => entry.id === category.id) : group.categories.length
+      group.categories.splice(targetIndex, 0, source!)
+    }
+    finishPromptDrag()
+  }
   const previewPromptDrop = (event: DragEvent, target: string, row = false) => {
     if (!draggedPrompt) return
     event.preventDefault()
@@ -239,6 +280,11 @@
     event.preventDefault()
     event.stopPropagation()
     const { entry, source, group: sourceGroup } = draggedPrompt
+    // Finalized rows are ordered by completion/archive time, so same-status drops are blocked.
+    if ((group.id === 'completed' || group.id === 'archived') && sourceGroup.id === group.id) {
+      finishPromptDrag()
+      return
+    }
     if (before?.id === entry.id) { finishPromptDrag(); return }
     const sourceIndex = source.findIndex((candidate) => candidate.id === entry.id)
     if (sourceIndex < 0) { finishPromptDrag(); return }
@@ -303,6 +349,7 @@
   const thumbTop = (scroll: ScrollMetrics) => scroll.top / Math.max(1, scroll.total - scroll.height) * (scroll.height - thumbHeight(scroll))
   let drag: { kind: 'width' | 'section' | 'scroll'; start: number; size: number; id?: string; previousId?: string; previousSize?: number } | null = null
   const startResize = (event: PointerEvent, group?: MockGroup) => {
+    if (event.button !== 0) return
     const target = event.currentTarget as HTMLButtonElement
     event.preventDefault()
     target.setPointerCapture(event.pointerId)
@@ -350,6 +397,32 @@
   </button>
 {/snippet}
 
+{#snippet ActivityButton(activity: (typeof activities)[number])}
+  <button class="activity-button" type="button" title={activeActivity === activity.id ? `${activity.label} — ${sidebarExpanded ? 'Hide' : 'Show'} sidebar` : activity.label} aria-label={activity.label}
+    aria-current={activeActivity === activity.id ? 'page' : undefined}
+    aria-expanded={activeActivity === activity.id ? sidebarExpanded : undefined}
+    data-compact={!sidebarExpanded}
+    onclick={() => {
+      sidebarExpanded = activeActivity === activity.id ? !sidebarExpanded : true
+      activeActivity = activity.id
+      collectionMenuOpen = false
+      actionsMenuOpen = false
+      categoryMenu = null
+      if (activity.id === 'prompt' || activity.id === 'template') {
+        collectionKind = activity.id
+        selectedGroupId = 'active'
+      }
+    }}>
+    <activity.icon size={24} strokeWidth={1.5} aria-hidden="true" />
+  </button>
+{/snippet}
+
+{#snippet DropIndicator(after = false, indentCount = 0, blocked = false)}
+  <span class="drop-indicator" data-after={after} data-blocked={blocked} style={`--tree-indent-count:${indentCount};`} aria-hidden="true">
+    <svg width="100%" height="10"><path d="M3 1.5 L8 5 L3 8.5" /><line x1="8" y1="5" x2="100%" y2="5" /></svg>
+  </span>
+{/snippet}
+
 {#snippet TreeGutter(indentCount: number, isLastRow: boolean)}
   <span class="tree-gutter" data-last-row={isLastRow ? 'true' : undefined} aria-hidden="true">
     {#each indentLevels(indentCount) as level (level)}
@@ -376,17 +449,16 @@
       ondrop={(event) => movePrompt(event, group, category, promptEntry)}
       ondragend={finishPromptDrag}
       aria-current={isCollectionActivity && !isOverviewActive && selectedPromptId === promptEntry.id ? 'true' : undefined}
-      onclick={() => {
+      onclick={(event) => {
         selectPrompt(promptEntry, group)
+        if (event.detail !== 0) event.currentTarget.blur()
       }}
     >
       {@render TreeGutter(indentCount, isLastRow)}
       <span class="tree-label text-sm">{promptEntry.title}</span>
     </button>
-    {#if dropTarget === promptEntry.id && group.id !== 'completed' && group.id !== 'archived'}
-      <span class="drop-indicator" data-after={dropAfter} aria-hidden="true">
-        <svg width="100%" height="10"><path d="M3 1.5 L8 5 L3 8.5" /><line x1="8" y1="5" x2="100%" y2="5" /></svg>
-      </span>
+    {#if dropTarget === promptEntry.id}
+      {@render DropIndicator(dropAfter, indentCount, (group.id === 'completed' || group.id === 'archived') && draggedPrompt?.group.id === group.id)}
     {/if}
   </div>
 {/snippet}
@@ -394,6 +466,7 @@
 {#snippet CategoryRow(category: MockCategory, group: MockGroup)}
   <div class="tree-category-row">
     <div class="tree-category-content" role="group" data-active={isCollectionActivity && selectedGroupId === group.id && selectedCategoryId === category.id}
+      data-dragging={draggedCategory?.group === group && draggedCategory.category.id === category.id}
       oncontextmenu={(event) => {
         event.preventDefault()
         categoryMenu = { category, group, x: event.clientX, y: event.clientY }
@@ -403,9 +476,26 @@
         type="button"
         aria-label={`${categoryExpanded(group, category) ? 'Collapse' : 'Expand'} category ${category.title}`}
         aria-expanded={categoryExpanded(group, category)}
-        data-drop-over={dropTarget === `${group.id}:${category.id}`}
-        ondragover={(event) => previewPromptDrop(event, `${group.id}:${category.id}`)}
-        ondrop={(event) => movePrompt(event, group, category)}
+        draggable="true"
+        ondragstart={(event) => {
+          draggedCategory = { category, group }
+          event.dataTransfer?.setData('text/plain', category.title)
+          if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+        }}
+        ondragend={finishPromptDrag}
+        ondragover={(event) => {
+          if (draggedCategory) previewCategoryDrop(event, group, category)
+          else {
+            // Only the first tree header offers a root insertion edge above the category.
+            const firstRow = group.prompts.length === 0 && group.categories[0]?.id === category.id
+            previewPromptDrop(event, `${group.id}:${category.id}`, firstRow)
+            if (!firstRow) dropAfter = true
+          }
+        }}
+        ondrop={(event) => {
+          if (draggedCategory) reorderCategory(event, group, category)
+          else movePrompt(event, group, dropAfter ? category : undefined)
+        }}
         onclick={(event) => {
           expandedCategoryIds[categoryKey(group, category)] = !categoryExpanded(group, category)
           if (event.detail !== 0) event.currentTarget.blur()
@@ -427,12 +517,20 @@
           type="button"
           aria-label={`Add ${contentLabel} to top of category ${category.title}`}
           title={`Add ${contentLabel} to top of category ${category.title}`}
-          onclick={() => addPrompt(category, group)}
+          onclick={(event) => {
+            addPrompt(category, group)
+            if (event.detail !== 0) event.currentTarget.blur()
+          }}
         >
           <Plus size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
+    {#if dropTarget === `${group.id}:order:${category.id}`}
+      {@render DropIndicator()}
+    {:else if dropTarget === `${group.id}:${category.id}`}
+      {@render DropIndicator(dropAfter, dropAfter ? 1 : 0)}
+    {/if}
   </div>
 
   {#if categoryExpanded(group, category)}
@@ -453,28 +551,18 @@
 
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
   <nav class="mock-activity-bar" aria-label="Mockup primary navigation">
-    {#each activities as activity (activity.id)}
-      <button class="activity-button" type="button" title={activeActivity === activity.id ? `${activity.label} — ${sidebarExpanded ? 'Hide' : 'Show'} sidebar` : activity.label} aria-label={activity.label}
-        aria-current={activeActivity === activity.id ? 'page' : undefined}
-        aria-expanded={activeActivity === activity.id ? sidebarExpanded : undefined}
-        data-compact={!sidebarExpanded}
-        onclick={() => {
-          sidebarExpanded = activeActivity === activity.id ? !sidebarExpanded : true
-          activeActivity = activity.id
-          collectionMenuOpen = false
-          actionsMenuOpen = false
-          if (activity.id === 'prompt' || activity.id === 'template') {
-            collectionKind = activity.id
-            selectedGroupId = 'active'
-          }
-        }}>
-        <activity.icon size={24} strokeWidth={1.5} aria-hidden="true" />
-      </button>
+    {#each activities.filter((activity) => activity.id !== 'settings') as activity (activity.id)}
+      {@render ActivityButton(activity)}
     {/each}
-    <button class="activity-button updates-button" type="button" title="App updates" aria-label="App updates — update available"
-      aria-expanded={updatesOpen} onclick={() => { updatesOpen = !updatesOpen }}>
-      <Download size={24} strokeWidth={1.5} aria-hidden="true" /><span class="update-dot"></span>
-    </button>
+    <div class="activity-footer">
+      {#each activities.filter((activity) => activity.id === 'settings') as activity (activity.id)}
+        {@render ActivityButton(activity)}
+      {/each}
+      <button class="activity-button updates-button" type="button" title="App updates" aria-label="App updates — update available"
+        aria-expanded={updatesOpen} onclick={() => { updatesOpen = !updatesOpen }}>
+        <Download size={24} strokeWidth={1.5} aria-hidden="true" /><span class="update-dot"></span>
+      </button>
+    </div>
   </nav>
   <aside class="mock-sidebar" hidden={!sidebarExpanded} style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <header class="workspace-header">
@@ -508,7 +596,8 @@
     <div class="separator"></div>
 
     <div class="collection-selector-wrap">
-      <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={collectionMenuOpen}
+      <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={selectedCollection ? collectionMenuOpen : undefined}
+        aria-haspopup={selectedCollection ? 'menu' : 'dialog'} data-empty={!selectedCollection}
         ondragover={(event) => { if (draggedPrompt) { event.preventDefault(); collectionMenuOpen = true } }}
         onclick={() => { if (selectedCollection) collectionMenuOpen = !collectionMenuOpen; else openCreateCollection() }}>
         <span class="selector-icon-cell">{#if selectedCollection}<CollectionIcon size={20} aria-hidden="true" />{:else}<Plus size={20} aria-hidden="true" />{/if}</span>
@@ -525,7 +614,8 @@
         {#if selectedCollection}<span class="selector-chevron">{#if collectionMenuOpen}<ChevronUp size={20} aria-hidden="true" />{:else}<ChevronDown size={20} aria-hidden="true" />{/if}</span>{/if}
       </button>
       {#if collectionMenuOpen}
-        <div class="local-menu collection-menu">
+        <div class="local-menu collection-menu" role="menu" aria-label="Collection selector">
+          <div class="collection-menu-items">
           {#each visibleCollections as collection (collection.id)}
             <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
               draggable="true" data-dragging={draggedCollectionId === collection.id} data-drop-over={dropTarget === collection.id}
@@ -537,11 +627,12 @@
               }}
               ondragend={() => { draggedCollectionId = null }}
               onclick={() => selectCollection(collection)}>
-              <GripVertical size={16} aria-hidden="true" /><CollectionIcon size={20} aria-hidden="true" />
+              <GripVertical class="collection-grip" size={16} aria-hidden="true" /><CollectionIcon class="collection-option-icon" size={20} aria-hidden="true" />
               <span>{collection.title}<small class="text-xs leading-4.5">{collectionCount(collection)} {contentLabel.toLowerCase()}{collectionCount(collection) === 1 ? '' : 's'}{collection.modified ? ` · ${collection.modified}` : ''}</small></span>
-              {#if selectedCollection?.id === collection.id}<ChevronRight size={20} aria-hidden="true" />{/if}
+              {#if selectedCollection?.id === collection.id}<ChevronRight size={14} aria-hidden="true" />{/if}
             </button>
           {/each}
+          </div>
           <div class="menu-footer"><button class="collection-option text-sm leading-5" type="button" onclick={openCreateCollection}><Plus size={20} aria-hidden="true" /><span>Create Collection<small class="text-xs leading-4.5">Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</small></span></button></div>
         </div>
       {/if}
@@ -570,29 +661,30 @@
       {/if}
     </div>
 
-    <div class="status-accordion">
+    <div class="status-accordion" bind:clientHeight={accordionHeight}>
       {#if !selectedCollection}<p class="empty-collections text-sm">Create a collection to get started.</p>{/if}
       {#key selectedCollection?.id}
       {#each visibleGroups as group (group.id)}
         <section class="status-section" data-testid={`mock-status-section-${group.id}`} data-expanded={group.expanded}
-          style={`flex:${group.expanded ? `${group.weight} 1 0px` : '0 0 36px'};`}>
+          style={`flex:0 0 ${sectionHeights[group.id]}px;`}>
           {#if group.expanded && visibleGroups.slice(0, visibleGroups.indexOf(group)).some((entry) => entry.expanded)}
             <button type="button" class="section-sash" aria-label={`Resize ${group.label} section`} tabindex="-1"
               onpointerdown={(event) => startResize(event, group)} onpointermove={moveDrag}
               onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></button>
           {/if}
-          <button class="status-header" type="button" aria-expanded={group.expanded}
+          <button class="status-header" type="button" aria-expanded={group.expanded} aria-controls={`mock-sidebar-${group.id}-content`}
             data-drop-over={dropTarget === group.id}
+            data-drop-blocked={dropTarget === group.id && (group.id === 'completed' || group.id === 'archived') && draggedPrompt?.group.id === group.id}
             ondragover={(event) => previewPromptDrop(event, group.id)}
             ondrop={(event) => movePrompt(event, group)}
             onclick={() => toggleSection(group)}>
             <span class="status-chevron"><ChevronRight size={20} /></span>
-            <group.icon size={16} />
+            <span class="status-icon"><group.icon size={16} aria-hidden="true" /></span>
             <span class="status-label text-sm leading-5">{group.label}</span>
             <span class="status-count text-xs leading-4.5">{groupCount(group)}</span>
           </button>
           {#if group.expanded}
-            <div class="prompt-tree-shell" role="presentation"
+            <div id={`mock-sidebar-${group.id}-content`} class="prompt-tree-shell" role="presentation"
               onmouseenter={() => { if (scrollMetrics[group.id]) scrollMetrics[group.id]!.hovered = true }}
               onmouseleave={() => { if (scrollMetrics[group.id]) scrollMetrics[group.id]!.hovered = false }}>
               <div class="prompt-tree" use:observeTree={group.id}>
@@ -616,7 +708,11 @@
                       } else { activeActivity = collectionKind; isOverviewActive = true }
                     }}>{isTemplateCollection && group.id === 'active' ? 'No templates' : `No ${group.label.toLowerCase()} prompts`}. Click to {group.id === 'active' || group.id === 'backlog' ? 'add' : 'view'}.</button>
                   {/if}
-                  <div class="tree-bottom-spacer" aria-hidden="true"></div>
+                  <div class="tree-bottom-spacer" role="presentation"
+                    ondragover={(event) => previewCategoryDrop(event, group)}
+                    ondrop={(event) => reorderCategory(event, group)}>
+                    {#if dropTarget === `${group.id}:order:end`}{@render DropIndicator()}{/if}
+                  </div>
                 </div>
               </div>
               {#if scrollMetrics[group.id]}
@@ -710,7 +806,7 @@
   </dialog>
   <dialog bind:this={collectionDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-create-title">
     <form onsubmit={(event) => { event.preventDefault(); createCollection() }}>
-      <header class="dialog-header"><CollectionIcon size={24} /><div><h2 id="mock-create-title" class="text-lg font-semibold">Create {isTemplateCollection ? 'Prompt Template' : 'Task Prompt'} Collection</h2><p class="text-xs">{isTemplateCollection ? 'Organize reusable prompts for repeatable workflows.' : 'Organize one-time prompts for individual tasks.'}</p></div></header>
+      <header class="dialog-header"><CollectionIcon size={24} /><div><h2 id="mock-create-title" class="text-lg font-semibold">Create {isTemplateCollection ? 'Template' : 'Prompt'} Collection</h2><p class="text-xs">{isTemplateCollection ? 'Organize reusable prompts for repeatable workflows.' : 'Organize one-time prompts for individual tasks.'}</p></div></header>
       <div class="dialog-body"><label>Collection Name<input class="text-sm leading-5" bind:value={collectionName} required /></label><p class="text-xs">Required. Names must be unique among {isTemplateCollection ? 'prompt template' : 'task prompt'} collections.</p></div>
       <footer class="dialog-footer"><button type="button" onclick={() => collectionDialog.close()}>Cancel</button><button class="accent-action" type="submit" disabled={!validCollectionName}>Create Collection</button></footer>
     </form>
@@ -785,11 +881,19 @@
   }
 
   .activity-button[data-compact='true']::before {
-    top: 8px;
-    bottom: 8px;
+    top: 9px;
+    bottom: 9px;
   }
 
-  .updates-button { margin-top: auto; }
+  .activity-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: auto;
+    position: relative;
+    width: 100%;
+  }
+
   .updates-button[aria-expanded='true'] { color: var(--ui-normal-text); }
   .update-dot {
     position: absolute;
@@ -973,6 +1077,12 @@
     color: var(--ui-normal-text);
   }
 
+  .collection-selector[data-empty='true'] {
+    border: 0;
+    grid-template-columns: 34px 8px minmax(0, 1fr);
+    padding: 8px;
+  }
+
   .selector-icon-cell {
     align-items: center;
     display: flex;
@@ -980,6 +1090,16 @@
     height: 34px;
     justify-content: center;
     width: 34px;
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .collection-selector:hover .selector-icon-cell,
+  .collection-selector:focus-visible .selector-icon-cell,
+  .collection-selector[aria-expanded='true'] .selector-icon-cell,
+  .collection-selector:hover .selector-chevron,
+  .collection-selector:focus-visible .selector-chevron,
+  .collection-selector[aria-expanded='true'] .selector-chevron {
+    color: var(--ui-normal-text);
   }
 
   .selector-copy {
@@ -1027,6 +1147,7 @@
     display: flex;
     grid-column: 4;
     justify-content: center;
+    color: var(--ui-hoverable-icon-glyph);
   }
 
   .prompts-header {
@@ -1092,7 +1213,8 @@
     width: 100%;
   }
 
-  .tree-prompt-row {
+  .tree-prompt-row,
+  .tree-category-row {
     position: relative;
   }
 
@@ -1131,7 +1253,7 @@
   }
 
   .tree-prompt-button[data-dragging='true'],
-  .tree-category-toggle[data-drop-over='true'],
+  .tree-category-content[data-dragging='true'],
   .local-menu .collection-option[data-drop-over='true'] {
     background: var(--ui-info-normal-surface);
     color: var(--ui-normal-text);
@@ -1149,6 +1271,7 @@
   }
   .drop-indicator[data-after='true'] { top: 100%; }
   .drop-indicator svg { display: block; overflow: visible; fill: none; stroke: var(--ui-info-strong-border); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .drop-indicator[data-blocked='true'] svg { stroke: var(--ui-muted-icon-glyph); }
 
   .tree-category-content {
     align-items: center;
@@ -1248,7 +1371,7 @@
     background: transparent;
     border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
+    color: var(--ui-hoverable-icon-glyph);
     cursor: pointer;
     display: flex;
     height: 28px;
@@ -1260,6 +1383,12 @@
   .tree-category-action:hover,
   .tree-category-action:focus-visible {
     background: var(--ui-neutral-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .tree-category-content:hover .tree-category-action,
+  .tree-category-content:focus-within .tree-category-action {
+    color: var(--ui-normal-text);
   }
 
   .tree-gutter {
@@ -1336,6 +1465,7 @@
 
   .tree-bottom-spacer {
     height: 32px;
+    position: relative;
   }
 
   .resize-handle {
@@ -1397,18 +1527,29 @@
     transform: rotate(90deg);
   }
 
-  .status-header :global(svg) {
+  .status-icon {
+    align-items: center;
+    display: flex;
+    height: 18px;
+    justify-content: center;
+    width: 18px;
     color: var(--ui-secondary-icon-glyph);
   }
 
   .status-header:hover, .status-header:focus-visible,
-  .status-header:hover :global(svg), .status-header:focus-visible :global(svg) {
+  .status-header:hover .status-chevron, .status-header:focus-visible .status-chevron,
+  .status-header:hover .status-icon, .status-header:focus-visible .status-icon {
     color: var(--ui-normal-text);
   }
 
   .status-header[data-drop-over='true'] {
     background: var(--ui-info-normal-surface);
     box-shadow: inset 0 0 0 1px var(--ui-info-strong-border);
+  }
+
+  .status-header[data-drop-blocked='true'] {
+    background: var(--ui-neutral-emphasis-surface);
+    box-shadow: inset 0 0 0 1px var(--ui-neutral-emphasis-border);
   }
 
   .status-label {
@@ -1503,7 +1644,8 @@
     padding: 0 12px;
   }
 
-  .empty-category:hover, .empty-status:hover {
+  .empty-category:hover, .empty-status:hover,
+  .empty-category:focus-visible, .empty-status:focus-visible {
     color: var(--ui-normal-text);
   }
 
@@ -1525,8 +1667,16 @@
   .collection-menu {
     top: 100%;
     left: 8px;
-    width: max(320px, calc(100% - 16px));
+    width: 320px;
     padding: 6px;
+  }
+
+  .collection-menu-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 478px;
+    overflow-y: auto;
   }
 
   .actions-menu {
@@ -1560,7 +1710,8 @@
   .local-menu .collection-option {
     display: grid;
     grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
-    min-height: 58px;
+    flex: 0 0 auto;
+    height: 58px;
     border: 1px solid var(--ui-ghost-surface);
     border-radius: 8px;
     gap: 8px;
@@ -1568,6 +1719,21 @@
 
   .collection-option :global(svg) {
     justify-self: center;
+  }
+
+  .collection-option :global(.collection-grip) {
+    color: var(--ui-muted-icon-glyph);
+    cursor: grab;
+  }
+
+  .collection-option :global(.collection-option-icon) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .collection-option:hover :global(svg),
+  .collection-option:focus-visible :global(svg),
+  .collection-option[data-selected='true'] :global(svg) {
+    color: var(--ui-normal-text);
   }
 
   .local-menu .collection-option[data-dragging='true'] {
@@ -1593,6 +1759,7 @@
   }
 
   .collection-option small {
+    margin-top: 2px;
     font-weight: var(--font-weight-normal);
   }
 
@@ -1605,18 +1772,20 @@
   .local-menu .collection-option[data-selected='true']:hover,
   .local-menu .collection-option[data-selected='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
     color: var(--ui-normal-text);
   }
 
   .menu-footer button:hover, .menu-footer button:focus-visible {
-    background: var(--ui-neutral-action-fill);
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
     color: var(--ui-normal-text);
   }
 
   .menu-footer {
     border-top: 1px solid var(--ui-neutral-muted-border);
-    margin-top: 5px;
-    padding-top: 5px;
+    margin: 5px -6px 0;
+    padding: 5px 6px 0;
   }
 
   .mock-dialog {
