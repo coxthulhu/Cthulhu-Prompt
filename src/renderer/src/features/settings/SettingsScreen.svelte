@@ -421,7 +421,7 @@
         <ControlRow
           testId="about-automatic-updates-row"
           label="Automatic Updates"
-          detail="Automatically check for updates at startup and every 15 minutes, and download them when available."
+          detail="Automatically check for and download updates."
         >
           {#snippet control()}
             <ToggleTextButton
