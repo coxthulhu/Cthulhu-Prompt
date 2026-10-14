@@ -6,15 +6,13 @@
   import { getWorkspaceFolderName } from './workspaceDisplay'
 
   /** Current workspace and distinct selectors for each summary surface. */
-  let { workspacePath, pathTestId, openFolderTestId, compact = false } = $props<{
+  let { workspacePath, pathTestId, openFolderTestId } = $props<{
     workspacePath: string | null
     pathTestId: string
     openFolderTestId: string
-    /** Shrinks popup text and glyphs while preserving the workspace row's alignment. */
-    compact?: boolean
   }>()
 
-  /** Folder-derived title shared by Home and the workspace popup. */
+  /** Folder-derived title for the Home summary. */
   const workspaceName = $derived(workspacePath ? getWorkspaceFolderName(workspacePath) : undefined)
 
   /** Hands the selected workspace folder to Windows Explorer through the preload bridge. */
@@ -26,17 +24,16 @@
   }
 </script>
 
-<!-- Shared workspace details and Explorer action with surface-appropriate sizing. -->
+<!-- Workspace details and Explorer action for the Home screen. -->
 <Row
   variant="workspace"
   icon={FolderOpen}
-  iconClass={compact ? 'size-6' : undefined}
   label={workspaceName ?? 'No workspace open'}
   labelTitle={workspaceName}
   detail={workspacePath ?? 'Open a workspace or create one to get started.'}
   detailTitle={workspacePath ?? undefined}
   detailTestId={workspacePath ? pathTestId : undefined}
-  class={compact ? 'p-4 [&_.cthulhuUiTitle]:text-lg [&_.cthulhuUiTitle]:leading-7' : 'p-4'}
+  class="p-4"
 >
   {#snippet trailing()}
     <IconButton

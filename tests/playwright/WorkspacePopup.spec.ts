@@ -32,7 +32,7 @@ describe('Workspace popup', () => {
 
     await button.press('Enter')
     await expect(popup).toBeVisible()
-    await expect(popup.getByRole('heading', { name: 'Workspace', exact: true })).toBeVisible()
+    await expect(popup.getByRole('heading', { name: 'Workspace Info', exact: true })).toBeVisible()
     await expect(popup).toHaveAttribute('aria-modal', 'false')
     await expect(button).toHaveAttribute('aria-expanded', 'true')
     await expect(mainWindow.getByTestId('app-sidebar')).toBeHidden()
@@ -74,7 +74,7 @@ describe('Workspace popup', () => {
     /** Shared popup survives workspace lifecycle changes. */
     const popup = mainWindow.getByTestId('workspace-popup')
     await mainWindow.getByTestId('workspace-button').click()
-    await expect(popup.locator('.cthulhuUiTitle')).toHaveText('No workspace open')
+    await expect(popup.getByTestId('workspace-popup-name')).toHaveText('No workspace open')
     await expect(popup).toContainText('Open a workspace or create one to get started.')
     await expect(popup.getByTestId('workspace-popup-open-folder-button')).toBeDisabled()
 
@@ -87,49 +87,39 @@ describe('Workspace popup', () => {
       await mainWindow.getByTestId('open-workspace-button').click()
       await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(path)
       await expect(popup.getByTestId('workspace-popup-path')).toHaveText(path)
-      await expect(popup.locator('.cthulhuUiTitle')).toHaveText(path.split('/').at(-1)!)
+      await expect(popup.getByTestId('workspace-popup-name')).toHaveText(path.split('/').at(-1)!)
       await popup.getByTestId('workspace-popup-open-folder-button').click()
       await expect.poll(() => electronApp.evaluate(({ app }) => (app as any).workspacePopupOpenedPath)).toBe(path)
       await expect(popup).toBeVisible()
     }
 
-    /** Home remains the reference for the shared path and foreground styling. */
+    /** Home retains its larger summary while the popup uses App Updates typography. */
     const homeRow = mainWindow.getByTestId('home-primary-card').locator('.cthulhuUiRow')
-    /** Compact summary matches the popup heading's text and icon sizes. */
-    const popupRow = popup.locator('.cthulhuUiRow')
-    await expect(popupRow.locator('.cthulhuUiTitle')).toHaveCSS('font-size', '18px')
-    await expect(popupRow.locator('.cthulhuUiTitle')).toHaveCSS('line-height', '28px')
-    await expect(popupRow.locator('.cthulhuUiIconCell svg')).toHaveCSS('width', '24px')
-    await expect(popupRow.locator('.cthulhuUiIconCell svg')).toHaveCSS('height', '24px')
+    const workspaceName = popup.getByTestId('workspace-popup-name')
+    const explorerButton = popup.getByRole('button', { name: 'Open in Explorer', exact: true })
+    await expect(workspaceName).toHaveCSS('font-size', '20px')
+    await expect(workspaceName).toHaveCSS('line-height', '28px')
+    await expect(popup.getByTestId('workspace-popup-path')).toHaveCSS('user-select', 'text')
+    await expect(explorerButton).toHaveAttribute('data-variant', 'accent')
     await expect.poll(async () => {
-      /** Explorer action and summary row must share the same vertical center after compact sizing. */
-      const [row, button] = await Promise.all([
-        popupRow.boundingBox(),
-        popup.getByTestId('workspace-popup-open-folder-button').boundingBox()
+      /** Explorer action spans the content width beneath the location. */
+      const [path, button] = await Promise.all([
+        popup.getByTestId('workspace-popup-path').boundingBox(),
+        explorerButton.boundingBox()
       ])
-      return Math.abs(row!.y + row!.height / 2 - button!.y - button!.height / 2)
+      return Math.max(Math.abs(path!.x - button!.x), Math.abs(path!.width - button!.width))
     }).toBeLessThanOrEqual(1)
     await expect(homeRow.locator('.cthulhuUiTitle')).toHaveCSS('font-size', '24px')
     await expect(homeRow.locator('.cthulhuUiIconCell svg')).toHaveCSS('width', '32px')
-    for (const selector of ['.cthulhuUiTitle', '.cthulhuUiSubtitle']) {
-      for (const property of selector === '.cthulhuUiTitle'
-        ? ['font-weight', 'color']
-        : ['font-size', 'line-height', 'font-weight', 'color']) {
-        /** Home's computed style is the reference for the requested identical appearance. */
-        const expectedStyle = await homeRow.locator(selector).evaluate((element, property) => getComputedStyle(element).getPropertyValue(property), property)
-        await expect(popupRow.locator(selector)).toHaveCSS(property, expectedStyle)
-      }
-    }
-    await expect(popupRow).toHaveCSS('padding', '16px')
     await mainWindow.getByTestId('close-workspace-button').click()
-    await expect(popup.locator('.cthulhuUiTitle')).toHaveText('No workspace open')
+    await expect(workspaceName).toHaveText('No workspace open')
     await expect(popup.getByTestId('workspace-popup-path')).toHaveCount(0)
     await expect(popup.getByTestId('workspace-popup-open-folder-button')).toBeDisabled()
   })
 
-  // Long workspace names and paths should truncate while keeping the Explorer action visible.
+  // Long workspace names and paths should wrap while keeping the Explorer action visible.
   test('keeps long workspace details inside the popup after resizing the window', async ({ electronApp, testSetup }) => {
-    /** Long folder name stresses both rows of the shared summary. */
+    /** Long folder name stresses the name card and location wrapping. */
     const path = `/ws/${'long-workspace-name-'.repeat(6)}`
     /** Minimal workspace provides real loaded metadata at the requested long path. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal', path } })
@@ -142,10 +132,15 @@ describe('Workspace popup', () => {
       }, width)
       await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getSize()[0])).toBe(width)
       await expect(popup.getByTestId('workspace-popup-open-folder-button')).toBeInViewport()
+      await expect(popup.locator('.cthulhuUiPopupSurface')).toHaveCSS('width', '360px')
       await expect(popup.getByTestId('workspace-popup-path')).toHaveAttribute('title', path)
       await expect.poll(() => popup.locator('.cthulhuUiPopupSurface').evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
-      await expect(popup.locator('.cthulhuUiTitle')).toHaveCSS('text-overflow', 'ellipsis')
-      await expect(popup.getByTestId('workspace-popup-path')).toHaveCSS('text-overflow', 'ellipsis')
+      for (const testId of ['workspace-popup-name', 'workspace-popup-path']) {
+        const detail = popup.getByTestId(testId)
+        await expect(detail).toHaveCSS('overflow-wrap', 'anywhere')
+        await expect.poll(() => detail.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
+      }
+      await expect.poll(() => popup.getByTestId('workspace-popup-path').evaluate((element) => element.clientHeight)).toBeGreaterThan(20)
     }
   })
 })
