@@ -10,6 +10,7 @@ Cthulhu Prompt is a lightweight prompt editor and organizer that helps you write
 - Browse all your prompts on a single screen with infinite scrolling.
 - Runs locally and quickly without any cloud or internet requirements.
 - Saves your prompts as simple markdown files. Version control them if you want to!
+- Supports multiple users collaborating on prompts and templates in the same committed workspace.
 - A simple interface with good performance. No elements flashing or popping in!
 - Works with any agentic interface - Just hit the copy button to get your templated prompt in your clipboard.
 
