@@ -1,4 +1,4 @@
-import { Archive, Check, CircleDashed, Clock, Play, Undo2 } from 'lucide-svelte'
+import { Archive, Check, CircleDashed, Clock, Play } from 'lucide-svelte'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import type { SimpleSelectorButtonItem } from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
 
@@ -52,7 +52,7 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
     id: PromptStatus.InProgress,
     forwardAction: completeAction,
     backwardAction: {
-      icon: Undo2,
+      icon: CircleDashed,
       label: 'Set prompt to Todo',
       hoverVariant: 'neutral',
       testId: 'prompt-previous-status-button',
@@ -85,7 +85,7 @@ const statusPresentation: Record<PromptStatus, PromptStatusItem> = {
   [PromptStatus.Completed]: {
     id: PromptStatus.Completed,
     backwardAction: {
-      icon: Undo2,
+      icon: CircleDashed,
       label: 'Uncomplete prompt',
       hoverVariant: 'neutral',
       testId: 'prompt-uncomplete-button',
