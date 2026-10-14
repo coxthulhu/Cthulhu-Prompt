@@ -15,7 +15,7 @@
     backdrop?: boolean
     closeDisabled?: boolean
     closeOnOutsideClick?: boolean
-    placement?: 'center' | 'bottom-left'
+    placement?: 'center' | 'bottom-left' | 'top-left'
     anchor?: HTMLElement
     offsetX?: number
     offsetY?: number
@@ -61,7 +61,7 @@
   })
   /** Live CSS anchor edges keep placement aligned through scrolling and resizing. */
   const surfaceStyle = $derived(
-    placement === 'bottom-left'
+    placement !== 'center'
       ? cssAnchor.getStyle({ placement, anchored: !!anchor, offsetX, offsetY })
       : undefined
   )
@@ -197,7 +197,8 @@
     pointer-events: auto;
   }
 
-  .cthulhuUiPopupLayer[data-placement='bottom-left'] :global(.cthulhuUiPopupSurface) {
+  .cthulhuUiPopupLayer[data-placement='bottom-left'] :global(.cthulhuUiPopupSurface),
+  .cthulhuUiPopupLayer[data-placement='top-left'] :global(.cthulhuUiPopupSurface) {
     position: fixed;
   }
 </style>

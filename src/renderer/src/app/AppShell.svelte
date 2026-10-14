@@ -801,7 +801,7 @@
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} onNavigate={activateActivity}
+    <AppActivityBar {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
       updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return
@@ -826,7 +826,6 @@
           {activeScreen}
           {isWorkspaceReady}
           {isWorkspaceLoading}
-          {workspacePath}
           {screenCollectionId}
           {promptCollectionScreenMode}
           {shownFinalStatusGroups}

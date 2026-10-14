@@ -173,7 +173,7 @@ test.describe('Sidebar Tests', () => {
     await expect(activity).toHaveAttribute('title', 'Task Prompts — Show sidebar')
     await expect(activity).toHaveCSS('color', activeIconColor)
     await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
-    expect(await readIndicator()).toEqual({ height: '28px', width: '2px' })
+    expect(await readIndicator()).toEqual({ height: '26px', width: '2px' })
 
     // Keyboard activation restores the sidebar without navigating away from the prompt.
     await activity.press('Enter')

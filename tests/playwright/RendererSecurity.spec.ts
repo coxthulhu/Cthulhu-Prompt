@@ -172,6 +172,9 @@ describe('Renderer security', () => {
       await cdp.send('Page.enable')
       await cdp.send('Page.setBypassCSP', { enabled: true })
       await mainWindow.reload()
+      // Wait for persisted activity restoration before the navigation helper decides whether to click it.
+      await expect(mainWindow.getByTestId('nav-button-home')).toBeVisible()
+      await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
       await testHelpers.navigateToPromptCollections('Development')
       await expect(mainWindow.locator('iframe.web-worker-ext-host-iframe')).toBeAttached()
 

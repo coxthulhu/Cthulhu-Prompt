@@ -21,12 +21,10 @@
   import type { ScreenId } from '@renderer/app/screens'
   import { isPromptCollectionScreen } from '@shared/domain/user-persistence/UserPersistence'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import appIcon from '@renderer/assets/cutethulhu.png'
   import {
     ArrowUpToLine,
     ChevronsDownUp,
     ChevronsUpDown,
-    ExternalLink,
     FileText,
     FolderCog,
     Layers,
@@ -39,7 +37,7 @@
   import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
   import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { movePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
   import {
     PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
@@ -72,7 +70,6 @@
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
   import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
-  import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
   import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
   import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
   import { getPromptStatusGroupCounts, promptStatusGroups, sidebarPromptStatusGroups } from '../prompt-collections/promptStatusGroups'
@@ -86,10 +83,6 @@
     type ManageCategoriesDialogOpenOptions
   } from '../prompt-collections/ManageCategoriesDialog.svelte'
   import PromptTree from '@renderer/features/prompt-tree/PromptTree.svelte'
-  import {
-    getNextAppIconTooltip,
-    INITIAL_APP_ICON_TOOLTIP
-  } from './appIconTooltip'
 
   type CreatePromptCollectionDialogHandle = {
     openDialog: () => void
@@ -111,7 +104,6 @@
     activeScreen,
     isWorkspaceReady = false,
     isWorkspaceLoading = false,
-    workspacePath = null,
     screenCollectionId = null,
     promptCollectionScreenMode = PromptCollectionScreenMode.Active,
     shownFinalStatusGroups = {},
@@ -124,7 +116,6 @@
     activeScreen: ScreenId
     isWorkspaceReady?: boolean
     isWorkspaceLoading?: boolean
-    workspacePath?: string | null
     screenCollectionId?: string | null
     promptCollectionScreenMode?: PromptCollectionScreenMode
     /** Visibility for each toggleable finalized group. */
@@ -423,16 +414,6 @@
     }
   }
 
-  const openWorkspaceFolder = () => {
-    const targetWorkspacePath = workspacePath
-    if (!targetWorkspacePath) return
-
-    // Hand off to the main process so Windows opens the folder in Explorer.
-    void runIpcBestEffort(() =>
-      ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath)
-    )
-  }
-
   // Selects and reveals the collection overview formerly represented by the first tree row.
   const selectCollectionOverview = () => {
     // The selected collection owns both the toolbar state and the overview navigation target.
@@ -486,21 +467,6 @@
       () => false
     )
   }
-
-  // Keep workspace header text aligned with the mockup's simple end-truncation style.
-  const workspaceDisplay = $derived.by(() => {
-    if (!workspacePath) {
-      return {
-        title: 'No workspace selected',
-        path: 'Select a workspace to get started.'
-      }
-    }
-
-    return {
-      title: getWorkspaceFolderName(workspacePath),
-      path: workspacePath
-    }
-  })
 
   const openCreatePromptCollectionDialog = () => {
     createPromptCollectionDialog?.openDialog()
@@ -739,56 +705,6 @@
   data-testid="app-sidebar"
   class="appSidebar flex h-full w-full flex-col text-sidebar-foreground/80"
 >
-  <div class="sidebarTopLevelInsetWithInnerPadding pt-4 pb-3">
-    <div class="flex items-start gap-2">
-      <div class="flex h-10 w-10 shrink-0 items-center justify-center">
-        <img
-          class="h-8 w-8 object-contain"
-          src={appIcon}
-          alt="Cthulhu Prompt icon"
-          title={INITIAL_APP_ICON_TOOLTIP}
-          draggable="false"
-          onmouseenter={(event) => {
-            event.currentTarget.title = getNextAppIconTooltip(event.currentTarget.title)
-          }}
-          ondragstart={(event) => event.preventDefault()}
-        />
-      </div>
-      <div class="min-w-0 flex-1">
-        <div class="cthulhuSidebarWorkspaceTitleRow">
-          <h1
-            data-testid="sidebar-workspace-name"
-            class="cthulhuSidebarWorkspaceName truncate text-sm font-semibold tracking-tight"
-          >
-            {workspaceDisplay.title}
-          </h1>
-          {#if workspacePath}
-            <IconButton
-              icon={ExternalLink}
-              label="Open Workspace Folder"
-              title="Open Workspace Folder"
-              size="tiny"
-              borderless
-              baseVariant="muted"
-              hoverVariant="glyph"
-              testId="sidebar-open-workspace-folder-button"
-              class="ml-0.5"
-              onclick={openWorkspaceFolder}
-            />
-          {/if}
-        </div>
-        <p
-          data-testid="sidebar-workspace-subtitle"
-          class="cthulhuSidebarWorkspacePath truncate pt-0.5 text-xs"
-          title={workspacePath ?? undefined}
-        >
-          {workspaceDisplay.path}
-        </p>
-      </div>
-    </div>
-  </div>
-  <Separator />
-
   {#if collectionListState !== 'no-workspace'}
     <div class="sidebarTopLevelInsetWithInnerPadding py-1">
       {#if collectionListState === 'empty'}
@@ -999,19 +915,4 @@
     z-index: var(--z-chrome);
   }
 
-  .cthulhuSidebarWorkspaceName {
-    min-width: 0;
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuSidebarWorkspacePath {
-    color: var(--ui-muted-text);
-  }
-
-  .cthulhuSidebarWorkspaceTitleRow {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: 4px;
-  }
 </style>

@@ -756,16 +756,17 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(
       mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]')
     ).toHaveAttribute('aria-label', 'Prompt Templates')
-    /** Visible activity IDs proving the required primary-screen order. */
+    /** Workspace details lead the unchanged primary-screen order. */
     const activityIds = await mainWindow
       .locator('[data-testid="app-activity-bar"] > button')
       .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-testid')))
     expect(activityIds.slice(0, 4)).toEqual([
+      'workspace-button',
       'nav-button-home',
       'nav-button-prompt-task-collections',
-      'nav-button-prompt-template-collections',
-      'nav-button-settings'
+      'nav-button-prompt-template-collections'
     ])
+    await expect(mainWindow.locator('[data-testid="app-activity-bar"] > div [data-testid="nav-button-settings"]')).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="nav-button-prompt-task-collections"] svg')
     ).toHaveClass(/lucide-file-text/)

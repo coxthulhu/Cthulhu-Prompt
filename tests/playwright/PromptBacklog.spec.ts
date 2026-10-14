@@ -149,6 +149,8 @@ describe('Backlog prompts', () => {
       const directory = group === 'completed' ? 'Completed' : 'Archived'
       /** Saved metadata verifies both the final status and retained category. */
       const path = `${ROOT_PATH}/${directory}/second.prompt.md`
+      // The optimistic drop completes before the destination file is necessarily persisted.
+      await expect.poll(() => checkFileExists(electronApp, path)).toBe(true)
       await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, path)))
         .toMatchObject({ status: directory, category: 'alpha', finalizedAt: expect.any(String) })
       /** Original content must remain byte-for-byte unchanged by a rejected drop. */

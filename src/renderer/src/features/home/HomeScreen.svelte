@@ -13,16 +13,14 @@
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
   import CthulhuPromptWordmark from '@renderer/common/cthulhu-ui/layout/CthulhuPromptWordmark.svelte'
-  import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
-  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
   } from '@renderer/features/workspace/types'
-  import { getWorkspaceFolderName } from '@renderer/features/workspace/workspaceDisplay'
+  import WorkspaceSummary from '@renderer/features/workspace/WorkspaceSummary.svelte'
   import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
   import WelcomeDialog from './WelcomeDialog.svelte'
 
@@ -125,27 +123,7 @@
     showCreateWorkspaceDialog = true
   }
 
-  const openWorkspaceFolder = () => {
-    const targetWorkspacePath = workspacePath
-    if (!targetWorkspacePath) return
-
-    // Hand off to the main process so Windows opens the folder in Explorer.
-    void runIpcBestEffort(() =>
-      ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath)
-    )
-  }
-
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isOpeningWorkspaceDialog)
-  const currentWorkspaceDetails = $derived.by(() => {
-    if (!workspacePath) {
-      return null
-    }
-
-    return {
-      name: getWorkspaceFolderName(workspacePath),
-      path: workspacePath
-    }
-  })
 </script>
 
 <main class="flex min-w-0 flex-1 overflow-y-auto px-8 py-12" data-testid="home-screen">
@@ -159,8 +137,8 @@
         <Button
           icon={BookOpen}
           text="Welcome"
-          variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
-          appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
+          variant={workspacePath ? 'neutral' : 'accent'}
+          appearance={workspacePath ? 'outline' : 'filled'}
           testId="show-welcome-button"
           onclick={() => (showWelcomeDialog = true)}
         />
@@ -182,27 +160,8 @@
       aria-label="Workspace"
       data-testid="home-primary-card"
     >
-      <Row
-        variant="workspace"
-        icon={FolderOpen}
-        label={currentWorkspaceDetails?.name ?? 'No workspace open'}
-        labelTitle={currentWorkspaceDetails?.name}
-        detail={currentWorkspaceDetails?.path ?? 'Open a workspace or create one to get started.'}
-        detailTitle={currentWorkspaceDetails?.path}
-        detailTestId={currentWorkspaceDetails ? 'workspace-ready-path' : undefined}
-        class="p-4"
-      >
-        {#snippet trailing()}
-          <IconButton
-            icon={ExternalLink}
-            label="Open Workspace Folder"
-            title="Open Workspace Folder"
-            testId="home-open-workspace-folder-button"
-            disabled={!currentWorkspaceDetails}
-            onclick={openWorkspaceFolder}
-          />
-        {/snippet}
-      </Row>
+      <WorkspaceSummary {workspacePath} pathTestId="workspace-ready-path"
+        openFolderTestId="home-open-workspace-folder-button" />
       <Separator />
       <div class="flex flex-wrap items-center justify-between gap-5 p-4">
         <div class="flex flex-wrap items-center gap-[22px]">
@@ -232,8 +191,8 @@
             testId="create-workspace-button"
             icon={FolderPlus}
             text="Create"
-            variant={currentWorkspaceDetails ? 'neutral' : 'accent'}
-            appearance={currentWorkspaceDetails ? 'outline' : 'filled'}
+            variant={workspacePath ? 'neutral' : 'accent'}
+            appearance={workspacePath ? 'outline' : 'filled'}
             onclick={handleCreateFolder}
             state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
           />
