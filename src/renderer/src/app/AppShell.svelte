@@ -479,14 +479,11 @@
 
     if (workspaceUiState.selectedScreen === 'mockups') {
       const persistedMockupId = workspaceUiState.selectedScreenData.mockupId
-      if (persistedMockupId === null || hasMockup(persistedMockupId)) {
-        selectPromptTaskSidebarCollection()
-        selectedMockupId = persistedMockupId
-        activeScreen = 'mockups'
-        return
-      }
-
-      await restoreWorkspaceHomeScreen(workspaceId)
+      selectPromptTaskSidebarCollection()
+      // Let the mockups screen select its first entry when the saved mockup was deleted.
+      selectedMockupId =
+        persistedMockupId !== null && hasMockup(persistedMockupId) ? persistedMockupId : null
+      activeScreen = 'mockups'
       return
     }
 
