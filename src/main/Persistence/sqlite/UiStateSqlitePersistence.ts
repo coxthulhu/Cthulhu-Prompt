@@ -15,6 +15,7 @@ import type {
 } from '@shared/domain/ui-state/UiState'
 import { MarkdownContentUiStateDataAccess } from './MarkdownContentUiStateDataAccess'
 import { SqliteDataAccess } from './SqliteDataAccess'
+import { WorkspaceStateDataAccess } from './WorkspaceStateDataAccess'
 import { UserPersistenceDataAccess } from './UserPersistenceDataAccess'
 import type { SqlitePersistenceLayer } from '../PersistenceTypes'
 
@@ -27,36 +28,6 @@ type WorkspaceCompositeKey = {
   localId: string
 }
 
-/** SQLite row containing workspace screen-selection state. */
-type WorkspaceUiStateRow = {
-  selectedScreen: string
-  selectedScreenDataJson: string | null
-  lastPromptTaskCollectionId: string | null
-  lastPromptTemplateCollectionId: string | null
-}
-
-/** SQLite row containing one prompt-collection screen view state. */
-type WorkspacePromptCollectionUiStateRow = {
-  workspaceId: string
-  contentOwnerId: string
-  selectedEntryId: string
-  treeIsExpanded: number
-  contentSectionIsExpanded: number
-  /** Serialized offsets for the collection's visited status modes. */
-  scrollTopByModeJson: string
-  /** Selected collection mode retained across application launches. */
-  selectedMode: WorkspacePromptCollectionUiState['selectedMode']
-  /** Serialized visibility of the collection's optional status sections. */
-  shownFinalStatusGroupsJson: string
-}
-
-/** SQLite row containing one serialized accordion state. */
-type AccordionUiStateRow = {
-  workspaceId: string
-  persistenceId: string
-  sectionsJson: string
-}
-
 /** Splits a workspace-scoped authoritative key at its first separator. */
 const parseWorkspaceCompositeKey = (id: string): WorkspaceCompositeKey => {
   /** Separator between the workspace ID and collection-local ID. */
@@ -67,16 +38,6 @@ const parseWorkspaceCompositeKey = (id: string): WorkspaceCompositeKey => {
   return {
     workspaceId: id.slice(0, separatorIndex),
     localId: id.slice(separatorIndex + 1)
-  }
-}
-
-/** Parses nullable JSON stored for one workspace screen selection. */
-const parseJson = (value: string | null): unknown => {
-  if (value === null) return null
-  try {
-    return JSON.parse(value)
-  } catch {
-    return undefined
   }
 }
 
@@ -94,212 +55,93 @@ export const userPersistenceSqlitePersistence: SqlitePersistenceLayer<
   }
 }
 
-/** SQLite query/command adapter for workspace-level UI state. */
-export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<
-  WorkspaceUiState,
-  SqlitePersistenceFields
-> = {
+/** SQLite adapter for workspace navigation, which follows the user. */
+export const workspaceUiStateSqlitePersistence: SqlitePersistenceLayer<WorkspaceUiState, SqlitePersistenceFields> = {
   kind: 'sqlite',
   query: (workspaceId) => {
-    /** Stored workspace-level UI state selected by its workspace key. */
-    const row = SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        SELECT
-          selected_screen AS selectedScreen,
-          selected_screen_data_json AS selectedScreenDataJson,
-          last_prompt_task_collection_id AS lastPromptTaskCollectionId,
-          last_prompt_template_collection_id AS lastPromptTemplateCollectionId
-        FROM workspace_ui_state
-        WHERE workspace_id = ?
-        `
-      )
-      .get(workspaceId) as WorkspaceUiStateRow | undefined
+    /** Navigation payload has no redundant identity fields. */
+    const row = WorkspaceStateDataAccess.read(workspaceId, 'workspace-navigation', null)
     if (!row) return null
-    /** Validated discriminated screen selection stored in the row. */
-    const selection = parseWorkspaceScreenSelection(
-      row.selectedScreen,
-      parseJson(row.selectedScreenDataJson)
-    )
-    return selection
-      ? {
-          workspaceId,
-          ...selection,
-          lastPromptTaskCollectionId: row.lastPromptTaskCollectionId,
-          lastPromptTemplateCollectionId: row.lastPromptTemplateCollectionId
-        }
-      : null
+    /** Existing validation rejects invalid screen selections. */
+    const selection = parseWorkspaceScreenSelection(row.selectedScreen, row.selectedScreenData)
+    return selection ? { ...row, ...selection, workspaceId } : null
   },
   command: (workspaceId, transition) => {
-    /** Database receiving the workspace-level UI-state command. */
-    const db = SqliteDataAccess.getDatabase()
     if (!transition.after) {
-      db.prepare('DELETE FROM workspace_ui_state WHERE workspace_id = ?').run(workspaceId)
+      WorkspaceStateDataAccess.delete(workspaceId, 'workspace-navigation', null)
       return
     }
-    /** Authoritative workspace UI state written by the command. */
-    const uiState = transition.after.data
-    db.prepare(
-      `
-      INSERT INTO workspace_ui_state (
-        workspace_id,
-        selected_screen,
-        selected_screen_data_json,
-        last_prompt_task_collection_id,
-        last_prompt_template_collection_id
-      )
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(workspace_id) DO UPDATE SET
-        selected_screen = excluded.selected_screen,
-        selected_screen_data_json = excluded.selected_screen_data_json,
-        last_prompt_task_collection_id = excluded.last_prompt_task_collection_id,
-        last_prompt_template_collection_id = excluded.last_prompt_template_collection_id
-      `
-    ).run(
-      workspaceId,
-      uiState.selectedScreen,
-      uiState.selectedScreenData === null ? null : JSON.stringify(uiState.selectedScreenData),
-      uiState.lastPromptTaskCollectionId,
-      uiState.lastPromptTemplateCollectionId
-    )
+    /** Identity stays in the key columns rather than the JSON payload. */
+    const { workspaceId: _workspaceId, ...state } = transition.after.data
+    WorkspaceStateDataAccess.write(workspaceId, 'workspace-navigation', null, state)
   }
 }
 
-/** SQLite query/command adapter for prompt-collection view UI state. */
-export const workspacePromptCollectionUiStateSqlitePersistence: SqlitePersistenceLayer<
-  WorkspacePromptCollectionUiState,
-  SqlitePersistenceFields
-> = {
+/** SQLite adapter separating collection choices from machine-local viewport offsets. */
+export const workspacePromptCollectionUiStateSqlitePersistence: SqlitePersistenceLayer<WorkspacePromptCollectionUiState, SqlitePersistenceFields> = {
   kind: 'sqlite',
   query: (id) => {
-    /** Composite workspace and content-owner key decoded for the SQL query. */
+    /** Workspace and owner identify both halves of the record. */
     const { workspaceId, localId: contentOwnerId } = parseWorkspaceCompositeKey(id)
-    /** Stored prompt-collection view state selected by its composite key. */
-    const row = SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        SELECT
-          workspace_id AS workspaceId,
-          content_owner_id AS contentOwnerId,
-          selected_entry_id AS selectedEntryId,
-          tree_is_expanded AS treeIsExpanded,
-          content_section_is_expanded AS contentSectionIsExpanded,
-          scroll_top_by_mode_json AS scrollTopByModeJson,
-          selected_mode AS selectedMode,
-          shown_final_status_groups_json AS shownFinalStatusGroupsJson
-        FROM prompt_collection_view_state
-        WHERE workspace_id = ? AND content_owner_id = ?
-        `
-      )
-      .get(workspaceId, contentOwnerId) as WorkspacePromptCollectionUiStateRow | undefined
-    return row
-      ? {
-          workspaceId: row.workspaceId,
-          contentOwnerId: row.contentOwnerId,
-          selectedEntryId: row.selectedEntryId,
-          treeIsExpanded: row.treeIsExpanded !== 0,
-          contentSectionIsExpanded: row.contentSectionIsExpanded !== 0,
-          scrollTopByMode: JSON.parse(row.scrollTopByModeJson),
-          selectedMode: row.selectedMode,
-          shownFinalStatusGroups: JSON.parse(row.shownFinalStatusGroupsJson)
-        }
-      : null
+    /** User choices are sufficient to restore a collection on a new machine. */
+    const user = WorkspaceStateDataAccess.read(workspaceId, 'collection-user', contentOwnerId)
+    return user ? {
+      ...user, workspaceId, contentOwnerId,
+      scrollTopByMode: WorkspaceStateDataAccess.read(workspaceId, 'collection-machine', contentOwnerId)?.scrollTopByMode ?? {}
+    } : null
   },
   command: (id, transition) => {
-    /** Composite workspace and content-owner key decoded for the SQL command. */
+    /** Both storage scopes share the same workspace and owner. */
     const { workspaceId, localId: contentOwnerId } = parseWorkspaceCompositeKey(id)
-    /** Database receiving the prompt-collection UI-state command. */
-    const db = SqliteDataAccess.getDatabase()
-    if (!transition.after) {
-      db.prepare(
-        'DELETE FROM prompt_collection_view_state WHERE workspace_id = ? AND content_owner_id = ?'
-      ).run(workspaceId, contentOwnerId)
-      return
-    }
-    /** Authoritative prompt-collection view state written by the command. */
-    const uiState = transition.after.data
-    db.prepare(
-      `
-      INSERT INTO prompt_collection_view_state (
-        workspace_id,
-        content_owner_id,
-        selected_entry_id,
-        tree_is_expanded,
-        content_section_is_expanded,
-        scroll_top_by_mode_json,
-        selected_mode,
-        shown_final_status_groups_json
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
-        selected_entry_id = excluded.selected_entry_id,
-        tree_is_expanded = excluded.tree_is_expanded,
-        content_section_is_expanded = excluded.content_section_is_expanded,
-        scroll_top_by_mode_json = excluded.scroll_top_by_mode_json,
-        selected_mode = excluded.selected_mode,
-        shown_final_status_groups_json = excluded.shown_final_status_groups_json
-      `
-    ).run(
-      workspaceId,
-      contentOwnerId,
-      uiState.selectedEntryId,
-      uiState.treeIsExpanded ? 1 : 0,
-      uiState.contentSectionIsExpanded ? 1 : 0,
-      JSON.stringify(uiState.scrollTopByMode),
-      uiState.selectedMode,
-      JSON.stringify(uiState.shownFinalStatusGroups)
-    )
+    SqliteDataAccess.runTransaction(() => {
+      if (!transition.after) {
+        WorkspaceStateDataAccess.delete(workspaceId, 'collection-user', contentOwnerId)
+        WorkspaceStateDataAccess.delete(workspaceId, 'collection-machine', contentOwnerId)
+        return
+      }
+      /** Split pixel offsets from the portable choices. */
+      const { workspaceId: _workspaceId, contentOwnerId: _contentOwnerId, scrollTopByMode, ...user } = transition.after.data
+      WorkspaceStateDataAccess.write(workspaceId, 'collection-user', contentOwnerId, user)
+      WorkspaceStateDataAccess.write(workspaceId, 'collection-machine', contentOwnerId, { scrollTopByMode })
+    })
   }
 }
 
-/** SQLite query/command adapter for one accordion UI-state record. */
-export const accordionUiStateSqlitePersistence: SqlitePersistenceLayer<
-  AccordionUiState,
-  SqlitePersistenceFields
-> = {
+/** SQLite adapter separating ordered accordion expansion from machine-local heights. */
+export const accordionUiStateSqlitePersistence: SqlitePersistenceLayer<AccordionUiState, SqlitePersistenceFields> = {
   kind: 'sqlite',
   query: (id) => {
-    /** Composite workspace and persistence key decoded for the SQL query. */
+    /** Accordion identity shared by both stored payloads. */
     const { workspaceId, localId: persistenceId } = parseWorkspaceCompositeKey(id)
-    /** Stored accordion UI state selected by its composite key. */
-    const row = SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        SELECT
-          workspace_id AS workspaceId,
-          persistence_id AS persistenceId,
-          sections_json AS sectionsJson
-        FROM accordion_view_state
-        WHERE workspace_id = ? AND persistence_id = ?
-        `
-      )
-      .get(workspaceId, persistenceId) as AccordionUiStateRow | undefined
-    if (!row) return null
-    /** Validated accordion section state decoded from SQLite JSON. */
-    const sections = parseWorkspaceAccordionSections(parseJson(row.sectionsJson))
-    return sections
-      ? { workspaceId: row.workspaceId, persistenceId: row.persistenceId, sections }
-      : null
+    /** Ordered section choices determine which sections can be restored. */
+    const user = WorkspaceStateDataAccess.read(workspaceId, 'accordion-user', persistenceId)
+    if (!user) return null
+    /** Missing local heights use equal weights until the user resizes the sections. */
+    const heights = WorkspaceStateDataAccess.read(workspaceId, 'accordion-machine', persistenceId)?.heights ?? {}
+    /** Reassembled sections retain the existing domain validation. */
+    const sections = parseWorkspaceAccordionSections(user.sections.map((section) => ({
+      ...section, configuredExpandedHeightPx: heights[section.id] ?? 1
+    })))
+    return sections ? { workspaceId, persistenceId, sections } : null
   },
   command: (id, transition) => {
-    /** Composite workspace and persistence key decoded for the SQL command. */
+    /** Accordion identity shared by both storage scopes. */
     const { workspaceId, localId: persistenceId } = parseWorkspaceCompositeKey(id)
-    /** Database receiving the accordion UI-state command. */
-    const db = SqliteDataAccess.getDatabase()
-    if (!transition.after) {
-      db.prepare(
-        'DELETE FROM accordion_view_state WHERE workspace_id = ? AND persistence_id = ?'
-      ).run(workspaceId, persistenceId)
-      return
-    }
-    db.prepare(
-      `
-      INSERT INTO accordion_view_state (workspace_id, persistence_id, sections_json)
-      VALUES (?, ?, ?)
-      ON CONFLICT(workspace_id, persistence_id) DO UPDATE SET
-        sections_json = excluded.sections_json
-      `
-    ).run(workspaceId, persistenceId, JSON.stringify(transition.after.data.sections))
+    SqliteDataAccess.runTransaction(() => {
+      if (!transition.after) {
+        WorkspaceStateDataAccess.delete(workspaceId, 'accordion-user', persistenceId)
+        WorkspaceStateDataAccess.delete(workspaceId, 'accordion-machine', persistenceId)
+        return
+      }
+      /** Ordered sections are split without losing collapsed sections' saved heights. */
+      const sections = transition.after.data.sections
+      WorkspaceStateDataAccess.write(workspaceId, 'accordion-user', persistenceId, {
+        sections: sections.map(({ id, isExpanded }) => ({ id, isExpanded }))
+      })
+      WorkspaceStateDataAccess.write(workspaceId, 'accordion-machine', persistenceId, {
+        heights: Object.fromEntries(sections.map((section) => [section.id, section.configuredExpandedHeightPx]))
+      })
+    })
   }
 }
 

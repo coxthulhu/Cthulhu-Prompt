@@ -35,7 +35,7 @@ import {
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
-import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
+import { runSqlQuery, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -3009,22 +3009,19 @@ describe('Prompt collection prompt management', () => {
     const workspaceId = (
       await runSqlQuery(
         electronApp,
-        'SELECT workspace_id AS workspaceId FROM workspace_ui_state LIMIT 1'
+        `SELECT workspace_id AS workspaceId FROM workspace_state WHERE state_type = 'workspace-navigation' LIMIT 1`
       )
     ).rows?.[0]?.workspaceId as string
-    await runSqlStatement(
-      electronApp,
-      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
-       VALUES ('${workspaceId}', 'dev-1', '{}'), ('${workspaceId}', 'dev-2', '{}')
-       ON CONFLICT(workspace_id, content_id) DO UPDATE SET editor_view_state_json = excluded.editor_view_state_json`
-    )
+    for (const contentId of ['dev-1', 'dev-2']) {
+      await seedWorkspaceState(electronApp, workspaceId, 'markdown-editor', contentId, { editorViewStateJson: '{}' }, 'machine-specific')
+    }
     expect(
       (
         await runSqlQuery(
           electronApp,
-          `SELECT content_id AS contentId FROM markdown_content_ui_state
-           WHERE workspace_id = '${workspaceId}' AND content_id IN ('dev-1', 'dev-2')
-           ORDER BY content_id`
+          `SELECT entity_id AS contentId FROM workspace_state
+           WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceId}' AND entity_id IN ('dev-1', 'dev-2')
+           ORDER BY entity_id`
         )
       ).rows
     ).toEqual([{ contentId: 'dev-1' }, { contentId: 'dev-2' }])
@@ -3076,9 +3073,9 @@ describe('Prompt collection prompt management', () => {
       (
         await runSqlQuery(
           electronApp,
-          `SELECT content_id FROM markdown_content_ui_state
-           WHERE workspace_id = '${workspaceId}' AND content_id IN ('dev-1', 'dev-2')
-           ORDER BY content_id`
+          `SELECT entity_id AS content_id FROM workspace_state
+           WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceId}' AND entity_id IN ('dev-1', 'dev-2')
+           ORDER BY entity_id`
         )
       ).rows
     ).toEqual([{ content_id: 'dev-2' }])

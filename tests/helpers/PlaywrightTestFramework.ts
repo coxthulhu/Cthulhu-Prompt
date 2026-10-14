@@ -218,7 +218,8 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           if (!options.firstLaunch) {
             await runSqlStatement(
               electronApp,
-              'UPDATE app_persistence SET has_shown_welcome = 1 WHERE id = 1'
+              `UPDATE workspace_state SET data_json = json_set(data_json, '$.hasShownWelcome', json('true'))
+                WHERE workspace_id IS NULL AND entity_id IS NULL AND state_type = 'application-user'`
             )
           }
           // Handle workspace setup if provided

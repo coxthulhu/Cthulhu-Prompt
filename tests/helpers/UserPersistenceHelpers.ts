@@ -63,22 +63,6 @@ const toSqlNullableText = (value: string | null | undefined): string => {
   return value === null || value === undefined ? 'NULL' : toSqlText(value)
 }
 
-const toSqlJson = (value: unknown): string => {
-  return value === null ? 'NULL' : toSqlText(JSON.stringify(value))
-}
-
-const toSqlNullableInteger = (value: number | null): string => {
-  return value === null ? 'NULL' : `${Math.round(value)}`
-}
-
-const toSqlNullableBoolean = (value: boolean | null): string => {
-  if (value === null) {
-    return 'NULL'
-  }
-
-  return value ? '1' : '0'
-}
-
 export const runSqlQuery = async (
   electronApp: ElectronApplication,
   sql: string
@@ -124,63 +108,72 @@ export const migrateSqliteDatabase = async (electronApp: ElectronApplication): P
   if (!result.success) throw new Error(result.error)
 }
 
+/** Seeds a JSON state record directly, independently of the production adapters. */
+export const seedWorkspaceState = async (
+  electronApp: ElectronApplication,
+  workspaceId: string | null,
+  stateType: string,
+  entityId: string | null,
+  data: object,
+  storageScope: 'user-specific' | 'machine-specific' = 'user-specific'
+): Promise<void> => {
+  await runSqlStatement(electronApp, `INSERT INTO workspace_state
+    (workspace_id, state_type, entity_id, storage_scope, data_json)
+    VALUES (${toSqlNullableText(workspaceId)}, ${toSqlText(stateType)}, ${toSqlNullableText(entityId)},
+      ${toSqlText(storageScope)}, ${toSqlText(JSON.stringify(data))})
+    ON CONFLICT DO UPDATE SET data_json = excluded.data_json, storage_scope = excluded.storage_scope`)
+}
+
+/** Reads actual persisted JSON without invoking production reconstruction code. */
+export const readWorkspaceState = async <T = Record<string, unknown>>(
+  electronApp: ElectronApplication, workspaceId: string | null, stateType: string, entityId: string | null
+): Promise<T | null> => {
+  /** Full logical key includes nullable application and workspace scopes. */
+  const result = await runSqlQuery(electronApp, `SELECT data_json FROM workspace_state
+    WHERE workspace_id IS ${toSqlNullableText(workspaceId)} AND state_type = ${toSqlText(stateType)}
+      AND entity_id IS ${toSqlNullableText(entityId)}`)
+  if (!result.success) throw new Error(result.error)
+  return result.rows?.[0] ? JSON.parse(String(result.rows[0].data_json)) : null
+}
+
+/** Reads settings from their application-wide user record. */
+export const readSystemSettings = async (electronApp: ElectronApplication) =>
+  (await readWorkspaceState<import('@shared/domain/settings/SystemSettings').SystemSettings>(electronApp, null, 'system-settings', null))!
+
+/** Seeds the renderer's machine-local preferences without changing Welcome. */
 export const seedUserPersistence = async (
   electronApp: ElectronApplication,
-  data: {
-    lastWorkspaceInfoPath: string | null
-    appSidebarWidthPx?: number
-  }
+  data: { lastWorkspaceInfoPath: string | null; appSidebarWidthPx?: number }
 ): Promise<void> => {
-  const lastWorkspaceInfoPathSql =
-    data.lastWorkspaceInfoPath === null ? 'NULL' : toSqlText(data.lastWorkspaceInfoPath)
-
-  await runSqlStatement(
-    electronApp,
-    `
-    INSERT INTO app_persistence (
-      id,
-      last_workspace_info_path,
-      app_sidebar_width_px
-    )
-    VALUES (
-      1,
-      ${lastWorkspaceInfoPathSql},
-      ${data.appSidebarWidthPx ?? 275}
-    )
-    ON CONFLICT(id) DO UPDATE SET
-      last_workspace_info_path = excluded.last_workspace_info_path,
-      app_sidebar_width_px = excluded.app_sidebar_width_px
-    `
-  )
+  await seedWorkspaceState(electronApp, null, 'application-machine', null, {
+    lastWorkspaceInfoPath: data.lastWorkspaceInfoPath,
+    appSidebarWidthPx: data.appSidebarWidthPx ?? 275
+  }, 'machine-specific')
 }
 
+/** Seeds machine-local window geometry and display modes. */
 export const seedWindowPersistence = async (
   electronApp: ElectronApplication,
-  data: {
-    x: number | null
-    y: number | null
-    width: number | null
-    height: number | null
-    isMaximized: boolean | null
-    isFullScreen: boolean | null
-  }
+  data: { x: number | null; y: number | null; width: number | null; height: number | null; isMaximized: boolean | null; isFullScreen: boolean | null }
 ): Promise<void> => {
-  await runSqlStatement(
-    electronApp,
-    `
-    UPDATE app_persistence
-    SET
-      window_x_px = ${toSqlNullableInteger(data.x)},
-      window_y_px = ${toSqlNullableInteger(data.y)},
-      window_width_px = ${toSqlNullableInteger(data.width)},
-      window_height_px = ${toSqlNullableInteger(data.height)},
-      window_is_maximized = ${toSqlNullableBoolean(data.isMaximized)},
-      window_is_fullscreen = ${toSqlNullableBoolean(data.isFullScreen)}
-    WHERE id = 1
-    `
-  )
+  await seedWorkspaceState(electronApp, null, 'window', null, data, 'machine-specific')
 }
 
+/** Seeds both halves of collection view state. */
+export const seedCollectionUiState = async (electronApp: ElectronApplication, workspaceId: string, entry: WorkspacePromptCollectionUiStateSeedEntry): Promise<void> => {
+  await seedWorkspaceState(electronApp, workspaceId, 'collection-user', entry.contentOwnerId, {
+    selectedEntryId: entry.selectedEntryId,
+    treeIsExpanded: entry.treeIsExpanded ?? true,
+    contentSectionIsExpanded: entry.contentSectionIsExpanded ?? true,
+    selectedMode: entry.selectedMode ?? 'active',
+    shownFinalStatusGroups: entry.shownFinalStatusGroups ?? {}
+  })
+  await seedWorkspaceState(electronApp, workspaceId, 'collection-machine', entry.contentOwnerId, {
+    scrollTopByMode: entry.scrollTopByMode ?? {}
+  }, 'machine-specific')
+}
+
+/** Seeds workspace navigation and independently classified collection and accordion records. */
 export const seedWorkspaceUiState = async (
   electronApp: ElectronApplication,
   data: {
@@ -206,201 +199,61 @@ export const seedWorkspaceUiState = async (
     accordionViewEntries?: AccordionUiStateSeedEntry[]
   }
 ): Promise<void> => {
-  await runSqlStatement(
-    electronApp,
-    `
-    INSERT INTO workspace_ui_state (
-      workspace_id,
-      selected_screen,
-      selected_screen_data_json,
-      last_prompt_task_collection_id,
-      last_prompt_template_collection_id
-    )
-    VALUES (
-      ${toSqlText(data.workspaceId)},
-      ${toSqlText(data.selectedScreen)},
-      ${toSqlJson(data.selectedScreenData)},
-      ${toSqlNullableText(data.lastPromptTaskCollectionId)},
-      ${toSqlNullableText(data.lastPromptTemplateCollectionId)}
-    )
-    ON CONFLICT(workspace_id) DO UPDATE SET
-      selected_screen = excluded.selected_screen,
-      selected_screen_data_json = excluded.selected_screen_data_json,
-      last_prompt_task_collection_id = excluded.last_prompt_task_collection_id,
-      last_prompt_template_collection_id = excluded.last_prompt_template_collection_id
-    `
-  )
-
-  await runSqlStatement(
-    electronApp,
-    `DELETE FROM prompt_collection_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
-  )
-  await runSqlStatement(
-    electronApp,
-    `DELETE FROM accordion_view_state WHERE workspace_id = ${toSqlText(data.workspaceId)}`
-  )
-
-  for (const entry of data.promptCollectionViewEntries) {
-    await runSqlStatement(
-      electronApp,
-      `
-      INSERT INTO prompt_collection_view_state (
-        workspace_id,
-        content_owner_id,
-        selected_entry_id,
-        tree_is_expanded,
-        content_section_is_expanded,
-        scroll_top_by_mode_json,
-        selected_mode,
-        shown_final_status_groups_json
-      )
-      VALUES (
-        ${toSqlText(data.workspaceId)},
-        ${toSqlText(entry.contentOwnerId)},
-        ${toSqlText(entry.selectedEntryId)},
-        ${entry.treeIsExpanded === false ? 0 : 1},
-        ${entry.contentSectionIsExpanded === false ? 0 : 1},
-        ${toSqlJson(entry.scrollTopByMode ?? {})},
-        ${toSqlText(entry.selectedMode ?? 'active')},
-        ${toSqlJson(entry.shownFinalStatusGroups ?? {})}
-      )
-      `
-    )
-  }
-
+  await seedWorkspaceState(electronApp, data.workspaceId, 'workspace-navigation', null, {
+    selectedScreen: data.selectedScreen,
+    selectedScreenData: data.selectedScreenData,
+    lastPromptTaskCollectionId: data.lastPromptTaskCollectionId ?? null,
+    lastPromptTemplateCollectionId: data.lastPromptTemplateCollectionId ?? null
+  })
+  await runSqlStatement(electronApp, `DELETE FROM workspace_state WHERE workspace_id = ${toSqlText(data.workspaceId)}
+    AND state_type IN ('collection-user', 'collection-machine', 'accordion-user', 'accordion-machine')`)
+  for (const entry of data.promptCollectionViewEntries) await seedCollectionUiState(electronApp, data.workspaceId, entry)
   for (const entry of data.accordionViewEntries ?? []) {
-    await runSqlStatement(
-      electronApp,
-      `
-      INSERT INTO accordion_view_state (
-        workspace_id,
-        persistence_id,
-        sections_json
-      )
-      VALUES (
-        ${toSqlText(data.workspaceId)},
-        ${toSqlText(entry.persistenceId)},
-        ${toSqlText(JSON.stringify(entry.sections))}
-      )
-      `
-    )
+    await seedWorkspaceState(electronApp, data.workspaceId, 'accordion-user', entry.persistenceId, {
+      sections: entry.sections.map(({ id, isExpanded }) => ({ id, isExpanded }))
+    })
+    await seedWorkspaceState(electronApp, data.workspaceId, 'accordion-machine', entry.persistenceId, {
+      heights: Object.fromEntries(entry.sections.map((section) => [section.id, section.configuredExpandedHeightPx]))
+    }, 'machine-specific')
   }
 }
 
-export const readUserPersistence = async (
-  electronApp: ElectronApplication
-): Promise<{
-  lastWorkspaceInfoPath: string | null
-  appSidebarWidthPx: number
-  /** Raw SQLite display flag, allowing tests to assert the persisted value. */
-  hasShownWelcome: number
+/** Reassembles the two renderer records for existing UI assertions. */
+export const readUserPersistence = async (electronApp: ElectronApplication): Promise<{
+  lastWorkspaceInfoPath: string | null; appSidebarWidthPx: number; hasShownWelcome: number
 }> => {
-  const queryResult = await runSqlQuery(
-    electronApp,
-    `
-    SELECT
-      last_workspace_info_path AS lastWorkspaceInfoPath,
-      app_sidebar_width_px AS appSidebarWidthPx,
-      has_shown_welcome AS hasShownWelcome
-    FROM app_persistence
-    WHERE id = 1
-    `
-  )
-
-  if (!queryResult.success || !queryResult.rows?.[0]) {
-    throw new Error(queryResult.error ?? 'Failed to read app persistence')
-  }
-
-  return queryResult.rows[0] as {
-    lastWorkspaceInfoPath: string | null
-    appSidebarWidthPx: number
-    /** SQLite boolean stored as zero or one. */
-    hasShownWelcome: number
-  }
+  /** Local path and sizing state. */
+  const machine = await readWorkspaceState<{ lastWorkspaceInfoPath: string | null; appSidebarWidthPx: number }>(electronApp, null, 'application-machine', null)
+  /** Portable Welcome state, exposed numerically for existing assertions. */
+  const user = await readWorkspaceState<{ hasShownWelcome: boolean }>(electronApp, null, 'application-user', null)
+  return { lastWorkspaceInfoPath: machine?.lastWorkspaceInfoPath ?? null, appSidebarWidthPx: machine?.appSidebarWidthPx ?? 275, hasShownWelcome: user?.hasShownWelcome ? 1 : 0 }
 }
 
-export const readWorkspaceUiState = async (
-  electronApp: ElectronApplication,
-  workspaceId: string
-): Promise<WorkspaceUiStateSnapshot> => {
-  const workspaceStateResult = await runSqlQuery(
-    electronApp,
-    `
-    SELECT
-      selected_screen AS selectedScreen,
-      selected_screen_data_json AS selectedScreenDataJson,
-      last_prompt_task_collection_id AS lastPromptTaskCollectionId,
-      last_prompt_template_collection_id AS lastPromptTemplateCollectionId
-    FROM workspace_ui_state
-    WHERE workspace_id = ${toSqlText(workspaceId)}
-    `
-  )
-
-  if (!workspaceStateResult.success) {
-    throw new Error(workspaceStateResult.error ?? 'Failed to read workspace state')
-  }
-
-  const promptCollectionViewResult = await runSqlQuery(
-    electronApp,
-    `
-    SELECT
-      content_owner_id AS contentOwnerId,
-      selected_entry_id AS selectedEntryId,
-      tree_is_expanded AS treeIsExpanded,
-      content_section_is_expanded AS contentSectionIsExpanded
-    FROM prompt_collection_view_state
-    WHERE workspace_id = ${toSqlText(workspaceId)}
-    `
-  )
-
-  if (!promptCollectionViewResult.success) {
-    throw new Error(promptCollectionViewResult.error ?? 'Failed to read prompt collection view state')
-  }
-
-  /** Complete accordion section rows persisted for this workspace. */
-  const accordionViewStateResult = await runSqlQuery(
-    electronApp,
-    `
-    SELECT
-      persistence_id AS persistenceId,
-      sections_json AS sectionsJson
-    FROM accordion_view_state
-    WHERE workspace_id = ${toSqlText(workspaceId)}
-    `
-  )
-
-  if (!accordionViewStateResult.success) {
-    throw new Error(accordionViewStateResult.error ?? 'Failed to read accordion view state')
-  }
-
-  const workspaceRow = workspaceStateResult.rows?.[0] as
-    | {
-        selectedScreen: WorkspaceUiStateSnapshot['selectedScreen']
-        selectedScreenDataJson: string | null
-        lastPromptTaskCollectionId: string | null
-        lastPromptTemplateCollectionId: string | null
-      }
-    | undefined
-
+/** Reassembles persisted workspace state independently of the application adapters. */
+export const readWorkspaceUiState = async (electronApp: ElectronApplication, workspaceId: string): Promise<WorkspaceUiStateSnapshot> => {
+  /** All rows are inspected together to avoid mixing snapshots during autosave. */
+  const result = await runSqlQuery(electronApp, `SELECT state_type, entity_id, data_json FROM workspace_state WHERE workspace_id = ${toSqlText(workspaceId)}`)
+  if (!result.success) throw new Error(result.error)
+  /** Parsed records used to join accordion heights by their section IDs. */
+  const rows = (result.rows ?? []).map((row) => ({ type: row.state_type, id: String(row.entity_id), data: JSON.parse(String(row.data_json)) }))
+  /** Workspace navigation can be absent before the first screen selection. */
+  const navigation = rows.find((row) => row.type === 'workspace-navigation')?.data
   return {
     workspaceId,
-    selectedScreen: workspaceRow?.selectedScreen ?? 'home',
-    selectedScreenData: workspaceRow?.selectedScreenDataJson
-      ? JSON.parse(workspaceRow.selectedScreenDataJson)
-      : null,
-    lastPromptTaskCollectionId: workspaceRow?.lastPromptTaskCollectionId ?? null,
-    lastPromptTemplateCollectionId: workspaceRow?.lastPromptTemplateCollectionId ?? null,
-    promptCollectionViewEntries: (promptCollectionViewResult.rows ?? []).map((entry) => ({
-      contentOwnerId: String(entry.contentOwnerId),
-      selectedEntryId: String(entry.selectedEntryId),
-      treeIsExpanded: entry.treeIsExpanded !== 0,
-      contentSectionIsExpanded: entry.contentSectionIsExpanded !== 0
+    selectedScreen: navigation?.selectedScreen ?? 'home',
+    selectedScreenData: navigation?.selectedScreenData ?? null,
+    lastPromptTaskCollectionId: navigation?.lastPromptTaskCollectionId ?? null,
+    lastPromptTemplateCollectionId: navigation?.lastPromptTemplateCollectionId ?? null,
+    promptCollectionViewEntries: rows.filter((row) => row.type === 'collection-user').map((row) => ({
+      contentOwnerId: row.id, selectedEntryId: row.data.selectedEntryId,
+      treeIsExpanded: row.data.treeIsExpanded, contentSectionIsExpanded: row.data.contentSectionIsExpanded
     })),
-    accordionViewEntries: (accordionViewStateResult.rows ?? []).map((entry) => ({
-      persistenceId: String(entry.persistenceId),
-      sections: JSON.parse(
-        String(entry.sectionsJson)
-      ) as AccordionUiStateSeedEntry['sections']
+    accordionViewEntries: rows.filter((row) => row.type === 'accordion-user').map((row) => ({
+      persistenceId: row.id,
+      sections: row.data.sections.map((section: { id: string; isExpanded: boolean }) => ({
+        ...section,
+        configuredExpandedHeightPx: rows.find((machine) => machine.type === 'accordion-machine' && machine.id === row.id)?.data.heights[section.id] ?? 1
+      }))
     }))
   }
 }

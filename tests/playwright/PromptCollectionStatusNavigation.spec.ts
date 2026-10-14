@@ -59,8 +59,8 @@ const startWorkspace = async (
 const readNavigation = async (electronApp: PlaywrightTestFixtures['electronApp']) => {
   /** Collection rows written through the normal UI-state autosave path. */
   const result = await runSqlQuery(electronApp,
-    `SELECT content_owner_id AS id, selected_mode AS mode, shown_final_status_groups_json AS shown
-     FROM prompt_collection_view_state WHERE workspace_id = '${WORKSPACE_ID}' ORDER BY content_owner_id`)
+    `SELECT entity_id AS id, json_extract(data_json, '$.selectedMode') AS mode, json_extract(data_json, '$.shownFinalStatusGroups') AS shown
+     FROM workspace_state WHERE state_type = 'collection-user' AND workspace_id = '${WORKSPACE_ID}' ORDER BY entity_id`)
   expect(result.success).toBe(true)
   return result.rows?.map((row) => ({ ...row, shown: JSON.parse(String(row.shown)) }))
 }

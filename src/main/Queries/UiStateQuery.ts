@@ -7,14 +7,9 @@ import {
   type LoadWorkspaceUiStateResult
 } from '@shared/domain/ui-state/UiState'
 import { data } from '../Data/Data'
-import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
+import { WorkspaceStateDataAccess } from '../Persistence/sqlite/WorkspaceStateDataAccess'
 import { parseLoadWorkspaceUiStateRequest } from '../IpcFramework/IpcValidation'
 import { runQueryIpcRequest } from '../IpcFramework/IpcRequest'
-
-/** SQLite row containing one local ID within a workspace-scoped UI-state table. */
-type WorkspaceLocalIdRow = {
-  localId: string
-}
 
 /** Loads one prompt-collection UI-state record into its committed store. */
 const loadWorkspacePromptCollectionUiStateEntry = async (id: string) => {
@@ -40,8 +35,6 @@ export const setupUiStateQueryHandlers = (): void => {
           try {
             /** Workspace whose split UI-state tables are being hydrated. */
             const workspaceId = validatedRequest.payload.workspaceId
-            /** SQLite database queried for every workspace-scoped row key. */
-            const db = SqliteDataAccess.getDatabase()
             await data.workspaceUiState.loadDataFromPersistence(workspaceId, {})
             if (!data.workspaceUiState.committedStore.getEntry(workspaceId)) {
               data.workspaceUiState.committedStore.setFromDisk(
@@ -51,34 +44,24 @@ export const setupUiStateQueryHandlers = (): void => {
               )
             }
 
-            /** Prompt-collection view row IDs owned by the selected workspace. */
-            const promptCollectionRows = db
-              .prepare(
-                `SELECT content_owner_id AS localId
-                 FROM prompt_collection_view_state WHERE workspace_id = ?`
-              )
-              .all(workspaceId) as WorkspaceLocalIdRow[]
-            /** Accordion row IDs owned by the selected workspace. */
-            const accordionRows = db
-              .prepare(
-                `SELECT persistence_id AS localId
-                 FROM accordion_view_state WHERE workspace_id = ?`
-              )
-              .all(workspaceId) as WorkspaceLocalIdRow[]
+            /** Portable records enumerate the owners hydrated by the adapters. */
+            const promptCollectionIds = WorkspaceStateDataAccess.listEntityIds(workspaceId, 'collection-user')
+            /** Portable accordion records retain their local heights when available. */
+            const accordionIds = WorkspaceStateDataAccess.listEntityIds(workspaceId, 'accordion-user')
 
             /** Loaded prompt-collection UI-state committed entries. */
             const promptCollectionEntries = await Promise.all(
-              promptCollectionRows.map((row) =>
+              promptCollectionIds.map((localId) =>
                 loadWorkspacePromptCollectionUiStateEntry(
-                  createWorkspacePromptCollectionUiStateKey(workspaceId, row.localId)
+                  createWorkspacePromptCollectionUiStateKey(workspaceId, localId)
                 )
               )
             )
             /** Loaded accordion UI-state committed entries. */
             const accordionEntries = await Promise.all(
-              accordionRows.map((row) =>
+              accordionIds.map((localId) =>
                 loadAccordionUiStateEntry(
-                  createAccordionUiStateKey(workspaceId, row.localId)
+                  createAccordionUiStateKey(workspaceId, localId)
                 )
               )
             )

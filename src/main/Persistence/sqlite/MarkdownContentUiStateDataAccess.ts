@@ -1,113 +1,40 @@
 import type { MarkdownContentUiState } from '@shared/domain/ui-state/MarkdownContentUiState'
-import { SqliteDataAccess } from './SqliteDataAccess'
+import { WorkspaceStateDataAccess } from './WorkspaceStateDataAccess'
 
-type MarkdownContentUiStateRow = {
-  workspaceId: string
-  contentId: string
-  editorViewStateJson: string
-}
-
+/** Machine-local Monaco state shared by prompts and templates. */
 export class MarkdownContentUiStateDataAccess {
-  static readMarkdownContentUiState(
-    workspaceId: string,
-    contentId: string
-  ): MarkdownContentUiState | null {
-    const row = SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        SELECT
-          workspace_id AS workspaceId,
-          content_id AS contentId,
-          editor_view_state_json AS editorViewStateJson
-        FROM markdown_content_ui_state
-        WHERE workspace_id = ? AND content_id = ?
-        `
-      )
-      .get(workspaceId, contentId) as MarkdownContentUiStateRow | undefined
-
-    return row
-      ? {
-          workspaceId: row.workspaceId,
-          contentId: row.contentId,
-          editorViewStateJson: row.editorViewStateJson
-        }
-      : null
+  /** Reads one editor state and restores its domain identity. */
+  static readMarkdownContentUiState(workspaceId: string, contentId: string): MarkdownContentUiState | null {
+    /** Monaco JSON remains an opaque string inside the state object. */
+    const state = WorkspaceStateDataAccess.read(workspaceId, 'markdown-editor', contentId)
+    return state ? { workspaceId, contentId, ...state } : null
   }
 
-  static readMarkdownContentUiStates(
-    workspaceId: string,
-    contentIds: string[]
-  ): MarkdownContentUiState[] {
-    if (contentIds.length === 0) return []
-
-    const placeholders = contentIds.map(() => '?').join(', ')
-    const rows = SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        SELECT
-          workspace_id AS workspaceId,
-          content_id AS contentId,
-          editor_view_state_json AS editorViewStateJson
-        FROM markdown_content_ui_state
-        WHERE workspace_id = ?
-          AND content_id IN (${placeholders})
-        `
-      )
-      .all(workspaceId, ...contentIds) as MarkdownContentUiStateRow[]
-
-    return rows.map((row) => ({
-      workspaceId: row.workspaceId,
-      contentId: row.contentId,
-      editorViewStateJson: row.editorViewStateJson
-    }))
+  /** Reads only the editors requested by a content query. */
+  static readMarkdownContentUiStates(workspaceId: string, contentIds: string[]): MarkdownContentUiState[] {
+    return WorkspaceStateDataAccess.readMany(workspaceId, 'markdown-editor', contentIds)
+      .map(({ entityId, data }) => ({ workspaceId, contentId: entityId, ...data }))
   }
 
-  static upsertMarkdownContentUiState(
-    uiState: MarkdownContentUiState
-  ): MarkdownContentUiState {
-    SqliteDataAccess.getDatabase()
-      .prepare(
-        `
-        INSERT INTO markdown_content_ui_state (
-          workspace_id,
-          content_id,
-          editor_view_state_json
-        )
-        VALUES (?, ?, ?)
-        ON CONFLICT(workspace_id, content_id) DO UPDATE SET
-          editor_view_state_json = excluded.editor_view_state_json
-        `
-      )
-      .run(uiState.workspaceId, uiState.contentId, uiState.editorViewStateJson)
-
+  /** Saves one editor state without parsing Monaco's private payload. */
+  static upsertMarkdownContentUiState(uiState: MarkdownContentUiState): MarkdownContentUiState {
+    WorkspaceStateDataAccess.write(uiState.workspaceId, 'markdown-editor', uiState.contentId, {
+      editorViewStateJson: uiState.editorViewStateJson
+    })
     return { ...uiState }
   }
 
+  /** Removes state when its prompt or template is deleted. */
   static deleteMarkdownContentUiState(workspaceId: string, contentId: string): void {
-    SqliteDataAccess.getDatabase()
-      .prepare(
-        'DELETE FROM markdown_content_ui_state WHERE workspace_id = ? AND content_id = ?'
-      )
-      .run(workspaceId, contentId)
+    WorkspaceStateDataAccess.delete(workspaceId, 'markdown-editor', contentId)
   }
 
-  static cleanupWorkspaceMarkdownContentUiState(
-    workspaceId: string,
-    workspaceContentIds: string[]
-  ): void {
-    const db = SqliteDataAccess.getDatabase()
-    if (workspaceContentIds.length === 0) {
-      db.prepare('DELETE FROM markdown_content_ui_state WHERE workspace_id = ?').run(workspaceId)
-      return
+  /** Prunes editors whose content no longer exists in the workspace. */
+  static cleanupWorkspaceMarkdownContentUiState(workspaceId: string, workspaceContentIds: string[]): void {
+    /** Content IDs still owned by this workspace. */
+    const validIds = new Set(workspaceContentIds)
+    for (const contentId of WorkspaceStateDataAccess.listEntityIds(workspaceId, 'markdown-editor')) {
+      if (!validIds.has(contentId)) this.deleteMarkdownContentUiState(workspaceId, contentId)
     }
-
-    const placeholders = workspaceContentIds.map(() => '?').join(', ')
-    db.prepare(
-      `
-      DELETE FROM markdown_content_ui_state
-      WHERE workspace_id = ?
-        AND content_id NOT IN (${placeholders})
-      `
-    ).run(workspaceId, ...workspaceContentIds)
   }
 }

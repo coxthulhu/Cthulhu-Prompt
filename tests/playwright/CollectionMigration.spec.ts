@@ -1,7 +1,8 @@
+import { createLegacyStateDatabase } from '../fixtures/LegacyStateDatabase'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { migrateSqliteDatabase, readWorkspaceUiState, runSqlQuery, runSqlStatement, seedUserPersistence, seedWorkspaceUiState, toSqlText } from '../helpers/UserPersistenceHelpers'
+import { migrateSqliteDatabase, readWorkspaceUiState, runSqlQuery, runSqlStatement, readWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
 
 /** Production Electron suite verifies both persisted formats through workspace startup. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -98,14 +99,7 @@ describe('Collection terminology migrations', () => {
   for (const kind of ['task', 'template'] as const) {
     test(`migrates SQLite ${kind} selection and retains collection view state`, async ({ electronApp, testSetup }) => {
       await testSetup.setupFilesystem(createMigrationWorkspace())
-      await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(WORKSPACE_PATH) })
-      // Restore the exact version-24 table and column names before seeding legacy records.
-      for (const sql of [
-        'ALTER TABLE prompt_collection_view_state RENAME TO prompt_folder_view_state',
-        'ALTER TABLE workspace_ui_state RENAME COLUMN last_prompt_task_collection_id TO last_prompt_task_folder_id',
-        'ALTER TABLE workspace_ui_state RENAME COLUMN last_prompt_template_collection_id TO last_prompt_template_folder_id',
-        'UPDATE schema_version SET version = 24'
-      ]) await runSqlStatement(electronApp, sql)
+      await createLegacyStateDatabase(electronApp, 24, getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Selected collection and prompt must survive the schema rename unchanged. */
       const collectionId = kind === 'task' ? 'tasks' : 'library'
       /** Serialized version-24 screen payload contains the retired field name. */
@@ -122,10 +116,12 @@ describe('Collection terminology migrations', () => {
         lastPromptTaskCollectionId: 'tasks', lastPromptTemplateCollectionId: 'library'
       })
       expect(migrated.selectedScreenData).not.toHaveProperty('promptFolderId')
-      /** Every collection-local view setting remains intact under the new table name. */
-      const view = await runSqlQuery(electronApp, `SELECT * FROM prompt_collection_view_state WHERE workspace_id = ${toSqlText(WORKSPACE_ID)}`)
-      expect(view.rows?.[0]).toMatchObject({ selected_entry_id: 'collection-header', tree_is_expanded: 0, content_section_is_expanded: 0, scroll_top_by_mode_json: '{"active":123}', selected_mode: 'active', shown_final_status_groups_json: '{"archived":true}' })
-      expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 26 }])
+      expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-user', collectionId)).toEqual({
+        selectedEntryId: 'collection-header', treeIsExpanded: false, contentSectionIsExpanded: false,
+        selectedMode: 'active', shownFinalStatusGroups: { archived: true }
+      })
+      expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-machine', collectionId)).toEqual({ scrollTopByMode: { active: 123 } })
+      expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 27 }])
       await migrateSqliteDatabase(electronApp)
       expect(await readWorkspaceUiState(electronApp, WORKSPACE_ID)).toEqual(migrated)
       /** Startup restores the selected activity and collection through the production reader. */
@@ -137,33 +133,31 @@ describe('Collection terminology migrations', () => {
 
   test('migrates saved collection headers without changing prompt or category selections', async ({ electronApp, testSetup }) => {
     await testSetup.setupFilesystem(createMigrationWorkspace())
-    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(WORKSPACE_PATH) })
-    await seedWorkspaceUiState(electronApp, {
-      workspaceId: WORKSPACE_ID,
-      selectedScreen: 'prompt-task-collections',
-      selectedScreenData: { promptCollectionId: 'tasks', contentOwnerId: 'tasks' },
-      lastPromptTaskCollectionId: 'tasks',
-      lastPromptTemplateCollectionId: 'library',
-      promptCollectionViewEntries: [
-        { contentOwnerId: 'tasks', selectedEntryId: 'root-header', treeIsExpanded: false,
-          scrollTopByMode: { active: 0, backlog: 123 }, shownFinalStatusGroups: { archived: true } },
-        { contentOwnerId: 'library', selectedEntryId: 'template', contentSectionIsExpanded: false },
-        { contentOwnerId: 'code', selectedEntryId: 'category-details' }
-      ]
-    })
-    await runSqlStatement(electronApp, 'UPDATE schema_version SET version = 25')
+    await createLegacyStateDatabase(electronApp, 25, getWorkspaceInfoPath(WORKSPACE_PATH))
+    await runSqlStatement(electronApp, `INSERT INTO workspace_ui_state VALUES (
+      '${WORKSPACE_ID}', 'prompt-task-collections', '{"promptCollectionId":"tasks","contentOwnerId":"tasks"}', 'tasks', 'library')`)
+    await runSqlStatement(electronApp, `INSERT INTO prompt_collection_view_state VALUES
+      ('${WORKSPACE_ID}', 'tasks', 'root-header', 0, 1, '{"active":0,"backlog":123}', 'active', '{"archived":true}'),
+      ('${WORKSPACE_ID}', 'library', 'template', 1, 0, '{}', 'active', '{}'),
+      ('${WORKSPACE_ID}', 'code', 'category-details', 1, 1, '{}', 'active', '{}')`)
     /** Compare all stored view fields before rendering can update viewport settings. */
     const before = await runSqlQuery(electronApp, 'SELECT * FROM prompt_collection_view_state ORDER BY content_owner_id')
-    /** Only the retired header sentinel changes; entity IDs and other settings remain intact. */
-    const expected = before.rows!.map((row) => ({
-      ...row,
-      selected_entry_id: row.selected_entry_id === 'root-header' ? 'collection-header' : row.selected_entry_id
-    }))
     await migrateSqliteDatabase(electronApp)
-    expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 26 }])
-    expect((await runSqlQuery(electronApp, 'SELECT * FROM prompt_collection_view_state ORDER BY content_owner_id')).rows).toEqual(expected)
+    expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 27 }])
+    for (const row of before.rows!) {
+      expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-user', String(row.content_owner_id))).toEqual({
+        selectedEntryId: row.selected_entry_id === 'root-header' ? 'collection-header' : row.selected_entry_id,
+        treeIsExpanded: Boolean(row.tree_is_expanded), contentSectionIsExpanded: Boolean(row.content_section_is_expanded),
+        selectedMode: row.selected_mode, shownFinalStatusGroups: JSON.parse(String(row.shown_final_status_groups_json))
+      })
+      expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-machine', String(row.content_owner_id))).toEqual({
+        scrollTopByMode: JSON.parse(String(row.scroll_top_by_mode_json))
+      })
+    }
+    /** A second migration run must leave all imported rows byte-for-byte unchanged. */
+    const migratedRows = await runSqlQuery(electronApp, 'SELECT * FROM workspace_state ORDER BY state_type, entity_id')
     await migrateSqliteDatabase(electronApp)
-    expect((await runSqlQuery(electronApp, 'SELECT * FROM prompt_collection_view_state ORDER BY content_owner_id')).rows).toEqual(expected)
+    expect((await runSqlQuery(electronApp, 'SELECT * FROM workspace_state ORDER BY state_type, entity_id')).rows).toEqual(migratedRows.rows)
     /** Startup and reload must restore the migrated collection overview through the real UI. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await expect(mainWindow.getByTestId('prompt-collection-header')).toBeVisible()

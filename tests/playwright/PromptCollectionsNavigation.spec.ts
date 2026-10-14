@@ -13,7 +13,7 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
-import { runSqlQuery, runSqlStatement } from '../helpers/UserPersistenceHelpers'
+import { runSqlQuery, seedWorkspaceState, seedCollectionUiState } from '../helpers/UserPersistenceHelpers'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import { getPromptCollectionCategoryIds, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 
@@ -69,8 +69,8 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const workspaceRow = (
       await runSqlQuery(
         electronApp,
-        `SELECT workspace_id AS workspaceId, selected_screen_data_json AS selectedScreenDataJson
-         FROM workspace_ui_state LIMIT 1`
+        `SELECT workspace_id AS workspaceId, json_extract(data_json, '$.selectedScreenData') AS selectedScreenDataJson
+         FROM workspace_state WHERE state_type = 'workspace-navigation' LIMIT 1`
       )
     ).rows?.[0] as { workspaceId: string; selectedScreenDataJson: string }
     /** prompt-collection ID selected in the persisted workspace screen state. */
@@ -94,52 +94,29 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       (snapshot: { id: string }) => snapshot.id === promptCollectionId
     ) as { id: string; revision: number; data: unknown }
 
-    for (const contentOwnerId of [promptCollectionId, categoryId]) {
-      await runSqlStatement(
-        electronApp,
-        `INSERT INTO prompt_collection_view_state (
-           workspace_id, content_owner_id, selected_entry_id,
-           tree_is_expanded, content_section_is_expanded
-         ) VALUES ('${workspaceRow.workspaceId}', '${contentOwnerId}', 'collection-settings', 1, 1)
-         ON CONFLICT(workspace_id, content_owner_id) DO UPDATE SET
-           selected_entry_id = excluded.selected_entry_id`
-      )
+    for (const contentOwnerId of [promptCollectionId, categoryId, 'sibling-owner']) {
+      await seedCollectionUiState(electronApp, workspaceRow.workspaceId, { contentOwnerId, selectedEntryId: 'collection-settings' })
     }
-    await runSqlStatement(
-      electronApp,
-      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
-       VALUES ('${workspaceRow.workspaceId}', 'base-before', '{}')
-       ON CONFLICT(workspace_id, content_id) DO UPDATE SET editor_view_state_json = '{}'`
-    )
-    await runSqlStatement(
-      electronApp,
-      `INSERT INTO prompt_collection_view_state (
-         workspace_id, content_owner_id, selected_entry_id,
-         tree_is_expanded, content_section_is_expanded
-       ) VALUES ('${workspaceRow.workspaceId}', 'sibling-owner', 'collection-settings', 1, 1)`
-    )
-    await runSqlStatement(
-      electronApp,
-      `INSERT INTO markdown_content_ui_state (workspace_id, content_id, editor_view_state_json)
-       VALUES ('${workspaceRow.workspaceId}', 'sibling-content', '{}')`
-    )
+    for (const contentId of ['base-before', 'sibling-content']) {
+      await seedWorkspaceState(electronApp, workspaceRow.workspaceId, 'markdown-editor', contentId, { editorViewStateJson: '{}' }, 'machine-specific')
+    }
     /** Seed verification proving every target and sibling row exists before deletion. */
     const seededRow = (
       await runSqlQuery(
         electronApp,
         `SELECT
-           (SELECT COUNT(*) FROM prompt_collection_view_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND content_owner_id IN (
+           (SELECT COUNT(*) FROM workspace_state
+            WHERE state_type IN ('collection-user', 'collection-machine') AND workspace_id = '${workspaceRow.workspaceId}'
+              AND entity_id IN (
                 '${promptCollectionId}', '${categoryId}', 'sibling-owner'
               )) AS promptCollectionCount,
-           (SELECT COUNT(*) FROM markdown_content_ui_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND content_id IN ('base-before', 'sibling-content')) AS markdownCount`
+           (SELECT COUNT(*) FROM workspace_state
+            WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
+              AND entity_id IN ('base-before', 'sibling-content')) AS markdownCount`
       )
     ).rows?.[0]
     expect(seededRow).toEqual({
-      promptCollectionCount: 3,
+      promptCollectionCount: 6,
       markdownCount: 2
     })
 
@@ -229,28 +206,28 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       await runSqlQuery(
         electronApp,
         `SELECT
-           (SELECT COUNT(*) FROM prompt_collection_view_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND content_owner_id IN ('${promptCollectionId}', '${categoryId}')) AS promptCollectionCount,
-           (SELECT COUNT(*) FROM markdown_content_ui_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND content_id = 'base-before') AS markdownCount,
-           (SELECT COUNT(*) FROM prompt_collection_view_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND content_owner_id = 'sibling-owner') AS siblingPromptCollectionCount,
-           (SELECT COUNT(*) FROM markdown_content_ui_state
-            WHERE workspace_id = '${workspaceRow.workspaceId}'
-              AND content_id = 'sibling-content') AS siblingMarkdownCount,
-           selected_screen AS selectedScreen,
-           last_prompt_task_collection_id AS lastPromptTaskCollectionId
-         FROM workspace_ui_state
-         WHERE workspace_id = '${workspaceRow.workspaceId}'`
+           (SELECT COUNT(*) FROM workspace_state
+            WHERE state_type IN ('collection-user', 'collection-machine') AND workspace_id = '${workspaceRow.workspaceId}'
+              AND entity_id IN ('${promptCollectionId}', '${categoryId}')) AS promptCollectionCount,
+           (SELECT COUNT(*) FROM workspace_state
+            WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
+              AND entity_id = 'base-before') AS markdownCount,
+           (SELECT COUNT(*) FROM workspace_state
+            WHERE state_type IN ('collection-user', 'collection-machine') AND workspace_id = '${workspaceRow.workspaceId}'
+              AND entity_id = 'sibling-owner') AS siblingPromptCollectionCount,
+           (SELECT COUNT(*) FROM workspace_state
+            WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
+              AND entity_id = 'sibling-content') AS siblingMarkdownCount,
+           json_extract(data_json, '$.selectedScreen') AS selectedScreen,
+           json_extract(data_json, '$.lastPromptTaskCollectionId') AS lastPromptTaskCollectionId
+         FROM workspace_state
+         WHERE state_type = 'workspace-navigation' AND workspace_id = '${workspaceRow.workspaceId}'`
       )
     ).rows?.[0]
     expect(cleanupRow).toEqual({
       promptCollectionCount: 0,
       markdownCount: 0,
-      siblingPromptCollectionCount: 1,
+      siblingPromptCollectionCount: 2,
       siblingMarkdownCount: 1,
       selectedScreen: 'prompt-task-collections',
       lastPromptTaskCollectionId: null

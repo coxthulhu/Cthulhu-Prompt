@@ -5,6 +5,7 @@ import { getFs, setFs } from '../fs-provider'
 import { setDialogProvider, createTestDialogProvider } from '../dialog-provider'
 import { isPlaywrightEnvironment } from '../appEnvironment'
 import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
+import { importLegacySystemSettings } from '../Persistence/SystemSettingsPersistence'
 import { initializePersistentLogging } from '../logging'
 import { createTestAppUpdater } from './TestAppUpdater'
 
@@ -349,6 +350,7 @@ export function setupTestStartupListener(): void {
   ;(app as any).on('test-migrate-database', (payload: { requestId: string }) => {
     try {
       SqliteDataAccess.migrateDatabaseForTests()
+      importLegacySystemSettings()
       app.emit(`test-migrate-database-ready:${payload.requestId}`, { success: true })
     } catch (error) {
       app.emit(`test-migrate-database-ready:${payload.requestId}`, { success: false, error: String(error) })

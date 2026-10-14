@@ -4,8 +4,8 @@ import { DEFAULT_SYSTEM_SETTINGS, SYSTEM_SETTINGS_ID } from '@shared/domain/sett
 import type { LoadUserPersistenceResult } from '@shared/domain/user-persistence/UserPersistence'
 import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { runSqlQuery, readSystemSettings } from '../helpers/UserPersistenceHelpers'
+import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -52,7 +52,7 @@ describe('Test Infrastructure', () => {
 
   describe('Controlled Startup Framework', () => {
     // Starting without a workspace or explicit filesystem setup must never select the host disk.
-    test('uses an empty in-memory filesystem before setup and persists startup settings there', async ({
+    test('uses an empty in-memory filesystem and persists startup settings in SQLite', async ({
       testSetup,
       electronApp
     }) => {
@@ -65,7 +65,8 @@ describe('Test Infrastructure', () => {
 
       await testSetup.setupAndStart()
 
-      expect(JSON.parse(await readTextFile(electronApp, settingsPath))).toEqual(DEFAULT_SYSTEM_SETTINGS)
+      expect(await readSystemSettings(electronApp)).toEqual(DEFAULT_SYSTEM_SETTINGS)
+      expect(await checkFileExists(electronApp, settingsPath)).toBe(false)
       expect(await checkFileExists(electronApp, executablePath)).toBe(false)
     })
 
@@ -167,94 +168,20 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 26 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 27 })
 
-      /** Welcome remains eligible by default when the preference column is migrated. */
-      const appPersistenceColumnsResult = await runSqlQuery(
-        electronApp,
-        'PRAGMA table_info(app_persistence)'
-      )
-      expect(appPersistenceColumnsResult.success).toBe(true)
-      expect(appPersistenceColumnsResult.rows).toContainEqual(
-        expect.objectContaining({ name: 'workspace_dialog_directory', type: 'TEXT', notnull: 0 })
-      )
-      expect(appPersistenceColumnsResult.rows).toContainEqual(
-        expect.objectContaining({
-          name: 'has_shown_welcome',
-          type: 'INTEGER',
-          notnull: 1,
-          dflt_value: '0'
-        })
-      )
-
-      const persistenceTablesResult = await runSqlQuery(
-        electronApp,
-        `
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table'
-          AND name IN (
-            'app_persistence',
-            'workspace_ui_state',
-            'accordion_view_state',
-            'prompt_collection_view_state',
-            'category_description_editor_view_state',
-            'markdown_content_ui_state'
-          )
-        `
-      )
-
-      expect(persistenceTablesResult.success).toBe(true)
-      expect(persistenceTablesResult.rows).toHaveLength(5)
-      /** Persistence table names used to verify obsolete category state was dropped. */
-      const persistenceTableNames = (persistenceTablesResult.rows ?? []).map((row) => row.name)
-      expect(persistenceTableNames).not.toContain('category_description_editor_view_state')
-
-      const promptCollectionViewStateColumnsResult = await runSqlQuery(
-        electronApp,
-        'PRAGMA table_info(prompt_collection_view_state)'
-      )
-      const promptCollectionViewStateColumnNames = (promptCollectionViewStateColumnsResult.rows ?? []).map(
-        (row) => row.name
-      )
-
-      expect(promptCollectionViewStateColumnsResult.success).toBe(true)
-      expect(promptCollectionViewStateColumnsResult.rows).toEqual(expect.arrayContaining([
-        expect.objectContaining({ name: 'selected_mode', type: 'TEXT', notnull: 1, dflt_value: "'active'" }),
-        expect.objectContaining({ name: 'shown_final_status_groups_json', type: 'TEXT', notnull: 1, dflt_value: "'{}'" })
+      /** Only schema metadata and the unified state table remain. */
+      const tables = await runSqlQuery(electronApp, "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      expect(tables.rows).toEqual([{ name: 'schema_version' }, { name: 'workspace_state' }])
+      /** Nullable key columns support application-wide and workspace-wide state. */
+      const columns = await runSqlQuery(electronApp, 'PRAGMA table_info(workspace_state)')
+      expect(columns.rows).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'workspace_id', type: 'TEXT', notnull: 0 }),
+        expect.objectContaining({ name: 'entity_id', type: 'TEXT', notnull: 0 }),
+        expect.objectContaining({ name: 'state_type', type: 'TEXT', notnull: 1 }),
+        expect.objectContaining({ name: 'storage_scope', type: 'TEXT', notnull: 1 }),
+        expect.objectContaining({ name: 'data_json', type: 'TEXT', notnull: 1 })
       ]))
-      expect(promptCollectionViewStateColumnNames).toContain('tree_is_expanded')
-      expect(promptCollectionViewStateColumnNames).not.toContain('details_section_is_expanded')
-      expect(promptCollectionViewStateColumnNames).not.toContain(
-        'prompt_tree_is_showing_all_prompts'
-      )
-
-      /** Workspace selection columns after splitting task and template last-root state. */
-      const workspaceUiStateColumnsResult = await runSqlQuery(
-        electronApp,
-        'PRAGMA table_info(workspace_ui_state)'
-      )
-      /** Workspace UI-state column names used to verify the split-root migration. */
-      const workspaceUiStateColumnNames = (workspaceUiStateColumnsResult.rows ?? []).map(
-        (row) => row.name
-      )
-      expect(workspaceUiStateColumnNames).toContain('last_prompt_task_collection_id')
-      expect(workspaceUiStateColumnNames).toContain('last_prompt_template_collection_id')
-      expect(workspaceUiStateColumnNames).not.toContain('last_prompt_collection_id')
-
-      /** Current accordion columns after replacing expansion-only persistence. */
-      const accordionViewStateColumnsResult = await runSqlQuery(
-        electronApp,
-        'PRAGMA table_info(accordion_view_state)'
-      )
-      /** Accordion column names used to verify the generic section-state JSON migration. */
-      const accordionViewStateColumnNames = (accordionViewStateColumnsResult.rows ?? []).map(
-        (row) => row.name
-      )
-
-      expect(accordionViewStateColumnsResult.success).toBe(true)
-      expect(accordionViewStateColumnNames).toContain('sections_json')
-      expect(accordionViewStateColumnNames).not.toContain('expanded_section_ids_json')
     })
   })
 

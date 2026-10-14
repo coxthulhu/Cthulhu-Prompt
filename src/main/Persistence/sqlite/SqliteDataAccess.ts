@@ -4,10 +4,11 @@ import * as path from 'path'
 import { getFs } from '../../fs-provider'
 import { isPlaywrightEnvironment } from '../../appEnvironment'
 import { DEFAULT_USER_PERSISTENCE } from '@shared/domain/user-persistence/UserPersistence'
+import { migrateWorkspaceState } from './WorkspaceStateMigration'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 26
+const LATEST_SCHEMA_VERSION = 27
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -788,6 +789,12 @@ const applyStartupMigrations = (db: Database.Database): void => {
         db.prepare('UPDATE schema_version SET version = ?').run(26)
       })()
       schemaVersion = 26
+      continue
+    }
+
+    if (schemaVersion === 26) {
+      migrateWorkspaceState(db)
+      schemaVersion = 27
       continue
     }
 

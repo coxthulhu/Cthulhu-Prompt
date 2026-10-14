@@ -3,7 +3,7 @@ import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/Authoritative
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
-  /** Whether Welcome has been displayed on this installation. */
+  /** Whether Welcome has been displayed for this user. */
   hasShownWelcome: boolean
 }
 

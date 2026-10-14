@@ -10,11 +10,10 @@ import { createTestRequestId } from '../helpers/TestRequestId'
 import {
   readUserPersistence,
   readWorkspaceUiState,
-  runSqlStatement,
+  seedWorkspaceState,
   seedUserPersistence,
   seedWindowPersistence,
   seedWorkspaceUiState,
-  toSqlText
 } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -381,21 +380,10 @@ describe('User Persistence', () => {
     await seedUserPersistence(electronApp, {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
-    await runSqlStatement(
-      electronApp,
-      `
-      INSERT INTO workspace_ui_state (
-        workspace_id,
-        selected_screen,
-        selected_screen_data_json
-      )
-      VALUES (
-        ${toSqlText(workspaceId)},
-        'prompt-task-collections',
-        '{malformed'
-      )
-      `
-    )
+    await seedWorkspaceState(electronApp, workspaceId, 'workspace-navigation', null, {
+      selectedScreen: 'prompt-task-collections', selectedScreenData: '{malformed',
+      lastPromptTaskCollectionId: null, lastPromptTemplateCollectionId: null
+    })
 
     const { mainWindow } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }

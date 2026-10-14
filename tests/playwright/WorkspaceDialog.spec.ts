@@ -1,7 +1,7 @@
 import type { ElectronApplication } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { runSqlQuery, runSqlStatement, toSqlText } from '../helpers/UserPersistenceHelpers'
+import { readWorkspaceState, seedWorkspaceState, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 const workspacePath = '/ws/dialog-workspace'
@@ -28,12 +28,7 @@ const readDefaultPath = async (electronApp: ElectronApplication): Promise<string
   )
 
 const readSavedDirectory = async (electronApp: ElectronApplication): Promise<unknown> => {
-  const result = await runSqlQuery(
-    electronApp,
-    'SELECT workspace_dialog_directory FROM app_persistence WHERE id = 1'
-  )
-  expect(result.success).toBe(true)
-  return result.rows?.[0]?.workspace_dialog_directory
+  return (await readWorkspaceState(electronApp, null, 'workspace-dialog', null))?.directory
 }
 
 describe('Workspace Open dialog persistence', () => {
@@ -68,10 +63,7 @@ describe('Workspace Open dialog persistence', () => {
   }) => {
     await testSetup.setupFilesystem({ '/ws/remembered': null })
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await runSqlStatement(
-      electronApp,
-      "UPDATE app_persistence SET workspace_dialog_directory = '/ws/remembered' WHERE id = 1"
-    )
+    await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: '/ws/remembered' }, 'machine-specific')
     await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
     await mainWindow.getByTestId('open-workspace-button').click()
     await expect.poll(() => readDefaultPath(electronApp)).toBe('/ws/remembered')
@@ -85,12 +77,8 @@ describe('Workspace Open dialog persistence', () => {
     }) => {
       await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
       const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-      await runSqlStatement(
-        electronApp,
-        `UPDATE app_persistence SET
-          workspace_dialog_directory = ${savedDirectory === null ? 'NULL' : toSqlText(savedDirectory)},
-          last_workspace_info_path = ${toSqlText(workspaceInfoPath)} WHERE id = 1`
-      )
+      await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: savedDirectory }, 'machine-specific')
+      await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: workspaceInfoPath })
       await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
       await mainWindow.getByTestId('open-workspace-button').click()
       await expect.poll(() => readDefaultPath(electronApp)).toBe(workspacePath)
@@ -102,11 +90,8 @@ describe('Workspace Open dialog persistence', () => {
     testSetup
   }) => {
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await runSqlStatement(
-      electronApp,
-      `UPDATE app_persistence SET workspace_dialog_directory = '/ws/deleted',
-       last_workspace_info_path = '/ws/also-deleted/Workspace.cthulhuprompt.json' WHERE id = 1`
-    )
+    await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: '/ws/deleted' }, 'machine-specific')
+    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: '/ws/also-deleted/Workspace.cthulhuprompt.json' })
     const downloads = await electronApp.evaluate(({ app }) => app.getPath('downloads').replace(/\\/g, '/'))
     await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
     await mainWindow.getByTestId('open-workspace-button').click()

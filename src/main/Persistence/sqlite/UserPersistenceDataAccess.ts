@@ -4,27 +4,7 @@ import {
   type UserPersistence
 } from '@shared/domain/user-persistence/UserPersistence'
 import { SqliteDataAccess } from './SqliteDataAccess'
-
-/** Singleton SQLite row ID used by application and window persistence. */
-const APP_PERSISTENCE_ID = 1
-
-/** SQLite projection for renderer-owned user persistence. */
-type UserPersistenceRow = {
-  lastWorkspaceInfoPath: string | null
-  appSidebarWidthPx: number
-  /** SQLite integer representing whether Welcome has been displayed. */
-  hasShownWelcome: number
-}
-
-/** SQLite projection for main-process window persistence. */
-type WindowPersistenceRow = {
-  windowXPx: number | null
-  windowYPx: number | null
-  windowWidthPx: number | null
-  windowHeightPx: number | null
-  windowIsMaximized: number | null
-  windowIsFullScreen: number | null
-}
+import { WorkspaceStateDataAccess } from './WorkspaceStateDataAccess'
 
 /** Main-process window geometry and display-mode persistence. */
 export type WindowPersistence = {
@@ -46,124 +26,54 @@ const DEFAULT_WINDOW_PERSISTENCE: WindowPersistence = {
   isFullScreen: null
 }
 
-/** SQLite access for renderer user persistence and main window persistence. */
+/** Adapts independently stored user and machine state to the application's existing records. */
 export class UserPersistenceDataAccess {
-  /** Main-process dialog preference, independent of the currently open workspace. */
+  /** Reads the last native workspace-picker directory on this machine. */
   static readWorkspaceDialogDirectory(): string | null {
-    const row = SqliteDataAccess.getDatabase()
-      .prepare('SELECT workspace_dialog_directory AS directory FROM app_persistence WHERE id = ?')
-      .get(APP_PERSISTENCE_ID) as { directory: string | null } | undefined
-    return row?.directory ?? null
+    return WorkspaceStateDataAccess.read(null, 'workspace-dialog', null)?.directory ?? null
   }
 
+  /** Saves the picker directory without replacing renderer or window preferences. */
   static updateWorkspaceDialogDirectory(directory: string): void {
-    SqliteDataAccess.getDatabase()
-      .prepare('UPDATE app_persistence SET workspace_dialog_directory = ? WHERE id = ?')
-      .run(directory, APP_PERSISTENCE_ID)
+    WorkspaceStateDataAccess.write(null, 'workspace-dialog', null, { directory })
   }
 
-  /** Reads the renderer-owned user-persistence singleton. */
+  /** Reassembles renderer persistence with independent defaults for each storage scope. */
   static readUserPersistence(): UserPersistence {
-    /** SQLite database containing the singleton application row. */
-    const db = SqliteDataAccess.getDatabase()
-    /** Stored renderer persistence fields when the singleton row exists. */
-    const persistenceRow = db
-      .prepare(
-        `SELECT last_workspace_info_path AS lastWorkspaceInfoPath,
-                app_sidebar_width_px AS appSidebarWidthPx,
-                has_shown_welcome AS hasShownWelcome
-         FROM app_persistence WHERE id = ?`
-      )
-      .get(APP_PERSISTENCE_ID) as UserPersistenceRow | undefined
-    /** Validated persistence or the stable defaults. */
-    const parsedPersistence = parseUserPersistence(
-      persistenceRow && {
-        ...persistenceRow,
-        hasShownWelcome: Boolean(persistenceRow.hasShownWelcome)
-      }
-    )
-    return parsedPersistence ?? DEFAULT_USER_PERSISTENCE
+    return parseUserPersistence({
+      ...DEFAULT_USER_PERSISTENCE,
+      ...WorkspaceStateDataAccess.read(null, 'application-machine', null),
+      ...WorkspaceStateDataAccess.read(null, 'application-user', null)
+    })!
   }
 
-  /** Writes and returns normalized renderer user persistence. */
+  /** Atomically splits renderer preferences into their user and machine state types. */
   static updateUserPersistence(userPersistence: UserPersistence): UserPersistence {
-    /** SQLite database receiving the singleton upsert. */
-    const db = SqliteDataAccess.getDatabase()
-    /** Normalized values persisted by the domain mutation. */
-    const nextUserPersistence = {
-      lastWorkspaceInfoPath: userPersistence.lastWorkspaceInfoPath,
-      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx),
-      hasShownWelcome: userPersistence.hasShownWelcome
-    }
-    db.prepare(
-      `INSERT INTO app_persistence (id, last_workspace_info_path, app_sidebar_width_px, has_shown_welcome)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         last_workspace_info_path = excluded.last_workspace_info_path,
-         app_sidebar_width_px = excluded.app_sidebar_width_px,
-         has_shown_welcome = excluded.has_shown_welcome`
-    ).run(
-      APP_PERSISTENCE_ID,
-      nextUserPersistence.lastWorkspaceInfoPath,
-      nextUserPersistence.appSidebarWidthPx,
-      nextUserPersistence.hasShownWelcome ? 1 : 0
-    )
-    return nextUserPersistence
+    /** Pixel widths retain the existing integer normalization. */
+    const next = { ...userPersistence, appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx) }
+    SqliteDataAccess.runTransaction(() => {
+      WorkspaceStateDataAccess.write(null, 'application-user', null, { hasShownWelcome: next.hasShownWelcome })
+      WorkspaceStateDataAccess.write(null, 'application-machine', null, {
+        lastWorkspaceInfoPath: next.lastWorkspaceInfoPath,
+        appSidebarWidthPx: next.appSidebarWidthPx
+      })
+    })
+    return next
   }
 
-  /** Reads persisted window geometry and display modes. */
+  /** Reads the saved geometry and display modes for this machine. */
   static readWindowPersistence(): WindowPersistence {
-    /** Stored window fields when the singleton row exists. */
-    const row = SqliteDataAccess.getDatabase()
-      .prepare(
-        `SELECT window_x_px AS windowXPx,
-                window_y_px AS windowYPx,
-                window_width_px AS windowWidthPx,
-                window_height_px AS windowHeightPx,
-                window_is_maximized AS windowIsMaximized,
-                window_is_fullscreen AS windowIsFullScreen
-         FROM app_persistence WHERE id = ?`
-      )
-      .get(APP_PERSISTENCE_ID) as WindowPersistenceRow | undefined
-    if (!row) return DEFAULT_WINDOW_PERSISTENCE
-    return {
-      x: row.windowXPx === null ? null : Math.round(row.windowXPx),
-      y: row.windowYPx === null ? null : Math.round(row.windowYPx),
-      width: row.windowWidthPx === null ? null : Math.round(row.windowWidthPx),
-      height: row.windowHeightPx === null ? null : Math.round(row.windowHeightPx),
-      isMaximized: row.windowIsMaximized === null ? null : Boolean(row.windowIsMaximized),
-      isFullScreen: row.windowIsFullScreen === null ? null : Boolean(row.windowIsFullScreen)
-    }
+    return WorkspaceStateDataAccess.read(null, 'window', null) ?? DEFAULT_WINDOW_PERSISTENCE
   }
 
-  /** Writes normalized window geometry and display modes. */
+  /** Saves integer geometry together with its associated display modes. */
   static updateWindowPersistence(windowPersistence: WindowPersistence): void {
-    /** Normalized SQLite-compatible window values. */
-    const next = {
+    WorkspaceStateDataAccess.write(null, 'window', null, {
+      ...windowPersistence,
       x: windowPersistence.x === null ? null : Math.round(windowPersistence.x),
       y: windowPersistence.y === null ? null : Math.round(windowPersistence.y),
       width: windowPersistence.width === null ? null : Math.round(windowPersistence.width),
-      height: windowPersistence.height === null ? null : Math.round(windowPersistence.height),
-      isMaximized:
-        windowPersistence.isMaximized === null ? null : windowPersistence.isMaximized ? 1 : 0,
-      isFullScreen:
-        windowPersistence.isFullScreen === null ? null : windowPersistence.isFullScreen ? 1 : 0
-    }
-    SqliteDataAccess.getDatabase()
-      .prepare(
-        `UPDATE app_persistence SET
-           window_x_px = ?, window_y_px = ?, window_width_px = ?, window_height_px = ?,
-           window_is_maximized = ?, window_is_fullscreen = ?
-         WHERE id = ?`
-      )
-      .run(
-        next.x,
-        next.y,
-        next.width,
-        next.height,
-        next.isMaximized,
-        next.isFullScreen,
-        APP_PERSISTENCE_ID
-      )
+      height: windowPersistence.height === null ? null : Math.round(windowPersistence.height)
+    })
   }
 }

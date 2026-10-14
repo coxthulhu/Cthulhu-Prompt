@@ -1,7 +1,6 @@
-import { join } from 'node:path'
+import { readSystemSettings } from '../helpers/UserPersistenceHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { setNewPromptFocus } from '../helpers/SettingsHelpers'
-import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
 import { isMonacoEditorFocused, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
@@ -21,8 +20,6 @@ describe('New prompt focus', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'minimal' }
     })
-    /** Saved settings path in the test application's filesystem. */
-    const settingsPath = join(await electronApp.evaluate(({ app }) => app.getPath('userData')), 'SystemSettings.json')
     await testHelpers.navigateToSettingsScreen()
     /** Existing dropdown and its row-local Reset action. */
     const selector = mainWindow.getByTestId('new-prompt-focus-selector')
@@ -31,7 +28,7 @@ describe('New prompt focus', () => {
     await expect(selector).toHaveText('Editor')
     await expect(reset).toBeDisabled()
     await setNewPromptFocus(mainWindow, testHelpers, 'title')
-    await expect.poll(async () => JSON.parse(await readTextFile(electronApp, settingsPath)).newPromptFocus).toBe('title')
+    await expect.poll(async () => (await readSystemSettings(electronApp)).newPromptFocus).toBe('title')
 
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
@@ -41,7 +38,7 @@ describe('New prompt focus', () => {
     await reset.click()
     await expect(selector).toHaveText('Editor')
     await expect(reset).toBeDisabled()
-    await expect.poll(async () => JSON.parse(await readTextFile(electronApp, settingsPath)).newPromptFocus).toBe('editor')
+    await expect.poll(async () => (await readSystemSettings(electronApp)).newPromptFocus).toBe('editor')
   })
 
   // Both content kinds share focus handling but have separate sidebar creation paths.

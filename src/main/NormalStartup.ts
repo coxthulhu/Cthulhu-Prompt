@@ -30,6 +30,7 @@ import {
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { isDevEnvironment, isPlaywrightEnvironment } from './appEnvironment'
 import { systemSettingsData } from './Data/SystemSettingsData'
+import { importLegacySystemSettings } from './Persistence/SystemSettingsPersistence'
 import { attachRendererLogging } from './logging'
 import { configureRendererSecurity, getRendererDevelopmentUrl } from './rendererSecurity'
 import { isUpdateRestarting, isUpdateInstalling, setupAppUpdater } from './updates/AppUpdater'
@@ -328,7 +329,8 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupWorkspaceDialogHandlers()
     // Side effect: create/open SQLite DB before renderer or IPC work begins.
     SqliteDataAccess.initializeDatabase()
-    // Side effect: hydrate in-memory system settings from disk before IPC handlers run.
+    // Import legacy settings before hydrating the SQLite singleton and starting the updater.
+    importLegacySystemSettings()
     await systemSettingsData.loadDataFromPersistence(SYSTEM_SETTINGS_ID, {})
     setupSystemSettingsQueryHandlers()
     setupUserPersistenceQueryHandlers()

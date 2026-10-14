@@ -697,7 +697,7 @@ describe('Prompt template collection UI', () => {
       .poll(async () => {
         const result = await runSqlQuery(
           electronApp,
-          `SELECT content_id FROM markdown_content_ui_state WHERE content_id = '${TEMPLATE_ID}'`
+          `SELECT entity_id AS content_id FROM workspace_state WHERE state_type = 'markdown-editor' AND entity_id = '${TEMPLATE_ID}'`
         )
         return result.rows?.[0]?.content_id ?? null
       })

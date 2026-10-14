@@ -1,9 +1,9 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { controlUpdater } from '../helpers/AppUpdateHelpers'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { runSqlStatement, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
+import { runSqlStatement, seedUserPersistence, readSystemSettings } from '../helpers/UserPersistenceHelpers'
 import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { readPersistedPromptTextById, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
 import { join } from 'node:path'
 import { setAutomaticUpdates } from '../helpers/SettingsHelpers'
 
@@ -37,7 +37,7 @@ describe('App updates', () => {
     await expect(reset).toBeDisabled()
     expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(1)
     await setAutomaticUpdates(mainWindow, testHelpers, false)
-    expect(JSON.parse(await readTextFile(electronApp, settingsPath)).automaticUpdates).toBe(false)
+    expect((await readSystemSettings(electronApp)).automaticUpdates).toBe(false)
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
     await controlUpdater(electronApp, { type: 'interval' })
     expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
@@ -48,7 +48,7 @@ describe('App updates', () => {
     await expect(reset).toBeEnabled()
     await reset.click()
     await expect(reset).toBeDisabled()
-    await expect.poll(async () => JSON.parse(await readTextFile(electronApp, settingsPath)).automaticUpdates).toBe(true)
+    await expect.poll(async () => (await readSystemSettings(electronApp)).automaticUpdates).toBe(true)
     expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
     await controlUpdater(electronApp, { type: 'interval' })
     await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(1)
@@ -257,7 +257,8 @@ describe('App updates', () => {
     const workspacePath = '/ws/update-overlay'
     await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
     await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath) })
-    await runSqlStatement(electronApp, 'UPDATE app_persistence SET has_shown_welcome = 1 WHERE id = 1')
+    await runSqlStatement(electronApp, `UPDATE workspace_state SET data_json = json_set(data_json, '$.hasShownWelcome', json('true'))
+                WHERE workspace_id IS NULL AND entity_id IS NULL AND state_type = 'application-user'`)
     await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.1.0' } })
     await testSetup.pauseIpcChannel('load-workspace-by-path')
     await testSetup.completeStartup()

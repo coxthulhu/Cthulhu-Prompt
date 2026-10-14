@@ -77,8 +77,8 @@ const readOffsets = async (electronApp: ElectronApplication, collectionId: 'Alph
   /** SQLite result after the normal renderer autosave has flushed. */
   const result = await runSqlQuery(
     electronApp,
-    `SELECT scroll_top_by_mode_json AS offsets FROM prompt_collection_view_state
-     WHERE workspace_id = '${WORKSPACE_ID}' AND content_owner_id = '${collectionId}'`
+    `SELECT json_extract(data_json, '$.scrollTopByMode') AS offsets FROM workspace_state
+     WHERE state_type = 'collection-machine' AND workspace_id = '${WORKSPACE_ID}' AND entity_id = '${collectionId}'`
   )
   expect(result.success).toBe(true)
   return JSON.parse(String(result.rows?.[0]?.offsets)) as Record<string, number>
