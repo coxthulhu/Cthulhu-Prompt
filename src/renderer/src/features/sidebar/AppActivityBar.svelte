@@ -141,7 +141,7 @@
   .updatesButton:focus-visible,
   .updatesButton[aria-expanded='true'] { color: var(--ui-normal-text); }
   /* Brighten the mascot alongside the rail's other ghost controls on interaction. */
-  .workspaceButton img { opacity: 0.8; }
+  .workspaceButton img { opacity: 0.8; transform: translateX(1px); }
   .workspaceButton:hover img,
   .workspaceButton:focus-visible img,
   .workspaceButton[aria-expanded='true'] img { opacity: 1; }
