@@ -1,15 +1,15 @@
 <script lang="ts">
   import {
     Archive, ArrowRight, ArrowUpToLine, Bug, Check, ChevronsDownUp, ChevronsUpDown,
-    ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, Clock, Download, ExternalLink, FileText, Folder, FolderCog,
+    ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, Clock, Download, ExternalLink, FileText, Folder, FolderCog, FolderOpen,
     GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Trash2, X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
-  // Visual snapshot of AppSidebar, AppActivityBar, PromptTree, and their controls.
+  // Visual snapshot of AppSidebar, AppActivityBar, WorkspacePopup, PromptTree, and their controls.
   // Only Lucide icons, the brand image, and global palette/typography tokens are shared.
   // All sample data and interactions below are local and reset when this mockup unmounts.
-  type MockPrompt = { id: string; title: string; status?: string; edited?: boolean }
+  type MockPrompt = { id: string; title: string; status?: string; edited?: boolean; categoryId?: string }
   type MockCategory = { id: string; title: string; prompts: MockPrompt[]; shortDescription?: string; description?: string }
   type MockGroup = {
     id: string
@@ -105,6 +105,21 @@
   // Local navigation and fixture selection never touch the app's screen or workspace state.
   let activeActivity = $state('prompt')
   let sidebarExpanded = $state(true)
+  // Workspace details remain available from the rail even while the sidebar is collapsed.
+  const mockWorkspace = { name: 'CthulhuPromptPublic', path: 'C:\\Source\\PromptApps\\CthulhuPromptPublic' }
+  const mascotTooltips = [
+    "Made in R'lyeh", 'The Call of Cthulhu Prompt',
+    'Not for developing Eldritch Superintelligence!', 'The Dead Internet Waits, Dreaming...',
+    "Ph'nglui mglw'nafh Cthulhu Prompt R'lyeh wgah'nagl fhtagn",
+    'Works in my Dimension', 'Prompt Your Shoggoth'
+  ]
+  let mascotTooltipIndex = $state(0)
+  let workspaceOpen = $state(false)
+  let workspaceButton: HTMLButtonElement
+  let workspaceFolderPreviewOpen = $state(false)
+  const closeWorkspace = () => { workspaceOpen = false; workspaceButton.focus() }
+  // Focus the local nonmodal popup without importing the live popup or keyboard router.
+  const focusWorkspacePopup = (node: HTMLDivElement) => { node.focus({ preventScroll: true }) }
   let updatesOpen = $state(false)
   // This fixed release snapshot previews the updater without contacting release services.
   const mockRelease = { current: '0.0.35', latest: '0.0.36', currentDate: 'Oct 1, 2026', latestDate: 'Oct 7, 2026' }
@@ -160,7 +175,6 @@
     collectionMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
-    updatesOpen = false
   }
   // Templates expose Active and Archived only, matching the live sidebar's workflow filters.
   const visibleGroups = $derived(groups.filter((group) =>
@@ -244,7 +258,7 @@
   }
 
   // Native drag previews mutate only local fixtures, including status and category membership.
-  let draggedPrompt = $state<{ entry: MockPrompt; group: MockGroup; source: MockPrompt[] } | null>(null)
+  let draggedPrompt = $state<{ entry: MockPrompt; group: MockGroup; source: MockPrompt[]; categoryId?: string } | null>(null)
   let draggedCategory = $state<{ category: MockCategory; group: MockGroup } | null>(null)
   let dropTarget = $state<string | null>(null)
   let dropAfter = $state(false)
@@ -291,6 +305,7 @@
     source.splice(sourceIndex, 1)
     const destination = category?.prompts ?? group.prompts
     const isFinalGroup = group.id === 'completed' || group.id === 'archived'
+    entry.categoryId = isFinalGroup ? draggedPrompt.categoryId : category?.id
     const index = before && !isFinalGroup ? destination.findIndex((candidate) => candidate.id === before.id) + (dropAfter ? 1 : 0) : 0
     destination.splice(Math.max(0, index), 0, entry)
     if (sourceGroup.id !== group.id) {
@@ -301,6 +316,20 @@
     if (category) expandedCategoryIds[`${collection.id}:${group.id}:${category.id}`] = true
     finishPromptDrag()
   }
+
+  // Workflow headers retain category membership; finalized rows still render as a flat list.
+  const movePromptToStatus = (event: DragEvent, group: MockGroup) => {
+    if (!draggedPrompt || draggedPrompt.group.id === group.id) {
+      event.preventDefault()
+      finishPromptDrag()
+      return
+    }
+    const category = group.categories.find((entry) => entry.id === draggedPrompt!.categoryId)
+    movePrompt(event, group, category)
+  }
+  const canMoveToCollection = (collection: MockCollection) => !!draggedPrompt &&
+    collection.id !== selectedCollection?.id &&
+    (draggedPrompt.group.id === 'active' || draggedPrompt.group.id === 'backlog')
 
   const toggleSection = (group: MockGroup) => {
     // Preserve rendered proportions when collapsing; the last open section receives the freed space.
@@ -441,7 +470,7 @@
       draggable="true"
       data-dragging={draggedPrompt?.entry.id === promptEntry.id}
       ondragstart={(event) => {
-        draggedPrompt = { entry: promptEntry, group, source: category?.prompts ?? group.prompts }
+        draggedPrompt = { entry: promptEntry, group, source: category?.prompts ?? group.prompts, categoryId: category?.id ?? promptEntry.categoryId }
         event.dataTransfer?.setData('text/plain', promptEntry.title)
         if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
       }}
@@ -546,11 +575,21 @@
 {/snippet}
 
 <svelte:window onclick={closeMenus} ondragover={() => { dropTarget = null }} ondragend={finishPromptDrag} onkeydown={(event) => {
-  if (event.key === 'Escape') { collectionMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag() }
+  if (event.key === 'Escape') {
+    if (workspaceOpen && event.target instanceof Element && event.target.closest('.workspace-popup')) closeWorkspace()
+    collectionMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag()
+  }
 }} />
 
 <main class="sidebar-base-stage" data-testid="app-sidebar-base-mockup">
   <nav class="mock-activity-bar" aria-label="Mockup primary navigation">
+    <button bind:this={workspaceButton} class="activity-button workspace-button" type="button"
+      aria-label="Workspace" aria-expanded={workspaceOpen} aria-haspopup="dialog"
+      title={mascotTooltips[mascotTooltipIndex]}
+      onmouseenter={() => { mascotTooltipIndex = (mascotTooltipIndex + 1) % mascotTooltips.length }}
+      onclick={() => { workspaceOpen = !workspaceOpen }}>
+      <img src={appIcon} alt="Cthulhu Prompt icon" draggable="false" />
+    </button>
     {#each activities.filter((activity) => activity.id !== 'settings') as activity (activity.id)}
       {@render ActivityButton(activity)}
     {/each}
@@ -565,36 +604,6 @@
     </div>
   </nav>
   <aside class="mock-sidebar" hidden={!sidebarExpanded} style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
-    <header class="workspace-header">
-      <div class="workspace-icon-cell">
-        <img
-          src={appIcon}
-          alt="Cthulhu Prompt icon"
-          title="Cthulhu Prompt"
-          draggable="false"
-          ondragstart={(event) => event.preventDefault()}
-        />
-      </div>
-      <div class="workspace-copy">
-        <div class="workspace-title-row">
-          <h1 class="text-sm">CthulhuPromptPublic</h1>
-          <button
-            class="workspace-open-button"
-            type="button"
-            aria-label="Open Workspace Folder"
-            title="Open Workspace Folder"
-          >
-            <ExternalLink size={14} aria-hidden="true" />
-          </button>
-        </div>
-        <p class="text-xs" title="C:\Source\PromptApps\CthulhuPromptPublic">
-          C:\Source\PromptApps\CthulhuPromptPublic
-        </p>
-      </div>
-    </header>
-
-    <div class="separator"></div>
-
     <div class="collection-selector-wrap">
       <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={selectedCollection ? collectionMenuOpen : undefined}
         aria-haspopup={selectedCollection ? 'menu' : 'dialog'} data-empty={!selectedCollection}
@@ -620,9 +629,12 @@
             <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
               draggable="true" data-dragging={draggedCollectionId === collection.id} data-drop-over={dropTarget === collection.id}
               ondragstart={(event) => { draggedCollectionId = collection.id; event.dataTransfer?.setData('text/plain', collection.id) }}
-              ondragover={(event) => { if (draggedCollectionId) event.preventDefault(); else previewPromptDrop(event, collection.id) }}
+              ondragover={(event) => { if (draggedCollectionId) event.preventDefault(); else if (canMoveToCollection(collection)) previewPromptDrop(event, collection.id) }}
               ondrop={(event) => {
-                if (draggedPrompt) { movePrompt(event, collection.groups.find((group) => group.id === 'active')!, undefined, undefined, collection); return }
+                if (draggedPrompt) {
+                  if (canMoveToCollection(collection)) movePrompt(event, collection.groups.find((group) => group.id === draggedPrompt!.group.id)!, undefined, undefined, collection)
+                  return
+                }
                 event.preventDefault(); reorderCollection(collection.id); draggedCollectionId = null
               }}
               ondragend={() => { draggedCollectionId = null }}
@@ -674,9 +686,9 @@
           {/if}
           <button class="status-header" type="button" aria-expanded={group.expanded} aria-controls={`mock-sidebar-${group.id}-content`}
             data-drop-over={dropTarget === group.id}
-            data-drop-blocked={dropTarget === group.id && (group.id === 'completed' || group.id === 'archived') && draggedPrompt?.group.id === group.id}
+            data-drop-blocked={dropTarget === group.id && draggedPrompt?.group.id === group.id}
             ondragover={(event) => previewPromptDrop(event, group.id)}
-            ondrop={(event) => movePrompt(event, group)}
+            ondrop={(event) => movePromptToStatus(event, group)}
             onclick={() => toggleSection(group)}>
             <span class="status-chevron"><ChevronRight size={20} /></span>
             <span class="status-icon"><group.icon size={16} aria-hidden="true" /></span>
@@ -741,6 +753,26 @@
       onpointerdown={(event) => startResize(event)} onpointermove={moveDrag}
       onpointerup={stopDrag} onpointercancel={stopDrag} onlostpointercapture={stopDrag}></button>
   </aside>
+  {#if workspaceOpen}
+    <div class="workspace-popup text-sm leading-5" role="dialog" aria-label="Workspace" aria-modal="false"
+      tabindex="-1" use:focusWorkspacePopup>
+      <header class="updates-heading"><FolderOpen size={24} aria-hidden="true" /><h2 class="text-lg font-semibold">Workspace</h2>
+        {@render IconAction(X, 'Close workspace details', closeWorkspace)}
+      </header>
+      <div class="workspace-summary">
+        <span class="workspace-icon-cell"><FolderOpen size={24} strokeWidth={1.5} aria-hidden="true" /></span>
+        <div class="workspace-copy">
+          <h3 class="text-lg leading-7 font-semibold" title={mockWorkspace.name}>{mockWorkspace.name}</h3>
+          <p class="text-sm" title={mockWorkspace.path}>{mockWorkspace.path}</p>
+        </div>
+        {@render IconAction(ExternalLink, 'Open Workspace Folder', () => { workspaceFolderPreviewOpen = !workspaceFolderPreviewOpen })}
+      </div>
+      {#if workspaceFolderPreviewOpen}
+        <!-- Local feedback stands in for Explorer; the fixture never calls a preload API. -->
+        <p class="workspace-folder-preview text-sm leading-5" role="status">Mock workspace folder: {mockWorkspace.path}</p>
+      {/if}
+    </div>
+  {/if}
   {#if updatesOpen}
     <div class="updates-popup text-sm leading-5" role="dialog" aria-label="App Updates" tabindex="-1">
       <header class="updates-heading"><Download size={24} /><h2 class="text-lg font-semibold">App Updates</h2>
@@ -895,6 +927,11 @@
   }
 
   .updates-button[aria-expanded='true'] { color: var(--ui-normal-text); }
+  .workspace-button { margin-bottom: 4px; }
+  .workspace-button img { height: 32px; width: 32px; object-fit: contain; opacity: 0.8; transform: translateX(1px); }
+  .workspace-button:hover img,
+  .workspace-button:focus-visible img,
+  .workspace-button[aria-expanded='true'] img { opacity: 1; }
   .update-dot {
     position: absolute;
     right: 7px;
@@ -907,7 +944,7 @@
     box-sizing: content-box;
   }
 
-  .updates-popup {
+  .updates-popup, .workspace-popup {
     position: absolute;
     bottom: 10px;
     left: 58px;
@@ -920,6 +957,12 @@
     color: var(--ui-normal-text);
     z-index: 25;
   }
+
+  .workspace-popup { bottom: auto; top: 11px; width: 400px; max-width: calc(100% - 74px); }
+  .workspace-popup .icon-action, .updates-popup .icon-action { color: var(--ui-hoverable-icon-glyph); }
+  .workspace-popup .icon-action:hover, .workspace-popup .icon-action:focus-visible,
+  .updates-popup .icon-action:hover, .updates-popup .icon-action:focus-visible { color: var(--ui-normal-text); }
+  .workspace-folder-preview { margin: 0; padding: 0 16px 16px; overflow-wrap: anywhere; color: var(--ui-muted-text); }
 
   .updates-heading { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--ui-neutral-muted-border); }
   .updates-heading h2 { margin: 0; flex: 1; }
@@ -961,12 +1004,12 @@
   .mock-sidebar[hidden] { display: none; }
 
 
-  .workspace-header {
-    align-items: flex-start;
+  .workspace-summary {
+    align-items: center;
     display: flex;
     flex: 0 0 auto;
-    gap: 8px;
-    padding: 16px 8px 12px;
+    gap: 12px;
+    padding: 16px;
   }
 
   .workspace-icon-cell {
@@ -976,30 +1019,20 @@
     height: 40px;
     justify-content: center;
     width: 40px;
-  }
-
-  .workspace-icon-cell img {
-    height: 32px;
-    object-fit: contain;
-    width: 32px;
+    color: var(--ui-hoverable-icon-glyph);
   }
 
   .workspace-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     flex: 1 1 auto;
     min-width: 0;
   }
 
-  .workspace-title-row {
-    align-items: center;
-    display: flex;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .workspace-title-row h1 {
+  .workspace-copy h3 {
     color: var(--ui-normal-text);
     font-weight: var(--font-weight-semibold);
-    letter-spacing: -0.025em;
     margin: 0;
     min-width: 0;
     overflow: hidden;
@@ -1011,29 +1044,8 @@
     color: var(--ui-muted-text);
     margin: 0;
     overflow: hidden;
-    padding-top: 2px;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .workspace-open-button {
-    align-items: center;
-    background: transparent;
-    border: 0;
-    color: var(--ui-muted-icon-glyph);
-    cursor: pointer;
-    display: inline-flex;
-    flex: 0 0 18px;
-    height: 18px;
-    justify-content: center;
-    margin-left: 2px;
-    padding: 0;
-    width: 18px;
-  }
-
-  .workspace-open-button:hover,
-  .workspace-open-button:focus-visible {
-    color: var(--ui-normal-text);
   }
 
   .separator {
