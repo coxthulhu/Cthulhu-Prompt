@@ -651,7 +651,7 @@ const runAtomicDataTransitionsImmediately = async (
       for (const stagedTransition of stagedTransitions) {
         if (
           stagedTransition.transition.persistenceMode === 'metadataOnly' ||
-          stagedTransition.revisionData.persistence.kind !== 'sqlite'
+          !stagedTransition.revisionData.persistence.command
         ) {
           continue
         }
@@ -682,7 +682,7 @@ const runAtomicDataTransitionsImmediately = async (
     const hasSqliteChanges = stagedTransitions.some(
       (stagedTransition) =>
         stagedTransition.transition.persistenceMode === 'stage' &&
-        stagedTransition.revisionData.persistence.kind === 'sqlite'
+        Boolean(stagedTransition.revisionData.persistence.command)
     )
     if (hasSqliteChanges) {
       SqliteDataAccess.runTransaction(commitPersistenceChanges)

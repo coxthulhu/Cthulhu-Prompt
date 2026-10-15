@@ -14,7 +14,6 @@ import {
   collectionEntryRef,
   promptEntryRef,
   promptTemplateEntryRef,
-  type EntryRef,
   type CollectionEntryRef
 } from '@shared/domain/OrderContainer'
 import {
@@ -47,13 +46,13 @@ import {
   resolvePromptCollectionCategoryOrderPath,
   resolvePromptCollectionSettingsTextPath,
   resolvePromptPathsFromStem,
-  resolveCategoriesDirectoryPath,
-  resolveWorkspaceCollectionOrderPath
+  resolveCategoriesDirectoryPath
 } from '../PromptPersistencePaths'
 import {
   serializePromptMarkdown,
   serializePromptTemplateMarkdown
 } from '../PromptFrontmatter'
+import { WorkspaceStateDataAccess } from '../sqlite/WorkspaceStateDataAccess'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from './WorkspaceMigrations'
 
 export const readWorkspaceInfo = (workspaceInfoPath: string): WorkspaceInfoFile => {
@@ -120,57 +119,6 @@ const readContentIds = (
     .map((entry) => entry.id)
 }
 
-const isEntryRef = (value: unknown): value is EntryRef => {
-  if (!value || typeof value !== 'object') return false
-  const entry = value as Record<string, unknown>
-  return (
-    (entry.kind === 'prompt' || entry.kind === 'template' || entry.kind === 'collection') &&
-    typeof entry.id === 'string'
-  )
-}
-
-const readOrderEntries = <TEntry extends EntryRef>(orderPath: string): TEntry[] => {
-  const fs = getFs()
-  if (!fs.existsSync(orderPath)) return []
-
-  const orderFile = readJsonFile<{ entries?: unknown }>(orderPath)
-  if (!Array.isArray(orderFile.entries) || !orderFile.entries.every(isEntryRef)) {
-    throw new Error(`Invalid order file: ${orderPath}`)
-  }
-
-  return orderFile.entries as TEntry[]
-}
-
-const writeRepairedOrder = <TEntry extends EntryRef>(
-  orderPath: string,
-  persistedEntries: readonly TEntry[],
-  discoveredEntries: readonly TEntry[]
-): TEntry[] => {
-  const discoveredKeys = new Set(discoveredEntries.map((entry) => `${entry.kind}:${entry.id}`))
-  const seenKeys = new Set<string>()
-  const entries = persistedEntries.filter((entry) => {
-    const key = `${entry.kind}:${entry.id}`
-    if (!discoveredKeys.has(key) || seenKeys.has(key)) return false
-    seenKeys.add(key)
-    return true
-  })
-
-  for (const entry of discoveredEntries) {
-    const key = `${entry.kind}:${entry.id}`
-    if (seenKeys.has(key)) continue
-    entries.push(entry)
-    seenKeys.add(key)
-  }
-
-  const fs = getFs()
-  if (!fs.existsSync(orderPath) || JSON.stringify(entries) !== JSON.stringify(persistedEntries)) {
-    fs.mkdirSync(path.dirname(orderPath), { recursive: true })
-    fs.writeFileSync(orderPath, JSON.stringify({ entries }, null, 2), 'utf8')
-  }
-
-  return entries
-}
-
 /** Discovers one kind of collection in deterministic disk-name order. */
 const readDirectWorkspaceCollectionRefs = (
   workspacePath: string,
@@ -197,19 +145,27 @@ const readDirectWorkspaceCollectionRefs = (
     .map((collection) => collection.ref)
 }
 
-/** Reads and repairs the workspace collection order for one kind. */
+/** Loads a user's order, removes stale references, and appends discoveries by folder name. */
 export const readWorkspaceCollectionEntries = (
   workspacePath: string,
+  workspaceId: string,
   kind: PromptCollectionKind
 ): CollectionEntryRef[] => {
-  /** Type-owned order file repaired against collections currently on disk. */
-  const orderPath = resolveWorkspaceCollectionOrderPath(workspacePath, kind)
-  const persistedEntries = readOrderEntries<CollectionEntryRef>(orderPath)
-  return writeRepairedOrder(
-    orderPath,
-    persistedEntries,
-    readDirectWorkspaceCollectionRefs(workspacePath, kind)
+  /** A missing row uses the same alphabetical discovery order and is saved immediately. */
+  const saved = WorkspaceStateDataAccess.read(workspaceId, `${kind}-collection-order`, null)
+  /** Disk names determine the initial order and the placement of newly discovered collections. */
+  const discovered = readDirectWorkspaceCollectionRefs(workspacePath, kind)
+  /** Remaining identities exclude stale and duplicate saved references. */
+  const remaining = new Set(discovered.map((entry) => entry.id))
+  /** Existing valid positions take priority over alphabetical placement. */
+  const entries = (saved?.entries ?? []).filter((entry) =>
+    entry.kind === 'collection' && remaining.delete(entry.id)
   )
+  entries.push(...discovered.filter((entry) => remaining.delete(entry.id)))
+  if (!saved || JSON.stringify(entries) !== JSON.stringify(saved.entries)) {
+    WorkspaceStateDataAccess.write(workspaceId, `${kind}-collection-order`, null, { entries })
+  }
+  return entries
 }
 
 const readFileModifiedAt = (filePath: string): string => {
@@ -667,7 +623,7 @@ export const readPromptCollections = (
   }
 
   const promptCollectionById = new Map(promptCollections.map((collection) => [collection.id, collection]))
-  return readWorkspaceCollectionEntries(workspacePath, kind).flatMap((entry) => {
+  return readDirectWorkspaceCollectionRefs(workspacePath, kind).flatMap((entry) => {
     const collection = promptCollectionById.get(entry.id)
     return collection ? [collection] : []
   })

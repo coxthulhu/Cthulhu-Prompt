@@ -31,8 +31,8 @@ export async function clickPromptCollectionItem(
   })
   await page
     .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-    .filter({ hasText: displayName })
-    .first()
+    // Exact names avoid selecting a different collection after alphabetical fallback ordering.
+    .filter({ has: page.getByText(displayName, { exact: true }) })
     .click({ timeout })
   await page.waitForSelector('[data-testid="prompt-collection-screen"]', {
     state: 'attached',

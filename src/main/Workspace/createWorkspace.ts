@@ -7,7 +7,7 @@ import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { PROMPT_STATUS_FOLDERS, PromptStatus } from '@shared/domain/prompt/Prompt'
 import { createFilenameAllocator } from '../Persistence/FilenameAllocation'
 import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
-import { collectionEntryRef, promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
+import { promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
 import { getFs } from '../fs-provider'
 import {
   serializePromptMarkdown,
@@ -32,8 +32,7 @@ import {
   resolveCategoryPathFromStem,
   resolvePromptStatusFolderName,
   resolvePromptCollectionCategoryOrderPath,
-  resolvePromptDirectoryPath,
-  resolveWorkspaceCollectionOrderPath
+  resolvePromptDirectoryPath
 } from '../Persistence/PromptPersistencePaths'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/workspace/WorkspaceMigrations'
 
@@ -88,21 +87,6 @@ const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): v
     2
   )
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
-}
-
-const writeWorkspaceCollectionOrderFile = (
-  workspacePath: string,
-  kind: 'prompt' | 'template',
-  collectionIds: string[]
-): void => {
-  const fs = getFs()
-  /** Type-owned collection order initialized for the new workspace. */
-  const orderPath = resolveWorkspaceCollectionOrderPath(workspacePath, kind)
-  fs.writeFileSync(
-    orderPath,
-    JSON.stringify({ entries: collectionIds.map(collectionEntryRef) }, null, 2),
-    'utf8'
-  )
 }
 
 const writeMyProjectCollection = (
@@ -394,19 +378,17 @@ export const createWorkspace = async (
     fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
 
-    /** Initial template collection persisted in template-collection order. */
-    const { collectionId: templateCollectionId, templateIdByKey } = writeMyTemplatesCollection(
+    /** Initial templates supply references for the bundled prompts. */
+    const { templateIdByKey } = writeMyTemplatesCollection(
       workspacePath,
       includeExamplePrompts
     )
-    /** Initial prompt collection persisted in prompt-collection order. */
-    const promptCollectionId = writeMyProjectCollection(
+    // SQLite collection orders are initialized when the new workspace is loaded.
+    writeMyProjectCollection(
       workspacePath,
       includeExamplePrompts,
       templateIdByKey
     )
-    writeWorkspaceCollectionOrderFile(workspacePath, 'prompt', [promptCollectionId])
-    writeWorkspaceCollectionOrderFile(workspacePath, 'template', [templateCollectionId])
 
     return { success: true }
   } catch (error) {

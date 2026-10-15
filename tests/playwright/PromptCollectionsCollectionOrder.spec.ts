@@ -1,3 +1,5 @@
+import { createDeterministicId } from '../fixtures/FixtureIds'
+import { readWorkspaceCollectionOrder, runSqlQuery, runSqlStatement, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { readTextFile, checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
@@ -38,27 +40,20 @@ const workspaceCollectionOrderPath = (
   `${workspacePath}/${kind === 'template' ? 'Templates' : 'Prompts'}/CollectionOrder.json`
 
 
+/** Reads stable IDs from the user's persisted SQLite order. */
 const readWorkspacePromptCollectionIds = async (
   electronApp: ElectronApplication,
   workspacePath: string,
   kind: 'prompt' | 'template' = 'prompt'
-): Promise<string[]> => {
-  const fileContents = await readTextFile(
-    electronApp,
-    workspaceCollectionOrderPath(workspacePath, kind)
-  )
-  return (JSON.parse(fileContents) as { entries: Array<{ id: string }> }).entries.map(
-    (entry) => entry.id
-  )
-}
+): Promise<string[]> =>
+  (await readWorkspaceCollectionOrder(electronApp, workspacePath, kind))!.entries.map((entry) => entry.id)
 
+/** Reads persisted references independently of the renderer's collection cache. */
 const readWorkspacePromptCollectionEntries = async (
   electronApp: ElectronApplication,
   workspacePath: string
-): Promise<Array<{ kind: 'collection'; id: string }>> => {
-  const fileContents = await readTextFile(electronApp, workspaceCollectionOrderPath(workspacePath))
-  return (JSON.parse(fileContents) as { entries: Array<{ kind: 'collection'; id: string }> }).entries
-}
+): Promise<Array<{ kind: 'collection'; id: string }>> =>
+  (await readWorkspaceCollectionOrder(electronApp, workspacePath))!.entries
 
 const readPromptCollectionDropdownItemTestIds = async (page: Page): Promise<string[]> => {
   if ((await page.locator(PROMPT_COLLECTION_SELECTOR_MENU).count()) === 0) {
@@ -126,6 +121,108 @@ const createCombinedCollectionWorkspace = (workspacePath: string) => ({
 })
 
 describe('Prompt Collection Order', () => {
+  for (const kind of ['prompt', 'template'] as const) {
+    test(`persists ${kind} fallback, creation, rename, and workspace isolation through reopening`, async ({ electronApp, testSetup }) => {
+      /** Folder and display names deliberately sort in opposite orders. */
+      const workspacePath = `/ws/sqlite-order-${kind}`
+      /** Another workspace reuses collection IDs but owns an independent order. */
+      const otherPath = `${workspacePath}-other`
+      /** Both kinds have the same IDs in each workspace to expose incorrect storage scope. */
+      const filesystem = {
+        ...createCombinedCollectionWorkspace(workspacePath),
+        ...createCombinedCollectionWorkspace(otherPath)
+      }
+      /** Collection metadata files whose display names must not control fallback ordering. */
+      const root = kind === 'prompt' ? 'Prompts' : 'Templates'
+      /** Template fixtures use Alpha/Beta while task fixtures use alpha/Zulu. */
+      const folderNames = kind === 'prompt' ? ['alpha', 'Zulu'] : ['Alpha', 'Beta']
+      for (const [index, folderName] of folderNames.entries()) {
+        /** Existing collection identity remains unchanged while its display name is reversed. */
+        const infoPath = `${workspacePath}/${root}/${folderName}/_CollectionInfo/CollectionInfo.json`
+        filesystem[infoPath] = JSON.stringify({ ...JSON.parse(filesystem[infoPath]!), displayName: index === 0 ? 'Zulu Display' : 'Alpha Display' })
+      }
+      /** Expected initial order uses folders, independently for each kind. */
+      const initialIds = kind === 'prompt' ? ['prompt-alpha', 'prompt-zulu'] : ['template-alpha', 'template-beta']
+      await seedWorkspaceState(electronApp, createDeterministicId(otherPath), `${kind}-collection-order`, null, {
+        entries: [...initialIds].reverse().map((id) => ({ kind: 'collection', id }))
+      })
+      await testSetup.setupFilesystem(filesystem)
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      /** Real UI actions must persist through clearing the main and renderer caches. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await testHelpers.setupWorkspaceViaUI()
+      expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath, kind)).toEqual(initialIds)
+      for (const orderKind of ['prompt', 'template'] as const) {
+        expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath, orderKind))).toBe(false)
+      }
+      expect((await runSqlQuery(electronApp, "SELECT DISTINCT storage_scope FROM workspace_state WHERE state_type IN ('prompt-collection-order', 'template-collection-order')")).rows).toEqual([{ storage_scope: 'user-specific' }])
+
+      if (kind === 'prompt') await testHelpers.navigateToPromptCollections('Zulu Display')
+      else await testHelpers.navigateToPromptTemplateCollections('Zulu Display')
+      await mainWindow.getByTestId('sidebar-collection-overview-button').click()
+      await mainWindow.getByTestId('prompt-collection-title-edit').click()
+      await mainWindow.getByTestId('rename-prompt-collection-name-input').fill('Zzz Renamed')
+      await mainWindow.getByTestId('rename-prompt-collection-button').click()
+      await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Zzz Renamed')
+      expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath, kind)).toEqual(initialIds)
+
+      await mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
+      await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-item').click()
+      await mainWindow.getByTestId('create-prompt-collection-name-input').fill('New Collection')
+      await mainWindow.getByTestId('create-prompt-collection-button').click()
+      await expect.poll(() => readWorkspacePromptCollectionIds(electronApp, workspacePath, kind)).toEqual([
+        expect.any(String), ...initialIds
+      ])
+      /** Captured stable IDs must survive opening a workspace with conflicting orders. */
+      const savedIds = await readWorkspacePromptCollectionIds(electronApp, workspacePath, kind)
+      for (const path of [otherPath, workspacePath]) {
+        await testHelpers.navigateToHomeScreen()
+        await testHelpers.clearWorkspaceViaUI()
+        await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+        await testHelpers.setupWorkspaceViaUI()
+        await mainWindow.getByTestId(kind === 'prompt' ? 'nav-button-prompt-task-collections' : 'nav-button-prompt-template-collections').click()
+        await expect.poll(() => readPromptCollectionDropdownItemTestIds(mainWindow)).toEqual(
+          (path === otherPath ? [...initialIds].reverse() : savedIds).map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`)
+        )
+        await mainWindow.keyboard.press('Escape')
+      }
+      expect(await readWorkspacePromptCollectionIds(electronApp, otherPath, kind)).toEqual([...initialIds].reverse())
+      for (const orderKind of ['prompt', 'template'] as const) {
+        expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath, orderKind))).toBe(false)
+      }
+    })
+  }
+
+  test('rolls back both SQLite orders and collection creation when the second order write fails', async ({ electronApp, testSetup }) => {
+    /** Separate kinds ensure the first SQLite write must roll back if the second fails. */
+    const workspacePath = '/ws/sqlite-order-rollback'
+    await testSetup.setupFilesystem(createCombinedCollectionWorkspace(workspacePath))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    /** Creation uses the real mutation and staged filesystem commit. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToPromptCollections('Prompt Alpha')
+    await runSqlStatement(electronApp, `CREATE TRIGGER reject_collection_order BEFORE INSERT ON workspace_state
+      WHEN NEW.state_type = 'template-collection-order' BEGIN SELECT RAISE(ABORT, 'Controlled collection order failure'); END`)
+    await mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
+    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-item').click()
+    await mainWindow.getByTestId('create-prompt-collection-name-input').fill('Retry Collection')
+    await mainWindow.getByTestId('create-prompt-collection-button').click()
+    await expect(mainWindow.getByTestId('create-prompt-collection-name-error')).toBeVisible()
+    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(['prompt-alpha', 'prompt-zulu'])
+    expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath, 'template')).toEqual(['template-alpha', 'template-beta'])
+    expect(await checkFileExists(electronApp, `${workspacePath}/Prompts/RetryCollection/_CollectionInfo/CollectionInfo.json`)).toBe(false)
+    await runSqlStatement(electronApp, 'DROP TRIGGER reject_collection_order')
+    await mainWindow.getByTestId('create-prompt-collection-button').click()
+    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Retry Collection')
+    await expect.poll(() => readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual([
+      expect.any(String), 'prompt-alpha', 'prompt-zulu'
+    ])
+    expect(await checkFileExists(electronApp, `${workspacePath}/Prompts/RetryCollection/_CollectionInfo/CollectionInfo.json`)).toBe(true)
+    expect(testSetup.getRendererErrors().some((error) => error.message.includes('Controlled collection order failure'))).toBe(true)
+    testSetup.removeRendererErrorsContaining('Controlled collection order failure')
+  })
+
   test('loads explicitly ordered collections before unordered collections sorted by disk name', async ({
     electronApp,
     testSetup
@@ -136,16 +233,9 @@ describe('Prompt Collection Order', () => {
       { folderName: 'middle', displayName: 'Middle', promptCollectionId: 'collection-middle' },
       { folderName: 'beta', displayName: 'Beta', promptCollectionId: 'collection-beta' }
     ])
-    filesystem[workspaceCollectionOrderPath(COLLECTION_ORDER_WORKSPACE_PATH)] = JSON.stringify(
-      {
-        entries: ['missing-collection', 'collection-middle', 'collection-zeta'].map((id) => ({
-          kind: 'collection',
-          id
-        }))
-      },
-      null,
-      2
-    )
+    await seedWorkspaceState(electronApp, createDeterministicId(COLLECTION_ORDER_WORKSPACE_PATH), 'prompt-collection-order', null, {
+      entries: ['missing-collection', 'collection-middle', 'collection-middle', 'collection-zeta'].map((id) => ({ kind: 'collection', id }))
+    })
 
     await testSetup.setupFilesystem(filesystem)
     await testSetup.setupFileDialog([getWorkspaceInfoPath(COLLECTION_ORDER_WORKSPACE_PATH)])
@@ -239,7 +329,7 @@ describe('Prompt Collection Order', () => {
     ).toEqual(['template-alpha', 'template-beta'])
   })
 
-  test('migrates an interleaved schema-one order into type-owned orders', async ({
+  test('discards an interleaved schema-one order and saves alphabetical SQLite orders', async ({
     electronApp,
     testSetup
   }) => {
@@ -267,29 +357,29 @@ describe('Prompt Collection Order', () => {
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
     expect(
       await readWorkspacePromptCollectionIds(electronApp, COMBINED_PERSISTED_WORKSPACE_PATH)
-    ).toEqual(['prompt-zulu', 'prompt-alpha'])
+    ).toEqual(['prompt-alpha', 'prompt-zulu'])
     expect(
       await readWorkspacePromptCollectionIds(
         electronApp,
         COMBINED_PERSISTED_WORKSPACE_PATH,
         'template'
       )
-    ).toEqual(['template-beta', 'template-alpha'])
+    ).toEqual(['template-alpha', 'template-beta'])
     await expect
       .poll(async () => await readPromptCollectionDropdownItemTestIds(mainWindow))
       .toEqual([
-        'sidebar-prompt-collection-dropdown-item-prompt-zulu',
-        'sidebar-prompt-collection-dropdown-item-prompt-alpha'
+        'sidebar-prompt-collection-dropdown-item-prompt-alpha',
+        'sidebar-prompt-collection-dropdown-item-prompt-zulu'
       ])
     await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
     await expect
       .poll(async () => await readPromptCollectionDropdownItemTestIds(mainWindow))
       .toEqual([
-        'sidebar-prompt-collection-dropdown-item-template-beta',
-        'sidebar-prompt-collection-dropdown-item-template-alpha'
+        'sidebar-prompt-collection-dropdown-item-template-alpha',
+        'sidebar-prompt-collection-dropdown-item-template-beta'
       ])
     expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath))).toMatchObject({
-      schemaVersion: 5
+      schemaVersion: 6
     })
     await expect(
       checkFileExists(
@@ -465,6 +555,9 @@ describe('Prompt Collection Order', () => {
         'Theta'
       ])
     )
+    await seedWorkspaceState(electronApp, createDeterministicId(DROPDOWN_SCROLL_COLLECTION_ORDER_WORKSPACE_PATH), 'prompt-collection-order', null, {
+      entries: ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta'].map((name) => ({ kind: 'collection', id: `collection-${name}` }))
+    })
     await testSetup.setupFileDialog([
       getWorkspaceInfoPath(DROPDOWN_SCROLL_COLLECTION_ORDER_WORKSPACE_PATH)
     ])

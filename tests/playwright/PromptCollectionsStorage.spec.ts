@@ -1,3 +1,4 @@
+import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import type { Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
@@ -138,11 +139,9 @@ describe('Prompt collection storage', () => {
       .toBe(true)
     expect(JSON.parse(await readTextFile(electronApp, `${alphaPath}/_CollectionInfo/CollectionInfo.json`)))
       .toMatchObject({ displayName: ALPHA_NAME, kind: 'prompt' })
-    // Task collections persist only in the prompt-owned workspace ordering file.
+    // Task collections persist in their independent user-specific SQLite order.
     const alphaId = await readCollectionId(electronApp, alphaPath)
-    const workspaceOrder = JSON.parse(
-      await readTextFile(electronApp, `${WORKSPACE_PATH}/Prompts/CollectionOrder.json`)
-    ) as { entries: Array<{ kind: 'collection'; id: string }> }
+    const workspaceOrder = (await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH))!
     expect(workspaceOrder.entries).toContainEqual({ kind: 'collection', id: alphaId })
     await expect(
       readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME))
@@ -188,9 +187,7 @@ describe('Prompt collection storage', () => {
     /** Stable ID expected in the template-owned collection order. */
     const templateAlphaId = await readCollectionId(electronApp, templateAlphaPath)
     expect(
-      JSON.parse(
-        await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/CollectionOrder.json`)
-      )
+      await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH, 'template')
     ).toEqual({ entries: [{ kind: 'collection', id: templateAlphaId }] })
   })
 

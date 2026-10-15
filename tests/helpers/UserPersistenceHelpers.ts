@@ -1,6 +1,8 @@
 import type { ElectronApplication } from 'playwright'
 import type { EventEmitter } from 'node:events'
 import { createTestRequestId } from './TestRequestId'
+import { readTextFile } from './PromptPersistenceTestHelpers'
+import { getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 
 /** Seed values for one collection or category view-state entry. */
 export type WorkspacePromptCollectionUiStateSeedEntry = {
@@ -134,6 +136,17 @@ export const readWorkspaceState = async <T = Record<string, unknown>>(
       AND entity_id IS ${toSqlNullableText(entityId)}`)
   if (!result.success) throw new Error(result.error)
   return result.rows?.[0] ? JSON.parse(String(result.rows[0].data_json)) : null
+}
+
+/** Reads the actual SQLite collection order using the workspace's persisted identity. */
+export const readWorkspaceCollectionOrder = async (
+  electronApp: ElectronApplication,
+  workspacePath: string,
+  kind: 'prompt' | 'template' = 'prompt'
+): Promise<{ entries: Array<{ kind: 'collection'; id: string }> } | null> => {
+  /** Workspace IDs, rather than machine-local paths, own user-specific orders. */
+  const info = JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(workspacePath)))
+  return await readWorkspaceState(electronApp, info.workspaceId, `${kind}-collection-order`, null)
 }
 
 /** Reads settings from their application-wide user record. */

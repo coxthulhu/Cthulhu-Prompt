@@ -213,7 +213,7 @@ describe('Filename allocation', () => {
     expect(await readTextFile(electronApp, `${orphanDirectory}/Legacy Category.category.json`)).toBe(category)
     expect(await readTextFile(electronApp, `${orphanDirectory}/Alpha.template.md`)).toBe(alphaTemplate)
     expect(await readTextFile(electronApp, `${orphanDirectory}/Beta.template.md`)).toBe(betaTemplate)
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(5)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(6)
     /** Loaded prompt timestamps verify rename-only migration preserved historical mtimes. */
     const loaded = await loadRoot(mainWindow)
     expect(loaded.prompts.map((entry: { data: { modifiedAt: string } }) => entry.data.modifiedAt)).toEqual([modifiedAt, modifiedAt, modifiedAt])

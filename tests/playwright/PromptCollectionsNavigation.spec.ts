@@ -13,7 +13,7 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
-import { runSqlQuery, seedWorkspaceState, seedCollectionUiState } from '../helpers/UserPersistenceHelpers'
+import { readWorkspaceCollectionOrder, runSqlQuery, seedWorkspaceState, seedCollectionUiState } from '../helpers/UserPersistenceHelpers'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import { getPromptCollectionCategoryIds, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 
@@ -752,7 +752,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     ).toHaveClass(/lucide-layers/)
     await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
 
-    await mainWindow.waitForSelector('[data-testid="prompt-editor-simple-1"]', {
+    await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-1"]', {
       state: 'attached'
     })
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
@@ -760,11 +760,12 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'true'
     )
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
-      'Example Prompts'
+      'Development Tools'
     )
   })
 
   test('opens the first ordered template collection when no template collection was selected', async ({
+    electronApp,
     testSetup
   }) => {
     /** Template-only workspace whose persisted order differs from alphabetical order. */
@@ -774,7 +775,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       { folderName: 'Alpha', displayName: 'Alpha Templates', collectionId: 'template-alpha' },
       { folderName: 'Zulu', displayName: 'Zulu Templates', collectionId: 'template-zulu' }
     ])
-    filesystem[`${workspacePath}/Templates/CollectionOrder.json`] = JSON.stringify({
+    await seedWorkspaceState(electronApp, createDeterministicId(workspacePath), 'template-collection-order', null, {
       entries: [
         { kind: 'collection', id: 'template-zulu' },
         { kind: 'collection', id: 'template-alpha' }
@@ -1313,9 +1314,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
     /** Empty template order repaired when the prompt-only sample workspace loads. */
     const initialWorkspaceCollectionEntries = (
-      JSON.parse(
-        await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/CollectionOrder.json`)
-      ) as { entries: Array<{ kind: 'collection'; id: string }> }
+      (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH, 'template'))!
     ).entries
 
     await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
@@ -1358,9 +1357,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       collectionId: expect.any(String),
       kind: 'template'
     })
-    const workspaceCollectionOrder = JSON.parse(
-      await readTextFile(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/CollectionOrder.json`)
-    ) as { entries: Array<{ kind: 'collection'; id: string }> }
+    const workspaceCollectionOrder = (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH, 'template'))!
     expect(workspaceCollectionOrder.entries).toEqual([
       { kind: 'collection', id: collectionInfo.collectionId },
       ...initialWorkspaceCollectionEntries
@@ -1625,6 +1622,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
+    await testHelpers.navigateToPromptCollections('Short')
     await testHelpers.scrollVirtualWindowTo(PROMPT_TREE_HOST, 1700)
     await mainWindow.waitForSelector(SHORT_PROMPT_50, { state: 'attached' })
     await mainWindow.evaluate((selector) => {

@@ -16,6 +16,4 @@ export type PromptCollectionOrderFile = OrderContainer<EntryRef>
 /** Collection prompt or template category ordering stored in CategoryOrder.json. */
 export type PromptCollectionCategoryOrderFile = import('@shared/domain/prompt-collection/PromptCollection').CategoryOrder
 
-/** collection ordering stored independently below Prompts or Templates. */
-export type WorkspaceCollectionOrderFile = OrderContainer<CollectionEntryRef>
-import type { EntryRef, CollectionEntryRef, OrderContainer } from '@shared/domain/OrderContainer'
+import type { EntryRef, OrderContainer } from '@shared/domain/OrderContainer'

@@ -20,7 +20,7 @@ import {
 import { parsePromptMarkdown, parsePromptTemplateMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 5
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 6
 
 /** Historical metadata names used only by pre-collection migrations. */
 const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
@@ -497,13 +497,26 @@ const migrateSchemaVersionFourToFive: WorkspaceMigration = (workspacePath, works
   writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 5 })
 }
 
+/** Discards shared collection orders; each user's SQLite order is initialized on load. */
+const migrateSchemaVersionFiveToSix: WorkspaceMigration = (workspacePath, workspaceInfoPath) => {
+  /** Only the two workspace-level order files are retired, regardless of their contents. */
+  const fs = getFs()
+  for (const rootName of [PROMPTS_DIRECTORY_NAME, TEMPLATES_DIRECTORY_NAME]) {
+    fs.rmSync(path.join(workspacePath, rootName, 'CollectionOrder.json'), { force: true })
+  }
+  /** Commit the schema after both legacy files have been removed. */
+  const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+  writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 6 })
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   0: migrateSchemaVersionZeroToOne,
   1: migrateSchemaVersionOneToTwo,
   2: migrateSchemaVersionTwoToThree,
   3: migrateSchemaVersionThreeToFour,
-  4: migrateSchemaVersionFourToFive
+  4: migrateSchemaVersionFourToFive,
+  5: migrateSchemaVersionFiveToSix
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

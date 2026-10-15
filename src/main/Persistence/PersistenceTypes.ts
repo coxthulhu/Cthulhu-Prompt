@@ -41,6 +41,8 @@ export type PersistenceStageResult<TPersistenceFields> = {
 /** Filesystem persistence staged before its synchronous logical commit. */
 export type FilePersistenceLayer<TData, TPersistenceFields> = {
   kind: 'filesystem'
+  /** Optional SQLite state committed in the same transaction as the staged files. */
+  command?: SqlitePersistenceLayer<TData, TPersistenceFields>['command']
   stageChanges: (
     transition: PersistenceTransition<TData, TPersistenceFields>
   ) => Promise<PersistenceStageResult<TPersistenceFields>>

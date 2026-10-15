@@ -9,6 +9,16 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 
+// This loader test isolates content hydration; Playwright covers actual SQLite order persistence.
+vi.mock('../../src/main/Persistence/sqlite/SqliteDataAccess', () => ({
+  SqliteDataAccess: { runTransaction: <T>(commands: () => T): T => commands() }
+}))
+
+// An unsaved user order exercises alphabetical discovery without opening a native database.
+vi.mock('../../src/main/Persistence/sqlite/WorkspaceStateDataAccess', () => ({
+  WorkspaceStateDataAccess: { read: vi.fn(() => null), write: vi.fn() }
+}))
+
 vi.mock('../../src/main/Persistence/sqlite/WorkspaceUiStateDataAccess', () => ({
   WorkspaceUiStateDataAccess: {
     cleanupWorkspacePromptCollectionUiState: vi.fn()

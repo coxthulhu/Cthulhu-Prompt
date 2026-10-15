@@ -15,8 +15,6 @@ export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 /** Filename for category-view ordering owned by a collection. */
 export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = 'CategoryOrder.json'
-/** Filename for the workspace's ordered collection references. */
-export const WORKSPACE_COLLECTION_ORDER_FILENAME = 'CollectionOrder.json'
 export const PROMPT_COLLECTION_INFO_DIRECTORY_NAME = '_CollectionInfo'
 export const PROMPT_COLLECTION_INFO_FILENAME = 'CollectionInfo.json'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
@@ -100,18 +98,6 @@ export const resolvePromptCollectionCategoryOrderPath = (
     PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME
   )
 }
-
-/** Resolves the collection order owned by the selected type directory. */
-export const resolveWorkspaceCollectionOrderPath = (
-  workspacePath: string,
-  kind: PromptCollectionKind
-): string =>
-  path.join(
-    workspacePath,
-    resolvePromptRootDirectoryName(kind),
-    WORKSPACE_COLLECTION_ORDER_FILENAME
-  )
-
 export const resolvePromptCollectionInfoDirectoryPath = (
   workspacePath: string,
   folderName: string,

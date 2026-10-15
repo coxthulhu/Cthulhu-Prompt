@@ -1,3 +1,4 @@
+import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   createWorkspaceWithCollections,
@@ -245,7 +246,7 @@ Keep this body.`
       /** Canonical unreferenced category data produced by the recursive scan. */
       const migratedCategoryText = await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))
       expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 5,
+        schemaVersion: 6,
         workspaceId: unversionedInfo.workspaceId,
         workspaceName: unversionedInfo.workspaceName
       })
@@ -291,7 +292,7 @@ Keep this body.`
       })
 
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(5)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(6)
     })
 
     test('leaves schema version zero when a workspace migration file is malformed', async ({
@@ -401,7 +402,7 @@ Keep this partial body.`
       await expect(errorDialog).toBeHidden()
     })
 
-    test('repairs a missing workspace collection order during load', async ({
+    test('initializes a missing SQLite collection order during load', async ({
       electronApp,
       testSetup
     }) => {
@@ -428,10 +429,11 @@ Keep this partial body.`
         mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
       ).toHaveCount(0)
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
-      expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(true)
+      expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
+      expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' }] })
     })
 
-    test('rejects malformed workspace collection order JSON', async ({ testSetup }) => {
+    test('deletes malformed legacy collection orders without reading them', async ({ electronApp, testSetup }) => {
       const workspacePath = '/ws/malformed-collection-order'
       const filesystem = createWorkspaceWithCollections(workspacePath, [
         {
@@ -441,6 +443,7 @@ Keep this partial body.`
         }
       ])
       filesystem[workspaceCollectionOrderPath(workspacePath)] = '{ malformed'
+      filesystem[`${workspacePath}/Templates/CollectionOrder.json`] = '{ malformed'
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -452,8 +455,12 @@ Keep this partial body.`
 
       await expect(
         mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
-      ).toBeVisible()
-      expect(await testHelpers.isWorkspaceReady()).toBe(false)
+      ).toHaveCount(0)
+      await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
+      expect(await testHelpers.isWorkspaceReady()).toBe(true)
+      expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
+      expect(await checkFileExists(electronApp, `${workspacePath}/Templates/CollectionOrder.json`)).toBe(false)
+      expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' }] })
     })
 
     test('shows create dialog for empty directory creation and completes setup', async ({
@@ -482,7 +489,7 @@ Keep this partial body.`
             `${workspacePath}\\TestWorkspace.cthulhuprompt.json`
           )
         ).schemaVersion
-      ).toBe(5)
+      ).toBe(6)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {

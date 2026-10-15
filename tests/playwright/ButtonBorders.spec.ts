@@ -10,6 +10,7 @@ describe('Button styling', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'categories-ui' }
     })
+    await testHelpers.navigateToPromptCollections('Hierarchy')
     await testHelpers.clickNavButton('Test Screen')
 
     const neutralBorder = await resolvePaletteColor(

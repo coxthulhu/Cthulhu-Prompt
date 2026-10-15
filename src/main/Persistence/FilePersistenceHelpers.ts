@@ -136,7 +136,8 @@ export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange
       return
     }
 
-    fs.rmSync(stagedChange.targetPath)
+    // The staged directory is empty, but rm still requires directory removal mode.
+    fs.rmSync(stagedChange.targetPath, { recursive: true })
     return
   }
 

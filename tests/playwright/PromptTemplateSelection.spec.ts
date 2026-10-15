@@ -15,6 +15,8 @@ import {
   waitForMonacoEditor
 } from '../helpers/MonacoHelpers'
 import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
+import { createDeterministicId } from '../fixtures/FixtureIds'
+import { seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -219,6 +221,9 @@ describe('Prompt template selection', () => {
     electronApp,
     testSetup
   }) => {
+    await seedWorkspaceState(electronApp, createDeterministicId(WORKSPACE_PATH), 'template-collection-order', null, {
+      entries: [SECOND_TEMPLATE_COLLECTION_ID, FIRST_TEMPLATE_COLLECTION_ID, EMPTY_TEMPLATE_COLLECTION_ID].map((id) => ({ kind: 'collection', id }))
+    })
     await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({

@@ -1,6 +1,4 @@
 import type { Workspace } from '@shared/domain/workspace/Workspace'
-import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
-import type { WorkspaceCollectionOrderFile } from './workspace/WorkspaceDiskTypes'
 import { readWorkspaceCollectionEntries, readWorkspaceInfo } from './workspace/WorkspaceReads'
 import { createPersistenceStageResult, type PersistenceLayer } from './PersistenceTypes'
 import {
@@ -11,20 +9,32 @@ import {
   resolveTempPath,
   writeJsonFile
 } from './FilePersistenceHelpers'
-import { resolveWorkspaceCollectionOrderPath } from './PromptPersistencePaths'
+import { WorkspaceStateDataAccess } from './sqlite/WorkspaceStateDataAccess'
+import { SqliteDataAccess } from './sqlite/SqliteDataAccess'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from './workspace/WorkspaceMigrations'
 
+/** Filesystem location of the shared workspace identity and content. */
 export type WorkspacePersistenceFields = {
   workspacePath: string
   workspaceInfoPath: string
 }
 
-const toWorkspaceCollectionOrderFile = (entries: CollectionEntryRef[]): WorkspaceCollectionOrderFile => {
-  return { entries }
-}
-
+/** Persists shared workspace metadata and user-specific SQLite collection orders atomically. */
 export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersistenceFields> = {
   kind: 'filesystem',
+  command: (workspaceId, transition) => {
+    for (const kind of ['prompt', 'template'] as const) {
+      if (!transition.after) {
+        WorkspaceStateDataAccess.delete(workspaceId, `${kind}-collection-order`, null)
+        continue
+      }
+      /** The workspace owns independent orders for each collection kind. */
+      const entries = kind === 'prompt'
+        ? transition.after.data.promptCollectionEntries
+        : transition.after.data.templateCollectionEntries
+      WorkspaceStateDataAccess.write(workspaceId, `${kind}-collection-order`, null, { entries })
+    }
+  },
   stageChanges: async (transition) => {
     /** Current workspace record used for deletion paths. */
     const before = transition.before
@@ -33,47 +43,23 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     if (!before && !after) throw new Error('Workspace persistence transition is empty')
     /** Persistence metadata selected from the present transition side. */
     const fields = (after ?? before)!.persistenceFields
+    /** Shared identity file remains on disk. */
     const infoPath = fields.workspaceInfoPath
-    /** Task-prompt collection order stored below the Prompts directory. */
-    const promptCollectionOrderPath = resolveWorkspaceCollectionOrderPath(fields.workspacePath, 'prompt')
-    /** Prompt-template collection order stored below the Templates directory. */
-    const templateCollectionOrderPath = resolveWorkspaceCollectionOrderPath(
-      fields.workspacePath,
-      'template'
-    )
+    if (!after) return createPersistenceStageResult([createStagedFileRemove(infoPath)])
 
-    if (!after) {
-      return createPersistenceStageResult([
-        createStagedFileRemove(infoPath),
-        createStagedFileRemove(promptCollectionOrderPath),
-        createStagedFileRemove(templateCollectionOrderPath)
-      ])
+    // Collection ordering alone does not change shared workspace metadata.
+    if (before && before.data.workspaceName === after.data.workspaceName && before.data.id === after.data.id) {
+      return createPersistenceStageResult([])
     }
 
+    /** Staged identity file committed alongside the SQLite order. */
     const infoTempPath = resolveTempPath(infoPath)
     writeJsonFile(infoTempPath, {
       schemaVersion: LATEST_WORKSPACE_SCHEMA_VERSION,
       workspaceId: after.data.id,
       workspaceName: after.data.workspaceName
     })
-    /** Staged task-prompt order written atomically with the workspace record. */
-    const promptCollectionOrderTempPath = resolveTempPath(promptCollectionOrderPath)
-    writeJsonFile(
-      promptCollectionOrderTempPath,
-      toWorkspaceCollectionOrderFile(after.data.promptCollectionEntries)
-    )
-    /** Staged prompt-template order written atomically with the workspace record. */
-    const templateCollectionOrderTempPath = resolveTempPath(templateCollectionOrderPath)
-    writeJsonFile(
-      templateCollectionOrderTempPath,
-      toWorkspaceCollectionOrderFile(after.data.templateCollectionEntries)
-    )
-
-    return createPersistenceStageResult([
-      createStagedFileUpsert(infoPath, infoTempPath),
-      createStagedFileUpsert(promptCollectionOrderPath, promptCollectionOrderTempPath),
-      createStagedFileUpsert(templateCollectionOrderPath, templateCollectionOrderTempPath)
-    ])
+    return createPersistenceStageResult([createStagedFileUpsert(infoPath, infoTempPath)])
   },
   commitChanges: (stagedChange) => {
     commitStagedFileChanges(stagedChange)
@@ -85,12 +71,13 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     const { workspacePath, workspaceInfoPath } = persistenceFields
     const workspaceInfo = readWorkspaceInfo(workspaceInfoPath)
 
-    return {
+    // Initialize or repair both orders together before publishing the workspace snapshot.
+    return SqliteDataAccess.runTransaction(() => ({
       id: workspaceInfo.workspaceId,
       workspacePath,
       workspaceName: workspaceInfo.workspaceName,
-      promptCollectionEntries: readWorkspaceCollectionEntries(workspacePath, 'prompt'),
-      templateCollectionEntries: readWorkspaceCollectionEntries(workspacePath, 'template')
-    }
+      promptCollectionEntries: readWorkspaceCollectionEntries(workspacePath, workspaceInfo.workspaceId, 'prompt'),
+      templateCollectionEntries: readWorkspaceCollectionEntries(workspacePath, workspaceInfo.workspaceId, 'template')
+    }))
   }
 }

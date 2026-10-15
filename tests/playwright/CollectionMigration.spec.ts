@@ -2,7 +2,7 @@ import { createLegacyStateDatabase } from '../fixtures/LegacyStateDatabase'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { migrateSqliteDatabase, readWorkspaceUiState, runSqlQuery, runSqlStatement, readWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
+import { readWorkspaceCollectionOrder, migrateSqliteDatabase, readWorkspaceUiState, runSqlQuery, runSqlStatement, readWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
 
 /** Production Electron suite verifies both persisted formats through workspace startup. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -51,7 +51,7 @@ describe('Collection terminology migrations', () => {
     await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('3')
     await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('Prompt Collections')
     for (const [filePath, contents] of Object.entries(current)) {
-      if (contents === null || filePath.endsWith('.cthulhuprompt.json')) continue
+      if (contents === null || filePath.endsWith('.cthulhuprompt.json') || filePath.endsWith('/CollectionOrder.json')) continue
       expect(await checkFileExists(electronApp, filePath)).toBe(true)
       if (filePath.endsWith('CollectionInfo.json') || filePath.endsWith('CollectionOrder.json')) {
         expect(JSON.parse(await readTextFile(electronApp, filePath))).toEqual(JSON.parse(contents))
@@ -62,7 +62,7 @@ describe('Collection terminology migrations', () => {
     for (const filePath of Object.keys(legacy).filter((filePath) => filePath.includes('_FolderInfo') || filePath.endsWith('/FolderOrder.json'))) {
       expect(await checkFileExists(electronApp, filePath)).toBe(false)
     }
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(5)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(6)
     expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Tasks/Archived/_CollectionInfo`)).toBe(true)
     await testHelpers.navigateToPromptCollections('Tasks')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Task')
@@ -72,8 +72,9 @@ describe('Collection terminology migrations', () => {
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     await testHelpers.setupWorkspaceViaUI()
-    expect(JSON.parse(await readTextFile(electronApp, `${WORKSPACE_PATH}/Prompts/CollectionOrder.json`))).toEqual({ entries: [
-      { kind: 'collection', id: 'tasks' }, { kind: 'collection', id: 'another' }
+    expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/CollectionOrder.json`)).toBe(false)
+    expect(await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH)).toEqual({ entries: [
+      { kind: 'collection', id: 'another' }, { kind: 'collection', id: 'tasks' }
     ] })
     await testHelpers.navigateToPromptTemplateCollections('Library')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Wrapper')

@@ -183,7 +183,7 @@ describe('User Persistence', () => {
 
     await mainWindow.getByTestId('workspace-button').click()
     await expect(mainWindow.getByTestId('workspace-popup-path')).toHaveText(persistedWorkspacePath)
-    await expect(mainWindow.getByTestId('workspace-popup').locator('.cthulhuUiTitle')).toHaveText('persisted-workspace')
+    await expect(mainWindow.getByTestId('workspace-popup-name')).toHaveText('persisted-workspace')
   })
 
   test('applies persisted sidebar widths from user persistence', async ({
