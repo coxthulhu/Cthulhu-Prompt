@@ -611,11 +611,10 @@
           {#each visibleCollections.slice(0, 3) as collection (collection.id)}
             <div title={collection.title}>
               <SelectorButton
-                class="collection-row-selector"
+                class="collection-row-selector collection-tree-row"
                 icon={CollectionIcon}
                 text={collection.title}
                 showChevron={false}
-                selectionVariant="accent"
                 rowState={selectedCollection.id === collection.id ? 'active' : 'idle'}
                 ariaPressed={selectedCollection.id === collection.id}
                 onclick={() => selectCollection(collection)}
@@ -630,7 +629,6 @@
             class="collection-row-selector"
             icon={FolderOpen}
             text="All collections"
-            selectionVariant="accent"
             open={collectionMenuOpen}
             ariaHaspopup="menu"
             onclick={() => { collectionMenuOpen = !collectionMenuOpen }}
@@ -1091,19 +1089,41 @@
 
   .collection-selector-wrap {
     flex: 0 0 auto;
-    padding: 4px 8px;
+    padding: 4px 0;
   }
 
-  /* Keep the compact mockup geometry while shared selectors own control behavior and colors. */
+  /* Preview shared selectors with the prompt tree's row height and neutral selection treatment. */
   .collection-selector-wrap :global(.cthulhuUiSelectorButton.collection-row-selector) {
     grid-template-columns: 16px 8px minmax(0, 1fr) 24px;
-    min-height: 34px;
-    padding: 5px 8px;
-    border-radius: var(--cthulhu-ui-radius-control);
+    height: 30px;
+    min-height: 30px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .collection-selector-wrap :global(.collection-tree-row:hover),
+  .collection-selector-wrap :global(.collection-tree-row:focus-visible) {
+    background-color: var(--ui-neutral-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .collection-selector-wrap :global(.collection-tree-row[data-row-state='active']) {
+    background-color: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .collection-selector-wrap :global(.collection-tree-row[data-row-state='active']:hover) {
+    background-color: var(--ui-neutral-selection-surface);
+  }
+
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonText) {
+    font-weight: var(--font-weight-normal);
   }
 
   .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonIconCell),
   .collection-selector-wrap :global(.collection-row-selector .cthulhuUiIconCellIcon) {
+    color: var(--ui-secondary-icon-glyph);
     height: 16px;
     width: 16px;
   }
