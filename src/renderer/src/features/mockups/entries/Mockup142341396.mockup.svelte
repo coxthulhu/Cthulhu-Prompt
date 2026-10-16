@@ -7,6 +7,7 @@
   import appIcon from '@renderer/assets/cutethulhu.png'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
 
+  // Plain text header action; based on mockup 142341391.
   // Visual snapshot of AppSidebar, AppActivityBar, WorkspacePopup, PromptTree, and their controls.
   // Collection rows use shared selector buttons; other controls remain local snapshots.
   // All sample data and interactions below are local and reset when this mockup unmounts.
@@ -172,7 +173,7 @@
     collections.splice(targetIndex, 0, collection!)
   }
   const closeMenus = (event: MouseEvent) => {
-    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .collection-row-selector, .prompts-actions, .updates-button, .updates-popup')) return
+    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-header-picker, .collection-selector, .collection-row-selector, .prompts-actions, .updates-button, .updates-popup')) return
     collectionMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
@@ -606,6 +607,15 @@
   </nav>
   <aside class="mock-sidebar" hidden={!sidebarExpanded} style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <div class="collection-selector-wrap">
+      <header class="collection-header">
+        <h2 class="collection-header-title text-sm leading-5">{isTemplateCollection ? 'Template Collections' : 'Task Collections'}</h2>
+        <button class="collection-header-picker text-xs leading-4" type="button" aria-haspopup="menu" aria-expanded={collectionMenuOpen}
+          aria-controls="header-collection-menu"
+          onclick={() => { collectionMenuOpen = !collectionMenuOpen }}>
+          <span>All Collections</span>
+          {#if collectionMenuOpen}<ChevronUp size={14} aria-hidden="true" />{:else}<ChevronDown size={14} aria-hidden="true" />{/if}
+        </button>
+      </header>
       {#if visibleCollections.length > 0}
         <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
           {#each visibleCollections.slice(0, 3) as collection (collection.id)}
@@ -625,14 +635,6 @@
               </SelectorButton>
             </div>
           {/each}
-          <SelectorButton
-            class="collection-row-selector"
-            icon={FolderOpen}
-            text="All collections"
-            open={collectionMenuOpen}
-            ariaHaspopup="menu"
-            onclick={() => { collectionMenuOpen = !collectionMenuOpen }}
-          />
         </div>
       {:else}
       <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={selectedCollection ? collectionMenuOpen : undefined}
@@ -654,7 +656,7 @@
       </button>
       {/if}
       {#if collectionMenuOpen}
-        <div class="local-menu collection-menu" role="menu" aria-label="Collection selector">
+        <div id="header-collection-menu" class="local-menu collection-menu" role="menu" aria-label="Collection selector">
           <div class="collection-menu-items">
           {#each visibleCollections as collection (collection.id)}
             <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
@@ -1089,7 +1091,60 @@
 
   .collection-selector-wrap {
     flex: 0 0 auto;
-    padding: 4px 0;
+    padding: 0 0 4px;
+  }
+
+
+  .collection-header {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 10px;
+  }
+
+  .collection-header-title {
+    color: var(--ui-secondary-text);
+    flex: 1;
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .collection-header-picker {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 4px;
+    min-height: 28px;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+
+  .collection-header-picker:hover,
+  .collection-header-picker:focus-visible,
+  .collection-header-picker[aria-expanded='true'] {
+    background: var(--ui-neutral-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .collection-header-picker:focus-visible {
+    outline: 1px solid var(--ui-neutral-hover-border);
+    outline-offset: -1px;
+  }
+
+  .collection-header-picker:hover > span,
+  .collection-header-picker:focus-visible > span {
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* Preview shared selectors with the prompt tree's row height and neutral selection treatment. */
@@ -1758,7 +1813,7 @@
   }
 
   .collection-menu {
-    top: 100%;
+    top: 40px;
     left: 8px;
     width: 320px;
     padding: 6px;
