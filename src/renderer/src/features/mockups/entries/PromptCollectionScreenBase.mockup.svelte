@@ -7,7 +7,7 @@
     Ban,
     Check,
     Archive,
-    Bookmark,
+    Clock,
     ChevronDown,
     ChevronRight,
     ChevronUp,
@@ -25,7 +25,6 @@
     Plus,
     Search,
     Trash2,
-    Undo2,
     Zap,
     X
   } from 'lucide-svelte'
@@ -35,6 +34,7 @@
   // Standalone snapshot of the prompt-collection screen: all fixtures, controls, and mutations live here.
   // Only third-party Svelte/icons/Monaco/token counting and the host's palette/theme are shared.
   // Editor sizing below intentionally uses application defaults, independent of persisted settings.
+  // Snapshot: task-prompt collection UI. No workspace, IPC, live components, or domain mutations.
   const NO_TEMPLATE_LABEL = 'No template'
   const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
 
@@ -50,7 +50,7 @@
   const statusItems = [
     { id: MockPromptStatus.Todo, label: 'Todo', detail: 'Move back to active todo status', icon: CircleDashed },
     { id: MockPromptStatus.InProgress, label: 'In Progress', detail: 'Mark this prompt as underway', icon: Play },
-    { id: MockPromptStatus.Backlog, label: 'Backlog', detail: 'Save this prompt for future work', icon: Bookmark },
+    { id: MockPromptStatus.Backlog, label: 'Backlog', detail: 'Save this prompt for future work', icon: Clock },
     { id: MockPromptStatus.Completed, label: 'Complete', selectedLabel: 'Completed', detail: 'Move this prompt to completed', icon: Check },
     { id: MockPromptStatus.Archived, label: 'Archived', detail: 'Archived prompts must be restored to another status', icon: Archive }
   ]
@@ -132,6 +132,7 @@
     status: MockPromptStatus
     templateIds: string[]
     templateState: 'not-selected' | 'no-template' | 'selected'
+    isEdited: boolean
   }
 
   type MockTemplate = {
@@ -168,13 +169,15 @@
     categoryId: string,
     templateLabel: string,
     text: string,
-    status: MockPromptStatus = MockPromptStatus.Todo
+    status: MockPromptStatus = MockPromptStatus.Todo,
+    appearance: Partial<Pick<MockPrompt, 'isEdited' | 'modifiedLabel' | 'finalizedAt'>> = {}
   ): MockPrompt => ({
     id,
     title,
     categoryId,
     templateLabel,
     modifiedLabel: 'Updated today',
+    isEdited: false,
     finalizedAt: status === 'Completed' || status === 'Archived' ? Date.now() : null,
     status,
     templateIds:
@@ -185,7 +188,8 @@
         : templateLabel === NO_TEMPLATE_LABEL
           ? 'no-template'
           : 'selected',
-    text
+    text,
+    ...appearance
   })
 
   const templateCollections: MockTemplateGroup[] = [
@@ -193,7 +197,7 @@
       id: 'product-templates',
       title: 'Product Templates',
       templates: [
-        { id: 'turn-notes-into-requirements', title: 'Turn Notes into Requirements' },
+        { id: 'turn-notes-into-requirements', title: 'Turn Notes into Requirements', text: 'Turn these notes into specific requirements and acceptance criteria.\n\n[[PROMPT_TEXT]]' },
         { id: 'draft-implementation-plan', title: 'Draft Implementation Plan', text: 'Create a repository-grounded implementation plan.\n\n[[PROMPT_TEXT]]\n\nInclude focused validation for each step.' }
       ],
       children: [
@@ -201,8 +205,8 @@
           id: 'implementation-templates',
           title: 'Implementation',
           templates: [
-            { id: 'implement-approved-change', title: 'Implement Approved Change' },
-            { id: 'add-regression-coverage', title: 'Add Regression Coverage' }
+            { id: 'implement-approved-change', title: 'Implement Approved Change', text: 'Implement this approved change using the repository conventions.\n\n[[PROMPT_TEXT]]\n\nRun the relevant checks and report the outcome.' },
+            { id: 'add-regression-coverage', title: 'Add Regression Coverage', text: 'Add focused regression coverage for the following behavior.\n\n[[PROMPT_TEXT]]' }
           ],
           children: []
         }
@@ -211,14 +215,14 @@
     {
       id: 'review-templates',
       title: 'Review Templates',
-      templates: [{ id: 'review-completed-change', title: 'Review Completed Change' }],
+      templates: [{ id: 'review-completed-change', title: 'Review Completed Change', text: 'Review the following change for concrete defects.\n\n[[PROMPT_TEXT]]\n\nInclude file locations and reproduction steps for each finding.' }],
       children: [
         {
           id: 'handoff-templates',
           title: 'Handoff',
           templates: [
-            { id: 'prepare-final-handoff', title: 'Prepare Final Handoff' },
-            { id: 'update-developer-docs', title: 'Update Developer Documentation' }
+            { id: 'prepare-final-handoff', title: 'Prepare Final Handoff', text: 'Summarize the outcome, changed files, and verification results.\n\n[[PROMPT_TEXT]]' },
+            { id: 'update-developer-docs', title: 'Update Developer Documentation', text: 'Update the developer documentation for this change.\n\n[[PROMPT_TEXT]]' }
           ],
           children: []
         }
@@ -262,11 +266,9 @@
     if (!templateDialogPrompt) return
 
     if (templateDialogMode === 'select-and-copy') {
-      templateDialogPrompt.templateIds = template ? [template.id] : []
-      templateDialogPrompt.templateLabel = template?.title ?? NO_TEMPLATE_LABEL
-      templateDialogPrompt.templateState = template ? 'selected' : 'no-template'
-      void copyPrompt(templateDialogPrompt)
+      const prompt = templateDialogPrompt
       closeTemplateDialog()
+      requestCopyPrompt(prompt, template)
       return
     }
 
@@ -320,7 +322,9 @@
         'Convert the supplied product notes into a concise implementation checklist.',
         '',
         'Separate required behavior from optional polish.'
-      ].join('\n')
+      ].join('\n'),
+      MockPromptStatus.Todo,
+      { isEdited: true }
     ),
     createPrompt(
       'base-plan',
@@ -337,7 +341,9 @@
         '- Include the files to change and focused verification for each step.',
         '',
         'Return a checklist with concrete acceptance criteria.'
-      ].join('\n')
+      ].join('\n'),
+      MockPromptStatus.Todo,
+      { modifiedLabel: 'Updated yesterday' }
     ),
     createPrompt(
       'base-review',
@@ -348,7 +354,9 @@
         'Review the completed change for user-visible regressions, missing edge cases, and unnecessary complexity.',
         '',
         'Report only concrete findings.'
-      ].join('\n')
+      ].join('\n'),
+      MockPromptStatus.Completed,
+      { finalizedAt: Date.now() - 86_400_000 }
     ),
     createPrompt(
       'base-docs',
@@ -359,7 +367,8 @@
         'Update the relevant developer documentation to match the implemented behavior.',
         '',
         'Keep the guidance specific to this repository.'
-      ].join('\n')
+      ].join('\n'),
+      MockPromptStatus.Backlog
     ),
     createPrompt(
       'base-handoff',
@@ -370,7 +379,9 @@
         'Prepare a short handoff with the outcome, changed files, and verification results.',
         '',
         'Mention any remaining risk explicitly.'
-      ].join('\n')
+      ].join('\n'),
+      MockPromptStatus.Archived,
+      { finalizedAt: Date.now() - 3 * 86_400_000 }
     )
   ])
 
@@ -400,6 +411,7 @@
       title: 'Verification',
       shortDescription: 'Validate behavior and release readiness.',
       description: 'Prompts for validating product behavior and preparing a release.',
+      collapsed: true,
       prompts: [
         createPrompt('base-regression', 'Add focused regression coverage',
           'base-verification', NO_TEMPLATE_LABEL, 'Assert the visible user flow before implementation details.'),
@@ -428,6 +440,7 @@
   let findOpen = $state(false)
   let findQuery = $state('')
   let findIndex = $state(0)
+  let findNavigated = $state(false)
   let findInput = $state<HTMLTextAreaElement | null>(null)
   let viewport = $state<HTMLDivElement | null>(null)
   let viewportHeight = $state(0)
@@ -435,6 +448,7 @@
   let copiedPromptId = $state<string | null>(null)
   let copyResetTimer: number | undefined
   const mountedEditors = new SvelteMap<string, monaco.editor.IStandaloneCodeEditor>()
+  const editorFindDecorations = new SvelteMap<string, monaco.editor.IEditorDecorationsCollection>()
   const isFinalMode = $derived(screenMode === 'Completed' || screenMode === 'Archived')
   const allPrompts = $derived([...rootPrompts, ...categories.flatMap((category) => category.prompts)])
   const matchesGroup = (prompt: MockPrompt, group = screenMode) => group === 'Active'
@@ -466,9 +480,15 @@
       return matches
     })
   })
+  // Derived decorations track the current occurrence without taking focus from the find field.
+  const activeFindMatch = $derived(findOpen && findNavigated ? findMatches[findIndex] : undefined)
+  const getTitleMatches = (prompt: MockPrompt) => findOpen
+    ? findMatches.filter((match) => match.id === prompt.id && match.field === 'title')
+    : []
   const revealFindMatch = (direction: number) => {
     if (!findMatches.length) return
-    findIndex = (findIndex + direction + findMatches.length) % findMatches.length
+    findIndex = (findIndex + (findNavigated ? direction : direction < 0 ? -1 : 0) + findMatches.length) % findMatches.length
+    findNavigated = true
     const match = findMatches[findIndex]
     const category = categories.find((item) => item.id === match.categoryId)
     if (category && !isFinalMode) {
@@ -480,7 +500,12 @@
         ?? document.getElementById(`base-document-${match.id}`)
       target?.scrollIntoView({ block: 'center' })
       if (match.field === 'title') {
-        target?.querySelector('input')?.setSelectionRange(match.offset, match.offset + findQuery.length)
+        const input = target?.querySelector('input')
+        const highlight = target?.querySelector<HTMLElement>('[data-current="true"]')
+        if (input && highlight) {
+          input.scrollLeft = Math.max(0, highlight.offsetLeft + highlight.offsetWidth - input.clientWidth)
+          syncTitleHighlightScroll(input)
+        }
       } else {
         const editor = mountedEditors.get(match.id)
         const model = editor?.getModel()
@@ -488,7 +513,6 @@
           const start = model.getPositionAt(match.offset)
           const end = model.getPositionAt(match.offset + findQuery.length)
           const range = new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column)
-          editor.setSelection(range)
           editor.revealRangeInCenter(range)
         }
       }
@@ -496,12 +520,36 @@
   }
   // Side effect: focus the collection-wide find field when it appears.
   $effect(() => { if (findInput) { findInput.focus(); findInput.select() } })
-  // Side effect: reveal the first occurrence as the user changes the search text.
+  // Side effect: query edits reveal the first result while preserving the find field's focus.
   $effect(() => {
     void findQuery
     void findMatches.length
-    if (findOpen) untrack(() => { findIndex = 0; revealFindMatch(0) })
+    if (findOpen) untrack(() => {
+      findIndex = 0
+      findNavigated = false
+      revealFindMatch(0)
+    })
   })
+  // Side effect: decorate all mounted editor matches, including editors mounted by category expansion.
+  $effect(() => {
+    for (const [id, decorations] of editorFindDecorations) {
+      const model = mountedEditors.get(id)?.getModel()
+      if (!model) continue
+      decorations.set(findOpen ? findMatches.filter((match) => match.id === id && match.field === 'text').map((match) => {
+        const start = model.getPositionAt(match.offset)
+        const end = model.getPositionAt(match.offset + findQuery.length)
+        const isCurrent = match === activeFindMatch
+        return {
+          range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
+          options: { className: isCurrent ? 'base-editor-find-current' : 'base-editor-find-match' }
+        }
+      }) : [])
+    }
+  })
+  const syncTitleHighlightScroll = (input: HTMLInputElement) => {
+    const mirror = input.parentElement?.querySelector<HTMLElement>('.base-title-mirror')
+    if (mirror) mirror.style.transform = `translateX(${-input.scrollLeft}px)`
+  }
   const updateBreadcrumb = () => {
     if (!viewport || isFinalMode) { breadcrumbCategoryId = null; return }
     const sampleY = viewport.getBoundingClientRect().top + 84
@@ -643,7 +691,16 @@
   let nameInput = $state<HTMLInputElement | null>(null)
   const nameError = $derived(!nameDialog?.value.trim() ? 'Collection name is required' : null)
   const nameDisabled = $derived(Boolean(nameError) || nameDialog?.value.trim() === rootTitle)
-  let confirmation = $state<{ title: string; description: string; submit: string; confirm: () => void } | null>(null)
+  let confirmation = $state<{
+    title: string
+    description: string
+    submit: string
+    confirm: () => void
+    informational?: boolean
+    acknowledgement?: string
+    acknowledged?: boolean
+  } | null>(null)
+  let copyError = $state<string | null>(null)
 
   let manageCategoriesOpen = $state(false)
   let managementDrafts = $state<MockCategoryDraft[]>([])
@@ -784,7 +841,31 @@
   const mountMockDialog = (node: HTMLElement) => {
     const previousFocus = document.activeElement as HTMLElement | null
     document.body.appendChild(node)
-    return { destroy: () => { node.remove(); previousFocus?.focus() } }
+    // Keep keyboard focus inside the local modal and restore the initiating control on close.
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+      const controls = [...node.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]')]
+        .filter((control) => control.getClientRects().length > 0)
+      const first = controls[0]
+      const last = controls.at(-1)
+      if (event.shiftKey && (document.activeElement === first || !node.contains(document.activeElement))) {
+        event.preventDefault()
+        last?.focus()
+      } else if (!event.shiftKey && (document.activeElement === last || !node.contains(document.activeElement))) {
+        event.preventDefault()
+        first?.focus()
+      }
+    }
+    node.addEventListener('keydown', trapFocus)
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (!node.contains(document.activeElement)) node.querySelector<HTMLElement>('button, input, [tabindex]')?.focus()
+    })
+    return { destroy: () => {
+      window.cancelAnimationFrame(focusFrame)
+      node.removeEventListener('keydown', trapFocus)
+      node.remove()
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true })
+    } }
   }
   const EDITOR_BODY_PADDING_TOP_PX = 8
   const EDITOR_BODY_PADDING_RIGHT_PX = 10
@@ -816,6 +897,7 @@
     const editor = monaco.editor.create(host, {
       model,
       automaticLayout: true,
+      pasteAs: { enabled: false },
       ariaLabel: `${document.id} editor`,
       fontSize: editorSizing.fontSize,
       lineHeight: lineHeightPx,
@@ -824,6 +906,7 @@
       glyphMargin: false,
       minimap: { enabled: false },
       renderLineHighlightOnlyWhenFocus: true,
+      renderWhitespace: 'none',
       renderValidationDecorations: 'off',
       revealHorizontalRightPadding: 0,
       scrollBeyondLastLine: false,
@@ -843,6 +926,7 @@
       }
     })
     mountedEditors.set(document.id, editor)
+    editorFindDecorations.set(document.id, editor.createDecorationsCollection())
 
     const syncHeight = () => {
       const heightPx = document.fixedHeightPx ??
@@ -855,7 +939,7 @@
     const contentSizeDisposable = editor.onDidContentSizeChange(syncHeight)
     const contentDisposable = editor.onDidChangeModelContent(() => {
       document.text = editor.getValue()
-      if ('modifiedLabel' in document) document.modifiedLabel = 'Updated today'
+      if ('isEdited' in document) markPromptEdited(document as MockPrompt)
     })
 
     let isDisposed = false
@@ -864,6 +948,8 @@
       isDisposed = true
       contentSizeDisposable.dispose()
       contentDisposable.dispose()
+      editorFindDecorations.get(document.id)?.clear()
+      editorFindDecorations.delete(document.id)
       editor.dispose()
       mountedEditors.delete(document.id)
       if (!existingModel) model.dispose()
@@ -898,6 +984,7 @@
         nameDialog = null
         closeManageCategories()
         confirmation = null
+        copyError = null
         statusMenuId = null
         deleteMenuId = null
         findOpen = false
@@ -918,15 +1005,52 @@
     return () => document.removeEventListener('keydown', handleKeydown)
   })
 
-  const copyPrompt = async (prompt: MockPrompt) => {
-    const template = templateCollections.flatMap(getTemplates).find((item) => item.id === prompt.templateIds[0])
-    const templateText = template?.text ?? (template ? `${template.title}\n\n[[PROMPT_TEXT]]` : null)
-    const text = templateText ? templateText.replaceAll('[[PROMPT_TEXT]]', prompt.text) : prompt.text
-    await window.navigator.clipboard.writeText(text)
-    copiedPromptId = prompt.id
-    window.clearTimeout(copyResetTimer)
-    copyResetTimer = window.setTimeout(() => { copiedPromptId = null }, 1500)
-    if (prompt.status === 'Todo') setPromptStatus(prompt, MockPromptStatus.InProgress)
+  const markPromptEdited = (prompt: MockPrompt) => {
+    prompt.isEdited = true
+    prompt.modifiedLabel = 'Updated today'
+  }
+
+  const finalizedLabel = (prompt: MockPrompt) => {
+    const days = Math.floor((Date.now() - (prompt.finalizedAt ?? Date.now())) / 86_400_000)
+    return `${prompt.status} ${days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`}`
+  }
+
+  const requestCopyPrompt = (prompt: MockPrompt, selectedTemplate?: MockTemplate | null) => {
+    if (prompt.status === 'Backlog' || prompt.status === 'Completed' || prompt.status === 'Archived') {
+      confirmation = {
+        title: 'Copy Prompt',
+        description: `Copying this prompt will move it from ${prompt.status} to In Progress.`,
+        submit: 'Copy and Move',
+        informational: true,
+        confirm: () => { void copyPrompt(prompt, selectedTemplate) }
+      }
+      return
+    }
+    void copyPrompt(prompt, selectedTemplate)
+  }
+
+  const copyPrompt = async (prompt: MockPrompt, selectedTemplate?: MockTemplate | null) => {
+    const template = selectedTemplate === undefined
+      ? templateCollections.flatMap(getTemplates).find((item) => item.id === prompt.templateIds[0])
+      : selectedTemplate
+    const templateText = template?.text
+    const text = templateText?.includes('[[PROMPT_TEXT]]')
+      ? templateText.replaceAll('[[PROMPT_TEXT]]', prompt.text)
+      : prompt.text
+    try {
+      await window.navigator.clipboard.writeText(text)
+      if (selectedTemplate !== undefined) {
+        prompt.templateIds = template ? [template.id] : []
+        prompt.templateLabel = template?.title ?? NO_TEMPLATE_LABEL
+        prompt.templateState = template ? 'selected' : 'no-template'
+      }
+      copiedPromptId = prompt.id
+      window.clearTimeout(copyResetTimer)
+      copyResetTimer = window.setTimeout(() => { copiedPromptId = null }, 1500)
+      setPromptStatus(prompt, MockPromptStatus.InProgress)
+    } catch {
+      copyError = 'Unable to copy to the clipboard. Please try again.'
+    }
   }
 
   const setPromptStatus = (prompt: MockPrompt, status: MockPromptStatus) => {
@@ -970,9 +1094,9 @@
   </button>
 {/snippet}
 
-{#snippet IconCell(Icon: ComponentType)}
+{#snippet IconCell(Icon: ComponentType, large = false)}
   <span class="base-icon-cell">
-    <Icon size={24} aria-hidden="true" />
+    <Icon size={large ? 32 : 24} strokeWidth={large ? 1.5 : 2} aria-hidden="true" />
   </span>
 {/snippet}
 
@@ -1043,12 +1167,12 @@
   {@const isActive = prompt.status === 'Todo' || prompt.status === 'InProgress'}
   {@const hasBackward = isActive || prompt.status === 'Completed'}
   {@const hasForward = isActive || prompt.status === 'Backlog'}
-  {@const StatusIcon = prompt.status === 'Completed' ? Check : prompt.status === 'Archived' ? Archive : prompt.status === 'Backlog' ? Bookmark : prompt.status === 'InProgress' ? Play : CircleDashed}
+  {@const StatusIcon = prompt.status === 'Completed' ? Check : prompt.status === 'Archived' ? Archive : prompt.status === 'Backlog' ? Clock : prompt.status === 'InProgress' ? Play : CircleDashed}
   <div class="base-status-control">
     <div class="base-status-segmented" data-status={prompt.status}
       data-leading-action={hasBackward ? 'true' : 'false'} data-trailing-action={hasForward ? 'true' : 'false'}>
       {#if hasBackward}
-        {@render IconButton(prompt.status === 'Todo' ? Bookmark : Undo2,
+        {@render IconButton(prompt.status === 'Todo' ? Clock : CircleDashed,
           prompt.status === 'Todo' ? 'Move prompt to Backlog' : prompt.status === 'Completed' ? 'Uncomplete prompt' : 'Set prompt to Todo', {
             onclick: () => setPromptStatus(prompt, prompt.status === 'Todo' ? MockPromptStatus.Backlog : MockPromptStatus.Todo)
           })}
@@ -1143,6 +1267,7 @@
 
 {#snippet PromptCard(prompt: MockPrompt, index: number, siblingCount: number)}
   {@const archiveDefault = prompt.status !== 'Archived' && Boolean(prompt.title.trim() || prompt.text.trim())}
+  {@const titleMatches = getTitleMatches(prompt)}
   <article
     id={`base-card-${prompt.id}`}
     class="base-editor-card base-prompt-card"
@@ -1168,18 +1293,30 @@
 
     <div class="base-editor-body">
       <header class="base-prompt-title-area">
-        <span class="base-status-indicator" data-status={prompt.status} aria-hidden="true"></span>
+        <span class="base-status-indicator" data-status={prompt.status} data-edited={prompt.isEdited} aria-hidden="true"></span>
         <div class="base-prompt-title-main">
           {@render IconCell(FileText)}
           <div class="base-title-copy">
-            <input class="text-sm" aria-label="Prompt title" placeholder={prompt.title.trim() ? 'Title...' : 'New Prompt...'} bind:value={prompt.title}
-              oninput={() => prompt.modifiedLabel = 'Updated today'}
+            <div class="base-title-field">
+              <div class="base-title-highlights text-sm leading-5" aria-hidden="true">
+                <div class="base-title-mirror">
+                  {#each titleMatches as match, matchIndex (match.offset)}
+                    {prompt.title.slice(matchIndex === 0 ? 0 : titleMatches[matchIndex - 1].offset + findQuery.length, match.offset)}<span
+                      class="base-title-match" data-current={match === activeFindMatch}
+                    >{prompt.title.slice(match.offset, match.offset + findQuery.length)}</span>
+                  {/each}{prompt.title.slice(titleMatches.length ? titleMatches[titleMatches.length - 1].offset + findQuery.length : 0)}
+                </div>
+              </div>
+            <input class="text-sm leading-5" aria-label="Prompt title" placeholder={prompt.title.trim() ? 'Title...' : 'New Prompt...'} bind:value={prompt.title}
+              oninput={() => markPromptEdited(prompt)}
+              onscroll={(event) => syncTitleHighlightScroll(event.currentTarget)}
               onkeydown={(event) => {
                 if (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey)) {
                   event.preventDefault()
                   mountedEditors.get(prompt.id)?.focus()
                 }
               }} />
+            </div>
             <div class="base-metadata-row text-xs">
               <span
                 class="base-template-label"
@@ -1195,7 +1332,7 @@
               <span>{getTokenCount(prompt.text)} {getTokenCount(prompt.text) === 1 ? 'token' : 'tokens'}</span>
               {#if prompt.finalizedAt}
                 {@render SeparatorDot()}
-                <span title={new Date(prompt.finalizedAt).toLocaleString()}>{prompt.status} today</span>
+                <span title={new Date(prompt.finalizedAt).toLocaleString()}>{finalizedLabel(prompt)}</span>
               {/if}
             </div>
           </div>
@@ -1203,7 +1340,6 @@
 
         <div class="base-prompt-actions">
           <div class="base-icon-button-bar">
-            {#if prompt.status !== 'Backlog'}
             {#if prompt.templateState === 'not-selected'}
               {@render IconButton(Zap, 'Select Template and Copy', {
                 onclick: () => openTemplateDialog(prompt, 'select-and-copy')
@@ -1211,9 +1347,8 @@
             {:else}
               {@render IconButton(copiedPromptId === prompt.id ? ClipboardCheck : Copy, copiedPromptId === prompt.id ? 'Copied' : 'Copy prompt', {
                 hoverVariant: 'accent',
-                onclick: () => { void copyPrompt(prompt) }
+                onclick: () => requestCopyPrompt(prompt)
               })}
-            {/if}
             {/if}
             {@render IconButton(Layers, 'Set Template', {
               onclick: () => openTemplateDialog(prompt)
@@ -1251,7 +1386,7 @@
                     </span>
                     <span class="base-status-menu-text">
                       <span class="base-status-menu-title text-sm leading-4.5">{archiveDefault ? 'Delete Prompt' : 'Archive Prompt'}</span>
-                      <span class="base-status-menu-subtitle text-xs">{archiveDefault ? 'Permanently delete this prompt' : 'Move this prompt to Archived'}</span>
+                      <span class="base-status-menu-subtitle text-xs">{archiveDefault ? 'Permanently delete prompt' : 'Move to Archived'}</span>
                     </span>
                   </button>
                 </div>
@@ -1280,7 +1415,7 @@
       </aside>
 
       <div class="base-editor-body">
-        <header class="base-category-title-bar" aria-expanded={!category.collapsed}>
+        <header class="base-category-title-bar">
           <div class="base-category-title-main">
             <button class="base-category-chevron" type="button" aria-label={category.collapsed ? 'Expand category prompts' : 'Collapse category prompts'} aria-expanded={!category.collapsed} onclick={() => category.collapsed = !category.collapsed}>
               <ChevronRight size={24} aria-hidden="true" />
@@ -1375,7 +1510,7 @@
     <section class="base-root-header">
       <div class="base-root-title-row">
         <div class="base-root-title-block">
-          {@render IconCell(FileText)}
+          {@render IconCell(FileText, true)}
           <div class="base-root-title-stack">
             <div class="base-root-title-line">
               <h1 class="text-3xl leading-9" title={rootTitle}>{rootTitle}</h1>
@@ -1396,7 +1531,7 @@
           {#each groups as group (group)}
             <button class="text-sm leading-5" type="button" aria-pressed={screenMode === group}
               onclick={() => selectGroup(group)}>
-              {group} <span class="text-xs leading-4.5">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span>
+              <span class="base-filter-label">{group} <span class="base-filter-count text-xs leading-4.5">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span></span>
             </button>
           {/each}
         </div>
@@ -1409,8 +1544,9 @@
           <span class="base-root-action-divider" aria-hidden="true"></span>
           {@render IconButton(Trash2, 'Delete collection', { borderless: true, hoverVariant: 'danger',
             onclick: () => confirmation = { title: 'Delete Collection',
-              description: `Are you sure you want to permanently delete “${rootTitle}” and all of its contents?`,
-              submit: 'Delete Collection', confirm: () => { rootPrompts = []; categories = [] } }
+              description: 'This collection and everything inside it will be permanently deleted, including completed and archived prompts.',
+              acknowledgement: 'Yes, I want to delete this collection and all of its contents.',
+              submit: 'Delete collection', confirm: () => { rootPrompts = []; categories = [] } }
           })}
         </div>
       </div>
@@ -1631,19 +1767,56 @@
 
 {#if confirmation}
   <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog
-    onclick={(event) => { if (event.target === event.currentTarget) confirmation = null }}>
-    <div tabindex="-1" class="base-template-dialog base-confirmation-dialog" role="dialog" aria-modal="true" aria-label={confirmation.title}>
+    onclick={(event) => { if (event.target === event.currentTarget && !confirmation?.informational) confirmation = null }}>
+    <div tabindex="-1" class="base-template-dialog base-confirmation-dialog" data-informational={confirmation.informational ?? false}
+      data-acknowledgement={!!confirmation.acknowledgement} role="dialog" aria-modal="true" aria-label={confirmation.title}>
       <header class="base-template-dialog-header">
         <div class="base-template-dialog-heading">
-          <div class="base-template-dialog-icon"><Trash2 size={24} aria-hidden="true" /></div>
+          <div class="base-template-dialog-icon">
+            {#if confirmation.informational}<Copy size={24} aria-hidden="true" />{:else}<Trash2 size={24} aria-hidden="true" />{/if}
+          </div>
           <h2 class="text-lg">{confirmation.title}</h2>
         </div>
         {@render IconButton(X, 'Close', { onclick: () => confirmation = null })}
       </header>
-      <p class="text-base">{confirmation.description}</p>
+      <div class="base-confirmation-content">
+        <p class="text-base">{confirmation.description}</p>
+        {#if confirmation.acknowledgement}
+          <label class="base-confirmation-acknowledgement text-base">
+            <span class="base-confirmation-checkbox">
+              <input type="checkbox" bind:checked={confirmation.acknowledged} />
+              <span aria-hidden="true"><Check size={13} /></span>
+            </span>
+            <span>{confirmation.acknowledgement}</span>
+          </label>
+        {/if}
+      </div>
       <div class="base-template-dialog-footer">
         <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => confirmation = null}>Cancel</button>
-        <button class="base-dialog-confirm-button text-sm" type="button" onclick={() => { confirmation?.confirm(); confirmation = null }}>{confirmation.submit}</button>
+        <button class="base-dialog-confirm-button text-sm" type="button"
+          disabled={!!confirmation.acknowledgement && !confirmation.acknowledged}
+          onclick={() => { const action = confirmation?.confirm; confirmation = null; action?.() }}>
+          {#if confirmation.informational}<Copy size={16} aria-hidden="true" />{:else}<Trash2 size={16} aria-hidden="true" />{/if}
+          {confirmation.submit}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if copyError}
+  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
+    <div class="base-template-dialog base-confirmation-dialog" role="alertdialog" aria-modal="true" aria-label="Copy failed">
+      <header class="base-template-dialog-header">
+        <div class="base-template-dialog-heading">
+          <AlertCircle size={24} aria-hidden="true" />
+          <h2 class="text-lg">Copy failed</h2>
+        </div>
+        {@render IconButton(X, 'Close', { onclick: () => copyError = null })}
+      </header>
+      <div class="base-confirmation-content"><p class="text-base">{copyError}</p></div>
+      <div class="base-template-dialog-footer">
+        <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => copyError = null}>Close</button>
       </div>
     </div>
   </div>
@@ -2021,7 +2194,7 @@
   }
 
   .base-root-title-block {
-    align-items: flex-start;
+    align-items: center;
     display: flex;
     gap: 12px;
     height: 60px;
@@ -2171,7 +2344,13 @@
     outline-offset: 2px;
   }
 
-  .base-filter-bar span {
+  .base-filter-label {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+  }
+
+  .base-filter-count {
     margin-left: 4px;
     padding: 2px 6px;
   }
@@ -2314,6 +2493,11 @@
 
   .base-editor-sidebar button:disabled {
     opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .base-editor-sidebar:focus-within {
+    box-shadow: inset 0 0 0 2px var(--ui-neutral-focus-border);
   }
 
   .base-editor-sidebar button:not(.base-drag-button) :global(svg) {
@@ -2369,6 +2553,10 @@
     background: transparent;
   }
 
+  .base-status-indicator[data-edited='true'] {
+    background: var(--ui-info-strong-border);
+  }
+
   .base-status-indicator[data-status='InProgress'] {
     background: var(--ui-warning-icon-glyph);
   }
@@ -2394,6 +2582,8 @@
   }
 
   .base-title-copy input {
+    position: relative;
+    display: block;
     background: transparent;
     border: 0;
     color: var(--ui-normal-text);
@@ -2403,6 +2593,41 @@
     outline: none;
     padding: 0;
     width: 100%;
+  }
+
+  .base-title-copy input::placeholder {
+    color: var(--ui-secondary-text);
+  }
+
+  .base-title-field {
+    position: relative;
+    min-width: 0;
+    height: 20px;
+  }
+
+  .base-title-highlights {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    color: transparent;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .base-title-mirror {
+    position: relative;
+    width: max-content;
+    white-space: pre;
+  }
+
+  .base-title-match,
+  .base-monaco-host :global(.base-editor-find-match) {
+    background: var(--ui-search-match-fill);
+  }
+
+  .base-title-match[data-current='true'],
+  .base-monaco-host :global(.base-editor-find-current) {
+    background: var(--ui-search-current-fill);
   }
 
   .base-metadata-row {
@@ -2463,7 +2688,7 @@
 
   .base-category-chevron:hover {
     background: var(--ui-neutral-action-fill);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .base-actions-separator {
@@ -2693,7 +2918,7 @@
   }
 
   .base-category-card {
-    border-color: var(--ui-card-nested-border);
+    border-color: var(--ui-neutral-normal-border);
     border-bottom-left-radius: 0;
     border-bottom-right-radius: 0;
     height: 58px;
@@ -2742,18 +2967,16 @@
   }
 
   .base-category-children {
-    background: var(--ui-card-nested-surface);
-    border-left: 1px solid var(--ui-card-nested-border);
-    border-right: 1px solid var(--ui-card-nested-border);
+    border-left: 1px solid var(--ui-neutral-normal-border);
+    border-right: 1px solid var(--ui-neutral-normal-border);
     box-sizing: border-box;
     min-width: 0;
     padding-inline: 11px; /* Include the 1px side border in the live 12px inset. */
   }
 
   .base-category-bottom-cap {
-    background: var(--ui-card-nested-surface);
-    border: 1px solid var(--ui-card-nested-border);
-    border-radius: 0 0 var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card);
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 0 0 8px 8px;
     border-top: 0;
     box-sizing: border-box;
     height: 8px;
@@ -3270,11 +3493,43 @@
   .base-management-input[aria-invalid='true']:focus-visible { box-shadow: var(--cthulhu-ui-shadow-focus-danger); }
   .base-management-description-editor { background: var(--ui-editor-content-surface); border: 1px solid var(--ui-neutral-normal-border); border-radius: var(--cthulhu-ui-radius-control); display: block; min-width: 0; overflow: hidden; }
   .base-manage-dialog .base-dialog-confirm-button:disabled { cursor: default; opacity: 0.5; pointer-events: none; }
-  .base-confirmation-dialog { max-width: 480px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
+  .base-confirmation-dialog { max-width: 520px; padding-top: 16px; background: var(--ui-card-overlay-surface); }
   .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
-  .base-confirmation-dialog > p { padding: 0 4px 4px; margin: 0; }
+  .base-confirmation-content { display: grid; gap: 20px; min-width: 0; padding: 0 12px 4px; }
+  .base-confirmation-content p { margin: 0; color: var(--ui-normal-text); }
+  .base-confirmation-dialog[data-informational='true'] .base-confirmation-content,
+  .base-confirmation-dialog[data-acknowledgement='true'] .base-confirmation-content { padding: 12px; }
+  .base-confirmation-acknowledgement {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 16px;
+    border: 1px solid var(--ui-danger-muted-border);
+    border-radius: 8px;
+    background: var(--ui-danger-normal-surface);
+    color: var(--ui-normal-text);
+  }
+  .base-confirmation-checkbox { position: relative; flex: 0 0 17px; height: 17px; margin-top: 2px; }
+  .base-confirmation-checkbox input { position: absolute; inset: 0; width: 17px; height: 17px; margin: 0; opacity: 0; cursor: pointer; }
+  .base-confirmation-checkbox > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 17px;
+    height: 17px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 4px;
+    color: transparent;
+    pointer-events: none;
+  }
+  .base-confirmation-checkbox input:checked + span { background: var(--ui-danger-selection-fill); border-color: var(--ui-danger-selection-border); color: var(--ui-normal-text); }
+  .base-confirmation-checkbox input:focus-visible + span { outline: 2px solid var(--ui-danger-strong-border); outline-offset: 2px; }
   .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: var(--font-weight-semibold); }
   .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
+  .base-confirmation-dialog .base-dialog-confirm-button:disabled { opacity: 0.5; pointer-events: none; }
+  .base-confirmation-dialog[data-informational='true'] .base-dialog-confirm-button { background: var(--ui-accent-action-fill); border-color: var(--ui-accent-muted-border); }
+  .base-confirmation-dialog[data-informational='true'] .base-dialog-confirm-button:hover { background: var(--ui-accent-action-hover-fill); border-color: var(--ui-accent-muted-hover-border); }
   .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }
   @container (width < 720px) {
     .base-prompt-title-area { height: 109px; grid-template-columns: 2px minmax(0, 1fr); grid-template-rows: 56px 53px; }
