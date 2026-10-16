@@ -741,8 +741,8 @@
       <div class="cthulhuSidebarPromptSectionActions">
         <IconButton
           icon={ArrowUpToLine}
-          label="Show Collection Overview"
-          title="Show Collection Overview"
+          label="Go to Top"
+          title="Go to Top"
           borderless
           baseVariant="dim"
           disabled={!screenCollection}
