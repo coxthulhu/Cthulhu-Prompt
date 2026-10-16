@@ -1126,25 +1126,35 @@
     gap: 4px;
     min-height: 28px;
     padding: 0 4px;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
     white-space: nowrap;
   }
 
   .collection-header-picker:hover,
-  .collection-header-picker:focus-visible,
+  .collection-header-picker:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
+  }
+
   .collection-header-picker[aria-expanded='true'] {
-    background: var(--ui-neutral-normal-surface);
+    background: var(--ui-neutral-action-hover-fill);
     color: var(--ui-normal-text);
   }
 
   .collection-header-picker:focus-visible {
-    outline: 1px solid var(--ui-neutral-hover-border);
-    outline-offset: -1px;
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
   }
 
-  .collection-header-picker:hover > span,
-  .collection-header-picker:focus-visible > span {
-    text-decoration: underline;
-    text-underline-offset: 3px;
+  .collection-header-picker > :global(svg) {
+    color: var(--ui-hoverable-icon-glyph);
+    transition: color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .collection-header-picker:where(:hover, :focus-visible, [aria-expanded='true']) > :global(svg) {
+    color: var(--ui-normal-text);
   }
 
   /* Preview shared selectors with the prompt tree's row height and neutral selection treatment. */
