@@ -5,9 +5,10 @@
     GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Trash2, X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
+  import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
 
   // Visual snapshot of AppSidebar, AppActivityBar, WorkspacePopup, PromptTree, and their controls.
-  // Only Lucide icons, the brand image, and global palette/typography tokens are shared.
+  // Collection rows use shared selector buttons; other controls remain local snapshots.
   // All sample data and interactions below are local and reset when this mockup unmounts.
   type MockPrompt = { id: string; title: string; status?: string; edited?: boolean; categoryId?: string }
   type MockCategory = { id: string; title: string; prompts: MockPrompt[]; shortDescription?: string; description?: string }
@@ -171,7 +172,7 @@
     collections.splice(targetIndex, 0, collection!)
   }
   const closeMenus = (event: MouseEvent) => {
-    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .prompts-actions, .updates-button, .updates-popup')) return
+    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .collection-row-selector, .prompts-actions, .updates-button, .updates-popup')) return
     collectionMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
@@ -606,35 +607,34 @@
   <aside class="mock-sidebar" hidden={!sidebarExpanded} style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <div class="collection-selector-wrap">
       {#if visibleCollections.length > 0}
-        <div style="display: grid; grid-template-columns: minmax(0, 1fr) 28px; gap: 6px;">
-          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-            {#each visibleCollections.slice(0, 3) as collection (collection.id)}
-              <button
-                class="collection-selector text-sm leading-5"
-                type="button"
-                title={collection.title}
-                aria-pressed={selectedCollection.id === collection.id}
+        <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+          {#each visibleCollections.slice(0, 3) as collection (collection.id)}
+            <div title={collection.title}>
+              <SelectorButton
+                class="collection-row-selector"
+                icon={CollectionIcon}
+                text={collection.title}
+                showChevron={false}
+                selectionVariant="accent"
+                rowState={selectedCollection.id === collection.id ? 'active' : 'idle'}
+                ariaPressed={selectedCollection.id === collection.id}
                 onclick={() => selectCollection(collection)}
-                style={`display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 5px 8px; border-radius: 6px; ${selectedCollection.id === collection.id ? 'background: var(--ui-accent-action-fill); border-color: var(--ui-accent-muted-border); color: var(--ui-normal-text);' : ''}`}
               >
-                <CollectionIcon size={16} aria-hidden="true" style="flex-shrink: 0;" />
-                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--font-weight-semibold);">{collection.title}</span>
-                <span class="text-xs leading-4" style="flex-shrink: 0; font-variant-numeric: tabular-nums;">{collectionCount(collection)}</span>
-              </button>
-            {/each}
-          </div>
-          <button
-            class="collection-selector"
-            type="button"
-            aria-label="All collections"
-            title="All collections"
-            aria-expanded={collectionMenuOpen}
-            aria-haspopup="menu"
+                {#snippet trailingAccessory()}
+                  <span class="text-xs leading-4 tabular-nums">{collectionCount(collection)}</span>
+                {/snippet}
+              </SelectorButton>
+            </div>
+          {/each}
+          <SelectorButton
+            class="collection-row-selector"
+            icon={FolderOpen}
+            text="All collections"
+            selectionVariant="accent"
+            open={collectionMenuOpen}
+            ariaHaspopup="menu"
             onclick={() => { collectionMenuOpen = !collectionMenuOpen }}
-            style="display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 6px;"
-          >
-            {#if collectionMenuOpen}<ChevronUp size={18} aria-hidden="true" />{:else}<ChevronDown size={18} aria-hidden="true" />{/if}
-          </button>
+          />
         </div>
       {:else}
       <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={selectedCollection ? collectionMenuOpen : undefined}
@@ -1092,6 +1092,34 @@
   .collection-selector-wrap {
     flex: 0 0 auto;
     padding: 4px 8px;
+  }
+
+  /* Keep the compact mockup geometry while shared selectors own control behavior and colors. */
+  .collection-selector-wrap :global(.cthulhuUiSelectorButton.collection-row-selector) {
+    grid-template-columns: 16px 8px minmax(0, 1fr) 24px;
+    min-height: 34px;
+    padding: 5px 8px;
+    border-radius: var(--cthulhu-ui-radius-control);
+  }
+
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonIconCell),
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiIconCellIcon) {
+    height: 16px;
+    width: 16px;
+  }
+
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonTextStack) {
+    padding-right: 8px;
+  }
+
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonTrailingAccessory),
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonChevronWrap) {
+    width: 24px;
+  }
+
+  .collection-selector-wrap :global(.collection-row-selector .cthulhuUiSelectorButtonChevronWrap svg) {
+    height: 18px;
+    width: 18px;
   }
 
   .collection-selector {
