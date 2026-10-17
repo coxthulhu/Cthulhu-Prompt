@@ -52,7 +52,7 @@
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
-  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/buttons/IconButtonWithMoreOptions.svelte'
+  import SplitIconButton from '@renderer/common/cthulhu-ui/buttons/SplitIconButton.svelte'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
@@ -444,7 +444,7 @@
           />
         {/if}
         {#if onArchive && status !== PromptStatus.Archived}
-          <IconButtonWithMoreOptions
+          <SplitIconButton
             icon={DeletePrimaryIcon}
             label={deletePrimaryLabel}
             title={deletePrimaryLabel}

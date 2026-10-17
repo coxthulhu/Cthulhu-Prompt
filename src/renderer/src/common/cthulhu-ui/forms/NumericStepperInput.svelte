@@ -2,6 +2,7 @@
   import { Minus, Plus } from 'lucide-svelte'
   import type { HTMLInputAttributes } from 'svelte/elements'
   import type { WithElementRef } from '@renderer/common/cthulhu-ui/elementRef'
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = WithElementRef<
@@ -77,7 +78,7 @@
   data-invalid={ariaInvalid === true || ariaInvalid === 'true' ? 'true' : undefined}
 >
   <button
-    class="cthulhuUiNumericStepperInputButton"
+    class="cthulhuUiButtonBase cthulhuUiNumericStepperInputButton"
     type="button"
     aria-label={decreaseLabel}
     disabled={disabled || !canDecrease}
@@ -106,7 +107,7 @@
   </label>
 
   <button
-    class="cthulhuUiNumericStepperInputButton"
+    class="cthulhuUiButtonBase cthulhuUiNumericStepperInputButton"
     type="button"
     aria-label={increaseLabel}
     disabled={disabled || !canIncrease}
@@ -149,13 +150,9 @@
   }
 
   .cthulhuUiNumericStepperInputButton {
-    align-items: center;
     background-color: var(--ui-ghost-surface);
     border: 1px solid var(--ui-neutral-normal-border);
-    box-sizing: border-box;
     color: var(--ui-hoverable-icon-glyph);
-    cursor: pointer;
-    display: inline-flex;
     height: 100%;
     justify-content: center;
     padding: 0;
@@ -177,12 +174,6 @@
   .cthulhuUiNumericStepperInputButton:hover {
     background-color: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiNumericStepperInputButton:disabled {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
   }
 
   .cthulhuUiNumericStepperInput[data-invalid='true'] .cthulhuUiNumericStepperInputButton:disabled {

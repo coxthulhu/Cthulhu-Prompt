@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   export type IconButtonSize =
@@ -54,7 +55,7 @@
     iconTestId,
     testId,
     title,
-    disabled,
+    disabled = false,
     active,
     borderless = false,
     ariaHaspopup,
@@ -69,7 +70,6 @@
     onmousedown
   }: Props = $props()
 
-  const isDisabled = $derived(disabled === true)
   const iconSize = $derived(
     requestedIconSize ??
       (size === 'default' || size === 'compact-large-icon' ? 20 : size === 'tiny' ? 14 : 16)
@@ -80,13 +80,12 @@
 <button
   use:resolvedButtonAction={buttonActionParameter}
   type="button"
-  class={mergeClasses('cthulhuUiIconButton', className)}
+  class={mergeClasses('cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiIconButton', className)}
   aria-label={label}
   aria-haspopup={ariaHaspopup}
   aria-expanded={ariaExpanded}
   aria-current={ariaCurrent}
   aria-pressed={ariaPressed}
-  data-disabled={isDisabled ? 'true' : 'false'}
   data-size={size}
   data-base-variant={baseVariant}
   data-hover-variant={hoverVariant}
@@ -96,33 +95,21 @@
   data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}
   {tabindex}
-  disabled={isDisabled}
+  {disabled}
   {onclick}
   {onmousedown}
 >
   <!-- Icon button for compact icon-only actions. -->
-  <Icon class={iconClass} size={iconSize} data-testid={iconTestId} aria-hidden="true" />
+  <Icon class={mergeClasses('cthulhuUiButtonIcon', iconClass)} size={iconSize} data-testid={iconTestId} aria-hidden="true" />
 </button>
 
 <style>
   .cthulhuUiIconButton {
-    align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
-    color: var(--ui-hoverable-icon-glyph);
-    cursor: pointer;
-    display: inline-flex;
-    flex: 0 0 auto;
+    /* Icon-only controls use the glyph foreground instead of the text foreground. */
+    --cthulhu-ui-button-text: var(--ui-hoverable-icon-glyph);
     height: 36px;
     justify-content: center;
-    min-width: 0;
     padding: 0;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      border-color var(--ui-animation-duration-standard) ease,
-      color var(--ui-animation-duration-standard) ease;
     width: 36px;
   }
 
@@ -157,61 +144,31 @@
     border-bottom: 0;
   }
 
-  .cthulhuUiIconButton[data-grab-cursor='true'] {
+  .cthulhuUiIconButton[data-grab-cursor='true']:not(:disabled) {
     cursor: grab;
   }
 
-  .cthulhuUiIconButton[data-grab-cursor='true']:active {
+  .cthulhuUiIconButton[data-grab-cursor='true']:not(:disabled):active {
     cursor: grabbing;
   }
 
   .cthulhuUiIconButton[data-base-variant='dim'] {
-    background: transparent;
-    color: var(--ui-secondary-icon-glyph);
+    --cthulhu-ui-button-text: var(--ui-secondary-icon-glyph);
   }
 
   .cthulhuUiIconButton[data-base-variant='muted'] {
-    color: var(--ui-muted-icon-glyph);
+    --cthulhu-ui-button-text: var(--ui-muted-icon-glyph);
+  }
+
+  .cthulhuUiIconButton[data-size='sidebar-rail'][data-hover-variant='neutral'] {
+    /* Rail hover preserves its separator and uses the subtler fill. */
+    --cthulhu-ui-button-hover-fill: var(--ui-neutral-subtle-action-hover-fill);
+    --cthulhu-ui-button-hover-border: var(--ui-neutral-normal-border);
   }
 
   .cthulhuUiIconButton[data-hover-variant='glyph'] {
     /* Glyph-only actions intentionally remain visually borderless. */
     border: 0;
-  }
-
-  .cthulhuUiIconButton[data-borderless='true'] {
-    border: 0;
-  }
-
-  .cthulhuUiIconButton:hover,
-  .cthulhuUiIconButton:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    border-color: var(--ui-neutral-hover-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiIconButton[data-size='sidebar-rail']:hover,
-  .cthulhuUiIconButton[data-size='sidebar-rail']:focus-visible {
-    background: var(--ui-neutral-subtle-action-hover-fill);
-    border-bottom-color: var(--ui-neutral-normal-border);
-  }
-
-  .cthulhuUiIconButton[data-hover-variant='accent']:hover,
-  .cthulhuUiIconButton[data-hover-variant='accent']:focus-visible {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
-  }
-
-  .cthulhuUiIconButton[data-hover-variant='success']:hover,
-  .cthulhuUiIconButton[data-hover-variant='success']:focus-visible {
-    background: var(--ui-success-action-hover-fill);
-    border-color: var(--ui-success-muted-hover-border);
-  }
-
-  .cthulhuUiIconButton[data-hover-variant='danger']:hover,
-  .cthulhuUiIconButton[data-hover-variant='danger']:focus-visible {
-    background: var(--ui-danger-action-hover-fill);
-    border-color: var(--ui-danger-muted-hover-border);
   }
 
   .cthulhuUiIconButton[data-hover-variant='glyph']:hover,
@@ -226,18 +183,7 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiIconButton:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
-    outline-offset: 2px;
-  }
-
   .cthulhuUiIconButton[data-base-variant='dim']:focus-visible {
     outline: none;
-  }
-
-  .cthulhuUiIconButton[data-disabled='true'] {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
   }
 </style>

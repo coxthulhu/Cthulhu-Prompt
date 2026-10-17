@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   export type InlineTextButtonSize = 'default' | 'compact'
@@ -8,6 +9,8 @@
     text: string
     size?: InlineTextButtonSize
     baseVariant?: InlineTextButtonBaseVariant
+    /** Disables inline actions using the same behavior as other buttons. */
+    disabled?: boolean
     rowState?: string
     class?: string
     testId?: string
@@ -19,6 +22,7 @@
     text,
     size = 'compact',
     baseVariant = 'muted',
+    disabled = false,
     rowState,
     class: className,
     testId,
@@ -30,12 +34,13 @@
 <!-- Button line heights are explicitly excluded from text defaults to preserve compact rows. -->
 <button
   type="button"
-  class={mergeClasses('cthulhuUiInlineTextButton text-sm', size === 'default' ? 'leading-5' : 'leading-4.5', className)}
+  class={mergeClasses('cthulhuUiButtonBase cthulhuUiInlineTextButton text-sm', size === 'default' ? 'leading-5' : 'leading-4.5', className)}
   data-size={size}
   data-base-variant={baseVariant}
   data-row-state={rowState}
   data-testid={testId}
   {title}
+  {disabled}
   {onclick}
 >
   <span class="cthulhuUiInlineTextButtonLabel">{text}</span>
@@ -43,10 +48,6 @@
 
 <style>
   .cthulhuUiInlineTextButton {
-    display: inline-flex;
-    min-width: 0;
-    cursor: pointer;
-    align-items: center;
     border: 0;
     background: transparent;
     padding: var(--cthulhu-ui-inline-text-button-padding, 0);

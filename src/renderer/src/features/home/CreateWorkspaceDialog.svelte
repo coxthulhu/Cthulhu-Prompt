@@ -7,7 +7,7 @@
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
   import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
+  import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import type { WorkspaceFolderStatus } from '@shared/domain/workspace/Workspace'
   import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
@@ -244,7 +244,7 @@
           text="Include example prompts and templates in the My Project and My Templates collections."
         />
       </TitleSubtitleStack>
-      <ToggleTextButton
+      <ToggleButton
         testId="create-workspace-examples-toggle"
         pressed={includeExamples}
         disabled={isWorkspaceLoading}

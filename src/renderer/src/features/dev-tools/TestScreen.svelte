@@ -63,8 +63,8 @@
     type IconButtonHoverVariant,
     type IconButtonSize
   } from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import IconButtonWithMoreOptions from '@renderer/common/cthulhu-ui/buttons/IconButtonWithMoreOptions.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
+  import SplitIconButton from '@renderer/common/cthulhu-ui/buttons/SplitIconButton.svelte'
+  import ToolbarButton from '@renderer/common/cthulhu-ui/buttons/ToolbarButton.svelte'
   import InlineTextButton from '@renderer/common/cthulhu-ui/buttons/InlineTextButton.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/layout/MessageRow.svelte'
@@ -80,7 +80,7 @@
   import ControlRow from '@renderer/common/cthulhu-ui/forms/ControlRow.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
+  import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/layout/ValuePill.svelte'
 
   /** Workspace-scoped persistence key for the Test Screen accordion demo. */
@@ -113,7 +113,8 @@
     'danger',
     'glyph'
   ]
-  const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'tiny', 'sidebar-rail']
+  /** Include every supported size so the gallery also covers rectangular title actions. */
+  const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'compact-large-icon', 'tiny', 'sidebar-rail']
   const categoryIconSizes = [14, 18, 24, 32] as const
   const backlogIconSizes = [14, 16, 18, 24] as const
   const backlogIconCandidates: {
@@ -277,8 +278,14 @@
   let workspaceNameValue = $state('Engineering Prompts')
   let readonlyPathValue = $state('C:\\Source\\PromptApps\\CthulhuPromptPublic')
   let folderInputValue = $state('')
-  // Interactive gallery state demonstrates the controlled IconTextButton toggle API.
-  let iconTextButtonPressed = $state(true)
+  // Interactive gallery state demonstrates the controlled ToolbarButton toggle API.
+  let toolbarButtonPressed = $state(true)
+  /** Live disabled state exercises updates without remounting the button samples. */
+  let buttonSamplesDisabled = $state(true)
+  /** Visible activation count exposes unintended callbacks from disabled controls. */
+  let buttonSampleActivations = $state(0)
+  /** Records native button activation for the interactive disabled-state gallery. */
+  const recordButtonSampleActivation = () => { buttonSampleActivations += 1 }
   let togglePressed = $state(true)
   let ErrorDialogOpen = $state(false)
   let ConfirmationDialogOpen = $state(false)
@@ -386,7 +393,7 @@
                     {/each}
                   </div>
                   <div class="variant-controls">
-                    <IconTextButton icon={CandidateIcon} text="Backlog" />
+                    <ToolbarButton icon={CandidateIcon} text="Backlog" />
                   </div>
                 </div>
               {/each}
@@ -493,35 +500,36 @@
                 </div>
               </div>
               <div class="component-sample">
-                {@render componentLabel('IconTextButton')}
+                {@render componentLabel('ToolbarButton')}
                 <div class="variant-controls">
-                  <IconTextButton
+                  <ToolbarButton
                     icon={Sparkles}
                     text="Improve"
                     testId="test-screen-neutral-icon-text-button"
                   />
-                  <IconTextButton
+                  <ToolbarButton
                     icon={Archive}
                     text="Archive"
                     hoverVariant="accent"
                     testId="test-screen-accent-icon-text-button"
                   />
-                  <IconTextButton
+                  <ToolbarButton
                     icon={Plus}
                     pressedIcon={Check}
+                    pressedHoverIcon={X}
                     text="Description"
-                    pressed={iconTextButtonPressed}
+                    pressed={toolbarButtonPressed}
                     testId="test-screen-toggle-icon-text-button"
                     onclick={() => {
-                      iconTextButtonPressed = !iconTextButtonPressed
+                      toolbarButtonPressed = !toolbarButtonPressed
                     }}
                   />
                 </div>
               </div>
               <div class="component-sample">
-                {@render componentLabel('IconButtonWithMoreOptions')}
+                {@render componentLabel('SplitIconButton')}
                 <div class="variant-controls icon-only-controls">
-                  <IconButtonWithMoreOptions
+                  <SplitIconButton
                     icon={Copy}
                     label="Copy prompt"
                     title="Copy prompt"
@@ -535,7 +543,38 @@
               </div>
               <div class="component-sample">
                 {@render componentLabel('LinkButton')}
-                <LinkButton href="#action-buttons" text="Anchor link" icon={Download} />
+                <LinkButton href="#action-buttons" text="Anchor link" icon={Download}
+                  testId="test-screen-link-button" />
+              </div>
+              <!-- Live samples demonstrate native disabling, tab order, and disabled links. -->
+              <div class="component-sample">
+                {@render componentLabel('Button interaction')}
+                <Button
+                  text={buttonSamplesDisabled ? 'Enable samples' : 'Disable samples'}
+                  testId="test-screen-toggle-button-disabled"
+                  onclick={() => { buttonSamplesDisabled = !buttonSamplesDisabled }}
+                />
+                <div class="variant-controls" data-testid="test-screen-button-interaction">
+                  <Button text="Action" disabled={buttonSamplesDisabled}
+                    testId="test-screen-disable-action" onclick={recordButtonSampleActivation} />
+                  <IconButton icon={Plus} label="Icon action" disabled={buttonSamplesDisabled}
+                    testId="test-screen-disable-icon" onclick={recordButtonSampleActivation} />
+                  <ToolbarButton icon={Plus} text="Toolbar action" disabled={buttonSamplesDisabled}
+                    testId="test-screen-disable-toolbar" onclick={recordButtonSampleActivation} />
+                  <LinkButton href="#action-buttons" text="Link action" disabled={buttonSamplesDisabled}
+                    testId="test-screen-disable-link" />
+                  <ToggleButton pressed={false} disabled={buttonSamplesDisabled}
+                    testId="test-screen-disable-toggle" onclick={recordButtonSampleActivation} />
+                  <SplitIconButton icon={Copy} label="Split action" moreOptions={iconButtonMoreOptionsItems}
+                    disabled={buttonSamplesDisabled} testId="test-screen-disable-split"
+                    moreOptionsTestId="test-screen-disable-split-menu"
+                    onclick={recordButtonSampleActivation} />
+                  <DetailedSelectorButton label="Disabled selector" items={detailedDropdownItems}
+                    selectedItem={detailedDropdownItems[0]!} disabled={buttonSamplesDisabled}
+                    triggerTestId="test-screen-disable-selector" />
+                </div>
+                <Button text="Focus target" testId="test-screen-button-focus-target" />
+                <span data-testid="test-screen-button-activations">{buttonSampleActivations}</span>
               </div>
               <div class="component-sample">
                 {@render componentLabel('IconCell')}
@@ -642,11 +681,11 @@
                 detail="Keep prompt edits available between app launches"
               >
                 {#snippet detailExtra()}
-                  Control: ToggleTextButton
+                  Control: ToggleButton
                 {/snippet}
 
                 {#snippet control()}
-                  <ToggleTextButton
+                  <ToggleButton
                     pressed={togglePressed}
                     onclick={() => {
                       togglePressed = !togglePressed
@@ -841,8 +880,8 @@
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('ToggleTextButton')}
-                <ToggleTextButton
+                {@render componentLabel('ToggleButton')}
+                <ToggleButton
                   pressed={togglePressed}
                   testId="test-screen-toggle-text-button"
                   onclick={() => {
@@ -851,8 +890,8 @@
                 />
               </div>
               <div class="component-sample">
-                {@render componentLabel('ToggleTextButton: disabled')}
-                <ToggleTextButton
+                {@render componentLabel('ToggleButton: disabled')}
+                <ToggleButton
                   pressed={false}
                   disabled
                   testId="test-screen-disabled-toggle-text-button"

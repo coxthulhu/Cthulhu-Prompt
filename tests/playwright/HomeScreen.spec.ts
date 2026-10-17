@@ -341,7 +341,7 @@ Keep this partial body.`
 
       await mainWindow
         .locator(
-          '[role="dialog"][aria-label="Failed to Open Workspace"] button.cthulhuUiActionButton'
+          '[role="dialog"][aria-label="Failed to Open Workspace"] button.cthulhuUiButton'
         )
         .click()
       await testSetup.setupFileDialog([workspaceInfoPath])

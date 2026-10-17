@@ -2,11 +2,10 @@
   import type { ComponentType } from 'svelte'
   import type { HTMLButtonAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
-  import '@renderer/common/cthulhu-ui/actionButton.css'
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
 
   export type ButtonVariant = 'neutral' | 'accent' | 'danger'
   export type ButtonAppearance = 'filled' | 'outline'
-  type ButtonState = 'enabled' | 'disabled'
 
   type Props = Omit<HTMLButtonAttributes, 'type' | 'disabled'> & {
     icon?: ComponentType
@@ -14,7 +13,8 @@
     text: string
     variant?: ButtonVariant
     appearance?: ButtonAppearance
-    state?: ButtonState
+    /** Prevents activation and applies the shared disabled appearance. */
+    disabled?: boolean
     class?: string
     iconClass?: string
     testId?: string
@@ -27,50 +27,31 @@
     text,
     variant = 'neutral',
     appearance = 'filled',
-    state = 'enabled',
+    disabled = false,
     class: className,
     iconClass,
     testId,
     onclick,
     ...restProps
   }: Props = $props()
-
-  const isDisabled = $derived(state === 'disabled')
 </script>
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiActionButton text-sm leading-5 cthulhuUiButton', className)}
+  class={mergeClasses('cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiButtonAction text-sm leading-5 cthulhuUiButton', className)}
   data-variant={variant}
   data-appearance={appearance}
   data-testid={testId}
   {onclick}
-  disabled={isDisabled}
+  {disabled}
   {...restProps}
 >
   <!-- Text action button for row-level commands; icons are optional. -->
   {#if Icon}
     <Icon class={mergeClasses('cthulhuUiButtonIcon', iconClass)} size={16} aria-hidden="true" />
   {/if}
-  <span>{text}</span>
+  <span class="cthulhuUiButtonLabel">{text}</span>
   {#if EndIcon}
     <EndIcon class={mergeClasses('cthulhuUiButtonIcon', iconClass)} size={16} aria-hidden="true" />
   {/if}
 </button>
-
-<style>
-  .cthulhuUiButton {
-    cursor: pointer;
-  }
-
-  .cthulhuUiButton:disabled {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-  .cthulhuUiButtonIcon {
-    flex: 0 0 auto;
-    stroke-width: 2;
-  }
-</style>

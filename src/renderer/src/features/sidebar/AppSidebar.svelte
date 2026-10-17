@@ -329,9 +329,8 @@
       return category ? [category] : []
     })
   })
-  const promptCollectionSelectorState = $derived(
-    isWorkspaceReady && !isWorkspaceLoading ? 'enabled' : 'disabled'
-  )
+  /** Prevents collection selection before the workspace finishes loading. */
+  const promptCollectionSelectorDisabled = $derived(!isWorkspaceReady || isWorkspaceLoading)
   const canToggleCategories = $derived(
     collectionListState === 'ready' &&
       screenCollection !== null
@@ -713,7 +712,7 @@
           text={promptCollectionSelectorFooterItem.label}
           detail={promptCollectionSelectorFooterItem.detail}
           showChevron={false}
-          state={promptCollectionSelectorState}
+          disabled={promptCollectionSelectorDisabled}
           testId="sidebar-prompt-collection-add-button"
           onclick={openCreatePromptCollectionDialog}
         />
@@ -723,7 +722,7 @@
           items={promptCollectionDropdownItems}
           selectedItem={screenCollectionDropdownItem}
           footerItem={promptCollectionSelectorFooterItem}
-          state={promptCollectionSelectorState}
+          disabled={promptCollectionSelectorDisabled}
           itemDragOptions={promptCollectionSelectorItemDragOptions}
           selectionVariant="accent"
           dragOpenTypes={promptCollectionSelectorDragOpenTypes}

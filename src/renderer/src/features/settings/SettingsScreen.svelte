@@ -9,7 +9,7 @@
   import ValuePill from '@renderer/common/cthulhu-ui/layout/ValuePill.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
-  import ToggleTextButton from '@renderer/common/cthulhu-ui/buttons/ToggleTextButton.svelte'
+  import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import SimpleSelectorButton from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
   import { ExternalLink, Info, RefreshCcw, Settings, TextCursorInput, Type } from 'lucide-svelte'
   import {
@@ -253,7 +253,7 @@
               text="Reset"
               appearance="outline"
               onclick={handleFontSizeReset}
-              state={isFontSizeResetDisabled ? 'disabled' : 'enabled'}
+              disabled={isFontSizeResetDisabled}
             />
           {/snippet}
         </ControlRow>
@@ -285,7 +285,7 @@
               text="Reset"
               appearance="outline"
               onclick={() => updateNewPromptFocus(DEFAULT_SYSTEM_SETTINGS.newPromptFocus)}
-              state={isNewPromptFocusResetDisabled ? 'disabled' : 'enabled'}
+              disabled={isNewPromptFocusResetDisabled}
             />
           {/snippet}
         </ControlRow>
@@ -321,7 +321,7 @@
               text="Reset"
               appearance="outline"
               onclick={handleMinLinesReset}
-              state={isMinLinesResetDisabled ? 'disabled' : 'enabled'}
+              disabled={isMinLinesResetDisabled}
             />
           {/snippet}
         </ControlRow>
@@ -357,7 +357,7 @@
               text="Reset"
               appearance="outline"
               onclick={handleMaxLinesReset}
-              state={isMaxLinesResetDisabled ? 'disabled' : 'enabled'}
+              disabled={isMaxLinesResetDisabled}
             />
           {/snippet}
         </ControlRow>
@@ -370,7 +370,7 @@
           detail="Display line numbers beside prompt text for easier review."
         >
           {#snippet control()}
-            <ToggleTextButton
+            <ToggleButton
               testId="show-line-numbers-toggle"
               pressed={systemSettingsClientState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}
@@ -384,7 +384,7 @@
               text="Reset"
               appearance="outline"
               onclick={handleShowLineNumbersReset}
-              state={isShowLineNumbersResetDisabled ? 'disabled' : 'enabled'}
+              disabled={isShowLineNumbersResetDisabled}
             />
           {/snippet}
         </ControlRow>
@@ -424,7 +424,7 @@
           detail="Automatically check for and download updates."
         >
           {#snippet control()}
-            <ToggleTextButton
+            <ToggleButton
               testId="automatic-updates-toggle"
               pressed={systemSettingsClientState.automaticUpdates}
               onclick={() => updateAutomaticUpdates(!systemSettingsClientState.automaticUpdates)}
@@ -438,7 +438,7 @@
               text="Reset"
               appearance="outline"
               onclick={() => updateAutomaticUpdates(DEFAULT_SYSTEM_SETTINGS.automaticUpdates)}
-              state={isUpdating || systemSettingsClientState.automaticUpdates === DEFAULT_SYSTEM_SETTINGS.automaticUpdates ? 'disabled' : 'enabled'}
+              disabled={isUpdating || systemSettingsClientState.automaticUpdates === DEFAULT_SYSTEM_SETTINGS.automaticUpdates}
             />
           {/snippet}
         </ControlRow>

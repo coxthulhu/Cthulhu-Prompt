@@ -11,7 +11,8 @@
     items: DropdownPopupDetailedItem[]
     selectedItem: DropdownPopupDetailedItem
     footerItem?: DropdownPopupDetailedItem
-    state?: 'enabled' | 'disabled'
+    /** Disables the selector trigger. */
+    disabled?: boolean
     testId?: string
     triggerTestId?: string
     dragOpenTypes?: string[]
@@ -26,7 +27,7 @@
     items,
     selectedItem,
     footerItem,
-    state = 'enabled',
+    disabled = false,
     testId,
     triggerTestId,
     dragOpenTypes,
@@ -58,7 +59,7 @@
       detailParts={selectedItem.detailParts}
       open={dropdown.open}
       {selectionVariant}
-      {state}
+      {disabled}
       ariaHaspopup={dropdown.ariaHaspopup}
       ariaExpanded={dropdown.ariaExpanded}
       buttonAction={dropdown.triggerAction}

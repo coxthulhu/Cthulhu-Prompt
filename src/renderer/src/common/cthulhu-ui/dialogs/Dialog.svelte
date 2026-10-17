@@ -126,7 +126,7 @@
       {#if showCancelButton}
         <Button
           text={cancelText}
-          state={cancelDisabled ? 'disabled' : 'enabled'}
+          disabled={cancelDisabled}
           testId={cancelTestId}
           onclick={closeDialog}
         />
@@ -138,7 +138,7 @@
         <Button
           icon={submitIcon}
           text={submitText}
-          state={submitDisabled ? 'disabled' : 'enabled'}
+          disabled={submitDisabled}
           variant={submitVariant}
           testId={submitTestId}
           onclick={submitDialog}

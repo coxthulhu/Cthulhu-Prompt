@@ -100,13 +100,13 @@ describe('Button styling', () => {
     await glyphIconButton.hover()
     await expect(glyphIconButton).toHaveCSS('border-top-style', 'none')
 
-    const neutralIconTextButton = mainWindow.locator(
+    const neutralToolbarButton = mainWindow.locator(
       '[data-testid="test-screen-neutral-icon-text-button"]'
     )
-    await expect(neutralIconTextButton).toHaveCSS('border-top-color', neutralBorder)
-    await neutralIconTextButton.hover()
-    await expect(neutralIconTextButton).toHaveCSS('background-color', neutralFill)
-    await expect(neutralIconTextButton).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(neutralToolbarButton).toHaveCSS('border-top-color', neutralBorder)
+    await neutralToolbarButton.hover()
+    await expect(neutralToolbarButton).toHaveCSS('background-color', neutralFill)
+    await expect(neutralToolbarButton).toHaveCSS('border-top-color', neutralHoverBorder)
 
     const stepperDecreaseButton = mainWindow.getByRole('button', { name: 'Decrease value' }).first()
     const stepperIncreaseButton = mainWindow.getByRole('button', { name: 'Increase value' }).first()
@@ -115,23 +115,23 @@ describe('Button styling', () => {
     await stepperIncreaseButton.hover()
     await expect(stepperIncreaseButton).toHaveCSS('background-color', neutralFill)
 
-    const accentIconTextButton = mainWindow.locator(
+    const accentToolbarButton = mainWindow.locator(
       '[data-testid="test-screen-accent-icon-text-button"]'
     )
-    await accentIconTextButton.hover()
-    await expect(accentIconTextButton).toHaveCSS('border-top-color', accentHoverBorder)
+    await accentToolbarButton.hover()
+    await expect(accentToolbarButton).toHaveCSS('border-top-color', accentHoverBorder)
 
-    const toggleIconTextButton = mainWindow.locator(
+    const toggleToolbarButton = mainWindow.locator(
       '[data-testid="test-screen-toggle-icon-text-button"]'
     )
-    await expect(toggleIconTextButton).toHaveAttribute('aria-pressed', 'true')
-    await expect(toggleIconTextButton).toHaveCSS('border-top-color', accentBorder)
-    await toggleIconTextButton.hover()
-    await expect(toggleIconTextButton).toHaveCSS('border-top-color', accentHoverBorder)
-    await toggleIconTextButton.click()
+    await expect(toggleToolbarButton).toHaveAttribute('aria-pressed', 'true')
+    await expect(toggleToolbarButton).toHaveCSS('border-top-color', accentBorder)
+    await toggleToolbarButton.hover()
+    await expect(toggleToolbarButton).toHaveCSS('border-top-color', accentHoverBorder)
+    await toggleToolbarButton.click()
     await mainWindow.mouse.move(0, 0)
-    await expect(toggleIconTextButton).toHaveAttribute('aria-pressed', 'false')
-    await expect(toggleIconTextButton).toHaveCSS('border-top-color', neutralBorder)
+    await expect(toggleToolbarButton).toHaveAttribute('aria-pressed', 'false')
+    await expect(toggleToolbarButton).toHaveCSS('border-top-color', neutralBorder)
 
     const accentButton = mainWindow.locator('[data-testid="test-screen-accent-button"]')
     await expect(accentButton).toHaveCSS('border-top-color', accentBorder)
@@ -156,10 +156,10 @@ describe('Button styling', () => {
     await mainWindow.mouse.move(0, 0)
     await expect(toggleTextButton).toHaveCSS('border-top-color', neutralBorder)
 
-    const disabledToggleTextButton = mainWindow.locator(
+    const disabledToggleButton = mainWindow.locator(
       '[data-testid="test-screen-disabled-toggle-text-button"]'
     )
-    await expect(disabledToggleTextButton).toHaveCSS('border-top-color', neutralBorder)
+    await expect(disabledToggleButton).toHaveCSS('border-top-color', neutralBorder)
 
     const promptTreeActionButton = mainWindow.locator('.sidebarPromptTreeActionButton').first()
     await promptTreeActionButton.waitFor({ state: 'attached' })
@@ -181,7 +181,9 @@ describe('Button styling', () => {
     await sidebarAddCategoryButton.hover()
     await expect(sidebarAddCategoryButton).toHaveCSS('border-top-style', 'none')
 
-    const compoundButton = mainWindow.locator('.cthulhuUiIconButtonWithMoreOptions')
+    const compoundButton = mainWindow.locator('.cthulhuUiSplitIconButton').filter({
+      has: mainWindow.getByRole('button', { name: 'Copy prompt', exact: true })
+    })
     const compoundMainButton = compoundButton.getByRole('button', {
       name: 'Copy prompt',
       exact: true
@@ -190,7 +192,7 @@ describe('Button styling', () => {
       name: 'Copy prompt More Options',
       exact: true
     })
-    const compoundSeparator = compoundButton.locator('.cthulhuUiIconButtonWithMoreOptionsSeparator')
+    const compoundSeparator = compoundButton.locator('.cthulhuUiSplitIconButtonSeparator')
     await expect(compoundButton).toHaveCSS('outline-color', neutralBorder)
     await expect(compoundMainButton).toHaveAttribute('data-hover-variant', 'accent')
     await expect(compoundChevronButton).toHaveAttribute('data-hover-variant', 'neutral')
@@ -489,7 +491,7 @@ describe('Button styling', () => {
 
     // Detailed menu subtitles join their title and icon at full white on hover.
     const compoundChevronButton = mainWindow
-      .locator('.cthulhuUiIconButtonWithMoreOptions')
+      .locator('.cthulhuUiSplitIconButton')
       .getByRole('button', { name: 'Copy prompt More Options', exact: true })
     await compoundChevronButton.click()
     const detailedDropdownItem = mainWindow

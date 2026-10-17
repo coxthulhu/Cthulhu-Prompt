@@ -3,10 +3,10 @@
   import type { Action } from 'svelte/action'
   import { ChevronDown, ChevronUp } from 'lucide-svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
 
-  type SelectorButtonState = 'enabled' | 'disabled'
   export type SelectorButtonSelectionVariant = 'neutral' | 'accent'
   export type SelectorButtonRowState =
     | 'idle'
@@ -35,7 +35,8 @@
     rowState?: SelectorButtonRowState
     selectionVariant?: SelectorButtonSelectionVariant
     showChevron?: boolean
-    state?: SelectorButtonState
+    /** Prevents activation and applies the shared disabled appearance. */
+    disabled?: boolean
     class?: string
     iconClass?: string
     leadingAccessory?: Snippet
@@ -64,7 +65,7 @@
     rowState = 'idle',
     selectionVariant = 'neutral',
     showChevron = true,
-    state = 'enabled',
+    disabled = false,
     class: className,
     iconClass,
     leadingAccessory,
@@ -81,7 +82,6 @@
     onclick
   }: Props = $props()
 
-  const isDisabled = $derived(state === 'disabled')
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
   const resolvedDetailParts = $derived(
     (detailParts?.length ? detailParts : detail ? [detail] : []).map((detailPart) =>
@@ -96,7 +96,7 @@
 <button
   use:resolvedButtonAction={buttonActionParameter}
   type="button"
-  class={mergeClasses('cthulhuUiSelectorButton', className)}
+  class={mergeClasses('cthulhuUiButtonBase cthulhuUiSelectorButton', className)}
   data-open={open ? 'true' : 'false'}
   data-selected={selected ? 'true' : 'false'}
   data-row-state={rowState}
@@ -104,9 +104,8 @@
   data-chevron={showChevron ? 'true' : 'false'}
   data-leading-accessory={leadingAccessory ? 'true' : 'false'}
   data-trailing-accessory={trailingAccessory ? 'true' : 'false'}
-  data-disabled={isDisabled ? 'true' : 'false'}
   data-testid={testId}
-  disabled={isDisabled}
+  {disabled}
   {role}
   aria-haspopup={ariaHaspopup}
   aria-expanded={ariaExpanded ?? (showChevron ? open : undefined)}
@@ -166,16 +165,13 @@
 
 <style>
   .cthulhuUiSelectorButton {
-    align-items: center;
     background-color: var(--ui-ghost-surface);
     border: 0;
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-hoverable-text);
-    cursor: pointer;
     display: grid;
     column-gap: 0;
     grid-template-columns: 34px 8px minmax(0, 1fr) 22px;
-    min-width: 0;
     padding: 8px;
     text-align: left;
     transition:
@@ -276,12 +272,6 @@
   .cthulhuUiSelectorButton[data-selection-variant='accent'][data-row-state='blocked-over'] {
     background-color: var(--ui-neutral-emphasis-surface);
     border-color: var(--ui-neutral-emphasis-border);
-  }
-
-  .cthulhuUiSelectorButton[data-disabled='true'] {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
   }
 
   .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonIconCell) {

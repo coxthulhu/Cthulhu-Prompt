@@ -88,7 +88,7 @@
       {#if state.mode === 'portable'}
         <p class="m-0 mb-2 text-sm leading-5">Portable copies cannot auto-update. Go to GitHub Releases and download the new version.</p>
       {/if}
-      <Button variant="accent" state={disabled ? 'disabled' : 'enabled'} icon={RefreshCw}
+      <Button variant="accent" disabled={disabled} icon={RefreshCw}
         text={state.status === 'ready' || restarting ? 'Update & Restart' : showUpdate ? 'Download Update' : 'Check for Updates'} testId="update-action"
         onclick={() => state.status === 'ready' ? oninstall() : showUpdate ? ondownload() : void window.appUpdates.check()}
         style="width:100%;max-width:none;justify-content:center;" />

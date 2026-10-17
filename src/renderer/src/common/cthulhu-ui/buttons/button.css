@@ -1,0 +1,127 @@
+/* Shared native-button layout and disabled behavior, including disabled anchors. */
+.cthulhuUiButtonBase {
+  align-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  min-width: 0;
+}
+
+.cthulhuUiButtonBase:where(:disabled, [aria-disabled='true'], [data-disabled='true']) {
+  cursor: default;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Bordered controls share their surface; components retain their own geometry. */
+.cthulhuUiButtonSurface {
+  /* Idle fill, border, and foreground for ghost controls. */
+  --cthulhu-ui-button-fill: var(--ui-ghost-surface);
+  --cthulhu-ui-button-border: var(--ui-neutral-normal-border);
+  --cthulhu-ui-button-text: var(--ui-hoverable-text);
+  /* Hover/focus colors can be specialized independently of the idle surface. */
+  --cthulhu-ui-button-hover-fill: var(--ui-neutral-action-fill);
+  --cthulhu-ui-button-hover-border: var(--ui-neutral-hover-border);
+  /* Components with faster feedback override only this transition value. */
+  --cthulhu-ui-button-transition: var(--ui-animation-duration-standard) ease;
+
+  background-color: var(--cthulhu-ui-button-fill);
+  border: 1px solid var(--cthulhu-ui-button-border);
+  border-radius: var(--cthulhu-ui-radius-control);
+  color: var(--cthulhu-ui-button-text);
+  flex: 0 0 auto;
+  transition:
+    background-color var(--cthulhu-ui-button-transition),
+    border-color var(--cthulhu-ui-button-transition),
+    color var(--cthulhu-ui-button-transition);
+}
+
+.cthulhuUiButtonSurface:where(:hover, :focus-visible) {
+  background-color: var(--cthulhu-ui-button-hover-fill);
+  border-color: var(--cthulhu-ui-button-hover-border);
+  color: var(--ui-normal-text);
+}
+
+.cthulhuUiButtonSurface:focus-visible {
+  outline: 2px solid var(--ui-neutral-focus-border);
+  outline-offset: 2px;
+}
+
+.cthulhuUiButtonSurface[data-borderless='true'] {
+  border: 0;
+}
+
+/* Filled actions keep a white foreground in both idle and interacted states. */
+.cthulhuUiButtonSurface[data-appearance='filled'] {
+  --cthulhu-ui-button-fill: var(--ui-neutral-action-fill);
+  --cthulhu-ui-button-hover-fill: var(--ui-neutral-action-hover-fill);
+  --cthulhu-ui-button-text: var(--ui-normal-text);
+}
+
+.cthulhuUiButtonSurface[data-appearance='filled'][data-variant='accent'],
+.cthulhuUiButtonToggle[aria-pressed='true'] {
+  --cthulhu-ui-button-fill: var(--ui-accent-action-fill);
+  --cthulhu-ui-button-border: var(--ui-accent-muted-border);
+  --cthulhu-ui-button-text: var(--ui-normal-text);
+}
+
+.cthulhuUiButtonSurface[data-appearance='filled'][data-variant='accent'],
+.cthulhuUiButtonSurface[data-hover-variant='accent'],
+.cthulhuUiButtonToggle[aria-pressed='true'] {
+  --cthulhu-ui-button-hover-fill: var(--ui-accent-action-hover-fill);
+  --cthulhu-ui-button-hover-border: var(--ui-accent-muted-hover-border);
+}
+
+.cthulhuUiButtonSurface[data-appearance='filled'][data-variant='danger'] {
+  --cthulhu-ui-button-fill: var(--ui-danger-action-fill);
+  --cthulhu-ui-button-border: var(--ui-danger-muted-border);
+}
+
+.cthulhuUiButtonSurface[data-appearance='filled'][data-variant='danger'],
+.cthulhuUiButtonSurface[data-hover-variant='danger'] {
+  --cthulhu-ui-button-hover-fill: var(--ui-danger-action-hover-fill);
+  --cthulhu-ui-button-hover-border: var(--ui-danger-muted-hover-border);
+}
+
+.cthulhuUiButtonSurface[data-hover-variant='success'] {
+  --cthulhu-ui-button-hover-fill: var(--ui-success-action-hover-fill);
+  --cthulhu-ui-button-hover-border: var(--ui-success-muted-hover-border);
+}
+
+/* Outline actions retain their subtler hover fill and stronger colored borders. */
+.cthulhuUiButtonSurface[data-appearance='outline'] {
+  --cthulhu-ui-button-hover-fill: var(--ui-neutral-subtle-action-hover-fill);
+}
+
+.cthulhuUiButtonSurface[data-appearance='outline'][data-variant='accent'] {
+  --cthulhu-ui-button-border: var(--ui-accent-normal-border);
+  --cthulhu-ui-button-hover-border: var(--ui-accent-strong-border);
+}
+
+.cthulhuUiButtonSurface[data-appearance='outline'][data-variant='danger'] {
+  --cthulhu-ui-button-border: var(--ui-danger-strong-border);
+  --cthulhu-ui-button-hover-border: var(--ui-danger-strong-border);
+}
+
+/* Action buttons and links have the same text layout and optional end icon. */
+.cthulhuUiButtonAction {
+  font-weight: var(--font-weight-semibold);
+  gap: 8px;
+  height: 40px;
+  max-width: 14rem;
+  overflow: hidden;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+/* Labels truncate without shrinking or clipping the adjacent icons. */
+.cthulhuUiButtonLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cthulhuUiButtonIcon {
+  flex: 0 0 auto;
+  stroke-width: 2;
+}

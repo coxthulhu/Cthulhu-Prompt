@@ -41,7 +41,7 @@ describe('Separator DPI scaling', () => {
     await testHelpers.clickNavButton('Test Screen')
     // The compound button exposes a normal vertical Separator.
     const verticalSeparator = mainWindow
-      .locator('.cthulhuUiIconButtonWithMoreOptionsSeparator')
+      .locator('.cthulhuUiSplitIconButtonSeparator')
       .first()
     await verticalSeparator.scrollIntoViewIfNeeded()
     await expect(verticalSeparator).toBeVisible()

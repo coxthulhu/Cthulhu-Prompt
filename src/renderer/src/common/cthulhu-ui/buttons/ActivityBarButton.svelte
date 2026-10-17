@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {
@@ -36,7 +37,7 @@
 
 <button
   type="button"
-  class={mergeClasses('cthulhuUiActivityBarButton', className)}
+  class={mergeClasses('cthulhuUiButtonBase cthulhuUiActivityBarButton', className)}
   aria-label={label}
   aria-current={ariaCurrent}
   aria-expanded={ariaExpanded}
@@ -57,12 +58,9 @@
 <style>
   .cthulhuUiActivityBarButton {
     position: relative;
-    display: inline-flex;
     height: 44px;
     width: 100%;
     flex: none;
-    cursor: pointer;
-    align-items: center;
     justify-content: center;
     border: 0;
     border-radius: 0;
@@ -94,12 +92,6 @@
   .cthulhuUiActivityBarButton[data-active='true'][data-compact-indicator='true']::before {
     top: 9px;
     bottom: 9px;
-  }
-
-  .cthulhuUiActivityBarButton:disabled {
-    pointer-events: none;
-    cursor: default;
-    opacity: 0.5;
   }
 
   .cthulhuUiActivityBarButtonIcon {

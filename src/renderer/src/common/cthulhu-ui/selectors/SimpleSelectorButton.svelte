@@ -3,6 +3,7 @@
   import { ChevronDown, ChevronUp } from 'lucide-svelte'
   import DropdownPopupMoreOptions from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   export type SimpleSelectorButtonTone = 'neutral' | 'warning' | 'success'
@@ -58,7 +59,7 @@
     {@const DropdownChevron = dropdown.open ? ChevronUp : ChevronDown}
     <span
       use:triggerAction
-      class={mergeClasses('cthulhuUiSimpleSelectorButton', className)}
+      class={mergeClasses('cthulhuUiButtonBase cthulhuUiSimpleSelectorButton', className)}
       data-tone={selectedItem.tone ?? 'neutral'}
       data-open={dropdown.open ? 'true' : 'false'}
       data-disabled={disabled ? 'true' : 'false'}
@@ -114,7 +115,6 @@
     background: transparent;
     border: 1px solid var(--cthulhu-ui-simple-selector-border);
     border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
     display: inline-grid;
     height: 36px;
     transition:
@@ -159,12 +159,6 @@
 
   .cthulhuUiSimpleSelectorButton[data-tone='neutral']:has(:focus-visible) {
     --cthulhu-ui-simple-selector-text: var(--ui-normal-text);
-  }
-
-  .cthulhuUiSimpleSelectorButton[data-disabled='true'] {
-    cursor: default;
-    opacity: 0.5;
-    pointer-events: none;
   }
 
   .cthulhuUiSimpleSelectorButtonValue {

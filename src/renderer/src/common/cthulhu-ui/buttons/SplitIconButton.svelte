@@ -13,8 +13,10 @@
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
 
+  /** Optional Svelte action attached to the main native button. */
   type IconButtonAction = Action<HTMLButtonElement, unknown>
 
+  /** Main icon action paired with a separately triggered options menu. */
   type Props = {
     icon: ComponentType
     label: string
@@ -40,6 +42,7 @@
     onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
   }
 
+  /** Shared presentation and callbacks for the two split-button actions. */
   let {
     icon,
     label,
@@ -55,7 +58,7 @@
     moreOptionsTestId,
     menuTestId,
     title,
-    disabled,
+    disabled = false,
     active,
     buttonAction,
     buttonActionParameter,
@@ -65,15 +68,15 @@
     onselect
   }: Props = $props()
 
-  const isDisabled = $derived(disabled === true)
+  /** Keeps the options trigger accessible name aligned with the main action. */
   const moreOptionsLabel = $derived(`${label} More Options`)
 </script>
 
+<!-- Split action keeps one outer border around two independently operable buttons. -->
 <span
-  class={mergeClasses('cthulhuUiIconButtonWithMoreOptions', className)}
+  class={mergeClasses('cthulhuUiSplitIconButton', className)}
   data-size={size}
   data-base-variant={baseVariant}
-  data-disabled={isDisabled ? 'true' : 'false'}
 >
   <IconButton
     {icon}
@@ -90,10 +93,10 @@
     {buttonAction}
     {buttonActionParameter}
     {onclick}
-    class="cthulhuUiIconButtonWithMoreOptionsMain"
+    class="cthulhuUiSplitIconButtonMain"
   />
 
-  <Separator orientation="vertical" class="cthulhuUiIconButtonWithMoreOptionsSeparator" />
+  <Separator orientation="vertical" class="cthulhuUiSplitIconButtonSeparator" />
 
   <DropdownPopupMoreOptions
     label={moreOptionsLabel}
@@ -111,21 +114,21 @@
         {size}
         {baseVariant}
         hoverVariant={moreOptionsHoverVariant}
-        disabled={isDisabled}
+        {disabled}
         active={dropdown.open}
         ariaHaspopup={dropdown.ariaHaspopup}
         ariaExpanded={dropdown.ariaExpanded}
         buttonAction={dropdown.triggerAction}
         onclick={dropdown.toggle}
         testId={moreOptionsTestId}
-        class="cthulhuUiIconButtonWithMoreOptionsChevron"
+        class="cthulhuUiSplitIconButtonChevron"
       />
     {/snippet}
   </DropdownPopupMoreOptions>
 </span>
 
 <style>
-  .cthulhuUiIconButtonWithMoreOptions {
+  .cthulhuUiSplitIconButton {
     align-items: center;
     background: var(--ui-ghost-surface);
     border-radius: var(--cthulhu-ui-radius-control);
@@ -136,39 +139,39 @@
     overflow: hidden;
   }
 
-  .cthulhuUiIconButtonWithMoreOptions :global(.cthulhuUiIconButton) {
+  .cthulhuUiSplitIconButton :global(.cthulhuUiIconButton) {
     /* The compound control owns the outer border. */
     border: 0;
     border-radius: 0;
     box-sizing: content-box;
   }
 
-  :global(.cthulhuUiIconButtonWithMoreOptionsMain.cthulhuUiIconButton) {
+  :global(.cthulhuUiSplitIconButtonMain.cthulhuUiIconButton) {
     border-bottom-left-radius: var(--cthulhu-ui-radius-control);
     border-top-left-radius: var(--cthulhu-ui-radius-control);
   }
 
-  :global(.cthulhuUiIconButtonWithMoreOptionsSeparator.cthulhuUiSeparator) {
+  :global(.cthulhuUiSplitIconButtonSeparator.cthulhuUiSeparator) {
     --cthulhu-ui-separator-color: var(--ui-neutral-normal-border);
     align-self: stretch;
     flex: 0 0 1px;
     height: auto;
   }
 
-  .cthulhuUiIconButtonWithMoreOptions
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
+  .cthulhuUiSplitIconButton
+    :global(.cthulhuUiSplitIconButtonChevron.cthulhuUiIconButton) {
     border-bottom-right-radius: var(--cthulhu-ui-radius-control);
     border-top-right-radius: var(--cthulhu-ui-radius-control);
     width: 23px;
   }
 
-  .cthulhuUiIconButtonWithMoreOptions[data-size='compact']
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
+  .cthulhuUiSplitIconButton[data-size='compact']
+    :global(.cthulhuUiSplitIconButtonChevron.cthulhuUiIconButton) {
     width: 21px;
   }
 
-  .cthulhuUiIconButtonWithMoreOptions[data-size='tiny']
-    :global(.cthulhuUiIconButtonWithMoreOptionsChevron.cthulhuUiIconButton) {
+  .cthulhuUiSplitIconButton[data-size='tiny']
+    :global(.cthulhuUiSplitIconButtonChevron.cthulhuUiIconButton) {
     width: 17px;
   }
 </style>

@@ -7,7 +7,7 @@
   import PageHeader from '@renderer/common/cthulhu-ui/layout/PageHeader.svelte'
   import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
+  import ToolbarButton from '@renderer/common/cthulhu-ui/buttons/ToolbarButton.svelte'
   import ButtonBarSelector from '@renderer/common/cthulhu-ui/selectors/ButtonBarSelector.svelte'
   import { promptStatusGroups } from './promptStatusGroups'
   import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
@@ -89,7 +89,7 @@
       />
 
     <div class="prompt-collection-actions">
-      <IconTextButton
+      <ToolbarButton
         class="prompt-collection-categories-button"
         icon={FolderCog}
         iconSize={18}

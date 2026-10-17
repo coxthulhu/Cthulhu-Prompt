@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends string">
+  import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Item = {
@@ -12,12 +13,14 @@
     label: string
     items: readonly Item[]
     selectedId: T
+    /** Disables every choice in this segmented selector. */
+    disabled?: boolean
     class?: string
     testId?: string
     onselect?: (id: T) => void
   }
 
-  let { label, items, selectedId, class: className, testId, onselect }: Props = $props()
+  let { label, items, selectedId, disabled = false, class: className, testId, onselect }: Props = $props()
 </script>
 
 <div
@@ -28,8 +31,9 @@
 >
   {#each items as item (item.id)}
     <button
-      class="cthulhuUiButtonBarSelectorButton text-sm leading-5"
+      class="cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiButtonToggle cthulhuUiButtonBarSelectorButton text-sm leading-5"
       type="button"
+      {disabled}
       aria-pressed={selectedId === item.id}
       data-testid={item.testId}
       onclick={() => onselect?.(item.id)}
@@ -59,16 +63,18 @@
   }
 
   .cthulhuUiButtonBarSelectorButton {
-    align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 1px solid var(--ui-ghost-surface);
     border-radius: 6px;
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
     display: flex;
     font-family: inherit;
+    flex: 0 1 auto;
     height: 34px;
     padding: 0 11px;
+    transition: none;
+  }
+
+  .cthulhuUiButtonBarSelectorButton[aria-pressed='false'] {
+    /* Unselected segments reserve a border without displaying it. */
+    --cthulhu-ui-button-border: var(--ui-ghost-surface);
   }
 
   .cthulhuUiButtonBarSelectorLabel {
@@ -80,29 +86,5 @@
   .cthulhuUiButtonBarSelectorCount {
     margin-left: 4px;
     padding: 2px 6px;
-  }
-
-  .cthulhuUiButtonBarSelectorButton:hover,
-  .cthulhuUiButtonBarSelectorButton:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    border-color: var(--ui-neutral-hover-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiButtonBarSelectorButton[aria-pressed='true'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiButtonBarSelectorButton[aria-pressed='true']:hover,
-  .cthulhuUiButtonBarSelectorButton[aria-pressed='true']:focus-visible {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
-  }
-
-  .cthulhuUiButtonBarSelectorButton:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
-    outline-offset: 2px;
   }
 </style>

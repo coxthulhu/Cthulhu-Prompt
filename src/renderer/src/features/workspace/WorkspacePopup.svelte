@@ -49,7 +49,7 @@
       </div>
       <Separator />
       <div class="pt-[14px]">
-        <Button variant="accent" state={workspacePath ? 'enabled' : 'disabled'} icon={ExternalLink}
+        <Button variant="accent" disabled={!workspacePath} icon={ExternalLink}
           text="Open in Explorer" testId="workspace-popup-open-folder-button" onclick={openWorkspaceFolder}
           style="width:100%;max-width:none;justify-content:center;" />
       </div>

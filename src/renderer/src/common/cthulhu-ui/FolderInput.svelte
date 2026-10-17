@@ -63,9 +63,6 @@
       value = result.filePaths[0]
     }
   }
-
-  /** Effective browse-button state while the field is disabled or browsing. */
-  const buttonState = $derived(disabled || isBrowsing ? 'disabled' : 'enabled')
 </script>
 
 <!-- Disabled path display paired with the native folder-picker action. -->
@@ -83,7 +80,7 @@
   <Button
     icon={FolderOpen}
     text={buttonText}
-    state={buttonState}
+    disabled={disabled || isBrowsing}
     class="shrink-0"
     testId={buttonTestId}
     aria-label={ariaLabel}

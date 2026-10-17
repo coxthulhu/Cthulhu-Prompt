@@ -4,6 +4,8 @@
 
   type Props = {
     text: string
+    /** Disables the underlying icon action without touching clipboard state. */
+    disabled?: boolean
     label?: string
     copiedLabel?: string
     title?: string
@@ -20,6 +22,7 @@
 
   let {
     text,
+    disabled = false,
     label = 'Copy',
     copiedLabel = 'Copied',
     title = label,
@@ -69,6 +72,7 @@
 </script>
 
 <IconButton
+  {disabled}
   icon={isCopied ? ClipboardCheck : Copy}
   label={isCopied ? copiedLabel : label}
   title={isCopied ? copiedTitle : title}

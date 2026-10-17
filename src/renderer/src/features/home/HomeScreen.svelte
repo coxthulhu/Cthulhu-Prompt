@@ -185,7 +185,7 @@
             text="Open"
             variant="accent"
             onclick={handleSelectFolder}
-            state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+            disabled={isWorkspaceActionDisabled}
           />
           <Button
             testId="create-workspace-button"
@@ -194,7 +194,7 @@
             variant={workspacePath ? 'neutral' : 'accent'}
             appearance={workspacePath ? 'outline' : 'filled'}
             onclick={handleCreateFolder}
-            state={isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+            disabled={isWorkspaceActionDisabled}
           />
           <Button
             testId="close-workspace-button"
@@ -202,7 +202,7 @@
             text="Close"
             appearance="outline"
             onclick={onWorkspaceClear}
-            state={!isWorkspaceReady || isWorkspaceActionDisabled ? 'disabled' : 'enabled'}
+            disabled={!isWorkspaceReady || isWorkspaceActionDisabled}
           />
         </div>
       </div>

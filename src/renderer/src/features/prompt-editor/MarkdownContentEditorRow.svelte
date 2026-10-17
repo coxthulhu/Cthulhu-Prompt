@@ -8,7 +8,7 @@
   import type { PromptHandleDropPayload } from '@renderer/features/prompt-drag-drop/promptHandleDrag'
   import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
-  import IconTextButton from '@renderer/common/cthulhu-ui/buttons/IconTextButton.svelte'
+  import ToolbarButton from '@renderer/common/cthulhu-ui/buttons/ToolbarButton.svelte'
   import EditorCardSurface from './EditorCardSurface.svelte'
   import EditorSubtitleBar from './EditorSubtitleBar.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
@@ -628,7 +628,7 @@
       testId="prompt-template-parameters-toolbar"
     >
       {#snippet actions()}
-        <IconTextButton
+        <ToolbarButton
           icon={Plus}
           pressedIcon={Check}
           text={PROMPT_TEXT_TEMPLATE_PARAMETER.name}
