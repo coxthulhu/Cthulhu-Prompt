@@ -174,7 +174,9 @@
     collections.splice(targetIndex, 0, collection!)
   }
   const closeMenus = (event: MouseEvent) => {
-    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-header-picker, .collection-selector, .collection-row-selector, .prompts-actions, .updates-button, .updates-popup')) return
+    // The chevron can be replaced before this window handler runs; retain the original click ancestry.
+    if (event.composedPath().some((target) => target instanceof Element &&
+      target.matches('.local-menu, .collection-header-picker, .collection-selector, .collection-row-selector, .prompts-actions, .updates-button, .updates-popup'))) return
     collectionMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
