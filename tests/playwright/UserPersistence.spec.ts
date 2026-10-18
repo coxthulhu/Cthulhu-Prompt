@@ -1,3 +1,4 @@
+import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import {
   createWorkspaceWithCollections,
@@ -334,7 +335,7 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Development Tools'
     )
   })
@@ -487,7 +488,7 @@ describe('User Persistence', () => {
 
     await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
 
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Task Beta'
     )
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
@@ -496,7 +497,7 @@ describe('User Persistence', () => {
     )
 
     await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Template Beta'
     )
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
@@ -516,11 +517,11 @@ describe('User Persistence', () => {
       .toBe(`prompt-template-collections:${taskBetaId}:${templateAlphaId}`)
 
     await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Task Beta'
     )
     await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Template Alpha'
     )
   })
@@ -722,7 +723,7 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Development Tools'
     )
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')

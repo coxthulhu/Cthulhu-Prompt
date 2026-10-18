@@ -2,6 +2,7 @@ import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import type { Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
+  selectedQuickCollectionSelector,
   promptEditorSelector,
   promptCollectionSelectorDropdownItemSelector,
   promptCollectionSelectorMenuSelector,
@@ -70,7 +71,7 @@ const createCollection = async (page: Page, folderName: string): Promise<void> =
   await page.locator(COLLECTION_ADD_ITEM).click()
   await page.locator(COLLECTION_NAME_INPUT).fill(folderName)
   await page.locator(COLLECTION_CREATE_BUTTON).click()
-  await expect(page.locator(promptCollectionSelectorTriggerSelector)).toContainText(folderName)
+  await expect(page.locator(selectedQuickCollectionSelector)).toContainText(folderName)
 }
 
 // Reads the stable collection ID persisted in CollectionInfo.json.
@@ -123,8 +124,8 @@ describe('Prompt collection storage', () => {
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
 
     // The selected prompt collection exposes category creation without add-category dividers.
-    const selectorTrigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
-    await expect(selectorTrigger).toContainText(ALPHA_NAME)
+    const selectedCollection = mainWindow.locator(selectedQuickCollectionSelector)
+    await expect(selectedCollection).toContainText(ALPHA_NAME)
     // The created task collection identifies its type in the overview header.
     await expect(
       mainWindow.getByTestId('prompt-collection-subtitle')

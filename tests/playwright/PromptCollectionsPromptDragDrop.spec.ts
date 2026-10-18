@@ -5,6 +5,7 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
+  selectedQuickCollectionSelector,
   PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector,
   promptCollectionSelectorDropdownItemSelector,
@@ -446,7 +447,7 @@ describe('Prompt collection prompt drag-drop', () => {
       FALLBACK_DESTINATION_COLLECTION_ID
     )
 
-    await expect(mainWindow.locator(promptCollectionSelectorTriggerSelector)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       FALLBACK_SOURCE_COLLECTION_NAME
     )
     await expectCurrentCollectionPromptEditors(mainWindow, ['move-fallback-source-existing'])
@@ -812,7 +813,7 @@ describe('Prompt collection prompt drag-drop', () => {
 
     await dragPromptHandleToCollectionSelectorItem(mainWindow, DEV_1_ID, EXAMPLES_COLLECTION_ID)
 
-    await expect(mainWindow.locator(promptCollectionSelectorTriggerSelector)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       DEVELOPMENT_COLLECTION_NAME
     )
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
@@ -861,7 +862,7 @@ describe('Prompt collection prompt drag-drop', () => {
 
     await dragPromptHandleToCollectionSelectorItem(mainWindow, DEV_1_ID, EXAMPLES_COLLECTION_ID)
 
-    await expect(mainWindow.locator(promptCollectionSelectorTriggerSelector)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       DEVELOPMENT_COLLECTION_NAME
     )
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
@@ -916,7 +917,7 @@ describe('Prompt collection prompt drag-drop', () => {
     )
     await finishActiveDrag(mainWindow)
 
-    await expect(mainWindow.locator(promptCollectionSelectorTriggerSelector)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       DEVELOPMENT_COLLECTION_NAME
     )
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
@@ -987,7 +988,7 @@ describe('Prompt collection prompt drag-drop', () => {
     )
     await finishActiveDrag(mainWindow)
 
-    await expect(mainWindow.locator(promptCollectionSelectorTriggerSelector)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       DEVELOPMENT_COLLECTION_NAME
     )
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])

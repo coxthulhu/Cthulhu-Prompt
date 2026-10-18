@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { ComponentType } from 'svelte'
+  import type { Action } from 'svelte/action'
   import { Check, Copy } from 'lucide-svelte'
   import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
@@ -11,6 +13,12 @@
   type SelectionControl = 'checkbox' | 'radio' | 'copy'
 
   type Props = {
+    /** Overrides prompt identity when this row represents a collection. */
+    testId?: string
+    /** Optional collection icon before the row label. */
+    icon?: ComponentType
+    /** Optional content count at the end of a collection row. */
+    count?: number
     /** Status or template namespace used by this reusable row. */
     testIdGroup?: import('./promptTreeTestIds').PromptTreeTestIdGroup
     collectionId: string
@@ -33,6 +41,9 @@
   }
 
   let {
+    testId,
+    icon: Icon,
+    count,
     testIdGroup = 'template',
     collectionId,
     promptId,
@@ -55,7 +66,7 @@
     onPromptSelect(collectionId, promptId)
 
     const button = event.currentTarget
-    if (button instanceof HTMLButtonElement) {
+    if (event.detail !== 0 && button instanceof HTMLButtonElement) {
       button.blur()
     }
   }
@@ -76,11 +87,39 @@
   const rowStyle = $derived(
     `--prompt-tree-indent-count:${promptIndentCount}; --prompt-tree-indent-width:${PROMPT_TREE_INDENT_WIDTH_PX}px;`
   )
+
+  /** Registers dragging only for rows that supply a drag source. */
+  const optionalDraggable: Action<HTMLButtonElement, PromptRowDragOptions | undefined> = (
+    node,
+    initialOptions
+  ) => {
+    /** Drag registration follows changes without replacing the row button. */
+    let action = initialOptions ? draggable(node, initialOptions) : undefined
+    return {
+      /** Updates the drag source when the virtual row's content changes. */
+      update(options) {
+        if (options) {
+          if (action) action.update(options)
+          else action = draggable(node, options)
+        } else {
+          action?.destroy()
+          action = undefined
+        }
+      },
+      /** Releases pointer handlers when the row unmounts. */
+      destroy() {
+        action?.destroy()
+      }
+    }
+  }
 </script>
 
 {#snippet promptButtonContent()}
   <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
   <span class="prompt-tree-prompt-content">
+    {#if Icon}
+      <Icon size={16} class="prompt-tree-row-icon" aria-hidden="true" />
+    {/if}
     {#if selectionControl}
       <span
         class="prompt-tree-selection-control"
@@ -95,6 +134,9 @@
       </span>
     {/if}
     <span class="sidebarPromptTreeSettingsLabel text-sm prompt-tree-prompt-label">{promptTitle}</span>
+    {#if count !== undefined}
+      <span class="prompt-tree-row-count text-xs leading-4 tabular-nums">{count}</span>
+    {/if}
   </span>
 {/snippet}
 
@@ -109,12 +151,15 @@
   ></span>
 {/snippet}
 
-{#snippet promptButton()}
+{#snippet promptButton(isOver: boolean, isBlocked: boolean)}
   <button
+    use:optionalDraggable={promptDragOptions}
     type="button"
-    data-testid={collectionPromptTestId(promptId, testIdGroup)}
-    data-row-state={rowState}
+    data-testid={testId ?? collectionPromptTestId(promptId, testIdGroup)}
+    data-row-state={isOver && Icon ? isBlocked ? 'blocked-over' : 'over' : rowState}
     data-selection-control={selectionControl}
+    data-collection-row={Icon ? 'true' : undefined}
+    title={Icon ? promptTitle : undefined}
     aria-current={isActive ? 'true' : undefined}
     aria-pressed={selectionControl === 'copy' || !selectionControl ? undefined : isActive}
     onclick={handlePromptSelect}
@@ -124,38 +169,18 @@
   </button>
 {/snippet}
 
-{#if getPromptDroppableOptions && promptDragOptions}
-  <DropTarget
-    getOptions={getPromptDroppableOptions}
-    class="sidebarPromptTreeSettingsRow"
-    style={rowStyle}
-    data-first-tree-row={isFirstTreeRow ? 'true' : undefined}
-  >
+<!-- Shared tree rows also support collection pickers that accept drops without dragging. -->
+<DropTarget
+  getOptions={getPromptDroppableOptions}
+  class="sidebarPromptTreeSettingsRow relative"
+  style={rowStyle}
+  data-first-tree-row={isFirstTreeRow ? 'true' : undefined}
+>
+  {#snippet children({ isOver, isBlocked })}
     {@render promptStatusIndicator()}
-    <button
-      use:draggable={promptDragOptions}
-      type="button"
-      data-testid={collectionPromptTestId(promptId, testIdGroup)}
-      data-row-state={rowState}
-      data-selection-control={selectionControl}
-      aria-current={isActive ? 'true' : undefined}
-      aria-pressed={selectionControl === 'copy' || !selectionControl ? undefined : isActive}
-      onclick={handlePromptSelect}
-      class="sidebarPromptTreeSettingsButton"
-    >
-      {@render promptButtonContent()}
-    </button>
-  </DropTarget>
-{:else}
-  <div
-    class="sidebarPromptTreeSettingsRow"
-    style={rowStyle}
-    data-first-tree-row={isFirstTreeRow ? 'true' : undefined}
-  >
-    {@render promptStatusIndicator()}
-    {@render promptButton()}
-  </div>
-{/if}
+    {@render promptButton(isOver, isBlocked)}
+  {/snippet}
+</DropTarget>
 
 <style>
   .prompt-tree-prompt-content {
@@ -165,8 +190,38 @@
     min-width: 0;
   }
 
-  .sidebarPromptTreeSettingsRow {
-    position: relative;
+  .sidebarPromptTreeSettingsButton[data-collection-row='true'] {
+    cursor: pointer;
+    padding-right: 12px;
+  }
+
+  .prompt-tree-prompt-content :global(.prompt-tree-row-icon) {
+    flex-shrink: 0;
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .sidebarPromptTreeSettingsButton[data-collection-row='true']:hover :global(.prompt-tree-row-icon),
+  .sidebarPromptTreeSettingsButton[data-collection-row='true']:focus-visible :global(.prompt-tree-row-icon) {
+    color: var(--ui-normal-text);
+  }
+
+  .sidebarPromptTreeSettingsButton[data-collection-row='true']:focus-visible {
+    color: var(--ui-normal-text);
+  }
+
+  .sidebarPromptTreeSettingsButton[data-row-state='over'] {
+    background: var(--ui-info-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .sidebarPromptTreeSettingsButton[data-row-state='blocked-over'] {
+    background: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .prompt-tree-row-count {
+    flex-shrink: 0;
+    color: var(--ui-secondary-text);
   }
 
   .prompt-tree-status-indicator {

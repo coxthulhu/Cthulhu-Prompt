@@ -104,7 +104,10 @@ describe('Dropdown tracking', () => {
     /** Detailed menu whose width must follow the resized trigger. */
     const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
     await trigger.click()
+    await expect(menu).toHaveCSS('width', '360px')
     await trigger.evaluate((element: HTMLElement) => {
+      // This positioning fixture deliberately exceeds the action button's normal width cap.
+      element.style.maxWidth = 'none'
       element.style.width = '380px'
       element.style.translate = '10px 20px'
     })

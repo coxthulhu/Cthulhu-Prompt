@@ -244,11 +244,14 @@ describe('Button styling', () => {
     await mainWindow.mouse.move(0, 0)
     await expect(collectionSelectorTrigger).toHaveCSS('background-color', transparent)
     await collectionSelectorTrigger.hover()
-    await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFill)
-    await expect(collectionSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(collectionSelectorTrigger).toHaveCSS(
+      'background-color',
+      await resolvePaletteColor(collectionSelectorTrigger, '--ui-neutral-subtle-action-hover-fill')
+    )
+    await expect(collectionSelectorTrigger).toHaveCSS('border-top-style', 'none')
     await collectionSelectorTrigger.click()
     await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
-    await expect(collectionSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(collectionSelectorTrigger).toHaveCSS('border-top-style', 'none')
 
     const collectionSelectorMenu = mainWindow.locator(
       '[data-testid="sidebar-prompt-collection-selector-menu"]'
@@ -258,7 +261,7 @@ describe('Button styling', () => {
     await expect(selectedCollection).toHaveCSS('border-top-color', accentBorder)
     await selectedCollection.hover()
     await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
-    await expect(collectionSelectorTrigger).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(collectionSelectorTrigger).toHaveCSS('border-top-style', 'none')
     await expect(selectedCollection).toHaveCSS('background-color', accentHoverFill)
     await expect(selectedCollection).toHaveCSS('border-top-color', accentHoverBorder)
 

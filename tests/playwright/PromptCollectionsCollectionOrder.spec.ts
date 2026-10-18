@@ -1,4 +1,5 @@
 import { createDeterministicId } from '../fixtures/FixtureIds'
+import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
 import { readWorkspaceCollectionOrder, runSqlQuery, runSqlStatement, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { readTextFile, checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
@@ -489,7 +490,7 @@ describe('Prompt Collection Order', () => {
     await finishActiveDrag(mainWindow)
 
     await expect(mainWindow.locator(PROMPT_COLLECTION_SELECTOR_MENU)).toBeVisible()
-    await expect(mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText('Beta')
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Beta')
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
     await expect
       .poll(
@@ -534,7 +535,7 @@ describe('Prompt Collection Order', () => {
       ])
       expect(await readWorkspacePromptCollectionIds(electronApp, DROPDOWN_DRAG_COLLECTION_ORDER_WORKSPACE_PATH))
         .toEqual(['collection-alpha', 'collection-beta', 'collection-gamma'])
-      await expect(mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText('Beta')
+      await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Beta')
       await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', 'grabbing')
     })
   }

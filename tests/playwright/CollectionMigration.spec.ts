@@ -1,3 +1,4 @@
+import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
 import { createLegacyStateDatabase } from '../fixtures/LegacyStateDatabase'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
@@ -128,7 +129,7 @@ describe('Collection terminology migrations', () => {
       /** Startup restores the selected activity and collection through the production reader. */
       const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await expect(mainWindow.getByTestId('prompt-collection-screen')).toBeVisible()
-      await expect(mainWindow.getByTestId('sidebar-prompt-collection-selector-trigger')).toContainText(kind === 'task' ? 'Tasks' : 'Library')
+      await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(kind === 'task' ? 'Tasks' : 'Library')
     })
   }
 

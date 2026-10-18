@@ -25,6 +25,8 @@
     ArrowUpToLine,
     ChevronsDownUp,
     ChevronsUpDown,
+    ChevronDown,
+    ChevronUp,
     FileText,
     FolderCog,
     Layers,
@@ -59,12 +61,12 @@
   } from '@shared/domain/markdown-content/MarkdownContent'
   import type { Category } from '@shared/domain/category/Category'
   import { getAllWorkspaceCollectionEntries, type Workspace } from '@shared/domain/workspace/Workspace'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import DropdownPopupDetailed, { type DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupSimple.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
-  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/selectors/DetailedSelectorButton.svelte'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
@@ -83,6 +85,13 @@
     type ManageCategoriesDialogOpenOptions
   } from '../prompt-collections/ManageCategoriesDialog.svelte'
   import PromptTree from '@renderer/features/prompt-tree/PromptTree.svelte'
+  import PromptTreePromptRow from '@renderer/features/prompt-tree/PromptTreePromptRow.svelte'
+
+  /** Collection metadata shared by quick rows and the full dropdown. */
+  type CollectionPickerItem = DropdownPopupDetailedItem & {
+    /** Active content count, including Backlog for task collections. */
+    count: number
+  }
 
   type CreatePromptCollectionDialogHandle = {
     openDialog: () => void
@@ -243,7 +252,7 @@
       .map((promptCollectionId) => promptCollectionById.get(promptCollectionId))
       .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
   })
-  const promptCollectionDropdownItems = $derived.by((): DropdownPopupDetailedItem[] => {
+  const promptCollectionDropdownItems = $derived.by((): CollectionPickerItem[] => {
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
     const templateById = new Map(
       promptTemplateQuery.data.map((template) => [template.id, template])
@@ -288,6 +297,7 @@
 
       return {
         id: promptCollection.id,
+        count: promptCount,
         label: promptCollection.displayName,
         detailParts,
         icon: promptCollection.kind === 'template' ? Layers : FileText,
@@ -314,6 +324,15 @@
       promptCollections.find((promptCollection) => promptCollection.id === screenCollectionId) ??
       promptCollections[0]!
     )
+  })
+  /** Quick picks follow committed order and retain a selected collection outside the first three. */
+  const quickCollectionItems = $derived.by(() => {
+    /** Baseline follows workspace order, independently of a dropdown drag preview. */
+    const collections = promptCollections.slice(0, 3)
+    if (screenCollection && !collections.some((collection) => collection.id === screenCollection.id)) {
+      collections.splice(0, collections.length, screenCollection, ...collections.slice(0, 2))
+    }
+    return collections.map((collection) => promptCollectionDropdownItems.find((item) => item.id === collection.id)!)
   })
   /** Categories owned by the selected collection, preserved in Active status-folder order. */
   const selectedCollectionCategories = $derived.by((): Category[] => {
@@ -647,15 +666,17 @@
     indicator: statusHeaderDroppableState.getState(statusSection)
   })
 
-  const getPromptCollectionSelectorPromptDroppableOptions = (
-    item: DropdownPopupDetailedItem
-  ): DroppableOptions<unknown, unknown> => ({
+  /** Shares collection transfer rules while keeping quick-row and dropdown indicators independent. */
+  const getCollectionPromptDroppableOptions = (
+    collectionId: string,
+    target: 'quick' | 'dropdown'
+  ): DroppableOptions<unknown, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
-    // Collection selection requires the pointer to remain within the visible dropdown row.
+    // Collection transfers require the pointer to remain within the visible row.
     snapDimensions: { x: 0, y: 0 },
     payload: (): PromptHandleDropPayload => ({
-      collectionId: item.id,
+      collectionId,
       targetEntryId: null,
       position: 'after',
       statusSection: promptEntryDragState.draggedEntry?.kind === 'content'
@@ -666,10 +687,10 @@
       const entryPayload = payload as PromptHandleDragPayload
       if (getPromptStatusFolderDefinition(entryPayload.location.status).ordering !== 'category') return false
       const allCollections = promptCollectionQuery.data
-      const destinationCollection = allCollections.find((collection) => collection.id === item.id)
+      const destinationCollection = allCollections.find((collection) => collection.id === collectionId)
       if (!destinationCollection) return false
       const dropPayload: PromptHandleDropPayload = {
-        collectionId: item.id,
+        collectionId,
         targetEntryId: null,
         position: 'after',
         statusSection: getPromptStatusFolderDefinition(entryPayload.location.status).id
@@ -684,12 +705,13 @@
         resolvePromptTreePromptMove(allCollections, entryPayload, dropPayload) !== null
       )
     },
-    indicator: promptCollectionSelectorPromptDroppableState.getState(item.id)
+    indicator: promptCollectionSelectorPromptDroppableState.getState(`${target}:${collectionId}`)
   })
 
   const promptCollectionSelectorItemDragOptions = {
     getDraggableOptions: getPromptCollectionSelectorDraggableOptions,
-    getRowDroppableOptions: getPromptCollectionSelectorPromptDroppableOptions,
+    getRowDroppableOptions: (item: DropdownPopupDetailedItem) =>
+      getCollectionPromptDroppableOptions(item.id, 'dropdown'),
     getDragHandleTestId: (item: DropdownPopupDetailedItem) =>
       `sidebar-prompt-collection-dropdown-drag-handle-${item.id}`,
     isDragging: (item: DropdownPopupDetailedItem) => draggedPromptCollectionSelectorId === item.id,
@@ -705,31 +727,70 @@
   class="appSidebar flex h-full w-full flex-col text-sidebar-foreground/80"
 >
   {#if collectionListState !== 'no-workspace'}
-    <div class="sidebarTopLevelInsetWithInnerPadding py-1">
-      {#if collectionListState === 'empty'}
-        <SelectorButton
-          icon={promptCollectionSelectorFooterItem.icon}
-          text={promptCollectionSelectorFooterItem.label}
-          detail={promptCollectionSelectorFooterItem.detail}
-          showChevron={false}
-          disabled={promptCollectionSelectorDisabled}
-          testId="sidebar-prompt-collection-add-button"
-          onclick={openCreatePromptCollectionDialog}
-        />
-      {:else}
-        <DetailedSelectorButton
+    <div class="shrink-0 pb-1">
+      <header class="sidebarCollectionHeader">
+        <h2 class="sidebarCollectionTitle text-sm leading-5" data-testid="sidebar-collection-title">
+          {collectionKind === 'template' ? 'Template Collections' : 'Task Collections'}
+        </h2>
+        <DropdownPopupDetailed
           label="Collection selector"
+          menuWidth="360px"
           items={promptCollectionDropdownItems}
           selectedItem={screenCollectionDropdownItem}
           footerItem={promptCollectionSelectorFooterItem}
-          disabled={promptCollectionSelectorDisabled}
           itemDragOptions={promptCollectionSelectorItemDragOptions}
-          selectionVariant="accent"
+          itemSelectionVariant="accent"
           dragOpenTypes={promptCollectionSelectorDragOpenTypes}
+          placement="below-trigger"
           testId="sidebar-prompt-collection-selector-menu"
-          triggerTestId="sidebar-prompt-collection-selector-trigger"
           onselect={handlePromptCollectionDropdownSelect}
-        />
+        >
+          {#snippet trigger(dropdown)}
+            <Button
+              buttonAction={dropdown.triggerAction}
+              text="Show All"
+              appearance="outline"
+              borderless
+              endIcon={dropdown.open ? ChevronUp : ChevronDown}
+              iconClass="size-5"
+              class="sidebarCollectionShowAll"
+              disabled={promptCollectionSelectorDisabled}
+              aria-haspopup={dropdown.ariaHaspopup}
+              aria-expanded={dropdown.ariaExpanded}
+              onclick={dropdown.toggle}
+              testId="sidebar-prompt-collection-selector-trigger"
+            />
+          {/snippet}
+        </DropdownPopupDetailed>
+      </header>
+      {#if collectionListState === 'empty'}
+        <div class="sidebarTopLevelInsetWithInnerPadding">
+          <SelectorButton
+            icon={promptCollectionSelectorFooterItem.icon}
+            text={promptCollectionSelectorFooterItem.label}
+            detail={promptCollectionSelectorFooterItem.detail}
+            showChevron={false}
+            disabled={promptCollectionSelectorDisabled}
+            testId="sidebar-prompt-collection-add-button"
+            onclick={openCreatePromptCollectionDialog}
+          />
+        </div>
+      {:else}
+        {#each quickCollectionItems as item (item.id)}
+          <PromptTreePromptRow
+            collectionId={item.id}
+            promptId={item.id}
+            promptTitle={item.label}
+            icon={item.icon}
+            count={item.count}
+            isActive={screenCollection?.id === item.id}
+            isDragging={false}
+            isPromptDragActive={promptEntryDragState.draggedEntry !== null}
+            testId={`sidebar-quick-collection-${item.id}`}
+            getPromptDroppableOptions={() => getCollectionPromptDroppableOptions(item.id, 'quick')}
+            onPromptSelect={onScreenCollectionSelect}
+          />
+        {/each}
       {/if}
     </div>
     <Separator />
@@ -887,6 +948,29 @@
 />
 
 <style>
+  .sidebarCollectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 4px 0 10px;
+  }
+
+  .sidebarCollectionTitle {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--font-weight-semibold);
+    color: var(--ui-secondary-text);
+  }
+
+  .sidebarCollectionHeader :global(.sidebarCollectionShowAll) {
+    height: 32px;
+    padding: 0 8px;
+  }
+
   .cthulhuSidebarPromptSectionHeader {
     display: flex;
     min-height: 40px;

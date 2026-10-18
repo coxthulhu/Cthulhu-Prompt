@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import type { Action } from 'svelte/action'
   import type { HTMLButtonAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
@@ -20,6 +21,8 @@
     class?: string
     iconClass?: string
     testId?: string
+    /** Attaches dropdown anchoring or another action to the native button. */
+    buttonAction?: Action<HTMLButtonElement>
     onclick?: (event: MouseEvent) => void
   }
 
@@ -34,12 +37,19 @@
     class: className,
     iconClass,
     testId,
+    buttonAction,
     onclick,
     ...restProps
   }: Props = $props()
+
+  /** Leaves ordinary buttons unchanged when no DOM action is supplied. */
+  const noopButtonAction: Action<HTMLButtonElement> = () => undefined
+  /** Keeps the action attached to the button that owns focus and pointer interaction. */
+  const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
 
 <button
+  use:resolvedButtonAction
   type="button"
   class={mergeClasses('cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiButtonAction text-sm leading-5 cthulhuUiButton', className)}
   data-variant={variant}

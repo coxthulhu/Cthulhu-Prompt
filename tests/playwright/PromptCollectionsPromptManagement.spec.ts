@@ -2546,12 +2546,13 @@ describe('Prompt collection prompt management', () => {
     await expect(
       mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')
     ).toHaveAttribute('data-active', 'true')
-    await expect(mainWindow.locator('[data-testid][data-row-state="active"]')).toHaveCount(1)
+    // Collection quick picks retain their own selection independently of the prompt tree.
+    await expect(mainWindow.locator('.sidebarPromptTree [data-testid][data-row-state="active"]')).toHaveCount(1)
     await completedTreePrompt.click()
     await expect(
       mainWindow.locator('[data-testid="prompt-collection-completed-filter"]')
     ).toHaveAttribute('aria-pressed', 'true')
-    await expect(mainWindow.locator('[data-testid][data-row-state="active"]')).toHaveCount(1)
+    await expect(mainWindow.locator('.sidebarPromptTree [data-testid][data-row-state="active"]')).toHaveCount(1)
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-header-section"]')).toHaveText(
       'Completed'

@@ -1,3 +1,4 @@
+import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { ConsoleMessage, Page } from 'playwright'
@@ -430,7 +431,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptCollectionScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Example Prompts'
     )
   })
@@ -666,7 +667,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     let screenInfo = await testHelpers.getPromptCollectionScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Example Prompts'
     )
 
@@ -681,7 +682,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     screenInfo = await testHelpers.getPromptCollectionScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(2)
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Development Tools'
     )
 
@@ -759,7 +760,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'data-active',
       'true'
     )
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Development Tools'
     )
   })
@@ -791,7 +792,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
 
     await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Zulu Templates'
     )
   })
@@ -844,7 +845,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', {
       state: 'attached'
     })
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Development Tools'
     )
     expect(await testHelpers.getActiveScreen()).toBe('prompt-collection')
@@ -901,7 +902,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'Create a collection to get started.'
     )
     await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCSS('font-size', '14px')
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toHaveCount(0)
+    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toHaveText('Show All')
     await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
       'data-active',
@@ -1136,7 +1137,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await deleteDialog.getByRole('checkbox').check()
     await deleteDialog.getByRole('button', { name: 'Delete collection' }).click()
 
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Last Prompt'
     )
 
@@ -1157,7 +1158,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
 
     await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'First Template'
     )
     await expect(mainWindow.locator('[data-testid="prompt-collection-active-filter"]')).toBeVisible()
@@ -1241,7 +1242,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     await createButton.click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Test Collection'
     )
     expect(
@@ -1258,7 +1259,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     await testHelpers.navigateToPromptCollections('Test Collection')
 
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Test Collection'
     )
     await expect(mainWindow.locator(PROMPT_COLLECTION_HOST)).toBeVisible()
@@ -1327,7 +1328,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
     await mainWindow.locator('[data-testid="create-prompt-collection-button"]').click()
 
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText('Examples')
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Examples')
     await expect(mainWindow.locator('[data-testid="prompt-collection-title"]')).toHaveText(
       'Examples'
     )
@@ -1514,7 +1515,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await renameButton.click()
     await expect(renameDialog).toHaveCount(0)
     await expect(rootTitle).toHaveText('Devel opment')
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Devel opment'
     )
     await expect
@@ -1541,7 +1542,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toContainText(
       'Renamed Development'
     )
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText(
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Renamed Development'
     )
     await expect(rootHeader).toContainText('Renamed Development')

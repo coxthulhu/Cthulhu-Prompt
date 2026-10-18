@@ -22,6 +22,14 @@ export const promptTreeCategorySelector = (categoryName: string, group: 'active'
 export const promptCollectionSelectorTriggerSelector =
   '[data-testid="sidebar-prompt-collection-selector-trigger"]'
 
+/** Selected collection remains visible in the quick list even outside the first three. */
+export const selectedQuickCollectionSelector =
+  '[data-testid^="sidebar-quick-collection-"][aria-current="true"]'
+
+/** Direct collection drop target and navigation button. */
+export const quickCollectionSelector = (collectionId: string): string =>
+  `[data-testid="sidebar-quick-collection-${collectionId}"]`
+
 /** Shared menu containing selectable collections. */
 export const promptCollectionSelectorMenuSelector =
   '[data-testid="sidebar-prompt-collection-selector-menu"]'

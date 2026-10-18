@@ -2,6 +2,7 @@ import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
+  selectedQuickCollectionSelector,
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
   PROMPT_COLLECTION_HOST_SELECTOR,
@@ -70,8 +71,6 @@ const CATEGORY_OPEN_MENU_ITEM =
 const CATEGORY_SETTINGS_MENU_ITEM =
   '[data-testid="prompt-tree-active-category-settings-menu-item-Category"]'
 const TOGGLE_ALL_CATEGORIES_BUTTON = '[data-testid="toggle-all-categories-button"]'
-const SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER =
-  '[data-testid="sidebar-prompt-collection-selector-trigger"]'
 const CATEGORY_EDITOR = `[data-testid="category-editor-${CATEGORY_ID}"]`
 const CATEGORY_CONTENT_TOGGLE = `${CATEGORY_EDITOR} [data-testid="category-editor-content-toggle"]`
 // Matches the category-navigation bias requested from the virtual window.
@@ -469,7 +468,7 @@ describe('Prompt collection prompt tree', () => {
       testHelpers,
       '[data-testid="prompt-editor-category-prompt"]'
     )
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText('Main')
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Main')
     await expect
       .poll(async () => {
         const persisted = await readWorkspaceUiState(electronApp, workspaceId)
@@ -513,7 +512,7 @@ describe('Prompt collection prompt tree', () => {
     await mainWindow.locator(CATEGORY_TOGGLE).click({ button: 'right' })
     await expect(mainWindow.locator(CATEGORY_OPEN_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(CATEGORY_OPEN_MENU_ITEM).click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toContainText('Main')
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Main')
     await expectRowToReachPromptCollectionCategoryBias(mainWindow, testHelpers, CATEGORY_EDITOR)
     await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',
