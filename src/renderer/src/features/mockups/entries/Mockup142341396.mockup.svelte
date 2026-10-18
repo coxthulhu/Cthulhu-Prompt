@@ -5,11 +5,12 @@
     GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Trash2, X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
 
   // Plain text header action; based on mockup 142341391.
   // Visual snapshot of AppSidebar, AppActivityBar, WorkspacePopup, PromptTree, and their controls.
-  // Collection rows use shared selector buttons; other controls remain local snapshots.
+  // The header action and collection rows use shared buttons; other controls remain local snapshots.
   // All sample data and interactions below are local and reset when this mockup unmounts.
   type MockPrompt = { id: string; title: string; status?: string; edited?: boolean; categoryId?: string }
   type MockCategory = { id: string; title: string; prompts: MockPrompt[]; shortDescription?: string; description?: string }
@@ -609,12 +610,17 @@
     <div class="collection-selector-wrap">
       <header class="collection-header">
         <h2 class="collection-header-title text-sm leading-5">{isTemplateCollection ? 'Template Collections' : 'Task Collections'}</h2>
-        <button class="collection-header-picker text-xs leading-4" type="button" aria-haspopup="menu" aria-expanded={collectionMenuOpen}
+        <Button
+          class="collection-header-picker"
+          text="Show All"
+          appearance="outline"
+          endIcon={collectionMenuOpen ? ChevronUp : ChevronDown}
+          iconClass="size-5"
+          aria-haspopup="menu"
+          aria-expanded={collectionMenuOpen}
           aria-controls="header-collection-menu"
-          onclick={() => { collectionMenuOpen = !collectionMenuOpen }}>
-          <span>All Collections</span>
-          {#if collectionMenuOpen}<ChevronUp size={14} aria-hidden="true" />{:else}<ChevronDown size={14} aria-hidden="true" />{/if}
-        </button>
+          onclick={() => { collectionMenuOpen = !collectionMenuOpen }}
+        />
       </header>
       {#if visibleCollections.length > 0}
         <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
@@ -1114,46 +1120,18 @@
     white-space: nowrap;
   }
 
-  .collection-header-picker {
-    align-items: center;
-    background: var(--ui-ghost-surface);
+  .collection-header :global(.cthulhuUiButton.collection-header-picker) {
+    align-self: center;
     border: 0;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: inline-flex;
-    flex: 0 0 auto;
     gap: 4px;
-    min-height: 28px;
-    padding: 0 4px;
-    transition:
-      background-color var(--ui-animation-duration-fast) ease-out,
-      color var(--ui-animation-duration-fast) ease-out;
-    white-space: nowrap;
+    height: 32px;
+    /* Preserve the title layout while matching the right inset to the 4px vertical inset. */
+    margin: 0 -6px 0 -2px;
+    padding: 0 8px;
   }
 
-  .collection-header-picker:hover,
-  .collection-header-picker:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    color: var(--ui-normal-text);
-  }
-
-  .collection-header-picker[aria-expanded='true'] {
+  .collection-header :global(.cthulhuUiButton.collection-header-picker[aria-expanded='true']) {
     background: var(--ui-neutral-action-hover-fill);
-    color: var(--ui-normal-text);
-  }
-
-  .collection-header-picker:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
-    outline-offset: 2px;
-  }
-
-  .collection-header-picker > :global(svg) {
-    color: var(--ui-hoverable-icon-glyph);
-    transition: color var(--ui-animation-duration-fast) ease-out;
-  }
-
-  .collection-header-picker:where(:hover, :focus-visible, [aria-expanded='true']) > :global(svg) {
     color: var(--ui-normal-text);
   }
 
