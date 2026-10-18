@@ -37,7 +37,7 @@ import {
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/workspace/WorkspaceMigrations'
 
 const EXAMPLE_COLLECTION_NAME = 'MyProject'
-const EXAMPLE_COLLECTION_DISPLAY_NAME = 'My Project'
+const EXAMPLE_COLLECTION_DISPLAY_NAME = 'My Prompts'
 // Ordered categories created with the bundled example prompts.
 const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
   'Features & Improvements',

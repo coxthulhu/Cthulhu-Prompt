@@ -476,7 +476,7 @@ Keep this partial body.`
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
-      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Project')
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
       await testHelpers.navigateToHomeScreen()
       /** Created workspace root shown by the ready-state home screen. */
@@ -575,7 +575,7 @@ Keep this partial body.`
       )
       await expect(finalPathField.locator('.cthulhuUiTitle')).toHaveText('Workspace Path')
       await expect(examplesField.locator('.cthulhuUiSubtitle')).toHaveText(
-        'Include example prompts and templates in the My Project and My Templates collections.'
+        'Include example prompts and templates in the My Prompts and My Templates collections.'
       )
       await expect(createDialog.locator('.cthulhuUiTitleSubtitleStack svg')).toHaveCount(0)
       await expect(containingFolderInput).toBeDisabled()
@@ -665,7 +665,7 @@ Keep this partial body.`
 
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
 
-      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Project')
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', { state: 'visible' })
       await mainWindow.waitForSelector('[data-testid^="prompt-editor-"]', {
@@ -741,7 +741,7 @@ Keep this partial body.`
       ).toHaveCount(1)
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
-      ).toContainText('My Project')
+      ).toContainText('My Prompts')
       await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
       await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
@@ -768,7 +768,7 @@ Keep this partial body.`
       expect((await testHelpers.getPromptCollectionScreenInfo()).promptCount).toBe(2)
     })
 
-    test('creates a blank My Project collection when examples are disabled', async ({ testSetup }) => {
+    test('creates a blank My Prompts collection when examples are disabled', async ({ testSetup }) => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'empty', path: '/empty-without-examples', autoSetup: false }
       })
@@ -798,7 +798,7 @@ Keep this partial body.`
 
       await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
       await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toHaveText(
-        'My Project'
+        'My Prompts'
       )
 
       const screenInfo = await testHelpers.getPromptCollectionScreenInfo()
@@ -811,7 +811,7 @@ Keep this partial body.`
       ).toHaveCount(1)
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
-      ).toContainText('My Project')
+      ).toContainText('My Prompts')
       await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
       await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
