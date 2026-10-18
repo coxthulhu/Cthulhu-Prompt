@@ -84,6 +84,11 @@
       ...group, prompts: group.id === 'active' ? [prompt('website', 'Review the personal website'), prompt('backup', 'Automate workspace backups')] : []
     })) },
     { id: 'empty-project', title: 'New Project', kind: 'prompt', groups: emptyGroups() },
+    { id: 'release', title: 'Release Preparation and Follow-up', kind: 'prompt', modified: '2 hours ago', groups: emptyGroups().map((group) => ({
+      ...group, prompts: group.id === 'active'
+        ? [prompt('release-package', 'Verify the Windows installer'), prompt('release-changelog', 'Draft the release announcement')]
+        : group.id === 'backlog' ? [prompt('release-feedback', 'Review feedback after the release')] : []
+    })) },
     { id: 'engineering', title: 'Engineering Templates', kind: 'template', modified: 'Yesterday', groups: emptyGroups().map((group) => ({
       ...group,
       prompts: group.id === 'active' ? [{ ...prompt('template-plan', 'Plan an implementation'), edited: true }, prompt('template-review', 'Review a pull request')] :
@@ -92,6 +97,11 @@
     })) },
     { id: 'writing', title: 'Writing Templates', kind: 'template', modified: '3 days ago', groups: emptyGroups().map((group) => ({
       ...group, prompts: group.id === 'active' ? [prompt('template-docs', 'Write developer documentation'), prompt('template-summary', 'Summarize a technical decision')] : []
+    })) },
+    { id: 'empty-templates', title: 'New Templates', kind: 'template', groups: emptyGroups() },
+    { id: 'review-templates', title: 'Architecture Review Templates', kind: 'template', modified: '2 hours ago', groups: emptyGroups().map((group) => ({
+      ...group, prompts: group.id === 'active'
+        ? [prompt('template-boundaries', 'Review module boundaries'), prompt('template-migration', 'Plan a data migration')] : []
     })) }
   ])
   const activities = [
@@ -128,6 +138,13 @@
   let selectedCollectionIds = $state({ prompt: 'product', template: 'engineering' })
   const visibleCollections = $derived(collections.filter((collection) => collection.kind === collectionKind))
   const selectedCollection = $derived(visibleCollections.find((collection) => collection.id === selectedCollectionIds[collectionKind]) ?? visibleCollections[0])
+  // Match the live quick picks: workspace order, with an out-of-range selection pinned first.
+  const quickCollections = $derived.by(() => {
+    const firstThree = visibleCollections.slice(0, 3)
+    return selectedCollection && !firstThree.some((collection) => collection.id === selectedCollection.id)
+      ? [selectedCollection, ...firstThree.slice(0, 2)]
+      : firstThree
+  })
   const groups = $derived(selectedCollection?.groups ?? [])
   const isTemplateCollection = $derived(collectionKind === 'template')
   const CollectionIcon = $derived(isTemplateCollection ? Layers : FileText)
@@ -171,7 +188,7 @@
     collections.splice(targetIndex, 0, collection!)
   }
   const closeMenus = (event: MouseEvent) => {
-    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .prompts-actions, .updates-button, .updates-popup')) return
+    if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .collection-show-all, .prompts-actions, .updates-button, .updates-popup')) return
     collectionMenuOpen = false
     actionsMenuOpen = false
     categoryMenu = null
@@ -330,6 +347,21 @@
   const canMoveToCollection = (collection: MockCollection) => !!draggedPrompt &&
     collection.id !== selectedCollection?.id &&
     (draggedPrompt.group.id === 'active' || draggedPrompt.group.id === 'backlog')
+  // Quick rows and the full menu share transfer rules but own distinct hover indicators.
+  const previewCollectionDrop = (event: DragEvent, collection: MockCollection, target: 'quick' | 'dropdown') => {
+    if (!draggedPrompt) return
+    previewPromptDrop(event, `${target}:${collection.id}`)
+  }
+  const dropOnCollection = (event: DragEvent, collection: MockCollection) => {
+    if (!canMoveToCollection(collection)) {
+      event.preventDefault()
+      event.stopPropagation()
+      finishPromptDrag()
+      return
+    }
+    const group = collection.groups.find((group) => group.id === draggedPrompt!.group.id)
+    if (group) movePrompt(event, group, undefined, undefined, collection)
+  }
 
   const toggleSection = (group: MockGroup) => {
     // Preserve rendered proportions when collapsing; the last open section receives the freed space.
@@ -605,56 +637,80 @@
   </nav>
   <aside class="mock-sidebar" hidden={!sidebarExpanded} style={`--sidebar-width:${sidebarWidth}px;`} aria-label="Cthulhu Prompt sidebar">
     <div class="collection-selector-wrap">
-      <button class="collection-selector" type="button" aria-label={selectedCollection ? 'Collection selector' : 'Create Collection'} aria-expanded={selectedCollection ? collectionMenuOpen : undefined}
-        aria-haspopup={selectedCollection ? 'menu' : 'dialog'} data-empty={!selectedCollection}
-        ondragover={(event) => { if (draggedPrompt) { event.preventDefault(); collectionMenuOpen = true } }}
-        onclick={() => { if (selectedCollection) collectionMenuOpen = !collectionMenuOpen; else openCreateCollection() }}>
-        <span class="selector-icon-cell">{#if selectedCollection}<CollectionIcon size={20} aria-hidden="true" />{:else}<Plus size={20} aria-hidden="true" />{/if}</span>
-        <span class="selector-copy">
-          <span class="selector-title text-sm leading-5">{selectedCollection ? collectionTitle : 'Create Collection'}</span>
-          <span class="selector-detail text-xs leading-4.5">
-            {#if selectedCollection}
-            <span>{collectionCount(selectedCollection)} {contentLabel.toLowerCase()}{collectionCount(selectedCollection) === 1 ? '' : 's'}</span>
-            {#if selectedCollection.modified}<span class="separator-dot" aria-hidden="true"></span>
-            <span>{selectedCollection.modified}</span>{/if}
-            {:else}<span>Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</span>{/if}
-          </span>
-        </span>
-        {#if selectedCollection}<span class="selector-chevron">{#if collectionMenuOpen}<ChevronUp size={20} aria-hidden="true" />{:else}<ChevronDown size={20} aria-hidden="true" />{/if}</span>{/if}
-      </button>
-      {#if collectionMenuOpen}
-        <div class="local-menu collection-menu" role="menu" aria-label="Collection selector">
-          <div class="collection-menu-items">
-          {#each visibleCollections as collection (collection.id)}
-            <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
-              draggable="true" data-dragging={draggedCollectionId === collection.id} data-drop-over={dropTarget === collection.id}
-              ondragstart={(event) => { draggedCollectionId = collection.id; event.dataTransfer?.setData('text/plain', collection.id) }}
-              ondragover={(event) => { if (draggedCollectionId) event.preventDefault(); else if (canMoveToCollection(collection)) previewPromptDrop(event, collection.id) }}
-              ondrop={(event) => {
-                if (draggedPrompt) {
-                  if (canMoveToCollection(collection)) movePrompt(event, collection.groups.find((group) => group.id === draggedPrompt!.group.id)!, undefined, undefined, collection)
-                  return
-                }
-                event.preventDefault(); reorderCollection(collection.id); draggedCollectionId = null
-              }}
-              ondragend={() => { draggedCollectionId = null }}
-              onclick={() => selectCollection(collection)}>
-              <GripVertical class="collection-grip" size={16} aria-hidden="true" /><CollectionIcon class="collection-option-icon" size={20} aria-hidden="true" />
-              <span>{collection.title}<small class="text-xs leading-4.5">{collectionCount(collection)} {contentLabel.toLowerCase()}{collectionCount(collection) === 1 ? '' : 's'}{collection.modified ? ` · ${collection.modified}` : ''}</small></span>
-              {#if selectedCollection?.id === collection.id}<ChevronRight size={14} aria-hidden="true" />{/if}
-            </button>
-          {/each}
-          </div>
-          <div class="menu-footer"><button class="collection-option text-sm leading-5" type="button" onclick={openCreateCollection}><Plus size={20} aria-hidden="true" /><span>Create Collection<small class="text-xs leading-4.5">Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</small></span></button></div>
+      <header class="collection-header">
+        <h2 class="collection-heading text-sm leading-5">{isTemplateCollection ? 'Template Collections' : 'Task Collections'}</h2>
+        <div class="collection-menu-anchor">
+          <button class="collection-show-all text-sm leading-5" type="button" aria-expanded={collectionMenuOpen}
+            aria-haspopup="menu" aria-controls="mock-collection-menu"
+            ondragover={(event) => { if (draggedPrompt) { event.preventDefault(); collectionMenuOpen = true } }}
+            onclick={() => { collectionMenuOpen = !collectionMenuOpen }}>
+            Show All
+            {#if collectionMenuOpen}<ChevronUp size={20} aria-hidden="true" />{:else}<ChevronDown size={20} aria-hidden="true" />{/if}
+          </button>
+          {#if collectionMenuOpen}
+            <div id="mock-collection-menu" class="local-menu collection-menu" role="menu" aria-label="Collection selector">
+              <div class="collection-menu-items">
+                {#each visibleCollections as collection (collection.id)}
+                  <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
+                    role="menuitemradio" aria-checked={selectedCollection?.id === collection.id}
+                    draggable="true" data-dragging={draggedCollectionId === collection.id}
+                    data-drop-over={dropTarget === `dropdown:${collection.id}` && canMoveToCollection(collection)}
+                    data-drop-blocked={dropTarget === `dropdown:${collection.id}` && !canMoveToCollection(collection)}
+                    ondragstart={(event) => { draggedCollectionId = collection.id; event.dataTransfer?.setData('text/plain', collection.id) }}
+                    ondragover={(event) => { if (draggedCollectionId) event.preventDefault(); else previewCollectionDrop(event, collection, 'dropdown') }}
+                    ondrop={(event) => {
+                      if (draggedPrompt) {
+                        dropOnCollection(event, collection)
+                        return
+                      }
+                      event.preventDefault(); reorderCollection(collection.id); draggedCollectionId = null
+                    }}
+                    ondragend={() => { draggedCollectionId = null }}
+                    onclick={() => selectCollection(collection)}>
+                    <GripVertical class="collection-grip" size={16} aria-hidden="true" /><CollectionIcon class="collection-option-icon" size={20} aria-hidden="true" />
+                    <span>{collection.title}<small class="text-xs leading-4.5">{collectionCount(collection)} {contentLabel.toLowerCase()}{collectionCount(collection) === 1 ? '' : 's'}{collection.modified ? ` · ${collection.modified}` : ''}</small></span>
+                    {#if selectedCollection?.id === collection.id}<ChevronRight size={14} aria-hidden="true" />{/if}
+                  </button>
+                {/each}
+              </div>
+              <div class="menu-footer"><button class="collection-option text-sm leading-5" type="button" role="menuitem" onclick={openCreateCollection}><Plus size={20} aria-hidden="true" /><span>Create Collection<small class="text-xs leading-4.5">Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</small></span></button></div>
+            </div>
+          {/if}
         </div>
-      {/if}
+      </header>
+      {#each quickCollections as collection (collection.id)}
+        <div class="quick-collection-row">
+          <button class="quick-collection text-sm" type="button" title={collection.title}
+            aria-current={selectedCollection?.id === collection.id ? 'true' : undefined}
+            data-active={selectedCollection?.id === collection.id}
+            data-drop-over={dropTarget === `quick:${collection.id}` && canMoveToCollection(collection)}
+            data-drop-blocked={dropTarget === `quick:${collection.id}` && !canMoveToCollection(collection)}
+            ondragover={(event) => previewCollectionDrop(event, collection, 'quick')}
+            ondrop={(event) => dropOnCollection(event, collection)}
+            onclick={(event) => { selectCollection(collection); if (event.detail !== 0) event.currentTarget.blur() }}>
+            <CollectionIcon class="quick-collection-icon" size={16} aria-hidden="true" />
+            <span class="quick-collection-label">{collection.title}</span>
+            <span class="quick-collection-count text-xs leading-4 tabular-nums">{collectionCount(collection)}</span>
+          </button>
+        </div>
+      {:else}
+        <div class="empty-collection-picker">
+          <button class="collection-selector" type="button" aria-haspopup="dialog" onclick={openCreateCollection}>
+            <span class="selector-icon-cell"><Plus size={20} aria-hidden="true" /></span>
+            <span class="selector-copy">
+              <span class="selector-title text-sm leading-5">Create Collection</span>
+              <span class="selector-detail text-xs leading-4.5">Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</span>
+            </span>
+          </button>
+        </div>
+      {/each}
     </div>
 
     <div class="separator"></div>
 
     <div class="prompts-header">
       <div class="prompts-actions">
-        {@render IconAction(ArrowUpToLine, 'Show Collection Overview', () => { activeActivity = collectionKind; isOverviewActive = true; selectedCategoryId = null }, false, !selectedCollection)}
+        {@render IconAction(ArrowUpToLine, 'Go to Top', () => { activeActivity = collectionKind; isOverviewActive = true; selectedCategoryId = null }, false, !selectedCollection)}
         {#if selectedCollection && !isTemplateCollection}
           {@render IconAction(Check, 'Show Completed Prompts', () => { showCompleted = !showCompleted }, showCompleted)}
         {/if}
@@ -1058,20 +1114,147 @@
 
   .collection-selector-wrap {
     flex: 0 0 auto;
-    padding: 4px 8px;
+    padding-bottom: 4px;
+  }
+
+  .collection-header {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 4px 0 10px;
+  }
+
+  .collection-heading {
+    color: var(--ui-secondary-text);
+    flex: 1;
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .collection-menu-anchor {
+    flex: 0 0 auto;
+    position: relative;
+  }
+
+  .collection-show-all {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
+    display: flex;
+    font-weight: var(--font-weight-semibold);
+    gap: 4px;
+    height: 32px;
+    padding: 0 8px;
+    white-space: nowrap;
+  }
+
+  .collection-show-all:hover,
+  .collection-show-all:focus-visible {
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .collection-show-all:focus-visible {
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
+  }
+
+  .collection-show-all[aria-expanded='true'] {
+    background: var(--ui-neutral-action-hover-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .quick-collection-row {
+    padding-block: 1px;
+  }
+
+  .quick-collection {
+    align-items: center;
+    background: var(--ui-ghost-surface);
+    border: 0;
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
+    display: flex;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px 0 13px;
+    text-align: left;
+    width: 100%;
+    transition: background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .quick-collection:hover,
+  .quick-collection:focus-visible {
+    background: var(--ui-neutral-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .quick-collection[data-active='true'] {
+    background: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .quick-collection[data-active='true']:hover {
+    background: var(--ui-neutral-selection-surface);
+  }
+
+  .quick-collection :global(.quick-collection-icon) {
+    color: var(--ui-secondary-icon-glyph);
+    flex-shrink: 0;
+  }
+
+  .quick-collection:hover :global(.quick-collection-icon),
+  .quick-collection:focus-visible :global(.quick-collection-icon) {
+    color: var(--ui-normal-text);
+  }
+
+  .quick-collection-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quick-collection-count {
+    color: var(--ui-secondary-text);
+    flex-shrink: 0;
+  }
+
+  .quick-collection[data-drop-over='true'] {
+    background: var(--ui-info-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .quick-collection[data-drop-blocked='true'] {
+    background: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .empty-collection-picker {
+    padding: 0 8px;
   }
 
   .collection-selector {
     align-items: center;
     background: transparent;
-    border: 1px solid var(--ui-ghost-surface);
+    border: 0;
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
-    grid-template-columns: 34px 8px minmax(0, 1fr) 22px;
+    grid-template-columns: 34px 8px minmax(0, 1fr);
     min-width: 0;
-    padding: 7px;
+    padding: 8px;
     text-align: left;
     width: 100%;
   }
@@ -1081,18 +1264,6 @@
     background: var(--ui-neutral-action-fill);
     border-color: var(--ui-neutral-hover-border);
     color: var(--ui-normal-text);
-  }
-
-  .collection-selector[aria-expanded='true'] {
-    background: var(--ui-neutral-action-hover-fill);
-    border-color: var(--ui-neutral-hover-border);
-    color: var(--ui-normal-text);
-  }
-
-  .collection-selector[data-empty='true'] {
-    border: 0;
-    grid-template-columns: 34px 8px minmax(0, 1fr);
-    padding: 8px;
   }
 
   .selector-icon-cell {
@@ -1106,11 +1277,7 @@
   }
 
   .collection-selector:hover .selector-icon-cell,
-  .collection-selector:focus-visible .selector-icon-cell,
-  .collection-selector[aria-expanded='true'] .selector-icon-cell,
-  .collection-selector:hover .selector-chevron,
-  .collection-selector:focus-visible .selector-chevron,
-  .collection-selector[aria-expanded='true'] .selector-chevron {
+  .collection-selector:focus-visible .selector-icon-cell {
     color: var(--ui-normal-text);
   }
 
@@ -1136,30 +1303,8 @@
     gap: 6px;
     min-width: 0;
     overflow: hidden;
-    white-space: nowrap;
-  }
-
-  .selector-detail > span:not(.separator-dot) {
-    min-width: 0;
-    overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  .separator-dot {
-    background: currentColor;
-    border-radius: 50%;
-    display: inline-block;
-    height: 3px;
-    width: 3px;
-    flex-shrink: 0;
-  }
-
-  .selector-chevron {
-    align-items: center;
-    display: flex;
-    grid-column: 4;
-    justify-content: center;
-    color: var(--ui-hoverable-icon-glyph);
+    white-space: nowrap;
   }
 
   .prompts-header {
@@ -1265,8 +1410,7 @@
   }
 
   .tree-prompt-button[data-dragging='true'],
-  .tree-category-content[data-dragging='true'],
-  .local-menu .collection-option[data-drop-over='true'] {
+  .tree-category-content[data-dragging='true'] {
     background: var(--ui-info-normal-surface);
     color: var(--ui-normal-text);
   }
@@ -1677,9 +1821,9 @@
   }
 
   .collection-menu {
-    top: 100%;
-    left: 8px;
-    width: 320px;
+    top: calc(100% + 4px);
+    left: 0;
+    width: 360px;
     padding: 6px;
   }
 
@@ -1785,6 +1929,19 @@
   .local-menu .collection-option[data-selected='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
+    color: var(--ui-normal-text);
+  }
+
+  /* Transfer feedback takes precedence over the selected collection's accent fill. */
+  .local-menu .collection-option[data-drop-over='true'],
+  .local-menu .collection-option[data-drop-over='true']:hover {
+    background: var(--ui-info-normal-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .local-menu .collection-option[data-drop-blocked='true'],
+  .local-menu .collection-option[data-drop-blocked='true']:hover {
+    background: var(--ui-neutral-emphasis-surface);
     color: var(--ui-normal-text);
   }
 
