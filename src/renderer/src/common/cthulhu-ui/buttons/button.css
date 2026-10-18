@@ -106,7 +106,7 @@
 /* Action buttons and links have the same text layout and optional end icon. */
 .cthulhuUiButtonAction {
   font-weight: var(--font-weight-semibold);
-  gap: 8px;
+  gap: 4px;
   height: 40px;
   max-width: 14rem;
   overflow: hidden;

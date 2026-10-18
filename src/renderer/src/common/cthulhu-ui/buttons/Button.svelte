@@ -15,6 +15,8 @@
     appearance?: ButtonAppearance
     /** Prevents activation and applies the shared disabled appearance. */
     disabled?: boolean
+    /** Removes the border while preserving the selected appearance. */
+    borderless?: boolean
     class?: string
     iconClass?: string
     testId?: string
@@ -28,6 +30,7 @@
     variant = 'neutral',
     appearance = 'filled',
     disabled = false,
+    borderless = false,
     class: className,
     iconClass,
     testId,
@@ -41,6 +44,7 @@
   class={mergeClasses('cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiButtonAction text-sm leading-5 cthulhuUiButton', className)}
   data-variant={variant}
   data-appearance={appearance}
+  data-borderless={borderless ? 'true' : 'false'}
   data-testid={testId}
   {onclick}
   {disabled}

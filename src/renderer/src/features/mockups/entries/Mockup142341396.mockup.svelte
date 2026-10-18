@@ -614,6 +614,7 @@
           class="collection-header-picker"
           text="Show All"
           appearance="outline"
+          borderless
           endIcon={collectionMenuOpen ? ChevronUp : ChevronDown}
           iconClass="size-5"
           aria-haspopup="menu"
@@ -1104,9 +1105,10 @@
   .collection-header {
     align-items: center;
     display: flex;
-    gap: 8px;
+    gap: 6px;
     min-height: 40px;
-    padding: 0 10px;
+    /* Keep the title inset at 10px and the button inset equal to its 4px vertical clearance. */
+    padding: 0 4px 0 10px;
   }
 
   .collection-header-title {
@@ -1121,12 +1123,7 @@
   }
 
   .collection-header :global(.cthulhuUiButton.collection-header-picker) {
-    align-self: center;
-    border: 0;
-    gap: 4px;
     height: 32px;
-    /* Preserve the title layout while matching the right inset to the 4px vertical inset. */
-    margin: 0 -6px 0 -2px;
     padding: 0 8px;
   }
 
