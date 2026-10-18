@@ -1127,11 +1127,6 @@
     padding: 0 8px;
   }
 
-  .collection-header :global(.cthulhuUiButton.collection-header-picker[aria-expanded='true']) {
-    background: var(--ui-neutral-action-hover-fill);
-    color: var(--ui-normal-text);
-  }
-
   /* Preview shared selectors with the prompt tree's row height and neutral selection treatment. */
   .collection-selector-wrap :global(.cthulhuUiSelectorButton.collection-row-selector) {
     grid-template-columns: 16px 8px minmax(0, 1fr) 24px;

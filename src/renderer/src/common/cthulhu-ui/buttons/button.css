@@ -114,6 +114,12 @@
   white-space: nowrap;
 }
 
+/* Dropdown triggers remain highlighted while their controlled popup is expanded. */
+.cthulhuUiButton[aria-expanded='true'] {
+  background-color: var(--ui-neutral-action-hover-fill);
+  color: var(--ui-normal-text);
+}
+
 /* Labels truncate without shrinking or clipping the adjacent icons. */
 .cthulhuUiButtonLabel {
   min-width: 0;
