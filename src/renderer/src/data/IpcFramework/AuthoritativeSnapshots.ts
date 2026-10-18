@@ -1,3 +1,4 @@
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import type { DomainEntityType } from '@shared/domain/DomainChanges'
 import { createPromptFull, isPromptFull } from '@shared/domain/prompt/Prompt'
@@ -20,6 +21,8 @@ import { clearPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/Pr
 /** Returns the renderer collection owning one registered entity's authoritative revision. */
 export const getRendererRevisionCollection = (entityType: DomainEntityType) => {
   switch (entityType) {
+    case 'note':
+      return notesCollection
     case 'systemSettings':
       return systemSettingsCollection
     case 'workspace':
@@ -64,6 +67,9 @@ const reconcileRendererAuthoritativeSnapshot = (
   }
 
   switch (snapshot.entityType) {
+    case 'note':
+      notesCollection.utils.upsertAuthoritative(snapshot)
+      return
     case 'systemSettings':
       systemSettingsCollection.utils.upsertAuthoritative(snapshot)
       return

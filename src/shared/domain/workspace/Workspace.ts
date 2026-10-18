@@ -67,5 +67,7 @@ export type LoadWorkspaceByPathResult = IpcResult<{
   promptCollections: Array<RevisionEnvelope<PromptCollection>>
   categories: Array<RevisionEnvelope<import('@shared/domain/category/Category').Category>>
   prompts: Array<RevisionEnvelope<PromptSummaryData>>
+  /** Full notes available independently of owner editor hydration. */
+  notes: Array<RevisionEnvelope<import('@shared/domain/note/Note').Note>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
 }>

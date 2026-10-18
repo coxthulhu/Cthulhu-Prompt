@@ -1,3 +1,5 @@
+import type { Note } from '@shared/domain/note/Note'
+import { readMarkdownModifiedAt } from '../Persistence/MarkdownPersistence'
 import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
 import type { CategoryOrder, PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
@@ -66,7 +68,9 @@ const filterLoadedCategoryOrder = (categoryOrder: CategoryOrder): CategoryOrder 
       {
         ...category,
         entries: category.entries.filter((entry) =>
-          entry.kind === 'prompt'
+          entry.kind === 'note'
+            ? data.note.committedStore.getEntry(entry.id) !== null
+            : entry.kind === 'prompt'
             ? data.prompt.committedStore.getEntry(entry.id) !== null
             : data.promptTemplate.committedStore.getEntry(entry.id) !== null
         )
@@ -136,6 +140,7 @@ export const buildPromptCollectionSnapshot = (
               }
             : {
                 ...layout,
+                noteIds: layout.noteIds.filter((id) => data.note.committedStore.getEntry(id)),
                 promptIds: promptCollection.kind === 'template'
                   ? layout.promptIds.filter((id) => data.promptTemplate.committedStore.getEntry(id))
                   : filterLoadedPromptIds(layout.promptIds)
@@ -177,4 +182,12 @@ export const buildCategorySnapshot = (
   id: categoryEntry.committed.id,
   revision: categoryEntry.revision,
   data: categoryEntry.committed
+})
+
+/** Builds a note snapshot using its own file timestamp. */
+export const buildNoteSnapshot = (
+  entry: CommittedEntry<Note, PromptPersistenceFields>
+): RevisionEnvelope<Note> => ({
+  id: entry.committed.id, revision: entry.revision,
+  data: { ...entry.committed, modifiedAt: readMarkdownModifiedAt(entry.persistenceFields, 'note') }
 })

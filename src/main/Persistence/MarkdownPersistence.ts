@@ -13,6 +13,8 @@ import { resolvePromptDirectoryPath, resolvePromptPathsFromStem } from './Prompt
 import { getFs } from '../fs-provider'
 
 export type MarkdownPersistenceFields = {
+  /** Library containing this Markdown file, independent of its extension. */
+  collectionKind?: PromptCollectionContentKind
   workspaceId: string
   workspacePath: string
   folderPath: string
@@ -27,10 +29,10 @@ type MarkdownData = {
 }
 
 type MarkdownPersistenceOptions<TData extends MarkdownData> = {
-  kind: PromptCollectionContentKind
+  kind: PromptCollectionContentKind | 'note'
   parseMarkdown: (fileText: string) => TData | null
   serializeMarkdown: (data: TData) => string
-  normalizeLoadedData?: (data: TData, folderPath: string) => TData
+  normalizeLoadedData?: (data: TData, folderPath: string, fields: MarkdownPersistenceFields) => TData
   shouldRewriteNormalizedData?: (
     loaded: TData,
     normalized: TData,
@@ -40,12 +42,12 @@ type MarkdownPersistenceOptions<TData extends MarkdownData> = {
 
 export const readMarkdownModifiedAt = (
   persistenceFields: MarkdownPersistenceFields,
-  kind: PromptCollectionContentKind
+  kind: PromptCollectionContentKind | 'note'
 ): string => {
   const folderPath = resolvePromptDirectoryPath(
     persistenceFields.workspacePath,
     persistenceFields.folderPath,
-    kind
+    persistenceFields.collectionKind ?? (kind === 'note' ? 'prompt' : kind)
   )
   const filePaths = resolvePromptPathsFromStem(folderPath, persistenceFields.promptStem, kind)
   return getFs().statSync(filePaths.markdownPath).mtime.toISOString()
@@ -70,7 +72,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
       ? resolvePromptDirectoryPath(
           before.persistenceFields.workspacePath,
           before.persistenceFields.folderPath,
-          kind
+          before.persistenceFields.collectionKind ?? (kind === 'note' ? 'prompt' : kind)
         )
       : null
     /** Current markdown path when the entity already exists. */
@@ -91,7 +93,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     const targetFolderPath = resolvePromptDirectoryPath(
       fields.workspacePath,
       fields.folderPath,
-      kind
+      fields.collectionKind ?? (kind === 'note' ? 'prompt' : kind)
     )
     /** Filename allocated once by the storage planner. */
     const stem = fields.promptStem
@@ -123,7 +125,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     const folderPath = resolvePromptDirectoryPath(
       persistenceFields.workspacePath,
       persistenceFields.folderPath,
-      kind
+      persistenceFields.collectionKind ?? (kind === 'note' ? 'prompt' : kind)
     )
     const filePaths = resolvePromptPathsFromStem(folderPath, persistenceFields.promptStem, kind)
     const fs = getFs()
@@ -134,7 +136,7 @@ export const createMarkdownPersistence = <TData extends MarkdownData>({
     const loadedData = parseMarkdown(fileText)
     if (!loadedData) return null
 
-    const normalizedData = normalizeLoadedData(loadedData, persistenceFields.folderPath)
+    const normalizedData = normalizeLoadedData(loadedData, persistenceFields.folderPath, persistenceFields)
     if (shouldRewriteNormalizedData(loadedData, normalizedData, fileText)) {
       fs.writeFileSync(filePaths.markdownPath, serializeMarkdown(normalizedData), 'utf8')
     }

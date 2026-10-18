@@ -28,7 +28,7 @@ export const createFilenameAllocator = () => {
       namesIn(path.dirname(filePath)).add(path.basename(filePath).toLowerCase())
     },
     /** Allocates a destination, allowing an entity to retain its own current filename. */
-    allocate: (directory: string, title: string, suffix: string, currentFilename?: string): string =>
+    allocate: (directory: string, title: string, suffix: string | string[], currentFilename?: string | string[]): string =>
       allocateFilenameStem(title, suffix, namesIn(directory), currentFilename)
   }
 }

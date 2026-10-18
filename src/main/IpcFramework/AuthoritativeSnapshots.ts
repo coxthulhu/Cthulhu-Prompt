@@ -2,6 +2,7 @@ import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import type { DomainTarget } from '@shared/domain/DomainChanges'
 import { data } from '../Data/Data'
 import {
+  buildNoteSnapshot,
   buildCategorySnapshot,
   buildPromptCollectionSnapshot,
   buildPromptSnapshot,
@@ -44,6 +45,12 @@ const buildMainAuthoritativeSnapshot = (target: DomainTarget): AuthoritativeSnap
       return entry
         ? { entityType: 'category', ...buildCategorySnapshot(entry) }
         : { entityType: 'category', id: target.id, deleted: true }
+    }
+    case 'note': {
+      /** Note snapshot retains its independent modified time. */
+      const entry = data.note.committedStore.getEntry(target.id)
+      return entry ? { entityType: 'note', ...buildNoteSnapshot(entry) }
+        : { entityType: 'note', id: target.id, deleted: true }
     }
     case 'prompt': {
       /** Current prompt entry used by the established modified-time snapshot adapter. */

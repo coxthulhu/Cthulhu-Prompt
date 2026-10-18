@@ -1,3 +1,4 @@
+import { getStandaloneNoteIds } from '@shared/domain/note/Note'
 import { getPromptCollectionCategoryIds, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import { isFinalPromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
@@ -10,6 +11,7 @@ export const getPromptCollectionAllPromptIds = (promptCollection: PromptCollecti
   promptCollection.kind === 'prompt' ? getMarkdownContentIds(promptCollection, 'prompt') : []
 
 export const isPromptCollectionEmpty = (promptCollection: PromptCollection): boolean =>
+  getStandaloneNoteIds(promptCollection).length === 0 &&
   getMarkdownContentIds(promptCollection, promptCollection.kind).length === 0 &&
   getPromptCollectionCategoryIds(promptCollection).length === 0 &&
   Object.values(promptCollection.settings).every((value) => (value ?? '').trim().length === 0)

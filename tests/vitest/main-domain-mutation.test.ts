@@ -25,6 +25,7 @@ const mockMainData = vi.hoisted(() => {
     promptCollection: new Map<string, Entry>(),
     category: new Map<string, Entry>(),
     prompt: new Map<string, Entry>(),
+    note: new Map<string, Entry>(),
     promptTemplate: new Map<string, Entry>(),
     workspacePromptCollectionUiState: new Map<string, Entry>()
   }
@@ -40,6 +41,7 @@ const mockMainData = vi.hoisted(() => {
     promptCollection: { committedStore: createStore('promptCollection'), targetPolicy: 'requirePresent' },
     category: { committedStore: createStore('category'), targetPolicy: 'requirePresent' },
     prompt: { committedStore: createStore('prompt'), targetPolicy: 'requirePresent' },
+    note: { committedStore: createStore('note'), targetPolicy: 'requirePresent' },
     promptTemplate: { committedStore: createStore('promptTemplate'), targetPolicy: 'requirePresent' },
     workspacePromptCollectionUiState: {
       committedStore: createStore('workspacePromptCollectionUiState'),

@@ -351,6 +351,9 @@ const collectCategoryDeletionTargets = (
       addUniqueTarget(targets, { entityType: 'promptTemplate', id: promptTemplate.id })
     }
   }
+  for (const note of state.getAll('note')) {
+    if (note.kind === 'standalone' && note.category === categoryId) addUniqueTarget(targets, { entityType: 'note', id: note.id })
+  }
   return targets
 }
 
@@ -544,6 +547,14 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
     })
   }
 
+  for (const note of state.getAll('note')) {
+    if (note.kind !== 'standalone' || !note.category || !deletedCategoryIds.includes(note.category)) continue
+    changes.push({ type: 'update', entityType: 'note', id: note.id, recipe: (draft) => {
+      if (draft.kind === 'standalone') delete draft.category
+      draft.modifiedAt = command.modifiedAt
+    } })
+  }
+
   /** Workspace navigation currently pointing at a staged deleted category. */
   const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
   /** Deleted active category whose selected row must transfer to the collection owner. */
@@ -688,6 +699,12 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   ]
 
   for (const target of targets) {
+    if (target.entityType === 'note') {
+      changes.push({ type: 'update', entityType: 'note', id: target.id, recipe: (draft) => {
+        if (draft.kind === 'standalone') delete draft.category
+        draft.modifiedAt = command.modifiedAt
+      } })
+    }
     if (target.entityType === 'prompt') {
       changes.push({
         type: 'update',

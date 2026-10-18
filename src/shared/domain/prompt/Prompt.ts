@@ -134,6 +134,8 @@ export type PromptTemplateReference = {
 
 export type PromptSummary = {
   id: string
+  /** GUID of the separately persisted attached note. */
+  attachedNoteId?: string
   title: string
   fallbackTitle: string
   modifiedAt: string
@@ -146,6 +148,8 @@ export type PromptSummary = {
 
 export type PromptFull = {
   id: string
+  /** GUID of the separately persisted attached note. */
+  attachedNoteId?: string
   title: string
   createdAt: string
   modifiedAt: string
@@ -167,6 +171,7 @@ export type PromptPersisted = Omit<PromptFull, 'loadingState'>
 export type PromptSummaryData = Pick<
   PromptPersisted,
   | 'id'
+  | 'attachedNoteId'
   | 'title'
   | 'fallbackTitle'
   | 'modifiedAt'
@@ -178,6 +183,7 @@ export type PromptSummaryData = Pick<
 
 export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary => ({
   id: prompt.id,
+  ...(prompt.attachedNoteId ? { attachedNoteId: prompt.attachedNoteId } : {}),
   title: prompt.title,
   fallbackTitle: prompt.fallbackTitle,
   modifiedAt: prompt.modifiedAt,
@@ -192,6 +198,7 @@ export const createPromptSummary = (prompt: PromptSummaryData): PromptSummary =>
 
 export const createPromptFull = (prompt: PromptPersisted): PromptFull => ({
   id: prompt.id,
+  ...(prompt.attachedNoteId ? { attachedNoteId: prompt.attachedNoteId } : {}),
   title: prompt.title,
   createdAt: prompt.createdAt,
   modifiedAt: prompt.modifiedAt,

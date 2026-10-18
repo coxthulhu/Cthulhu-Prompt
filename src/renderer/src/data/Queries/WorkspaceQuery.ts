@@ -1,3 +1,4 @@
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import {
   getAllWorkspaceCollectionEntries,
   type LoadWorkspaceByPathRequest,
@@ -39,6 +40,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
     promptCollectionsCollection.utils.upsertAuthoritative(promptCollection)
   }
   upsertPromptCollectionClientStates(result.promptCollections.map((promptCollection) => promptCollection.id))
+  notesCollection.utils.upsertManyAuthoritative(result.notes)
   for (const adapter of markdownContentQueryAdapters) adapter.applyWorkspaceResult(result)
 
   if (!previousGraph) {
@@ -56,6 +58,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   }
   deletePromptCollectionClientStates(removedPromptCollectionIds)
 
+  notesCollection.utils.deleteManyAuthoritative([...previousGraph.noteIds].filter((id) => !result.notes.some((note) => note.id === id)))
   const nextCategoryIds = new Set(result.categories.map((category) => category.id))
   const removedCategoryIds = [...previousGraph.categoryIds].filter(
     (categoryId) => !nextCategoryIds.has(categoryId)

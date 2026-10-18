@@ -1,3 +1,6 @@
+import { readNoteFiles } from './NoteReads'
+import { parseNoteMarkdown, serializeNoteMarkdown } from '../NoteFrontmatter'
+import type { StandaloneNote } from '@shared/domain/note/Note'
 import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
 import * as path from 'path'
 import {
@@ -246,7 +249,7 @@ export const readCategoryStemById = (
 /** Parsed ordered content used to repair category ordering and front matter together. */
 type CategoryOrderContent = {
   entry: CategoryOrderEntryRef
-  content: PromptPersisted | PromptTemplatePersisted
+  content: PromptPersisted | PromptTemplatePersisted | StandaloneNote
   markdownPath: string
 }
 
@@ -258,7 +261,7 @@ const isCategoryOrderEntry = (
   if (!value || typeof value !== 'object') return false
   /** Candidate persisted entry being validated. */
   const entry = value as Record<string, unknown>
-  return entry.kind === kind && typeof entry.id === 'string'
+  return (entry.kind === kind || entry.kind === 'note') && typeof entry.id === 'string'
 }
 
 /** Reads and validates one existing CategoryOrder file. */
@@ -325,17 +328,18 @@ const readCollectionCategoryOrderContents = (
     for (const entry of fs
       .readdirSync(orderedCollectionPath, { withFileTypes: true })
       .sort((left, right) => left.name.localeCompare(right.name))) {
-      if (!entry.isFile() || !entry.name.endsWith(filenameSuffix)) continue
+      if (!entry.isFile() || (!entry.name.endsWith(filenameSuffix) && !entry.name.endsWith('.note.md'))) continue
       /** Full path of one ordered prompt or template markdown file. */
       const entryPath = path.join(orderedCollectionPath, entry.name)
       /** Parsed content whose stable ID participates in category ordering. */
       const content =
+        entry.name.endsWith('.note.md') ? parseNoteMarkdown(fs.readFileSync(entryPath, 'utf8')) :
         kind === 'prompt'
           ? parsePromptMarkdown(fs.readFileSync(entryPath, 'utf8'))
           : parsePromptTemplateMarkdown(fs.readFileSync(entryPath, 'utf8'))
-      if (!content || contentById.has(content.id)) continue
+      if (!content || ('kind' in content && content.kind === 'attached') || contentById.has(content.id)) continue
       contentById.set(content.id, {
-        entry: kind === 'prompt' ? promptEntryRef(content.id) : promptTemplateEntryRef(content.id),
+        entry: 'kind' in content ? { kind: 'note', id: content.id } : kind === 'prompt' ? promptEntryRef(content.id) : promptTemplateEntryRef(content.id),
         content,
         markdownPath: entryPath
       })
@@ -457,7 +461,7 @@ export const readPromptCollectionCategoryOrder = (
     else synchronizedContent.category = categoryId
     fs.writeFileSync(
       discoveredContent.markdownPath,
-      kind === 'prompt'
+      'kind' in synchronizedContent ? serializeNoteMarkdown(synchronizedContent) : kind === 'prompt'
         ? serializePromptMarkdown(synchronizedContent as PromptPersisted)
         : serializePromptTemplateMarkdown(synchronizedContent as PromptTemplatePersisted),
       'utf8'
@@ -489,7 +493,8 @@ export const readPromptCollection = (
       kind,
       statusFolders: createPromptStatusFolderLayouts({
         categoryOrders: { active: readPromptCollectionCategoryOrder(workspacePath, folderPath, kind) },
-        promptIds: { archived: [...readPromptTemplateStemById(workspacePath, resolvePromptStatusFolderName(folderPath, PromptStatusFolderId.Archived)).keys()] }
+        promptIds: { archived: [...readPromptTemplateStemById(workspacePath, resolvePromptStatusFolderName(folderPath, PromptStatusFolderId.Archived)).keys()] },
+        noteIds: { archived: readNoteFiles(workspacePath, resolvePromptStatusFolderName(folderPath, PromptStatusFolderId.Archived), kind).filter(({ note }) => note.kind === 'standalone').map(({ note }) => note.id) }
       }),
       settings: { collectionDescription }
     }
@@ -512,6 +517,7 @@ export const readPromptCollection = (
           }
         : {
             ordering: 'finalizedAt' as const,
+            noteIds: readNoteFiles(workspacePath, resolvePromptStatusFolderName(folderPath, statusFolder.id), kind).filter(({ note }) => note.kind === 'standalone').map(({ note }) => note.id),
             promptIds: [
               ...readPromptStemByPromptId(
                 workspacePath,

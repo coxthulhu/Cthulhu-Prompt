@@ -1,3 +1,4 @@
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import type { Transaction } from '@tanstack/svelte-db'
 import {
   assertValidDomainChanges,
@@ -136,6 +137,8 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
   id: string
 ): DomainPlannerEntityMap[TEntityType] | undefined => {
   switch (entityType) {
+    case 'note':
+      return notesCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'systemSettings':
       return systemSettingsCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'workspace':
@@ -184,6 +187,8 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
   entityType: TEntityType
 ): ReadonlyArray<DomainPlannerEntityMap[TEntityType]> => {
   switch (entityType) {
+    case 'note':
+      return notesCollection.toArray as unknown as Array<DomainPlannerEntityMap[TEntityType]>
     case 'systemSettings':
       return systemSettingsCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]

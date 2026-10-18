@@ -4,7 +4,10 @@ export type PromptTemplateEntryRef = { kind: 'template'; id: string }
 
 export type CollectionEntryRef = { kind: 'collection'; id: string }
 
-export type EntryRef = PromptEntryRef | PromptTemplateEntryRef | CollectionEntryRef
+/** Ordered standalone note reference. */
+export type NoteEntryRef = { kind: 'note'; id: string }
+
+export type EntryRef = NoteEntryRef | PromptEntryRef | PromptTemplateEntryRef | CollectionEntryRef
 
 export interface OrderContainer<TEntry extends EntryRef> {
   entries: TEntry[]

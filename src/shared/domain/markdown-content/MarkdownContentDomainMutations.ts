@@ -452,6 +452,8 @@ const createContentEntryRef = (
 
 /** Summary-compatible markdown fields required by the shared movement planner. */
 type MarkdownContentDomainProjection = {
+  /** Attached note deleted in the same transaction as its owner. */
+  attachedNoteId?: string
   id: string
   title: string
   fallbackTitle: string
@@ -534,6 +536,7 @@ const createDeletePlanner = (
         }
       }
     },
+    ...(content.attachedNoteId ? [{ type: 'delete' as const, entityType: 'note' as const, id: content.attachedNoteId }] : []),
     {
       type: 'delete',
       entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',

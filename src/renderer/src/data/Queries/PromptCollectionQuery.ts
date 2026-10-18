@@ -1,3 +1,4 @@
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import type {
   LoadPromptCollectionInitialPayload,
   LoadPromptCollectionInitialResult
@@ -30,6 +31,7 @@ export const loadPromptCollectionInitial = async (
     )
   )
 
+  notesCollection.utils.upsertManyAuthoritative(result.notes)
   for (const adapter of markdownContentQueryAdapters) adapter.applyCollectionResult(result)
   categoryCollection.utils.upsertManyAuthoritative(result.categories)
   promptCollectionsCollection.utils.upsertManyAuthoritative(result.promptCollections)
@@ -42,6 +44,7 @@ export const loadPromptCollectionInitial = async (
     throw new Error('Prompt collection not loaded after initial load')
   }
   const nextGraph = collectPromptCollectionGraphIds([promptCollectionId])
+  notesCollection.utils.deleteManyAuthoritative([...previousGraph.noteIds].filter((id) => !nextGraph.noteIds.has(id)))
   const removedCategoryIds = [...previousGraph.categoryIds].filter(
     (categoryId) => !nextGraph.categoryIds.has(categoryId)
   )

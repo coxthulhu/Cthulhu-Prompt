@@ -25,6 +25,7 @@ import type {
 } from './PersistenceTypes'
 import type { PromptCollectionPersistenceFields } from './PromptCollectionPersistence'
 import {
+  NOTE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
@@ -220,6 +221,35 @@ const domainStorageAdapters: {
   },
   promptCollection: { deriveDesiredFields: derivePromptCollectionFields },
   category: { deriveDesiredFields: deriveCategoryFields },
+  note: {
+    deriveDesiredFields: (graph, id, entry) => {
+      /** An attachment follows its referencing owner; standalone notes belong to collection layouts. */
+      const ownerContent = entry.data.kind === 'attached'
+        ? [...graph.getAll('prompt'), ...graph.getAll('promptTemplate')].find((candidate) => candidate.data.attachedNoteId === id)
+        : undefined
+      /** Projected collection and physical folder containing this note. */
+      const owner = graph.getAll('promptCollection').flatMap(({ data: collection }) =>
+        Object.entries(collection.statusFolders).flatMap(([folderId, layout]) => {
+          /** The owner reference participates in ordering only for attachments. */
+          const targetId = ownerContent?.data.id ?? id
+          /** Membership is checked against the correct entry type. */
+          const present = layout.ordering === 'category'
+            ? layout.categoryOrder.categories.some((group) => group.entries.some((ref) => ref.id === targetId && ref.kind === (ownerContent ? collection.kind : 'note')))
+            : (ownerContent ? layout.promptIds : layout.noteIds).includes(targetId)
+          return present ? [{ collection, folderId: folderId as PromptStatusFolderId }] : []
+        })
+      )[0]
+      if (!owner) throw new Error(`Note storage owner not found: ${id}`)
+      /** Workspace metadata inherited from the containing collection. */
+      const fields = derivePromptCollectionFields(graph, owner.collection.id, graph.get('promptCollection', owner.collection.id)!)
+      return {
+        workspaceId: fields.workspaceId, workspacePath: fields.workspacePath,
+        collectionKind: owner.collection.kind, promptCollectionId: owner.collection.id,
+        folderPath: resolvePromptStatusFolderName(owner.collection.folderName, owner.folderId),
+        promptId: id, promptStem: entry.persistenceFields?.promptStem ?? ''
+      }
+    }
+  },
   prompt: createMarkdownStorageAdapter('prompt', 'prompt'),
   promptTemplate: createMarkdownStorageAdapter('promptTemplate', 'template'),
   userPersistence: { deriveDesiredFields: () => ({}) },
@@ -295,7 +325,7 @@ const isCategoryRelocatedByCollectionRename = (
 
 /** Reports whether one markdown path changed only because its owning collection directory moved. */
 const isMarkdownRelocatedByCollectionRename = (
-  transition: DomainStorageTransitionFor<'prompt'> | DomainStorageTransitionFor<'promptTemplate'>,
+  transition: DomainStorageTransitionFor<'prompt'> | DomainStorageTransitionFor<'promptTemplate'> | DomainStorageTransitionFor<'note'>,
   rename: CollectionDirectoryRename
 ): boolean => {
   if (!transition.before || !transition.after) return false
@@ -334,14 +364,14 @@ const isRelocatedByCollectionDirectoryRename = (
     if (transition.entityType === 'category') {
       return isCategoryRelocatedByCollectionRename(transition, rename)
     }
-    if (transition.entityType === 'prompt' || transition.entityType === 'promptTemplate') {
+    if (transition.entityType === 'prompt' || transition.entityType === 'promptTemplate' || transition.entityType === 'note') {
       return isMarkdownRelocatedByCollectionRename(transition, rename)
     }
     return false
   })
 
 /** File-backed entities whose filenames are independent of their domain identity. */
-type FilenameEntityType = 'category' | 'prompt' | 'promptTemplate'
+type FilenameEntityType = 'category' | 'prompt' | 'promptTemplate' | 'note'
 
 /** Resolves the directory, extension, and persisted stem for one file-backed entity. */
 const getFilenameLocation = (
@@ -360,9 +390,9 @@ const getFilenameLocation = (
   /** Markdown metadata owns one physical status directory. */
   const markdown = fields as DomainPersistenceFieldsMap['prompt']
   return {
-    directory: resolvePromptDirectoryPath(markdown.workspacePath, markdown.folderPath, entityType === 'prompt' ? 'prompt' : 'template'),
+    directory: resolvePromptDirectoryPath(markdown.workspacePath, markdown.folderPath, markdown.collectionKind ?? (entityType === 'prompt' ? 'prompt' : 'template')),
     stem: markdown.promptStem,
-    suffix: entityType === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
+    suffix: entityType === 'note' ? NOTE_MARKDOWN_FILENAME_SUFFIX : entityType === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
   }
 }
 
@@ -383,7 +413,7 @@ export const planDomainStorageTransitions = (
   /** Shared disk snapshot and reservations for all file writes in this transaction. */
   const filenames = createFilenameAllocator()
   /** File-backed types reserved before any new destination is allocated. */
-  const filenameTypes: FilenameEntityType[] = ['category', 'prompt', 'promptTemplate']
+  const filenameTypes: FilenameEntityType[] = ['category', 'prompt', 'promptTemplate', 'note']
   /** Maps a descendant directory through a collection rename without reallocating its filename. */
   const relocatedDirectory = (directory: string): string => {
     for (const rename of collectionDirectoryRenames) {
@@ -416,6 +446,7 @@ export const planDomainStorageTransitions = (
     'category',
     'prompt',
     'promptTemplate',
+    'note',
     'userPersistence',
     'markdownContentUiState',
     'workspaceUiState',
@@ -468,7 +499,7 @@ export const planDomainStorageTransitions = (
         id,
         afterEntry as never
       ) as DomainPersistenceFieldsMap[typeof entityType]
-      if (entityType === 'category' || entityType === 'prompt' || entityType === 'promptTemplate') {
+      if (entityType === 'category' || entityType === 'prompt' || entityType === 'promptTemplate' || entityType === 'note') {
         /** Destination directory derived from the projected owner, independent of the title. */
         const destination = getFilenameLocation(entityType, desiredFields as DomainPersistenceFieldsMap[FilenameEntityType])
         /** Existing location follows an ancestor rename while retaining its allocated stem. */
@@ -484,15 +515,33 @@ export const planDomainStorageTransitions = (
         /** Category names and Markdown title/fallback pairs retain their existing domain behavior. */
         const sameTitle = beforeData && ('displayName' in afterData
           ? 'displayName' in beforeData && beforeData.displayName === afterData.displayName
-          : 'title' in beforeData && beforeData.title === afterData.title && beforeData.fallbackTitle === afterData.fallbackTitle)
+          : 'title' in afterData && 'title' in beforeData && beforeData.title === afterData.title && beforeData.fallbackTitle === afterData.fallbackTitle)
+        /** Attached notes take their owner's already allocated stem. */
+        const attachmentOwner = entityType === 'note' && 'kind' in afterData && afterData.kind === 'attached'
+          ? [...afterGraph.getAll('prompt'), ...afterGraph.getAll('promptTemplate')].find((entry) => entry.data.attachedNoteId === id)
+          : undefined
+        /** Owner transition carries a new filename; otherwise its persisted filename remains valid. */
+        const ownerTransition = attachmentOwner ? storageTransitions.find((transition) =>
+          (transition.entityType === 'prompt' || transition.entityType === 'promptTemplate') && transition.id === attachmentOwner.data.id) : undefined
+        /** Owners reserve both extensions whenever they have an attached note. */
+        const attachedNoteId = 'attachedNoteId' in afterData ? afterData.attachedNoteId : undefined
+        /** Current attachment may retain its path when the pair stays in the same directory. */
+        const currentNote = attachedNoteId ? beforeGraph.get('note', attachedNoteId)?.persistenceFields : undefined
+        /** Complete current filenames excluded from collision checks for this pair. */
+        const currentNames = sameDirectory ? [
+          `${current!.stem}${current!.suffix}`,
+          ...(currentNote ? [`${currentNote.promptStem}${NOTE_MARKDOWN_FILENAME_SUFFIX}`] : [])
+        ] : []
         /** Stable files bypass allocation; renamed and moved files claim the lowest available name. */
-        const stem = sameDirectory && sameTitle
+        const stem = attachmentOwner
+          ? ((ownerTransition?.after?.persistenceFields ?? attachmentOwner.persistenceFields) as DomainPersistenceFieldsMap['prompt']).promptStem
+          : sameDirectory && sameTitle && !attachedNoteId
           ? current!.stem
           : filenames.allocate(
               destination.directory,
-              'displayName' in afterData ? afterData.displayName : getPromptDisplayTitle(afterData),
-              destination.suffix,
-              sameDirectory ? `${current!.stem}${current!.suffix}` : undefined
+              sameDirectory && sameTitle ? current!.stem : 'displayName' in afterData ? afterData.displayName : 'title' in afterData ? getPromptDisplayTitle(afterData) : '',
+              attachedNoteId ? [destination.suffix, NOTE_MARKDOWN_FILENAME_SUFFIX] : destination.suffix,
+              currentNames
             )
         if (entityType === 'category') (desiredFields as CategoryPersistenceFields).categoryStem = stem
         else (desiredFields as DomainPersistenceFieldsMap['prompt']).promptStem = stem

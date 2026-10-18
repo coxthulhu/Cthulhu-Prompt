@@ -65,6 +65,7 @@ const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value
     record.entityType === 'workspace' ||
     record.entityType === 'promptCollection' ||
     record.entityType === 'category' ||
+    record.entityType === 'note' ||
     record.entityType === 'prompt' ||
     record.entityType === 'promptTemplate' ||
     record.entityType === 'userPersistence' ||

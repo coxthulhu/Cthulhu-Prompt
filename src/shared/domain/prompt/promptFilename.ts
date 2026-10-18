@@ -14,10 +14,14 @@ export const sanitizePromptTitleForFilename = (title: string): string => {
 /** Allocates and reserves a readable stem against complete case-insensitive filenames. */
 export const allocateFilenameStem = (
   title: string,
-  suffix: string,
+  suffix: string | string[],
   occupiedNames: Set<string>,
-  currentFilename?: string
+  currentFilename?: string | string[]
 ): string => {
+  /** Paired files reserve a stem only when every extension is available. */
+  const suffixes = typeof suffix === 'string' ? [suffix] : suffix
+  /** Existing filenames that this entity or pair may retain. */
+  const currentNames = new Set((typeof currentFilename === 'string' ? [currentFilename] : currentFilename ?? []).map((name) => name.toLowerCase()))
   /** Sanitized title retained even when it already ends in a number. */
   const titleStem = sanitizePromptTitleForFilename(title)
   /** Lowest available suffix; zero represents the unnumbered filename. */
@@ -25,12 +29,12 @@ export const allocateFilenameStem = (
   /** Candidate stem checked together with its complete file extension. */
   let stem = titleStem
   while (
-    occupiedNames.has(`${stem}${suffix}`.toLowerCase()) &&
-    `${stem}${suffix}`.toLowerCase() !== currentFilename?.toLowerCase()
+    suffixes.some((extension) => occupiedNames.has(`${stem}${extension}`.toLowerCase()) &&
+      !currentNames.has(`${stem}${extension}`.toLowerCase()))
   ) {
     index += 1
     stem = `${titleStem} ${index}`
   }
-  occupiedNames.add(`${stem}${suffix}`.toLowerCase())
+  for (const extension of suffixes) occupiedNames.add(`${stem}${extension}`.toLowerCase())
   return stem
 }

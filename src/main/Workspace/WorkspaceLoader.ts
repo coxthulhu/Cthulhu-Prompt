@@ -1,3 +1,5 @@
+import { readNoteFiles } from '../Persistence/workspace/NoteReads'
+import { getCollectionNoteIds } from '@shared/domain/note/Note'
 import * as path from 'path'
 import { getContentStatusFolders, isFinalPromptStatus } from '@shared/domain/prompt/Prompt'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
@@ -20,6 +22,7 @@ import { WorkspaceUiStateDataAccess } from '../Persistence/sqlite/WorkspaceUiSta
 import { MarkdownContentUiStateDataAccess } from '../Persistence/sqlite/MarkdownContentUiStateDataAccess'
 import { data } from '../Data/Data'
 import {
+  buildNoteSnapshot,
   buildCategorySnapshot,
   buildPromptCollectionSnapshot,
   buildPromptTemplateSnapshot,
@@ -67,6 +70,8 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
   const promptCollections: WorkspaceLoadPayload['promptCollections'] = []
   const categories: WorkspaceLoadPayload['categories'] = []
   const prompts: WorkspaceLoadPayload['prompts'] = []
+  /** Full note records are available before any editor mounts. */
+  const notes: WorkspaceLoadPayload['notes'] = []
   const promptTemplates: WorkspaceLoadPayload['promptTemplates'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
   /** Task-prompt collection IDs loaded in their type-owned order. */
@@ -94,6 +99,14 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
 
     const promptCollectionSnapshot = buildPromptCollectionSnapshot(promptCollectionEntry)
     promptCollections.push(promptCollectionSnapshot)
+    for (const noteId of getCollectionNoteIds({
+      get: (type, id) => data[type].committedStore.getEntry(id)?.committed as never,
+      getAll: (type) => data[type].committedStore.getAllEntries().map((entry) => entry.committed) as never
+    }, promptCollectionSnapshot.data)) {
+      /** Note is independently revisioned even while attached. */
+      const note = data.note.committedStore.getEntry(noteId)
+      if (note) notes.push(buildNoteSnapshot(note))
+    }
 
     for (const categoryEntry of getLoadedCategoryEntries(
       getPromptCollectionCategoryIds(promptCollectionSnapshot.data)
@@ -121,6 +134,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
         revision: promptEntry.revision,
         data: {
           id: promptEntry.committed.id,
+          ...(promptEntry.committed.attachedNoteId ? { attachedNoteId: promptEntry.committed.attachedNoteId } : {}),
           title: promptEntry.committed.title,
           fallbackTitle: promptEntry.committed.fallbackTitle,
           modifiedAt: promptEntry.committed.modifiedAt,
@@ -159,6 +173,7 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     workspace: workspaceSnapshot,
     promptCollections,
     categories,
+    notes,
     prompts,
     promptTemplates
   }
@@ -275,6 +290,22 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 
   // Side effect: hydrate all prompt templates only after template collection loads complete.
   await Promise.all(promptTemplateLoadTasks)
+
+  // Hydrate note files after their owners so unattached minimal files are not mistaken for standalone entries.
+  for (const collection of allPromptCollections) {
+    for (const group of getContentStatusFolders(collection.kind)) {
+      /** Physical folder supplies collection/status ownership independently of the extension. */
+      const folderPath = resolvePromptStatusFolderName(collection.folderName, group.id)
+      for (const { stem, note } of readNoteFiles(workspacePath, folderPath, collection.kind)) {
+        if (note.kind === 'attached' && ![...data.prompt.committedStore.getAllEntries(), ...data.promptTemplate.committedStore.getAllEntries()]
+          .some((entry) => entry.persistenceFields.promptCollectionId === collection.id && entry.committed.attachedNoteId === note.id)) continue
+        await data.note.loadDataFromPersistence(note.id, {
+          workspaceId, workspacePath, collectionKind: collection.kind,
+          promptCollectionId: collection.id, folderPath, promptId: note.id, promptStem: stem
+        })
+      }
+    }
+  }
 
   return workspaceId
 }

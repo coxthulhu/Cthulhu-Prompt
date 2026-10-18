@@ -1,3 +1,4 @@
+import { getCollectionNoteIds } from '@shared/domain/note/Note'
 import { ipcMain } from 'electron'
 import type {
   LoadPromptCollectionInitialPayload,
@@ -8,6 +9,7 @@ import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection
 import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 import { data } from '../Data/Data'
 import {
+  buildNoteSnapshot,
   buildPromptCollectionSnapshot,
   buildCategorySnapshot,
   getLoadedCategoryEntries,
@@ -78,6 +80,14 @@ export const loadPromptCollectionInitialData = async (
       categories,
       prompts,
       promptTemplates,
+      notes: getCollectionNoteIds({
+        get: (type, id) => data[type].committedStore.getEntry(id)?.committed as never,
+        getAll: (type) => data[type].committedStore.getAllEntries().map((entry) => entry.committed) as never
+      }, promptCollectionEntry.committed).flatMap((id) => {
+        /** Loaded note snapshot carries full text for future editors. */
+        const entry = data.note.committedStore.getEntry(id)
+        return entry ? [buildNoteSnapshot(entry)] : []
+      }),
       markdownContentUiStates
     }
   } catch (error) {

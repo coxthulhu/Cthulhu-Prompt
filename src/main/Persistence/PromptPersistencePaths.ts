@@ -17,6 +17,8 @@ export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = 'CategoryOrder.json'
 export const PROMPT_COLLECTION_INFO_DIRECTORY_NAME = '_CollectionInfo'
 export const PROMPT_COLLECTION_INFO_FILENAME = 'CollectionInfo.json'
+/** File extension identifying attached and standalone notes. */
+export const NOTE_MARKDOWN_FILENAME_SUFFIX = '.note.md'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
 export const PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX = '.template.md'
 /** Canonical directory containing categories owned by one collection. */
@@ -155,12 +157,12 @@ export const resolveCategoryPathFromStem = (
 export const resolvePromptPathsFromStem = (
   folderPath: string,
   stem: string,
-  kind: PromptCollectionContentKind
+  kind: PromptCollectionContentKind | 'note'
 ): PromptFilePaths => {
   return {
     markdownPath: path.join(
       folderPath,
-      `${stem}${kind === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX}`
+      `${stem}${kind === 'note' ? NOTE_MARKDOWN_FILENAME_SUFFIX : kind === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX}`
     )
   }
 }

@@ -1,3 +1,4 @@
+import { noteData } from './NoteData'
 import type { Draft } from 'immer'
 import type { PersistenceLayer } from '../Persistence/PersistenceTypes'
 import type { CommittedStore } from './CommittedStore'
@@ -32,6 +33,7 @@ export const data = {
   workspace: workspaceData,
   promptCollection: promptCollectionData,
   category: categoryData,
+  note: noteData,
   prompt: promptData,
   promptTemplate: promptTemplateData,
   userPersistence: userPersistenceData,

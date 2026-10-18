@@ -1,3 +1,4 @@
+import { setupNoteMutationHandlers } from './Mutations/NoteMutations'
 import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
 import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -342,6 +343,7 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupWorkspaceMutationHandlers()
     setupPromptCollectionQueryHandlers()
     setupPromptCollectionMutationHandlers()
+    setupNoteMutationHandlers()
     setupPromptMutationHandlers()
     setupPromptTemplateMutationHandlers()
     setupCategoryMutationHandlers()

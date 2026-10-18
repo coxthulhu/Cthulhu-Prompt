@@ -1,3 +1,4 @@
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import {
   createPacedRevisionUpdateMutationRunner,
   createRevisionMutationRunner
@@ -31,6 +32,7 @@ const revisionCollections = {
   workspace: workspaceCollection,
   promptCollection: promptCollectionsCollection,
   category: categoryCollection,
+  note: notesCollection,
   prompt: promptsCollection,
   promptTemplate: promptTemplatesCollection,
   markdownContentUiState: markdownContentUiStateCollection,

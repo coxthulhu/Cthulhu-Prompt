@@ -286,6 +286,23 @@ export function setupTestStartupListener(): void {
     const exists = fs.existsSync(filePath)
     ;(global as any).testFileExistsResult = exists
   })
+  // Test-only fault injection exercises restoration after earlier files have already committed.
+  ;(app as any).on('test-fail-file-commit', (filePath: string) => {
+    /** Original implementation is restored before throwing so rollback can complete normally. */
+    const rename = filesystem.renameSync.bind(filesystem)
+    filesystem.renameSync = (source, target) => {
+      if (String(target).replace(/\\/g, '/') === filePath && String(source).endsWith('.tmp')) {
+        filesystem.renameSync = rename
+        throw new Error('Injected note file commit failure')
+      }
+      return rename(source, target)
+    }
+  })
+  // Test-only timestamp access verifies physical file isolation without relying on cached records.
+  ;(app as any).on('test-file-modified-time', (payload: { filePath: string; setTo?: string }) => {
+    if (payload.setTo) filesystem.utimesSync(payload.filePath, new Date(payload.setTo), new Date(payload.setTo))
+    ;(global as any).testFileModifiedTime = filesystem.statSync(payload.filePath).mtime.toISOString()
+  })
   ;(app as any).on('test-read-file', (payload: { filePath: string; requestId: string }) => {
     const fs = getFs()
     const content = fs.readFileSync(payload.filePath, 'utf8')

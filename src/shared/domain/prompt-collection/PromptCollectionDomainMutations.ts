@@ -1,3 +1,4 @@
+import { getCollectionNoteIds } from '@shared/domain/note/Note'
 import type {
   DomainChange,
   DomainPlanner,
@@ -322,6 +323,7 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
         )
       }
     },
+    ...getCollectionNoteIds(state, promptCollection).map((id): DomainChange => ({ type: 'delete', entityType: 'note', id })),
     ...contentIds.map(
       (contentId): DomainChange => ({
         type: 'delete',

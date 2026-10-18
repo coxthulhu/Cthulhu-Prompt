@@ -80,6 +80,7 @@ const createDomainState = (
     promptCollection: [],
     category: [],
     prompt: [],
+    note: [],
     promptTemplate: [],
     userPersistence: [],
     markdownContentUiState: [],

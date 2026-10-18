@@ -1,6 +1,6 @@
 import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import type { PromptEntryRef, PromptTemplateEntryRef } from '@shared/domain/OrderContainer'
+import type { PromptEntryRef, PromptTemplateEntryRef, NoteEntryRef } from '@shared/domain/OrderContainer'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { IpcResult } from '@shared/ipc/IpcResult'
 import type { MarkdownContentUiState } from '@shared/domain/ui-state/MarkdownContentUiState'
@@ -15,7 +15,7 @@ export type PromptCollectionKind = 'prompt' | 'template'
 export type PromptCollectionContentKind = PromptCollectionKind
 
 /** Ordered prompt or template reference stored inside one category group. */
-export type CategoryOrderEntryRef = PromptEntryRef | PromptTemplateEntryRef
+export type CategoryOrderEntryRef = PromptEntryRef | PromptTemplateEntryRef | NoteEntryRef
 
 /** One category and its ordered active content references. */
 export type CategoryOrderGroup = {
@@ -38,6 +38,8 @@ export type OrderedPromptStatusFolderLayout = {
 export type UnorderedPromptStatusFolderLayout = {
   ordering: 'finalizedAt'
   promptIds: string[]
+  /** Standalone note identities sorted by their finalization times. */
+  noteIds: string[]
 }
 
 /** prompt-collection layouts keyed by stable status-folder identity. */
@@ -51,6 +53,8 @@ export type PromptStatusFolderLayouts = {
 export type PromptStatusFolderLayoutInitialData = {
   categoryOrders?: Partial<Record<PromptStatusFolderId, CategoryOrder>>
   promptIds?: Partial<Record<PromptStatusFolderId, string[]>>
+  /** Discovered standalone notes in finalized folders. */
+  noteIds?: Partial<Record<PromptStatusFolderId, string[]>>
 }
 
 /** Creates category ordering for a collection with Uncategorized first. */
@@ -61,7 +65,8 @@ export const createCollectionCategoryOrder = (): CategoryOrder => ({
 /** Creates prompt status-folder layouts from the code-defined registry. */
 export const createPromptStatusFolderLayouts = ({
   categoryOrders = {},
-  promptIds = {}
+  promptIds = {},
+  noteIds = {}
 }: PromptStatusFolderLayoutInitialData = {}): PromptStatusFolderLayouts =>
   Object.fromEntries(
     PROMPT_STATUS_FOLDERS.map((statusFolder) => [
@@ -77,7 +82,8 @@ export const createPromptStatusFolderLayouts = ({
           }
         : {
             ordering: 'finalizedAt',
-            promptIds: promptIds[statusFolder.id] ?? []
+            promptIds: promptIds[statusFolder.id] ?? [],
+            noteIds: noteIds[statusFolder.id] ?? []
           }
     ])
   ) as PromptStatusFolderLayouts
@@ -328,6 +334,8 @@ export type LoadPromptCollectionInitialResult = IpcResult<{
   promptCollections: Array<RevisionEnvelope<PromptCollection>>
   categories: Array<RevisionEnvelope<import('@shared/domain/category/Category').Category>>
   prompts: Array<RevisionEnvelope<PromptPersisted>>
+  /** Full notes available independently of owner editor hydration. */
+  notes: Array<RevisionEnvelope<import('@shared/domain/note/Note').Note>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
   markdownContentUiStates: Array<RevisionEnvelope<MarkdownContentUiState>>
 }>

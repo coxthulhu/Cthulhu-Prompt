@@ -24,6 +24,8 @@ export type DomainPersistenceFieldsMap = {
   workspace: WorkspacePersistenceFields
   promptCollection: PromptCollectionPersistenceFields
   category: CategoryPersistenceFields
+  /** Note paths retain the owning library independently of their extension. */
+  note: PromptPersistenceFields
   prompt: PromptPersistenceFields
   promptTemplate: PromptTemplatePersistenceFields
   userPersistence: Record<string, never>

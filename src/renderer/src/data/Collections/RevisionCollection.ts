@@ -141,6 +141,8 @@ export const revisionCollectionOptions = <TRecord extends object>(
   }
 
   const sync: SyncConfig<TRecord, string> = {
+    // Authoritative snapshots replace entire records, including removed optional fields.
+    rowUpdateMode: 'full',
     sync: (params) => {
       syncBegin = params.begin
       syncWrite = params.write

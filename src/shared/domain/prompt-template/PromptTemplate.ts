@@ -9,6 +9,8 @@ export const isPromptTemplateStatus = (value: unknown): value is PromptTemplateS
 
 export type PromptTemplateSummary = {
   id: string
+  /** GUID of the separately persisted attached note. */
+  attachedNoteId?: string
   title: string
   fallbackTitle: string
   modifiedAt: string
@@ -22,6 +24,8 @@ export type PromptTemplateSummary = {
 
 export type PromptTemplateFull = {
   id: string
+  /** GUID of the separately persisted attached note. */
+  attachedNoteId?: string
   title: string
   fallbackTitle: string
   createdAt: string
@@ -43,7 +47,7 @@ export type PromptTemplatePersisted = Omit<PromptTemplateFull, 'loadingState'>
 // Prompt template data loaded during workspace bootstrap for tree/title hydration.
 export type PromptTemplateSummaryData = Pick<
   PromptTemplatePersisted,
-  'id' | 'title' | 'fallbackTitle' | 'modifiedAt' | 'category' | 'status' | 'finalizedAt'
+  'id' | 'attachedNoteId' | 'title' | 'fallbackTitle' | 'modifiedAt' | 'category' | 'status' | 'finalizedAt'
 >
 
 export const createPromptTemplateSummary = (

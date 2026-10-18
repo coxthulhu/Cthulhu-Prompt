@@ -1,5 +1,6 @@
 import { produce } from 'immer'
 import type { FilePersistenceStagedChange } from '../Persistence/FilePersistenceHelpers'
+import { captureFileRollback } from '../Persistence/FilePersistenceHelpers'
 import {
   planDomainStorageTransitions
 } from '../Persistence/DomainStorageAdapters'
@@ -292,6 +293,7 @@ const createAtomicDataBuilder = (): {
       workspace: createStoreBuilder('workspace'),
       promptCollection: createStoreBuilder('promptCollection'),
       category: createStoreBuilder('category'),
+      note: createStoreBuilder('note'),
       prompt: createStoreBuilder('prompt'),
       promptTemplate: createStoreBuilder('promptTemplate'),
       userPersistence: createStoreBuilder('userPersistence'),
@@ -644,8 +646,11 @@ const runAtomicDataTransitionsImmediately = async (
   if (conflict) return { status: 'conflict', conflict }
   /** Filesystem work staged by each entity persistence layer. */
   const stagedTransitions = await stageAtomicDataTransitions(transitions)
+  /** Original destinations are restored if any later file or SQLite commit fails. */
+  let restoreFiles = (): void => {}
 
   try {
+    restoreFiles = captureFileRollback(stagedTransitions.flatMap((entry) => entry.stagedChange))
     /** Commits every SQLite command before synchronously committing staged filesystem changes. */
     const commitPersistenceChanges = (): void => {
       for (const stagedTransition of stagedTransitions) {
@@ -690,7 +695,13 @@ const runAtomicDataTransitionsImmediately = async (
       commitPersistenceChanges()
     }
   } catch (error) {
-    await revertStagedChanges(stagedTransitions)
+    try {
+      restoreFiles()
+    } catch (rollbackError) {
+      throw new AggregateError([error, rollbackError], 'Filesystem commit and restoration failed')
+    } finally {
+      await revertStagedChanges(stagedTransitions)
+    }
     throw error
   }
 

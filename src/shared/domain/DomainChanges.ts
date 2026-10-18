@@ -1,3 +1,4 @@
+import type { Note } from '@shared/domain/note/Note'
 import type { Category } from '@shared/domain/category/Category'
 import type { Draft } from 'immer'
 import type { PromptPersisted, PromptSummaryData } from '@shared/domain/prompt/Prompt'
@@ -24,6 +25,8 @@ export type DomainEntityMap = {
   promptCollection: PromptCollection
   category: Category
   prompt: PromptPersisted
+  /** Attached and standalone note records. */
+  note: Note
   promptTemplate: PromptTemplatePersisted
   userPersistence: UserPersistence
   markdownContentUiState: MarkdownContentUiState

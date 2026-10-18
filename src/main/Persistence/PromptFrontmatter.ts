@@ -10,7 +10,7 @@ import {
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import { normalizePromptTitle } from '@shared/domain/prompt/promptFallbackTitle'
 
-type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'category'> &
+type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'attachedNoteId' | 'createdAt' | 'category'> &
   { templates?: PromptTemplateReference[] | null } &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string }) &
   {
@@ -20,7 +20,7 @@ type PromptFrontmatterData = Pick<PromptPersisted, 'id' | 'createdAt' | 'categor
 
 type PromptTemplateFrontmatterData = Pick<
   PromptTemplatePersisted,
-  'id' | 'createdAt' | 'category' | 'status' | 'finalizedAt'
+  'id' | 'attachedNoteId' | 'createdAt' | 'category' | 'status' | 'finalizedAt'
 > &
   ({ title: string; fallbackTitle?: never } | { title?: never; fallbackTitle: string })
 
@@ -39,6 +39,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
   const hasCategory = keys.includes('category')
   const allowedKeys = new Set([
     'id',
+    ...(frontmatter.attachedNoteId !== undefined ? ['attachedNoteId'] : []),
     'createdAt',
     hasTitle ? 'title' : 'fallbackTitle',
     ...(hasTemplates ? ['templates'] : []),
@@ -66,6 +67,7 @@ const isPromptFrontmatterData = (data: unknown): data is PromptFrontmatterData =
 
   return (
     typeof frontmatter.id === 'string' &&
+    (frontmatter.attachedNoteId === undefined || typeof frontmatter.attachedNoteId === 'string') &&
     typeof frontmatter.createdAt === 'string' &&
     (!hasCategory || typeof frontmatter.category === 'string') &&
     (!hasTemplates ||
@@ -98,7 +100,7 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
   const hasCategory = keys.includes('category')
 
   return (
-    keys.length === (hasCategory ? 4 : 3) + (frontmatter.status === undefined ? 0 : 1) + (frontmatter.finalizedAt === undefined ? 0 : 1) &&
+    keys.length === (hasCategory ? 4 : 3) + (frontmatter.attachedNoteId === undefined ? 0 : 1) + (frontmatter.status === undefined ? 0 : 1) + (frontmatter.finalizedAt === undefined ? 0 : 1) &&
     (frontmatter.status === undefined || frontmatter.status === PromptTemplateStatus.Active || frontmatter.status === PromptTemplateStatus.Archived) &&
     (frontmatter.status === PromptTemplateStatus.Archived ? typeof frontmatter.finalizedAt === 'string' : frontmatter.finalizedAt === undefined) &&
     keys.includes('id') &&
@@ -107,6 +109,7 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
     keys.every((key) =>
       new Set([
         'id',
+        'attachedNoteId',
         'createdAt',
         'status',
         'finalizedAt',
@@ -115,6 +118,7 @@ const isPromptTemplateFrontmatterData = (data: unknown): data is PromptTemplateF
       ]).has(key)
     ) &&
     typeof frontmatter.id === 'string' &&
+    (frontmatter.attachedNoteId === undefined || typeof frontmatter.attachedNoteId === 'string') &&
     typeof frontmatter.createdAt === 'string' &&
     (!hasCategory || typeof frontmatter.category === 'string') &&
     (hasTitle
@@ -158,6 +162,7 @@ export const parsePromptMarkdown = (
 ): PromptPersisted | null =>
   parseMarkdownContent(fileText, modifiedAt, isPromptFrontmatterData, (data, content, timestamp) => ({
     id: data.id,
+    ...(data.attachedNoteId ? { attachedNoteId: data.attachedNoteId } : {}),
     title: data.title ?? '',
     fallbackTitle: data.fallbackTitle ?? '',
     createdAt: data.createdAt,
@@ -174,6 +179,7 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
   /** Registry-compatible metadata preserving the exact current prompt status. */
   const metadata: PromptFrontmatterData = {
     ...baseMetadata,
+    ...(prompt.attachedNoteId ? { attachedNoteId: prompt.attachedNoteId } : {}),
     ...(prompt.category !== undefined ? { category: prompt.category } : {}),
     ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
     status: prompt.status,
@@ -194,6 +200,7 @@ export const parsePromptTemplateMarkdown = (
     isPromptTemplateFrontmatterData,
     (data, content, timestamp) => ({
       id: data.id,
+      ...(data.attachedNoteId ? { attachedNoteId: data.attachedNoteId } : {}),
       title: data.title ?? '',
       fallbackTitle: data.fallbackTitle ?? '',
       createdAt: data.createdAt,
@@ -208,6 +215,7 @@ export const parsePromptTemplateMarkdown = (
 export const serializePromptTemplateMarkdown = (template: PromptTemplatePersisted): string => {
   const metadata: PromptTemplateFrontmatterData = {
     ...createTitleMetadata(template),
+    ...(template.attachedNoteId ? { attachedNoteId: template.attachedNoteId } : {}),
     ...(template.status === PromptTemplateStatus.Archived ? { status: template.status, finalizedAt: template.finalizedAt } : {}),
     ...(template.category !== undefined ? { category: template.category } : {})
   }

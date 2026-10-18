@@ -1,4 +1,5 @@
 import { getFs } from '../fs-provider'
+import * as path from 'path'
 
 export type FilePersistenceStagedChange =
   | {
@@ -24,6 +25,37 @@ export type FilePersistenceStagedChange =
       sourcePath: string
       targetPath: string
     }
+
+/** Captures affected destinations so a partial multi-file commit can restore original bytes and times. */
+export const captureFileRollback = (changes: readonly FilePersistenceStagedChange[]): (() => void) => {
+  /** Filesystem shared by staging and synchronous commit. */
+  const fs = getFs()
+  /** Existing files and directories, including descendants of removed or renamed collections. */
+  const originals = new Map<string, { content: Buffer | null; atime: Date; mtime: Date }>()
+  /** Paths the commit may replace, create, remove, or relocate. */
+  const roots = new Set(changes.flatMap((change) => change.type === 'ensureDirectory' ? []
+    : change.type === 'renameDirectory' ? [change.sourcePath, change.targetPath] : [change.targetPath]))
+  /** Copies each original path once before any committed file changes occur. */
+  const capture = (filePath: string): void => {
+    if (originals.has(filePath) || !fs.existsSync(filePath)) return
+    /** Original metadata distinguishes directories and preserves file modification times. */
+    const stat = fs.statSync(filePath)
+    originals.set(filePath, { content: stat.isDirectory() ? null : fs.readFileSync(filePath), atime: stat.atime, mtime: stat.mtime })
+    if (stat.isDirectory()) for (const name of fs.readdirSync(filePath)) capture(path.join(filePath, name))
+  }
+  for (const root of roots) capture(root)
+  return () => {
+    for (const root of roots) if (fs.existsSync(root)) fs.rmSync(root, { recursive: true })
+    for (const [filePath, original] of [...originals].sort(([left], [right]) => left.length - right.length)) {
+      if (original.content === null) fs.mkdirSync(filePath, { recursive: true })
+      else {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true })
+        fs.writeFileSync(filePath, original.content)
+        fs.utimesSync(filePath, original.atime, original.mtime)
+      }
+    }
+  }
+}
 
 export const createStagedFileUpsert = (
   targetPath: string,
