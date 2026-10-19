@@ -191,22 +191,12 @@
   }
 
   .sidebarPromptTreeSettingsButton[data-collection-row='true'] {
-    cursor: pointer;
     padding-right: 12px;
   }
 
   .prompt-tree-prompt-content :global(.prompt-tree-row-icon) {
     flex-shrink: 0;
     color: var(--ui-secondary-icon-glyph);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-collection-row='true']:hover :global(.prompt-tree-row-icon),
-  .sidebarPromptTreeSettingsButton[data-collection-row='true']:focus-visible :global(.prompt-tree-row-icon) {
-    color: var(--ui-normal-text);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-collection-row='true']:focus-visible {
-    color: var(--ui-normal-text);
   }
 
   .sidebarPromptTreeSettingsButton[data-row-state='over'] {
