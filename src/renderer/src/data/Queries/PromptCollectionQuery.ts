@@ -1,4 +1,6 @@
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
+import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
   LoadPromptCollectionInitialPayload,
   LoadPromptCollectionInitialResult
@@ -32,6 +34,12 @@ export const loadPromptCollectionInitial = async (
   )
 
   notesCollection.utils.upsertManyAuthoritative(result.notes)
+  attachedNoteUiStateCollection.utils.upsertManyAuthoritative(result.attachedNoteUiStates)
+  /** Only notes covered by this collection load can lose a saved visibility record. */
+  const loadedNoteIds = new Set([...previousGraph.noteIds, ...result.notes.map((note) => note.id)])
+  attachedNoteUiStateCollection.utils.deleteManyAuthoritative([...loadedNoteIds]
+    .filter((id) => !result.attachedNoteUiStates.some((snapshot) => snapshot.data.noteId === id))
+    .map((id) => createAttachedNoteUiStateKey(workspaceId, id)))
   for (const adapter of markdownContentQueryAdapters) adapter.applyCollectionResult(result)
   categoryCollection.utils.upsertManyAuthoritative(result.categories)
   promptCollectionsCollection.utils.upsertManyAuthoritative(result.promptCollections)

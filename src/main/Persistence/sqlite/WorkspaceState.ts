@@ -24,6 +24,8 @@ export type WorkspaceStateData = {
   'collection-machine': Pick<WorkspacePromptCollectionUiState, 'scrollTopByMode'>
   'accordion-user': { sections: Array<{ id: string; isExpanded: boolean }> }
   'accordion-machine': { heights: Record<string, number> }
+  /** Portable visibility belonging only to an attached note. */
+  'attached-note': { visible: boolean }
   'markdown-editor': { editorViewStateJson: string }
 }
 
@@ -44,5 +46,6 @@ export const WORKSPACE_STATE_SCOPES = {
   'collection-machine': StorageScope.MachineSpecific,
   'accordion-user': StorageScope.UserSpecific,
   'accordion-machine': StorageScope.MachineSpecific,
+  'attached-note': StorageScope.UserSpecific,
   'markdown-editor': StorageScope.MachineSpecific
 } satisfies Record<WorkspaceStateType, StorageScope>

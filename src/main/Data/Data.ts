@@ -11,6 +11,7 @@ import { categoryData } from './CategoryData'
 import type { DomainTargetPolicy } from '@shared/domain/DomainChanges'
 import {
   accordionUiStateData,
+  attachedNoteUiStateData,
   markdownContentUiStateData,
   userPersistenceData,
   workspacePromptCollectionUiStateData,
@@ -37,6 +38,7 @@ export const data = {
   prompt: promptData,
   promptTemplate: promptTemplateData,
   userPersistence: userPersistenceData,
+  attachedNoteUiState: attachedNoteUiStateData,
   markdownContentUiState: markdownContentUiStateData,
   workspaceUiState: workspaceUiStateData,
   workspacePromptCollectionUiState: workspacePromptCollectionUiStateData,

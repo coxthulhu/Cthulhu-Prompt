@@ -32,6 +32,8 @@ const mockDomainData = vi.hoisted(() => {
     promptTemplate: new Map<string, Entry>(),
     userPersistence: new Map<string, Entry>(),
     markdownContentUiState: new Map<string, Entry>(),
+    /** Optional visibility participates in the complete persistence graph. */
+    attachedNoteUiState: new Map<string, Entry>(),
     workspaceUiState: new Map<string, Entry>(),
     workspacePromptCollectionUiState: new Map<string, Entry>(),
     accordionUiState: new Map<string, Entry>()
@@ -52,6 +54,7 @@ const mockDomainData = vi.hoisted(() => {
     promptTemplate: { committedStore: createStore('promptTemplate') },
     userPersistence: { committedStore: createStore('userPersistence') },
     markdownContentUiState: { committedStore: createStore('markdownContentUiState') },
+    attachedNoteUiState: { committedStore: createStore('attachedNoteUiState'), targetPolicy: 'deleteIfPresent' },
     workspaceUiState: { committedStore: createStore('workspaceUiState') },
     workspacePromptCollectionUiState: {
       committedStore: createStore('workspacePromptCollectionUiState'),

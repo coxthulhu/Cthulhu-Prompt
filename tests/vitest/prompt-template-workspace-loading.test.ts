@@ -16,7 +16,12 @@ vi.mock('../../src/main/Persistence/sqlite/SqliteDataAccess', () => ({
 
 // An unsaved user order exercises alphabetical discovery without opening a native database.
 vi.mock('../../src/main/Persistence/sqlite/WorkspaceStateDataAccess', () => ({
-  WorkspaceStateDataAccess: { read: vi.fn(() => null), write: vi.fn() }
+  WorkspaceStateDataAccess: {
+    read: vi.fn(() => null),
+    write: vi.fn(),
+    /** This content-only fixture has no saved attachment preferences to prune. */
+    listEntityIds: vi.fn(() => [])
+  }
 }))
 
 vi.mock('../../src/main/Persistence/sqlite/WorkspaceUiStateDataAccess', () => ({

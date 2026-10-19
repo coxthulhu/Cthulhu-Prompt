@@ -1,5 +1,6 @@
 import {
   accordionUiStateSqlitePersistence,
+  attachedNoteUiStateSqlitePersistence,
   markdownContentUiStateSqlitePersistence,
   userPersistenceSqlitePersistence,
   workspacePromptCollectionUiStateSqlitePersistence,
@@ -42,6 +43,13 @@ export const accordionUiStateData = createRevisionData({
 /** Authoritative markdown-content editor UI state backed by SQLite. */
 export const markdownContentUiStateData = createRevisionData({
   persistence: markdownContentUiStateSqlitePersistence,
+  emitCommittedRevisionChanged,
+  targetPolicy: 'deleteIfPresent'
+})
+
+/** Optional user preference deleted atomically with its attachment. */
+export const attachedNoteUiStateData = createRevisionData({
+  persistence: attachedNoteUiStateSqlitePersistence,
   emitCommittedRevisionChanged,
   targetPolicy: 'deleteIfPresent'
 })

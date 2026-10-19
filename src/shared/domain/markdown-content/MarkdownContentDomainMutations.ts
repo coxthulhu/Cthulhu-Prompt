@@ -1,4 +1,5 @@
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
+import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
   DomainChange,
   DomainMutationConflict,
@@ -536,7 +537,10 @@ const createDeletePlanner = (
         }
       }
     },
-    ...(content.attachedNoteId ? [{ type: 'delete' as const, entityType: 'note' as const, id: content.attachedNoteId }] : []),
+    ...(content.attachedNoteId ? [
+      { type: 'delete' as const, entityType: 'note' as const, id: content.attachedNoteId },
+      deleteAttachedNoteUiState(command.workspaceId, content.attachedNoteId)
+    ] : []),
     {
       type: 'delete',
       entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',

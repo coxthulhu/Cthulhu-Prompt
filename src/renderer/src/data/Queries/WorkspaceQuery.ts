@@ -1,4 +1,6 @@
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
+import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import {
   getAllWorkspaceCollectionEntries,
   type LoadWorkspaceByPathRequest,
@@ -41,6 +43,12 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   }
   upsertPromptCollectionClientStates(result.promptCollections.map((promptCollection) => promptCollection.id))
   notesCollection.utils.upsertManyAuthoritative(result.notes)
+  attachedNoteUiStateCollection.utils.upsertManyAuthoritative(result.attachedNoteUiStates)
+  // Remove only preferences proven absent from this workspace's complete load.
+  attachedNoteUiStateCollection.utils.deleteManyAuthoritative(attachedNoteUiStateCollection.toArray
+    .filter((state) => state.workspaceId === result.workspace.id &&
+      !result.attachedNoteUiStates.some((snapshot) => snapshot.data.noteId === state.noteId))
+    .map((state) => createAttachedNoteUiStateKey(state.workspaceId, state.noteId)))
   for (const adapter of markdownContentQueryAdapters) adapter.applyWorkspaceResult(result)
 
   if (!previousGraph) {

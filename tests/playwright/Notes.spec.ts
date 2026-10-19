@@ -5,6 +5,7 @@ import { createPlaywrightTestSuite, type TestSetup } from '../helpers/Playwright
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { createDeterministicId } from '../fixtures/FixtureIds'
+import { readWorkspaceState, runSqlQuery, seedWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
 
 /** Real Electron integration covers note files and the production renderer mutation bridge. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -61,6 +62,26 @@ const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template') => 
 /** Reads the persisted note through the renderer's authoritative collection. */
 const readNote = (page: Page, id: string) => page.evaluate((id) => window.playwrightTestControls!.notes.getNote(id), id)
 
+/** Changes visibility through the production renderer action. */
+const setVisible = (page: Page, noteId: string, visible: boolean) => page.evaluate(
+  ({ workspaceId, noteId, visible }) => window.playwrightTestControls!.notes.setAttachedNoteVisible(workspaceId, noteId, visible),
+  { workspaceId: WORKSPACE_ID, noteId, visible }
+)
+
+/** Reads the production visibility default as well as saved values. */
+const readVisible = (page: Page, noteId: string) => page.evaluate(
+  ({ workspaceId, noteId }) => window.playwrightTestControls!.notes.getAttachedNoteVisible(workspaceId, noteId),
+  { workspaceId: WORKSPACE_ID, noteId }
+)
+
+/** Verifies lifecycle cleanup in both SQLite and the reconciled renderer collection. */
+const expectVisibilityRemoved = async (page: Page, app: ElectronApplication, noteId: string) => {
+  expect(await readWorkspaceState(app, WORKSPACE_ID, 'attached-note', noteId)).toBeNull()
+  expect(await page.evaluate(({ workspaceId, noteId }) =>
+    window.playwrightTestControls!.notes.getAttachedNoteUiState(workspaceId, noteId),
+  { workspaceId: WORKSPACE_ID, noteId })).toBeUndefined()
+}
+
 /** Reads physical modification times, optionally seeding an old time without rewriting content. */
 const fileTime = (app: ElectronApplication, filePath: string, setTo?: string): Promise<string> => app.evaluate(({ app }, payload) => {
   app.emit('test-file-modified-time', payload)
@@ -76,6 +97,85 @@ const invoke = (page: Page, channel: string, command: object, expectations: obje
 
 describe('Notes persistence and commands', () => {
   for (const kind of ['prompt', 'template'] as const) {
+    test(`${kind} attachment visibility is user-specific, isolated, and restored for finalized owners`, async ({ testSetup, electronApp }) => {
+      /** Existing notes fixture exercises real files, SQLite, and renderer mutations. */
+      const { mainWindow, testHelpers, active } = await startNotes(testSetup, kind)
+      /** Two attachments must retain independent visibility choices. */
+      const ids = await mainWindow.evaluate(async (kind) => [
+        await window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`),
+        await window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-neighbor`)
+      ], kind)
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(true)
+      expect(await readVisible(mainWindow, ids[1]!)).toBe(true)
+      expect(await readVisible(mainWindow, 'blocker')).toBeUndefined()
+      /** Identical note IDs in other workspaces must not be changed or pruned. */
+      const otherWorkspace = 'other-workspace'
+      await seedWorkspaceState(electronApp, otherWorkspace, 'attached-note', ids[0]!, { visible: true })
+      /** Neither visibility direction may write the owner or note file. */
+      const paths = [`${active}/Owner 1.${kind}.md`, `${active}/Owner 1.note.md`]
+      /** Exact contents and physical mtimes before any visibility changes. */
+      const files = await Promise.all(paths.map((path) => readTextFile(electronApp, path)))
+      /** Independent file timestamps detect rewrites with unchanged text. */
+      const times = await Promise.all(paths.map((path) => fileTime(electronApp, path)))
+      /** Domain timestamps must also remain untouched. */
+      const noteBefore = await readNote(mainWindow, ids[0]!)
+      /** Owner metadata remains independent of the preference. */
+      const ownerBefore = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, `${kind}-owner`), kind)
+      await setVisible(mainWindow, ids[0]!, false)
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(false)
+      expect(await readVisible(mainWindow, ids[1]!)).toBe(true)
+      await setVisible(mainWindow, ids[0]!, true)
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(true)
+      await setVisible(mainWindow, ids[0]!, false)
+      expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', ids[0]!)).toEqual({ visible: false })
+      expect((await runSqlQuery(electronApp, `SELECT storage_scope FROM workspace_state WHERE workspace_id = ${toSqlText(WORKSPACE_ID)} AND state_type = 'attached-note' AND entity_id = ${toSqlText(ids[0]!)}`)).rows).toEqual([{ storage_scope: 'user-specific' }])
+      expect(await Promise.all(paths.map((path) => readTextFile(electronApp, path)))).toEqual(files)
+      expect(await Promise.all(paths.map((path) => fileTime(electronApp, path)))).toEqual(times)
+      expect(await readNote(mainWindow, ids[0]!)).toEqual(noteBefore)
+      expect(await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, `${kind}-owner`), kind)).toEqual(ownerBefore)
+      await mainWindow.evaluate(({ kind, status }) => window.playwrightTestControls!.notes.setOwnerLocation(`${kind}-source`, `${kind}-owner`, {
+        promptCollectionId: `${kind}-target`, categoryId: null, previousEntryId: null, status
+      }), { kind, status: PromptStatus.Archived })
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(false)
+      await testHelpers.clearWorkspaceViaUI()
+      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+      await testHelpers.setupWorkspaceViaUI()
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(false)
+      await mainWindow.evaluate(({ workspaceId, kind }) => window.playwrightTestControls!.notes.loadCollection(workspaceId, `${kind}-target`), { workspaceId: WORKSPACE_ID, kind })
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(false)
+      await setVisible(mainWindow, ids[0]!, true)
+      expect(await readVisible(mainWindow, ids[0]!)).toBe(true)
+      expect(await readWorkspaceState(electronApp, otherWorkspace, 'attached-note', ids[0]!)).toEqual({ visible: true })
+    })
+
+    test(`${kind} visibility is removed on detach, note deletion, owner deletion, and collection deletion`, async ({ testSetup, electronApp }) => {
+      /** Lifecycle operations share the production atomic transaction path. */
+      const { mainWindow } = await startNotes(testSetup, kind)
+      /** Unrelated preference must survive the first three cleanup operations. */
+      const neighborId = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-neighbor`), kind)
+      await setVisible(mainWindow, neighborId, false)
+      /** Each removal path must clean the preference without affecting its neighbor. */
+      for (const operation of ['detachNote', 'deleteNote', 'deleteOwner'] as const) {
+        /** Replacement attachments start shown even when the previous one was hidden. */
+        const id = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`), kind)
+        expect(await readVisible(mainWindow, id)).toBe(true)
+        await setVisible(mainWindow, id, false)
+        await mainWindow.evaluate(async ({ kind, id, operation }) => {
+          if (operation === 'deleteOwner') await window.playwrightTestControls!.notes.deleteOwner(kind, `${kind}-source`, `${kind}-owner`)
+          else await window.playwrightTestControls!.notes[operation](id)
+        }, { kind, id, operation })
+        await expectVisibilityRemoved(mainWindow, electronApp, id)
+        expect(await readVisible(mainWindow, id)).toBeUndefined()
+        expect(await readVisible(mainWindow, neighborId)).toBe(false)
+        if (operation === 'detachNote') {
+          expect(await invoke(mainWindow, 'set-attached-note-visible', { workspaceId: WORKSPACE_ID, noteId: id, visible: false })).toMatchObject({ success: false, conflict: true })
+          await expectVisibilityRemoved(mainWindow, electronApp, id)
+        }
+      }
+      await mainWindow.evaluate(({ workspaceId, kind }) => window.playwrightTestControls!.notes.deleteCollection(workspaceId, `${kind}-source`), { workspaceId: WORKSPACE_ID, kind })
+      await expectVisibilityRemoved(mainWindow, electronApp, neighborId)
+    })
+
     test(`${kind} attachments reserve paired filenames, detach, reopen, and delete independently`, async ({ testSetup, electronApp }) => {
       /** Hydrated library with a preexisting standalone note occupying the owner stem. */
       const { mainWindow, testHelpers, active } = await startNotes(testSetup, kind)
@@ -233,6 +333,40 @@ describe('Notes persistence and commands', () => {
     })
   }
 
+  test('visibility rejects malformed and stale requests and prunes only stale preferences in the opened workspace', async ({ testSetup, electronApp }) => {
+    /** Real IPC validates commands independently of the renderer wrapper. */
+    const { mainWindow, testHelpers } = await startNotes(testSetup, 'prompt')
+    /** Attachment used for valid state and revision-conflict assertions. */
+    const noteId = await mainWindow.evaluate(() => window.playwrightTestControls!.notes.createAttachedNote('prompt', 'prompt-owner'))
+    await setVisible(mainWindow, noteId, false)
+    /** Invalid wire shapes must fail before any preference is changed. */
+    for (const command of [
+      { workspaceId: WORKSPACE_ID, noteId },
+      { workspaceId: WORKSPACE_ID, noteId, visible: 'false' },
+      { workspaceId: WORKSPACE_ID, noteId, visible: true, noteText: 'Invalid' }
+    ]) expect(await invoke(mainWindow, 'set-attached-note-visible', command)).toMatchObject({ success: false, error: 'Invalid request payload' })
+    /** Valid shapes still require an attached note in the requested workspace. */
+    for (const command of [
+      { workspaceId: 'wrong-workspace', noteId, visible: true },
+      { workspaceId: WORKSPACE_ID, noteId: 'blocker', visible: false },
+      { workspaceId: WORKSPACE_ID, noteId: 'missing', visible: false }
+    ]) expect(await invoke(mainWindow, 'set-attached-note-visible', command)).toMatchObject({ success: false, conflict: true })
+    expect(await invoke(mainWindow, 'set-attached-note-visible', { workspaceId: WORKSPACE_ID, noteId, visible: true }, [
+      { entityType: 'attachedNoteUiState', id: `${WORKSPACE_ID}:${noteId}`, expected: 'revision', revision: 0 }
+    ])).toMatchObject({ success: false, conflict: true })
+    expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', noteId)).toEqual({ visible: false })
+    await seedWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', 'missing', { visible: false })
+    await seedWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', 'blocker', { visible: false })
+    await seedWorkspaceState(electronApp, 'other-workspace', 'attached-note', 'missing', { visible: false })
+    await testHelpers.clearWorkspaceViaUI()
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+    await testHelpers.setupWorkspaceViaUI()
+    await expectVisibilityRemoved(mainWindow, electronApp, 'missing')
+    await expectVisibilityRemoved(mainWindow, electronApp, 'blocker')
+    expect(await readVisible(mainWindow, noteId)).toBe(false)
+    expect(await readWorkspaceState(electronApp, 'other-workspace', 'attached-note', 'missing')).toEqual({ visible: false })
+  })
+
   test('paced note edits flush before detachment and invalid IPC cannot change note files', async ({ testSetup, electronApp }) => {
     /** Real renderer queue with deterministic IPC gates. */
     const { mainWindow, active } = await startNotes(testSetup, 'prompt')
@@ -270,6 +404,7 @@ describe('Notes persistence and commands', () => {
     /** Real renderer-generated note identity. */
     const id = await mainWindow.evaluate(() => window.playwrightTestControls!.notes.createAttachedNote('prompt', 'prompt-owner'))
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.updateNote(id, 'Retain these notes'), id)
+    await setVisible(mainWindow, id, false)
     /** Original files and timestamps must survive partial filesystem commit. */
     const paths = [`${active}/Owner 1.prompt.md`, `${active}/Owner 1.note.md`, `${active}/_CollectionInfo/CategoryOrder.json`]
     /** Exact original disk contents. */
@@ -300,7 +435,10 @@ describe('Notes persistence and commands', () => {
     expect(await readNote(mainWindow, id)).toMatchObject({ id, kind: 'attached', noteText: 'Retain these notes' })
     expect(await mainWindow.evaluate(() => window.playwrightTestControls!.notes.getOwner('prompt', 'prompt-owner'))).toMatchObject({ attachedNoteId: id })
     expect(await load()).toEqual(initial)
+    expect(await readVisible(mainWindow, id)).toBe(false)
+    expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', id)).toEqual({ visible: false })
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.detachNote(id), id)
     expect(await readNote(mainWindow, id)).toMatchObject({ id, kind: 'standalone', noteText: 'Retain these notes' })
+    await expectVisibilityRemoved(mainWindow, electronApp, id)
   })
 })

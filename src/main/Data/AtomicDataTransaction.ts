@@ -298,6 +298,7 @@ const createAtomicDataBuilder = (): {
       promptTemplate: createStoreBuilder('promptTemplate'),
       userPersistence: createStoreBuilder('userPersistence'),
       markdownContentUiState: createStoreBuilder('markdownContentUiState'),
+      attachedNoteUiState: createStoreBuilder('attachedNoteUiState'),
       workspaceUiState: createStoreBuilder('workspaceUiState'),
       workspacePromptCollectionUiState: createStoreBuilder('workspacePromptCollectionUiState'),
       accordionUiState: createStoreBuilder('accordionUiState')

@@ -1,3 +1,4 @@
+import type { AttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type { Note } from '@shared/domain/note/Note'
 import type { Category } from '@shared/domain/category/Category'
 import type { Draft } from 'immer'
@@ -29,6 +30,8 @@ export type DomainEntityMap = {
   note: Note
   promptTemplate: PromptTemplatePersisted
   userPersistence: UserPersistence
+  /** User-specific visibility independent of note content. */
+  attachedNoteUiState: AttachedNoteUiState
   markdownContentUiState: MarkdownContentUiState
   workspaceUiState: WorkspaceUiState
   workspacePromptCollectionUiState: WorkspacePromptCollectionUiState

@@ -1,3 +1,4 @@
+import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { produce, type Draft } from 'immer'
 import type {
   DomainChange,
@@ -70,6 +71,7 @@ const createEmptyGraphEntries = (): DomainGraphEntries => ({
   prompt: new Map(),
   promptTemplate: new Map(),
   userPersistence: new Map(),
+  attachedNoteUiState: new Map(),
   markdownContentUiState: new Map(),
   workspaceUiState: new Map(),
   workspacePromptCollectionUiState: new Map(),
@@ -99,6 +101,11 @@ const getDomainEntityId = <TEntityType extends DomainEntityType>(
       return USER_PERSISTENCE_ID
     case 'workspaceUiState':
       return (entity as DomainEntityMap['workspaceUiState']).workspaceId
+    case 'attachedNoteUiState': {
+      /** Workspace and note identify one portable visibility preference. */
+      const uiState = entity as DomainEntityMap['attachedNoteUiState']
+      return createAttachedNoteUiStateKey(uiState.workspaceId, uiState.noteId)
+    }
     case 'markdownContentUiState': {
       /** Markdown UI state whose workspace and content IDs form its authoritative key. */
       const uiState = entity as DomainEntityMap['markdownContentUiState']
@@ -133,6 +140,7 @@ const captureCommittedDomainGraph = (): DomainGraph => {
     'prompt',
     'promptTemplate',
     'userPersistence',
+    'attachedNoteUiState',
     'markdownContentUiState',
     'workspaceUiState',
     'workspacePromptCollectionUiState',
@@ -170,6 +178,7 @@ const copyDomainGraph = (graph: DomainGraph): DomainGraph =>
     prompt: new Map(graph.entries.prompt),
     promptTemplate: new Map(graph.entries.promptTemplate),
     userPersistence: new Map(graph.entries.userPersistence),
+    attachedNoteUiState: new Map(graph.entries.attachedNoteUiState),
     markdownContentUiState: new Map(graph.entries.markdownContentUiState),
     workspaceUiState: new Map(graph.entries.workspaceUiState),
     workspacePromptCollectionUiState: new Map(graph.entries.workspacePromptCollectionUiState),

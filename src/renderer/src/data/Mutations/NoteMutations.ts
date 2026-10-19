@@ -1,3 +1,4 @@
+import { planSetAttachedNoteVisible } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import type { PromptLocation } from '@shared/domain/prompt/Prompt'
@@ -6,6 +7,14 @@ import {
   type UpdateNoteCommand
 } from '@shared/domain/note/NoteDomainMutations'
 import { runImmediateRendererDomainMutation, mutatePacedRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
+
+/** Sets one attachment's user-specific visibility without editing its Markdown. */
+export const setAttachedNoteVisible = async (workspaceId: string, noteId: string, visible: boolean): Promise<void> => {
+  await runImmediateRendererDomainMutation({
+    mutation: { command: { workspaceId, noteId, visible }, plan: planSetAttachedNoteVisible },
+    ipc: { channel: 'set-attached-note-visible' }, renderer: {}
+  })
+}
 
 /** Creates one empty attachment and returns its stable GUID for a future editor. */
 export const createAttachedNote = async (ownerKind: 'prompt' | 'template', ownerId: string): Promise<string> => {

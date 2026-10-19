@@ -1,3 +1,4 @@
+import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import type { Transaction } from '@tanstack/svelte-db'
 import {
@@ -137,6 +138,8 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
   id: string
 ): DomainPlannerEntityMap[TEntityType] | undefined => {
   switch (entityType) {
+    case 'attachedNoteUiState':
+      return attachedNoteUiStateCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'note':
       return notesCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
     case 'systemSettings':
@@ -187,6 +190,8 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
   entityType: TEntityType
 ): ReadonlyArray<DomainPlannerEntityMap[TEntityType]> => {
   switch (entityType) {
+    case 'attachedNoteUiState':
+      return attachedNoteUiStateCollection.toArray as unknown as Array<DomainPlannerEntityMap[TEntityType]>
     case 'note':
       return notesCollection.toArray as unknown as Array<DomainPlannerEntityMap[TEntityType]>
     case 'systemSettings':

@@ -1,4 +1,5 @@
 import { getCollectionNoteIds } from '@shared/domain/note/Note'
+import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
   DomainChange,
   DomainPlanner,
@@ -323,7 +324,10 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
         )
       }
     },
-    ...getCollectionNoteIds(state, promptCollection).map((id): DomainChange => ({ type: 'delete', entityType: 'note', id })),
+    ...getCollectionNoteIds(state, promptCollection).flatMap((id): DomainChange[] => [
+      { type: 'delete', entityType: 'note', id },
+      ...(state.get('note', id)?.kind === 'attached' ? [deleteAttachedNoteUiState(command.workspaceId, id)] : [])
+    ]),
     ...contentIds.map(
       (contentId): DomainChange => ({
         type: 'delete',

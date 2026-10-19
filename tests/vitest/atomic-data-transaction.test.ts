@@ -17,6 +17,7 @@ const mockTransactionState = vi.hoisted(() => {
     'promptTemplate',
     'userPersistence',
     'markdownContentUiState',
+    'attachedNoteUiState',
     'workspaceUiState',
     'workspacePromptCollectionUiState',
     'accordionUiState'
@@ -38,6 +39,8 @@ const mockTransactionState = vi.hoisted(() => {
     promptTemplate: new Map(),
     userPersistence: new Map(),
     markdownContentUiState: new Map(),
+    /** Optional attachment preferences share the SQLite transaction. */
+    attachedNoteUiState: new Map(),
     workspaceUiState: new Map(),
     workspacePromptCollectionUiState: new Map(),
     accordionUiState: new Map()
@@ -117,6 +120,7 @@ const mockTransactionState = vi.hoisted(() => {
     const isSqliteStore =
       store === 'userPersistence' ||
       store === 'markdownContentUiState' ||
+      store === 'attachedNoteUiState' ||
       store === 'workspaceUiState' ||
       store === 'workspacePromptCollectionUiState' ||
       store === 'accordionUiState'
@@ -151,6 +155,7 @@ const mockTransactionState = vi.hoisted(() => {
       emitCommittedRevisionChanged: (_id: string) => undefined,
       targetPolicy:
         store === 'markdownContentUiState' ||
+        store === 'attachedNoteUiState' ||
         store === 'workspaceUiState' ||
         store === 'workspacePromptCollectionUiState' ||
         store === 'accordionUiState'
@@ -170,6 +175,7 @@ const mockTransactionState = vi.hoisted(() => {
       promptTemplate: createRevisionData('promptTemplate'),
       userPersistence: createRevisionData('userPersistence'),
       markdownContentUiState: createRevisionData('markdownContentUiState'),
+      attachedNoteUiState: createRevisionData('attachedNoteUiState'),
       workspaceUiState: createRevisionData('workspaceUiState'),
       workspacePromptCollectionUiState: createRevisionData('workspacePromptCollectionUiState'),
       accordionUiState: createRevisionData('accordionUiState')
@@ -601,6 +607,7 @@ describe('atomic data transaction', () => {
       promptTemplate: 0,
       userPersistence: 0,
       markdownContentUiState: 0,
+      attachedNoteUiState: 0,
       workspaceUiState: 0,
       workspacePromptCollectionUiState: 0,
       accordionUiState: 0
@@ -715,6 +722,7 @@ describe('atomic data transaction', () => {
       promptTemplate: 0,
       userPersistence: 0,
       markdownContentUiState: 0,
+      attachedNoteUiState: 0,
       workspaceUiState: 0,
       workspacePromptCollectionUiState: 0,
       accordionUiState: 0

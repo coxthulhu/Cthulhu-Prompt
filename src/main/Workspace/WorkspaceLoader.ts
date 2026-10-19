@@ -1,4 +1,7 @@
 import { readNoteFiles } from '../Persistence/workspace/NoteReads'
+import { loadAttachedNoteUiStates } from '../Queries/AttachedNoteUiStateQuery'
+import { WorkspaceStateDataAccess } from '../Persistence/sqlite/WorkspaceStateDataAccess'
+import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { getCollectionNoteIds } from '@shared/domain/note/Note'
 import * as path from 'path'
 import { getContentStatusFolders, isFinalPromptStatus } from '@shared/domain/prompt/Prompt'
@@ -60,7 +63,7 @@ const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
   )
 }
 
-const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPayload => {
+const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<WorkspaceLoadPayload> => {
   const workspaceEntry = data.workspace.committedStore.getEntry(workspaceId)
 
   if (!workspaceEntry) {
@@ -169,11 +172,21 @@ const buildWorkspaceLoadPayloadFromData = (workspaceId: string): WorkspaceLoadPa
     ...loadedPromptTemplateIds
   ])
 
+  /** Live attachment identities prune preferences left by external deletes or detachments. */
+  const attachedNoteIds = new Set(notes.filter((note) => note.data.kind === 'attached').map((note) => note.id))
+  /** Each saved identity is checked against the workspace's current attachments. */
+  for (const noteId of WorkspaceStateDataAccess.listEntityIds(workspaceId, 'attached-note')) {
+    if (attachedNoteIds.has(noteId)) continue
+    WorkspaceStateDataAccess.delete(workspaceId, 'attached-note', noteId)
+    data.attachedNoteUiState.committedStore.remove(createAttachedNoteUiStateKey(workspaceId, noteId))
+  }
+
   return {
     workspace: workspaceSnapshot,
     promptCollections,
     categories,
     notes,
+    attachedNoteUiStates: await loadAttachedNoteUiStates(workspaceId, [...attachedNoteIds]),
     prompts,
     promptTemplates
   }
@@ -320,7 +333,7 @@ export const loadWorkspaceByPath = async (
 
     applyWorkspaceMigrations(workspaceInfoPath)
     const workspaceId = await loadWorkspaceDataIntoNewDataLayer(workspaceInfoPath)
-    const payload = buildWorkspaceLoadPayloadFromData(workspaceId)
+    const payload = await buildWorkspaceLoadPayloadFromData(workspaceId)
 
     return {
       success: true,

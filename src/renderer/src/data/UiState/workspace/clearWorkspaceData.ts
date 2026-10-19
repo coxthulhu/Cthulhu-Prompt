@@ -1,3 +1,4 @@
+import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
@@ -30,6 +31,7 @@ export const clearWorkspaceData = (): void => {
     promptsCollection,
     notesCollection,
     promptTemplatesCollection,
+    attachedNoteUiStateCollection,
     markdownContentUiStateCollection,
     workspaceUiStateCollection,
     workspacePromptCollectionUiStateCollection,

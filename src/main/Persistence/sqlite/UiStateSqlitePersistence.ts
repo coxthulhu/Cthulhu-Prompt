@@ -1,3 +1,4 @@
+import type { AttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import {
   createMarkdownContentUiStateKey,
   type MarkdownContentUiState
@@ -169,5 +170,23 @@ export const markdownContentUiStateSqlitePersistence: SqlitePersistenceLayer<
       throw new Error(`Markdown UI-state ID does not match its data: ${id}`)
     }
     MarkdownContentUiStateDataAccess.upsertMarkdownContentUiState(uiState)
+  }
+}
+
+/** Stores attachment visibility separately from shared Markdown and machine-local editors. */
+export const attachedNoteUiStateSqlitePersistence: SqlitePersistenceLayer<AttachedNoteUiState, SqlitePersistenceFields> = {
+  kind: 'sqlite',
+  query: (id) => {
+    /** Composite identity scopes each preference to its workspace and note. */
+    const { workspaceId, localId: noteId } = parseWorkspaceCompositeKey(id)
+    /** Missing rows leave the attachment shown by default. */
+    const state = WorkspaceStateDataAccess.read(workspaceId, 'attached-note', noteId)
+    return state ? { workspaceId, noteId, ...state } : null
+  },
+  command: (id, transition) => {
+    /** Identity comes from the authoritative target. */
+    const { workspaceId, localId: noteId } = parseWorkspaceCompositeKey(id)
+    if (transition.after) WorkspaceStateDataAccess.write(workspaceId, 'attached-note', noteId, { visible: transition.after.data.visible })
+    else WorkspaceStateDataAccess.delete(workspaceId, 'attached-note', noteId)
   }
 }

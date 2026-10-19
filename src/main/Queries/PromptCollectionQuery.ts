@@ -1,4 +1,5 @@
 import { getCollectionNoteIds } from '@shared/domain/note/Note'
+import { loadAttachedNoteUiStates } from './AttachedNoteUiStateQuery'
 import { ipcMain } from 'electron'
 import type {
   LoadPromptCollectionInitialPayload,
@@ -74,16 +75,19 @@ export const loadPromptCollectionInitialData = async (
       const entry = data.markdownContentUiState.committedStore.getEntry(id)
       return entry ? [{ id, revision: entry.revision, data: entry.committed }] : []
     })
+    /** Notes are loaded independently of whether their owner editors are active. */
+    const noteIds = getCollectionNoteIds({
+      get: (type, id) => data[type].committedStore.getEntry(id)?.committed as never,
+      getAll: (type) => data[type].committedStore.getAllEntries().map((entry) => entry.committed) as never
+    }, promptCollectionEntry.committed)
     return {
       success: true,
       promptCollections,
       categories,
       prompts,
       promptTemplates,
-      notes: getCollectionNoteIds({
-        get: (type, id) => data[type].committedStore.getEntry(id)?.committed as never,
-        getAll: (type) => data[type].committedStore.getAllEntries().map((entry) => entry.committed) as never
-      }, promptCollectionEntry.committed).flatMap((id) => {
+      attachedNoteUiStates: await loadAttachedNoteUiStates(payload.workspaceId, noteIds),
+      notes: noteIds.flatMap((id) => {
         /** Loaded note snapshot carries full text for future editors. */
         const entry = data.note.committedStore.getEntry(id)
         return entry ? [buildNoteSnapshot(entry)] : []

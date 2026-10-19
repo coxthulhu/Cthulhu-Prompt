@@ -67,6 +67,7 @@ const buildMainAuthoritativeSnapshot = (target: DomainTarget): AuthoritativeSnap
         : { entityType: 'promptTemplate', id: target.id, deleted: true }
     }
     case 'userPersistence':
+    case 'attachedNoteUiState':
     case 'markdownContentUiState':
     case 'workspaceUiState':
     case 'workspacePromptCollectionUiState':

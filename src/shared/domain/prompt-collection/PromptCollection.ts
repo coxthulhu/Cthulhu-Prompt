@@ -338,4 +338,6 @@ export type LoadPromptCollectionInitialResult = IpcResult<{
   notes: Array<RevisionEnvelope<import('@shared/domain/note/Note').Note>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
   markdownContentUiStates: Array<RevisionEnvelope<MarkdownContentUiState>>
+  /** Visibility preferences independent of owner editor hydration. */
+  attachedNoteUiStates: Array<RevisionEnvelope<import('@shared/domain/ui-state/AttachedNoteUiState').AttachedNoteUiState>>
 }>

@@ -60,6 +60,7 @@ const hasTestDomainEntityId = (
   if (entityType === 'markdownContentUiState') {
     return `${record.workspaceId}:${record.contentId}` === id
   }
+  if (entityType === 'attachedNoteUiState') return `${record.workspaceId}:${record.noteId}` === id
   if (entityType === 'workspacePromptCollectionUiState') {
     return `${record.workspaceId}:${record.contentOwnerId}` === id
   }
@@ -84,6 +85,8 @@ const createDomainState = (
     promptTemplate: [],
     userPersistence: [],
     markdownContentUiState: [],
+    /** Complete graph includes independently persisted attachment preferences. */
+    attachedNoteUiState: [],
     workspaceUiState: [],
     workspacePromptCollectionUiState: [],
     accordionUiState: [],

@@ -1,4 +1,6 @@
 import type { DomainChange, DomainPlanner, DomainState, DomainTarget } from '@shared/domain/DomainChanges'
+import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
+import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import { getMarkdownContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
 import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
 import { isPromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
@@ -99,6 +101,14 @@ const findCollection = (state: DomainState, noteId: string) => {
     : getStandaloneNoteIds(collection).includes(noteId))
 }
 
+/** Resolves the workspace key for attachment-state cleanup during detach or deletion. */
+const clearAttachedNoteUiState = (state: DomainState, collectionId: string, noteId: string): DomainChange => {
+  /** Every loaded collection belongs to one loaded workspace. */
+  const workspace = state.getAll('workspace').find((candidate) =>
+    getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === collectionId))!
+  return deleteAttachedNoteUiState(workspace.id, noteId)
+}
+
 /** Finds sibling standalone titles in one physical status folder. */
 const siblingNotes = (state: DomainState, collectionId: string, status: StandaloneNote['status']): StandaloneNote[] => {
   /** Collection whose notes share the fallback-title namespace. */
@@ -181,6 +191,7 @@ export const planDetachNote: DomainPlanner<NoteCommand> = (state, command) => {
     ...(attachment.owner.category ? { category: attachment.owner.category } : {})
   }
   return [clearAttachment(attachment, command.modifiedAt),
+    clearAttachedNoteUiState(state, collection.id, note.id),
     { type: 'update', entityType: 'note', id: note.id, recipe: (draft) => { Object.assign(draft, standalone) } },
     { type: 'update', entityType: 'promptCollection', id: collection.id, recipe: (draft) => {
       /** Ordered layout guaranteed by the final-status guard. */
@@ -200,7 +211,7 @@ export const planDeleteNote: DomainPlanner<NoteCommand> = (state, command) => {
   if (!note || !collection) return { status: 'conflict', reason: 'Note deletion conflict', targets: [{ entityType: 'note', id: command.noteId }] }
   /** Atomic relationship/order cleanup followed by file removal. */
   const changes: DomainChange[] = note.kind === 'attached'
-    ? [clearAttachment(findNoteOwner(state, note.id)!, command.modifiedAt)]
+    ? [clearAttachment(findNoteOwner(state, note.id)!, command.modifiedAt), clearAttachedNoteUiState(state, collection.id, note.id)]
     : [{ type: 'update', entityType: 'promptCollection', id: collection.id, recipe: (draft) => {
         for (const layout of Object.values(draft.statusFolders)) {
           if (layout.ordering === 'category') layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, { kind: 'note', id: note.id })

@@ -1,4 +1,6 @@
 import * as notes from '@renderer/data/Mutations/NoteMutations'
+import { attachedNoteUiStateCollection, getAttachedNoteVisible } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
+import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
@@ -22,6 +24,10 @@ import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
  */
 export const playwrightNoteControls = {
   ...notes,
+  getAttachedNoteVisible,
+  /** Reads raw renderer state so cleanup assertions cannot be masked by the default. */
+  getAttachedNoteUiState: (workspaceId: string, noteId: string) =>
+    attachedNoteUiStateCollection.get(createAttachedNoteUiStateKey(workspaceId, noteId)),
   loadCollection: loadPromptCollectionInitial,
   setOwnerLocation: setPromptLocation,
   deleteCollection: deletePromptCollection,

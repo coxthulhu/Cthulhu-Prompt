@@ -69,6 +69,7 @@ describe('prompt template renderer loading', () => {
       prompts: [],
       categories: [],
       notes: [],
+      attachedNoteUiStates: [],
       promptTemplates: [
         {
           id: 'renderer-template',
@@ -187,6 +188,7 @@ describe('prompt template renderer loading', () => {
       prompts: [],
       categories: [],
       notes: [],
+      attachedNoteUiStates: [],
       promptTemplates: [
         {
           id: 'renderer-template',
