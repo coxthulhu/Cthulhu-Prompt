@@ -28,7 +28,9 @@
     ChevronDown,
     ChevronUp,
     FileText,
+    Folder,
     FolderCog,
+    FolderOpen,
     Layers,
     MoreHorizontal,
     Plus,
@@ -781,7 +783,7 @@
             collectionId={item.id}
             promptId={item.id}
             promptTitle={item.label}
-            icon={item.icon}
+            icon={screenCollection?.id === item.id ? FolderOpen : Folder}
             count={item.count}
             isActive={screenCollection?.id === item.id}
             isDragging={false}
