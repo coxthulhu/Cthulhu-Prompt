@@ -4,6 +4,8 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import Popup from '@renderer/common/cthulhu-ui/dialogs/Popup.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { getWorkspaceFolderName } from './workspaceDisplay'
 
@@ -36,16 +38,19 @@
     </header>
     <Separator />
     <div class="min-w-0 p-4">
-      <div class="rounded-md border border-[var(--ui-neutral-muted-border)] bg-[var(--ui-neutral-normal-surface)] px-[14px] py-[13px]">
-        <div class="mb-1 text-sm text-[var(--ui-secondary-text)]">Current workspace</div>
-        <h3 class="m-0 text-xl leading-7 font-semibold [overflow-wrap:anywhere]" data-testid="workspace-popup-name">{workspaceName}</h3>
-      </div>
-      <div class="pt-4 pb-[18px]">
-        <div class="mb-1 text-sm text-[var(--ui-muted-text)]">Location</div>
-        <p class="m-0 text-sm leading-5 text-[var(--ui-secondary-text)] select-text [overflow-wrap:anywhere]"
-          title={workspacePath ?? undefined} data-testid={workspacePath ? 'workspace-popup-path' : undefined}>
-          {workspacePath ?? 'Open a workspace or create one to get started.'}
-        </p>
+      <div class="grid gap-[17px] pb-[18px]">
+        <TitleSubtitleStack>
+          <Title title="Workspace Name" variant="small" />
+          <p class="m-0 text-sm leading-5 text-[var(--ui-normal-text)] [overflow-wrap:anywhere]"
+            data-testid="workspace-popup-name">{workspaceName}</p>
+        </TitleSubtitleStack>
+        <TitleSubtitleStack>
+          <Title title="Location" variant="small" />
+          <p class="m-0 text-sm leading-5 text-[var(--ui-normal-text)] select-text [overflow-wrap:anywhere]"
+            title={workspacePath ?? undefined} data-testid={workspacePath ? 'workspace-popup-path' : undefined}>
+            {workspacePath ?? 'Open a workspace or create one to get started.'}
+          </p>
+        </TitleSubtitleStack>
       </div>
       <Separator />
       <div class="pt-[14px]">

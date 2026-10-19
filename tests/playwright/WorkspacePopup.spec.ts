@@ -93,12 +93,12 @@ describe('Workspace popup', () => {
       await expect(popup).toBeVisible()
     }
 
-    /** Home retains its larger summary while the popup uses App Updates typography. */
+    /** Home retains its larger summary while the popup uses standard field typography. */
     const homeRow = mainWindow.getByTestId('home-primary-card').locator('.cthulhuUiRow')
     const workspaceName = popup.getByTestId('workspace-popup-name')
     const explorerButton = popup.getByRole('button', { name: 'Open in Explorer', exact: true })
-    await expect(workspaceName).toHaveCSS('font-size', '20px')
-    await expect(workspaceName).toHaveCSS('line-height', '28px')
+    await expect(workspaceName).toHaveCSS('font-size', '14px')
+    await expect(workspaceName).toHaveCSS('line-height', '20px')
     await expect(popup.getByTestId('workspace-popup-path')).toHaveCSS('user-select', 'text')
     await expect(explorerButton).toHaveAttribute('data-variant', 'accent')
     await expect.poll(async () => {
