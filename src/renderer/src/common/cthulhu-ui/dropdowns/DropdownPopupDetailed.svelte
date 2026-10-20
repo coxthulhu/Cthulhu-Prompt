@@ -243,9 +243,8 @@
   }
 
   .cthulhuUiDropdownPopupDetailedItems {
-    display: flex;
+    display: grid;
     flex: 1 1 auto;
-    flex-direction: column;
     gap: 2px;
     max-height: calc((58px * 8) + (2px * 7));
     min-height: 0;
@@ -261,16 +260,7 @@
 
   :global(.cthulhuUiDropdownPopupDetailedItem) {
     border-radius: 8px;
-    flex: 0 0 auto;
     height: 58px;
-  }
-
-  .cthulhuUiDropdownPopupDetailedAnimatedItem {
-    flex: 0 0 auto;
-  }
-
-  :global(.cthulhuUiDropdownPopupDetailedRowDropTarget) {
-    flex: 0 0 auto;
   }
 
   :global(.cthulhuUiDropdownPopupDetailedDragItem .cthulhuUiSelectorButtonLeadingCell) {
