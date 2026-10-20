@@ -6,6 +6,7 @@
 <script lang="ts">
   import PageHeader from '@renderer/common/cthulhu-ui/layout/PageHeader.svelte'
   import { FileText, FolderCog, Layers, Pencil, Trash2 } from 'lucide-svelte'
+  import ButtonBar from '@renderer/common/cthulhu-ui/buttons/ButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import ToolbarButton from '@renderer/common/cthulhu-ui/buttons/ToolbarButton.svelte'
   import ButtonBarSelector from '@renderer/common/cthulhu-ui/selectors/ButtonBarSelector.svelte'
@@ -88,7 +89,7 @@
         onselect={onScreenModeChange}
       />
 
-    <div class="prompt-collection-actions">
+    <ButtonBar class="prompt-collection-actions">
       <ToolbarButton
         class="prompt-collection-categories-button"
         icon={FolderCog}
@@ -111,13 +112,12 @@
         testId="prompt-collection-delete-button"
         onclick={onDeletePromptCollection}
       />
-    </div>
+    </ButtonBar>
   </div>
 </div>
 
 <style>
   .prompt-collection-header-row {
-    box-sizing: border-box;
     display: grid;
     gap: 18px;
     grid-template-rows: 60px 44px;
@@ -144,26 +144,13 @@
     padding-inline: 24px;
   }
 
-  .prompt-collection-actions {
-    align-items: center;
-    background: var(--ui-card-solid-surface);
-    border: 1px solid var(--ui-neutral-muted-border);
-    border-radius: 10px;
-    box-sizing: border-box;
-    display: flex;
-    flex-shrink: 0;
-    gap: 4px;
-    height: 44px;
-    padding: 4px;
-  }
-
-  .prompt-collection-actions :global(.prompt-collection-categories-button) {
+  .prompt-collection-toolbar :global(.prompt-collection-categories-button) {
     gap: 8px;
     height: 34px;
     padding-inline: 12px;
   }
 
-  .prompt-collection-actions :global(.prompt-collection-delete-button) {
+  .prompt-collection-toolbar :global(.prompt-collection-delete-button) {
     height: 34px;
     width: 34px;
   }

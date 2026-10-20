@@ -112,7 +112,6 @@
     --cthulhu-ui-simple-selector-text: var(--ui-hoverable-text);
 
     align-items: stretch;
-    background: transparent;
     border: 1px solid var(--cthulhu-ui-simple-selector-border);
     border-radius: var(--cthulhu-ui-radius-control);
     display: inline-grid;
@@ -163,18 +162,12 @@
 
   .cthulhuUiSimpleSelectorButtonValue {
     align-items: center;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    box-sizing: border-box;
     color: var(--cthulhu-ui-simple-selector-text);
     cursor: pointer;
     display: inline-flex;
-    font-family: inherit;
     font-weight: var(--font-weight-semibold);
     grid-area: 1 / 1;
     height: 34px;
-    padding: 0;
     transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
     width: 100%;
@@ -186,7 +179,6 @@
 
   .cthulhuUiSimpleSelectorButtonValueContent {
     align-items: center;
-    box-sizing: border-box;
     display: inline-flex;
     flex: 1 1 auto;
     gap: 6px;
@@ -194,12 +186,6 @@
     justify-content: center;
     min-width: 0;
     padding-left: 8px;
-  }
-
-  .cthulhuUiSimpleSelectorButtonWidthSizerItem {
-    align-items: center;
-    display: inline-flex;
-    gap: 6px;
   }
 
   .cthulhuUiSimpleSelectorButtonWidthSizer {
@@ -210,6 +196,9 @@
   }
 
   .cthulhuUiSimpleSelectorButtonWidthSizerItem {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
     grid-area: 1 / 1;
     padding-left: 8px;
     padding-right: 32px;

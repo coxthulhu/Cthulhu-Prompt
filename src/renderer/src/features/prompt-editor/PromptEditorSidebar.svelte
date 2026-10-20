@@ -173,7 +173,6 @@
     position: relative;
     background: var(--ui-card-normal-surface);
     border-right: 1px solid var(--ui-neutral-muted-border);
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     flex: 0 0 32px;

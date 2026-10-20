@@ -49,7 +49,6 @@
   .cthulhuUiValuePill[data-variant='todo'],
   .cthulhuUiValuePill[data-variant='in-progress'],
   .cthulhuUiValuePill[data-variant='completed'] {
-    box-sizing: border-box;
     justify-content: center;
     max-width: none;
     padding: 4px;
@@ -70,18 +69,13 @@
     color: var(--ui-warning-icon-glyph);
   }
 
+  .cthulhuUiValuePill[data-variant='todo'] :global(svg),
+  .cthulhuUiValuePill[data-variant='in-progress'] :global(svg),
+  .cthulhuUiValuePill[data-variant='completed'] :global(svg) {
+    flex: 0 0 auto;
+  }
+
   .cthulhuUiValuePill[data-variant='todo'] :global(svg) {
     color: var(--ui-secondary-icon-glyph);
-    flex: 0 0 auto;
-  }
-
-  .cthulhuUiValuePill[data-variant='in-progress'] :global(svg) {
-    color: var(--ui-warning-icon-glyph);
-    flex: 0 0 auto;
-  }
-
-  .cthulhuUiValuePill[data-variant='completed'] :global(svg) {
-    color: var(--ui-success-normal-text);
-    flex: 0 0 auto;
   }
 </style>

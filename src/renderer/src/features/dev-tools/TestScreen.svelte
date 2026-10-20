@@ -1228,7 +1228,6 @@
   }
 
   .test-screen-content {
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -1307,7 +1306,6 @@
 
   .category-icon-candidate p {
     color: var(--ui-muted-text);
-    margin: 0;
   }
 
   .category-icon-sizes {
@@ -1344,7 +1342,6 @@
 
   .component-section-content,
   .sample-card-content {
-    box-sizing: border-box;
     display: grid;
     gap: 12px;
     min-width: 0;
@@ -1353,7 +1350,6 @@
 
   .component-title-description {
     color: var(--ui-muted-text);
-    margin: 0;
     min-width: 0;
   }
 

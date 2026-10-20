@@ -48,9 +48,6 @@
 
 <style>
   .cthulhuUiInlineTextButton {
-    border: 0;
-    background: transparent;
-    padding: var(--cthulhu-ui-inline-text-button-padding, 0);
     color: var(--ui-muted-text);
     font-weight: var(--font-weight-normal);
     text-align: inherit;

@@ -49,7 +49,6 @@
 
 <style>
   .prompt-collection-section-row {
-    box-sizing: border-box;
     min-width: 0;
     position: relative;
   }
@@ -57,12 +56,10 @@
   .prompt-collection-section-middle-layer {
     border-left: 1px solid var(--ui-neutral-normal-border);
     border-right: 1px solid var(--ui-neutral-normal-border);
-    box-sizing: border-box;
     position: absolute;
   }
 
   .prompt-collection-section-row-content {
-    box-sizing: border-box;
     height: 100%;
     margin-left: var(--prompt-collection-section-content-offset);
     margin-right: var(--prompt-collection-section-content-offset);

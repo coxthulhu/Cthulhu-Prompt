@@ -133,7 +133,6 @@
     background: var(--ui-ghost-surface);
     border-radius: var(--cthulhu-ui-radius-control);
     display: inline-flex;
-    gap: 0;
     min-width: 0;
     outline: 1px solid var(--ui-neutral-normal-border);
     overflow: hidden;

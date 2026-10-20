@@ -121,7 +121,6 @@
   .cthulhuUiNumericStepperInput {
     align-items: stretch;
     border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
     color: var(--ui-normal-text);
     grid-template-columns: 40px minmax(80px, auto) 40px;
     min-width: 0;
@@ -150,12 +149,10 @@
   }
 
   .cthulhuUiNumericStepperInputButton {
-    background-color: var(--ui-ghost-surface);
     border: 1px solid var(--ui-neutral-normal-border);
     color: var(--ui-hoverable-icon-glyph);
     height: 100%;
     justify-content: center;
-    padding: 0;
     transition:
       background-color var(--ui-animation-duration-standard) ease,
       color var(--ui-animation-duration-standard) ease;
@@ -201,13 +198,10 @@
   }
 
   .cthulhuUiNumericStepperInputNative {
-    background: var(--ui-ghost-surface);
-    border: 0;
     color: var(--ui-normal-text);
     height: 100%;
     min-width: 2ch;
     outline: none;
-    padding: 0;
     text-align: right;
     width: 3ch;
   }

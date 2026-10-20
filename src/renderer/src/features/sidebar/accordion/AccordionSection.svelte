@@ -168,12 +168,9 @@
   }
 
   .cthulhuUiAccordionSash {
-    background: transparent;
-    border: 0;
     cursor: ns-resize;
     height: 4px;
     left: 0;
-    padding: 0;
     position: absolute;
     right: 0;
     top: 0;
@@ -187,8 +184,6 @@
 
   .cthulhuUiAccordionHeader {
     align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 0;
     border-top: 1px solid var(--ui-neutral-muted-border);
     color: var(--ui-muted-text);
     cursor: pointer;

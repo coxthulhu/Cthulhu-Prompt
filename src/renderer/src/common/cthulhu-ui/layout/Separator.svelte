@@ -33,10 +33,6 @@
 ></div>
 
 <style>
-  .cthulhuUiSeparator {
-    box-sizing: border-box;
-  }
-
   .cthulhuUiSeparator[data-orientation='horizontal'] {
     border-top: 1px solid var(--cthulhu-ui-separator-color, var(--ui-neutral-muted-border));
   }

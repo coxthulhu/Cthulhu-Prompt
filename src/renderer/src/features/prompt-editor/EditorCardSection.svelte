@@ -63,7 +63,6 @@
 
 <style>
   .editor-card-section {
-    box-sizing: border-box;
     display: grid;
     min-width: 0;
   }

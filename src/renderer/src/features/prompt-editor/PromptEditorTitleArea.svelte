@@ -92,7 +92,6 @@
 
 <style>
   .prompt-editor-title-area {
-    box-sizing: border-box;
     display: grid;
     min-width: 0;
     overflow: hidden;

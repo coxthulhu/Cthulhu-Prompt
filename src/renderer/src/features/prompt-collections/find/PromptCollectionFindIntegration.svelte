@@ -743,6 +743,5 @@
     display: flex;
     flex: 1;
     min-height: 0;
-    --prompt-collection-find-widget-top: 36px;
   }
 </style>

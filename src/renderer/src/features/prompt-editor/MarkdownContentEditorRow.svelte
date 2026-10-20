@@ -718,17 +718,8 @@
 </EditorCardSurface>
 
 <style>
-  :global(.editor-card-surface) {
-    transition: opacity var(--ui-animation-duration-fast) ease-out;
-  }
-
-  :global(.editor-card-surface[data-dragging='true']) {
-    opacity: 0.72;
-  }
-
   .prompt-editor-body-editor-section {
     background: var(--ui-editor-content-surface);
-    box-sizing: border-box;
     min-width: 0;
   }
 </style>

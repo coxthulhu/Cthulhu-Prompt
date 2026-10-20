@@ -36,7 +36,6 @@
 <style>
   .cthulhuUiErrorDialogMessage {
     color: var(--ui-normal-text);
-    margin: 0;
     padding-left: 8px;
   }
 </style>

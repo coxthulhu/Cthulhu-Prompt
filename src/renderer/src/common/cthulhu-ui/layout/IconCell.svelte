@@ -56,7 +56,8 @@
     width: 34px;
   }
 
-  .cthulhuUiIconCell[data-variant='title'] {
+  .cthulhuUiIconCell[data-variant='title'],
+  .cthulhuUiIconCell[data-variant='large'] {
     flex-basis: 40px;
     height: 40px;
     width: 40px;
@@ -66,12 +67,6 @@
     flex-basis: 18px;
     height: 18px;
     width: 18px;
-  }
-
-  .cthulhuUiIconCell[data-variant='large'] {
-    flex-basis: 40px;
-    height: 40px;
-    width: 40px;
   }
 
   .cthulhuUiIconCell[data-variant='menu'] {

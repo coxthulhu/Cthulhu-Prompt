@@ -21,7 +21,6 @@
     background-color: var(--ui-neutral-field-surface);
     color: var(--ui-normal-text);
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    margin: 0;
     overflow-x: auto;
     white-space: pre-wrap;
   }

@@ -726,7 +726,7 @@
 
 <aside
   data-testid="app-sidebar"
-  class="appSidebar flex h-full w-full flex-col text-sidebar-foreground/80"
+  class="appSidebar flex h-full w-full flex-col text-foreground/80"
 >
   {#if collectionListState !== 'no-workspace'}
     <div class="shrink-0 pb-1">

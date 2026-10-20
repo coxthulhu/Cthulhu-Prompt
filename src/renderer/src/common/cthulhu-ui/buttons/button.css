@@ -1,7 +1,6 @@
 /* Shared native-button layout and disabled behavior, including disabled anchors. */
 .cthulhuUiButtonBase {
   align-items: center;
-  box-sizing: border-box;
   cursor: pointer;
   display: inline-flex;
   min-width: 0;

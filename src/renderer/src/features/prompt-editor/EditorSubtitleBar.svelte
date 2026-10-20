@@ -47,7 +47,6 @@
 <style>
   .editor-subtitle-bar {
     align-items: center;
-    box-sizing: border-box;
     display: flex;
     gap: 24px;
     justify-content: space-between;

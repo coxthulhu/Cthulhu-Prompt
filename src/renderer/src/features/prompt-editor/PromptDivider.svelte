@@ -159,8 +159,6 @@
 <style>
   .promptDividerMoveIndicator {
     align-items: center;
-    background: transparent;
-    border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-normal-text);
     display: inline-flex;
@@ -183,8 +181,6 @@
 
   .promptDividerSeparatorButton {
     align-items: center;
-    background: transparent;
-    border: 0;
     cursor: pointer;
     display: flex;
     height: 12px;
@@ -220,14 +216,11 @@
 
   .promptDividerActionButton {
     align-items: center;
-    background: transparent;
-    border: 0;
     color: var(--ui-muted-text);
     cursor: pointer;
     display: inline-flex;
     gap: 4px;
     height: 100%;
-    padding: 0;
     transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
   }

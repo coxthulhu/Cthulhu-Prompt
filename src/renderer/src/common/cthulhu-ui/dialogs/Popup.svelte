@@ -163,13 +163,10 @@
     -webkit-app-region: no-drag;
     align-items: center;
     background: var(--ui-ghost-surface);
-    border: 0;
-    box-sizing: border-box;
     color: var(--ui-normal-text);
     height: 100%;
     inset: 0;
     justify-content: center;
-    margin: 0;
     max-height: none;
     max-width: none;
     padding: 16px;

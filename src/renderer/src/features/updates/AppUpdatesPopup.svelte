@@ -76,7 +76,7 @@
           <div class="mt-1 text-sm text-[var(--ui-secondary-text)]" data-testid="update-current-date">{releaseDate(state.currentReleaseDate)}</div>
         </div>
         <ChevronRight size={18} class="shrink-0 text-[var(--ui-muted-icon-glyph)]" />
-        <div class="latestVersion min-w-0 flex-1 rounded-md border px-[13px] py-[9px]" data-available={showUpdate} data-testid="update-latest-card">
+        <div class="latestVersion min-w-0 flex-1 rounded-[var(--cthulhu-ui-radius-card)] border px-[13px] py-[9px]" data-available={showUpdate} data-testid="update-latest-card">
           <div class="mb-1 text-sm text-[var(--ui-secondary-text)]">Latest version</div>
           <div class="text-xl leading-7 font-semibold tabular-nums" data-testid="update-latest-version">{state.latestVersion ?? '—'}</div>
           <div class="mt-1 text-sm text-[var(--ui-secondary-text)]" data-testid="update-latest-date">{releaseDate(state.latestReleaseDate)}</div>

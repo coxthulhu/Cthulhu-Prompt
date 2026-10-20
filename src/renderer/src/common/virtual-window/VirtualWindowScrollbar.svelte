@@ -224,7 +224,6 @@
 
   .virtual-window-scrollbar.visible {
     opacity: 1;
-    background: rgba(0, 0, 0, 0);
     transition: opacity var(--ui-animation-duration-standard) linear;
     z-index: var(--z-chrome);
   }
@@ -243,7 +242,6 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background: transparent;
   }
 
   .virtual-window-scrollbar-thumb {

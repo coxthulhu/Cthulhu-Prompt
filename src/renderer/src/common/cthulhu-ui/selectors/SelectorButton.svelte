@@ -165,12 +165,9 @@
 
 <style>
   .cthulhuUiSelectorButton {
-    background-color: var(--ui-ghost-surface);
-    border: 0;
     border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-hoverable-text);
     display: grid;
-    column-gap: 0;
     grid-template-columns: 34px 8px minmax(0, 1fr) 22px;
     padding: 8px;
     text-align: left;
@@ -333,7 +330,6 @@
   }
 
   .cthulhuUiSelectorButtonText {
-    color: inherit;
     display: block;
     font-weight: var(--font-weight-semibold);
     text-overflow: ellipsis;
@@ -342,7 +338,6 @@
 
   .cthulhuUiSelectorButtonDetail {
     align-items: center;
-    color: inherit;
     display: flex;
     gap: 6px;
   }

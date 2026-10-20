@@ -1008,7 +1008,6 @@
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: 0 0 8px 8px;
     border-top: 0;
-    box-sizing: border-box;
     height: 8px;
     width: 100%;
   }

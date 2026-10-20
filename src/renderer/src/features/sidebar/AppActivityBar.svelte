@@ -131,9 +131,6 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    border: 0;
-    padding: 0;
-    background: var(--ui-ghost-surface);
     color: var(--ui-muted-icon-glyph);
     cursor: pointer;
   }

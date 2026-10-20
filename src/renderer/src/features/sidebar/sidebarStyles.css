@@ -20,11 +20,6 @@
   -webkit-user-select: none;
 }
 
-.sidebarTopLevelInset {
-  padding-left: 5px;
-  padding-right: 3px;
-}
-
 /* Keep shared top-level sidebar sections aligned with compact selector spacing. */
 .sidebarTopLevelInsetWithInnerPadding {
   padding-left: 8px;
@@ -49,37 +44,36 @@
   height: 30px;
   width: 100%;
   align-items: center;
-  gap: 0;
   position: relative;
-  background-color: var(--ui-ghost-surface);
   color: var(--ui-hoverable-text);
   transition:
     background-color var(--ui-animation-duration-fast) ease-out,
     color var(--ui-animation-duration-fast) ease-out;
 }
 
-.sidebarPromptTreeRow[data-row-state='idle']:hover {
+.sidebarPromptTreeRow[data-row-state='idle']:hover,
+.sidebarPromptTreeSettingsButton[data-row-state='idle']:hover {
   background-color: var(--ui-neutral-normal-surface);
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-row-state='active']:hover {
+.sidebarPromptTreeRow[data-row-state='active']:hover,
+.sidebarPromptTreeSettingsButton[data-row-state='active']:hover {
   background-color: var(--ui-neutral-selection-surface);
   color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeRow[data-row-state='active'],
-.sidebarPromptTreeRow[data-row-state='drag-active'] {
+.sidebarPromptTreeRow[data-row-state='drag-active'],
+.sidebarPromptTreeSettingsButton[data-row-state='active'],
+.sidebarPromptTreeSettingsButton[data-row-state='drag-active'] {
   background-color: var(--ui-neutral-emphasis-surface);
   color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-row-state='over'] {
-  background-color: var(--ui-info-normal-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeRow[data-row-state='dragging'] {
+.sidebarPromptTreeRow[data-row-state='over'],
+.sidebarPromptTreeRow[data-row-state='dragging'],
+.sidebarPromptTreeSettingsButton[data-row-state='dragging'] {
   background-color: var(--ui-info-normal-surface);
   color: var(--ui-normal-text);
 }
@@ -95,10 +89,7 @@
   align-items: center;
   gap: 8px;
   grid-template-columns: 24px 18px minmax(0, 1fr);
-  border: 0;
-  background: var(--ui-ghost-surface);
   padding: 0 12px 0 6px;
-  color: inherit;
   text-align: left;
 }
 
@@ -114,7 +105,6 @@
   color: var(--ui-hoverable-icon-glyph);
 }
 
-.sidebarPromptTreeCollectionIcon,
 .sidebarPromptTreeCategoryIcon {
   color: var(--ui-secondary-icon-glyph);
 }
@@ -128,21 +118,6 @@
   font-weight: var(--font-weight-normal);
 }
 
-.sidebarPromptTreeCountBadge {
-  display: inline-flex;
-  height: 22px;
-  min-width: 26px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--cthulhu-ui-radius-card);
-  background-color: var(--ui-ghost-surface);
-  padding: 0 8px;
-  @apply text-xs;
-  font-weight: var(--font-weight-semibold);
-  color: var(--ui-secondary-text);
-}
-
 .sidebarPromptTreeActionSlot {
   display: flex;
   position: relative;
@@ -152,10 +127,6 @@
   flex-shrink: 0;
   margin-left: auto;
   margin-right: 14px;
-  pointer-events: none;
-}
-
-.sidebarPromptTreeCountInActionSlot {
   pointer-events: none;
 }
 
@@ -226,25 +197,6 @@
   background: var(--ui-ghost-surface);
 }
 
-.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeCountInActionSlot,
-.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeCountInActionSlot,
-.sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountInActionSlot {
-  display: none;
-}
-
-.sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeCountBadge,
-.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeCountBadge,
-.sidebarPromptTreeRow:focus-within .sidebarPromptTreeCountBadge {
-  background-color: var(--ui-ghost-surface);
-  color: var(--ui-secondary-text);
-}
-
-.sidebarPromptTreeRow[data-row-state='active'] .sidebarPromptTreeCountBadge,
-.sidebarPromptTreeRow[data-row-state='drag-active'] .sidebarPromptTreeCountBadge {
-  background-color: var(--ui-ghost-surface);
-  color: var(--ui-secondary-text);
-}
-
 .sidebarPromptTreeSettingsRow {
   width: 100%;
   padding-block: 1px;
@@ -275,53 +227,12 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
-  border-radius: 0;
-  background-color: var(--ui-ghost-surface);
   padding: 0 22px 0 0;
   color: var(--ui-hoverable-text);
   text-align: left;
   transition:
     background-color var(--ui-animation-duration-fast) ease-out,
     color var(--ui-animation-duration-fast) ease-out;
-}
-
-.sidebarPromptTreeSettingsButton[data-row-state='idle']:hover {
-  background-color: var(--ui-neutral-normal-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeSettingsButton[data-row-state='active']:hover {
-  background-color: var(--ui-neutral-selection-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeSettingsButton[data-row-state='active'],
-.sidebarPromptTreeSettingsButton[data-row-state='drag-active'] {
-  background-color: var(--ui-neutral-emphasis-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeSettingsButton[data-row-state='dragging'] {
-  background-color: var(--ui-info-normal-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeOverviewButton {
-  display: flex;
-  padding-left: 13px;
-  font-weight: var(--font-weight-semibold);
-}
-
-.sidebarPromptTreeBaseCollectionButton {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 8px;
-  padding: 0 12px 0 9px;
-  font-weight: var(--font-weight-normal);
-}
-
-.sidebarPromptTreeBaseCollectionButton .sidebarPromptTreeCollectionIcon {
-  justify-self: center;
 }
 
 .sidebarPromptTreeSettingsLabel {
@@ -332,7 +243,6 @@
 }
 
 .promptDragGhost {
-  box-sizing: border-box;
   min-width: 120px;
   max-width: 400px;
   width: max-content;

@@ -7,6 +7,7 @@
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import SelectionIndicator from '@renderer/common/cthulhu-ui/forms/SelectionIndicator.svelte'
   import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
   import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
@@ -210,6 +211,12 @@
 
   // Staged selection projected against the templates currently available in the library.
   const normalizedStagedTemplateIds = $derived(normalizeTemplateIds(stagedTemplateIds))
+  // The no-template row is the active choice only while selecting with nothing staged.
+  const isNoTemplateActive = $derived(
+    mode === 'select' &&
+      normalizedStagedTemplateIds.length === 0 &&
+      (!hasArchivedSelection || selectionChanged)
+  )
 
   // Side effect: every dialog opening expands collections and initializes independent staging.
   $effect(() => {
@@ -397,12 +404,8 @@
       <button
         type="button"
         class="prompt-template-no-template-option"
-        data-row-state={mode === 'select' && normalizedStagedTemplateIds.length === 0 && (!hasArchivedSelection || selectionChanged)
-          ? 'active'
-          : 'idle'}
-        aria-pressed={mode === 'select'
-          ? normalizedStagedTemplateIds.length === 0 && (!hasArchivedSelection || selectionChanged)
-          : undefined}
+        data-row-state={isNoTemplateActive ? 'active' : 'idle'}
+        aria-pressed={mode === 'select' ? isNoTemplateActive : undefined}
         data-testid="prompt-template-option-none"
         onclick={handleNoTemplateSelect}
       >
@@ -411,15 +414,11 @@
           <strong class="text-sm font-semibold">{NO_TEMPLATE_LABEL}</strong>
           <small class="text-xs">Use the prompt exactly as written</small>
         </span>
-        <span
+        <SelectionIndicator
+          control={selectionControl}
+          checked={isNoTemplateActive}
           class="prompt-template-no-template-control"
-          data-control={selectionControl}
-          aria-hidden="true"
-        >
-          {#if selectionControl === 'copy'}
-            <Copy size={16} />
-          {/if}
-        </span>
+        />
       </button>
     </div>
 
@@ -526,10 +525,8 @@
 
   .prompt-template-no-template-option {
     align-items: center;
-    background: var(--ui-ghost-surface);
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
-    box-sizing: border-box;
     color: var(--ui-hoverable-text);
     cursor: pointer;
     display: grid;
@@ -578,55 +575,6 @@
     color: var(--ui-muted-text);
   }
 
-  .prompt-template-no-template-control {
-    align-items: center;
-    box-sizing: border-box;
-    display: inline-flex;
-    height: 17px;
-    justify-content: center;
-    width: 17px;
-  }
-
-  .prompt-template-no-template-control[data-control='checkbox'] {
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 4px;
-    color: transparent;
-  }
-
-  .prompt-template-no-template-control[data-control='radio'] {
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 50%;
-  }
-
-  .prompt-template-no-template-control[data-control='radio']::after {
-    background: transparent;
-    border-radius: 50%;
-    content: '';
-    height: 9px;
-    width: 9px;
-  }
-
-  .prompt-template-no-template-option[data-row-state='active']
-    .prompt-template-no-template-control[data-control='radio'] {
-    border-color: var(--ui-accent-normal-border);
-  }
-
-  .prompt-template-no-template-option[data-row-state='active']
-    .prompt-template-no-template-control[data-control='radio']::after {
-    background: var(--ui-normal-text);
-  }
-
-  .prompt-template-no-template-option[data-row-state='active']
-    .prompt-template-no-template-control[data-control='checkbox'] {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-normal-text);
-  }
-
-  .prompt-template-no-template-control[data-control='copy'] {
-    color: var(--ui-secondary-icon-glyph);
-  }
-
   .prompt-template-tree-label {
     align-items: flex-end;
     display: flex;
@@ -653,7 +601,6 @@
     background: var(--ui-card-normal-surface);
     border: 1px solid var(--ui-card-nested-border);
     border-radius: var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card) 0 0;
-    box-sizing: border-box;
     color: var(--ui-normal-text);
     display: flex;
     gap: 9px;
@@ -684,7 +631,6 @@
     background: var(--ui-card-solid-surface);
     border-left: 1px solid var(--ui-card-nested-border);
     border-right: 1px solid var(--ui-card-nested-border);
-    box-sizing: border-box;
     height: 6px;
   }
 
@@ -692,7 +638,6 @@
     background: var(--ui-card-solid-surface);
     border-left: 1px solid var(--ui-card-nested-border);
     border-right: 1px solid var(--ui-card-nested-border);
-    box-sizing: border-box;
     height: 32px;
     padding-inline: 5px;
   }
@@ -702,7 +647,6 @@
     border: 1px solid var(--ui-card-nested-border);
     border-radius: 0 0 var(--cthulhu-ui-radius-card) var(--cthulhu-ui-radius-card);
     border-top: 0;
-    box-sizing: border-box;
     height: 8px;
   }
 </style>

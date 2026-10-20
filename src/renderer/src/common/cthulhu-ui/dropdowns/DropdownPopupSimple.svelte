@@ -84,8 +84,6 @@
     --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
 
     align-items: center;
-    background: var(--ui-ghost-surface);
-    border: 0;
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-text);
     cursor: pointer;

@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
-  import { Check, Copy } from 'lucide-svelte'
   import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import DropTarget from '@renderer/common/drag-drop/DropTarget.svelte'
+  import SelectionIndicator from '@renderer/common/cthulhu-ui/forms/SelectionIndicator.svelte'
+  import PromptStatusIndicator from '@renderer/features/prompt-editor/PromptStatusIndicator.svelte'
   import type { PromptStatus } from '@shared/domain/prompt/Prompt'
   import PromptTreeGutter from './PromptTreeGutter.svelte'
   import { collectionPromptTestId } from './promptTreeTestIds'
@@ -114,24 +115,18 @@
   }
 </script>
 
-{#snippet promptButtonContent()}
+{#snippet promptButtonContent(isSelected: boolean)}
   <PromptTreeGutter indentCount={promptIndentCount} {isLastRow} />
   <span class="prompt-tree-prompt-content">
     {#if Icon}
       <Icon size={16} class="prompt-tree-row-icon" aria-hidden="true" />
     {/if}
     {#if selectionControl}
-      <span
+      <SelectionIndicator
+        control={selectionControl}
+        checked={isSelected}
         class="prompt-tree-selection-control"
-        data-control={selectionControl}
-        aria-hidden="true"
-      >
-        {#if selectionControl === 'checkbox'}
-          <Check size={13} />
-        {:else if selectionControl === 'copy'}
-          <Copy size={16} />
-        {/if}
-      </span>
+      />
     {/if}
     <span class="sidebarPromptTreeSettingsLabel text-sm prompt-tree-prompt-label">{promptTitle}</span>
     {#if count !== undefined}
@@ -142,21 +137,21 @@
 
 {#snippet promptStatusIndicator()}
   <!-- The status accent overlays the row so it does not alter button geometry or interaction. -->
-  <span
+  <PromptStatusIndicator
+    {status}
+    {isEdited}
+    testId="prompt-tree-status-indicator"
     class="prompt-tree-status-indicator"
-    data-status={status}
-    data-edited={isEdited ? 'true' : 'false'}
-    data-testid="prompt-tree-status-indicator"
-    aria-hidden="true"
-  ></span>
+  />
 {/snippet}
 
 {#snippet promptButton(isOver: boolean, isBlocked: boolean)}
+  {@const buttonRowState = isOver && Icon ? isBlocked ? 'blocked-over' : 'over' : rowState}
   <button
     use:optionalDraggable={promptDragOptions}
     type="button"
     data-testid={testId ?? collectionPromptTestId(promptId, testIdGroup)}
-    data-row-state={isOver && Icon ? isBlocked ? 'blocked-over' : 'over' : rowState}
+    data-row-state={buttonRowState}
     data-selection-control={selectionControl}
     data-collection-row={Icon ? 'true' : undefined}
     title={Icon ? promptTitle : undefined}
@@ -165,7 +160,7 @@
     onclick={handlePromptSelect}
     class="sidebarPromptTreeSettingsButton"
   >
-    {@render promptButtonContent()}
+    {@render promptButtonContent(buttonRowState === 'active')}
   </button>
 {/snippet}
 
@@ -214,41 +209,14 @@
     color: var(--ui-secondary-text);
   }
 
-  .prompt-tree-status-indicator {
-    --prompt-status-indicator-color: transparent;
-    background: var(--prompt-status-indicator-color);
+  :global(.prompt-tree-status-indicator) {
     bottom: 0;
     left: 0;
     pointer-events: none;
     position: absolute;
     top: 0;
-    visibility: hidden;
     width: 2px;
     z-index: var(--z-raised);
-  }
-
-  .prompt-tree-status-indicator[data-edited='true'] {
-    --prompt-status-indicator-color: var(--ui-info-strong-border);
-    color: var(--prompt-status-indicator-color);
-    visibility: visible;
-  }
-
-  .prompt-tree-status-indicator[data-status='InProgress'] {
-    --prompt-status-indicator-color: var(--ui-warning-icon-glyph);
-    color: var(--prompt-status-indicator-color);
-    visibility: visible;
-  }
-
-  .prompt-tree-status-indicator[data-status='Completed'] {
-    --prompt-status-indicator-color: var(--ui-success-normal-text);
-    color: var(--prompt-status-indicator-color);
-    visibility: visible;
-  }
-
-  .prompt-tree-status-indicator[data-status='Archived'] {
-    --prompt-status-indicator-color: var(--ui-secondary-icon-glyph);
-    color: var(--prompt-status-indicator-color);
-    visibility: visible;
   }
 
   .sidebarPromptTreeSettingsButton[data-selection-control] {
@@ -263,60 +231,6 @@
 
   .sidebarPromptTreeSettingsButton[data-selection-control][data-row-state='active']:hover {
     background: var(--ui-accent-action-hover-fill);
-  }
-
-  .prompt-tree-selection-control {
-    align-items: center;
-    box-sizing: border-box;
-    display: inline-flex;
-    flex: 0 0 auto;
-    height: 17px;
-    justify-content: center;
-    width: 17px;
-  }
-
-  .prompt-tree-selection-control[data-control='checkbox'] {
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 4px;
-    color: transparent;
-    transition:
-      background-color var(--ui-animation-duration-fast) ease-out,
-      border-color var(--ui-animation-duration-fast) ease-out,
-      color var(--ui-animation-duration-fast) ease-out;
-  }
-
-  .prompt-tree-selection-control[data-control='radio'] {
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 50%;
-  }
-
-  .prompt-tree-selection-control[data-control='radio']::after {
-    background: transparent;
-    border-radius: 50%;
-    content: '';
-    height: 9px;
-    width: 9px;
-  }
-
-  .sidebarPromptTreeSettingsButton[data-row-state='active']
-    .prompt-tree-selection-control[data-control='radio'] {
-    border-color: var(--ui-accent-normal-border);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-row-state='active']
-    .prompt-tree-selection-control[data-control='radio']::after {
-    background: var(--ui-normal-text);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-row-state='active']
-    .prompt-tree-selection-control[data-control='checkbox'] {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-normal-border);
-    color: var(--ui-normal-text);
-  }
-
-  .prompt-tree-selection-control[data-control='copy'] {
-    color: var(--ui-secondary-icon-glyph);
   }
 
   .prompt-tree-prompt-label {

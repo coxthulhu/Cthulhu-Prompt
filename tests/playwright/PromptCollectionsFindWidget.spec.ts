@@ -1076,7 +1076,7 @@ describe('Prompt collection find dialog', () => {
     await expect(matches).toHaveCount(2)
     await expect(matches.nth(0)).toHaveAttribute('data-current', 'true')
     await expect(matches.nth(0)).toHaveCSS('background-color', 'oklch(0.8 0.15 80 / 0.3)')
-    await expect(matches.nth(0)).toHaveCSS('border-top-style', 'none')
+    await expect(matches.nth(0)).toHaveCSS('border-top-width', '0px')
     await expect(matches.nth(1)).toHaveCSS('background-color', 'oklch(0.485004 0.0772893 229.387 / 0.5)')
     await expect(findInput).toBeFocused()
     await expect(title).not.toBeFocused()

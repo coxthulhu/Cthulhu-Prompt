@@ -58,6 +58,7 @@
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
+  import PromptStatusIndicator from './PromptStatusIndicator.svelte'
   import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
   import { isPromptStatus, PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
@@ -327,13 +328,12 @@
 
 <div class="prompt-editor-title-row" data-layout={compactLayout ? 'compact' : 'default'}>
   <!-- Reserve the indicator column so Todo titles stay aligned with other statuses. -->
-  <span
+  <PromptStatusIndicator
+    {status}
+    {isEdited}
+    testId="prompt-title-status-indicator"
     class="prompt-editor-title-status-indicator"
-    data-status={status}
-    data-edited={isEdited ? 'true' : 'false'}
-    data-testid="prompt-title-status-indicator"
-    aria-hidden="true"
-  ></span>
+  />
 
   <div class="prompt-editor-title-main">
     <IconCell {icon} variant="title" />
@@ -488,11 +488,7 @@
 <style>
   .prompt-editor-title-row {
     align-items: center;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
     display: grid;
-    gap: 0;
     grid-template-columns: 2px minmax(0, 1fr) auto;
     height: 100%;
     min-width: 0;
@@ -503,35 +499,12 @@
     grid-template-rows: 56px 53px;
   }
 
-  .prompt-editor-title-status-indicator {
-    --prompt-status-indicator-color: transparent;
+  .prompt-editor-title-row :global(.prompt-editor-title-status-indicator) {
     align-self: stretch;
-    background: var(--prompt-status-indicator-color);
-    visibility: hidden;
   }
 
-  .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-status-indicator {
+  .prompt-editor-title-row[data-layout='compact'] :global(.prompt-editor-title-status-indicator) {
     grid-row: 1 / -1;
-  }
-
-  .prompt-editor-title-status-indicator[data-edited='true'] {
-    --prompt-status-indicator-color: var(--ui-info-strong-border);
-    visibility: visible;
-  }
-
-  .prompt-editor-title-status-indicator[data-status='InProgress'] {
-    --prompt-status-indicator-color: var(--ui-warning-icon-glyph);
-    visibility: visible;
-  }
-
-  .prompt-editor-title-status-indicator[data-status='Completed'] {
-    --prompt-status-indicator-color: var(--ui-success-normal-text);
-    visibility: visible;
-  }
-
-  .prompt-editor-title-status-indicator[data-status='Archived'] {
-    --prompt-status-indicator-color: var(--ui-secondary-icon-glyph);
-    visibility: visible;
   }
 
   .prompt-editor-title-main {
@@ -551,7 +524,6 @@
   .prompt-editor-title-actions {
     align-items: center;
     align-self: stretch;
-    box-sizing: border-box;
     display: flex;
     gap: 12px;
     min-width: 0;
@@ -560,7 +532,6 @@
 
   .prompt-editor-title-row[data-layout='compact'] .prompt-editor-title-actions {
     border-top: 1px solid var(--ui-neutral-normal-border);
-    box-sizing: border-box;
     grid-column: 2;
     grid-row: 2;
     justify-content: space-between;
@@ -593,15 +564,11 @@
 
   .prompt-editor-title-input,
   .prompt-editor-title-text {
-    background: transparent;
-    border: 0;
     color: var(--ui-normal-text);
-    font-family: inherit;
     font-weight: var(--font-weight-semibold);
     height: 20px;
     min-width: 0;
     outline: none;
-    padding: 0;
     width: 100%;
   }
 
@@ -633,15 +600,10 @@
 
   .prompt-editor-title-match {
     background-color: var(--ui-search-match-fill);
-    border: none;
   }
 
   .prompt-editor-title-match[data-current='true'] {
     background-color: var(--ui-search-current-fill);
-  }
-
-  .prompt-editor-title-text {
-    margin: 0;
   }
 
   .prompt-editor-title-input::placeholder {

@@ -94,7 +94,6 @@
             </div>
           </div>
         </div>
-        <div class="prompt-find-input__controls"></div>
       </div>
       <div class="prompt-find-widget__actions">
         <div class="prompt-find-widget__matches">{matchesLabel}</div>
@@ -163,7 +162,7 @@
     --prompt-find-error-foreground: #f48771;
     position: absolute;
     /* Keep the widget below the prompt-collection header row. */
-    top: var(--prompt-collection-find-widget-top, 36px);
+    top: 36px;
     right: 18px;
     width: 400px;
     z-index: var(--z-chrome);
@@ -175,11 +174,8 @@
     height: 33px;
     overflow: hidden;
     padding: 0 4px;
-    box-sizing: border-box;
     display: flex;
     align-items: flex-start;
-    transition: none;
-    transform: translateY(0);
     box-shadow: 0 0 8px 2px var(--prompt-find-widget-shadow);
     color: var(--prompt-find-widget-foreground);
     border-left: 1px solid var(--prompt-find-widget-border);
@@ -201,7 +197,6 @@
   .prompt-find-input {
     display: flex;
     flex: 1;
-    vertical-align: middle;
   }
 
   .prompt-find-input__scroll {
@@ -213,8 +208,6 @@
   .prompt-find-input__box {
     position: relative;
     display: block;
-    padding: 0;
-    box-sizing: border-box;
     border-radius: 2px;
     min-height: 25px;
     background-color: var(--prompt-find-input-background);
@@ -235,21 +228,14 @@
 
   .prompt-find-input__field,
   .prompt-find-input__mirror {
-    padding: 4px 6px;
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding: 2px 6px;
   }
 
   .prompt-find-input__field {
     display: block;
-    box-sizing: border-box;
     width: 100%;
     height: 100%;
-    border: none;
-    font-family: inherit;
     resize: none;
-    color: inherit;
-    background-color: transparent;
     min-height: 0;
     outline: none;
     scrollbar-width: none;
@@ -269,14 +255,9 @@
     width: 100%;
     top: 0;
     left: 0;
-    box-sizing: border-box;
     white-space: pre-wrap;
     visibility: hidden;
     word-wrap: break-word;
-  }
-
-  .prompt-find-input__controls {
-    display: none;
   }
 
   .prompt-find-widget__actions {
@@ -292,8 +273,6 @@
     padding: 2px 0 0 2px;
     min-width: 69px;
     height: 25px;
-    vertical-align: middle;
-    box-sizing: border-box;
     text-align: center;
   }
 
@@ -305,8 +284,6 @@
     display: flex;
     flex: initial;
     margin-left: 3px;
-    background-position: center center;
-    background-repeat: no-repeat;
     cursor: pointer;
     align-items: center;
     justify-content: center;

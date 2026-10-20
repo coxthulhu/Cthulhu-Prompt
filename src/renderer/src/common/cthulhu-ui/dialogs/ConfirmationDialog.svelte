@@ -97,7 +97,6 @@
 
   .cthulhuUiConfirmationDialogMessage {
     color: var(--ui-normal-text);
-    margin: 0;
     min-width: 0;
   }
 
@@ -124,7 +123,6 @@
     inset: 0;
     width: 17px;
     height: 17px;
-    margin: 0;
     opacity: 0;
     cursor: pointer;
   }
@@ -133,7 +131,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    box-sizing: border-box;
     width: 17px;
     height: 17px;
     border: 1px solid var(--ui-neutral-normal-border);

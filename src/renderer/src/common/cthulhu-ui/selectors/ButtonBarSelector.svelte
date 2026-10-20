@@ -1,5 +1,6 @@
 <script lang="ts" generics="T extends string">
   import '@renderer/common/cthulhu-ui/buttons/button.css'
+  import ButtonBar from '@renderer/common/cthulhu-ui/buttons/ButtonBar.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Item = {
@@ -23,7 +24,7 @@
   let { label, items, selectedId, disabled = false, class: className, testId, onselect }: Props = $props()
 </script>
 
-<div
+<ButtonBar
   class={mergeClasses('cthulhuUiButtonBarSelector', className)}
   role="group"
   aria-label={label}
@@ -46,26 +47,12 @@
       </span>
     </button>
   {/each}
-</div>
+</ButtonBar>
 
 <style>
-  .cthulhuUiButtonBarSelector {
-    align-items: center;
-    background: var(--ui-card-solid-surface);
-    border: 1px solid var(--ui-neutral-muted-border);
-    border-radius: 10px;
-    box-sizing: border-box;
-    display: flex;
-    flex-shrink: 0;
-    gap: 4px;
-    height: 44px;
-    padding: 4px;
-  }
-
   .cthulhuUiButtonBarSelectorButton {
     border-radius: 6px;
     display: flex;
-    font-family: inherit;
     flex: 0 1 auto;
     height: 34px;
     padding: 0 11px;

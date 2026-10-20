@@ -168,10 +168,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    color: inherit;
-    border: none;
-    padding: 0;
     -webkit-app-region: no-drag;
     cursor: default;
   }

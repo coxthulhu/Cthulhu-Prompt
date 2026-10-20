@@ -62,9 +62,6 @@
     width: 100%;
     flex: none;
     justify-content: center;
-    border: 0;
-    border-radius: 0;
-    background: var(--ui-ghost-surface);
     color: var(--ui-muted-icon-glyph);
     transition: color var(--ui-animation-duration-standard) ease-out;
   }

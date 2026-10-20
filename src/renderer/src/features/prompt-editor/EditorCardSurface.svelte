@@ -42,11 +42,15 @@
     align-items: stretch;
     border: 1px solid var(--ui-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-card);
-    box-sizing: border-box;
     display: grid;
     min-width: 0;
     overflow: hidden;
+    transition: opacity var(--ui-animation-duration-fast) ease-out;
     width: 100%;
+  }
+
+  :global(.editor-card-surface[data-dragging='true']) {
+    opacity: 0.72;
   }
 
   :global(.editor-card-surface[data-layout='sidebar']) {

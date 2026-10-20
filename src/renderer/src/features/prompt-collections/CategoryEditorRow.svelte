@@ -156,7 +156,6 @@
 
 <style>
   .category-editor-row {
-    box-sizing: border-box;
     min-width: 0;
   }
 
@@ -168,10 +167,6 @@
 
   .category-editor-title-bar {
     align-items: center;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    box-sizing: border-box;
     display: grid;
     gap: 12px;
     grid-template-columns: minmax(0, 1fr) auto;
