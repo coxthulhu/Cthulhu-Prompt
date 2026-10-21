@@ -151,6 +151,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
       templateCollectionEntries: []
     }
@@ -179,6 +181,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: sibling.id }],
       templateCollectionEntries: []
     }
@@ -211,6 +215,8 @@ describe('shared domain mutation planners', () => {
     /** Workspace containing both roots for the reorder plan. */
     const populatedWorkspace = {
       ...workspace,
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [
         { kind: 'collection' as const, id: sibling.id },
         { kind: 'collection' as const, id: 'created' }
@@ -292,6 +298,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
       templateCollectionEntries: []
     }
@@ -361,6 +369,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
       templateCollectionEntries: []
     }
@@ -484,6 +494,8 @@ describe('shared domain mutation planners', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
       templateCollectionEntries: []
     }

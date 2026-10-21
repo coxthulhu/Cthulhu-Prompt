@@ -2,6 +2,7 @@ import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload
 } from '@shared/domain/workspace/Workspace'
+import { planSetCollectionFavorite, planMoveCollectionFavorite } from '@shared/domain/workspace/CollectionFavoritesDomainMutations'
 import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
 import {
   planDeletePromptCollectionDomainMutation,
@@ -20,6 +21,22 @@ import { promptCollectionClientStateCollection } from '@renderer/data/Collection
 import { clearWorkspaceData } from '@renderer/data/UiState/workspace/clearWorkspaceData'
 import { submitAllPacedUpdateTransactionsAndWait } from '@renderer/data/IpcFramework/RevisionCollections'
 import { waitForRevisionMutations } from '@renderer/data/IpcFramework/RevisionMutation'
+
+/** Saves favorite membership through the shared optimistic workspace mutation flow. */
+export const setCollectionFavorite = async (workspaceId: string, promptCollectionId: string, favorite: boolean): Promise<void> => {
+  await runImmediateRendererDomainMutation({
+    mutation: { command: { workspaceId, promptCollectionId, favorite }, plan: planSetCollectionFavorite },
+    ipc: { channel: 'set-collection-favorite' }, renderer: {}
+  })
+}
+
+/** Persists a favorite's position independently from All Collections. */
+export const moveCollectionFavorite = async (workspaceId: string, promptCollectionId: string, previousEntryId: string | null): Promise<void> => {
+  await runImmediateRendererDomainMutation({
+    mutation: { command: { workspaceId, promptCollectionId, previousEntryId }, plan: planMoveCollectionFavorite },
+    ipc: { channel: 'move-collection-favorite' }, renderer: {}
+  })
+}
 
 /** Creates a workspace through the command-style IPC endpoint. */
 export const createWorkspace = async (

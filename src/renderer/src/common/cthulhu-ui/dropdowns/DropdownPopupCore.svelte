@@ -243,7 +243,10 @@
       bindings: [
         { matches: (event) => event.key === 'Escape', run: closeMenu },
         {
-          matches: (event) => scrollKeys.has(event.key),
+          // Space activates a focused menu button; other scroll keys still lock the background.
+          matches: (event) => scrollKeys.has(event.key) && !(
+            event.key === ' ' && event.target instanceof HTMLButtonElement && menuLayerRef?.contains(event.target)
+          ),
           // The router consumes scroll keys to preserve the existing background scroll lock.
           run: null
         }

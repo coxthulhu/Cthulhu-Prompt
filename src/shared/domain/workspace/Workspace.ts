@@ -15,6 +15,8 @@ export interface WorkspaceCollections {
 }
 
 export interface Workspace extends WorkspaceCollections {
+  /** User-owned favorite order, independent for task and template collections. */
+  favoriteCollectionIds: Record<PromptCollectionKind, string[]>
   workspacePath: string
   workspaceName: string
 }

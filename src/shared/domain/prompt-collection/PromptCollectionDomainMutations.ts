@@ -322,6 +322,8 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
             command.promptCollectionId
           )
         )
+        draft.favoriteCollectionIds[promptCollection.kind] = draft.favoriteCollectionIds[promptCollection.kind]
+          .filter((id) => id !== command.promptCollectionId)
       }
     },
     ...getCollectionNoteIds(state, promptCollection).flatMap((id): DomainChange[] => [

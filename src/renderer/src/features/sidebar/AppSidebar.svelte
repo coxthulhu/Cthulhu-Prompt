@@ -34,6 +34,7 @@
     Layers,
     MoreHorizontal,
     Plus,
+    Star,
     Trash2
   } from 'lucide-svelte'
   import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
@@ -42,7 +43,7 @@
   import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import { movePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
+  import { movePromptCollection, moveCollectionFavorite, setCollectionFavorite } from '@renderer/data/Mutations/WorkspaceMutations'
   import {
     PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
   } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
@@ -218,6 +219,10 @@
     testId: 'sidebar-prompt-collection-dropdown-add-item'
   })
   let draggedPromptCollectionSelectorId = $state<string | null>(null)
+  /** Only the section where collection dragging began can preview or save a reorder. */
+  let draggedCollectionSection = $state('all')
+  /** Committed favorites determine sidebar priority independently of drag previews. */
+  const favoriteCollectionIds = $derived(selectedWorkspace?.favoriteCollectionIds[collectionKind] ?? [])
   // Local preview order lets the dropdown reorder live without persisting until drop.
   let promptCollectionSelectorDragSourceIds = $state<string[] | null>(null)
   let promptCollectionSelectorPreviewIds = $state<string[] | null>(null)
@@ -241,7 +246,7 @@
   }
 
   const promptCollectionDropdownCollections = $derived.by((): PromptCollection[] => {
-    if (!promptCollectionSelectorPreviewIds) {
+    if (!promptCollectionSelectorPreviewIds || draggedCollectionSection !== 'all') {
       return promptCollections
     }
 
@@ -307,6 +312,18 @@
       }
     })
   })
+  /** Favorites reuse collection metadata while retaining a separate keyed row and order. */
+  const favoriteDropdownItems = $derived(
+    (draggedCollectionSection === 'favorites' && promptCollectionSelectorPreviewIds
+      ? promptCollectionSelectorPreviewIds : favoriteCollectionIds)
+      .map((id) => promptCollectionDropdownItems.find((item) => item.id === id)!)
+      .map((item) => ({ ...item, testId: `sidebar-favorite-collection-dropdown-item-${item.id}` }))
+  )
+  /** Both sections remain visible, including guidance before the first favorite is added. */
+  const collectionDropdownSections = $derived([
+    { id: 'favorites', label: 'Favorites', items: favoriteDropdownItems, emptyText: 'Star a collection to pin it here.' },
+    { id: 'all', label: 'All Collections', items: promptCollectionDropdownItems }
+  ])
   const screenCollectionDropdownItem = $derived.by((): DropdownPopupDetailedItem => {
     if (promptCollectionDropdownItems.length === 0) {
       return promptCollectionSelectorPlaceholder
@@ -329,8 +346,11 @@
   })
   /** Quick picks follow committed order and retain a selected collection outside the first three. */
   const quickCollectionItems = $derived.by(() => {
-    /** Baseline follows workspace order, independently of a dropdown drag preview. */
-    const collections = promptCollections.slice(0, 3)
+    /** Favorites lead, then the complete order supplies nonfavorite entries without duplicates. */
+    const collections = [
+      ...favoriteCollectionIds.map((id) => promptCollections.find((collection) => collection.id === id)!),
+      ...promptCollections.filter((collection) => !favoriteCollectionIds.includes(collection.id))
+    ].slice(0, 3)
     if (screenCollection && !collections.some((collection) => collection.id === screenCollection.id)) {
       collections.splice(0, collections.length, screenCollection, ...collections.slice(0, 2))
     }
@@ -509,6 +529,13 @@
     )
   }
 
+  /** Toggling either copy updates the shared favorite preference without selecting the row. */
+  const toggleCollectionFavorite = (collectionId: string): void => {
+    void runIpcBestEffort(() => setCollectionFavorite(
+      workspaceSelection.selectedWorkspaceId!, collectionId, !favoriteCollectionIds.includes(collectionId)
+    ))
+  }
+
   const reorderPromptCollectionIds = (
     collectionIds: string[],
     draggedCollectionId: string,
@@ -545,6 +572,7 @@
   }
 
   const getPromptCollectionSelectorTargetIndex = (
+    clientX: number,
     clientY: number,
     itemCount: number
   ): number | null => {
@@ -553,9 +581,13 @@
       return null
     }
 
-    const rect = itemsElement.getBoundingClientRect()
-    const contentY = clientY - rect.top + itemsElement.scrollTop
-    const rowPitch = itemsElement.scrollHeight / itemCount
+    /** Hit testing rejects headers, the footer, and the other section even after a valid preview. */
+    const section = itemsElement.querySelector<HTMLElement>(`[data-dropdown-section="${draggedCollectionSection}"]`)
+    if (!section || !document.elementsFromPoint(clientX, clientY).some((element) => element === section || section.contains(element))) return null
+    /** Section geometry excludes headings and uses the current scroll position. */
+    const rect = section.getBoundingClientRect()
+    const contentY = clientY - rect.top
+    const rowPitch = (section.scrollHeight + 2) / itemCount
     const rawIndex = Math.round(contentY / rowPitch - 0.5)
 
     return Math.max(0, Math.min(rawIndex, itemCount - 1))
@@ -573,8 +605,9 @@
 
     const currentPreviewIds =
       promptCollectionSelectorPreviewIds ?? promptCollections.map((promptCollection) => promptCollection.id)
-    const targetIndex = getPromptCollectionSelectorTargetIndex(clientY, currentPreviewIds.length)
+    const targetIndex = getPromptCollectionSelectorTargetIndex(clientX, clientY, currentPreviewIds.length)
     if (targetIndex === null) {
+      resetPromptCollectionSelectorPreview()
       return
     }
 
@@ -599,22 +632,26 @@
     }
 
     const previousEntryId = getPromptCollectionPreviousEntryId(previewIds, draggedCollectionId)
+    /** Capture the originating section before drag cleanup resets component state. */
+    const moveCollection = draggedCollectionSection === 'favorites' ? moveCollectionFavorite : movePromptCollection
     void runIpcBestEffort(async () => {
-      await movePromptCollection(workspaceId, draggedCollectionId, previousEntryId)
+      await moveCollection(workspaceId, draggedCollectionId, previousEntryId)
     })
   }
 
   const getPromptCollectionSelectorDraggableOptions = (
-    item: DropdownPopupDetailedItem
+    item: DropdownPopupDetailedItem,
+    sectionId: string
   ): DraggableOptions<unknown, unknown> => ({
     dragType: PROMPT_COLLECTION_SELECTOR_DRAG_TYPE,
     payload: {
       collectionId: item.id
     },
     onDragStart: (payload) => {
-      const collectionIds = promptCollections.map((promptCollection) => promptCollection.id)
+      const collectionIds = sectionId === 'favorites' ? [...favoriteCollectionIds] : promptCollections.map((promptCollection) => promptCollection.id)
       const draggedCollectionId = (payload as PromptCollectionDragPayload).collectionId
       draggedPromptCollectionSelectorId = draggedCollectionId
+      draggedCollectionSection = sectionId
       promptCollectionSelectorDragSourceIds = collectionIds
       promptCollectionSelectorPreviewIds = collectionIds
     },
@@ -671,7 +708,7 @@
   /** Shares collection transfer rules while keeping quick-row and dropdown indicators independent. */
   const getCollectionPromptDroppableOptions = (
     collectionId: string,
-    target: 'quick' | 'dropdown'
+    target: string
   ): DroppableOptions<unknown, PromptHandleDropPayload> => ({
     dragType: PROMPT_HANDLE_DRAG_TYPE,
     allowedEdges: 'none',
@@ -712,11 +749,12 @@
 
   const promptCollectionSelectorItemDragOptions = {
     getDraggableOptions: getPromptCollectionSelectorDraggableOptions,
-    getRowDroppableOptions: (item: DropdownPopupDetailedItem) =>
-      getCollectionPromptDroppableOptions(item.id, 'dropdown'),
-    getDragHandleTestId: (item: DropdownPopupDetailedItem) =>
-      `sidebar-prompt-collection-dropdown-drag-handle-${item.id}`,
-    isDragging: (item: DropdownPopupDetailedItem) => draggedPromptCollectionSelectorId === item.id,
+    getRowDroppableOptions: (item: DropdownPopupDetailedItem, sectionId: string) =>
+      getCollectionPromptDroppableOptions(item.id, `dropdown:${sectionId}`),
+    getDragHandleTestId: (item: DropdownPopupDetailedItem, sectionId: string) =>
+      `sidebar-${sectionId === 'favorites' ? 'favorite' : 'prompt'}-collection-dropdown-drag-handle-${item.id}`,
+    isDragging: (item: DropdownPopupDetailedItem, sectionId: string) =>
+      draggedPromptCollectionSelectorId === item.id && draggedCollectionSection === sectionId,
     isDraggingAny: () => draggedPromptCollectionSelectorId !== null,
     onItemsElementChange: (element: HTMLElement | null) => {
       promptCollectionSelectorItemsElement = element
@@ -738,6 +776,7 @@
           label="Collection selector"
           menuWidth="360px"
           items={promptCollectionDropdownItems}
+          sections={collectionDropdownSections}
           selectedItem={screenCollectionDropdownItem}
           footerItem={promptCollectionSelectorFooterItem}
           itemDragOptions={promptCollectionSelectorItemDragOptions}
@@ -747,6 +786,20 @@
           testId="sidebar-prompt-collection-selector-menu"
           onselect={handlePromptCollectionDropdownSelect}
         >
+          {#snippet rowAccessory(item, sectionId)}
+            <button
+              type="button"
+              class="sidebarCollectionFavorite"
+              role="menuitemcheckbox"
+              aria-checked={favoriteCollectionIds.includes(item.id)}
+              aria-label={`${favoriteCollectionIds.includes(item.id) ? 'Remove' : 'Add'} ${item.label} ${favoriteCollectionIds.includes(item.id) ? 'from' : 'to'} favorites`}
+              title={favoriteCollectionIds.includes(item.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+              data-testid={`sidebar-collection-favorite-${sectionId}-${item.id}`}
+              onclick={() => toggleCollectionFavorite(item.id)}
+            >
+              <Star size={16} fill={favoriteCollectionIds.includes(item.id) ? 'currentColor' : 'none'} aria-hidden="true" />
+            </button>
+          {/snippet}
           {#snippet trigger(dropdown)}
             <Button
               buttonAction={dropdown.triggerAction}
@@ -950,6 +1003,28 @@
 />
 
 <style>
+  .sidebarCollectionFavorite {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 30px;
+    padding: 0;
+    background: var(--ui-ghost-surface);
+    border: 0;
+    border-radius: 8px;
+    color: var(--ui-muted-icon-glyph);
+    cursor: pointer;
+  }
+
+  .sidebarCollectionFavorite:hover,
+  .sidebarCollectionFavorite:focus-visible {
+    color: var(--ui-normal-text);
+  }
+
+  .sidebarCollectionFavorite[aria-checked='true'] {
+    color: var(--ui-favorite-icon-glyph);
+  }
+
   .sidebarCollectionHeader {
     display: flex;
     align-items: center;

@@ -395,6 +395,8 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: 'root' }],
       templateCollectionEntries: []
     }
@@ -480,6 +482,8 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: 'root' }],
       templateCollectionEntries: []
     }
@@ -620,6 +624,8 @@ describe('atomic data transaction', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [],
       templateCollectionEntries: [{ kind: 'collection' as const, id: 'templates' }]
     }

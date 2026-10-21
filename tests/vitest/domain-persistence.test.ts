@@ -173,6 +173,8 @@ describe('domain persistence planning', () => {
         id: 'workspace',
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
+        /** Existing fixtures start without user favorites. */
+        favoriteCollectionIds: { prompt: [], template: [] },
         promptCollectionEntries:
           kind === 'prompt' ? [{ kind: 'collection' as const, id: root.id }] : [],
         templateCollectionEntries:
@@ -413,6 +415,8 @@ describe('domain persistence planning', () => {
       id: 'workspace',
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
+      /** Existing fixtures start without user favorites. */
+      favoriteCollectionIds: { prompt: [], template: [] },
       promptCollectionEntries: [{ kind: 'collection' as const, id: root.id }],
       templateCollectionEntries: []
     }

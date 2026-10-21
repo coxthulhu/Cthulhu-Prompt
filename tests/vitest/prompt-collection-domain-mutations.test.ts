@@ -60,6 +60,8 @@ describe('prompt-collection domain mutations', () => {
         id: WORKSPACE_ID,
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
+        /** Existing fixtures start without user favorites. */
+        favoriteCollectionIds: { prompt: [], template: [] },
         promptCollectionEntries: [
           { kind: 'collection', id: EXISTING_ROOT_ID },
           { kind: 'collection', id: SECOND_ROOT_ID }

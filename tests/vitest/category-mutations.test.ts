@@ -106,6 +106,8 @@ describe('category mutations', () => {
         id: WORKSPACE_ID,
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
+        /** Existing fixtures start without user favorites. */
+        favoriteCollectionIds: { prompt: [], template: [] },
         promptCollectionEntries: [{ kind: 'collection', id: ROOT_COLLECTION_ID }],
         templateCollectionEntries: []
       }

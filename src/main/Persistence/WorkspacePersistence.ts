@@ -26,6 +26,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     for (const kind of ['prompt', 'template'] as const) {
       if (!transition.after) {
         WorkspaceStateDataAccess.delete(workspaceId, `${kind}-collection-order`, null)
+        WorkspaceStateDataAccess.delete(workspaceId, `${kind}-collection-favorites`, null)
         continue
       }
       /** The workspace owns independent orders for each collection kind. */
@@ -33,6 +34,9 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
         ? transition.after.data.promptCollectionEntries
         : transition.after.data.templateCollectionEntries
       WorkspaceStateDataAccess.write(workspaceId, `${kind}-collection-order`, null, { entries })
+      WorkspaceStateDataAccess.write(workspaceId, `${kind}-collection-favorites`, null, {
+        ids: transition.after.data.favoriteCollectionIds[kind]
+      })
     }
   },
   stageChanges: async (transition) => {
@@ -72,12 +76,30 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     const workspaceInfo = readWorkspaceInfo(workspaceInfoPath)
 
     // Initialize or repair both orders together before publishing the workspace snapshot.
-    return SqliteDataAccess.runTransaction(() => ({
-      id: workspaceInfo.workspaceId,
-      workspacePath,
-      workspaceName: workspaceInfo.workspaceName,
-      promptCollectionEntries: readWorkspaceCollectionEntries(workspacePath, workspaceInfo.workspaceId, 'prompt'),
-      templateCollectionEntries: readWorkspaceCollectionEntries(workspacePath, workspaceInfo.workspaceId, 'template')
-    }))
+    return SqliteDataAccess.runTransaction(() => {
+      /** Repaired collection orders define which saved favorites still exist. */
+      const promptCollectionEntries = readWorkspaceCollectionEntries(workspacePath, workspaceInfo.workspaceId, 'prompt')
+      /** Template ownership is repaired independently of task collections. */
+      const templateCollectionEntries = readWorkspaceCollectionEntries(workspacePath, workspaceInfo.workspaceId, 'template')
+      /** Retains favorite order while removing deleted or duplicate collection identities. */
+      const readFavorites = (kind: 'prompt' | 'template'): string[] => {
+        /** Valid collection IDs are consumed once while retaining saved positions. */
+        const remaining = new Set((kind === 'prompt' ? promptCollectionEntries : templateCollectionEntries).map((entry) => entry.id))
+        /** Missing preferences start empty for existing workspaces. */
+        const saved = WorkspaceStateDataAccess.read(workspaceInfo.workspaceId, `${kind}-collection-favorites`, null)
+        /** Only existing favorites survive; discoveries are never automatically favorited. */
+        const ids = (saved?.ids ?? []).filter((id) => remaining.delete(id))
+        WorkspaceStateDataAccess.write(workspaceInfo.workspaceId, `${kind}-collection-favorites`, null, { ids })
+        return ids
+      }
+      return {
+        id: workspaceInfo.workspaceId,
+        workspacePath,
+        workspaceName: workspaceInfo.workspaceName,
+        promptCollectionEntries,
+        templateCollectionEntries,
+        favoriteCollectionIds: { prompt: readFavorites('prompt'), template: readFavorites('template') }
+      }
+    })
   }
 }
