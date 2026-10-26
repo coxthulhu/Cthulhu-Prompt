@@ -39,49 +39,55 @@
   padding-block: 1px;
 }
 
-.sidebarPromptTreeRow {
-  display: flex;
+/* Category rows and prompt buttons share row geometry, colors, and row-state feedback. */
+.sidebarPromptTreeRow,
+.sidebarPromptTreeSettingsButton {
   height: 30px;
   width: 100%;
-  align-items: center;
-  position: relative;
   color: var(--ui-hoverable-text);
   transition:
     background-color var(--ui-animation-duration-fast) ease-out,
     color var(--ui-animation-duration-fast) ease-out;
 }
 
-.sidebarPromptTreeRow[data-row-state='idle']:hover,
-.sidebarPromptTreeSettingsButton[data-row-state='idle']:hover {
+.sidebarPromptTreeRow {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(
+    [data-row-state='idle']:hover,
+    [data-row-state='active'],
+    [data-row-state='drag-active'],
+    [data-row-state='over'],
+    [data-row-state='dragging'],
+    [data-row-state='blocked-over']
+  ) {
+  color: var(--ui-normal-text);
+}
+
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton)[data-row-state='idle']:hover {
   background-color: var(--ui-neutral-normal-surface);
-  color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-row-state='active']:hover,
-.sidebarPromptTreeSettingsButton[data-row-state='active']:hover {
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton)[data-row-state='active']:hover {
   background-color: var(--ui-neutral-selection-surface);
-  color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-row-state='active'],
-.sidebarPromptTreeRow[data-row-state='drag-active'],
-.sidebarPromptTreeSettingsButton[data-row-state='active'],
-.sidebarPromptTreeSettingsButton[data-row-state='drag-active'] {
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(
+    [data-row-state='active'],
+    [data-row-state='drag-active'],
+    [data-row-state='blocked-over']
+  ) {
   background-color: var(--ui-neutral-emphasis-surface);
-  color: var(--ui-normal-text);
 }
 
-.sidebarPromptTreeRow[data-row-state='over'],
-.sidebarPromptTreeRow[data-row-state='dragging'],
-.sidebarPromptTreeSettingsButton[data-row-state='over'],
-.sidebarPromptTreeSettingsButton[data-row-state='dragging'] {
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(
+    [data-row-state='over'],
+    [data-row-state='dragging']
+  ) {
   background-color: var(--ui-info-normal-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeSettingsButton[data-row-state='blocked-over'] {
-  background-color: var(--ui-neutral-emphasis-surface);
-  color: var(--ui-normal-text);
 }
 
 .sidebarPromptTreeToggleButton {
@@ -113,11 +119,6 @@
 
 .sidebarPromptTreeCategoryIcon {
   color: var(--ui-secondary-icon-glyph);
-}
-
-.sidebarPromptTreeCategoryLabel {
-  flex: 1;
-  font-weight: var(--font-weight-normal);
 }
 
 .sidebarPromptTreeActionSlot {
@@ -202,23 +203,11 @@
   grid-template-columns:
     calc(5px + var(--prompt-tree-indent-width, 12px) * var(--prompt-tree-indent-count, 1))
     minmax(0, 1fr);
-  height: 30px;
-  width: 100%;
   min-width: 0;
   align-items: center;
   gap: 8px;
   padding: 0 22px 0 0;
-  color: var(--ui-hoverable-text);
   text-align: left;
-  transition:
-    background-color var(--ui-animation-duration-fast) ease-out,
-    color var(--ui-animation-duration-fast) ease-out;
-}
-
-.promptDragGhost {
-  min-width: 120px;
-  max-width: 400px;
-  width: max-content;
 }
 
 /* Keep the drag ghost independent from the prompt tree row layout. */

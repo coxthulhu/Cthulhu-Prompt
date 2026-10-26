@@ -114,6 +114,24 @@ describe('Shared button behavior', () => {
     await expect(link).not.toHaveAttribute('href')
   })
 
+  test('disables only the split button options trigger when requested', async ({ testSetup }) => {
+    /** Gallery sample keeps its main action enabled while its options trigger is disabled. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.clickNavButton('Test Screen')
+    /** Main action of the options-disabled split button. */
+    const mainButton = mainWindow.getByTestId('test-screen-split-options-disabled')
+    /** Chevron trigger that must stay inert. */
+    const chevronButton = mainWindow.getByTestId('test-screen-split-options-disabled-chevron')
+    await expect(mainButton).toBeEnabled()
+    await expect(chevronButton).toBeDisabled()
+    await expect(chevronButton).toHaveCSS('opacity', '0.5')
+
+    await chevronButton.evaluate((element) => (element as HTMLButtonElement).click())
+    await expect(mainWindow.getByRole('menu')).toHaveCount(0)
+    await mainButton.click()
+    await expect(mainWindow.getByTestId('test-screen-button-activations')).toHaveText('1')
+  })
+
   test('preserves pressed and hover icons without changing toolbar geometry', async ({ testSetup }) => {
     /** Controlled gallery toggle reproduces the icon-swap states used by toolbar actions. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })

@@ -31,41 +31,39 @@
     font-weight: var(--font-weight-semibold);
   }
 
-  .cthulhuUiTitle[data-variant='row'],
-  .cthulhuUiTitle[data-variant='workspace'] {
-    min-width: 0;
+  .cthulhuUiTitle:is(
+      [data-variant='page'],
+      [data-variant='small'],
+      [data-variant='card'],
+      [data-variant='dialog'],
+      [data-variant='workspace']
+    ) {
+    color: var(--ui-normal-text);
+  }
+
+  .cthulhuUiTitle:is(
+      [data-variant='page'],
+      [data-variant='dialog'],
+      [data-variant='row'],
+      [data-variant='workspace']
+    ) {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .cthulhuUiTitle[data-variant='workspace'] {
-    color: var(--ui-normal-text);
+  .cthulhuUiTitle:is([data-variant='page'], [data-variant='row'], [data-variant='workspace']) {
+    min-width: 0;
+  }
+
+  .cthulhuUiTitle:is([data-variant='page'], [data-variant='workspace']) {
     letter-spacing: -0.03em;
   }
 
   .cthulhuUiTitle[data-variant='page'] {
-    color: var(--ui-normal-text);
     /* Give Windows glyphs room beyond the 36px line without enlarging the layout height. */
     height: 40px;
     margin-block: -2px;
     padding-block: 2px;
-    letter-spacing: -0.03em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cthulhuUiTitle[data-variant='small'],
-  .cthulhuUiTitle[data-variant='card'],
-  .cthulhuUiTitle[data-variant='dialog'] {
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiTitle[data-variant='dialog'] {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 </style>

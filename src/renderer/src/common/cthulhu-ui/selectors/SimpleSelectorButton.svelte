@@ -167,7 +167,6 @@
     display: inline-flex;
     font-weight: var(--font-weight-semibold);
     grid-area: 1 / 1;
-    height: 34px;
     transition: color var(--ui-animation-duration-standard) ease;
     white-space: nowrap;
     width: 100%;
@@ -177,12 +176,17 @@
     outline: none;
   }
 
+  /* The value button stretches to the selector's interior; its parts fill that height. */
+  .cthulhuUiSimpleSelectorButtonValueContent,
+  .cthulhuUiSimpleSelectorButtonMoreOptions {
+    align-self: stretch;
+  }
+
   .cthulhuUiSimpleSelectorButtonValueContent {
     align-items: center;
     display: inline-flex;
     flex: 1 1 auto;
     gap: 6px;
-    height: 34px;
     justify-content: center;
     min-width: 0;
     padding-left: 8px;
@@ -215,7 +219,6 @@
     color: var(--ui-hoverable-icon-glyph);
     display: inline-flex;
     flex: 0 0 auto;
-    height: 34px;
     justify-content: center;
     margin-left: auto;
     padding: 0 6px;

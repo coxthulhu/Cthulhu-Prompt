@@ -74,7 +74,6 @@
   /* Success */
   --ui-success-normal-text: oklch(0.871 0.15 154.449);
   --ui-success-muted-hover-border: oklch(0.871 0.15 154.449 / 19.1%);
-  --ui-success-normal-border: oklch(0.871 0.15 154.449 / 42%);
   --ui-success-action-hover-fill: oklch(0.606 0.219 145 / 36%);
 
   /* Info */

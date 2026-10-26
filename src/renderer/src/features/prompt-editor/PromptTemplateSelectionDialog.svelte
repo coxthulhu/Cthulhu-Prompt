@@ -624,17 +624,18 @@
     color: var(--ui-muted-text);
   }
 
-  .prompt-template-base-collection-header-spacer {
-    background: var(--ui-card-solid-surface);
-    border-left: 1px solid var(--ui-card-nested-border);
-    border-right: 1px solid var(--ui-card-nested-border);
-    height: 6px;
-  }
-
+  .prompt-template-base-collection-header-spacer,
   .prompt-template-base-collection-content-row {
     background: var(--ui-card-solid-surface);
     border-left: 1px solid var(--ui-card-nested-border);
     border-right: 1px solid var(--ui-card-nested-border);
+  }
+
+  .prompt-template-base-collection-header-spacer {
+    height: 6px;
+  }
+
+  .prompt-template-base-collection-content-row {
     height: 32px;
     padding-inline: 5px;
   }

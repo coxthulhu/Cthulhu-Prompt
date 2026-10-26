@@ -108,8 +108,6 @@ type PromptDragGhostSnapshot = {
   borderStyle: string
   borderWidth: string
   color: string
-  ghostMaxWidth: string
-  ghostMinWidth: string
   height: number
   isTextClipped: boolean
   kind: string | null
@@ -117,6 +115,7 @@ type PromptDragGhostSnapshot = {
   minWidth: string
   mutedBorderColor: string
   opacity: string
+  rowWidth: number
   text: string
   width: number
 }
@@ -210,7 +209,6 @@ const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragG
       throw new Error('Missing prompt drag ghost label')
     }
     const overlayStyle = getComputedStyle(element)
-    const ghostStyle = getComputedStyle(ghost)
     const rowStyle = getComputedStyle(row)
     const mutedBorderProbe = document.createElement('div')
     mutedBorderProbe.style.borderColor = 'var(--ui-neutral-muted-border)'
@@ -225,8 +223,6 @@ const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragG
       borderStyle: rowStyle.borderStyle,
       borderWidth: rowStyle.borderWidth,
       color: rowStyle.color,
-      ghostMaxWidth: ghostStyle.maxWidth,
-      ghostMinWidth: ghostStyle.minWidth,
       height: Math.round(rowRect.height),
       isTextClipped: label.scrollWidth > label.clientWidth,
       kind: element.getAttribute('data-drag-ghost-kind'),
@@ -234,6 +230,7 @@ const getPromptDragGhostSnapshot = async (locator: Locator): Promise<PromptDragG
       minWidth: rowStyle.minWidth,
       mutedBorderColor,
       opacity: overlayStyle.opacity,
+      rowWidth: Math.round(rowRect.width),
       text: row.textContent?.trim() ?? '',
       width: Math.round(ghostRect.width)
     }
@@ -1349,8 +1346,6 @@ describe('Prompt collection prompt drag-drop', () => {
       borderRadius: '6px',
       borderStyle: 'solid',
       borderWidth: '1px',
-      ghostMaxWidth: '400px',
-      ghostMinWidth: '120px',
       height: 30,
       isTextClipped: false,
       kind: 'prompt',
@@ -1362,6 +1357,7 @@ describe('Prompt collection prompt drag-drop', () => {
     expect(treeGhost.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
     expect(treeGhost.borderColor).toBe(treeGhost.mutedBorderColor)
     expect(treeGhost.width).toBeLessThanOrEqual(400)
+    expect(Math.abs(treeGhost.width - treeGhost.rowWidth)).toBeLessThanOrEqual(1)
     expect(handleGhost).toEqual(treeGhost)
   })
 

@@ -85,10 +85,7 @@
 
   .cthulhuUiActivityBarButton:hover,
   .cthulhuUiActivityBarButton:focus-visible,
-  .cthulhuUiActivityBarButton[aria-expanded='true'] {
-    color: var(--ui-normal-text);
-  }
-
+  .cthulhuUiActivityBarButton[aria-expanded='true'],
   .cthulhuUiActivityBarButton[data-active='true'] {
     color: var(--ui-normal-text);
   }

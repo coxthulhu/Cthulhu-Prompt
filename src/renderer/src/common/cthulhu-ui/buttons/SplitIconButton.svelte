@@ -31,6 +31,7 @@
     menuTestId?: string
     title?: string
     disabled?: boolean
+    moreOptionsDisabled?: boolean
     active?: boolean
     buttonAction?: IconButtonAction | null
     buttonActionParameter?: unknown
@@ -56,6 +57,7 @@
     menuTestId,
     title,
     disabled = false,
+    moreOptionsDisabled = false,
     active,
     buttonAction,
     buttonActionParameter,
@@ -67,6 +69,8 @@
 
   /** Keeps the options trigger accessible name aligned with the main action. */
   const moreOptionsLabel = $derived(`${label} More Options`)
+  /** Disabling the whole split button also disables its options trigger. */
+  const isMoreOptionsDisabled = $derived(disabled || moreOptionsDisabled)
 </script>
 
 <!-- Split action keeps one outer border around two independently operable buttons. -->
@@ -108,7 +112,7 @@
         title="More Options"
         {baseVariant}
         hoverVariant={moreOptionsHoverVariant}
-        {disabled}
+        disabled={isMoreOptionsDisabled}
         active={dropdown.open}
         ariaHaspopup={dropdown.ariaHaspopup}
         ariaExpanded={dropdown.ariaExpanded}

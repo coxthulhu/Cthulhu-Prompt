@@ -539,6 +539,16 @@
                     menuTestId="icon-button-more-options-menu"
                     moreOptionsTestId="icon-button-more-options-chevron"
                   />
+                  <SplitIconButton
+                    icon={Copy}
+                    label="Options disabled"
+                    title="Options disabled"
+                    moreOptions={iconButtonMoreOptionsItems}
+                    moreOptionsDisabled
+                    testId="test-screen-split-options-disabled"
+                    moreOptionsTestId="test-screen-split-options-disabled-chevron"
+                    onclick={recordButtonSampleActivation}
+                  />
                 </div>
               </div>
               <div class="component-sample">

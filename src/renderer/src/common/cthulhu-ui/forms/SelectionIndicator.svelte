@@ -6,10 +6,12 @@
     control: 'checkbox' | 'radio' | 'copy'
     /** Whether the owning picker row is the current selection. */
     checked: boolean
+    /** Checked color treatment; danger marks destructive acknowledgements. */
+    variant?: 'accent' | 'danger'
     class?: string
   }
 
-  let { control, checked, class: className }: Props = $props()
+  let { control, checked, variant = 'accent', class: className }: Props = $props()
 </script>
 
 <!-- Decorative state mark; the owning row button carries the accessible pressed state. -->
@@ -17,6 +19,7 @@
   class={mergeClasses('cthulhuUiSelectionIndicator', className)}
   data-control={control}
   data-checked={checked ? 'true' : 'false'}
+  data-variant={variant}
   aria-hidden="true"
 >
   {#if control === 'checkbox'}
@@ -36,8 +39,11 @@
     width: 17px;
   }
 
-  .cthulhuUiSelectionIndicator[data-control='checkbox'] {
+  .cthulhuUiSelectionIndicator:is([data-control='checkbox'], [data-control='radio']) {
     border: 1px solid var(--ui-neutral-normal-border);
+  }
+
+  .cthulhuUiSelectionIndicator[data-control='checkbox'] {
     border-radius: 4px;
     color: transparent;
     transition:
@@ -52,8 +58,12 @@
     color: var(--ui-normal-text);
   }
 
+  .cthulhuUiSelectionIndicator[data-control='checkbox'][data-checked='true'][data-variant='danger'] {
+    background: var(--ui-danger-selection-fill);
+    border-color: var(--ui-danger-selection-border);
+  }
+
   .cthulhuUiSelectionIndicator[data-control='radio'] {
-    border: 1px solid var(--ui-neutral-normal-border);
     border-radius: 50%;
   }
 

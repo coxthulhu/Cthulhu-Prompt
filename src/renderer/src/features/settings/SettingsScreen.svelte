@@ -466,11 +466,4 @@
   section :global(.settingsNewPromptFocusSelector) {
     height: 40px;
   }
-
-  /* Fill the 38px interior inside this selector's top and bottom borders. */
-  section :global(.settingsNewPromptFocusSelector .cthulhuUiSimpleSelectorButtonValue),
-  section :global(.settingsNewPromptFocusSelector .cthulhuUiSimpleSelectorButtonValueContent),
-  section :global(.settingsNewPromptFocusSelector .cthulhuUiSimpleSelectorButtonMoreOptions) {
-    height: 38px;
-  }
 </style>

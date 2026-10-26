@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { Check, Trash2 } from 'lucide-svelte'
+  import { Trash2 } from 'lucide-svelte'
   import type { ComponentType } from 'svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
+  import SelectionIndicator from '@renderer/common/cthulhu-ui/forms/SelectionIndicator.svelte'
 
   /** Shared confirmation with an optional required acknowledgement. */
   type Props = {
@@ -73,9 +74,12 @@
             type="checkbox"
             bind:checked={acknowledged}
           />
-          <span class="cthulhuUiConfirmationDialogCheckboxMark" aria-hidden="true">
-            <Check size={13} />
-          </span>
+          <SelectionIndicator
+            control="checkbox"
+            checked={acknowledged}
+            variant="danger"
+            class="cthulhuUiConfirmationDialogCheckboxMark"
+          />
         </span>
         <span>{confirmationText}</span>
       </label>
@@ -127,29 +131,12 @@
     cursor: pointer;
   }
 
-  .cthulhuUiConfirmationDialogCheckboxMark {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 17px;
-    height: 17px;
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 4px;
-    color: transparent;
+  /* The native input above the mark receives pointer input. */
+  :global(.cthulhuUiConfirmationDialogCheckboxMark) {
     pointer-events: none;
-    transition:
-      background-color var(--ui-animation-duration-fast) ease-out,
-      border-color var(--ui-animation-duration-fast) ease-out,
-      color var(--ui-animation-duration-fast) ease-out;
   }
 
-  .cthulhuUiConfirmationDialogCheckboxInput:checked + .cthulhuUiConfirmationDialogCheckboxMark {
-    background: var(--ui-danger-selection-fill);
-    border-color: var(--ui-danger-selection-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiConfirmationDialogCheckboxInput:focus-visible + .cthulhuUiConfirmationDialogCheckboxMark {
+  .cthulhuUiConfirmationDialogCheckboxInput:focus-visible + :global(.cthulhuUiConfirmationDialogCheckboxMark) {
     outline: 2px solid var(--ui-danger-strong-border);
     outline-offset: 2px;
   }
