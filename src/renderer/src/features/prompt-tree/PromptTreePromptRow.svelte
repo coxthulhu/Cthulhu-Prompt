@@ -128,7 +128,7 @@
         class="prompt-tree-selection-control"
       />
     {/if}
-    <span class="sidebarPromptTreeSettingsLabel text-sm prompt-tree-prompt-label">{promptTitle}</span>
+    <span class="sidebarPromptTreeSettingsLabel prompt-tree-prompt-label min-w-0 truncate text-sm">{promptTitle}</span>
     {#if count !== undefined}
       <span class="prompt-tree-row-count text-xs leading-4 tabular-nums">{count}</span>
     {/if}
@@ -192,16 +192,6 @@
   .prompt-tree-prompt-content :global(.prompt-tree-row-icon) {
     flex-shrink: 0;
     color: var(--ui-secondary-icon-glyph);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-row-state='over'] {
-    background: var(--ui-info-normal-surface);
-    color: var(--ui-normal-text);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-row-state='blocked-over'] {
-    background: var(--ui-neutral-emphasis-surface);
-    color: var(--ui-normal-text);
   }
 
   .prompt-tree-row-count {

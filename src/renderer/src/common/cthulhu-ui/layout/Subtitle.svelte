@@ -10,7 +10,7 @@
   let { text, wrap = true, class: className, ...restProps }: Props = $props()
 </script>
 
-<span class={mergeClasses('cthulhuUiSubtitle text-sm', className)} data-wrap={wrap} {...restProps}>
+<span class={mergeClasses('cthulhuUiSubtitle min-w-0 truncate text-sm', className)} data-wrap={wrap} {...restProps}>
   {text}
 </span>
 
@@ -19,10 +19,6 @@
     color: var(--ui-muted-text);
     display: block;
     font-weight: var(--font-weight-normal);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiSubtitle[data-wrap='true'] {

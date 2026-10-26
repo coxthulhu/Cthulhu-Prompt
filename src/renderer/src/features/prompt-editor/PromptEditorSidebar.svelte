@@ -113,7 +113,7 @@
   }
 </script>
 
-<div class="prompt-editor-sidebar">
+<div class="editor-card-rail prompt-editor-sidebar">
   <!-- One background layer covers every rail control, including disabled move buttons. -->
   {#key navigationHighlightGeneration}
     <span
@@ -169,20 +169,6 @@
 </div>
 
 <style>
-  .prompt-editor-sidebar {
-    position: relative;
-    background: var(--ui-card-normal-surface);
-    border-right: 1px solid var(--ui-neutral-muted-border);
-    display: flex;
-    flex-direction: column;
-    flex: 0 0 32px;
-    height: 100%;
-    min-height: 0;
-    min-width: 0;
-    overflow: hidden;
-    width: 32px;
-  }
-
   /* The muted violet wash sits behind the transparent buttons without intercepting input. */
   .prompt-editor-sidebar-highlight {
     position: absolute;

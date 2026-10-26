@@ -39,7 +39,6 @@
   .cthulhuUiLoadingOverlay {
     z-index: var(--z-modal);
     background-color: var(--background);
-    opacity: 1;
   }
 
   .cthulhuUiLoadingOverlay[data-fading='true'] {

@@ -33,7 +33,6 @@
 
   .cthulhuUiTitle[data-variant='row'],
   .cthulhuUiTitle[data-variant='workspace'] {
-    color: inherit;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -58,10 +57,7 @@
     white-space: nowrap;
   }
 
-  .cthulhuUiTitle[data-variant='small'] {
-    color: var(--ui-normal-text);
-  }
-
+  .cthulhuUiTitle[data-variant='small'],
   .cthulhuUiTitle[data-variant='card'],
   .cthulhuUiTitle[data-variant='dialog'] {
     color: var(--ui-normal-text);

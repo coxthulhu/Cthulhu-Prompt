@@ -170,7 +170,6 @@
 
   .prompt-find-widget {
     position: relative;
-    width: 400px;
     height: 33px;
     overflow: hidden;
     padding: 0 4px;
@@ -184,7 +183,7 @@
     border-bottom-left-radius: 4px;
     border-bottom-right-radius: 4px;
     background-color: var(--prompt-find-widget-background);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Segoe UI', system-ui, sans-serif;
   }
 
   .prompt-find-widget__find-part {
@@ -251,7 +250,6 @@
 
   .prompt-find-input__mirror {
     position: absolute;
-    display: inline-block;
     width: 100%;
     top: 0;
     left: 0;
@@ -268,7 +266,6 @@
 
   .prompt-find-widget__matches {
     display: flex;
-    flex: initial;
     margin: 0 0 0 3px;
     padding: 2px 0 0 2px;
     min-width: 69px;
@@ -282,7 +279,6 @@
     padding: 3px;
     border-radius: 5px;
     display: flex;
-    flex: initial;
     margin-left: 3px;
     cursor: pointer;
     align-items: center;
@@ -295,7 +291,6 @@
   }
 
   .prompt-find-widget__button--disabled {
-    cursor: default;
     opacity: 0.4;
     pointer-events: none;
   }

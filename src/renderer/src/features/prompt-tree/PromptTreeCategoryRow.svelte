@@ -194,7 +194,7 @@
       class="sidebarPromptTreeChevronWrap"
     />
     <IconCell icon={Folder} iconClass="sidebarPromptTreeCategoryIcon" variant="small" />
-    <span class="sidebarPromptTreeCategoryLabel text-sm leading-5">{category.displayName}</span>
+    <span class="sidebarPromptTreeCategoryLabel min-w-0 truncate text-sm leading-5">{category.displayName}</span>
   </button>
 
   {#if showActions && onCategoryAddToTop}

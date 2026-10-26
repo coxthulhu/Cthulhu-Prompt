@@ -7,7 +7,7 @@
 </script>
 
 <div class="promptDragGhost">
-  <div class="sidebarPromptTreeSettingsButton promptDragGhostButton" data-row-state="idle">
+  <div class="promptDragGhostButton">
     {#if kind === 'category'}
       <Folder
         class="promptDragGhostIcon"
@@ -23,6 +23,6 @@
         aria-hidden="true"
       />
     {/if}
-    <span class="sidebarPromptTreeSettingsLabel text-sm">{title}</span>
+    <span class="sidebarPromptTreeSettingsLabel min-w-0 truncate text-sm">{title}</span>
   </div>
 </div>

@@ -7,8 +7,7 @@
   import type { DropdownPopupMenuAlignment } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupCore.svelte'
   import IconButton, {
     type IconButtonBaseVariant,
-    type IconButtonHoverVariant,
-    type IconButtonSize
+    type IconButtonHoverVariant
   } from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
@@ -21,7 +20,6 @@
     icon: ComponentType
     label: string
     moreOptions: DropdownPopupDetailedItem[]
-    size?: IconButtonSize
     baseVariant?: IconButtonBaseVariant
     mainHoverVariant?: IconButtonHoverVariant
     moreOptionsHoverVariant?: IconButtonHoverVariant
@@ -47,7 +45,6 @@
     icon,
     label,
     moreOptions,
-    size = 'default',
     baseVariant = 'normal',
     mainHoverVariant = 'neutral',
     moreOptionsHoverVariant = 'neutral',
@@ -75,13 +72,11 @@
 <!-- Split action keeps one outer border around two independently operable buttons. -->
 <span
   class={mergeClasses('cthulhuUiSplitIconButton', className)}
-  data-size={size}
   data-base-variant={baseVariant}
 >
   <IconButton
     {icon}
     {label}
-    {size}
     {baseVariant}
     hoverVariant={mainHoverVariant}
     {iconClass}
@@ -111,7 +106,6 @@
         icon={ChevronDown}
         label={moreOptionsLabel}
         title="More Options"
-        {size}
         {baseVariant}
         hoverVariant={moreOptionsHoverVariant}
         {disabled}
@@ -162,15 +156,5 @@
     border-bottom-right-radius: var(--cthulhu-ui-radius-control);
     border-top-right-radius: var(--cthulhu-ui-radius-control);
     width: 23px;
-  }
-
-  .cthulhuUiSplitIconButton[data-size='compact']
-    :global(.cthulhuUiSplitIconButtonChevron.cthulhuUiIconButton) {
-    width: 21px;
-  }
-
-  .cthulhuUiSplitIconButton[data-size='tiny']
-    :global(.cthulhuUiSplitIconButtonChevron.cthulhuUiIconButton) {
-    width: 17px;
   }
 </style>

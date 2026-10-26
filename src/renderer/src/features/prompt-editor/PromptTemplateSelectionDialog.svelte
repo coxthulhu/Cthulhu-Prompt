@@ -451,7 +451,7 @@
   >
     <IconCell icon={FolderOpen} variant="standard" class="prompt-template-base-collection-icon" />
     <span class="prompt-template-base-collection-copy">
-      <span class="prompt-template-base-collection-name text-sm">{row.collection.displayName}</span>
+      <span class="prompt-template-base-collection-name truncate text-sm">{row.collection.displayName}</span>
       <span class="prompt-template-base-collection-count text-xs">{row.templateCount} {row.templateCount === 1 ? 'template' : 'templates'}</span>
     </span>
   </div>
@@ -618,9 +618,6 @@
   .prompt-template-base-collection-name {
     color: var(--ui-normal-text);
     font-weight: var(--font-weight-semibold);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .prompt-template-base-collection-count {

@@ -59,6 +59,7 @@
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
   import PromptEditorStatusControl from './PromptEditorStatusControl.svelte'
   import PromptStatusIndicator from './PromptStatusIndicator.svelte'
+  import EditorMetadataRow from './EditorMetadataRow.svelte'
   import { Archive, FileText, Layers, Trash2, Undo2 } from 'lucide-svelte'
   import { isPromptStatus, PROMPT_STATUS_BEHAVIORS, PromptStatus } from '@shared/domain/prompt/Prompt'
   import { formatPromptModifiedFull, formatPromptModifiedRelative } from './promptModifiedTime'
@@ -338,7 +339,7 @@
   <div class="prompt-editor-title-main">
     <IconCell {icon} variant="title" />
 
-    <div class="prompt-editor-title-copy">
+    <div class="prompt-editor-title-copy grid min-w-0 gap-1">
       {#if onTitleChange}
         <div class="prompt-editor-title-field" bind:clientWidth={titleWidth}>
           <div class="prompt-editor-title-highlights text-sm leading-5" aria-hidden="true">
@@ -378,7 +379,7 @@
         <p class="prompt-editor-title-text text-sm">{title}</p>
       {/if}
 
-      <div class="prompt-editor-metadata-row text-xs">
+      <EditorMetadataRow class="prompt-editor-metadata-row">
         {#if metadataTemplateLabel}
           <span
             class="prompt-editor-metadata-template"
@@ -407,7 +408,7 @@
             {finalizedLabel}
           </span>
         {/if}
-      </div>
+      </EditorMetadataRow>
     </div>
   </div>
 
@@ -556,12 +557,6 @@
     display: none;
   }
 
-  .prompt-editor-title-copy {
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-  }
-
   .prompt-editor-title-input,
   .prompt-editor-title-text {
     color: var(--ui-normal-text);
@@ -613,17 +608,6 @@
   /* Find-selected title text exposes the yellow mirror instead of the native selection tint. */
   .prompt-editor-title-field:has(.prompt-editor-title-match[data-current='true']) .prompt-editor-title-input::selection {
     background-color: var(--ui-ghost-surface);
-  }
-
-  .prompt-editor-metadata-row {
-    align-items: center;
-    color: var(--ui-muted-text);
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
   }
 
   .prompt-editor-metadata-template {

@@ -62,7 +62,7 @@
         {@const detailParts = getDetailParts(item)}
         <button
           type="button"
-          class="cthulhuUiDropdownPopupMoreOptionsItem"
+          class="cthulhuUiDropdownPopupItem cthulhuUiDropdownPopupMoreOptionsItem"
           role="menuitem"
           data-testid={item.testId}
           onclick={(event) => {
@@ -79,7 +79,7 @@
 
           <span class="cthulhuUiDropdownPopupMoreOptionsTextStack">
             <!-- Menu button titles are explicitly excluded from default line heights. -->
-            <span class="cthulhuUiDropdownPopupMoreOptionsTitle text-sm leading-4.5">{item.label}</span>
+            <span class="cthulhuUiDropdownPopupMoreOptionsTitle truncate text-sm leading-4.5">{item.label}</span>
             {#if detailParts.length}
               <span
                 class="cthulhuUiDropdownPopupMoreOptionsSubtitle text-xs leading-4"
@@ -90,7 +90,7 @@
                     <SeparatorDot />
                   {/if}
                   <span
-                    class="cthulhuUiDropdownPopupMoreOptionsSubtitlePart"
+                    class="cthulhuUiDropdownPopupMoreOptionsSubtitlePart min-w-0 truncate"
                     data-testid={detailPart.testId}
                   >
                     {#if detailPart.icon}
@@ -124,26 +124,9 @@
   }
 
   .cthulhuUiDropdownPopupMoreOptionsItem {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: grid;
-    gap: 8px;
     grid-template-columns: 28px minmax(0, 1fr);
     min-height: 50px;
     padding: 6px 8px;
-    text-align: left;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      color var(--ui-animation-duration-standard) ease;
-    width: 100%;
-  }
-
-  .cthulhuUiDropdownPopupMoreOptionsItem:hover,
-  .cthulhuUiDropdownPopupMoreOptionsItem:focus-visible {
-    background: var(--ui-neutral-action-fill);
-    color: var(--ui-normal-text);
   }
 
   .cthulhuUiDropdownPopupMoreOptionsItem:focus-visible {
@@ -170,9 +153,6 @@
 
   .cthulhuUiDropdownPopupMoreOptionsTitle {
     font-weight: var(--font-weight-semibold);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiDropdownPopupMoreOptionsSubtitle {
@@ -194,10 +174,6 @@
     align-items: center;
     display: inline-flex;
     gap: 4px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiDropdownPopupMoreOptionsSubtitlePart

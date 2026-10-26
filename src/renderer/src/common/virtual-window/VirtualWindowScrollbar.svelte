@@ -223,7 +223,6 @@
   }
 
   .virtual-window-scrollbar.visible {
-    opacity: 1;
     transition: opacity var(--ui-animation-duration-standard) linear;
     z-index: var(--z-chrome);
   }

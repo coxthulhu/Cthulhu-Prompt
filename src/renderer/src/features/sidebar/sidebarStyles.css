@@ -73,8 +73,14 @@
 
 .sidebarPromptTreeRow[data-row-state='over'],
 .sidebarPromptTreeRow[data-row-state='dragging'],
+.sidebarPromptTreeSettingsButton[data-row-state='over'],
 .sidebarPromptTreeSettingsButton[data-row-state='dragging'] {
   background-color: var(--ui-info-normal-surface);
+  color: var(--ui-normal-text);
+}
+
+.sidebarPromptTreeSettingsButton[data-row-state='blocked-over'] {
+  background-color: var(--ui-neutral-emphasis-surface);
   color: var(--ui-normal-text);
 }
 
@@ -110,11 +116,7 @@
 }
 
 .sidebarPromptTreeCategoryLabel {
-  min-width: 0;
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-weight: var(--font-weight-normal);
 }
 
@@ -142,18 +144,8 @@
   padding-right: 56px;
 }
 
+/* IconButton owns the geometry and idle colors; tree actions use faster feedback. */
 .sidebarPromptTreeActionButton {
-  display: flex;
-  height: 28px;
-  width: 28px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 6px;
-  background: var(--ui-ghost-surface);
-  color: var(--ui-hoverable-icon-glyph);
-  cursor: pointer;
   transition:
     background-color var(--ui-animation-duration-fast) ease-out,
     color var(--ui-animation-duration-fast) ease-out;
@@ -166,7 +158,8 @@
 }
 
 .sidebarPromptTreeRow[data-row-state='idle']:hover .sidebarPromptTreeActionButton,
-.sidebarPromptTreeRow[data-row-state='active']:hover .sidebarPromptTreeActionButton,
+.sidebarPromptTreeRow[data-row-state='active'] .sidebarPromptTreeActionButton,
+.sidebarPromptTreeRow[data-row-state='drag-active'] .sidebarPromptTreeActionButton,
 .sidebarPromptTreeRow:focus-within .sidebarPromptTreeActionButton {
   color: var(--ui-normal-text);
 }
@@ -182,19 +175,6 @@
 
 .sidebarPromptTreeActionButton:hover {
   background-color: var(--ui-neutral-normal-surface);
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeActionButton[data-active='true'],
-.sidebarPromptTreeRow[data-row-state='active'] .sidebarPromptTreeActionButton,
-.sidebarPromptTreeRow[data-row-state='drag-active'] .sidebarPromptTreeActionButton {
-  color: var(--ui-normal-text);
-}
-
-.sidebarPromptTreeActionButton.cthulhuUiIconButton[data-active='true']:not(:hover):not(
-    :focus-visible
-  ) {
-  background: var(--ui-ghost-surface);
 }
 
 .sidebarPromptTreeSettingsRow {
@@ -235,13 +215,6 @@
     color var(--ui-animation-duration-fast) ease-out;
 }
 
-.sidebarPromptTreeSettingsLabel {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .promptDragGhost {
   min-width: 120px;
   max-width: 400px;
@@ -253,6 +226,7 @@
   align-items: center;
   display: flex;
   gap: 8px;
+  height: 30px;
   width: max-content;
   min-width: 120px;
   max-width: 400px;

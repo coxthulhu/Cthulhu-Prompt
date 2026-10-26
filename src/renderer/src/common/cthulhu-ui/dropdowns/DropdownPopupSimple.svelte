@@ -54,7 +54,7 @@
         {@const ItemIcon = item.icon}
         <button
           type="button"
-          class="cthulhuUiDropdownPopupSimpleItem"
+          class="cthulhuUiDropdownPopupItem cthulhuUiDropdownPopupSimpleItem"
           role="menuitem"
           data-variant={item.variant ?? 'neutral'}
           data-testid={item.testId}
@@ -83,28 +83,14 @@
   .cthulhuUiDropdownPopupSimpleItem {
     --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-hoverable-icon-glyph);
 
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-text);
-    cursor: pointer;
-    display: grid;
-    gap: 8px;
     grid-template-columns: 18px minmax(0, 1fr);
     min-height: 34px;
     padding: 4px 8px;
-    text-align: left;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      color var(--ui-animation-duration-standard) ease;
-    width: 100%;
   }
 
   .cthulhuUiDropdownPopupSimpleItem:hover,
   .cthulhuUiDropdownPopupSimpleItem:focus-visible {
     --cthulhu-ui-dropdown-popup-item-icon-color: var(--ui-normal-text);
-
-    background: var(--ui-neutral-action-fill);
-    color: var(--ui-normal-text);
   }
 
   .cthulhuUiDropdownPopupSimpleItem[data-variant='accent']:where(:hover, :focus-visible) {

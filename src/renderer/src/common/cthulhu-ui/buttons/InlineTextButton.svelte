@@ -43,7 +43,7 @@
   {disabled}
   {onclick}
 >
-  <span class="cthulhuUiInlineTextButtonLabel">{text}</span>
+  <span class="cthulhuUiInlineTextButtonLabel min-w-0 truncate">{text}</span>
 </button>
 
 <style>
@@ -52,13 +52,6 @@
     font-weight: var(--font-weight-normal);
     text-align: inherit;
     transition: color var(--ui-animation-duration-fast) ease-out;
-  }
-
-  .cthulhuUiInlineTextButtonLabel {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiInlineTextButton[data-base-variant='secondary'] {

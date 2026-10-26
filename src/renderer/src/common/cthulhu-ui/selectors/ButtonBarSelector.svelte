@@ -51,7 +51,6 @@
 
 <style>
   .cthulhuUiButtonBarSelectorButton {
-    border-radius: 6px;
     display: flex;
     flex: 0 1 auto;
     height: 34px;

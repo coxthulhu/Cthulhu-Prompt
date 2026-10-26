@@ -136,7 +136,7 @@
       <ChevronRight size={20} aria-hidden="true" />
     </span>
     <IconCell icon={SectionIcon} iconClass="cthulhuUiAccordionIcon" variant="small" />
-    <span class="cthulhuUiAccordionLabel text-sm leading-5">{label}</span>
+    <span class="cthulhuUiAccordionLabel min-w-0 truncate text-sm leading-5">{label}</span>
     {#if count !== undefined}
       <!-- Button counts are explicitly excluded from default line heights to preserve header spacing. -->
       <span class="cthulhuUiAccordionCount text-xs leading-4.5">{count}</span>
@@ -231,10 +231,6 @@
   .cthulhuUiAccordionLabel {
     font-weight: var(--font-weight-semibold);
     letter-spacing: 0.01em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiAccordionCount {

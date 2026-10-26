@@ -330,7 +330,6 @@
 
   :global(.cthulhuUiDropdownPopupDetailedItem) {
     flex: 1;
-    border-radius: 8px;
     height: 58px;
   }
 

@@ -96,13 +96,12 @@
 {/snippet}
 
 <nav class="appActivityBar" aria-label="Primary navigation" data-testid="app-activity-bar">
-  <button bind:this={workspaceButton} type="button" class="workspaceButton mb-1"
-    aria-label="Workspace" aria-expanded={workspaceOpen} aria-haspopup="dialog"
-    title={workspaceTooltip} data-testid="workspace-button"
+  <ActivityBarButton bind:buttonElement={workspaceButton} class="mb-1" label="Workspace"
+    ariaExpanded={workspaceOpen} ariaHaspopup="dialog" title={workspaceTooltip} testId="workspace-button"
     onmouseenter={() => { workspaceTooltip = getNextAppIconTooltip(workspaceTooltip) }}
     onclick={() => { workspaceOpen = !workspaceOpen }}>
-    <img class="h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" draggable="false" />
-  </button>
+    <img class="workspaceIcon h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" draggable="false" />
+  </ActivityBarButton>
   {#each activityItems.filter((item) => item.id !== 'settings') as item (item.id)}
     {@render activityButton(item)}
   {/each}
@@ -110,11 +109,11 @@
     {#each activityItems.filter((item) => item.id === 'settings') as item (item.id)}
       {@render activityButton(item)}
     {/each}
-    <button type="button" class="updatesButton" aria-label={updateAvailable ? 'App updates — update available' : 'App updates'}
-      aria-expanded={updatesOpen} title="App updates" data-testid="app-updates-button" onclick={onToggleUpdates}>
+    <ActivityBarButton label={updateAvailable ? 'App updates — update available' : 'App updates'}
+      ariaExpanded={updatesOpen} title="App updates" testId="app-updates-button" onclick={onToggleUpdates}>
       <Download size={24} strokeWidth={1.5} aria-hidden="true" />
       {#if updateAvailable}<span class="updateDot" data-testid="update-available-dot"></span>{/if}
-    </button>
+    </ActivityBarButton>
   </div>
 </nav>
 
@@ -122,26 +121,11 @@
 <WorkspacePopup bind:open={workspaceOpen} anchor={workspaceButton} {workspacePath} />
 
 <style>
-  .updatesButton,
-  .workspaceButton {
-    display: flex;
-    position: relative;
-    width: 100%;
-    height: 44px;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    color: var(--ui-muted-icon-glyph);
-    cursor: pointer;
-  }
-  .updatesButton:hover,
-  .updatesButton:focus-visible,
-  .updatesButton[aria-expanded='true'] { color: var(--ui-normal-text); }
   /* Brighten the mascot alongside the rail's other ghost controls on interaction. */
-  .workspaceButton img { opacity: 0.8; transform: translateX(1px); }
-  .workspaceButton:hover img,
-  .workspaceButton:focus-visible img,
-  .workspaceButton[aria-expanded='true'] img { opacity: 1; }
+  .workspaceIcon { opacity: 0.8; transform: translateX(1px); }
+  :global(.cthulhuUiActivityBarButton:is(:hover, :focus-visible, [aria-expanded='true'])) .workspaceIcon {
+    opacity: 1;
+  }
   .updateDot {
     position: absolute;
     right: 7px;

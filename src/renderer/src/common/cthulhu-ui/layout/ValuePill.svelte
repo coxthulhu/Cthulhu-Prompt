@@ -2,23 +2,19 @@
   import type { ComponentType } from 'svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
-  type ValuePillVariant = 'default' | 'todo' | 'in-progress' | 'completed'
-
   type Props = {
     text: string
     title?: string
-    variant?: ValuePillVariant
     icon?: ComponentType
     class?: string
     testId?: string
   }
 
-  let { text, title, variant = 'default', icon: Icon, class: className, testId }: Props = $props()
+  let { text, title, icon: Icon, class: className, testId }: Props = $props()
 </script>
 
 <span
-  class={mergeClasses('cthulhuUiValuePill text-sm', className)}
-  data-variant={variant}
+  class={mergeClasses('cthulhuUiValuePill min-w-0 truncate text-sm', className)}
   title={title ?? text}
   data-testid={testId}
 >
@@ -39,43 +35,6 @@
     font-weight: var(--font-weight-semibold);
     gap: 6px;
     max-width: 11rem;
-    min-width: 0;
-    overflow: hidden;
     padding: 4px 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .cthulhuUiValuePill[data-variant='todo'],
-  .cthulhuUiValuePill[data-variant='in-progress'],
-  .cthulhuUiValuePill[data-variant='completed'] {
-    justify-content: center;
-    max-width: none;
-    padding: 4px;
-    width: 116px;
-  }
-
-  .cthulhuUiValuePill[data-variant='todo'] {
-    color: var(--ui-secondary-text);
-  }
-
-  .cthulhuUiValuePill[data-variant='completed'] {
-    border-color: var(--ui-success-normal-border);
-    color: var(--ui-success-normal-text);
-  }
-
-  .cthulhuUiValuePill[data-variant='in-progress'] {
-    border-color: var(--ui-warning-normal-border);
-    color: var(--ui-warning-icon-glyph);
-  }
-
-  .cthulhuUiValuePill[data-variant='todo'] :global(svg),
-  .cthulhuUiValuePill[data-variant='in-progress'] :global(svg),
-  .cthulhuUiValuePill[data-variant='completed'] :global(svg) {
-    flex: 0 0 auto;
-  }
-
-  .cthulhuUiValuePill[data-variant='todo'] :global(svg) {
-    color: var(--ui-secondary-icon-glyph);
   }
 </style>

@@ -39,7 +39,7 @@
   }
 </script>
 
-<div class="category-editor-sidebar" data-testid="category-editor-sidebar">
+<div class="editor-card-rail category-editor-sidebar" data-testid="category-editor-sidebar">
   <IconButton
     icon={GripVertical}
     label="Drag category"
@@ -56,18 +56,6 @@
 </div>
 
 <style>
-  .category-editor-sidebar {
-    background: var(--ui-card-normal-surface);
-    border-right: 1px solid var(--ui-neutral-muted-border);
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    min-width: 0;
-    overflow: hidden;
-    width: 32px;
-  }
-
   .category-editor-sidebar :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
     border-bottom-color: transparent;
   }

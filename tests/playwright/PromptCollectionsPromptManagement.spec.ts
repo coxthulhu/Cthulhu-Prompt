@@ -100,7 +100,6 @@ const sidebarPromptStatusContentSelector = (status: 'active' | 'completed' | 'ar
 const expectEditedIndicator = async (page: any, promptId: string) => {
   const indicator = page.locator(statusIndicatorSelector(promptId))
   await expect(indicator).toHaveAttribute('data-edited', 'true')
-  await expect(indicator).toHaveCSS('visibility', 'visible')
   const colors = await indicator.evaluate((element) => {
     const reference = document.createElement('span')
     reference.style.backgroundColor = 'var(--ui-info-strong-border)'
@@ -1696,7 +1695,7 @@ describe('Prompt collection prompt management', () => {
     )
     await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'Todo')
     await expect(promptTreeStatusIndicator).toHaveAttribute('data-edited', 'false')
-    await expect(promptTreeStatusIndicator).toHaveCSS('visibility', 'hidden')
+    await expect(promptTreeStatusIndicator).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     const todoTitleBox = await activePromptTreeRow
       .locator('.sidebarPromptTreeSettingsLabel')
       .boundingBox()
@@ -1711,7 +1710,6 @@ describe('Prompt collection prompt management', () => {
       'edited tree accent'
     )
     await expect(promptTreeStatusIndicator).toHaveAttribute('data-edited', 'true')
-    await expect(promptTreeStatusIndicator).toHaveCSS('visibility', 'visible')
     await expect(promptTreeStatusIndicator).toHaveCSS(
       'background-color',
       (await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-info-strong-border']))[0]!
@@ -1771,7 +1769,6 @@ describe('Prompt collection prompt management', () => {
       'in-progress'
     )
     await expect(promptTreeStatusIndicator).toHaveAttribute('data-status', 'InProgress')
-    await expect(promptTreeStatusIndicator).toHaveCSS('visibility', 'visible')
     // The warning token comparison ensures the tree accent exactly matches the editor accent.
     const warningColor = (
       await resolvePaletteColors(promptTreeStatusIndicator, ['--ui-warning-icon-glyph'])

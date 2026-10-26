@@ -5,6 +5,7 @@
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
   import EditorCardSurface from '../prompt-editor/EditorCardSurface.svelte'
+  import EditorMetadataRow from '../prompt-editor/EditorMetadataRow.svelte'
   import type { DraggableOptions } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import type {
     CategoryDragPayload,
@@ -110,10 +111,10 @@
 
         <IconCell icon={Folder} variant="title" />
 
-        <div class="category-editor-title-copy">
+        <div class="grid min-w-0 gap-1">
           <div class="category-editor-title-line">
             <!-- Category titles are explicitly excluded from default line heights. -->
-            <span class="category-editor-title text-base leading-5" title={displayName}>
+            <span class="category-editor-title min-w-0 truncate text-base leading-5" title={displayName}>
               {displayName}
             </span>
             {#if canRename && !isReadOnly}
@@ -131,9 +132,9 @@
             {/if}
           </div>
 
-          <div class="category-editor-metadata-row text-xs">
+          <EditorMetadataRow>
             <span>{contentCountLabel}</span>
-          </div>
+          </EditorMetadataRow>
         </div>
       </div>
 
@@ -185,12 +186,6 @@
     min-width: 0;
   }
 
-  .category-editor-title-copy {
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-  }
-
   .category-editor-title-line {
     align-items: baseline;
     display: flex;
@@ -201,21 +196,6 @@
   .category-editor-title {
     color: var(--ui-normal-text);
     font-weight: var(--font-weight-semibold);
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .category-editor-metadata-row {
-    align-items: center;
-    color: var(--ui-muted-text);
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 8px;
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
   }
 
   :global(.category-editor-chevron-toggle.cthulhuUiIconButton) {

@@ -61,6 +61,20 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* Shared shell for the prompt and category side rails in the sidebar column. */
+  :global(.editor-card-rail) {
+    background: var(--ui-card-normal-surface);
+    border-right: 1px solid var(--ui-neutral-muted-border);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+    width: 32px;
+  }
+
   .editor-card-body {
     /* The outer wrapper clips the rail and body into one card silhouette. */
     align-content: start;

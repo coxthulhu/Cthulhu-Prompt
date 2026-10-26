@@ -136,7 +136,7 @@
           {#if index > 0}
             <SeparatorDot />
           {/if}
-          <span class="cthulhuUiSelectorButtonDetailText" data-testid={detailPart.testId}>
+          <span class="cthulhuUiSelectorButtonDetailText min-w-0 truncate" data-testid={detailPart.testId}>
             {#if detailPart.icon}
               {@const DetailIcon = detailPart.icon}
               <DetailIcon class="cthulhuUiSelectorButtonDetailIcon" size={10} aria-hidden="true" />
@@ -198,11 +198,7 @@
   }
 
   .cthulhuUiSelectorButton[data-open='true'],
-  .cthulhuUiSelectorButton[data-selected='true'] {
-    background-color: var(--ui-neutral-action-hover-fill);
-    color: var(--ui-normal-text);
-  }
-
+  .cthulhuUiSelectorButton[data-selected='true'],
   .cthulhuUiSelectorButton[data-row-state='active'],
   .cthulhuUiSelectorButton[data-row-state='drag-active'] {
     background-color: var(--ui-neutral-action-hover-fill);
@@ -346,10 +342,6 @@
     align-items: center;
     display: inline-flex;
     gap: 5px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .cthulhuUiSelectorButtonDetailText :global(.cthulhuUiSelectorButtonDetailIcon) {

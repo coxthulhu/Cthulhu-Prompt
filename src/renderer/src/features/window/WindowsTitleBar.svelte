@@ -187,7 +187,6 @@
 
   .titlebar__control--close:active {
     background: #f1707a;
-    color: #ffffff;
   }
 
   /* Windows glyph metrics are explicitly excluded to preserve native control rendering. */

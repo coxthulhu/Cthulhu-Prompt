@@ -769,7 +769,7 @@
   {#if collectionListState !== 'no-workspace'}
     <div class="shrink-0 pb-1">
       <header class="sidebarCollectionHeader">
-        <h2 class="sidebarCollectionTitle text-sm leading-5" data-testid="sidebar-collection-title">
+        <h2 class="sidebarCollectionTitle min-w-0 truncate text-sm leading-5" data-testid="sidebar-collection-title">
           {collectionKind === 'template' ? 'Template Collections' : 'Task Collections'}
         </h2>
         <DropdownPopupDetailed
@@ -1008,9 +1008,6 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 30px;
-    padding: 0;
-    background: var(--ui-ghost-surface);
-    border: 0;
     border-radius: 8px;
     color: var(--ui-muted-icon-glyph);
     cursor: pointer;
@@ -1035,10 +1032,6 @@
 
   .sidebarCollectionTitle {
     flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
     font-weight: var(--font-weight-semibold);
     color: var(--ui-secondary-text);
   }

@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   type Props = {
-    icon: ComponentType
+    /** Standard rail glyph; ignored when custom content is supplied. */
+    icon?: ComponentType
     label: string
     active?: boolean
     /** Shortens the active indicator while its sidebar is hidden. */
@@ -15,8 +16,13 @@
     title?: string
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
     ariaExpanded?: boolean
+    ariaHaspopup?: 'dialog'
     disabled?: boolean
+    /** Bound native button, used as an anchor by popup triggers. */
+    buttonElement?: HTMLButtonElement
     onclick?: (event: MouseEvent) => void
+    onmouseenter?: (event: MouseEvent) => void
+    children?: Snippet
   }
 
   let {
@@ -30,29 +36,40 @@
     title,
     ariaCurrent,
     ariaExpanded,
+    ariaHaspopup,
     disabled = false,
-    onclick
+    buttonElement = $bindable(),
+    onclick,
+    onmouseenter,
+    children
   }: Props = $props()
 </script>
 
 <button
+  bind:this={buttonElement}
   type="button"
   class={mergeClasses('cthulhuUiButtonBase cthulhuUiActivityBarButton', className)}
   aria-label={label}
   aria-current={ariaCurrent}
   aria-expanded={ariaExpanded}
+  aria-haspopup={ariaHaspopup}
   data-active={active ? 'true' : 'false'}
   data-compact-indicator={compactIndicator ? 'true' : 'false'}
   data-testid={testId}
   {title}
   {disabled}
   {onclick}
+  {onmouseenter}
 >
-  <Icon
-    class={mergeClasses('cthulhuUiActivityBarButtonIcon', iconClass)}
-    strokeWidth={1.5}
-    aria-hidden="true"
-  />
+  {#if children}
+    {@render children()}
+  {:else if Icon}
+    <Icon
+      class={mergeClasses('cthulhuUiActivityBarButtonIcon', iconClass)}
+      strokeWidth={1.5}
+      aria-hidden="true"
+    />
+  {/if}
 </button>
 
 <style>
@@ -67,7 +84,8 @@
   }
 
   .cthulhuUiActivityBarButton:hover,
-  .cthulhuUiActivityBarButton:focus-visible {
+  .cthulhuUiActivityBarButton:focus-visible,
+  .cthulhuUiActivityBarButton[aria-expanded='true'] {
     color: var(--ui-normal-text);
   }
 

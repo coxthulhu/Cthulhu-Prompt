@@ -337,4 +337,25 @@
   .cthulhuUiDropdownPopupLayer :global(.cthulhuUiCardSurface) {
     box-shadow: none;
   }
+
+  /* Shared menu row surface; menu components own their columns and spacing. */
+  :global(.cthulhuUiDropdownPopupItem) {
+    align-items: center;
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-hoverable-text);
+    cursor: pointer;
+    display: grid;
+    gap: 8px;
+    text-align: left;
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
+    width: 100%;
+  }
+
+  :global(.cthulhuUiDropdownPopupItem:hover),
+  :global(.cthulhuUiDropdownPopupItem:focus-visible) {
+    background: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
+  }
 </style>
