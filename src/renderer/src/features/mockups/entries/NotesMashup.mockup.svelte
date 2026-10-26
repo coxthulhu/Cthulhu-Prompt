@@ -1520,9 +1520,7 @@
       <EyeOff class="base-note-header-icon" size={16} aria-hidden="true" />
     {/if}
     <span class="base-note-header-copy">
-      <span class="base-note-header-title text-sm leading-5">Attached Note</span>
-      {@render SeparatorDot()}
-      <span class="base-note-header-detail text-xs">{note.visible ? note.modifiedLabel : 'Hidden'}</span>
+      <span class="base-note-header-title text-sm leading-5">Attached Note</span>      <span class="base-note-header-detail text-xs">{note.visible ? note.modifiedLabel : 'Hidden'}</span>
     </span>
   </button>
   {#if note.visible}
@@ -2704,8 +2702,7 @@
   }
 
   .base-note-header :global(.base-note-header-icon) { flex: 0 0 auto; color: var(--ui-normal-text); }
-  .base-note-header-copy { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
-  .base-note-header-copy > .base-separator-dot { align-self: center; }
+  .base-note-header-copy { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
   .base-note-header-title { color: var(--ui-normal-text); font-weight: var(--font-weight-semibold); white-space: nowrap; }
   .base-note-header-detail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .base-note-header[data-hidden='true'] :global(.base-note-header-icon) { color: var(--ui-muted-icon-glyph); }
