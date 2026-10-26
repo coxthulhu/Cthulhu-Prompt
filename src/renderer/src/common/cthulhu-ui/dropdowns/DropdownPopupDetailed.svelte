@@ -194,9 +194,10 @@
           {/if}
           <div class="cthulhuUiDropdownPopupDetailedSection" data-dropdown-section={section.id}>
             {#each section.items as item (item.id)}
+              <!-- Rows only slide while a drag previews a reorder; other list changes apply instantly. -->
               <div
                 class="cthulhuUiDropdownPopupDetailedAnimatedItem"
-                animate:flip={{ duration: uiAnimationDurationMs.standard }}
+                animate:flip={{ duration: itemDragOptions?.isDraggingAny() ? uiAnimationDurationMs.standard : 0 }}
               >
                 {@render rowAccessory?.(item, section.id)}
                 {#if itemDragOptions}
