@@ -8,11 +8,11 @@ const { test, describe, expect } = createPlaywrightTestSuite({
 })
 
 describe('Separator DPI scaling', () => {
-  test('renders horizontal and vertical separator borders as one device pixel', async ({
+  test('renders horizontal separator borders as one device pixel', async ({
     testSetup
   }) => {
     // The empty-workspace home card exposes a normal horizontal Separator.
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+    const { mainWindow } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
     // The first card divider provides the horizontal border under test.
@@ -37,29 +37,52 @@ describe('Separator DPI scaling', () => {
     expect(parseFloat(horizontalMetrics.borderTopWidth) * horizontalMetrics.devicePixelRatio).toBe(
       1
     )
-
-    await testHelpers.clickNavButton('Test Screen')
-    // The compound button exposes a normal vertical Separator.
-    const verticalSeparator = mainWindow
-      .locator('.cthulhuUiSplitIconButtonSeparator')
-      .first()
-    await verticalSeparator.scrollIntoViewIfNeeded()
-    await expect(verticalSeparator).toBeVisible()
-
-    // Computed metrics confirm the vertical border uses the same physical-pixel snapping.
-    const verticalMetrics = await verticalSeparator.evaluate((element) => {
-      const bounds = element.getBoundingClientRect()
-      const style = getComputedStyle(element)
-      return {
-        devicePixelRatio,
-        borderLeftWidth: style.borderLeftWidth,
-        width: bounds.width
-      }
-    })
-
-    expect(verticalMetrics.devicePixelRatio).toBe(1.25)
-    expect(verticalMetrics.borderLeftWidth).toBe('0.8px')
-    expect(verticalMetrics.width).toBe(1)
-    expect(parseFloat(verticalMetrics.borderLeftWidth) * verticalMetrics.devicePixelRatio).toBe(1)
   })
 })
+
+for (const scale of [1, 1.25, 1.5, 2, 4]) {
+  const { test, describe, expect } = createPlaywrightTestSuite({
+    launchOptions: { args: [`--force-device-scale-factor=${scale}`] }
+  })
+
+  describe(`Split button at ${scale * 100}% DPI`, () => {
+    test('keeps only one device pixel between the hover surfaces', async ({
+      testSetup
+    }, testInfo) => {
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'none' }
+      })
+      await testHelpers.clickNavButton('Test Screen')
+      const splitButton = mainWindow.locator('.cthulhuUiSplitIconButton').first()
+      const separator = splitButton.locator('.cthulhuUiSplitIconButtonSeparator')
+
+      for (const side of ['Main', 'Chevron']) {
+        await splitButton.locator(`.cthulhuUiSplitIconButton${side}`).hover()
+        const metrics = await separator.evaluate((element) => {
+          const bounds = element.getBoundingClientRect()
+          const style = getComputedStyle(element)
+          const mainBounds = element.previousElementSibling!.getBoundingClientRect()
+          const chevronBounds = element.nextElementSibling!.getBoundingClientRect()
+          return {
+            devicePixelRatio,
+            borderWidth: parseFloat(style.borderLeftWidth),
+            width: bounds.width,
+            leftGap: bounds.left - mainBounds.right,
+            rightGap: chevronBounds.left - bounds.right
+          }
+        })
+        expect(metrics.devicePixelRatio).toBe(scale)
+        expect(metrics.borderWidth * scale).toBeCloseTo(1, 5)
+        // Layout units can round slightly; the old 1 CSS pixel box fails at fractional DPI.
+        expect(metrics.width * scale).toBeCloseTo(1, 1)
+        expect(Math.abs(metrics.leftGap)).toBeLessThanOrEqual(1)
+        expect(Math.abs(metrics.rightGap)).toBeLessThanOrEqual(1)
+        await splitButton.screenshot({
+          path: testInfo.outputPath(`${side.toLowerCase()}-hover.png`),
+          animations: 'disabled',
+          scale: 'device'
+        })
+      }
+    })
+  })
+}

@@ -152,11 +152,16 @@
     border-top-left-radius: var(--cthulhu-ui-radius-control);
   }
 
-  :global(.cthulhuUiSplitIconButtonSeparator.cthulhuUiSeparator) {
+  .cthulhuUiSplitIconButton
+    :global(.cthulhuUiSplitIconButtonSeparator.cthulhuUiSeparator) {
     --cthulhu-ui-separator-color: var(--ui-neutral-normal-border);
     align-self: stretch;
-    flex: 0 0 1px;
+    /* Let the snapped hairline own all the width, without an empty content strip. */
+    border-left-width: 0.25px;
+    box-sizing: content-box;
+    flex: 0 0 auto;
     height: auto;
+    width: 0;
   }
 
   .cthulhuUiSplitIconButton

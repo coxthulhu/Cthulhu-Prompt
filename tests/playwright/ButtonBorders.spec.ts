@@ -200,7 +200,7 @@ describe('Button styling', () => {
     await expect(compoundSeparator).toHaveAttribute('data-orientation', 'vertical')
     await expect(compoundSeparator).toHaveCSS('border-left-color', neutralBorder)
     await expect(compoundSeparator).toHaveCSS('border-left-style', 'solid')
-    await expect(compoundSeparator).toHaveCSS('width', '1px')
+    await expect(compoundSeparator).toHaveCSS('width', '0px')
     await compoundChevronButton.hover()
     await expect(compoundChevronButton).toHaveCSS('background-color', neutralFill)
     await expect(compoundSeparator).toHaveCSS('border-left-color', neutralBorder)
