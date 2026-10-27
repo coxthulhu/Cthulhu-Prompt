@@ -2,7 +2,7 @@
   import {
     Archive, ArrowRight, ArrowUpToLine, Bug, Check, ChevronsDownUp, ChevronsUpDown,
     ChevronDown, ChevronUp, ChevronRight, CircleCheckBig, Clock, Download, ExternalLink, FileText, Folder, FolderCog, FolderOpen,
-    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Trash2, X
+    GripVertical, Home, Layers, ListTodo, MoreHorizontal, PanelsTopLeft, Plus, RefreshCw, Settings, Star, Trash2, X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
 
@@ -136,11 +136,19 @@
   let updateReady = $state(false)
   let collectionKind = $state<'prompt' | 'template'>('prompt')
   let selectedCollectionIds = $state({ prompt: 'product', template: 'engineering' })
+  // Favorites and their order are separate for tasks and templates, just like the live picker.
+  let favoriteCollectionIds = $state<Record<'prompt' | 'template', string[]>>({
+    prompt: ['release', 'product'],
+    template: ['review-templates', 'engineering']
+  })
   const visibleCollections = $derived(collections.filter((collection) => collection.kind === collectionKind))
   const selectedCollection = $derived(visibleCollections.find((collection) => collection.id === selectedCollectionIds[collectionKind]) ?? visibleCollections[0])
-  // Match the live quick picks: workspace order, with an out-of-range selection pinned first.
+  const favoriteCollections = $derived(favoriteCollectionIds[collectionKind]
+    .flatMap((id) => visibleCollections.filter((collection) => collection.id === id)))
+  // Committed favorites lead quick picks; an out-of-range selection is pinned first.
   const quickCollections = $derived.by(() => {
-    const firstThree = visibleCollections.slice(0, 3)
+    const firstThree = [...favoriteCollections,
+      ...visibleCollections.filter((collection) => !favoriteCollectionIds[collectionKind].includes(collection.id))].slice(0, 3)
     return selectedCollection && !firstThree.some((collection) => collection.id === selectedCollection.id)
       ? [selectedCollection, ...firstThree.slice(0, 2)]
       : firstThree
@@ -178,14 +186,55 @@
   let actionsMenuOpen = $state(false)
   let categoryMenu = $state<{ category: MockCategory; group: MockGroup; x: number; y: number } | null>(null)
   let selectedCategoryId = $state<string | null>(null)
-  // Collection reorder previews live entirely in this mockup's fixture array.
+  // Reorder previews stay inside their source section until dropped; cancellation discards them.
   let draggedCollectionId = $state<string | null>(null)
-  const reorderCollection = (targetId: string) => {
-    const sourceIndex = collections.findIndex((collection) => collection.id === draggedCollectionId)
-    const targetIndex = collections.findIndex((collection) => collection.id === targetId)
+  let draggedCollectionSection = $state('all')
+  let collectionPreviewIds = $state<string[] | null>(null)
+  const collectionSections = $derived([
+    { id: 'favorites', label: 'Favorites', collections: favoriteCollections },
+    { id: 'all', label: 'All Collections', collections: visibleCollections }
+  ].map((section) => ({ ...section,
+    collections: collectionPreviewIds && draggedCollectionSection === section.id
+      ? collectionPreviewIds.flatMap((id) => section.collections.filter((collection) => collection.id === id))
+      : section.collections
+  })))
+  const finishCollectionDrag = () => { draggedCollectionId = null; collectionPreviewIds = null }
+  const toggleFavorite = (id: string) => {
+    const ids = favoriteCollectionIds[collectionKind]
+    favoriteCollectionIds[collectionKind] = ids.includes(id) ? ids.filter((entry) => entry !== id) : [...ids, id]
+    finishCollectionDrag()
+  }
+  const previewCollectionOrder = (event: DragEvent, targetId: string, sectionId: string) => {
+    if (!draggedCollectionId || draggedCollectionSection !== sectionId || !collectionPreviewIds) return
+    event.preventDefault()
+    event.stopPropagation()
+    const sourceIndex = collectionPreviewIds.indexOf(draggedCollectionId)
+    const targetIndex = collectionPreviewIds.indexOf(targetId)
     if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return
-    const [collection] = collections.splice(sourceIndex, 1)
-    collections.splice(targetIndex, 0, collection!)
+    const ids = [...collectionPreviewIds]
+    ids.splice(sourceIndex, 1)
+    ids.splice(targetIndex, 0, draggedCollectionId)
+    collectionPreviewIds = ids
+  }
+  const commitCollectionOrder = (event: DragEvent, sectionId: string) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (collectionPreviewIds && draggedCollectionSection === sectionId) {
+      if (sectionId === 'favorites') favoriteCollectionIds[collectionKind] = [...collectionPreviewIds]
+      else {
+        const ordered = collectionPreviewIds.flatMap((id) => visibleCollections.filter((collection) => collection.id === id))
+        collections = collections.map((collection) => collection.kind === collectionKind ? ordered.shift()! : collection)
+      }
+    }
+    finishCollectionDrag()
+  }
+  const deleteCollection = () => {
+    const id = selectedCollection?.id
+    favoriteCollectionIds[collectionKind] = favoriteCollectionIds[collectionKind].filter((entry) => entry !== id)
+    collections = collections.filter((collection) => collection.id !== id)
+    selectedPromptId = ''
+    selectedCategoryId = null
+    deleteDialog.close()
   }
   const closeMenus = (event: MouseEvent) => {
     if (event.target instanceof Element && event.target.closest('.local-menu, .collection-selector, .collection-show-all, .prompts-actions, .updates-button, .updates-popup')) return
@@ -347,11 +396,6 @@
   const canMoveToCollection = (collection: MockCollection) => !!draggedPrompt &&
     collection.id !== selectedCollection?.id &&
     (draggedPrompt.group.id === 'active' || draggedPrompt.group.id === 'backlog')
-  // Quick rows and the full menu share transfer rules but own distinct hover indicators.
-  const previewCollectionDrop = (event: DragEvent, collection: MockCollection, target: 'quick' | 'dropdown') => {
-    if (!draggedPrompt) return
-    previewPromptDrop(event, `${target}:${collection.id}`)
-  }
   const dropOnCollection = (event: DragEvent, collection: MockCollection) => {
     if (!canMoveToCollection(collection)) {
       event.preventDefault()
@@ -606,10 +650,48 @@
   {/if}
 {/snippet}
 
-<svelte:window onclick={closeMenus} ondragover={() => { dropTarget = null }} ondragend={finishPromptDrag} onkeydown={(event) => {
+{#snippet CollectionOption(collection: MockCollection, sectionId: string)}
+  <div class="collection-option-row">
+    <button class="collection-favorite" type="button" role="menuitemcheckbox"
+      aria-checked={favoriteCollectionIds[collectionKind].includes(collection.id)}
+      aria-label={`${favoriteCollectionIds[collectionKind].includes(collection.id) ? 'Remove' : 'Add'} ${collection.title} ${favoriteCollectionIds[collectionKind].includes(collection.id) ? 'from' : 'to'} favorites`}
+      title={favoriteCollectionIds[collectionKind].includes(collection.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+      onclick={() => toggleFavorite(collection.id)}>
+      <Star size={16} fill={favoriteCollectionIds[collectionKind].includes(collection.id) ? 'currentColor' : 'none'} aria-hidden="true" />
+    </button>
+    <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
+      role="menuitemradio" aria-checked={selectedCollection?.id === collection.id}
+      draggable="true" data-dragging={draggedCollectionId === collection.id && draggedCollectionSection === sectionId}
+      data-drop-over={dropTarget === `dropdown:${sectionId}:${collection.id}` && canMoveToCollection(collection)}
+      data-drop-blocked={dropTarget === `dropdown:${sectionId}:${collection.id}` && !canMoveToCollection(collection)}
+      ondragstart={(event) => {
+        draggedCollectionId = collection.id
+        draggedCollectionSection = sectionId
+        collectionPreviewIds = (sectionId === 'favorites' ? favoriteCollections : visibleCollections).map((entry) => entry.id)
+        event.dataTransfer?.setData('text/plain', collection.id)
+      }}
+      ondragover={(event) => {
+        if (draggedCollectionId) previewCollectionOrder(event, collection.id, sectionId)
+        else previewPromptDrop(event, `dropdown:${sectionId}:${collection.id}`)
+      }}
+      ondrop={(event) => {
+        if (draggedPrompt) dropOnCollection(event, collection)
+        else commitCollectionOrder(event, sectionId)
+      }}
+      ondragend={finishCollectionDrag}
+      onclick={() => selectCollection(collection)}>
+      <GripVertical class="collection-grip" size={16} aria-hidden="true" />
+      <CollectionIcon class="collection-option-icon" size={20} aria-hidden="true" />
+      <span class="collection-option-copy"><span class="collection-option-title">{collection.title}</span><small class="text-xs leading-4.5">{collectionCount(collection)} {contentLabel.toLowerCase()}{collectionCount(collection) === 1 ? '' : 's'}{collection.modified ? ` · ${collection.modified}` : ''}</small></span>
+      {#if selectedCollection?.id === collection.id}<ChevronRight size={14} aria-hidden="true" />{/if}
+    </button>
+  </div>
+{/snippet}
+
+<svelte:window onclick={closeMenus} ondragover={() => { dropTarget = null }} ondragend={() => { finishPromptDrag(); finishCollectionDrag() }} onkeydown={(event) => {
   if (event.key === 'Escape') {
     if (workspaceOpen && event.target instanceof Element && event.target.closest('.workspace-popup')) closeWorkspace()
-    collectionMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag()
+    collectionMenuOpen = false; actionsMenuOpen = false; categoryMenu = null; updatesOpen = false; finishPromptDrag(); finishCollectionDrag()
   }
 }} />
 
@@ -650,27 +732,17 @@
           {#if collectionMenuOpen}
             <div id="mock-collection-menu" class="local-menu collection-menu" role="menu" aria-label="Collection selector">
               <div class="collection-menu-items">
-                {#each visibleCollections as collection (collection.id)}
-                  <button class="collection-option text-sm leading-5" type="button" data-selected={selectedCollection?.id === collection.id}
-                    role="menuitemradio" aria-checked={selectedCollection?.id === collection.id}
-                    draggable="true" data-dragging={draggedCollectionId === collection.id}
-                    data-drop-over={dropTarget === `dropdown:${collection.id}` && canMoveToCollection(collection)}
-                    data-drop-blocked={dropTarget === `dropdown:${collection.id}` && !canMoveToCollection(collection)}
-                    ondragstart={(event) => { draggedCollectionId = collection.id; event.dataTransfer?.setData('text/plain', collection.id) }}
-                    ondragover={(event) => { if (draggedCollectionId) event.preventDefault(); else previewCollectionDrop(event, collection, 'dropdown') }}
-                    ondrop={(event) => {
-                      if (draggedPrompt) {
-                        dropOnCollection(event, collection)
-                        return
-                      }
-                      event.preventDefault(); reorderCollection(collection.id); draggedCollectionId = null
-                    }}
-                    ondragend={() => { draggedCollectionId = null }}
-                    onclick={() => selectCollection(collection)}>
-                    <GripVertical class="collection-grip" size={16} aria-hidden="true" /><CollectionIcon class="collection-option-icon" size={20} aria-hidden="true" />
-                    <span>{collection.title}<small class="text-xs leading-4.5">{collectionCount(collection)} {contentLabel.toLowerCase()}{collectionCount(collection) === 1 ? '' : 's'}{collection.modified ? ` · ${collection.modified}` : ''}</small></span>
-                    {#if selectedCollection?.id === collection.id}<ChevronRight size={14} aria-hidden="true" />{/if}
-                  </button>
+                {#each collectionSections as section (section.id)}
+                  <div class="collection-section-heading text-sm leading-5" role="presentation">
+                    {section.label}<span class="separator"></span>
+                  </div>
+                  <div class="collection-menu-section">
+                    {#each section.collections as collection (collection.id)}
+                      {@render CollectionOption(collection, section.id)}
+                    {:else}
+                      {#if section.id === 'favorites'}<p class="collection-favorites-empty text-sm leading-5">Star a collection to pin it here.</p>{/if}
+                    {/each}
+                  </div>
                 {/each}
               </div>
               <div class="menu-footer"><button class="collection-option text-sm leading-5" type="button" role="menuitem" onclick={openCreateCollection}><Plus size={20} aria-hidden="true" /><span>Create Collection<small class="text-xs leading-4.5">Create a {isTemplateCollection ? 'prompt template' : 'task prompt'} collection</small></span></button></div>
@@ -685,10 +757,14 @@
             data-active={selectedCollection?.id === collection.id}
             data-drop-over={dropTarget === `quick:${collection.id}` && canMoveToCollection(collection)}
             data-drop-blocked={dropTarget === `quick:${collection.id}` && !canMoveToCollection(collection)}
-            ondragover={(event) => previewCollectionDrop(event, collection, 'quick')}
+            ondragover={(event) => previewPromptDrop(event, `quick:${collection.id}`)}
             ondrop={(event) => dropOnCollection(event, collection)}
             onclick={(event) => { selectCollection(collection); if (event.detail !== 0) event.currentTarget.blur() }}>
-            <CollectionIcon class="quick-collection-icon" size={16} aria-hidden="true" />
+            {#if selectedCollection?.id === collection.id}
+              <FolderOpen class="quick-collection-icon" size={16} aria-hidden="true" />
+            {:else}
+              <Folder class="quick-collection-icon" size={16} aria-hidden="true" />
+            {/if}
             <span class="quick-collection-label">{collection.title}</span>
             <span class="quick-collection-count text-xs leading-4 tabular-nums">{collectionCount(collection)}</span>
           </button>
@@ -734,6 +810,7 @@
       {#key selectedCollection?.id}
       {#each visibleGroups as group (group.id)}
         <section class="status-section" data-testid={`mock-status-section-${group.id}`} data-expanded={group.expanded}
+          data-bottom-anchored={!group.expanded && visibleGroups.indexOf(group) > 0 && visibleGroups.findLastIndex((entry) => entry.expanded) === visibleGroups.indexOf(group) - 1}
           style={`flex:0 0 ${sectionHeights[group.id]}px;`}>
           {#if group.expanded && visibleGroups.slice(0, visibleGroups.indexOf(group)).some((entry) => entry.expanded)}
             <button type="button" class="section-sash" aria-label={`Resize ${group.label} section`} tabindex="-1"
@@ -900,7 +977,7 @@
     </form>
   </dialog>
   <dialog bind:this={deleteDialog} class="mock-dialog text-sm leading-5" aria-labelledby="mock-delete-title">
-    <form onsubmit={(event) => { event.preventDefault(); collections = collections.filter((collection) => collection.id !== selectedCollection?.id); selectedPromptId = ''; selectedCategoryId = null; deleteDialog.close() }}>
+    <form onsubmit={(event) => { event.preventDefault(); deleteCollection() }}>
       <header class="dialog-header"><Trash2 size={24} /><h2 id="mock-delete-title" class="text-lg font-semibold">Delete Collection</h2></header>
       <p class="dialog-body">Delete “{collectionTitle}” and its {contentLabel.toLowerCase()}s?</p>
       <footer class="dialog-footer"><button type="button" onclick={() => deleteDialog.close()}>Cancel</button><button class="danger-action" type="submit">Delete Collection</button></footer>
@@ -1642,7 +1719,7 @@
     flex: 1;
     flex-direction: column;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .status-section {
@@ -1655,6 +1732,8 @@
   .status-section[data-expanded='false'] {
     min-height: 36px;
   }
+
+  .status-section[data-bottom-anchored='true'] { margin-top: auto; }
 
   .status-header {
     display: grid;
@@ -1828,12 +1907,30 @@
   }
 
   .collection-menu-items {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: 2px;
     max-height: 478px;
+    min-height: 0;
     overflow-y: auto;
   }
+
+  .collection-menu-section {
+    display: grid;
+    gap: 2px;
+  }
+
+  .collection-section-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 8px;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .collection-section-heading .separator { flex: 1; width: auto; }
+  .collection-favorites-empty { margin: 0; padding: 8px 8px 10px 42px; }
+  .collection-option-row { display: flex; gap: 4px; min-width: 0; }
 
   .actions-menu {
     top: 100%;
@@ -1863,15 +1960,42 @@
     display: block;
   }
 
+  .local-menu .collection-favorite {
+    flex: 0 0 30px;
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--ui-muted-icon-glyph);
+  }
+
+  .local-menu .collection-favorite:hover,
+  .local-menu .collection-favorite:focus-visible {
+    background: var(--ui-ghost-surface);
+    color: var(--ui-normal-text);
+  }
+
+  .local-menu .collection-favorite[aria-checked='true'] {
+    color: var(--ui-favorite-icon-glyph);
+  }
+
   .local-menu .collection-option {
     display: grid;
-    grid-template-columns: 22px 34px minmax(0, 1fr) 22px;
-    flex: 0 0 auto;
+    grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr);
+    flex: 1;
+    min-width: 0;
     height: 58px;
     border: 1px solid var(--ui-ghost-surface);
     border-radius: 8px;
-    gap: 8px;
+    gap: 0;
   }
+
+  .local-menu .collection-option[data-selected='true'] {
+    grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr) 22px;
+  }
+
+  .collection-option-copy { grid-column: 5; }
+  .collection-option-title, .collection-option small { display: block; overflow: hidden; text-overflow: ellipsis; }
 
   .collection-option :global(svg) {
     justify-self: center;
@@ -1883,6 +2007,7 @@
   }
 
   .collection-option :global(.collection-option-icon) {
+    grid-column: 3;
     color: var(--ui-hoverable-icon-glyph);
   }
 
@@ -1892,12 +2017,15 @@
     color: var(--ui-normal-text);
   }
 
-  .local-menu .collection-option[data-dragging='true'] {
-    background: var(--ui-info-normal-surface);
+  .local-menu .collection-option:hover,
+  .local-menu .collection-option:focus-visible {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
   }
 
   .menu-footer .collection-option {
     grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
   }
 
   .empty-collections {
@@ -1933,15 +2061,23 @@
   }
 
   /* Transfer feedback takes precedence over the selected collection's accent fill. */
+  .local-menu .collection-option[data-dragging='true'] {
+    background: var(--ui-info-normal-surface);
+    border-color: var(--ui-info-muted-border);
+    color: var(--ui-normal-text);
+  }
+
   .local-menu .collection-option[data-drop-over='true'],
   .local-menu .collection-option[data-drop-over='true']:hover {
-    background: var(--ui-info-normal-surface);
+    background: var(--ui-info-hover-surface);
+    border-color: var(--ui-info-muted-hover-border);
     color: var(--ui-normal-text);
   }
 
   .local-menu .collection-option[data-drop-blocked='true'],
   .local-menu .collection-option[data-drop-blocked='true']:hover {
     background: var(--ui-neutral-emphasis-surface);
+    border-color: var(--ui-neutral-emphasis-border);
     color: var(--ui-normal-text);
   }
 
