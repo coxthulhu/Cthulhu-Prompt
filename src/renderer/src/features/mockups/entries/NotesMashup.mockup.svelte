@@ -33,9 +33,21 @@
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
   import { estimateTokenCount } from 'tokenx'
+  import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
+  import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
+  import UiSplitIconButton from '@renderer/common/cthulhu-ui/buttons/SplitIconButton.svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
+  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import UiIconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
+  import UiSeparator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import UiSeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
+  import EditorMetadataRow from '@renderer/features/prompt-editor/EditorMetadataRow.svelte'
+  import PromptStatusIndicator from '@renderer/features/prompt-editor/PromptStatusIndicator.svelte'
 
-  // Standalone snapshot of the prompt-collection screen: all fixtures, controls, and mutations live here.
-  // Only third-party Svelte/icons/Monaco/token counting and the host's palette/theme are shared.
+  // Snapshot of the prompt-collection screen: all fixtures, controls, and mutations live here.
+  // The notes UI uses shared cthulhu-ui and prompt-editor components; the rest is local markup
+  // over third-party Svelte/icons/Monaco/token counting and the host's palette/theme.
+  // Shared components are imported with a Ui prefix where a local snippet already uses the name.
   // Editor sizing below intentionally uses application defaults, independent of persisted settings.
   // Snapshot: task-prompt collection UI. No workspace, IPC, live components, or domain mutations.
   const NO_TEMPLATE_LABEL = 'No template'
@@ -752,10 +764,21 @@
     description: string
     submit: string
     confirm: () => void
+    cancel?: () => void
     informational?: boolean
     acknowledgement?: string
-    acknowledged?: boolean
   } | null>(null)
+  // Every dismissal path routes through here so pending copy confirmations resolve.
+  const cancelConfirmation = () => {
+    const cancel = confirmation?.cancel
+    confirmation = null
+    cancel?.()
+  }
+  const acceptConfirmation = () => {
+    const confirm = confirmation?.confirm
+    confirmation = null
+    confirm?.()
+  }
   let copyError = $state<string | null>(null)
 
   let manageCategoriesOpen = $state(false)
@@ -1039,7 +1062,7 @@
         closeTemplateDialog()
         nameDialog = null
         closeManageCategories()
-        confirmation = null
+        cancelConfirmation()
         copyError = null
         statusMenuId = null
         splitMenuKey = null
@@ -1071,18 +1094,24 @@
     return `${prompt.status} ${days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`}`
   }
 
-  const requestCopyPrompt = (prompt: MockPrompt, selectedTemplate?: MockTemplate | null) => {
-    if (prompt.status === 'Backlog' || prompt.status === 'Completed' || prompt.status === 'Archived') {
-      confirmation = {
-        title: 'Copy Prompt',
-        description: `Copying this prompt will move it from ${prompt.status} to In Progress.`,
-        submit: 'Copy and Move',
-        informational: true,
-        confirm: () => { void copyPrompt(prompt, selectedTemplate) }
-      }
+  // Resolves true immediately for active prompts, or after the user accepts the status move.
+  const confirmCopyMove = (prompt: MockPrompt) => new Promise<boolean>((resolve) => {
+    if (prompt.status !== 'Backlog' && prompt.status !== 'Completed' && prompt.status !== 'Archived') {
+      resolve(true)
       return
     }
-    void copyPrompt(prompt, selectedTemplate)
+    confirmation = {
+      title: 'Copy Prompt',
+      description: `Copying this prompt will move it from ${prompt.status} to In Progress.`,
+      submit: 'Copy and Move',
+      informational: true,
+      confirm: () => resolve(true),
+      cancel: () => resolve(false)
+    }
+  })
+
+  const requestCopyPrompt = async (prompt: MockPrompt, selectedTemplate?: MockTemplate | null) => {
+    if (await confirmCopyMove(prompt)) void copyPrompt(prompt, selectedTemplate)
   }
 
   const copyPrompt = async (prompt: MockPrompt, selectedTemplate?: MockTemplate | null) => {
@@ -1113,6 +1142,12 @@
     if (prompt.attachedNote) prompt.attachedNote.visible = !prompt.attachedNote.visible
     else prompt.attachedNote = { id: window.crypto.randomUUID(), modifiedLabel: 'Updated today', visible: true, isEdited: false, text: '' }
   }
+
+  const attachedNoteMoreOptions = (prompt: MockPrompt): DropdownPopupDetailedItem[] => [
+    prompt.attachedNote
+      ? { id: 'delete', label: 'Delete Note', detail: 'Permanently delete attached note', icon: Trash2 }
+      : { id: 'add', label: 'Add Note', detail: 'Add and show an attached note', icon: NotebookPen }
+  ]
 
   const requestAttachedNoteDelete = (prompt: MockPrompt) => {
     if (!prompt.attachedNote?.text.trim()) { prompt.attachedNote = undefined; return }
@@ -1206,10 +1241,6 @@
 
 {#snippet Separator()}
   <div class="base-separator" role="presentation"></div>
-{/snippet}
-
-{#snippet SeparatorDot()}
-  <span class="base-separator-dot" aria-hidden="true"></span>
 {/snippet}
 
 {#snippet TemplateCategoryRows(category: MockTemplateGroup, indentCount: number)}
@@ -1399,7 +1430,7 @@
       <header class="base-prompt-title-area">
         <span class="base-status-indicator" data-status={prompt.status} data-edited={prompt.isEdited} aria-hidden="true"></span>
         <div class="base-prompt-title-main">
-          {@render IconCell(prompt.kind === 'note' ? NotebookPen : FileText)}
+          <UiIconCell icon={prompt.kind === 'note' ? NotebookPen : FileText} variant="title" />
           <div class="base-title-copy">
             <div class="base-title-field">
               <div class="base-title-highlights text-sm leading-5" aria-hidden="true">
@@ -1421,7 +1452,7 @@
                 }
               }} />
             </div>
-            <div class="base-metadata-row text-xs">
+            <EditorMetadataRow>
               {#if prompt.kind !== 'note'}
               <span
                 class="base-template-label"
@@ -1431,26 +1462,29 @@
                 <Layers size={12} aria-hidden="true" />
                 {prompt.templateLabel}
               </span>
-              {@render SeparatorDot()}
+              <UiSeparatorDot />
               {/if}
               <span>{prompt.modifiedLabel}</span>
-              {@render SeparatorDot()}
+              <UiSeparatorDot />
               <span>{getTokenCount(prompt.text)} {getTokenCount(prompt.text) === 1 ? 'token' : 'tokens'}</span>
               {#if prompt.finalizedAt}
-                {@render SeparatorDot()}
+                <UiSeparatorDot />
                 <span title={new Date(prompt.finalizedAt).toLocaleString()}>{finalizedLabel(prompt)}</span>
               {/if}
-            </div>
+            </EditorMetadataRow>
           </div>
         </div>
 
         <div class="base-prompt-actions">
-          <div class="base-icon-button-bar">
+          <IconButtonBar>
             {#if prompt.kind === 'note'}
-              {@render IconButton(copiedPromptId === prompt.id ? ClipboardCheck : Copy, copiedPromptId === prompt.id ? 'Copied' : 'Copy note', {
-                hoverVariant: 'accent',
-                onclick: () => requestCopyPrompt(prompt, null)
-              })}
+              <CopyButton
+                text={prompt.text}
+                label="Copy note"
+                hoverVariant="accent"
+                onBeforeCopy={() => confirmCopyMove(prompt)}
+                onCopied={() => setPromptStatus(prompt, MockPromptStatus.InProgress)}
+              />
             {:else if prompt.templateState === 'not-selected'}
               {@render IconButton(Zap, 'Select Template and Copy', {
                 onclick: () => openTemplateDialog(prompt, 'select-and-copy')
@@ -1465,15 +1499,17 @@
             {@render IconButton(Layers, 'Set Template', {
               onclick: () => openTemplateDialog(prompt)
             })}
-            {@render SplitIconButton(!prompt.attachedNote ? NotebookPen : prompt.attachedNote.visible ? Eye : EyeOff,
-              !prompt.attachedNote ? 'Add attached note' : prompt.attachedNote.visible ? 'Hide attached note' : 'Show attached note', {
-                ariaPressed: prompt.attachedNote ? !prompt.attachedNote.visible : undefined,
-                onclick: () => runAttachedNoteAction(prompt)
-              }, `${prompt.id}:note`, prompt.attachedNote
-                ? { icon: Trash2, title: 'Delete Note', subtitle: 'Permanently delete attached note', onclick: () => requestAttachedNoteDelete(prompt) }
-                : { icon: NotebookPen, title: 'Add Note', subtitle: 'Add and show an attached note', onclick: () => runAttachedNoteAction(prompt) })}
+            <UiSplitIconButton
+              icon={!prompt.attachedNote ? NotebookPen : prompt.attachedNote.visible ? Eye : EyeOff}
+              label={!prompt.attachedNote ? 'Add attached note' : prompt.attachedNote.visible ? 'Hide attached note' : 'Show attached note'}
+              title={!prompt.attachedNote ? 'Add attached note' : prompt.attachedNote.visible ? 'Hide attached note' : 'Show attached note'}
+              ariaPressed={prompt.attachedNote ? !prompt.attachedNote.visible : undefined}
+              moreOptions={attachedNoteMoreOptions(prompt)}
+              onclick={() => runAttachedNoteAction(prompt)}
+              onselect={(item) => item.id === 'delete' ? requestAttachedNoteDelete(prompt) : runAttachedNoteAction(prompt)}
+            />
             {/if}
-          </div>
+          </IconButtonBar>
           <span class="base-actions-separator" aria-hidden="true"></span>
           {@render StatusControl(prompt)}
           <span class="base-actions-separator" aria-hidden="true"></span>
@@ -1503,7 +1539,7 @@
 {/snippet}
 
 {#snippet AttachedNote(prompt: MockPrompt, note: MockAttachedNote)}
-  {@render Separator()}
+  <UiSeparator />
   <button
     type="button"
     class="base-note-header"
@@ -1513,18 +1549,16 @@
     aria-label={note.visible ? 'Hide attached note' : 'Show attached note'}
     onclick={() => note.visible = !note.visible}
   >
-    <span class="base-note-indicator" data-edited={note.isEdited} aria-hidden="true"></span>
-    {#if note.visible}
-      <NotebookPen class="base-note-header-icon" size={16} aria-hidden="true" />
-    {:else}
-      <EyeOff class="base-note-header-icon" size={16} aria-hidden="true" />
-    {/if}
+    <PromptStatusIndicator isEdited={note.isEdited} testId={`base-mockup-attached-note-indicator-${prompt.id}`}
+      class="base-note-indicator" />
+    <UiIconCell icon={note.visible ? NotebookPen : EyeOff} variant="small" class="base-note-header-icon" />
     <span class="base-note-header-copy">
-      <span class="base-note-header-title text-sm leading-5">Attached Note</span>      <span class="base-note-header-detail text-xs">{note.visible ? note.modifiedLabel : 'Hidden'}</span>
+      <span class="base-note-header-title text-sm leading-5">Attached Note</span>
+      <span class="base-note-header-detail text-xs">{note.visible ? note.modifiedLabel : 'Hidden'}</span>
     </span>
   </button>
   {#if note.visible}
-    {@render Separator()}
+    <UiSeparator />
     {@render MonacoBody(note, `base-mockup-attached-note-monaco-${prompt.id}`)}
   {/if}
 {/snippet}
@@ -1893,42 +1927,18 @@
 {/if}
 
 {#if confirmation}
-  <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog
-    onclick={(event) => { if (event.target === event.currentTarget && !confirmation?.informational) confirmation = null }}>
-    <div tabindex="-1" class="base-template-dialog base-confirmation-dialog" data-informational={confirmation.informational ?? false}
-      data-acknowledgement={!!confirmation.acknowledgement} role="dialog" aria-modal="true" aria-label={confirmation.title}>
-      <header class="base-template-dialog-header">
-        <div class="base-template-dialog-heading">
-          <div class="base-template-dialog-icon">
-            {#if confirmation.informational}<Copy size={24} aria-hidden="true" />{:else}<Trash2 size={24} aria-hidden="true" />{/if}
-          </div>
-          <h2 class="text-lg">{confirmation.title}</h2>
-        </div>
-        {@render IconButton(X, 'Close', { onclick: () => confirmation = null })}
-      </header>
-      <div class="base-confirmation-content">
-        <p class="text-base">{confirmation.description}</p>
-        {#if confirmation.acknowledgement}
-          <label class="base-confirmation-acknowledgement text-base">
-            <span class="base-confirmation-checkbox">
-              <input type="checkbox" bind:checked={confirmation.acknowledged} />
-              <span aria-hidden="true"><Check size={13} /></span>
-            </span>
-            <span>{confirmation.acknowledgement}</span>
-          </label>
-        {/if}
-      </div>
-      <div class="base-template-dialog-footer">
-        <button class="base-dialog-cancel-button text-sm" type="button" onclick={() => confirmation = null}>Cancel</button>
-        <button class="base-dialog-confirm-button text-sm" type="button"
-          disabled={!!confirmation.acknowledgement && !confirmation.acknowledged}
-          onclick={() => { const action = confirmation?.confirm; confirmation = null; action?.() }}>
-          {#if confirmation.informational}<Copy size={16} aria-hidden="true" />{:else}<Trash2 size={16} aria-hidden="true" />{/if}
-          {confirmation.submit}
-        </button>
-      </div>
-    </div>
-  </div>
+  <ConfirmationDialog
+    open
+    title={confirmation.title}
+    description={confirmation.description}
+    confirmText={confirmation.submit}
+    variant={confirmation.informational ? 'informational' : 'destructive'}
+    icon={confirmation.informational ? Copy : Trash2}
+    closeOnOutsideClick={!confirmation.informational}
+    confirmationText={confirmation.acknowledgement}
+    oncancel={cancelConfirmation}
+    onconfirm={acceptConfirmation}
+  />
 {/if}
 
 {#if copyError}
@@ -2231,15 +2241,6 @@
     flex-shrink: 0;
     height: 1px;
     width: 100%;
-  }
-
-  .base-separator-dot {
-    background: currentColor;
-    border-radius: 999px;
-    display: inline-block;
-    flex: 0 0 auto;
-    height: 3px;
-    width: 3px;
   }
 
   .base-header-bar {
@@ -2686,14 +2687,15 @@
 
   .base-note-header {
     position: relative;
-    height: 40px;
+    height: 36px;
     width: 100%;
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 10px;
+    /* The 18px small icon cell centers its 16px glyph, so trim 1px each side to keep the glyph and title in place. */
+    gap: 9px;
     min-width: 0;
-    padding: 0 12px 0 22px;
+    padding: 0 12px 0 21px;
     background: var(--ui-card-normal-surface);
     border: 0;
     color: var(--ui-muted-text);
@@ -2712,15 +2714,10 @@
   .base-note-header[data-hidden='true']:hover .base-note-header-title,
   .base-note-header[data-hidden='true']:focus-visible .base-note-header-title { color: var(--ui-hoverable-text); }
 
-  .base-note-indicator {
+  .base-note-header :global(.base-note-indicator) {
     position: absolute;
     inset: 0 auto 0 0;
     width: 2px;
-    background: transparent;
-  }
-
-  .base-note-indicator[data-edited='true'] {
-    background: var(--ui-info-strong-border);
   }
 
   .base-status-indicator[data-status='InProgress'] {
@@ -3663,39 +3660,6 @@
   .base-confirmation-dialog .base-template-dialog-header { padding-bottom: 12px; }
   .base-confirmation-content { display: grid; gap: 20px; min-width: 0; padding: 0 12px 4px; }
   .base-confirmation-content p { margin: 0; color: var(--ui-normal-text); }
-  .base-confirmation-dialog[data-informational='true'] .base-confirmation-content,
-  .base-confirmation-dialog[data-acknowledgement='true'] .base-confirmation-content { padding: 12px; }
-  .base-confirmation-acknowledgement {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 8px 16px;
-    border: 1px solid var(--ui-danger-muted-border);
-    border-radius: 8px;
-    background: var(--ui-danger-normal-surface);
-    color: var(--ui-normal-text);
-  }
-  .base-confirmation-checkbox { position: relative; flex: 0 0 17px; height: 17px; margin-top: 2px; }
-  .base-confirmation-checkbox input { position: absolute; inset: 0; width: 17px; height: 17px; margin: 0; opacity: 0; cursor: pointer; }
-  .base-confirmation-checkbox > span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-    width: 17px;
-    height: 17px;
-    border: 1px solid var(--ui-neutral-normal-border);
-    border-radius: 4px;
-    color: transparent;
-    pointer-events: none;
-  }
-  .base-confirmation-checkbox input:checked + span { background: var(--ui-danger-selection-fill); border-color: var(--ui-danger-selection-border); color: var(--ui-normal-text); }
-  .base-confirmation-checkbox input:focus-visible + span { outline: 2px solid var(--ui-danger-strong-border); outline-offset: 2px; }
-  .base-confirmation-dialog .base-dialog-confirm-button { background: var(--ui-danger-action-fill); border-color: var(--ui-danger-muted-border); font-weight: var(--font-weight-semibold); }
-  .base-confirmation-dialog .base-dialog-confirm-button:hover { background: var(--ui-danger-action-hover-fill); border-color: var(--ui-danger-muted-hover-border); }
-  .base-confirmation-dialog .base-dialog-confirm-button:disabled { opacity: 0.5; pointer-events: none; }
-  .base-confirmation-dialog[data-informational='true'] .base-dialog-confirm-button { background: var(--ui-accent-action-fill); border-color: var(--ui-accent-muted-border); }
-  .base-confirmation-dialog[data-informational='true'] .base-dialog-confirm-button:hover { background: var(--ui-accent-action-hover-fill); border-color: var(--ui-accent-muted-hover-border); }
   .base-status-indicator[data-status='Archived'] { background: var(--ui-secondary-icon-glyph); visibility: visible; }
   @container (width < 720px) {
     .base-prompt-title-area { height: 109px; grid-template-columns: 2px minmax(0, 1fr); grid-template-rows: 56px 53px; }

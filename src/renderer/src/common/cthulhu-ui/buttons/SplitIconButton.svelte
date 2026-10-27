@@ -33,6 +33,8 @@
     disabled?: boolean
     moreOptionsDisabled?: boolean
     active?: boolean
+    /** Pressed state exposed by the main action when it toggles something. */
+    ariaPressed?: boolean | 'mixed'
     buttonAction?: IconButtonAction | null
     buttonActionParameter?: unknown
     menuWidth?: string
@@ -59,6 +61,7 @@
     disabled = false,
     moreOptionsDisabled = false,
     active,
+    ariaPressed,
     buttonAction,
     buttonActionParameter,
     menuWidth,
@@ -89,6 +92,7 @@
     {title}
     {disabled}
     {active}
+    {ariaPressed}
     {buttonAction}
     {buttonActionParameter}
     {onclick}
