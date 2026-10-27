@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import { onDestroy, untrack } from 'svelte'
+  import { onDestroy, tick, untrack } from 'svelte'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import {
     AlertCircle,
@@ -14,12 +14,15 @@
     CircleDashed,
     ClipboardCheck,
     Copy,
+    Eye,
+    EyeOff,
     FileText,
     Folder,
     FolderCog,
     FolderOpen,
     GripVertical,
     Layers,
+    NotebookPen,
     Pencil,
     Play,
     Plus,
@@ -34,7 +37,8 @@
   // Standalone snapshot of the prompt-collection screen: all fixtures, controls, and mutations live here.
   // Only third-party Svelte/icons/Monaco/token counting and the host's palette/theme are shared.
   // Editor sizing below intentionally uses application defaults, independent of persisted settings.
-  // Snapshot: task-prompt collection UI. No workspace, IPC, live components, or domain mutations.
+  // Snapshot: task-prompt collection UI, including attached notes and Ctrl+Shift+Arrow reordering.
+  // No workspace, IPC, live components, settings, or domain mutations are used.
   const NO_TEMPLATE_LABEL = 'No template'
   const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
 
@@ -68,10 +72,14 @@
       if (!node.contains(event.target as Node) && !anchor.contains(event.target as Node)) {
         statusMenuId = null
         deleteMenuId = null
+        noteMenuId = null
       }
     }
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') anchor.querySelector('button')?.focus()
+      if (event.key === 'Escape') {
+        if (anchor instanceof HTMLButtonElement) anchor.focus()
+        else anchor.querySelector('button')?.focus()
+      }
       if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
       event.preventDefault()
       const items = [...node.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
@@ -97,6 +105,7 @@
   let statusAnchor = $state<HTMLElement | null>(null)
   const toggleStatusMenu = (prompt: MockPrompt, event: MouseEvent) => {
     deleteMenuId = null
+    noteMenuId = null
     statusAnchor = (event.currentTarget as HTMLElement).parentElement
     statusMenuId = statusMenuId === prompt.id ? null : prompt.id
   }
@@ -104,6 +113,7 @@
   type MockIconButtonOptions = {
     active?: boolean
     ariaExpanded?: boolean
+    ariaHaspopup?: 'menu'
     ariaPressed?: boolean
     baseVariant?: 'normal' | 'dim' | 'muted'
     borderless?: boolean
@@ -123,7 +133,14 @@
     text: string
   }
 
+  type MockAttachedNote = MockDocument & {
+    visible: boolean
+    isEdited: boolean
+    modifiedLabel: string
+  }
+
   type MockPrompt = MockDocument & {
+    note?: MockAttachedNote
     title: string
     categoryId: string
     templateLabel: string
@@ -170,7 +187,7 @@
     templateLabel: string,
     text: string,
     status: MockPromptStatus = MockPromptStatus.Todo,
-    appearance: Partial<Pick<MockPrompt, 'isEdited' | 'modifiedLabel' | 'finalizedAt'>> = {}
+    appearance: Partial<Pick<MockPrompt, 'isEdited' | 'modifiedLabel' | 'finalizedAt' | 'note'>> = {}
   ): MockPrompt => ({
     id,
     title,
@@ -311,7 +328,12 @@
         '',
         'Call out constraints that the change must preserve.'
       ].join('\n'),
-      MockPromptStatus.InProgress
+      MockPromptStatus.InProgress,
+      { note: {
+        id: 'base-discovery-note', minLines: 1, visible: true, isEdited: false,
+        modifiedLabel: 'Updated today',
+        text: '## Investigation notes\n\nThe collection screen owns the editing workflow; the sidebar handles navigation.\nKeep keyboard focus in the current editor when reordering prompts.'
+      } }
     ),
     createPrompt(
       'base-requirements',
@@ -324,7 +346,11 @@
         'Separate required behavior from optional polish.'
       ].join('\n'),
       MockPromptStatus.Todo,
-      { isEdited: true }
+      { isEdited: true, note: {
+        id: 'base-requirements-note', minLines: 1, visible: false, isEdited: false,
+        modifiedLabel: 'Updated yesterday',
+        text: 'Confirm the acceptance criteria with the product owner.\nKeep optional polish out of the initial implementation.'
+      } }
     ),
     createPrompt(
       'base-plan',
@@ -356,7 +382,11 @@
         'Report only concrete findings.'
       ].join('\n'),
       MockPromptStatus.Completed,
-      { finalizedAt: Date.now() - 86_400_000 }
+      { finalizedAt: Date.now() - 86_400_000, note: {
+        id: 'base-review-note', minLines: 1, visible: true, isEdited: false,
+        modifiedLabel: 'Updated yesterday',
+        text: 'Review complete. Keyboard navigation and category expansion verified.\nFollow-up: check the compact toolbar at smaller window widths.'
+      } }
     ),
     createPrompt(
       'base-docs',
@@ -437,6 +467,8 @@
   let rootTitle = $state('Product Work')
   let statusMenuId = $state<string | null>(null)
   let deleteMenuId = $state<string | null>(null)
+  let noteMenuId = $state<string | null>(null)
+  let noteAnchor = $state<HTMLElement | null>(null)
   let findOpen = $state(false)
   let findQuery = $state('')
   let findIndex = $state(0)
@@ -449,6 +481,10 @@
   let copyResetTimer: number | undefined
   const mountedEditors = new SvelteMap<string, monaco.editor.IStandaloneCodeEditor>()
   const editorFindDecorations = new SvelteMap<string, monaco.editor.IEditorDecorationsCollection>()
+  // Local view states retain each editor's caret when a note or category is hidden.
+  const editorViewStates = new SvelteMap<string, monaco.editor.ICodeEditorViewState>()
+  const editorHeightSync = new SvelteMap<string, () => void>()
+  const noteHeights = new SvelteMap<string, number>()
   const isFinalMode = $derived(screenMode === 'Completed' || screenMode === 'Archived')
   const allPrompts = $derived([...rootPrompts, ...categories.flatMap((category) => category.prompts)])
   const matchesGroup = (prompt: MockPrompt, group = screenMode) => group === 'Active'
@@ -563,6 +599,7 @@
     screenMode = group
     statusMenuId = null
     deleteMenuId = null
+    noteMenuId = null
     breadcrumbCategoryId = null
     viewport?.scrollTo({ top: 0 })
   }
@@ -584,14 +621,89 @@
     prompts.splice(afterId ? prompts.findIndex((item) => item.id === afterId) + 1 : 0, 0, prompt)
   }
   const movePrompt = (prompt: MockPrompt, direction: number) => {
-    const prompts = categories.find((category) => category.id === prompt.categoryId)?.prompts ?? rootPrompts
+    const sections = [
+      { id: 'base-root', prompts: rootPrompts },
+      ...categories.map((category) => ({ id: category.id, prompts: category.prompts }))
+    ]
+    const sectionIndex = sections.findIndex((section) => section.id === prompt.categoryId)
+    const prompts = sections[sectionIndex].prompts
     const visible = visiblePrompts(prompts)
     const target = visible[visible.indexOf(prompt) + direction]
-    if (!target) return
-    const index = prompts.indexOf(prompt)
-    const targetIndex = prompts.indexOf(target)
-    prompts.splice(index, 1)
-    prompts.splice(targetIndex, 0, prompt)
+    if (target) {
+      const targetIndex = prompts.indexOf(target)
+      prompts.splice(prompts.indexOf(prompt), 1)
+      prompts.splice(targetIndex, 0, prompt)
+      return
+    }
+    // The live shortcuts cross category boundaries, including empty categories.
+    const destination = sections[sectionIndex + direction]
+    if (!destination) return
+    prompts.splice(prompts.indexOf(prompt), 1)
+    prompt.categoryId = destination.id
+    const lastVisible = visiblePrompts(destination.prompts).at(-1)
+    const insertionIndex = direction < 0 && lastVisible
+      ? destination.prompts.indexOf(lastVisible) + 1
+      : 0
+    destination.prompts.splice(insertionIndex, 0, prompt)
+    const category = categories.find((item) => item.id === destination.id)
+    if (category) category.collapsed = false
+  }
+
+  const toggleAttachedNote = async (prompt: MockPrompt) => {
+    noteMenuId = null
+    if (prompt.note) {
+      prompt.note.visible = !prompt.note.visible
+      return
+    }
+    const id = window.crypto.randomUUID()
+    prompt.note = { id, text: '', minLines: 1, visible: true, isEdited: false, modifiedLabel: 'Updated just now' }
+    // Side effect: focus only newly added notes after their local Monaco host mounts.
+    await tick()
+    mountedEditors.get(id)?.focus()
+  }
+
+  const requestNoteDelete = (prompt: MockPrompt) => {
+    noteMenuId = null
+    confirmation = {
+      title: 'Delete Attached Note',
+      description: 'Are you sure you want to permanently delete this attached note?',
+      submit: 'Delete',
+      confirm: () => { prompt.note = undefined }
+    }
+  }
+
+  // Side effect: capture move shortcuts before Monaco handles them, retaining the active field and caret.
+  const promptMoveShortcuts = (node: HTMLElement, prompt: MockPrompt) => {
+    const keydown = async (event: KeyboardEvent) => {
+      if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey ||
+          !['ArrowUp', 'ArrowDown'].includes(event.key)) return
+      const focusedElement = window.document.activeElement as HTMLElement | null
+      const editor = [mountedEditors.get(prompt.id), mountedEditors.get(prompt.note?.id ?? '')]
+        .find((candidate) => candidate?.hasTextFocus())
+      if (!(focusedElement instanceof HTMLInputElement) && !editor) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (isFinalMode) return
+      const editorId = editor === mountedEditors.get(prompt.note?.id ?? '') ? prompt.note?.id : prompt.id
+      const viewState = editor?.saveViewState()
+      const titleSelection = focusedElement instanceof HTMLInputElement
+        ? [focusedElement.selectionStart, focusedElement.selectionEnd] as const
+        : null
+      movePrompt(prompt, event.key === 'ArrowUp' ? -1 : 1)
+      // Side effect: restore focus and selection after reordering or remounting in another category.
+      await tick()
+      if (editor && editorId) {
+        const nextEditor = mountedEditors.get(editorId)
+        if (viewState) nextEditor?.restoreViewState(viewState)
+        nextEditor?.focus()
+      } else {
+        const input = window.document.getElementById(`base-card-${prompt.id}`)?.querySelector('input')
+        input?.focus({ preventScroll: true })
+        if (titleSelection) input?.setSelectionRange(...titleSelection)
+      }
+    }
+    node.addEventListener('keydown', keydown, true)
+    return { destroy: () => node.removeEventListener('keydown', keydown, true) }
   }
 
   type MockDragSource = { kind: 'prompt' | 'category'; id: string; title: string }
@@ -874,14 +986,35 @@
   const editorSizing = {
     fontSize: 16,
     minLines: 2,
-    maxLines: 35
+    maxLines: 35,
+    attachedNoteMaxLines: 10
   }
   const lineHeightPx = Math.round(editorSizing.fontSize * 1.35)
-  const maxEditorHeightPx = lineHeightPx * editorSizing.maxLines
   const editorCleanupCallbacks = new SvelteSet<() => void>()
 
-  const clampEditorHeight = (heightPx: number, minLines = editorSizing.minLines): number =>
-    Math.min(Math.max(heightPx, lineHeightPx * minLines), maxEditorHeightPx)
+  const clampEditorHeight = (heightPx: number, document: MockDocument): number => {
+    const prompt = allPrompts.find((item) => item.id === document.id)
+    const reservedNoteLines = prompt?.note?.visible
+      ? Math.ceil((noteHeights.get(prompt.note.id) ?? lineHeightPx) / lineHeightPx)
+      : 0
+    const maxLines = 'visible' in document
+      ? editorSizing.attachedNoteMaxLines
+      : editorSizing.maxLines - reservedNoteLines
+    const minLines = Math.min(document.minLines ?? editorSizing.minLines, maxLines)
+    return Math.min(Math.max(heightPx, lineHeightPx * minLines), lineHeightPx * maxLines)
+  }
+
+  // Side effect: visible notes share the prompt's line budget; hiding one returns its space.
+  $effect(() => {
+    for (const prompt of allPrompts) {
+      if (prompt.note) {
+        void prompt.note.visible
+        void noteHeights.get(prompt.note.id)
+      }
+      const syncHeight = editorHeightSync.get(prompt.id)
+      if (syncHeight) untrack(syncHeight)
+    }
+  })
 
   const getTokenCount = (text: string): number => estimateTokenCount(text)
 
@@ -921,7 +1054,7 @@
         height: document.fixedHeightPx ??
           clampEditorHeight(
             lineHeightPx * Math.max(1, document.text.split('\n').length),
-            document.minLines
+            document
           )
       }
     })
@@ -930,16 +1063,26 @@
 
     const syncHeight = () => {
       const heightPx = document.fixedHeightPx ??
-        clampEditorHeight(Math.ceil(editor.getContentHeight()), document.minLines)
+        clampEditorHeight(Math.ceil(editor.getContentHeight()), document)
+      if ('visible' in document && noteHeights.get(document.id) !== heightPx) {
+        noteHeights.set(document.id, heightPx)
+      }
       host.style.height = `${heightPx}px`
       editor.layout({ width: Math.max(1, host.clientWidth), height: heightPx })
     }
 
+    editorHeightSync.set(document.id, syncHeight)
     syncHeight()
+    const viewState = editorViewStates.get(document.id)
+    if (viewState) editor.restoreViewState(viewState)
     const contentSizeDisposable = editor.onDidContentSizeChange(syncHeight)
     const contentDisposable = editor.onDidChangeModelContent(() => {
       document.text = editor.getValue()
-      if ('isEdited' in document) markPromptEdited(document as MockPrompt)
+      if ('visible' in document) {
+        const note = document as MockAttachedNote
+        note.isEdited = true
+        note.modifiedLabel = 'Updated just now'
+      } else if ('isEdited' in document) markPromptEdited(document as MockPrompt)
     })
 
     let isDisposed = false
@@ -948,6 +1091,9 @@
       isDisposed = true
       contentSizeDisposable.dispose()
       contentDisposable.dispose()
+      const viewState = editor.saveViewState()
+      if (viewState) editorViewStates.set(document.id, viewState)
+      editorHeightSync.delete(document.id)
       editorFindDecorations.get(document.id)?.clear()
       editorFindDecorations.delete(document.id)
       editor.dispose()
@@ -969,6 +1115,15 @@
     return { destroy }
   }
 
+  // Side effect: clicking the editor's padding focuses that section without adding a tab stop.
+  const focusEditorFromPadding = (node: HTMLElement, document: MockDocument) => {
+    const click = (event: MouseEvent) => {
+      if (!(event.target as HTMLElement).closest('.monaco-editor')) mountedEditors.get(document.id)?.focus()
+    }
+    node.addEventListener('click', click)
+    return { destroy: () => node.removeEventListener('click', click) }
+  }
+
   // Side effect: dispose any Monaco instance still owned by the mockup when it unmounts.
   onDestroy(() => {
     for (const cleanup of editorCleanupCallbacks) cleanup()
@@ -987,6 +1142,7 @@
         copyError = null
         statusMenuId = null
         deleteMenuId = null
+        noteMenuId = null
         findOpen = false
       }
       if (event.ctrlKey && event.key.toLowerCase() === 'f' && !templateDialogPrompt && !nameDialog && !manageCategoriesOpen && !confirmation) {
@@ -1070,6 +1226,7 @@
     class="base-icon-button"
     aria-label={label}
     aria-expanded={options.ariaExpanded}
+    aria-haspopup={options.ariaHaspopup}
     aria-pressed={options.ariaPressed}
     data-active={options.active === undefined ? undefined : options.active ? 'true' : 'false'}
     data-base-variant={options.baseVariant ?? 'normal'}
@@ -1176,6 +1333,7 @@
           prompt.status === 'Todo' ? 'Move prompt to Backlog' : prompt.status === 'Completed' ? 'Uncomplete prompt' : 'Set prompt to Todo', {
             onclick: () => setPromptStatus(prompt, prompt.status === 'Todo' ? MockPromptStatus.Backlog : MockPromptStatus.Todo)
           })}
+        <span class="base-split-separator" aria-hidden="true"></span>
       {/if}
       <span class="base-status-selector" data-open={statusMenuId === prompt.id ? 'true' : 'false'}>
         <button type="button" class="base-status-value text-sm"
@@ -1204,6 +1362,7 @@
         </span>
       </span>
       {#if hasForward}
+        <span class="base-split-separator" aria-hidden="true"></span>
         {@render IconButton(prompt.status === 'Backlog' ? CircleDashed : Check,
           prompt.status === 'Backlog' ? 'Set prompt to Todo' : 'Complete prompt', {
             hoverVariant: prompt.status === 'Backlog' ? 'neutral' : 'success',
@@ -1228,11 +1387,69 @@
   </div>
 {/snippet}
 
+{#snippet AttachedNoteControl(prompt: MockPrompt)}
+  {@const label = !prompt.note ? 'Add attached note' : prompt.note.visible ? 'Hide attached note' : 'Show attached note'}
+  <div class="base-split-button">
+    {@render IconButton(!prompt.note ? NotebookPen : prompt.note.visible ? Eye : EyeOff, label, {
+      ariaPressed: prompt.note ? prompt.note.visible : undefined,
+      onclick: () => { void toggleAttachedNote(prompt) }
+    })}
+    <span class="base-split-separator" aria-hidden="true"></span>
+    {@render IconButton(ChevronDown, `${label} More Options`, {
+      disabled: !prompt.note,
+      active: noteMenuId === prompt.id,
+      ariaExpanded: noteMenuId === prompt.id,
+      ariaHaspopup: 'menu',
+      onclick: (event) => {
+        statusMenuId = null
+        deleteMenuId = null
+        noteAnchor = event.currentTarget as HTMLElement
+        noteMenuId = noteMenuId === prompt.id ? null : prompt.id
+      }
+    })}
+    {#if noteMenuId === prompt.id && noteAnchor}
+      <div class="base-status-menu" role="menu" aria-label="Attached note actions"
+        use:mountMockMenu={{ anchor: noteAnchor, width: 240 }}>
+        <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => requestNoteDelete(prompt)}>
+          <span class="base-status-menu-icon" data-action="delete"><Trash2 size={20} aria-hidden="true" /></span>
+          <span class="base-status-menu-text">
+            <span class="base-status-menu-title text-sm leading-4.5">Delete Note</span>
+            <span class="base-status-menu-subtitle text-xs">Permanently delete attached note</span>
+          </span>
+        </button>
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet AttachedNoteSection(prompt: MockPrompt, note: MockAttachedNote)}
+  {@render Separator()}
+  <button type="button" class="base-attached-note-header" data-hidden={!note.visible}
+    aria-expanded={note.visible} aria-label={note.visible ? 'Hide attached note' : 'Show attached note'}
+    onclick={() => { void toggleAttachedNote(prompt) }}>
+    {#if note.visible}
+      <span class="base-status-indicator base-attached-note-indicator" data-edited={note.isEdited} aria-hidden="true"></span>
+    {/if}
+    <span class="base-attached-note-icon" aria-hidden="true">
+      {#if note.visible}<NotebookPen size={16} />{:else}<EyeOff size={16} />{/if}
+    </span>
+    <span class="base-attached-note-copy">
+      <span class="base-attached-note-title text-sm leading-5">Attached Note</span>
+      <span class="base-attached-note-metadata text-xs">{note.visible ? note.modifiedLabel : 'Hidden'}</span>
+    </span>
+  </button>
+  {#if note.visible}
+    {@render Separator()}
+    {@render MonacoBody(note, `base-mockup-note-${note.id}`)}
+  {/if}
+{/snippet}
+
 {#snippet MonacoBody(document: MockDocument, testId: string)}
   <div
     id={`base-document-${document.id}`}
     class="base-monaco-shell"
-    style={`padding:${EDITOR_BODY_PADDING_TOP_PX}px ${EDITOR_BODY_PADDING_RIGHT_PX}px ${document.minLines === 1 ? 8 : EDITOR_BODY_PADDING_BOTTOM_PX}px ${EDITOR_BODY_PADDING_LEFT_PX}px;`}
+    style={`padding:${EDITOR_BODY_PADDING_TOP_PX}px ${EDITOR_BODY_PADDING_RIGHT_PX}px ${document.minLines === 1 && !('visible' in document) ? 8 : EDITOR_BODY_PADDING_BOTTOM_PX}px ${EDITOR_BODY_PADDING_LEFT_PX}px;`}
+    use:focusEditorFromPadding={document}
   >
     <div
       class="base-monaco-host"
@@ -1246,7 +1463,7 @@
   {#if !isFinalMode}
   <div class="base-divider-row" use:mockDropTarget={{ category, afterId, nextCategoryId }}>
     <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
-    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from left separator" onclick={() => addPrompt(category, afterId)}>
+    <button type="button" class="base-divider-line-button" tabindex="-1" aria-label="Add Prompt from left separator" onclick={() => addPrompt(category, afterId)}>
       {@render Separator()}
     </button>
     <div class="base-divider-actions">
@@ -1256,7 +1473,7 @@
       </button>
 
     </div>
-    <button type="button" class="base-divider-line-button" aria-label="Add Prompt from right separator" onclick={() => addPrompt(category, afterId)}>
+    <button type="button" class="base-divider-line-button" tabindex="-1" aria-label="Add Prompt from right separator" onclick={() => addPrompt(category, afterId)}>
       {@render Separator()}
     </button>
   </div>
@@ -1265,7 +1482,7 @@
   {/if}
 {/snippet}
 
-{#snippet PromptCard(prompt: MockPrompt, index: number, siblingCount: number)}
+{#snippet PromptCard(prompt: MockPrompt)}
   {@const archiveDefault = prompt.status !== 'Archived' && Boolean(prompt.title.trim() || prompt.text.trim())}
   {@const titleMatches = getTitleMatches(prompt)}
   <article
@@ -1273,22 +1490,13 @@
     class="base-editor-card base-prompt-card"
     data-testid={`base-mockup-prompt-editor-${prompt.id}`}
     data-prompt-category-id={prompt.categoryId}
+    use:promptMoveShortcuts={prompt}
   >
     <aside class="base-editor-sidebar">
-      {#if !isFinalMode}
-      <button type="button" aria-label="Move prompt up" disabled={isFinalMode || index === 0} onclick={() => movePrompt(prompt, -1)}>
-        <ChevronUp size={16} aria-hidden="true" />
-      </button>
-      {/if}
-      <button type="button" aria-label="Drag prompt" class="base-drag-button" tabindex="-1"
+      <button type="button" aria-label="Drag prompt" title="Drag prompt" class="base-drag-button" tabindex="-1" disabled={isFinalMode}
         use:mockDragHandle={{ kind: 'prompt', id: prompt.id, title: prompt.title || 'Untitled prompt' }}>
         <GripVertical size={16} aria-hidden="true" />
       </button>
-      {#if !isFinalMode}
-      <button type="button" aria-label="Move prompt down" disabled={isFinalMode || index === siblingCount - 1} onclick={() => movePrompt(prompt, 1)}>
-        <ChevronDown size={16} aria-hidden="true" />
-      </button>
-      {/if}
     </aside>
 
     <div class="base-editor-body">
@@ -1353,22 +1561,25 @@
             {@render IconButton(Layers, 'Set Template', {
               onclick: () => openTemplateDialog(prompt)
             })}
+            {@render AttachedNoteControl(prompt)}
           </div>
           <span class="base-actions-separator" aria-hidden="true"></span>
           {@render StatusControl(prompt)}
           <span class="base-actions-separator" aria-hidden="true"></span>
-          <div class="base-prompt-delete-section" data-split={prompt.status !== 'Archived' ? 'true' : 'false'}>
+          <div class:base-split-button={prompt.status !== 'Archived'}>
             {@render IconButton(archiveDefault ? Archive : Trash2, archiveDefault ? 'Archive prompt' : 'Delete prompt', {
               hoverVariant: archiveDefault ? 'neutral' : 'danger',
               onclick: () => archiveDefault ? setPromptStatus(prompt, MockPromptStatus.Archived) : requestPromptDelete(prompt)
             })}
             {#if prompt.status !== 'Archived'}
-              <span class="base-delete-separator" aria-hidden="true"></span>
+              <span class="base-split-separator" aria-hidden="true"></span>
               {@render IconButton(ChevronDown, `${archiveDefault ? 'Archive prompt' : 'Delete prompt'} More Options`, {
                 active: deleteMenuId === prompt.id,
                 ariaExpanded: deleteMenuId === prompt.id,
+                ariaHaspopup: 'menu',
                 onclick: (event) => {
                   statusMenuId = null
+                  noteMenuId = null
                   deleteAnchor = event.currentTarget as HTMLElement
                   deleteMenuId = deleteMenuId === prompt.id ? null : prompt.id
                 }
@@ -1398,6 +1609,11 @@
 
       {@render Separator()}
       {@render MonacoBody(prompt, `base-mockup-monaco-${prompt.id}`)}
+      {#if prompt.note}
+        {#key prompt.note.id}
+          {@render AttachedNoteSection(prompt, prompt.note)}
+        {/key}
+      {/if}
     </div>
   </article>
 {/snippet}
@@ -1456,8 +1672,8 @@
     {#if !category.collapsed}
     <div class="base-category-children">
       {@render Divider(category)}
-      {#each visiblePrompts(category.prompts) as prompt, promptIndex (prompt.id)}
-        {@render PromptCard(prompt, promptIndex, visiblePrompts(category.prompts).length)}
+      {#each visiblePrompts(category.prompts) as prompt (prompt.id)}
+        {@render PromptCard(prompt)}
         {@render Divider(category, prompt.id)}
       {/each}
     </div>
@@ -1555,14 +1771,14 @@
     <div class="base-entry-flow">
       {#if isFinalMode}
         {#if finalizedPrompts.length}{@render Divider()}{/if}
-        {#each finalizedPrompts as prompt, promptIndex (prompt.id)}
-          {@render PromptCard(prompt, promptIndex, finalizedPrompts.length)}
+        {#each finalizedPrompts as prompt (prompt.id)}
+          {@render PromptCard(prompt)}
           {@render Divider()}
         {/each}
       {:else}
       {@render Divider(undefined, undefined, !visiblePrompts(rootPrompts).length ? categories[0]?.id : undefined)}
       {#each visiblePrompts(rootPrompts) as prompt, promptIndex (prompt.id)}
-        {@render PromptCard(prompt, promptIndex, visiblePrompts(rootPrompts).length)}
+        {@render PromptCard(prompt)}
         {@render Divider(undefined, prompt.id, promptIndex === visiblePrompts(rootPrompts).length - 1 ? categories[0]?.id : undefined)}
       {/each}
       <div class="base-categories-inset">
@@ -2076,6 +2292,7 @@
   .base-icon-button:disabled {
     cursor: default;
     opacity: 0.5;
+    pointer-events: none;
   }
 
   .base-icon-button-bar {
@@ -2475,7 +2692,7 @@
     background: transparent;
     border: 0;
     border-bottom: 1px solid transparent;
-    color: var(--ui-muted-icon-glyph);
+    color: var(--ui-secondary-icon-glyph);
     display: flex;
     flex: 0 4 40px;
     justify-content: center;
@@ -2500,19 +2717,9 @@
     box-shadow: inset 0 0 0 2px var(--ui-neutral-focus-border);
   }
 
-  .base-editor-sidebar button:not(.base-drag-button) :global(svg) {
-    opacity: 0;
-    transition: opacity var(--ui-animation-duration-fast) ease-out;
-  }
-
   .base-editor-sidebar:hover button,
   .base-editor-sidebar:focus-within button {
     border-bottom-color: var(--ui-neutral-normal-border);
-  }
-
-  .base-editor-sidebar:hover button:not(.base-drag-button) :global(svg),
-  .base-editor-sidebar:focus-within button:not(.base-drag-button) :global(svg) {
-    opacity: 1;
   }
 
   .base-editor-sidebar button:hover,
@@ -2520,7 +2727,7 @@
   .base-category-sidebar button:hover,
   .base-category-sidebar button:focus-visible {
     background: var(--ui-neutral-subtle-action-hover-fill);
-    color: var(--ui-hoverable-icon-glyph);
+    color: var(--ui-normal-text);
   }
 
   .base-category-sidebar {
@@ -2725,34 +2932,26 @@
 
   .base-status-segmented[data-leading-action='true'] > .base-icon-button:first-child {
     border-bottom-right-radius: 0;
+    border-right-width: 0;
     border-top-right-radius: 0;
   }
 
   .base-status-segmented[data-leading-action='true'] > .base-status-selector {
     border-bottom-left-radius: 0;
+    border-left-width: 0;
     border-top-left-radius: 0;
-    margin-left: -1px;
   }
 
   .base-status-segmented[data-trailing-action='true'] > .base-status-selector {
     border-bottom-right-radius: 0;
+    border-right-width: 0;
     border-top-right-radius: 0;
   }
 
   .base-status-segmented[data-trailing-action='true'] > .base-icon-button:last-child {
     border-bottom-left-radius: 0;
+    border-left-width: 0;
     border-top-left-radius: 0;
-    margin-left: -1px;
-  }
-
-  .base-status-segmented[data-leading-action='true']
-    > .base-icon-button:first-child:not(:hover):not(:focus-visible) {
-    border-right-color: transparent;
-  }
-
-  .base-status-segmented[data-trailing-action='true']
-    > .base-icon-button:last-child:not(:hover):not(:focus-visible) {
-    border-left-color: transparent;
   }
 
 
@@ -2882,13 +3081,6 @@
   .base-status-selector:where(:hover, :has(:focus-visible), [data-open='true'])
     .base-status-more {
     color: var(--ui-normal-text);
-  }
-
-  .base-prompt-delete-section {
-    position: relative;
-    align-items: center;
-    display: flex;
-    flex: 0 0 auto;
   }
 
   .base-status-value:focus-visible,
@@ -3652,22 +3844,108 @@
   .base-status-menu-item:where(:hover, :focus-visible)
     .base-status-menu-icon:not([data-status='InProgress']):not([data-status='Completed']) { color: var(--ui-normal-text); }
   .base-status-menu-icon[data-action='delete'] { color: var(--ui-hoverable-icon-glyph); }
-  .base-prompt-delete-section[data-split='true'] {
-    background: var(--ui-ghost-surface);
-    border-radius: var(--cthulhu-ui-radius-control);
-    outline: 1px solid var(--ui-neutral-normal-border);
-    overflow: hidden;
+  .base-split-button {
+    align-items: stretch;
+    display: inline-flex;
+    min-width: 0;
   }
-  .base-prompt-delete-section[data-split='true'] > .base-icon-button {
-    border: 0;
-    border-radius: 0;
-    box-sizing: content-box;
+  .base-split-button > .base-icon-button {
+    position: relative;
   }
-  .base-prompt-delete-section[data-split='true'] > .base-icon-button:last-of-type { width: 23px; }
-  .base-delete-separator {
+  .base-split-button > .base-icon-button:first-child {
+    border-bottom-right-radius: 0;
+    border-right-width: 0;
+    border-top-right-radius: 0;
+  }
+  .base-split-button > .base-icon-button:last-of-type {
+    border-bottom-left-radius: 0;
+    border-left-width: 0;
+    border-top-left-radius: 0;
+    width: 23px;
+  }
+  .base-split-button > .base-icon-button:is(:hover, :focus-visible) {
+    z-index: 1;
+  }
+  .base-split-separator {
     align-self: stretch;
-    border-left: 1px solid var(--ui-neutral-normal-border);
-    flex: 0 0 1px;
+    background: var(--ui-ghost-surface);
+    border-left: 0.25px solid var(--ui-neutral-normal-border);
+    box-sizing: content-box;
+    flex: 0 0 auto;
+    width: 0;
+  }
+  .base-split-button > .base-icon-button:is(:hover, :focus-visible) + .base-split-separator,
+  .base-split-button > .base-split-separator:has(+ .base-icon-button:is(:hover, :focus-visible)),
+  .base-status-segmented > :is(:hover, :focus-visible, :has(:focus-visible)) + .base-split-separator,
+  .base-status-segmented > .base-split-separator:has(+ :is(:hover, :focus-visible, :has(:focus-visible))) {
+    background: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+  .base-split-button > .base-icon-button[data-hover-variant='danger']:is(:hover, :focus-visible) + .base-split-separator {
+    background: var(--ui-danger-action-hover-fill);
+    border-color: var(--ui-danger-muted-hover-border);
+  }
+  .base-status-segmented > .base-split-separator:has(+ .base-icon-button[data-hover-variant='success']:is(:hover, :focus-visible)) {
+    background: var(--ui-success-action-hover-fill);
+    border-color: var(--ui-success-muted-hover-border);
+  }
+
+  .base-attached-note-header {
+    align-items: center;
+    background: var(--ui-card-normal-surface);
+    border: 0;
+    color: var(--ui-muted-text);
+    display: flex;
+    gap: 9px;
+    height: 36px;
+    min-width: 0;
+    padding: 0 12px 0 21px;
+    position: relative;
+    text-align: left;
+    width: 100%;
+  }
+  .base-attached-note-icon {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: flex;
+    flex: 0 0 18px;
+    height: 18px;
+    justify-content: center;
+    width: 18px;
+  }
+  .base-attached-note-copy {
+    align-items: baseline;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+  }
+  .base-attached-note-title {
+    color: var(--ui-normal-text);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+  }
+  .base-attached-note-header[data-hidden='true'] .base-attached-note-icon {
+    color: var(--ui-muted-icon-glyph);
+  }
+  .base-attached-note-header[data-hidden='true'] .base-attached-note-title {
+    color: var(--ui-secondary-text);
+    font-weight: var(--font-weight-normal);
+  }
+  .base-attached-note-header[data-hidden='true']:is(:hover, :focus-visible) .base-attached-note-title {
+    color: var(--ui-hoverable-text);
+  }
+  .base-attached-note-header[data-hidden='true']:is(:hover, :focus-visible) .base-attached-note-icon {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+  .base-attached-note-metadata {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .base-attached-note-indicator {
+    inset: 0 auto 0 0;
+    position: absolute;
+    width: 2px;
   }
   .base-status-segmented[data-status='Todo'] .base-status-value-content :global(svg),
   .base-status-segmented[data-status='Backlog'] .base-status-value-content :global(svg) {
