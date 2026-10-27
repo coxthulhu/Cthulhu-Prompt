@@ -254,7 +254,7 @@ describe('Prompt collection prompt tree', () => {
     const normalColors = await Promise.all(
       indicators.map((indicator) => indicator.evaluate((element) => getComputedStyle(element).backgroundColor))
     )
-    /** Single animated background shared by the drag handle and move buttons. */
+    /** Single animated background behind the full-height drag handle. */
     const highlight = editor.locator('[data-testid="prompt-sidebar-highlight"]')
     await promptTreeRow.click()
     await expect(highlight).toHaveAttribute('data-navigation-highlight', 'true')
@@ -273,11 +273,11 @@ describe('Prompt collection prompt tree', () => {
       expect(await indicator.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(normalColors[index])
       expect(await indicator.evaluate((element) => element.getAnimations().length)).toBe(0)
     }
-    /** Background bounds cover every control, including the disabled first move arrow. */
+    /** Background bounds cover the full-height drag handle. */
     const highlightBounds = await highlight.boundingBox()
     expect(highlightBounds).not.toBeNull()
     /** Each control must fit inside the full-height highlight with a 1px border tolerance. */
-    for (const testId of ['prompt-move-up', 'prompt-drag-handle', 'prompt-move-down']) {
+    for (const testId of ['prompt-drag-handle']) {
       await expect(editor.locator(`[data-testid="${testId}"]`)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
       /** Rendered control bounds verify the complete button area receives the wash. */
       const bounds = await editor.locator(`[data-testid="${testId}"]`).boundingBox()

@@ -49,11 +49,6 @@ const CATEGORY_ROOT_ORDER_PATH =
   `${CATEGORY_WORKSPACE_PATH}/Prompts/Controls/Active/_CollectionInfo/CategoryOrder.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
-const moveUpSelector = (promptId: string) =>
-  `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
-const moveDownSelector = (promptId: string) =>
-  `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
-
 type FrameSnapshot = {
   movedRowTop: number | null
   editorIdsByTop: string[]
@@ -127,31 +122,27 @@ const runMove = async (
   direction: 'up' | 'down',
   waitForMove: () => Promise<void>
 ) => {
-  const buttonSelector =
-    direction === 'down' ? moveDownSelector(targetId) : moveUpSelector(targetId)
+  /** Native title owns the shortcut without changing the measured row position. */
+  const title = page.locator(`${promptEditorSelector(targetId)} [data-testid="prompt-title"]`)
   await testHelpers.scrollVirtualElementIntoView(
     PROMPT_COLLECTION_HOST_SELECTOR,
     promptEditorSelector(targetId),
     120
   )
-  await testHelpers.scrollVirtualElementIntoView(
-    PROMPT_COLLECTION_HOST_SELECTOR,
-    buttonSelector,
-    120
-  )
+  await title.focus()
   await waitForMeasuredRows(page)
 
-  await expect(page.locator(buttonSelector)).toBeEnabled()
   const initialTop = await page.locator(promptEditorSelector(targetId)).evaluate(
     (element: HTMLElement) => element.getBoundingClientRect().top
   )
   await startFrameRecorder(page, targetId)
-  await page.locator(buttonSelector).click()
+  await page.keyboard.press(`Control+Shift+${direction === 'up' ? 'ArrowUp' : 'ArrowDown'}`)
   await waitForMove()
   // Persisted order is visible before the renderer finishes authoritative reconciliation.
   await page.evaluate(() => window.playwrightTestControls!.waitForMutations())
   await waitForMeasuredRows(page)
   const frames = await stopFrameRecorder(page)
+  await expect(title).toBeFocused()
 
   expect(frames.length, `${label}: recorder captured no frames`).toBeGreaterThan(0)
 

@@ -3,7 +3,7 @@
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import type { Action } from 'svelte/action'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import { ChevronDown, ChevronUp, GripVertical } from 'lucide-svelte'
+  import { GripVertical } from 'lucide-svelte'
   import {
     draggable,
     type DragFinishResult,
@@ -23,12 +23,7 @@
     contentKind = 'prompt',
     contentLabel = 'prompt',
     title,
-    isFirstPrompt,
-    isLastPrompt,
     isDragEnabled = true,
-    showMoveButtons = true,
-    onMoveUp,
-    onMoveDown,
     onPromptTreeDrop
   }: {
     promptId: string
@@ -36,13 +31,7 @@
     contentKind?: import('@shared/domain/prompt-collection/PromptCollection').PromptCollectionContentKind
     contentLabel?: string
     title: string
-    isFirstPrompt: boolean
-    isLastPrompt: boolean
     isDragEnabled?: boolean
-    /** Whether the Active-only move arrow controls are rendered. */
-    showMoveButtons?: boolean
-    onMoveUp: () => void | Promise<void>
-    onMoveDown: () => void | Promise<void>
     onPromptTreeDrop: (dropPayload: PromptHandleDropPayload | null) => void | Promise<void>
   } = $props()
 
@@ -63,14 +52,6 @@
     dropPayload
   }: DragFinishResult<PromptHandleDragPayload, PromptHandleDropPayload>): void => {
     void onPromptTreeDrop(dropPayload)
-  }
-
-  const handleMoveUpClick = () => {
-    void onMoveUp()
-  }
-
-  const handleMoveDownClick = () => {
-    void onMoveDown()
   }
 
   const preventSidebarButtonMouseFocus = (event: MouseEvent) => {
@@ -114,7 +95,7 @@
 </script>
 
 <div class="editor-card-rail prompt-editor-sidebar">
-  <!-- One background layer covers every rail control, including disabled move buttons. -->
+  <!-- One background layer covers the full-height drag handle. -->
   {#key navigationHighlightGeneration}
     <span
       class="prompt-editor-sidebar-highlight"
@@ -124,20 +105,6 @@
       aria-hidden="true"
     ></span>
   {/key}
-  {#if showMoveButtons}
-    <IconButton
-      icon={ChevronUp}
-      label={`Move ${contentLabel} up`}
-      size="sidebar-rail"
-      baseVariant="dim"
-      class="prompt-editor-sidebar-move-button"
-      testId="prompt-move-up"
-      disabled={isFirstPrompt}
-      onclick={handleMoveUpClick}
-      onmousedown={preventSidebarButtonMouseFocus}
-    />
-  {/if}
-
   <IconButton
     icon={GripVertical}
     label={`Drag ${contentLabel}`}
@@ -152,24 +119,10 @@
     tabindex={-1}
     onmousedown={preventSidebarButtonMouseFocus}
   />
-
-  {#if showMoveButtons}
-    <IconButton
-      icon={ChevronDown}
-      label={`Move ${contentLabel} down`}
-      size="sidebar-rail"
-      baseVariant="dim"
-      class="prompt-editor-sidebar-move-button"
-      testId="prompt-move-down"
-      disabled={isLastPrompt}
-      onclick={handleMoveDownClick}
-      onmousedown={preventSidebarButtonMouseFocus}
-    />
-  {/if}
 </div>
 
 <style>
-  /* The muted violet wash sits behind the transparent buttons without intercepting input. */
+  /* The muted violet wash sits behind the drag handle without intercepting input. */
   .prompt-editor-sidebar-highlight {
     position: absolute;
     inset: 0;
@@ -204,28 +157,13 @@
       color var(--ui-animation-duration-standard) ease;
   }
 
-  .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button) {
-    /* Keep each move slot reserved while its arrow fades out. */
-    flex: 0 4 40px;
-  }
-
   .prompt-editor-sidebar :global(.prompt-editor-sidebar-drag-button) {
     flex: 1 1 52px;
-  }
-
-  .prompt-editor-sidebar :global(.prompt-editor-sidebar-move-button svg) {
-    opacity: 0;
-    transition: opacity var(--ui-animation-duration-fast) ease-out;
   }
 
   .prompt-editor-sidebar:hover :global(.cthulhuUiIconButton[data-size='sidebar-rail']),
   .prompt-editor-sidebar:focus-within :global(.cthulhuUiIconButton[data-size='sidebar-rail']) {
     border-bottom-color: var(--ui-neutral-normal-border);
-  }
-
-  .prompt-editor-sidebar:hover :global(.prompt-editor-sidebar-move-button svg),
-  .prompt-editor-sidebar:focus-within :global(.prompt-editor-sidebar-move-button svg) {
-    opacity: 1;
   }
 
   .prompt-editor-sidebar:focus-within {

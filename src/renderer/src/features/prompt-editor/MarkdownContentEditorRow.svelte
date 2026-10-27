@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
+  import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
   import type { Action } from 'svelte/action'
   import { Check, Layers, Plus } from 'lucide-svelte'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
@@ -176,7 +177,7 @@
     maxLines: systemSettings.promptEditorMaxLines
   })
   /** Whether this editor belongs to an automatically ordered final-status screen. */
-  // Finalized groups hide manual ordering controls.
+  // Finalized groups do not allow manual ordering.
   const isFinalMode = $derived(PROMPT_STATUS_FOLDER_REGISTRY[screenMode].ordering === 'finalizedAt')
   /** Prompt-card sidebar width retained in active and final-status modes. */
   const sidebarWidthPx = PROMPT_EDITOR_SIDEBAR_WIDTH_PX
@@ -544,14 +545,32 @@
     })
   })
 
-  const handleMoveUp = async () => {
+  /** Keeps the current editing field focused after the optimistic row reorder. */
+  const handleMoveShortcut = async (event: KeyboardEvent): Promise<void> => {
+    /** Direction uses the existing placement limits. */
+    const moveUp = event.key === 'ArrowUp'
+    if (isFinalMode || (moveUp ? isFirstPrompt : isLastPrompt)) return
+    /** Title focus is retained independently of Monaco's current selection. */
+    const wasTitleFocused = event.target === titleInputRef
     onInteraction?.()
-    void (await onMoveUp())
+    void (moveUp ? onMoveUp() : onMoveDown())
+    // Side effect: restore focus after Svelte moves the keyed row's DOM nodes.
+    await tick()
+    if (wasTitleFocused) titleInputRef?.focus({ preventScroll: true })
+    else editorInstance?.focus()
   }
-  const handleMoveDown = async () => {
-    onInteraction?.()
-    void (await onMoveDown())
-  }
+
+  // Side effect: register this mounted editor's shortcuts and release them on unmount.
+  onMount(() => registerKeyboardScope({
+    layer: 'screen',
+    bindings: [{
+      matches: (event) =>
+        event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey &&
+        (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
+        (event.target === titleInputRef || editorInstance?.hasTextFocus() === true),
+      run: (event) => { void handleMoveShortcut(event) }
+    }]
+  }))
 </script>
 
 <EditorCardSurface
@@ -569,12 +588,7 @@
       {contentKind}
       {contentLabel}
       title={promptTreeTitle}
-      {isFirstPrompt}
-      {isLastPrompt}
       {isDragEnabled}
-      showMoveButtons={!isFinalMode}
-      onMoveUp={handleMoveUp}
-      onMoveDown={handleMoveDown}
       {onPromptTreeDrop}
     />
   {/snippet}

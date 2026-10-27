@@ -67,7 +67,7 @@ const BOUNDARY_2_ID = 'boundary-2'
 const MOVE_ANCHOR_1_ID = 'move-anchor-1'
 const MOVE_ANCHOR_2_ID = 'move-anchor-2'
 const MOVE_ANCHOR_3_ID = 'move-anchor-3'
-const MOVE_BUTTON_POSITION_TOLERANCE_PX = 1
+const CONTROL_POSITION_TOLERANCE_PX = 1
 const MINIMAL_SCROLL_POSITION_TOLERANCE_PX = 2
 
 const promptTitleSelector = (promptId: string) =>
@@ -76,10 +76,6 @@ const dividerAddSelector = (promptId: string) =>
   `[data-testid="prompt-divider-add-after-${promptId}"]`
 const dividerSeparatorSelector = (promptId: string, side: 'left' | 'right') =>
   `[data-testid="prompt-divider-add-after-${promptId}-separator-${side}"]`
-const moveUpSelector = (promptId: string) =>
-  `${promptEditorSelector(promptId)} [data-testid="prompt-move-up"]`
-const moveDownSelector = (promptId: string) =>
-  `${promptEditorSelector(promptId)} [data-testid="prompt-move-down"]`
 const completeSelector = (promptId: string) =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-complete-button"]`
 const uncompleteSelector = (promptId: string) =>
@@ -150,16 +146,16 @@ const clickAddAfter = async (
   await button.click()
 }
 
-const clickMoveUp = async (page: any, promptId: string) => {
-  const button = page.locator(moveUpSelector(promptId))
-  await expect(button).toBeEnabled()
-  await button.evaluate((element: HTMLButtonElement) => element.click())
+/** Moves the focused title's prompt to the previous placement. */
+const movePromptUp = async (page: any, promptId: string) => {
+  await page.locator(promptTitleSelector(promptId)).focus()
+  await page.keyboard.press('Control+Shift+ArrowUp')
 }
 
-const clickMoveDown = async (page: any, promptId: string) => {
-  const button = page.locator(moveDownSelector(promptId))
-  await expect(button).toBeEnabled()
-  await button.evaluate((element: HTMLButtonElement) => element.click())
+/** Moves the focused title's prompt to the next placement. */
+const movePromptDown = async (page: any, promptId: string) => {
+  await page.locator(promptTitleSelector(promptId)).focus()
+  await page.keyboard.press('Control+Shift+ArrowDown')
 }
 
 const setPromptTitle = async (page: any, promptId: string, title: string) => {
@@ -1005,54 +1001,19 @@ describe('Prompt collection prompt management', () => {
 
     const editor = mainWindow.locator(promptEditorSelector('dev-2'))
     const rail = editor.locator('.prompt-editor-sidebar')
-    const moveUpButton = editor.locator('[data-testid="prompt-move-up"]')
-    const moveDownButton = editor.locator('[data-testid="prompt-move-down"]')
-    const dragHandle = editor.locator('[data-testid="prompt-drag-handle"]')
-    const moveUpIcon = moveUpButton.locator('svg')
-    const moveDownIcon = moveDownButton.locator('svg')
-    const dragIcon = dragHandle.locator('svg')
-    const moveUpBoxBefore = await moveUpButton.boundingBox()
-
-    await expect(moveUpIcon).toHaveCSS('opacity', '0')
-    await expect(moveDownIcon).toHaveCSS('opacity', '0')
-    await expect(dragIcon).toHaveCSS('opacity', '1')
-    await expect(moveUpButton).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)')
-    await expect(dragHandle).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)')
-    await expect(moveUpIcon).toHaveCSS('transition-property', 'opacity')
-    await expect(moveUpIcon).toHaveCSS('transition-duration', '0.05s')
-    await expect(moveUpIcon).toHaveCSS('transition-timing-function', 'ease-out')
-
+    /** The retained drag handle fills the rail while arrow controls stay unmounted. */
+    const dragHandle = editor.getByTestId('prompt-drag-handle')
+    await expect(editor.getByTestId('prompt-move-up')).toHaveCount(0)
+    await expect(editor.getByTestId('prompt-move-down')).toHaveCount(0)
+    await expect(dragHandle).toBeVisible()
     await rail.hover()
-    await expect(moveUpIcon).toHaveCSS('opacity', '1')
-    await expect(moveDownIcon).toHaveCSS('opacity', '1')
-    await expect(moveDownButton).toHaveCSS('opacity', '0.5')
-    await expect
-      .poll(
-        async () =>
-          await moveUpButton.evaluate((button) => getComputedStyle(button).borderBottomColor)
-      )
-      .not.toBe('rgba(0, 0, 0, 0)')
-    await expect
-      .poll(
-        async () =>
-          await dragHandle.evaluate((button) => getComputedStyle(button).borderBottomColor)
-      )
-      .not.toBe('rgba(0, 0, 0, 0)')
-
-    const moveUpBoxAfter = await moveUpButton.boundingBox()
-    expect(moveUpBoxBefore).not.toBeNull()
-    expect(moveUpBoxAfter).not.toBeNull()
-    expect(Math.abs(moveUpBoxAfter!.x - moveUpBoxBefore!.x)).toBeLessThanOrEqual(
-      MOVE_BUTTON_POSITION_TOLERANCE_PX
-    )
-    expect(Math.abs(moveUpBoxAfter!.y - moveUpBoxBefore!.y)).toBeLessThanOrEqual(
-      MOVE_BUTTON_POSITION_TOLERANCE_PX
-    )
-    await mainWindow.locator(promptTitleSelector('dev-2')).hover()
-    await moveUpButton.focus()
-    await expect(moveUpIcon).toHaveCSS('opacity', '1')
-    await mainWindow.locator(promptTitleSelector('dev-2')).focus()
-    await expect(moveUpIcon).toHaveCSS('opacity', '0')
+    await expect(editor.getByTestId('prompt-move-up')).toHaveCount(0)
+    await expect(editor.getByTestId('prompt-move-down')).toHaveCount(0)
+    /** The drag area takes the complete rail height, within its border. */
+    const railBounds = (await rail.boundingBox())!
+    /** Handle bounds ensure the removed arrows leave no empty slots. */
+    const dragBounds = (await dragHandle.boundingBox())!
+    expect(Math.abs(railBounds.height - dragBounds.height)).toBeLessThanOrEqual(2)
 
     const dividerButton = mainWindow.locator(dividerAddSelector('dev-2'))
     await testHelpers.scrollVirtualElementIntoView(
@@ -1111,16 +1072,16 @@ describe('Prompt collection prompt management', () => {
     )
     expect(
       separatorCenterOffsets.every(
-        (offset) => offset <= MOVE_BUTTON_POSITION_TOLERANCE_PX
+        (offset) => offset <= CONTROL_POSITION_TOLERANCE_PX
       )
     ).toBe(true)
     expect(Math.abs(dividerButtonCenter - dividerRowCenter)).toBeLessThanOrEqual(
-      MOVE_BUTTON_POSITION_TOLERANCE_PX
+      CONTROL_POSITION_TOLERANCE_PX
     )
     const dividerActionsCenter = dividerActionsBox!.x + dividerActionsBox!.width / 2
     const dividerRowHorizontalCenter = dividerRowBox!.x + dividerRowBox!.width / 2
     expect(Math.abs(dividerActionsCenter - dividerRowHorizontalCenter)).toBeLessThanOrEqual(
-      MOVE_BUTTON_POSITION_TOLERANCE_PX
+      CONTROL_POSITION_TOLERANCE_PX
     )
     await dividerButton.hover()
     await expect(dividerActions).toHaveCSS('opacity', '1')
@@ -1147,10 +1108,10 @@ describe('Prompt collection prompt management', () => {
     const dividerButtonBoxAfter = await dividerButton.boundingBox()
     expect(dividerButtonBoxAfter).not.toBeNull()
     expect(Math.abs(dividerButtonBoxAfter!.x - dividerButtonBoxBefore!.x)).toBeLessThanOrEqual(
-      MOVE_BUTTON_POSITION_TOLERANCE_PX
+      CONTROL_POSITION_TOLERANCE_PX
     )
     expect(Math.abs(dividerButtonBoxAfter!.y - dividerButtonBoxBefore!.y)).toBeLessThanOrEqual(
-      MOVE_BUTTON_POSITION_TOLERANCE_PX
+      CONTROL_POSITION_TOLERANCE_PX
     )
     await mainWindow.mouse.move(0, 0)
     await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
@@ -1168,7 +1129,7 @@ describe('Prompt collection prompt management', () => {
     await expect.poll(readSeparatorColors).toEqual(separatorColorsBefore)
   })
 
-  test('reorders prompts with move buttons', async ({ testSetup }) => {
+  test('reorders prompts with keyboard shortcuts and stops at boundaries', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -1186,31 +1147,34 @@ describe('Prompt collection prompt management', () => {
     expect(newPromptId).toBeTruthy()
 
     // Step 1-2: move the second prompt to the top.
-    await clickMoveUp(mainWindow, 'dev-2')
+    await movePromptUp(mainWindow, 'dev-2')
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['dev-2', 'dev-1', newPromptId])
 
     // Step 3-4: move the current second prompt to the third slot.
-    await clickMoveDown(mainWindow, 'dev-1')
+    await movePromptDown(mainWindow, 'dev-1')
     await expect
       .poll(async () => await getPromptEditorIds(mainWindow), { timeout: 5000 })
       .toEqual(['dev-2', newPromptId, 'dev-1'])
 
-    // Step 5-6: boundary buttons are disabled when the prompt cannot move farther.
-    await expect(mainWindow.locator(moveUpSelector('dev-2'))).toBeDisabled()
-    await expect(mainWindow.locator(moveDownSelector('dev-1'))).toBeDisabled()
+    // Boundary shortcuts must preserve order and focus.
+    await movePromptUp(mainWindow, 'dev-2')
+    await expect(mainWindow.locator(promptTitleSelector('dev-2'))).toBeFocused()
+    await movePromptDown(mainWindow, 'dev-1')
+    await expect(mainWindow.locator(promptTitleSelector('dev-1'))).toBeFocused()
+    await mainWindow.evaluate(() => window.playwrightTestControls!.waitForMutations())
     expect(await getPromptEditorIds(mainWindow)).toEqual(['dev-2', newPromptId, 'dev-1'])
   })
 
   // The pixel-exact anchor polls below fail with an opaque offset when a card
   // clips content inside its own overflow:hidden box (the browser then scrolls
-  // the card internally on click). Diagnose that directly after each click.
+  // the card internally on click). Diagnose that directly after each move.
   const expectNoCardInternalScroll = async (mainWindow: any, promptId: string): Promise<void> => {
     const geometry = await measureEditorCardGeometry(mainWindow, promptEditorSelector(promptId))
     expect(
       geometry?.internalScrollTopPx,
-      `${promptId} card scrolled internally after a move click — its content likely overflows the card (height constants out of sync with CSS)`
+      `${promptId} card scrolled internally after a move shortcut — its content likely overflows the card (height constants out of sync with CSS)`
     ).toBe(0)
     expect(
       geometry?.hiddenOverflowPx,
@@ -1218,7 +1182,7 @@ describe('Prompt collection prompt management', () => {
     ).toBe(0)
   }
 
-  test('keeps moved prompt buttons under the cursor when move buttons reorder prompts', async ({
+  test('keeps the focused title stationary when keyboard shortcuts reorder prompts', async ({
     testSetup
   }) => {
     await testSetup.setupFilesystem(buildMoveScrollWorkspace())
@@ -1229,51 +1193,57 @@ describe('Prompt collection prompt management', () => {
     await testHelpers.navigateToPromptCollections(MOVE_SCROLL_COLLECTION_NAME)
     await scrollPromptEditorIntoView(mainWindow, testHelpers, BOUNDARY_2_ID)
 
-    await mainWindow.locator(moveUpSelector(BOUNDARY_2_ID)).click()
+    await movePromptUp(mainWindow, BOUNDARY_2_ID)
     await expectNoCardInternalScroll(mainWindow, BOUNDARY_2_ID)
 
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
       .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_3_ID])
 
-    const moveAnchorUpSelector = moveUpSelector(MOVE_ANCHOR_2_ID)
+    /** Focused title used as the visible reorder anchor. */
+    const moveAnchorUpSelector = promptTitleSelector(MOVE_ANCHOR_2_ID)
     await scrollUntilMounted(mainWindow, testHelpers, moveAnchorUpSelector)
     await testHelpers.scrollVirtualElementIntoView(
       PROMPT_COLLECTION_HOST_SELECTOR,
       moveAnchorUpSelector,
       120
     )
+    await mainWindow.locator(moveAnchorUpSelector).focus()
     const moveUpTopBefore = await getElementTop(mainWindow, moveAnchorUpSelector)
-    await mainWindow.locator(moveAnchorUpSelector).click()
+    await mainWindow.keyboard.press('Control+Shift+ArrowUp')
+    await expect(mainWindow.locator(moveAnchorUpSelector)).toBeFocused()
     await expectNoCardInternalScroll(mainWindow, MOVE_ANCHOR_2_ID)
 
     await expect
       .poll(async () =>
         Math.abs(
-          (await getElementTop(mainWindow, moveUpSelector(MOVE_ANCHOR_2_ID))) - moveUpTopBefore
+          (await getElementTop(mainWindow, promptTitleSelector(MOVE_ANCHOR_2_ID))) - moveUpTopBefore
         )
       )
-      .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+      .toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
       .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_3_ID])
 
-    const moveAnchorDownSelector = moveDownSelector(MOVE_ANCHOR_2_ID)
+    /** Same title anchors the reverse move. */
+    const moveAnchorDownSelector = promptTitleSelector(MOVE_ANCHOR_2_ID)
     await testHelpers.scrollVirtualElementIntoView(
       PROMPT_COLLECTION_HOST_SELECTOR,
       moveAnchorDownSelector,
       120
     )
 
+    await mainWindow.locator(moveAnchorDownSelector).focus()
     const moveDownTopBefore = await getElementTop(mainWindow, moveAnchorDownSelector)
-    await mainWindow.locator(moveAnchorDownSelector).click()
+    await mainWindow.keyboard.press('Control+Shift+ArrowDown')
+    await expect(mainWindow.locator(moveAnchorDownSelector)).toBeFocused()
     await expectNoCardInternalScroll(mainWindow, MOVE_ANCHOR_2_ID)
 
     await expect
       .poll(async () =>
         Math.abs((await getElementTop(mainWindow, moveAnchorDownSelector)) - moveDownTopBefore)
       )
-      .toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+      .toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow))
       .toEqual([BOUNDARY_2_ID, BOUNDARY_1_ID, MOVE_ANCHOR_1_ID, MOVE_ANCHOR_2_ID, MOVE_ANCHOR_3_ID])
@@ -1738,7 +1708,7 @@ describe('Prompt collection prompt management', () => {
     expect(todoCompleteBox).not.toBeNull()
     expect(
       Math.abs(todoStatusBox!.x + todoStatusBox!.width - todoCompleteBox!.x)
-    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    ).toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '0px')
@@ -1837,7 +1807,7 @@ describe('Prompt collection prompt management', () => {
           inProgressStatusBox!.x -
           1
       )
-    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    ).toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     expect(
       inProgressStatusBox!.x + inProgressStatusBox!.width - inProgressCompleteBox!.x
     ).toBeGreaterThan(0)
@@ -1848,7 +1818,7 @@ describe('Prompt collection prompt management', () => {
           inProgressCompleteBox!.x -
           1
       )
-    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    ).toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     await expect(activePromptStatusSelector).toHaveCSS('border-top-left-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-bottom-left-radius', '0px')
     await expect(activePromptStatusSelector).toHaveCSS('border-top-right-radius', '0px')
@@ -2356,6 +2326,15 @@ describe('Prompt collection prompt management', () => {
       'completed-mode-newest',
       'completed-mode-oldest'
     ])
+    // Finalized ordering consumes move shortcuts without moving the prompt or title focus.
+    await movePromptDown(mainWindow, 'completed-mode-newest')
+    await expect(mainWindow.locator(promptTitleSelector('completed-mode-newest'))).toBeFocused()
+    await movePromptUp(mainWindow, 'completed-mode-oldest')
+    await expect(mainWindow.locator(promptTitleSelector('completed-mode-oldest'))).toBeFocused()
+    await mainWindow.evaluate(() => window.playwrightTestControls!.waitForMutations())
+    expect(await getPromptEditorIds(mainWindow)).toEqual([
+      'completed-mode-newest', 'completed-mode-oldest'
+    ])
 
     await activeHeader.click()
     await expect(activeHeader).toHaveAttribute('aria-expanded', 'false')
@@ -2571,7 +2550,7 @@ describe('Prompt collection prompt management', () => {
     expect(completedCollectionTitleBox).not.toBeNull()
     expect(newestCompletedPromptBox).not.toBeNull()
     expect(completedCollectionTitleBox!.y + completedCollectionTitleBox!.height).toBeLessThanOrEqual(
-      newestCompletedPromptBox!.y + MOVE_BUTTON_POSITION_TOLERANCE_PX
+      newestCompletedPromptBox!.y + CONTROL_POSITION_TOLERANCE_PX
     )
     await expect(mainWindow.locator('[data-testid="prompt-collection-title-edit"]')).toBeVisible()
     await expect(
@@ -2606,7 +2585,7 @@ describe('Prompt collection prompt management', () => {
       Math.abs(
         completedUncompleteBox!.x + completedUncompleteBox!.width - completedStatusBox!.x
       )
-    ).toBeLessThanOrEqual(MOVE_BUTTON_POSITION_TOLERANCE_PX)
+    ).toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     await expect(completedStatusSelector).toHaveCSS('border-top-left-radius', '0px')
     await expect(completedStatusSelector).toHaveCSS('border-bottom-left-radius', '0px')
     await expect(completedStatusSelector).toHaveCSS('border-top-right-radius', '6px')

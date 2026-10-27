@@ -319,9 +319,9 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       finalKeyframeColor: templateAnimation.normalColor,
       normalColor: templateAnimation.normalColor
     })
-    await expect(templateEditor.locator('[data-testid="prompt-move-up"]')).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-move-up"]')).toHaveCount(0)
     await expect(templateEditor.locator('[data-testid="prompt-drag-handle"]')).toBeVisible()
-    await expect(templateEditor.locator('[data-testid="prompt-move-down"]')).toBeVisible()
+    await expect(templateEditor.locator('[data-testid="prompt-move-down"]')).toHaveCount(0)
     await expect(templateEditor.locator('[data-testid="prompt-modified-time"]')).toBeVisible()
     await expect(templateEditor.locator('[data-testid="prompt-token-count"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="prompt-editor-category-template"]')).toBeVisible()

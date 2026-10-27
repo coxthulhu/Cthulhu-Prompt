@@ -231,14 +231,16 @@ describe('Prompt collection storage', () => {
     const initialTopPromptId = initialPromptIds[0]
     const reversedPromptIds = [...initialPromptIds].reverse()
     await mainWindow
-      .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-move-down"]`)
-      .click()
+      .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-title"]`)
+      .focus()
+    await mainWindow.keyboard.press('Control+Shift+ArrowDown')
     await expect
       .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
       .toEqual(reversedPromptIds)
     await mainWindow
-      .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-move-up"]`)
-      .click()
+      .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-title"]`)
+      .focus()
+    await mainWindow.keyboard.press('Control+Shift+ArrowUp')
     await expect
       .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
       .toEqual(initialPromptIds)

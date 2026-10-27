@@ -632,7 +632,7 @@ describe('Prompt collection find dialog', () => {
       const workspacePath = `/ws/find-reorder-${section}`
       await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, section))
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
-      /** Window and navigation helpers for real move-button interactions. */
+      /** Window and navigation helpers for real reorder shortcuts. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
       await testHelpers.navigateToPromptCollections('Find Scope')
@@ -650,8 +650,27 @@ describe('Prompt collection find dialog', () => {
       await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('1 of 3')
       await findInput.press('Enter')
       await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
+      if (section === 'title') {
+        // Find previews title matches without selecting them; enter that exact range before focusing.
+        await mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`).evaluate((input: HTMLInputElement, query) => {
+          /** Selected occurrence agrees with Find's pending return-focus range. */
+          const start = input.value.indexOf(query)
+          input.setSelectionRange(start, start + query.length)
+          input.focus({ preventScroll: true })
+        }, SCOPE_CHANGE_QUERY)
+        await expect(mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`)).toBeFocused()
+        await expect.poll(() => mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`)
+          .evaluate((input: HTMLInputElement) => input.value.slice(input.selectionStart!, input.selectionEnd!)))
+          .toBe(SCOPE_CHANGE_QUERY)
+        await expect(mainWindow.locator(`${secondEditor} [data-testid="prompt-title-find-match"]`))
+          .toHaveAttribute('data-current', 'true')
+      } else {
+        await mainWindow.locator(secondEditor).evaluate((row) => {
+          window.__cthulhuMonacoEditors!.find((entry) => row.contains(entry.container))!.editor.focus()
+        })
+      }
 
-      await mainWindow.locator(`${secondEditor} [data-testid="prompt-move-up"]`).click()
+      await mainWindow.keyboard.press('Control+Shift+ArrowUp')
       await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual([
         'find-scope-2', 'find-scope-1', 'find-scope-3'
       ])
@@ -671,7 +690,7 @@ describe('Prompt collection find dialog', () => {
         await expect.poll(() => isMonacoEditorFocused(mainWindow, secondEditor)).toBe(true)
         await expect.poll(() => getMonacoSelectedText(mainWindow, secondEditor)).toBe(SCOPE_CHANGE_QUERY)
       } else {
-        /** Native title receives the selected match only when Find closes. */
+        /** Native title retains the selected match after Find closes. */
         const title = mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`)
         await expect(title).toBeFocused()
         await expect.poll(() => title.evaluate((input: HTMLInputElement) =>
@@ -701,7 +720,15 @@ describe('Prompt collection find dialog', () => {
       const findInput = mainWindow.locator(FIND_INPUT)
       await expect(findInput).toHaveValue(SCOPE_CHANGE_QUERY)
       await expect.poll(() => getFindMatchesLabelText(mainWindow)).toBe('2 of 3')
-      await mainWindow.locator(`${secondEditor} [data-testid="prompt-move-up"]`).click()
+      // Focus Monaco through its API so its current input implementation and selection are retained.
+      if (section === 'body') {
+        await mainWindow.locator(secondEditor).evaluate((row) => {
+          window.__cthulhuMonacoEditors!.find((entry) => row.contains(entry.container))!.editor.focus()
+        })
+      } else {
+        await mainWindow.locator(`${secondEditor} ${PROMPT_TITLE_SELECTOR}`).focus()
+      }
+      await mainWindow.keyboard.press('Control+Shift+ArrowUp')
       await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual([
         'find-scope-2', 'find-scope-1', 'find-scope-3'
       ])

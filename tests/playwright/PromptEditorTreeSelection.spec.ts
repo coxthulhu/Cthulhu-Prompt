@@ -131,7 +131,7 @@ describe('Editor-driven prompt tree selection', () => {
       }
     })
 
-    test(`${kind} editing and move arrows preserve collapsed tree categories`, async ({ testSetup }) => {
+    test(`${kind} editing and move shortcuts preserve collapsed tree categories`, async ({ testSetup }) => {
       await testSetup.setupFilesystem(createSelectionWorkspace(kind, true))
       await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
       /** Window and navigation helpers for a root with a categorized editor. */
@@ -153,15 +153,21 @@ describe('Editor-driven prompt tree selection', () => {
       await category.click()
 
       // Moving up crosses into Uncategorized; moving down returns without expanding the category.
-      await editor.getByTestId('prompt-move-up').click()
+      await editor.getByTestId('prompt-title').focus()
+      await mainWindow.keyboard.press('Control+Shift+ArrowUp')
+      await expect(editor.getByTestId('prompt-title')).toBeFocused()
       await expect(mainWindow.getByTestId(`prompt-tree-${group}-prompt-entry-1`)).toHaveAttribute('aria-current', 'true')
-      await editor.getByTestId('prompt-move-down').click()
+      await editor.getByTestId('prompt-title').focus()
+      await mainWindow.keyboard.press('Control+Shift+ArrowDown')
+      await expect(editor.getByTestId('prompt-title')).toBeFocused()
       await expect(mainWindow.getByTestId(`prompt-tree-${group}-prompt-entry-1`)).toHaveCount(0)
       await expect(category).toHaveAttribute('aria-expanded', 'false')
       await category.click()
       await expect(mainWindow.getByTestId(`prompt-tree-${group}-prompt-entry-1`)).toHaveAttribute('aria-current', 'true')
       await mainWindow.getByTestId(`prompt-tree-${group}-prompt-entry-0`).click()
-      await editor.getByTestId('prompt-move-down').click()
+      await editor.getByTestId('prompt-title').focus()
+      await mainWindow.keyboard.press('Control+Shift+ArrowDown')
+      await expect(editor.getByTestId('prompt-title')).toBeFocused()
       await expect(mainWindow.getByTestId(`prompt-tree-${group}-prompt-entry-1`)).toHaveAttribute('aria-current', 'true')
     })
 
