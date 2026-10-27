@@ -3,7 +3,7 @@ import { createAttachedNoteUiStateKey, type AttachedNoteUiState } from '@shared/
 import { revisionCollectionOptions } from './RevisionCollection'
 import { notesCollection } from './NotesCollection'
 
-/** Independently persisted attachment visibility, defaulting to shown when absent. */
+/** Independently persisted attachment visibility, defaulting to hidden when absent. */
 export const attachedNoteUiStateCollection = createCollection(
   revisionCollectionOptions<AttachedNoteUiState>({
     id: 'attached-note-ui-state',
@@ -15,5 +15,5 @@ export const attachedNoteUiStateCollection = createCollection(
 /** Reads visibility for actions; standalone and missing notes have no visibility setting. */
 export const getAttachedNoteVisible = (workspaceId: string, noteId: string): boolean | undefined =>
   notesCollection.get(noteId)?.kind === 'attached'
-    ? attachedNoteUiStateCollection.get(createAttachedNoteUiStateKey(workspaceId, noteId))?.visible ?? true
+    ? attachedNoteUiStateCollection.get(createAttachedNoteUiStateKey(workspaceId, noteId))?.visible ?? false
     : undefined

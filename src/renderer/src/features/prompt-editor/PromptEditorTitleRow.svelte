@@ -1,9 +1,11 @@
 <script module lang="ts">
-  import type { ComponentType } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import type { PromptCollectionFindRequest, PromptCollectionFindSelection } from '../prompt-collections/find/promptCollectionFindTypes'
 
   export type PromptEditorTitleRowProps = {
+    /** Optional attached-note toolbar control. */
+    attachedNoteAction?: Snippet
     /** Collection search state used to decorate title occurrences without taking focus. */
     findRequest?: PromptCollectionFindRequest | null
     title: string
@@ -67,6 +69,7 @@
   import { PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY } from '../prompt-collections/find/promptCollectionFindSectionKeys'
 
   let {
+    attachedNoteAction: renderAttachedNoteAction,
     findRequest,
     title,
     draftText,
@@ -424,7 +427,11 @@
         {copyTitle}
         onCopySuccess={handleCopySuccess}
         {onBeforeCopy}
-      />
+      >
+        {#snippet attachedNoteAction()}
+          {@render renderAttachedNoteAction?.()}
+        {/snippet}
+      </PromptEditorButtonBar>
     </div>
 
     {#if onStatusChange && isPromptStatus(status)}

@@ -179,7 +179,7 @@ export const attachedNoteUiStateSqlitePersistence: SqlitePersistenceLayer<Attach
   query: (id) => {
     /** Composite identity scopes each preference to its workspace and note. */
     const { workspaceId, localId: noteId } = parseWorkspaceCompositeKey(id)
-    /** Missing rows leave the attachment shown by default. */
+    /** Missing rows leave the attachment hidden by default. */
     const state = WorkspaceStateDataAccess.read(workspaceId, 'attached-note', noteId)
     return state ? { workspaceId, noteId, ...state } : null
   },

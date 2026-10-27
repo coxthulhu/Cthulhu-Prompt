@@ -60,6 +60,7 @@ const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSe
   promptFontSize: 16,
   promptEditorMinLines: 2,
   promptEditorMaxLines: 30,
+  attachedNoteMaxLines: 10,
   showLineNumbers: true,
   /** Default creation focus included in the complete settings record. */
   newPromptFocus: 'editor' as const,
@@ -131,6 +132,7 @@ describe('client-state sync contract', () => {
         promptFontSize: 19,
         promptEditorMinLines: 6,
         promptEditorMaxLines: 29,
+        attachedNoteMaxLines: 10,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,

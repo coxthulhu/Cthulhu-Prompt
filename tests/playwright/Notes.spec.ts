@@ -156,7 +156,7 @@ describe('Notes persistence and commands', () => {
       await setVisible(mainWindow, neighborId, false)
       /** Each removal path must clean the preference without affecting its neighbor. */
       for (const operation of ['detachNote', 'deleteNote', 'deleteOwner'] as const) {
-        /** Replacement attachments start shown even when the previous one was hidden. */
+        /** Every new attachment starts visible independently of the previous note. */
         const id = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`), kind)
         expect(await readVisible(mainWindow, id)).toBe(true)
         await setVisible(mainWindow, id, false)

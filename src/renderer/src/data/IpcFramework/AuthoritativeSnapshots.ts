@@ -1,5 +1,6 @@
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { deleteNoteClientStates } from '@renderer/data/UiState/client-state/NoteClientState'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import type { DomainEntityType } from '@shared/domain/DomainChanges'
 import { createPromptFull, isPromptFull } from '@shared/domain/prompt/Prompt'
@@ -57,6 +58,7 @@ const reconcileRendererAuthoritativeSnapshot = (
 ): void => {
   if ('deleted' in snapshot) {
     getRendererRevisionCollection(snapshot.entityType).utils.deleteAuthoritative(snapshot.id)
+    if (snapshot.entityType === 'note') deleteNoteClientStates([snapshot.id])
     if (snapshot.entityType === 'prompt' && promptClientStateCollection.has(snapshot.id)) {
       promptClientStateCollection.delete(snapshot.id)
     }

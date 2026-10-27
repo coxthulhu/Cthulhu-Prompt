@@ -35,6 +35,8 @@
       meta: {
         didResize: boolean
         heightPx: number
+        /** Unclamped wrapped content height retained across virtualization. */
+        contentHeightPx: number
         selection: PromptCollectionFindSelection | null
       }
     ) => void

@@ -1,10 +1,13 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte'
   import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { Layers, Zap } from 'lucide-svelte'
 
   type Props = {
+    /** Attached-note split action supplied by the owning editor. */
+    attachedNoteAction?: Snippet
     draftText: string
     copyText?: string
     onTemplateSelect?: () => void
@@ -19,6 +22,7 @@
   }
 
   let {
+    attachedNoteAction,
     draftText,
     copyText,
     onTemplateSelect,
@@ -62,4 +66,5 @@
       onclick={onTemplateSelect}
     />
   {/if}
+  {@render attachedNoteAction?.()}
 </IconButtonBar>

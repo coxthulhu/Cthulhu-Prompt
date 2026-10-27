@@ -129,6 +129,8 @@ type PromptMetadata = {
 
 export type MarkdownContentDraftRecord = {
   id: string
+  /** Attached note identity projected alongside the owner's editor data. */
+  attachedNoteId?: string
   title: string
   fallbackTitle: string
   modifiedAt: string
@@ -244,6 +246,7 @@ export const createPromptCollectionScreenController = ({
               prompt.id,
               {
                 id: prompt.id,
+                attachedNoteId: prompt.attachedNoteId,
                 title: prompt.title,
                 fallbackTitle: prompt.fallbackTitle,
                 modifiedAt: prompt.modifiedAt,
@@ -280,6 +283,7 @@ export const createPromptCollectionScreenController = ({
                 template.id,
                 {
                   id: template.id,
+                  attachedNoteId: template.attachedNoteId,
                   title: template.title,
                   fallbackTitle: template.fallbackTitle,
                   modifiedAt: template.modifiedAt,

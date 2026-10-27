@@ -57,6 +57,10 @@ export const createPromptTemplateEditorModelUri = (templateId: string): monaco.U
   return monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/templates/${templateId}.md`)
 }
 
+/** Keeps note models independent of their owning prompt or template. */
+export const createNoteEditorModelUri = (noteId: string): monaco.Uri =>
+  monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/notes/${noteId}.md`)
+
 /** Creates the Monaco model URI for one category description editor. */
 export const createCategoryDescriptionModelUri = (categoryId: string): monaco.Uri =>
   monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/category-descriptions/${categoryId}.md`)

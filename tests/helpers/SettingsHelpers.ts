@@ -70,6 +70,9 @@ export async function setPromptEditorMaxLines(
   await testHelpers.navigateToSettingsScreen()
   /** Settings control whose value is checked before leaving the screen. */
   const input = mainWindow.locator('[data-testid="max-lines-input"]')
+  /** Keep existing small-viewport test setups valid under the shared note budget. */
+  const noteInput = mainWindow.getByTestId('note-max-lines-input')
+  if (Number(await noteInput.inputValue()) > value - 5) await noteInput.fill(String(value - 5))
   await input.fill(String(value))
   await expect(input).toHaveValue(String(value))
   await testHelpers.navigateToHomeScreen()

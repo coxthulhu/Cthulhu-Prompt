@@ -1,4 +1,7 @@
 import { planSetAttachedNoteVisible } from '@shared/domain/ui-state/AttachedNoteUiState'
+import { noteClientStateCollection } from '@renderer/data/Collections/NoteClientStateCollection'
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { submitPacedUpdateTransactionAndWait } from '@renderer/data/IpcFramework/RevisionCollections'
 import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import type { PromptLocation } from '@shared/domain/prompt/Prompt'
@@ -16,10 +19,13 @@ export const setAttachedNoteVisible = async (workspaceId: string, noteId: string
   })
 }
 
-/** Creates one empty attachment and returns its stable GUID for a future editor. */
-export const createAttachedNote = async (ownerKind: 'prompt' | 'template', ownerId: string): Promise<string> => {
+/** Creates and reveals one empty attachment in a single optimistic transaction. */
+export const createAttachedNote = async (
+  ownerKind: 'prompt' | 'template',
+  ownerId: string,
+  noteId = compactGuid(crypto.randomUUID())
+): Promise<string> => {
   /** Identity is generated before optimistic planning and retained through IPC. */
-  const noteId = compactGuid(crypto.randomUUID())
   await runImmediateRendererDomainMutation({
     mutation: { command: { ownerKind, ownerId, noteId, modifiedAt: getCurrentIsoSecondTimestamp() }, plan: planCreateAttachedNote },
     ipc: { channel: 'create-attached-note' }, renderer: {}
@@ -39,9 +45,24 @@ export const updateNote = async (noteId: string, noteText: string, title?: strin
 export const mutatePacedNoteUpdate = (edit: Omit<UpdateNoteCommand, 'modifiedAt'>, debounceMs: number): void => {
   mutatePacedRendererDomainMutation({
     mutation: { command: { ...edit, modifiedAt: getCurrentIsoSecondTimestamp() }, plan: planUpdateNote },
-    ipc: { channel: 'update-note' }, renderer: {},
+    ipc: { channel: 'update-note' },
+    renderer: {
+      mutate: ({ collections }) => {
+        if (noteClientStateCollection.has(edit.noteId)) {
+          collections.noteClientState.update(edit.noteId, (state) => { state.isEdited = true })
+        } else {
+          collections.noteClientState.insert({ id: edit.noteId, isEdited: true })
+        }
+      }
+    },
     pacing: { target: { entityType: 'note', id: edit.noteId }, debounceMs }
   })
+}
+
+/** Flushes note text before workspace changes and application shutdown. */
+export const flushNoteAutosaves = async (): Promise<void> => {
+  await Promise.allSettled(noteClientStateCollection.toArray.map((state) =>
+    submitPacedUpdateTransactionAndWait(notesCollection.id, state.id)))
 }
 
 /** Deletes either note form, including its owner reference when attached. */

@@ -22,6 +22,7 @@
   import {
     setSystemSettingsClientStateFontSizeInput,
     setSystemSettingsClientStatePromptEditorMaxLinesInput,
+    setSystemSettingsClientStateAttachedNoteMaxLinesInput,
     setSystemSettingsClientStatePromptEditorMinLinesInput,
     setSystemSettingsClientStateShowLineNumbers,
     setSystemSettingsClientStateNewPromptFocus,
@@ -37,6 +38,8 @@
   import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
   import {
     DEFAULT_SYSTEM_SETTINGS,
+    MIN_ATTACHED_NOTE_MAX_LINES,
+    MAX_ATTACHED_NOTE_MAX_LINES,
     MAX_PROMPT_EDITOR_MAX_LINES,
     MAX_PROMPT_EDITOR_MIN_LINES,
     MAX_PROMPT_FONT_SIZE,
@@ -331,7 +334,7 @@
         <ControlRow
           testId="editor-layout-max-lines-row"
           label="Maximum Line Count"
-          detail="Sets the maximum number of visible lines before prompt editors begin scrolling."
+          detail="Shared maximum visible lines for a prompt or template and its attached note. Must exceed the note maximum by at least 5."
         >
           {#snippet control()}
             <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
@@ -358,6 +361,41 @@
               appearance="outline"
               onclick={handleMaxLinesReset}
               disabled={isMaxLinesResetDisabled}
+            />
+          {/snippet}
+        </ControlRow>
+
+        <Separator />
+
+        <ControlRow
+          testId="editor-layout-note-max-lines-row"
+          label="Attached Note Maximum Lines"
+          detail="Maximum visible note lines before scrolling. These lines share the editor maximum above."
+        >
+          {#snippet control()}
+            <FloatingValidationMessage message={validation.noteMaxLinesError} textTestId="note-max-lines-error">
+              <NumericStepperInput
+                data-testid="note-max-lines-input"
+                value={systemSettingsClientState.attachedNoteMaxLinesInput}
+                min={MIN_ATTACHED_NOTE_MAX_LINES}
+                max={MAX_ATTACHED_NOTE_MAX_LINES}
+                helperText="lines"
+                aria-label="Attached note maximum lines"
+                aria-invalid={validation.noteMaxLinesError ? 'true' : undefined}
+                decreaseLabel="Decrease attached note maximum lines"
+                increaseLabel="Increase attached note maximum lines"
+                onvaluechange={setSystemSettingsClientStateAttachedNoteMaxLinesInput}
+                onblur={handleInputBlur}
+              />
+            </FloatingValidationMessage>
+          {/snippet}
+          {#snippet actions()}
+            <Button
+              icon={RefreshCcw}
+              text="Reset"
+              appearance="outline"
+              onclick={() => resetSettingToDefault(String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines), setSystemSettingsClientStateAttachedNoteMaxLinesInput)}
+              disabled={isUpdating || systemSettingsClientState.attachedNoteMaxLinesInput === String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines)}
             />
           {/snippet}
         </ControlRow>

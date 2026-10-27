@@ -286,6 +286,7 @@ describe('domain mutation command validation', () => {
       promptFontSize: 18,
       promptEditorMinLines: 3,
       promptEditorMaxLines: 30,
+      attachedNoteMaxLines: 10,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,

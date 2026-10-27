@@ -72,7 +72,7 @@ const readValidatedSystemSettings = (
   clientState: SystemSettingsClientStateRecord
 ): SystemSettings | null => {
   const validation = getSystemSettingsValidation(clientState)
-  if (validation.fontSizeError || validation.minLinesError || validation.maxLinesError) {
+  if (validation.fontSizeError || validation.minLinesError || validation.maxLinesError || validation.noteMaxLinesError) {
     return null
   }
 
@@ -82,6 +82,7 @@ const readValidatedSystemSettings = (
       .rounded,
     promptEditorMaxLines: normalizePromptEditorMaxLinesInput(clientState.promptEditorMaxLinesInput)
       .rounded,
+    attachedNoteMaxLines: Math.round(Number(clientState.attachedNoteMaxLinesInput)),
     showLineNumbers: clientState.showLineNumbers,
     newPromptFocus: clientState.newPromptFocus,
     automaticUpdates: clientState.automaticUpdates
@@ -126,6 +127,7 @@ export const mutateSystemSettingsClientStateWithAutosave = (
             nextClientState.promptFontSizeInput = nextFormData.promptFontSizeInput
             nextClientState.promptEditorMinLinesInput = nextFormData.promptEditorMinLinesInput
             nextClientState.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
+            nextClientState.attachedNoteMaxLinesInput = nextFormData.attachedNoteMaxLinesInput
             nextClientState.showLineNumbers = nextFormData.showLineNumbers
             nextClientState.newPromptFocus = nextFormData.newPromptFocus
             nextClientState.automaticUpdates = nextFormData.automaticUpdates

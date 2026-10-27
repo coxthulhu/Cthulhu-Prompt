@@ -10,7 +10,7 @@ export const loadAttachedNoteUiStates = async (workspaceId: string, noteIds: str
   await Promise.all(ids.filter((id) => !data.attachedNoteUiState.committedStore.getEntry(id))
     .map((id) => data.attachedNoteUiState.loadDataFromPersistence(id, {})))
   return ids.flatMap((id) => {
-    /** Absent preferences use the shown default without creating a SQLite row. */
+    /** Absent preferences use the hidden default without creating a SQLite row. */
     const entry = data.attachedNoteUiState.committedStore.getEntry(id)
     return entry ? [{ id, revision: entry.revision, data: entry.committed }] : []
   })

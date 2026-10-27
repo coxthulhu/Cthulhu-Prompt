@@ -1,6 +1,8 @@
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { noteClientStateCollection } from '@renderer/data/Collections/NoteClientStateCollection'
+import { noteEditorMeasuredHeight } from '@renderer/data/UiState/cache/NoteEditorUiCache.svelte.ts'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
@@ -21,6 +23,8 @@ export const clearWorkspaceData = (): void => {
   clearPromptClientStateCollection()
   clearPromptTemplateClientStateCollection()
   promptEditorUiCache.editorMeasuredHeight.clearAll()
+  noteEditorMeasuredHeight.clearAll()
+  for (const state of noteClientStateCollection.toArray) noteClientStateCollection.delete(state.id)
   promptCollectionUiCache.settingsRowMeasuredHeight.clearAll()
 
   // Clear records and revision metadata together so reopened disk snapshots are accepted.

@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
+import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { createAttachedNote } from '@renderer/data/Mutations/NoteMutations'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
@@ -162,6 +166,9 @@ const mutatePacedCategoryDomainMutation = (
 
 describe('renderer domain mutation framework', () => {
   beforeEach(() => {
+    notesCollection.utils.deleteAuthoritative('new-note')
+    attachedNoteUiStateCollection.utils.deleteAuthoritative('note-workspace:new-note')
+    workspaceCollection.utils.deleteAuthoritative('note-workspace')
     categoryCollection.utils.deleteAuthoritative(CATEGORY_ID)
     if (promptClientStateCollection.has(CATEGORY_ID)) {
       promptClientStateCollection.delete(CATEGORY_ID)
@@ -200,6 +207,45 @@ describe('renderer domain mutation framework', () => {
     vi.restoreAllMocks()
     vi.useRealTimers()
     vi.unstubAllGlobals()
+  })
+
+  it('reveals a newly created note before persistence and rolls back the whole creation on failure', async () => {
+    const owner = createPromptFull({ id: PROMPT_ID, title: 'Owner', fallbackTitle: '', promptText: '',
+      createdAt: '2026-10-27T12:00:00Z', modifiedAt: '2026-10-27T12:00:00Z', status: PromptStatus.Todo })
+    promptsCollection.utils.upsertAuthoritative({ id: PROMPT_ID, revision: 1, data: owner })
+    promptCollectionsCollection.utils.upsertAuthoritative({ id: PROMPT_COLLECTION_ID, revision: 1, data: {
+      id: PROMPT_COLLECTION_ID, kind: 'prompt', folderName: 'Content', displayName: 'Content',
+      settings: { collectionDescription: null },
+      statusFolders: createPromptStatusFolderLayouts({ categoryOrders: { active: {
+        categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: PROMPT_ID }] }]
+      } } })
+    } })
+    workspaceCollection.utils.upsertAuthoritative({ id: 'note-workspace', revision: 1, data: {
+      id: 'note-workspace', workspacePath: 'C:\\Workspace', workspaceName: 'Workspace',
+      favoriteCollectionIds: { prompt: [], template: [] },
+      promptCollectionEntries: [{ kind: 'collection', id: PROMPT_COLLECTION_ID }], templateCollectionEntries: []
+    } })
+    let rejectSave!: (error: Error) => void
+    const invoke = vi.fn(() => new Promise((_resolve, reject) => { rejectSave = reject }))
+    vi.stubGlobal('window', { ipcClientId: 'renderer-domain-client', electron: { ipcRenderer: { invoke } } })
+    const pending = createAttachedNote('prompt', PROMPT_ID, 'new-note')
+    const rejected = expect(pending).rejects.toThrow('Creation failed')
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledOnce())
+    expect(promptsCollection.get(PROMPT_ID)?.attachedNoteId).toBe('new-note')
+    expect(notesCollection.get('new-note')).toMatchObject({ kind: 'attached', noteText: '' })
+    expect(attachedNoteUiStateCollection.get('note-workspace:new-note')?.visible).toBe(true)
+    expect(invoke).toHaveBeenCalledWith('create-attached-note', expect.objectContaining({
+      payload: expect.objectContaining({ expectations: expect.arrayContaining([
+        { entityType: 'note', id: 'new-note', expected: 'absent' },
+        { entityType: 'attachedNoteUiState', id: 'note-workspace:new-note', expected: 'absent' }
+      ]) })
+    }))
+    rejectSave(new Error('Creation failed'))
+    await rejected
+    expect(promptsCollection.get(PROMPT_ID)).toMatchObject(owner)
+    expect(promptsCollection.get(PROMPT_ID)?.attachedNoteId).toBeUndefined()
+    expect(notesCollection.has('new-note')).toBe(false)
+    expect(attachedNoteUiStateCollection.has('note-workspace:new-note')).toBe(false)
   })
 
   it('accepts renderer-only state after success and sends current target revisions', async () => {
@@ -645,6 +691,7 @@ describe('renderer domain mutation framework', () => {
       promptFontSizeInput: '16',
       promptEditorMinLinesInput: '2',
       promptEditorMaxLinesInput: '35',
+      attachedNoteMaxLinesInput: '10',
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -695,6 +742,7 @@ describe('renderer domain mutation framework', () => {
             promptFontSize: 20,
             promptEditorMinLines: 2,
             promptEditorMaxLines: 35,
+            attachedNoteMaxLines: 10,
             showLineNumbers: false,
             /** Default creation focus included in the complete settings record. */
             newPromptFocus: 'editor' as const,
@@ -716,6 +764,7 @@ describe('renderer domain mutation framework', () => {
       promptFontSize: 20,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 35,
+      attachedNoteMaxLines: 10,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -727,6 +776,7 @@ describe('renderer domain mutation framework', () => {
       promptFontSizeInput: '20',
       promptEditorMinLinesInput: '2',
       promptEditorMaxLinesInput: '35',
+      attachedNoteMaxLinesInput: '10',
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,

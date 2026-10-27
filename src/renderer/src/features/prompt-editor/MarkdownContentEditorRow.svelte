@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
+  import AttachedNoteButton from './AttachedNoteButton.svelte'
+  import AttachedNoteSection from './AttachedNoteSection.svelte'
+  import { ATTACHED_NOTE_HEADER_HEIGHT_PX, getAttachedNoteSectionHeight, getPromptSizingWithNote, type AttachedNoteLayout } from './attachedNoteSizing'
+  import { createAttachedNote, setAttachedNoteVisible } from '@renderer/data/Mutations/NoteMutations'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { compactGuid } from '@shared/utilities/compactGuid'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
-  import type { Action } from 'svelte/action'
   import { Check, Layers, Plus } from 'lucide-svelte'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
   import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus, type PromptContentStatus } from '@shared/domain/prompt/Prompt'
@@ -14,8 +19,7 @@
   import EditorSubtitleBar from './EditorSubtitleBar.svelte'
   import PromptEditorSidebar from './PromptEditorSidebar.svelte'
   import PromptEditorTitleArea from './PromptEditorTitleArea.svelte'
-  import HydratableMonacoEditor from './HydratableMonacoEditor.svelte'
-  import MonacoEditorPlaceholder from './MonacoEditorPlaceholder.svelte'
+  import MonacoEditorSection from './MonacoEditorSection.svelte'
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/domain/prompt/promptFallbackTitle'
@@ -60,6 +64,7 @@
   // Shared editor implementation; prompt and template wrappers provide the variant behavior.
   let {
     promptId,
+    attachment,
     promptCollectionId,
     screenCollectionId,
     workspaceId,
@@ -109,6 +114,8 @@
     onPromptTreeDrop
   }: {
     promptId: string
+    /** Optional note presentation shared with the virtual row's height calculation. */
+    attachment?: AttachedNoteLayout
     promptCollectionId: string
     screenCollectionId: string
     workspaceId: string | null
@@ -171,11 +178,13 @@
   } = $props()
   const systemSettings = getSystemSettingsContext()
   const promptNavigation = getPromptNavigationContext()
-  const promptEditorSizingConfig: PromptEditorSizingConfig = $derived({
+  const promptEditorSizingConfig: PromptEditorSizingConfig = $derived(getPromptSizingWithNote({
     fontSize: systemSettings.promptFontSize,
     minLines: systemSettings.promptEditorMinLines,
     maxLines: systemSettings.promptEditorMaxLines
-  })
+  }, attachment))
+  /** Includes collapsed note chrome and the expanded editor's displayed height. */
+  const noteSectionHeightPx = $derived(getAttachedNoteSectionHeight(attachment))
   /** Whether this editor belongs to an automatically ordered final-status screen. */
   // Finalized groups do not allow manual ordering.
   const isFinalMode = $derived(PROMPT_STATUS_FOLDER_REGISTRY[screenMode].ordering === 'finalizedAt')
@@ -213,7 +222,7 @@
   const placeholderMonacoHeightPx = $derived.by(() => {
     return clampMonacoHeightPx(
       getMonacoHeightFromRowPx(
-        virtualRowHeightPx,
+        virtualRowHeightPx - noteSectionHeightPx,
         titleAreaWidthPx,
         compactLayoutMaxWidthPx,
         subtitleBarHeightPx
@@ -244,6 +253,39 @@
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
   let titleInputRef = $state<HTMLInputElement | null>(null)
   let editorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
+  /** Separate focus target for shortcuts issued inside the note. */
+  let noteEditorInstance = $state<monaco.editor.IStandaloneCodeEditor | null>(null)
+  /** Only a newly added note requests automatic editor focus. */
+  let focusNewNoteId = $state<string | null>(null)
+
+  /** Adds and reveals a new note, or toggles an existing note without moving focus. */
+  const toggleAttachedNote = (): void => {
+    onInteraction?.()
+    void runIpcBestEffort(async () => {
+      if (attachment) {
+        await setAttachedNoteVisible(workspaceId!, attachment.note.id, !attachment.visible)
+      } else {
+        /** Set focus intent before optimistic creation can mount the visible editor. */
+        const noteId = compactGuid(window.crypto.randomUUID())
+        focusNewNoteId = noteId
+        try {
+          await createAttachedNote(contentKind, promptId, noteId)
+        } catch (error) {
+          if (focusNewNoteId === noteId) focusNewNoteId = null
+          throw error
+        }
+      }
+    })
+  }
+
+  /** Tracks note focus independently and fulfills only the Add Note focus request. */
+  const handleNoteEditorLifecycle = (editor: monaco.editor.IStandaloneCodeEditor, active: boolean): void => {
+    noteEditorInstance = active ? editor : null
+    if (active && focusNewNoteId === attachment?.note.id) {
+      focusNewNoteId = null
+      editor.focus()
+    }
+  }
   let isHydrated = $state(false)
   type FindRowHandlers = {
     requestImmediateHydration: (() => Promise<void>) | null
@@ -419,32 +461,6 @@
     titleInputRef?.focus({ preventScroll: true })
   }
 
-  const focusEditorFromBodyClick = async (event: MouseEvent) => {
-    const target = event.target as HTMLElement | null
-    if (target?.closest('.monaco-editor')) return
-    if (!editorInstance) {
-      await ensureHydrated()
-    }
-
-    // Side effect: wait for click-triggered hydration before focusing the editor.
-    await tick()
-    editorInstance?.focus()
-  }
-
-  const focusEditorSectionClickAction: Action<HTMLDivElement, unknown> = (node) => {
-    const handleClick = (event: MouseEvent) => {
-      void focusEditorFromBodyClick(event)
-    }
-
-    node.addEventListener('click', handleClick)
-
-    return {
-      destroy() {
-        node.removeEventListener('click', handleClick)
-      }
-    }
-  }
-
   // Side effect: register this row with the find integration for navigation.
   onMount(() => {
     if (!findContext) return
@@ -552,12 +568,14 @@
     if (isFinalMode || (moveUp ? isFirstPrompt : isLastPrompt)) return
     /** Title focus is retained independently of Monaco's current selection. */
     const wasTitleFocused = event.target === titleInputRef
+    /** Preserve the note's own caret and selection when its owner is moved. */
+    const focusedEditor = noteEditorInstance?.hasTextFocus() ? noteEditorInstance : editorInstance
     onInteraction?.()
     void (moveUp ? onMoveUp() : onMoveDown())
     // Side effect: restore focus after Svelte moves the keyed row's DOM nodes.
     await tick()
     if (wasTitleFocused) titleInputRef?.focus({ preventScroll: true })
-    else editorInstance?.focus()
+    else focusedEditor?.focus()
   }
 
   // Side effect: register this mounted editor's shortcuts and release them on unmount.
@@ -567,7 +585,7 @@
       matches: (event) =>
         event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey &&
         (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
-        (event.target === titleInputRef || editorInstance?.hasTextFocus() === true),
+        (event.target === titleInputRef || editorInstance?.hasTextFocus() === true || noteEditorInstance?.hasTextFocus() === true),
       run: (event) => { void handleMoveShortcut(event) }
     }]
   }))
@@ -628,7 +646,11 @@
     isEdited={promptDraftRecord.isEdited}
     {titleAreaHeightPx}
     compactLayout={compactTitleLayout}
-  />
+  >
+    {#snippet attachedNoteAction()}
+      <AttachedNoteButton noteId={attachment?.note.id} visible={attachment?.visible ?? false} ontoggle={toggleAttachedNote} />
+    {/snippet}
+  </PromptEditorTitleArea>
 
   <Separator />
 
@@ -659,81 +681,78 @@
     <Separator />
   {/if}
 
-  <div
-    class="prompt-editor-body-editor-section"
-    style={`padding:${PROMPT_EDITOR_BODY_PADDING_TOP_PX}px ${PROMPT_EDITOR_BODY_PADDING_RIGHT_PX}px ${PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX}px ${PROMPT_EDITOR_BODY_PADDING_LEFT_PX}px;`}
-    use:focusEditorSectionClickAction
-  >
-    {#if overflowHost}
-      {#key promptId}
-        <HydratableMonacoEditor
-          class="bg-[var(--ui-editor-content-surface)]"
-          initialValue={promptData.draft.text}
-          initialViewStateJson={initialEditorViewStateJson}
-          viewStateCaptureKey={`content:${promptId}`}
-          {modelUri}
-          containerWidthPx={virtualWindowWidthPx}
-          placeholderHeightPx={placeholderMonacoHeightPx}
-          overflowWidgetsDomNode={overflowHost}
-          sizingConfig={promptEditorSizingConfig}
-          {hydrationPriority}
-          {shouldDehydrate}
-          {rowId}
-          {scrollToWithinWindowBand}
-          onEditorLifecycle={handleEditorLifecycle}
-          findSectionKey={PROMPT_COLLECTION_FIND_BODY_SECTION_KEY}
-          {findRequest}
-          onFindMatchReveal={(handler) => {
-            findRowHandlers.revealSectionMatch = handler
-          }}
-          onSelectionChange={reportBodySelection}
-          onBackwardTabAtStart={focusTitleFromEditorStart}
-          onImmediateHydrationRequest={(request) => {
-            findRowHandlers.requestImmediateHydration = request
-          }}
-          onViewStateCapture={(viewStateJson) => {
-            if (!workspaceId) return
-            setMarkdownContentEditorViewStateJson(workspaceId, promptId, viewStateJson)
-          }}
-          onHydrationChange={handleHydrationChange}
-          onChange={(text, meta) => {
-            // Monaco also reports hydration and size changes with unchanged content.
-            if (text !== promptData.draft.text) onInteraction?.()
-            if (meta.heightPx !== monacoHeightPx) {
-              monacoHeightPx = meta.heightPx
-            }
-            promptData.setText(text, {
-              measuredHeightPx: getRowHeightPx(
-                meta.heightPx,
-                titleAreaWidthPx,
-                compactLayoutMaxWidthPx,
-                subtitleBarHeightPx
-              ),
-              widthPx: virtualWindowWidthPx,
-              devicePixelRatio
-            })
-            findContext?.reportSectionTextChange(
-              promptId,
-              PROMPT_COLLECTION_FIND_BODY_SECTION_KEY,
-              text,
-              meta.selection
-            )
-          }}
-        />
-      {/key}
-    {:else}
-      <MonacoEditorPlaceholder
-        class="bg-[var(--ui-editor-content-surface)]"
-        heightPx={placeholderMonacoHeightPx}
-        sizingConfig={promptEditorSizingConfig}
+  {#key promptId}
+    <MonacoEditorSection
+      class="prompt-editor-body-editor-section"
+      initialValue={promptData.draft.text}
+      initialViewStateJson={initialEditorViewStateJson}
+      viewStateCaptureKey={`content:${promptId}`}
+      {modelUri}
+      containerWidthPx={virtualWindowWidthPx}
+      placeholderHeightPx={placeholderMonacoHeightPx}
+      overflowWidgetsDomNode={overflowHost}
+      sizingConfig={promptEditorSizingConfig}
+      {hydrationPriority}
+      {shouldDehydrate}
+      {rowId}
+      {scrollToWithinWindowBand}
+      onEditorLifecycle={handleEditorLifecycle}
+      findSectionKey={PROMPT_COLLECTION_FIND_BODY_SECTION_KEY}
+      {findRequest}
+      onFindMatchReveal={(handler) => {
+        findRowHandlers.revealSectionMatch = handler
+      }}
+      onSelectionChange={reportBodySelection}
+      onBackwardTabAtStart={focusTitleFromEditorStart}
+      onImmediateHydrationRequest={(request) => {
+        findRowHandlers.requestImmediateHydration = request
+      }}
+      onViewStateCapture={(viewStateJson) => {
+        if (!workspaceId) return
+        setMarkdownContentEditorViewStateJson(workspaceId, promptId, viewStateJson)
+      }}
+      onHydrationChange={handleHydrationChange}
+      onChange={(text, meta) => {
+        // Monaco also reports hydration and size changes with unchanged content.
+        if (text !== promptData.draft.text) onInteraction?.()
+        if (meta.heightPx !== monacoHeightPx) {
+          monacoHeightPx = meta.heightPx
+        }
+        promptData.setText(text, {
+          measuredHeightPx: getRowHeightPx(
+            meta.heightPx,
+            titleAreaWidthPx,
+            compactLayoutMaxWidthPx,
+            subtitleBarHeightPx
+          ),
+          widthPx: virtualWindowWidthPx,
+          devicePixelRatio
+        })
+        findContext?.reportSectionTextChange(
+          promptId,
+          PROMPT_COLLECTION_FIND_BODY_SECTION_KEY,
+          text,
+          meta.selection
+        )
+      }}
+    />
+  {/key}
+  {#if attachment}
+    {#key attachment.note.id}
+      <AttachedNoteSection
+        {attachment}
+        widthPx={virtualWindowWidthPx}
+        {devicePixelRatio}
+        {rowId}
+        {hydrationPriority}
+        {shouldDehydrate}
+        {overlayRowElement}
+        overflowPadding={`${OVERFLOW_TOP_PADDING_PX + monacoHeightPx + PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX + PROMPT_EDITOR_SEPARATOR_HEIGHT_PX * 2 + ATTACHED_NOTE_HEADER_HEIGHT_PX + PROMPT_EDITOR_BODY_PADDING_TOP_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`}
+        {scrollToWithinWindowBand}
+        ontoggle={toggleAttachedNote}
+        {onInteraction}
+        onEditorLifecycle={handleNoteEditorLifecycle}
       />
-    {/if}
-  </div>
+    {/key}
+  {/if}
 </EditorCardSurface>
-
-<style>
-  .prompt-editor-body-editor-section {
-    background: var(--ui-editor-content-surface);
-    min-width: 0;
-  }
-</style>

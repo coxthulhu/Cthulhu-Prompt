@@ -36,6 +36,8 @@
       meta: {
         didResize: boolean
         heightPx: number
+        /** Unclamped wrapped content height for shared editor budgeting. */
+        contentHeightPx: number
         selection: PromptCollectionFindSelection | null
       }
     ) => void
@@ -157,7 +159,7 @@
     heightPx: number,
     selection: PromptCollectionFindSelection | null = null
   ) => {
-    onChange?.(value, { didResize, heightPx, selection })
+    onChange?.(value, { didResize, heightPx, contentHeightPx: editor?.getContentHeight() ?? heightPx, selection })
   }
 
   const serializeEditorViewState = (

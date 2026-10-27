@@ -1,5 +1,6 @@
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { noteClientStateCollection } from '@renderer/data/Collections/NoteClientStateCollection'
 import {
   createPacedRevisionUpdateMutationRunner,
   createRevisionMutationRunner
@@ -44,6 +45,7 @@ const revisionCollections = {
 }
 
 const clientStateCollections = {
+  noteClientState: noteClientStateCollection,
   promptClientState: promptClientStateCollection,
   promptTemplateClientState: promptTemplateClientStateCollection,
   promptCollectionClientState: promptCollectionClientStateCollection,

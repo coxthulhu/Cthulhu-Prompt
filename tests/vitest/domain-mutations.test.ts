@@ -37,6 +37,7 @@ import {
 import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
+import { parseCreateAttachedNoteCommand, planCreateAttachedNote } from '@shared/domain/note/NoteDomainMutations'
 
 /** Narrows a planner update whose entity and operation are established by its test case. */
 const getUpdateRecipe = <TEntityType extends DomainEntityType>(change: DomainChange): DomainUpdateRecipe<TEntityType> =>
@@ -143,6 +144,46 @@ const createCollection = (
 }
 
 describe('shared domain mutation planners', () => {
+  for (const ownerKind of ['prompt', 'template'] as const) {
+    it(`creates a visible ${ownerKind} note and its workspace preference in one plan`, () => {
+      const owner = { id: 'owner', title: 'Owner', fallbackTitle: '', modifiedAt: 'old', status: PromptStatus.Todo }
+      const collection = createCollection('root', ownerKind, 'category', owner.id)
+      const workspace = {
+        id: 'workspace', workspacePath: 'C:\\Workspace', workspaceName: 'Workspace',
+        favoriteCollectionIds: { prompt: [], template: [] },
+        promptCollectionEntries: ownerKind === 'prompt' ? [{ kind: 'collection' as const, id: 'root' }] : [],
+        templateCollectionEntries: ownerKind === 'template' ? [{ kind: 'collection' as const, id: 'root' }] : []
+      }
+      const state = createDomainState({
+        workspace: [workspace], promptCollection: [collection],
+        ...(ownerKind === 'prompt' ? { prompt: [owner] } : {
+          promptTemplate: [{ ...owner, status: PromptTemplateStatus.Active }]
+        })
+      })
+      const command = { ownerKind, ownerId: owner.id, noteId: 'note', modifiedAt: '2026-10-27T12:00:00Z' }
+      expect(parseCreateAttachedNoteCommand(command)).toEqual(command)
+      expect(parseCreateAttachedNoteCommand({ ...command, visible: false })).toBeNull()
+      expect(parseCreateAttachedNoteCommand({ ...command, extra: true })).toBeNull()
+      const { noteId: _noteId, ...missingIdentity } = command
+      expect(parseCreateAttachedNoteCommand(missingIdentity)).toBeNull()
+
+      const plan = planCreateAttachedNote(state, command)
+      expect(Array.isArray(plan)).toBe(true)
+      if (!Array.isArray(plan)) throw new Error('Expected creation changes')
+      expect(plan).toHaveLength(3)
+      expect(plan).toContainEqual({ type: 'insert', entityType: 'attachedNoteUiState', id: 'workspace:note',
+        data: { workspaceId: 'workspace', noteId: 'note', visible: true } })
+      expect(produce(owner, getUpdateRecipe<'prompt'>(plan[0]!))).toMatchObject({ attachedNoteId: 'note' })
+      expect(planCreateAttachedNote(createDomainState({
+        prompt: [owner], promptTemplate: [{ ...owner, status: PromptTemplateStatus.Active }], promptCollection: [collection]
+      }), command)).toMatchObject({ status: 'conflict' })
+      expect(planCreateAttachedNote(createDomainState({
+        prompt: [{ ...owner, attachedNoteId: 'existing' }],
+        promptTemplate: [{ ...owner, status: PromptTemplateStatus.Active, attachedNoteId: 'existing' }]
+      }), command)).toMatchObject({ status: 'conflict' })
+    })
+  }
+
   it('plans a normalized collection rename as one collection update', () => {
     /** collection selected for the rename. */
     const collection = createCollection('root', 'prompt', null)
@@ -688,6 +729,7 @@ describe('shared domain mutation planners', () => {
       promptFontSize: 16,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 35,
+      attachedNoteMaxLines: 10,
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -711,6 +753,7 @@ describe('shared domain mutation planners', () => {
         promptFontSize: 100,
         promptEditorMinLines: 3,
         promptEditorMaxLines: 30,
+        attachedNoteMaxLines: 10,
         showLineNumbers: false,
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
@@ -725,6 +768,7 @@ describe('shared domain mutation planners', () => {
       promptFontSize: 32,
       promptEditorMinLines: 3,
       promptEditorMaxLines: 30,
+      attachedNoteMaxLines: 10,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,

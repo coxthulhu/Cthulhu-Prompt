@@ -1,5 +1,5 @@
 import type { DomainChange, DomainPlanner, DomainState, DomainTarget } from '@shared/domain/DomainChanges'
-import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
+import { createAttachedNoteUiStateKey, deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import { getMarkdownContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
 import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
@@ -120,7 +120,7 @@ const siblingNotes = (state: DomainState, collectionId: string, status: Standalo
   })
 }
 
-/** Creates an empty note and the owner's relationship atomically, including finalized owners. */
+/** Creates a visible empty note and the owner's relationship atomically, including finalized owners. */
 export const planCreateAttachedNote: DomainPlanner<CreateAttachedNoteCommand> = (state, command) => {
   /** Entity type selected by the validated owner kind. */
   const entityType = command.ownerKind === 'prompt' ? 'prompt' : 'promptTemplate'
@@ -129,6 +129,15 @@ export const planCreateAttachedNote: DomainPlanner<CreateAttachedNoteCommand> = 
   /** Required targets reconcile stale creation attempts. */
   const targets: DomainTarget[] = [{ entityType, id: command.ownerId }, { entityType: 'note', id: command.noteId }]
   if (!owner || owner.attachedNoteId || state.get('note', command.noteId)) return { status: 'conflict', reason: 'Note attachment conflict', targets }
+  /** Resolve the preference's workspace from the owner's authoritative membership. */
+  const collection = state.getAll('promptCollection').find((candidate) =>
+    candidate.kind === command.ownerKind && getMarkdownContentIds(candidate, candidate.kind).includes(owner.id))
+  const workspace = collection && state.getAll('workspace').find((candidate) =>
+    getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === collection.id))
+  if (!workspace) return { status: 'conflict', reason: 'Note attachment workspace missing', targets }
+  const id = createAttachedNoteUiStateKey(workspace.id, command.noteId)
+  targets.push({ entityType: 'attachedNoteUiState', id })
+  if (state.get('attachedNoteUiState', id)) return { status: 'conflict', reason: 'Note attachment visibility already exists', targets }
   return [
     { type: 'update', entityType, id: owner.id, recipe: (draft) => {
       draft.attachedNoteId = command.noteId
@@ -136,7 +145,9 @@ export const planCreateAttachedNote: DomainPlanner<CreateAttachedNoteCommand> = 
     } } as DomainChange,
     { type: 'insert', entityType: 'note', id: command.noteId, data: {
       id: command.noteId, kind: 'attached', noteText: '', modifiedAt: command.modifiedAt
-    } }
+    } },
+    { type: 'insert', entityType: 'attachedNoteUiState', id,
+      data: { workspaceId: workspace.id, noteId: command.noteId, visible: true } }
   ]
 }
 

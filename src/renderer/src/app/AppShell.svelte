@@ -100,6 +100,10 @@
     get promptEditorMaxLines() {
       return systemSettingsQuery.data.promptEditorMaxLines
     },
+    /** Shares the persisted note viewport limit with every editor. */
+    get attachedNoteMaxLines() {
+      return systemSettingsQuery.data.attachedNoteMaxLines
+    },
     get showLineNumbers() {
       return systemSettingsQuery.data.showLineNumbers
     },

@@ -7,6 +7,8 @@ export interface SystemSettings {
   promptFontSize: number
   promptEditorMinLines: number
   promptEditorMaxLines: number
+  /** Maximum visible note lines within the shared editor line budget. */
+  attachedNoteMaxLines: number
   showLineNumbers: boolean
   /** Preferred initial focus for newly created prompts and templates. */
   newPromptFocus: NewPromptFocus
@@ -24,10 +26,17 @@ export const MIN_PROMPT_EDITOR_MIN_LINES = 2
 export const MAX_PROMPT_EDITOR_MIN_LINES = 10
 export const MIN_PROMPT_EDITOR_MAX_LINES = 10
 export const MAX_PROMPT_EDITOR_MAX_LINES = 40
+/** Inclusive limits for the attached-note editor. */
+export const MIN_ATTACHED_NOTE_MAX_LINES = 1
+/** Largest configurable attached-note viewport. */
+export const MAX_ATTACHED_NOTE_MAX_LINES = 20
+/** Minimum main-editor capacity remaining at the note's configured maximum. */
+export const ATTACHED_NOTE_LINE_RESERVE = 5
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = Object.freeze({
   promptFontSize: 16,
   promptEditorMinLines: 2,
   promptEditorMaxLines: 35,
+  attachedNoteMaxLines: 10,
   showLineNumbers: true,
   newPromptFocus: 'editor',
   /** Automatic update discovery is enabled for new and existing installations. */
@@ -79,6 +88,10 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
       payload.promptEditorMaxLines,
       DEFAULT_SYSTEM_SETTINGS.promptEditorMaxLines
     ),
+    attachedNoteMaxLines:
+      typeof payload.attachedNoteMaxLines === 'number' && Number.isFinite(payload.attachedNoteMaxLines)
+        ? Math.min(MAX_ATTACHED_NOTE_MAX_LINES, Math.max(MIN_ATTACHED_NOTE_MAX_LINES, Math.round(payload.attachedNoteMaxLines)))
+        : DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines,
     showLineNumbers: resolveShowLineNumbers(
       payload.showLineNumbers,
       DEFAULT_SYSTEM_SETTINGS.showLineNumbers

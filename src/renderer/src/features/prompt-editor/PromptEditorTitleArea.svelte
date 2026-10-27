@@ -10,6 +10,7 @@
   }
 
   let {
+    attachedNoteAction: renderAttachedNoteAction,
     findRequest,
     title,
     draftText,
@@ -87,7 +88,11 @@
     {status}
     {isEdited}
     {compactLayout}
-  />
+  >
+    {#snippet attachedNoteAction()}
+      {@render renderAttachedNoteAction?.()}
+    {/snippet}
+  </PromptEditorTitleRow>
 </div>
 
 <style>

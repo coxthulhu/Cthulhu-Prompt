@@ -1,4 +1,5 @@
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { deleteNoteClientStates } from '@renderer/data/UiState/client-state/NoteClientState'
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import {
@@ -66,7 +67,10 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   }
   deletePromptCollectionClientStates(removedPromptCollectionIds)
 
-  notesCollection.utils.deleteManyAuthoritative([...previousGraph.noteIds].filter((id) => !result.notes.some((note) => note.id === id)))
+  /** Prune note session state together with removed authoritative notes. */
+  const removedNoteIds = [...previousGraph.noteIds].filter((id) => !result.notes.some((note) => note.id === id))
+  notesCollection.utils.deleteManyAuthoritative(removedNoteIds)
+  deleteNoteClientStates(removedNoteIds)
   const nextCategoryIds = new Set(result.categories.map((category) => category.id))
   const removedCategoryIds = [...previousGraph.categoryIds].filter(
     (categoryId) => !nextCategoryIds.has(categoryId)

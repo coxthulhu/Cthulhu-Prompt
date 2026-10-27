@@ -1,4 +1,5 @@
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+import { deleteNoteClientStates } from '@renderer/data/UiState/client-state/NoteClientState'
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
@@ -52,7 +53,10 @@ export const loadPromptCollectionInitial = async (
     throw new Error('Prompt collection not loaded after initial load')
   }
   const nextGraph = collectPromptCollectionGraphIds([promptCollectionId])
-  notesCollection.utils.deleteManyAuthoritative([...previousGraph.noteIds].filter((id) => !nextGraph.noteIds.has(id)))
+  /** Remove only notes proven absent from this collection's refreshed graph. */
+  const removedNoteIds = [...previousGraph.noteIds].filter((id) => !nextGraph.noteIds.has(id))
+  notesCollection.utils.deleteManyAuthoritative(removedNoteIds)
+  deleteNoteClientStates(removedNoteIds)
   const removedCategoryIds = [...previousGraph.categoryIds].filter(
     (categoryId) => !nextGraph.categoryIds.has(categoryId)
   )

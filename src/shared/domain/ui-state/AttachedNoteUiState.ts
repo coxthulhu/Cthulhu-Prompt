@@ -3,13 +3,13 @@ import { findNoteOwner } from '@shared/domain/note/Note'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 
-/** User-specific visibility for one attachment; absence means shown. */
+/** User-specific visibility for one attachment; absence means hidden. */
 export type AttachedNoteUiState = {
   /** Workspace owning the attachment. */
   workspaceId: string
   /** Attached note whose visibility is remembered. */
   noteId: string
-  /** Whether the future attached-note editor should be shown. */
+  /** Whether the attached-note editor should be shown. */
   visible: boolean
 }
 
