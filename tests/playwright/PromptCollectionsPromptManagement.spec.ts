@@ -1798,24 +1798,18 @@ describe('Prompt collection prompt management', () => {
     expect(inProgressStatusBox).not.toBeNull()
     expect(inProgressPreviousBox).not.toBeNull()
     expect(
-      inProgressPreviousBox!.x + inProgressPreviousBox!.width - inProgressStatusBox!.x
-    ).toBeGreaterThan(0)
-    expect(
       Math.abs(
-        inProgressPreviousBox!.x +
+        inProgressStatusBox!.x -
+          inProgressPreviousBox!.x -
           inProgressPreviousBox!.width -
-          inProgressStatusBox!.x -
           1
       )
     ).toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
     expect(
-      inProgressStatusBox!.x + inProgressStatusBox!.width - inProgressCompleteBox!.x
-    ).toBeGreaterThan(0)
-    expect(
       Math.abs(
-        inProgressStatusBox!.x +
+        inProgressCompleteBox!.x -
+          inProgressStatusBox!.x -
           inProgressStatusBox!.width -
-          inProgressCompleteBox!.x -
           1
       )
     ).toBeLessThanOrEqual(CONTROL_POSITION_TOLERANCE_PX)
@@ -1827,12 +1821,12 @@ describe('Prompt collection prompt management', () => {
     await expect(inProgressPreviousButton).toHaveCSS('border-bottom-left-radius', '6px')
     await expect(inProgressPreviousButton).toHaveCSS('border-top-right-radius', '0px')
     await expect(inProgressPreviousButton).toHaveCSS('border-bottom-right-radius', '0px')
-    await expect(activePromptStatusSelector).toHaveCSS('margin-left', '-1px')
+    await expect(activePromptStatusSelector).toHaveCSS('margin-left', '0px')
     await expect(inProgressCompleteButton).toHaveCSS('border-top-left-radius', '0px')
     await expect(inProgressCompleteButton).toHaveCSS('border-bottom-left-radius', '0px')
     await expect(inProgressCompleteButton).toHaveCSS('border-top-right-radius', '6px')
     await expect(inProgressCompleteButton).toHaveCSS('border-bottom-right-radius', '6px')
-    await expect(inProgressCompleteButton).toHaveCSS('margin-left', '-1px')
+    await expect(inProgressCompleteButton).toHaveCSS('margin-left', '0px')
     // These palette colors verify resting ownership and standard IconButton hover treatments.
     const [
       neutralBorder,
@@ -1847,63 +1841,37 @@ describe('Prompt collection prompt management', () => {
       '--ui-success-action-hover-fill',
       '--ui-success-muted-hover-border'
     ])
-    await expect(inProgressPreviousButton).toHaveCSS(
-      'border-right-color',
-      'rgba(0, 0, 0, 0)'
-    )
-    await expect(inProgressPreviousButton).toHaveCSS('border-right-style', 'solid')
-    await expect(inProgressPreviousButton).toHaveCSS('border-right-width', '1px')
-    await expect(activePromptStatusSelector).toHaveCSS('border-left-color', neutralBorder)
-    await expect(activePromptStatusSelector).toHaveCSS('border-left-style', 'solid')
-    await expect(activePromptStatusSelector).toHaveCSS('border-left-width', '1px')
-    await expect(inProgressCompleteButton).toHaveCSS(
-      'border-left-color',
-      'rgba(0, 0, 0, 0)'
-    )
-    await expect(inProgressCompleteButton).toHaveCSS('border-left-style', 'solid')
-    await expect(inProgressCompleteButton).toHaveCSS('border-left-width', '1px')
-    await expect(activePromptStatusSelector).toHaveCSS('border-right-color', neutralBorder)
-    await expect(activePromptStatusSelector).toHaveCSS('border-right-style', 'solid')
-    await expect(activePromptStatusSelector).toHaveCSS('border-right-width', '1px')
+    // Dedicated dividers replace overlapping segment borders at both internal edges.
+    const statusDividers = activePromptStatusSelector.locator('..').locator('.cthulhuUiSegmentedControlDivider')
+    await expect(statusDividers).toHaveCount(2)
+    await expect(statusDividers.nth(0)).toHaveCSS('border-left-color', neutralBorder)
+    await expect(statusDividers.nth(1)).toHaveCSS('border-left-color', neutralBorder)
+    await expect(inProgressPreviousButton).toHaveCSS('border-right-width', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-left-width', '0px')
+    await expect(inProgressCompleteButton).toHaveCSS('border-left-width', '0px')
+    await expect(activePromptStatusSelector).toHaveCSS('border-right-width', '0px')
     await inProgressPreviousButton.hover()
     await expect(inProgressPreviousButton).toHaveCSS('background-color', neutralHoverFill)
     await expect(inProgressPreviousButton).toHaveCSS('border-top-color', neutralHoverBorder)
-    await expect(inProgressPreviousButton).toHaveCSS('border-right-color', neutralHoverBorder)
-    await expect(inProgressPreviousButton).toHaveCSS('border-right-style', 'solid')
-    await expect(inProgressPreviousButton).toHaveCSS('border-right-width', '1px')
-    await expect(activePromptStatusSelector).toHaveCSS(
-      'border-left-color',
-      'rgba(0, 0, 0, 0)'
-    )
-    await expect(activePromptStatusSelector).toHaveCSS('border-left-style', 'solid')
-    await expect(activePromptStatusSelector).toHaveCSS('border-left-width', '1px')
+    await expect(statusDividers.nth(0)).toHaveCSS('border-left-color', neutralHoverBorder)
+    await expect(statusDividers.nth(1)).toHaveCSS('border-left-color', neutralBorder)
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-color', neutralBorder)
     await expect(inProgressPreviousButton).toHaveCSS('z-index', '10')
     await expect(activePromptStatusSelector).toHaveCSS('z-index', 'auto')
     await inProgressCompleteButton.hover()
     await expect(inProgressCompleteButton).toHaveCSS('background-color', successHoverFill)
     await expect(inProgressCompleteButton).toHaveCSS('border-top-color', successHoverBorder)
-    await expect(inProgressCompleteButton).toHaveCSS('border-left-color', successHoverBorder)
-    await expect(inProgressCompleteButton).toHaveCSS('border-left-style', 'solid')
-    await expect(inProgressCompleteButton).toHaveCSS('border-left-width', '1px')
-    await expect(activePromptStatusSelector).toHaveCSS(
-      'border-right-color',
-      'rgba(0, 0, 0, 0)'
-    )
-    await expect(activePromptStatusSelector).toHaveCSS('border-right-style', 'solid')
-    await expect(activePromptStatusSelector).toHaveCSS('border-right-width', '1px')
+    await expect(statusDividers.nth(0)).toHaveCSS('border-left-color', neutralBorder)
+    await expect(statusDividers.nth(1)).toHaveCSS('border-left-color', successHoverBorder)
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-color', neutralBorder)
     await expect(inProgressCompleteButton).toHaveCSS('z-index', '10')
     await expect(activePromptStatusSelector).toHaveCSS('z-index', 'auto')
     await activePromptStatus.hover()
-    await expect(activePromptStatusSelector).toHaveCSS('border-left-color', neutralHoverBorder)
-    await expect(activePromptStatusSelector).toHaveCSS('border-right-color', neutralHoverBorder)
-    await expect(inProgressPreviousButton).toHaveCSS(
-      'border-right-color',
-      'rgba(0, 0, 0, 0)'
-    )
-    await expect(inProgressCompleteButton).toHaveCSS(
-      'border-left-color',
-      'rgba(0, 0, 0, 0)'
-    )
+    await expect(statusDividers.nth(0)).toHaveCSS('border-left-color', neutralHoverBorder)
+    await expect(statusDividers.nth(1)).toHaveCSS('border-left-color', neutralHoverBorder)
+    await expect(activePromptStatusSelector).toHaveCSS('border-top-color', neutralHoverBorder)
+    await expect(inProgressPreviousButton).toHaveCSS('border-top-color', neutralBorder)
+    await expect(inProgressCompleteButton).toHaveCSS('border-top-color', neutralBorder)
     await expect(activePromptStatusSelector).toHaveCSS('z-index', '10')
     await expect(mainWindow.locator(uncompleteSelector('completed-mode-active'))).toHaveCount(0)
 

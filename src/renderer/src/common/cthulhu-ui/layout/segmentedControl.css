@@ -1,0 +1,86 @@
+/* Joined controls retain normal outer borders and share single-device-pixel dividers. */
+.cthulhuUiSegmentedControl {
+  align-items: stretch;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* Each segment owns its outer edges; adjacent separators own the internal edges. */
+.cthulhuUiSegmentedControl > :is(.cthulhuUiIconButton, .cthulhuUiSimpleSelectorButton) {
+  position: relative;
+}
+
+.cthulhuUiSegmentedControl > :is(.cthulhuUiIconButton, .cthulhuUiSimpleSelectorButton):has(+ .cthulhuUiSegmentedControlDivider) {
+  border-bottom-right-radius: 0;
+  border-right-width: 0;
+  border-top-right-radius: 0;
+}
+
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider + :is(.cthulhuUiIconButton, .cthulhuUiSimpleSelectorButton) {
+  border-bottom-left-radius: 0;
+  border-left-width: 0;
+  border-top-left-radius: 0;
+}
+
+/* Raising focused segments keeps their keyboard outlines visible above their neighbors. */
+.cthulhuUiSegmentedControl > :is(.cthulhuUiIconButton, .cthulhuUiSimpleSelectorButton):is(:hover, :focus-visible, :has(:focus-visible)) {
+  z-index: var(--z-raised);
+}
+
+/* Open icon menus retain the hovered segment's border instead of its idle active border. */
+.cthulhuUiSegmentedControl > .cthulhuUiIconButton:is(:hover, :focus-visible):not(:disabled) {
+  border-color: var(--cthulhu-ui-button-hover-border);
+}
+
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider.cthulhuUiSeparator {
+  /* Translucent border colors need the same underlying fill as the neighboring segment. */
+  background-color: var(--ui-ghost-surface);
+  /* Chromium snaps this hairline to one device pixel at 100–400% Windows scaling. */
+  border-left: 0.25px solid var(--ui-neutral-normal-border);
+  box-sizing: content-box;
+  flex: 0 0 auto;
+  height: auto;
+  width: 0;
+  transition:
+    background-color var(--ui-animation-duration-standard) ease,
+    border-color var(--ui-animation-duration-standard) ease;
+}
+
+/* Either neighboring segment can highlight the divider, including a selector's nested button. */
+.cthulhuUiSegmentedControl > :is(:hover, :focus-visible, :has(:focus-visible)) + .cthulhuUiSegmentedControlDivider,
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ :is(:hover, :focus-visible)),
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ .cthulhuUiSimpleSelectorButton :focus-visible) {
+  background-color: var(--ui-neutral-action-fill);
+  border-left-color: var(--ui-neutral-hover-border);
+}
+
+/* An open selector uses a stronger fill beneath the same translucent hover border. */
+.cthulhuUiSegmentedControl > .cthulhuUiSimpleSelectorButton[data-open='true']:hover + .cthulhuUiSegmentedControlDivider,
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ .cthulhuUiSimpleSelectorButton[data-open='true']:hover) {
+  background-color: var(--ui-neutral-action-hover-fill);
+}
+
+/* The selector's keyboard-focus fill takes precedence over its open-menu fill. */
+.cthulhuUiSegmentedControl > .cthulhuUiSimpleSelectorButton[data-open='true']:has(:focus-visible) + .cthulhuUiSegmentedControlDivider,
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ .cthulhuUiSimpleSelectorButton[data-open='true'] :focus-visible) {
+  background-color: var(--ui-neutral-action-fill);
+}
+
+/* Semantic quick actions color only their adjoining divider, never the entire control. */
+.cthulhuUiSegmentedControl > .cthulhuUiIconButton[data-hover-variant='accent']:is(:hover, :focus-visible) + .cthulhuUiSegmentedControlDivider,
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ .cthulhuUiIconButton[data-hover-variant='accent']:is(:hover, :focus-visible)) {
+  background-color: var(--ui-accent-action-hover-fill);
+  border-left-color: var(--ui-accent-muted-hover-border);
+}
+
+.cthulhuUiSegmentedControl > .cthulhuUiIconButton[data-hover-variant='danger']:is(:hover, :focus-visible) + .cthulhuUiSegmentedControlDivider,
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ .cthulhuUiIconButton[data-hover-variant='danger']:is(:hover, :focus-visible)) {
+  background-color: var(--ui-danger-action-hover-fill);
+  border-left-color: var(--ui-danger-muted-hover-border);
+}
+
+.cthulhuUiSegmentedControl > .cthulhuUiIconButton[data-hover-variant='success']:is(:hover, :focus-visible) + .cthulhuUiSegmentedControlDivider,
+.cthulhuUiSegmentedControl > .cthulhuUiSegmentedControlDivider:has(+ .cthulhuUiIconButton[data-hover-variant='success']:is(:hover, :focus-visible)) {
+  background-color: var(--ui-success-action-hover-fill);
+  border-left-color: var(--ui-success-muted-hover-border);
+}

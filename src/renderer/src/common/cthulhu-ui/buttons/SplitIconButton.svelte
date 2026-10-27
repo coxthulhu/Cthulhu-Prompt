@@ -11,6 +11,7 @@
   } from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import '@renderer/common/cthulhu-ui/layout/segmentedControl.css'
 
   /** Optional Svelte action attached to the main native button. */
   type IconButtonAction = Action<HTMLButtonElement, unknown>
@@ -76,9 +77,9 @@
   const isMoreOptionsDisabled = $derived(disabled || moreOptionsDisabled)
 </script>
 
-<!-- Split action keeps one outer border around two independently operable buttons. -->
+<!-- Both actions share the divider while retaining their own outer hover borders. -->
 <span
-  class={mergeClasses('cthulhuUiSplitIconButton', className)}
+  class={mergeClasses('cthulhuUiSplitIconButton cthulhuUiSegmentedControl', className)}
   data-base-variant={baseVariant}
 >
   <IconButton
@@ -99,7 +100,7 @@
     class="cthulhuUiSplitIconButtonMain"
   />
 
-  <Separator orientation="vertical" class="cthulhuUiSplitIconButtonSeparator" />
+  <Separator orientation="vertical" class="cthulhuUiSegmentedControlDivider" />
 
   <DropdownPopupMoreOptions
     label={moreOptionsLabel}
@@ -130,44 +131,8 @@
 </span>
 
 <style>
-  .cthulhuUiSplitIconButton {
-    align-items: center;
-    background: var(--ui-ghost-surface);
-    border-radius: var(--cthulhu-ui-radius-control);
-    display: inline-flex;
-    min-width: 0;
-    outline: 1px solid var(--ui-neutral-normal-border);
-    overflow: hidden;
-  }
-
-  .cthulhuUiSplitIconButton :global(.cthulhuUiIconButton) {
-    /* The compound control owns the outer border. */
-    border: 0;
-    border-radius: 0;
-    box-sizing: content-box;
-  }
-
-  :global(.cthulhuUiSplitIconButtonMain.cthulhuUiIconButton) {
-    border-bottom-left-radius: var(--cthulhu-ui-radius-control);
-    border-top-left-radius: var(--cthulhu-ui-radius-control);
-  }
-
-  .cthulhuUiSplitIconButton
-    :global(.cthulhuUiSplitIconButtonSeparator.cthulhuUiSeparator) {
-    --cthulhu-ui-separator-color: var(--ui-neutral-normal-border);
-    align-self: stretch;
-    /* Let the snapped hairline own all the width, without an empty content strip. */
-    border-left-width: 0.25px;
-    box-sizing: content-box;
-    flex: 0 0 auto;
-    height: auto;
-    width: 0;
-  }
-
   .cthulhuUiSplitIconButton
     :global(.cthulhuUiSplitIconButtonChevron.cthulhuUiIconButton) {
-    border-bottom-right-radius: var(--cthulhu-ui-radius-control);
-    border-top-right-radius: var(--cthulhu-ui-radius-control);
     width: 23px;
   }
 </style>
