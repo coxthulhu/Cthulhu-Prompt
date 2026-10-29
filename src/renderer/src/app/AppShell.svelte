@@ -382,10 +382,10 @@
 
   const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {
     await closeSelectedWorkspace()
-    const workspaceId = await loadWorkspaceByPath(workspaceInfoPath)
-    await loadWorkspaceUiState(workspaceId)
-    setSelectedWorkspaceId(workspaceId)
-    await syncLastWorkspaceInfoPath(workspaceInfoPath)
+    const loadedWorkspace = await loadWorkspaceByPath(workspaceInfoPath)
+    await loadWorkspaceUiState(loadedWorkspace.workspaceId)
+    setSelectedWorkspaceId(loadedWorkspace.workspaceId)
+    await syncLastWorkspaceInfoPath(loadedWorkspace.workspaceInfoPath)
   }
 
   const syncCurrentWorkspaceScreenSelection = async (

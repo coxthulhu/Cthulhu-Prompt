@@ -43,7 +43,7 @@ describe('workspace Open dialog directory', () => {
     expect(dialog.showOpenDialog).toHaveBeenCalledWith({
       defaultPath: path.dirname(previousFile),
       properties: ['openFile'],
-      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cthulhuprompt'] }]
+      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cthulhuprompt', 'cthulhuprompt.json'] }]
     })
   })
 

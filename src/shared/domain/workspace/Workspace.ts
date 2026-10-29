@@ -65,6 +65,8 @@ export type WorkspaceFolderStatus = {
 }
 
 export type LoadWorkspaceByPathResult = IpcResult<{
+  /** Info path actually loaded, which differs from the request after a legacy filename rename. */
+  workspaceInfoPath: string
   workspace: RevisionEnvelope<Workspace>
   promptCollections: Array<RevisionEnvelope<PromptCollection>>
   categories: Array<RevisionEnvelope<import('@shared/domain/category/Category').Category>>

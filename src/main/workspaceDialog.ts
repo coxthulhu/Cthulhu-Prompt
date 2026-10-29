@@ -2,9 +2,9 @@ import { ipcMain, shell } from 'electron'
 import * as path from 'path'
 import type { WorkspaceFolderStatus } from '@shared/domain/workspace/Workspace'
 import {
+  isWorkspaceInfoFilename,
   PROMPTS_DIRECTORY_NAME,
-  TEMPLATES_DIRECTORY_NAME,
-  WORKSPACE_INFO_FILENAME_SUFFIX
+  TEMPLATES_DIRECTORY_NAME
 } from './Persistence/PromptPersistencePaths'
 import { getDialogProvider } from './dialog-provider'
 import { getFs } from './fs-provider'
@@ -13,7 +13,7 @@ const hasWorkspaceInfoFile = (folderPath: string): boolean => {
   const fs = getFs()
   return fs
     .readdirSync(folderPath)
-    .some((entryName) => entryName.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX))
+    .some(isWorkspaceInfoFilename)
 }
 
 const getWorkspaceFolderStatus = (folderPath: string): WorkspaceFolderStatus => {

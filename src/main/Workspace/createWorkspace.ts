@@ -27,6 +27,7 @@ import {
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
   WORKSPACE_INFO_FILENAME_SUFFIX,
+  isWorkspaceInfoFilename,
   resolveActivePromptStatusFolderName,
   resolveCategoriesDirectoryPath,
   resolveCategoryPathFromStem,
@@ -349,7 +350,7 @@ const validateNewWorkspacePath = (workspacePath: string): CreateWorkspaceResult 
     fs.existsSync(workspacePath) &&
     fs
       .readdirSync(workspacePath)
-      .some((entryName) => entryName.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX))
+      .some(isWorkspaceInfoFilename)
 
   if (hasWorkspaceInfoFile || fs.existsSync(promptsPath) || fs.existsSync(templatesPath)) {
     return { success: false, error: 'Workspace already exists' }

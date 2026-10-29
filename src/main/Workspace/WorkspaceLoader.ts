@@ -36,6 +36,7 @@ import {
 } from '../Data/DataSnapshotHelpers'
 import {
   isWorkspaceInfoPath,
+  migrateLegacyWorkspaceInfoPath,
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
   resolvePromptStatusFolderName,
@@ -43,7 +44,10 @@ import {
 } from '../Persistence/PromptPersistencePaths'
 import { applyWorkspaceMigrations } from '../Persistence/workspace/WorkspaceMigrations'
 
-type WorkspaceLoadPayload = Omit<Extract<LoadWorkspaceByPathResult, { success: true }>, 'success'>
+type WorkspaceLoadPayload = Omit<
+  Extract<LoadWorkspaceByPathResult, { success: true }>,
+  'success' | 'workspaceInfoPath'
+>
 
 const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
   if (!isWorkspaceInfoPath(workspaceInfoPath)) {
@@ -324,9 +328,11 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 }
 
 export const loadWorkspaceByPath = async (
-  workspaceInfoPath: string
+  requestedWorkspaceInfoPath: string
 ): Promise<LoadWorkspaceByPathResult> => {
   try {
+    /** Info path after renaming a pre-rename .cthulhuprompt.json file to .cthulhuprompt. */
+    const workspaceInfoPath = migrateLegacyWorkspaceInfoPath(requestedWorkspaceInfoPath)
     if (!isWorkspaceInfoPathValid(workspaceInfoPath)) {
       return { success: false, error: 'Invalid workspace path' }
     }
@@ -337,6 +343,7 @@ export const loadWorkspaceByPath = async (
 
     return {
       success: true,
+      workspaceInfoPath,
       ...payload
     }
   } catch (error) {

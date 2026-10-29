@@ -19,7 +19,10 @@ import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollect
 import { markdownContentQueryAdapters } from './MarkdownContentQueryAdapters'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 
-export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<string> => {
+/** Loaded workspace identity plus the info path main resolved, renamed if it was legacy. */
+export type LoadedWorkspace = { workspaceId: string; workspaceInfoPath: string }
+
+export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<LoadedWorkspace> => {
   const result = await runLoad(() =>
     ipcInvokeWithPayload<LoadWorkspaceByPathResult, LoadWorkspaceByPathRequest>(
       'load-workspace-by-path',
@@ -53,7 +56,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
   for (const adapter of markdownContentQueryAdapters) adapter.applyWorkspaceResult(result)
 
   if (!previousGraph) {
-    return result.workspace.id
+    return { workspaceId: result.workspace.id, workspaceInfoPath: result.workspaceInfoPath }
   }
 
   const nextPromptCollectionIds = new Set(result.promptCollections.map((collection) => collection.id))
@@ -85,5 +88,5 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<st
     adapter.delete(removedContentIds)
   }
 
-  return result.workspace.id
+  return { workspaceId: result.workspace.id, workspaceInfoPath: result.workspaceInfoPath }
 }

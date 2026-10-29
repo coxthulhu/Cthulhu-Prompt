@@ -1,4 +1,5 @@
 import * as path from 'path'
+import { getFs } from '../fs-provider'
 import {
   PROMPT_COLLECTION_SETTINGS_DISK_FILENAMES,
   type PromptCollectionContentKind,
@@ -13,6 +14,8 @@ import {
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
 export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt'
+/** Workspace info suffix used before the .cthulhuprompt file association; renamed on load. */
+export const LEGACY_WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 /** Filename for category-view ordering owned by a collection. */
 export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = 'CategoryOrder.json'
 export const PROMPT_COLLECTION_INFO_DIRECTORY_NAME = '_CollectionInfo'
@@ -82,6 +85,31 @@ export const resolveWorkspacePathFromInfoPath = (workspaceInfoPath: string): str
 
 export const isWorkspaceInfoPath = (workspaceInfoPath: string): boolean => {
   return workspaceInfoPath.toLowerCase().endsWith(WORKSPACE_INFO_FILENAME_SUFFIX)
+}
+
+/** Reports whether a path is a workspace info file still using the pre-rename suffix. */
+export const isLegacyWorkspaceInfoPath = (workspaceInfoPath: string): boolean => {
+  return workspaceInfoPath.toLowerCase().endsWith(LEGACY_WORKSPACE_INFO_FILENAME_SUFFIX)
+}
+
+/** Reports whether a folder entry is a current or pre-rename workspace info file. */
+export const isWorkspaceInfoFilename = (filename: string): boolean => {
+  return isWorkspaceInfoPath(filename) || isLegacyWorkspaceInfoPath(filename)
+}
+
+/** Renames a pre-rename workspace info file in place and returns the current info path. */
+export const migrateLegacyWorkspaceInfoPath = (workspaceInfoPath: string): string => {
+  if (!isLegacyWorkspaceInfoPath(workspaceInfoPath)) {
+    return workspaceInfoPath
+  }
+
+  /** Same filename stem with the legacy `.json` extension removed. */
+  const currentInfoPath = workspaceInfoPath.slice(0, -'.json'.length)
+  const fs = getFs()
+  if (fs.existsSync(workspaceInfoPath) && !fs.existsSync(currentInfoPath)) {
+    fs.renameSync(workspaceInfoPath, currentInfoPath)
+  }
+  return currentInfoPath
 }
 
 /** Resolves the collection-owned category ordering file for prompts or templates. */
