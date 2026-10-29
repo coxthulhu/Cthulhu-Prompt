@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+# Queue overlapping runs so two builds never upload mismatched assets to the same draft release.
+concurrency:
+  group: publish-windows
+  cancel-in-progress: false
+
 jobs:
   build-windows:
     runs-on: windows-latest
