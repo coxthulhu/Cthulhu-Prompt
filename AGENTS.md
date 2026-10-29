@@ -12,6 +12,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
 - **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.
 - **System Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
+- **Settings Sidebar** — Replaces the App Sidebar on the System Settings Screen with a settings tree that scrolls to each settings section and row.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
 - **Workspace Popup** — Opens from the activity bar mascot to show the current workspace name, path, and action to open its folder in Explorer.
 - **Mockups Screen** — Provides a development-only interface for previewing UI mockups.

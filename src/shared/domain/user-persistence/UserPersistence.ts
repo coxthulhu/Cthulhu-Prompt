@@ -5,12 +5,18 @@ export type UserPersistence = {
   appSidebarWidthPx: number
   /** Whether Welcome has been displayed for this user. */
   hasShownWelcome: boolean
+  /** Settings sidebar sections collapsed on this machine; all others are expanded. */
+  settingsCollapsedSectionIds: string[]
+  /** Last scroll offset of the settings screen on this machine. */
+  settingsScrollTopPx: number
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   lastWorkspaceInfoPath: null,
   appSidebarWidthPx: 275,
-  hasShownWelcome: false
+  hasShownWelcome: false,
+  settingsCollapsedSectionIds: [],
+  settingsScrollTopPx: 0
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -129,7 +135,14 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
   return {
     lastWorkspaceInfoPath,
     appSidebarWidthPx,
-    hasShownWelcome: value.hasShownWelcome === true
+    hasShownWelcome: value.hasShownWelcome === true,
+    settingsCollapsedSectionIds: Array.isArray(value.settingsCollapsedSectionIds)
+      ? value.settingsCollapsedSectionIds.filter((id): id is string => typeof id === 'string')
+      : DEFAULT_USER_PERSISTENCE.settingsCollapsedSectionIds,
+    settingsScrollTopPx:
+      typeof value.settingsScrollTopPx === 'number'
+        ? Math.round(value.settingsScrollTopPx)
+        : DEFAULT_USER_PERSISTENCE.settingsScrollTopPx
   }
 }
 

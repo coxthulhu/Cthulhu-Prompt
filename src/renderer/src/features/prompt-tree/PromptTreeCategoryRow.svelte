@@ -27,7 +27,8 @@
   type Props = {
     /** Status or template namespace used by this reusable row. */
     testIdGroup?: import('./promptTreeTestIds').PromptTreeTestIdGroup
-    category: Category
+    /** Category, or another folder-like group such as a settings section. */
+    category: Pick<Category, 'id' | 'displayName'>
     isActive: boolean
     isDragging: boolean
     isPromptDragActive: boolean
@@ -48,7 +49,10 @@
     categoryDragOptions?: CategoryRowDragOptions
     onCategoryExpandedChange: (categoryId: string, isExpanded: boolean) => void
     onCategoryOpen: (categoryId: string) => void
-    onCategorySettingsOpen: (categoryId: string) => void
+    /** Context-menu label for the open action. */
+    openLabel?: string
+    /** Adds the category settings action to the context menu when supplied. */
+    onCategorySettingsOpen?: (categoryId: string) => void
     /** Creates a prompt or template at the start of this category when supplied. */
     onCategoryAddToTop?: (categoryId: string) => void
   }
@@ -72,6 +76,7 @@
     categoryDragOptions,
     onCategoryExpandedChange,
     onCategoryOpen,
+    openLabel = 'Open Category',
     onCategorySettingsOpen,
     onCategoryAddToTop
   }: Props = $props()
@@ -122,16 +127,20 @@
   const dropdownItems = $derived.by((): DropdownPopupItem[] => [
     {
       id: 'open-category',
-      label: 'Open Category',
+      label: openLabel,
       icon: ArrowRight,
       testId: categoryOpenMenuItemTestId(category, testIdGroup)
     },
-    {
-      id: 'category-settings',
-      label: 'Open Category Settings',
-      icon: Settings,
-      testId: categorySettingsTestId(category, testIdGroup)
-    }
+    ...(onCategorySettingsOpen
+      ? [
+          {
+            id: 'category-settings',
+            label: 'Open Category Settings',
+            icon: Settings,
+            testId: categorySettingsTestId(category, testIdGroup)
+          }
+        ]
+      : [])
   ])
 
   /** Handles a category context-menu selection. */
@@ -143,7 +152,7 @@
     }
 
     if (item.id === 'category-settings') {
-      onCategorySettingsOpen(category.id)
+      onCategorySettingsOpen?.(category.id)
       blurButtonAfterMouseClick(event)
       return
     }

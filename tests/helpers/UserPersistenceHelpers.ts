@@ -156,11 +156,18 @@ export const readSystemSettings = async (electronApp: ElectronApplication) =>
 /** Seeds the renderer's machine-local preferences without changing Welcome. */
 export const seedUserPersistence = async (
   electronApp: ElectronApplication,
-  data: { lastWorkspaceInfoPath: string | null; appSidebarWidthPx?: number }
+  data: {
+    lastWorkspaceInfoPath: string | null
+    appSidebarWidthPx?: number
+    settingsCollapsedSectionIds?: string[]
+    settingsScrollTopPx?: number
+  }
 ): Promise<void> => {
   await seedWorkspaceState(electronApp, null, 'application-machine', null, {
     lastWorkspaceInfoPath: data.lastWorkspaceInfoPath,
-    appSidebarWidthPx: data.appSidebarWidthPx ?? 275
+    appSidebarWidthPx: data.appSidebarWidthPx ?? 275,
+    settingsCollapsedSectionIds: data.settingsCollapsedSectionIds ?? [],
+    settingsScrollTopPx: data.settingsScrollTopPx ?? 0
   }, 'machine-specific')
 }
 
@@ -234,12 +241,22 @@ export const seedWorkspaceUiState = async (
 /** Reassembles the two renderer records for existing UI assertions. */
 export const readUserPersistence = async (electronApp: ElectronApplication): Promise<{
   lastWorkspaceInfoPath: string | null; appSidebarWidthPx: number; hasShownWelcome: number
+  settingsCollapsedSectionIds: string[]; settingsScrollTopPx: number
 }> => {
-  /** Local path and sizing state. */
-  const machine = await readWorkspaceState<{ lastWorkspaceInfoPath: string | null; appSidebarWidthPx: number }>(electronApp, null, 'application-machine', null)
+  /** Local path, sizing, and settings navigation state. */
+  const machine = await readWorkspaceState<{
+    lastWorkspaceInfoPath: string | null; appSidebarWidthPx: number
+    settingsCollapsedSectionIds?: string[]; settingsScrollTopPx?: number
+  }>(electronApp, null, 'application-machine', null)
   /** Portable Welcome state, exposed numerically for existing assertions. */
   const user = await readWorkspaceState<{ hasShownWelcome: boolean }>(electronApp, null, 'application-user', null)
-  return { lastWorkspaceInfoPath: machine?.lastWorkspaceInfoPath ?? null, appSidebarWidthPx: machine?.appSidebarWidthPx ?? 275, hasShownWelcome: user?.hasShownWelcome ? 1 : 0 }
+  return {
+    lastWorkspaceInfoPath: machine?.lastWorkspaceInfoPath ?? null,
+    appSidebarWidthPx: machine?.appSidebarWidthPx ?? 275,
+    hasShownWelcome: user?.hasShownWelcome ? 1 : 0,
+    settingsCollapsedSectionIds: machine?.settingsCollapsedSectionIds ?? [],
+    settingsScrollTopPx: machine?.settingsScrollTopPx ?? 0
+  }
 }
 
 /** Reassembles persisted workspace state independently of the application adapters. */

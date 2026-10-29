@@ -1,7 +1,7 @@
 import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 
-/** Namespace identifying one prompt workflow or the status-free template tree. */
-export type PromptTreeTestIdGroup = `${PromptStatusFolderId}` | 'template'
+/** Namespace identifying one prompt workflow, the status-free template tree, or the settings tree. */
+export type PromptTreeTestIdGroup = `${PromptStatusFolderId}` | 'template' | 'settings'
 
 /** Minimal display identity used by category selectors. */
 type PromptTreeCategoryIdentity = { displayName: string }

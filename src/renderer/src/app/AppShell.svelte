@@ -20,6 +20,7 @@
   import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
   import { PromptCollectionScreenMode } from '../features/prompt-collections/promptCollectionScreenMode'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
+  import SettingsSidebar from '../features/settings/SettingsSidebar.svelte'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -857,21 +858,25 @@
       }}
     >
       {#snippet sidebar()}
-        <AppSidebar
-          {activeScreen}
-          {isWorkspaceReady}
-          {isWorkspaceLoading}
-          {screenCollectionId}
-          {promptCollectionScreenMode}
-          {shownFinalStatusGroups}
-          collectionKind={activeScreen === 'prompt-template-collections' ? 'template' : 'prompt'}
-          onPromptCollectionModeChange={setPromptCollectionMode}
-          onFinalStatusGroupShownChange={setFinalStatusGroupShown}
-          onScreenCollectionSelect={(promptCollectionId) => {
-            navigateToScreenCollection(promptCollectionId)
-          }}
-          onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
-        />
+        {#if activeScreen === 'settings'}
+          <SettingsSidebar />
+        {:else}
+          <AppSidebar
+            {activeScreen}
+            {isWorkspaceReady}
+            {isWorkspaceLoading}
+            {screenCollectionId}
+            {promptCollectionScreenMode}
+            {shownFinalStatusGroups}
+            collectionKind={activeScreen === 'prompt-template-collections' ? 'template' : 'prompt'}
+            onPromptCollectionModeChange={setPromptCollectionMode}
+            onFinalStatusGroupShownChange={setFinalStatusGroupShown}
+            onScreenCollectionSelect={(promptCollectionId) => {
+              navigateToScreenCollection(promptCollectionId)
+            }}
+            onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
+          />
+        {/if}
       {/snippet}
 
       {#snippet content()}

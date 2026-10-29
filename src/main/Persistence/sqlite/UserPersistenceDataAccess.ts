@@ -49,13 +49,19 @@ export class UserPersistenceDataAccess {
 
   /** Atomically splits renderer preferences into their user and machine state types. */
   static updateUserPersistence(userPersistence: UserPersistence): UserPersistence {
-    /** Pixel widths retain the existing integer normalization. */
-    const next = { ...userPersistence, appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx) }
+    /** Pixel sizes retain the existing integer normalization. */
+    const next = {
+      ...userPersistence,
+      appSidebarWidthPx: Math.round(userPersistence.appSidebarWidthPx),
+      settingsScrollTopPx: Math.round(userPersistence.settingsScrollTopPx)
+    }
     SqliteDataAccess.runTransaction(() => {
       WorkspaceStateDataAccess.write(null, 'application-user', null, { hasShownWelcome: next.hasShownWelcome })
       WorkspaceStateDataAccess.write(null, 'application-machine', null, {
         lastWorkspaceInfoPath: next.lastWorkspaceInfoPath,
-        appSidebarWidthPx: next.appSidebarWidthPx
+        appSidebarWidthPx: next.appSidebarWidthPx,
+        settingsCollapsedSectionIds: next.settingsCollapsedSectionIds,
+        settingsScrollTopPx: next.settingsScrollTopPx
       })
     })
     return next

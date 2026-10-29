@@ -12,18 +12,23 @@ export const parseSetUserPersistenceDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 3 ||
+    Object.keys(record).length !== 5 ||
     (record.lastWorkspaceInfoPath !== null &&
       typeof record.lastWorkspaceInfoPath !== 'string') ||
     typeof record.appSidebarWidthPx !== 'number' ||
-    typeof record.hasShownWelcome !== 'boolean'
+    typeof record.hasShownWelcome !== 'boolean' ||
+    !Array.isArray(record.settingsCollapsedSectionIds) ||
+    !record.settingsCollapsedSectionIds.every((id) => typeof id === 'string') ||
+    typeof record.settingsScrollTopPx !== 'number'
   ) {
     return null
   }
   return {
     lastWorkspaceInfoPath: record.lastWorkspaceInfoPath,
     appSidebarWidthPx: Math.round(record.appSidebarWidthPx),
-    hasShownWelcome: record.hasShownWelcome
+    hasShownWelcome: record.hasShownWelcome,
+    settingsCollapsedSectionIds: record.settingsCollapsedSectionIds,
+    settingsScrollTopPx: Math.round(record.settingsScrollTopPx)
   }
 }
 

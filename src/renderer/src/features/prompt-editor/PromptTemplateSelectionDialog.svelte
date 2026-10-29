@@ -488,7 +488,6 @@
       roundedCorners
       onCategoryExpandedChange={handleCategoryExpandedChange}
       onCategoryOpen={() => {}}
-      onCategorySettingsOpen={() => {}}
     />
   </div>
 {/snippet}

@@ -23,6 +23,28 @@ export const setAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void 
   mutateAppSidebarWidthWithAutosave(appSidebarWidthPx)
 }
 
+/** Saves which settings sidebar sections are collapsed on this machine. */
+export const setSettingsCollapsedSectionIdsWithAutosave = (sectionIds: string[]): void => {
+  /** Latest optimistic preferences, including other pending autosave edits. */
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, settingsCollapsedSectionIds: sectionIds },
+    debounceMs: AUTOSAVE_MS
+  })
+}
+
+/** Saves the settings screen scroll offset on this machine. */
+export const setSettingsScrollTopWithAutosave = (scrollTopPx: number): void => {
+  /** Rounded offset compared against the latest optimistic value to skip unchanged writes. */
+  const roundedScrollTopPx = Math.round(scrollTopPx)
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  if (userPersistence.settingsScrollTopPx === roundedScrollTopPx) return
+  mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, settingsScrollTopPx: roundedScrollTopPx },
+    debounceMs: AUTOSAVE_MS
+  })
+}
+
 export const flushUserPersistenceAutosaves = async (): Promise<void> => {
   await submitPacedUpdateTransactionAndWait(userPersistenceCollection.id, USER_PERSISTENCE_ID)
 }

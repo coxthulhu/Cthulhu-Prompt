@@ -75,7 +75,9 @@ describe('Welcome Dialog', () => {
     await expect.poll(async () => await readUserPersistence(electronApp)).toEqual({
       lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath),
       appSidebarWidthPx: 290,
-      hasShownWelcome: 1
+      hasShownWelcome: 1,
+      settingsCollapsedSectionIds: [],
+      settingsScrollTopPx: 0
     })
     await welcome.getByRole('button', { name: 'Close', exact: true }).click()
     await testHelpers.navigateToSettingsScreen()

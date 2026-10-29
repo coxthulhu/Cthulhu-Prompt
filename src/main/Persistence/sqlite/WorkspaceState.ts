@@ -12,7 +12,12 @@ export enum StorageScope {
 /** JSON payloads stored independently of their workspace and entity identity. */
 export type WorkspaceStateData = {
   'application-user': { hasShownWelcome: boolean }
-  'application-machine': { lastWorkspaceInfoPath: string | null; appSidebarWidthPx: number }
+  'application-machine': {
+    lastWorkspaceInfoPath: string | null
+    appSidebarWidthPx: number
+    settingsCollapsedSectionIds: string[]
+    settingsScrollTopPx: number
+  }
   'workspace-dialog': { directory: string | null }
   window: WindowPersistence
   'system-settings': SystemSettings
