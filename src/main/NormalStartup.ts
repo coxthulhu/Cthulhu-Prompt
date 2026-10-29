@@ -36,6 +36,7 @@ import { attachRendererLogging } from './logging'
 import { configureRendererSecurity, getRendererDevelopmentUrl } from './rendererSecurity'
 import { isUpdateRestarting, isUpdateInstalling, setupAppUpdater } from './updates/AppUpdater'
 import type { UpdateSource } from './updates/UpdateSource'
+import { isWorkspaceInfoPath } from './Persistence/PromptPersistencePaths'
 
 const WINDOW_DEFAULT_WIDTH = 1366
 const WINDOW_DEFAULT_HEIGHT = 768
@@ -50,6 +51,10 @@ function getWorkingDirectoryName(): string | null {
     return null
   }
 }
+
+/** Finds the workspace file Windows passes when a .cthulhuprompt file is double-clicked. */
+const findWorkspaceInfoPathArg = (argv: string[]): string | null =>
+  argv.find((arg) => isWorkspaceInfoPath(arg)) ?? null
 
 function encodeRuntimeConfigArg(config: RuntimeConfig): string {
   const payload = JSON.stringify(config)
@@ -116,7 +121,8 @@ function buildRuntimeConfig(): RuntimeConfig {
   return {
     executionFolderName,
     environment,
-    appVersion
+    appVersion,
+    startupWorkspaceInfoPath: findWorkspaceInfoPathArg(process.argv)
   }
 }
 
@@ -297,6 +303,26 @@ function createWindow(runtimeConfig: RuntimeConfig): void {
   }
 }
 
+/** Focuses the existing window and forwards any double-clicked workspace file to it. */
+function setupSecondInstanceHandler(): void {
+  app.on('second-instance', (_event, argv) => {
+    const mainWindow = BrowserWindow.getAllWindows()[0]
+    if (!mainWindow) return
+
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+
+    mainWindow.show()
+    mainWindow.focus()
+
+    const workspaceInfoPath = findWorkspaceInfoPathArg(argv)
+    if (workspaceInfoPath) {
+      mainWindow.webContents.send('open-workspace-file', workspaceInfoPath)
+    }
+  })
+}
+
 export function startupNormally(updateSource?: UpdateSource): void {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
@@ -349,6 +375,7 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupCategoryMutationHandlers()
     setupMarkdownContentUiStateMutationHandlers()
     setupWindowControlHandlers()
+    setupSecondInstanceHandler()
 
     const runtimeConfig = buildRuntimeConfig()
 

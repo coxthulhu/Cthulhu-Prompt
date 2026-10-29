@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app } from 'electron'
 import { join } from 'path'
 import { mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -46,18 +46,6 @@ if (shouldUsePlaywrightSetup) {
 } else {
   // Side effect: begin persistent diagnostics only in the primary application instance.
   initializePersistentLogging()
-
-  app.on('second-instance', () => {
-    const mainWindow = BrowserWindow.getAllWindows()[0]
-    if (!mainWindow) return
-
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore()
-    }
-
-    mainWindow.show()
-    mainWindow.focus()
-  })
 
   // Normal startup path
   startupNormally()

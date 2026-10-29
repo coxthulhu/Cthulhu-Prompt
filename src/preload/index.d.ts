@@ -11,6 +11,7 @@ interface WindowControls {
   isMaximized: () => Promise<boolean>
   onMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void
   onCloseRequested: (callback: () => void) => () => void
+  onOpenWorkspaceFile: (callback: (workspaceInfoPath: string) => void) => () => void
 }
 
 /** Renderer-facing API for forwarding complete error details to persistent logging. */

@@ -27,6 +27,8 @@ export interface TestSetupOptions {
     path?: string
     autoSetup?: boolean
     fileModifiedTimes?: Record<string, string>
+    /** Extra entries written with the scenario, since each filesystem setup replaces the last; ignored for 'none'. */
+    additionalFilesystem?: Record<string, string | null>
   }
 }
 
@@ -229,10 +231,10 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               getWorkspacePath(options.workspace.scenario)
 
             // Create filesystem structure using existing scenario logic
-            const workspaceFilesystem = setupWorkspaceScenario(
-              workspacePath,
-              options.workspace.scenario
-            )
+            const workspaceFilesystem = {
+              ...setupWorkspaceScenario(workspacePath, options.workspace.scenario),
+              ...options.workspace.additionalFilesystem
+            }
             await setupUtils.setupFilesystem(workspaceFilesystem, {
               fileModifiedTimes: options.workspace.fileModifiedTimes
             })

@@ -52,7 +52,7 @@ describe('Collection terminology migrations', () => {
     await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('3')
     await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('Prompt Collections')
     for (const [filePath, contents] of Object.entries(current)) {
-      if (contents === null || filePath.endsWith('.cthulhuprompt.json') || filePath.endsWith('/CollectionOrder.json')) continue
+      if (contents === null || filePath.endsWith('.cthulhuprompt') || filePath.endsWith('/CollectionOrder.json')) continue
       expect(await checkFileExists(electronApp, filePath)).toBe(true)
       if (filePath.endsWith('CollectionInfo.json') || filePath.endsWith('CollectionOrder.json')) {
         expect(JSON.parse(await readTextFile(electronApp, filePath))).toEqual(JSON.parse(contents))

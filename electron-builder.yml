@@ -22,6 +22,11 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+fileAssociations:
+  - ext: cthulhuprompt
+    name: Cthulhu Prompt Workspace
+    description: Cthulhu Prompt Workspace
+    icon: build/icon.ico
 portable:
   artifactName: CthulhuPrompt_${version}_Windows_Portable.${ext}
 mac:

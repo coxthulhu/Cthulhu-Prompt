@@ -211,7 +211,7 @@ describe('domain persistence planning', () => {
             }
       mockDomainData.seed('workspace', workspace.id, workspace, {
         workspacePath: workspace.workspacePath,
-        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt'
       })
       mockDomainData.seed(
         'promptCollection',
@@ -422,7 +422,7 @@ describe('domain persistence planning', () => {
     }
     mockDomainData.seed('workspace', workspace.id, workspace, {
       workspacePath: workspace.workspacePath,
-      workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+      workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt'
     })
     mockDomainData.seed(
       'promptCollection',

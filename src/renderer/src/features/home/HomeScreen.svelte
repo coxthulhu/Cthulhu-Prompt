@@ -24,8 +24,12 @@
   import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
   import WelcomeDialog from './WelcomeDialog.svelte'
 
+  const workspaceOpenErrorFallbackText = 'Failed to open workspace. Please try again.'
+
   let {
     showWelcomeDialog = $bindable(false),
+    showWorkspaceOpenErrorDialog = $bindable(false),
+    workspaceOpenErrorText = $bindable(workspaceOpenErrorFallbackText),
     workspacePath,
     isWorkspaceReady,
     isWorkspaceLoading,
@@ -38,6 +42,10 @@
   } = $props<{
     /** Welcome visibility controlled by startup or the Welcome action. */
     showWelcomeDialog?: boolean
+    /** Open-failure dialog visibility, also raised by the shell for double-clicked workspace files. */
+    showWorkspaceOpenErrorDialog?: boolean
+    /** Failure details shown by the open-failure dialog. */
+    workspaceOpenErrorText?: string
     workspacePath: string | null
     isWorkspaceReady: boolean
     isWorkspaceLoading: boolean
@@ -60,12 +68,9 @@
   }
 
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
-  const workspaceOpenErrorFallbackText = 'Failed to open workspace. Please try again.'
 
   let isOpeningWorkspaceDialog = $state(false)
   let showCreateWorkspaceDialog = $state(false)
-  let showWorkspaceOpenErrorDialog = $state(false)
-  let workspaceOpenErrorText = $state(workspaceOpenErrorFallbackText)
   /** Covers the native picker through the final workspace-selection result. */
   let isSelectingWorkspace = $state(false)
 

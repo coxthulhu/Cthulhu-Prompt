@@ -486,7 +486,7 @@ Keep this partial body.`
         JSON.parse(
           await readTextFile(
             electronApp,
-            `${workspacePath}\\TestWorkspace.cthulhuprompt.json`
+            `${workspacePath}\\TestWorkspace.cthulhuprompt`
           )
         ).schemaVersion
       ).toBe(6)

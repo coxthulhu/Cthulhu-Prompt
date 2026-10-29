@@ -418,7 +418,7 @@ describe('atomic data transaction', () => {
       committed: workspace,
       persistenceFields: {
         workspacePath: workspace.workspacePath,
-        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt'
       }
     })
     mockTransactionState.seedEntry('promptCollection', promptCollection.id, {
@@ -527,7 +527,7 @@ describe('atomic data transaction', () => {
       committed: workspace,
       persistenceFields: {
         workspacePath: workspace.workspacePath,
-        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt'
       }
     })
     mockTransactionState.seedEntry('promptCollection', promptCollection.id, {
@@ -659,7 +659,7 @@ describe('atomic data transaction', () => {
       committed: workspace,
       persistenceFields: {
         workspacePath: workspace.workspacePath,
-        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt.json'
+        workspaceInfoPath: 'C:\\Workspace\\Workspace.cthulhuprompt'
       }
     })
     mockTransactionState.seedEntry('promptCollection', promptCollection.id, {

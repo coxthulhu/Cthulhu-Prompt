@@ -91,7 +91,7 @@ describe('Workspace Open dialog persistence', () => {
   }) => {
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: '/ws/deleted' }, 'machine-specific')
-    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: '/ws/also-deleted/Workspace.cthulhuprompt.json' })
+    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: '/ws/also-deleted/Workspace.cthulhuprompt' })
     const downloads = await electronApp.evaluate(({ app }) => app.getPath('downloads').replace(/\\/g, '/'))
     await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
     await mainWindow.getByTestId('open-workspace-button').click()

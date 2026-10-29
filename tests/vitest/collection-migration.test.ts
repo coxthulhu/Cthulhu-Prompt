@@ -5,7 +5,7 @@ import { applyWorkspaceMigrations } from '../../src/main/Persistence/workspace/W
 import { readPromptCollections } from '../../src/main/Persistence/workspace/WorkspaceReads'
 
 const workspacePath = '/ws/collection-migration'
-const workspaceInfoPath = `${workspacePath}/Migration.cthulhuprompt.json`
+const workspaceInfoPath = `${workspacePath}/Migration.cthulhuprompt`
 
 /** Historical metadata is explicit so current fixture renames cannot change the source schema. */
 const createLegacyWorkspace = (

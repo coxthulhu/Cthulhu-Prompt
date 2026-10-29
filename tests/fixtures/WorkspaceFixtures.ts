@@ -298,7 +298,7 @@ export function getWorkspacePath(scenario: WorkspaceScenario): string {
 export function getWorkspaceInfoPath(workspacePath: string): string {
   const segments = workspacePath.split(/[\\/]+/).filter(Boolean)
   const workspaceName = segments[segments.length - 1] ?? 'Workspace'
-  return `${workspacePath}/${workspaceName}.cthulhuprompt.json`
+  return `${workspacePath}/${workspaceName}.cthulhuprompt`
 }
 
 /**
@@ -324,7 +324,7 @@ export function createBasicWorkspace(
       : getWorkspaceInfoPath(workspacePath)
           .split('/')
           .pop()!
-          .replace(/\.cthulhuprompt\.json$/, '')
+          .replace(/\.cthulhuprompt$/, '')
 
   const structure: Record<string, string | null> = {
     [`${workspacePath}/Prompts`]: null,
@@ -391,7 +391,7 @@ export function createLegacyWorkspaceFilesystem(
       .replaceAll('CategoryOrder.json', 'FolderOrder.json')
       .replaceAll('CollectionOrder.json', 'FolderOrder.json')
     if (content === null) return [legacyPath, content]
-    if (filePath.endsWith('.cthulhuprompt.json')) {
+    if (filePath.endsWith('.cthulhuprompt')) {
       return [legacyPath, JSON.stringify({ ...JSON.parse(content), schemaVersion }, null, 2)]
     }
     if (filePath.endsWith('/CollectionInfo.json')) {
@@ -1036,7 +1036,7 @@ export function createCorruptedWorkspace(
   switch (corruptionType) {
     case 'missing-settings':
       structure[`${workspacePath}/Prompts`] = null
-      // Missing .cthulhuprompt.json
+      // Missing .cthulhuprompt
       break
 
     case 'invalid-json':
@@ -1052,7 +1052,7 @@ export function createCorruptedWorkspace(
           workspaceName: getWorkspaceInfoPath(workspacePath)
             .split('/')
             .pop()!
-            .replace(/\.cthulhuprompt\.json$/, '')
+            .replace(/\.cthulhuprompt$/, '')
         },
         null,
         2

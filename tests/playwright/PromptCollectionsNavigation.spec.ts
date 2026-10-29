@@ -81,7 +81,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       return await window.electron.ipcRenderer.invoke('load-workspace-by-path', {
         requestId: `root-delete-load-${Date.now()}`,
         clientId: window.ipcClientId,
-        payload: { workspaceInfoPath: '/ws/categories/categories.cthulhuprompt.json' }
+        payload: { workspaceInfoPath: '/ws/categories/categories.cthulhuprompt' }
       })
     })
     /** Authoritative workspace revision payload required by collection deletion. */

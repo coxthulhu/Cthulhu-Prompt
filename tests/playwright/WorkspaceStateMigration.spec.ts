@@ -16,7 +16,7 @@ describe('Unified workspace state', () => {
   test('migrates every legacy table, splits mixed records, and retains workspace isolation', async ({ electronApp }) => {
     await createLegacyStateDatabase(electronApp)
     for (const sql of [
-      `UPDATE app_persistence SET last_workspace_info_path = 'C:/Work/Example.cthulhuprompt.json',
+      `UPDATE app_persistence SET last_workspace_info_path = 'C:/Work/Example.cthulhuprompt',
         app_sidebar_width_px = 312, has_shown_welcome = 1, workspace_dialog_directory = 'C:/Work',
         window_x_px = 45, window_y_px = 67, window_width_px = 1100, window_height_px = 800,
         window_is_maximized = 0, window_is_fullscreen = 1 WHERE id = 1`,
@@ -31,7 +31,7 @@ describe('Unified workspace state', () => {
     await migrateSqliteDatabase(electronApp)
     expect(await readWorkspaceState(electronApp, null, 'application-user', null)).toEqual({ hasShownWelcome: true })
     expect(await readWorkspaceState(electronApp, null, 'application-machine', null)).toEqual({
-      lastWorkspaceInfoPath: 'C:/Work/Example.cthulhuprompt.json', appSidebarWidthPx: 312
+      lastWorkspaceInfoPath: 'C:/Work/Example.cthulhuprompt', appSidebarWidthPx: 312
     })
     expect(await readWorkspaceState(electronApp, null, 'workspace-dialog', null)).toEqual({ directory: 'C:/Work' })
     expect(await readWorkspaceState(electronApp, null, 'window', null)).toEqual({

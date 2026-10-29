@@ -12,7 +12,7 @@ import {
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
-export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
+export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt'
 /** Filename for category-view ordering owned by a collection. */
 export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = 'CategoryOrder.json'
 export const PROMPT_COLLECTION_INFO_DIRECTORY_NAME = '_CollectionInfo'

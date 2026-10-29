@@ -130,6 +130,10 @@
   const needsWelcome = !getUserPersistence().hasShownWelcome
   /** Welcome visibility shared with Home after startup restoration completes. */
   let showWelcomeDialog = $state(false)
+  /** Home's open-failure dialog visibility, raised here when a double-clicked workspace fails. */
+  let showWorkspaceOpenErrorDialog = $state(false)
+  /** Failure details shown by Home's open-failure dialog. */
+  let workspaceOpenErrorText = $state('')
   // Session-only visibility starts expanded whenever the application launches.
   let isAppSidebarExpanded = $state(true)
 
@@ -373,7 +377,7 @@
 
   const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
     const workspaceFileName = preparePromptCollectionName(workspaceName).folderName
-    return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cthulhuprompt.json`
+    return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cthulhuprompt`
   }
 
   const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {
@@ -517,7 +521,36 @@
     )
   }
 
+  /** Shows the opened workspace's saved screen, or Home while the first-launch Welcome is pending. */
+  const restoreSelectedWorkspaceScreen = async (): Promise<void> => {
+    if (needsWelcome && startupRestorePhase !== 'ready') {
+      await restoreWorkspaceHomeScreen(getSelectedWorkspaceId()!)
+    } else {
+      await restoreWorkspaceScreenFromPersistence()
+    }
+  }
+
+  /** Replaces the open workspace with a double-clicked workspace file, reporting failures on Home. */
+  const openWorkspaceFile = async (workspaceInfoPath: string): Promise<void> => {
+    if (isWorkspaceLoading) return
+
+    const selectionResult = await selectWorkspace(workspaceInfoPath)
+    if (selectionResult.success) {
+      await restoreSelectedWorkspaceScreen()
+      return
+    }
+
+    activeScreen = 'home'
+    workspaceOpenErrorText = selectionResult.message
+    showWorkspaceOpenErrorDialog = true
+  }
+
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
+    if (runtimeConfig.startupWorkspaceInfoPath) {
+      await openWorkspaceFile(runtimeConfig.startupWorkspaceInfoPath)
+      return
+    }
+
     const lastWorkspaceInfoPath = getUserPersistence().lastWorkspaceInfoPath
 
     if (!lastWorkspaceInfoPath) {
@@ -526,11 +559,7 @@
 
     const selectionResult = await selectWorkspace(lastWorkspaceInfoPath)
     if (selectionResult.success) {
-      if (needsWelcome) {
-        await restoreWorkspaceHomeScreen(getSelectedWorkspaceId()!)
-      } else {
-        await restoreWorkspaceScreenFromPersistence()
-      }
+      await restoreSelectedWorkspaceScreen()
       return
     }
 
@@ -679,6 +708,11 @@
       unsubscribe()
     }
   })
+
+  // Side effect: open workspace files double-clicked while this window is already running.
+  $effect(() => windowControls.onOpenWorkspaceFile((workspaceInfoPath) => {
+    void openWorkspaceFile(workspaceInfoPath)
+  }))
 
   const navigateToScreen = (screen: ScreenId) => {
     const config = screens[screen]
@@ -847,6 +881,8 @@
           {#if activeScreen === 'home'}
             <HomeScreen
               bind:showWelcomeDialog
+              bind:showWorkspaceOpenErrorDialog
+              bind:workspaceOpenErrorText
               {workspacePath}
               {isWorkspaceReady}
               {isWorkspaceLoading}

@@ -88,7 +88,7 @@ describe('prompt template renderer loading', () => {
       ]
     })
 
-    await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt.json')
+    await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt')
 
     expect(promptTemplatesCollection.get('renderer-template')).toMatchObject({
       id: 'renderer-template',
@@ -119,7 +119,7 @@ describe('prompt template renderer loading', () => {
     promptCollectionClientStateCollection.update('renderer-template-collection', (clientState) => {
       clientState.hasLoadedInitialData = true
     })
-    await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt.json')
+    await loadWorkspaceByPath('C:\\Templates\\Templates.cthulhuprompt')
     expect(promptCollectionClientStateCollection.get('renderer-template-collection')).toMatchObject({
       hasLoadedInitialData: true
     })

@@ -20,8 +20,8 @@ vi.mock('../../src/main/Persistence/sqlite/UserPersistenceDataAccess', () => ({
   }
 }))
 
-const selectedFile = '/workspaces/selected/Selected.cthulhuprompt.json'
-const previousFile = '/workspaces/previous/Previous.cthulhuprompt.json'
+const selectedFile = '/workspaces/selected/Selected.cthulhuprompt'
+const previousFile = '/workspaces/previous/Previous.cthulhuprompt'
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -43,7 +43,7 @@ describe('workspace Open dialog directory', () => {
     expect(dialog.showOpenDialog).toHaveBeenCalledWith({
       defaultPath: path.dirname(previousFile),
       properties: ['openFile'],
-      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cthulhuprompt.json'] }]
+      filters: [{ name: 'Cthulhu Prompt Workspace', extensions: ['cthulhuprompt'] }]
     })
   })
 
@@ -100,7 +100,7 @@ describe('workspace Open dialog directory', () => {
     )
   })
 
-  it.each([null, '/deleted-workspace/Workspace.cthulhuprompt.json'])(
+  it.each([null, '/deleted-workspace/Workspace.cthulhuprompt'])(
     'uses Downloads when neither directory is available: %s',
     async (lastWorkspaceInfoPath) => {
       vi.mocked(UserPersistenceDataAccess.readUserPersistence).mockReturnValue({

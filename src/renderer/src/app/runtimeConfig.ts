@@ -10,7 +10,8 @@ export const getRuntimeConfig = (): RuntimeConfig => {
   return {
     executionFolderName: config.executionFolderName ?? null,
     environment: normalizeRuntimeEnvironment(config.environment),
-    appVersion: normalizeAppVersion(config.appVersion)
+    appVersion: normalizeAppVersion(config.appVersion),
+    startupWorkspaceInfoPath: config.startupWorkspaceInfoPath ?? null
   }
 }
 

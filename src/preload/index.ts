@@ -54,11 +54,14 @@ function loadRuntimeConfig(): RuntimeConfig {
       typeof parsed.executionFolderName === 'string' ? parsed.executionFolderName : null
     const environment = normalizeRuntimeEnvironment(parsed.environment)
     const appVersion = normalizeAppVersion(parsed.appVersion)
+    const startupWorkspaceInfoPath =
+      typeof parsed.startupWorkspaceInfoPath === 'string' ? parsed.startupWorkspaceInfoPath : null
 
     return Object.freeze({
       executionFolderName,
       environment,
-      appVersion
+      appVersion,
+      startupWorkspaceInfoPath
     })
   } catch (error) {
     console.error('Failed to parse runtime config payload:', error)
@@ -86,6 +89,13 @@ const windowControls = {
       callback()
     }
     return electronAPI.ipcRenderer.on('window-close-requested', listener)
+  },
+  /** Delivers workspace files double-clicked while the application is already running. */
+  onOpenWorkspaceFile: (callback: (workspaceInfoPath: string) => void) => {
+    const listener = (_event: unknown, workspaceInfoPath: string) => {
+      callback(workspaceInfoPath)
+    }
+    return electronAPI.ipcRenderer.on('open-workspace-file', listener)
   }
 }
 

@@ -229,7 +229,7 @@ describe('App updates', () => {
     await electronApp.evaluate(({ app, dialog }) => {
       app.emit('test-setup-file-dialog', null)
       dialog.showOpenDialog = (() => new Promise((resolve) => {
-        ;(app as any).finishUpdatePicker = () => resolve({ canceled: false, filePaths: ['/ws/missing.cthulhuprompt.json'] })
+        ;(app as any).finishUpdatePicker = () => resolve({ canceled: false, filePaths: ['/ws/missing.cthulhuprompt'] })
       })) as typeof dialog.showOpenDialog
     })
     /** First-launch user chooses the native Open flow. */
@@ -249,7 +249,7 @@ describe('App updates', () => {
     await errorDialog.getByRole('button', { name: 'Close', exact: true }).first().click()
     await expect(mainWindow.getByTestId('app-updates-popup')).toBeVisible()
     testSetup.removeRendererErrorsContaining('IPC invocation error')
-    testSetup.removeRendererErrorsContaining('missing.cthulhuprompt.json')
+    testSetup.removeRendererErrorsContaining('missing.cthulhuprompt')
   })
 
   test('waits until the returning-user startup overlay finishes fading', async ({ electronApp, testSetup }) => {
