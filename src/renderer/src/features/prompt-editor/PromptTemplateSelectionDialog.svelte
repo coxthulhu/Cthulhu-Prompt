@@ -93,6 +93,8 @@
     selectedTemplates?: PromptTemplateReference[] | null
     mode?: TemplateDialogMode
     onselect: (templates: PromptTemplateReference[] | null) => void | Promise<void>
+    /** Applies a choice and copies the composed prompt from either dialog mode. */
+    onselectandcopy: (templates: PromptTemplateReference[] | null) => void | Promise<void>
   }
 
   let {
@@ -100,7 +102,8 @@
     workspaceId,
     selectedTemplates,
     mode = 'select',
-    onselect
+    onselect,
+    onselectandcopy
   }: Props = $props()
 
   // Reactive workspaces determine which template collections appear in the dialog.
@@ -192,7 +195,7 @@
   const dialogSubtitle = $derived(
     mode === 'select-and-copy'
       ? 'Click a template to apply it and copy this prompt immediately.'
-      : 'Choose one template, or use the prompt exactly as written.'
+      : 'Choose one template, or use the prompt exactly as written. Double-click an option to select it and copy the prompt.'
   )
   // Shared row control switches from single-choice markers to copy glyphs in quick mode.
   const selectionControl = $derived(mode === 'select-and-copy' ? 'copy' : 'radio')
@@ -254,11 +257,16 @@
         (entry) => entry.kind === 'template' && Boolean(templateTitleById[entry.id])
       ) ?? []
 
+  /** Copies with the chosen template, or no template, and closes the selector. */
+  const handleSelectAndCopy = (templateId: string | null): void => {
+    void onselectandcopy(templateId === null ? null : [{ id: templateId }])
+    open = false
+  }
+
   // Applies a quick selection immediately or replaces the staged single selection.
   const handleTemplateSelect = (templateId: string): void => {
     if (mode === 'select-and-copy') {
-      void onselect([{ id: templateId }])
-      open = false
+      handleSelectAndCopy(templateId)
       return
     }
 
@@ -269,8 +277,7 @@
   // Selects the explicit no-template option, immediately only in quick mode.
   const handleNoTemplateSelect = (): void => {
     if (mode === 'select-and-copy') {
-      void onselect(null)
-      open = false
+      handleSelectAndCopy(null)
       return
     }
 
@@ -399,7 +406,8 @@
   showSubmitButton={mode === 'select'}
   onsubmit={handleConfirm}
 >
-  <div class="prompt-template-selection-body">
+  <!-- Picker rows suppress native text highlighting during double-click selection. -->
+  <div class="prompt-template-selection-body select-none">
     <div class="prompt-template-no-template-panel">
       <button
         type="button"
@@ -408,6 +416,7 @@
         aria-pressed={mode === 'select' ? isNoTemplateActive : undefined}
         data-testid="prompt-template-option-none"
         onclick={handleNoTemplateSelect}
+        ondblclick={mode === 'select' ? () => handleSelectAndCopy(null) : undefined}
       >
         <IconCell icon={Ban} variant="standard" class="prompt-template-no-template-icon" />
         <span class="prompt-template-no-template-copy">
@@ -497,6 +506,9 @@
       isLastRow={row.isLastRow}
       {selectionControl}
       onPromptSelect={(_collectionId, templateId) => handleTemplateSelect(templateId)}
+      onPromptDoubleClick={mode === 'select'
+        ? (_collectionId, templateId) => handleSelectAndCopy(templateId)
+        : undefined}
     />
   </div>
 {/snippet}

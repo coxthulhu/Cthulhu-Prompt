@@ -284,7 +284,7 @@ describe('Prompt template selection', () => {
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
     await expect(dialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
-      'Choose one template, or use the prompt exactly as written.'
+      'Choose one template, or use the prompt exactly as written. Double-click an option to select it and copy the prompt.'
     )
     expect(Math.abs((await dialog.locator('.cthulhuUiPopupSurface').boundingBox())!.width - 580)).toBeLessThanOrEqual(2)
     const firstBaseCollectionHeader = dialog.locator('.prompt-template-base-collection-header').first()
@@ -687,6 +687,56 @@ describe('Prompt template selection', () => {
     await expect(
       promptEditor.locator('[data-testid="prompt-template-and-copy-button"]')
     ).toHaveCount(0)
+  })
+
+  // Real double-clicks verify copying and text selection before the selector unmounts.
+  test('double-clicks template and no-template rows to select and copy without highlighting text', async ({
+    electronApp,
+    testSetup
+  }) => {
+    await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    /** Editor and selector share the persisted prompt used for every choice. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'none' }
+    })
+    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await testHelpers.navigateToPromptCollections('Prompts')
+    await stubClipboard(mainWindow)
+    /** Existing selection is deliberately different from the double-clicked choice. */
+    const promptEditor = mainWindow.locator(promptEditorSelector('select-template-prompt'))
+    /** Normal selector retains single-click staging before the double-click shortcut. */
+    const dialog = mainWindow.getByRole('dialog', { name: 'Select Template', exact: true })
+
+    // Root, categorized, and explicit no-template rows must all copy their own choice.
+    for (const choice of [
+      { option: 'prompt-tree-template-prompt-template-first', label: '.prompt-tree-prompt-label', output: 'First root Choose a template..', templates: [{ id: 'template-first' }] },
+      { option: 'prompt-tree-template-prompt-template-category', label: '.prompt-tree-prompt-label', output: 'Category Choose a template..', templates: [{ id: 'template-category' }] },
+      { option: 'prompt-template-option-none', label: 'strong', output: 'Choose a template.', templates: null }
+    ]) {
+      await mainWindow.evaluate(() => navigator.clipboard.writeText('Keep clipboard'))
+      await promptEditor.getByTestId('prompt-template-button').click()
+      await dialog.getByTestId('prompt-tree-template-prompt-template-second').click()
+      await expect(dialog).toBeVisible()
+      expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
+      /** Row label receives the native double-click, where text highlighting would occur. */
+      const label = dialog.getByTestId(choice.option).locator(choice.label)
+      await label.evaluate((element) => {
+        window.getSelection()!.removeAllRanges()
+        ;(window as any).__templateDoubleClickSelection = undefined
+        // Capture before the row handler closes the dialog and removes its selected text.
+        element.addEventListener('dblclick', () => {
+          ;(window as any).__templateDoubleClickSelection = window.getSelection()!.toString()
+        }, { capture: true, once: true })
+      })
+      // Click inside the first word, including the full-width No template label.
+      await label.dblclick({ position: { x: 6, y: 8 } })
+      await expect(dialog).toBeHidden()
+      expect(await mainWindow.evaluate(() => (window as any).__templateDoubleClickSelection)).toBe('')
+      await expect.poll(() => readClipboardText(mainWindow)).toBe(choice.output)
+      await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, PROMPT_PATH)))
+        .toMatchObject({ templates: choice.templates, status: 'InProgress' })
+    }
   })
 
   test('virtualizes the complete template library collection cards', async ({

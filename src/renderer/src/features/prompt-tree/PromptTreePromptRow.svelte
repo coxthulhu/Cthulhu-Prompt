@@ -39,6 +39,8 @@
     getPromptDroppableOptions?: () => PromptRowDropOptions
     promptDragOptions?: PromptRowDragOptions
     onPromptSelect: (collectionId: string, promptId: string) => void
+    /** Optional picker action invoked by double-clicking this row. */
+    onPromptDoubleClick?: (collectionId: string, promptId: string) => void
   }
 
   let {
@@ -60,7 +62,8 @@
     selectionControl,
     getPromptDroppableOptions,
     promptDragOptions,
-    onPromptSelect
+    onPromptSelect,
+    onPromptDoubleClick
   }: Props = $props()
 
   const handlePromptSelect = (event: MouseEvent) => {
@@ -158,6 +161,7 @@
     aria-current={isActive ? 'true' : undefined}
     aria-pressed={selectionControl === 'copy' || !selectionControl ? undefined : isActive}
     onclick={handlePromptSelect}
+    ondblclick={onPromptDoubleClick ? () => onPromptDoubleClick(collectionId, promptId) : undefined}
     class="sidebarPromptTreeSettingsButton"
   >
     {@render promptButtonContent(buttonRowState === 'active')}

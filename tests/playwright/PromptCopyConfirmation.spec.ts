@@ -102,64 +102,75 @@ describe('Prompt copy confirmation', () => {
       await expect(confirmation).toBeHidden()
     })
 
-    test(`${status}: stages quick-copy choices until confirmation`, async ({ testSetup, electronApp }) => {
-      await testSetup.setupFilesystem(createCopyWorkspace(status))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
-      /** Real window and navigation helpers exercise both quick-copy decisions. */
-      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-      await testHelpers.setupWorkspaceViaUI()
-      await testHelpers.navigateToPromptCollections('Tasks')
-      await stubClipboard(mainWindow)
-      if (status !== PromptStatus.Backlog) {
-        await mainWindow.getByTestId(`toggle-${status.toLowerCase()}-prompts-button`).click()
-      }
-      /** Source filter remains selected after both confirmed moves. */
-      const filter = mainWindow.getByTestId(`prompt-collection-${status.toLowerCase()}-filter`)
-      await filter.click()
-      // Both a real template and No template must wait for the same confirmation boundary.
-      for (const choice of [
-        { id: 'quick-template', title: 'Quick Template', option: 'prompt-tree-template-prompt-wrapper', output: 'Wrapped Template body', templates: [{ id: 'wrapper' }] },
-        { id: 'quick-none', title: 'Quick None', option: 'prompt-template-option-none', output: 'Plain body', templates: null }
-      ]) {
-        await mainWindow.evaluate(() => navigator.clipboard.writeText('Keep clipboard'))
-        /** Source document detects changes made before the confirmation is accepted. */
-        const sourcePath = `${ROOT_PATH}/${status}/${choice.title}.prompt.md`
-        /** Original bytes include the unset template decision and original workflow. */
-        const original = await readTextFile(electronApp, sourcePath)
-        /** Undecided editor exposes quick copy and Set Template just like an Active prompt. */
-        const editor = mainWindow.locator(promptEditorSelector(choice.id))
-        await expect(editor.getByTestId('prompt-template-button')).toBeVisible()
-        await expect(editor.getByTestId('prompt-copy-button')).toHaveCount(0)
-        await editor.getByTestId('prompt-template-and-copy-button').click()
-        /** Picker appears before any copy confirmation. */
-        const picker = mainWindow.getByRole('dialog', { name: 'Quick Template Selection' })
-        /** Confirmation must appear only after the chosen row is activated. */
-        const confirmation = mainWindow.getByRole('dialog', { name: 'Copy Prompt', exact: true })
-        await expect(picker).toBeVisible()
-        await expect(confirmation).toBeHidden()
-        await picker.getByTestId(choice.option).click()
-        await expect(picker).toBeHidden()
-        await expect(confirmation).toBeVisible()
-        expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
-        expect(await readTextFile(electronApp, sourcePath)).toBe(original)
-        if (choice.templates) await mainWindow.keyboard.press('Escape')
-        else await confirmation.getByRole('button', { name: 'Close', exact: true }).click()
-        await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
-        await expect(editor.locator('.prompt-editor-metadata-template')).toHaveText('Not selected')
-        await expect(editor.getByTestId('prompt-status-pill')).toHaveText(status)
-        expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
-        expect(await readTextFile(electronApp, sourcePath)).toBe(original)
-        await editor.getByTestId('prompt-template-and-copy-button').click()
-        await picker.getByTestId(choice.option).click()
-        await confirmation.getByTestId('prompt-confirm-copy-button').click()
-        await expect.poll(() => readClipboardText(mainWindow)).toBe(choice.output)
-        await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/${choice.title}.prompt.md`)))
-          .toMatchObject({ status: PromptStatus.InProgress, templates: choice.templates })
-        await expect.poll(() => checkFileExists(electronApp, sourcePath)).toBe(false)
-        await expect(filter).toHaveAttribute('aria-pressed', 'true')
-        await expect(editor).toHaveCount(0)
-        await expect(confirmation).toBeHidden()
-      }
-    })
+    // Both selector entry points must defer clipboard and saved selection until confirmation.
+    for (const selectionMode of ['quick', 'double-click'] as const) {
+      test(`${status}: stages ${selectionMode} choices until confirmation`, async ({ testSetup, electronApp }) => {
+        await testSetup.setupFilesystem(createCopyWorkspace(status))
+        await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+        /** Real window and navigation helpers exercise both selector copy decisions. */
+        const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+        await testHelpers.setupWorkspaceViaUI()
+        await testHelpers.navigateToPromptCollections('Tasks')
+        await stubClipboard(mainWindow)
+        if (status !== PromptStatus.Backlog) {
+          await mainWindow.getByTestId(`toggle-${status.toLowerCase()}-prompts-button`).click()
+        }
+        /** Source filter remains selected after both confirmed moves. */
+        const filter = mainWindow.getByTestId(`prompt-collection-${status.toLowerCase()}-filter`)
+        await filter.click()
+        // Both a real template and No template must wait for the same confirmation boundary.
+        for (const choice of [
+          { id: 'quick-template', title: 'Quick Template', option: 'prompt-tree-template-prompt-wrapper', output: 'Wrapped Template body', templates: [{ id: 'wrapper' }] },
+          { id: 'quick-none', title: 'Quick None', option: 'prompt-template-option-none', output: 'Plain body', templates: null }
+        ]) {
+          await mainWindow.evaluate(() => navigator.clipboard.writeText('Keep clipboard'))
+          /** Source document detects changes made before the confirmation is accepted. */
+          const sourcePath = `${ROOT_PATH}/${status}/${choice.title}.prompt.md`
+          /** Original bytes include the unset template decision and original workflow. */
+          const original = await readTextFile(electronApp, sourcePath)
+          /** Undecided editor exposes quick copy and Set Template just like an Active prompt. */
+          const editor = mainWindow.locator(promptEditorSelector(choice.id))
+          await expect(editor.getByTestId('prompt-template-button')).toBeVisible()
+          await expect(editor.getByTestId('prompt-copy-button')).toHaveCount(0)
+          await editor.getByTestId(selectionMode === 'quick'
+            ? 'prompt-template-and-copy-button'
+            : 'prompt-template-button').click()
+          /** Picker appears before any copy confirmation. */
+          const picker = mainWindow.getByRole('dialog', {
+            name: selectionMode === 'quick' ? 'Quick Template Selection' : 'Select Template', exact: true
+          })
+          /** Confirmation must appear only after the chosen row is activated. */
+          const confirmation = mainWindow.getByRole('dialog', { name: 'Copy Prompt', exact: true })
+          await expect(picker).toBeVisible()
+          await expect(confirmation).toBeHidden()
+          if (selectionMode === 'quick') await picker.getByTestId(choice.option).click()
+          else await picker.getByTestId(choice.option).dblclick()
+          await expect(picker).toBeHidden()
+          await expect(confirmation).toBeVisible()
+          expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
+          expect(await readTextFile(electronApp, sourcePath)).toBe(original)
+          if (choice.templates) await mainWindow.keyboard.press('Escape')
+          else await confirmation.getByRole('button', { name: 'Close', exact: true }).click()
+          await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
+          await expect(editor.locator('.prompt-editor-metadata-template')).toHaveText('Not selected')
+          await expect(editor.getByTestId('prompt-status-pill')).toHaveText(status)
+          expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
+          expect(await readTextFile(electronApp, sourcePath)).toBe(original)
+          await editor.getByTestId(selectionMode === 'quick'
+            ? 'prompt-template-and-copy-button'
+            : 'prompt-template-button').click()
+          if (selectionMode === 'quick') await picker.getByTestId(choice.option).click()
+          else await picker.getByTestId(choice.option).dblclick()
+          await confirmation.getByTestId('prompt-confirm-copy-button').click()
+          await expect.poll(() => readClipboardText(mainWindow)).toBe(choice.output)
+          await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/${choice.title}.prompt.md`)))
+            .toMatchObject({ status: PromptStatus.InProgress, templates: choice.templates })
+          await expect.poll(() => checkFileExists(electronApp, sourcePath)).toBe(false)
+          await expect(filter).toHaveAttribute('aria-pressed', 'true')
+          await expect(editor).toHaveCount(0)
+          await expect(confirmation).toBeHidden()
+        }
+      })
+    }
   }
 })

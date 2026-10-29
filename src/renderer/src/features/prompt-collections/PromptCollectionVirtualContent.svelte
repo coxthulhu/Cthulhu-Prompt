@@ -1033,9 +1033,8 @@
   selectedTemplates={templateSelectionTarget
     ? promptDraftById[templateSelectionTarget.promptId]?.templates
     : undefined}
-  onselect={templateSelectionMode === 'select-and-copy'
-    ? handleTemplateSelectAndCopy
-    : handleTemplateSelect}
+  onselect={handleTemplateSelect}
+  onselectandcopy={handleTemplateSelectAndCopy}
 />
 
 <!-- Informational confirmation is shared by direct copy and quick template selection. -->
