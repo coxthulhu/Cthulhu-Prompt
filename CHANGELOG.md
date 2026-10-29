@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.0.36
+
+### New Features
+
+- Added attached notes for prompts and templates, with per-user visibility and a setting for the maximum visible note lines.
+- Added collection quick pickers to the sidebar for switching between collections.
+- Added collection favorites that pin starred collections to the top of the collection selector.
+- Added Ctrl+Shift+Up and Ctrl+Shift+Down shortcuts to move prompts, replacing the editor move arrows.
+- Added a Workspace Popup on the activity bar mascot that shows the workspace name and path and opens its folder.
+
+### Changes
+
+- Renamed prompt folders to collections, migrating existing workspaces automatically.
+- Stored collection order and workspace state per user to better support multiple users sharing a workspace.
+- Prompt and template files now use stable numeric filenames, migrating existing workspaces automatically.
+- Renamed Settings to System Settings and moved it in the activity bar.
+- Renamed the sidebar overview button to Go to Top and the starter collection to My Prompts.
+- Refined button, dropdown, selector, and workspace popup styling.
+
+### Fixed
+
+- Fixed the App Updates button not closing the popup when clicked again.
+- Fixed gaps and doubled borders in split buttons and segmented controls at fractional DPI scaling.
+- Fixed collection dropdown rows animating when the list changed outside of drag reordering.
+- Fixed punctuation in the sidebar empty category message.
+
 ## 0.0.35
 
 ### Changes
