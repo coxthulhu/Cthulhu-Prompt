@@ -121,8 +121,10 @@ for (const scale of [1, 1.25, 1.5, 2, 4]) {
           ['prompt-delete-more-options-button', '--ui-neutral-hover-border', '--ui-neutral-action-fill']
         ]]
       ] as const) {
-        // Only direct segments and dividers belong to this compound control.
-        const control = editor.locator(`.${controlClass}`)
+        // Identify the intended action group independently of other controls using the same class.
+        const control = editor.locator(`.${controlClass}`).filter({
+          has: mainWindow.getByTestId(actions[0][0])
+        })
         // The selector uses a wrapper around its native button; icon actions are native buttons.
         const segments = control.locator(':scope > :is(.cthulhuUiIconButton, .cthulhuUiSimpleSelectorButton)')
         // One divider must separate each pair, including both sides of the status selector.
