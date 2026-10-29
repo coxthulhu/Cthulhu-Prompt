@@ -29,10 +29,11 @@ export function updateReleaseDownloads(tag, repository) {
   ]
   const rows = downloads.map(([label, name]) => {
     const asset = release.assets.find((candidate) => candidate.name === name)
-    if (!asset || asset.state !== 'uploaded' || !asset.url) {
+    if (!asset || asset.state !== 'uploaded') {
       throw new Error(`Release ${tag} is missing a completed upload for ${name}.`)
     }
-    return `| ${label} | [Download](<${asset.url}>) |`
+    // Draft asset URLs use a temporary untagged path that 404s once the release is published.
+    return `| ${label} | [Download](<https://github.com/${repository}/releases/download/${tag}/${name}>) |`
   })
   const table = [
     startMarker,

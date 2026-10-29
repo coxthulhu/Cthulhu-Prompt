@@ -19,7 +19,7 @@ beforeEach(() => {
     assets: ['Setup.exe', 'Portable.exe', 'Setup.exe.blockmap'].map((suffix) => ({
       name: `CthulhuPrompt_1.2.3_Windows_${suffix}`,
       state: 'uploaded',
-      url: `https://github.com/${repository}/releases/download/${tag}/CthulhuPrompt_1.2.3_Windows_${suffix}`
+      url: `https://github.com/${repository}/releases/download/untagged-0123456789abcdef0123/CthulhuPrompt_1.2.3_Windows_${suffix}`
     }))
   }
   vi.mocked(execFileSync).mockImplementation((_command, args) => {
@@ -40,13 +40,19 @@ function expectNoEdit() {
 }
 
 describe('release download table', () => {
-  it('prepends links to uploaded executables while preserving the original notes exactly', () => {
+  it('prepends tagged links to uploaded executables while preserving the original notes exactly', () => {
     updateReleaseDownloads(tag, repository)
 
     const notes = writtenNotes()
+    const downloadBase = `https://github.com/${repository}/releases/download/${tag}`
     expect(notes.startsWith(`${startMarker}\n## Downloads\n`)).toBe(true)
-    expect(notes).toContain(`| Windows Installer | [Download](<${release.assets[0].url}>) |`)
-    expect(notes).toContain(`| Windows Portable | [Download](<${release.assets[1].url}>) |`)
+    expect(notes).toContain(
+      `| Windows Installer | [Download](<${downloadBase}/CthulhuPrompt_1.2.3_Windows_Setup.exe>) |`
+    )
+    expect(notes).toContain(
+      `| Windows Portable | [Download](<${downloadBase}/CthulhuPrompt_1.2.3_Windows_Portable.exe>) |`
+    )
+    expect(notes).not.toContain('untagged-')
     expect(notes).not.toContain('.blockmap')
     expect(notes.endsWith(`${endMarker}\n\n${release.body}`)).toBe(true)
   })
