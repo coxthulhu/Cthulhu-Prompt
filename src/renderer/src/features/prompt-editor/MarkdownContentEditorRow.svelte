@@ -3,7 +3,7 @@
   import AttachedNoteButton from './AttachedNoteButton.svelte'
   import AttachedNoteSection from './AttachedNoteSection.svelte'
   import { ATTACHED_NOTE_HEADER_HEIGHT_PX, getAttachedNoteSectionHeight, getPromptSizingWithNote, type AttachedNoteLayout } from './attachedNoteSizing'
-  import { createAttachedNote, setAttachedNoteVisible } from '@renderer/data/Mutations/NoteMutations'
+  import { createAttachedNote, deleteNote, setAttachedNoteVisible } from '@renderer/data/Mutations/NoteMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
@@ -258,11 +258,13 @@
   /** Only a newly added note requests automatic editor focus. */
   let focusNewNoteId = $state<string | null>(null)
 
-  /** Adds and reveals a new note, or toggles an existing note without moving focus. */
+  /** Adds and reveals a new note, deletes a blank note on hide, or toggles an existing note without moving focus. */
   const toggleAttachedNote = (): void => {
     onInteraction?.()
     void runIpcBestEffort(async () => {
-      if (attachment) {
+      if (attachment?.visible && attachment.note.noteText.trim().length === 0) {
+        await deleteNote(attachment.note.id)
+      } else if (attachment) {
         await setAttachedNoteVisible(workspaceId!, attachment.note.id, !attachment.visible)
       } else {
         /** Set focus intent before optimistic creation can mount the visible editor. */
@@ -648,7 +650,7 @@
     compactLayout={compactTitleLayout}
   >
     {#snippet attachedNoteAction()}
-      <AttachedNoteButton noteId={attachment?.note.id} visible={attachment?.visible ?? false} ontoggle={toggleAttachedNote} />
+      <AttachedNoteButton noteId={attachment?.note.id} noteText={attachment?.note.noteText} visible={attachment?.visible ?? false} ontoggle={toggleAttachedNote} />
     {/snippet}
   </PromptEditorTitleArea>
 

@@ -141,7 +141,7 @@ describe('Attached note editors', () => {
       }
     })
 
-    test(`${kind} adds, edits, hides, restores, and confirms deletion independently of its owner`, async ({ testSetup, electronApp }) => {
+    test(`${kind} adds, edits, hides, restores, and deletes independently of its owner`, async ({ testSetup, electronApp }) => {
       /** Both owners start without notes or saved visibility. */
       const { mainWindow, testHelpers, openCollection, active } = await startNotes(testSetup, kind)
       /** Owner-scoped locators keep toolbar and header assertions unambiguous. */
@@ -155,13 +155,17 @@ describe('Attached note editors', () => {
 
       await owner.getByTestId('attached-note-button').click()
       await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
-      await expect(owner.getByTestId('attached-note-options')).toBeEnabled()
+      /** A visible blank note offers deletion as the main action instead of the dropdown. */
+      await expect(owner.getByTestId('attached-note-button')).toHaveAttribute('aria-label', 'Delete attached note')
+      await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
       await expect(owner.getByTestId('attached-note-indicator')).toHaveAttribute('data-edited', 'false')
       /** Creation establishes the owner timestamp; text-only note edits must leave it alone. */
       const ownerBefore = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, 'owner'), kind)
       /** Real generated identity is stored separately from the owner file. */
       const noteId = ownerBefore!.attachedNoteId!
       await mainWindow.keyboard.insertText('Remember this note\nSecond line')
+      await expect(owner.getByTestId('attached-note-button')).toHaveAttribute('aria-label', 'Hide attached note')
+      await expect(owner.getByTestId('attached-note-options')).toBeEnabled()
       await expect(owner.getByTestId('attached-note-indicator')).toHaveAttribute('data-edited', 'true')
       await expect(owner.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-edited', 'false')
       await expect(mainWindow.getByTestId('prompt-tree-status-indicator').first()).toHaveAttribute('data-edited', 'false')
@@ -224,13 +228,15 @@ describe('Attached note editors', () => {
       expect(await checkFileExists(electronApp, `${active}/Owner.note.md`)).toBe(false)
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', noteId)).toBeNull()
       await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
+      /** The blank note's main action deletes it without confirmation. */
       await owner.getByTestId('attached-note-button').click()
       await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
-      await owner.getByTestId('attached-note-options').click()
-      await mainWindow.getByTestId('attached-note-delete').click()
-      await expect(mainWindow.getByTestId('attached-note-confirm-delete')).toBeVisible()
-      await mainWindow.getByTestId('attached-note-confirm-delete').click()
+      await owner.getByTestId('attached-note-button').click()
       await expect(owner.getByTestId('attached-note-header')).toHaveCount(0)
+      await expect(mainWindow.getByTestId('attached-note-confirm-delete')).toHaveCount(0)
+      await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
+      await mainWindow.evaluate(() => window.playwrightTestControls!.waitForMutations())
+      expect(await checkFileExists(electronApp, `${active}/Owner.note.md`)).toBe(false)
     })
 
     test(`${kind} shares visual lines and keeps wrapped notes within the budget across resize and navigation`, async ({ testSetup, electronApp }) => {
