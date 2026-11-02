@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
   import { ChevronRight } from 'lucide-svelte'
   import { untrack, type ComponentType, type Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
@@ -109,15 +110,14 @@
   {...restProps}
 >
   {#if canResize}
-    <button
-      type="button"
-      class="cthulhuUiAccordionSash"
-      data-dragging={isSashDragging ? 'true' : 'false'}
-      data-testid={sashTestId}
-      aria-label={`Resize ${label} section`}
-      tabindex="-1"
+    <ResizeSash
+      orientation="horizontal"
+      isDragging={isSashDragging}
+      testId={sashTestId}
+      label={`Resize ${label} section`}
+      tabindex={-1}
       onpointerdown={(event) => accordionContext.startSectionResize(id, event)}
-    ></button>
+    />
   {/if}
 
   <button
@@ -165,21 +165,6 @@
 
   .cthulhuUiAccordionSection[data-bottom-anchored='true'] {
     margin-top: auto;
-  }
-
-  .cthulhuUiAccordionSash {
-    cursor: ns-resize;
-    height: 4px;
-    left: 0;
-    position: absolute;
-    right: 0;
-    top: 0;
-    touch-action: none;
-    z-index: var(--z-raised);
-  }
-
-  .cthulhuUiAccordionSash[data-dragging='true'] {
-    background: var(--ui-info-strong-border);
   }
 
   .cthulhuUiAccordionHeader {

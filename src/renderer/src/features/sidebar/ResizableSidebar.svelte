@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte'
   import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
+  import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
 
   let {
     /** Controls whether the sidebar surface and resize handle are rendered. */
@@ -112,13 +113,13 @@
       <div class={`relative h-full ${sidebarBorderClass}`}>
         {@render sidebar()}
 
-        <button
-          type="button"
-          class="absolute top-0 right-0 h-full w-1.5 translate-x-1/2 cursor-ew-resize touch-none bg-[var(--ui-ghost-surface)] z-[var(--z-chrome)]"
-          data-testid={handleTestId}
-          aria-label="Resize sidebar"
+        <ResizeSash
+          orientation="vertical"
+          {isDragging}
+          testId={handleTestId}
+          label="Resize sidebar"
           onpointerdown={handlePointerDown}
-        ></button>
+        />
       </div>
     </div>
   </div>
