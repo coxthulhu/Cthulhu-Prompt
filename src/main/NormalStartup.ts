@@ -1,5 +1,6 @@
 import { setupNoteMutationHandlers } from './Mutations/NoteMutations'
-import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
+import { logStartupFailure } from './logging'
 import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -323,6 +324,13 @@ function setupSecondInstanceHandler(): void {
   })
 }
 
+/** Shows a fatal startup error and exits, since no window exists to trigger the normal quit path. */
+function handleStartupFailure(error: unknown): void {
+  const message = logStartupFailure(error)
+  dialog.showErrorBox('Cthulhu Prompt failed to start', message)
+  app.exit(1)
+}
+
 export function startupNormally(updateSource?: UpdateSource): void {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
@@ -388,6 +396,7 @@ export function startupNormally(updateSource?: UpdateSource): void {
       if (BrowserWindow.getAllWindows().length === 0) createWindow(runtimeConfig)
     })
   })
+    .catch(handleStartupFailure)
 
   // Quit when all windows are closed, except on macOS. There, it's common
   // for applications and their menu bar to stay active until the user quits

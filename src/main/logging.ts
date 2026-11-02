@@ -31,6 +31,18 @@ const getErrorDetails = (error: unknown): Pick<PersistentLogEntry, 'message' | '
   }
 }
 
+/** Records a fatal startup error and returns a readable message for the error dialog. */
+export const logStartupFailure = (error: unknown): string => {
+  const details = getErrorDetails(error)
+  writePersistentLog({
+    level: 'error',
+    source: 'main-startup-failure',
+    message: details.message,
+    stack: details.stack
+  })
+  return details.message
+}
+
 const writePersistentLog = (entry: PersistentLogEntry): void => {
   persistentLogWriter?.write(entry)
 }
