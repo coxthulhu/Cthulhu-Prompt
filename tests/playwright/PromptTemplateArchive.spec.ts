@@ -57,7 +57,7 @@ describe('Template archive', () => {
     /** First open runs the real workspace migration before hydration. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 2')
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH.replace('/Active/', '/'))).toBe(false)
@@ -72,7 +72,7 @@ describe('Template archive', () => {
     // Finish restoring the active screen before navigation decides whether to toggle its sidebar.
     await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 2')
     expect(await readTextFile(electronApp, orderPath)).toBe(order)
   })
@@ -83,7 +83,7 @@ describe('Template archive', () => {
     /** Shared editor remains addressable as its status changes. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     /** Populated template defaults to Archive without a confirmation dialog. */
     const editor = mainWindow.locator(promptEditorSelector(TEMPLATE_ID))
     await expect(editor.getByTestId('prompt-title-status-indicator')).toHaveAttribute('data-status', 'Active')
@@ -129,7 +129,7 @@ describe('Template archive', () => {
     /** Task and template views share the same loaded authoritative template identity. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
     await mainWindow.reload()
@@ -173,7 +173,7 @@ describe('Template archive', () => {
     /** Category deletion is performed through the same UI used for active templates. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
     await mainWindow.getByTestId('sidebar-manage-categories-button').click()

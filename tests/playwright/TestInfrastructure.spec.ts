@@ -168,7 +168,7 @@ describe('Test Infrastructure', () => {
       )
 
       expect(versionResult.success).toBe(true)
-      expect(versionResult.rows?.[0]).toMatchObject({ version: 27 })
+      expect(versionResult.rows?.[0]).toMatchObject({ version: 28 })
 
       /** Only schema metadata and the unified state table remain. */
       const tables = await runSqlQuery(electronApp, "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")

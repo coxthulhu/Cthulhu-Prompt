@@ -84,14 +84,10 @@ export const syncWorkspaceScreenSelection = async (
   const command: WorkspaceUiState = {
     workspaceId,
     ...workspaceScreenSelection,
-    lastPromptTaskCollectionId:
-      workspaceScreenSelection.selectedScreen === 'prompt-task-collections'
+    lastCollectionId:
+      workspaceScreenSelection.selectedScreen === 'project'
         ? workspaceScreenSelection.selectedScreenData.promptCollectionId
-        : current.lastPromptTaskCollectionId,
-    lastPromptTemplateCollectionId:
-      workspaceScreenSelection.selectedScreen === 'prompt-template-collections'
-        ? workspaceScreenSelection.selectedScreenData.promptCollectionId
-        : current.lastPromptTemplateCollectionId
+        : current.lastCollectionId
   }
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planSetWorkspaceUiStateDomainMutation },

@@ -396,9 +396,8 @@ describe('atomic data transaction', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: 'root' }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: 'root' }]
     }
     /** collection updated to own the inserted category. */
     const promptCollection = {
@@ -483,9 +482,8 @@ describe('atomic data transaction', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: 'root' }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: 'root' }]
     }
     /** Prompt root containing one category and one active prompt. */
     const promptCollection = {
@@ -625,9 +623,8 @@ describe('atomic data transaction', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [],
-      templateCollectionEntries: [{ kind: 'collection' as const, id: 'templates' }]
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: 'templates' }]
     }
     /** Template root containing one active template. */
     const promptCollection = {

@@ -3,7 +3,6 @@ import { deleteNoteClientStates } from '@renderer/data/UiState/client-state/Note
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
 import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import {
-  getAllWorkspaceCollectionEntries,
   type LoadWorkspaceByPathRequest,
   type LoadWorkspaceByPathResult
 } from '@shared/domain/workspace/Workspace'
@@ -35,7 +34,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<Lo
   const previousWorkspace = workspaceCollection.get(result.workspace.id)
   const previousGraph = previousWorkspace
     ? collectPromptCollectionGraphIds(
-        getAllWorkspaceCollectionEntries(previousWorkspace).map((entry) => entry.id)
+        previousWorkspace.collectionEntries.map((entry) => entry.id)
       )
     : null
 

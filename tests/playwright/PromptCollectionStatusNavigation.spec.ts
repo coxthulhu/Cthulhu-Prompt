@@ -31,7 +31,7 @@ const startWorkspace = async (
   await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(WORKSPACE_PATH) })
   await seedWorkspaceUiState(electronApp, {
     workspaceId: WORKSPACE_ID,
-    selectedScreen: 'prompt-task-collections',
+    selectedScreen: 'project',
     selectedScreenData: { promptCollectionId: 'Alpha' },
     promptCollectionViewEntries: [
       {
@@ -129,7 +129,7 @@ describe('Prompt collection status navigation', () => {
     await clickPromptCollectionItem(mainWindow, 'Beta')
     await mainWindow.getByTestId('toggle-completed-prompts-button').click()
     await mainWindow.getByTestId('prompt-collection-backlog-filter').click()
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
     await testHelpers.navigateToPromptCollections('Beta')
     await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
@@ -137,7 +137,7 @@ describe('Prompt collection status navigation', () => {
     for (const activity of ['home', 'settings'] as const) {
       await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').click()
       await mainWindow.getByTestId(`nav-button-${activity}`).click()
-      await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+      await mainWindow.getByTestId('nav-button-project').click()
       await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
       await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog')).toHaveAttribute('aria-expanded', 'true')
     }
@@ -150,7 +150,7 @@ describe('Prompt collection status navigation', () => {
     await expect.poll(async () => (await readWorkspaceUiState(electronApp, WORKSPACE_ID)).selectedScreen).toBe('home')
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
-    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+    await mainWindow.getByTestId('nav-button-project').click()
     await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-completed')).toBeVisible()
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-archived')).toHaveCount(0)
@@ -160,7 +160,7 @@ describe('Prompt collection status navigation', () => {
     // Persisted visibility does not count as a visit in the new session's return history.
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
   })
 })

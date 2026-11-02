@@ -81,19 +81,8 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
   const notes: WorkspaceLoadPayload['notes'] = []
   const promptTemplates: WorkspaceLoadPayload['promptTemplates'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
-  /** Task-prompt collection IDs loaded in their type-owned order. */
-  const loadedPromptTaskCollectionIds = workspaceSnapshot.data.promptCollectionEntries.map(
-    (entry) => entry.id
-  )
-  /** Prompt-template collection IDs loaded in their type-owned order. */
-  const loadedPromptTemplateCollectionIds = workspaceSnapshot.data.templateCollectionEntries.map(
-    (entry) => entry.id
-  )
-  /** Every collection ID traversed while building the workspace payload. */
-  const loadedPromptCollectionIds = [
-    ...loadedPromptTaskCollectionIds,
-    ...loadedPromptTemplateCollectionIds
-  ]
+  /** Every collection ID traversed while building the workspace payload, in project order. */
+  const loadedPromptCollectionIds = workspaceSnapshot.data.collectionEntries.map((entry) => entry.id)
   const loadedPromptIds: string[] = []
   const loadedPromptTemplateIds: string[] = []
 
@@ -166,8 +155,7 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
   // Side effect: drop stale per-collection UI state and clear invalid screen selections.
   WorkspaceUiStateDataAccess.cleanupWorkspacePromptCollectionUiState(
     workspaceId,
-    loadedPromptTaskCollectionIds,
-    loadedPromptTemplateCollectionIds,
+    loadedPromptCollectionIds,
     categories.map((category) => category.data.id)
   )
   // Side effect: remove stale editor view-state rows for content no longer in the workspace.

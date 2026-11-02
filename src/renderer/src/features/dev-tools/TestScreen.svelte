@@ -811,7 +811,7 @@
                   label="Collection selector"
                   items={detailedDropdownItems}
                   selectedItem={selectedDetailedDropdownItem}
-                  footerItem={detailedDropdownFooterItem}
+                  footerItems={[detailedDropdownFooterItem]}
                   testId="detailed-dropdown-menu"
                   triggerTestId="detailed-dropdown-trigger"
                   onselect={(item) => {

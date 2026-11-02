@@ -174,11 +174,8 @@ describe('domain persistence planning', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: { prompt: [], template: [] },
-        promptCollectionEntries:
-          kind === 'prompt' ? [{ kind: 'collection' as const, id: root.id }] : [],
-        templateCollectionEntries:
-          kind === 'template' ? [{ kind: 'collection' as const, id: root.id }] : []
+        favoriteCollectionIds: [],
+        collectionEntries: [{ kind: 'collection' as const, id: root.id }]
       }
       /** Loaded category physically contained by the renamed root. */
       const category = {
@@ -416,9 +413,8 @@ describe('domain persistence planning', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: root.id }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: root.id }]
     }
     mockDomainData.seed('workspace', workspace.id, workspace, {
       workspacePath: workspace.workspacePath,

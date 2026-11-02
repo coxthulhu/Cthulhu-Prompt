@@ -1,7 +1,6 @@
 import type { DomainChange, DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import { findNoteOwner } from '@shared/domain/note/Note'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
-import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 
 /** User-specific visibility for one attachment; absence means hidden. */
 export type AttachedNoteUiState = {
@@ -43,7 +42,7 @@ export const planSetAttachedNoteVisible: DomainPlanner<AttachedNoteUiState> = (s
     { entityType: 'attachedNoteUiState', id }
   ]
   if (note?.kind !== 'attached' || !attachment || !workspace ||
-    !getAllWorkspaceCollectionEntries(workspace).some((entry) => {
+    !workspace.collectionEntries.some((entry) => {
       /** Collection containing the attachment's owner. */
       const collection = state.get('promptCollection', entry.id)
       return collection && getMarkdownContentIds(collection, collection.kind).includes(attachment.owner.id)

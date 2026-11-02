@@ -38,8 +38,7 @@ describe('Unified workspace state', () => {
       x: 45, y: 67, width: 1100, height: 800, isMaximized: false, isFullScreen: true
     })
     expect(await readWorkspaceState(electronApp, 'one', 'workspace-navigation', null)).toEqual({
-      selectedScreen: 'settings', selectedScreenData: null,
-      lastPromptTaskCollectionId: 'tasks', lastPromptTemplateCollectionId: 'templates'
+      selectedScreen: 'settings', selectedScreenData: null, lastCollectionId: null
     })
     expect(await readWorkspaceState(electronApp, 'one', 'collection-user', 'owner')).toEqual({
       selectedEntryId: 'prompt', treeIsExpanded: false, contentSectionIsExpanded: true,
@@ -77,6 +76,36 @@ describe('Unified workspace state', () => {
     const before = await runSqlQuery(electronApp, 'SELECT * FROM workspace_state ORDER BY workspace_id, state_type, entity_id')
     await migrateSqliteDatabase(electronApp)
     expect((await runSqlQuery(electronApp, 'SELECT * FROM workspace_state ORDER BY workspace_id, state_type, entity_id')).rows).toEqual(before.rows)
+  })
+
+  test('clears per-kind collection orders and favorites and resets retired collection screens', async ({ electronApp }) => {
+    // Version-27 rows are written directly so the project migration runs against real legacy data.
+    for (const stateType of ['prompt-collection-order', 'template-collection-order']) {
+      await seedWorkspaceState(electronApp, 'one', stateType, null, { entries: [{ kind: 'collection', id: 'kept' }] })
+    }
+    for (const stateType of ['prompt-collection-favorites', 'template-collection-favorites']) {
+      await seedWorkspaceState(electronApp, 'one', stateType, null, { ids: ['kept'] })
+    }
+    await seedWorkspaceState(electronApp, 'one', 'workspace-navigation', null, {
+      selectedScreen: 'prompt-template-collections', selectedScreenData: { promptCollectionId: 'kept', contentOwnerId: 'kept' },
+      lastPromptTaskCollectionId: 'kept', lastPromptTemplateCollectionId: 'kept'
+    })
+    await seedWorkspaceState(electronApp, 'two', 'workspace-navigation', null, {
+      selectedScreen: 'mockups', selectedScreenData: { mockupId: 'mockup' },
+      lastPromptTaskCollectionId: 'kept', lastPromptTemplateCollectionId: null
+    })
+    await runSqlStatement(electronApp, 'UPDATE schema_version SET version = 27')
+    await migrateSqliteDatabase(electronApp)
+
+    expect((await runSqlQuery(electronApp, "SELECT COUNT(*) AS count FROM workspace_state WHERE state_type LIKE '%collection-order' OR state_type LIKE '%collection-favorites'")).rows)
+      .toEqual([{ count: 0 }])
+    expect(await readWorkspaceState(electronApp, 'one', 'workspace-navigation', null)).toEqual({
+      selectedScreen: 'home', selectedScreenData: null, lastCollectionId: null
+    })
+    expect(await readWorkspaceState(electronApp, 'two', 'workspace-navigation', null)).toEqual({
+      selectedScreen: 'mockups', selectedScreenData: { mockupId: 'mockup' }, lastCollectionId: null
+    })
+    expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 28 }])
   })
 
   test('rolls back the schema and copied records when a legacy payload cannot be migrated', async ({ electronApp }) => {

@@ -25,7 +25,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 // The sample workspace supplies existing canonical prompt collections.
 const WORKSPACE_PATH = '/ws/sample'
 // These selectors target the shared collection-creation controls.
-const COLLECTION_ADD_ITEM = '[data-testid="sidebar-prompt-collection-dropdown-add-item"]'
+const COLLECTION_ADD_ITEM = '[data-testid="sidebar-prompt-collection-dropdown-add-task-item"]'
 const COLLECTION_NAME_INPUT = '[data-testid="create-prompt-collection-name-input"]'
 const COLLECTION_CREATE_BUTTON = '[data-testid="create-prompt-collection-button"]'
 // These selectors target prompt and status controls.
@@ -33,7 +33,7 @@ const ADD_PROMPT_BUTTON = '[data-testid="prompt-divider-add-initial"]'
 const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]'
 // These stable names make the persisted canonical paths explicit in the assertions.
 const ALPHA_NAME = 'Alpha'
-/** Template collection created through the dedicated template activity. */
+/** Template collection created through the project's template create action. */
 const TEMPLATE_ALPHA_NAME = 'Template Alpha'
 const BETA_NAME = 'Beta'
 const FIRST_PROMPT_TITLE = 'Alpha First'
@@ -105,15 +105,15 @@ describe('Prompt collection storage', () => {
     electronApp,
     testSetup
   }) => {
-    // The task activity shows the collection selector for the sample workspace.
+    // The project shows the collection selector for the sample workspace.
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+    await mainWindow.getByTestId('nav-button-project').click()
 
     await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     await mainWindow.locator(COLLECTION_ADD_ITEM).click()
-    /** Fixed-kind task creation dialog opened from the task activity. */
+    /** Task creation dialog opened from the project's task footer action. */
     const taskDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Prompt Collection"]'
+      '[role="dialog"][aria-label="Create Task Collection"]'
     )
     await expect(taskDialog).toBeVisible()
     await expect(taskDialog).toContainText('Organize one-time prompts for individual tasks.')
@@ -170,9 +170,9 @@ describe('Prompt collection storage', () => {
       Promise.all(omittedPaths.map((path) => checkFileExists(electronApp, path)))
     ).resolves.toEqual(omittedPaths.map(() => false))
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await mainWindow.locator('[data-testid="sidebar-prompt-collection-add-button"]').click()
-    /** Fixed-kind template creation dialog opened from the template activity. */
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
+    /** Template creation dialog opened from the project's template footer action. */
     const templateDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Template Collection"]'
     )
@@ -184,13 +184,12 @@ describe('Prompt collection storage', () => {
     ).toHaveCount(0)
     await mainWindow.locator(COLLECTION_NAME_INPUT).fill(TEMPLATE_ALPHA_NAME)
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
-    /** Canonical template collection created by the fixed-kind dialog. */
+    /** Canonical template collection created by the template dialog. */
     const templateAlphaPath = `${WORKSPACE_PATH}/Templates/TemplateAlpha`
-    /** Stable ID expected in the template-owned collection order. */
+    /** Stable ID expected at the top of the combined project order. */
     const templateAlphaId = await readCollectionId(electronApp, templateAlphaPath)
-    expect(
-      await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH, 'template')
-    ).toEqual({ entries: [{ kind: 'collection', id: templateAlphaId }] })
+    await expect.poll(async () => (await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH))!.entries[0])
+      .toEqual({ kind: 'collection', id: templateAlphaId })
   })
 
   test('orders and moves active prompts and switches completed storage', async ({
@@ -201,7 +200,7 @@ describe('Prompt collection storage', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+    await mainWindow.getByTestId('nav-button-project').click()
     await createCollection(mainWindow, ALPHA_NAME)
     await createCollection(mainWindow, BETA_NAME)
 

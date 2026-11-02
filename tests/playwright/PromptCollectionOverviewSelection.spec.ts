@@ -80,8 +80,7 @@ describe('Prompt collection overview selection', () => {
       /** Real window and navigation helpers for this content kind. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
-      else await testHelpers.navigateToPromptCollections('Content')
+      await testHelpers.navigateToPromptCollections('Content')
       /** Category toggle controls expansion independently of the row highlight. */
       const category = mainWindow.getByTestId(`prompt-tree-${kind === 'template' ? 'template' : 'active'}-category-toggle-button-First`)
       /** Category wrapper owns the visible active styling. */
@@ -111,13 +110,13 @@ describe('Prompt collection overview selection', () => {
     /** Real window and navigation helpers for populated and empty template collections. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptTemplateCollections('Content')
+    await testHelpers.navigateToPromptCollections('Content')
     await expect(mainWindow.getByTestId('prompt-tree-template-prompt-first')).toHaveAttribute('aria-current', 'true')
     await mainWindow.getByTestId('prompt-tree-template-prompt-second').click()
     await expect(mainWindow.getByTestId('prompt-tree-template-prompt-second')).toHaveAttribute('aria-current', 'true')
     await mainWindow.getByTestId('sidebar-collection-overview-button').click()
     await expect(mainWindow.getByTestId('prompt-tree-template-prompt-first')).toHaveAttribute('aria-current', 'true')
-    await testHelpers.navigateToPromptTemplateCollections('Empty')
+    await testHelpers.navigateToPromptCollections('Empty')
     await expect(mainWindow.locator('.sidebarPromptTree [aria-current="true"]')).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-collection-overview-button')).not.toHaveAttribute('data-active', 'true')
   })

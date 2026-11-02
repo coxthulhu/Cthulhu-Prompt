@@ -7,14 +7,12 @@
 
   let {
     isWorkspaceReady,
-    kind,
     promptCollections = [],
     isPromptCollectionListLoading,
     onCreated
   } = $props<{
     isWorkspaceReady: boolean
-    /** Fixed collection kind supplied by the active collection activity. */
-    kind: PromptCollectionKind
+    /** Every project collection; only same-kind collections participate in name conflicts. */
     promptCollections: PromptCollection[]
     isPromptCollectionListLoading: boolean
     onCreated?: (promptCollectionId: string) => void
@@ -22,12 +20,15 @@
 
   const workspaceSelection = getWorkspaceSelectionContext()
   let promptCollectionNameDialog = $state<{ openDialog: () => void } | null>(null)
-  /** Opens the fixed-kind collection name dialog. */
-  export const openDialog = () => {
+  /** Collection kind chosen by the action that opened the dialog. */
+  let kind = $state<PromptCollectionKind>('prompt')
+  /** Opens the collection name dialog for one collection kind. */
+  export const openDialog = (nextKind: PromptCollectionKind) => {
+    kind = nextKind
     promptCollectionNameDialog?.openDialog()
   }
 
-  /** Creates one collection using the activity's fixed kind. */
+  /** Creates one collection of the chosen kind. */
   const handleCreateCollection = async (normalizedDisplayName: string): Promise<boolean> => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
     if (!selectedWorkspaceId) return false
@@ -53,11 +54,11 @@
 <PromptCollectionNameDialog
   bind:this={promptCollectionNameDialog}
   {isWorkspaceReady}
-  {promptCollections}
+  promptCollections={promptCollections.filter((collection) => collection.kind === kind)}
   {isPromptCollectionListLoading}
   title={kind === 'template'
     ? 'Create Template Collection'
-    : 'Create Prompt Collection'}
+    : 'Create Task Collection'}
   subtitle={kind === 'template'
     ? 'Organize reusable prompts for repeatable workflows.'
     : 'Organize one-time prompts for individual tasks.'}

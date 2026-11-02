@@ -61,7 +61,8 @@
     rowAccessory?: Snippet<[DropdownPopupDetailedItem, string]>
     selectedItem: DropdownPopupDetailedItem | null
     trigger: Snippet<[DropdownPopupTriggerContext]>
-    footerItem?: DropdownPopupDetailedItem
+    /** Action rows pinned below the scrolling items, in display order. */
+    footerItems?: DropdownPopupDetailedItem[]
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
@@ -79,7 +80,7 @@
     rowAccessory,
     selectedItem,
     trigger,
-    footerItem,
+    footerItems = [],
     menuWidth = '320px',
     testId,
     placement = 'cursor',
@@ -244,8 +245,9 @@
         {/each}
       </div>
 
-      {#if footerItem}
+      {#if footerItems.length > 0}
         <div class="cthulhuUiDropdownPopupDetailedFooter">
+          {#each footerItems as footerItem (footerItem.id)}
           <SelectorButton
             icon={footerItem.icon}
             iconClass={footerItem.iconClass}
@@ -262,6 +264,7 @@
             class="cthulhuUiDropdownPopupDetailedItem cthulhuUiDropdownPopupDetailedFooterItem"
             onclick={(event) => selectItem(footerItem, event, close)}
           />
+          {/each}
         </div>
       {/if}
     </div>
@@ -323,6 +326,8 @@
   }
 
   .cthulhuUiDropdownPopupDetailedFooter {
+    display: grid;
+    gap: 2px;
     border-top: 1px solid var(--ui-neutral-muted-border);
     flex-shrink: 0;
     margin: 5px -6px 0;

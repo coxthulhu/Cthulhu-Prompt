@@ -735,27 +735,23 @@ Keep this partial body.`
       await categoryToggles.nth(1).click()
       await expect(mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]')).toHaveCount(0)
 
+      // The default project lists both kinds together in combined alphabetical order.
       await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-      ).toHaveCount(1)
+      ).toHaveCount(2)
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('My Prompts')
-      await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-      ).toHaveCount(1)
-      await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
       ).toContainText('2 templates')
       await mainWindow
         .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-        .nth(0)
+        .nth(1)
         .click()
       const exampleFeatureTemplate = await testHelpers.verifyPromptVisible(
         'Example: Q&A with Implementation & Testing'
@@ -805,28 +801,24 @@ Keep this partial body.`
       expect(screenInfo.hasPromptEditors).toBe(false)
       expect(screenInfo.promptCount).toBe(0)
 
+      // The default project lists both kinds together in combined alphabetical order.
       await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-      ).toHaveCount(1)
+      ).toHaveCount(2)
       await expect(
         mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
       ).toContainText('My Prompts')
-      await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-      ).toHaveCount(1)
-      await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
       ).toContainText('0 templates')
 
       await mainWindow
         .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-        .nth(0)
+        .nth(1)
         .click()
       await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toHaveText(
         'My Templates'

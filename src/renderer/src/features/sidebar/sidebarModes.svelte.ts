@@ -13,26 +13,22 @@ import {
 } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
 import { PromptCollectionScreenMode } from '@renderer/features/prompt-collections/promptCollectionScreenMode'
 import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
-import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
+import { DEFAULT_PROJECT } from '@renderer/features/projects/projects'
 
 /** Identifies which overall sidebar mode is displayed, independently of the active screen. */
 export enum SidebarModeId {
   Home = 'home',
-  TaskCollections = 'task-collections',
-  TemplateCollections = 'template-collections',
+  Project = 'project',
   Settings = 'settings'
 }
 
 /** Home mode has no state beyond its title. */
 export type HomeSidebarModeData = Record<never, never>
 
-/** Collection selection and status navigation shared by a collection sidebar and its screen. */
+/** Collection selection and status navigation shared by a project sidebar and its screen. */
 export class CollectionSidebarModeData {
-  /** Collection kind displayed by this mode. */
-  readonly kind: PromptCollectionKind
-  /** Selected collection, or null when the workspace has none of this kind. */
+  /** Selected collection of either kind, or null when the project has no collections. */
   collectionId = $state<string | null>(null)
   /** Status group displayed by the collection screen. */
   screenMode = $state<PromptCollectionScreenMode>(PromptCollectionScreenMode.Active)
@@ -41,24 +37,17 @@ export class CollectionSidebarModeData {
   /** Most recently visited status groups first, independently for each collection. */
   modeHistoryByCollection = $state<Record<string, PromptStatusFolderId[]>>({})
 
-  constructor(kind: PromptCollectionKind) {
-    this.kind = kind
-  }
-
-  /** Returns the preferred collection when it exists, else the remembered one, else the first of this kind. */
+  /** Returns the preferred collection when it exists, else the remembered one, else the first in project order. */
   resolveCollectionId(preferredId = this.collectionId): string | null {
     const workspaceId = getSelectedWorkspaceId()
     const workspace = workspaceId ? workspaceCollection.get(workspaceId) : null
     if (!workspaceId || !workspace) return null
-    /** Loaded collections of this kind in workspace order. */
-    const collectionIds = getWorkspaceCollectionEntries(workspace, this.kind)
+    /** Loaded collections of both kinds in project order. */
+    const collectionIds = workspace.collectionEntries
       .map((entry) => entry.id)
       .filter((id) => promptCollectionsCollection.has(id))
-    const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
-    /** Last collection persisted independently for this kind. */
-    const lastCollectionId = this.kind === 'template'
-      ? workspaceUiState?.lastPromptTemplateCollectionId
-      : workspaceUiState?.lastPromptTaskCollectionId
+    /** Last collection persisted for the project. */
+    const lastCollectionId = workspaceUiStateCollection.get(workspaceId)?.lastCollectionId
 
     return [preferredId, lastCollectionId].find((id) => id && collectionIds.includes(id)) ??
       collectionIds[0] ?? null
@@ -86,7 +75,7 @@ export class CollectionSidebarModeData {
 
   /** Displays a status group, revealing toggleable groups and their sidebar section. */
   setScreenMode = (nextMode: PromptCollectionScreenMode): void => {
-    if (this.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
+    if (promptCollectionsCollection.get(this.collectionId ?? '')?.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
     if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') {
       this.shownFinalStatusGroups[nextMode] = true
     }
@@ -166,21 +155,16 @@ export class SettingsSidebarModeData {
 /** One sidebar mode: its identity, header title, and the state it shares with its screens. */
 export type SidebarMode =
   | { id: SidebarModeId.Home; title: string; data: HomeSidebarModeData }
-  | { id: SidebarModeId.TaskCollections | SidebarModeId.TemplateCollections; title: string; data: CollectionSidebarModeData }
+  | { id: SidebarModeId.Project; title: string; data: CollectionSidebarModeData }
   | { id: SidebarModeId.Settings; title: string; data: SettingsSidebarModeData }
 
 /** Creates every sidebar mode once so each mode's data survives screen switches. */
 export const createSidebarModes = () => ({
   [SidebarModeId.Home]: { id: SidebarModeId.Home, title: 'Cthulhu Prompt', data: {} },
-  [SidebarModeId.TaskCollections]: {
-    id: SidebarModeId.TaskCollections,
-    title: 'Task Collections',
-    data: new CollectionSidebarModeData('prompt')
-  },
-  [SidebarModeId.TemplateCollections]: {
-    id: SidebarModeId.TemplateCollections,
-    title: 'Template Collections',
-    data: new CollectionSidebarModeData('template')
+  [SidebarModeId.Project]: {
+    id: SidebarModeId.Project,
+    title: DEFAULT_PROJECT.title,
+    data: new CollectionSidebarModeData()
   },
   [SidebarModeId.Settings]: { id: SidebarModeId.Settings, title: 'System Settings', data: new SettingsSidebarModeData() }
 }) satisfies Record<SidebarModeId, SidebarMode>

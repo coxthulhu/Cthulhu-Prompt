@@ -1,5 +1,5 @@
 import type { ComponentType } from 'svelte'
-import { Bug, FileText, Home, Layers, PanelsTopLeft, Settings } from 'lucide-svelte'
+import { Bug, Home, PanelsTopLeft, Settings } from 'lucide-svelte'
 import { SidebarModeId } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
 
 export type ScreenId =
@@ -7,8 +7,7 @@ export type ScreenId =
   | 'settings'
   | 'mockups'
   | 'test-screen'
-  | 'prompt-task-collections'
-  | 'prompt-template-collections'
+  | 'project'
 
 type ScreenConfig = {
   label: string
@@ -56,20 +55,11 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     icon: Bug,
     sidebarMode: SidebarModeId.Home
   },
-  'prompt-task-collections': {
-    label: 'Task Prompts',
-    testId: 'nav-button-prompt-task-collections',
+  /** Rendered by the activity bar's project group instead of the screen list. */
+  project: {
+    label: 'Project',
+    testId: 'nav-button-project',
     requiresWorkspace: true,
-    showInNav: true,
-    icon: FileText,
-    sidebarMode: SidebarModeId.TaskCollections
-  },
-  'prompt-template-collections': {
-    label: 'Prompt Templates',
-    testId: 'nav-button-prompt-template-collections',
-    requiresWorkspace: true,
-    showInNav: true,
-    icon: Layers,
-    sidebarMode: SidebarModeId.TemplateCollections
+    sidebarMode: SidebarModeId.Project
   }
 }

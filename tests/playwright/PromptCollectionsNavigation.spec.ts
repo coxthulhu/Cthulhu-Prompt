@@ -31,8 +31,8 @@ const SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-collection-selector-trigger"]'
 const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-collection-dropdown-item-"]'
 const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ADD_ITEM =
-  '[data-testid="sidebar-prompt-collection-dropdown-add-item"]'
-const SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON = '[data-testid="sidebar-prompt-collection-add-button"]'
+  '[data-testid="sidebar-prompt-collection-dropdown-add-task-item"]'
+const SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON = '[data-testid="sidebar-prompt-collection-add-task-button"]'
 const SHORT_PROMPT_50 = '[data-testid="prompt-tree-active-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-active-virtual-window"]'
@@ -220,7 +220,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
             WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
               AND entity_id = 'sibling-content') AS siblingMarkdownCount,
            json_extract(data_json, '$.selectedScreen') AS selectedScreen,
-           json_extract(data_json, '$.lastPromptTaskCollectionId') AS lastPromptTaskCollectionId
+           json_extract(data_json, '$.lastCollectionId') AS lastCollectionId
          FROM workspace_state
          WHERE state_type = 'workspace-navigation' AND workspace_id = '${workspaceRow.workspaceId}'`
       )
@@ -230,8 +230,8 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       markdownCount: 0,
       siblingPromptCollectionCount: 2,
       siblingMarkdownCount: 1,
-      selectedScreen: 'prompt-task-collections',
-      lastPromptTaskCollectionId: null
+      selectedScreen: 'project',
+      lastCollectionId: null
     })
   })
 
@@ -274,7 +274,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toBeVisible()
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
     await expect(
@@ -283,7 +283,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
         .locator('.lucide-layers')
     ).toBeVisible()
     await mainWindow.keyboard.press('Escape')
-    await testHelpers.navigateToPromptTemplateCollections('Code Review Templates')
+    await testHelpers.navigateToPromptCollections('Code Review Templates')
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-title"]')).toHaveText(
       'Code Review Templates'
@@ -693,7 +693,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect(bugAnalysisResult.found).toBe(true)
   })
 
-  test('opens Task Prompts view and renders prompt list', async ({ testSetup }) => {
+  test('opens the project view and renders prompt list', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
@@ -710,7 +710,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     ).toHaveCSS('width', '14px')
   })
 
-  test('opens the first collection from the activity bar when no collection was selected', async ({
+  test('opens the first collection from the project button when no collection was selected', async ({
     testSetup
   }) => {
     const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -719,44 +719,12 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    // Each collection kind has its own tooltip, accessible label, and activity position.
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
-      'title',
-      'Task Prompts'
-    )
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
-      'aria-label',
-      'Task Prompts'
-    )
-    await expect(
-      mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]')
-    ).toHaveAttribute('title', 'Prompt Templates')
-    await expect(
-      mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]')
-    ).toHaveAttribute('aria-label', 'Prompt Templates')
-    /** Workspace details lead the unchanged primary-screen order. */
-    const activityIds = await mainWindow
-      .locator('[data-testid="app-activity-bar"] > button')
-      .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('data-testid')))
-    expect(activityIds.slice(0, 4)).toEqual([
-      'workspace-button',
-      'nav-button-home',
-      'nav-button-prompt-task-collections',
-      'nav-button-prompt-template-collections'
-    ])
-    await expect(mainWindow.locator('[data-testid="app-activity-bar"] > div [data-testid="nav-button-settings"]')).toBeVisible()
-    await expect(
-      mainWindow.locator('[data-testid="nav-button-prompt-task-collections"] svg')
-    ).toHaveClass(/lucide-file-text/)
-    await expect(
-      mainWindow.locator('[data-testid="nav-button-prompt-template-collections"] svg')
-    ).toHaveClass(/lucide-layers/)
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
 
     await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-1"]', {
       state: 'attached'
     })
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
       'data-active',
       'true'
     )
@@ -765,7 +733,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
   })
 
-  test('opens the first ordered template collection when no template collection was selected', async ({
+  test('opens the first ordered collection when it is a template collection', async ({
     electronApp,
     testSetup
   }) => {
@@ -776,7 +744,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       { folderName: 'Alpha', displayName: 'Alpha Templates', collectionId: 'template-alpha' },
       { folderName: 'Zulu', displayName: 'Zulu Templates', collectionId: 'template-zulu' }
     ])
-    await seedWorkspaceState(electronApp, createDeterministicId(workspacePath), 'template-collection-order', null, {
+    await seedWorkspaceState(electronApp, createDeterministicId(workspacePath), 'collection-order', null, {
       entries: [
         { kind: 'collection', id: 'template-zulu' },
         { kind: 'collection', id: 'template-alpha' }
@@ -791,7 +759,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
     await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
       'Zulu Templates'
     )
@@ -815,10 +783,10 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const savedScrollTop = await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST)
 
     await testHelpers.navigateToHomeScreen()
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
     await mainWindow.waitForSelector(PROMPT_COLLECTION_HOST, { state: 'attached' })
 
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
       'data-active',
       'true'
     )
@@ -836,7 +804,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
     await mainWindow
       .locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM)
@@ -854,7 +822,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ADD_ITEM).click()
     const createPromptCollectionDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Prompt Collection"]'
+      '[role="dialog"][aria-label="Create Task Collection"]'
     )
     await expect(createPromptCollectionDialog).toBeVisible()
     const createDialogBox = await createPromptCollectionDialog.locator('.cthulhuUiPopupSurface').boundingBox()
@@ -886,7 +854,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect(Math.abs(nameInputBox!.width - nameFieldBox!.width)).toBeLessThanOrEqual(2)
   })
 
-  test('shows add prompt collection button when the workspace has no prompt collections', async ({
+  test('shows both add collection buttons when the project has no collections', async ({
     testSetup
   }) => {
     const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -895,17 +863,20 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toBeVisible()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toContainText(
-      'Create Collection'
+      'Create Task Collection'
+    )
+    await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-template-button')).toContainText(
+      'Create Template Collection'
     )
     await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveText(
       'Create a collection to get started.'
     )
     await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCSS('font-size', '14px')
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toHaveText('Show All')
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
       'data-active',
       'true'
     )
@@ -1061,7 +1032,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
   test('selects the first remaining collection and retains the screen after deleting the last collection', async ({
     testSetup
   }) => {
-    /** Mixed prompt and template collections used to verify kind-local deletion fallback. */
+    /** Mixed prompt and template collections used to verify project-order deletion fallback. */
     const filesystem = {
       ...createWorkspaceWithCollections(DELETE_NAVIGATION_WORKSPACE_PATH, [
         {
@@ -1098,7 +1069,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await testSetup.setupFilesystem(filesystem)
     await testSetup.setupFileDialog([getWorkspaceInfoPath(DELETE_NAVIGATION_WORKSPACE_PATH)])
-    /** Mixed workspace window and helpers used for consecutive task-collection deletions. */
+    /** Mixed workspace window and helpers used for consecutive deletions of both kinds. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -1108,39 +1079,38 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptCollections('Delete Second')
-    await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
-    await mainWindow.locator(DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM).click()
-    /** Confirmation dialog for deleting the selected second collection. */
+    /** Confirmation dialog shared by each consecutive deletion. */
     const deleteDialog = mainWindow.locator('[role="dialog"][aria-label="Delete Collection"]')
-    await expect(deleteDialog.getByRole('button', { name: 'Delete collection' })).toBeDisabled()
-    await deleteDialog.getByRole('checkbox').check()
-    await deleteDialog.getByRole('button', { name: 'Delete collection' }).click()
+    /** Deletes the selected non-empty collection through its confirmation dialog. */
+    const deleteSelectedCollection = async (): Promise<void> => {
+      await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
+      await mainWindow.locator(DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM).click()
+      await expect(deleteDialog.getByRole('checkbox')).not.toBeChecked()
+      await expect(deleteDialog.getByRole('button', { name: 'Delete collection' })).toBeDisabled()
+      await deleteDialog.getByRole('checkbox').check()
+      await deleteDialog.getByRole('button', { name: 'Delete collection' }).click()
+    }
 
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Last Prompt'
-    )
+    // Deletion returns to the first remaining collection of either kind in project order.
+    await deleteSelectedCollection()
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('First Template')
+    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('First Template')
+    await deleteSelectedCollection()
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Last Prompt')
+    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Last Prompt')
+    await deleteSelectedCollection()
 
-    await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
-    await mainWindow.locator(DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM).click()
-    await expect(deleteDialog.getByRole('checkbox')).not.toBeChecked()
-    await expect(deleteDialog.getByRole('button', { name: 'Delete collection' })).toBeDisabled()
-    await deleteDialog.getByRole('checkbox').check()
-    await deleteDialog.getByRole('button', { name: 'Delete collection' }).click()
-
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
+    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
       'data-active',
       'true'
     )
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toHaveCount(0)
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toContainText(
-      'Create Collection'
+      'Create Task Collection'
     )
-
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'First Template'
+    await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-template-button')).toContainText(
+      'Create Template Collection'
     )
-    await expect(mainWindow.locator('[data-testid="prompt-collection-active-filter"]')).toBeVisible()
   })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {
@@ -1165,7 +1135,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+    await mainWindow.getByTestId('nav-button-project').click()
 
     await expect(mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON)).toBeDisabled()
     await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeDisabled()
@@ -1177,7 +1147,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+    await mainWindow.getByTestId('nav-button-project').click()
 
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON).click()
 
@@ -1294,13 +1264,14 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const { mainWindow } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    /** Empty template order repaired when the prompt-only sample workspace loads. */
+    /** Combined order repaired when the prompt-only sample workspace loads. */
     const initialWorkspaceCollectionEntries = (
-      (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH, 'template'))!
+      (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))!
     ).entries
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON).click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
+    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
+    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
     const createTemplateCollectionDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Template Collection"]'
     )
@@ -1313,7 +1284,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-collection-title"]')).toHaveText(
       'Examples'
     )
-    // The created template collection identifies its type while individual template controls stay concise.
+    // The created template collection identifies its type in the subtitle.
     await expect(
       mainWindow.getByTestId('prompt-collection-subtitle')
     ).toHaveText('Prompt Templates')
@@ -1339,7 +1310,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       collectionId: expect.any(String),
       kind: 'template'
     })
-    const workspaceCollectionOrder = (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH, 'template'))!
+    const workspaceCollectionOrder = (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))!
     expect(workspaceCollectionOrder.entries).toEqual([
       { kind: 'collection', id: collectionInfo.collectionId },
       ...initialWorkspaceCollectionEntries
@@ -1356,7 +1327,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Completed`)
     ).toBe(false)
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ADD_ITEM).click()
+    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
     await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-collection-name-error"]')

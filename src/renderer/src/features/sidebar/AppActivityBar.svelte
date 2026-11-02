@@ -2,7 +2,9 @@
   import type { ComponentType } from 'svelte'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
+  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { Download } from 'lucide-svelte'
+  import { projects } from '@renderer/features/projects/projects'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import WorkspacePopup from '@renderer/features/workspace/WorkspacePopup.svelte'
   import { getNextAppIconTooltip, INITIAL_APP_ICON_TOOLTIP } from './appIconTooltip'
@@ -49,8 +51,6 @@
 
   const activityScreenOrder: ScreenId[] = [
     'home',
-    'prompt-task-collections',
-    'prompt-template-collections',
     'settings',
     'mockups',
     'test-screen'
@@ -105,6 +105,25 @@
   {#each activityItems.filter((item) => item.id !== 'settings') as item (item.id)}
     {@render activityButton(item)}
   {/each}
+  {#if isWorkspaceReady}
+    <!-- Project buttons form their own top-aligned group below the screen activities. -->
+    <Separator class="my-1 w-7" />
+    {#each projects as project (project.title)}
+      {@const isActive = activeScreen === 'project'}
+      <ActivityBarButton
+        label={project.title}
+        title={isActive ? `${project.title} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar` : project.title}
+        testId={screens.project.testId}
+        active={isActive}
+        compactIndicator={!isAppSidebarExpanded}
+        ariaCurrent={isActive ? 'page' : undefined}
+        ariaExpanded={isActive ? isAppSidebarExpanded : undefined}
+        onclick={() => onNavigate('project')}
+      >
+        <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.initials}</span>
+      </ActivityBarButton>
+    {/each}
+  {/if}
   <div class="mt-auto flex w-full flex-col gap-1 relative">
     {#each activityItems.filter((item) => item.id === 'settings') as item (item.id)}
       {@render activityButton(item)}

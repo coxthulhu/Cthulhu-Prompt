@@ -63,8 +63,7 @@ describe('prompt template workspace loading', () => {
     const result = await loadWorkspaceByPath(getWorkspaceInfoPath(workspacePath))
     if (!result.success) throw new Error(result.error)
 
-    expect(result.workspace.data.promptCollectionEntries).toEqual([])
-    expect(result.workspace.data.templateCollectionEntries).toEqual([
+    expect(result.workspace.data.collectionEntries).toEqual([
       { kind: 'collection', id: 'template-root' }
     ])
     expect(result.promptCollections.map((collection) => collection.id)).toEqual(['template-root'])

@@ -325,7 +325,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId: persistedPromptCollectionId },
       promptCollectionViewEntries: []
     })
@@ -352,7 +352,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId: 'missing-collection-id' },
       promptCollectionViewEntries: []
     })
@@ -382,8 +382,8 @@ describe('User Persistence', () => {
       lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
     })
     await seedWorkspaceState(electronApp, workspaceId, 'workspace-navigation', null, {
-      selectedScreen: 'prompt-task-collections', selectedScreenData: '{malformed',
-      lastPromptTaskCollectionId: null, lastPromptTemplateCollectionId: null
+      selectedScreen: 'project', selectedScreenData: '{malformed',
+      lastCollectionId: null
     })
 
     const { mainWindow } = await testSetup.setupAndStart({
@@ -419,11 +419,11 @@ describe('User Persistence', () => {
         return [
           persisted.selectedScreen,
           JSON.stringify(persisted.selectedScreenData),
-          persisted.lastPromptTaskCollectionId
+          persisted.lastCollectionId
         ].join(':')
       })
       .toBe(
-        `prompt-task-collections:{"promptCollectionId":"${developmentPromptCollectionId}","contentOwnerId":"${developmentPromptCollectionId}"}:${developmentPromptCollectionId}`
+        `project:{"promptCollectionId":"${developmentPromptCollectionId}","contentOwnerId":"${developmentPromptCollectionId}"}:${developmentPromptCollectionId}`
       )
 
     await testHelpers.navigateToSettingsScreen()
@@ -434,13 +434,13 @@ describe('User Persistence', () => {
         return [
           persisted.selectedScreen,
           JSON.stringify(persisted.selectedScreenData),
-          persisted.lastPromptTaskCollectionId
+          persisted.lastCollectionId
         ].join(':')
       })
       .toBe(`settings:null:${developmentPromptCollectionId}`)
   })
 
-  test('remembers the last task and template collection independently', async ({
+  test('remembers the last collection of either kind', async ({
     electronApp,
     testSetup
   }) => {
@@ -449,23 +449,15 @@ describe('User Persistence', () => {
     const taskAlphaId = 'persisted-task-alpha'
     const taskBetaId = 'persisted-task-beta'
     const templateAlphaId = 'persisted-template-alpha'
-    const templateBetaId = 'persisted-template-beta'
-    /** Mixed-kind workspace retaining both required type-owned order files. */
+    /** Mixed-kind workspace whose last collection may be either kind. */
     const filesystem = {
       ...createWorkspaceWithCollections(persistedWorkspacePath, [
         { folderName: 'TaskAlpha', displayName: 'Task Alpha', promptCollectionId: taskAlphaId },
         { folderName: 'TaskBeta', displayName: 'Task Beta', promptCollectionId: taskBetaId }
       ]),
       ...createWorkspaceWithTemplateCollections(persistedWorkspacePath, [
-        { folderName: 'TemplateAlpha', displayName: 'Template Alpha', collectionId: templateAlphaId },
-        { folderName: 'TemplateBeta', displayName: 'Template Beta', collectionId: templateBetaId }
-      ]),
-      [`${persistedWorkspacePath}/Prompts/CollectionOrder.json`]: JSON.stringify({
-        entries: [taskAlphaId, taskBetaId].map((id) => ({ kind: 'collection', id }))
-      }),
-      [`${persistedWorkspacePath}/Templates/CollectionOrder.json`]: JSON.stringify({
-        entries: [templateAlphaId, templateBetaId].map((id) => ({ kind: 'collection', id }))
-      })
+        { folderName: 'TemplateAlpha', displayName: 'Template Alpha', collectionId: templateAlphaId }
+      ])
     }
     await testSetup.setupFilesystem(filesystem)
     await seedUserPersistence(electronApp, {
@@ -475,8 +467,7 @@ describe('User Persistence', () => {
       workspaceId,
       selectedScreen: 'home',
       selectedScreenData: null,
-      lastPromptTaskCollectionId: taskBetaId,
-      lastPromptTemplateCollectionId: templateBetaId,
+      lastCollectionId: taskBetaId,
       promptCollectionViewEntries: []
     })
 
@@ -486,44 +477,28 @@ describe('User Persistence', () => {
 
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
-
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Task Beta'
-    )
-    await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Task Beta')
+    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
       'data-active',
       'true'
     )
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Template Beta'
-    )
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
     await mainWindow
       .locator(`[data-testid="sidebar-prompt-collection-dropdown-item-${templateAlphaId}"]`)
       .click()
     await expect
       .poll(async () => {
-        /** Persisted split selection captured after choosing a different template root. */
+        /** Persisted selection captured after choosing a template collection. */
         const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return [
-          persisted.selectedScreen,
-          persisted.lastPromptTaskCollectionId,
-          persisted.lastPromptTemplateCollectionId
-        ].join(':')
+        return [persisted.selectedScreen, persisted.lastCollectionId].join(':')
       })
-      .toBe(`prompt-template-collections:${taskBetaId}:${templateAlphaId}`)
+      .toBe(`project:${templateAlphaId}`)
 
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Task Beta'
-    )
-    await mainWindow.locator('[data-testid="nav-button-prompt-template-collections"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Template Alpha'
-    )
+    await mainWindow.locator('[data-testid="nav-button-home"]').click()
+    await mainWindow.locator('[data-testid="nav-button-project"]').click()
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Template Alpha')
   })
 
   test('autosaves active prompt tree entry id in workspace persistence', async ({
@@ -599,7 +574,7 @@ describe('User Persistence', () => {
             )
             /** Prompt-collection screen data containing the newly persisted owner pointer. */
             const selectedScreenData =
-              persisted.selectedScreen === 'prompt-task-collections'
+              persisted.selectedScreen === 'project'
                 ? (persisted.selectedScreenData as {
                     promptCollectionId: string | null
                     contentOwnerId?: string | null
@@ -708,7 +683,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId: developmentPromptCollectionId },
       promptCollectionViewEntries: [
         {
@@ -744,7 +719,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId, contentOwnerId: categoryId },
       promptCollectionViewEntries: [
         {
@@ -791,7 +766,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId, contentOwnerId: categoryId },
       promptCollectionViewEntries: [
         {
@@ -829,7 +804,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId: longPromptCollectionId },
       promptCollectionViewEntries: [
         {
@@ -863,7 +838,7 @@ describe('User Persistence', () => {
     })
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: { promptCollectionId: developmentPromptCollectionId },
       promptCollectionViewEntries: [
         {

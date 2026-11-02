@@ -61,12 +61,11 @@ describe('prompt-collection domain mutations', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: { prompt: [], template: [] },
-        promptCollectionEntries: [
+        favoriteCollectionIds: [],
+        collectionEntries: [
           { kind: 'collection', id: EXISTING_ROOT_ID },
           { kind: 'collection', id: SECOND_ROOT_ID }
-        ],
-        templateCollectionEntries: []
+        ]
       }
     })
     runRevisionMutation.mockResolvedValue(undefined)
@@ -97,7 +96,7 @@ describe('prompt-collection domain mutations', () => {
         promptCollectionClientState: { insert: insertClientState }
       }
     })
-    expect(workspace.promptCollectionEntries.map((entry) => entry.id)).toEqual([
+    expect(workspace.collectionEntries.map((entry) => entry.id)).toEqual([
       EXISTING_ROOT_ID,
       createdId,
       SECOND_ROOT_ID
@@ -156,7 +155,7 @@ describe('prompt-collection domain mutations', () => {
         }
       }
     })
-    expect(workspace.promptCollectionEntries.map((entry) => entry.id)).toEqual([
+    expect(workspace.collectionEntries.map((entry) => entry.id)).toEqual([
       SECOND_ROOT_ID,
       EXISTING_ROOT_ID
     ])

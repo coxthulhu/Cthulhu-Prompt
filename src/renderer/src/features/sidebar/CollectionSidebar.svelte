@@ -28,7 +28,6 @@
     FileText,
     Folder,
     FolderCog,
-    FolderOpen,
     Layers,
     MoreHorizontal,
     Plus,
@@ -52,13 +51,13 @@
     type Prompt
   } from '@shared/domain/prompt/Prompt'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
-  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
+  import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
   import {
     getMarkdownContentCategoryOrder,
     getOrderedMarkdownContentIds
   } from '@shared/domain/markdown-content/MarkdownContent'
   import type { Category } from '@shared/domain/category/Category'
-  import { getAllWorkspaceCollectionEntries, type Workspace } from '@shared/domain/workspace/Workspace'
+  import type { Workspace } from '@shared/domain/workspace/Workspace'
   import DropdownPopupDetailed, { type DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
@@ -94,7 +93,7 @@
   }
 
   type CreatePromptCollectionDialogHandle = {
-    openDialog: () => void
+    openDialog: (kind: PromptCollectionKind) => void
   }
 
   type ManageCategoriesDialogHandle = {
@@ -119,7 +118,7 @@
   } = $props<{
     /** Mode title shown in the shared sidebar header. */
     title: string
-    /** Collection mode state shared with the collection screen. */
+    /** Project mode state shared with the collection screen. */
     modeData: CollectionSidebarModeData
     isWorkspaceReady?: boolean
     isWorkspaceLoading?: boolean
@@ -133,9 +132,6 @@
   const promptCollectionScreenMode = $derived(modeData.screenMode)
   /** Visibility for each toggleable finalized group. */
   const shownFinalStatusGroups = $derived(modeData.shownFinalStatusGroups)
-  /** Collection kind displayed by this mode. */
-  const collectionKind = $derived(modeData.kind)
-
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptNavigation = getPromptNavigationContext()
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
@@ -162,8 +158,8 @@
     return null
   })
 
-  /** Every workspace collection resolved in task-then-template order. */
-  const workspacePromptCollections = $derived.by((): PromptCollection[] => {
+  /** Every project collection of either kind, resolved in project order. */
+  const promptCollections = $derived.by((): PromptCollection[] => {
     if (!selectedWorkspace) {
       return []
     }
@@ -177,14 +173,10 @@
       promptCollectionById.set(promptCollection.id, promptCollection)
     }
 
-    return getAllWorkspaceCollectionEntries(selectedWorkspace)
+    return selectedWorkspace.collectionEntries
       .map((entry) => promptCollectionById.get(entry.id))
       .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
   })
-  /** Collections eligible for the current activity's selector and tree. */
-  const promptCollections = $derived(
-    workspacePromptCollections.filter((collection) => collection.kind === collectionKind)
-  )
   const collectionListState = $derived<'no-workspace' | 'loading' | 'empty' | 'ready'>(
     isWorkspaceLoading
       ? 'loading'
@@ -195,29 +187,37 @@
           : 'ready'
   )
 
-  /** Empty selector item specialized to the active collection kind. */
-  const promptCollectionSelectorPlaceholder = $derived<DropdownPopupDetailedItem>({
+  /** Empty selector item shown before the project has any collections. */
+  const promptCollectionSelectorPlaceholder: DropdownPopupDetailedItem = {
     id: 'no-prompt-collections',
     label: 'No collections',
     detail: 'Create one from the menu',
-    icon: collectionKind === 'template' ? Layers : FileText
-  })
-  /** Collection-creation action specialized to the active collection kind. */
-  const promptCollectionSelectorFooterItem = $derived<DropdownPopupDetailedItem>({
-    id: 'add-prompt-collection',
-    label: 'Create Collection',
-    detail:
-      collectionKind === 'template'
-        ? 'Create a prompt template collection'
-        : 'Create a task prompt collection',
-    icon: Plus,
-    testId: 'sidebar-prompt-collection-dropdown-add-item'
-  })
+    icon: Folder
+  }
+  /** Collection-creation actions for each kind, keyed by the kind they create. */
+  const createCollectionItems: Array<DropdownPopupDetailedItem & { kind: PromptCollectionKind }> = [
+    {
+      id: 'add-task-collection',
+      kind: 'prompt',
+      label: 'Create Task Collection',
+      detail: 'Create a task prompt collection',
+      icon: Plus,
+      testId: 'sidebar-prompt-collection-dropdown-add-task-item'
+    },
+    {
+      id: 'add-template-collection',
+      kind: 'template',
+      label: 'Create Template Collection',
+      detail: 'Create a prompt template collection',
+      icon: Plus,
+      testId: 'sidebar-prompt-collection-dropdown-add-template-item'
+    }
+  ]
   let draggedPromptCollectionSelectorId = $state<string | null>(null)
   /** Only the section where collection dragging began can preview or save a reorder. */
   let draggedCollectionSection = $state('all')
   /** Committed favorites determine sidebar priority independently of drag previews. */
-  const favoriteCollectionIds = $derived(selectedWorkspace?.favoriteCollectionIds[collectionKind] ?? [])
+  const favoriteCollectionIds = $derived(selectedWorkspace?.favoriteCollectionIds ?? [])
   // Local preview order lets the dropdown reorder live without persisting until drop.
   let promptCollectionSelectorDragSourceIds = $state<string[] | null>(null)
   let promptCollectionSelectorPreviewIds = $state<string[] | null>(null)
@@ -499,13 +499,16 @@
     )
   }
 
-  const openCreatePromptCollectionDialog = () => {
-    createPromptCollectionDialog?.openDialog()
+  /** Opens collection creation for one kind. */
+  const openCreatePromptCollectionDialog = (kind: PromptCollectionKind) => {
+    createPromptCollectionDialog?.openDialog(kind)
   }
 
   const handlePromptCollectionDropdownSelect = (item: DropdownPopupDetailedItem) => {
-    if (item.id === promptCollectionSelectorFooterItem.id) {
-      openCreatePromptCollectionDialog()
+    /** Creation action selected from the footer, if any. */
+    const createItem = createCollectionItems.find((candidate) => candidate.id === item.id)
+    if (createItem) {
+      openCreatePromptCollectionDialog(createItem.kind)
       return
     }
 
@@ -547,7 +550,7 @@
   }
 
   const isHoveringPromptCollectionSelectorFooter = (clientX: number, clientY: number): boolean => {
-    const footerSelector = '[data-testid="sidebar-prompt-collection-dropdown-add-item"]'
+    const footerSelector = '.cthulhuUiDropdownPopupDetailedFooter'
 
     return document
       .elementsFromPoint(clientX, clientY)
@@ -763,7 +766,7 @@
           items={promptCollectionDropdownItems}
           sections={collectionDropdownSections}
           selectedItem={screenCollectionDropdownItem}
-          footerItem={promptCollectionSelectorFooterItem}
+          footerItems={createCollectionItems}
           itemDragOptions={promptCollectionSelectorItemDragOptions}
           itemSelectionVariant="accent"
           dragOpenTypes={promptCollectionSelectorDragOpenTypes}
@@ -804,16 +807,18 @@
         </DropdownPopupDetailed>
       </SidebarHeader>
       {#if collectionListState === 'empty'}
-        <div class="sidebarTopLevelInsetWithInnerPadding">
-          <SelectorButton
-            icon={promptCollectionSelectorFooterItem.icon}
-            text={promptCollectionSelectorFooterItem.label}
-            detail={promptCollectionSelectorFooterItem.detail}
-            showChevron={false}
-            disabled={promptCollectionSelectorDisabled}
-            testId="sidebar-prompt-collection-add-button"
-            onclick={openCreatePromptCollectionDialog}
-          />
+        <div class="sidebarTopLevelInsetWithInnerPadding grid gap-0.5">
+          {#each createCollectionItems as item (item.id)}
+            <SelectorButton
+              icon={item.icon}
+              text={item.label}
+              detail={item.detail}
+              showChevron={false}
+              disabled={promptCollectionSelectorDisabled}
+              testId={`sidebar-prompt-collection-add-${item.kind === 'template' ? 'template' : 'task'}-button`}
+              onclick={() => openCreatePromptCollectionDialog(item.kind)}
+            />
+          {/each}
         </div>
       {:else}
         {#each quickCollectionItems as item (item.id)}
@@ -821,7 +826,7 @@
             collectionId={item.id}
             promptId={item.id}
             promptTitle={item.label}
-            icon={screenCollection?.id === item.id ? FolderOpen : Folder}
+            icon={item.icon}
             count={item.count}
             isActive={screenCollection?.id === item.id}
             isDragging={false}
@@ -912,7 +917,6 @@
           bind:this={createPromptCollectionDialog}
           {isWorkspaceReady}
           promptCollections={promptCollections}
-          kind={collectionKind}
           isPromptCollectionListLoading={isWorkspaceLoading}
           onCreated={(promptCollectionId) => {
             onScreenCollectionSelect(promptCollectionId)

@@ -22,12 +22,10 @@ export type WorkspaceStateData = {
   window: WindowPersistence
   'system-settings': SystemSettings
   'workspace-navigation': Omit<WorkspaceUiState, 'workspaceId'>
-  /** Independent workspace orders for task prompts and reusable templates. */
-  'prompt-collection-order': { entries: CollectionEntryRef[] }
-  'template-collection-order': { entries: CollectionEntryRef[] }
+  /** Combined default-project order for task and template collections. */
+  'collection-order': { entries: CollectionEntryRef[] }
   /** Ordered favorites remain private to the user and workspace. */
-  'prompt-collection-favorites': { ids: string[] }
-  'template-collection-favorites': { ids: string[] }
+  'collection-favorites': { ids: string[] }
   'collection-user': Omit<WorkspacePromptCollectionUiState, 'workspaceId' | 'contentOwnerId' | 'scrollTopByMode'>
   'collection-machine': Pick<WorkspacePromptCollectionUiState, 'scrollTopByMode'>
   'accordion-user': { sections: Array<{ id: string; isExpanded: boolean }> }
@@ -48,10 +46,8 @@ export const WORKSPACE_STATE_SCOPES = {
   window: StorageScope.MachineSpecific,
   'system-settings': StorageScope.UserSpecific,
   'workspace-navigation': StorageScope.UserSpecific,
-  'prompt-collection-order': StorageScope.UserSpecific,
-  'template-collection-order': StorageScope.UserSpecific,
-  'prompt-collection-favorites': StorageScope.UserSpecific,
-  'template-collection-favorites': StorageScope.UserSpecific,
+  'collection-order': StorageScope.UserSpecific,
+  'collection-favorites': StorageScope.UserSpecific,
   'collection-user': StorageScope.UserSpecific,
   'collection-machine': StorageScope.MachineSpecific,
   'accordion-user': StorageScope.UserSpecific,

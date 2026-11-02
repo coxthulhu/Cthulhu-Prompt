@@ -221,8 +221,8 @@ describe('Prompt template selection', () => {
     electronApp,
     testSetup
   }) => {
-    await seedWorkspaceState(electronApp, createDeterministicId(WORKSPACE_PATH), 'template-collection-order', null, {
-      entries: [SECOND_TEMPLATE_COLLECTION_ID, FIRST_TEMPLATE_COLLECTION_ID, EMPTY_TEMPLATE_COLLECTION_ID].map((id) => ({ kind: 'collection', id }))
+    await seedWorkspaceState(electronApp, createDeterministicId(WORKSPACE_PATH), 'collection-order', null, {
+      entries: [SECOND_TEMPLATE_COLLECTION_ID, FIRST_TEMPLATE_COLLECTION_ID, EMPTY_TEMPLATE_COLLECTION_ID, PROMPT_COLLECTION_ID].map((id) => ({ kind: 'collection', id }))
     })
     await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
@@ -558,7 +558,7 @@ describe('Prompt template selection', () => {
       )
       .toEqual([{ id: 'template-second' }])
 
-    await testHelpers.navigateToPromptTemplateCollections('First Templates')
+    await testHelpers.navigateToPromptCollections('First Templates')
     const templateEditor = mainWindow.locator(promptEditorSelector('template-first'))
     await expect(templateEditor.locator('[data-testid="prompt-template-button"]')).toHaveCount(0)
     await expect(
@@ -919,7 +919,7 @@ describe('Prompt template selection', () => {
     await dialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]').click()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
 
-    await testHelpers.navigateToPromptTemplateCollections('First Templates')
+    await testHelpers.navigateToPromptCollections('First Templates')
     const templateEditorSelector = promptEditorSelector('template-first')
     await waitForMonacoEditor(mainWindow, templateEditorSelector)
     await focusMonacoEditor(mainWindow, templateEditorSelector)
@@ -937,7 +937,7 @@ describe('Prompt template selection', () => {
       .poll(() => readClipboardText(mainWindow))
       .toBe('Draft Choose a template. wrapper')
 
-    await testHelpers.navigateToPromptTemplateCollections('First Templates')
+    await testHelpers.navigateToPromptCollections('First Templates')
     await focusMonacoEditor(mainWindow, templateEditorSelector)
     await mainWindow.keyboard.press('Control+A')
     await mainWindow.keyboard.insertText('Draft without a token')

@@ -150,9 +150,8 @@ describe('shared domain mutation planners', () => {
       const collection = createCollection('root', ownerKind, 'category', owner.id)
       const workspace = {
         id: 'workspace', workspacePath: 'C:\\Workspace', workspaceName: 'Workspace',
-        favoriteCollectionIds: { prompt: [], template: [] },
-        promptCollectionEntries: ownerKind === 'prompt' ? [{ kind: 'collection' as const, id: 'root' }] : [],
-        templateCollectionEntries: ownerKind === 'template' ? [{ kind: 'collection' as const, id: 'root' }] : []
+        favoriteCollectionIds: [],
+        collectionEntries: [{ kind: 'collection' as const, id: 'root' }]
       }
       const state = createDomainState({
         workspace: [workspace], promptCollection: [collection],
@@ -193,9 +192,8 @@ describe('shared domain mutation planners', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: collection.id }]
     }
     /** Shared rename plan applied in renderer and main process. */
     const plan = planRenamePromptCollectionDomainMutation(
@@ -223,9 +221,8 @@ describe('shared domain mutation planners', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: sibling.id }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: sibling.id }]
     }
     /** Root creation plan shared by renderer and main. */
     const createPlan = planCreatePromptCollectionDomainMutation(
@@ -242,7 +239,7 @@ describe('shared domain mutation planners', () => {
     if (!Array.isArray(createPlan)) return
     /** Workspace projection after the creation placement recipe. */
     const workspaceAfterCreate = produce(workspace, getUpdateRecipe<'workspace'>(createPlan[0]!))
-    expect(workspaceAfterCreate.promptCollectionEntries.map((entry) => entry.id)).toEqual([
+    expect(workspaceAfterCreate.collectionEntries.map((entry) => entry.id)).toEqual([
       sibling.id,
       'created'
     ])
@@ -257,8 +254,8 @@ describe('shared domain mutation planners', () => {
     const populatedWorkspace = {
       ...workspace,
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [
+      favoriteCollectionIds: [],
+      collectionEntries: [
         { kind: 'collection' as const, id: sibling.id },
         { kind: 'collection' as const, id: 'created' }
       ]
@@ -276,7 +273,7 @@ describe('shared domain mutation planners', () => {
     expect(Array.isArray(movePlan)).toBe(true)
     if (!Array.isArray(movePlan)) return
     expect(
-      produce(populatedWorkspace, getUpdateRecipe<'workspace'>(movePlan[0]!)).promptCollectionEntries.map(
+      produce(populatedWorkspace, getUpdateRecipe<'workspace'>(movePlan[0]!)).collectionEntries.map(
         (entry) => entry.id
       )
     ).toEqual(['created', sibling.id])
@@ -340,9 +337,8 @@ describe('shared domain mutation planners', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: collection.id }]
     }
     /** Planner state containing summary-compatible prompt and template projections. */
     const state = createDomainState({
@@ -411,9 +407,8 @@ describe('shared domain mutation planners', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: collection.id }]
     }
     /** Existing category records split between retention and staged deletion. */
     const categories = [
@@ -536,9 +531,8 @@ describe('shared domain mutation planners', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: { prompt: [], template: [] },
-      promptCollectionEntries: [{ kind: 'collection' as const, id: collection.id }],
-      templateCollectionEntries: []
+      favoriteCollectionIds: [],
+      collectionEntries: [{ kind: 'collection' as const, id: collection.id }]
     }
     /** Existing root state whose expansion fields must survive selection transfer. */
     const rootUiState = {
@@ -565,10 +559,9 @@ describe('shared domain mutation planners', () => {
     /** Active workspace navigation pointing at the deleted category owner. */
     const activeWorkspaceUiState = {
       workspaceId: workspace.id,
-      selectedScreen: 'prompt-task-collections' as const,
+      selectedScreen: 'project' as const,
       selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: 'category' },
-      lastPromptTaskCollectionId: collection.id,
-      lastPromptTemplateCollectionId: null
+      lastCollectionId: collection.id
     }
     /** Shared planner state containing active split UI-state records. */
     const activeState = createDomainState({

@@ -41,15 +41,12 @@ describe('Sidebar collection quick picks', () => {
       /** Shared navigation selects the appropriate activity before assertions. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'prompt') await testHelpers.navigateToPromptCollections('Alpha')
-      else await testHelpers.navigateToPromptTemplateCollections('Alpha')
+      await testHelpers.navigateToPromptCollections('Alpha')
       /** Visible quick rows preserve the ordinary tree row pitch. */
       const rows = mainWindow.locator(QUICK_ROWS)
       /** Label assertions ignore whitespace between the separate label and count spans. */
       const labels = rows.locator('.sidebarPromptTreeSettingsLabel')
-      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText(
-        kind === 'prompt' ? 'Task Collections' : 'Template Collections'
-      )
+      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
       await expect(labels).toHaveText(['Alpha', 'Beta', 'Gamma'])
       await expect(rows.locator('.prompt-tree-row-count')).toHaveText(['1', '1', '1'])
       await expect(rows.first().locator('svg')).toBeVisible()
@@ -79,7 +76,7 @@ describe('Sidebar collection quick picks', () => {
       await rows.nth(0).hover()
       await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', 'grabbing')
       await mainWindow.mouse.up()
-      expect((await readWorkspaceCollectionOrder(electronApp, workspacePath, kind))!.entries.map((entry) => entry.id)).toEqual(names)
+      expect((await readWorkspaceCollectionOrder(electronApp, workspacePath))!.entries.map((entry) => entry.id)).toEqual(names)
 
       await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
       /** Reorder only inside the full dropdown, retaining the selected Alpha collection. */
@@ -92,25 +89,24 @@ describe('Sidebar collection quick picks', () => {
       await mainWindow.keyboard.press('Escape')
       await expect(labels).toHaveText(['Omega', 'Alpha', 'Beta'])
       await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Alpha')
-      await expect.poll(async () => (await readWorkspaceCollectionOrder(electronApp, workspacePath, kind))!.entries.map((entry) => entry.id))
+      await expect.poll(async () => (await readWorkspaceCollectionOrder(electronApp, workspacePath))!.entries.map((entry) => entry.id))
         .toEqual(['Omega', 'Alpha', 'Beta', 'Gamma'])
     })
 
     test(`${kind} quick picks grow from empty to three without placeholder rows`, async ({ testSetup }) => {
       /** An empty workspace also verifies the separate Create Collection entry point remains. */
       const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
-      await mainWindow.getByTestId(kind === 'template' ? 'nav-button-prompt-template-collections' : 'nav-button-prompt-task-collections').click()
-      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText(
-        kind === 'prompt' ? 'Task Collections' : 'Template Collections'
-      )
+      await mainWindow.getByTestId('nav-button-project').click()
+      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
       await expect(mainWindow.locator(QUICK_ROWS)).toHaveCount(0)
-      await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-button')).toBeVisible()
+      await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-task-button')).toBeVisible()
+      await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-template-button')).toBeVisible()
       await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveText('Create a collection to get started.')
       // The first iteration opens the enabled Show All menu with only its creation footer.
       for (const count of [1, 2, 3]) {
         await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
         await expect(mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')).toHaveCount(count - 1)
-        await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-item').click()
+        await mainWindow.getByTestId(`sidebar-prompt-collection-dropdown-add-${kind === 'template' ? 'template' : 'task'}-item`).click()
         await mainWindow.getByTestId('create-prompt-collection-name-input').fill(`Collection ${count}`)
         await mainWindow.getByTestId('create-prompt-collection-button').click()
         await expect(mainWindow.locator(QUICK_ROWS)).toHaveCount(count)
@@ -145,8 +141,7 @@ describe('Sidebar collection quick picks', () => {
       /** Source remains selected throughout the move. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'prompt') await testHelpers.navigateToPromptCollections('Source')
-      else await testHelpers.navigateToPromptTemplateCollections('Source')
+      await testHelpers.navigateToPromptCollections('Source')
       if (kind === 'prompt') {
         // The fixture builder seeds non-final prompts in Active; move this one into Backlog through the UI.
         await beginPromptTreeRowDrag(mainWindow, 'backlog')

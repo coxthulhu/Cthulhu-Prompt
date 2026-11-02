@@ -68,9 +68,8 @@ describe('prompt template mutations', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: { prompt: [], template: [] },
-        promptCollectionEntries: [],
-        templateCollectionEntries: [
+        favoriteCollectionIds: [],
+        collectionEntries: [
           { kind: 'collection', id: 'source-collection' },
           { kind: 'collection', id: 'destination-collection' }
         ]

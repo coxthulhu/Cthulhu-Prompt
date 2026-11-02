@@ -12,7 +12,7 @@ describe('Workspace popup', () => {
     await testHelpers.navigateToPromptCollections('Development')
     await mainWindow.getByTestId('prompt-tree-active-prompt-dev-1').click()
     /** Re-clicking the current activity collapses only the sidebar. */
-    const activity = mainWindow.getByTestId('nav-button-prompt-task-collections')
+    const activity = mainWindow.getByTestId('nav-button-project')
     await activity.click()
     /** Persistent workspace trigger remains available outside the collapsed panel. */
     const button = mainWindow.getByTestId('workspace-button')

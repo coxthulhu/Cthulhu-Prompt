@@ -39,7 +39,7 @@ const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template', tex
   /** Reused navigation remounts the screen without resetting session markers. */
   const openCollection = () => kind === 'prompt'
     ? started.testHelpers.navigateToPromptCollections('Content')
-    : started.testHelpers.navigateToPromptTemplateCollections('Content')
+    : started.testHelpers.navigateToPromptCollections('Content')
   await openCollection()
   await waitForMonacoEditor(started.mainWindow, BODY)
   return { ...started, openCollection, active: `${WORKSPACE}/${kind === 'prompt' ? 'Prompts' : 'Templates'}/Content/Active` }

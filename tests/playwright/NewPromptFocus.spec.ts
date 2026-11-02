@@ -58,8 +58,7 @@ describe('New prompt focus', () => {
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
         await setNewPromptFocus(mainWindow, testHelpers, target)
-        if (kind === 'prompt') await testHelpers.navigateToPromptCollections('Focus')
-        else await testHelpers.navigateToPromptTemplateCollections('Focus')
+        await testHelpers.navigateToPromptCollections('Focus')
         /** Sidebar group owning the newly created rows. */
         const group = kind === 'prompt' ? 'active' : 'template'
         /** Task prompts have a status action; templates have a root empty-state action. */

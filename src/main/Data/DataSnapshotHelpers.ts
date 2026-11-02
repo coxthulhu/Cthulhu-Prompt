@@ -110,12 +110,7 @@ export const buildWorkspaceSnapshot = (
     revision: workspaceEntry.revision,
     data: {
       ...workspaceEntry.committed,
-      promptCollectionEntries: filterLoadedPromptCollectionEntries(
-        workspaceEntry.committed.promptCollectionEntries
-      ),
-      templateCollectionEntries: filterLoadedPromptCollectionEntries(
-        workspaceEntry.committed.templateCollectionEntries
-      )
+      collectionEntries: filterLoadedPromptCollectionEntries(workspaceEntry.committed.collectionEntries)
     }
   }
 }

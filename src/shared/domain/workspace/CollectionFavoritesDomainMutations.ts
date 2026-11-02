@@ -1,5 +1,4 @@
 import type { DomainPlanner } from '../DomainChanges'
-import { getWorkspaceCollectionEntries } from './Workspace'
 import type { MovePromptCollectionDomainCommand } from '../prompt-collection/PromptCollectionDomainMutations'
 
 /** Explicit favorite state avoids toggling against a stale renderer snapshot. */
@@ -26,21 +25,20 @@ export const parseSetCollectionFavoriteCommand = (value: unknown): SetCollection
 export const planSetCollectionFavorite: DomainPlanner<SetCollectionFavoriteCommand> = (state, command) => {
   /** Workspace whose user-specific favorites will change. */
   const workspace = state.get('workspace', command.workspaceId)
-  /** Collection kind selects the independent favorite order. */
+  /** Collection whose favorite membership changes. */
   const collection = state.get('promptCollection', command.promptCollectionId)
-  if (!workspace || !collection || !getWorkspaceCollectionEntries(workspace, collection.kind)
-    .some((entry) => entry.id === collection.id)) {
+  if (!workspace || !collection || !workspace.collectionEntries.some((entry) => entry.id === collection.id)) {
     return { status: 'conflict', reason: 'Collection favorite ownership conflict', targets: [{ entityType: 'workspace', id: command.workspaceId }] }
   }
   return [{
     type: 'update', entityType: 'workspace', id: workspace.id,
     recipe: (draft) => {
       /** Existing favorites are kept in their own order. */
-      const ids = draft.favoriteCollectionIds[collection.kind]
+      const ids = draft.favoriteCollectionIds
       if (command.favorite) {
         if (!ids.includes(collection.id)) ids.push(collection.id)
       } else {
-        draft.favoriteCollectionIds[collection.kind] = ids.filter((id) => id !== collection.id)
+        draft.favoriteCollectionIds = ids.filter((id) => id !== collection.id)
       }
     }
   }]
@@ -50,20 +48,20 @@ export const planSetCollectionFavorite: DomainPlanner<SetCollectionFavoriteComma
 export const planMoveCollectionFavorite: DomainPlanner<MovePromptCollectionDomainCommand> = (state, command) => {
   /** Workspace owning the independently ordered favorites. */
   const workspace = state.get('workspace', command.workspaceId)
-  /** Collection kind determines which favorite order can be changed. */
+  /** Favorite collection being repositioned. */
   const collection = state.get('promptCollection', command.promptCollectionId)
   /** Remaining favorites provide the insertion position after removing the moved entry. */
   const ids = workspace && collection
-    ? workspace.favoriteCollectionIds[collection.kind].filter((id) => id !== collection.id) : []
+    ? workspace.favoriteCollectionIds.filter((id) => id !== collection.id) : []
   /** A null predecessor places the favorite first. */
   const index = command.previousEntryId === null ? 0 : ids.indexOf(command.previousEntryId) + 1
-  if (!workspace || !collection || !workspace.favoriteCollectionIds[collection.kind].includes(collection.id) ||
+  if (!workspace || !collection || !workspace.favoriteCollectionIds.includes(collection.id) ||
     (command.previousEntryId !== null && index === 0)) {
     return { status: 'conflict', reason: 'Collection favorite reorder conflict', targets: [{ entityType: 'workspace', id: command.workspaceId }] }
   }
   ids.splice(index, 0, collection.id)
   return [{
     type: 'update', entityType: 'workspace', id: workspace.id,
-    recipe: (draft) => { draft.favoriteCollectionIds[collection.kind] = ids }
+    recipe: (draft) => { draft.favoriteCollectionIds = ids }
   }]
 }

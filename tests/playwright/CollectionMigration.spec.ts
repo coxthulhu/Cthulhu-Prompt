@@ -14,14 +14,14 @@ const WORKSPACE_ID = 'collection-migration-workspace'
 
 /** Creates ordered task and template collections with content and collection descriptions. */
 const createMigrationWorkspace = (): Record<string, string | null> => {
-  /** Task order deliberately differs from alphabetical order. */
+  /** Task collections whose legacy order file is ignored in favor of the combined alphabetical order. */
   const tasks = createWorkspaceWithCollections(WORKSPACE_PATH, [
     { folderName: 'Tasks', displayName: 'Tasks', promptCollectionId: 'tasks', collectionSettings: { collectionDescription: 'Task description' }, prompts: [
       { id: 'task', title: 'Task', promptText: 'Preserve task bytes.' }
     ] },
     { folderName: 'Another', displayName: 'Another', promptCollectionId: 'another' }
   ])
-  /** Templates use the same collection metadata schema with independent ordering. */
+  /** Templates use the same collection metadata schema and share the combined order. */
   const templates = createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [
     { folderName: 'Library', displayName: 'Library', collectionId: 'library', description: 'Template description', categories: [
       { categoryName: 'Code', displayName: 'Code', categoryId: 'code', templates: [
@@ -67,7 +67,7 @@ describe('Collection terminology migrations', () => {
     expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Tasks/Archived/_CollectionInfo`)).toBe(true)
     await testHelpers.navigateToPromptCollections('Tasks')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Task')
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Wrapper')
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
@@ -75,9 +75,9 @@ describe('Collection terminology migrations', () => {
     await testHelpers.setupWorkspaceViaUI()
     expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/CollectionOrder.json`)).toBe(false)
     expect(await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH)).toEqual({ entries: [
-      { kind: 'collection', id: 'another' }, { kind: 'collection', id: 'tasks' }
+      { kind: 'collection', id: 'another' }, { kind: 'collection', id: 'library' }, { kind: 'collection', id: 'tasks' }
     ] })
-    await testHelpers.navigateToPromptTemplateCollections('Library')
+    await testHelpers.navigateToPromptCollections('Library')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Wrapper')
   })
 
@@ -99,7 +99,7 @@ describe('Collection terminology migrations', () => {
   })
 
   for (const kind of ['task', 'template'] as const) {
-    test(`migrates SQLite ${kind} selection and retains collection view state`, async ({ electronApp, testSetup }) => {
+    test(`migrates SQLite ${kind} collection view state and resets the retired selection to Home`, async ({ electronApp, testSetup }) => {
       await testSetup.setupFilesystem(createMigrationWorkspace())
       await createLegacyStateDatabase(electronApp, 24, getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Selected collection and prompt must survive the schema rename unchanged. */
@@ -110,25 +110,21 @@ describe('Collection terminology migrations', () => {
       await runSqlStatement(electronApp, `INSERT INTO prompt_folder_view_state (workspace_id, content_owner_id, selected_entry_id, tree_is_expanded, content_section_is_expanded, scroll_top_by_mode_json, selected_mode, shown_final_status_groups_json) VALUES (${toSqlText(WORKSPACE_ID)}, '${collectionId}', 'root-header', 0, 0, '{"active":123}', 'active', '{"archived":true}')`)
       await runSqlStatement(electronApp, `INSERT INTO workspace_ui_state VALUES ('malformed', 'prompt-task-folders', '{malformed', NULL, NULL)`)
       await migrateSqliteDatabase(electronApp)
-      /** Direct read verifies preservation before rendering can change viewport state. */
+      /** Direct read verifies the project migration reset the retired per-kind screen. */
       const migrated = await readWorkspaceUiState(electronApp, WORKSPACE_ID)
-      expect(migrated).toMatchObject({
-        selectedScreen: `prompt-${kind}-collections`,
-        selectedScreenData: { promptCollectionId: collectionId, contentOwnerId: collectionId },
-        lastPromptTaskCollectionId: 'tasks', lastPromptTemplateCollectionId: 'library'
-      })
-      expect(migrated.selectedScreenData).not.toHaveProperty('promptFolderId')
+      expect(migrated).toMatchObject({ selectedScreen: 'home', selectedScreenData: null, lastCollectionId: null })
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-user', collectionId)).toEqual({
         selectedEntryId: 'collection-header', treeIsExpanded: false, contentSectionIsExpanded: false,
         selectedMode: 'active', shownFinalStatusGroups: { archived: true }
       })
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-machine', collectionId)).toEqual({ scrollTopByMode: { active: 123 } })
-      expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 27 }])
+      expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 28 }])
       await migrateSqliteDatabase(electronApp)
       expect(await readWorkspaceUiState(electronApp, WORKSPACE_ID)).toEqual(migrated)
-      /** Startup restores the selected activity and collection through the production reader. */
-      const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-      await expect(mainWindow.getByTestId('prompt-collection-screen')).toBeVisible()
+      /** Startup opens Home, and the migrated collection remains selectable in the project. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+      await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+      await testHelpers.navigateToPromptCollections(kind === 'task' ? 'Tasks' : 'Library')
       await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(kind === 'task' ? 'Tasks' : 'Library')
     })
   }
@@ -145,7 +141,7 @@ describe('Collection terminology migrations', () => {
     /** Compare all stored view fields before rendering can update viewport settings. */
     const before = await runSqlQuery(electronApp, 'SELECT * FROM prompt_collection_view_state ORDER BY content_owner_id')
     await migrateSqliteDatabase(electronApp)
-    expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 27 }])
+    expect((await runSqlQuery(electronApp, 'SELECT version FROM schema_version')).rows).toEqual([{ version: 28 }])
     for (const row of before.rows!) {
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'collection-user', String(row.content_owner_id))).toEqual({
         selectedEntryId: row.selected_entry_id === 'root-header' ? 'collection-header' : row.selected_entry_id,
@@ -160,8 +156,9 @@ describe('Collection terminology migrations', () => {
     const migratedRows = await runSqlQuery(electronApp, 'SELECT * FROM workspace_state ORDER BY state_type, entity_id')
     await migrateSqliteDatabase(electronApp)
     expect((await runSqlQuery(electronApp, 'SELECT * FROM workspace_state ORDER BY state_type, entity_id')).rows).toEqual(migratedRows.rows)
-    /** Startup and reload must restore the migrated collection overview through the real UI. */
-    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    /** Opening the project and reloading must restore the migrated collection overview through the real UI. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.navigateToPromptCollections('Tasks')
     await expect(mainWindow.getByTestId('prompt-collection-header')).toBeVisible()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Tasks')
     await mainWindow.getByTestId('sidebar-collection-overview-button').click()

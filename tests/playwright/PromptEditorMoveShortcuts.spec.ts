@@ -36,8 +36,7 @@ describe('Editor move shortcuts', () => {
         /** Window and navigation helpers for the selected editor kind. */
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         await testHelpers.setupWorkspaceViaUI()
-        if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
-        else await testHelpers.navigateToPromptCollections('Content')
+        await testHelpers.navigateToPromptCollections('Content')
         /** Second editor moves independently of the tree's initially selected first entry. */
         const selector = promptEditorSelector('second')
         /** Note selectors keep its registry lookup distinct from the main editor. */

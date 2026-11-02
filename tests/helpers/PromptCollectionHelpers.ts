@@ -111,18 +111,10 @@ export async function getPromptCollectionScreenInfo(page: Page): Promise<{
   )
 }
 
-/** Opens the task-prompt activity before selecting one task-prompt collection. */
+/** Opens the default project before selecting one task or template collection. */
 export async function navigateToPromptCollections(page: Page, collectionName: string): Promise<void> {
-  const activity = page.getByTestId('nav-button-prompt-task-collections')
+  const activity = page.getByTestId('nav-button-project')
   // An already expanded activity must not be clicked again before using its sidebar.
-  if (await activity.getAttribute('aria-expanded') !== 'true') await activity.click()
-  await clickPromptCollectionItem(page, collectionName)
-}
-
-/** Opens the template activity before selecting one prompt-template collection. */
-export async function navigateToTemplateCollection(page: Page, collectionName: string): Promise<void> {
-  const activity = page.getByTestId('nav-button-prompt-template-collections')
-  // Navigation helpers open the sidebar; raw activity clicks exercise toggling.
   if (await activity.getAttribute('aria-expanded') !== 'true') await activity.click()
   await clickPromptCollectionItem(page, collectionName)
 }

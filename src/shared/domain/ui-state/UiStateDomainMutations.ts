@@ -48,7 +48,7 @@ export const parseSetWorkspaceUiStateDomainCommand = (
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
-  if (Object.keys(record).length !== 5 || typeof record.workspaceId !== 'string') return null
+  if (Object.keys(record).length !== 4 || typeof record.workspaceId !== 'string') return null
   /** Validated discriminated workspace screen selection. */
   const selection = parseWorkspaceScreenSelection(
     record.selectedScreen,
@@ -56,18 +56,14 @@ export const parseSetWorkspaceUiStateDomainCommand = (
   )
   if (
     !selection ||
-    (record.lastPromptTaskCollectionId !== null &&
-      typeof record.lastPromptTaskCollectionId !== 'string') ||
-    (record.lastPromptTemplateCollectionId !== null &&
-      typeof record.lastPromptTemplateCollectionId !== 'string')
+    (record.lastCollectionId !== null && typeof record.lastCollectionId !== 'string')
   ) {
     return null
   }
   return {
     workspaceId: record.workspaceId,
     ...selection,
-    lastPromptTaskCollectionId: record.lastPromptTaskCollectionId,
-    lastPromptTemplateCollectionId: record.lastPromptTemplateCollectionId
+    lastCollectionId: record.lastCollectionId
   }
 }
 

@@ -122,24 +122,19 @@ const readContentIds = (
     .map((entry) => entry.id)
 }
 
-/** Discovers one kind of collection in deterministic disk-name order. */
-const readDirectWorkspaceCollectionRefs = (
-  workspacePath: string,
-  kind: PromptCollectionKind
-): CollectionEntryRef[] => {
+/** Discovers task and template collections together in deterministic disk-name order. */
+const readDirectWorkspaceCollectionRefs = (workspacePath: string): CollectionEntryRef[] => {
   const fs = getFs()
-  /** Type directory containing every discoverable collection in this order. */
-  const diskPath = path.join(workspacePath, resolvePromptRootDirectoryName(kind))
-  /** Valid collections paired with their stable references. */
-  const collections = fs
-    .readdirSync(diskPath, { withFileTypes: true })
+  /** Valid collections of both kinds paired with their stable references. */
+  const collections = (['prompt', 'template'] as const).flatMap((kind) => fs
+    .readdirSync(path.join(workspacePath, resolvePromptRootDirectoryName(kind)), { withFileTypes: true })
     .filter(
       (entry) => entry.isDirectory() && isPromptCollectionDirectory(workspacePath, entry.name, kind)
     )
     .map((entry) => ({
       folderName: entry.name,
       ref: collectionEntryRef(readPromptCollectionInfo(workspacePath, entry.name, kind).collectionId)
-    }))
+    })))
 
   return collections
     .sort((left, right) =>
@@ -151,13 +146,12 @@ const readDirectWorkspaceCollectionRefs = (
 /** Loads a user's order, removes stale references, and appends discoveries by folder name. */
 export const readWorkspaceCollectionEntries = (
   workspacePath: string,
-  workspaceId: string,
-  kind: PromptCollectionKind
+  workspaceId: string
 ): CollectionEntryRef[] => {
   /** A missing row uses the same alphabetical discovery order and is saved immediately. */
-  const saved = WorkspaceStateDataAccess.read(workspaceId, `${kind}-collection-order`, null)
-  /** Disk names determine the initial order and the placement of newly discovered collections. */
-  const discovered = readDirectWorkspaceCollectionRefs(workspacePath, kind)
+  const saved = WorkspaceStateDataAccess.read(workspaceId, 'collection-order', null)
+  /** Disk names of both kinds, combined alphabetically, determine the initial order and new placements. */
+  const discovered = readDirectWorkspaceCollectionRefs(workspacePath)
   /** Remaining identities exclude stale and duplicate saved references. */
   const remaining = new Set(discovered.map((entry) => entry.id))
   /** Existing valid positions take priority over alphabetical placement. */
@@ -166,7 +160,7 @@ export const readWorkspaceCollectionEntries = (
   )
   entries.push(...discovered.filter((entry) => remaining.delete(entry.id)))
   if (!saved || JSON.stringify(entries) !== JSON.stringify(saved.entries)) {
-    WorkspaceStateDataAccess.write(workspaceId, `${kind}-collection-order`, null, { entries })
+    WorkspaceStateDataAccess.write(workspaceId, 'collection-order', null, { entries })
   }
   return entries
 }
@@ -629,7 +623,7 @@ export const readPromptCollections = (
   }
 
   const promptCollectionById = new Map(promptCollections.map((collection) => [collection.id, collection]))
-  return readDirectWorkspaceCollectionRefs(workspacePath, kind).flatMap((entry) => {
+  return readDirectWorkspaceCollectionRefs(workspacePath).flatMap((entry) => {
     const collection = promptCollectionById.get(entry.id)
     return collection ? [collection] : []
   })

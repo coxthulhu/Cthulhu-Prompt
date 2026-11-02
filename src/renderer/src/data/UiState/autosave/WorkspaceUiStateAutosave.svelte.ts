@@ -1,7 +1,7 @@
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
 import { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
-  isPromptCollectionScreenSelection,
+  isProjectScreenSelection,
   type WorkspaceAccordionSectionViewEntry
 } from '@shared/domain/user-persistence/UserPersistence'
 import {
@@ -87,7 +87,7 @@ const setPromptCollectionUiStateFieldsWithAutosave = (
   if (
     selectedPromptCollectionId &&
     workspaceUiState &&
-    isPromptCollectionScreenSelection(workspaceUiState) &&
+    isProjectScreenSelection(workspaceUiState) &&
     workspaceUiState.selectedScreenData.promptCollectionId === selectedPromptCollectionId &&
     workspaceUiState.selectedScreenData.contentOwnerId !== contentOwnerId
   ) {
@@ -207,7 +207,7 @@ export const lookupWorkspacePersistedPromptCollectionSelection = (
   const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
   if (
     !workspaceUiState ||
-    !isPromptCollectionScreenSelection(workspaceUiState) ||
+    !isProjectScreenSelection(workspaceUiState) ||
     workspaceUiState.selectedScreenData.promptCollectionId !== promptCollectionId
   ) {
     return null

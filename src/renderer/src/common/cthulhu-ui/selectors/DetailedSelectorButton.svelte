@@ -10,7 +10,8 @@
     label: string
     items: DropdownPopupDetailedItem[]
     selectedItem: DropdownPopupDetailedItem
-    footerItem?: DropdownPopupDetailedItem
+    /** Action rows pinned below the scrolling items. */
+    footerItems?: DropdownPopupDetailedItem[]
     /** Disables the selector trigger. */
     disabled?: boolean
     testId?: string
@@ -26,7 +27,7 @@
     label,
     items,
     selectedItem,
-    footerItem,
+    footerItems,
     disabled = false,
     testId,
     triggerTestId,
@@ -42,7 +43,7 @@
   {label}
   {items}
   {selectedItem}
-  {footerItem}
+  {footerItems}
   {itemDragOptions}
   itemSelectionVariant={selectionVariant}
   {showSelectedItemChevron}

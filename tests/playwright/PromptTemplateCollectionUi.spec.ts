@@ -146,7 +146,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     /** Template-specific action rendered under the expanded category. */
     const action = mainWindow.getByTestId('prompt-tree-template-category-empty-action-Empty')
     /** Category toggle verifies both empty and populated child visibility. */
@@ -217,7 +217,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Empty Templates')
+    await testHelpers.navigateToPromptCollections('Empty Templates')
 
     /** Shared action replacing the former two-line empty indicator. */
     const action = mainWindow.getByTestId('prompt-tree-template-empty-state')
@@ -265,7 +265,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
 
     await electronApp.evaluate(({ BrowserWindow }) => {
       /** Active window enlarged enough to leave 300px above and below a short template row. */
@@ -349,7 +349,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     /** Category hover action whose label must reflect template-collection content. */
@@ -430,7 +430,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Case Templates')
+    await testHelpers.navigateToPromptCollections('Case Templates')
     await waitForMonacoEditor(mainWindow, editorSelector)
 
     const toolbar = mainWindow.locator(
@@ -459,7 +459,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     const toolbar = mainWindow.locator(
@@ -507,7 +507,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     await setEditorSelections(mainWindow, TEMPLATE_EDITOR, [
@@ -541,7 +541,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await stubClipboard(mainWindow)
 
     await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
@@ -589,7 +589,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
 
     const titleRow = mainWindow.locator(`${TEMPLATE_EDITOR} .prompt-editor-title-row`)
     // Use the supported minimum window width before narrowing the title row through the sidebar.
@@ -656,7 +656,7 @@ describe('Prompt template collection UI', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
 
     await focusMonacoEditor(mainWindow, TEMPLATE_EDITOR)
@@ -675,7 +675,7 @@ describe('Prompt template collection UI', () => {
     await expect
       .poll(async () => Math.abs((await getEditorScrollTop(mainWindow, TEMPLATE_EDITOR))! - 240))
       .toBeLessThanOrEqual(2)
-    await testHelpers.navigateToPromptTemplateCollections('Empty Templates')
+    await testHelpers.navigateToPromptCollections('Empty Templates')
     await expect(mainWindow.locator(TEMPLATE_EDITOR)).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="sidebar-prompt-status-accordion"]')).toHaveCount(
       1
@@ -703,14 +703,14 @@ describe('Prompt template collection UI', () => {
       })
       .toBe(TEMPLATE_ID)
 
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await waitForMonacoEditor(mainWindow, TEMPLATE_EDITOR)
     await expect
       .poll(async () => Math.abs((await getEditorScrollTop(mainWindow, TEMPLATE_EDITOR))! - 240))
       .toBeLessThanOrEqual(2)
   })
 
-  test('filters cross-kind roots from each collection selector', async ({
+  test('lists both collection kinds with their kind icons in the project selector and quick picks', async ({
     testSetup
   }) => {
     const workspacePath = '/ws/template-cross-kind-drag'
@@ -750,13 +750,19 @@ describe('Prompt template collection UI', () => {
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptCollections('Prompts')
+    // Quick picks use each collection kind's icon instead of a folder, whether or not they are selected.
+    await expect(mainWindow.getByTestId(`sidebar-quick-collection-${promptCollectionId}`).locator('svg').first())
+      .toHaveClass(/lucide-file-text/)
+    await expect(mainWindow.getByTestId(`sidebar-quick-collection-${templateCollectionId}`).locator('svg').first())
+      .toHaveClass(/lucide-layers/)
     await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     await expect(mainWindow.locator(promptCollectionSelectorDropdownItemSelector(promptCollectionId))).toBeVisible()
-    await expect(mainWindow.locator(promptCollectionSelectorDropdownItemSelector(templateCollectionId))).toHaveCount(0)
-
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     await expect(mainWindow.locator(promptCollectionSelectorDropdownItemSelector(templateCollectionId))).toBeVisible()
-    await expect(mainWindow.locator(promptCollectionSelectorDropdownItemSelector(promptCollectionId))).toHaveCount(0)
+    await mainWindow.keyboard.press('Escape')
+
+    await testHelpers.navigateToPromptCollections('Templates')
+    await expect(mainWindow.getByTestId(`sidebar-quick-collection-${templateCollectionId}`).locator('svg').first())
+      .toHaveClass(/lucide-layers/)
+    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Templates')
   })
 })

@@ -34,7 +34,6 @@ import {
   resolvePromptTitleUpdateForPromptIds
 } from '@shared/domain/prompt/promptFallbackTitle'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 
 /** Renderer-authored command for creating one prompt at an exact collection position. */
@@ -498,7 +497,7 @@ const createDeletePlanner = (
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      getAllWorkspaceCollectionEntries(candidate).some(
+      candidate.collectionEntries.some(
         (entry) => entry.id === command.promptCollectionId
       )
     )

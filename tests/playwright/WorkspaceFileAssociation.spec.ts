@@ -25,7 +25,7 @@ const startupFileSuite = createPlaywrightTestSuite({
 const seedFileWorkspaceScreen = async (electronApp: ElectronApplication): Promise<void> => {
   await seedWorkspaceUiState(electronApp, {
     workspaceId: createDeterministicId(fileWorkspacePath),
-    selectedScreen: 'prompt-task-collections',
+    selectedScreen: 'project',
     selectedScreenData: {
       promptCollectionId: createDeterministicId(`${fileWorkspacePath}:Development`)
     },

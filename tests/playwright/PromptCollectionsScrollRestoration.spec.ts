@@ -53,7 +53,7 @@ const startSavedWorkspace = async (
   })
   await seedWorkspaceUiState(electronApp, {
     workspaceId: WORKSPACE_ID,
-    selectedScreen: 'prompt-task-collections',
+    selectedScreen: 'project',
     selectedScreenData: { promptCollectionId: 'Alpha' },
     promptCollectionViewEntries: [
       {

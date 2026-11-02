@@ -225,7 +225,7 @@ describe('Prompt categories', () => {
       }
       /** Window and navigation helpers for this empty workflow. */
       const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
-      if (workflow === 'template') await testHelpers.navigateToPromptTemplateCollections('Templates')
+      if (workflow === 'template') await testHelpers.navigateToPromptCollections('Templates')
       else await testHelpers.navigateToPromptCollections('Prompts')
       if (workflow === 'backlog') await mainWindow.getByTestId('prompt-collection-backlog-filter').click()
       await mainWindow.mouse.move(0, 0)
@@ -278,7 +278,7 @@ describe('Prompt categories', () => {
       }
       /** Window and navigation helpers for the category-boundary transition. */
       const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
-      if (contentKind === 'template') await testHelpers.navigateToPromptTemplateCollections('Templates')
+      if (contentKind === 'template') await testHelpers.navigateToPromptCollections('Templates')
       else await testHelpers.navigateToPromptCollections('Prompts')
       /** Top button initially doubles as the first category drop boundary. */
       const button = mainWindow.getByTestId('prompt-divider-add-initial').first()
@@ -314,7 +314,7 @@ describe('Prompt categories', () => {
       'category:'
     )
 
-    await testHelpers.navigateToPromptTemplateCollections('Templates')
+    await testHelpers.navigateToPromptCollections('Templates')
     await expect(mainWindow.locator('.prompt-editor-metadata-category')).toHaveCount(0)
   })
 
@@ -798,7 +798,7 @@ describe('Prompt categories', () => {
       `${WORKSPACE_PATH}/Templates/TemplateTargets/Active/_CollectionInfo/CategoryOrder.json`
     /** Started template workspace exposing the shared editor and tree drag behavior. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
-    await testHelpers.navigateToPromptTemplateCollections('Template Targets')
+    await testHelpers.navigateToPromptCollections('Template Targets')
 
     /** Collapsed template category header that owns the category-start target. */
     const categoryHeader = mainWindow.locator(
@@ -1315,12 +1315,12 @@ describe('Prompt categories', () => {
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
-      selectedScreen: 'prompt-task-collections',
+      selectedScreen: 'project',
       selectedScreenData: {
         promptCollectionId: PROMPT_ROOT_ID,
         contentOwnerId: PROMPT_CATEGORY_ID
       },
-      lastPromptTaskCollectionId: PROMPT_ROOT_ID,
+      lastCollectionId: PROMPT_ROOT_ID,
       promptCollectionViewEntries: [
         {
           contentOwnerId: PROMPT_ROOT_ID,
@@ -1483,7 +1483,7 @@ describe('Prompt categories', () => {
         )
         return {
           contentOwnerId:
-            uiState.selectedScreen === 'prompt-task-collections'
+            uiState.selectedScreen === 'project'
               ? (uiState.selectedScreenData as { contentOwnerId?: string } | null)?.contentOwnerId
               : null,
           categoryPresent: uiState.promptCollectionViewEntries.some(
@@ -1689,7 +1689,7 @@ describe('Prompt categories', () => {
         ]
       })
 
-    await testHelpers.navigateToPromptTemplateCollections('Template Source')
+    await testHelpers.navigateToPromptCollections('Template Source')
     await beginPromptHandleDrag(mainWindow, 'moving-category-template')
     await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
     await moveActiveDragToTarget(

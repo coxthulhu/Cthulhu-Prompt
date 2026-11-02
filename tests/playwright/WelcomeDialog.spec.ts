@@ -112,7 +112,7 @@ describe('Welcome Dialog', () => {
     await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Welcome Workspace')
     await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
     await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-    // Workspace creation opens Task Prompts; Home owns the persisted workspace path display.
+    // Workspace creation opens the default project; Home owns the persisted workspace path display.
     await expect(mainWindow.getByTestId('prompt-collection-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
     await mainWindow.getByTestId('nav-button-home').click()

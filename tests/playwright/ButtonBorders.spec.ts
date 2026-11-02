@@ -230,8 +230,8 @@ describe('Button styling', () => {
     await expect(selectedSelectorItem).toHaveCSS('background-color', neutralFilledHover)
     await mainWindow.keyboard.press('Escape')
 
-    // Sidebar controls render only in the task collection mode.
-    await testHelpers.clickNavButton('Task Prompts')
+    // Sidebar controls render only in the project mode.
+    await testHelpers.clickNavButton('Default Project')
     const promptTreeActionButton = mainWindow.locator('.sidebarPromptTreeActionButton').first()
     await promptTreeActionButton.waitFor({ state: 'attached' })
     await expect(promptTreeActionButton).toHaveCSS('border-top-style', 'none')
@@ -287,7 +287,7 @@ describe('Button styling', () => {
     await expect(unselectedCollection).toHaveCSS('border-top-color', neutralHoverBorder)
 
     const createCollectionItem = collectionSelectorMenu.locator(
-      '[data-testid="sidebar-prompt-collection-dropdown-add-item"]'
+      '[data-testid="sidebar-prompt-collection-dropdown-add-task-item"]'
     )
     await createCollectionItem.hover()
     await expect(createCollectionItem).toHaveCSS('background-color', accentHoverFill)

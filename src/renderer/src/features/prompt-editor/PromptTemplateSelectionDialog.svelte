@@ -178,7 +178,7 @@
   })
   // template collections with usable descendants retain workspace ordering.
   const templateCollections = $derived.by(() =>
-    (selectedWorkspace?.templateCollectionEntries ?? []).flatMap((entry) => {
+    (selectedWorkspace?.collectionEntries ?? []).flatMap((entry) => {
       const collection = promptCollectionById[entry.id]
       return collection?.kind === 'template' && availableTemplateCountByCollectionId[collection.id] > 0
         ? [collection]

@@ -10,7 +10,6 @@ import { type MarkdownContentPersisted } from '@shared/domain/markdown-content/M
 import { type PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import {
   mutatePacedRendererDomainMutation,
   runImmediateRendererDomainMutation
@@ -149,7 +148,7 @@ export const createMarkdownContentRendererMutations = <
     }
     /** Workspace that owns the deleted content's collection. */
     const workspace = workspaceCollection.toArray.find((candidate) =>
-      getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === promptCollectionId)
+      candidate.collectionEntries.some((entry) => entry.id === promptCollectionId)
     )
     if (!workspace) throw new Error(`${config.label} workspace not loaded`)
     /** Shared deletion command projected by renderer and main process. */

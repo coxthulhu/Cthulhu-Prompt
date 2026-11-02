@@ -54,8 +54,7 @@ describe('Editor-driven prompt tree selection', () => {
       /** Window and virtual-scroll helpers for this content kind. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
-      else await testHelpers.navigateToPromptCollections('Content')
+      await testHelpers.navigateToPromptCollections('Content')
       await stubClipboard(mainWindow)
       /** Sidebar namespace distinguishes the two content kinds. */
       const group = kind === 'template' ? 'template' : 'active'
@@ -137,8 +136,7 @@ describe('Editor-driven prompt tree selection', () => {
       /** Window and navigation helpers for a root with a categorized editor. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
-      else await testHelpers.navigateToPromptCollections('Content')
+      await testHelpers.navigateToPromptCollections('Content')
       /** Content kind determines the sidebar test IDs. */
       const group = kind === 'template' ? 'template' : 'active'
       /** Collapsing the sidebar must leave the main editors available. */
@@ -191,8 +189,7 @@ describe('Editor-driven prompt tree selection', () => {
       /** Window and virtual-scroll helpers for the long-body fixture. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
-      if (kind === 'template') await testHelpers.navigateToPromptTemplateCollections('Content')
-      else await testHelpers.navigateToPromptCollections('Content')
+      await testHelpers.navigateToPromptCollections('Content')
       /** Sidebar namespace for the long editor's selected row. */
       const group = kind === 'template' ? 'template' : 'active'
       await focusMonacoEditor(mainWindow, promptEditorSelector('second'))

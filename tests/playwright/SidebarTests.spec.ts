@@ -80,7 +80,7 @@ test.describe('Sidebar Tests', () => {
   })
 
   // Each collection mode restores its own collection and status view after other modes are displayed.
-  test('restores task and template collection selections across activity switches', async ({ testSetup }) => {
+  test('restores the project collection selection across activity switches', async ({ testSetup }) => {
     /** Workspace with distinct task and template collection names. */
     const path = '/ws/sidebar-modes'
     await testSetup.setupFilesystem({
@@ -102,21 +102,21 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.navigateToPromptCollections('Beta')
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toHaveAttribute('aria-pressed', 'true')
-    await testHelpers.navigateToPromptTemplateCollections('Delta')
-    await expect(sidebarTitle).toHaveText('Template Collections')
+    await testHelpers.navigateToPromptCollections('Delta')
+    await expect(sidebarTitle).toHaveText('Default Project')
     await expect(collectionTitle).toHaveText('Delta')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
 
+    // The project reopens its last collection of either kind, and each collection keeps its status mode.
     await testHelpers.navigateToHomeScreen()
     await expect(sidebarTitle).toHaveText('Cthulhu Prompt')
-    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
-    await expect(sidebarTitle).toHaveText('Task Collections')
-    await expect(collectionTitle).toHaveText('Beta')
-    await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toHaveAttribute('aria-pressed', 'true')
-    await mainWindow.getByTestId('nav-button-prompt-template-collections').click()
-    await expect(sidebarTitle).toHaveText('Template Collections')
+    await mainWindow.getByTestId('nav-button-project').click()
+    await expect(sidebarTitle).toHaveText('Default Project')
     await expect(collectionTitle).toHaveText('Delta')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
+    await testHelpers.navigateToPromptCollections('Beta')
+    await expect(collectionTitle).toHaveText('Beta')
+    await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toHaveAttribute('aria-pressed', 'true')
   })
 
   test('home selected on startup and settings enabled', async ({ testSetup }) => {
@@ -192,7 +192,7 @@ test.describe('Sidebar Tests', () => {
     await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
 
     const activityBar = mainWindow.getByTestId('app-activity-bar')
-    const activity = mainWindow.getByTestId('nav-button-prompt-task-collections')
+    const activity = mainWindow.getByTestId('nav-button-project')
     const sidebar = mainWindow.getByTestId('app-sidebar')
     const sidebarPane = mainWindow.locator('.resizableSidebarPane')
     const mainSurface = mainWindow.locator('.mainScreenSurface')
@@ -214,7 +214,7 @@ test.describe('Sidebar Tests', () => {
     await expect(titleBarAppIcon).toHaveCSS('height', '16px')
     await expect(activity).toHaveAttribute('aria-current', 'page')
     await expect(activity).toHaveAttribute('aria-expanded', 'true')
-    await expect(activity).toHaveAttribute('title', 'Task Prompts — Hide sidebar')
+    await expect(activity).toHaveAttribute('title', 'Default Project — Hide sidebar')
     expect(await readIndicator()).toEqual({ height: '36px', width: '2px' })
     await expect(sidebarPane).toHaveCSS('transition-duration', '0s')
     await expect(sidebarPane).toHaveCSS('animation-name', 'none')
@@ -232,7 +232,7 @@ test.describe('Sidebar Tests', () => {
     await expect(activityBar).toBeVisible()
     await expect(activity).toHaveAttribute('aria-current', 'page')
     await expect(activity).toHaveAttribute('aria-expanded', 'false')
-    await expect(activity).toHaveAttribute('title', 'Task Prompts — Show sidebar')
+    await expect(activity).toHaveAttribute('title', 'Default Project — Show sidebar')
     await expect(activity).toHaveCSS('color', activeIconColor)
     await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
     expect(await readIndicator()).toEqual({ height: '26px', width: '2px' })
@@ -252,7 +252,7 @@ test.describe('Sidebar Tests', () => {
     await activity.press('Space')
     await expect(sidebar).toBeHidden()
     // Every primary screen opens its sidebar on navigation and toggles on a repeat click.
-    for (const screen of ['settings', 'home', 'prompt-template-collections', 'prompt-task-collections']) {
+    for (const screen of ['settings', 'home', 'project']) {
       const nextActivity = mainWindow.getByTestId(`nav-button-${screen}`)
       await nextActivity.click()
       await expect(nextActivity).toHaveAttribute('aria-current', 'page')

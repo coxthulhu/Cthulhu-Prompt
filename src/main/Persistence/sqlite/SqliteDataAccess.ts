@@ -8,7 +8,7 @@ import { migrateWorkspaceState } from './WorkspaceStateMigration'
 
 const SQLITE_FILENAME = 'CthulhuPrompt.sqlite3'
 const INITIAL_SCHEMA_VERSION = 1
-const LATEST_SCHEMA_VERSION = 27
+const LATEST_SCHEMA_VERSION = 28
 
 let database: Database.Database | null = null
 let inMemoryDatabase = false
@@ -795,6 +795,26 @@ const applyStartupMigrations = (db: Database.Database): void => {
     if (schemaVersion === 26) {
       migrateWorkspaceState(db)
       schemaVersion = 27
+      continue
+    }
+
+    if (schemaVersion === 27) {
+      // Combine task and template collections into the default project, clearing per-kind orders and favorites.
+      db.transaction(() => {
+        db.exec(`
+          DELETE FROM workspace_state WHERE state_type IN ('prompt-collection-order', 'template-collection-order',
+            'prompt-collection-favorites', 'template-collection-favorites');
+          UPDATE workspace_state SET data_json = CASE
+            WHEN json_extract(data_json, '$.selectedScreen') IN ('prompt-task-collections', 'prompt-template-collections')
+              THEN json_object('selectedScreen', 'home', 'selectedScreenData', json('null'), 'lastCollectionId', json('null'))
+            ELSE json_object('selectedScreen', json_extract(data_json, '$.selectedScreen'),
+              'selectedScreenData', json(json_extract(data_json, '$.selectedScreenData')), 'lastCollectionId', json('null'))
+            END
+          WHERE state_type = 'workspace-navigation';
+        `)
+        db.prepare('UPDATE schema_version SET version = ?').run(28)
+      })()
+      schemaVersion = 28
       continue
     }
 

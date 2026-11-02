@@ -36,8 +36,7 @@ export type WorkspaceUiStateSnapshot = {
     | 'settings'
     | 'mockups'
     | 'test-screen'
-    | 'prompt-task-collections'
-    | 'prompt-template-collections'
+    | 'project'
   selectedScreenData:
     | null
     | { mockupId: string | null }
@@ -46,8 +45,7 @@ export type WorkspaceUiStateSnapshot = {
         /** collection or category owner containing the selected row. */
         contentOwnerId?: string | null
       }
-  lastPromptTaskCollectionId: string | null
-  lastPromptTemplateCollectionId: string | null
+  lastCollectionId: string | null
   promptCollectionViewEntries: Array<{
     contentOwnerId: string
     selectedEntryId: string
@@ -138,15 +136,14 @@ export const readWorkspaceState = async <T = Record<string, unknown>>(
   return result.rows?.[0] ? JSON.parse(String(result.rows[0].data_json)) : null
 }
 
-/** Reads the actual SQLite collection order using the workspace's persisted identity. */
+/** Reads the actual SQLite combined collection order using the workspace's persisted identity. */
 export const readWorkspaceCollectionOrder = async (
   electronApp: ElectronApplication,
-  workspacePath: string,
-  kind: 'prompt' | 'template' = 'prompt'
+  workspacePath: string
 ): Promise<{ entries: Array<{ kind: 'collection'; id: string }> } | null> => {
   /** Workspace IDs, rather than machine-local paths, own user-specific orders. */
   const info = JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(workspacePath)))
-  return await readWorkspaceState(electronApp, info.workspaceId, `${kind}-collection-order`, null)
+  return await readWorkspaceState(electronApp, info.workspaceId, 'collection-order', null)
 }
 
 /** Reads settings from their application-wide user record. */
@@ -203,8 +200,7 @@ export const seedWorkspaceUiState = async (
       | 'settings'
       | 'mockups'
       | 'test-screen'
-      | 'prompt-task-collections'
-      | 'prompt-template-collections'
+      | 'project'
     selectedScreenData:
       | null
       | { mockupId: string | null }
@@ -213,8 +209,7 @@ export const seedWorkspaceUiState = async (
           /** collection or category owner containing the selected row. */
           contentOwnerId?: string | null
         }
-    lastPromptTaskCollectionId?: string | null
-    lastPromptTemplateCollectionId?: string | null
+    lastCollectionId?: string | null
     promptCollectionViewEntries: WorkspacePromptCollectionUiStateSeedEntry[]
     accordionViewEntries?: AccordionUiStateSeedEntry[]
   }
@@ -222,8 +217,7 @@ export const seedWorkspaceUiState = async (
   await seedWorkspaceState(electronApp, data.workspaceId, 'workspace-navigation', null, {
     selectedScreen: data.selectedScreen,
     selectedScreenData: data.selectedScreenData,
-    lastPromptTaskCollectionId: data.lastPromptTaskCollectionId ?? null,
-    lastPromptTemplateCollectionId: data.lastPromptTemplateCollectionId ?? null
+    lastCollectionId: data.lastCollectionId ?? null
   })
   await runSqlStatement(electronApp, `DELETE FROM workspace_state WHERE workspace_id = ${toSqlText(data.workspaceId)}
     AND state_type IN ('collection-user', 'collection-machine', 'accordion-user', 'accordion-machine')`)
@@ -272,8 +266,7 @@ export const readWorkspaceUiState = async (electronApp: ElectronApplication, wor
     workspaceId,
     selectedScreen: navigation?.selectedScreen ?? 'home',
     selectedScreenData: navigation?.selectedScreenData ?? null,
-    lastPromptTaskCollectionId: navigation?.lastPromptTaskCollectionId ?? null,
-    lastPromptTemplateCollectionId: navigation?.lastPromptTemplateCollectionId ?? null,
+    lastCollectionId: navigation?.lastCollectionId ?? null,
     promptCollectionViewEntries: rows.filter((row) => row.type === 'collection-user').map((row) => ({
       contentOwnerId: row.id, selectedEntryId: row.data.selectedEntryId,
       treeIsExpanded: row.data.treeIsExpanded, contentSectionIsExpanded: row.data.contentSectionIsExpanded

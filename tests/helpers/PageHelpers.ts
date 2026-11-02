@@ -107,9 +107,6 @@ export function createPageHelpers(mainWindow: Page, ipcControls: IpcControls) {
     /** Navigate to prompt collections using this test’s main window. */
     navigateToPromptCollections: (folderName: string) =>
       promptCollectionHelpers.navigateToPromptCollections(mainWindow, folderName),
-    /** Opens one prompt-template root through its dedicated activity. */
-    navigateToPromptTemplateCollections: (folderName: string) =>
-      promptCollectionHelpers.navigateToTemplateCollection(mainWindow, folderName),
     /** Pause ipc channel using this test’s main window. */
     pauseIpcChannel: async (channel: string) => {
       await ipcControls.pauseIpcChannel(channel)

@@ -34,7 +34,6 @@ import {
   resolvePromptStatusFolderName,
   resolveWorkspaceInfoPath
 } from './PromptPersistencePaths'
-import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
 import type { WorkspacePersistenceFields } from './WorkspacePersistence'
 
 /** One typed storage transition staged without inventing a domain mutation. */
@@ -83,7 +82,7 @@ const findOwningWorkspace = (
   graph
     .getAll('workspace')
     .find((workspace) =>
-      getAllWorkspaceCollectionEntries(workspace.data).some((entry) => entry.id === promptCollectionId)
+      workspace.data.collectionEntries.some((entry) => entry.id === promptCollectionId)
     )
 
 /** Derives canonical prompt-collection metadata from its owning workspace and after data. */

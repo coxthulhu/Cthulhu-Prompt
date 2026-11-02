@@ -39,9 +39,8 @@ describe('prompt template renderer loading', () => {
           workspacePath: 'C:\\Templates',
           workspaceName: 'Templates',
           /** Existing fixtures start without user favorites. */
-          favoriteCollectionIds: { prompt: [], template: [] },
-          promptCollectionEntries: [],
-          templateCollectionEntries: [{ kind: 'collection', id: 'renderer-template-collection' }]
+          favoriteCollectionIds: [],
+          collectionEntries: [{ kind: 'collection', id: 'renderer-template-collection' }]
         }
       },
       promptCollections: [

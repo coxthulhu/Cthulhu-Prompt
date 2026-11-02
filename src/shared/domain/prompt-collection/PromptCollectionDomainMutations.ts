@@ -20,11 +20,6 @@ import {
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 import { createWorkspacePromptCollectionUiStateKey } from '@shared/domain/ui-state/UiState'
-import {
-  getAllWorkspaceCollectionEntries,
-  getWorkspaceCollectionEntries,
-  setWorkspaceCollectionEntries
-} from '@shared/domain/workspace/Workspace'
 
 /** Renderer-authored command for creating one collection prompt or template collection. */
 export type CreatePromptCollectionDomainCommand = {
@@ -156,7 +151,7 @@ export const planCreatePromptCollectionDomainMutation: DomainPlanner<
   const preparedName = preparePromptCollectionName(command.displayName)
   /** Same-kind sibling collections participating in name-conflict validation. */
   const siblings = workspace
-    ? getAllWorkspaceCollectionEntries(workspace).flatMap((entry) => {
+    ? workspace.collectionEntries.flatMap((entry) => {
         /** Loaded sibling referenced by one workspace entry. */
         const sibling = state.get('promptCollection', entry.id)
         return sibling && sibling.kind === command.kind ? [sibling] : []
@@ -164,7 +159,7 @@ export const planCreatePromptCollectionDomainMutation: DomainPlanner<
     : []
   /** Requested insertion index after validating its predecessor. */
   const insertIndex = workspace
-    ? resolveEntryInsertIndex(getWorkspaceCollectionEntries(workspace, command.kind), command.previousEntryId)
+    ? resolveEntryInsertIndex(workspace.collectionEntries, command.previousEntryId)
     : null
 
   if (
@@ -202,11 +197,8 @@ export const planCreatePromptCollectionDomainMutation: DomainPlanner<
       entityType: 'workspace',
       id: command.workspaceId,
       recipe: (draft) => {
-        /** Workspace entries receiving the new collection at its exact position. */
-        /** Kind-specific order receiving the new collection at its exact position. */
-        const entries = [...getWorkspaceCollectionEntries(draft, command.kind)]
-        entries.splice(insertIndex, 0, collectionEntryRef(command.promptCollectionId))
-        setWorkspaceCollectionEntries(draft, command.kind, entries)
+        /** Combined order receiving the new collection at its exact position. */
+        draft.collectionEntries.splice(insertIndex, 0, collectionEntryRef(command.promptCollectionId))
       }
     },
     {
@@ -236,13 +228,13 @@ export const planRenamePromptCollectionDomainMutation: DomainPlanner<
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === promptCollection.id)
+      candidate.collectionEntries.some((entry) => entry.id === promptCollection.id)
     )
   /** Validated and normalized display and directory names. */
   const preparedName = preparePromptCollectionName(command.displayName)
   /** Same-kind sibling collections participating in name-conflict validation. */
   const siblingCollections = workspace
-    ? getAllWorkspaceCollectionEntries(workspace).flatMap((entry) => {
+    ? workspace.collectionEntries.flatMap((entry) => {
         /** Loaded collection referenced by one workspace entry. */
         const candidate = state.get('promptCollection', entry.id)
         return candidate && candidate.kind === promptCollection.kind ? [candidate] : []
@@ -287,9 +279,7 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
   if (
     !workspace ||
     !promptCollection ||
-    !getWorkspaceCollectionEntries(workspace, promptCollection.kind).some(
-      (entry) => entry.id === command.promptCollectionId
-    )
+    !workspace.collectionEntries.some((entry) => entry.id === command.promptCollectionId)
   ) {
     return {
       status: 'conflict',
@@ -301,9 +291,9 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
   const contentIds = getMarkdownContentIds(promptCollection, promptCollection.kind)
   /** Category IDs owned by the deleted collection. */
   const categoryIds = getPromptCollectionCategoryIds(promptCollection)
-  /** First collection remaining in workspace order after the requested deletion. */
+  /** First collection of either kind remaining in project order after the requested deletion. */
   const nextPromptCollectionId =
-    getWorkspaceCollectionEntries(workspace, promptCollection.kind).find(
+    workspace.collectionEntries.find(
       (entry) => entry.id !== command.promptCollectionId
     )?.id ?? null
   /** Complete domain changes applied atomically in meaningful ownership order. */
@@ -313,17 +303,8 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
       entityType: 'workspace',
       id: command.workspaceId,
       recipe: (draft) => {
-        setWorkspaceCollectionEntries(
-          draft,
-          promptCollection.kind,
-          removeEntry(
-            getWorkspaceCollectionEntries(draft, promptCollection.kind),
-            'collection',
-            command.promptCollectionId
-          )
-        )
-        draft.favoriteCollectionIds[promptCollection.kind] = draft.favoriteCollectionIds[promptCollection.kind]
-          .filter((id) => id !== command.promptCollectionId)
+        draft.collectionEntries = removeEntry(draft.collectionEntries, 'collection', command.promptCollectionId)
+        draft.favoriteCollectionIds = draft.favoriteCollectionIds.filter((id) => id !== command.promptCollectionId)
       }
     },
     ...getCollectionNoteIds(state, promptCollection).flatMap((id): DomainChange[] => [
@@ -373,33 +354,16 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
       id: command.workspaceId,
       recipe: (draft) => {
         if (
-          (draft.selectedScreen === 'prompt-task-collections' ||
-            draft.selectedScreen === 'prompt-template-collections') &&
+          draft.selectedScreen === 'project' &&
           draft.selectedScreenData.promptCollectionId === command.promptCollectionId
         ) {
-          Object.assign(draft, {
-            selectedScreen:
-              promptCollection.kind === 'template'
-                ? 'prompt-template-collections'
-                : 'prompt-task-collections',
-            selectedScreenData: {
-              promptCollectionId: nextPromptCollectionId,
-              contentOwnerId: nextPromptCollectionId
-            },
-            ...(promptCollection.kind === 'template'
-              ? { lastPromptTemplateCollectionId: nextPromptCollectionId }
-              : { lastPromptTaskCollectionId: nextPromptCollectionId })
-          })
-        } else if (
-          promptCollection.kind === 'template' &&
-          draft.lastPromptTemplateCollectionId === command.promptCollectionId
-        ) {
-          draft.lastPromptTemplateCollectionId = nextPromptCollectionId
-        } else if (
-          promptCollection.kind === 'prompt' &&
-          draft.lastPromptTaskCollectionId === command.promptCollectionId
-        ) {
-          draft.lastPromptTaskCollectionId = nextPromptCollectionId
+          draft.selectedScreenData = {
+            promptCollectionId: nextPromptCollectionId,
+            contentOwnerId: nextPromptCollectionId
+          }
+        }
+        if (draft.lastCollectionId === command.promptCollectionId) {
+          draft.lastCollectionId = nextPromptCollectionId
         }
       }
     })
@@ -419,11 +383,7 @@ export const planMovePromptCollectionDomainMutation: DomainPlanner<
   const targets: DomainTarget[] = [{ entityType: 'workspace', id: command.workspaceId }]
   /** Workspace entries after removing the moved collection. */
   const entries = workspace && promptCollection
-    ? removeEntry(
-        getWorkspaceCollectionEntries(workspace, promptCollection.kind),
-        'collection',
-        command.promptCollectionId
-      )
+    ? removeEntry(workspace.collectionEntries, 'collection', command.promptCollectionId)
     : []
   /** Requested reinsertion index after predecessor validation. */
   const insertIndex = resolveEntryInsertIndex(entries, command.previousEntryId)
@@ -431,9 +391,7 @@ export const planMovePromptCollectionDomainMutation: DomainPlanner<
   if (
     !workspace ||
     !promptCollection ||
-    !getWorkspaceCollectionEntries(workspace, promptCollection.kind).some(
-      (entry) => entry.id === command.promptCollectionId
-    ) ||
+    !workspace.collectionEntries.some((entry) => entry.id === command.promptCollectionId) ||
     insertIndex === null
   ) {
     return { status: 'conflict', reason: 'Prompt collection move conflict', targets }
@@ -446,7 +404,7 @@ export const planMovePromptCollectionDomainMutation: DomainPlanner<
       entityType: 'workspace',
       id: command.workspaceId,
       recipe: (draft) => {
-        setWorkspaceCollectionEntries(draft, promptCollection.kind, entries)
+        draft.collectionEntries = entries
       }
     }
   ]

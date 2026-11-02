@@ -26,23 +26,11 @@ export type PersistedWorkspaceScreen =
   | 'settings'
   | 'mockups'
   | 'test-screen'
-  | 'prompt-task-collections'
-  | 'prompt-template-collections'
+  | 'project'
 
-/** Persisted screen IDs that display one kind of prompt collection. */
-export type PromptCollectionScreenId =
-  | 'prompt-task-collections'
-  | 'prompt-template-collections'
-
-/** Reports whether a screen displays task-prompt or prompt-template collections. */
-export const isPromptCollectionScreen = (
-  screen: PersistedWorkspaceScreen
-): screen is PromptCollectionScreenId =>
-  screen === 'prompt-task-collections' || screen === 'prompt-template-collections'
-
-/** Persisted selection data shared by both split collection activities. */
-export type PromptCollectionWorkspaceScreenSelection = {
-  selectedScreen: PromptCollectionScreenId
+/** Persisted selection data for the project screen's selected collection. */
+export type ProjectWorkspaceScreenSelection = {
+  selectedScreen: 'project'
   selectedScreenData: {
     promptCollectionId: string | null
     /** collection or category owner containing the selected prompt-collection screen row. */
@@ -69,13 +57,13 @@ export type WorkspaceScreenSelection =
         mockupId: string | null
       }
     }
-  | PromptCollectionWorkspaceScreenSelection
+  | ProjectWorkspaceScreenSelection
 
-/** Narrows a complete screen selection to either collection activity. */
-export const isPromptCollectionScreenSelection = (
+/** Narrows a complete screen selection to the project screen. */
+export const isProjectScreenSelection = (
   selection: WorkspaceScreenSelection
-): selection is PromptCollectionWorkspaceScreenSelection =>
-  isPromptCollectionScreen(selection.selectedScreen)
+): selection is ProjectWorkspaceScreenSelection =>
+  selection.selectedScreen === 'project'
 
 /** Persisted collapse and configured sizing state for one accordion section. */
 export type WorkspaceAccordionSectionViewEntry = {
@@ -92,7 +80,7 @@ export const isWorkspaceScreenSelectionSame = (
     return false
   }
 
-  if (isPromptCollectionScreenSelection(left) && isPromptCollectionScreenSelection(right)) {
+  if (isProjectScreenSelection(left) && isProjectScreenSelection(right)) {
     return (
       left.selectedScreenData.promptCollectionId === right.selectedScreenData.promptCollectionId &&
       left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId
@@ -152,8 +140,7 @@ const parsePersistedWorkspaceScreen = (value: unknown): PersistedWorkspaceScreen
     value === 'settings' ||
     value === 'mockups' ||
     value === 'test-screen' ||
-    value === 'prompt-task-collections' ||
-    value === 'prompt-template-collections'
+    value === 'project'
   ) {
     return value
   }

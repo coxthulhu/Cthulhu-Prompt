@@ -24,8 +24,7 @@ import {
   createWorkspacePromptCollectionUiStateKey,
   type WorkspacePromptCollectionUiState
 } from '@shared/domain/ui-state/UiState'
-import { isPromptCollectionScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
-import { getAllWorkspaceCollectionEntries } from '@shared/domain/workspace/Workspace'
+import { isProjectScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
 
 /** Renderer-authored command for creating one collection-owned category. */
 export type CreateCategoryDomainCommand = {
@@ -443,7 +442,7 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   if (
     !promptCollection ||
     !workspace ||
-    !getAllWorkspaceCollectionEntries(workspace).some(
+    !workspace.collectionEntries.some(
       (entry) => entry.id === command.promptCollectionId
     ) ||
     /[\\/]/.test(promptCollection.folderName) ||
@@ -560,7 +559,7 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   /** Deleted active category whose selected row must transfer to the collection owner. */
   const selectedDeletedCategoryId =
     workspaceUiState &&
-    isPromptCollectionScreenSelection(workspaceUiState) &&
+    isProjectScreenSelection(workspaceUiState) &&
     workspaceUiState.selectedScreenData.promptCollectionId === command.promptCollectionId &&
     workspaceUiState.selectedScreenData.contentOwnerId &&
     deletedCategoryIds.includes(workspaceUiState.selectedScreenData.contentOwnerId)
@@ -591,7 +590,7 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
       entityType: 'workspaceUiState',
       id: command.workspaceId,
       recipe: (draft) => {
-        if (isPromptCollectionScreenSelection(draft)) {
+        if (isProjectScreenSelection(draft)) {
           draft.selectedScreenData.contentOwnerId = command.promptCollectionId
         }
       }
@@ -651,7 +650,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      getAllWorkspaceCollectionEntries(candidate).some((entry) => entry.id === owningCollection?.id)
+      candidate.collectionEntries.some((entry) => entry.id === owningCollection?.id)
     )
   /** Correct target set used by successful planning and invariant conflicts. */
   const targets = collectCategoryDeletionTargets(
@@ -734,7 +733,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   /** Whether the deleted category currently owns the visible prompt-collection selection. */
   const isActiveCategory =
     workspaceUiState &&
-    isPromptCollectionScreenSelection(workspaceUiState) &&
+    isProjectScreenSelection(workspaceUiState) &&
     workspaceUiState.selectedScreenData.promptCollectionId === command.promptCollectionId &&
     workspaceUiState.selectedScreenData.contentOwnerId === command.categoryId
   /** Composite key for the deleted category's prompt-collection view state. */
@@ -765,7 +764,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
       entityType: 'workspaceUiState',
       id: command.workspaceId,
       recipe: (draft) => {
-        if (isPromptCollectionScreenSelection(draft)) {
+        if (isProjectScreenSelection(draft)) {
           draft.selectedScreenData.contentOwnerId = command.promptCollectionId
         }
       }

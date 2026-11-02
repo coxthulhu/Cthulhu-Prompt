@@ -7,16 +7,13 @@ export class WorkspaceUiStateDataAccess {
   /** Prunes both storage scopes for deleted owners and resets invalid navigation. */
   static cleanupWorkspacePromptCollectionUiState(
     workspaceId: string,
-    workspacePromptTaskCollectionIds: string[],
-    workspacePromptTemplateCollectionIds: string[],
+    workspaceCollectionIds: string[],
     workspaceCategoryIds: string[]
   ): void {
-    /** Valid collections for each navigation activity. */
-    const tasks = new Set(workspacePromptTaskCollectionIds)
-    /** Template collection IDs are independent from task collection IDs. */
-    const templates = new Set(workspacePromptTemplateCollectionIds)
+    /** Valid collections of either kind for project navigation. */
+    const collections = new Set(workspaceCollectionIds)
     /** Categories and collections both own collection-view state. */
-    const owners = new Set([...tasks, ...templates, ...workspaceCategoryIds])
+    const owners = new Set([...collections, ...workspaceCategoryIds])
     SqliteDataAccess.runTransaction(() => {
       for (const stateType of ['collection-user', 'collection-machine'] as const) {
         for (const ownerId of WorkspaceStateDataAccess.listEntityIds(workspaceId, stateType)) {
@@ -29,15 +26,14 @@ export class WorkspaceUiStateDataAccess {
       /** Existing parser rejects malformed or retired screen selections. */
       const selection = parseWorkspaceScreenSelection(state.selectedScreen, state.selectedScreenData)
       if (!selection || (
-        (selection.selectedScreen === 'prompt-task-collections' || selection.selectedScreen === 'prompt-template-collections') &&
+        selection.selectedScreen === 'project' &&
         selection.selectedScreenData.promptCollectionId &&
-        !(selection.selectedScreen === 'prompt-template-collections' ? templates : tasks).has(selection.selectedScreenData.promptCollectionId)
+        !collections.has(selection.selectedScreenData.promptCollectionId)
       )) {
         state.selectedScreen = 'home'
         state.selectedScreenData = null
       }
-      if (state.lastPromptTaskCollectionId && !tasks.has(state.lastPromptTaskCollectionId)) state.lastPromptTaskCollectionId = null
-      if (state.lastPromptTemplateCollectionId && !templates.has(state.lastPromptTemplateCollectionId)) state.lastPromptTemplateCollectionId = null
+      if (state.lastCollectionId && !collections.has(state.lastCollectionId)) state.lastCollectionId = null
       WorkspaceStateDataAccess.write(workspaceId, 'workspace-navigation', null, state)
     })
   }
