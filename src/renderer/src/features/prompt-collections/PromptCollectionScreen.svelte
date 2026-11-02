@@ -21,18 +21,21 @@
     moveCategory,
     saveCategories
   } from '@renderer/data/Mutations/CategoryMutations'
+  import type { CollectionSidebarModeData } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
 
   let {
-    screenCollectionId,
-    screenMode = PromptCollectionScreenMode.Active,
-    onScreenModeChange,
+    sidebarModeData,
     onPromptCollectionDeleted
   } = $props<{
-    screenCollectionId: string
-    screenMode?: PromptCollectionScreenMode
-    onScreenModeChange: (screenMode: PromptCollectionScreenMode) => void
+    /** Collection sidebar mode state that selects this screen's collection and status group. */
+    sidebarModeData: CollectionSidebarModeData
     onPromptCollectionDeleted: () => void
   }>()
+
+  /** Collection displayed by this keyed screen instance. */
+  const screenCollectionId = $derived(sidebarModeData.collectionId!)
+  /** Status group displayed by this keyed screen instance. */
+  const screenMode = $derived(sidebarModeData.screenMode)
 
   const controller = createPromptCollectionScreenController({
     getScreenCollectionId: () => screenCollectionId,
@@ -44,7 +47,7 @@
   /** Keeps the collection header at its current offset when selecting a different status tab. */
   const handleScreenModeChange = (nextMode: PromptCollectionScreenMode): void => {
     controller.preserveScrollForScreenMode(nextMode)
-    onScreenModeChange(nextMode)
+    sidebarModeData.setScreenMode(nextMode)
   }
 
   // Side effect: persist the last selected row for this collection when the screen unmounts.

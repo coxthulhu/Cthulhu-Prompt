@@ -17,10 +17,8 @@
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
   import PromptCollectionScreen from '../features/prompt-collections/PromptCollectionScreen.svelte'
-  import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-  import { PromptCollectionScreenMode } from '../features/prompt-collections/promptCollectionScreenMode'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
-  import SettingsSidebar from '../features/settings/SettingsSidebar.svelte'
+  import { createSidebarModes, SidebarModeId } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import type {
     WorkspaceCreationResult,
     WorkspaceSelectionResult
@@ -57,13 +55,7 @@
   } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
-  import {
-    setPromptCollectionSelectedEntryIdWithAutosave,
-    setPromptCollectionScrollTopWithAutosave,
-    lookupPromptCollectionUiState,
-    setPromptCollectionStatusNavigationWithAutosave,
-    expandPromptStatusSectionWithAutosave
-  } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
+  import { setPromptCollectionSelectedEntryIdWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
     isPromptCollectionScreen,
@@ -73,6 +65,7 @@
     type WorkspaceScreenSelection
   } from '@shared/domain/user-persistence/UserPersistence'
   import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
+  import type { CollectionSidebarModeData } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
   import { getAllWorkspaceCollectionEntries, type Workspace } from '@shared/domain/workspace/Workspace'
   import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
@@ -150,6 +143,15 @@
   setPromptNavigationContext(promptNavigation)
 
   let activeScreen = $state<ScreenId>('home')
+  /** Every sidebar mode, created once so each mode's data survives screen switches. */
+  const sidebarModes = createSidebarModes()
+  /** Collection mode state for each collection kind, shared by its sidebar and screen. */
+  const collectionModes: Record<PromptCollectionKind, CollectionSidebarModeData> = {
+    prompt: sidebarModes[SidebarModeId.TaskCollections].data,
+    template: sidebarModes[SidebarModeId.TemplateCollections].data
+  }
+  /** Sidebar mode displayed beside the active screen. */
+  const activeSidebarMode = $derived(sidebarModes[screens[activeScreen].sidebarMode])
   let selectedMockupId = $state<string | null>(null)
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = getSelectedWorkspaceId()
@@ -191,14 +193,8 @@
     return promptIds.size
   })
   const workspacePromptCollectionCount = $derived(selectedWorkspacePromptCollections.length)
-  let screenCollectionId = $state<string | null>(null)
   /** Mounted prompt-collection screen used for sidebar actions owned by that screen. */
   let promptCollectionScreen = $state<PromptCollectionScreenHandle | null>(null)
-  let promptCollectionScreenMode = $state(PromptCollectionScreenMode.Active)
-  /** Selected collection's persisted visibility for toggleable finalized status groups. */
-  let shownFinalStatusGroups = $state<Partial<Record<PromptStatusFolderId, boolean>>>({})
-  /** Most recently visited modes first, independently for each collection in the open workspace. */
-  let modeHistoryByCollection = $state<Record<string, PromptStatusFolderId[]>>({})
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -239,50 +235,6 @@
     workspaceActionCount -= 1
   }
 
-  const clearPromptCollectionSelection = () => {
-    screenCollectionId = null
-    promptCollectionScreenMode = PromptCollectionScreenMode.Active
-    shownFinalStatusGroups = {}
-  }
-
-  /** Records a visit without accumulating duplicate entries in a collection's return history. */
-  const rememberPromptCollectionMode = (): void => {
-    if (!screenCollectionId) return
-    modeHistoryByCollection[screenCollectionId] = [
-      promptCollectionScreenMode,
-      ...(modeHistoryByCollection[screenCollectionId] ?? []).filter(
-        (mode) => mode !== promptCollectionScreenMode
-      )
-    ]
-  }
-
-  /** Restores the selected collection before its screen mounts, including template-collection state. */
-  const restorePromptCollectionMode = (expandSection = true): void => {
-    /** Workspace whose loaded collection contains the selected collection's navigation settings. */
-    const workspaceId = getSelectedWorkspaceId()
-    /** Saved navigation defaults to Active with both optional sections hidden. */
-    const saved = workspaceId && screenCollectionId
-      ? lookupPromptCollectionUiState(workspaceId, screenCollectionId)
-      : null
-    promptCollectionScreenMode = saved?.selectedMode ?? PromptCollectionScreenMode.Active
-    shownFinalStatusGroups = { ...saved?.shownFinalStatusGroups }
-    rememberPromptCollectionMode()
-    if (expandSection && workspaceId && screenCollectionId &&
-      promptCollectionsCollection.has(screenCollectionId)) {
-      expandPromptStatusSectionWithAutosave(workspaceId, promptCollectionScreenMode)
-    }
-  }
-
-  /** Queues both navigation fields together through the existing collection autosave. */
-  const persistPromptCollectionMode = (): void => {
-    /** Workspace owning this collection's independent navigation preferences. */
-    const workspaceId = getSelectedWorkspaceId()
-    if (!workspaceId || !screenCollectionId) return
-    setPromptCollectionStatusNavigationWithAutosave(
-      workspaceId, screenCollectionId, promptCollectionScreenMode, shownFinalStatusGroups
-    )
-  }
-
   /** Maps a collection activity to its authoritative collection kind. */
   const getPromptCollectionScreenKind = (screen: PromptCollectionScreenId): PromptCollectionKind =>
     screen === 'prompt-template-collections' ? 'template' : 'prompt'
@@ -291,45 +243,10 @@
   const getPromptCollectionKindScreen = (kind: PromptCollectionKind): PromptCollectionScreenId =>
     kind === 'template' ? 'prompt-template-collections' : 'prompt-task-collections'
 
-  /** Resolves the selected or fallback collection for one collection activity. */
-  const resolvePromptCollectionNavigationId = (screen: PromptCollectionScreenId): string | null => {
-    const workspaceId = getSelectedWorkspaceId()
-    const workspaceUiState = workspaceId
-      ? workspaceUiStateCollection.get(workspaceId)
-      : null
-    /** Collection kind displayed by the requested activity. */
-    const kind = getPromptCollectionScreenKind(screen)
-    /** Collections eligible for selection within this activity. */
-    const matchingCollections = selectedWorkspacePromptCollections.filter((collection) => collection.kind === kind)
-    /** First collection in the repaired type-specific order. */
-    const firstPromptCollectionId = matchingCollections[0]?.id ?? null
-    /** Last collection persisted independently for the requested activity. */
-    const persistedLastPromptCollectionId =
-      kind === 'template'
-        ? (workspaceUiState?.lastPromptTemplateCollectionId ?? null)
-        : (workspaceUiState?.lastPromptTaskCollectionId ?? null)
-    /** Current collection retained only when it belongs to the requested activity. */
-    const currentPromptCollectionId = matchingCollections.some(
-      (collection) => collection.id === screenCollectionId
-    )
-      ? screenCollectionId
-      : null
-
-    return currentPromptCollectionId
-      ? currentPromptCollectionId
-      : matchingCollections.some((collection) => collection.id === persistedLastPromptCollectionId)
-        ? persistedLastPromptCollectionId
-        : firstPromptCollectionId
-  }
-
-  /** Selects the remembered task collection used by every non-collection activity sidebar. */
-  const selectPromptTaskSidebarCollection = (): void => {
-    screenCollectionId = resolvePromptCollectionNavigationId('prompt-task-collections')
-    restorePromptCollectionMode(false)
-  }
-
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
     if (isPromptCollectionScreen(screen)) {
+      /** Collection selected by the screen's collection mode. */
+      const screenCollectionId = collectionModes[getPromptCollectionScreenKind(screen)].collectionId
       /** Current owner retained when rebuilding persistence for the already-selected collection. */
       const contentOwnerId =
         promptNavigation.screenCollectionId === screenCollectionId
@@ -364,9 +281,9 @@
     persistPromptNavigationSelection()
     captureRegisteredMonacoViewStates()
     await closeWorkspaceMutation()
-    clearPromptCollectionSelection()
+    collectionModes.prompt.clear()
+    collectionModes.template.clear()
     promptNavigation.clear()
-    modeHistoryByCollection = {}
     // Side effect: let workspace editors unmount before releasing their Monaco models.
     await tick()
     await clearWorkspaceMonacoModels()
@@ -412,7 +329,6 @@
   }
 
   const restoreWorkspaceHomeScreen = async (workspaceId: string): Promise<void> => {
-    selectPromptTaskSidebarCollection()
     activeScreen = 'home'
     await syncWorkspaceScreenSelection(workspaceId, {
       selectedScreen: 'home',
@@ -438,57 +354,38 @@
     }
 
     if (isPromptCollectionScreenSelection(workspaceUiState)) {
-      const workspaceRecord = workspaceCollection.get(workspaceId)
       const persistedPromptCollectionId = workspaceUiState.selectedScreenData.promptCollectionId
-      /** Collection kind required by the persisted split activity. */
-      const persistedCollectionKind = getPromptCollectionScreenKind(workspaceUiState.selectedScreen)
-      /** Type-specific workspace order used to validate the persisted collection. */
-      const persistedCollectionEntries =
-        persistedCollectionKind === 'template'
-          ? workspaceRecord?.templateCollectionEntries
-          : workspaceRecord?.promptCollectionEntries
-      /** Last type-specific collection retained when the selected screen collection is unavailable. */
-      const persistedLastPromptCollectionId =
-        persistedCollectionKind === 'template'
-          ? workspaceUiState.lastPromptTemplateCollectionId
-          : workspaceUiState.lastPromptTaskCollectionId
+      /** Collection mode displayed by the persisted split activity. */
+      const collectionMode = collectionModes[getPromptCollectionScreenKind(workspaceUiState.selectedScreen)]
       /** Collection selected from screen data, remembered state, or type-specific order. */
-      const restoredPromptCollectionId =
-        persistedCollectionEntries?.find((entry) => entry.id === persistedPromptCollectionId)?.id ??
-        persistedCollectionEntries?.find((entry) => entry.id === persistedLastPromptCollectionId)?.id ??
-        persistedCollectionEntries?.[0]?.id ??
-        null
-
-      if (restoredPromptCollectionId) {
-        screenCollectionId = restoredPromptCollectionId
-        restorePromptCollectionMode()
-        activeScreen = workspaceUiState.selectedScreen
-        if (
-          persistedPromptCollectionId !== restoredPromptCollectionId ||
-          persistedLastPromptCollectionId !== restoredPromptCollectionId
-        ) {
-          await syncWorkspaceScreenSelection(workspaceId, {
-            selectedScreen: workspaceUiState.selectedScreen,
-            selectedScreenData: {
-              promptCollectionId: restoredPromptCollectionId,
-              contentOwnerId:
-                persistedPromptCollectionId === restoredPromptCollectionId
-                  ? workspaceUiState.selectedScreenData.contentOwnerId
-                  : restoredPromptCollectionId
-            }
-          })
-        }
-        return
-      }
-
-      clearPromptCollectionSelection()
+      const restoredPromptCollectionId = collectionMode.resolveCollectionId(persistedPromptCollectionId)
+      collectionMode.selectCollection(restoredPromptCollectionId)
       activeScreen = workspaceUiState.selectedScreen
+      /** Last type-specific collection, re-synced when it differs from the restored collection. */
+      const persistedLastPromptCollectionId = collectionMode.kind === 'template'
+        ? workspaceUiState.lastPromptTemplateCollectionId
+        : workspaceUiState.lastPromptTaskCollectionId
+      if (
+        restoredPromptCollectionId &&
+        (persistedPromptCollectionId !== restoredPromptCollectionId ||
+          persistedLastPromptCollectionId !== restoredPromptCollectionId)
+      ) {
+        await syncWorkspaceScreenSelection(workspaceId, {
+          selectedScreen: workspaceUiState.selectedScreen,
+          selectedScreenData: {
+            promptCollectionId: restoredPromptCollectionId,
+            contentOwnerId:
+              persistedPromptCollectionId === restoredPromptCollectionId
+                ? workspaceUiState.selectedScreenData.contentOwnerId
+                : restoredPromptCollectionId
+          }
+        })
+      }
       return
     }
 
     if (workspaceUiState.selectedScreen === 'mockups') {
       const persistedMockupId = workspaceUiState.selectedScreenData.mockupId
-      selectPromptTaskSidebarCollection()
       // Let the mockups screen select its first entry when the saved mockup was deleted.
       selectedMockupId =
         persistedMockupId !== null && hasMockup(persistedMockupId) ? persistedMockupId : null
@@ -496,7 +393,6 @@
       return
     }
 
-    selectPromptTaskSidebarCollection()
     activeScreen = workspaceUiState.selectedScreen
   }
 
@@ -715,7 +611,8 @@
     void openWorkspaceFile(workspaceInfoPath)
   }))
 
-  const navigateToScreen = (screen: ScreenId) => {
+  /** Shows a screen, selecting the given or remembered collection when it is a collection activity. */
+  const navigateToScreen = (screen: ScreenId, collectionId?: string) => {
     const config = screens[screen]
     if (!config) return
     if (config.devOnly && !isDevMode) {
@@ -723,11 +620,8 @@
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
     if (isPromptCollectionScreen(screen)) {
-      const promptCollectionId = resolvePromptCollectionNavigationId(screen)
-      screenCollectionId = promptCollectionId
-      restorePromptCollectionMode()
-    } else {
-      selectPromptTaskSidebarCollection()
+      const collectionMode = collectionModes[getPromptCollectionScreenKind(screen)]
+      collectionMode.selectCollection(collectionMode.resolveCollectionId(collectionId))
     }
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
@@ -753,51 +647,10 @@
     if (!promptCollection) return
     /** Activity dedicated to the selected collection's kind. */
     const targetScreen = getPromptCollectionKindScreen(promptCollection.kind)
-    if (activeScreen === targetScreen && screenCollectionId === promptCollectionId) {
+    if (activeScreen === targetScreen && collectionModes[promptCollection.kind].collectionId === promptCollectionId) {
       return
     }
-    screenCollectionId = promptCollectionId
-    navigateToScreen(targetScreen)
-  }
-
-  const setPromptCollectionMode = (nextMode: PromptCollectionScreenMode): void => {
-    if (screenCollectionId) {
-      const collection = selectedWorkspacePromptCollections.find(
-        (candidate) => candidate.id === screenCollectionId
-      )
-      if (collection?.kind === 'template' && nextMode !== 'active' && nextMode !== 'archived') return
-    }
-    if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') {
-      shownFinalStatusGroups[nextMode] = true
-    }
-    promptCollectionScreenMode = nextMode
-    rememberPromptCollectionMode()
-    persistPromptCollectionMode()
-    /** Every selected destination must be reachable in the sidebar, including restored modes. */
-    const workspaceId = getSelectedWorkspaceId()
-    if (workspaceId) expandPromptStatusSectionWithAutosave(workspaceId, nextMode)
-  }
-
-  /** Hides the selected group by returning to this collection's most recently visited visible mode. */
-  const setFinalStatusGroupShown = (groupId: PromptStatusFolderId, isShown: boolean): void => {
-    shownFinalStatusGroups[groupId] = isShown
-    if (isShown) {
-      /** Enabling a sidebar section resets only this collection's destination mode. */
-      const workspaceId = workspaceSelection.selectedWorkspaceId
-      if (workspaceId && screenCollectionId) {
-        setPromptCollectionScrollTopWithAutosave(workspaceId, screenCollectionId, groupId, 0)
-      }
-      setPromptCollectionMode(groupId)
-    } else if (promptCollectionScreenMode === groupId) {
-      /** Hidden finalized groups are skipped; category workflows always remain available. */
-      const returnMode = (modeHistoryByCollection[screenCollectionId ?? ''] ?? []).find(
-        (mode) => mode !== groupId &&
-          (PROMPT_STATUS_FOLDER_REGISTRY[mode].ordering === 'category' || shownFinalStatusGroups[mode])
-      ) ?? PromptCollectionScreenMode.Active
-      setPromptCollectionMode(returnMode)
-    } else {
-      persistPromptCollectionMode()
-    }
+    navigateToScreen(targetScreen, promptCollectionId)
   }
 
   /** Selects the first remaining same-kind collection or retains the empty collection activity. */
@@ -809,7 +662,7 @@
       (collection) => collection.kind === kind
     )?.id ?? null
     if (!nextPromptCollectionId) {
-      clearPromptCollectionSelection()
+      collectionModes[kind].selectCollection(null)
       return
     }
 
@@ -858,25 +711,13 @@
       }}
     >
       {#snippet sidebar()}
-        {#if activeScreen === 'settings'}
-          <SettingsSidebar />
-        {:else}
-          <AppSidebar
-            {activeScreen}
-            {isWorkspaceReady}
-            {isWorkspaceLoading}
-            {screenCollectionId}
-            {promptCollectionScreenMode}
-            {shownFinalStatusGroups}
-            collectionKind={activeScreen === 'prompt-template-collections' ? 'template' : 'prompt'}
-            onPromptCollectionModeChange={setPromptCollectionMode}
-            onFinalStatusGroupShownChange={setFinalStatusGroupShown}
-            onScreenCollectionSelect={(promptCollectionId) => {
-              navigateToScreenCollection(promptCollectionId)
-            }}
-            onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
-          />
-        {/if}
+        <AppSidebar
+          mode={activeSidebarMode}
+          {isWorkspaceReady}
+          {isWorkspaceLoading}
+          onScreenCollectionSelect={navigateToScreenCollection}
+          onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
+        />
       {/snippet}
 
       {#snippet content()}
@@ -899,17 +740,16 @@
               onWorkflowBusy={(busy) => { homeWorkflowBusy = busy }}
             />
           {:else if activeScreen === 'settings'}
-            <SettingsScreen />
+            <SettingsScreen sidebarModeData={sidebarModes[SidebarModeId.Settings].data} />
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
           {:else if isPromptCollectionScreen(activeScreen)}
-            {#if screenCollectionId && workspacePath}
-              {#key `${screenCollectionId}:${promptCollectionScreenMode}`}
+            {@const collectionMode = collectionModes[getPromptCollectionScreenKind(activeScreen)]}
+            {#if collectionMode.collectionId && workspacePath}
+              {#key `${collectionMode.collectionId}:${collectionMode.screenMode}`}
                 <PromptCollectionScreen
                   bind:this={promptCollectionScreen}
-                  {screenCollectionId}
-                  screenMode={promptCollectionScreenMode}
-                  onScreenModeChange={setPromptCollectionMode}
+                  sidebarModeData={collectionMode}
                   onPromptCollectionDeleted={navigateAfterPromptCollectionDelete}
                 />
               {/key}

@@ -1,5 +1,3 @@
-import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
-
 /** One navigable settings tree entry and the settings screen element it reveals. */
 export type SettingsTreeRow = {
   id: string
@@ -39,9 +37,3 @@ export const settingsTreeSections: SettingsTreeSection[] = [
     ]
   }
 ]
-
-/** Highlighted settings tree entry, set by a tree click and cleared by user scrolling. */
-export const settingsNavigation = $state<{ selectedRowId: string | null }>({ selectedRowId: null })
-
-/** Settings screen scroll requests for one tree entry. */
-export const settingsScrollRequests = createConsumableRequestCoordinator<{ rowId: string }>()

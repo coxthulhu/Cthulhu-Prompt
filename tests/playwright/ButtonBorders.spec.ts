@@ -161,26 +161,6 @@ describe('Button styling', () => {
     )
     await expect(disabledToggleButton).toHaveCSS('border-top-color', neutralBorder)
 
-    const promptTreeActionButton = mainWindow.locator('.sidebarPromptTreeActionButton').first()
-    await promptTreeActionButton.waitFor({ state: 'attached' })
-    await expect(promptTreeActionButton).toHaveCSS('border-top-style', 'none')
-
-    const sidebarIconButtons = mainWindow.locator('.appSidebar .cthulhuUiIconButton')
-    expect(await sidebarIconButtons.count()).toBeGreaterThan(0)
-    expect(
-      await sidebarIconButtons.evaluateAll(
-        (buttons) =>
-          buttons.filter((button) => getComputedStyle(button).borderTopStyle !== 'none').length
-      )
-    ).toBe(0)
-
-    const sidebarAddCategoryButton = mainWindow.locator(
-      '[data-testid="sidebar-manage-categories-button"]'
-    )
-    await expect(sidebarAddCategoryButton).toBeEnabled()
-    await sidebarAddCategoryButton.hover()
-    await expect(sidebarAddCategoryButton).toHaveCSS('border-top-style', 'none')
-
     const compoundButton = mainWindow.locator('.cthulhuUiSplitIconButton').filter({
       has: mainWindow.getByRole('button', { name: 'Copy prompt', exact: true })
     })
@@ -250,6 +230,28 @@ describe('Button styling', () => {
     await expect(selectedSelectorItem).toHaveCSS('background-color', neutralFilledHover)
     await mainWindow.keyboard.press('Escape')
 
+    // Sidebar controls render only in the task collection mode.
+    await testHelpers.clickNavButton('Task Prompts')
+    const promptTreeActionButton = mainWindow.locator('.sidebarPromptTreeActionButton').first()
+    await promptTreeActionButton.waitFor({ state: 'attached' })
+    await expect(promptTreeActionButton).toHaveCSS('border-top-style', 'none')
+
+    const sidebarIconButtons = mainWindow.locator('.appSidebar .cthulhuUiIconButton')
+    expect(await sidebarIconButtons.count()).toBeGreaterThan(0)
+    expect(
+      await sidebarIconButtons.evaluateAll(
+        (buttons) =>
+          buttons.filter((button) => getComputedStyle(button).borderTopStyle !== 'none').length
+      )
+    ).toBe(0)
+
+    const sidebarAddCategoryButton = mainWindow.locator(
+      '[data-testid="sidebar-manage-categories-button"]'
+    )
+    await expect(sidebarAddCategoryButton).toBeEnabled()
+    await sidebarAddCategoryButton.hover()
+    await expect(sidebarAddCategoryButton).toHaveCSS('border-top-style', 'none')
+
     const collectionSelectorTrigger = mainWindow.locator(
       '[data-testid="sidebar-prompt-collection-selector-trigger"]'
     )
@@ -292,6 +294,7 @@ describe('Button styling', () => {
     await expect(createCollectionItem).toHaveCSS('border-top-color', accentHoverBorder)
     await mainWindow.keyboard.press('Escape')
 
+    await testHelpers.clickNavButton('Test Screen')
     const sidebarRailButton = mainWindow.getByRole('button', {
       name: 'normal neutral sidebar-rail',
       exact: true

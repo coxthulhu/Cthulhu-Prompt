@@ -1,4 +1,9 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import {
+  createWorkspaceWithCollections,
+  createWorkspaceWithTemplateCollections,
+  getWorkspaceInfoPath
+} from '../fixtures/WorkspaceFixtures'
 
 const { test, expect } = createPlaywrightTestSuite()
 
@@ -56,6 +61,63 @@ test.describe('Sidebar Tests', () => {
         .toBeLessThanOrEqual(2)
     })
   }
+
+  // Home, Mockups, and Test Screen share the empty Home sidebar mode.
+  test('shows only the Cthulhu Prompt title in the sidebar for every Home mode screen', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'sample' }
+    })
+    await testHelpers.navigateToPromptCollections('Development')
+    /** Sidebar whose content must collapse to the shared title alone. */
+    const sidebar = mainWindow.getByTestId('app-sidebar')
+
+    for (const screen of ['home', 'mockups', 'test-screen']) {
+      await mainWindow.getByTestId(`nav-button-${screen}`).click()
+      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Cthulhu Prompt')
+      await expect(sidebar).toHaveText('Cthulhu Prompt')
+      await expect(sidebar.locator('button')).toHaveCount(0)
+    }
+  })
+
+  // Each collection mode restores its own collection and status view after other modes are displayed.
+  test('restores task and template collection selections across activity switches', async ({ testSetup }) => {
+    /** Workspace with distinct task and template collection names. */
+    const path = '/ws/sidebar-modes'
+    await testSetup.setupFilesystem({
+      ...createWorkspaceWithCollections(path, ['Alpha', 'Beta'].map((name) => (
+        { folderName: name, displayName: name, promptCollectionId: `prompt-${name}` }
+      ))),
+      ...createWorkspaceWithTemplateCollections(path, ['Gamma', 'Delta'].map((name) => (
+        { folderName: name, displayName: name, collectionId: `template-${name}` }
+      )))
+    })
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    /** Shared header title identifying the displayed sidebar mode. */
+    const sidebarTitle = mainWindow.getByTestId('sidebar-title')
+    /** Collection screen title identifying the displayed collection. */
+    const collectionTitle = mainWindow.getByTestId('prompt-collection-title')
+
+    await testHelpers.navigateToPromptCollections('Beta')
+    await mainWindow.getByTestId('toggle-archived-prompts-button').click()
+    await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toHaveAttribute('aria-pressed', 'true')
+    await testHelpers.navigateToPromptTemplateCollections('Delta')
+    await expect(sidebarTitle).toHaveText('Template Collections')
+    await expect(collectionTitle).toHaveText('Delta')
+    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
+
+    await testHelpers.navigateToHomeScreen()
+    await expect(sidebarTitle).toHaveText('Cthulhu Prompt')
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
+    await expect(sidebarTitle).toHaveText('Task Collections')
+    await expect(collectionTitle).toHaveText('Beta')
+    await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toHaveAttribute('aria-pressed', 'true')
+    await mainWindow.getByTestId('nav-button-prompt-template-collections').click()
+    await expect(sidebarTitle).toHaveText('Template Collections')
+    await expect(collectionTitle).toHaveText('Delta')
+    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
+  })
 
   test('home selected on startup and settings enabled', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({

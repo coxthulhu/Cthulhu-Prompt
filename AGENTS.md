@@ -7,12 +7,13 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Major Application Components
 
 - **App Activity Bar** — The persistent icon rail used to navigate between available screens.
-- **App Sidebar** — The collapsible, resizable workspace panel used to select prompt collections or template collections, then create, reorder, and navigate to the prompts or templates within them.
+- **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Home, Task Collections, Template Collections, or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`.
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
 - **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.
 - **System Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
-- **Settings Sidebar** — Replaces the App Sidebar on the System Settings Screen with a settings tree that scrolls to each settings section and row.
+- **Collection Sidebar** — The App Sidebar mode used to select prompt collections or template collections, then create, reorder, and navigate to the prompts or templates within them.
+- **Settings Sidebar** — The App Sidebar mode on the System Settings Screen that shows a settings tree that scrolls to each settings section and row.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
 - **Workspace Popup** — Opens from the activity bar mascot to show the current workspace name, path, and action to open its folder in Explorer.
 - **Mockups Screen** — Provides a development-only interface for previewing UI mockups.

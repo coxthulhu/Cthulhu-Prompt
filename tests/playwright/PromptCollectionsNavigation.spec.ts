@@ -836,6 +836,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
     await mainWindow
       .locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM)
@@ -894,6 +895,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
+    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toBeVisible()
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toContainText(
       'Create Collection'
@@ -903,7 +905,6 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCSS('font-size', '14px')
     await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toHaveText('Show All')
-    await mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]').click()
     await expect(mainWindow.locator('[data-testid="nav-button-prompt-task-collections"]')).toHaveAttribute(
       'data-active',
       'true'
@@ -1057,28 +1058,6 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
-  test('opens selected collection deletion after navigating from Home', async ({ testSetup }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
-
-    await testHelpers.navigateToPromptCollections('Development')
-    await testHelpers.navigateToHomeScreen()
-    await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
-    await mainWindow.locator(DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM).click()
-
-    await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
-    const deleteDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Delete Collection"]'
-    )
-    await expect(deleteDialog).toBeVisible()
-    await expect(deleteDialog).toContainText('This collection and everything inside it will be permanently deleted')
-    await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
-  })
-
-  /** Verifies ordered post-delete selection and the final-collection empty state. */
   test('selects the first remaining collection and retains the screen after deleting the last collection', async ({
     testSetup
   }) => {
@@ -1186,6 +1165,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
 
     await expect(mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON)).toBeDisabled()
     await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeDisabled()
@@ -1197,6 +1177,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
 
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON).click()
 
@@ -1847,11 +1828,5 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'true'
     )
     await expect(mainWindow.getByTestId('prompt-tree-active-prompt-short-1')).toHaveAttribute('aria-current', 'true')
-    await testHelpers.navigateToHomeScreen()
-    await expect(mainWindow.locator(SIDEBAR_COLLECTION_OVERVIEW_BUTTON)).toBeVisible()
-    await expect(mainWindow.locator(SIDEBAR_COLLECTION_OVERVIEW_BUTTON)).not.toHaveAttribute(
-      'data-active',
-      'true'
-    )
   })
 })

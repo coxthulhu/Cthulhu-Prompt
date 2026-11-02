@@ -47,7 +47,7 @@ describe('Sidebar collection quick picks', () => {
       const rows = mainWindow.locator(QUICK_ROWS)
       /** Label assertions ignore whitespace between the separate label and count spans. */
       const labels = rows.locator('.sidebarPromptTreeSettingsLabel')
-      await expect(mainWindow.getByTestId('sidebar-collection-title')).toHaveText(
+      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText(
         kind === 'prompt' ? 'Task Collections' : 'Template Collections'
       )
       await expect(labels).toHaveText(['Alpha', 'Beta', 'Gamma'])
@@ -99,8 +99,8 @@ describe('Sidebar collection quick picks', () => {
     test(`${kind} quick picks grow from empty to three without placeholder rows`, async ({ testSetup }) => {
       /** An empty workspace also verifies the separate Create Collection entry point remains. */
       const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
-      if (kind === 'template') await mainWindow.getByTestId('nav-button-prompt-template-collections').click()
-      await expect(mainWindow.getByTestId('sidebar-collection-title')).toHaveText(
+      await mainWindow.getByTestId(kind === 'template' ? 'nav-button-prompt-template-collections' : 'nav-button-prompt-task-collections').click()
+      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText(
         kind === 'prompt' ? 'Task Collections' : 'Template Collections'
       )
       await expect(mainWindow.locator(QUICK_ROWS)).toHaveCount(0)

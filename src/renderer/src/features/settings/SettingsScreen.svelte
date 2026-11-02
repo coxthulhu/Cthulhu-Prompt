@@ -40,7 +40,8 @@
   import { setSettingsScrollTopWithAutosave } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
   import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
   import { PROMPT_COLLECTION_CATEGORY_TOP_OFFSET_PX } from '@renderer/features/prompt-collections/promptCollectionScrollOffsets'
-  import { settingsNavigation, settingsScrollRequests, settingsTreeSections } from './settingsNavigation.svelte.ts'
+  import { settingsTreeSections } from './settingsTreeSections'
+  import type { SettingsSidebarModeData } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
   import {
     DEFAULT_SYSTEM_SETTINGS,
@@ -54,6 +55,11 @@
     MIN_PROMPT_FONT_SIZE,
     type NewPromptFocus
   } from '@shared/domain/settings/SystemSettings'
+
+  let { sidebarModeData }: {
+    /** Settings sidebar mode state that drives tree highlights and scroll requests. */
+    sidebarModeData: SettingsSidebarModeData
+  } = $props()
 
   const systemSettingsClientStateQuery = useSystemSettingsClientStateQuery()
   const systemSettingsClientState = $derived(
@@ -145,7 +151,7 @@
   const handleScroll = (event: Event): void => {
     const scrollTopPx = (event.currentTarget as HTMLElement).scrollTop
     if (programmaticScrollTopPx === null || Math.abs(scrollTopPx - programmaticScrollTopPx) >= 1) {
-      settingsNavigation.selectedRowId = null
+      sidebarModeData.selectedRowId = null
     }
     programmaticScrollTopPx = null
     if (isScrollRestored) setSettingsScrollTopWithAutosave(scrollTopPx)
@@ -255,7 +261,7 @@
     // Side effect: restore the persisted offset once the bottom spacer reflects the measured height.
     void tick().then(() => {
       if (isScrollRestored) return
-      settingsNavigation.selectedRowId = null
+      sidebarModeData.selectedRowId = null
       applyScrollTop(
         scrollContainerElement,
         userPersistenceCollection.get(USER_PERSISTENCE_ID)!.settingsScrollTopPx
@@ -276,11 +282,11 @@
 
   // Side effect: perform settings tree scroll requests once the persisted offset is restored.
   $effect(() => {
-    const request = settingsScrollRequests.pending
+    const request = sidebarModeData.scrollRequests.pending
     const scrollContainerElement = settingsScrollContainerElement
     if (!request || !scrollContainerElement || !isScrollRestored) return
 
-    settingsScrollRequests.consume(request, ({ rowId }) => {
+    sidebarModeData.scrollRequests.consume(request, ({ rowId }) => {
       scrollToTreeRow(scrollContainerElement, rowId)
     })
   })

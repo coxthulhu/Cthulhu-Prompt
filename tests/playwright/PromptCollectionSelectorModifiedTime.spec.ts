@@ -32,6 +32,7 @@ describe('Prompt collection selector metadata', () => {
       }
     })
 
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
 
     const hierarchyItem = mainWindow

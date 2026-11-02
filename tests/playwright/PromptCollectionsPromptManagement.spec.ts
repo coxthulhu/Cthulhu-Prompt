@@ -820,13 +820,12 @@ describe('Prompt collection prompt management', () => {
       .toBe(true)
   })
 
-  test('opens category creation from the sidebar without leaving Home', async ({ testSetup }) => {
+  test('opens category creation from the sidebar', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
 
     await testHelpers.navigateToPromptCollections('Development')
-    await testHelpers.navigateToHomeScreen()
     const addCategoryButton = mainWindow.locator(
       '[data-testid="sidebar-manage-categories-button"]'
     )
@@ -853,7 +852,6 @@ describe('Prompt collection prompt management', () => {
     await categoryDialog.locator('[data-testid="manage-categories-save-button"]').click()
 
     await expect(categoryDialog).toBeHidden()
-    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-SidebarCategory"]')
     ).toBeVisible()

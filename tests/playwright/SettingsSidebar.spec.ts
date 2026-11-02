@@ -44,8 +44,8 @@ describe('Settings Sidebar', () => {
     })
     await testHelpers.navigateToSettingsScreen()
 
-    await expect(mainWindow.getByTestId('settings-sidebar-title')).toHaveText('System Settings')
-    await expect(mainWindow.getByTestId('sidebar-collection-title')).toHaveCount(0)
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('System Settings')
+    await expect(mainWindow.getByTestId('sidebar-prompt-collection-selector-trigger')).toHaveCount(0)
     const tree = mainWindow.getByTestId('settings-tree')
     await expect(tree.locator('[aria-expanded]')).toHaveText(['Editor & Layout', 'About'])
     await expect(tree.locator('[aria-expanded="true"]')).toHaveCount(2)

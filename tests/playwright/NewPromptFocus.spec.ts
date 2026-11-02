@@ -58,17 +58,12 @@ describe('New prompt focus', () => {
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
         await setNewPromptFocus(mainWindow, testHelpers, target)
-        if (kind === 'prompt') {
-          await testHelpers.navigateToPromptCollections('Focus')
-          await testHelpers.navigateToHomeScreen()
-        } else {
-          await testHelpers.navigateToPromptTemplateCollections('Focus')
-        }
+        if (kind === 'prompt') await testHelpers.navigateToPromptCollections('Focus')
+        else await testHelpers.navigateToPromptTemplateCollections('Focus')
         /** Sidebar group owning the newly created rows. */
         const group = kind === 'prompt' ? 'active' : 'template'
         /** Task prompts have a status action; templates have a root empty-state action. */
         const sidebarAction = kind === 'prompt' ? 'prompt-tree-active-empty-status' : 'prompt-tree-template-empty-state'
-        // Prompt creation also opens the editor from Home; Home itself always shows task collections.
         for (const action of [sidebarAction, 'prompt-divider-add-initial']) {
           /** Existing IDs distinguish the inserted row without relying on fallback-title text. */
           const previousIds = await getPromptEditorIds(mainWindow)

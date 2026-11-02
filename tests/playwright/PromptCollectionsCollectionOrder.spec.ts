@@ -245,6 +245,7 @@ describe('Prompt Collection Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await expect
@@ -286,6 +287,7 @@ describe('Prompt Collection Order', () => {
     })
 
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     await expect
       .poll(
         async () =>
@@ -356,6 +358,7 @@ describe('Prompt Collection Order', () => {
     })
 
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     expect(
       await readWorkspacePromptCollectionIds(electronApp, COMBINED_PERSISTED_WORKSPACE_PATH)
     ).toEqual(['prompt-alpha', 'prompt-zulu'])
@@ -406,6 +409,7 @@ describe('Prompt Collection Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
@@ -567,6 +571,7 @@ describe('Prompt Collection Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
@@ -628,6 +633,7 @@ describe('Prompt Collection Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
@@ -667,6 +673,7 @@ describe('Prompt Collection Order', () => {
     })
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
     await mainWindow.locator(PROMPT_COLLECTION_SELECTOR_TRIGGER).click()

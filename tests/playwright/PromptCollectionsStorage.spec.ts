@@ -105,8 +105,9 @@ describe('Prompt collection storage', () => {
     electronApp,
     testSetup
   }) => {
-    // The sample workspace starts on an existing prompt collection with a visible selector.
+    // The task activity shows the collection selector for the sample workspace.
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
 
     await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     await mainWindow.locator(COLLECTION_ADD_ITEM).click()
@@ -200,6 +201,7 @@ describe('Prompt collection storage', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
+    await mainWindow.getByTestId('nav-button-prompt-task-collections').click()
     await createCollection(mainWindow, ALPHA_NAME)
     await createCollection(mainWindow, BETA_NAME)
 

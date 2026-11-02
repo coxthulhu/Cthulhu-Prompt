@@ -98,7 +98,8 @@ describe('Dropdown tracking', () => {
 
   test('below-trigger menu follows trigger dimensions and a live device scale change', async ({ testSetup }) => {
     /** Root selector uses below-trigger placement and trigger-dependent minimum width. */
-    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    await testHelpers.navigateToPromptCollections('Development')
     /** Actual root selector anchor. */
     const trigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
     /** Detailed menu whose width must follow the resized trigger. */
@@ -181,7 +182,8 @@ describe('Dropdown tracking', () => {
 
   test('menus retain edge clamping as the trigger and menu dimensions change', async ({ testSetup }) => {
     /** The real collection selector supplies a resizable below-trigger menu. */
-    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    await testHelpers.navigateToPromptCollections('Development')
     /** Move the real trigger into an unclipped geometry fixture without replacing its handlers. */
     const trigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
     await trigger.evaluate((element: HTMLElement) => {
@@ -289,19 +291,27 @@ describe('Dropdown tracking', () => {
       folderName: `Collection ${index}`, displayName: `Collection ${index}`, prompts: []
     }))))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
-    /** Test Screen supplies an existing native scrolling surface, without adding a mock component. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.clickNavButton('Test Screen')
+    await testHelpers.navigateToPromptCollections('Collection 0')
+    // The collection screen scrolls virtually, so cover it with a native scroller beside the sidebar selector.
+    await mainWindow.locator('.mainScreenSurface').evaluate((surface: HTMLElement) => {
+      const rect = surface.getBoundingClientRect()
+      const scroller = document.createElement('div')
+      scroller.dataset.testid = 'native-scroll-background'
+      scroller.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;overflow-y:scroll;`
+      scroller.innerHTML = '<div style="height:5000px"></div>'
+      document.body.appendChild(scroller)
+    })
     /** Native background scroll container. */
-    const background = mainWindow.getByTestId('test-screen')
+    const background = mainWindow.getByTestId('native-scroll-background')
     await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
     /** Detailed menu scrolls its item list independently of the background. */
     const items = mainWindow.getByTestId('sidebar-prompt-collection-selector-menu-items')
     await items.hover()
     await mainWindow.mouse.wheel(0, 500)
     await expect.poll(() => items.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
-    /** Right side of the Test Screen lies outside the collection menu. */
+    /** Right side of the native scroller lies outside the collection menu. */
     const backgroundBox = await box(background)
     await mainWindow.mouse.move(backgroundBox.x + backgroundBox.width - 30, backgroundBox.y + 100)
     await mainWindow.mouse.wheel(0, 500)
