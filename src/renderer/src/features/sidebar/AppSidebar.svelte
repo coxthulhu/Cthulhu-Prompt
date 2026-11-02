@@ -1,7 +1,6 @@
 <script lang="ts">
   import CollectionSidebar from './CollectionSidebar.svelte'
   import SettingsSidebar from '@renderer/features/settings/SettingsSidebar.svelte'
-  import SidebarHeader from './SidebarHeader.svelte'
   import { SidebarModeId, type SidebarMode } from './sidebarModes.svelte.ts'
 
   /** Sidebar host that renders the content of the active sidebar mode. */
@@ -26,8 +25,6 @@
 <aside data-testid="app-sidebar" data-sidebar-mode={mode.id} class="appSidebar flex h-full w-full flex-col text-foreground/80">
   {#if mode.id === SidebarModeId.Settings}
     <SettingsSidebar title={mode.title} modeData={mode.data} />
-  {:else if mode.id === SidebarModeId.Home}
-    <SidebarHeader title={mode.title} />
   {:else}
     {#key mode.id}
       <CollectionSidebar

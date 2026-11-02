@@ -83,14 +83,14 @@
   <ActivityBarButton
     icon={item.icon}
     label={item.label}
-    title={activeScreen === item.id
+    title={activeScreen === item.id && screens[item.id].sidebarMode !== null
       ? `${item.label} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar`
       : item.label}
     testId={item.testId}
     active={activeScreen === item.id}
     compactIndicator={!isAppSidebarExpanded}
     ariaCurrent={activeScreen === item.id ? 'page' : undefined}
-    ariaExpanded={activeScreen === item.id ? isAppSidebarExpanded : undefined}
+    ariaExpanded={activeScreen === item.id && screens[item.id].sidebarMode !== null ? isAppSidebarExpanded : undefined}
     onclick={() => onNavigate(item.id)}
   />
 {/snippet}

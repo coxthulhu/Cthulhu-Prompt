@@ -125,8 +125,8 @@
   let showWorkspaceOpenErrorDialog = $state(false)
   /** Failure details shown by Home's open-failure dialog. */
   let workspaceOpenErrorText = $state('')
-  // Session-only visibility starts expanded whenever the application launches.
-  let isAppSidebarExpanded = $state(true)
+  // Session-only expansion applies only to screens that provide a sidebar.
+  let sidebarExpanded = $state(true)
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
@@ -145,7 +145,12 @@
   /** Default project's collection state, shared by its sidebar and screen. */
   const projectMode = sidebarModes[SidebarModeId.Project].data
   /** Sidebar mode displayed beside the active screen. */
-  const activeSidebarMode = $derived(sidebarModes[screens[activeScreen].sidebarMode])
+  const activeSidebarMode = $derived.by(() => {
+    const modeId = screens[activeScreen].sidebarMode
+    return modeId === null ? null : sidebarModes[modeId]
+  })
+  /** Screens without a sidebar always use the collapsed layout, including programmatic navigation. */
+  const isAppSidebarExpanded = $derived(activeSidebarMode !== null && sidebarExpanded)
   let selectedMockupId = $state<string | null>(null)
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = getSelectedWorkspaceId()
@@ -610,12 +615,12 @@
   /** Re-clicking an activity changes visibility without resetting its screen selection. */
   const activateActivity = (screen: ScreenId): void => {
     if (screen === activeScreen) {
-      isAppSidebarExpanded = !isAppSidebarExpanded
+      if (activeSidebarMode) sidebarExpanded = !sidebarExpanded
       return
     }
 
     navigateToScreen(screen)
-    isAppSidebarExpanded = true
+    sidebarExpanded = true
   }
 
   const navigateToScreenCollection = (promptCollectionId: string): void => {
@@ -679,13 +684,15 @@
       }}
     >
       {#snippet sidebar()}
-        <AppSidebar
-          mode={activeSidebarMode}
-          {isWorkspaceReady}
-          {isWorkspaceLoading}
-          onScreenCollectionSelect={navigateToScreenCollection}
-          onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
-        />
+        {#if activeSidebarMode}
+          <AppSidebar
+            mode={activeSidebarMode}
+            {isWorkspaceReady}
+            {isWorkspaceLoading}
+            onScreenCollectionSelect={navigateToScreenCollection}
+            onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
+          />
+        {/if}
       {/snippet}
 
       {#snippet content()}

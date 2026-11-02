@@ -7,7 +7,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 ## Major Application Components
 
 - **App Activity Bar** — The persistent icon rail used to navigate between available screens, with a separate group of two-letter project buttons shown while a workspace is open.
-- **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Home, Project, or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`.
+- **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Project or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`, with Home, Mockups, and Test Screen always hiding the sidebar.
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
 - **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.

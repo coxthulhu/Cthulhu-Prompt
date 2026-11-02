@@ -18,13 +18,9 @@ import { DEFAULT_PROJECT } from '@renderer/features/projects/projects'
 
 /** Identifies which overall sidebar mode is displayed, independently of the active screen. */
 export enum SidebarModeId {
-  Home = 'home',
   Project = 'project',
   Settings = 'settings'
 }
-
-/** Home mode has no state beyond its title. */
-export type HomeSidebarModeData = Record<never, never>
 
 /** Collection selection and status navigation shared by a project sidebar and its screen. */
 export class CollectionSidebarModeData {
@@ -154,13 +150,11 @@ export class SettingsSidebarModeData {
 
 /** One sidebar mode: its identity, header title, and the state it shares with its screens. */
 export type SidebarMode =
-  | { id: SidebarModeId.Home; title: string; data: HomeSidebarModeData }
   | { id: SidebarModeId.Project; title: string; data: CollectionSidebarModeData }
   | { id: SidebarModeId.Settings; title: string; data: SettingsSidebarModeData }
 
 /** Creates every sidebar mode once so each mode's data survives screen switches. */
 export const createSidebarModes = () => ({
-  [SidebarModeId.Home]: { id: SidebarModeId.Home, title: 'Cthulhu Prompt', data: {} },
   [SidebarModeId.Project]: {
     id: SidebarModeId.Project,
     title: DEFAULT_PROJECT.title,

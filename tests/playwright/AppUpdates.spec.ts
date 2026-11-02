@@ -200,7 +200,7 @@ describe('App updates', () => {
     await testSetup.completeStartup()
     /** Access the window before the shared setup helper waits for the overlay to disappear. */
     const mainWindow = await electronApp.firstWindow()
-    await mainWindow.waitForSelector('[data-testid="app-sidebar"]', { state: 'visible' })
+    await mainWindow.waitForSelector('[data-testid="app-activity-bar"]', { state: 'visible' })
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toBeVisible()
     await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('downloading')
     await controlUpdater(electronApp, { type: 'complete-download' })
@@ -264,7 +264,7 @@ describe('App updates', () => {
     await testSetup.completeStartup()
     /** Observe every DOM transition instead of relying on sampling a short fade. */
     const mainWindow = await electronApp.firstWindow()
-    await mainWindow.waitForSelector('[data-testid="app-sidebar"]', { state: 'visible' })
+    await mainWindow.waitForSelector('[data-testid="app-activity-bar"]', { state: 'visible' })
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toBeVisible()
     await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('downloading')
     await controlUpdater(electronApp, { type: 'complete-download' })
@@ -320,7 +320,7 @@ describe('App updates', () => {
       await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('ready')
       await expect(popup).toHaveCount(0)
       await mainWindow.reload()
-      await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
+      await expect(mainWindow.getByTestId('app-activity-bar')).toBeVisible()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
       await expect(popup).toHaveCount(0)
       await mainWindow.getByTestId('app-updates-button').click()

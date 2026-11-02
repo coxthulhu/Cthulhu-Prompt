@@ -16,8 +16,8 @@ type ScreenConfig = {
   devOnly?: boolean
   showInNav?: boolean
   icon?: ComponentType
-  /** Sidebar mode displayed beside this screen; several screens may share one mode. */
-  sidebarMode: SidebarModeId
+  /** Sidebar mode displayed beside this screen, or null for screens without a sidebar. */
+  sidebarMode: SidebarModeId | null
 }
 
 export const screens: Record<ScreenId, ScreenConfig> = {
@@ -27,7 +27,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     requiresWorkspace: false,
     showInNav: true,
     icon: Home,
-    sidebarMode: SidebarModeId.Home
+    sidebarMode: null
   },
   settings: {
     label: 'System Settings',
@@ -44,7 +44,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     devOnly: true,
     showInNav: true,
     icon: PanelsTopLeft,
-    sidebarMode: SidebarModeId.Home
+    sidebarMode: null
   },
   'test-screen': {
     label: 'Test Screen',
@@ -53,7 +53,7 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     devOnly: true,
     showInNav: true,
     icon: Bug,
-    sidebarMode: SidebarModeId.Home
+    sidebarMode: null
   },
   /** Rendered by the activity bar's project group instead of the screen list. */
   project: {

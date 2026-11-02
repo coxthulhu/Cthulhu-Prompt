@@ -62,20 +62,29 @@ test.describe('Sidebar Tests', () => {
     })
   }
 
-  // Home, Mockups, and Test Screen share the empty Home sidebar mode.
-  test('shows only the Cthulhu Prompt title in the sidebar for every Home mode screen', async ({ testSetup }) => {
+  // Screens without a sidebar stay collapsed even when their activity is activated again.
+  test('keeps screens without a sidebar collapsed across activity switches and repeated clicks', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await testHelpers.navigateToPromptCollections('Development')
-    /** Sidebar whose content must collapse to the shared title alone. */
     const sidebar = mainWindow.getByTestId('app-sidebar')
+    await expect(sidebar).toHaveCount(0)
+    await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
 
     for (const screen of ['home', 'mockups', 'test-screen']) {
-      await mainWindow.getByTestId(`nav-button-${screen}`).click()
-      await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Cthulhu Prompt')
-      await expect(sidebar).toHaveText('Cthulhu Prompt')
-      await expect(sidebar.locator('button')).toHaveCount(0)
+      await testHelpers.navigateToPromptCollections('Development')
+      await expect(sidebar).toBeVisible()
+      const activity = mainWindow.getByTestId(`nav-button-${screen}`)
+      await activity.click()
+      await expect(sidebar).toHaveCount(0)
+      await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
+      await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeHidden()
+      await expect(activity).not.toHaveAttribute('aria-expanded')
+      await expect(activity).not.toHaveAttribute('title', /sidebar/)
+      await activity.click()
+      await activity.press('Enter')
+      await expect(sidebar).toHaveCount(0)
+      await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
     }
   })
 
@@ -109,7 +118,7 @@ test.describe('Sidebar Tests', () => {
 
     // The project reopens its last collection of either kind, and each collection keeps its status mode.
     await testHelpers.navigateToHomeScreen()
-    await expect(sidebarTitle).toHaveText('Cthulhu Prompt')
+    await expect(sidebarTitle).toHaveCount(0)
     await mainWindow.getByTestId('nav-button-project').click()
     await expect(sidebarTitle).toHaveText('Default Project')
     await expect(collectionTitle).toHaveText('Delta')
@@ -251,8 +260,8 @@ test.describe('Sidebar Tests', () => {
 
     await activity.press('Space')
     await expect(sidebar).toBeHidden()
-    // Every primary screen opens its sidebar on navigation and toggles on a repeat click.
-    for (const screen of ['settings', 'home', 'project']) {
+    // Screens with a sidebar open it on navigation and toggle it on a repeat click.
+    for (const screen of ['settings', 'project']) {
       const nextActivity = mainWindow.getByTestId(`nav-button-${screen}`)
       await nextActivity.click()
       await expect(nextActivity).toHaveAttribute('aria-current', 'page')

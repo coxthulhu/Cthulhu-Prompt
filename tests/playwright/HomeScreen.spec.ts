@@ -40,7 +40,7 @@ describe('Home Screen', () => {
     // Validate key structural elements without relying on text matching.
     const pageStructure = await testHelpers.validatePageStructure()
     expect(pageStructure.hasMainElement).toBe(true)
-    expect(pageStructure.hasSidebar).toBe(true)
+    expect(pageStructure.hasSidebar).toBe(false)
     expect(pageStructure.hasWelcomeText).toBe(true)
 
     await expect(mainWindow.getByTestId('home-title')).toHaveText('Cthulhu Prompt')
