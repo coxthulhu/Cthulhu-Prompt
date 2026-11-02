@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { monaco } from '@renderer/common/Monaco'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
+  import { SCROLL_IDLE_TIMEOUT_MS } from '@renderer/common/scrollTimings'
   import { FindController } from 'monaco-editor/esm/vs/editor/contrib/find/browser/findController'
   import { FindModelBoundToEditorModel } from '@codingame/monaco-vscode-api/vscode/vs/editor/contrib/find/browser/findModel'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
@@ -217,6 +218,28 @@
     handleMouseWheel: boolean
   ): void => {
     targetEditor.updateOptions({ scrollbar: { handleMouseWheel } })
+  }
+
+  /** Timestamp of the previous wheel event over this editor, used to detect new gestures. */
+  let lastWheelTimeStampMs = Number.NEGATIVE_INFINITY
+  /** Whether the current wheel gesture started while the focused editor could scroll. */
+  let isWheelGestureLatchedToEditor = false
+
+  /** Keeps an editor-latched wheel gesture from scrolling the surrounding window past Monaco's edge. */
+  const handleWheelCapture = (event: WheelEvent): void => {
+    if (!editor?.hasWidgetFocus() || event.deltaY === 0) return
+    const scrollTop = editor.getScrollTop()
+    const canEditorScroll =
+      event.deltaY > 0
+        ? scrollTop + editor.getLayoutInfo().height < editor.getScrollHeight()
+        : scrollTop > 0
+    if (event.timeStamp - lastWheelTimeStampMs > SCROLL_IDLE_TIMEOUT_MS) {
+      isWheelGestureLatchedToEditor = canEditorScroll
+    }
+    lastWheelTimeStampMs = event.timeStamp
+    if (!isWheelGestureLatchedToEditor || canEditorScroll) return
+    event.preventDefault()
+    event.stopPropagation()
   }
 
   const getCursorMetrics = (position: monaco.IPosition) => {
@@ -637,6 +660,7 @@
 
 <div
   bind:this={container}
+  onwheelcapture={handleWheelCapture}
   class={className}
   style={`min-height:${initialMonacoHeightPx}px;${fixedHeightPx === undefined ? '' : `height:${fixedHeightPx}px;`} position: relative;`}
 ></div>
