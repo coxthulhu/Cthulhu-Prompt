@@ -292,6 +292,14 @@
     max-height: calc((58px * 8) + (2px * 7));
     min-height: 0;
     overflow-y: auto;
+    container-type: scroll-state;
+  }
+
+  /* Rows keep clear of the scrollbar only while the list can scroll. */
+  @container scroll-state(scrollable: y) {
+    .cthulhuUiDropdownPopupDetailedItems > * {
+      margin-right: 4px;
+    }
   }
 
   .cthulhuUiDropdownPopupDetailedSection {

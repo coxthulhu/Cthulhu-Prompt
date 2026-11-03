@@ -183,11 +183,11 @@
   }
 
   .cthulhuUiSelectorButton[data-leading-accessory='true'] {
-    grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr) 22px;
+    grid-template-columns: 16px 2px 34px 8px minmax(0, 1fr) 22px;
   }
 
   .cthulhuUiSelectorButton[data-leading-accessory='true'][data-chevron='false'][data-trailing-accessory='false'] {
-    grid-template-columns: 22px 8px 34px 8px minmax(0, 1fr);
+    grid-template-columns: 16px 2px 34px 8px minmax(0, 1fr);
   }
 
   .cthulhuUiSelectorButton:where(:not(:disabled)[data-row-state='idle']:hover),
@@ -299,7 +299,7 @@
     grid-column: 1;
     height: 34px;
     justify-content: center;
-    width: 22px;
+    width: 16px;
   }
 
   .cthulhuUiSelectorButtonTextStack {

@@ -762,7 +762,7 @@
       <SidebarHeader {title}>
         <DropdownPopupDetailed
           label="Collection selector"
-          menuWidth="360px"
+          menuWidth="380px"
           items={promptCollectionDropdownItems}
           sections={collectionDropdownSections}
           selectedItem={screenCollectionDropdownItem}
@@ -995,7 +995,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 30px;
+    flex: 0 0 28px;
     border-radius: 8px;
     color: var(--ui-muted-icon-glyph);
     cursor: pointer;
