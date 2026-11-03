@@ -423,7 +423,7 @@ describe('User Persistence', () => {
         ].join(':')
       })
       .toBe(
-        `project:{"promptCollectionId":"${developmentPromptCollectionId}","contentOwnerId":"${developmentPromptCollectionId}"}:${developmentPromptCollectionId}`
+        `project:{"promptCollectionId":"${developmentPromptCollectionId}","contentOwnerId":"${developmentPromptCollectionId}","openPromptId":null}:${developmentPromptCollectionId}`
       )
 
     await testHelpers.navigateToSettingsScreen()

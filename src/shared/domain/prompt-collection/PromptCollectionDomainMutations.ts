@@ -359,7 +359,8 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
         ) {
           draft.selectedScreenData = {
             promptCollectionId: nextPromptCollectionId,
-            contentOwnerId: nextPromptCollectionId
+            contentOwnerId: nextPromptCollectionId,
+            openPromptId: null
           }
         }
         if (draft.lastCollectionId === command.promptCollectionId) {

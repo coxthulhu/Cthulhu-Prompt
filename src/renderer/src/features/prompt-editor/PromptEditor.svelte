@@ -5,10 +5,10 @@
     setPromptText,
     setPromptTitle
   } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
-  import MarkdownContentEditorRow from './MarkdownContentEditorRow.svelte'
+  import MarkdownContentEditor from './MarkdownContentEditor.svelte'
 
   type Props = Omit<
-    ComponentProps<typeof MarkdownContentEditorRow>,
+    ComponentProps<typeof MarkdownContentEditor>,
     | 'contentKind'
     | 'contentLabel'
     | 'metadataTemplateLabel'
@@ -27,7 +27,7 @@
   let { promptId, ...props }: Props = $props()
 </script>
 
-<MarkdownContentEditorRow
+<MarkdownContentEditor
   {...props}
   {promptId}
   contentKind="prompt"

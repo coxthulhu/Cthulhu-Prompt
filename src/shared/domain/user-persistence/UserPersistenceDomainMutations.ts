@@ -12,14 +12,15 @@ export const parseSetUserPersistenceDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 5 ||
+    Object.keys(record).length !== 6 ||
     (record.lastWorkspaceInfoPath !== null &&
       typeof record.lastWorkspaceInfoPath !== 'string') ||
     typeof record.appSidebarWidthPx !== 'number' ||
     typeof record.hasShownWelcome !== 'boolean' ||
     !Array.isArray(record.settingsCollapsedSectionIds) ||
     !record.settingsCollapsedSectionIds.every((id) => typeof id === 'string') ||
-    typeof record.settingsScrollTopPx !== 'number'
+    typeof record.settingsScrollTopPx !== 'number' ||
+    typeof record.singlePromptNoteFraction !== 'number'
   ) {
     return null
   }
@@ -28,7 +29,8 @@ export const parseSetUserPersistenceDomainCommand = (
     appSidebarWidthPx: Math.round(record.appSidebarWidthPx),
     hasShownWelcome: record.hasShownWelcome,
     settingsCollapsedSectionIds: record.settingsCollapsedSectionIds,
-    settingsScrollTopPx: Math.round(record.settingsScrollTopPx)
+    settingsScrollTopPx: Math.round(record.settingsScrollTopPx),
+    singlePromptNoteFraction: record.singlePromptNoteFraction
   }
 }
 

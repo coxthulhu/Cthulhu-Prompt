@@ -44,6 +44,8 @@ export type WorkspaceUiStateSnapshot = {
         promptCollectionId: string | null
         /** collection or category owner containing the selected row. */
         contentOwnerId?: string | null
+        /** Prompt shown in the single-prompt editor. */
+        openPromptId: string | null
       }
   lastCollectionId: string | null
   promptCollectionViewEntries: Array<{
@@ -208,6 +210,8 @@ export const seedWorkspaceUiState = async (
           promptCollectionId: string | null
           /** collection or category owner containing the selected row. */
           contentOwnerId?: string | null
+          /** Prompt shown in the single-prompt editor. */
+          openPromptId?: string | null
         }
     lastCollectionId?: string | null
     promptCollectionViewEntries: WorkspacePromptCollectionUiStateSeedEntry[]

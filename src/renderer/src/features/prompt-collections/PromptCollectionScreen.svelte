@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { Pencil, Search } from 'lucide-svelte'
+  import { Pencil } from 'lucide-svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
-  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import PromptCollectionHeaderBar from './PromptCollectionHeaderBar.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isPromptCollectionEmpty } from '@renderer/data/Collections/PromptCollectionEntries'
@@ -191,54 +191,30 @@
 >
   {#snippet children(findControls)}
     <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-collection-screen">
-      <div
-        class="prompt-collection-header-bar flex h-9 shrink-0 items-center justify-between gap-3 px-6"
-      >
-        {#if controller.isVirtualContentReady}
-          <div
-            class="prompt-collection-header-breadcrumb flex min-w-0 items-center text-sm font-semibold"
-          >
-            <button
-              type="button"
-              data-testid="prompt-collection-header-collection"
-              class="prompt-collection-header-collection min-w-0 cursor-pointer truncate transition-colors duration-[var(--ui-animation-duration-standard)]"
-              onclick={controller.handleHeaderCollectionClick}
-            >
-              {controller.collectionDisplayName}
-            </button>
-            <span class="prompt-collection-header-separator mx-1 px-2">/</span>
-            <button
-              type="button"
-              data-testid="prompt-collection-header-section"
-              class="prompt-collection-header-section cursor-pointer whitespace-nowrap transition-colors duration-[var(--ui-animation-duration-standard)]"
-              onclick={controller.handleHeaderCollectionClick}
-            >
-              {controller.headerGroupLabel}
-            </button>
-            {#if controller.headerCategoryLabel !== null}
-              <span class="prompt-collection-header-separator mx-1 px-2">/</span>
-              <button
-                type="button"
-                data-testid="prompt-collection-header-category"
-                class="prompt-collection-header-section cursor-pointer whitespace-nowrap transition-colors duration-[var(--ui-animation-duration-standard)]"
-                onclick={controller.handleHeaderCategoryClick}
-              >
-                {controller.headerCategoryLabel}
-              </button>
-            {/if}
-          </div>
-
-          <IconButton
-            icon={Search}
-            label="Find in Collection (Control + F)"
-            title="Find in Collection (Control + F)"
-            size="compact"
-            borderless
-            testId="prompt-collection-find-button"
-            onclick={findControls.toggleFindDialog}
-          />
-        {/if}
-      </div>
+      <PromptCollectionHeaderBar
+        isReady={controller.isVirtualContentReady}
+        segments={[
+          {
+            label: controller.collectionDisplayName,
+            testId: 'prompt-collection-header-collection',
+            onclick: controller.handleHeaderCollectionClick
+          },
+          {
+            label: controller.headerGroupLabel,
+            testId: 'prompt-collection-header-section',
+            onclick: controller.handleHeaderCollectionClick
+          },
+          ...(controller.headerCategoryLabel !== null
+            ? [{
+                label: controller.headerCategoryLabel,
+                testId: 'prompt-collection-header-category',
+                onclick: controller.handleHeaderCategoryClick
+              }]
+            : [])
+        ]}
+        findLabel="Find in Collection (Control + F)"
+        onFind={findControls.toggleFindDialog}
+      />
 
       <div class="flex-1 min-h-0">
         {#if controller.errorMessage}
@@ -278,6 +254,7 @@
             onDeletePrompt={controller.handleDeletePrompt}
             onDeletePromptCollection={handleDeletePromptCollection}
             onSetPromptStatus={controller.handleSetPromptStatus}
+            onOpenPrompt={sidebarModeData.openPrompt}
             onMovePromptUp={controller.handleMovePromptUp}
             onMovePromptDown={controller.handleMovePromptDown}
             canMovePrompt={controller.canMovePrompt}
@@ -357,35 +334,3 @@
     }
   }}
 />
-
-<style>
-  .prompt-collection-header-bar {
-    /* Keep the fixed breadcrumb controls alongside Find and below editor popups. */
-    position: relative;
-    z-index: var(--z-chrome);
-    border-bottom: 1px solid var(--ui-neutral-muted-border);
-  }
-
-  .prompt-collection-header-breadcrumb,
-  .prompt-collection-header-collection,
-  .prompt-collection-header-section {
-    color: var(--ui-muted-text);
-  }
-
-  .prompt-collection-header-collection:hover,
-  .prompt-collection-header-section:hover {
-    color: var(--ui-hoverable-text);
-  }
-
-  .prompt-collection-header-separator {
-    color: var(--ui-neutral-emphasis-border);
-  }
-
-  .prompt-collection-header-section:last-child {
-    color: var(--ui-hoverable-text);
-  }
-
-  .prompt-collection-header-section:last-child:hover {
-    color: var(--ui-normal-text);
-  }
-</style>

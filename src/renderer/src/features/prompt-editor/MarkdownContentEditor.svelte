@@ -7,7 +7,12 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
-  import { Check, Layers, Plus } from 'lucide-svelte'
+  import { Check, Layers, Maximize2, Minimize2, Plus } from 'lucide-svelte'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import EditorSplitHandle from './EditorSplitHandle.svelte'
+  import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
+  import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
+  import { setSinglePromptNoteFractionWithAutosave } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
   import { PROMPT_STATUS_FOLDER_REGISTRY, PromptStatus, type PromptContentStatus } from '@shared/domain/prompt/Prompt'
   import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
@@ -44,6 +49,7 @@
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
     getMonacoHeightFromRowPx,
     getPromptEditorTitleAreaHeightPx,
+    getLineHeightPx,
     getPromptEditorTitleAreaWidthPx,
     getRowHeightPx,
     isPromptEditorCompactLayout,
@@ -63,6 +69,9 @@
 
   // Shared editor implementation; prompt and template wrappers provide the variant behavior.
   let {
+    layout = 'card',
+    onOpen,
+    onClose,
     promptId,
     attachment,
     promptCollectionId,
@@ -113,6 +122,12 @@
     onMoveDown,
     onPromptTreeDrop
   }: {
+    /** Card renders a virtual-row card; screen fills the single-prompt editor with resizable editors. */
+    layout?: 'card' | 'screen'
+    /** Opens this prompt in the single-prompt editor; omitted where it is already open. */
+    onOpen?: () => void
+    /** Closes the single-prompt editor that is showing this prompt. */
+    onClose?: () => void
     promptId: string
     /** Optional note presentation shared with the virtual row's height calculation. */
     attachment?: AttachedNoteLayout
@@ -135,9 +150,11 @@
     modelUri?: monaco.Uri
     compactLayoutMaxWidthPx?: number
     rowId: string
+    /** Card width in the card layout, or the screen width in the screen layout. */
     virtualWindowWidthPx: number
     rowContentLeftOffsetPx?: number
     devicePixelRatio: number
+    /** Pinned card height in the card layout, or the available screen height in the screen layout. */
     rowHeightPx: number
     hydrationPriority: number
     shouldDehydrate: boolean
@@ -316,13 +333,72 @@
   const OVERFLOW_BOTTOM_PADDING_PX =
     PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX + MONACO_VERTICAL_PADDING_PX
 
+  /** Zero-height popup anchor placed directly above the screen layout's body editor. */
+  let bodyOverlayAnchor = $state<HTMLDivElement | null>(null)
+  /** Zero-height popup anchor placed directly above the screen layout's note section. */
+  let noteOverlayAnchor = $state<HTMLDivElement | null>(null)
+  /** Screen anchors sit at their editor section's origin, so only the editor padding offsets popups. */
+  const SCREEN_BODY_OVERFLOW_PADDING = `${PROMPT_EDITOR_BODY_PADDING_TOP_PX + MONACO_VERTICAL_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${PROMPT_EDITOR_BODY_PADDING_LEFT_PX}px`
+  /** Note popups also skip the note's separators and header. */
+  const SCREEN_NOTE_OVERFLOW_PADDING = `${PROMPT_EDITOR_SEPARATOR_HEIGHT_PX * 2 + ATTACHED_NOTE_HEADER_HEIGHT_PX + PROMPT_EDITOR_BODY_PADDING_TOP_PX + MONACO_VERTICAL_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${PROMPT_EDITOR_BODY_PADDING_LEFT_PX}px`
+  /** One rendered line, the minimum height of each screen-layout editor. */
+  const lineHeightPx = $derived(getLineHeightPx(systemSettings.promptFontSize))
+  /** Header, optional template bar, separators, and body padding around the screen-layout body editor. */
+  const screenBodyChromePx = $derived(
+    titleAreaHeightPx +
+      PROMPT_EDITOR_SEPARATOR_HEIGHT_PX +
+      subtitleBarHeightPx +
+      (subtitleBarHeightPx > 0 ? PROMPT_EDITOR_SEPARATOR_HEIGHT_PX : 0) +
+      PROMPT_EDITOR_BODY_PADDING_TOP_PX +
+      PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX
+  )
+  /** Note separator and header, plus its editor chrome while expanded. */
+  const screenNoteChromePx = $derived(
+    attachment
+      ? PROMPT_EDITOR_SEPARATOR_HEIGHT_PX + ATTACHED_NOTE_HEADER_HEIGHT_PX +
+          (attachment.visible
+            ? PROMPT_EDITOR_SEPARATOR_HEIGHT_PX + PROMPT_EDITOR_BODY_PADDING_TOP_PX + PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX
+            : 0)
+      : 0
+  )
+  /** Height shared by the screen layout's body editor and an expanded note editor. */
+  const screenEditorsHeightPx = $derived(virtualRowHeightPx - screenBodyChromePx - screenNoteChromePx)
+  /** Machine-wide share of the editor height given to an expanded note, seeded from persistence. */
+  let noteFraction = $state(userPersistenceCollection.get(USER_PERSISTENCE_ID)!.singlePromptNoteFraction)
+  /** Expanded note editor height, keeping at least one line for both editors. */
+  const screenNoteEditorHeightPx = $derived(
+    attachment?.visible
+      ? Math.min(
+          Math.max(Math.round(screenEditorsHeightPx * noteFraction), lineHeightPx),
+          screenEditorsHeightPx - lineHeightPx
+        )
+      : 0
+  )
+  /** Body editor fills the remaining screen-layout height. */
+  const screenBodyEditorHeightPx = $derived(screenEditorsHeightPx - screenNoteEditorHeightPx)
+  /** Note editor height when the current split-handle drag began. */
+  let resizeStartNoteHeightPx = 0
+
+  /** Moves the split by the drag distance, clamps both editors to one line, and saves the new share. */
+  const resizeNote = (deltaPx: number): void => {
+    /** Requested note height, clamped to the same one-line minimums as the derived layout. */
+    const noteHeightPx = Math.min(
+      Math.max(resizeStartNoteHeightPx - deltaPx, lineHeightPx),
+      screenEditorsHeightPx - lineHeightPx
+    )
+    noteFraction = noteHeightPx / screenEditorsHeightPx
+    setSinglePromptNoteFractionWithAutosave(noteFraction)
+  }
+
   // Side effect: keep the Monaco overflow host aligned with the prompt editor chrome.
   $effect(() => {
     const next = syncMonacoOverflowHost({
-      overlayRowElement,
+      overlayRowElement: layout === 'screen' ? bodyOverlayAnchor : overlayRowElement,
       overflowHost,
       overflowPaddingHost,
-      padding: `${OVERFLOW_TOP_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
+      padding: layout === 'screen'
+        ? SCREEN_BODY_OVERFLOW_PADDING
+        : `${OVERFLOW_TOP_PADDING_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`
     })
     overflowPaddingHost = next.overflowPaddingHost
     overflowHost = next.overflowHost
@@ -580,8 +656,9 @@
     else focusedEditor?.focus()
   }
 
-  // Side effect: register this mounted editor's shortcuts and release them on unmount.
-  onMount(() => registerKeyboardScope({
+  // Side effect: register this mounted card's move shortcuts and release them on unmount.
+  // The screen layout omits them because the move would not be visible.
+  onMount(() => layout === 'screen' ? undefined : registerKeyboardScope({
     layer: 'screen',
     bindings: [{
       matches: (event) =>
@@ -593,26 +670,21 @@
   }))
 </script>
 
-<EditorCardSurface
-  bind:rowElement
-  showSidebar
-  style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
-  data-testid={`prompt-editor-${promptId}`}
-  data-dragging={isDragging ? 'true' : 'false'}
-  data-virtual-window-row=""
->
-  {#snippet sidebar()}
-    <PromptEditorSidebar
-      {promptId}
-      {promptCollectionId}
-      {contentKind}
-      {contentLabel}
-      title={promptTreeTitle}
-      {isDragEnabled}
-      {onPromptTreeDrop}
-    />
-  {/snippet}
+<!-- Drag rail shared by the card's full-height sidebar and the screen header. -->
+{#snippet editorSidebar()}
+  <PromptEditorSidebar
+    {promptId}
+    {promptCollectionId}
+    {contentKind}
+    {contentLabel}
+    title={promptTreeTitle}
+    {isDragEnabled}
+    {onPromptTreeDrop}
+  />
+{/snippet}
 
+<!-- Title, metadata, status accent, and toolbar shared by both layouts. -->
+{#snippet titleArea()}
   <PromptEditorTitleArea
     {findRequest}
     title={promptData.draft.title}
@@ -649,13 +721,32 @@
     {titleAreaHeightPx}
     compactLayout={compactTitleLayout}
   >
-    {#snippet attachedNoteAction()}
+    {#snippet trailingActions()}
       <AttachedNoteButton noteId={attachment?.note.id} noteText={attachment?.note.noteText} visible={attachment?.visible ?? false} ontoggle={toggleAttachedNote} />
+      {#if onOpen}
+        <IconButton
+          icon={Maximize2}
+          label="Open in editor"
+          title="Open in editor"
+          testId="prompt-open-button"
+          onclick={onOpen}
+        />
+      {/if}
+      {#if onClose}
+        <IconButton
+          icon={Minimize2}
+          label="Close full screen editor"
+          title="Close full screen editor"
+          testId="prompt-close-button"
+          onclick={onClose}
+        />
+      {/if}
     {/snippet}
   </PromptEditorTitleArea>
+{/snippet}
 
-  <Separator />
-
+<!-- Template-only parameter bar shared by both layouts. -->
+{#snippet subtitleBar()}
   {#if contentKind === 'template'}
     <EditorSubtitleBar
       icon={Layers}
@@ -682,7 +773,10 @@
 
     <Separator />
   {/if}
+{/snippet}
 
+<!-- Main prompt or template text editor shared by both layouts. -->
+{#snippet bodyEditor()}
   {#key promptId}
     <MonacoEditorSection
       class="prompt-editor-body-editor-section"
@@ -691,7 +785,8 @@
       viewStateCaptureKey={`content:${promptId}`}
       {modelUri}
       containerWidthPx={virtualWindowWidthPx}
-      placeholderHeightPx={placeholderMonacoHeightPx}
+      placeholderHeightPx={layout === 'screen' ? screenBodyEditorHeightPx : placeholderMonacoHeightPx}
+      fixedHeightPx={layout === 'screen' ? screenBodyEditorHeightPx : undefined}
       overflowWidgetsDomNode={overflowHost}
       sizingConfig={promptEditorSizingConfig}
       {hydrationPriority}
@@ -721,8 +816,9 @@
           monacoHeightPx = meta.heightPx
         }
         promptData.setText(text, {
+          // Screen editors have a fixed height, so their measurement uses the card-clamped content height.
           measuredHeightPx: getRowHeightPx(
-            meta.heightPx,
+            layout === 'screen' ? clampMonacoHeightPx(meta.contentHeightPx, promptEditorSizingConfig) : meta.heightPx,
             titleAreaWidthPx,
             compactLayoutMaxWidthPx,
             subtitleBarHeightPx
@@ -739,6 +835,10 @@
       }}
     />
   {/key}
+{/snippet}
+
+<!-- Collapsible attached note shared by both layouts. -->
+{#snippet noteSection()}
   {#if attachment}
     {#key attachment.note.id}
       <AttachedNoteSection
@@ -748,8 +848,9 @@
         {rowId}
         {hydrationPriority}
         {shouldDehydrate}
-        {overlayRowElement}
-        overflowPadding={`${OVERFLOW_TOP_PADDING_PX + monacoHeightPx + PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX + PROMPT_EDITOR_SEPARATOR_HEIGHT_PX * 2 + ATTACHED_NOTE_HEADER_HEIGHT_PX + PROMPT_EDITOR_BODY_PADDING_TOP_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`}
+        overlayRowElement={layout === 'screen' ? noteOverlayAnchor : overlayRowElement}
+        fixedHeightPx={layout === 'screen' ? screenNoteEditorHeightPx : undefined}
+        overflowPadding={layout === 'screen' ? SCREEN_NOTE_OVERFLOW_PADDING : `${OVERFLOW_TOP_PADDING_PX + monacoHeightPx + PROMPT_EDITOR_BODY_PADDING_BOTTOM_PX + PROMPT_EDITOR_SEPARATOR_HEIGHT_PX * 2 + ATTACHED_NOTE_HEADER_HEIGHT_PX + PROMPT_EDITOR_BODY_PADDING_TOP_PX}px ${OVERFLOW_RIGHT_PADDING_PX}px ${OVERFLOW_BOTTOM_PADDING_PX}px ${OVERFLOW_LEFT_PADDING_PX}px`}
         {scrollToWithinWindowBand}
         ontoggle={toggleAttachedNote}
         {onInteraction}
@@ -757,4 +858,81 @@
       />
     {/key}
   {/if}
-</EditorCardSurface>
+{/snippet}
+
+{#if layout === 'card'}
+  <EditorCardSurface
+    bind:rowElement
+    showSidebar
+    style={`height:${virtualRowHeightPx}px; min-height:${virtualRowHeightPx}px; max-height:${virtualRowHeightPx}px;`}
+    data-testid={`prompt-editor-${promptId}`}
+    data-dragging={isDragging ? 'true' : 'false'}
+    data-virtual-window-row=""
+  >
+    {#snippet sidebar()}
+      {@render editorSidebar()}
+    {/snippet}
+
+    {@render titleArea()}
+    <Separator />
+    {@render subtitleBar()}
+    {@render bodyEditor()}
+    {@render noteSection()}
+  </EditorCardSurface>
+{:else}
+  <div
+    bind:this={rowElement}
+    class="markdown-content-editor-screen"
+    data-testid={`prompt-editor-${promptId}`}
+    data-layout="screen"
+    data-virtual-window-row=""
+  >
+    <div class="markdown-content-editor-screen-header" style={`height:${titleAreaHeightPx}px;`}>
+      {@render editorSidebar()}
+      {@render titleArea()}
+    </div>
+    <Separator />
+    {@render subtitleBar()}
+    <div class="markdown-content-editor-overlay-anchor" bind:this={bodyOverlayAnchor}></div>
+    {@render bodyEditor()}
+    {#if attachment?.visible}
+      <EditorSplitHandle
+        label="Resize attached note"
+        testId="attached-note-split-handle"
+        onResizeStart={() => {
+          resizeStartNoteHeightPx = screenNoteEditorHeightPx
+        }}
+        onResize={resizeNote}
+      />
+    {/if}
+    <div class="markdown-content-editor-overlay-anchor" bind:this={noteOverlayAnchor}></div>
+    {@render noteSection()}
+  </div>
+{/if}
+
+<style>
+  .markdown-content-editor-screen {
+    background: var(--ui-card-normal-surface);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    position: relative;
+  }
+
+  .markdown-content-editor-screen-header {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: 32px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  /* Unclipped zero-height origin for Monaco popups, painted above the editors that follow it. */
+  .markdown-content-editor-overlay-anchor {
+    height: 0;
+    overflow: visible;
+    position: relative;
+    z-index: var(--z-overlay);
+  }
+</style>

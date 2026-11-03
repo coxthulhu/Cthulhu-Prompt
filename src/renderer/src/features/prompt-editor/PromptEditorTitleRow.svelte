@@ -4,8 +4,8 @@
   import type { PromptCollectionFindRequest, PromptCollectionFindSelection } from '../prompt-collections/find/promptCollectionFindTypes'
 
   export type PromptEditorTitleRowProps = {
-    /** Optional attached-note toolbar control. */
-    attachedNoteAction?: Snippet
+    /** Optional attached-note and open-editor toolbar controls. */
+    trailingActions?: Snippet
     /** Collection search state used to decorate title occurrences without taking focus. */
     findRequest?: PromptCollectionFindRequest | null
     title: string
@@ -69,7 +69,7 @@
   import { PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY } from '../prompt-collections/find/promptCollectionFindSectionKeys'
 
   let {
-    attachedNoteAction: renderAttachedNoteAction,
+    trailingActions: renderTrailingActions,
     findRequest,
     title,
     draftText,
@@ -428,8 +428,8 @@
         onCopySuccess={handleCopySuccess}
         {onBeforeCopy}
       >
-        {#snippet attachedNoteAction()}
-          {@render renderAttachedNoteAction?.()}
+        {#snippet trailingActions()}
+          {@render renderTrailingActions?.()}
         {/snippet}
       </PromptEditorButtonBar>
     </div>

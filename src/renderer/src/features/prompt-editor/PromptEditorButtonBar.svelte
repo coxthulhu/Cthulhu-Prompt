@@ -6,8 +6,8 @@
   import { Layers, Zap } from 'lucide-svelte'
 
   type Props = {
-    /** Attached-note split action supplied by the owning editor. */
-    attachedNoteAction?: Snippet
+    /** Attached-note and open-editor actions supplied by the owning editor. */
+    trailingActions?: Snippet
     draftText: string
     copyText?: string
     onTemplateSelect?: () => void
@@ -22,7 +22,7 @@
   }
 
   let {
-    attachedNoteAction,
+    trailingActions,
     draftText,
     copyText,
     onTemplateSelect,
@@ -66,5 +66,5 @@
       onclick={onTemplateSelect}
     />
   {/if}
-  {@render attachedNoteAction?.()}
+  {@render trailingActions?.()}
 </IconButtonBar>

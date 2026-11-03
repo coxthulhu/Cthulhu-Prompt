@@ -9,6 +9,8 @@ export type UserPersistence = {
   settingsCollapsedSectionIds: string[]
   /** Last scroll offset of the settings screen on this machine. */
   settingsScrollTopPx: number
+  /** Share of the single-prompt editor area given to a visible attached note on this machine. */
+  singlePromptNoteFraction: number
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
@@ -16,7 +18,8 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   appSidebarWidthPx: 275,
   hasShownWelcome: false,
   settingsCollapsedSectionIds: [],
-  settingsScrollTopPx: 0
+  settingsScrollTopPx: 0,
+  singlePromptNoteFraction: 0.3
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -35,6 +38,8 @@ export type ProjectWorkspaceScreenSelection = {
     promptCollectionId: string | null
     /** collection or category owner containing the selected prompt-collection screen row. */
     contentOwnerId: string | null
+    /** Prompt or template shown in the single-prompt editor, or null for the collection view. */
+    openPromptId: string | null
   }
 }
 
@@ -83,7 +88,8 @@ export const isWorkspaceScreenSelectionSame = (
   if (isProjectScreenSelection(left) && isProjectScreenSelection(right)) {
     return (
       left.selectedScreenData.promptCollectionId === right.selectedScreenData.promptCollectionId &&
-      left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId
+      left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId &&
+      left.selectedScreenData.openPromptId === right.selectedScreenData.openPromptId
     )
   }
 
@@ -130,7 +136,11 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
     settingsScrollTopPx:
       typeof value.settingsScrollTopPx === 'number'
         ? Math.round(value.settingsScrollTopPx)
-        : DEFAULT_USER_PERSISTENCE.settingsScrollTopPx
+        : DEFAULT_USER_PERSISTENCE.settingsScrollTopPx,
+    singlePromptNoteFraction:
+      typeof value.singlePromptNoteFraction === 'number'
+        ? value.singlePromptNoteFraction
+        : DEFAULT_USER_PERSISTENCE.singlePromptNoteFraction
   }
 }
 
@@ -198,11 +208,18 @@ export const parseWorkspaceScreenSelection = (
     return null
   }
 
+  /** Open single-prompt editor target, absent from data saved before the editor existed. */
+  const openPromptId = selectedScreenData.openPromptId ?? null
+  if (openPromptId !== null && typeof openPromptId !== 'string') {
+    return null
+  }
+
   return {
     selectedScreen,
     selectedScreenData: {
       promptCollectionId,
-      contentOwnerId
+      contentOwnerId,
+      openPromptId
     }
   }
 }

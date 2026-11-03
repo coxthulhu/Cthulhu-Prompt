@@ -6,10 +6,10 @@
     setPromptTemplateTitle
   } from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
   import { PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX } from './promptEditorSizing'
-  import MarkdownContentEditorRow from './MarkdownContentEditorRow.svelte'
+  import MarkdownContentEditor from './MarkdownContentEditor.svelte'
 
   type Props = Omit<
-    ComponentProps<typeof MarkdownContentEditorRow>,
+    ComponentProps<typeof MarkdownContentEditor>,
     | 'contentKind'
     | 'contentLabel'
     | 'metadataTemplateLabel'
@@ -28,7 +28,7 @@
   let { promptId, ...props }: Props = $props()
 </script>
 
-<MarkdownContentEditorRow
+<MarkdownContentEditor
   {...props}
   {promptId}
   contentKind="template"

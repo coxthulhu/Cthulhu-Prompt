@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import { clearWorkspaceMonacoModels } from '@renderer/common/Monaco'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
@@ -17,6 +17,7 @@
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
   import PromptCollectionScreen from '../features/prompt-collections/PromptCollectionScreen.svelte'
+  import SinglePromptScreen from '../features/prompt-collections/SinglePromptScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import { createSidebarModes, SidebarModeId } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import type {
@@ -247,7 +248,8 @@
         selectedScreen: screen,
         selectedScreenData: {
           promptCollectionId: screenCollectionId,
-          contentOwnerId
+          contentOwnerId,
+          openPromptId: projectMode.openPromptId
         }
       }
     }
@@ -348,6 +350,12 @@
       /** Collection selected from screen data, remembered state, or project order. */
       const restoredPromptCollectionId = projectMode.resolveCollectionId(persistedPromptCollectionId)
       projectMode.selectCollection(restoredPromptCollectionId)
+      /** Single-prompt editor restored only within its own collection; it closes itself if the prompt is gone. */
+      const restoredOpenPromptId =
+        persistedPromptCollectionId === restoredPromptCollectionId
+          ? workspaceUiState.selectedScreenData.openPromptId
+          : null
+      projectMode.openPromptId = restoredOpenPromptId
       activeScreen = workspaceUiState.selectedScreen
       /** Last project collection, re-synced when it differs from the restored collection. */
       const persistedLastPromptCollectionId = workspaceUiState.lastCollectionId
@@ -363,7 +371,8 @@
             contentOwnerId:
               persistedPromptCollectionId === restoredPromptCollectionId
                 ? workspaceUiState.selectedScreenData.contentOwnerId
-                : restoredPromptCollectionId
+                : restoredPromptCollectionId,
+            openPromptId: restoredOpenPromptId
           }
         })
       }
@@ -576,6 +585,15 @@
     )
   })
 
+  // Side effect: persist opening and closing the single-prompt editor while the project screen is shown.
+  $effect(() => {
+    void projectMode.openPromptId
+    untrack(() => {
+      if (activeScreen !== 'project') return
+      void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('project'))
+    })
+  })
+
   // Side effect: flush pending autosaves before allowing the main process to close the window.
   $effect(() => {
     const unsubscribe = windowControls.onCloseRequested(() => {
@@ -626,7 +644,11 @@
   const navigateToScreenCollection = (promptCollectionId: string): void => {
     if (!isWorkspaceReady) return
     if (!selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) return
-    if (activeScreen === 'project' && projectMode.collectionId === promptCollectionId) return
+    if (activeScreen === 'project' && projectMode.collectionId === promptCollectionId) {
+      // Reselecting the shown collection returns from the single-prompt editor to its collection view.
+      projectMode.closeOpenPrompt()
+      return
+    }
     navigateToScreen('project', promptCollectionId)
   }
 
@@ -719,7 +741,11 @@
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
           {:else if activeScreen === 'project'}
-            {#if projectMode.collectionId && workspacePath}
+            {#if projectMode.collectionId && workspacePath && projectMode.openPromptId}
+              {#key `${projectMode.collectionId}:${projectMode.openPromptId}`}
+                <SinglePromptScreen sidebarModeData={projectMode} />
+              {/key}
+            {:else if projectMode.collectionId && workspacePath}
               {#key `${projectMode.collectionId}:${projectMode.screenMode}`}
                 <PromptCollectionScreen
                   bind:this={promptCollectionScreen}

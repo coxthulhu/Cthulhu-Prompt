@@ -15,24 +15,17 @@
   } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Category } from '@shared/domain/category/Category'
   import { lookupPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
-  import type { MarkdownContentDraftRecord } from './promptCollectionScreenController.svelte.ts'
+  import type { MarkdownContentDraftRecord } from '../prompt-editor/markdownContentDraftRecord'
   import {
     getPromptStatusFolderDefinition,
     PROMPT_STATUS_FOLDER_REGISTRY,
-    PROMPT_STATUS_BEHAVIORS,
     type PromptStatusFolderId,
     PromptStatus,
-    isPromptStatus,
-    type PromptContentStatus,
-    type PromptTemplateReference
+    type PromptContentStatus
   } from '@shared/domain/prompt/Prompt'
-  import PromptEditorRow from '../prompt-editor/PromptEditorRow.svelte'
-  import PromptTemplateEditorRow from '../prompt-editor/PromptTemplateEditorRow.svelte'
-  import PromptTemplateSelectionDialog from '../prompt-editor/PromptTemplateSelectionDialog.svelte'
-  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
-  import { Copy } from 'lucide-svelte'
-  import { applyPromptTemplates } from '../prompt-editor/promptTemplatingEngine'
-  import { setPromptTemplates } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
+  import PromptEditor from '../prompt-editor/PromptEditor.svelte'
+  import PromptTemplateEditor from '../prompt-editor/PromptTemplateEditor.svelte'
+  import PromptCopyWorkflow from '../prompt-editor/PromptCopyWorkflow.svelte'
   import {
     clampMonacoHeightPx,
     EDITOR_SUBTITLE_BAR_HEIGHT_PX,
@@ -165,7 +158,9 @@
     onManageCategories: () => void
     onDeletePrompt: (target: PromptCollectionPromptTarget) => void
     onDeletePromptCollection: (promptCollectionId: string) => void
-    onSetPromptStatus: (target: PromptCollectionPromptTarget, status: PromptContentStatus) => void
+    onSetPromptStatus: (promptId: string, status: PromptContentStatus) => void
+    /** Opens one prompt or template in the single-prompt editor. */
+    onOpenPrompt: (promptId: string) => void
     canMovePrompt: (target: PromptCollectionPromptTarget, direction: 'up' | 'down') => boolean
     onMovePromptUp: (target: PromptCollectionPromptTarget) => Promise<boolean>
     onMovePromptDown: (target: PromptCollectionPromptTarget) => Promise<boolean>
@@ -215,6 +210,7 @@
     onDeletePrompt,
     onDeletePromptCollection,
     onSetPromptStatus,
+    onOpenPrompt,
     onMovePromptUp,
     onMovePromptDown,
     canMovePrompt,
@@ -270,32 +266,8 @@
     }
   }
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
-  let isTemplateSelectionDialogOpen = $state(false)
-  let templateSelectionTarget = $state<PromptCollectionPromptTarget | null>(null)
-  let templateSelectionMode = $state<'select' | 'select-and-copy'>('select')
-  /** Suspends either copy action until the user accepts its status change. */
-  let pendingCopyConfirmation = $state<{
-    status: PromptContentStatus
-    resolve: (confirmed: boolean) => void
-  } | null>(null)
-
-  /** Confirms copying only when it moves a prompt out of an inactive workflow. */
-  const confirmPromptCopy = (promptId: string): Promise<boolean> => {
-    /** Current status supplies both the confirmation condition and its explanation. */
-    const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
-    if (status !== PromptStatus.Backlog && status !== PromptStatus.Completed && status !== PromptStatus.Archived) {
-      return Promise.resolve(true)
-    }
-    return new Promise((resolve) => {
-      pendingCopyConfirmation = { status, resolve }
-    })
-  }
-
-  /** Closes the confirmation and resumes or cancels the suspended copy action. */
-  const resolveCopyConfirmation = (confirmed: boolean): void => {
-    pendingCopyConfirmation!.resolve(confirmed)
-    pendingCopyConfirmation = null
-  }
+  /** Template selection and copy confirmation shared with the single-prompt editor. */
+  let copyWorkflow = $state<PromptCopyWorkflow | null>(null)
   const promptDividerDroppableState = createDroppableStateRegistry<string>()
   /** Category-only divider target state keyed by virtual row ID. */
   const categoryDividerDroppableState = createDroppableStateRegistry<string>()
@@ -312,7 +284,7 @@
     isTemplateCollection ? PROMPT_TEMPLATE_EDITOR_COMPACT_LAYOUT_MAX_WIDTH_PX : undefined
   )
   const ContentEditorRow = $derived(
-    isTemplateCollection ? PromptTemplateEditorRow : PromptEditorRow
+    isTemplateCollection ? PromptTemplateEditor : PromptEditor
   )
   const promptCollectionById = $derived.by(
     () =>
@@ -345,62 +317,6 @@
   $effect(() => {
     onViewportMetricsChange(viewportMetrics)
   })
-
-  const getCopyTemplateTexts = (
-    selectedTemplates: PromptTemplateReference[] | null | undefined
-  ): string[] => {
-    if (isTemplateCollection) return []
-
-    const templateTexts: string[] = []
-
-    for (const template of selectedTemplates ?? []) {
-      const selectedTemplateText = promptTemplateTextById[template.id]
-      if (selectedTemplateText !== undefined) templateTexts.push(selectedTemplateText)
-    }
-    return templateTexts
-  }
-
-  const openTemplateSelectionDialog = (
-    target: PromptCollectionPromptTarget,
-    mode: 'select' | 'select-and-copy'
-  ): void => {
-    templateSelectionTarget = target
-    templateSelectionMode = mode
-    isTemplateSelectionDialogOpen = true
-  }
-
-  const handleTemplateSelect = (templates: PromptTemplateReference[] | null): void => {
-    if (!templateSelectionTarget) return
-    setPromptTemplates(templateSelectionTarget.promptId, templates)
-  }
-
-  const handleTemplateSelectAndCopy = async (
-    templates: PromptTemplateReference[] | null
-  ): Promise<void> => {
-    if (!templateSelectionTarget) return
-    /** Retains the selected prompt while confirmation is open. */
-    const target = templateSelectionTarget
-    const { promptId } = target
-    if (!(await confirmPromptCopy(promptId))) return
-    const promptDraft = promptDraftById[promptId]!
-    await window.navigator.clipboard.writeText(
-      applyPromptTemplates(
-        promptDraft.text,
-        getCopyTemplateTexts(templates)
-      )
-    )
-    setPromptTemplates(promptId, templates)
-    /** Both copy actions share the same successful-copy status transition. */
-    const status = (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status
-    const nextStatus = isPromptStatus(status) ? PROMPT_STATUS_BEHAVIORS[status].copyStatus : undefined
-    if (nextStatus) onSetPromptStatus(target, nextStatus)
-  }
-
-  const handlePromptCopySuccess = (promptId: string): void => {
-    if (promptDraftById[promptId]!.templates === undefined) {
-      setPromptTemplates(promptId, null)
-    }
-  }
 
   const rowRegistry = defineVirtualWindowRowRegistry<PromptCollectionRow>({
     'collection-header': {
@@ -988,7 +904,7 @@
       {shouldDehydrate}
       {overlayRowElement}
       {onHydrationChange}
-      copyTemplateTexts={getCopyTemplateTexts(promptDraftById[row.promptId]!.templates)}
+      copyTemplateTexts={copyWorkflow?.getCopyTemplateTexts(promptDraftById[row.promptId]!.templates) ?? []}
       {screenMode}
       status={promptMetadata.status}
       finalizedAt={promptMetadata.finalizedAt}
@@ -997,20 +913,21 @@
       isLastPrompt={!canMovePrompt(promptTarget, 'down')}
       onDelete={() => onDeletePrompt(promptTarget)}
       onInteraction={() => onPromptInteraction(promptTarget)}
-      onArchive={() => onSetPromptStatus(promptTarget, isTemplateCollection ? PromptTemplateStatus.Archived : PromptStatus.Archived)}
+      onOpen={() => onOpenPrompt(row.promptId)}
+      onArchive={() => onSetPromptStatus(row.promptId, isTemplateCollection ? PromptTemplateStatus.Archived : PromptStatus.Archived)}
       onRestore={isTemplateCollection && promptMetadata.status === PromptTemplateStatus.Archived
-        ? () => onSetPromptStatus(promptTarget, PromptTemplateStatus.Active)
+        ? () => onSetPromptStatus(row.promptId, PromptTemplateStatus.Active)
         : undefined}
       onTemplateSelect={isTemplateCollection
         ? undefined
-        : () => openTemplateSelectionDialog(promptTarget, 'select')}
+        : () => copyWorkflow?.openTemplateSelection(row.promptId, 'select')}
       onTemplateSelectAndCopy={isTemplateCollection
         ? undefined
-        : () => openTemplateSelectionDialog(promptTarget, 'select-and-copy')}
-      onCopySuccess={isTemplateCollection ? undefined : () => handlePromptCopySuccess(row.promptId)}
-      onBeforeCopy={isTemplateCollection ? undefined : () => confirmPromptCopy(row.promptId)}
+        : () => copyWorkflow?.openTemplateSelection(row.promptId, 'select-and-copy')}
+      onCopySuccess={isTemplateCollection ? undefined : () => copyWorkflow?.handlePromptCopySuccess(row.promptId)}
+      onBeforeCopy={isTemplateCollection ? undefined : () => copyWorkflow!.confirmPromptCopy(row.promptId)}
       onStatusChange={isTemplateCollection ? undefined : (status) => {
-        onSetPromptStatus(promptTarget, status)
+        onSetPromptStatus(row.promptId, status)
       }}
       onMoveUp={() => (isFinalMode ? Promise.resolve(false) : onMovePromptUp(promptTarget))}
       onMoveDown={() =>
@@ -1026,29 +943,14 @@
   <BottomSpacer scrollContainerHeightPx={virtualWindowHeightPx} />
 {/snippet}
 
-<PromptTemplateSelectionDialog
-  bind:open={isTemplateSelectionDialogOpen}
+<PromptCopyWorkflow
+  bind:this={copyWorkflow}
   {workspaceId}
-  mode={templateSelectionMode}
-  selectedTemplates={templateSelectionTarget
-    ? promptDraftById[templateSelectionTarget.promptId]?.templates
-    : undefined}
-  onselect={handleTemplateSelect}
-  onselectandcopy={handleTemplateSelectAndCopy}
-/>
-
-<!-- Informational confirmation is shared by direct copy and quick template selection. -->
-<ConfirmationDialog
-  open={pendingCopyConfirmation !== null}
-  variant="informational"
-  icon={Copy}
-  title="Copy Prompt"
-  description={`Copying this prompt will move it from ${pendingCopyConfirmation?.status} to In Progress.`}
-  confirmText="Copy and Move"
-  confirmTestId="prompt-confirm-copy-button"
-  closeOnOutsideClick={false}
-  oncancel={() => resolveCopyConfirmation(false)}
-  onconfirm={() => resolveCopyConfirmation(true)}
+  {isTemplateCollection}
+  {promptDraftById}
+  {promptTemplateTextById}
+  getStatus={(promptId) => (promptMetadataByPromptId[promptId] ?? todoPromptMetadata).status}
+  {onSetPromptStatus}
 />
 
 <style>

@@ -1440,7 +1440,8 @@ describe('Prompt categories', () => {
             data: expect.objectContaining({
               selectedScreenData: {
                 promptCollectionId: PROMPT_ROOT_ID,
-                contentOwnerId: PROMPT_ROOT_ID
+                contentOwnerId: PROMPT_ROOT_ID,
+                openPromptId: null
               }
             })
           }),

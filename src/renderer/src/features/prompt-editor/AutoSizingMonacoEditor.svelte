@@ -497,7 +497,8 @@
         lineNumbers: showLineNumbers ? 'on' : 'off',
         lineNumbersMinChars: 3,
         overviewRulerBorder: false,
-        scrollbar: { handleMouseWheel: false, alwaysConsumeMouseWheel: false },
+        // Fixed-height editors own their viewport, so they always scroll with the wheel.
+        scrollbar: { handleMouseWheel: fixedHeightPx !== undefined, alwaysConsumeMouseWheel: false },
         revealHorizontalRightPadding: 0,
         cursorSmoothCaretAnimation: 'off',
         smoothScrolling: false,
@@ -521,7 +522,7 @@
 
       const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
       const blurDisposable = nextEditor.onDidBlurEditorWidget(() => {
-        syncMouseWheelHandling(nextEditor, false)
+        syncMouseWheelHandling(nextEditor, fixedHeightPx !== undefined)
         onBlur?.()
       })
       const focusDisposable = nextEditor.onDidFocusEditorWidget(() => {

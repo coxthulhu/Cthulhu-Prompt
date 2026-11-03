@@ -32,6 +32,18 @@ export class CollectionSidebarModeData {
   shownFinalStatusGroups = $state<Partial<Record<PromptStatusFolderId, boolean>>>({})
   /** Most recently visited status groups first, independently for each collection. */
   modeHistoryByCollection = $state<Record<string, PromptStatusFolderId[]>>({})
+  /** Prompt or template shown in the single-prompt editor, or null while the collection view is shown. */
+  openPromptId = $state<string | null>(null)
+
+  /** Shows one prompt or template of the selected collection in the single-prompt editor. */
+  openPrompt = (promptId: string): void => {
+    this.openPromptId = promptId
+  }
+
+  /** Returns from the single-prompt editor to the collection view. */
+  closeOpenPrompt = (): void => {
+    this.openPromptId = null
+  }
 
   /** Returns the preferred collection when it exists, else the remembered one, else the first in project order. */
   resolveCollectionId(preferredId = this.collectionId): string | null {
@@ -52,6 +64,7 @@ export class CollectionSidebarModeData {
   /** Selects a collection and restores its saved status navigation before its screen mounts. */
   selectCollection(collectionId: string | null, expandSection = true): void {
     this.collectionId = collectionId
+    this.openPromptId = null
     const workspaceId = getSelectedWorkspaceId()
     /** Saved navigation defaults to Active with every optional section hidden. */
     const saved = workspaceId && collectionId ? lookupPromptCollectionUiState(workspaceId, collectionId) : null
@@ -75,12 +88,20 @@ export class CollectionSidebarModeData {
     if (PROMPT_STATUS_FOLDER_REGISTRY[nextMode].ordering === 'finalizedAt') {
       this.shownFinalStatusGroups[nextMode] = true
     }
+    this.openPromptId = null
     this.screenMode = nextMode
     this.rememberScreenMode()
     this.persistStatusNavigation()
     /** Every selected destination must be reachable in the sidebar, including restored modes. */
     const workspaceId = getSelectedWorkspaceId()
     if (workspaceId) expandPromptStatusSectionWithAutosave(workspaceId, nextMode)
+  }
+
+  /** Follows the open prompt into another category workflow without changing accordion expansion. */
+  followOpenPromptGroup = (nextMode: PromptCollectionScreenMode): void => {
+    this.screenMode = nextMode
+    this.rememberScreenMode()
+    this.persistStatusNavigation()
   }
 
   /** Shows a finalized group, or hides it by returning to the most recently visited visible mode. */

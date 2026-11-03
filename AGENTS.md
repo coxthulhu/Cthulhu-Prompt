@@ -11,6 +11,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
 - **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.
+- **Single Prompt Screen** — Shows one prompt or template full screen beside the collection sidebar, with a resizable attached note and a path and Find scoped to that prompt.
 - **System Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
 - **Collection Sidebar** — The App Sidebar project mode used to select, create, and reorder a project's task and template collections together, then navigate to the prompts or templates within them.
 - **Settings Sidebar** — The App Sidebar mode on the System Settings Screen that shows a settings tree that scrolls to each settings section and row.

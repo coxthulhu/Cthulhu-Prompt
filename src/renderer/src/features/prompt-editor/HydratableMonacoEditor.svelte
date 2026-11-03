@@ -27,6 +27,8 @@
     shouldDehydrate: boolean
     rowId: string
     sizingConfig: PromptEditorSizingConfig
+    /** Optional exact editor height that disables content-based vertical resizing. */
+    fixedHeightPx?: number
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onImmediateHydrationRequest?: (request: (() => Promise<void>) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
@@ -66,6 +68,7 @@
     shouldDehydrate,
     rowId,
     sizingConfig,
+    fixedHeightPx,
     scrollToWithinWindowBand,
     onImmediateHydrationRequest,
     onHydrationChange,
@@ -190,6 +193,7 @@
     {overflowWidgetsDomNode}
     {rowId}
     {sizingConfig}
+    {fixedHeightPx}
     {scrollToWithinWindowBand}
     {onChange}
     {onBlur}

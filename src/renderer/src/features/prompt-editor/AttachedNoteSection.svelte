@@ -18,7 +18,7 @@
 
   /** Note presentation and virtual-row services supplied by the owning editor. */
   let { attachment, widthPx, devicePixelRatio, rowId, hydrationPriority, shouldDehydrate,
-    overlayRowElement, overflowPadding, scrollToWithinWindowBand, ontoggle, onInteraction, onEditorLifecycle }: {
+    overlayRowElement, overflowPadding, fixedHeightPx, scrollToWithinWindowBand, ontoggle, onInteraction, onEditorLifecycle }: {
     /** Authoritative note and its current visibility and measurements. */
     attachment: AttachedNoteLayout
     /** Card width used to key wrapped-height measurements. */
@@ -35,6 +35,8 @@
     overlayRowElement?: HTMLDivElement | null
     /** Positions popups at the note editor's origin. */
     overflowPadding: string
+    /** Exact editor height chosen by a resizable layout instead of the note's content. */
+    fixedHeightPx?: number
     /** Keeps the note caret within the collection viewport. */
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     /** Toggles persisted note visibility. */
@@ -119,7 +121,8 @@
     onViewStateCapture={(value) => { viewStateJson = value }}
     {modelUri}
     containerWidthPx={widthPx}
-    placeholderHeightPx={attachment.editorHeightPx}
+    placeholderHeightPx={fixedHeightPx ?? attachment.editorHeightPx}
+    {fixedHeightPx}
     overflowWidgetsDomNode={overflowHost}
     {sizingConfig}
     {hydrationPriority}

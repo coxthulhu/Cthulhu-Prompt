@@ -45,6 +45,15 @@ export const setSettingsScrollTopWithAutosave = (scrollTopPx: number): void => {
   })
 }
 
+/** Saves the single-prompt editor's attached-note share on this machine. */
+export const setSinglePromptNoteFractionWithAutosave = (fraction: number): void => {
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, singlePromptNoteFraction: fraction },
+    debounceMs: AUTOSAVE_MS
+  })
+}
+
 export const flushUserPersistenceAutosaves = async (): Promise<void> => {
   await submitPacedUpdateTransactionAndWait(userPersistenceCollection.id, USER_PERSISTENCE_ID)
 }

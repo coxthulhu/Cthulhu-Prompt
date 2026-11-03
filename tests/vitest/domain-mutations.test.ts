@@ -560,7 +560,7 @@ describe('shared domain mutation planners', () => {
     const activeWorkspaceUiState = {
       workspaceId: workspace.id,
       selectedScreen: 'project' as const,
-      selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: 'category' },
+      selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: 'category', openPromptId: null },
       lastCollectionId: collection.id
     }
     /** Shared planner state containing active split UI-state records. */
@@ -599,7 +599,7 @@ describe('shared domain mutation planners', () => {
     /** Inactive navigation already owned by the root and retaining its selection. */
     const inactiveWorkspaceUiState = {
       ...activeWorkspaceUiState,
-      selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: collection.id }
+      selectedScreenData: { promptCollectionId: collection.id, contentOwnerId: collection.id, openPromptId: null }
     }
     /** Inactive-category plan that must not update workspace or root UI state. */
     const inactivePlan = planDeleteCategoryDomainMutation(

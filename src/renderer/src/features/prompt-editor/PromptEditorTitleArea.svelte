@@ -10,7 +10,7 @@
   }
 
   let {
-    attachedNoteAction: renderAttachedNoteAction,
+    trailingActions: renderTrailingActions,
     findRequest,
     title,
     draftText,
@@ -89,8 +89,8 @@
     {isEdited}
     {compactLayout}
   >
-    {#snippet attachedNoteAction()}
-      {@render renderAttachedNoteAction?.()}
+    {#snippet trailingActions()}
+      {@render renderTrailingActions?.()}
     {/snippet}
   </PromptEditorTitleRow>
 </div>

@@ -1,6 +1,10 @@
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
-import { getPromptLocation, getPromptStatusLocation, setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
-import { NO_TEMPLATE_LABEL, TEMPLATE_NOT_SELECTED_LABEL } from '@renderer/common/emptyStateText'
+import { getPromptLocation, setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
+import {
+  buildPromptDraftRecord,
+  buildTemplateDraftRecord,
+  type MarkdownContentDraftRecord
+} from '@renderer/features/prompt-editor/markdownContentDraftRecord'
 import { useLiveQuery } from '@tanstack/svelte-db'
 import { SvelteSet } from 'svelte/reactivity'
 import {
@@ -9,8 +13,7 @@ import {
   PromptStatusFolderId,
   isPromptFull,
   type Prompt,
-  type PromptContentStatus,
-  type PromptTemplateReference
+  type PromptContentStatus
 } from '@shared/domain/prompt/Prompt'
 import {
   isPromptTemplateFull,
@@ -57,10 +60,7 @@ import {
 } from '@shared/domain/markdown-content/MarkdownContent'
 import { loadPromptCollectionInitial } from '@renderer/data/Queries/PromptCollectionQuery'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-import { deletePrompt } from '@renderer/data/Mutations/PromptMutations'
-import {
-  deletePromptTemplate
-} from '@renderer/data/Mutations/PromptTemplateMutations'
+import { deleteMarkdownContent, setMarkdownContentStatus } from './markdownContentActions'
 import {
   lookupPromptCollectionScrollTop,
   setPromptCollectionScrollTopWithAutosave,
@@ -125,20 +125,6 @@ const BREADCRUMB_SAMPLE_OFFSET_PX = PROMPT_COLLECTION_CATEGORY_TOP_OFFSET_PX + 4
 type PromptMetadata = {
   status: PromptContentStatus
   finalizedAt: string | null
-}
-
-export type MarkdownContentDraftRecord = {
-  id: string
-  /** Attached note identity projected alongside the owner's editor data. */
-  attachedNoteId?: string
-  title: string
-  fallbackTitle: string
-  modifiedAt: string
-  text: string
-  templates?: PromptTemplateReference[] | null
-  templateName?: string
-  templateState?: 'not-selected' | 'no-template' | 'selected'
-  isEdited: boolean
 }
 
 type PromptCollectionScreenControllerOptions = {
@@ -232,66 +218,18 @@ export const createPromptCollectionScreenController = ({
   const contentDraftById = $derived.by<Record<string, MarkdownContentDraftRecord>>(() => {
     if (!isTemplateCollection) {
       return Object.fromEntries(
-        promptQuery.data.flatMap((prompt) => {
-          if (!isPromptFull(prompt)) return []
-          // Resolved names drive both the compact label and its additional-template count.
-          const templateNames = (prompt.templates ?? []).flatMap((template) => {
-            const title = templateTitleById[template.id]
-            return title === undefined ? [] : [title]
-          })
-          // Missing references are skipped so the first available template names the selection.
-          const templateName = templateNames[0]
-          return [
-            [
-              prompt.id,
-              {
-                id: prompt.id,
-                attachedNoteId: prompt.attachedNoteId,
-                title: prompt.title,
-                fallbackTitle: prompt.fallbackTitle,
-                modifiedAt: prompt.modifiedAt,
-                text: prompt.promptText,
-                ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
-                templateName:
-                  prompt.templates === undefined
-                    ? TEMPLATE_NOT_SELECTED_LABEL
-                    : templateName === undefined
-                      ? NO_TEMPLATE_LABEL
-                      : templateNames.length > 1
-                        ? `${templateName} + ${templateNames.length - 1} More`
-                        : templateName,
-                // Missing template ids use the same indicator treatment as No Template.
-                templateState:
-                  prompt.templates === undefined
-                    ? 'not-selected'
-                    : templateName === undefined
-                      ? 'no-template'
-                      : 'selected',
-                isEdited: promptEditedById[prompt.id] ?? false
-              }
-            ] as const
-          ]
-        })
+        promptQuery.data.flatMap((prompt) =>
+          isPromptFull(prompt)
+            ? [[prompt.id, buildPromptDraftRecord(prompt, templateTitleById, promptEditedById[prompt.id] ?? false)] as const]
+            : []
+        )
       )
     }
 
     return Object.fromEntries(
       promptTemplateQuery.data.flatMap((template) =>
         isPromptTemplateFull(template)
-          ? [
-              [
-                template.id,
-                {
-                  id: template.id,
-                  attachedNoteId: template.attachedNoteId,
-                  title: template.title,
-                  fallbackTitle: template.fallbackTitle,
-                  modifiedAt: template.modifiedAt,
-                  text: template.templateText,
-                  isEdited: promptTemplateEditedById[template.id] ?? false
-                }
-              ] as const
-            ]
+          ? [[template.id, buildTemplateDraftRecord(template, promptTemplateEditedById[template.id] ?? false)] as const]
           : []
       )
     )
@@ -1157,27 +1095,12 @@ export const createPromptCollectionScreenController = ({
   }
 
   const handleDeletePrompt = (target: PromptCollectionPromptTarget) => {
-    if (!promptCollectionsCollection.get(screenCollectionId)) {
-      return
-    }
-
-    void runIpcBestEffort(async () => {
-      if (isTemplateCollection) {
-        await deletePromptTemplate(screenCollectionId, target.promptId)
-      } else {
-        await deletePrompt(screenCollectionId, target.promptId)
-      }
-    })
+    deleteMarkdownContent(screenCollectionId, target.promptId)
   }
 
-  const handleSetPromptStatus = (target: PromptCollectionPromptTarget, status: PromptContentStatus) => {
-    if (!promptCollectionsCollection.get(screenCollectionId)) {
-      return
-    }
-
-    void runIpcBestEffort(async () => {
-      await setPromptLocation(screenCollectionId, target.promptId, getPromptStatusLocation(screenCollectionId, target.promptId, status))
-    })
+  /** Changes one prompt's status within the displayed collection. */
+  const handleSetPromptStatus = (promptId: string, status: PromptContentStatus) => {
+    setMarkdownContentStatus(screenCollectionId, promptId, status)
   }
 
   const logicalPromptDropTargets = $derived.by<PromptHandleDropPayload[]>(() => {

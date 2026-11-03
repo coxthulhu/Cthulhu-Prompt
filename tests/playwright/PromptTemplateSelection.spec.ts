@@ -262,22 +262,22 @@ describe('Prompt template selection', () => {
       await promptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Select Template and Copy', 'Set Template', 'Add attached note', 'Add attached note More Options'])
+    ).toEqual(['Select Template and Copy', 'Set Template', 'Add attached note', 'Add attached note More Options', 'Open in editor'])
     expect(
       await stalePromptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Copy prompt', 'Set Template', 'Add attached note', 'Add attached note More Options'])
+    ).toEqual(['Copy prompt', 'Set Template', 'Add attached note', 'Add attached note More Options', 'Open in editor'])
     expect(
       await noTemplatePromptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Copy prompt', 'Set Template', 'Add attached note', 'Add attached note More Options'])
+    ).toEqual(['Copy prompt', 'Set Template', 'Add attached note', 'Add attached note More Options', 'Open in editor'])
     expect(
       await multiTemplatePromptEditor
         .locator('.prompt-editor-title-button-bar button')
         .evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label')))
-    ).toEqual(['Copy prompt', 'Set Template', 'Add attached note', 'Add attached note More Options'])
+    ).toEqual(['Copy prompt', 'Set Template', 'Add attached note', 'Add attached note More Options', 'Open in editor'])
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     const dialog = mainWindow.getByRole('dialog', { name: 'Select Template' })
