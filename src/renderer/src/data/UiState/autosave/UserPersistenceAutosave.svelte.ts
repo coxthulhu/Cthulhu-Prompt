@@ -65,6 +65,15 @@ export const setSinglePromptNoteFractionWithAutosave = (fraction: number): void 
   })
 }
 
+/** Saves the number of project sidebar quick collection rows on this machine. */
+export const setSidebarQuickCollectionCountWithAutosave = (count: number): void => {
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, sidebarQuickCollectionCount: count },
+    debounceMs: AUTOSAVE_MS
+  })
+}
+
 export const flushUserPersistenceAutosaves = async (): Promise<void> => {
   await submitPacedUpdateTransactionAndWait(userPersistenceCollection.id, USER_PERSISTENCE_ID)
 }

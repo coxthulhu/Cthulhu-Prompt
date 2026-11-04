@@ -13,6 +13,8 @@ export type UserPersistence = {
   settingsScrollTopPx: number
   /** Share of the single-prompt editor area given to a visible attached note on this machine. */
   singlePromptNoteFraction: number
+  /** Number of quick collection rows shown in the project sidebar on this machine. */
+  sidebarQuickCollectionCount: number
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
@@ -22,7 +24,8 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   hasShownWelcome: false,
   settingsCollapsedSectionIds: [],
   settingsScrollTopPx: 0,
-  singlePromptNoteFraction: 0.3
+  singlePromptNoteFraction: 0.3,
+  sidebarQuickCollectionCount: 3
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -147,7 +150,11 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
     singlePromptNoteFraction:
       typeof value.singlePromptNoteFraction === 'number'
         ? value.singlePromptNoteFraction
-        : DEFAULT_USER_PERSISTENCE.singlePromptNoteFraction
+        : DEFAULT_USER_PERSISTENCE.singlePromptNoteFraction,
+    sidebarQuickCollectionCount:
+      typeof value.sidebarQuickCollectionCount === 'number'
+        ? value.sidebarQuickCollectionCount
+        : DEFAULT_USER_PERSISTENCE.sidebarQuickCollectionCount
   }
 }
 

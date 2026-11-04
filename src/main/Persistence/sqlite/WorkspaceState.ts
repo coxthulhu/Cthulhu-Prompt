@@ -22,6 +22,7 @@ export type WorkspaceStateData = {
     settingsCollapsedSectionIds: string[]
     settingsScrollTopPx: number
     singlePromptNoteFraction: number
+    sidebarQuickCollectionCount: number
   }
   'workspace-dialog': { directory: string | null }
   window: WindowPersistence

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
-  import { onMount } from 'svelte'
+  import { onDestroy, onMount } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { SvelteMap } from 'svelte/reactivity'
   import type {
@@ -67,6 +67,11 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import { createConsumableRequestCoordinator } from '@renderer/common/consumableRequestCoordinator.svelte.ts'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
+  import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
+  import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
+  import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
+  import { setSidebarQuickCollectionCountWithAutosave } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
+  import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
   import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
   import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
@@ -339,15 +344,74 @@
       promptCollections[0]!
     )
   })
-  /** Quick picks follow committed order and retain a selected collection outside the first three. */
+  /** Vertical distance between quick rows: a 30px row plus 2px of spacing. */
+  const QUICK_COLLECTION_ROW_PITCH_PX = 32
+  /** Most quick rows the separator sash can reveal. */
+  const MAX_QUICK_COLLECTION_COUNT = 10
+  /** Machine-wide quick row count, seeded from persistence and updated by the separator sash. */
+  let quickCollectionCount = $state(
+    userPersistenceCollection.get(USER_PERSISTENCE_ID)!.sidebarQuickCollectionCount
+  )
+  /** Quick row count shown, limited by how many collections exist. */
+  const displayedQuickCollectionCount = $derived(
+    Math.max(1, Math.min(quickCollectionCount, MAX_QUICK_COLLECTION_COUNT, promptCollections.length))
+  )
+  /** Active separator-sash drag, or null while the sash is idle. */
+  let quickCollectionDrag = $state<{ startClientYPx: number; startCount: number } | null>(null)
+  /** Pointer session owned by the separator sash during a drag. */
+  let quickCollectionDragSession: ReturnType<typeof startPointerDrag> | null = null
+
+  /** Snaps the drag distance to whole rows within 1 and the available collections, up to 10. */
+  const handleQuickCollectionSashMove = (event: PointerEvent): void => {
+    const rowDelta = Math.round((event.clientY - quickCollectionDrag!.startClientYPx) / QUICK_COLLECTION_ROW_PITCH_PX)
+    quickCollectionCount = Math.max(
+      1,
+      Math.min(quickCollectionDrag!.startCount + rowDelta, MAX_QUICK_COLLECTION_COUNT, promptCollections.length)
+    )
+  }
+
+  /** Clears drag visuals, restoring the start count on cancel and otherwise saving a changed count. */
+  const finishQuickCollectionSashDrag = (cancelled: boolean): void => {
+    if (cancelled) {
+      quickCollectionCount = quickCollectionDrag!.startCount
+    } else if (quickCollectionCount !== quickCollectionDrag!.startCount) {
+      setSidebarQuickCollectionCountWithAutosave(quickCollectionCount)
+    }
+    quickCollectionDragSession = null
+    quickCollectionDrag = null
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  }
+
+  /** Starts a primary-button separator drag from the currently displayed row count. */
+  const startQuickCollectionSashDrag = (event: PointerEvent): void => {
+    if (event.button !== 0 || quickCollectionDragSession) return
+    event.preventDefault()
+    event.stopPropagation()
+    quickCollectionCount = displayedQuickCollectionCount
+    quickCollectionDrag = { startClientYPx: event.clientY, startCount: displayedQuickCollectionCount }
+    document.body.style.cursor = 'ns-resize'
+    document.body.style.userSelect = 'none'
+    quickCollectionDragSession = startPointerDrag({
+      target: event.currentTarget as HTMLElement,
+      event,
+      onMove: handleQuickCollectionSashMove,
+      onFinish: finishQuickCollectionSashDrag
+    })
+  }
+
+  // Side effect: release capture and drag visuals if the sidebar unmounts mid-drag.
+  onDestroy(() => quickCollectionDragSession?.cancel())
+
+  /** Quick picks follow committed order and retain a selected collection outside the visible rows. */
   const quickCollectionItems = $derived.by(() => {
     /** Favorites lead, then the complete order supplies nonfavorite entries without duplicates. */
     const collections = [
       ...favoriteCollectionIds.map((id) => promptCollections.find((collection) => collection.id === id)!),
       ...promptCollections.filter((collection) => !favoriteCollectionIds.includes(collection.id))
-    ].slice(0, 3)
+    ].slice(0, displayedQuickCollectionCount)
     if (screenCollection && !collections.some((collection) => collection.id === screenCollection.id)) {
-      collections.splice(0, collections.length, screenCollection, ...collections.slice(0, 2))
+      collections.splice(0, collections.length, screenCollection, ...collections.slice(0, displayedQuickCollectionCount - 1))
     }
     return collections.map((collection) => promptCollectionDropdownItems.find((item) => item.id === collection.id)!)
   })
@@ -838,7 +902,19 @@
         {/each}
       {/if}
     </div>
-    <Separator />
+    <div class="relative">
+      <Separator />
+      {#if collectionListState === 'ready'}
+        <ResizeSash
+          orientation="horizontal"
+          isDragging={quickCollectionDrag !== null}
+          testId="sidebar-quick-collections-sash"
+          label="Resize quick collections"
+          tabindex={-1}
+          onpointerdown={startQuickCollectionSashDrag}
+        />
+      {/if}
+    </div>
   {/if}
 
   <div class="cthulhuSidebarPromptSectionHeader">

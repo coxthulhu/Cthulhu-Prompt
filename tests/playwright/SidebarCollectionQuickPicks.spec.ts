@@ -1,10 +1,11 @@
+import type { ElectronApplication, Page } from '@playwright/test'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import {
   createWorkspaceWithCollections,
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import {
   promptCollectionSelectorDropdownItemSelector,
   promptCollectionSelectorMenuSelector,
@@ -14,12 +15,50 @@ import {
 } from '../helpers/PromptCollectionSelectors'
 import { beginPromptHandleDrag, beginPromptTreeRowDrag, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
 import { expectPersistedCollectionPromptIds } from '../helpers/PromptPersistenceTestHelpers'
-import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
+import { readUserPersistence, readWorkspaceCollectionOrder, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
 
 /** Real Electron coverage for collection selection, geometry, and direct content transfers. */
 const { test, describe, expect } = createPlaywrightTestSuite()
 /** Quick rows are distinct from the reorderable dropdown rows. */
 const QUICK_ROWS = '[data-testid^="sidebar-quick-collection-"]'
+/** Separator sash that sets how many quick rows are shown. */
+const QUICK_SASH = 'sidebar-quick-collections-sash'
+/** Distance between quick rows, which is also the sash's snap step. */
+const ROW_PITCH_PX = 32
+
+/** Opens a workspace with the requested number of task collections, after seeding a quick row count. */
+const startWithCollections = async (
+  testSetup: TestSetup,
+  electronApp: ElectronApplication,
+  collectionCount: number,
+  sidebarQuickCollectionCount?: number
+): Promise<Page> => {
+  /** Workspace path named after its collection count. */
+  const workspacePath = `/ws/quick-count-${collectionCount}`
+  await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, Array.from({ length: collectionCount }, (_, index) => ({
+    folderName: `C${index + 1}`, displayName: `C${index + 1}`, promptCollectionId: `C${index + 1}`,
+    prompts: [{ id: `C${index + 1}-content`, title: `C${index + 1} content`, promptText: 'Task' }]
+  }))))
+  await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath), sidebarQuickCollectionCount })
+  const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+  await testHelpers.assertWorkspaceReadyPath(workspacePath)
+  await testHelpers.navigateToPromptCollections('C1')
+  return mainWindow
+}
+
+/** Drags the quick row sash vertically from its center and releases it. */
+const dragQuickSashBy = async (mainWindow: Page, deltaYPx: number): Promise<void> => {
+  /** Current sash hitbox, which moves with the quick row count. */
+  const sash = mainWindow.getByTestId(QUICK_SASH)
+  const box = (await sash.boundingBox())!
+  await mainWindow.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await mainWindow.mouse.down()
+  // A missed press would otherwise only surface as an unchanged row count.
+  await expect(sash).toHaveAttribute('data-dragging', 'true')
+  await mainWindow.mouse.move(box.x + box.width / 2, box.y + box.height / 2 + deltaYPx, { steps: 4 })
+  await mainWindow.mouse.up()
+  await expect(sash).toHaveAttribute('data-dragging', 'false')
+}
 
 describe('Sidebar collection quick picks', () => {
   for (const kind of ['prompt', 'template'] as const) {
@@ -99,6 +138,7 @@ describe('Sidebar collection quick picks', () => {
       await mainWindow.getByTestId('nav-button-project').click()
       await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
       await expect(mainWindow.locator(QUICK_ROWS)).toHaveCount(0)
+      await expect(mainWindow.getByTestId(QUICK_SASH)).toHaveCount(0)
       await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-task-button')).toBeVisible()
       await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-template-button')).toBeVisible()
       await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveText('Create a collection to get started.')
@@ -182,4 +222,54 @@ describe('Sidebar collection quick picks', () => {
       }
     })
   }
+
+  test('quick row sash snaps to whole rows between 1 and 10 and persists the count', async ({ testSetup, electronApp }) => {
+    /** Twelve collections leave room above the ten-row maximum. */
+    const mainWindow = await startWithCollections(testSetup, electronApp, 12)
+    /** Quick collection rows whose count the sash controls. */
+    const rows = mainWindow.locator(QUICK_ROWS)
+    /** Separator sash under the last quick row. */
+    const sash = mainWindow.getByTestId(QUICK_SASH)
+    await expect(rows).toHaveCount(3)
+    await expect(sash).toHaveAttribute('tabindex', '-1')
+
+    // A partial row snaps back, and the sash stays aligned with the separator under the last row.
+    await dragQuickSashBy(mainWindow, ROW_PITCH_PX * 0.4)
+    await expect(rows).toHaveCount(3)
+    await dragQuickSashBy(mainWindow, ROW_PITCH_PX * 2)
+    await expect(rows).toHaveCount(5)
+    /** Last quick row and the sash below it, measured after the snap. */
+    const lastRowBox = (await rows.nth(4).boundingBox())!
+    const sashBox = (await sash.boundingBox())!
+    // The row wrapper's 1px bottom padding and the container's 4px bottom padding sit above the separator.
+    expect(Math.abs(sashBox.y - (lastRowBox.y + lastRowBox.height + 5))).toBeLessThanOrEqual(1)
+    await expect.poll(async () => (await readUserPersistence(electronApp)).sidebarQuickCollectionCount).toBe(5)
+
+    // Dragging past either limit stops at ten rows or one row.
+    await dragQuickSashBy(mainWindow, ROW_PITCH_PX * 6)
+    await expect(rows).toHaveCount(10)
+    await expect.poll(async () => (await readUserPersistence(electronApp)).sidebarQuickCollectionCount).toBe(10)
+    await dragQuickSashBy(mainWindow, -ROW_PITCH_PX * 12)
+    await expect(rows).toHaveCount(1)
+    await expect.poll(async () => (await readUserPersistence(electronApp)).sidebarQuickCollectionCount).toBe(1)
+
+    // With one row, selecting a hidden collection replaces the only quick row.
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.locator(promptCollectionSelectorDropdownItemSelector('C5')).click()
+    await expect(rows.locator('.sidebarPromptTreeSettingsLabel')).toHaveText(['C5'])
+  })
+
+  test('quick row count restores on startup and the sash stops at the collection count', async ({ testSetup, electronApp }) => {
+    /** A saved count above the collection count shows every collection without changing the saved value. */
+    const mainWindow = await startWithCollections(testSetup, electronApp, 4, 7)
+    /** Quick collection rows whose count the sash controls. */
+    const rows = mainWindow.locator(QUICK_ROWS)
+    await expect(rows).toHaveCount(4)
+    expect((await readUserPersistence(electronApp)).sidebarQuickCollectionCount).toBe(7)
+    await dragQuickSashBy(mainWindow, -ROW_PITCH_PX)
+    await expect(rows).toHaveCount(3)
+    await dragQuickSashBy(mainWindow, ROW_PITCH_PX * 5)
+    await expect(rows).toHaveCount(4)
+    await expect.poll(async () => (await readUserPersistence(electronApp)).sidebarQuickCollectionCount).toBe(4)
+  })
 })

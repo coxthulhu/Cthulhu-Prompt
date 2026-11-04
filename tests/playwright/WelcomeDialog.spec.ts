@@ -77,7 +77,8 @@ describe('Welcome Dialog', () => {
       appSidebarWidthPx: 290,
       hasShownWelcome: 1,
       settingsCollapsedSectionIds: [],
-      settingsScrollTopPx: 0
+      settingsScrollTopPx: 0,
+      sidebarQuickCollectionCount: 3
     })
     await welcome.getByRole('button', { name: 'Close', exact: true }).click()
     await testHelpers.navigateToSettingsScreen()
