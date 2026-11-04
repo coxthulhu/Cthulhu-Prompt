@@ -62,9 +62,9 @@ describe('Template archive', () => {
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH.replace('/Active/', '/'))).toBe(false)
     expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/Library/_CollectionInfo/Description.md`)).toBe('Keep root description')
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(6)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(7)
     /** Persisted order compared after a fresh renderer reload exercises idempotent migration. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CollectionInfo/CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CategoryOrder.json`
     /** Original categorized order remains byte-for-byte stable after reopening. */
     const order = await readTextFile(electronApp, orderPath)
     expect(JSON.parse(order).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual(['archive-predecessor', TEMPLATE_ID])
@@ -102,7 +102,7 @@ describe('Template archive', () => {
     await editor.getByTestId('template-restore-button').click()
     await expect.poll(() => checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     /** Restored order proves this is a first-position insertion rather than an append. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CollectionInfo/CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CategoryOrder.json`
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, orderPath)).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual([TEMPLATE_ID, 'archive-predecessor'])
     await beginPromptTreeRowDrag(mainWindow, TEMPLATE_ID, 'template')
     await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-archived"]')
@@ -186,7 +186,7 @@ describe('Template archive', () => {
     await mainWindow.getByTestId('prompt-collection-archived-filter').click()
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('template-restore-button').click()
     /** Existing uncategorized template must follow the restored template. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CollectionInfo/CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CategoryOrder.json`
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, orderPath)).categories[0].entries.map((entry: { id: string }) => entry.id)).toEqual([TEMPLATE_ID, 'archive-predecessor'])
     expect(await readTextFile(electronApp, ACTIVE_PATH)).not.toContain('category:')
     await mainWindow.getByTestId('prompt-collection-active-filter').click()

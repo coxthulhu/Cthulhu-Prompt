@@ -37,7 +37,7 @@ const createBacklogWorkspace = () => {
       id: categoryId, displayName: categoryId, shortDescription: null, description: null
     })
   }
-  filesystem[`${ROOT_PATH}/Active/_CollectionInfo/CategoryOrder.json`] = JSON.stringify({
+  filesystem[`${ROOT_PATH}/Active/_CategoryOrder.json`] = JSON.stringify({
     categories: [
       { categoryId: null, entries: [] },
       { categoryId: 'beta', entries: [] },
@@ -52,7 +52,7 @@ const createBacklogWorkspace = () => {
 
 /** Reads the authoritative order for one workflow, including empty categories. */
 const readOrder = async (electronApp: ElectronApplication, group: 'Active' | 'Backlog'): Promise<CategoryOrder> =>
-  JSON.parse(await readTextFile(electronApp, `${ROOT_PATH}/${group}/_CollectionInfo/CategoryOrder.json`))
+  JSON.parse(await readTextFile(electronApp, `${ROOT_PATH}/${group}/_CategoryOrder.json`))
 
 /** Reads one category's persisted prompt IDs to distinguish append, prepend, and exact drops. */
 const readEntries = async (

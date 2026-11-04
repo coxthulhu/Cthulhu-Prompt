@@ -53,7 +53,7 @@ const EXAMPLES_COLLECTION_NAME = 'Examples'
 const promptCollectionCategoryOrderPath = (workspacePath: string, folderName: string): string => {
   // CategoryOrder belongs only to the selected collection's flat Active directory.
   const [collectionFolderName] = folderName.split('/')
-  return `${workspacePath}/Prompts/${collectionFolderName}/Active/_CollectionInfo/CategoryOrder.json`
+  return `${workspacePath}/Prompts/${collectionFolderName}/Active/_CategoryOrder.json`
 }
 const DEVELOPMENT_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, DEVELOPMENT_COLLECTION_NAME)
 const EXAMPLES_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, EXAMPLES_COLLECTION_NAME)

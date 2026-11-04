@@ -28,7 +28,7 @@ describe('Prompt collection overview selection', () => {
     }
     // Each category-ordered workflow owns only its own prompt references.
     for (const [directory, status] of [['Active', PromptStatus.Todo], ['Backlog', PromptStatus.Backlog]] as const) {
-      structure[`${WORKSPACE_PATH}/Prompts/Tasks/${directory}/_CollectionInfo/CategoryOrder.json`] = JSON.stringify({
+      structure[`${WORKSPACE_PATH}/Prompts/Tasks/${directory}/_CategoryOrder.json`] = JSON.stringify({
         categories: [{ categoryId: null, entries: ['first', 'second'].map((suffix) => ({ kind: 'prompt', id: `${status}-${suffix}` })) }]
       })
     }
@@ -74,7 +74,7 @@ describe('Prompt collection overview selection', () => {
             ] }]),
             [`${WORKSPACE_PATH}/Prompts/Content/Categories/First.category.json`]: JSON.stringify({ id: 'first', displayName: 'First', shortDescription: null, description: '' }),
             [`${WORKSPACE_PATH}/Prompts/Content/Categories/Second.category.json`]: JSON.stringify({ id: 'second', displayName: 'Second', shortDescription: null, description: '' }),
-            [`${WORKSPACE_PATH}/Prompts/Content/Active/_CollectionInfo/CategoryOrder.json`]: JSON.stringify({ categories: [{ categoryId: null, entries: [] }, { categoryId: 'first', entries: [] }, { categoryId: 'second', entries: [{ kind: 'prompt', id: 'later' }] }] })
+            [`${WORKSPACE_PATH}/Prompts/Content/Active/_CategoryOrder.json`]: JSON.stringify({ categories: [{ categoryId: null, entries: [] }, { categoryId: 'first', entries: [] }, { categoryId: 'second', entries: [{ kind: 'prompt', id: 'later' }] }] })
           })
       await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
       /** Real window and navigation helpers for this content kind. */

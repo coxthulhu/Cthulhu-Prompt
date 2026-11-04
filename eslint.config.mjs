@@ -9,6 +9,7 @@ export default [
       'dist/**',
       'build/**',
       'out/**',
+      'temp/**',
       'reporters/**',
       '.vscode/**',
       '.agents/**',

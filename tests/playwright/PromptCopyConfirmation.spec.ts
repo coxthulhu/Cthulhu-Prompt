@@ -33,7 +33,7 @@ const createCopyWorkspace = (status: PromptStatus) => {
       tasks[path.replace('/Active/', '/Backlog/')] = tasks[path]
       delete tasks[path]
     }
-    tasks[`${ROOT_PATH}/Active/_CollectionInfo/CategoryOrder.json`] = JSON.stringify({
+    tasks[`${ROOT_PATH}/Active/_CategoryOrder.json`] = JSON.stringify({
       categories: [{ categoryId: null, entries: [] }]
     })
   }

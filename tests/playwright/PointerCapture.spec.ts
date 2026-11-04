@@ -153,7 +153,7 @@ describe('Pointer capture', () => {
           ? PROMPT_COLLECTION_HOST_SELECTOR
           : '[data-testid="prompt-tree-active-virtual-window"]').locator('..')
         /** Existing persisted ordering must survive browser interruption unchanged. */
-        const orderPath = '/ws/sample/Prompts/Development/Active/_CollectionInfo/CategoryOrder.json'
+        const orderPath = '/ws/sample/Prompts/Development/Active/_CategoryOrder.json'
         /** Persisted order before the drag. */
         const before = await readPromptCollectionEntryIds(electronApp, orderPath)
         await recordPointerId(frame)

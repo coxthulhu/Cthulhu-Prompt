@@ -33,7 +33,7 @@ const createPromptCollectionInfo = (
 
 /** Returns the CategoryOrder path for one prompt or template status folder. */
 const getPromptCollectionCategoryOrderPath = (folderPath: string): string =>
-  `${folderPath}/_CollectionInfo/CategoryOrder.json`
+  `${folderPath}/_CategoryOrder.json`
 
 const collectionOrderFile = (promptCollectionIds: string[]) => ({
   entries: promptCollectionIds.map((id) => ({ kind: 'collection' as const, id }))
@@ -379,14 +379,17 @@ export function createWorkspaceWithCollections(
     : structure
 }
 
-/** Converts current fixture metadata into the exact folder-era format for migration tests. */
+/** Restores nested metadata and, before schema five, the historical folder terminology. */
 export function createLegacyWorkspaceFilesystem(
   filesystem: Record<string, string | null>,
   schemaVersion: number
 ): Record<string, string | null> {
   return Object.fromEntries(Object.entries(filesystem).map(([filePath, content]) => {
     /** Historical metadata path; prompt, template, category, and description bytes are unchanged. */
-    const legacyPath = filePath.replaceAll('_CollectionInfo', '_FolderInfo')
+    const nestedPath = filePath.replace('/_CollectionInfo.json', '/_CollectionInfo/CollectionInfo.json')
+      .replace('/_CategoryOrder.json', '/_CollectionInfo/CategoryOrder.json')
+    /** Schemas five and six use collection terminology with nested JSON files. */
+    const legacyPath = schemaVersion >= 5 ? nestedPath : nestedPath.replaceAll('_CollectionInfo', '_FolderInfo')
       .replaceAll('CollectionInfo.json', 'FolderInfo.json')
       .replaceAll('CategoryOrder.json', 'FolderOrder.json')
       .replaceAll('CollectionOrder.json', 'FolderOrder.json')
@@ -394,12 +397,12 @@ export function createLegacyWorkspaceFilesystem(
     if (filePath.endsWith('.cthulhuprompt')) {
       return [legacyPath, JSON.stringify({ ...JSON.parse(content), schemaVersion }, null, 2)]
     }
-    if (filePath.endsWith('/CollectionInfo.json')) {
+    if (schemaVersion < 5 && filePath.endsWith('/_CollectionInfo.json')) {
       /** Root metadata retains its stable identity under the old field name. */
       const { collectionId, ...info } = JSON.parse(content)
       return [legacyPath, JSON.stringify({ ...info, folderId: collectionId }, null, 2)]
     }
-    if (filePath.endsWith('CollectionOrder.json')) {
+    if (schemaVersion < 5 && filePath.endsWith('CollectionOrder.json')) {
       /** Root entries use the discriminator understood by the historical migrations. */
       const order = JSON.parse(content)
       return [legacyPath, JSON.stringify({ ...order, entries: order.entries.map((entry: { id: string }) => ({ ...entry, kind: 'folder' })) }, null, 2)]
@@ -430,7 +433,7 @@ export function createWorkspaceWithTemplateCollections(
       templates: category.templates ?? []
     }))
 
-    structure[`${folderPath}/_CollectionInfo/CollectionInfo.json`] = JSON.stringify(
+    structure[`${folderPath}/_CollectionInfo.json`] = JSON.stringify(
       createPromptCollectionInfo(collection.displayName, collectionId, 'template'),
       null,
       2
@@ -925,7 +928,7 @@ export function addCollectionToWorkspace(
       null,
       2
     ),
-    [`${folderPath}/_CollectionInfo/CollectionInfo.json`]: JSON.stringify(
+    [`${folderPath}/_CollectionInfo.json`]: JSON.stringify(
       createPromptCollectionInfo(collectionConfig.displayName, promptCollectionId),
       null,
       2

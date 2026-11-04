@@ -23,7 +23,7 @@ export type CategoryOrderGroup = {
   entries: CategoryOrderEntryRef[]
 }
 
-/** Collection category ordering persisted in CategoryOrder.json. */
+/** Collection category ordering persisted in _CategoryOrder.json. */
 export type CategoryOrder = {
   categories: CategoryOrderGroup[]
 }

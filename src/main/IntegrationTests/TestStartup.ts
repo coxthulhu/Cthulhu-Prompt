@@ -291,9 +291,9 @@ export function setupTestStartupListener(): void {
     /** Original implementation is restored before throwing so rollback can complete normally. */
     const rename = filesystem.renameSync.bind(filesystem)
     filesystem.renameSync = (source, target) => {
-      if (String(target).replace(/\\/g, '/') === filePath && String(source).endsWith('.tmp')) {
+      if (String(target).replace(/\\/g, '/') === filePath) {
         filesystem.renameSync = rename
-        throw new Error('Injected note file commit failure')
+        throw new Error('Injected file commit failure')
       }
       return rename(source, target)
     }

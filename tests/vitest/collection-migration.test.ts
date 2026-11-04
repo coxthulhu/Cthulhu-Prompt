@@ -53,16 +53,16 @@ describe('collection metadata migration', () => {
 
         expect(vol.existsSync(collectionPath)).toBe(true)
         expect(vol.existsSync(`${collectionPath}/_FolderInfo`)).toBe(false)
-        expect(vol.existsSync(`${collectionPath}/Archived/_CollectionInfo`)).toBe(true)
+        expect(vol.existsSync(`${collectionPath}/Archived/_CollectionInfo`)).toBe(false)
         expect(vol.readFileSync(`${collectionPath}/_CollectionInfo/Description.md`, 'utf8'))
           .toBe(legacy[`${collectionPath}/_FolderInfo/Description.md`])
-        expect(vol.readFileSync(`${collectionPath}/Active/_CollectionInfo/CategoryOrder.json`, 'utf8'))
+        expect(vol.readFileSync(`${collectionPath}/Active/_CategoryOrder.json`, 'utf8'))
           .toBe(legacy[`${collectionPath}/Active/_FolderInfo/FolderOrder.json`])
         expect(vol.existsSync(`${rootPath}/CollectionOrder.json`)).toBe(false)
         expect(readPromptCollections(workspacePath, kind)).toMatchObject([
           { id: 'collection', folderName: name, displayName: name, kind }
         ])
-        expect(JSON.parse(vol.readFileSync(workspaceInfoPath, 'utf8') as string).schemaVersion).toBe(6)
+        expect(JSON.parse(vol.readFileSync(workspaceInfoPath, 'utf8') as string).schemaVersion).toBe(7)
 
         const migrated = vol.toJSON()
         applyWorkspaceMigrations(workspaceInfoPath)

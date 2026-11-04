@@ -128,9 +128,11 @@ export const promptCollectionPersistence: PersistenceLayer<
 
     const collectionAlreadyExists = fs.existsSync(folderPath)
     const infoDirectoryAlreadyExists = fs.existsSync(infoDirectoryPath)
+    /** Only Markdown settings require the collection's metadata subdirectory. */
+    const hasSettingsText = settingsTextPaths.some(({ field }) => after.data.settings[field] !== null)
     // Side effect: create prompt collection metadata directories before staging writes.
     fs.mkdirSync(folderPath, { recursive: true })
-    fs.mkdirSync(infoDirectoryPath, { recursive: true })
+    if (hasSettingsText) fs.mkdirSync(infoDirectoryPath, { recursive: true })
     for (const statusDirectory of statusDirectories) {
       fs.mkdirSync(statusDirectory.path, { recursive: true })
     }
@@ -188,9 +190,11 @@ export const promptCollectionPersistence: PersistenceLayer<
       ...categoryOrderChanges,
       createStagedFileUpsert(infoPath, infoTempPath),
       ...settingsTextChanges,
-      createStagedEnsureDirectory(folderPath, !collectionAlreadyExists),
-      createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists)
+      createStagedEnsureDirectory(folderPath, !collectionAlreadyExists)
     ]
+    if (hasSettingsText) {
+      stagedChanges.push(createStagedEnsureDirectory(infoDirectoryPath, !infoDirectoryAlreadyExists))
+    }
 
     for (const statusDirectory of statusDirectories) {
       stagedChanges.push(

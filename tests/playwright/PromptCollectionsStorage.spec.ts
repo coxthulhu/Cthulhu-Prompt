@@ -45,11 +45,11 @@ const folderPath = (folderName: string): string =>
 
 // Returns the persisted category ordering file used by a prompt collection collection.
 const activeOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_CollectionInfo/CategoryOrder.json`
+  `${folderPath(folderName)}/Active/_CategoryOrder.json`
 
 // Returns the persisted category-view ordering file owned by a prompt collection.
 const activeCategoryOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_CollectionInfo/CategoryOrder.json`
+  `${folderPath(folderName)}/Active/_CategoryOrder.json`
 
 // Reads every prompt ID across the persisted category groups in UI order.
 const readCategoryOrderPromptIds = async (
@@ -78,7 +78,7 @@ const createCollection = async (page: Page, folderName: string): Promise<void> =
 const readCollectionId = async (electronApp: any, folderPath: string): Promise<string> => {
   // The persisted metadata is the authoritative ID used by selector drag targets.
   const collectionInfo = JSON.parse(
-    await readTextFile(electronApp, `${folderPath}/_CollectionInfo/CollectionInfo.json`)
+    await readTextFile(electronApp, `${folderPath}/_CollectionInfo.json`)
   ) as { collectionId: string }
   return collectionInfo.collectionId
 }
@@ -137,9 +137,9 @@ describe('Prompt collection storage', () => {
     // The collection metadata identifies a prompt collection while only Active owns an order file.
     const alphaPath = folderPath(ALPHA_NAME)
     await expect
-      .poll(() => checkFileExists(electronApp, `${alphaPath}/_CollectionInfo/CollectionInfo.json`))
+      .poll(() => checkFileExists(electronApp, `${alphaPath}/_CollectionInfo.json`))
       .toBe(true)
-    expect(JSON.parse(await readTextFile(electronApp, `${alphaPath}/_CollectionInfo/CollectionInfo.json`)))
+    expect(JSON.parse(await readTextFile(electronApp, `${alphaPath}/_CollectionInfo.json`)))
       .toMatchObject({ displayName: ALPHA_NAME, kind: 'prompt' })
     // Task collections persist in their independent user-specific SQLite order.
     const alphaId = await readCollectionId(electronApp, alphaPath)
@@ -156,15 +156,18 @@ describe('Prompt collection storage', () => {
 
     // The canonical layout omits collection ordering and status metadata not explicitly required.
     const omittedPaths = [
-      `${alphaPath}/_CollectionInfo/CategoryOrder.json`,
-      `${alphaPath}/Active/_CollectionInfo/CollectionInfo.json`,
+      `${alphaPath}/_CollectionInfo`,
+      `${alphaPath}/Active/_CollectionInfo`,
+      `${alphaPath}/Backlog/_CollectionInfo`,
+      `${alphaPath}/_CategoryOrder.json`,
+      `${alphaPath}/Active/_CollectionInfo.json`,
       `${alphaPath}/Active/_CollectionInfo/Description.md`,
-      `${alphaPath}/Completed/_CollectionInfo/CollectionInfo.json`,
+      `${alphaPath}/Completed/_CollectionInfo.json`,
       `${alphaPath}/Completed/_CollectionInfo/Description.md`,
-      `${alphaPath}/Completed/_CollectionInfo/CategoryOrder.json`,
-      `${alphaPath}/Archived/_CollectionInfo/CollectionInfo.json`,
+      `${alphaPath}/Completed/_CategoryOrder.json`,
+      `${alphaPath}/Archived/_CollectionInfo.json`,
       `${alphaPath}/Archived/_CollectionInfo/Description.md`,
-      `${alphaPath}/Archived/_CollectionInfo/CategoryOrder.json`
+      `${alphaPath}/Archived/_CategoryOrder.json`
     ]
     await expect(
       Promise.all(omittedPaths.map((path) => checkFileExists(electronApp, path)))
@@ -188,6 +191,9 @@ describe('Prompt collection storage', () => {
     const templateAlphaPath = `${WORKSPACE_PATH}/Templates/TemplateAlpha`
     /** Stable ID expected at the top of the combined project order. */
     const templateAlphaId = await readCollectionId(electronApp, templateAlphaPath)
+    expect(await checkFileExists(electronApp, `${templateAlphaPath}/Active/_CategoryOrder.json`)).toBe(true)
+    expect(await checkFileExists(electronApp, `${templateAlphaPath}/_CollectionInfo`)).toBe(false)
+    expect(await checkFileExists(electronApp, `${templateAlphaPath}/Active/_CollectionInfo`)).toBe(false)
     await expect.poll(async () => (await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH))!.entries[0])
       .toEqual({ kind: 'collection', id: templateAlphaId })
   })

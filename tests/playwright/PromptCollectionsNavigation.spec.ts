@@ -59,7 +59,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const categoryOrder = JSON.parse(
       await readTextFile(
         electronApp,
-        '/ws/categories/Prompts/Main/Active/_CollectionInfo/CategoryOrder.json'
+        '/ws/categories/Prompts/Main/Active/_CategoryOrder.json'
       )
     )
     /** Category ID deleted with the prompt collection. */
@@ -1302,7 +1302,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const collectionInfo = JSON.parse(
       await readTextFile(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_CollectionInfo/CollectionInfo.json`
+        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_CollectionInfo.json`
       )
     ) as { displayName: string; collectionId: string; kind: string }
     expect(collectionInfo).toEqual({
@@ -1319,7 +1319,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Active/_CollectionInfo/CategoryOrder.json`
+          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
@@ -1473,7 +1473,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect
       .poll(async () => JSON.parse(await readTextFile(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_CollectionInfo/CollectionInfo.json`
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_CollectionInfo.json`
       )).displayName)
       .toBe('Devel opment')
 
@@ -1499,7 +1499,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await expect(rootHeader).toContainText('Renamed Development')
 
-    const renamedCollectionInfoPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/_CollectionInfo/CollectionInfo.json`
+    const renamedCollectionInfoPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/_CollectionInfo.json`
     /** Descendant prompt path expected to remain authoritative after the collection rename. */
     const renamedPromptPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/Active/Code Review.prompt.md`
     const renamedCollectionInfo = JSON.parse(
@@ -1519,7 +1519,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
         async () =>
           await checkFileExists(
             electronApp,
-            `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_CollectionInfo/CollectionInfo.json`
+            `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_CollectionInfo.json`
           )
       )
       .toBe(false)

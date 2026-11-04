@@ -18,11 +18,11 @@ const ROOT_COLLECTION_NAME = 'Root'
 /** Active directory containing every test prompt. */
 const ACTIVE_PATH = `${WORKSPACE_PATH}/Prompts/${ROOT_COLLECTION_NAME}/Active`
 /** Canonical category-order file path under the Active metadata directory. */
-const CATEGORY_ORDER_PATH = `${ACTIVE_PATH}/_CollectionInfo/CategoryOrder.json`
+const CATEGORY_ORDER_PATH = `${ACTIVE_PATH}/_CategoryOrder.json`
 /** Template collection containing direct and categorized templates for repair coverage. */
 const TEMPLATE_ROOT_PATH = `${WORKSPACE_PATH}/Templates/Templates`
 /** Canonical template category-order file stored at the template collection. */
-const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/Active/_CollectionInfo/CategoryOrder.json`
+const TEMPLATE_CATEGORY_ORDER_PATH = `${TEMPLATE_ROOT_PATH}/Active/_CategoryOrder.json`
 
 /** Creates one serializable active prompt with optional category front matter. */
 const createPrompt = (

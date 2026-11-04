@@ -339,7 +339,7 @@ const buildCompletedFallbackGapWorkspace = () => {
   }).markdownPath
 
   workspace[
-    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Active/_CollectionInfo/CategoryOrder.json`
+    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Active/_CategoryOrder.json`
   ] = JSON.stringify(
     {
       categories: [
@@ -411,7 +411,7 @@ const buildCompletedSelfHealingWorkspace = () => {
 
   return {
     ...workspace,
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CollectionInfo/CategoryOrder.json`]:
+    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CategoryOrder.json`]:
       JSON.stringify(
         {
           categories: [
@@ -543,7 +543,7 @@ const buildCompletedModeWorkspace = () => {
     promptTitle: oldestArchivedPrompt.title
   }).markdownPath
 
-  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CollectionInfo/CategoryOrder.json`] =
+  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CategoryOrder.json`] =
     JSON.stringify(
       {
         categories: [
@@ -1484,7 +1484,7 @@ describe('Prompt collection prompt management', () => {
     expect(
       await readPromptCollectionEntries(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_COLLECTION_NAME}/Active/_CollectionInfo/CategoryOrder.json`
+        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_COLLECTION_NAME}/Active/_CategoryOrder.json`
       )
     ).toEqual([{ kind: 'prompt', id: 'dev-2' }])
 
@@ -1533,7 +1533,7 @@ describe('Prompt collection prompt management', () => {
         async () =>
           await readPromptCollectionEntries(
             electronApp,
-            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CollectionInfo/CategoryOrder.json`
+            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CategoryOrder.json`
           )
       )
       .toEqual([{ kind: 'prompt', id: activePromptId }])
@@ -2074,7 +2074,7 @@ describe('Prompt collection prompt management', () => {
     await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain('status: Todo')
     await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
     /** Empty destination gets exactly the restored prompt as its first ordered entry. */
-    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CollectionInfo/CategoryOrder.json`
+    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     await expect.poll(async () => {
       /** Saved category order proves the transfer used the category target. */
       const order = JSON.parse(await readTextFile(electronApp, orderPath)) as {
@@ -2128,7 +2128,7 @@ describe('Prompt collection prompt management', () => {
       expect.objectContaining({ entityType: 'promptCollection' })
     ]))
     /** Persisted group order verifies the exact predecessor across every UI action. */
-    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CollectionInfo/CategoryOrder.json`
+    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     /** Reads one category's persisted IDs without relying on renderer optimism. */
     const readCategoryIds = async (categoryId: string) => {
       /** Current order file after the atomic mutation. */
@@ -2203,7 +2203,7 @@ describe('Prompt collection prompt management', () => {
     await finishActiveDrag(mainWindow)
 
     /** Persisted category order used to verify both ownership and exact predecessor placement. */
-    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CollectionInfo/CategoryOrder.json`
+    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     await expect
       .poll(async () => {
         /** Current persisted groups after the Completed-to-Active transaction settles. */
@@ -2329,7 +2329,7 @@ describe('Prompt collection prompt management', () => {
       .poll(async () =>
         await readPromptCollectionEntries(
           electronApp,
-          `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_CollectionInfo/CategoryOrder.json`
+          `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_CategoryOrder.json`
         )
       )
       .toEqual([
@@ -2679,7 +2679,7 @@ describe('Prompt collection prompt management', () => {
         async () =>
           await readPromptCollectionEntries(
             electronApp,
-            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_CollectionInfo/CategoryOrder.json`
+            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_CategoryOrder.json`
           )
       )
       .toEqual([

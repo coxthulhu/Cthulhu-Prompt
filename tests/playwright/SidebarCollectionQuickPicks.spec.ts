@@ -198,7 +198,7 @@ describe('Sidebar collection quick picks', () => {
       await finishActiveDrag(mainWindow)
       /** Persisted Active order proves rejected drops did not remove the content. */
       const root = `${workspacePath}/${kind === 'prompt' ? 'Prompts' : 'Templates'}`
-      await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Active/_CollectionInfo/CategoryOrder.json`, ['content'])
+      await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Active/_CategoryOrder.json`, ['content'])
       await beginPromptTreeRowDrag(mainWindow, 'content', kind === 'prompt' ? 'active' : 'template')
       await moveActiveDragToTarget(mainWindow, quickCollectionSelector('target'))
       await expect(mainWindow.locator(quickCollectionSelector('target'))).toHaveAttribute('data-row-state', 'over')
@@ -207,8 +207,8 @@ describe('Sidebar collection quick picks', () => {
       await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Source')
       await expect(mainWindow.locator(selectedQuickCollectionSelector).locator('.prompt-tree-row-count')).toHaveText(kind === 'prompt' ? '1' : '0')
       await expect(mainWindow.locator(quickCollectionSelector('target')).locator('.prompt-tree-row-count')).toHaveText('2')
-      await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Active/_CollectionInfo/CategoryOrder.json`, [])
-      await expectPersistedCollectionPromptIds(electronApp, `${root}/Target/Active/_CollectionInfo/CategoryOrder.json`, ['content', 'existing'])
+      await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Active/_CategoryOrder.json`, [])
+      await expectPersistedCollectionPromptIds(electronApp, `${root}/Target/Active/_CategoryOrder.json`, ['content', 'existing'])
       if (kind === 'prompt') {
         // Backlog transfers must retain their workflow instead of moving into Active.
         await beginPromptTreeRowDrag(mainWindow, 'backlog', 'backlog')
@@ -216,9 +216,9 @@ describe('Sidebar collection quick picks', () => {
         await finishActiveDrag(mainWindow)
         await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Source')
         await expect(mainWindow.locator(quickCollectionSelector('target')).locator('.prompt-tree-row-count')).toHaveText('3')
-        await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Backlog/_CollectionInfo/CategoryOrder.json`, [])
-        await expectPersistedCollectionPromptIds(electronApp, `${root}/Target/Backlog/_CollectionInfo/CategoryOrder.json`, ['backlog'])
-        await expectPersistedCollectionPromptIds(electronApp, `${root}/Target/Active/_CollectionInfo/CategoryOrder.json`, ['content', 'existing'])
+        await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Backlog/_CategoryOrder.json`, [])
+        await expectPersistedCollectionPromptIds(electronApp, `${root}/Target/Backlog/_CategoryOrder.json`, ['backlog'])
+        await expectPersistedCollectionPromptIds(electronApp, `${root}/Target/Active/_CategoryOrder.json`, ['content', 'existing'])
       }
     })
   }

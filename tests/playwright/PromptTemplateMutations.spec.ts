@@ -129,7 +129,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/Active/_CollectionInfo/CategoryOrder.json`
+          `${WORKSPACE_PATH}/Templates/Source/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({
@@ -287,7 +287,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/Active/_CollectionInfo/CategoryOrder.json`
+          `${WORKSPACE_PATH}/Templates/Source/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
@@ -295,7 +295,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/Active/_CollectionInfo/CategoryOrder.json`
+          `${WORKSPACE_PATH}/Templates/Destination/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({
@@ -369,7 +369,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/Active/_CollectionInfo/CategoryOrder.json`
+          `${WORKSPACE_PATH}/Templates/Destination/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

@@ -21,7 +21,6 @@ import exampleFeatureTemplateSource from '../BundledPrompts/ExampleFeatureTempla
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
-  PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
   PROMPT_COLLECTION_INFO_FILENAME,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
@@ -115,7 +114,6 @@ const writeMyProjectCollection = (
   )
   const collectionInfoPath = path.join(
     exampleFolderPath,
-    PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
     PROMPT_COLLECTION_INFO_FILENAME
   )
   const now = getCurrentIsoSecondTimestamp()
@@ -160,8 +158,7 @@ const writeMyProjectCollection = (
   /** Names reserved across every bundled file written into this collection. */
   const filenames = createFilenameAllocator()
 
-  fs.mkdirSync(path.join(exampleFolderPath, PROMPT_COLLECTION_INFO_DIRECTORY_NAME), { recursive: true })
-  fs.mkdirSync(path.join(activeFolderPath, PROMPT_COLLECTION_INFO_DIRECTORY_NAME), { recursive: true })
+  fs.mkdirSync(activeFolderPath, { recursive: true })
   for (const finalStatusFolderPath of finalStatusFolderPaths) {
     fs.mkdirSync(finalStatusFolderPath, { recursive: true })
   }
@@ -266,7 +263,7 @@ const writeMyTemplatesCollection = (
       })
     : []
 
-  fs.mkdirSync(path.join(templateCollectionPath, PROMPT_COLLECTION_INFO_DIRECTORY_NAME), {
+  fs.mkdirSync(templateCollectionPath, {
     recursive: true
   })
   fs.mkdirSync(
@@ -276,7 +273,6 @@ const writeMyTemplatesCollection = (
   fs.writeFileSync(
     path.join(
       templateCollectionPath,
-      PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
       PROMPT_COLLECTION_INFO_FILENAME
     ),
     JSON.stringify(
@@ -292,7 +288,7 @@ const writeMyTemplatesCollection = (
   )
 
   // Side effect: create template status directories before writing examples and order metadata.
-  fs.mkdirSync(path.join(templateCollectionPath, 'Active', '_CollectionInfo'), { recursive: true })
+  fs.mkdirSync(path.join(templateCollectionPath, 'Active'), { recursive: true })
   fs.mkdirSync(path.join(templateCollectionPath, 'Archived'), { recursive: true })
 
   /** Template names share the same allocation policy as prompts and categories. */

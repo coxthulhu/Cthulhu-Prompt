@@ -20,7 +20,7 @@ import {
 import { parsePromptMarkdown, parsePromptTemplateMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 6
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 7
 
 /** Historical metadata names used only by pre-collection migrations. */
 const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
@@ -509,6 +509,53 @@ const migrateSchemaVersionFiveToSix: WorkspaceMigration = (workspacePath, worksp
   writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 6 })
 }
 
+/** Flattens JSON metadata with rename-only moves that can resume after an interrupted open. */
+const migrateSchemaVersionSixToSeven: WorkspaceMigration = (workspacePath, workspaceInfoPath) => {
+  /** Workspace filesystem shared by the migration and subsequent readers. */
+  const fs = getFs()
+  /** Remaining moves are checked for collisions before any files are changed. */
+  const files: Array<{ source: string; target: string }> = []
+  /** Only owned metadata directories are eligible for empty-directory cleanup. */
+  const directories: string[] = []
+  for (const rootName of [PROMPTS_DIRECTORY_NAME, TEMPLATES_DIRECTORY_NAME]) {
+    /** Immediate children of each library are the only collection candidates. */
+    const rootPath = path.join(workspacePath, rootName)
+    for (const entry of fs.readdirSync(rootPath, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      /** Either identity location recognizes a collection during a partially completed migration. */
+      const collectionPath = path.join(rootPath, entry.name)
+      if (!fs.existsSync(path.join(collectionPath, '_CollectionInfo', 'CollectionInfo.json')) &&
+          !fs.existsSync(path.join(collectionPath, '_CollectionInfo.json'))) continue
+      /** Historical status names are fixed to schema six rather than the current registry. */
+      const statusNames = rootName === TEMPLATES_DIRECTORY_NAME
+        ? ['Active', 'Archived'] : ['Active', 'Backlog', 'Completed', 'Archived']
+      for (const folderName of ['', ...statusNames]) {
+        /** Metadata belongs to the collection itself or one known status directory. */
+        const parent = path.join(collectionPath, folderName)
+        /** Markdown settings and unrelated files keep this directory alive. */
+        const directory = path.join(parent, '_CollectionInfo')
+        if (!fs.existsSync(directory)) continue
+        directories.push(directory)
+        /** Identity lives at the collection root; ordering lives inside each status. */
+        const filename = folderName === '' ? 'CollectionInfo.json' : 'CategoryOrder.json'
+        /** A missing source means this move already completed or was never needed. */
+        const source = path.join(directory, filename)
+        if (fs.existsSync(source)) files.push({ source, target: path.join(parent, `_${filename}`) })
+      }
+    }
+  }
+  for (const file of files) {
+    if (fs.existsSync(file.target)) throw new Error(`Collection metadata already exists: ${file.target}`)
+  }
+  for (const file of files) fs.renameSync(file.source, file.target)
+  for (const directory of directories) {
+    if (fs.readdirSync(directory).length === 0) fs.rmSync(directory, { recursive: true })
+  }
+  /** The version advances only after every move and empty-directory cleanup succeeds. */
+  const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+  writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 7 })
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   0: migrateSchemaVersionZeroToOne,
@@ -516,7 +563,8 @@ const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   2: migrateSchemaVersionTwoToThree,
   3: migrateSchemaVersionThreeToFour,
   4: migrateSchemaVersionFourToFive,
-  5: migrateSchemaVersionFiveToSix
+  5: migrateSchemaVersionFiveToSix,
+  6: migrateSchemaVersionSixToSeven
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

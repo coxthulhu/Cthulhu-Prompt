@@ -213,7 +213,7 @@ describe('Notes persistence and commands', () => {
       expect(await readTextFile(electronApp, `${active}/New Note.note.md`)).toContain(`id: ${noteId}`)
       expect(await readTextFile(electronApp, `${active}/Neighbor 1.${kind}.md`)).not.toContain('attachedNoteId:')
       /** Category ordering contains the note immediately after its former owner. */
-      const order = JSON.parse(await readTextFile(electronApp, `${active}/_CollectionInfo/CategoryOrder.json`))
+      const order = JSON.parse(await readTextFile(electronApp, `${active}/_CategoryOrder.json`))
       expect(order.categories.find((group: { categoryId: string }) => group.categoryId === `${kind}-category`).entries).toEqual([
         { kind, id: `${kind}-owner` }, { kind: 'note', id: noteId }, { kind, id: `${kind}-neighbor` }
       ])
@@ -264,7 +264,7 @@ describe('Notes persistence and commands', () => {
         promptCollectionId: `${kind}-source`, categoryId: `${kind}-category`, previousEntryId: `${kind}-neighbor`, status
       }), { kind, noteId, status })
       /** Reordering retains the note reference in the same category. */
-      const order = JSON.parse(await readTextFile(electronApp, `${active}/_CollectionInfo/CategoryOrder.json`))
+      const order = JSON.parse(await readTextFile(electronApp, `${active}/_CategoryOrder.json`))
       expect(order.categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual([`${kind}-owner`, `${kind}-neighbor`, noteId])
       await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.deleteCategory(`${kind}-category`), kind)
       expect(await readNote(mainWindow, noteId)).not.toHaveProperty('category')
@@ -406,7 +406,7 @@ describe('Notes persistence and commands', () => {
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.updateNote(id, 'Retain these notes'), id)
     await setVisible(mainWindow, id, false)
     /** Original files and timestamps must survive partial filesystem commit. */
-    const paths = [`${active}/Owner 1.prompt.md`, `${active}/Owner 1.note.md`, `${active}/_CollectionInfo/CategoryOrder.json`]
+    const paths = [`${active}/Owner 1.prompt.md`, `${active}/Owner 1.note.md`, `${active}/_CategoryOrder.json`]
     /** Exact original disk contents. */
     const before = await Promise.all(paths.map((path) => readTextFile(electronApp, path)))
     /** Exact original physical file modification times. */
@@ -425,9 +425,9 @@ describe('Notes persistence and commands', () => {
       } catch (error) {
         return String(error)
       }
-    }, id)).toContain('Injected note file commit failure')
+    }, id)).toContain('Injected file commit failure')
     // The deliberately rejected IPC request is expected; unrelated renderer errors still fail teardown.
-    testSetup.removeRendererErrorsContaining('Injected note file commit failure')
+    testSetup.removeRendererErrorsContaining('Injected file commit failure')
     testSetup.removeRendererErrorsContaining('IPC invocation error')
     expect(await Promise.all(paths.map((path) => readTextFile(electronApp, path)))).toEqual(before)
     expect(await Promise.all(paths.map((path) => fileTime(electronApp, path)))).toEqual(times)

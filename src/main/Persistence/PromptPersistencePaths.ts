@@ -17,9 +17,10 @@ export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt'
 /** Workspace info suffix used before the .cthulhuprompt file association; renamed on load. */
 export const LEGACY_WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 /** Filename for category-view ordering owned by a collection. */
-export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = 'CategoryOrder.json'
+export const PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME = '_CategoryOrder.json'
 export const PROMPT_COLLECTION_INFO_DIRECTORY_NAME = '_CollectionInfo'
-export const PROMPT_COLLECTION_INFO_FILENAME = 'CollectionInfo.json'
+/** Collection identity stored directly in the collection directory. */
+export const PROMPT_COLLECTION_INFO_FILENAME = '_CollectionInfo.json'
 /** File extension identifying attached and standalone notes. */
 export const NOTE_MARKDOWN_FILENAME_SUFFIX = '.note.md'
 export const PROMPT_MARKDOWN_FILENAME_SUFFIX = '.prompt.md'
@@ -124,7 +125,6 @@ export const resolvePromptCollectionCategoryOrderPath = (
     resolvePromptStatusFolderName(collectionFolderName, statusFolderId)
   return path.join(
     resolvePromptDirectoryPath(workspacePath, orderFolderName, kind),
-    PROMPT_COLLECTION_INFO_DIRECTORY_NAME,
     PROMPT_COLLECTION_CATEGORY_ORDER_FILENAME
   )
 }
@@ -143,13 +143,14 @@ export const resolvePromptCollectionInfoDirectoryPath = (
   )
 }
 
+/** Resolves identity metadata beside the collection's status directories. */
 export const resolvePromptCollectionInfoPath = (
   workspacePath: string,
   folderName: string,
   kind: PromptCollectionKind
 ): string => {
   return path.join(
-    resolvePromptCollectionInfoDirectoryPath(workspacePath, folderName, kind),
+    resolvePromptDirectoryPath(workspacePath, folderName, kind),
     PROMPT_COLLECTION_INFO_FILENAME
   )
 }

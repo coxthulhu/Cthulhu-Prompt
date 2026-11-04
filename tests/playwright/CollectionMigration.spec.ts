@@ -63,8 +63,8 @@ describe('Collection terminology migrations', () => {
     for (const filePath of Object.keys(legacy).filter((filePath) => filePath.includes('_FolderInfo') || filePath.endsWith('/FolderOrder.json'))) {
       expect(await checkFileExists(electronApp, filePath)).toBe(false)
     }
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(6)
-    expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Tasks/Archived/_CollectionInfo`)).toBe(true)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(7)
+    expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/Tasks/Archived/_CollectionInfo`)).toBe(false)
     await testHelpers.navigateToPromptCollections('Tasks')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Task')
     await testHelpers.navigateToPromptCollections('Library')

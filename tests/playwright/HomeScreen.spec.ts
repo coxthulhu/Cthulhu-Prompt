@@ -246,7 +246,7 @@ Keep this body.`
       /** Canonical unreferenced category data produced by the recursive scan. */
       const migratedCategoryText = await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))
       expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 6,
+        schemaVersion: 7,
         workspaceId: unversionedInfo.workspaceId,
         workspaceName: unversionedInfo.workspaceName
       })
@@ -292,7 +292,7 @@ Keep this body.`
       })
 
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(6)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(7)
     })
 
     test('leaves schema version zero when a workspace migration file is malformed', async ({
@@ -489,7 +489,7 @@ Keep this partial body.`
             `${workspacePath}\\TestWorkspace.cthulhuprompt`
           )
         ).schemaVersion
-      ).toBe(6)
+      ).toBe(7)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {
