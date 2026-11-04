@@ -11,7 +11,11 @@ export enum StorageScope {
 
 /** JSON payloads stored independently of their workspace and entity identity. */
 export type WorkspaceStateData = {
-  'application-user': { hasShownWelcome: boolean }
+  'application-user': {
+    hasShownWelcome: boolean
+    /** Shared sidebar expansion preference, independent of machine geometry. */
+    appSidebarExpanded: boolean
+  }
   'application-machine': {
     lastWorkspaceInfoPath: string | null
     appSidebarWidthPx: number

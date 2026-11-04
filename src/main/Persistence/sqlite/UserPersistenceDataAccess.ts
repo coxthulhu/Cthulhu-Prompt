@@ -56,7 +56,10 @@ export class UserPersistenceDataAccess {
       settingsScrollTopPx: Math.round(userPersistence.settingsScrollTopPx)
     }
     SqliteDataAccess.runTransaction(() => {
-      WorkspaceStateDataAccess.write(null, 'application-user', null, { hasShownWelcome: next.hasShownWelcome })
+      WorkspaceStateDataAccess.write(null, 'application-user', null, {
+        hasShownWelcome: next.hasShownWelcome,
+        appSidebarExpanded: next.appSidebarExpanded
+      })
       WorkspaceStateDataAccess.write(null, 'application-machine', null, {
         lastWorkspaceInfoPath: next.lastWorkspaceInfoPath,
         appSidebarWidthPx: next.appSidebarWidthPx,

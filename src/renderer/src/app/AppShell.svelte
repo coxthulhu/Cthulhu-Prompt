@@ -37,7 +37,10 @@
   } from '@renderer/app/workspaceSelection.svelte.ts'
   import { syncLastWorkspaceInfoPath } from '@renderer/data/Mutations/UserPersistenceMutations'
   import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
-  import { setAppSidebarWidthWithAutosave } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
+  import {
+    setAppSidebarExpandedWithAutosave,
+    setAppSidebarWidthWithAutosave
+  } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
   import { loadWorkspaceUiState } from '@renderer/data/Queries/WorkspaceUiStateQuery'
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
@@ -126,8 +129,8 @@
   let showWorkspaceOpenErrorDialog = $state(false)
   /** Failure details shown by Home's open-failure dialog. */
   let workspaceOpenErrorText = $state('')
-  // Session-only expansion applies only to screens that provide a sidebar.
-  let sidebarExpanded = $state(true)
+  /** Restores the user's expansion preference for screens that provide a sidebar. */
+  let sidebarExpanded = $state(getUserPersistence().appSidebarExpanded)
 
   const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
     data: Workspace[]
@@ -633,12 +636,16 @@
   /** Re-clicking an activity changes visibility without resetting its screen selection. */
   const activateActivity = (screen: ScreenId): void => {
     if (screen === activeScreen) {
-      if (activeSidebarMode) sidebarExpanded = !sidebarExpanded
+      if (activeSidebarMode) {
+        sidebarExpanded = !sidebarExpanded
+        setAppSidebarExpandedWithAutosave(sidebarExpanded)
+      }
       return
     }
 
     navigateToScreen(screen)
     sidebarExpanded = true
+    setAppSidebarExpandedWithAutosave(sidebarExpanded)
   }
 
   const navigateToScreenCollection = (promptCollectionId: string): void => {

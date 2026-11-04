@@ -3,6 +3,8 @@ import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/Authoritative
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
+  /** Application-wide sidebar expansion preference for this user. */
+  appSidebarExpanded: boolean
   /** Whether Welcome has been displayed for this user. */
   hasShownWelcome: boolean
   /** Settings sidebar sections collapsed on this machine; all others are expanded. */
@@ -16,6 +18,7 @@ export type UserPersistence = {
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   lastWorkspaceInfoPath: null,
   appSidebarWidthPx: 275,
+  appSidebarExpanded: true,
   hasShownWelcome: false,
   settingsCollapsedSectionIds: [],
   settingsScrollTopPx: 0,
@@ -129,6 +132,10 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
   return {
     lastWorkspaceInfoPath,
     appSidebarWidthPx,
+    appSidebarExpanded:
+      typeof value.appSidebarExpanded === 'boolean'
+        ? value.appSidebarExpanded
+        : DEFAULT_USER_PERSISTENCE.appSidebarExpanded,
     hasShownWelcome: value.hasShownWelcome === true,
     settingsCollapsedSectionIds: Array.isArray(value.settingsCollapsedSectionIds)
       ? value.settingsCollapsedSectionIds.filter((id): id is string => typeof id === 'string')

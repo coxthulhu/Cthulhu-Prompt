@@ -10,6 +10,7 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createTestRequestId } from '../helpers/TestRequestId'
 import {
   readUserPersistence,
+  readWorkspaceState,
   readWorkspaceUiState,
   seedWorkspaceState,
   seedUserPersistence,
@@ -169,6 +170,61 @@ const dragSidebarHandleBy = async (
 }
 
 describe('User Persistence', () => {
+  // Both sidebar modes must save and restore the shared preference through startup hydration.
+  for (const screen of ['project', 'settings']) {
+    test(`persists collapsed and expanded ${screen} sidebar state across reloads`, async ({
+      electronApp,
+      testSetup
+    }) => {
+      /** Real workspace allows startup to restore the active screen alongside sidebar visibility. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+        workspace: { scenario: 'sample' }
+      })
+      await testHelpers.navigateToPromptCollections('Development')
+      if (screen === 'settings') await testHelpers.navigateToSettingsScreen()
+
+      /** Active activity toggles visibility without changing the restored screen. */
+      const activity = mainWindow.getByTestId(`nav-button-${screen}`)
+      /** Sidebar surface and sash must agree with the activity's expansion state. */
+      const sidebar = mainWindow.getByTestId('app-sidebar')
+      /** Resize handle must remain unavailable while the sidebar is collapsed. */
+      const resizeHandle = mainWindow.getByTestId('app-sidebar-resize-handle')
+      await expect(sidebar).toBeVisible()
+
+      // Inspect actual SQLite JSON before reloading so in-memory state cannot satisfy restoration.
+      for (const expanded of [false, true]) {
+        await activity.click()
+        await expect(activity).toHaveAttribute('aria-expanded', String(expanded))
+        await expect.poll(async () =>
+          (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
+        ).toBe(expanded)
+
+        await mainWindow.reload()
+        await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+        await expect(activity).toHaveAttribute('aria-current', 'page')
+        await expect(activity).toHaveAttribute('aria-expanded', String(expanded))
+        await expect(sidebar).toBeVisible({ visible: expanded })
+        await expect(resizeHandle).toBeVisible({ visible: expanded })
+      }
+
+      // Switching activities must save the existing automatic expansion behavior too.
+      await activity.click()
+      await expect(sidebar).toBeHidden()
+      await expect.poll(async () =>
+        (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
+      ).toBe(false)
+      /** Other sidebar mode shares the same application preference. */
+      const nextActivity = mainWindow.getByTestId(
+        `nav-button-${screen === 'project' ? 'settings' : 'project'}`
+      )
+      await nextActivity.click()
+      await expect(sidebar).toBeVisible()
+      await expect.poll(async () =>
+        (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
+      ).toBe(true)
+    })
+  }
+
   test('reopens the persisted workspace on startup', async ({ electronApp, testSetup }) => {
     const persistedWorkspacePath = '/ws/persisted-workspace'
 

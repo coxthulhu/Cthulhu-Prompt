@@ -4,6 +4,17 @@ import { userPersistenceCollection } from '@renderer/data/Collections/UserPersis
 import { submitPacedUpdateTransactionAndWait } from '@renderer/data/IpcFramework/RevisionCollections'
 import { mutatePacedUserPersistenceAutosaveUpdate } from '@renderer/data/Mutations/UserPersistenceMutations'
 
+/** Saves the application-wide sidebar expansion preference. */
+export const setAppSidebarExpandedWithAutosave = (appSidebarExpanded: boolean): void => {
+  /** Latest optimistic preferences preserve other pending autosave edits. */
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  if (userPersistence.appSidebarExpanded === appSidebarExpanded) return
+  mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, appSidebarExpanded },
+    debounceMs: AUTOSAVE_MS
+  })
+}
+
 const mutateAppSidebarWidthWithAutosave = (appSidebarWidthPx: number): void => {
   const roundedWidthPx = Math.round(appSidebarWidthPx)
   /** Current user persistence used to skip an unchanged sidebar-width write. */
