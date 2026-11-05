@@ -56,14 +56,15 @@ export const parseSetWorkspaceUiStateDomainCommand = (
   )
   if (
     !selection ||
-    (record.lastCollectionId !== null && typeof record.lastCollectionId !== 'string')
+    (typeof record.lastCollectionIdByProject !== 'object' || record.lastCollectionIdByProject === null ||
+      Array.isArray(record.lastCollectionIdByProject) || Object.values(record.lastCollectionIdByProject).some((id) => id !== null && typeof id !== 'string'))
   ) {
     return null
   }
   return {
     workspaceId: record.workspaceId,
     ...selection,
-    lastCollectionId: record.lastCollectionId
+    lastCollectionIdByProject: record.lastCollectionIdByProject as Record<string, string | null>
   }
 }
 

@@ -17,9 +17,9 @@ const WORKSPACE_PATH = '/ws/template-archive'
 /** Original template identity must survive migration, archive, and restoration. */
 const TEMPLATE_ID = 'archive-template'
 /** Active filename whose disappearance proves a physical archive transfer. */
-const ACTIVE_PATH = `${WORKSPACE_PATH}/Templates/Library/Active/Wrapper.template.md`
+const ACTIVE_PATH = `${WORKSPACE_PATH}/DefaultProject/Templates/Library/Active/Wrapper.template.md`
 /** Archive filename whose metadata controls newest-first presentation. */
-const ARCHIVED_PATH = `${WORKSPACE_PATH}/Templates/Library/Archived/Wrapper.template.md`
+const ARCHIVED_PATH = `${WORKSPACE_PATH}/DefaultProject/Templates/Library/Archived/Wrapper.template.md`
 
 /** Builds categorized templates plus a task that already references the first template. */
 const createArchiveWorkspace = (): Record<string, string | null> => {
@@ -40,7 +40,7 @@ const createArchiveWorkspace = (): Record<string, string | null> => {
       { id: TEMPLATE_ID, title: 'Wrapper', templateText: 'Wrapped [[PROMPT_TEXT]]' }
     ] }]
   }])
-  return { ...tasks, ...templates, [`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]: tasks[`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`] }
+  return { ...tasks, ...templates }
 }
 
 describe('Template archive', () => {
@@ -61,10 +61,10 @@ describe('Template archive', () => {
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 2')
     expect(await checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     expect(await checkFileExists(electronApp, ACTIVE_PATH.replace('/Active/', '/'))).toBe(false)
-    expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/Templates/Library/_CollectionInfo/Description.md`)).toBe('Keep root description')
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(7)
+    expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/DefaultProject/Templates/Library/_CollectionInfo/Description.md`)).toBe('Keep root description')
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(8)
     /** Persisted order compared after a fresh renderer reload exercises idempotent migration. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/DefaultProject/Templates/Library/Active/_CategoryOrder.json`
     /** Original categorized order remains byte-for-byte stable after reopening. */
     const order = await readTextFile(electronApp, orderPath)
     expect(JSON.parse(order).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual(['archive-predecessor', TEMPLATE_ID])
@@ -102,7 +102,7 @@ describe('Template archive', () => {
     await editor.getByTestId('template-restore-button').click()
     await expect.poll(() => checkFileExists(electronApp, ACTIVE_PATH)).toBe(true)
     /** Restored order proves this is a first-position insertion rather than an append. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/DefaultProject/Templates/Library/Active/_CategoryOrder.json`
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, orderPath)).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual([TEMPLATE_ID, 'archive-predecessor'])
     await beginPromptTreeRowDrag(mainWindow, TEMPLATE_ID, 'template')
     await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-archived"]')
@@ -147,7 +147,7 @@ describe('Template archive', () => {
     await editor.getByTestId('prompt-copy-button').click()
     await expect.poll(() => mainWindow.evaluate(() => navigator.clipboard.readText())).toBe('Wrapped Body')
     /** Disk reference remains unchanged after confirming the untouched dialog. */
-    const taskPath = `${WORKSPACE_PATH}/Prompts/Tasks/Active/Task.prompt.md`
+    const taskPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Tasks/Active/Task.prompt.md`
     expect(await readTextFile(electronApp, taskPath)).toContain(`id: ${TEMPLATE_ID}`)
     await editor.getByTestId('prompt-template-button').click()
     await dialog.getByTestId('prompt-tree-template-prompt-archive-predecessor').click()
@@ -186,7 +186,7 @@ describe('Template archive', () => {
     await mainWindow.getByTestId('prompt-collection-archived-filter').click()
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('template-restore-button').click()
     /** Existing uncategorized template must follow the restored template. */
-    const orderPath = `${WORKSPACE_PATH}/Templates/Library/Active/_CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/DefaultProject/Templates/Library/Active/_CategoryOrder.json`
     await expect.poll(async () => JSON.parse(await readTextFile(electronApp, orderPath)).categories[0].entries.map((entry: { id: string }) => entry.id)).toEqual([TEMPLATE_ID, 'archive-predecessor'])
     expect(await readTextFile(electronApp, ACTIVE_PATH)).not.toContain('category:')
     await mainWindow.getByTestId('prompt-collection-active-filter').click()

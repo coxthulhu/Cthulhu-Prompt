@@ -37,7 +37,8 @@ const start = async (testSetup: TestSetup, path: string) => {
 }
 /** Reads SQLite independently of the optimistic renderer state. */
 const favorites = async (app: ElectronApplication, path: string): Promise<string[]> =>
-  (await readWorkspaceState<{ ids: string[] }>(app, createDeterministicId(path), 'collection-favorites', null))!.ids
+  (await readWorkspaceState<{ ids: string[] }>(app, createDeterministicId(path), 'collection-favorites',
+    JSON.parse(await readTextFile(app, `${path}/DefaultProject/ProjectInfo.json`)).id))!.ids
 /** Toggles either visible copy without selecting the collection. */
 const toggle = async (page: Page, name: string, section = 'all'): Promise<void> => {
   await page.getByTestId(`sidebar-collection-favorite-${section}-${id(name)}`).click()

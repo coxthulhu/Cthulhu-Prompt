@@ -197,7 +197,7 @@ describe('Sidebar collection quick picks', () => {
       await expect(mainWindow.locator(quickCollectionSelector('source'))).toHaveAttribute('data-row-state', 'blocked-over')
       await finishActiveDrag(mainWindow)
       /** Persisted Active order proves rejected drops did not remove the content. */
-      const root = `${workspacePath}/${kind === 'prompt' ? 'Prompts' : 'Templates'}`
+      const root = `${workspacePath}/DefaultProject/${kind === 'prompt' ? 'Prompts' : 'Templates'}`
       await expectPersistedCollectionPromptIds(electronApp, `${root}/Source/Active/_CategoryOrder.json`, ['content'])
       await beginPromptTreeRowDrag(mainWindow, 'content', kind === 'prompt' ? 'active' : 'template')
       await moveActiveDragToTarget(mainWindow, quickCollectionSelector('target'))

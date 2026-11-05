@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { projectNavigation } from '@renderer/features/projects/projectNavigation.svelte.ts'
+  import { findCollectionProject, getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
   import { tick, untrack } from 'svelte'
   import { clearWorkspaceMonacoModels } from '@renderer/common/Monaco'
   import { useLiveQuery } from '@tanstack/svelte-db'
@@ -151,7 +153,8 @@
   /** Sidebar mode displayed beside the active screen. */
   const activeSidebarMode = $derived.by(() => {
     const modeId = screens[activeScreen].sidebarMode
-    return modeId === null ? null : sidebarModes[modeId]
+    return modeId === null ? null : modeId === SidebarModeId.Project
+      ? { ...sidebarModes[modeId], title: selectedProject?.name ?? '' } : sidebarModes[modeId]
   })
   /** Screens without a sidebar always use the collapsed layout, including programmatic navigation. */
   const isAppSidebarExpanded = $derived(activeSidebarMode !== null && sidebarExpanded)
@@ -167,6 +170,8 @@
 
     return null
   })
+  /** Selected project metadata is reactive to successful edits and renames. */
+  const selectedProject = $derived(selectedWorkspace?.projects.find((project) => project.id === projectMode.projectId))
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
   const selectedWorkspacePromptCollections = $derived.by(() => {
     if (!selectedWorkspace) {
@@ -180,7 +185,7 @@
       }
     }
 
-    return selectedWorkspace.collectionEntries
+    return getWorkspaceCollectionEntries(selectedWorkspace)
       .map((entry) => entry.id)
       .map((promptCollectionId) => promptCollectionById.get(promptCollectionId))
       .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
@@ -250,6 +255,7 @@
       return {
         selectedScreen: screen,
         selectedScreenData: {
+          projectId: projectMode.projectId!,
           promptCollectionId: screenCollectionId,
           contentOwnerId,
           openPromptId: projectMode.openPromptId
@@ -349,6 +355,7 @@
     }
 
     if (isProjectScreenSelection(workspaceUiState)) {
+      projectMode.projectId = workspaceUiState.selectedScreenData.projectId
       const persistedPromptCollectionId = workspaceUiState.selectedScreenData.promptCollectionId
       /** Collection selected from screen data, remembered state, or project order. */
       const restoredPromptCollectionId = projectMode.resolveCollectionId(persistedPromptCollectionId)
@@ -361,7 +368,7 @@
       projectMode.openPromptId = restoredOpenPromptId
       activeScreen = workspaceUiState.selectedScreen
       /** Last project collection, re-synced when it differs from the restored collection. */
-      const persistedLastPromptCollectionId = workspaceUiState.lastCollectionId
+      const persistedLastPromptCollectionId = workspaceUiState.lastCollectionIdByProject[projectMode.projectId!]
       if (
         restoredPromptCollectionId &&
         (persistedPromptCollectionId !== restoredPromptCollectionId ||
@@ -370,6 +377,7 @@
         await syncWorkspaceScreenSelection(workspaceId, {
           selectedScreen: workspaceUiState.selectedScreen,
           selectedScreenData: {
+            projectId: projectMode.projectId!,
             promptCollectionId: restoredPromptCollectionId,
             contentOwnerId:
               persistedPromptCollectionId === restoredPromptCollectionId
@@ -627,11 +635,44 @@
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
     if (screen === 'project') {
+      if (!projectMode.projectId) projectMode.projectId = selectedWorkspace?.projects[0]?.id ?? null
+      if (!projectMode.projectId) return
       projectMode.selectCollection(projectMode.resolveCollectionId(collectionId))
     }
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
+
+  /** Opens another project with its own last collection; re-clicking the active project toggles its sidebar. */
+  const activateProject = (projectId: string): void => {
+    if (activeScreen === 'project' && projectMode.projectId === projectId) {
+      activateActivity('project')
+      return
+    }
+    persistPromptNavigationSelection()
+    captureRegisteredMonacoViewStates()
+    projectMode.projectId = projectId
+    projectMode.selectCollection(null)
+    navigateToScreen('project')
+    sidebarExpanded = true
+    setAppSidebarExpandedWithAutosave(true)
+  }
+
+  // Consume successful project lifecycle requests in the shell that owns navigation.
+  $effect(() => {
+    /** Only requests belonging to the currently open workspace can change its screen. */
+    const request = projectNavigation.pending
+    if (!request) return
+    untrack(() => projectNavigation.consume(request, ({ workspaceId, projectId }) => {
+      if (workspaceId !== getSelectedWorkspaceId()) return
+      if (projectId) activateProject(projectId)
+      else {
+        projectMode.clear()
+        promptNavigation.clear()
+        navigateToScreen('home')
+      }
+    }))
+  })
 
   /** Re-clicking an activity changes visibility without resetting its screen selection. */
   const activateActivity = (screen: ScreenId): void => {
@@ -656,13 +697,14 @@
       projectMode.closeOpenPrompt()
       return
     }
+    projectMode.projectId = findCollectionProject(selectedWorkspace!, promptCollectionId)!.id
     navigateToScreen('project', promptCollectionId)
   }
 
   /** Selects the first remaining collection of either kind or retains the empty project screen. */
   const navigateAfterPromptCollectionDelete = (): void => {
     /** First remaining collection in project order. */
-    const nextPromptCollectionId = selectedWorkspacePromptCollections[0]?.id ?? null
+    const nextPromptCollectionId = selectedProject?.collectionEntries[0]?.id ?? null
     if (!nextPromptCollectionId) {
       projectMode.selectCollection(null)
       return
@@ -692,7 +734,7 @@
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
+    <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
       updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return

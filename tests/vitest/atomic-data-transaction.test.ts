@@ -396,8 +396,8 @@ describe('atomic data transaction', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: [],
-      collectionEntries: [{ kind: 'collection' as const, id: 'root' }]
+      projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
     }
     /** collection updated to own the inserted category. */
     const promptCollection = {
@@ -425,7 +425,7 @@ describe('atomic data transaction', () => {
       committed: promptCollection,
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         folderName: promptCollection.folderName,
         folderPath: promptCollection.folderName,
         kind: promptCollection.kind
@@ -466,7 +466,7 @@ describe('atomic data transaction', () => {
       },
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         promptCollectionId: promptCollection.id,
         collectionFolderName: promptCollection.folderName,
         kind: promptCollection.kind,
@@ -482,8 +482,8 @@ describe('atomic data transaction', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: [],
-      collectionEntries: [{ kind: 'collection' as const, id: 'root' }]
+      projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
     }
     /** Prompt root containing one category and one active prompt. */
     const promptCollection = {
@@ -533,7 +533,7 @@ describe('atomic data transaction', () => {
       committed: promptCollection,
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         folderName: promptCollection.folderName,
         folderPath: promptCollection.folderName,
         kind: promptCollection.kind
@@ -544,7 +544,7 @@ describe('atomic data transaction', () => {
       committed: category,
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         promptCollectionId: promptCollection.id,
         collectionFolderName: promptCollection.folderName,
         kind: promptCollection.kind,
@@ -556,7 +556,7 @@ describe('atomic data transaction', () => {
       committed: prompt,
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         folderPath: 'Root\\Active',
         promptCollectionId: promptCollection.id,
         promptId: prompt.id,
@@ -623,8 +623,8 @@ describe('atomic data transaction', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: [],
-      collectionEntries: [{ kind: 'collection' as const, id: 'templates' }]
+      projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'templates' }] }]
     }
     /** Template root containing one active template. */
     const promptCollection = {
@@ -664,7 +664,7 @@ describe('atomic data transaction', () => {
       committed: promptCollection,
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         folderName: promptCollection.folderName,
         folderPath: promptCollection.folderName,
         kind: promptCollection.kind
@@ -675,7 +675,7 @@ describe('atomic data transaction', () => {
       committed: promptTemplate,
       persistenceFields: {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         folderPath: `${promptCollection.folderName}\\Active`,
         promptCollectionId: promptCollection.id,
         promptId: promptTemplate.id,

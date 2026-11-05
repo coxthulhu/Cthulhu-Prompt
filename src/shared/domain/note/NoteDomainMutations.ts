@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import type { DomainChange, DomainPlanner, DomainState, DomainTarget } from '@shared/domain/DomainChanges'
 import { createAttachedNoteUiStateKey, deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { getMarkdownContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
@@ -104,7 +105,7 @@ const findCollection = (state: DomainState, noteId: string) => {
 const clearAttachedNoteUiState = (state: DomainState, collectionId: string, noteId: string): DomainChange => {
   /** Every loaded collection belongs to one loaded workspace. */
   const workspace = state.getAll('workspace').find((candidate) =>
-    candidate.collectionEntries.some((entry) => entry.id === collectionId))!
+    getWorkspaceCollectionEntries(candidate).some((entry) => entry.id === collectionId))!
   return deleteAttachedNoteUiState(workspace.id, noteId)
 }
 
@@ -132,7 +133,7 @@ export const planCreateAttachedNote: DomainPlanner<CreateAttachedNoteCommand> = 
   const collection = state.getAll('promptCollection').find((candidate) =>
     candidate.kind === command.ownerKind && getMarkdownContentIds(candidate, candidate.kind).includes(owner.id))
   const workspace = collection && state.getAll('workspace').find((candidate) =>
-    candidate.collectionEntries.some((entry) => entry.id === collection.id))
+    getWorkspaceCollectionEntries(candidate).some((entry) => entry.id === collection.id))
   if (!workspace) return { status: 'conflict', reason: 'Note attachment workspace missing', targets }
   const id = createAttachedNoteUiStateKey(workspace.id, command.noteId)
   targets.push({ entityType: 'attachedNoteUiState', id })

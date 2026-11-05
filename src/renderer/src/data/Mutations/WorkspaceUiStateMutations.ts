@@ -84,10 +84,11 @@ export const syncWorkspaceScreenSelection = async (
   const command: WorkspaceUiState = {
     workspaceId,
     ...workspaceScreenSelection,
-    lastCollectionId:
-      workspaceScreenSelection.selectedScreen === 'project'
-        ? workspaceScreenSelection.selectedScreenData.promptCollectionId
-        : current.lastCollectionId
+    lastCollectionIdByProject: {
+      ...current.lastCollectionIdByProject,
+      ...(workspaceScreenSelection.selectedScreen === 'project'
+        ? { [workspaceScreenSelection.selectedScreenData.projectId]: workspaceScreenSelection.selectedScreenData.promptCollectionId } : {})
+    }
   }
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planSetWorkspaceUiStateDomainMutation },

@@ -17,6 +17,8 @@ vi.mock('../../src/main/Persistence/sqlite/WorkspaceStateDataAccess', () => ({
   WorkspaceStateDataAccess: {
     read: vi.fn(() => null),
     write: vi.fn(),
+    /** Legacy user preferences are removed after project-scoped import. */
+    delete: vi.fn(),
     listEntityIds: vi.fn(() => [])
   }
 }))

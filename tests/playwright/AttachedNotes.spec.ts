@@ -42,7 +42,7 @@ const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template', tex
     : started.testHelpers.navigateToPromptCollections('Content')
   await openCollection()
   await waitForMonacoEditor(started.mainWindow, BODY)
-  return { ...started, openCollection, active: `${WORKSPACE}/${kind === 'prompt' ? 'Prompts' : 'Templates'}/Content/Active` }
+  return { ...started, openCollection, active: `${WORKSPACE}/DefaultProject/${kind === 'prompt' ? 'Prompts' : 'Templates'}/Content/Active` }
 }
 
 /** Reads committed settings independently of the editable settings form. */

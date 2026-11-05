@@ -1,3 +1,4 @@
+import { playwrightProjectControls } from './playwrightProjectControls'
 import { tick } from 'svelte'
 import { getRuntimeConfig } from './runtimeConfig'
 import { waitForRevisionMutations } from '@renderer/data/IpcFramework/RevisionMutation'
@@ -10,6 +11,7 @@ export const initializePlaywrightTestControls = (): void => {
   if (getRuntimeConfig().environment !== 'PLAYWRIGHT') return
   window.playwrightTestControls = {
     notes: playwrightNoteControls,
+    projects: playwrightProjectControls,
     tokenization: createPlaywrightTokenizationControls(),
     hasPendingAutosaves: hasPendingPacedUpdates,
     waitForMutations: async () => {

@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import type {
   DomainChange,
   DomainMutationConflict,
@@ -442,7 +443,7 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
   if (
     !promptCollection ||
     !workspace ||
-    !workspace.collectionEntries.some(
+    !getWorkspaceCollectionEntries(workspace).some(
       (entry) => entry.id === command.promptCollectionId
     ) ||
     /[\\/]/.test(promptCollection.folderName) ||
@@ -650,7 +651,7 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      candidate.collectionEntries.some((entry) => entry.id === owningCollection?.id)
+      getWorkspaceCollectionEntries(candidate).some((entry) => entry.id === owningCollection?.id)
     )
   /** Correct target set used by successful planning and invariant conflicts. */
   const targets = collectCategoryDeletionTargets(

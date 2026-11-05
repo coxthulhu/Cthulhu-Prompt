@@ -1,3 +1,4 @@
+import { findCollectionProject, getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import * as path from 'path'
 import { createFilenameAllocator } from './FilenameAllocation'
 import { isDeepStrictEqual } from 'node:util'
@@ -82,7 +83,7 @@ const findOwningWorkspace = (
   graph
     .getAll('workspace')
     .find((workspace) =>
-      workspace.data.collectionEntries.some((entry) => entry.id === promptCollectionId)
+      getWorkspaceCollectionEntries(workspace.data).some((entry) => entry.id === promptCollectionId)
     )
 
 /** Derives canonical prompt-collection metadata from its owning workspace and after data. */
@@ -100,7 +101,9 @@ const derivePromptCollectionFields = (
   }
   return {
     workspaceId: workspace?.data.id ?? currentFields!.workspaceId,
-    workspacePath: workspace?.data.workspacePath ?? currentFields!.workspacePath,
+    workspacePath: workspace
+      ? path.join(workspace.data.workspacePath, findCollectionProject(workspace.data, id)!.folderName)
+      : currentFields!.workspacePath,
     folderName: entry.data.folderName,
     folderPath: entry.data.folderName,
     kind: entry.data.kind
@@ -410,12 +413,28 @@ export const planDomainStorageTransitions = (
   const storageTransitions: DomainStorageTransition[] = []
   /** Collection directory moves that cover their descendants' physical relocation. */
   const collectionDirectoryRenames = collectCollectionDirectoryRenames(domainTransitions)
+  /** Project directory moves relocate every descendant without rewriting its content. */
+  const projectRenames = beforeGraph.getAll('workspace').flatMap(({ data: workspace }) => {
+    /** Matching after snapshot supplies the renamed directory with its stable identity. */
+    const after = afterGraph.get('workspace', workspace.id)?.data
+    return workspace.projects.flatMap((project) => {
+      /** Same project after the mutation, absent when deleted. */
+      const next = after?.projects.find((candidate) => candidate.id === project.id)
+      return next && next.folderName !== project.folderName
+        ? [{ source: path.join(workspace.workspacePath, project.folderName), target: path.join(workspace.workspacePath, next.folderName) }] : []
+    })
+  })
   /** Shared disk snapshot and reservations for all file writes in this transaction. */
   const filenames = createFilenameAllocator()
   /** File-backed types reserved before any new destination is allocated. */
   const filenameTypes: FilenameEntityType[] = ['category', 'prompt', 'promptTemplate', 'note']
   /** Maps a descendant directory through a collection rename without reallocating its filename. */
   const relocatedDirectory = (directory: string): string => {
+    for (const rename of projectRenames) {
+      /** Descendants retain their complete path beneath the project directory. */
+      const relative = path.relative(rename.source, directory)
+      if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) return path.join(rename.target, relative)
+    }
     for (const rename of collectionDirectoryRenames) {
       /** Existing collection metadata identifies the absolute source directory. */
       const collectionFields = beforeGraph.get('promptCollection', rename.promptCollectionId)!.persistenceFields!
@@ -567,7 +586,13 @@ export const planDomainStorageTransitions = (
         before: beforeRecord,
         after: toPersistenceRecord(afterEntry, desiredFields)
       } as DomainStorageTransition
-      storageTransition.persistenceMode = isRelocatedByCollectionDirectoryRename(
+      /** A project rename changes only the content root; its parent operation moves the files. */
+      const followsProjectRename = beforeRecord && 'workspacePath' in beforeRecord.persistenceFields &&
+        'workspacePath' in desiredFields && projectRenames.some((rename) =>
+          beforeRecord.persistenceFields.workspacePath === rename.source && desiredFields.workspacePath === rename.target) &&
+        isDeepStrictEqual(beforeRecord.data, afterEntry.data) &&
+        isDeepStrictEqual({ ...beforeRecord.persistenceFields, workspacePath: undefined }, { ...desiredFields, workspacePath: undefined })
+      storageTransition.persistenceMode = followsProjectRename || isRelocatedByCollectionDirectoryRename(
         storageTransition,
         collectionDirectoryRenames
       )

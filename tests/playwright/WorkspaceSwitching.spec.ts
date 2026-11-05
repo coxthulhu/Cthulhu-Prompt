@@ -23,10 +23,10 @@ const createSwitchingWorkspace = (path: string, label: string): Record<string, s
     collectionId: 'shared-template-collection',
     templates: [{ id: 'shared-template', title: `${label} Template`, templateText: `${label} template body` }]
   }]),
-  [`${path}/Prompts/CollectionOrder.json`]: JSON.stringify({
+  [`${path}/DefaultProject/Prompts/CollectionOrder.json`]: JSON.stringify({
     entries: [{ kind: 'collection', id: 'shared-prompt-collection' }]
   }),
-  [`${path}/Templates/CollectionOrder.json`]: JSON.stringify({
+  [`${path}/DefaultProject/Templates/CollectionOrder.json`]: JSON.stringify({
     entries: [{ kind: 'collection', id: 'shared-template-collection' }]
   })
 })

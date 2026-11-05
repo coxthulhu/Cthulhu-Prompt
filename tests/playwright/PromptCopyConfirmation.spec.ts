@@ -11,7 +11,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 /** Isolated workspace shared by each independently launched case. */
 const WORKSPACE_PATH = '/ws/copy-confirmation'
 /** Task root used to verify physical status-folder moves. */
-const ROOT_PATH = `${WORKSPACE_PATH}/Prompts/Tasks`
+const ROOT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Tasks`
 
 /** Builds direct-copy and undecided prompts in the requested workflow with a usable template. */
 const createCopyWorkspace = (status: PromptStatus) => {
@@ -42,7 +42,7 @@ const createCopyWorkspace = (status: PromptStatus) => {
     folderName: 'Library', displayName: 'Library', collectionId: 'copy-library',
     templates: [{ id: 'wrapper', title: 'Wrapper', templateText: 'Wrapped [[PROMPT_TEXT]]' }]
   }])
-  return { ...tasks, ...templates, [`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]: tasks[`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`] }
+  return { ...tasks, ...templates }
 }
 
 describe('Prompt copy confirmation', () => {

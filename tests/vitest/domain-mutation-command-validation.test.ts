@@ -42,6 +42,7 @@ describe('domain mutation command validation', () => {
     /** Valid collection creation command carrying stable intent only. */
     const createCommand = {
       workspaceId: 'workspace',
+      projectId: 'project',
       promptCollectionId: 'root',
       displayName: 'Root',
       previousEntryId: null,

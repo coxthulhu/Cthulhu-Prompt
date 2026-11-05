@@ -44,15 +44,15 @@ describe('Filename allocation', () => {
       const filesystem = kind === 'prompt'
         ? createWorkspaceWithCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptCollectionId: ROOT_ID,
             prompts: ids.map((id, index) => ({ id, title: titles[index], promptText: `Body ${id}` }))
-          }], { settings: { schemaVersion: 5, workspaceId: WORKSPACE_ID } })
+          }], { settings: { schemaVersion: 8, workspaceId: WORKSPACE_ID } })
         : createWorkspaceWithTemplateCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', collectionId: ROOT_ID,
             templates: ids.map((id, index) => ({ id, title: titles[index], templateText: `Body ${id}` }))
           }])
       filesystem[getWorkspaceInfoPath(WORKSPACE_PATH)] = JSON.stringify({
-        schemaVersion: 5, workspaceId: WORKSPACE_ID, workspaceName: 'Filename Allocation'
+        schemaVersion: 8, workspaceId: WORKSPACE_ID, workspaceName: 'Filename Allocation'
       })
       /** Destination directory contains unparsed files that must still reserve complete names. */
-      const destination = `${WORKSPACE_PATH}/${namespace}/Root/${statusDirectory}`
+      const destination = `${WORKSPACE_PATH}/DefaultProject/${namespace}/Root/${statusDirectory}`
       filesystem[`${destination}/NEW PROMPT${suffix.toUpperCase()}`] = 'Unrelated base file'
       filesystem[`${destination}/NEW PROMPT 1${suffix.toUpperCase()}`] = 'Unrelated numbered file'
       filesystem[`${destination}/NEW PROMPT 2${suffix.toUpperCase()}/marker.txt`] = 'Directory must survive'
@@ -108,7 +108,7 @@ describe('Filename allocation', () => {
         ]
       })
       expect(restored.success).toBe(true)
-      expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/${namespace}/Root/Active/New Prompt${suffix}`)).toContain(`id: ${ids[0]}`)
+      expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/DefaultProject/${namespace}/Root/Active/New Prompt${suffix}`)).toContain(`id: ${ids[0]}`)
       expect(await checkFileExists(electronApp, `${destination}/New Prompt 3${suffix}`)).toBe(false)
       expect(await readTextFile(electronApp, `${destination}/New Prompt 4${suffix}`)).toContain(`id: ${ids[1]}`)
     })
@@ -116,7 +116,7 @@ describe('Filename allocation', () => {
 
   test('reserves category filenames across one batch and does not reuse another category source path', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(createWorkspaceWithCollections(WORKSPACE_PATH, [{ folderName: 'Root', displayName: 'Root', promptCollectionId: ROOT_ID }], {
-      settings: { schemaVersion: 5, workspaceId: WORKSPACE_ID }
+      settings: { schemaVersion: 8, workspaceId: WORKSPACE_ID }
     }))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     /** Real category management command writes all retained drafts in one transaction. */
@@ -138,7 +138,7 @@ describe('Filename allocation', () => {
     })
     expect(created.success).toBe(true)
     /** Root category directory uses a separate complete-filename namespace. */
-    const directory = `${WORKSPACE_PATH}/Prompts/Root/Categories`
+    const directory = `${WORKSPACE_PATH}/DefaultProject/Prompts/Root/Categories`
     for (const [index, stem] of ['Same', 'same 1', 'Same 1 1'].entries()) {
       expect(JSON.parse(await readTextFile(electronApp, `${directory}/${stem}.category.json`))).toEqual(categories[index])
     }
@@ -205,15 +205,19 @@ describe('Filename allocation', () => {
     /** Workspace open runs the migration before loading entity paths. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
+    /** Project migration relocates both libraries after the legacy filename migration. */
+    const migratedDirectory = `${WORKSPACE_PATH}/DefaultProject/Prompts/Root/Active`
+    /** Unreferenced nested files move with their entire library directory. */
+    const migratedOrphanDirectory = `${WORKSPACE_PATH}/DefaultProject/Templates/Orphan/Nested`
     for (const [index, stem] of ['New Prompt', 'New Prompt 1', 'New Prompt 1 1'].entries()) {
-      expect(await readTextFile(electronApp, `${directory}/${stem}.prompt.md`)).toBe(originals[index])
+      expect(await readTextFile(electronApp, `${migratedDirectory}/${stem}.prompt.md`)).toBe(originals[index])
     }
-    expect(await checkFileExists(electronApp, `${directory}/a-abcdef12.prompt.md`)).toBe(false)
-    expect(await readTextFile(electronApp, `${orphanDirectory}/Legacy Template.template.md`)).toBe(template)
-    expect(await readTextFile(electronApp, `${orphanDirectory}/Legacy Category.category.json`)).toBe(category)
-    expect(await readTextFile(electronApp, `${orphanDirectory}/Alpha.template.md`)).toBe(alphaTemplate)
-    expect(await readTextFile(electronApp, `${orphanDirectory}/Beta.template.md`)).toBe(betaTemplate)
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(7)
+    expect(await checkFileExists(electronApp, `${migratedDirectory}/a-abcdef12.prompt.md`)).toBe(false)
+    expect(await readTextFile(electronApp, `${migratedOrphanDirectory}/Legacy Template.template.md`)).toBe(template)
+    expect(await readTextFile(electronApp, `${migratedOrphanDirectory}/Legacy Category.category.json`)).toBe(category)
+    expect(await readTextFile(electronApp, `${migratedOrphanDirectory}/Alpha.template.md`)).toBe(alphaTemplate)
+    expect(await readTextFile(electronApp, `${migratedOrphanDirectory}/Beta.template.md`)).toBe(betaTemplate)
+    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(8)
     /** Loaded prompt timestamps verify rename-only migration preserved historical mtimes. */
     const loaded = await loadRoot(mainWindow)
     expect(loaded.prompts.map((entry: { data: { modifiedAt: string } }) => entry.data.modifiedAt)).toEqual([modifiedAt, modifiedAt, modifiedAt])
@@ -221,7 +225,7 @@ describe('Filename allocation', () => {
     await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
     await testHelpers.setupWorkspaceViaUI()
     for (const [index, stem] of ['New Prompt', 'New Prompt 1', 'New Prompt 1 1'].entries()) {
-      expect(await readTextFile(electronApp, `${directory}/${stem}.prompt.md`)).toBe(originals[index])
+      expect(await readTextFile(electronApp, `${migratedDirectory}/${stem}.prompt.md`)).toBe(originals[index])
     }
   })
 

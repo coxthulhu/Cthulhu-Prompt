@@ -61,11 +61,11 @@ describe('prompt-collection domain mutations', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: [],
-        collectionEntries: [
+        projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [
           { kind: 'collection', id: EXISTING_ROOT_ID },
           { kind: 'collection', id: SECOND_ROOT_ID }
-        ]
+        ] }]
       }
     })
     runRevisionMutation.mockResolvedValue(undefined)
@@ -75,6 +75,7 @@ describe('prompt-collection domain mutations', () => {
     /** Stable ID returned by the renderer-authored creation command. */
     const createdId = await createPromptCollection(
       WORKSPACE_ID,
+      'project',
       ' Created Root ',
       EXISTING_ROOT_ID,
       'prompt'
@@ -96,7 +97,7 @@ describe('prompt-collection domain mutations', () => {
         promptCollectionClientState: { insert: insertClientState }
       }
     })
-    expect(workspace.collectionEntries.map((entry) => entry.id)).toEqual([
+    expect(workspace.projects[0]!.collectionEntries.map((entry) => entry.id)).toEqual([
       EXISTING_ROOT_ID,
       createdId,
       SECOND_ROOT_ID
@@ -120,6 +121,7 @@ describe('prompt-collection domain mutations', () => {
       payload: {
         command: {
           workspaceId: WORKSPACE_ID,
+      projectId: 'project',
           promptCollectionId: createdId,
           displayName: ' Created Root ',
           previousEntryId: EXISTING_ROOT_ID,
@@ -155,7 +157,7 @@ describe('prompt-collection domain mutations', () => {
         }
       }
     })
-    expect(workspace.collectionEntries.map((entry) => entry.id)).toEqual([
+    expect(workspace.projects[0]!.collectionEntries.map((entry) => entry.id)).toEqual([
       SECOND_ROOT_ID,
       EXISTING_ROOT_ID
     ])

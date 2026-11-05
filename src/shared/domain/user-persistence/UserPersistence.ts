@@ -41,6 +41,8 @@ export type PersistedWorkspaceScreen =
 export type ProjectWorkspaceScreenSelection = {
   selectedScreen: 'project'
   selectedScreenData: {
+    /** Persisted project identity, independent of the selected collection. */
+    projectId: string
     promptCollectionId: string | null
     /** collection or category owner containing the selected prompt-collection screen row. */
     contentOwnerId: string | null
@@ -93,6 +95,7 @@ export const isWorkspaceScreenSelectionSame = (
 
   if (isProjectScreenSelection(left) && isProjectScreenSelection(right)) {
     return (
+      left.selectedScreenData.projectId === right.selectedScreenData.projectId &&
       left.selectedScreenData.promptCollectionId === right.selectedScreenData.promptCollectionId &&
       left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId &&
       left.selectedScreenData.openPromptId === right.selectedScreenData.openPromptId
@@ -211,6 +214,9 @@ export const parseWorkspaceScreenSelection = (
     return null
   }
 
+  /** Project identity is migrated before this parser reads persisted selections. */
+  const projectId = selectedScreenData.projectId
+  if (typeof projectId !== 'string') return null
   const promptCollectionId = selectedScreenData.promptCollectionId
   if (promptCollectionId !== null && typeof promptCollectionId !== 'string') {
     return null
@@ -231,6 +237,7 @@ export const parseWorkspaceScreenSelection = (
   return {
     selectedScreen,
     selectedScreenData: {
+      projectId,
       promptCollectionId,
       contentOwnerId,
       openPromptId

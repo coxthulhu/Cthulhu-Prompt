@@ -44,7 +44,7 @@ describe('collection metadata migration', () => {
   for (const kind of ['prompt', 'template'] as const) {
     for (const name of ['Tasks', '_FolderInfo', '_CollectionInfo']) {
       it(`preserves the ${kind} collection directory named ${name}`, () => {
-        const rootPath = `${workspacePath}/${kind === 'prompt' ? 'Prompts' : 'Templates'}`
+        const rootPath = `${workspacePath}/DefaultProject/${kind === 'prompt' ? 'Prompts' : 'Templates'}`
         const collectionPath = `${rootPath}/${name}`
         const legacy = createLegacyWorkspace(kind, name)
         vol.fromJSON(legacy)
@@ -55,14 +55,14 @@ describe('collection metadata migration', () => {
         expect(vol.existsSync(`${collectionPath}/_FolderInfo`)).toBe(false)
         expect(vol.existsSync(`${collectionPath}/Archived/_CollectionInfo`)).toBe(false)
         expect(vol.readFileSync(`${collectionPath}/_CollectionInfo/Description.md`, 'utf8'))
-          .toBe(legacy[`${collectionPath}/_FolderInfo/Description.md`])
+          .toBe(legacy[`${collectionPath}/_FolderInfo/Description.md`.replace('/DefaultProject/', '/')])
         expect(vol.readFileSync(`${collectionPath}/Active/_CategoryOrder.json`, 'utf8'))
-          .toBe(legacy[`${collectionPath}/Active/_FolderInfo/FolderOrder.json`])
+          .toBe(legacy[`${collectionPath}/Active/_FolderInfo/FolderOrder.json`.replace('/DefaultProject/', '/')])
         expect(vol.existsSync(`${rootPath}/CollectionOrder.json`)).toBe(false)
-        expect(readPromptCollections(workspacePath, kind)).toMatchObject([
+        expect(readPromptCollections(`${workspacePath}/DefaultProject`, kind)).toMatchObject([
           { id: 'collection', folderName: name, displayName: name, kind }
         ])
-        expect(JSON.parse(vol.readFileSync(workspaceInfoPath, 'utf8') as string).schemaVersion).toBe(7)
+        expect(JSON.parse(vol.readFileSync(workspaceInfoPath, 'utf8') as string).schemaVersion).toBe(8)
 
         const migrated = vol.toJSON()
         applyWorkspaceMigrations(workspaceInfoPath)
@@ -86,7 +86,7 @@ describe('collection metadata migration', () => {
 
     for (const [filePath, contents] of Object.entries(unrelatedFiles)) {
       // Files inside owned metadata directories move with the directory but retain their names and bytes.
-      const expectedPath = filePath
+      const expectedPath = filePath.replace(`${workspacePath}/`, `${workspacePath}/DefaultProject/`)
         .replace('/Tasks/Active/_FolderInfo/', '/Tasks/Active/_CollectionInfo/')
         .replace('/Tasks/_FolderInfo/', '/Tasks/_CollectionInfo/')
       expect(vol.readFileSync(expectedPath, 'utf8')).toBe(contents)

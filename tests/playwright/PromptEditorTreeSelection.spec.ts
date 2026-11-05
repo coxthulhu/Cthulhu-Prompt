@@ -38,7 +38,7 @@ const createSelectionWorkspace = (kind: 'prompt' | 'template', categorized = fal
     }))
   }])
   if (categorized) {
-    structure[`${WORKSPACE_PATH}/Prompts/Content/Categories/Category.category.json`] = JSON.stringify({
+    structure[`${WORKSPACE_PATH}/DefaultProject/Prompts/Content/Categories/Category.category.json`] = JSON.stringify({
       id: 'category', displayName: 'Category', shortDescription: null, description: ''
     })
   }

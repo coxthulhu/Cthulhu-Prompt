@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { NO_TEMPLATE_LABEL } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
@@ -178,7 +179,7 @@
   })
   // template collections with usable descendants retain workspace ordering.
   const templateCollections = $derived.by(() =>
-    (selectedWorkspace?.collectionEntries ?? []).flatMap((entry) => {
+    (selectedWorkspace ? getWorkspaceCollectionEntries(selectedWorkspace) : []).flatMap((entry) => {
       const collection = promptCollectionById[entry.id]
       return collection?.kind === 'template' && availableTemplateCountByCollectionId[collection.id] > 0
         ? [collection]

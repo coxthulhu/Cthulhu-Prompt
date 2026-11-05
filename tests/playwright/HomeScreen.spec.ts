@@ -11,7 +11,7 @@ import { PromptStatus } from '@shared/domain/prompt/Prompt'
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const workspaceCollectionOrderPath = (workspacePath: string): string =>
-  `${workspacePath}/Prompts/CollectionOrder.json`
+  `${workspacePath}/DefaultProject/Prompts/CollectionOrder.json`
 
 describe('Home Screen', () => {
   test('shows the get started state on launch without a workspace', async ({ testSetup }) => {
@@ -136,7 +136,7 @@ describe('Home Screen', () => {
         [workspaceCollectionOrderPath(workspacePath)]: JSON.stringify({
           entries: [{ kind: 'collection', id: 'home-task-collection' }]
         }),
-        [`${workspacePath}/Templates/CollectionOrder.json`]: JSON.stringify({
+        [`${workspacePath}/DefaultProject/Templates/CollectionOrder.json`]: JSON.stringify({
           entries: [{ kind: 'collection', id: 'home-template-collection' }]
         })
       }
@@ -214,8 +214,8 @@ describe('Home Screen', () => {
       ) as { schemaVersion: number; workspaceId: string; workspaceName: string }
       filesystem[workspaceInfoPath] = JSON.stringify(unversionedInfo, null, 2)
       /** Unreferenced nested prompt carrying the retired singular template field. */
-      const promptPath = `${workspacePath}/Prompts/Orphan/Nested/Legacy.prompt.md`
-      filesystem[promptPath] = `---
+      const promptPath = `${workspacePath}/DefaultProject/Prompts/Orphan/Nested/Legacy.prompt.md`
+      filesystem[promptPath.replace('/DefaultProject/', '/')] = `---
 id: legacy-prompt
 createdAt: '2026-01-01T00:00:00.000Z'
 title: Legacy Prompt
@@ -224,8 +224,8 @@ status: Todo
 ---
 Keep this body.`
       /** Unreferenced nested category proving migration scans all matching workspace files. */
-      const categoryPath = `${workspacePath}/Templates/Orphan/Nested.category.json`
-      filesystem[categoryPath] = JSON.stringify({
+      const categoryPath = `${workspacePath}/DefaultProject/Templates/Orphan/Nested.category.json`
+      filesystem[categoryPath.replace('/DefaultProject/', '/')] = JSON.stringify({
         id: 'orphan-category',
         displayName: 'Orphan',
         description: null
@@ -246,7 +246,7 @@ Keep this body.`
       /** Canonical unreferenced category data produced by the recursive scan. */
       const migratedCategoryText = await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))
       expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 7,
+        schemaVersion: 8,
         workspaceId: unversionedInfo.workspaceId,
         workspaceName: unversionedInfo.workspaceName
       })
@@ -292,7 +292,7 @@ Keep this body.`
       })
 
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(7)
+      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(8)
     })
 
     test('leaves schema version zero when a workspace migration file is malformed', async ({
@@ -382,8 +382,8 @@ Keep this partial body.`
     test('rejects a workspace without a Templates directory', async ({ testSetup }) => {
       const workspacePath = '/ws/missing-templates'
       const filesystem = createWorkspaceWithCollections(workspacePath, [])
-      delete filesystem[`${workspacePath}/Templates`]
-      delete filesystem[`${workspacePath}/Templates/CollectionOrder.json`]
+      delete filesystem[`${workspacePath}/DefaultProject/Templates`]
+      delete filesystem[`${workspacePath}/DefaultProject/Templates/CollectionOrder.json`]
 
       await testSetup.setupFilesystem(filesystem)
       await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
@@ -441,8 +441,8 @@ Keep this partial body.`
           displayName: 'Examples',
           promptCollectionId: 'collection-examples'
         }
-      ])
-      filesystem[workspaceCollectionOrderPath(workspacePath)] = '{ malformed'
+      ], { settings: { schemaVersion: 5 } })
+      filesystem[`${workspacePath}/Prompts/CollectionOrder.json`] = '{ malformed'
       filesystem[`${workspacePath}/Templates/CollectionOrder.json`] = '{ malformed'
 
       await testSetup.setupFilesystem(filesystem)
@@ -459,7 +459,7 @@ Keep this partial body.`
       await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
       expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
-      expect(await checkFileExists(electronApp, `${workspacePath}/Templates/CollectionOrder.json`)).toBe(false)
+      expect(await checkFileExists(electronApp, `${workspacePath}/DefaultProject/Templates/CollectionOrder.json`)).toBe(false)
       expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' }] })
     })
 
@@ -489,7 +489,7 @@ Keep this partial body.`
             `${workspacePath}\\TestWorkspace.cthulhuprompt`
           )
         ).schemaVersion
-      ).toBe(7)
+      ).toBe(8)
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {

@@ -110,7 +110,9 @@ export const buildWorkspaceSnapshot = (
     revision: workspaceEntry.revision,
     data: {
       ...workspaceEntry.committed,
-      collectionEntries: filterLoadedPromptCollectionEntries(workspaceEntry.committed.collectionEntries)
+      projects: workspaceEntry.committed.projects.map((project) => ({
+        ...project, collectionEntries: filterLoadedPromptCollectionEntries(project.collectionEntries)
+      }))
     }
   }
 }

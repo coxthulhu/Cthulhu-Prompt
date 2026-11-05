@@ -22,12 +22,12 @@ describe('Prompt collection selector metadata', () => {
       workspace: {
         scenario: 'categories-ui',
         fileModifiedTimes: {
-          '/ws/categories-ui/Prompts/Hierarchy/Active/Root Before.prompt.md': daysAgo(5),
-          '/ws/categories-ui/Prompts/Hierarchy/Active/Root After.prompt.md': daysAgo(4),
-          '/ws/categories-ui/Prompts/Hierarchy/Active/Category Prompt.prompt.md': daysAgo(3),
-          '/ws/categories-ui/Prompts/Hierarchy/Active/Second Category Prompt.prompt.md':
+          '/ws/categories-ui/DefaultProject/Prompts/Hierarchy/Active/Root Before.prompt.md': daysAgo(5),
+          '/ws/categories-ui/DefaultProject/Prompts/Hierarchy/Active/Root After.prompt.md': daysAgo(4),
+          '/ws/categories-ui/DefaultProject/Prompts/Hierarchy/Active/Category Prompt.prompt.md': daysAgo(3),
+          '/ws/categories-ui/DefaultProject/Prompts/Hierarchy/Active/Second Category Prompt.prompt.md':
             daysAgo(2),
-          '/ws/categories-ui/Prompts/Hierarchy/Completed/Root Completed.prompt.md': daysAgo(0)
+          '/ws/categories-ui/DefaultProject/Prompts/Hierarchy/Completed/Root Completed.prompt.md': daysAgo(0)
         }
       }
     })

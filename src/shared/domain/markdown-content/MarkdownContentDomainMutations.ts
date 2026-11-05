@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
@@ -497,7 +498,7 @@ const createDeletePlanner = (
   const workspace = state
     .getAll('workspace')
     .find((candidate) =>
-      candidate.collectionEntries.some(
+      getWorkspaceCollectionEntries(candidate).some(
         (entry) => entry.id === command.promptCollectionId
       )
     )

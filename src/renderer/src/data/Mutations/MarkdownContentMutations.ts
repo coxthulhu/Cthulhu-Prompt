@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import { produce, type Draft } from 'immer'
 import {
   planPromptDelete,
@@ -148,7 +149,7 @@ export const createMarkdownContentRendererMutations = <
     }
     /** Workspace that owns the deleted content's collection. */
     const workspace = workspaceCollection.toArray.find((candidate) =>
-      candidate.collectionEntries.some((entry) => entry.id === promptCollectionId)
+      getWorkspaceCollectionEntries(candidate).some((entry) => entry.id === promptCollectionId)
     )
     if (!workspace) throw new Error(`${config.label} workspace not loaded`)
     /** Shared deletion command projected by renderer and main process. */

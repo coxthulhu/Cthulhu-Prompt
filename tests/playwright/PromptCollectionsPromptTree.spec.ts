@@ -95,9 +95,9 @@ const buildCompletedTreeWorkspace = (): Record<string, string | null> => {
     }
   ])
   const activeCollectionPrefix =
-    `${COMPLETED_TREE_WORKSPACE_PATH}/Prompts/${COMPLETED_TREE_COLLECTION_NAME}/Active/`
+    `${COMPLETED_TREE_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETED_TREE_COLLECTION_NAME}/Active/`
   const completedCollectionPrefix =
-    `${COMPLETED_TREE_WORKSPACE_PATH}/Prompts/${COMPLETED_TREE_COLLECTION_NAME}/Completed/`
+    `${COMPLETED_TREE_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETED_TREE_COLLECTION_NAME}/Completed/`
 
   for (const [path, content] of Object.entries(workspace)) {
     if (!path.startsWith(activeCollectionPrefix) || !path.endsWith('.prompt.md')) continue

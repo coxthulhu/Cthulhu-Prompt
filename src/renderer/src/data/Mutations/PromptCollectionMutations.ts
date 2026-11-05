@@ -10,6 +10,7 @@ import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/
 
 export const createPromptCollection = async (
   workspaceId: string,
+  projectId: string,
   displayName: string,
   previousEntryId: string | null = null,
   kind: PromptCollectionKind = 'prompt'
@@ -25,6 +26,7 @@ export const createPromptCollection = async (
   /** Shared collection creation command projected in both processes. */
   const command = {
     workspaceId,
+    projectId,
     promptCollectionId: optimisticPromptCollectionId,
     displayName,
     previousEntryId,

@@ -3,17 +3,15 @@ import type { PromptSummaryData } from '@shared/domain/prompt/Prompt'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { IpcResult } from '@shared/ipc/IpcResult'
-import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
+import type { Project } from './Project'
 
 export interface WorkspaceCollections {
   id: string
-  /** Ordered task and template collections owned by this workspace's default project. */
-  collectionEntries: CollectionEntryRef[]
+  /** Projects in this user's persisted order. */
+  projects: Project[]
 }
 
 export interface Workspace extends WorkspaceCollections {
-  /** User-owned favorite order shared by task and template collections. */
-  favoriteCollectionIds: string[]
   workspacePath: string
   workspaceName: string
 }

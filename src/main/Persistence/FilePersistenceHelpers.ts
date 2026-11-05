@@ -198,7 +198,12 @@ export const commitStagedFileChanges = (stagedChanges: FilePersistenceStagedChan
 }
 
 export const revertStagedFileChanges = (stagedChanges: FilePersistenceStagedChange[]): void => {
-  for (const fileChange of stagedChanges) {
+  // Remove staged files before checking newly created directories, deepest directory first.
+  for (const fileChange of stagedChanges.filter((change) => change.type !== 'ensureDirectory')) {
+    revertStagedFileChange(fileChange)
+  }
+  for (const fileChange of stagedChanges.filter((change) => change.type === 'ensureDirectory')
+    .sort((left, right) => right.targetPath.length - left.targetPath.length)) {
     revertStagedFileChange(fileChange)
   }
 }

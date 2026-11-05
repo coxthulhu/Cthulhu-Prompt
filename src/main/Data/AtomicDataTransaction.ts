@@ -309,7 +309,8 @@ const createAtomicDataBuilder = (): {
 /** Reverts every filesystem transition that reached the staged state. */
 const revertStagedChanges = async (stagedTransitions: StagedTransitionEntry[]): Promise<void> => {
   await Promise.allSettled(
-    stagedTransitions.flatMap((stagedTransition) =>
+    // Children release their staged files before newly created project directories are removed.
+    [...stagedTransitions].reverse().flatMap((stagedTransition) =>
       stagedTransition.transition.persistenceMode === 'stage' &&
       stagedTransition.revisionData.persistence.kind === 'filesystem'
         ? [stagedTransition.revisionData.persistence.revertChanges(stagedTransition.stagedChange)]

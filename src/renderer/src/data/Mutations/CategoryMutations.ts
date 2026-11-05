@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import { compactGuid } from '@shared/utilities/compactGuid'
 import {
   planCreateCategoryDomainMutation,
@@ -142,7 +143,7 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
   if (!promptCollection) throw new Error('Category prompt collection not loaded')
   /** Workspace that directly owns the category collection. */
   const workspace = workspaceCollection.toArray.find((candidate) =>
-    candidate.collectionEntries.some((entry) => entry.id === promptCollection.id)
+    getWorkspaceCollectionEntries(candidate).some((entry) => entry.id === promptCollection.id)
   )
   if (!workspace) throw new Error('Category workspace not loaded')
   /** Renderer-authored command shared with the main-process planner. */

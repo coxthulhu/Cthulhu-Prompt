@@ -53,7 +53,7 @@ const EXAMPLES_COLLECTION_NAME = 'Examples'
 const promptCollectionCategoryOrderPath = (workspacePath: string, folderName: string): string => {
   // CategoryOrder belongs only to the selected collection's flat Active directory.
   const [collectionFolderName] = folderName.split('/')
-  return `${workspacePath}/Prompts/${collectionFolderName}/Active/_CategoryOrder.json`
+  return `${workspacePath}/DefaultProject/Prompts/${collectionFolderName}/Active/_CategoryOrder.json`
 }
 const DEVELOPMENT_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, DEVELOPMENT_COLLECTION_NAME)
 const EXAMPLES_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, EXAMPLES_COLLECTION_NAME)
@@ -375,7 +375,7 @@ const buildCategoryScrollWorkspace = (): Record<string, string | null> => {
     }
   ])
   filesystem[
-    `${CATEGORY_SCROLL_WORKSPACE_PATH}/Prompts/${CATEGORY_SCROLL_COLLECTION_NAME}/Categories/Destination.category.json`
+    `${CATEGORY_SCROLL_WORKSPACE_PATH}/DefaultProject/Prompts/${CATEGORY_SCROLL_COLLECTION_NAME}/Categories/Destination.category.json`
   ] = JSON.stringify(
     {
       id: CATEGORY_SCROLL_CATEGORY_ID,

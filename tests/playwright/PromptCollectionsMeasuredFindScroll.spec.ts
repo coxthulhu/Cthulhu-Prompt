@@ -57,7 +57,7 @@ describe('Measured Find Scrolling', () => {
         { id: 'measured-category-target', title: QUERY, promptText: 'one line', category: 'measured-category' }
       ]
     }])
-    filesystem[`${path}/Prompts/Measured/Categories/Hidden.category.json`] = JSON.stringify({
+    filesystem[`${path}/DefaultProject/Prompts/Measured/Categories/Hidden.category.json`] = JSON.stringify({
       id: 'measured-category', displayName: 'Hidden', shortDescription: null, description: null
     })
     await testSetup.setupFilesystem(filesystem)

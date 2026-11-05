@@ -9,8 +9,8 @@ import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 /** Persisted screen selection and last-collection state for one workspace. */
 export type WorkspaceUiState = WorkspaceScreenSelection & {
   workspaceId: string
-  /** Last collection of either kind selected in this workspace. */
-  lastCollectionId: string | null
+  /** Each project remembers its last selected collection independently. */
+  lastCollectionIdByProject: Record<string, string | null>
 }
 
 /** Persisted prompt-collection screen state for one collection or category content owner. */
@@ -40,7 +40,7 @@ export const createDefaultWorkspaceUiState = (workspaceId: string): WorkspaceUiS
   workspaceId,
   selectedScreen: 'home',
   selectedScreenData: null,
-  lastCollectionId: null
+  lastCollectionIdByProject: {}
 })
 
 /** IPC channel that loads every split UI-state collection for one workspace. */

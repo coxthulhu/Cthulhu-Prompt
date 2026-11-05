@@ -19,7 +19,7 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 /** Stable workspace and root paths used to inspect persisted workflow changes. */
 const WORKSPACE_PATH = '/ws/backlog'
 /** Root containing shared categories and separate status directories. */
-const ROOT_PATH = `${WORKSPACE_PATH}/Prompts/Work`
+const ROOT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Work`
 
 /** Builds an existing workspace whose Active category order differs from alphabetical order. */
 const createBacklogWorkspace = () => {

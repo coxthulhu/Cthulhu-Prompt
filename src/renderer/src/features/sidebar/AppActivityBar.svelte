@@ -4,13 +4,16 @@
   import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { Download } from 'lucide-svelte'
-  import { projects } from '@renderer/features/projects/projects'
+  import type { Project } from '@shared/domain/workspace/Project'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import WorkspacePopup from '@renderer/features/workspace/WorkspacePopup.svelte'
   import { getNextAppIconTooltip, INITIAL_APP_ICON_TOOLTIP } from './appIconTooltip'
 
   let {
     activeScreen,
+    projects,
+    selectedProjectId,
+    onProjectSelect,
     isAppSidebarExpanded,
     isWorkspaceReady = false,
     isDevMode = false,
@@ -20,6 +23,12 @@
     updateAvailable,
     onToggleUpdates
   } = $props<{
+    /** Persisted project records in the user's display order. */
+    projects: Project[]
+    /** Selected project is independent of non-project screens. */
+    selectedProjectId: string | null
+    /** Opens a project or toggles its already-active sidebar. */
+    onProjectSelect: (projectId: string) => void
     activeScreen: ScreenId
     isAppSidebarExpanded: boolean
     isWorkspaceReady?: boolean
@@ -108,19 +117,19 @@
   {#if isWorkspaceReady}
     <!-- Project buttons form their own top-aligned group below the screen activities. -->
     <Separator class="my-1 w-7" />
-    {#each projects as project (project.title)}
-      {@const isActive = activeScreen === 'project'}
+    {#each projects as project (project.id)}
+      {@const isActive = activeScreen === 'project' && selectedProjectId === project.id}
       <ActivityBarButton
-        label={project.title}
-        title={isActive ? `${project.title} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar` : project.title}
+        label={project.name}
+        title={isActive ? `${project.name} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar` : project.name}
         testId={screens.project.testId}
         active={isActive}
         compactIndicator={!isAppSidebarExpanded}
         ariaCurrent={isActive ? 'page' : undefined}
         ariaExpanded={isActive ? isAppSidebarExpanded : undefined}
-        onclick={() => onNavigate('project')}
+        onclick={() => onProjectSelect(project.id)}
       >
-        <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.initials}</span>
+        <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.abbreviation}</span>
       </ActivityBarButton>
     {/each}
   {/if}

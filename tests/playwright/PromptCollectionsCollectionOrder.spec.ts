@@ -40,7 +40,7 @@ const workspaceCollectionOrderPath = (
   workspacePath: string,
   kind: 'prompt' | 'template' = 'prompt'
 ): string =>
-  `${workspacePath}/${kind === 'template' ? 'Templates' : 'Prompts'}/CollectionOrder.json`
+  `${workspacePath}/DefaultProject/${kind === 'template' ? 'Templates' : 'Prompts'}/CollectionOrder.json`
 
 
 /** Reads stable IDs from the user's persisted combined SQLite order. */
@@ -113,13 +113,7 @@ const createCombinedCollectionWorkspace = (workspacePath: string) => ({
   ...createWorkspaceWithTemplateCollections(workspacePath, [
     { folderName: 'Beta', displayName: 'Template Beta', collectionId: 'template-beta' },
     { folderName: 'Alpha', displayName: 'Template Alpha', collectionId: 'template-alpha' }
-  ]),
-  [`${workspacePath}/Prompts/CollectionOrder.json`]: JSON.stringify({
-    entries: ['prompt-zulu', 'prompt-alpha'].map((id) => ({ kind: 'collection', id }))
-  }),
-  [`${workspacePath}/Templates/CollectionOrder.json`]: JSON.stringify({
-    entries: ['template-beta', 'template-alpha'].map((id) => ({ kind: 'collection', id }))
-  })
+  ])
 })
 
 describe('Prompt Collection Order', () => {
@@ -135,7 +129,7 @@ describe('Prompt Collection Order', () => {
     }
     for (const [index, folderName] of ['alpha', 'Zulu'].entries()) {
       /** Existing collection identity remains unchanged while its display name is reversed. */
-      const infoPath = `${workspacePath}/Prompts/${folderName}/_CollectionInfo.json`
+      const infoPath = `${workspacePath}/DefaultProject/Prompts/${folderName}/_CollectionInfo.json`
       filesystem[infoPath] = JSON.stringify({ ...JSON.parse(filesystem[infoPath]!), displayName: index === 0 ? 'Zulu Display' : 'Alpha Display' })
     }
     await seedWorkspaceState(electronApp, createDeterministicId(otherPath), 'collection-order', null, {
@@ -203,14 +197,14 @@ describe('Prompt Collection Order', () => {
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await expect(mainWindow.getByTestId('create-prompt-collection-name-error')).toBeVisible()
     expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(COMBINED_ALPHABETICAL_IDS)
-    expect(await checkFileExists(electronApp, `${workspacePath}/Prompts/RetryCollection/_CollectionInfo.json`)).toBe(false)
+    expect(await checkFileExists(electronApp, `${workspacePath}/DefaultProject/Prompts/RetryCollection/_CollectionInfo.json`)).toBe(false)
     await runSqlStatement(electronApp, 'DROP TRIGGER reject_collection_order')
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Retry Collection')
     await expect.poll(() => readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual([
       expect.any(String), ...COMBINED_ALPHABETICAL_IDS
     ])
-    expect(await checkFileExists(electronApp, `${workspacePath}/Prompts/RetryCollection/_CollectionInfo.json`)).toBe(true)
+    expect(await checkFileExists(electronApp, `${workspacePath}/DefaultProject/Prompts/RetryCollection/_CollectionInfo.json`)).toBe(true)
     expect(testSetup.getRendererErrors().some((error) => error.message.includes('Controlled collection order failure'))).toBe(true)
     testSetup.removeRendererErrorsContaining('Controlled collection order failure')
   })
@@ -306,8 +300,8 @@ describe('Prompt Collection Order', () => {
     /** Current workspace identity retained while its schema marker is downgraded. */
     const workspaceInfo = JSON.parse(filesystem[workspaceInfoPath]!) as Record<string, unknown>
     filesystem[workspaceInfoPath] = JSON.stringify({ ...workspaceInfo, schemaVersion: 1 }, null, 2)
-    delete filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/Prompts/FolderOrder.json`]
-    delete filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/Templates/FolderOrder.json`]
+    delete filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/DefaultProject/Prompts/FolderOrder.json`]
+    delete filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/DefaultProject/Templates/FolderOrder.json`]
     filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/WorkspaceFolderOrder.json`] = JSON.stringify(
       { entries: persistedIds.map((id) => ({ kind: 'folder', id })) },
       null,
@@ -329,7 +323,7 @@ describe('Prompt Collection Order', () => {
       .poll(async () => await readPromptCollectionDropdownItemTestIds(mainWindow))
       .toEqual(COMBINED_ALPHABETICAL_IDS.map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`))
     expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath))).toMatchObject({
-      schemaVersion: 7
+      schemaVersion: 8
     })
     await expect(
       checkFileExists(

@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import type { DomainChange, DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import { findNoteOwner } from '@shared/domain/note/Note'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
@@ -42,7 +43,7 @@ export const planSetAttachedNoteVisible: DomainPlanner<AttachedNoteUiState> = (s
     { entityType: 'attachedNoteUiState', id }
   ]
   if (note?.kind !== 'attached' || !attachment || !workspace ||
-    !workspace.collectionEntries.some((entry) => {
+    !getWorkspaceCollectionEntries(workspace).some((entry) => {
       /** Collection containing the attachment's owner. */
       const collection = state.get('promptCollection', entry.id)
       return collection && getMarkdownContentIds(collection, collection.kind).includes(attachment.owner.id)

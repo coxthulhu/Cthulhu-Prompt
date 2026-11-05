@@ -163,9 +163,12 @@
     return null
   })
 
+  /** Persisted project supplies this sidebar's collections and private favorites. */
+  const selectedProject = $derived(selectedWorkspace?.projects.find((project) => project.id === modeData.projectId))
+
   /** Every project collection of either kind, resolved in project order. */
   const promptCollections = $derived.by((): PromptCollection[] => {
-    if (!selectedWorkspace) {
+    if (!selectedProject) {
       return []
     }
 
@@ -178,7 +181,7 @@
       promptCollectionById.set(promptCollection.id, promptCollection)
     }
 
-    return selectedWorkspace.collectionEntries
+    return selectedProject.collectionEntries
       .map((entry) => promptCollectionById.get(entry.id))
       .filter((promptCollection): promptCollection is PromptCollection => promptCollection !== undefined)
   })
@@ -222,7 +225,7 @@
   /** Only the section where collection dragging began can preview or save a reorder. */
   let draggedCollectionSection = $state('all')
   /** Committed favorites determine sidebar priority independently of drag previews. */
-  const favoriteCollectionIds = $derived(selectedWorkspace?.favoriteCollectionIds ?? [])
+  const favoriteCollectionIds = $derived(selectedProject?.favoriteCollectionIds ?? [])
   // Local preview order lets the dropdown reorder live without persisting until drop.
   let promptCollectionSelectorDragSourceIds = $state<string[] | null>(null)
   let promptCollectionSelectorPreviewIds = $state<string[] | null>(null)
@@ -990,6 +993,7 @@
           {/snippet}
         </DropdownPopupSimple>
         <CreatePromptCollectionDialog
+  projectId={modeData.projectId}
           bind:this={createPromptCollectionDialog}
           {isWorkspaceReady}
           promptCollections={promptCollections}

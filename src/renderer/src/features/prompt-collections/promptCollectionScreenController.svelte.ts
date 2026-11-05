@@ -52,6 +52,8 @@ import {
   promptTemplateClientStateCollection
 } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { findCollectionProject } from '@shared/domain/workspace/Project'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import type { Category } from '@shared/domain/category/Category'
 import {
@@ -151,6 +153,14 @@ export const createPromptCollectionScreenController = ({
   /** Whether the screen renders a final-status prompt list. */
   const isFinalMode = $derived(finalModeDefinition !== null)
   const workspaceId = $derived(workspaceSelection.selectedWorkspaceId)
+  /** Live project membership scopes collection names and screen actions to the current project. */
+  const workspaceQuery = useLiveQuery(workspaceCollection)
+  /** The collection identity determines ownership even after a project rename. */
+  const projectCollectionIds = $derived.by(() => {
+    /** Current workspace owns all loaded project records. */
+    const workspace = workspaceQuery.data.find((candidate) => candidate.id === workspaceId)
+    return workspace ? findCollectionProject(workspace, screenCollectionId)?.collectionEntries.map((entry) => entry.id) ?? [] : []
+  })
 
   const promptCollectionQuery = useLiveQuery(promptCollectionsCollection) as {
     data: PromptCollection[]
@@ -1356,7 +1366,7 @@ export const createPromptCollectionScreenController = ({
     get promptCollections(): PromptCollection[] {
       return promptCollectionQuery.data.filter(
         (currentPromptCollection): currentPromptCollection is PromptCollection =>
-          currentPromptCollection !== undefined
+          currentPromptCollection !== undefined && projectCollectionIds.includes(currentPromptCollection.id)
       )
     },
     get categories(): Category[] {

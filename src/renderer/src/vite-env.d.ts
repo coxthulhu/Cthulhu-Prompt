@@ -6,6 +6,8 @@ declare global {
     /** Persistence observers and worker-response gates installed only in Playwright runs. */
     playwrightTestControls?: {
       /** Production note commands exposed only in the Playwright environment. */
+      /** Production project lifecycle commands, pending management UI. */
+      projects: typeof import('./app/playwrightProjectControls').playwrightProjectControls
       notes: typeof import('./app/playwrightNoteControls').playwrightNoteControls
       /** Holds real worker replies until an editor-recycling test releases them. */
       tokenization: {

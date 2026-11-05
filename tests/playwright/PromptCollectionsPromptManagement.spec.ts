@@ -339,7 +339,7 @@ const buildCompletedFallbackGapWorkspace = () => {
   }).markdownPath
 
   workspace[
-    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Active/_CategoryOrder.json`
+    `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Active/_CategoryOrder.json`
   ] = JSON.stringify(
     {
       categories: [
@@ -355,7 +355,7 @@ const buildCompletedFallbackGapWorkspace = () => {
 
   return {
     ...workspace,
-    [`${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Completed`]:
+    [`${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Completed`]:
       null,
     [completedPath]: serializePromptMarkdown(completedPrompt)
   }
@@ -411,7 +411,7 @@ const buildCompletedSelfHealingWorkspace = () => {
 
   return {
     ...workspace,
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CategoryOrder.json`]:
+    [`${SELF_HEALING_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Active/_CategoryOrder.json`]:
       JSON.stringify(
         {
           categories: [
@@ -424,7 +424,7 @@ const buildCompletedSelfHealingWorkspace = () => {
         null,
         2
       ),
-    [`${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
+    [`${SELF_HEALING_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Completed`]: null,
     [activePath]: serializePromptMarkdown(activePrompt),
     [completedPath]: serializePromptMarkdown(completedPrompt)
   }
@@ -543,7 +543,7 @@ const buildCompletedModeWorkspace = () => {
     promptTitle: oldestArchivedPrompt.title
   }).markdownPath
 
-  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CategoryOrder.json`] =
+  workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Active/_CategoryOrder.json`] =
     JSON.stringify(
       {
         categories: [
@@ -559,8 +559,8 @@ const buildCompletedModeWorkspace = () => {
 
   return {
     ...workspace,
-    [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Completed`]: null,
-    [`${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/${folderName}/Archived`]: null,
+    [`${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Completed`]: null,
+    [`${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Archived`]: null,
     [newestCompletedPath]: serializePromptMarkdown(newestCompletedPrompt),
     [oldestCompletedPath]: serializePromptMarkdown(oldestCompletedPrompt),
     [newestArchivedPath]: serializePromptMarkdown(newestArchivedPrompt),
@@ -607,7 +607,7 @@ const buildStatusDragCategoryWorkspace = () => {
     }
   ], { settings: { workspaceId: 'status-drag-workspace' } })
   workspace[
-    `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Categories/Primary.category.json`
+    `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Categories/Primary.category.json`
   ] = JSON.stringify(
     {
       id: STATUS_DRAG_PRIMARY_CATEGORY_ID,
@@ -619,7 +619,7 @@ const buildStatusDragCategoryWorkspace = () => {
     2
   )
   workspace[
-    `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Categories/Secondary.category.json`
+    `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Categories/Secondary.category.json`
   ] = JSON.stringify(
     {
       id: STATUS_DRAG_SECONDARY_CATEGORY_ID,
@@ -1484,7 +1484,7 @@ describe('Prompt collection prompt management', () => {
     expect(
       await readPromptCollectionEntries(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/${COMPLETION_COLLECTION_NAME}/Active/_CategoryOrder.json`
+        `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETION_COLLECTION_NAME}/Active/_CategoryOrder.json`
       )
     ).toEqual([{ kind: 'prompt', id: 'dev-2' }])
 
@@ -1533,7 +1533,7 @@ describe('Prompt collection prompt management', () => {
         async () =>
           await readPromptCollectionEntries(
             electronApp,
-            `${SELF_HEALING_WORKSPACE_PATH}/Prompts/${folderName}/Active/_CategoryOrder.json`
+            `${SELF_HEALING_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Active/_CategoryOrder.json`
           )
       )
       .toEqual([{ kind: 'prompt', id: activePromptId }])
@@ -2070,11 +2070,11 @@ describe('Prompt collection prompt management', () => {
     await expect(emptyCategoryAction).toHaveCount(0)
 
     /** Persisted prompt must use the destination group's entry status and category. */
-    const restoredPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/Categorized Completed.prompt.md`
+    const restoredPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/Categorized Completed.prompt.md`
     await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain('status: Todo')
     await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
     /** Empty destination gets exactly the restored prompt as its first ordered entry. */
-    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
+    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     await expect.poll(async () => {
       /** Saved category order proves the transfer used the category target. */
       const order = JSON.parse(await readTextFile(electronApp, orderPath)) as {
@@ -2128,7 +2128,7 @@ describe('Prompt collection prompt management', () => {
       expect.objectContaining({ entityType: 'promptCollection' })
     ]))
     /** Persisted group order verifies the exact predecessor across every UI action. */
-    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
+    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     /** Reads one category's persisted IDs without relying on renderer optimism. */
     const readCategoryIds = async (categoryId: string) => {
       /** Current order file after the atomic mutation. */
@@ -2144,7 +2144,7 @@ describe('Prompt collection prompt management', () => {
     await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
     await mainWindow.getByTestId('prompt-status-option-todo').click()
     /** Prompt front matter proves the status control persisted before ordering is checked. */
-    const promptPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/Primary First.prompt.md`
+    const promptPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/Primary First.prompt.md`
     await expect.poll(() => readTextFile(electronApp, promptPath)).toContain('status: Todo')
     expect(await readCategoryIds(STATUS_DRAG_SECONDARY_CATEGORY_ID)).toEqual(['status-drag-secondary-first', 'status-drag-primary-first'])
     await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
@@ -2203,7 +2203,7 @@ describe('Prompt collection prompt management', () => {
     await finishActiveDrag(mainWindow)
 
     /** Persisted category order used to verify both ownership and exact predecessor placement. */
-    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
+    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     await expect
       .poll(async () => {
         /** Current persisted groups after the Completed-to-Active transaction settles. */
@@ -2329,7 +2329,7 @@ describe('Prompt collection prompt management', () => {
       .poll(async () =>
         await readPromptCollectionEntries(
           electronApp,
-          `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_CategoryOrder.json`
+          `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Active/_CategoryOrder.json`
         )
       )
       .toEqual([
@@ -2679,7 +2679,7 @@ describe('Prompt collection prompt management', () => {
         async () =>
           await readPromptCollectionEntries(
             electronApp,
-            `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/_CategoryOrder.json`
+            `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Active/_CategoryOrder.json`
           )
       )
       .toEqual([
@@ -2827,7 +2827,7 @@ describe('Prompt collection prompt management', () => {
 
     /** Archived path receiving the prompt without a confirmation dialog. */
     const archivedActivePromptPath =
-      `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Archived/Active Prompt.prompt.md`
+      `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Archived/Active Prompt.prompt.md`
     await expect.poll(() => checkFileExists(electronApp, archivedActivePromptPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, archivedActivePromptPath)).toContain(
       'status: Archived'
@@ -2922,7 +2922,7 @@ describe('Prompt collection prompt management', () => {
       .toEqual(['archived-mode-newest'])
     /** Restored active path proving Archived supports outbound status drops. */
     const restoredPromptPath =
-      `${COMPLETED_MODE_WORKSPACE_PATH}/Prompts/Completed Mode/Active/Newest Archived.prompt.md`
+      `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Active/Newest Archived.prompt.md`
     await expect.poll(() => readTextFile(electronApp, restoredPromptPath)).toContain('status: Todo')
 
     await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')

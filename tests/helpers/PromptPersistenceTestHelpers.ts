@@ -50,7 +50,7 @@ export const resolvePersistedPromptFilePathsByTitle = (
     collectionSegments[0] === 'Archived'
       ? [collectionFolderName, ...collectionSegments]
       : [collectionFolderName, 'Active', ...collectionSegments]
-  const folderPath = `${lookup.workspacePath}/Prompts/${persistedCollectionSegments.join('/')}`
+  const folderPath = `${lookup.workspacePath}/DefaultProject/Prompts/${persistedCollectionSegments.join('/')}`
   const promptStem = sanitizePromptTitleForFilename(lookup.promptTitle)
   return {
     markdownPath: `${folderPath}/${promptStem}.prompt.md`

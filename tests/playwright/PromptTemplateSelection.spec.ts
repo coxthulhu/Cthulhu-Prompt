@@ -27,12 +27,12 @@ const FIRST_TEMPLATE_COLLECTION_ID = 'selection-templates-first'
 const TEMPLATE_CATEGORY_ID = 'selection-templates-category'
 const EMPTY_TEMPLATE_COLLECTION_ID = 'selection-templates-empty'
 const UNUSABLE_CATEGORY_ID = 'selection-templates-unusable-category'
-const PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Select Template.prompt.md`
-const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Explicit No Template.prompt.md`
-const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Stale Template.prompt.md`
-const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/Prompts/Prompts/Active/Multiple Templates.prompt.md`
+const PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Select Template.prompt.md`
+const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Explicit No Template.prompt.md`
+const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Stale Template.prompt.md`
+const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Multiple Templates.prompt.md`
 const PROMPT_ORDER_PATH =
-  `${WORKSPACE_PATH}/Prompts/Prompts/Active/_CategoryOrder.json`
+  `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'

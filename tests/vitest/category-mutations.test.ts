@@ -107,8 +107,8 @@ describe('category mutations', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: [],
-        collectionEntries: [{ kind: 'collection', id: ROOT_COLLECTION_ID }]
+        projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection', id: ROOT_COLLECTION_ID }] }]
       }
     })
     promptsCollection.utils.upsertAuthoritative({

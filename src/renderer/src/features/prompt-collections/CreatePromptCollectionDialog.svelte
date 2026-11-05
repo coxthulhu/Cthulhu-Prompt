@@ -7,10 +7,13 @@
 
   let {
     isWorkspaceReady,
+    projectId,
     promptCollections = [],
     isPromptCollectionListLoading,
     onCreated
   } = $props<{
+    /** Selected project owns the new collection. */
+    projectId: string | null
     isWorkspaceReady: boolean
     /** Every project collection; only same-kind collections participate in name conflicts. */
     promptCollections: PromptCollection[]
@@ -31,12 +34,13 @@
   /** Creates one collection of the chosen kind. */
   const handleCreateCollection = async (normalizedDisplayName: string): Promise<boolean> => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId
-    if (!selectedWorkspaceId) return false
+    if (!selectedWorkspaceId || !projectId) return false
 
     return await runIpcBestEffort(
       async () => {
         const createdPromptCollectionId = await createPromptCollection(
           selectedWorkspaceId,
+          projectId,
           normalizedDisplayName,
           null,
           kind

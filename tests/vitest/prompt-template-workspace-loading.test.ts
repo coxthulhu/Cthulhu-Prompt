@@ -19,6 +19,8 @@ vi.mock('../../src/main/Persistence/sqlite/WorkspaceStateDataAccess', () => ({
   WorkspaceStateDataAccess: {
     read: vi.fn(() => null),
     write: vi.fn(),
+    /** Legacy user preferences are removed after project-scoped import. */
+    delete: vi.fn(),
     /** This content-only fixture has no saved attachment preferences to prune. */
     listEntityIds: vi.fn(() => [])
   }
@@ -63,7 +65,7 @@ describe('prompt template workspace loading', () => {
     const result = await loadWorkspaceByPath(getWorkspaceInfoPath(workspacePath))
     if (!result.success) throw new Error(result.error)
 
-    expect(result.workspace.data.collectionEntries).toEqual([
+    expect(result.workspace.data.projects[0]!.collectionEntries).toEqual([
       { kind: 'collection', id: 'template-root' }
     ])
     expect(result.promptCollections.map((collection) => collection.id)).toEqual(['template-root'])
@@ -86,7 +88,7 @@ describe('prompt template workspace loading', () => {
     })
     expect(result.promptTemplates).toHaveLength(1)
     const templateModifiedAt = vol
-      .statSync(`${workspacePath}/Templates/Root/Active/Category Template.template.md`)
+      .statSync(`${workspacePath}/DefaultProject/Templates/Root/Active/Category Template.template.md`)
       .mtime.toISOString()
     expect(result.promptTemplates[0]?.data).toMatchObject({
       id: 'category-template',

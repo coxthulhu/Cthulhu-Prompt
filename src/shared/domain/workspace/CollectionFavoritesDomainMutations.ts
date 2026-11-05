@@ -1,3 +1,4 @@
+import { findCollectionProject } from './Project'
 import type { DomainPlanner } from '../DomainChanges'
 import type { MovePromptCollectionDomainCommand } from '../prompt-collection/PromptCollectionDomainMutations'
 
@@ -27,18 +28,20 @@ export const planSetCollectionFavorite: DomainPlanner<SetCollectionFavoriteComma
   const workspace = state.get('workspace', command.workspaceId)
   /** Collection whose favorite membership changes. */
   const collection = state.get('promptCollection', command.promptCollectionId)
-  if (!workspace || !collection || !workspace.collectionEntries.some((entry) => entry.id === collection.id)) {
+  /** Project owning this collection's independent favorites. */
+  const project = workspace && findCollectionProject(workspace, command.promptCollectionId)
+  if (!workspace || !collection || !project) {
     return { status: 'conflict', reason: 'Collection favorite ownership conflict', targets: [{ entityType: 'workspace', id: command.workspaceId }] }
   }
   return [{
     type: 'update', entityType: 'workspace', id: workspace.id,
     recipe: (draft) => {
       /** Existing favorites are kept in their own order. */
-      const ids = draft.favoriteCollectionIds
+      const ids = draft.projects.find((candidate) => candidate.id === project.id)!.favoriteCollectionIds
       if (command.favorite) {
         if (!ids.includes(collection.id)) ids.push(collection.id)
       } else {
-        draft.favoriteCollectionIds = ids.filter((id) => id !== collection.id)
+        draft.projects.find((candidate) => candidate.id === project.id)!.favoriteCollectionIds = ids.filter((id) => id !== collection.id)
       }
     }
   }]
@@ -50,18 +53,20 @@ export const planMoveCollectionFavorite: DomainPlanner<MovePromptCollectionDomai
   const workspace = state.get('workspace', command.workspaceId)
   /** Favorite collection being repositioned. */
   const collection = state.get('promptCollection', command.promptCollectionId)
+  /** Project owning this collection's independent favorites. */
+  const project = workspace && findCollectionProject(workspace, command.promptCollectionId)
   /** Remaining favorites provide the insertion position after removing the moved entry. */
-  const ids = workspace && collection
-    ? workspace.favoriteCollectionIds.filter((id) => id !== collection.id) : []
+  const ids = project && collection
+    ? project.favoriteCollectionIds.filter((id) => id !== collection.id) : []
   /** A null predecessor places the favorite first. */
   const index = command.previousEntryId === null ? 0 : ids.indexOf(command.previousEntryId) + 1
-  if (!workspace || !collection || !workspace.favoriteCollectionIds.includes(collection.id) ||
+  if (!workspace || !collection || !project || !project.favoriteCollectionIds.includes(collection.id) ||
     (command.previousEntryId !== null && index === 0)) {
     return { status: 'conflict', reason: 'Collection favorite reorder conflict', targets: [{ entityType: 'workspace', id: command.workspaceId }] }
   }
   ids.splice(index, 0, collection.id)
   return [{
     type: 'update', entityType: 'workspace', id: workspace.id,
-    recipe: (draft) => { draft.favoriteCollectionIds = ids }
+    recipe: (draft) => { draft.projects.find((candidate) => candidate.id === project.id)!.favoriteCollectionIds = ids }
   }]
 }

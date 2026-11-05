@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import { notesCollection } from '@renderer/data/Collections/NotesCollection'
 import { deleteNoteClientStates } from '@renderer/data/UiState/client-state/NoteClientState'
 import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
@@ -34,7 +35,7 @@ export const loadWorkspaceByPath = async (workspaceInfoPath: string): Promise<Lo
   const previousWorkspace = workspaceCollection.get(result.workspace.id)
   const previousGraph = previousWorkspace
     ? collectPromptCollectionGraphIds(
-        previousWorkspace.collectionEntries.map((entry) => entry.id)
+        getWorkspaceCollectionEntries(previousWorkspace).map((entry) => entry.id)
       )
     : null
 

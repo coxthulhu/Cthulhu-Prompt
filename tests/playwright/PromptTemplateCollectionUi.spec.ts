@@ -565,7 +565,7 @@ describe('Prompt template collection UI', () => {
       createdEditor.locator('[data-testid="prompt-title-status-indicator"]')
     ).toHaveAttribute('data-edited', 'true')
 
-    const persistedPath = `${WORKSPACE_PATH}/Templates/Templates/Active/UI Template.template.md`
+    const persistedPath = `${WORKSPACE_PATH}/DefaultProject/Templates/Templates/Active/UI Template.template.md`
     await expect.poll(() => checkFileExists(electronApp, persistedPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, persistedPath)).toContain('Use {{selection}}.')
 
@@ -735,10 +735,10 @@ describe('Prompt template collection UI', () => {
           ]
         }
       ]),
-      [`${workspacePath}/Prompts/CollectionOrder.json`]: JSON.stringify({
+      [`${workspacePath}/DefaultProject/Prompts/CollectionOrder.json`]: JSON.stringify({
         entries: [{ kind: 'collection', id: promptCollectionId }]
       }),
-      [`${workspacePath}/Templates/CollectionOrder.json`]: JSON.stringify({
+      [`${workspacePath}/DefaultProject/Templates/CollectionOrder.json`]: JSON.stringify({
         entries: [{ kind: 'collection', id: templateCollectionId }]
       })
     }

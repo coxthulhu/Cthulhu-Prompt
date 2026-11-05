@@ -1,3 +1,4 @@
+import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import { readNoteFiles } from '../Persistence/workspace/NoteReads'
 import { loadAttachedNoteUiStates } from '../Queries/AttachedNoteUiStateQuery'
 import { WorkspaceStateDataAccess } from '../Persistence/sqlite/WorkspaceStateDataAccess'
@@ -37,8 +38,6 @@ import {
 import {
   isWorkspaceInfoPath,
   migrateLegacyWorkspaceInfoPath,
-  PROMPTS_DIRECTORY_NAME,
-  TEMPLATES_DIRECTORY_NAME,
   resolvePromptStatusFolderName,
   resolveWorkspacePathFromInfoPath
 } from '../Persistence/PromptPersistencePaths'
@@ -61,9 +60,7 @@ const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
 
   const fs = getFs()
   return (
-    fs.existsSync(workspaceInfoPath) &&
-    fs.existsSync(path.join(workspacePath, PROMPTS_DIRECTORY_NAME)) &&
-    fs.existsSync(path.join(workspacePath, TEMPLATES_DIRECTORY_NAME))
+    fs.existsSync(workspaceInfoPath)
   )
 }
 
@@ -82,7 +79,7 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
   const promptTemplates: WorkspaceLoadPayload['promptTemplates'] = []
   const workspaceSnapshot = buildWorkspaceSnapshot(workspaceEntry)
   /** Every collection ID traversed while building the workspace payload, in project order. */
-  const loadedPromptCollectionIds = workspaceSnapshot.data.collectionEntries.map((entry) => entry.id)
+  const loadedPromptCollectionIds = getWorkspaceCollectionEntries(workspaceSnapshot.data).map((entry) => entry.id)
   const loadedPromptIds: string[] = []
   const loadedPromptTemplateIds: string[] = []
 
@@ -156,7 +153,8 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
   WorkspaceUiStateDataAccess.cleanupWorkspacePromptCollectionUiState(
     workspaceId,
     loadedPromptCollectionIds,
-    categories.map((category) => category.data.id)
+    categories.map((category) => category.data.id),
+    workspaceSnapshot.data.projects
   )
   // Side effect: remove stale editor view-state rows for content no longer in the workspace.
   MarkdownContentUiStateDataAccess.cleanupWorkspaceMarkdownContentUiState(workspaceId, [
@@ -187,26 +185,32 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
 const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Promise<string> => {
   const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
   const workspaceId = readWorkspaceInfo(workspaceInfoPath).workspaceId
-  const promptCollections = readAllPromptCollections(workspacePath).filter(
-    (collection): collection is PromptContentCollection => collection.kind === 'prompt'
-  )
-  const promptTemplateCollections = readAllPromptCollections(workspacePath, 'template').filter(
-    (collection): collection is PromptTemplateCollection => collection.kind === 'template'
-  )
-  const allPromptCollections = [...promptCollections, ...promptTemplateCollections]
-
-  // Side effect: hydrate workspace into the new committed data store.
+  // Load project metadata before discovering each project's content.
   await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath, workspaceInfoPath })
-
-  const workspace = data.workspace.committedStore.getEntry(workspaceId)?.committed
-  if (!workspace) throw new Error('Workspace data not loaded')
+  /** Loaded projects supply the content roots without conflating workspace and project paths. */
+  const workspace = data.workspace.committedStore.getEntry(workspaceId)!.committed
+  /** Collection identity maps to its physical project root for every descendant loader. */
+  const projectPathByCollectionId = new Map<string, string>()
+  /** All collections remain loaded so templates can be selected across projects. */
+  const allPromptCollections = workspace.projects.flatMap((project) => {
+    /** Project directory owns both content libraries. */
+    const projectPath = path.join(workspacePath, project.folderName)
+    /** Both collection kinds are discovered inside the same project. */
+    const collections = [...readAllPromptCollections(projectPath), ...readAllPromptCollections(projectPath, 'template')]
+    for (const collection of collections) projectPathByCollectionId.set(collection.id, projectPath)
+    return collections
+  })
+  /** Task collections supply the initial prompt summaries. */
+  const promptCollections = allPromptCollections.filter((collection): collection is PromptContentCollection => collection.kind === 'prompt')
+  /** Template collections supply workspace-wide full template data. */
+  const promptTemplateCollections = allPromptCollections.filter((collection): collection is PromptTemplateCollection => collection.kind === 'template')
 
   // Side effect: hydrate all prompt collections before loading prompt records.
   await Promise.all(
     allPromptCollections.map((promptCollection) =>
       data.promptCollection.loadDataFromPersistence(promptCollection.id, {
         workspaceId,
-        workspacePath,
+        workspacePath: projectPathByCollectionId.get(promptCollection.id)!,
         folderName: promptCollection.folderName,
         folderPath: promptCollection.folderName,
         kind: promptCollection.kind
@@ -216,6 +220,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 
   /** Category load tasks hydrate records owned by collection prompt and template collections. */
   const categoryLoadTasks = allPromptCollections.flatMap((promptCollection) => {
+    /** Content paths resolve within this collection's project. */
+    const workspacePath = projectPathByCollectionId.get(promptCollection.id)!
     /** collection name used by category persistence. */
     const collectionFolderName = promptCollection.folderName
     const categoryStemById = readCategoryStemById(workspacePath, collectionFolderName, promptCollection.kind)
@@ -239,6 +245,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
   await Promise.all(categoryLoadTasks)
 
   const promptLoadTasks = promptCollections.flatMap((promptCollection) => {
+    /** Content paths resolve within this collection's project. */
+    const workspacePath = projectPathByCollectionId.get(promptCollection.id)!
     return Object.entries(promptCollection.statusFolders).flatMap(
       ([statusFolderId, layout]) => {
         /** Physical directory selected by one stable prompt status-folder identity. */
@@ -278,6 +286,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 
   const promptTemplateLoadTasks = promptTemplateCollections.flatMap((promptCollection) =>
     getContentStatusFolders('template').flatMap((group) => {
+      /** Content paths resolve within this collection's project. */
+      const workspacePath = projectPathByCollectionId.get(promptCollection.id)!
       /** Physical template directory and its discovered stable IDs. */
       const folderPath = resolvePromptStatusFolderName(promptCollection.folderName, group.id)
       /** Filenames used to hydrate both active and archived templates. */
@@ -298,6 +308,8 @@ const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Pro
 
   // Hydrate note files after their owners so unattached minimal files are not mistaken for standalone entries.
   for (const collection of allPromptCollections) {
+    /** Notes share their collection's project root. */
+    const workspacePath = projectPathByCollectionId.get(collection.id)!
     for (const group of getContentStatusFolders(collection.kind)) {
       /** Physical folder supplies collection/status ownership independently of the extension. */
       const folderPath = resolvePromptStatusFolderName(collection.folderName, group.id)

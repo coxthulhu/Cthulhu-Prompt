@@ -254,7 +254,7 @@ const buildVirtualFindLoopWorkspace = (workspacePath: string): Record<string, st
     }
   ])
 
-  const collectionDescriptionPath = `${workspacePath}/Prompts/Long/_CollectionInfo/Description.md`
+  const collectionDescriptionPath = `${workspacePath}/DefaultProject/Prompts/Long/_CollectionInfo/Description.md`
   filesystem[collectionDescriptionPath] = `Find marker in collection description: ${LOOP_REGRESSION_QUERY}`
 
   return filesystem
@@ -291,7 +291,7 @@ const buildVirtualFindRapidWorkspace = (workspacePath: string): Record<string, s
     }
   ])
 
-  const collectionDescriptionPath = `${workspacePath}/Prompts/Long/_CollectionInfo/Description.md`
+  const collectionDescriptionPath = `${workspacePath}/DefaultProject/Prompts/Long/_CollectionInfo/Description.md`
   filesystem[collectionDescriptionPath] = `Rapid loop marker in collection description: ${RAPID_LOOP_QUERY}`
 
   return filesystem

@@ -28,7 +28,9 @@ export type WorkspaceStateData = {
   window: WindowPersistence
   'system-settings': SystemSettings
   'workspace-navigation': Omit<WorkspaceUiState, 'workspaceId'>
-  /** Combined default-project order for task and template collections. */
+  /** User-owned project order, keyed by workspace. */
+  'project-order': { ids: string[] }
+  /** Combined task and template order, keyed by project. */
   'collection-order': { entries: CollectionEntryRef[] }
   /** Ordered favorites remain private to the user and workspace. */
   'collection-favorites': { ids: string[] }
@@ -52,6 +54,7 @@ export const WORKSPACE_STATE_SCOPES = {
   window: StorageScope.MachineSpecific,
   'system-settings': StorageScope.UserSpecific,
   'workspace-navigation': StorageScope.UserSpecific,
+  'project-order': StorageScope.UserSpecific,
   'collection-order': StorageScope.UserSpecific,
   'collection-favorites': StorageScope.UserSpecific,
   'collection-user': StorageScope.UserSpecific,

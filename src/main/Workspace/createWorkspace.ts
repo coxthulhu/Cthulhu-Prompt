@@ -36,7 +36,7 @@ import {
 } from '../Persistence/PromptPersistencePaths'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/workspace/WorkspaceMigrations'
 
-const EXAMPLE_COLLECTION_NAME = 'MyProject'
+const EXAMPLE_COLLECTION_NAME = 'MyPrompts'
 const EXAMPLE_COLLECTION_DISPLAY_NAME = 'My Prompts'
 // Ordered categories created with the bundled example prompts.
 const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
@@ -369,20 +369,25 @@ export const createWorkspace = async (
     }
 
     const fs = getFs()
-    const promptsPath = path.join(workspacePath, PROMPTS_DIRECTORY_NAME)
-    const templatesPath = path.join(workspacePath, TEMPLATES_DIRECTORY_NAME)
+    // The first project owns the initial collections and optional bundled examples.
+    const projectPath = path.join(workspacePath, 'DefaultProject')
+    const promptsPath = path.join(projectPath, PROMPTS_DIRECTORY_NAME)
+    const templatesPath = path.join(projectPath, TEMPLATES_DIRECTORY_NAME)
     fs.mkdirSync(promptsPath, { recursive: true })
     fs.mkdirSync(templatesPath, { recursive: true })
     writeWorkspaceInfoFile(workspacePath, workspaceName)
+    fs.writeFileSync(path.join(projectPath, 'ProjectInfo.json'), JSON.stringify({
+      id: compactGuid(randomUUID()), name: 'Default Project', abbreviation: 'DE'
+    }, null, 2), 'utf8')
 
     /** Initial templates supply references for the bundled prompts. */
     const { templateIdByKey } = writeMyTemplatesCollection(
-      workspacePath,
+      projectPath,
       includeExamplePrompts
     )
     // SQLite collection orders are initialized when the new workspace is loaded.
     writeMyProjectCollection(
-      workspacePath,
+      projectPath,
       includeExamplePrompts,
       templateIdByKey
     )

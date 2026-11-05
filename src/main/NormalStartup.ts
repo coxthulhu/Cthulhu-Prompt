@@ -1,3 +1,4 @@
+import { setupProjectMutationHandlers } from './Mutations/ProjectMutations'
 import { setupNoteMutationHandlers } from './Mutations/NoteMutations'
 import { app, BrowserWindow, dialog, ipcMain, screen, type IpcMainInvokeEvent } from 'electron'
 import { logStartupFailure } from './logging'
@@ -377,6 +378,7 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupWorkspaceMutationHandlers()
     setupPromptCollectionQueryHandlers()
     setupPromptCollectionMutationHandlers()
+    setupProjectMutationHandlers()
     setupNoteMutationHandlers()
     setupPromptMutationHandlers()
     setupPromptTemplateMutationHandlers()

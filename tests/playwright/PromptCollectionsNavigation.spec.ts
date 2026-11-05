@@ -59,7 +59,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const categoryOrder = JSON.parse(
       await readTextFile(
         electronApp,
-        '/ws/categories/Prompts/Main/Active/_CategoryOrder.json'
+        '/ws/categories/DefaultProject/Prompts/Main/Active/_CategoryOrder.json'
       )
     )
     /** Category ID deleted with the prompt collection. */
@@ -1057,7 +1057,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
         }
       ])
     }
-    filesystem[`${DELETE_NAVIGATION_WORKSPACE_PATH}/Prompts/CollectionOrder.json`] = JSON.stringify(
+    filesystem[`${DELETE_NAVIGATION_WORKSPACE_PATH}/DefaultProject/Prompts/CollectionOrder.json`] = JSON.stringify(
       {
         entries: ['delete-second', 'last-prompt'].map((id) => ({
           kind: 'collection',
@@ -1232,7 +1232,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     ).toBeVisible()
     await expect
       .poll(async () => {
-        const infoPath = '/ws/minimal/Prompts/TestCollection/_CollectionInfo'
+        const infoPath = '/ws/minimal/DefaultProject/Prompts/TestCollection/_CollectionInfo'
         return await Promise.all(
           ['Description.md'].map((filename) =>
             checkFileExists(electronApp, `${infoPath}/${filename}`)
@@ -1296,13 +1296,13 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'Manage Categories'
     )
     await expect
-      .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples`))
+      .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples`))
       .toBe(true)
 
     const collectionInfo = JSON.parse(
       await readTextFile(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/_CollectionInfo.json`
+        `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/_CollectionInfo.json`
       )
     ) as { displayName: string; collectionId: string; kind: string }
     expect(collectionInfo).toEqual({
@@ -1319,12 +1319,12 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Active/_CategoryOrder.json`
+          `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
     expect(
-      await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/Templates/Examples/Completed`)
+      await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/Completed`)
     ).toBe(false)
     await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
     await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
@@ -1473,7 +1473,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect
       .poll(async () => JSON.parse(await readTextFile(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_CollectionInfo.json`
+        `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/Development/_CollectionInfo.json`
       )).displayName)
       .toBe('Devel opment')
 
@@ -1499,9 +1499,9 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await expect(rootHeader).toContainText('Renamed Development')
 
-    const renamedCollectionInfoPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/_CollectionInfo.json`
+    const renamedCollectionInfoPath = `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/RenamedDevelopment/_CollectionInfo.json`
     /** Descendant prompt path expected to remain authoritative after the collection rename. */
-    const renamedPromptPath = `${SAMPLE_WORKSPACE_PATH}/Prompts/RenamedDevelopment/Active/Code Review.prompt.md`
+    const renamedPromptPath = `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/RenamedDevelopment/Active/Code Review.prompt.md`
     const renamedCollectionInfo = JSON.parse(
       await readTextFile(electronApp, renamedCollectionInfoPath)
     ) as {
@@ -1519,7 +1519,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
         async () =>
           await checkFileExists(
             electronApp,
-            `${SAMPLE_WORKSPACE_PATH}/Prompts/Development/_CollectionInfo.json`
+            `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/Development/_CollectionInfo.json`
           )
       )
       .toBe(false)

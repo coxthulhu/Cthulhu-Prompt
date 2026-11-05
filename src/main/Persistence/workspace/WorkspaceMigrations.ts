@@ -1,4 +1,6 @@
 import * as path from 'path'
+import { randomUUID } from 'crypto'
+import { compactGuid } from '@shared/utilities/compactGuid'
 import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from '../MarkdownFrontmatter'
 import type { Category } from '@shared/domain/category/Category'
 import type { PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
@@ -20,7 +22,7 @@ import {
 import { parsePromptMarkdown, parsePromptTemplateMarkdown, serializePromptMarkdown } from '../PromptFrontmatter'
 
 /** Latest schema understood by every workspace persistence reader. */
-export const LATEST_WORKSPACE_SCHEMA_VERSION = 7
+export const LATEST_WORKSPACE_SCHEMA_VERSION = 8
 
 /** Historical metadata names used only by pre-collection migrations. */
 const PROMPT_FOLDER_INFO_DIRECTORY_NAME = '_FolderInfo'
@@ -556,6 +558,42 @@ const migrateSchemaVersionSixToSeven: WorkspaceMigration = (workspacePath, works
   writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 7 })
 }
 
+/** Moves both libraries intact into a persisted default project and resumes interrupted moves. */
+const migrateSchemaVersionSevenToEight: WorkspaceMigration = (workspacePath, workspaceInfoPath) => {
+  /** Filesystem used for rename-only migration of all user content. */
+  const fs = getFs()
+  /** Fixed destination derived from the default project's display name. */
+  const projectPath = path.join(workspacePath, 'DefaultProject')
+  /** Metadata is written first so a retry reuses the same project identity. */
+  const infoPath = path.join(projectPath, 'ProjectInfo.json')
+  if (fs.existsSync(projectPath) && !fs.existsSync(infoPath)) {
+    throw new Error(`Project directory already exists: ${projectPath}`)
+  }
+  for (const name of [PROMPTS_DIRECTORY_NAME, TEMPLATES_DIRECTORY_NAME]) {
+    if (fs.existsSync(path.join(workspacePath, name)) && fs.existsSync(path.join(projectPath, name))) {
+      throw new Error(`Project directory already exists: ${path.join(projectPath, name)}`)
+    }
+  }
+  if (!fs.existsSync(infoPath)) {
+    fs.mkdirSync(projectPath)
+    try {
+      writeJsonFile(infoPath, { id: compactGuid(randomUUID()), name: 'Default Project', abbreviation: 'DE' })
+    } catch (error) {
+      fs.rmSync(projectPath, { recursive: true })
+      throw error
+    }
+  }
+  for (const name of [PROMPTS_DIRECTORY_NAME, TEMPLATES_DIRECTORY_NAME]) {
+    /** A missing source is already moved on retry; absent libraries become empty directories. */
+    const source = path.join(workspacePath, name)
+    if (fs.existsSync(source)) fs.renameSync(source, path.join(projectPath, name))
+    else fs.mkdirSync(path.join(projectPath, name), { recursive: true })
+  }
+  /** Existing workspace identity survives; the schema advances after both moves. */
+  const workspaceInfo = readMigratableWorkspaceInfo(workspaceInfoPath)
+  writeJsonFile(workspaceInfoPath, { ...workspaceInfo, schemaVersion: 8 })
+}
+
 /** Migration selected by each supported source workspace schema version. */
 const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   0: migrateSchemaVersionZeroToOne,
@@ -564,7 +602,8 @@ const WORKSPACE_MIGRATIONS: Record<number, WorkspaceMigration> = {
   3: migrateSchemaVersionThreeToFour,
   4: migrateSchemaVersionFourToFive,
   5: migrateSchemaVersionFiveToSix,
-  6: migrateSchemaVersionSixToSeven
+  6: migrateSchemaVersionSixToSeven,
+  7: migrateSchemaVersionSevenToEight
 }
 
 /** Applies pending workspace migrations before any workspace data is hydrated. */

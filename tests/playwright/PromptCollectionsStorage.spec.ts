@@ -41,7 +41,7 @@ const SECOND_PROMPT_TITLE = 'Alpha Second'
 
 // Returns the collection disk path for one prompt collection.
 const folderPath = (folderName: string): string =>
-  `${WORKSPACE_PATH}/Prompts/${folderName.replace(/\s+/g, '')}`
+  `${WORKSPACE_PATH}/DefaultProject/Prompts/${folderName.replace(/\s+/g, '')}`
 
 // Returns the persisted category ordering file used by a prompt collection collection.
 const activeOrderPath = (folderName: string): string =>
@@ -188,7 +188,7 @@ describe('Prompt collection storage', () => {
     await mainWindow.locator(COLLECTION_NAME_INPUT).fill(TEMPLATE_ALPHA_NAME)
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
     /** Canonical template collection created by the template dialog. */
-    const templateAlphaPath = `${WORKSPACE_PATH}/Templates/TemplateAlpha`
+    const templateAlphaPath = `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateAlpha`
     /** Stable ID expected at the top of the combined project order. */
     const templateAlphaId = await readCollectionId(electronApp, templateAlphaPath)
     expect(await checkFileExists(electronApp, `${templateAlphaPath}/Active/_CategoryOrder.json`)).toBe(true)

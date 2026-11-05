@@ -9,9 +9,12 @@ const WORKSPACE_PATH = '/ws/flat-metadata'
 /** Schema version remains six until all moves and cleanup succeed. */
 const INFO_PATH = getWorkspaceInfoPath(WORKSPACE_PATH)
 /** Task metadata includes independent Active and Backlog orders. */
-const TASK_PATH = `${WORKSPACE_PATH}/Prompts/Tasks`
+const TASK_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Tasks`
 /** A metadata-like collection name must remain a real collection directory. */
-const TEMPLATE_PATH = `${WORKSPACE_PATH}/Templates/_CollectionInfo`
+const TEMPLATE_PATH = `${WORKSPACE_PATH}/DefaultProject/Templates/_CollectionInfo`
+
+/** Removes the project layer from paths used before the schema-eight migration. */
+const legacyPath = (filePath: string): string => filePath.replace('/DefaultProject/', '/')
 
 /** Builds authentic schema-six metadata with deliberately nonalphabetical ordering. */
 const createNestedWorkspace = (): Record<string, string | null> => {
@@ -33,12 +36,12 @@ const createNestedWorkspace = (): Record<string, string | null> => {
     [`${TASK_PATH}/Archived/_CollectionInfo`]: null,
     [`${TASK_PATH}/Backlog/_CollectionInfo/Keep.txt`]: 'Keep unrelated metadata.',
     [`${TASK_PATH}/Attachments/_CollectionInfo/CategoryOrder.json`]: 'Unrelated ordering file.',
-    [`${WORKSPACE_PATH}/Prompts/Unowned/_CollectionInfo/CategoryOrder.json`]: 'Not a collection.'
+    [`${WORKSPACE_PATH}/DefaultProject/Prompts/Unowned/_CollectionInfo/CategoryOrder.json`]: 'Not a collection.'
   }
   /** Schema six already retired the shared library orders. */
   const nested = createLegacyWorkspaceFilesystem(current, 6)
-  delete nested[`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]
-  delete nested[`${WORKSPACE_PATH}/Templates/CollectionOrder.json`]
+  delete nested[`${WORKSPACE_PATH}/DefaultProject/Prompts/CollectionOrder.json`]
+  delete nested[`${WORKSPACE_PATH}/DefaultProject/Templates/CollectionOrder.json`]
   return nested
 }
 
@@ -61,18 +64,18 @@ describe('Flattened collection metadata', () => {
     ]
     for (const [source, target] of moves) {
       expect(await checkFileExists(electronApp, source)).toBe(false)
-      expect(await readTextFile(electronApp, target)).toBe(original[source])
+      expect(await readTextFile(electronApp, target)).toBe(original[legacyPath(source)])
     }
     /** Every file outside the move list retains its original bytes and location. */
     for (const [filePath, contents] of Object.entries(original)) {
-      if (contents === null || filePath === INFO_PATH || moves.some(([source]) => source === filePath)) continue
-      expect(await readTextFile(electronApp, filePath)).toBe(contents)
+      if (contents === null || filePath === INFO_PATH || moves.some(([source]) => legacyPath(source) === filePath)) continue
+      expect(await readTextFile(electronApp, filePath.replace(`${WORKSPACE_PATH}/`, `${WORKSPACE_PATH}/DefaultProject/`))).toBe(contents)
     }
     /** Empty metadata directories disappear, while settings and unrelated files keep theirs. */
     for (const directory of [`${TASK_PATH}/Active/_CollectionInfo`, `${TASK_PATH}/Archived/_CollectionInfo`, `${TEMPLATE_PATH}/_CollectionInfo`, `${TEMPLATE_PATH}/Active/_CollectionInfo`]) {
       expect(await checkFileExists(electronApp, directory)).toBe(false)
     }
-    expect(JSON.parse(await readTextFile(electronApp, INFO_PATH)).schemaVersion).toBe(7)
+    expect(JSON.parse(await readTextFile(electronApp, INFO_PATH)).schemaVersion).toBe(8)
     await testHelpers.navigateToPromptCollections('Tasks')
     await expect(mainWindow.getByTestId('prompt-title').nth(0)).toHaveValue('Zulu')
     await expect(mainWindow.getByTestId('prompt-title').nth(1)).toHaveValue('Alpha')
@@ -84,7 +87,7 @@ describe('Flattened collection metadata', () => {
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Wrapper')
     for (const [source, target] of moves) {
       expect(await checkFileExists(electronApp, source)).toBe(false)
-      expect(await readTextFile(electronApp, target)).toBe(original[source])
+      expect(await readTextFile(electronApp, target)).toBe(original[legacyPath(source)])
     }
   })
 
@@ -92,7 +95,7 @@ describe('Flattened collection metadata', () => {
     /** A late template collision proves the entire plan is checked before task files move. */
     const original = createNestedWorkspace()
     /** Existing destination represents user content that must never be overwritten. */
-    const target = `${TEMPLATE_PATH}/Active/_CategoryOrder.json`
+    const target = legacyPath(`${TEMPLATE_PATH}/Active/_CategoryOrder.json`)
     original[target] = 'Keep existing destination.'
     await testSetup.setupFilesystem(original)
     await testSetup.setupFileDialog([INFO_PATH])
@@ -103,7 +106,7 @@ describe('Flattened collection metadata', () => {
     for (const [filePath, contents] of Object.entries(original)) {
       if (contents !== null) expect(await readTextFile(electronApp, filePath)).toBe(contents)
     }
-    expect(await checkFileExists(electronApp, `${TASK_PATH}/_CollectionInfo.json`)).toBe(false)
+    expect(await checkFileExists(electronApp, legacyPath(`${TASK_PATH}/_CollectionInfo.json`))).toBe(false)
   })
 
   test('resumes after a failed rename without losing moved identities or ordering', async ({ electronApp, testSetup }) => {
@@ -113,18 +116,18 @@ describe('Flattened collection metadata', () => {
     await testSetup.setupFileDialog([INFO_PATH])
     /** The one-shot filesystem fault restores rename before the user retries. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await electronApp.evaluate(({ app }, target) => { app.emit('test-fail-file-commit', target) }, `${TASK_PATH}/Backlog/_CategoryOrder.json`)
+    await electronApp.evaluate(({ app }, target) => { app.emit('test-fail-file-commit', target) }, legacyPath(`${TASK_PATH}/Backlog/_CategoryOrder.json`))
     await mainWindow.getByTestId('open-workspace-button').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Failed to Open Workspace' })).toContainText('Injected file commit failure')
     expect(JSON.parse(await readTextFile(electronApp, INFO_PATH)).schemaVersion).toBe(6)
-    expect(await readTextFile(electronApp, `${TASK_PATH}/_CollectionInfo.json`)).toBe(original[`${TASK_PATH}/_CollectionInfo/CollectionInfo.json`])
-    expect(await readTextFile(electronApp, `${TASK_PATH}/Active/_CategoryOrder.json`)).toBe(original[`${TASK_PATH}/Active/_CollectionInfo/CategoryOrder.json`])
-    expect(await readTextFile(electronApp, `${TASK_PATH}/Backlog/_CollectionInfo/CategoryOrder.json`)).toBe(original[`${TASK_PATH}/Backlog/_CollectionInfo/CategoryOrder.json`])
+    expect(await readTextFile(electronApp, legacyPath(`${TASK_PATH}/_CollectionInfo.json`))).toBe(original[legacyPath(`${TASK_PATH}/_CollectionInfo/CollectionInfo.json`)])
+    expect(await readTextFile(electronApp, legacyPath(`${TASK_PATH}/Active/_CategoryOrder.json`))).toBe(original[legacyPath(`${TASK_PATH}/Active/_CollectionInfo/CategoryOrder.json`)])
+    expect(await readTextFile(electronApp, legacyPath(`${TASK_PATH}/Backlog/_CollectionInfo/CategoryOrder.json`))).toBe(original[legacyPath(`${TASK_PATH}/Backlog/_CollectionInfo/CategoryOrder.json`)])
     await mainWindow.getByRole('dialog', { name: 'Failed to Open Workspace' }).locator('button.cthulhuUiButton').click()
     await testSetup.setupFileDialog([INFO_PATH])
     await testHelpers.setupWorkspaceViaUI()
-    expect(JSON.parse(await readTextFile(electronApp, INFO_PATH)).schemaVersion).toBe(7)
-    expect(await readTextFile(electronApp, `${TASK_PATH}/Backlog/_CategoryOrder.json`)).toBe(original[`${TASK_PATH}/Backlog/_CollectionInfo/CategoryOrder.json`])
+    expect(JSON.parse(await readTextFile(electronApp, INFO_PATH)).schemaVersion).toBe(8)
+    expect(await readTextFile(electronApp, `${TASK_PATH}/Backlog/_CategoryOrder.json`)).toBe(original[legacyPath(`${TASK_PATH}/Backlog/_CollectionInfo/CategoryOrder.json`)])
     expect(await checkFileExists(electronApp, `${TASK_PATH}/Active/_CollectionInfo`)).toBe(false)
     await testHelpers.navigateToPromptCollections('Tasks')
     await expect(mainWindow.getByTestId('prompt-title').nth(0)).toHaveValue('Zulu')

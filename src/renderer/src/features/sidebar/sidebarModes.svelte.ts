@@ -14,7 +14,6 @@ import {
 import { PromptCollectionScreenMode } from '@renderer/features/prompt-collections/promptCollectionScreenMode'
 import { PROMPT_STATUS_FOLDER_REGISTRY, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
-import { DEFAULT_PROJECT } from '@renderer/features/projects/projects'
 
 /** Identifies which overall sidebar mode is displayed, independently of the active screen. */
 export enum SidebarModeId {
@@ -24,6 +23,8 @@ export enum SidebarModeId {
 
 /** Collection selection and status navigation shared by a project sidebar and its screen. */
 export class CollectionSidebarModeData {
+  /** Stable selected project identity shared by the activity bar, sidebar, and screen. */
+  projectId = $state<string | null>(null)
   /** Selected collection of either kind, or null when the project has no collections. */
   collectionId = $state<string | null>(null)
   /** Status group displayed by the collection screen. */
@@ -51,11 +52,11 @@ export class CollectionSidebarModeData {
     const workspace = workspaceId ? workspaceCollection.get(workspaceId) : null
     if (!workspaceId || !workspace) return null
     /** Loaded collections of both kinds in project order. */
-    const collectionIds = workspace.collectionEntries
+    const collectionIds = (workspace.projects.find((project) => project.id === this.projectId)?.collectionEntries ?? [])
       .map((entry) => entry.id)
       .filter((id) => promptCollectionsCollection.has(id))
     /** Last collection persisted for the project. */
-    const lastCollectionId = workspaceUiStateCollection.get(workspaceId)?.lastCollectionId
+    const lastCollectionId = workspaceUiStateCollection.get(workspaceId)?.lastCollectionIdByProject[this.projectId ?? '']
 
     return [preferredId, lastCollectionId].find((id) => id && collectionIds.includes(id)) ??
       collectionIds[0] ?? null
@@ -78,6 +79,7 @@ export class CollectionSidebarModeData {
 
   /** Releases every workspace-specific selection when the workspace closes. */
   clear(): void {
+    this.projectId = null
     this.selectCollection(null)
     this.modeHistoryByCollection = {}
   }
@@ -178,7 +180,7 @@ export type SidebarMode =
 export const createSidebarModes = () => ({
   [SidebarModeId.Project]: {
     id: SidebarModeId.Project,
-    title: DEFAULT_PROJECT.title,
+    title: '',
     data: new CollectionSidebarModeData()
   },
   [SidebarModeId.Settings]: { id: SidebarModeId.Settings, title: 'System Settings', data: new SettingsSidebarModeData() }

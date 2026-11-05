@@ -130,7 +130,7 @@ const createCollection = (
 /** Creates persistence fields for one collection. */
 const createCollectionPersistenceFields = (folderPath: string, kind: PromptCollection['kind']) => ({
   workspaceId: 'workspace',
-  workspacePath: 'C:\\Workspace',
+  workspacePath: 'C:\\Workspace\\DefaultProject',
   folderName: folderPath,
   folderPath,
   kind
@@ -139,7 +139,7 @@ const createCollectionPersistenceFields = (folderPath: string, kind: PromptColle
 /** Creates persistence fields for one active prompt or template. */
 const createMarkdownPersistenceFields = (promptCollectionId: string, promptId: string) => ({
   workspaceId: 'workspace',
-  workspacePath: 'C:\\Workspace',
+  workspacePath: 'C:\\Workspace\\DefaultProject',
   folderPath: `${promptCollectionId}\\Active`,
   promptCollectionId,
   promptId,
@@ -174,8 +174,8 @@ describe('domain persistence planning', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: [],
-        collectionEntries: [{ kind: 'collection' as const, id: root.id }]
+        projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: root.id }] }]
       }
       /** Loaded category physically contained by the renamed root. */
       const category = {
@@ -218,7 +218,7 @@ describe('domain persistence planning', () => {
       )
       mockDomainData.seed('category', category.id, category, {
         workspaceId: workspace.id,
-        workspacePath: workspace.workspacePath,
+        workspacePath: `${workspace.workspacePath}\\DefaultProject`,
         promptCollectionId: root.id,
         collectionFolderName: root.folderName,
         kind,
@@ -297,7 +297,7 @@ describe('domain persistence planning', () => {
     }
     mockDomainData.seed('category', category.id, category, {
       workspaceId: 'workspace',
-      workspacePath: 'C:\\Workspace',
+      workspacePath: 'C:\\Workspace\\DefaultProject',
       promptCollectionId: 'Root',
       collectionFolderName: 'Root',
       kind: 'prompt',
@@ -413,8 +413,8 @@ describe('domain persistence planning', () => {
       workspacePath: 'C:\\Workspace',
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
-      favoriteCollectionIds: [],
-      collectionEntries: [{ kind: 'collection' as const, id: root.id }]
+      projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: root.id }] }]
     }
     mockDomainData.seed('workspace', workspace.id, workspace, {
       workspacePath: workspace.workspacePath,
@@ -436,7 +436,7 @@ describe('domain persistence planning', () => {
       }
       mockDomainData.seed('category', categoryId, category, {
         workspaceId: 'workspace',
-        workspacePath: 'C:\\Workspace',
+        workspacePath: 'C:\\Workspace\\DefaultProject',
         promptCollectionId: root.id,
         collectionFolderName: root.id,
         kind: 'prompt',
@@ -487,7 +487,7 @@ describe('domain persistence planning', () => {
       },
       {
         workspaceId: 'workspace',
-        workspacePath: 'C:\\Workspace',
+        workspacePath: 'C:\\Workspace\\DefaultProject',
         promptCollectionId: root.id,
         collectionFolderName: root.id,
         kind: 'prompt',

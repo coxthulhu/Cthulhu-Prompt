@@ -122,14 +122,14 @@ describe('Prompt template mutations', () => {
     expect(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/Active/New Template.template.md`
+        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/New Template.template.md`
       )
     ).toContain('Initial {{value}}.')
     expect(
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({
@@ -177,13 +177,13 @@ describe('Prompt template mutations', () => {
     expect(
       await checkFileExists(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/Active/New Template.template.md`
+        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/New Template.template.md`
       )
     ).toBe(false)
     expect(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/Active/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/Renamed Template.template.md`
       )
     ).toContain('Updated {{value}}.')
 
@@ -274,20 +274,20 @@ describe('Prompt template mutations', () => {
     expect(
       await checkFileExists(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Source/Active/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/Renamed Template.template.md`
       )
     ).toBe(false)
     expect(
       await readTextFile(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Destination/Active/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/Renamed Template.template.md`
       )
     ).toContain('Updated {{value}}.')
     expect(
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Source/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
@@ -295,7 +295,7 @@ describe('Prompt template mutations', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({
@@ -362,14 +362,14 @@ describe('Prompt template mutations', () => {
     expect(
       await checkFileExists(
         electronApp,
-        `${WORKSPACE_PATH}/Templates/Destination/Active/Renamed Template.template.md`
+        `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/Renamed Template.template.md`
       )
     ).toBe(false)
     expect(
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/Destination/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/_CategoryOrder.json`
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })

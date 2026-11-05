@@ -68,11 +68,11 @@ describe('prompt template mutations', () => {
         workspacePath: 'C:\\Workspace',
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
-        favoriteCollectionIds: [],
-        collectionEntries: [
+        projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+        favoriteCollectionIds: [], collectionEntries: [
           { kind: 'collection', id: 'source-collection' },
           { kind: 'collection', id: 'destination-collection' }
-        ]
+        ] }]
       }
     })
     promptCollectionsCollection.utils.upsertAuthoritative({

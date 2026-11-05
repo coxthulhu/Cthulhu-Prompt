@@ -100,7 +100,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
       ]
     }
   ]),
-  [`${WORKSPACE_PATH}/Prompts/Prompts/Categories/Code Review.category.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Categories/Code Review.category.json`]: JSON.stringify(
     {
       id: PROMPT_CATEGORY_ID,
       displayName: 'Code Review',
@@ -110,7 +110,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Templates/Templates/Categories/Writing.category.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/DefaultProject/Templates/Templates/Categories/Writing.category.json`]: JSON.stringify(
     {
       id: TEMPLATE_CATEGORY_ID,
       displayName: 'Writing',
@@ -120,7 +120,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Prompts/Prompts/Active/_CategoryOrder.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`]: JSON.stringify(
     {
       categories: [
         {
@@ -139,7 +139,7 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Templates/Templates/Active/_CategoryOrder.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/DefaultProject/Templates/Templates/Active/_CategoryOrder.json`]: JSON.stringify(
     {
       categories: [
         { categoryId: null, entries: [] },
@@ -152,14 +152,14 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/DefaultProject/Prompts/CollectionOrder.json`]: JSON.stringify(
     {
       entries: [{ kind: 'collection', id: PROMPT_ROOT_ID }]
     },
     null,
     2
   ),
-  [`${WORKSPACE_PATH}/Templates/CollectionOrder.json`]: JSON.stringify(
+  [`${WORKSPACE_PATH}/DefaultProject/Templates/CollectionOrder.json`]: JSON.stringify(
     { entries: [{ kind: 'collection', id: TEMPLATE_ROOT_ID }] },
     null,
     2
@@ -169,9 +169,9 @@ const createCategorizedWorkspace = (): Record<string, string | null> => ({
 /** Adds an empty second prompt category and returns the root order path. */
 const addSecondPromptCategory = (filesystem: Record<string, string | null>): string => {
   /** Metadata path for the added category. */
-  const categoryPath = `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Second.category.json`
+  const categoryPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Categories/Second.category.json`
   /** CategoryOrder path updated with the added category group. */
-  const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_CategoryOrder.json`
+  const orderPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
   /** Existing categorized order extended for multi-category drag tests. */
   const categoryOrder = JSON.parse(filesystem[orderPath]!) as {
     categories: Array<{
@@ -217,7 +217,7 @@ describe('Prompt categories', () => {
       /** Fixture retains Active prompts when checking the independently empty Backlog. */
       const filesystem = createCategorizedWorkspace()
       /** Content directory whose entries are removed for the empty workflow. */
-      const contentPath = workflow === 'template' ? '/Templates/Templates/Active/' : '/Prompts/Prompts/Active/'
+      const contentPath = workflow === 'template' ? '/DefaultProject/Templates/Templates/Active/' : '/DefaultProject/Prompts/Prompts/Active/'
       if (workflow !== 'backlog') {
         for (const path of Object.keys(filesystem)) {
           if (path.includes(contentPath) && path.endsWith('.md')) delete filesystem[path]
@@ -308,7 +308,7 @@ describe('Prompt categories', () => {
       .locator(`${promptEditorSelector('unknown-category-prompt')} [data-testid="prompt-title"]`)
       .fill('Unknown Category Renamed')
     const renamedUnknownCategoryPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Active/Unknown Category Renamed.prompt.md`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Unknown Category Renamed.prompt.md`
     await expect.poll(() => checkFileExists(electronApp, renamedUnknownCategoryPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, renamedUnknownCategoryPath)).not.toContain(
       'category:'
@@ -329,13 +329,13 @@ describe('Prompt categories', () => {
     )
     /** Persisted collection order whose category group owns the active prompt. */
     const categoryOrderPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Active/_CategoryOrder.json`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
     /** Active categorized prompt path before completion. */
     const activePromptPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
     /** Completed categorized prompt path while it is excluded from collection order. */
     const completedPromptPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Completed/Categorized Prompt.prompt.md`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Completed/Categorized Prompt.prompt.md`
 
     await testHelpers.navigateToPromptCollections('Prompts')
     await mainWindow
@@ -517,7 +517,7 @@ describe('Prompt categories', () => {
         parsePromptMarkdown(
           await readTextFile(
             electronApp,
-            `${WORKSPACE_PATH}/Prompts/Prompts/Active/Uncategorized Prompt.prompt.md`
+            `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Uncategorized Prompt.prompt.md`
           )
         )
       )
@@ -626,7 +626,7 @@ describe('Prompt categories', () => {
       for (let index = 0; index < 80; index += 1) {
         /** Stable fixture prompt identity and filename. */
         const id = `capture-filler-${index}`
-        filesystem[`${WORKSPACE_PATH}/Prompts/Prompts/Active/${id}.prompt.md`] =
+        filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/${id}.prompt.md`] =
           serializePromptMarkdown({
             id,
             title: id,
@@ -718,7 +718,7 @@ describe('Prompt categories', () => {
     /** Categorized workspace used by the collapsed sidebar target flow. */
     const filesystem = createCategorizedWorkspace()
     /** Root order path observed after the prompt changes category. */
-    const orderPath = `${WORKSPACE_PATH}/Prompts/Prompts/Active/_CategoryOrder.json`
+    const orderPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
     /** Started prompt workspace exposing the editor handle and sidebar category. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptCollections('Prompts')
@@ -795,7 +795,7 @@ describe('Prompt categories', () => {
     ])
     /** Template order path observed after the category drop. */
     const orderPath =
-      `${WORKSPACE_PATH}/Templates/TemplateTargets/Active/_CategoryOrder.json`
+      `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateTargets/Active/_CategoryOrder.json`
     /** Started template workspace exposing the shared editor and tree drag behavior. */
     const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
     await testHelpers.navigateToPromptCollections('Template Targets')
@@ -853,10 +853,10 @@ describe('Prompt categories', () => {
     ])
     /** Category metadata path required by the categorized-only root. */
     const categoryPath =
-      `${WORKSPACE_PATH}/Prompts/CategoryOnly/Categories/Code Review.category.json`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/CategoryOnly/Categories/Code Review.category.json`
     /** Root order path observed after each top-target drop. */
     const orderPath =
-      `${WORKSPACE_PATH}/Prompts/CategoryOnly/Active/_CategoryOrder.json`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/CategoryOnly/Active/_CategoryOrder.json`
     filesystem[categoryPath] = JSON.stringify(
       {
         id: PROMPT_CATEGORY_ID,
@@ -946,7 +946,7 @@ describe('Prompt categories', () => {
         promptCollectionId: PROMPT_ROOT_ID
       }
     ])
-    filesystem[`${WORKSPACE_PATH}/Prompts/Empty/Categories/Existing.category.json`] =
+    filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Categories/Existing.category.json`] =
       JSON.stringify(
         {
           id: EXISTING_CATEGORY_ID,
@@ -957,7 +957,7 @@ describe('Prompt categories', () => {
         null,
         2
       )
-    filesystem[`${WORKSPACE_PATH}/Prompts/Empty/Active/_CategoryOrder.json`] =
+    filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Active/_CategoryOrder.json`] =
       JSON.stringify(
         {
           categories: [
@@ -1045,7 +1045,7 @@ describe('Prompt categories', () => {
     expect(Math.abs(populatedEditorHeightPx - 176)).toBeLessThanOrEqual(1)
     await categoryDialog.getByRole('button', { name: 'Save Changes' }).click()
 
-    const categoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Code Review.category.json`
+    const categoryPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Categories/Code Review.category.json`
     await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(true)
     const createdCategory = JSON.parse(await readTextFile(electronApp, categoryPath)) as {
       id: string
@@ -1063,7 +1063,7 @@ describe('Prompt categories', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Empty/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Active/_CategoryOrder.json`
         )
       ).categories.map((category: { categoryId: string | null }) => category.categoryId)
     ).toEqual([null, createdCategory.id, EXISTING_CATEGORY_ID])
@@ -1073,7 +1073,7 @@ describe('Prompt categories', () => {
     await categoryInput.fill('Name Only')
     await categoryDialog.getByRole('button', { name: 'Save Changes' }).click()
     /** Name-only category path verifies both optional fields remain optional. */
-    const nameOnlyCategoryPath = `${WORKSPACE_PATH}/Prompts/Empty/Categories/Name Only.category.json`
+    const nameOnlyCategoryPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Categories/Name Only.category.json`
     await expect.poll(() => checkFileExists(electronApp, nameOnlyCategoryPath)).toBe(true)
     /** Name-only persisted record created through the prompt-collection screen handler. */
     const nameOnlyCategory = JSON.parse(
@@ -1137,7 +1137,7 @@ describe('Prompt categories', () => {
       }
     ])
     /** First category metadata used by the Active ordering and cross-status count. */
-    filesystem[`${WORKSPACE_PATH}/Prompts/Managed/Categories/Code Review.category.json`] =
+    filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Categories/Code Review.category.json`] =
       JSON.stringify(
         {
           id: PROMPT_CATEGORY_ID,
@@ -1149,7 +1149,7 @@ describe('Prompt categories', () => {
         2
       )
     /** Second category metadata staged for deletion in the management dialog. */
-    filesystem[`${WORKSPACE_PATH}/Prompts/Managed/Categories/Second.category.json`] =
+    filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Categories/Second.category.json`] =
       JSON.stringify(
         {
           id: SECOND_PROMPT_CATEGORY_ID,
@@ -1254,7 +1254,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Managed/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Active/_CategoryOrder.json`
         )
       )
       .toMatchObject({
@@ -1269,7 +1269,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Managed/Categories/Review Work.category.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Categories/Review Work.category.json`
         )
       )
       .toBe(true)
@@ -1277,7 +1277,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Managed/Categories/Second.category.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Categories/Second.category.json`
         )
       )
       .toBe(false)
@@ -1286,7 +1286,7 @@ describe('Prompt categories', () => {
         parsePromptMarkdown(
           await readTextFile(
             electronApp,
-            `${WORKSPACE_PATH}/Prompts/Managed/Active/Second Prompt.prompt.md`
+            `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Active/Second Prompt.prompt.md`
           )
         )
       )
@@ -1305,10 +1305,10 @@ describe('Prompt categories', () => {
     const initialModifiedAt = '2020-01-01T00:00:00.000Z'
     /** Template path whose separately owned category must remain unchanged. */
     const templatePath =
-      `${WORKSPACE_PATH}/Templates/Templates/Active/Categorized Template.template.md`
+      `${WORKSPACE_PATH}/DefaultProject/Templates/Templates/Active/Categorized Template.template.md`
     /** Prompt path expected to be rewritten during category deletion. */
     const promptPath =
-      `${WORKSPACE_PATH}/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
+      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
     await testSetup.setupFilesystem(filesystem, {
       fileModifiedTimes: { [promptPath]: initialModifiedAt }
     })
@@ -1439,6 +1439,7 @@ describe('Prompt categories', () => {
             id: workspaceId,
             data: expect.objectContaining({
               selectedScreenData: {
+                projectId: createDeterministicId(`${WORKSPACE_PATH}:DefaultProject`),
                 promptCollectionId: PROMPT_ROOT_ID,
                 contentOwnerId: PROMPT_ROOT_ID,
                 openPromptId: null
@@ -1507,7 +1508,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         checkFileExists(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Prompts/Categories/Code Review.category.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Categories/Code Review.category.json`
         )
       )
       .toBe(false)
@@ -1517,7 +1518,7 @@ describe('Prompt categories', () => {
       JSON.parse(
         await readTextFile(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Prompts/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
         )
       )
     ).toEqual(deletedCategoryRoot.data.statusFolders.active.categoryOrder)
@@ -1572,7 +1573,7 @@ describe('Prompt categories', () => {
           collectionId: templateDestinationRootId
         }
       ]),
-      [`${WORKSPACE_PATH}/Prompts/CollectionOrder.json`]: JSON.stringify(
+      [`${WORKSPACE_PATH}/DefaultProject/Prompts/CollectionOrder.json`]: JSON.stringify(
         {
           entries: [
             { kind: 'collection', id: sourceRootId },
@@ -1582,7 +1583,7 @@ describe('Prompt categories', () => {
         null,
         2
       ),
-      [`${WORKSPACE_PATH}/Templates/CollectionOrder.json`]: JSON.stringify(
+      [`${WORKSPACE_PATH}/DefaultProject/Templates/CollectionOrder.json`]: JSON.stringify(
         {
           entries: [
             { kind: 'collection', id: templateSourceRootId },
@@ -1593,7 +1594,7 @@ describe('Prompt categories', () => {
         2
       )
     }
-    filesystem[`${WORKSPACE_PATH}/Prompts/Source/Categories/Code Review.category.json`] =
+    filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Source/Categories/Code Review.category.json`] =
       JSON.stringify(
         {
           id: PROMPT_CATEGORY_ID,
@@ -1604,7 +1605,7 @@ describe('Prompt categories', () => {
         null,
         2
       )
-    filesystem[`${WORKSPACE_PATH}/Prompts/Source/Active/_CategoryOrder.json`] =
+    filesystem[`${WORKSPACE_PATH}/DefaultProject/Prompts/Source/Active/_CategoryOrder.json`] =
       JSON.stringify(
         {
           categories: [
@@ -1619,7 +1620,7 @@ describe('Prompt categories', () => {
         2
       )
     filesystem[
-      `${WORKSPACE_PATH}/Templates/TemplateSource/Categories/Writing.category.json`
+      `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateSource/Categories/Writing.category.json`
     ] = JSON.stringify(
       {
         id: TEMPLATE_CATEGORY_ID,
@@ -1631,7 +1632,7 @@ describe('Prompt categories', () => {
       2
     )
     filesystem[
-      `${WORKSPACE_PATH}/Templates/TemplateSource/Active/_CategoryOrder.json`
+      `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateSource/Active/_CategoryOrder.json`
     ] = JSON.stringify(
       {
         categories: [
@@ -1658,14 +1659,14 @@ describe('Prompt categories', () => {
 
     const movedEditor = mainWindow.locator(promptEditorSelector('moving-category-prompt'))
     await expect(movedEditor.locator('.prompt-editor-metadata-category')).toHaveCount(0)
-    const movedPromptPath = `${WORKSPACE_PATH}/Prompts/Destination/Active/Moving Prompt.prompt.md`
+    const movedPromptPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Destination/Active/Moving Prompt.prompt.md`
     await expect.poll(() => checkFileExists(electronApp, movedPromptPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, movedPromptPath)).not.toContain('category:')
     await expect
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Source/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Source/Active/_CategoryOrder.json`
         )
       )
       .toEqual({
@@ -1678,7 +1679,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Prompts/Destination/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Prompts/Destination/Active/_CategoryOrder.json`
         )
       )
       .toEqual({
@@ -1702,14 +1703,14 @@ describe('Prompt categories', () => {
     const movedTemplate = mainWindow.locator(promptEditorSelector('moving-category-template'))
     await expect(movedTemplate.locator('.prompt-editor-metadata-category')).toHaveCount(0)
     const movedTemplatePath =
-      `${WORKSPACE_PATH}/Templates/TemplateDestination/Active/Moving Template.template.md`
+      `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateDestination/Active/Moving Template.template.md`
     await expect.poll(() => checkFileExists(electronApp, movedTemplatePath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, movedTemplatePath)).not.toContain('category:')
     await expect
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/TemplateSource/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateSource/Active/_CategoryOrder.json`
         )
       )
       .toEqual({
@@ -1722,7 +1723,7 @@ describe('Prompt categories', () => {
       .poll(() =>
         readCategoryOrder(
           electronApp,
-          `${WORKSPACE_PATH}/Templates/TemplateDestination/Active/_CategoryOrder.json`
+          `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateDestination/Active/_CategoryOrder.json`
         )
       )
       .toEqual({

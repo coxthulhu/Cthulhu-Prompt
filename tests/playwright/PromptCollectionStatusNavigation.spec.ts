@@ -24,7 +24,7 @@ const startWorkspace = async (
     ...createWorkspaceWithCollections(WORKSPACE_PATH, ['Alpha', 'Beta'].map((id) => ({
       folderName: id, displayName: id, promptCollectionId: id
     })), { settings: { workspaceId: WORKSPACE_ID } }),
-    [`${WORKSPACE_PATH}/Templates/CollectionOrder.json`]: JSON.stringify({
+    [`${WORKSPACE_PATH}/DefaultProject/Templates/CollectionOrder.json`]: JSON.stringify({
       entries: [{ kind: 'collection', id: 'Templates' }]
     })
   })

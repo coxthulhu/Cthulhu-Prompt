@@ -39,13 +39,12 @@ const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template') => 
   /** Selected library directory and original owner path. */
   const library = kind === 'prompt' ? 'Prompts' : 'Templates'
   /** Physical status folder shared by owners and notes. */
-  const active = `${WORKSPACE}/${library}/Source/Active`
+  const active = `${WORKSPACE}/DefaultProject/${library}/Source/Active`
   await testSetup.setupFilesystem({
     ...prompts, ...templates,
-    [`${WORKSPACE}/Prompts/Source/Categories/Category.category.json`]: JSON.stringify({
+    [`${WORKSPACE}/DefaultProject/Prompts/Source/Categories/Category.category.json`]: JSON.stringify({
       id: 'prompt-category', displayName: 'Category', shortDescription: null, description: null
     }),
-    [`${WORKSPACE}/Prompts/CollectionOrder.json`]: prompts[`${WORKSPACE}/Prompts/CollectionOrder.json`],
     [`${active}/Owner.note.md`]: `---\nid: blocker\ncreatedAt: "2020-01-01T00:00:00Z"\ntitle: Blocker\nstatus: ${kind === 'prompt' ? 'Todo' : 'Active'}\n---\nUnrelated note`
   }, { fileModifiedTimes: { [`${active}/Owner.${kind === 'prompt' ? 'prompt' : 'template'}.md`]: ORIGINAL_TIME } })
   await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
@@ -275,12 +274,12 @@ describe('Notes persistence and commands', () => {
         promptCollectionId: `${kind}-target`, categoryId: null, previousEntryId: null, status
       }), { kind, status })
       /** Moving into an empty directory permits both paired files to reclaim the base stem. */
-      const target = `${WORKSPACE}/${library}/Target`
+      const target = `${WORKSPACE}/DefaultProject/${library}/Target`
       expect(await checkFileExists(electronApp, `${active}/Owner 1.note.md`)).toBe(false)
       expect(await readTextFile(electronApp, `${target}/Active/Owner.note.md`)).toContain(attachedId)
       await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.renameCollection(`${kind}-target`, 'Renamed'), kind)
       /** Collection-directory rename moves both descendants without reallocating their stem. */
-      const renamed = `${WORKSPACE}/${library}/Renamed`
+      const renamed = `${WORKSPACE}/DefaultProject/${library}/Renamed`
       expect(await checkFileExists(electronApp, `${target}/Active/Owner.note.md`)).toBe(false)
       expect(await checkFileExists(electronApp, `${renamed}/Active/Owner.note.md`)).toBe(true)
       if (kind === 'prompt') {

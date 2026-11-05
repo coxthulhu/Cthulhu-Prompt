@@ -146,21 +146,23 @@ const readDirectWorkspaceCollectionRefs = (workspacePath: string): CollectionEnt
 /** Loads a user's order, removes stale references, and appends discoveries by folder name. */
 export const readWorkspaceCollectionEntries = (
   workspacePath: string,
-  workspaceId: string
+  workspaceId: string,
+  projectId: string,
+  legacyEntries?: CollectionEntryRef[]
 ): CollectionEntryRef[] => {
   /** A missing row uses the same alphabetical discovery order and is saved immediately. */
-  const saved = WorkspaceStateDataAccess.read(workspaceId, 'collection-order', null)
+  const saved = WorkspaceStateDataAccess.read(workspaceId, 'collection-order', projectId)
   /** Disk names of both kinds, combined alphabetically, determine the initial order and new placements. */
   const discovered = readDirectWorkspaceCollectionRefs(workspacePath)
   /** Remaining identities exclude stale and duplicate saved references. */
   const remaining = new Set(discovered.map((entry) => entry.id))
   /** Existing valid positions take priority over alphabetical placement. */
-  const entries = (saved?.entries ?? []).filter((entry) =>
+  const entries = (saved?.entries ?? legacyEntries ?? []).filter((entry) =>
     entry.kind === 'collection' && remaining.delete(entry.id)
   )
   entries.push(...discovered.filter((entry) => remaining.delete(entry.id)))
   if (!saved || JSON.stringify(entries) !== JSON.stringify(saved.entries)) {
-    WorkspaceStateDataAccess.write(workspaceId, 'collection-order', null, { entries })
+    WorkspaceStateDataAccess.write(workspaceId, 'collection-order', projectId, { entries })
   }
   return entries
 }
