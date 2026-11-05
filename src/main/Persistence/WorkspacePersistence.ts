@@ -46,6 +46,8 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     if (!after) return createPersistenceStageResult([createStagedFileRemove(fields.workspaceInfoPath)])
     /** Staged parent operations precede child writes during the atomic commit. */
     const changes: FilePersistenceStagedChange[] = []
+    /** Moving every renamed source aside first permits cycles and case-only renames. */
+    const renames: { source: string; temporary: string; target: string }[] = []
     /** Filesystem used to stage only changed shared metadata. */
     const fs = getFs()
     try {
@@ -64,10 +66,12 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
         /** Existing metadata determines whether this is creation, editing, or a rename. */
         const previous = before?.data.projects.find((candidate) => candidate.id === project.id)
         /** Stage inside the original directory so one rename moves all content intact. */
-        const source = path.join(fields.workspacePath, previous?.folderName ?? project.folderName)
+        const source = previous ? path.join(fields.workspacePath, previous.folderName)
+          : resolveTempPath(path.join(fields.workspacePath, project.folderName))
         /** New directory derived from the validated name. */
         const target = path.join(fields.workspacePath, project.folderName)
-        if ((!previous || source.toLowerCase() !== target.toLowerCase()) && fs.existsSync(target)) {
+        if (fs.existsSync(target) && !before?.data.projects.some((existing) =>
+          existing.folderName.toLowerCase() === project.folderName.toLowerCase())) {
           throw new Error(`Project directory already exists: ${target}`)
         }
         if (!previous) {
@@ -86,8 +90,11 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
           fs.writeFileSync(temp, serializeProjectInfo(project), 'utf8')
           changes.push(createStagedFileUpsert(infoPath, temp))
         }
-        if (previous && source !== target) changes.push(createStagedDirectoryRename(source, target))
+        if (!previous) changes.push({ type: 'publishDirectory', sourcePath: source, targetPath: target })
+        else if (source !== target) renames.push({ source, temporary: resolveTempPath(source), target })
       }
+      changes.push(...renames.map(({ source, temporary }) => createStagedDirectoryRename(source, temporary)))
+      changes.push(...renames.map(({ temporary, target }) => createStagedDirectoryRename(temporary, target)))
       return createPersistenceStageResult(changes)
     } catch (error) {
       revertStagedFileChanges(changes)

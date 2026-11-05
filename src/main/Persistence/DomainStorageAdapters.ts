@@ -424,6 +424,13 @@ export const planDomainStorageTransitions = (
         ? [{ source: path.join(workspace.workspacePath, project.folderName), target: path.join(workspace.workspacePath, next.folderName) }] : []
     })
   })
+  /** Parent directory removal already deletes these projects' complete filesystem contents. */
+  const deletedProjectPaths = new Set(beforeGraph.getAll('workspace').flatMap(({ data: workspace }) => {
+    /** Final ownership distinguishes deleted projects from renamed projects. */
+    const after = afterGraph.get('workspace', workspace.id)?.data
+    return workspace.projects.filter((project) => !after?.projects.some((candidate) => candidate.id === project.id))
+      .map((project) => path.join(workspace.workspacePath, project.folderName))
+  }))
   /** Shared disk snapshot and reservations for all file writes in this transaction. */
   const filenames = createFilenameAllocator()
   /** File-backed types reserved before any new destination is allocated. */
@@ -506,7 +513,9 @@ export const planDomainStorageTransitions = (
         storageTransitions.push({
           entityType,
           id,
-          persistenceMode: 'stage',
+          // Skip child file removals so a reused project path cannot delete its new owner's files.
+          persistenceMode: 'workspacePath' in beforeEntry.persistenceFields && deletedProjectPaths.has(beforeEntry.persistenceFields.workspacePath)
+            ? 'metadataOnly' : 'stage',
           before: toPersistenceRecord(beforeEntry, beforeEntry.persistenceFields),
           after: null
         } as DomainStorageTransition)

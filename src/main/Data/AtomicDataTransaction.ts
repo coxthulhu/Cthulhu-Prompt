@@ -1,6 +1,6 @@
 import { produce } from 'immer'
 import type { FilePersistenceStagedChange } from '../Persistence/FilePersistenceHelpers'
-import { captureFileRollback } from '../Persistence/FilePersistenceHelpers'
+import { captureFileRollback, commitStagedFileChange } from '../Persistence/FilePersistenceHelpers'
 import {
   planDomainStorageTransitions
 } from '../Persistence/DomainStorageAdapters'
@@ -447,6 +447,15 @@ const stageAtomicDataTransitions = async (
         })
         continue
       }
+      /** File-backed entity fields may identify a new project's final directory. */
+      const finalFields = transition.after?.persistenceFields as Record<string, unknown> | undefined
+      /** New project children are written beneath an unpublished directory until the batch commits. */
+      const projectStaging = stagedTransitions.flatMap((entry) => entry.stagedChange).find((change) =>
+        change.type === 'publishDirectory' && change.targetPath === finalFields?.workspacePath)
+      /** Staging paths are temporary; authoritative persistence fields keep their final location. */
+      const stagingAfter = projectStaging?.type === 'publishDirectory' && transition.after
+        ? { ...transition.after, persistenceFields: { ...finalFields, workspacePath: projectStaging.sourcePath } }
+        : transition.after
       /** Filesystem staging result for the explicit before/after records. */
       const stageResult = await revisionData.persistence.stageChanges({
         before: transition.before
@@ -455,13 +464,14 @@ const stageAtomicDataTransitions = async (
               persistenceFields: transition.before.persistenceFields
             }
           : null,
-        after: transition.after
+        after: stagingAfter
       })
       stagedTransitions.push({
         transition,
         revisionData,
-        nextPersistenceFields:
-          stageResult.nextPersistenceFields ?? transition.after?.persistenceFields,
+        nextPersistenceFields: projectStaging && stageResult.nextPersistenceFields
+          ? { ...stageResult.nextPersistenceFields, workspacePath: finalFields!.workspacePath }
+          : stageResult.nextPersistenceFields ?? transition.after?.persistenceFields,
         stagedChange: stageResult.stagedChange
       })
     }
@@ -682,7 +692,15 @@ const runAtomicDataTransitionsImmediately = async (
         ) {
           continue
         }
-        stagedTransition.revisionData.persistence.commitChanges(stagedTransition.stagedChange)
+        stagedTransition.revisionData.persistence.commitChanges(
+          stagedTransition.stagedChange.filter((change) => change.type !== 'publishDirectory')
+        )
+      }
+      // Publish new project directories only after all their staged child files have committed.
+      for (const entry of stagedTransitions) {
+        for (const change of entry.stagedChange) {
+          if (change.type === 'publishDirectory') commitStagedFileChange(change)
+        }
       }
     }
     /** Whether the logical commit needs a SQLite transaction boundary. */

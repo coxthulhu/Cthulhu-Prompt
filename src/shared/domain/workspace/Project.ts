@@ -40,7 +40,7 @@ export const findCollectionProject = (workspace: Workspace, collectionId: string
   workspace.projects.find((project) => project.collectionEntries.some((entry) => entry.id === collectionId))
 
 /** Validates names against the existing collection directory rules and normalizes abbreviations. */
-export const prepareProjectInfo = (info: ProjectInfo, siblings: readonly Project[]): ProjectInfo => {
+export const prepareProjectInfo = (info: ProjectInfo, siblings: readonly ProjectInfo[]): ProjectInfo => {
   /** Shared naming policy strips whitespace from the directory name and ignores casing for conflicts. */
   const prepared = preparePromptCollectionName(info.name)
   if (!prepared.validation.isValid) throw new Error(prepared.validation.errorMessage!.replaceAll('Collection', 'Project').replaceAll('collection', 'project'))
@@ -58,7 +58,7 @@ export const prepareProjectInfo = (info: ProjectInfo, siblings: readonly Project
 }
 
 /** Extracts shared metadata without leaking private collection ordering into workspace files. */
-export const getProjectInfo = (project: Project): ProjectInfo => ({
+export const getProjectInfo = (project: ProjectInfo): ProjectInfo => ({
   id: project.id, name: project.name, abbreviation: project.abbreviation,
   ...(project.shortDescription !== undefined ? { shortDescription: project.shortDescription } : {}),
   ...(project.description !== undefined ? { description: project.description } : {})

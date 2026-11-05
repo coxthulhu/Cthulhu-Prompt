@@ -4,14 +4,14 @@ import { createEmptyPromptCollectionSettings, createPromptStatusFolderLayouts, t
 import { preparePromptCollectionName } from '../prompt-collection/promptCollectionName'
 import { prepareProjectInfo, type Project, type ProjectInfo } from './Project'
 
-/** Metadata replacement shared by project creation and editing. */
-export type UpdateProjectCommand = { workspaceId: string; project: ProjectInfo }
-/** Creation includes both starter collection identities so both processes plan identically. */
-export type CreateProjectCommand = UpdateProjectCommand & { promptCollectionId: string; templateCollectionId: string }
-/** Stable identity of a project owned by one workspace. */
-export type DeleteProjectCommand = { workspaceId: string; projectId: string }
-/** A null predecessor places a project first, matching collection ordering. */
-export type MoveProjectCommand = DeleteProjectCommand & { previousProjectId: string | null }
+/** New projects carry stable starter identities generated before dispatch. */
+export type SaveProjectValue = {
+  project: ProjectInfo
+  starterCollections: { promptCollectionId: string; templateCollectionId: string } | null
+}
+
+/** Complete retained project list, in the order requested by the management dialog. */
+export type SaveProjectsCommand = { workspaceId: string; projects: SaveProjectValue[] }
 
 /** Validates exact metadata shape before applying normalized domain rules. */
 const isProjectInfo = (value: unknown): value is ProjectInfo => {
@@ -24,41 +24,21 @@ const isProjectInfo = (value: unknown): value is ProjectInfo => {
     Object.keys(record).every((key) => ['id', 'name', 'abbreviation', 'shortDescription', 'description'].includes(key))
 }
 
-/** Parses exact metadata-edit commands at the IPC boundary. */
-export const parseUpdateProjectCommand = (value: unknown): UpdateProjectCommand | null => {
+/** Rejects malformed or additional fields throughout the complete project command. */
+export const parseSaveProjectsCommand = (value: unknown): SaveProjectsCommand | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  /** Only workspace identity and the complete replacement metadata are accepted. */
+  /** Only workspace identity and retained values belong on the wire. */
   const record = value as Record<string, unknown>
-  return Object.keys(record).length === 2 && typeof record.workspaceId === 'string' && isProjectInfo(record.project)
-    ? record as UpdateProjectCommand : null
-}
-
-/** Parses creation without allowing extra properties or missing starter identities. */
-export const parseCreateProjectCommand = (value: unknown): CreateProjectCommand | null => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  /** Four fields carry every nondeterministic input required by the planner. */
-  const record = value as Record<string, unknown>
-  return Object.keys(record).length === 4 && typeof record.workspaceId === 'string' && isProjectInfo(record.project) &&
-    typeof record.promptCollectionId === 'string' && typeof record.templateCollectionId === 'string'
-    ? record as CreateProjectCommand : null
-}
-
-/** Parses project deletion without accepting unrelated command fields. */
-export const parseDeleteProjectCommand = (value: unknown): DeleteProjectCommand | null => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  /** Two stable identities are sufficient to delete the complete owned graph. */
-  const record = value as Record<string, unknown>
-  return Object.keys(record).length === 2 && typeof record.workspaceId === 'string' && typeof record.projectId === 'string'
-    ? record as DeleteProjectCommand : null
-}
-
-/** Parses reordering with an explicit predecessor or first position. */
-export const parseMoveProjectCommand = (value: unknown): MoveProjectCommand | null => {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  /** Every move remains scoped to a single workspace. */
-  const record = value as Record<string, unknown>
-  return Object.keys(record).length === 3 && typeof record.workspaceId === 'string' && typeof record.projectId === 'string' &&
-    (record.previousProjectId === null || typeof record.previousProjectId === 'string') ? record as MoveProjectCommand : null
+  if (Object.keys(record).length !== 2 || typeof record.workspaceId !== 'string' || !Array.isArray(record.projects)) return null
+  for (const value of record.projects) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+    if (Object.keys(value).length !== 2 || !isProjectInfo(value.project)) return null
+    /** Existing projects must explicitly omit starter creation with null. */
+    const starters = value.starterCollections
+    if (starters !== null && (!starters || typeof starters !== 'object' || Array.isArray(starters) ||
+      Object.keys(starters).length !== 2 || typeof starters.promptCollectionId !== 'string' || typeof starters.templateCollectionId !== 'string')) return null
+  }
+  return record as SaveProjectsCommand
 }
 
 /** Creates an empty starter collection with the same naming and status layout as ordinary collections. */
@@ -68,80 +48,60 @@ const starterCollection = (id: string, kind: 'prompt' | 'template'): PromptColle
   statusFolders: createPromptStatusFolderLayouts(), settings: createEmptyPromptCollectionSettings()
 })
 
-/** Creates a project and both empty starter collections in one atomic mutation. */
-export const planCreateProject: DomainPlanner<CreateProjectCommand> = (state, command) => {
-  /** Workspace supplies project name and abbreviation uniqueness. */
+/** Plans creation, editing, ordering, and complete owned-graph deletion as one transaction. */
+export const planSaveProjects: DomainPlanner<SaveProjectsCommand> = (state, command) => {
+  /** Workspace supplies existing ownership and user preferences. */
   const workspace = state.get('workspace', command.workspaceId)
   if (!workspace) throw new Error('Workspace not loaded')
-  if (workspace.projects.some((project) => project.id === command.project.id) ||
-    command.promptCollectionId === command.templateCollectionId ||
-    state.get('promptCollection', command.promptCollectionId) || state.get('promptCollection', command.templateCollectionId)) throw new Error('Project identity already exists')
-  /** Normalized metadata is shared by the optimistic and authoritative plans. */
-  const info = prepareProjectInfo(command.project, workspace.projects)
-  /** Project order starts with the new project; starter collections begin task-first. */
-  const project: Project = { ...info, folderName: preparePromptCollectionName(info.name).folderName,
-    collectionEntries: [command.promptCollectionId, command.templateCollectionId].map((id) => ({ kind: 'collection', id })), favoriteCollectionIds: [] }
-  return [
-    { type: 'update', entityType: 'workspace', id: workspace.id, recipe: (draft) => { draft.projects.unshift(project) } },
-    { type: 'insert', entityType: 'promptCollection', id: command.promptCollectionId, data: starterCollection(command.promptCollectionId, 'prompt') },
-    { type: 'insert', entityType: 'promptCollection', id: command.templateCollectionId, data: starterCollection(command.templateCollectionId, 'template') }
-  ]
-}
-
-/** Replaces shared metadata and derives the directory name while preserving identity and private preferences. */
-export const planUpdateProject: DomainPlanner<UpdateProjectCommand> = (state, command) => {
-  /** Workspace owns the project being edited. */
-  const workspace = state.get('workspace', command.workspaceId)
-  if (!workspace || !workspace.projects.some((project) => project.id === command.project.id)) throw new Error('Project not found')
-  /** Normalized replacement also validates conflicts against sibling projects. */
-  const info = prepareProjectInfo(command.project, workspace.projects)
-  return [{ type: 'update', entityType: 'workspace', id: workspace.id, recipe: (draft) => {
-    /** Replace optional descriptions as well as the required fields. */
-    const project = draft.projects.find((candidate) => candidate.id === info.id)!
-    delete project.shortDescription
-    delete project.description
-    Object.assign(project, info, { folderName: preparePromptCollectionName(info.name).folderName })
-  } }]
-}
-
-/** Reorders projects without changing their individual collection preferences. */
-export const planMoveProject: DomainPlanner<MoveProjectCommand> = (state, command) => {
-  /** Workspace order is the sole authoritative target. */
-  const workspace = state.get('workspace', command.workspaceId)
-  /** Moved project is removed before resolving the predecessor. */
-  const project = workspace?.projects.find((candidate) => candidate.id === command.projectId)
-  if (!workspace || !project) throw new Error('Project not found')
-  /** Remaining ordered projects keep their relative positions. */
-  const projects = workspace.projects.filter((candidate) => candidate.id !== project.id)
-  /** Null places the project first; unknown predecessors are rejected. */
-  const index = command.previousProjectId === null ? 0 : projects.findIndex((candidate) => candidate.id === command.previousProjectId) + 1
-  if (command.previousProjectId !== null && index === 0) throw new Error('Previous project not found')
-  projects.splice(index, 0, project)
-  return [{ type: 'update', entityType: 'workspace', id: workspace.id, recipe: (draft) => { draft.projects = projects } }]
-}
-
-/** Deletes every owned entity and preference, then persists Home even when other projects remain. */
-export const planDeleteProject: DomainPlanner<DeleteProjectCommand> = (state, command) => {
-  /** Workspace identity survives deletion of its final project. */
-  const workspace = state.get('workspace', command.workspaceId)
-  /** Project graph to remove atomically. */
-  const project = workspace?.projects.find((candidate) => candidate.id === command.projectId)
-  if (!workspace || !project) throw new Error('Project not found')
-  /** Reuse collection cleanup while replacing its workspace and navigation updates with one project-level update. */
+  /** Requested identities distinguish retained projects from deletions. */
+  const retainedIds = new Set(command.projects.map(({ project }) => project.id))
+  if (retainedIds.size !== command.projects.length) throw new Error('Duplicate project identity')
+  /** All retained values are normalized before checking final-set uniqueness. */
+  const infos = command.projects.map(({ project }) => prepareProjectInfo(project, []))
+  for (const info of infos) prepareProjectInfo(info, infos)
+  /** Starter IDs must be unique across every new project and existing collection. */
+  const starterIds = new Set<string>()
+  /** Final ordered graph preserves the private preferences of retained projects. */
+  const projects: Project[] = []
+  /** Each authoritative entity receives at most one change. */
   const changes: DomainChange[] = []
-  for (const entry of project.collectionEntries) {
-    /** Existing deletion planner covers notes, categories, editors, and optional UI state. */
-    const plan = planDeletePromptCollectionDomainMutation(state, { workspaceId: workspace.id, promptCollectionId: entry.id })
-    if (!Array.isArray(plan)) return plan
-    changes.push(...plan.filter((change) => change.entityType !== 'workspace' && change.entityType !== 'workspaceUiState'))
+  for (const [index, { starterCollections }] of command.projects.entries()) {
+    /** Normalized public metadata replaces optional descriptions too. */
+    const info = infos[index]
+    /** Existing identity determines whether starter creation is permitted. */
+    const existing = workspace.projects.find((project) => project.id === info.id)
+    if (existing ? starterCollections !== null : starterCollections === null) throw new Error('Project creation identity mismatch')
+    /** Retained collections and favorites never come from the dialog. */
+    const project: Project = { ...info, folderName: preparePromptCollectionName(info.name).folderName,
+      collectionEntries: existing?.collectionEntries ?? [], favoriteCollectionIds: existing?.favoriteCollectionIds ?? [] }
+    if (starterCollections) {
+      for (const [id, kind] of [[starterCollections.promptCollectionId, 'prompt'], [starterCollections.templateCollectionId, 'template']] as const) {
+        if (starterIds.has(id) || state.get('promptCollection', id)) throw new Error('Starter collection identity already exists')
+        starterIds.add(id)
+        project.collectionEntries.push({ kind: 'collection', id })
+        changes.push({ type: 'insert', entityType: 'promptCollection', id, data: starterCollection(id, kind) })
+      }
+    }
+    projects.push(project)
   }
-  changes.push({ type: 'update', entityType: 'workspace', id: workspace.id, recipe: (draft) => {
-    draft.projects = draft.projects.filter((candidate) => candidate.id !== project.id)
-  } })
-  if (state.get('workspaceUiState', workspace.id)) changes.push({ type: 'update', entityType: 'workspaceUiState', id: workspace.id, recipe: (draft) => {
-    draft.selectedScreen = 'home'
-    draft.selectedScreenData = null
-    delete draft.lastCollectionIdByProject[project.id]
-  } })
+  /** Omitted projects lose their content and preferences atomically. */
+  const deletedProjects = workspace.projects.filter((project) => !retainedIds.has(project.id))
+  for (const project of deletedProjects) {
+    for (const entry of project.collectionEntries) {
+      /** Existing collection cleanup covers notes, categories, editors, and optional UI state. */
+      const plan = planDeletePromptCollectionDomainMutation(state, { workspaceId: workspace.id, promptCollectionId: entry.id })
+      if (!Array.isArray(plan)) return plan
+      changes.push(...plan.filter((change) => change.entityType !== 'workspace' && change.entityType !== 'workspaceUiState'))
+    }
+  }
+  changes.push({ type: 'update', entityType: 'workspace', id: workspace.id, recipe: (draft) => { draft.projects = projects } })
+  if (deletedProjects.length && state.get('workspaceUiState', workspace.id)) {
+    changes.push({ type: 'update', entityType: 'workspaceUiState', id: workspace.id, recipe: (draft) => {
+      if (draft.selectedScreen === 'project' && !retainedIds.has(draft.selectedScreenData.projectId)) {
+        Object.assign(draft, { selectedScreen: 'home', selectedScreenData: null })
+      }
+      for (const project of deletedProjects) delete draft.lastCollectionIdByProject[project.id]
+    } })
+  }
   return changes
 }

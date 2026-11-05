@@ -25,6 +25,12 @@ export type FilePersistenceStagedChange =
       sourcePath: string
       targetPath: string
     }
+  | {
+      /** Publishes a new project only after its child files have committed in the staging directory. */
+      type: 'publishDirectory'
+      sourcePath: string
+      targetPath: string
+    }
 
 /** Captures affected destinations so a partial multi-file commit can restore original bytes and times. */
 export const captureFileRollback = (changes: readonly FilePersistenceStagedChange[]): (() => void) => {
@@ -34,7 +40,7 @@ export const captureFileRollback = (changes: readonly FilePersistenceStagedChang
   const originals = new Map<string, { content: Buffer | null; atime: Date; mtime: Date }>()
   /** Paths the commit may replace, create, remove, or relocate. */
   const roots = new Set(changes.flatMap((change) => change.type === 'ensureDirectory' ? []
-    : change.type === 'renameDirectory' ? [change.sourcePath, change.targetPath] : [change.targetPath]))
+    : change.type === 'renameDirectory' || change.type === 'publishDirectory' ? [change.sourcePath, change.targetPath] : [change.targetPath]))
   /** Copies each original path once before any committed file changes occur. */
   const capture = (filePath: string): void => {
     if (originals.has(filePath) || !fs.existsSync(filePath)) return
@@ -126,7 +132,7 @@ export const commitStagedFileChange = (stagedChange: FilePersistenceStagedChange
     return
   }
 
-  if (stagedChange.type === 'renameDirectory') {
+  if (stagedChange.type === 'renameDirectory' || stagedChange.type === 'publishDirectory') {
     if (fs.existsSync(stagedChange.sourcePath)) {
       fs.renameSync(stagedChange.sourcePath, stagedChange.targetPath)
     }
@@ -173,13 +179,8 @@ export const revertStagedFileChange = (stagedChange: FilePersistenceStagedChange
     return
   }
 
-  if (stagedChange.type === 'renameDirectory') {
-    const fs = getFs()
-    if (fs.existsSync(stagedChange.targetPath) && !fs.existsSync(stagedChange.sourcePath)) {
-      fs.renameSync(stagedChange.targetPath, stagedChange.sourcePath)
-    }
-    return
-  }
+  // Directory moves happen only at commit; the atomic file snapshot restores them before cleanup.
+  if (stagedChange.type === 'renameDirectory' || stagedChange.type === 'publishDirectory') return
 
   if (stagedChange.type !== 'upsert') {
     return

@@ -1,41 +1,39 @@
 import { compactGuid } from '@shared/utilities/compactGuid'
-import type { ProjectInfo } from '@shared/domain/workspace/Project'
-import { planCreateProject, planDeleteProject, planMoveProject, planUpdateProject } from '@shared/domain/workspace/ProjectDomainMutations'
+import { getProjectInfo, type ProjectInfo } from '@shared/domain/workspace/Project'
+import { planSaveProjects, type SaveProjectsCommand } from '@shared/domain/workspace/ProjectDomainMutations'
+import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
 import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/RendererDomainMutation'
 import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
 import { projectNavigation } from '@renderer/features/projects/projectNavigation.svelte.ts'
 
-/** Creates both blank starter collections and opens the new project after persistence succeeds. */
-export const createProject = async (workspaceId: string, info: Omit<ProjectInfo, 'id'>): Promise<string> => {
-  /** Stable identity used by both processes and returned to future management UI. */
-  const id = compactGuid(crypto.randomUUID())
-  /** Starter identities are generated once outside the deterministic planner. */
-  const command = { workspaceId, project: { ...info, id }, promptCollectionId: compactGuid(crypto.randomUUID()), templateCollectionId: compactGuid(crypto.randomUUID()) }
-  await runImmediateRendererDomainMutation({ mutation: { command, plan: planCreateProject }, ipc: { channel: 'create-project' }, renderer: {
+/** Saves the complete ordered draft list; callers allocate stable project IDs when adding drafts. */
+export const saveProjects = async (workspaceId: string, projects: ProjectInfo[]): Promise<void> => {
+  await flushAllAutosaves()
+  /** Current ownership determines which drafts require empty starter collections. */
+  const workspace = workspaceCollection.get(workspaceId)
+  if (!workspace) throw new Error('Workspace not loaded')
+  /** Navigation changes only when the currently selected project is removed. */
+  const navigation = workspaceUiStateCollection.get(workspaceId)
+  /** Capture the selected deletion before the optimistic graph is changed. */
+  const deletesSelectedProject = navigation?.selectedScreen === 'project' &&
+    !projects.some((project) => project.id === navigation.selectedScreenData.projectId)
+  /** Stable starter identities and public metadata are the only draft data sent to main. */
+  const command: SaveProjectsCommand = { workspaceId, projects: projects.map((project) => ({
+    project: getProjectInfo(project),
+    starterCollections: workspace.projects.some((existing) => existing.id === project.id) ? null : {
+      promptCollectionId: compactGuid(crypto.randomUUID()), templateCollectionId: compactGuid(crypto.randomUUID())
+    }
+  })) }
+  await runImmediateRendererDomainMutation({ mutation: { command, plan: planSaveProjects }, ipc: { channel: 'save-projects' }, renderer: {
     mutate: ({ collections }) => {
-      for (const collectionId of [command.promptCollectionId, command.templateCollectionId]) {
-        collections.promptCollectionClientState.insert({ id: collectionId, hasLoadedInitialData: false })
+      for (const { starterCollections } of command.projects) {
+        if (!starterCollections) continue
+        for (const id of [starterCollections.promptCollectionId, starterCollections.templateCollectionId]) {
+          collections.promptCollectionClientState.insert({ id, hasLoadedInitialData: false })
+        }
       }
     }
   } })
-  projectNavigation.request({ workspaceId, projectId: id })
-  return id
-}
-
-/** Saves complete shared metadata, flushing editors before a possible directory rename. */
-export const updateProject = async (workspaceId: string, project: ProjectInfo): Promise<void> => {
-  await flushAllAutosaves()
-  await runImmediateRendererDomainMutation({ mutation: { command: { workspaceId, project }, plan: planUpdateProject }, ipc: { channel: 'update-project' }, renderer: {} })
-}
-
-/** Persists the user's project order independently of every project's collection order. */
-export const moveProject = async (workspaceId: string, projectId: string, previousProjectId: string | null): Promise<void> => {
-  await runImmediateRendererDomainMutation({ mutation: { command: { workspaceId, projectId, previousProjectId }, plan: planMoveProject }, ipc: { channel: 'move-project' }, renderer: {} })
-}
-
-/** Flushes pending edits, removes the complete project, and returns to Home after success. */
-export const deleteProject = async (workspaceId: string, projectId: string): Promise<void> => {
-  await flushAllAutosaves()
-  await runImmediateRendererDomainMutation({ mutation: { command: { workspaceId, projectId }, plan: planDeleteProject }, ipc: { channel: 'delete-project' }, renderer: {} })
-  projectNavigation.request({ workspaceId, projectId: null })
+  if (deletesSelectedProject) projectNavigation.request({ workspaceId, projectId: null })
 }
