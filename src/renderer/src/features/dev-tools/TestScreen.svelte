@@ -3,35 +3,33 @@
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import {
     AlertCircle,
-    AppWindow,
     Archive,
+    Bolt,
     Check,
     CircleCheckBig,
     ClipboardList,
+    Cog,
     Copy,
     Download,
-    Expand,
-    FilePenLine,
     FileText,
     Folder,
     Folders,
-    Fullscreen,
     ListTodo,
     Loader,
-    Maximize,
-    Maximize2,
     MoreHorizontal,
-    PanelTopOpen,
+    NotebookPen,
     Pencil,
+    PencilLine,
     Pin,
     Plus,
-    Scan,
     Search,
     Settings,
+    Settings2,
+    SlidersHorizontal,
     Sparkles,
-    SquareArrowOutUpRight,
     SquarePen,
     Trash2,
+    Wrench,
     X
   } from 'lucide-svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
@@ -113,61 +111,61 @@
   /** Include every supported size so the gallery also covers rectangular title actions. */
   const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'compact-large-icon', 'tiny', 'sidebar-rail']
   const categoryIconSizes = [14, 18, 24, 32] as const
-  /** Lucide icons currently under consideration, compared at several sizes. */
+  /** Lucide alternatives for the sidebar title's Project Settings button, compared at several sizes. */
   const iconCandidates: {
     name: string
     description: string
     icon: ComponentType
   }[] = [
     {
-      name: 'Maximize2',
-      description: 'Diagonal expand arrows; reads as enlarging the prompt to fill the screen.',
-      icon: Maximize2
+      name: 'Settings',
+      description: 'The current gear; also the System Settings glyph in the activity bar.',
+      icon: Settings
     },
     {
-      name: 'Maximize',
-      description: 'Four expanding corners; a classic maximize or fullscreen glyph.',
-      icon: Maximize
+      name: 'Settings2',
+      description: 'Two toggle sliders; reads as settings without repeating the System Settings gear.',
+      icon: Settings2
     },
     {
-      name: 'Expand',
-      description: 'Arrows pointing out from the center to every corner.',
-      icon: Expand
+      name: 'SlidersHorizontal',
+      description: 'Three adjustment sliders; suggests tuning this project rather than the app.',
+      icon: SlidersHorizontal
     },
     {
-      name: 'Fullscreen',
-      description: 'A framed screen with corner brackets; explicitly fullscreen.',
-      icon: Fullscreen
+      name: 'Cog',
+      description: 'A heavier spoked gear that stays distinct from the System Settings glyph.',
+      icon: Cog
     },
     {
-      name: 'Scan',
-      description: 'Corner brackets alone; a lighter take on focusing one item.',
-      icon: Scan
+      name: 'Bolt',
+      description: 'A hex nut; a lighter mechanical cue for configuring the project.',
+      icon: Bolt
     },
     {
-      name: 'SquareArrowOutUpRight',
-      description: 'Opens the item somewhere else, like a separate view.',
-      icon: SquareArrowOutUpRight
+      name: 'Wrench',
+      description: 'A maintenance tool; suggests managing the project setup.',
+      icon: Wrench
     },
     {
-      name: 'PanelTopOpen',
-      description: 'A panel opening up; suggests revealing a larger editor.',
-      icon: PanelTopOpen
+      name: 'Pencil',
+      description: 'Matches the category rename pencil; reads as editing this project.',
+      icon: Pencil
     },
     {
-      name: 'AppWindow',
-      description: 'A dedicated window for the prompt.',
-      icon: AppWindow
+      name: 'PencilLine',
+      description: 'A pencil over a line; focuses on renaming the title it follows.',
+      icon: PencilLine
     },
     {
       name: 'SquarePen',
-      description: 'Edit inside a frame; emphasizes editing over enlarging.',
+      description: 'Edit inside a frame; suggests opening an editor for the project.',
       icon: SquarePen
     },
     {
-      name: 'FilePenLine',
-      description: 'A document being edited; emphasizes the single prompt.',
-      icon: FilePenLine
+      name: 'NotebookPen',
+      description: 'An annotated notebook; leans toward the project name and descriptions.',
+      icon: NotebookPen
     }
   ]
   const collectionDropdownItems: DropdownPopupItem[] = [
@@ -346,7 +344,7 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Icon Candidates',
-              'Lucide icon alternatives compared at several sizes and as an icon button.'
+              'Lucide icon alternatives compared at several sizes, as an icon button, and as the sidebar title button.'
             )}
 
             <div class="category-icon-grid">
@@ -370,6 +368,15 @@
                   </div>
                   <div class="variant-controls">
                     <IconButton icon={CandidateIcon} label={candidate.name} title={candidate.name} />
+                    <!-- Same configuration as the sidebar title's Project Settings button. -->
+                    <IconButton
+                      icon={CandidateIcon}
+                      label={candidate.name}
+                      title={candidate.name}
+                      size="tiny"
+                      baseVariant="muted"
+                      hoverVariant="glyph"
+                    />
                   </div>
                 </div>
               {/each}

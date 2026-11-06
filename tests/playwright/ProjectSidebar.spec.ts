@@ -15,6 +15,7 @@ describe('Project sidebar', () => {
     /** Project activity button for the uneditable default project. */
     const projectButton = mainWindow.getByTestId('nav-button-project')
     await expect(projectButton).toHaveCount(0)
+    await expect(mainWindow.getByTestId('new-project-button')).toHaveCount(0)
 
     await testHelpers.setupWorkspaceViaUI()
     await expect(projectButton).toHaveText('DE')
@@ -24,6 +25,8 @@ describe('Project sidebar', () => {
     await expect(mainWindow.locator(
       '[data-testid="app-activity-bar"] > [data-testid="nav-button-test-screen"] + .cthulhuUiSeparator + [data-testid="nav-button-project"]'
     )).toBeVisible()
+    // The + button closes the project group.
+    await expect(mainWindow.locator('[data-testid="nav-button-project"] + [data-testid="new-project-button"]')).toHaveAttribute('title', 'New Project')
 
     await projectButton.click()
     await expect(mainWindow.getByTestId('app-sidebar')).toHaveAttribute('data-sidebar-mode', 'project')
@@ -32,6 +35,7 @@ describe('Project sidebar', () => {
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
     await expect(projectButton).toHaveCount(0)
+    await expect(mainWindow.getByTestId('new-project-button')).toHaveCount(0)
   })
 
   test('creates task and template collections with the same name from both create actions', async ({ testSetup }) => {

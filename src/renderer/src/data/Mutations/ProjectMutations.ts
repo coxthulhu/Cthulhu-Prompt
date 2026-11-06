@@ -7,8 +7,8 @@ import { runImmediateRendererDomainMutation } from '@renderer/data/IpcFramework/
 import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
 import { projectNavigation } from '@renderer/features/projects/projectNavigation.svelte.ts'
 
-/** Saves the complete ordered draft list; callers allocate stable project IDs when adding drafts. */
-export const saveProjects = async (workspaceId: string, projects: ProjectInfo[]): Promise<void> => {
+/** Saves the complete ordered draft list, then opens navigateToProjectId when supplied; callers allocate stable draft IDs. */
+export const saveProjects = async (workspaceId: string, projects: ProjectInfo[], navigateToProjectId: string | null = null): Promise<void> => {
   await flushAllAutosaves()
   /** Current ownership determines which drafts require empty starter collections. */
   const workspace = workspaceCollection.get(workspaceId)
@@ -35,5 +35,6 @@ export const saveProjects = async (workspaceId: string, projects: ProjectInfo[])
       }
     }
   } })
-  if (deletesSelectedProject) projectNavigation.request({ workspaceId, projectId: null })
+  if (navigateToProjectId) projectNavigation.request({ workspaceId, projectId: navigateToProjectId })
+  else if (deletesSelectedProject) projectNavigation.request({ workspaceId, projectId: null })
 }

@@ -15,8 +15,9 @@
 </script>
 
 <script lang="ts">
+  import { tick } from 'svelte'
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { Check, Folder, FolderCog } from 'lucide-svelte'
+  import { Folder, FolderCog } from 'lucide-svelte'
   import type { Category } from '@shared/domain/category/Category'
   import {
     hasCategoryDisplayNameConflict,
@@ -27,13 +28,13 @@
   import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Prompt } from '@shared/domain/prompt/Prompt'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
-  import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
-  import ManagementSelectorPanel, {
-    type ManagementSelectorPanelItem
-  } from '@renderer/common/cthulhu-ui/selectors/ManagementSelectorPanel.svelte'
+  import ManagementDialog from '@renderer/common/cthulhu-ui/dialogs/ManagementDialog.svelte'
+  import type { ManagementSelectorPanelItem } from '@renderer/common/cthulhu-ui/selectors/ManagementSelectorPanel.svelte'
   import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
   import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-  import CategoryManagementEditor from './CategoryManagementEditor.svelte'
+  import ManagementDescriptionField from '../management/ManagementDescriptionField.svelte'
+  import ManagementEditor from '../management/ManagementEditor.svelte'
+  import ManagementTextField from '../management/ManagementTextField.svelte'
 
   /** Editable local copy of one existing or newly staged category. */
   type CategoryDraft = {
@@ -79,10 +80,8 @@
   let drafts = $state<CategoryDraft[]>([])
   /** Currently selected category draft. */
   let selectedId = $state<string | null>(null)
-  /** Monotonic request used to focus and select a category name. */
-  let nextFocusRequestId = $state(0)
-  /** Current focus request, or null when selection should not move focus. */
-  let focusRequestId = $state<number | null>(null)
+  /** Name input of the selected draft, focused by rename and creation entry points. */
+  let nameInput = $state<HTMLInputElement | null>(null)
   /** Prevents duplicate saves while category persistence is pending. */
   let isSubmitting = $state(false)
   /** General persistence failure displayed until the user edits or closes. */
@@ -119,9 +118,9 @@
       }
     })
   )
-  /** Validation message for the currently selected category name. */
+  /** Validation message shown after the selected draft's name has been edited. */
   const selectedValidationMessage = $derived(
-    !selectedDraft
+    !selectedDraft || !selectedDraft.hasInteracted || isSubmitting
       ? null
       : normalizeCategoryDisplayName(selectedDraft.displayName).length === 0
         ? 'Category name is required'
@@ -189,6 +188,13 @@
     submissionError = null
   }
 
+  /** Focuses and selects the selected draft's name once its editor has rendered. */
+  const focusName = async (): Promise<void> => {
+    await tick()
+    nameInput?.focus()
+    nameInput?.select()
+  }
+
   /** Opens category management to the requested category or the first retained category. */
   export const openDialog = (
     options: ManageCategoriesDialogOpenOptions = {}
@@ -199,12 +205,8 @@
     selectedId = options.categoryId && drafts.some((draft) => draft.id === options.categoryId)
       ? options.categoryId
       : (drafts[0]?.id ?? null)
-    focusRequestId = null
-    if (options.focusName && selectedId) {
-      nextFocusRequestId += 1
-      focusRequestId = nextFocusRequestId
-    }
     isDialogOpen = true
+    if (options.focusName) void focusName()
   }
 
   /** Clears every unsaved category draft when the dialog closes. */
@@ -213,14 +215,12 @@
     originalCategories = []
     drafts = []
     selectedId = null
-    focusRequestId = null
     submissionError = null
   }
 
   /** Selects one retained draft without discarding edits to the previous draft. */
   const selectDraft = (categoryId: string): void => {
     selectedId = categoryId
-    focusRequestId = null
     submissionError = null
   }
 
@@ -236,9 +236,8 @@
       hasInteracted: false
     })
     selectedId = categoryId
-    nextFocusRequestId += 1
-    focusRequestId = nextFocusRequestId
     submissionError = null
+    void focusName()
   }
 
   /** Stages selected-category deletion and selects the nearest retained draft. */
@@ -248,7 +247,6 @@
     const selectedIndex = drafts.findIndex((draft) => draft.id === selectedDraft.id)
     drafts.splice(selectedIndex, 1)
     selectedId = drafts[selectedIndex]?.id ?? drafts[selectedIndex - 1]?.id ?? null
-    focusRequestId = null
     submissionError = null
   }
 
@@ -271,71 +269,66 @@
 </script>
 
 <!-- collection category management dialog with retained multi-item drafts. -->
-<Dialog
+<ManagementDialog
   bind:open={isDialogOpen}
   icon={FolderCog}
   title="Manage Categories"
   subtitle={collectionDisplayName}
-  class="w-[1040px] max-w-[calc(100vw-32px)]"
-  submitText={isSubmitting ? 'Saving...' : 'Save Changes'}
-  cancelText="Close"
-  submitIcon={Check}
-  submitDisabled={!canSubmit}
-  cancelDisabled={isSubmitting}
+  listLabel="All Categories"
+  items={selectorItems}
+  {selectedId}
+  addText="New Category"
+  itemTestIdPrefix="manage-category-selector"
+  addTestId="manage-categories-new-button"
   submitTestId="manage-categories-save-button"
   cancelTestId="manage-categories-close-button"
+  {isSubmitting}
+  {canSubmit}
+  {submissionError}
+  onselect={selectDraft}
+  onadd={addDraft}
   oncancel={handleCancel}
   onsubmit={handleSubmit}
 >
-  <div class="cthulhuManageCategoriesDialogBody text-sm leading-5">
-    <ManagementSelectorPanel
-      label="All Categories"
-      items={selectorItems}
-      {selectedId}
-      addText="New Category"
-      itemTestIdPrefix="manage-category-selector"
-      addTestId="manage-categories-new-button"
-      onselect={selectDraft}
-      onadd={addDraft}
-    />
-
-    <div class="cthulhuManageCategoriesDialogEditor">
-      {#if submissionError}
-        <p class="mb-3 text-sm leading-5 text-[var(--ui-danger-icon-glyph)]">
-          {submissionError}
-        </p>
-      {/if}
-      {#if selectedDraft}
-        {#key selectedDraft.id}
-          <CategoryManagementEditor
-            categoryId={selectedDraft.id}
-            bind:displayName={selectedDraft.displayName}
-            bind:shortDescription={selectedDraft.shortDescription}
-            bind:description={selectedDraft.description}
-            bind:hasInteracted={selectedDraft.hasInteracted}
-            validationMessage={selectedValidationMessage}
-            {isSubmitting}
-            modelOwnerId={`${modelOwnerId}-${editorSessionId}`}
-            {focusRequestId}
-            ondelete={deleteSelectedDraft}
-          />
-        {/key}
-      {/if}
-    </div>
-  </div>
-</Dialog>
-
-<style>
-  .cthulhuManageCategoriesDialogBody {
-    display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
-    height: min(570px, calc(100vh - 212px));
-    min-height: 240px;
-  }
-
-  .cthulhuManageCategoriesDialogEditor {
-    min-width: 0;
-    overflow: auto;
-    padding: 16px 8px 22px 26px;
-  }
-</style>
+  {#if selectedDraft}
+    {#key selectedDraft.id}
+      <ManagementEditor
+        icon={Folder}
+        label={selectedDraft.displayName.trim() || 'New Category'}
+        detail="Category settings"
+        deleteLabel="Delete category"
+        deleteTestId="manage-categories-delete-button"
+        disabled={isSubmitting}
+        ondelete={deleteSelectedDraft}
+      >
+        <ManagementTextField
+          id="manage-category-name-input"
+          title="Category Name"
+          help="Required. Names must be unique in this collection."
+          required
+          bind:value={selectedDraft.displayName}
+          bind:ref={nameInput}
+          errorMessage={selectedValidationMessage}
+          errorTestId="manage-category-name-error"
+          disabled={isSubmitting}
+          oninput={() => {
+            selectedDraft.hasInteracted = true
+          }}
+        />
+        <ManagementTextField
+          id="manage-category-short-description-input"
+          title="Short Description"
+          help="A brief summary to help you recognize this category."
+          bind:value={selectedDraft.shortDescription}
+          disabled={isSubmitting}
+        />
+        <ManagementDescriptionField
+          id="manage-category-full-description-input"
+          help="Describe what belongs here and how to use these prompts."
+          modelKey={`${modelOwnerId}-${editorSessionId}-${selectedDraft.id}`}
+          bind:value={selectedDraft.description}
+        />
+      </ManagementEditor>
+    {/key}
+  {/if}
+</ManagementDialog>

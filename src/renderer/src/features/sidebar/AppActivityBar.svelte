@@ -3,7 +3,7 @@
   import { screens, type ScreenId } from '@renderer/app/screens'
   import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
-  import { Download } from 'lucide-svelte'
+  import { Download, Plus } from 'lucide-svelte'
   import type { Project } from '@shared/domain/workspace/Project'
   import appIcon from '@renderer/assets/cutethulhu.png'
   import WorkspacePopup from '@renderer/features/workspace/WorkspacePopup.svelte'
@@ -14,6 +14,7 @@
     projects,
     selectedProjectId,
     onProjectSelect,
+    onCreateProject,
     isAppSidebarExpanded,
     isWorkspaceReady = false,
     isDevMode = false,
@@ -29,6 +30,8 @@
     selectedProjectId: string | null
     /** Opens a project or toggles its already-active sidebar. */
     onProjectSelect: (projectId: string) => void
+    /** Opens project settings to a new project draft. */
+    onCreateProject: () => void
     activeScreen: ScreenId
     isAppSidebarExpanded: boolean
     isWorkspaceReady?: boolean
@@ -132,6 +135,7 @@
         <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.abbreviation}</span>
       </ActivityBarButton>
     {/each}
+    <ActivityBarButton icon={Plus} label="New Project" title="New Project" testId="new-project-button" onclick={onCreateProject} />
   {/if}
   <div class="mt-auto flex w-full flex-col gap-1 relative">
     {#each activityItems.filter((item) => item.id === 'settings') as item (item.id)}

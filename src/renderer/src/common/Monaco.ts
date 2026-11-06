@@ -61,9 +61,9 @@ export const createPromptTemplateEditorModelUri = (templateId: string): monaco.U
 export const createNoteEditorModelUri = (noteId: string): monaco.Uri =>
   monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/notes/${noteId}.md`)
 
-/** Creates the Monaco model URI for one category description editor. */
-export const createCategoryDescriptionModelUri = (categoryId: string): monaco.Uri =>
-  monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/category-descriptions/${categoryId}.md`)
+/** Creates the Monaco model URI for one management-dialog full-description draft. */
+export const createDescriptionDraftModelUri = (draftKey: string): monaco.Uri =>
+  monaco.Uri.file(`${PROMPT_EDITOR_MODEL_URI_ROOT}/description-drafts/${draftKey}.md`)
 
 export const warmupMonacoEditor = async (): Promise<void> => {
   const warmupHost = document.createElement('div')

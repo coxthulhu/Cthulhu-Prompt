@@ -6,7 +6,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Major Application Components
 
-- **App Activity Bar** — The persistent icon rail used to navigate between available screens, with a separate group of two-letter project buttons shown while a workspace is open.
+- **App Activity Bar** — The persistent icon rail used to navigate between available screens, with a separate group of two-letter project buttons and a + new-project button shown while a workspace is open.
 - **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Project or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`, with Home, Mockups, and Test Screen always hiding the sidebar.
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
@@ -16,6 +16,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - **Collection Sidebar** — The App Sidebar project mode used to select, create, and reorder a project's task and template collections together, then navigate to the prompts or templates within them.
 - **Settings Sidebar** — The App Sidebar mode on the System Settings Screen that shows a settings tree that scrolls to each settings section and row.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
+- **Project Settings Dialog** — Edits, creates, and deletes the workspace's projects as one batched save, opened from the project sidebar title's gear or the activity bar's + button.
 - **Workspace Popup** — Opens from the activity bar mascot to show the current workspace name, path, and action to open its folder in Explorer.
 - **Mockups Screen** — Provides a development-only interface for previewing UI mockups.
 - **Test Screen** — Provides a development-only interactive gallery for shared UI components.

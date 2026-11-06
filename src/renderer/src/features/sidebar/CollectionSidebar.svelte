@@ -31,6 +31,7 @@
     Layers,
     MoreHorizontal,
     Plus,
+    Settings2,
     Star,
     Trash2
   } from 'lucide-svelte'
@@ -119,7 +120,8 @@
     isWorkspaceReady = false,
     isWorkspaceLoading = false,
     onScreenCollectionSelect,
-    onDeleteSelectedPromptCollection
+    onDeleteSelectedPromptCollection,
+    onOpenProjectSettings
   } = $props<{
     /** Mode title shown in the shared sidebar header. */
     title: string
@@ -129,6 +131,8 @@
     isWorkspaceLoading?: boolean
     onScreenCollectionSelect: (screenCollectionId: string) => void
     onDeleteSelectedPromptCollection: (screenCollectionId: string) => void
+    /** Opens project settings to this sidebar's project. */
+    onOpenProjectSettings: () => void
   }>()
 
   /** Selected collection owned by this mode. */
@@ -827,6 +831,18 @@
   {#if collectionListState !== 'no-workspace'}
     <div class="shrink-0 pb-1">
       <SidebarHeader {title}>
+        {#snippet titleAccessory()}
+          <IconButton
+            icon={Settings2}
+            label="Project Settings"
+            title="Project Settings"
+            size="tiny"
+            baseVariant="muted"
+            hoverVariant="glyph"
+            testId="sidebar-project-settings-button"
+            onclick={onOpenProjectSettings}
+          />
+        {/snippet}
         <DropdownPopupDetailed
           label="Collection selector"
           menuWidth="380px"

@@ -1,12 +1,58 @@
+import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { readWorkspaceState, runSqlStatement, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
-import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
+import { promptCollectionSelectorDropdownItemSelector, promptCollectionSelectorTriggerSelector, selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
+import { focusMonacoEditor } from '../helpers/MonacoHelpers'
+import { finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
 
-/** Real Electron coverage uses production project commands until management UI is available. */
+/** Real Electron coverage drives Project Settings; controls remain for reordering, invalid commands, and read-only workspace snapshots. */
 const { test, describe, expect } = createPlaywrightTestSuite()
+
+/** Selector rows in the Project Settings dialog, one per retained draft. */
+const projectSelectorItems = '[data-testid^="project-settings-selector-"]'
+
+/** Project Settings dialog shared by the sidebar gear and the activity bar's + button. */
+const projectDialog = (page: Page) => page.getByRole('dialog', { name: 'Project Settings' })
+
+/** Replaces the selected draft's required name and abbreviation. */
+const fillProject = async (page: Page, name: string, abbreviation: string): Promise<void> => {
+  await projectDialog(page).getByTestId('project-settings-name-input').fill(name)
+  await projectDialog(page).getByTestId('project-settings-abbreviation-input').fill(abbreviation)
+}
+
+/** Stages deletion of one saved project through the required acknowledgement. */
+const deleteProject = async (page: Page, projectId: string): Promise<void> => {
+  await projectDialog(page).getByTestId(`project-settings-selector-${projectId}`).click()
+  await projectDialog(page).getByTestId('project-settings-delete-button').click()
+  /** Destructive confirmation shown above Project Settings. */
+  const confirmation = page.getByRole('dialog', { name: 'Delete Project' })
+  await confirmation.getByRole('checkbox').check()
+  await confirmation.getByTestId('project-settings-confirm-delete-button').click()
+  await expect(confirmation).toHaveCount(0)
+}
+
+/** Simulates Windows launching a second instance for a double-clicked workspace file. */
+const openWorkspaceFile = async (electronApp: ElectronApplication, workspaceInfoPath: string): Promise<void> => {
+  await electronApp.evaluate(({ app }, path) => {
+    app.emit('second-instance', {}, ['cthulhuprompt.exe', path], 'C:\\')
+  }, workspaceInfoPath)
+}
+
+/** Starts a real pointer drag on a Show All collection row. */
+const beginCollectionDrag = async (page: Page, selector: string): Promise<void> => {
+  /** Source row scrolled into view before measuring its geometry. */
+  const row = page.locator(selector)
+  await row.scrollIntoViewIfNeeded()
+  /** Pointer motion from the row center crosses the production drag threshold. */
+  const box = (await row.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2 + 8, box.y + box.height / 2 + 8, { steps: 4 })
+  await expect(page.locator('body')).toHaveCSS('cursor', 'grabbing')
+}
 
 /** Both content kinds and a stable task identity expose ownership and migration mistakes. */
 const workspaceFiles = (path: string) => ({
@@ -106,75 +152,96 @@ describe('Persisted projects', () => {
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', JSON.parse(info).id)).toEqual({ ids: ['tasks'] })
   })
 
-  test('creates blank projects, isolates collection names and favorites, and restores each selection', async ({ testSetup, electronApp }) => {
+  test('creates a project from the activity bar, isolates collection names and favorites, and restores each selection', async ({ testSetup, electronApp }) => {
     /** Existing content supplies a cross-project template and verifies new projects have no examples. */
     const path = '/ws/project-isolation'
-    await testSetup.setupFilesystem(workspaceFiles(path))
+    /** Fixture identities own the private preference rows. */
+    const workspaceId = createDeterministicId(path)
+    /** Default project identity whose preferences must stay unchanged. */
+    const originalId = createDeterministicId(`${path}:DefaultProject`)
+    /** A second workspace lets reopening pass through another workspace's Home screen. */
+    const otherPath = `${path}-other`
+    await testSetup.setupFilesystem({ ...workspaceFiles(path), ...workspaceFiles(otherPath) })
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
     /** Existing activity buttons remain the real switching UI. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptCollections('Templates')
-    /** Creation uses the same exported wrapper future management UI will invoke. */
-    const created = await mainWindow.evaluate(async () => {
-      /** Production command API is exposed only in the Playwright environment. */
-      const api = window.playwrightTestControls!.projects
-      /** Loaded workspace is the command's stable owner. */
-      const workspace = api.getWorkspace()!
-      /** Stable draft identity is allocated before the complete list is saved. */
-      const id = crypto.randomUUID().replaceAll('-', '')
-      await api.saveProjects(workspace.id, [{ id, name: 'Second Project', abbreviation: ' s2 ', shortDescription: 'Short', description: 'Full' }, ...workspace.projects])
-      return { id, workspaceId: workspace.id, originalId: workspace.projects[0].id }
-    })
-    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Templates')
-    await mainWindow.getByRole('button', { name: 'Second Project', exact: true }).click()
+    // The + button opens Project Settings with a focused draft appended after the existing project.
+    await mainWindow.getByTestId('new-project-button').click()
+    /** Project Settings dialog opened by the + button. */
+    const dialog = projectDialog(mainWindow)
+    await expect(dialog.getByTestId('dialog-subtitle')).toHaveText('project-isolation')
+    await expect(dialog.getByTestId('project-settings-name-input')).toBeFocused()
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Default Project\s*2 collections/, /New Project\s*2 collections/])
+    await dialog.getByTestId('project-settings-name-input').fill('Second Project')
+    await dialog.getByTestId('project-settings-abbreviation-input').pressSequentially('s2x')
+    await expect(dialog.getByTestId('project-settings-abbreviation-input')).toHaveValue('S2')
+    await dialog.getByTestId('project-settings-short-description-input').fill(' Short ')
+    await focusMonacoEditor(mainWindow, '[data-testid="project-settings-full-description-input"]')
+    await mainWindow.keyboard.insertText('Full')
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog).toHaveCount(0)
+    // Saving the + draft opens the new project at its first starter collection.
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second Project')
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'S2'])
     await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveCount(0)
+    /** Metadata written for the new project, including its generated identity. */
+    const info = JSON.parse(await readTextFile(electronApp, `${path}/SecondProject/ProjectInfo.json`))
+    expect(info).toEqual({ id: expect.stringMatching(/^[a-f0-9]{32}$/i), name: 'Second Project', abbreviation: 'S2', shortDescription: 'Short', description: 'Full' })
     // Both starter collections exist, are task-first, and contain no examples.
-    expect(await mainWindow.evaluate(() => window.playwrightTestControls!.projects.getWorkspace()!.projects[0].collectionEntries.map((entry) => {
-      /** Existing collection reader exposes the production empty layouts. */
-      const collection = window.playwrightTestControls!.notes.getCollection(entry.id)!
-      return { name: collection.displayName, kind: collection.kind, entries: collection.statusFolders.active.categoryOrder.categories[0].entries }
-    }))).toEqual([{ name: 'My Prompts', kind: 'prompt', entries: [] }, { name: 'My Templates', kind: 'template', entries: [] }])
-    expect(JSON.parse(await readTextFile(electronApp, `${path}/SecondProject/ProjectInfo.json`))).toEqual({ id: created.id, name: 'Second Project', abbreviation: 'S2', shortDescription: 'Short', description: 'Full' })
-    /** Same collection name as another project is valid and cannot alter its favorites. */
-    const secondCollectionId = await mainWindow.evaluate(async ({ id, workspaceId }) => {
-      /** Shared collection wrappers enforce project-local names and orders. */
-      const api = window.playwrightTestControls!.projects
-      /** A third collection makes reordering observable. */
-      const collectionId = await api.createCollection(workspaceId, id, 'Tasks')
-      await api.setCollectionFavorite(workspaceId, collectionId, true)
-      await api.moveCollection(workspaceId, collectionId, api.getWorkspace()!.projects[0].collectionEntries.at(-1)!.id)
-      return collectionId
-    }, created)
-    /** Reordering must persist independently of the original project's task-first order. */
-    const savedOrder = await readWorkspaceState(electronApp, created.workspaceId, 'collection-order', created.id)
-    expect(savedOrder).toMatchObject({ entries: [{ id: expect.any(String) }, { id: expect.any(String) }, { id: secondCollectionId }] })
-    expect(await readWorkspaceState(electronApp, created.workspaceId, 'collection-order', created.originalId)).toEqual({ entries: [{ kind: 'collection', id: 'tasks' }, { kind: 'collection', id: 'templates' }] })
-    await mainWindow.getByTestId('sidebar-prompt-collection-selector-trigger').click()
-    await mainWindow.getByTestId(`sidebar-prompt-collection-dropdown-item-${secondCollectionId}`).click()
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    /** All Collections rows in project order. */
+    const rows = mainWindow.locator('[data-dropdown-section="all"] [role="menuitem"]')
+    await expect(rows).toHaveText([/My Prompts\s*0 prompts/, /My Templates\s*0 templates/])
+    await expect(rows.nth(0).locator('svg.lucide-file-text')).toHaveCount(1)
+    await expect(rows.nth(1).locator('svg.lucide-layers')).toHaveCount(1)
+    // The same collection name as another project is valid here and gets its own favorite and position.
+    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-task-item').click()
+    await mainWindow.getByTestId('create-prompt-collection-name-input').fill('Tasks')
+    await mainWindow.getByTestId('create-prompt-collection-button').click()
+    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Tasks')
+    /** New collection identity read from its selected quick row. */
+    const tasksId = (await mainWindow.locator(selectedQuickCollectionSelector).getAttribute('data-testid'))!.replace('sidebar-quick-collection-', '')
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId(`sidebar-collection-favorite-all-${tasksId}`).click()
+    await expect(rows).toHaveText([/Tasks/, /My Prompts/, /My Templates/])
+    /** Starter template row currently holds the final position. */
+    const lastRowTestId = (await rows.nth(2).getAttribute('data-testid'))!
+    await beginCollectionDrag(mainWindow, promptCollectionSelectorDropdownItemSelector(tasksId))
+    await moveActiveDragToTarget(mainWindow, `[data-testid="${lastRowTestId}"]`)
+    await finishActiveDrag(mainWindow)
+    // Reordering persists independently of the original project's task-first order.
+    await expect.poll(async () => (await readWorkspaceState<{ entries: { id: string }[] }>(electronApp, workspaceId, 'collection-order', info.id))?.entries.map((entry) => entry.id).at(-1)).toBe(tasksId)
+    /** Complete reordered entries compared again after reopening. */
+    const savedOrder = await readWorkspaceState(electronApp, workspaceId, 'collection-order', info.id)
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', originalId)).toEqual({ entries: [{ kind: 'collection', id: 'tasks' }, { kind: 'collection', id: 'templates' }] })
+    await mainWindow.keyboard.press('Escape')
     await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
     await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Templates')
     await mainWindow.getByRole('button', { name: 'Second Project', exact: true }).click()
     await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Tasks')
-    expect(await readWorkspaceState(electronApp, created.workspaceId, 'collection-favorites', created.id)).toEqual({ ids: [secondCollectionId] })
-    expect(await readWorkspaceState(electronApp, created.workspaceId, 'collection-favorites', created.originalId)).toEqual({ ids: [] })
-    await testHelpers.navigateToHomeScreen()
-    await testHelpers.clearWorkspaceViaUI()
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
-    await testHelpers.setupWorkspaceViaUI()
-    await mainWindow.getByRole('button', { name: 'Second Project', exact: true }).click()
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', info.id)).toEqual({ ids: [tasksId] })
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', originalId)).toEqual({ ids: [] })
+    // Reopening restores the active project and its last collection, then each project's own collection.
+    await openWorkspaceFile(electronApp, getWorkspaceInfoPath(otherPath))
+    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await openWorkspaceFile(electronApp, getWorkspaceInfoPath(path))
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second Project')
     await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Tasks')
-    expect(await readWorkspaceState(electronApp, created.workspaceId, 'collection-order', created.id)).toEqual(savedOrder)
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', info.id)).toEqual(savedOrder)
     await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
     await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Templates')
   })
 
-  test('renames a project without rewriting its content and deletes the final project permanently', async ({ testSetup, electronApp }) => {
+  test('renames a project from the sidebar gear and deletes the final project after confirmation', async ({ testSetup, electronApp }) => {
     /** Content bytes and filenames must survive the parent-directory rename. */
     const path = '/ws/project-lifecycle'
+    /** Fixture identities own the private preference rows. */
+    const workspaceId = createDeterministicId(path)
+    /** Stable identity preserved by renaming and removed by deletion. */
+    const projectId = createDeterministicId(`${path}:DefaultProject`)
     await testSetup.setupFilesystem(workspaceFiles(path))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
     /** Real selected editors are mounted while the parent project changes. */
@@ -183,78 +250,100 @@ describe('Persisted projects', () => {
     await testHelpers.navigateToPromptCollections('Tasks')
     /** Original bytes include identity and timestamps in front matter. */
     const original = await readTextFile(electronApp, `${path}/DefaultProject/Prompts/Tasks/Active/Keep Me.prompt.md`)
-    /** Project editing preserves the stable ID used by navigation and private preferences. */
-    const ids = await mainWindow.evaluate(async () => {
-      /** Production command API supplies both metadata and the persisted update. */
-      const api = window.playwrightTestControls!.projects
-      /** Current workspace and first project are the rename targets. */
-      const workspace = api.getWorkspace()!
-      /** Metadata update also changes the activity label and abbreviation. */
-      const project = workspace.projects[0]
-      await api.saveProjects(workspace.id, [{ id: project.id, name: 'Renamed Project', abbreviation: 'rp', description: 'New description' }])
-      return { workspaceId: workspace.id, projectId: project.id }
-    })
+    // The gear immediately follows the title and opens settings to the shown project.
+    await expect(mainWindow.locator('[data-testid="sidebar-title"] + [data-testid="sidebar-project-settings-button"]')).toBeVisible()
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    /** Project Settings dialog opened by the sidebar gear. */
+    const dialog = projectDialog(mainWindow)
+    await expect(dialog.getByTestId(`project-settings-selector-${projectId}`)).toHaveAttribute('aria-pressed', 'true')
+    await fillProject(mainWindow, 'Renamed Project', 'rp')
+    await expect(dialog.getByTestId('project-settings-abbreviation-input')).toHaveValue('RP')
+    await focusMonacoEditor(mainWindow, '[data-testid="project-settings-full-description-input"]')
+    await mainWindow.keyboard.insertText('New description')
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Renamed Project')
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText('RP')
+    expect(JSON.parse(await readTextFile(electronApp, `${path}/RenamedProject/ProjectInfo.json`))).toEqual({ id: projectId, name: 'Renamed Project', abbreviation: 'RP', description: 'New description' })
     expect(await readTextFile(electronApp, `${path}/RenamedProject/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(original)
     expect(await checkFileExists(electronApp, `${path}/DefaultProject`)).toBe(false)
     // A subsequent editor command must use the relocated persistence path.
     await mainWindow.evaluate(() => window.playwrightTestControls!.notes.renameOwner('prompt', 'task', 'After Rename'))
     expect(await checkFileExists(electronApp, `${path}/RenamedProject/Prompts/Tasks/Active/After Rename.prompt.md`)).toBe(true)
-    await mainWindow.evaluate(({ workspaceId }) => window.playwrightTestControls!.projects.saveProjects(workspaceId, []), ids)
+    // Deleting a saved project requires the acknowledgement and waits for Save.
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await dialog.getByTestId('project-settings-delete-button').click()
+    /** Destructive confirmation shown above Project Settings. */
+    const confirmation = mainWindow.getByRole('dialog', { name: 'Delete Project' })
+    await expect(confirmation.getByTestId('project-settings-confirm-delete-button')).toBeDisabled()
+    await confirmation.getByRole('checkbox').check()
+    await confirmation.getByTestId('project-settings-confirm-delete-button').click()
+    await expect(confirmation).toHaveCount(0)
+    await expect(dialog.locator(projectSelectorItems)).toHaveCount(0)
+    expect(await checkFileExists(electronApp, `${path}/RenamedProject`)).toBe(true)
+    await dialog.getByTestId('project-settings-save-button').click()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveCount(0)
     expect(await checkFileExists(electronApp, `${path}/RenamedProject`)).toBe(false)
     expect(await checkFileExists(electronApp, getWorkspaceInfoPath(path))).toBe(true)
-    expect(await readWorkspaceState(electronApp, ids.workspaceId, 'collection-order', ids.projectId)).toBeNull()
-    expect(await readWorkspaceState(electronApp, ids.workspaceId, 'collection-favorites', ids.projectId)).toBeNull()
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', projectId)).toBeNull()
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', projectId)).toBeNull()
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
     await testHelpers.setupWorkspaceViaUI()
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveCount(0)
     expect(await checkFileExists(electronApp, `${path}/DefaultProject`)).toBe(false)
-    expect(await mainWindow.evaluate(() => window.playwrightTestControls!.projects.getWorkspace()!.projects)).toEqual([])
   })
 
-  test('rejects invalid and duplicate metadata and rolls back project creation on a failed SQLite write', async ({ testSetup, electronApp }) => {
+  test('validates project fields in the dialog and retries a draft after a failed SQLite write', async ({ testSetup, electronApp }) => {
     /** The original project remains selectable after each rejected operation. */
     const path = '/ws/project-validation'
     /** Minimal fixture starts with a persisted but empty default project. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal', path } })
-    for (const info of [
-      { name: 'default project', abbreviation: 'XY' }, { name: 'Another', abbreviation: 'de' },
-      { name: 'Another', abbreviation: 'A' }, { name: 'Another', abbreviation: 'ABC' },
-      { name: 'Another', abbreviation: 'A!' }, { name: 'Bad/Name', abbreviation: 'XY' }
-    ]) {
-      /** Rejections must not leave optimistic projects or newly allocated folders. */
-      const error = await mainWindow.evaluate(async (info) => {
-        /** Invalid new metadata participates in the same complete retained list. */
-        const api = window.playwrightTestControls!.projects
-        try { await api.saveProjects(api.getWorkspace()!.id, [...api.getWorkspace()!.projects, { ...info, id: 'invalid-project' }]); return null }
-        catch (error) { return String(error) }
-      }, info)
-      expect(error).not.toBeNull()
-      await expect(mainWindow.getByTestId('nav-button-project')).toHaveCount(1)
+    await mainWindow.getByTestId('new-project-button').click()
+    /** Project Settings dialog holding one new draft. */
+    const dialog = projectDialog(mainWindow)
+    /** Required name field validated against collection naming rules and sibling projects. */
+    const name = dialog.getByTestId('project-settings-name-input')
+    /** Required abbreviation field uppercased while typing. */
+    const abbreviation = dialog.getByTestId('project-settings-abbreviation-input')
+    /** Batched save disabled while any draft is invalid. */
+    const save = dialog.getByTestId('project-settings-save-button')
+    await expect(save).toBeDisabled()
+    for (const [field, value, error] of [
+      ['name', 'default project', 'A project with this name already exists'],
+      ['name', 'Bad/Name', 'Project name contains illegal characters: < > : " / \\ | ? *'],
+      ['name', '   ', 'Project name cannot be empty'],
+      ['abbreviation', 'de', 'A project with this abbreviation already exists'],
+      ['abbreviation', 'A', 'Project abbreviation must contain exactly two letters or digits'],
+      ['abbreviation', 'XY', null],
+      ['abbreviation', 'A!', 'Project abbreviation must contain exactly two letters or digits']
+    ] as const) {
+      await (field === 'name' ? name : abbreviation).fill(value)
+      if (error) await expect(dialog.getByTestId(`project-settings-${field}-error`)).toHaveText(error)
+      else await expect(dialog.getByTestId(`project-settings-${field}-error`)).toHaveCount(0)
+      await expect(save).toBeDisabled()
     }
+    await abbreviation.fill('')
+    await abbreviation.pressSequentially('rtx')
+    await expect(abbreviation).toHaveValue('RT')
+    await expect(dialog.getByTestId('project-settings-abbreviation-error')).toHaveCount(0)
+    await name.fill('Retry Project')
+    await expect(dialog.getByTestId('project-settings-name-error')).toHaveCount(0)
     await runSqlStatement(electronApp, `CREATE TRIGGER reject_project_create BEFORE INSERT ON workspace_state WHEN NEW.state_type = 'project-order' BEGIN SELECT RAISE(ABORT, 'Project create failure'); END`)
-    /** Main failure exercises the production optimistic rollback and staged filesystem cleanup. */
-    const error = await mainWindow.evaluate(async () => {
-      /** Failed creation retains the original project in the submitted set. */
-      const api = window.playwrightTestControls!.projects
-      try { await api.saveProjects(api.getWorkspace()!.id, [...api.getWorkspace()!.projects, { id: 'retry-project', name: 'Retry Project', abbreviation: 'RT' }]); return null }
-      catch (error) { return String(error) }
-    })
-    expect(error).toContain('Project create failure')
+    // Main failure exercises the production optimistic rollback and staged filesystem cleanup.
+    await save.click()
+    await expect(dialog.getByTestId('management-dialog-error')).toHaveText('Failed to save project changes. Please try again.')
+    await expect.poll(() => testSetup.getRendererErrors().some((error) => error.message.includes('Project create failure'))).toBe(true)
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveCount(1)
     expect(await checkFileExists(electronApp, `${path}/RetryProject`)).toBe(false)
     await runSqlStatement(electronApp, 'DROP TRIGGER reject_project_create')
     testSetup.removeRendererErrorsContaining('Project create failure')
-    await mainWindow.evaluate(() => {
-      /** Retrying the same stable draft must create its starter collections successfully. */
-      const api = window.playwrightTestControls!.projects
-      return api.saveProjects(api.getWorkspace()!.id, [...api.getWorkspace()!.projects, { id: 'retry-project', name: 'Retry Project', abbreviation: 'RT' }])
-    })
+    // The dialog keeps the stable draft, so saving again creates its starter collections.
+    await save.click()
+    await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'RT'])
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Retry Project')
   })
 
   test('keeps templates workspace-wide and repairs, reorders, and deletes projects independently', async ({ testSetup, electronApp }) => {
@@ -288,36 +377,33 @@ describe('Persisted projects', () => {
     await mainWindow.getByTestId('prompt-tree-template-prompt-wrapper').click()
     await mainWindow.getByTestId('prompt-template-confirm-button').click()
     await expect.poll(() => readTextFile(electronApp, `${path}/DefaultProject/Prompts/Tasks/Active/Keep Me.prompt.md`)).toContain('wrapper')
-    /** Newly created projects prepend without disturbing existing or discovered positions. */
-    const createdId = await mainWindow.evaluate(async () => {
-      /** Production API writes both metadata and private order. */
-      const api = window.playwrightTestControls!.projects
-      /** Complete-list order places this new draft first. */
-      const id = crypto.randomUUID().replaceAll('-', '')
-      await api.saveProjects(api.getWorkspace()!.id, [{ id, name: 'New Project', abbreviation: 'NP' }, ...api.getWorkspace()!.projects])
-      return id
-    })
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['NP', 'DE', 'AL', 'ZE'])
+    // New projects append without disturbing existing or discovered positions.
+    await mainWindow.getByTestId('new-project-button').click()
+    await fillProject(mainWindow, 'Fresh Project', 'FP')
+    await projectDialog(mainWindow).getByTestId('project-settings-save-button').click()
+    await expect(projectDialog(mainWindow)).toHaveCount(0)
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'AL', 'ZE', 'FP'])
+    /** Generated identity of the project created through the dialog. */
+    const createdId = JSON.parse(await readTextFile(electronApp, `${path}/FreshProject/ProjectInfo.json`)).id
     await mainWindow.evaluate(async (id) => {
-      /** Complete-list order moves Zeta first without changing collection preferences. */
+      /** Project Settings cannot reorder, so the production command moves Zeta first. */
       const api = window.playwrightTestControls!.projects
       await api.saveProjects(api.getWorkspace()!.id, [api.getWorkspace()!.projects.find((project) => project.id === id)!, ...api.getWorkspace()!.projects.filter((project) => project.id !== id)])
     }, zetaId)
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['ZE', 'NP', 'DE', 'AL'])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['ZE', 'DE', 'AL', 'FP'])
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
     await testHelpers.setupWorkspaceViaUI()
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['ZE', 'NP', 'DE', 'AL'])
-    expect(await readWorkspaceState(electronApp, createDeterministicId(path), 'project-order', null)).toEqual({ ids: [zetaId, createdId, defaultId, alphaId] })
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['ZE', 'DE', 'AL', 'FP'])
+    expect(await readWorkspaceState(electronApp, createDeterministicId(path), 'project-order', null)).toEqual({ ids: [zetaId, defaultId, alphaId, createdId] })
+    // Removing the selected project returns Home and removes only its own content.
     await mainWindow.getByRole('button', { name: 'Zeta', exact: true }).click()
-    await mainWindow.evaluate(async (id) => {
-      /** Removing the selected project returns Home and removes only its own content. */
-      const api = window.playwrightTestControls!.projects
-      await api.saveProjects(api.getWorkspace()!.id, api.getWorkspace()!.projects.filter((project) => project.id !== id))
-    }, zetaId)
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await deleteProject(mainWindow, zetaId)
+    await projectDialog(mainWindow).getByTestId('project-settings-save-button').click()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['NP', 'DE', 'AL'])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'AL', 'FP'])
     expect(await checkFileExists(electronApp, `${path}/Zeta`)).toBe(false)
     expect(await checkFileExists(electronApp, `${path}/DefaultProject/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(true)
     await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
@@ -327,6 +413,10 @@ describe('Persisted projects', () => {
   test('saves mixed project changes, swaps names, and reuses deleted directories without changing selection', async ({ testSetup, electronApp }) => {
     /** Identical relative content paths in different projects expose accidental cross-project deletion. */
     const path = '/ws/project-batch'
+    /** Fixture identities own the private preference rows. */
+    const workspaceId = createDeterministicId(path)
+    /** Selected project whose content moves into the Second directory. */
+    const defaultId = createDeterministicId(`${path}:DefaultProject`)
     await testSetup.setupFilesystem(batchWorkspaceFiles(path))
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
     /** Real selected content stays mounted while its project directory changes. */
@@ -337,52 +427,63 @@ describe('Persisted projects', () => {
     const original = await readTextFile(electronApp, `${path}/DefaultProject/Prompts/Tasks/Active/Keep Me.prompt.md`)
     /** Second project owns a different prompt at the same relative filename. */
     const second = await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)
-    /** One request mixes two swaps, one deletion, two creations, and a new order. */
-    const workspaceId = await mainWindow.evaluate(async () => {
-      /** Production wrapper submits public drafts and allocates starter identities. */
-      const api = window.playwrightTestControls!.projects
-      /** Stable workspace and original project metadata supply the retained set. */
-      const workspace = api.getWorkspace()!
-      await api.setCollectionFavorite(workspace.id, 'tasks', true)
-      await api.saveProjects(workspace.id, [
-        { id: 'replacement', name: 'Removed', abbreviation: 'RM' },
-        { ...workspace.projects.find((project) => project.id === 'second')!, name: 'Default Project', abbreviation: 'DE' },
-        { ...workspace.projects.find((project) => project.name === 'Default Project')!, name: 'Second', abbreviation: 'S2' },
-        { id: 'extra', name: 'Extra', abbreviation: 'EX' }
-      ])
-      return workspace.id
-    })
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('sidebar-collection-favorite-all-tasks').click()
+    await mainWindow.keyboard.press('Escape')
+    // One save mixes two swaps, one confirmed deletion, two creations, and a discarded draft.
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    /** Project Settings dialog opened to the selected project. */
+    const dialog = projectDialog(mainWindow)
+    await expect(dialog.getByTestId(`project-settings-selector-${defaultId}`)).toHaveAttribute('aria-pressed', 'true')
+    await fillProject(mainWindow, 'Second', 'S2')
+    await expect(dialog.getByTestId('project-settings-name-error')).toHaveText('A project with this name already exists')
+    await expect(dialog.getByTestId('project-settings-save-button')).toBeDisabled()
+    await dialog.getByTestId('project-settings-selector-second').click()
+    await fillProject(mainWindow, 'Default Project', 'DE')
+    await deleteProject(mainWindow, 'removed')
+    for (const [name, abbreviation] of [['Removed', 'RM'], ['Extra', 'EX']]) {
+      await dialog.getByTestId('project-settings-new-button').click()
+      await fillProject(mainWindow, name, abbreviation)
+    }
+    // New drafts are discarded without a confirmation.
+    await dialog.getByTestId('project-settings-new-button').click()
+    await dialog.getByTestId('project-settings-delete-button').click()
+    await expect(mainWindow.getByRole('dialog', { name: 'Delete Project' })).toHaveCount(0)
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second\s*2 collections/, /Default Project\s*1 collection(?!s)/, /Removed\s*2 collections/, /Extra\s*2 collections/])
+    /** Stable identity allocated for the draft that reuses the deleted directory. */
+    const replacementId = (await dialog.locator(projectSelectorItems).nth(2).getAttribute('data-testid'))!.replace('project-settings-selector-', '')
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Keep Me')
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['RM', 'DE', 'S2', 'EX'])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM', 'EX'])
     expect(await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(original)
     expect(await readTextFile(electronApp, `${path}/DefaultProject/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(second)
-    expect(JSON.parse(await readTextFile(electronApp, `${path}/Removed/ProjectInfo.json`)).id).toBe('replacement')
+    expect(JSON.parse(await readTextFile(electronApp, `${path}/Removed/ProjectInfo.json`)).id).toBe(replacementId)
     expect(await checkFileExists(electronApp, `${path}/Removed/Prompts/Tasks`)).toBe(false)
     expect(await checkFileExists(electronApp, `${path}/Removed/Prompts/MyPrompts/_CollectionInfo.json`)).toBe(true)
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', 'removed')).toBeNull()
-    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', createDeterministicId(`${path}:DefaultProject`))).toEqual({ ids: ['tasks'] })
+    expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', defaultId)).toEqual({ ids: ['tasks'] })
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
     await testHelpers.setupWorkspaceViaUI()
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['RM', 'DE', 'S2', 'EX'])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM', 'EX'])
     await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
     // Delete the other populated project and rename the selected project into its old directory.
-    await mainWindow.evaluate(async () => {
-      /** The selected project's content must survive deletion of the previous path owner. */
-      const api = window.playwrightTestControls!.projects
-      await api.saveProjects(api.getWorkspace()!.id, api.getWorkspace()!.projects
-        .filter((project) => project.name !== 'Second')
-        .map((project) => project.id === 'second' ? { ...project, name: 'Second', abbreviation: 'S2' } : project))
-    })
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await deleteProject(mainWindow, defaultId)
+    await dialog.getByTestId('project-settings-selector-second').click()
+    await fillProject(mainWindow, 'Second', 'S2')
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second')
     expect(await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(second)
     await mainWindow.evaluate(() => window.playwrightTestControls!.notes.renameOwner('prompt', 'second-task', 'After Batch'))
     expect(await checkFileExists(electronApp, `${path}/Second/Prompts/Tasks/Active/After Batch.prompt.md`)).toBe(true)
   })
 
-  test('rejects malformed batch IPC payloads and duplicate retained identities without changing projects', async ({ testSetup }) => {
+  test('rejects malformed batch IPC payloads, invalid metadata, and duplicate retained identities without changing projects', async ({ testSetup }) => {
     /** Direct IPC verifies main validation independently of the renderer wrapper. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
     /** Original workspace supplies real owned identities for otherwise malformed commands. */
@@ -402,18 +503,27 @@ describe('Persisted projects', () => {
       }), command)
       expect(result).toMatchObject({ success: false, error: 'Invalid request payload' })
     }
-    /** Duplicate retained IDs must fail before any optimistic project change. */
-    const error = await mainWindow.evaluate(async (project) => {
+    // Invalid metadata and duplicate retained IDs must fail in the planner before any optimistic project change.
+    for (const [projects, expected] of [
+      [[project, { id: 'invalid-project', name: 'default project', abbreviation: 'XY' }], 'A project with this name already exists'],
+      [[project, { id: 'invalid-project', name: 'Another', abbreviation: 'de' }], 'A project with this abbreviation already exists'],
+      [[project, { id: 'invalid-project', name: 'Another', abbreviation: 'ABC' }], 'Project abbreviation must contain exactly two letters or digits'],
+      [[project, { id: 'invalid-project', name: 'Bad/Name', abbreviation: 'XY' }], 'Project name contains illegal characters'],
+      [[project, project], 'Duplicate project identity']
+    ] as const) {
       /** Wrapper validation uses the same deterministic planner as main. */
-      const api = window.playwrightTestControls!.projects
-      try { await api.saveProjects(api.getWorkspace()!.id, [project, project]); return null }
-      catch (error) { return String(error) }
-    }, project)
-    expect(error).toContain('Duplicate project identity')
+      const error = await mainWindow.evaluate(async (projects) => {
+        /** Production command API reached only by Playwright for data the dialog cannot submit. */
+        const api = window.playwrightTestControls!.projects
+        try { await api.saveProjects(api.getWorkspace()!.id, [...projects]); return null }
+        catch (error) { return String(error) }
+      }, projects)
+      expect(error).toContain(expected)
+    }
     expect(await mainWindow.evaluate(() => window.playwrightTestControls!.projects.getWorkspace()!)).toEqual(before)
   })
 
-  test('restores every project after a mixed batch fails during final directory publication and can retry', async ({ testSetup, electronApp }) => {
+  test('restores every project after a mixed dialog save fails during final directory publication and can retry', async ({ testSetup, electronApp }) => {
     /** Late failure occurs after existing projects have been renamed and another deleted. */
     const path = '/ws/project-batch-rollback'
     await testSetup.setupFilesystem(batchWorkspaceFiles(path))
@@ -435,21 +545,22 @@ describe('Persisted projects', () => {
       readTextFile(electronApp, `${path}/${folder}/ProjectInfo.json`)))
     /** Deleted project preferences must survive the failed transaction. */
     const removedOrder = await readWorkspaceState(electronApp, before.id, 'collection-order', 'removed')
-    /** Same draft set is retried after the one-shot filesystem failure. */
-    const projects = [
-      { id: 'replacement', name: 'Removed', abbreviation: 'RM' },
-      { ...before.projects.find((project) => project.id === 'second')!, name: 'Default Project', abbreviation: 'DE' },
-      { ...before.projects.find((project) => project.name === 'Default Project')!, name: 'Second', abbreviation: 'S2' }
-    ]
+    // Two swaps, one confirmed deletion, and a replacement for the deleted directory are staged together.
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    /** Project Settings dialog that keeps its drafts across the failed save. */
+    const dialog = projectDialog(mainWindow)
+    await fillProject(mainWindow, 'Second', 'S2')
+    await dialog.getByTestId('project-settings-selector-second').click()
+    await fillProject(mainWindow, 'Default Project', 'DE')
+    await deleteProject(mainWindow, 'removed')
+    await dialog.getByTestId('project-settings-new-button').click()
+    await fillProject(mainWindow, 'Removed', 'RM')
+    /** Stable identity allocated for the replacement draft. */
+    const replacementId = (await dialog.locator(projectSelectorItems).last().getAttribute('data-testid'))!.replace('project-settings-selector-', '')
     await electronApp.evaluate(({ app }, target) => app.emit('test-fail-file-commit', target), `${path}/Removed`)
-    /** Error is caught at the caller while the production transaction performs rollback. */
-    const error = await mainWindow.evaluate(async (projects) => {
-      /** Real renderer API includes optimistic domain changes and client-state inserts. */
-      const api = window.playwrightTestControls!.projects
-      try { await api.saveProjects(api.getWorkspace()!.id, projects); return null }
-      catch (error) { return String(error) }
-    }, projects)
-    expect(error).toContain('Injected file commit failure')
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog.getByTestId('management-dialog-error')).toHaveText('Failed to save project changes. Please try again.')
+    await expect.poll(() => testSetup.getRendererErrors().some((error) => error.message.includes('Injected file commit failure'))).toBe(true)
     testSetup.removeRendererErrorsContaining('Injected file commit failure')
     expect(await mainWindow.evaluate(() => window.playwrightTestControls!.projects.getWorkspace()!)).toEqual(before)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
@@ -461,11 +572,12 @@ describe('Persisted projects', () => {
       readTextFile(electronApp, `${path}/${folder}/ProjectInfo.json`)))).toEqual(metadata)
     expect(await readWorkspaceState(electronApp, before.id, 'collection-order', 'removed')).toEqual(removedOrder)
     expect(await readWorkspaceState(electronApp, before.id, 'project-order', null)).toEqual({ ids: before.projects.map((project) => project.id) })
-    expect(await readWorkspaceState(electronApp, before.id, 'collection-order', 'replacement')).toBeNull()
-    await mainWindow.evaluate((projects) => window.playwrightTestControls!.projects.saveProjects(window.playwrightTestControls!.projects.getWorkspace()!.id, projects), projects)
+    expect(await readWorkspaceState(electronApp, before.id, 'collection-order', replacementId)).toBeNull()
+    // The dialog keeps every draft, so saving again retries the same batch.
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second')
     expect(await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(original)
-    expect(JSON.parse(await readTextFile(electronApp, `${path}/Removed/ProjectInfo.json`)).id).toBe('replacement')
+    expect(JSON.parse(await readTextFile(electronApp, `${path}/Removed/ProjectInfo.json`)).id).toBe(replacementId)
   })
-
 })

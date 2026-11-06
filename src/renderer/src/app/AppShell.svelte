@@ -1,5 +1,6 @@
 <script lang="ts">
   import { projectNavigation } from '@renderer/features/projects/projectNavigation.svelte.ts'
+  import ProjectSettingsDialog from '@renderer/features/projects/ProjectSettingsDialog.svelte'
   import { findCollectionProject, getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
   import { tick, untrack } from 'svelte'
   import { clearWorkspaceMonacoModels } from '@renderer/common/Monaco'
@@ -203,6 +204,8 @@
   const workspacePromptCollectionCount = $derived(selectedWorkspacePromptCollections.length)
   /** Mounted prompt-collection screen used for sidebar actions owned by that screen. */
   let promptCollectionScreen = $state<PromptCollectionScreenHandle | null>(null)
+  /** Shell-owned project settings opened by the sidebar gear and the activity bar's + button. */
+  let projectSettingsDialog = $state<ProjectSettingsDialog | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
@@ -734,7 +737,8 @@
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
+    <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
+      onCreateProject={() => projectSettingsDialog?.openDialog({ createProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
       updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return
@@ -762,6 +766,7 @@
             {isWorkspaceLoading}
             onScreenCollectionSelect={navigateToScreenCollection}
             onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
+            onOpenProjectSettings={() => projectSettingsDialog?.openDialog({ projectId: projectMode.projectId! })}
           />
         {/if}
       {/snippet}
@@ -811,6 +816,8 @@
     </ResizableSidebar>
   </div>
 </div>
+
+<ProjectSettingsDialog bind:this={projectSettingsDialog} workspace={selectedWorkspace} />
 
 <AppOverlays
   {startupRestoreOverlay}

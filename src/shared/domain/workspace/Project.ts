@@ -39,22 +39,34 @@ export const getWorkspaceCollectionEntries = (workspace: Workspace): CollectionE
 export const findCollectionProject = (workspace: Workspace, collectionId: string): Project | undefined =>
   workspace.projects.find((project) => project.collectionEntries.some((entry) => entry.id === collectionId))
 
-/** Validates names against the existing collection directory rules and normalizes abbreviations. */
-export const prepareProjectInfo = (info: ProjectInfo, siblings: readonly ProjectInfo[]): ProjectInfo => {
+/** User-facing validation messages for the two required project fields. */
+export type ProjectInfoErrors = { name: string | null; abbreviation: string | null }
+
+/** Validates names against the existing collection directory rules and abbreviations against sibling projects. */
+export const getProjectInfoErrors = (info: ProjectInfo, siblings: readonly ProjectInfo[]): ProjectInfoErrors => {
   /** Shared naming policy strips whitespace from the directory name and ignores casing for conflicts. */
   const prepared = preparePromptCollectionName(info.name)
-  if (!prepared.validation.isValid) throw new Error(prepared.validation.errorMessage!.replaceAll('Collection', 'Project').replaceAll('collection', 'project'))
   /** Canonical abbreviation used for both storage and uniqueness checks. */
   const abbreviation = info.abbreviation.trim().toUpperCase()
-  if (!/^[A-Z0-9]{2}$/.test(abbreviation)) throw new Error('Project abbreviation must contain exactly two letters or digits')
-  if (siblings.some((project) => project.id !== info.id &&
-    preparePromptCollectionName(project.name).folderName.toLowerCase() === prepared.folderName.toLowerCase())) {
-    throw new Error('A project with this name already exists')
+  return {
+    name: !prepared.validation.isValid
+      ? prepared.validation.errorMessage!.replaceAll('Collection', 'Project').replaceAll('collection', 'project')
+      : siblings.some((project) => project.id !== info.id &&
+        preparePromptCollectionName(project.name).folderName.toLowerCase() === prepared.folderName.toLowerCase())
+        ? 'A project with this name already exists' : null,
+    abbreviation: !/^[A-Z0-9]{2}$/.test(abbreviation)
+      ? 'Project abbreviation must contain exactly two letters or digits'
+      : siblings.some((project) => project.id !== info.id && project.abbreviation.trim().toUpperCase() === abbreviation)
+        ? 'A project with this abbreviation already exists' : null
   }
-  if (siblings.some((project) => project.id !== info.id && project.abbreviation.toUpperCase() === abbreviation)) {
-    throw new Error('A project with this abbreviation already exists')
-  }
-  return { ...info, name: prepared.displayName, abbreviation }
+}
+
+/** Rejects invalid or conflicting metadata and normalizes the name and abbreviation. */
+export const prepareProjectInfo = (info: ProjectInfo, siblings: readonly ProjectInfo[]): ProjectInfo => {
+  /** First failing rule, reported with the same message the management dialog shows. */
+  const errors = getProjectInfoErrors(info, siblings)
+  if (errors.name ?? errors.abbreviation) throw new Error(errors.name ?? errors.abbreviation!)
+  return { ...info, name: preparePromptCollectionName(info.name).displayName, abbreviation: info.abbreviation.trim().toUpperCase() }
 }
 
 /** Extracts shared metadata without leaking private collection ordering into workspace files. */
