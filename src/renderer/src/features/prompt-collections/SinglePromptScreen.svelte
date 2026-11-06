@@ -284,6 +284,7 @@
             size="compact"
             baseVariant="muted"
             hoverVariant="glyph"
+            textBaseline
             testId="single-prompt-return-button"
             onclick={sidebarModeData.closeOpenPrompt}
           />

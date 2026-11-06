@@ -21,15 +21,16 @@
     /** Find button label and tooltip, including its shortcut. */
     findLabel: string
     onFind: () => void
-    /** Optional controls shown directly after the path. */
+    /** Optional controls shown directly after the path, inheriting its font. */
     pathActions?: Snippet
   } = $props()
 </script>
 
 <div class="prompt-collection-header-bar flex h-9 shrink-0 items-center justify-between gap-3 px-6">
   {#if isReady}
-    <div class="flex min-w-0 items-center gap-1">
-      <div class="prompt-collection-header-breadcrumb flex min-w-0 items-center text-sm font-semibold">
+    <!-- Path actions share the path's font, so an icon laid out on its own centered text line gets the path's baseline. -->
+    <div class="flex min-w-0 items-center gap-1 text-sm font-semibold">
+      <div class="prompt-collection-header-breadcrumb flex min-w-0 items-center">
         {#each segments as segment, index (segment.testId)}
           {#if index > 0}
             <span class="prompt-collection-header-separator mx-1 px-2">/</span>

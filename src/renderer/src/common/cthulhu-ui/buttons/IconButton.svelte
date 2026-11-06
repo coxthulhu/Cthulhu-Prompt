@@ -29,6 +29,8 @@
     disabled?: boolean
     active?: boolean
     borderless?: boolean
+    /** Lays the icon on a centered line of the inherited font, half a cap height above its baseline, so it lines up with adjacent centered text in that font at every display scale. */
+    textBaseline?: boolean
     ariaHaspopup?: 'false' | 'true' | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
     ariaExpanded?: boolean
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
@@ -58,6 +60,7 @@
     disabled = false,
     active,
     borderless = false,
+    textBaseline = false,
     ariaHaspopup,
     ariaExpanded,
     ariaCurrent,
@@ -91,6 +94,8 @@
   data-hover-variant={hoverVariant}
   data-active={active === undefined ? undefined : active ? 'true' : 'false'}
   data-borderless={borderless ? 'true' : 'false'}
+  data-text-baseline={textBaseline ? 'true' : undefined}
+  style:--cthulhu-ui-icon-half-size={textBaseline ? `${iconSize / 2}px` : undefined}
   data-testid={testId}
   data-grab-cursor={grabCursor ? 'true' : undefined}
   {title}
@@ -142,6 +147,19 @@
 
   .cthulhuUiIconButton[data-size='sidebar-rail']:last-child {
     border-bottom: 0;
+  }
+
+  .cthulhuUiIconButton[data-text-baseline='true'] {
+    /* A text line replaces flex centering so the icon can be placed from the line's baseline;
+       the native button still centers that line vertically. */
+    display: inline-block;
+    text-align: center;
+  }
+
+  .cthulhuUiIconButton[data-text-baseline='true'] :global(.cthulhuUiButtonIcon) {
+    /* Puts the icon's center half a cap height above the baseline, where adjacent capitals are centered. */
+    display: inline-block;
+    vertical-align: calc(0.5cap - var(--cthulhu-ui-icon-half-size));
   }
 
   .cthulhuUiIconButton[data-grab-cursor='true']:not(:disabled) {
