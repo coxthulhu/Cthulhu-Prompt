@@ -13,8 +13,10 @@
 </script>
 
 <header class="sidebarHeader">
-  <div class="sidebarHeaderTitleGroup">
-    <h2 class="sidebarHeaderTitle min-w-0 truncate text-sm leading-5" data-testid="sidebar-title">
+  <!-- The accessory shares the title's font, so a text-baseline icon gets the title's baseline. The 18px line
+       fits a tiny icon button, so the title and the button's own text line start on the same pixel at every display scale. -->
+  <div class="sidebarHeaderTitleGroup text-sm leading-4.5">
+    <h2 class="sidebarHeaderTitle min-w-0 truncate" data-testid="sidebar-title">
       {title}
     </h2>
     {@render titleAccessory?.()}
@@ -36,12 +38,12 @@
     display: flex;
     flex: 1;
     align-items: center;
+    font-weight: var(--font-weight-semibold);
     gap: 4px;
     min-width: 0;
   }
 
   .sidebarHeaderTitle {
-    font-weight: var(--font-weight-semibold);
     color: var(--ui-secondary-text);
   }
 </style>

@@ -839,6 +839,7 @@
             size="tiny"
             baseVariant="muted"
             hoverVariant="glyph"
+            textBaseline
             testId="sidebar-project-settings-button"
             onclick={onOpenProjectSettings}
           />
