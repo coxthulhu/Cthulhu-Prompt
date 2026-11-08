@@ -1117,7 +1117,7 @@
     min-height: 40px;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 4px 8px;
   }
 
   .cthulhuSidebarPromptSectionActions {
