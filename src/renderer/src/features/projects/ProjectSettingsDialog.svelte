@@ -37,7 +37,7 @@
   let isDialogOpen = $state(false)
   /** Normalized project list captured when the dialog opened for change detection. */
   let originalProjectsJson = $state('')
-  /** Retained editable project drafts in project order followed by new drafts. */
+  /** Retained editable project drafts in the order they will be saved. */
   let drafts = $state<ProjectDraft[]>([])
   /** Currently selected project draft. */
   let selectedId = $state<string | null>(null)
@@ -148,6 +148,12 @@
     submissionError = null
   }
 
+  /** Stages a new project order without changing the selected draft. */
+  const reorderDrafts = (projectIds: string[]): void => {
+    drafts = projectIds.map((id) => drafts.find((draft) => draft.id === id)!)
+    submissionError = null
+  }
+
   /** Stages a draft's removal and selects the next project, then the previous one. */
   const removeDraft = (projectId: string): void => {
     /** Removed draft index used to choose the nearest retained selection. */
@@ -206,11 +212,13 @@
   addTestId="project-settings-new-button"
   submitTestId="project-settings-save-button"
   cancelTestId="project-settings-close-button"
+  dragHandleTestIdPrefix="project-settings-drag-handle"
   {isSubmitting}
   {canSubmit}
   {submissionError}
   onselect={selectDraft}
   onadd={addDraft}
+  onreorder={reorderDrafts}
   oncancel={handleCancel}
   onsubmit={handleSubmit}
 >

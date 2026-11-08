@@ -51,6 +51,7 @@
     createWorkspace as createWorkspaceMutation
   } from '@renderer/data/Mutations/WorkspaceMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { saveProjects } from '@renderer/data/Mutations/ProjectMutations'
   import {
     setWorkspaceSelectionContext,
     type WorkspaceSelectionContext
@@ -661,6 +662,16 @@
     setAppSidebarExpandedWithAutosave(true)
   }
 
+  /** Saves a project order dragged in the activity bar without changing navigation. */
+  const reorderProjects = async (projectIds: string[]): Promise<void> => {
+    /** Workspace whose complete project list is saved in the new order. */
+    const workspace = selectedWorkspace!
+    await runIpcBestEffort(() => saveProjects(
+      workspace.id,
+      projectIds.map((id) => workspace.projects.find((project) => project.id === id)!)
+    ))
+  }
+
   // Consume successful project lifecycle requests in the shell that owns navigation.
   $effect(() => {
     /** Only requests belonging to the currently open workspace can change its screen. */
@@ -738,6 +749,7 @@
 
   <div class="sidebarSurface flex min-h-0 flex-1">
     <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
+      onProjectsReorder={reorderProjects}
       onCreateProject={() => projectSettingsDialog?.openDialog({ createProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
       updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {

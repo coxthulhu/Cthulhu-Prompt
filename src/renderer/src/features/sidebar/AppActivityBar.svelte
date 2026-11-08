@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
+  import { flip } from 'svelte/animate'
   import { screens, type ScreenId } from '@renderer/app/screens'
+  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
+  import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
+  import { createListReorder } from '@renderer/common/drag-drop/listReorder.svelte.ts'
   import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { Download, Plus } from 'lucide-svelte'
@@ -14,6 +18,7 @@
     projects,
     selectedProjectId,
     onProjectSelect,
+    onProjectsReorder,
     onCreateProject,
     isAppSidebarExpanded,
     isWorkspaceReady = false,
@@ -30,6 +35,8 @@
     selectedProjectId: string | null
     /** Opens a project or toggles its already-active sidebar. */
     onProjectSelect: (projectId: string) => void
+    /** Saves a dragged project order; the preview stays until the save settles. */
+    onProjectsReorder: (projectIds: string[]) => Promise<void>
     /** Opens project settings to a new project draft. */
     onCreateProject: () => void
     activeScreen: ScreenId
@@ -53,6 +60,15 @@
   let workspaceButton = $state<HTMLButtonElement>()
   /** Preserve the mascot's rotating hover messages on its new button. */
   let workspaceTooltip = $state<string>(INITIAL_APP_ICON_TOOLTIP)
+  /** Stationary project button list that owns pointer capture while buttons reorder. */
+  let projectListElement = $state<HTMLElement>()
+  /** Live drag reordering of project buttons, saved on drop without selecting the dragged project. */
+  const projectReorder = createListReorder({
+    dragType: 'activity-bar-project',
+    getIds: () => projects.map((project: Project) => project.id),
+    getListElement: () => projectListElement,
+    onReorder: (projectIds) => onProjectsReorder(projectIds)
+  })
 
   type ActivityItem = {
     id: ScreenId
@@ -120,21 +136,34 @@
   {#if isWorkspaceReady}
     <!-- Project buttons form their own top-aligned group below the screen activities. -->
     <Separator class="my-1 w-7" />
-    {#each projects as project (project.id)}
-      {@const isActive = activeScreen === 'project' && selectedProjectId === project.id}
-      <ActivityBarButton
-        label={project.name}
-        title={isActive ? `${project.name} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar` : project.name}
-        testId={screens.project.testId}
-        active={isActive}
-        compactIndicator={!isAppSidebarExpanded}
-        ariaCurrent={isActive ? 'page' : undefined}
-        ariaExpanded={isActive ? isAppSidebarExpanded : undefined}
-        onclick={() => onProjectSelect(project.id)}
-      >
-        <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.abbreviation}</span>
-      </ActivityBarButton>
-    {/each}
+    {#if projects.length > 0}
+      <div bind:this={projectListElement} class="flex w-full flex-col gap-1" data-pointer-drag-owner
+        data-testid="activity-bar-project-list">
+        {#each projectReorder.sort<Project>(projects) as project (project.id)}
+          {@const isActive = activeScreen === 'project' && selectedProjectId === project.id}
+          <!-- Buttons only slide while a drag previews a reorder; other list changes apply instantly. -->
+          <div
+            class="w-full"
+            use:draggable={projectReorder.getDraggableOptions(project.id)}
+            animate:flip={{ duration: projectReorder.draggedId ? uiAnimationDurationMs.standard : 0 }}
+          >
+            <ActivityBarButton
+              label={project.name}
+              title={isActive ? `${project.name} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar` : project.name}
+              testId={screens.project.testId}
+              active={isActive}
+              dragging={projectReorder.draggedId === project.id}
+              compactIndicator={!isAppSidebarExpanded}
+              ariaCurrent={isActive ? 'page' : undefined}
+              ariaExpanded={isActive ? isAppSidebarExpanded : undefined}
+              onclick={() => onProjectSelect(project.id)}
+            >
+              <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.abbreviation}</span>
+            </ActivityBarButton>
+          </div>
+        {/each}
+      </div>
+    {/if}
     <ActivityBarButton icon={Plus} label="New Project" title="New Project" testId="new-project-button" onclick={onCreateProject} />
   {/if}
   <div class="mt-auto flex w-full flex-col gap-1 relative">

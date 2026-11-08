@@ -10,6 +10,8 @@
     active?: boolean
     /** Shortens the active indicator while its sidebar is hidden. */
     compactIndicator?: boolean
+    /** Highlights the button while it is being dragged to a new position. */
+    dragging?: boolean
     class?: string
     iconClass?: string
     testId?: string
@@ -30,6 +32,7 @@
     label,
     active = false,
     compactIndicator = false,
+    dragging = false,
     class: className,
     iconClass,
     testId,
@@ -55,6 +58,7 @@
   aria-haspopup={ariaHaspopup}
   data-active={active ? 'true' : 'false'}
   data-compact-indicator={compactIndicator ? 'true' : 'false'}
+  data-dragging={dragging ? 'true' : 'false'}
   data-testid={testId}
   {title}
   {disabled}
@@ -86,8 +90,14 @@
   .cthulhuUiActivityBarButton:hover,
   .cthulhuUiActivityBarButton:focus-visible,
   .cthulhuUiActivityBarButton[aria-expanded='true'],
-  .cthulhuUiActivityBarButton[data-active='true'] {
+  .cthulhuUiActivityBarButton[data-active='true'],
+  .cthulhuUiActivityBarButton[data-dragging='true'] {
     color: var(--ui-normal-text);
+  }
+
+  /* Dragged buttons share the dragged-row fill used by reorderable selector lists. */
+  .cthulhuUiActivityBarButton[data-dragging='true'] {
+    background-color: var(--ui-info-normal-surface);
   }
 
   .cthulhuUiActivityBarButton[data-active='true']::before {

@@ -6,9 +6,10 @@ import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestH
 import { readWorkspaceState, runSqlStatement, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 import { promptCollectionSelectorDropdownItemSelector, promptCollectionSelectorTriggerSelector, selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
-import { finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
+import { dragGhostSelector, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
+import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 
-/** Real Electron coverage drives Project Settings; controls remain for reordering, invalid commands, and read-only workspace snapshots. */
+/** Real Electron coverage drives Project Settings and project reordering; controls remain for invalid commands and read-only workspace snapshots. */
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 /** Selector rows in the Project Settings dialog, one per retained draft. */
@@ -41,8 +42,22 @@ const openWorkspaceFile = async (electronApp: ElectronApplication, workspaceInfo
   }, workspaceInfoPath)
 }
 
-/** Starts a real pointer drag on a Show All collection row. */
-const beginCollectionDrag = async (page: Page, selector: string): Promise<void> => {
+/** Locates one activity bar project button, since every project button shares one test ID. */
+const projectButtonSelector = (name: string): string => `[data-testid="nav-button-project"][aria-label="${name}"]`
+
+/** Flags any later press that starts a native text selection, which a reorder drag must never do. */
+const watchTextSelectionStarts = async (page: Page): Promise<void> => {
+  await page.evaluate(() => document.addEventListener('selectstart', () => {
+    document.body.dataset.textSelectionStarted = 'true'
+  }, true))
+}
+
+/** Reads whether a watched press started a native text selection. */
+const didStartTextSelection = async (page: Page): Promise<boolean> =>
+  (await page.locator('body').getAttribute('data-text-selection-started')) === 'true'
+
+/** Starts a real pointer drag on a Show All collection row, Project Settings row, or project button. */
+const beginPointerDrag = async (page: Page, selector: string): Promise<void> => {
   /** Source row scrolled into view before measuring its geometry. */
   const row = page.locator(selector)
   await row.scrollIntoViewIfNeeded()
@@ -209,7 +224,7 @@ describe('Persisted projects', () => {
     await expect(rows).toHaveText([/Tasks/, /My Prompts/, /My Templates/])
     /** Starter template row currently holds the final position. */
     const lastRowTestId = (await rows.nth(2).getAttribute('data-testid'))!
-    await beginCollectionDrag(mainWindow, promptCollectionSelectorDropdownItemSelector(tasksId))
+    await beginPointerDrag(mainWindow, promptCollectionSelectorDropdownItemSelector(tasksId))
     await moveActiveDragToTarget(mainWindow, `[data-testid="${lastRowTestId}"]`)
     await finishActiveDrag(mainWindow)
     // Reordering persists independently of the original project's task-first order.
@@ -385,11 +400,12 @@ describe('Persisted projects', () => {
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'AL', 'ZE', 'FP'])
     /** Generated identity of the project created through the dialog. */
     const createdId = JSON.parse(await readTextFile(electronApp, `${path}/FreshProject/ProjectInfo.json`)).id
-    await mainWindow.evaluate(async (id) => {
-      /** Project Settings cannot reorder, so the production command moves Zeta first. */
-      const api = window.playwrightTestControls!.projects
-      await api.saveProjects(api.getWorkspace()!.id, [api.getWorkspace()!.projects.find((project) => project.id === id)!, ...api.getWorkspace()!.projects.filter((project) => project.id !== id)])
-    }, zetaId)
+    // Dragging Zeta above the first project button saves the new order on drop.
+    await beginPointerDrag(mainWindow, projectButtonSelector('Zeta'))
+    await moveActiveDragToTarget(mainWindow, projectButtonSelector('Default Project'))
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readWorkspaceState(electronApp, createDeterministicId(path), 'project-order', null))
+      .toEqual({ ids: [zetaId, defaultId, alphaId, createdId] })
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['ZE', 'DE', 'AL', 'FP'])
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
@@ -481,6 +497,117 @@ describe('Persisted projects', () => {
     expect(await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(second)
     await mainWindow.evaluate(() => window.playwrightTestControls!.notes.renameOwner('prompt', 'second-task', 'After Batch'))
     expect(await checkFileExists(electronApp, `${path}/Second/Prompts/Tasks/Active/After Batch.prompt.md`)).toBe(true)
+  })
+
+  test('reorders projects with Project Settings drag handles without changing the selected draft', async ({ testSetup, electronApp }) => {
+    /** Three saved projects give the dragged row more than one destination. */
+    const path = '/ws/project-dialog-reorder'
+    /** Fixture identity owning the private project order. */
+    const workspaceId = createDeterministicId(path)
+    /** Selected project whose editor must stay open while another row moves. */
+    const defaultId = createDeterministicId(`${path}:DefaultProject`)
+    await testSetup.setupFilesystem(batchWorkspaceFiles(path))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+    /** Real dialog rows are dragged with the mouse. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    /** Project Settings dialog opened to the selected project. */
+    const dialog = projectDialog(mainWindow)
+    /** Row dragged above the selected project. */
+    const secondRow = dialog.getByTestId('project-settings-selector-second')
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Default Project/, /Removed/, /Second/])
+    await expect(dialog.getByTestId('project-settings-save-button')).toBeDisabled()
+    await dialog.getByTestId('project-settings-drag-handle-second').hover()
+    await expect(dialog.getByTestId('project-settings-drag-handle-second')).toHaveCSS('cursor', 'grab')
+    // Dragging previews the new order live with the Show All dragged-row styling and no ghost.
+    await watchTextSelectionStarts(mainWindow)
+    await beginPointerDrag(mainWindow, '[data-testid="project-settings-selector-second"]')
+    await expect(secondRow).toHaveAttribute('data-row-state', 'dragging')
+    await expect(secondRow).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
+    await expect(secondRow).toHaveCSS('border-top-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border'))
+    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
+    await moveActiveDragToTarget(mainWindow, `[data-testid="project-settings-selector-${defaultId}"]`)
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second/, /Default Project/, /Removed/])
+    await expect(dialog.getByTestId(`project-settings-selector-${defaultId}`)).toHaveAttribute('data-row-state', 'drag-active')
+    await expect(dialog.getByTestId('project-settings-selector-removed')).toHaveAttribute('data-row-state', 'drag-idle')
+    await finishActiveDrag(mainWindow)
+    // The drop keeps the selected draft, highlights no text, and waits for Save Changes.
+    expect(await didStartTextSelection(mainWindow)).toBe(false)
+    await expect(secondRow).toHaveAttribute('aria-pressed', 'false')
+    await expect(dialog.getByTestId(`project-settings-selector-${defaultId}`)).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.getByTestId('project-settings-name-input')).toHaveValue('Default Project')
+    await expect(dialog.getByTestId('project-settings-save-button')).toBeEnabled()
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'RM', 'S2'])
+    await dialog.getByTestId('project-settings-save-button').click()
+    await expect(dialog).toHaveCount(0)
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM'])
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
+    await expect.poll(() => readWorkspaceState(electronApp, workspaceId, 'project-order', null))
+      .toEqual({ ids: ['second', defaultId, 'removed'] })
+    // Dragging from the handle works too, and closing discards the unsaved reorder.
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await beginPointerDrag(mainWindow, '[data-testid="project-settings-drag-handle-removed"]')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="project-settings-selector-second"]')
+    await finishActiveDrag(mainWindow)
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Removed/, /Second/, /Default Project/])
+    await dialog.getByTestId('project-settings-close-button').click()
+    await expect(dialog).toHaveCount(0)
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM'])
+    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second/, /Default Project/, /Removed/])
+    expect(await readWorkspaceState(electronApp, workspaceId, 'project-order', null)).toEqual({ ids: ['second', defaultId, 'removed'] })
+  })
+
+  test('reorders activity bar projects by dragging without selecting the dragged project', async ({ testSetup, electronApp }) => {
+    /** Three saved projects give the dragged button more than one destination. */
+    const path = '/ws/project-rail-reorder'
+    /** Fixture identity owning the private project order. */
+    const workspaceId = createDeterministicId(path)
+    /** Selected project that must stay active while other buttons move. */
+    const defaultId = createDeterministicId(`${path}:DefaultProject`)
+    await testSetup.setupFilesystem(batchWorkspaceFiles(path))
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+    /** Real rail buttons are dragged with the mouse. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    await testHelpers.setupWorkspaceViaUI()
+    await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
+    /** Project buttons in rail order, identified by abbreviation. */
+    const rail = mainWindow.getByTestId('nav-button-project')
+    /** Button dragged above the selected project. */
+    const secondButton = mainWindow.locator(projectButtonSelector('Second'))
+    await expect(rail).toHaveText(['DE', 'RM', 'S2'])
+    // Dragging previews the new order live with the Show All dragged-row fill and no ghost.
+    await watchTextSelectionStarts(mainWindow)
+    await beginPointerDrag(mainWindow, projectButtonSelector('Second'))
+    await expect(secondButton).toHaveAttribute('data-dragging', 'true')
+    await expect(secondButton).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
+    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
+    await moveActiveDragToTarget(mainWindow, projectButtonSelector('Default Project'))
+    await expect(rail).toHaveText(['S2', 'DE', 'RM'])
+    expect(await readWorkspaceState(electronApp, workspaceId, 'project-order', null)).toEqual({ ids: [defaultId, 'removed', 'second'] })
+    await finishActiveDrag(mainWindow)
+    // The drop saves immediately without highlighting text or switching to the dragged project.
+    expect(await didStartTextSelection(mainWindow)).toBe(false)
+    await expect.poll(() => readWorkspaceState(electronApp, workspaceId, 'project-order', null))
+      .toEqual({ ids: ['second', defaultId, 'removed'] })
+    await expect(rail).toHaveText(['S2', 'DE', 'RM'])
+    await expect(secondButton).toHaveAttribute('data-dragging', 'false')
+    await expect(secondButton).toHaveAttribute('data-active', 'false')
+    await expect(mainWindow.locator(projectButtonSelector('Default Project'))).toHaveAttribute('data-active', 'true')
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
+    // Leaving the project list restores the original order, so the drop saves nothing.
+    await beginPointerDrag(mainWindow, projectButtonSelector('Removed'))
+    await moveActiveDragToTarget(mainWindow, projectButtonSelector('Second'))
+    await expect(rail).toHaveText(['RM', 'S2', 'DE'])
+    await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-title"]')
+    await expect(rail).toHaveText(['S2', 'DE', 'RM'])
+    await finishActiveDrag(mainWindow)
+    await expect(rail).toHaveText(['S2', 'DE', 'RM'])
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
+    expect(await readWorkspaceState(electronApp, workspaceId, 'project-order', null)).toEqual({ ids: ['second', defaultId, 'removed'] })
   })
 
   test('rejects malformed batch IPC payloads, invalid metadata, and duplicate retained identities without changing projects', async ({ testSetup }) => {

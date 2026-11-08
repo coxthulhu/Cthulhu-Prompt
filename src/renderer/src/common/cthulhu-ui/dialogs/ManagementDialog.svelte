@@ -20,11 +20,15 @@
     addTestId: string
     submitTestId: string
     cancelTestId: string
+    /** Test ID prefix for each selector row's drag handle, followed by the item ID. */
+    dragHandleTestIdPrefix?: string
     isSubmitting: boolean
     canSubmit: boolean
     submissionError: string | null
     onselect: (id: string) => void
     onadd: () => void
+    /** Enables selector-row drag handles and receives the complete new item order after a drop. */
+    onreorder?: (ids: string[]) => void
     oncancel: () => void
     onsubmit: () => void
     /** Editor for the selected draft, shown beside the selector list. */
@@ -45,11 +49,13 @@
     addTestId,
     submitTestId,
     cancelTestId,
+    dragHandleTestIdPrefix,
     isSubmitting,
     canSubmit,
     submissionError,
     onselect,
     onadd,
+    onreorder,
     oncancel,
     onsubmit,
     children
@@ -81,8 +87,10 @@
       {addText}
       {itemTestIdPrefix}
       {addTestId}
+      {dragHandleTestIdPrefix}
       {onselect}
       {onadd}
+      {onreorder}
     />
 
     <div class="cthulhuUiManagementDialogEditor">
