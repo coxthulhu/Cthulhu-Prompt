@@ -229,6 +229,8 @@
       await flushAllAutosaves()
     }
   )
+  /** Activity bar toggle that the updater popup must not treat as an outside press. */
+  let updatesButton = $state<HTMLButtonElement>()
   const windowTitle = $derived(
     isDevMode && executionFolderName
       ? `${baseWindowTitle} — ${executionFolderName}`
@@ -751,7 +753,7 @@
     <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
       onProjectsReorder={reorderProjects}
       onCreateProject={() => projectSettingsDialog?.openDialog({ createProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} {workspacePath} onNavigate={activateActivity}
-      updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
+      bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return
         if (updater.updates.open) updater.dismiss()
@@ -837,6 +839,6 @@
 />
 
 {#if updater.updates.snapshot}
-  <AppUpdatesPopup bind:open={updater.updates.open} state={updater.updates.snapshot}
+  <AppUpdatesPopup bind:open={updater.updates.open} state={updater.updates.snapshot} trigger={updatesButton}
     onclose={updater.dismiss} ondownload={updater.download} oninstall={updater.install} />
 {/if}

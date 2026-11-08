@@ -1,5 +1,6 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 
 /** Real Electron fixtures exercise the activity rail, shared popup, and Explorer IPC. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -43,8 +44,13 @@ describe('Workspace popup', () => {
       const [mascot, surface] = await Promise.all([button.boundingBox(), popup.locator('.cthulhuUiPopupSurface').boundingBox()])
       return Math.max(Math.abs(surface!.y - mascot!.y), Math.abs(surface!.x - mascot!.x - 58))
     }).toBeLessThanOrEqual(1)
-    await mainWindow.mouse.click(5, 5)
+    // Presses inside the surface keep the details open; a press anywhere else dismisses them.
+    await popup.getByTestId('workspace-popup-name').click()
     await expect(popup).toBeVisible()
+    await mainWindow.mouse.click(5, 5)
+    await expect(popup).toHaveCount(0)
+    await expect(button).toHaveAttribute('aria-expanded', 'false')
+    await button.click()
     await popup.getByRole('button', { name: 'Close workspace details' }).click()
     await expect(popup).toHaveCount(0)
     await expect(button).toBeFocused()
@@ -56,9 +62,36 @@ describe('Workspace popup', () => {
     await button.click()
     await button.click()
     await expect(popup).toHaveCount(0)
+    await button.click()
+    await expect(popup).toBeVisible()
+    // The press that dismisses the popup still reaches the control beneath it.
     await activity.click()
+    await expect(popup).toHaveCount(0)
     await expect(mainWindow.getByTestId('prompt-tree-active-prompt-dev-1')).toHaveAttribute('aria-current', 'true')
     await expect(mainWindow.getByTestId('app-sidebar').locator('img')).toHaveCount(0)
+  })
+
+  // Monaco and resize sashes run their own press handling but still count as clicks elsewhere.
+  test('closes on presses in the prompt editor and on the sidebar resize handle', async ({ testSetup }) => {
+    /** Sample workspace mounts a real editor beside the resizable sidebar. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
+    await testHelpers.navigateToPromptCollections('Development')
+    /** Trigger reopens the popup before each outside press. */
+    const button = mainWindow.getByTestId('workspace-button')
+    /** Popup is queried independently because the shared surface portals to the document body. */
+    const popup = mainWindow.getByTestId('workspace-popup')
+
+    await button.click()
+    await expect(popup).toBeVisible()
+    await focusMonacoEditor(mainWindow, '[data-testid="prompt-editor-dev-1"]', { ensureInputFocus: false })
+    await expect(popup).toHaveCount(0)
+    // Restoring focus to the opener must not take the press's focus away from the editor.
+    await expect.poll(() => mainWindow.evaluate(() => !!document.activeElement?.closest('.monaco-editor'))).toBe(true)
+
+    await button.click()
+    await expect(popup).toBeVisible()
+    await mainWindow.getByTestId('app-sidebar-resize-handle').click()
+    await expect(popup).toHaveCount(0)
   })
 
   // An already-open popup must follow workspace selection, replacement, and closure.
@@ -82,9 +115,12 @@ describe('Workspace popup', () => {
       // Capture the OS handoff without opening real Explorer windows for virtual fixtures.
       shell.openPath = async (path) => { (app as any).workspacePopupOpenedPath = path; return '' }
     })
+    /** Keyboard activation changes workspaces without the press that would dismiss the popup. */
+    const openWorkspaceButton = mainWindow.getByTestId('open-workspace-button')
     for (const path of paths) {
       await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
-      await mainWindow.getByTestId('open-workspace-button').click()
+      await expect(openWorkspaceButton).toBeEnabled()
+      await openWorkspaceButton.press('Enter')
       await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(path)
       await expect(popup.getByTestId('workspace-popup-path')).toHaveText(path)
       await expect(popup.getByTestId('workspace-popup-name')).toHaveText(path.split('/').at(-1)!)
@@ -111,7 +147,7 @@ describe('Workspace popup', () => {
     }).toBeLessThanOrEqual(1)
     await expect(homeRow.locator('.cthulhuUiTitle')).toHaveCSS('font-size', '24px')
     await expect(homeRow.locator('.cthulhuUiIconCell svg')).toHaveCSS('width', '32px')
-    await mainWindow.getByTestId('close-workspace-button').click()
+    await mainWindow.getByTestId('close-workspace-button').press('Enter')
     await expect(workspaceName).toHaveText('No workspace open')
     await expect(popup.getByTestId('workspace-popup-path')).toHaveCount(0)
     await expect(popup.getByTestId('workspace-popup-open-folder-button')).toBeDisabled()

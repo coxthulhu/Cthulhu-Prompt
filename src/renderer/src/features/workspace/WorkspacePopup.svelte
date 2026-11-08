@@ -27,8 +27,8 @@
   }
 </script>
 
-<!-- Nonmodal workspace details remain available without changing the active screen. -->
-<Popup bind:open title="Workspace Info" backdrop={false} placement="top-left" {anchor}
+<!-- Nonmodal workspace details leave the active screen unchanged and close on any press outside them. -->
+<Popup bind:open title="Workspace Info" backdrop={false} closeOnOutsideClick trigger={anchor} placement="top-left" {anchor}
   offsetX={58} offsetY={0} class="flex w-[360px] flex-col text-sm leading-5" testId="workspace-popup">
   {#snippet children(closeWorkspace)}
     <header class="flex min-w-0 items-center gap-2 px-4 py-3">

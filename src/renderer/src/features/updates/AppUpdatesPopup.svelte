@@ -9,9 +9,11 @@
   import ProgressBar from '@renderer/common/cthulhu-ui/loading/ProgressBar.svelte'
 
   /** Main-process snapshot and shell-owned popup actions. */
-  let { open = $bindable(false), state, onclose, ondownload, oninstall } = $props<{
+  let { open = $bindable(false), state, trigger, onclose, ondownload, oninstall } = $props<{
     open?: boolean
     state: AppUpdateState
+    /** Activity bar toggle, which handles its own click instead of counting as an outside press. */
+    trigger?: HTMLElement
     onclose: () => void
     /** Starts or retries a download without blocking the workspace. */
     ondownload: () => void
@@ -57,9 +59,9 @@
   }
 </script>
 
-<!-- Persistent update surface follows the approved mockup without its preview controls. -->
+<!-- Update surface follows the approved mockup without its preview controls and closes on any press outside it. -->
 <Popup bind:open title="App Updates" backdrop={restarting} closeDisabled={restarting} {busy}
-  placement="bottom-left" offsetX={58} offsetY={10}
+  closeOnOutsideClick {trigger} placement="bottom-left" offsetX={58} offsetY={10}
   class="flex w-[340px] flex-col text-sm leading-5" testId="app-updates-popup" {onclose}>
   {#snippet children(closeUpdates)}
     <header class="flex min-w-0 items-center gap-2 px-4 py-3">

@@ -15,6 +15,8 @@
     backdrop?: boolean
     closeDisabled?: boolean
     closeOnOutsideClick?: boolean
+    /** Toggle control that handles its own click, so pressing it is never an outside press. */
+    trigger?: HTMLElement
     placement?: 'center' | 'bottom-left' | 'top-left'
     anchor?: HTMLElement
     offsetX?: number
@@ -34,6 +36,7 @@
     backdrop = true,
     closeDisabled = false,
     closeOnOutsideClick = false,
+    trigger,
     placement = 'center',
     anchor,
     offsetX = 16,
@@ -75,7 +78,7 @@
 
   /** Dismisses outside pointer presses before click handlers can open a new popup. */
   const handleOutsidePointerDown = (event: PointerEvent): void => {
-    if (closeOnOutsideClick && layer &&
+    if (closeOnOutsideClick && layer && !trigger?.contains(event.target as Node) &&
       (event.target === layer || !layer.contains(event.target as Node))) {
       // Prevent the modal layer from taking focus after native close restores the opener.
       if (backdrop) event.preventDefault()
@@ -130,7 +133,8 @@
 </script>
 
 <svelte:window onfocusin={handleFocus} />
-<svelte:document onpointerdown={handleOutsidePointerDown} />
+<!-- Capture phase still sees presses on resize sashes, which stop propagation to start their drags. -->
+<svelte:document onpointerdowncapture={handleOutsidePointerDown} />
 
 <!-- Shared popup surface; native modality blocks pointer, keyboard, and accessibility access. -->
 {#if open}

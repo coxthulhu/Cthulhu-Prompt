@@ -27,7 +27,8 @@
     onNavigate,
     updatesOpen,
     updateAvailable,
-    onToggleUpdates
+    onToggleUpdates,
+    updatesButton = $bindable()
   } = $props<{
     /** Persisted project records in the user's display order. */
     projects: Project[]
@@ -52,6 +53,8 @@
     updateAvailable: boolean
     /** Toggles the shell-owned updater surface. */
     onToggleUpdates: () => void
+    /** Bound updater toggle, identified to the shell-owned popup as its trigger. */
+    updatesButton?: HTMLButtonElement
   }>()
 
   /** Session-only visibility does not affect navigation or sidebar expansion. */
@@ -170,7 +173,7 @@
     {#each activityItems.filter((item) => item.id === 'settings') as item (item.id)}
       {@render activityButton(item)}
     {/each}
-    <ActivityBarButton label={updateAvailable ? 'App updates — update available' : 'App updates'}
+    <ActivityBarButton bind:buttonElement={updatesButton} label={updateAvailable ? 'App updates — update available' : 'App updates'}
       ariaExpanded={updatesOpen} title="App updates" testId="app-updates-button" onclick={onToggleUpdates}>
       <Download size={24} strokeWidth={1.5} aria-hidden="true" />
       {#if updateAvailable}<span class="updateDot" data-testid="update-available-dot"></span>{/if}

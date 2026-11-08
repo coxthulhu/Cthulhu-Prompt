@@ -155,7 +155,13 @@ describe('App updates', () => {
     expect((await controlUpdater(electronApp, { type: 'stats' })).checks).toBe(2)
     await controlUpdater(electronApp, { type: 'complete-check' })
     await expect(popup.getByTestId('update-action')).toBeEnabled()
+    // Presses inside the surface keep it open; a press anywhere else dismisses it.
+    await popup.getByTestId('update-current-version').click()
+    await expect(popup).toBeVisible()
     await mainWindow.mouse.click(5, 5)
+    await expect(popup).toHaveCount(0)
+    await expect(mainWindow.getByTestId('app-updates-button')).toHaveAttribute('aria-expanded', 'false')
+    await mainWindow.getByTestId('app-updates-button').click()
     await expect(popup).toBeVisible()
     await electronApp.evaluate(({ app, shell }) => {
       /** Capture the OS handoff without launching a real browser. */
@@ -286,7 +292,7 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
   })
 
-  for (const dismissal of ['close button', 'Escape', 'activity bar'] as const) {
+  for (const dismissal of ['close button', 'Escape', 'activity bar', 'outside click'] as const) {
     test(`keeps 15-minute checks after notification dismissal with ${dismissal} without reopening`, async ({ electronApp, testSetup }) => {
       await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: true, latestVersion: '1.1.0' } })
       /** The manually opened variant first closes during checking, which must not mute notifications. */
@@ -308,6 +314,8 @@ describe('App updates', () => {
         await mainWindow.keyboard.press('Escape')
       } else if (dismissal === 'activity bar') {
         await mainWindow.getByTestId('app-updates-button').click()
+      } else if (dismissal === 'outside click') {
+        await mainWindow.mouse.click(5, 5)
       } else {
         await popup.getByRole('button', { name: 'Close updates' }).click()
       }
@@ -418,7 +426,10 @@ describe('App updates', () => {
       await expect(popup).toContainText('42.0 MB of 100.0 MB')
       await mainWindow.getByTestId('nav-button-settings').click()
       await expect(mainWindow.getByTestId('settings-screen')).toBeVisible()
-      await expect(popup).toBeVisible()
+      // The press that opens Settings also dismisses the popup; the download keeps running.
+      await expect(popup).toHaveCount(0)
+      await mainWindow.getByTestId('app-updates-button').click()
+      await expect(popup).toContainText('42.0 MB of 100.0 MB')
       await popup.getByRole('button', { name: 'Close updates' }).focus()
       await mainWindow.keyboard.press('Escape')
       await expect(popup).toHaveCount(0)
