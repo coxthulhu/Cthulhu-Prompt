@@ -225,7 +225,7 @@
         {@const TabIcon = tab.icon}
         <div
           {...hover(tab.id)}
-          style="position: relative; display: flex; flex: 0 1 184px; min-width: 0; height: 34px; border-radius: 8px 8px 0 0; background: {tabSurface(selected)};"
+          style="position: relative; display: flex; flex: 0 1 200px; width: 200px; min-width: 0; height: 34px; border-radius: 8px 8px 0 0; background: {tabSurface(selected)};"
         >
           {@render tabBackdrop(selected, isHovered)}
           <button
