@@ -30,6 +30,7 @@
     FolderCog,
     Layers,
     MoreHorizontal,
+    Pencil,
     Plus,
     Settings2,
     Star,
@@ -87,6 +88,7 @@
     type ManagedCategoryInput,
     type ManageCategoriesDialogOpenOptions
   } from '../prompt-collections/ManageCategoriesDialog.svelte'
+  import RenamePromptCollectionDialog from '../prompt-collections/RenamePromptCollectionDialog.svelte'
   import PromptTree from '@renderer/features/prompt-tree/PromptTree.svelte'
   import PromptTreePromptRow from '@renderer/features/prompt-tree/PromptTreePromptRow.svelte'
   import SidebarHeader from './SidebarHeader.svelte'
@@ -105,6 +107,11 @@
   type ManageCategoriesDialogHandle = {
     /** Opens category management with an optional category-specific target. */
     openDialog: (options?: ManageCategoriesDialogOpenOptions) => void
+  }
+
+  type RenamePromptCollectionDialogHandle = {
+    /** Opens collection rename prefilled with one collection's current name. */
+    openDialog: (promptCollectionId: string) => void
   }
 
   type PromptTreeBulkExpansionRequest = {
@@ -236,6 +243,8 @@
   let promptCollectionSelectorItemsElement = $state<HTMLElement | null>(null)
   let createPromptCollectionDialog = $state<CreatePromptCollectionDialogHandle | null>(null)
   let manageCategoriesDialog = $state<ManageCategoriesDialogHandle | null>(null)
+  /** Sidebar-owned rename dialog, available on every screen that shows this toolbar. */
+  let renamePromptCollectionDialog = $state<RenamePromptCollectionDialogHandle | null>(null)
   let nowMs = $state(Date.now())
 
   // Side effect: keep collection-selector relative modified labels fresh while the app is open.
@@ -478,6 +487,18 @@
   // Keep selected-collection overflow actions together as the toolbar gets tighter.
   const selectedPromptCollectionActionsItems = $derived.by((): DropdownPopupItem[] => [
     {
+      id: 'rename-collection',
+      label: 'Rename Collection',
+      icon: Pencil,
+      testId: 'rename-selected-prompt-collection-menu-item'
+    },
+    {
+      id: 'manage-categories',
+      label: 'Manage Categories',
+      icon: FolderCog,
+      testId: 'manage-categories-selected-prompt-collection-menu-item'
+    },
+    {
       id: 'delete-collection',
       label: 'Delete Collection',
       icon: Trash2,
@@ -515,7 +536,13 @@
   }
 
   const handleSelectedPromptCollectionActionsSelect = (item: DropdownPopupItem) => {
-    if (item.id === 'delete-collection' && screenCollection) {
+    if (!screenCollection) return
+
+    if (item.id === 'rename-collection') {
+      renamePromptCollectionDialog?.openDialog(screenCollection.id)
+    } else if (item.id === 'manage-categories') {
+      openManageCategoriesDialog()
+    } else if (item.id === 'delete-collection') {
       onDeleteSelectedPromptCollection(screenCollection.id)
     }
   }
@@ -975,16 +1002,6 @@
           testId="toggle-all-categories-button"
           onclick={handleCategoryExpansionAction}
         />
-        <IconButton
-          icon={FolderCog}
-          label="Manage Categories"
-          title="Manage Categories"
-          borderless
-          baseVariant="dim"
-          disabled={!screenCollection}
-          testId="sidebar-manage-categories-button"
-          onclick={openManageCategoriesDialog}
-        />
         <DropdownPopupSimple
           label="Selected Collection Actions"
           items={selectedPromptCollectionActionsItems}
@@ -1085,6 +1102,12 @@
   contentKind={screenCollection?.kind ?? 'prompt'}
   isWorkspaceReady={screenCollection !== null}
   onsubmit={handleSaveCategories}
+/>
+
+<RenamePromptCollectionDialog
+  bind:this={renamePromptCollectionDialog}
+  isWorkspaceReady={screenCollection !== null}
+  {promptCollections}
 />
 
 <style>

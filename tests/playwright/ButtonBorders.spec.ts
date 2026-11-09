@@ -245,12 +245,12 @@ describe('Button styling', () => {
       )
     ).toBe(0)
 
-    const sidebarAddCategoryButton = mainWindow.locator(
-      '[data-testid="sidebar-manage-categories-button"]'
+    const sidebarActionsButton = mainWindow.locator(
+      '[data-testid="selected-prompt-collection-actions-button"]'
     )
-    await expect(sidebarAddCategoryButton).toBeEnabled()
-    await sidebarAddCategoryButton.hover()
-    await expect(sidebarAddCategoryButton).toHaveCSS('border-top-style', 'none')
+    await expect(sidebarActionsButton).toBeEnabled()
+    await sidebarActionsButton.hover()
+    await expect(sidebarActionsButton).toHaveCSS('border-top-style', 'none')
 
     const collectionSelectorTrigger = mainWindow.locator(
       '[data-testid="sidebar-prompt-collection-selector-trigger"]'

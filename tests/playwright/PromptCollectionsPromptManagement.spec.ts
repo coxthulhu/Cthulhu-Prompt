@@ -826,13 +826,13 @@ describe('Prompt collection prompt management', () => {
     })
 
     await testHelpers.navigateToPromptCollections('Development')
-    const addCategoryButton = mainWindow.locator(
-      '[data-testid="sidebar-manage-categories-button"]'
+    await mainWindow.locator('[data-testid="selected-prompt-collection-actions-button"]').click()
+    const manageCategoriesMenuItem = mainWindow.locator(
+      '[data-testid="manage-categories-selected-prompt-collection-menu-item"]'
     )
-    await expect(addCategoryButton).toBeEnabled()
-    await expect(addCategoryButton).toHaveAttribute('title', 'Manage Categories')
-    await expect(addCategoryButton.locator('svg')).toHaveClass(/lucide-folder-cog/)
-    await addCategoryButton.click()
+    await expect(manageCategoriesMenuItem).toHaveText('Manage Categories')
+    await expect(manageCategoriesMenuItem.locator('svg')).toHaveClass(/lucide-folder-cog/)
+    await manageCategoriesMenuItem.click()
 
     const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Manage Categories"]')
     await expect(categoryDialog).toBeVisible()
@@ -2689,7 +2689,7 @@ describe('Prompt collection prompt management', () => {
 
     await testHelpers.navigateToPromptCollections('No Completed')
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
-    await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toBeEnabled()
+    await expect(mainWindow.locator('[data-testid="selected-prompt-collection-actions-button"]')).toBeEnabled()
     // The selected collection is not duplicated as a category in completed mode.
     await expect(
       mainWindow.locator('[data-testid="prompt-tree-active-category-toggle-button-NoCompleted"]')

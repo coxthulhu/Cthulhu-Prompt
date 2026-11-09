@@ -355,7 +355,6 @@ describe('Prompt collection prompt tree', () => {
       'toggle-completed-prompts-button',
       'toggle-archived-prompts-button',
       'toggle-all-categories-button',
-      'sidebar-manage-categories-button',
       'selected-prompt-collection-actions-button'
     ])
     const promptSectionAlignment = await mainWindow

@@ -7,7 +7,7 @@ import {
   finishActiveDrag,
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
-import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
+import { getPromptEditorIds, openManageCategoriesFromSidebar } from '../helpers/PromptCollectionHelpers'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
 
 /** Electron integration suite exercises persisted archive transfers and selection behavior. */
@@ -176,7 +176,7 @@ describe('Template archive', () => {
     await testHelpers.navigateToPromptCollections('Library')
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
-    await mainWindow.getByTestId('sidebar-manage-categories-button').click()
+    await openManageCategoriesFromSidebar(mainWindow)
     /** Removing the former category forces restoration into Uncategorized. */
     const dialog = mainWindow.getByRole('dialog', { name: 'Manage Categories' })
     await dialog.getByTestId('manage-category-selector-archive-category').click()

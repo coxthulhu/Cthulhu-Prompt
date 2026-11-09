@@ -1,6 +1,7 @@
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { openManageCategoriesFromSidebar } from '../helpers/PromptCollectionHelpers'
 import {
   createWorkspaceWithCollections,
   createWorkspaceWithTemplateCollections,
@@ -983,7 +984,7 @@ describe('Prompt categories', () => {
       )
     ).toBeVisible()
 
-    await mainWindow.locator('[data-testid="sidebar-manage-categories-button"]').click()
+    await openManageCategoriesFromSidebar(mainWindow)
     /** Management dialog that edits all retained category fields together. */
     const categoryDialog = mainWindow.locator('[role="dialog"][aria-label="Manage Categories"]')
     await categoryDialog.locator('[data-testid="manage-categories-new-button"]').click()

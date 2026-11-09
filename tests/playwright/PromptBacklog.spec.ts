@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import type { ElectronApplication } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { openManageCategoriesFromSidebar } from '../helpers/PromptCollectionHelpers'
 import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import {
@@ -314,7 +315,7 @@ describe('Backlog prompts', () => {
     expect((await readOrder(electronApp, 'Active')).categories.map((category) => category.categoryId))
       .toEqual([null, 'beta', 'alpha'])
 
-    await mainWindow.locator('[data-testid="sidebar-manage-categories-button"]').click()
+    await openManageCategoriesFromSidebar(mainWindow)
     await mainWindow.locator('[data-testid="manage-categories-new-button"]').click()
     await mainWindow.locator('[data-testid="manage-category-name-input"]').fill('new category')
     await mainWindow.locator('[data-testid="manage-categories-save-button"]').click()

@@ -1,18 +1,16 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
-  import { Pencil } from 'lucide-svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import PromptCollectionHeaderBar from './PromptCollectionHeaderBar.svelte'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isPromptCollectionEmpty } from '@renderer/data/Collections/PromptCollectionEntries'
-  import { renamePromptCollection } from '@renderer/data/Mutations/PromptCollectionMutations'
   import { deletePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
   import PromptCollectionVirtualContent from './PromptCollectionVirtualContent.svelte'
   import PromptCollectionFindIntegration from './find/PromptCollectionFindIntegration.svelte'
   import { createPromptCollectionScreenController } from './promptCollectionScreenController.svelte.ts'
   import { PromptCollectionScreenMode } from './promptCollectionScreenMode'
-  import PromptCollectionNameDialog from './PromptCollectionNameDialog.svelte'
+  import RenamePromptCollectionDialog from './RenamePromptCollectionDialog.svelte'
   import ManageCategoriesDialog, {
     type ManagedCategoryInput,
     type ManageCategoriesDialogOpenOptions
@@ -56,44 +54,16 @@
     controller.persistActivePromptScreenRow()
   })
 
-  let renamePromptCollectionDialog = $state<{ openDialog: (displayName?: string) => void } | null>(null)
-  let renamePromptCollectionId = $state<string | null>(null)
+  /** Imperative handle for opening collection rename. */
+  let renamePromptCollectionDialog = $state<{ openDialog: (promptCollectionId: string) => void } | null>(null)
   /** Imperative handle for opening collection category management. */
   let manageCategoriesDialog = $state<{
     openDialog: (options?: ManageCategoriesDialogOpenOptions) => void
   } | null>(null)
   let deletePromptCollectionId = $state<string | null>(null)
 
-  const renamePromptCollectionTarget = $derived(
-    controller.promptCollections.find((collection) => collection.id === renamePromptCollectionId) ?? null
-  )
-  // collection names conflict with same-kind collection siblings.
-  const renamePromptCollectionSiblings = $derived.by(() => {
-    if (!renamePromptCollectionTarget) return []
-    return controller.promptCollections.filter(
-      (collection) =>
-        (collection.kind === 'template') === (renamePromptCollectionTarget.kind === 'template')
-    )
-  })
-
   const openRenamePromptCollectionDialog = (promptCollectionId: string) => {
-    const promptCollection = controller.promptCollections.find((collection) => collection.id === promptCollectionId)
-    if (!promptCollection) return
-
-    renamePromptCollectionId = promptCollectionId
-    renamePromptCollectionDialog?.openDialog(promptCollection.displayName)
-  }
-
-  const handleRenamePromptCollection = async (displayName: string): Promise<boolean> => {
-    if (!renamePromptCollectionTarget) return false
-
-    return await runIpcBestEffort(
-      async () => {
-        await renamePromptCollection(renamePromptCollectionTarget.id, displayName)
-        return true
-      },
-      () => false
-    )
+    renamePromptCollectionDialog?.openDialog(promptCollectionId)
   }
 
   /** Opens category management to the first retained category, if present. */
@@ -296,26 +266,10 @@
   onsubmit={handleSaveCategories}
 />
 
-<PromptCollectionNameDialog
+<RenamePromptCollectionDialog
   bind:this={renamePromptCollectionDialog}
   isWorkspaceReady={controller.screenCollection !== null}
-  promptCollections={renamePromptCollectionSiblings}
-  isPromptCollectionListLoading={false}
-  icon={Pencil}
-  title="Rename Collection"
-  subtitle="Change the name shown in the app and on disk."
-  submitText="Rename Collection"
-  submittingText="Renaming..."
-  submitTestId="rename-prompt-collection-button"
-  inputTestId="rename-prompt-collection-name-input"
-  errorTestId="rename-prompt-collection-name-error"
-  rowLabel="Collection Name"
-  rowDetail="Required. Names must be unique among collections of the same type."
-  initialDisplayName={renamePromptCollectionTarget?.displayName ?? ''}
-  unchangedDisplayName={renamePromptCollectionTarget?.displayName ?? null}
-  duplicatePromptCollectionId={renamePromptCollectionTarget?.id ?? null}
-  failureMessage="Failed to rename collection. Please try again."
-  onsubmit={handleRenamePromptCollection}
+  promptCollections={controller.promptCollections}
 />
 
 <ConfirmationDialog

@@ -27,6 +27,8 @@ const SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON =
   '[data-testid="selected-prompt-collection-actions-button"]'
 const DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM =
   '[data-testid="delete-selected-prompt-collection-menu-item"]'
+const MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM =
+  '[data-testid="manage-categories-selected-prompt-collection-menu-item"]'
 const SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER =
   '[data-testid="sidebar-prompt-collection-selector-trigger"]'
 const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-collection-dropdown-item-"]'
@@ -297,10 +299,12 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await expect(mainWindow.locator('[data-testid="prompt-collection-completed-filter"]')).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="toggle-completed-prompts-button"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toHaveAttribute(
-      'title',
+    await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
+    await expect(mainWindow.locator(MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM)).toHaveText(
       'Manage Categories'
     )
+    await mainWindow.keyboard.press('Escape')
+    await expect(mainWindow.locator(MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM)).toHaveCount(0)
     const templateEditor = mainWindow.locator('[data-testid="prompt-editor-template-1"]')
     await expect(templateEditor).toBeVisible()
     /** Template tree row uses the same direct-navigation animation path as prompts. */
@@ -1291,10 +1295,12 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-collection-active-filter"]')).toHaveText(
       'Active 0'
     )
-    await expect(mainWindow.locator('[data-testid="sidebar-manage-categories-button"]')).toHaveAttribute(
-      'title',
+    await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
+    await expect(mainWindow.locator(MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM)).toHaveText(
       'Manage Categories'
     )
+    await mainWindow.keyboard.press('Escape')
+    await expect(mainWindow.locator(MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM)).toHaveCount(0)
     await expect
       .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples`))
       .toBe(true)

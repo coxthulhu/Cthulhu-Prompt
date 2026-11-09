@@ -162,3 +162,9 @@ export const expectCurrentCollectionPromptEditors = async (
 ): Promise<void> => {
   await expect.poll(async () => await getPromptEditorIds(page)).toEqual(expectedPromptIds)
 }
+
+/** Opens category management through the sidebar's selected-collection actions menu. */
+export const openManageCategoriesFromSidebar = async (page: Page): Promise<void> => {
+  await page.getByTestId('selected-prompt-collection-actions-button').click()
+  await page.getByTestId('manage-categories-selected-prompt-collection-menu-item').click()
+}

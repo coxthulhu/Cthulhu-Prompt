@@ -160,6 +160,37 @@ describe('Single prompt editor', () => {
     await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)).toBe(0)
   })
 
+  test('renames the collection from the sidebar actions menu on both project screens', async ({ testSetup }) => {
+    const { mainWindow } = await startWorkspace(testSetup)
+    const renameDialog = mainWindow.getByRole('dialog', { name: 'Rename Collection' })
+    const nameInput = mainWindow.getByTestId('rename-prompt-collection-name-input')
+    const submitButton = mainWindow.getByTestId('rename-prompt-collection-button')
+    /** Opens rename through the menu; closing the menu must leave focus in the name field. */
+    const openRenameFromMenu = async (): Promise<void> => {
+      await mainWindow.getByTestId('selected-prompt-collection-actions-button').click()
+      await mainWindow.getByTestId('rename-selected-prompt-collection-menu-item').click()
+      await expect(renameDialog).toBeVisible()
+      await expect(nameInput).toBeFocused()
+    }
+
+    await openRenameFromMenu()
+    await expect(nameInput).toHaveValue('Content')
+    await nameInput.fill('Renamed Content')
+    await submitButton.click()
+    await expect(renameDialog).toHaveCount(0)
+    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Renamed Content')
+
+    /** The single-prompt screen has no title action, and renaming must not navigate away from it. */
+    await openPrompt(mainWindow, 'p0')
+    await openRenameFromMenu()
+    await expect(nameInput).toHaveValue('Renamed Content')
+    await nameInput.fill('Content Again')
+    await submitButton.click()
+    await expect(renameDialog).toHaveCount(0)
+    await expect(mainWindow.locator(SCREEN)).toBeVisible()
+    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('Content Again')
+  })
+
   test('limits find to the open prompt', async ({ testSetup }) => {
     const { mainWindow } = await startWorkspace(testSetup)
     await openPrompt(mainWindow, 'p0')
