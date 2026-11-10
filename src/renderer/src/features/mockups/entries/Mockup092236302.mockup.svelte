@@ -185,10 +185,10 @@
       src={appIcon}
       alt="Cthulhu Prompt icon"
       draggable="false"
-      style="flex: 0 0 auto; width: 20px; height: 20px; margin: 0 8px 7px 12px; object-fit: contain;"
+      style="flex: 0 0 auto; width: 20px; height: 20px; margin: 0 10px 7px 12px; object-fit: contain;"
     />
 
-    <div role="tablist" aria-label="Screens" style="display: flex; flex: 0 0 auto; gap: 2px;">
+    <div role="tablist" aria-label="Screens" style="display: flex; flex: 0 0 auto; gap: 4px;">
       {#each screenTabs as tab (tab.id)}
         {@const selected = activeTabId === tab.id}
         {@const TabIcon = tab.icon}
