@@ -224,7 +224,9 @@
             activeTabId = tab.id
           }}
           {...hover(tab.id)}
-          style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 34px; color: var(--ui-secondary-icon-glyph);"
+          style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 34px; color: {selected || hovered.has(tab.id)
+            ? 'var(--ui-hoverable-icon-glyph)'
+            : 'var(--ui-secondary-icon-glyph)'};"
         >
           {@render tabBackdrop(selected, hovered.has(tab.id))}
           <TabIcon size={20} strokeWidth={1.5} style="position: relative;" aria-hidden="true" />
@@ -264,7 +266,9 @@
             <TabIcon
               size={16}
               aria-hidden="true"
-              style="flex: 0 0 auto; color: var(--ui-secondary-icon-glyph);"
+              style="flex: 0 0 auto; color: {selected || isHovered
+                ? 'var(--ui-hoverable-icon-glyph)'
+                : 'var(--ui-secondary-icon-glyph)'};"
             />
             <span style={truncate}>{tab.title}</span>
           </button>
