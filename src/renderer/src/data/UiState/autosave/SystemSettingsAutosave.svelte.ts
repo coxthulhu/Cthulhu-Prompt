@@ -20,14 +20,6 @@ import {
   toSystemSettingsFormData
 } from '@renderer/data/UiState/client-state/SystemSettingsFormat'
 
-type SystemSettingsAutosaveState = {
-  saving: boolean
-}
-
-const autosaveState = $state<SystemSettingsAutosaveState>({
-  saving: false
-})
-
 /** Live-query result for system-settings client state. */
 type SystemSettingsClientStateQuery = {
   data: SystemSettingsClientStateRecord[]
@@ -140,16 +132,7 @@ export const mutateSystemSettingsClientStateWithAutosave = (
   })
 }
 
-export const getSystemSettingsAutosaveState = (): SystemSettingsAutosaveState => {
-  return autosaveState
-}
-
+/** Sends any pending settings autosave now; later edits queue behind it as a separate save. */
 export const flushSystemSettingsAutosaves = async (): Promise<void> => {
-  autosaveState.saving = true
-
-  try {
-    await submitPacedUpdateTransactionAndWait(systemSettingsCollection.id, SYSTEM_SETTINGS_ID)
-  } finally {
-    autosaveState.saving = false
-  }
+  await submitPacedUpdateTransactionAndWait(systemSettingsCollection.id, SYSTEM_SETTINGS_ID)
 }

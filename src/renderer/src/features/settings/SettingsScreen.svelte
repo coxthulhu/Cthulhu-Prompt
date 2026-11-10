@@ -14,7 +14,6 @@
   import { ExternalLink, Info, RefreshCcw, Settings, TextCursorInput, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
-    getSystemSettingsAutosaveState,
     selectSystemSettingsClientStateRecord,
     useSystemSettingsClientStateQuery
   } from '@renderer/data/UiState/autosave/SystemSettingsAutosave.svelte.ts'
@@ -65,8 +64,6 @@
   const systemSettingsClientState = $derived(
     selectSystemSettingsClientStateRecord(systemSettingsClientStateQuery.data)
   )
-  const autosaveState = getSystemSettingsAutosaveState()
-  const isUpdating = $derived(autosaveState.saving)
   const defaultFontSize = DEFAULT_SYSTEM_SETTINGS.promptFontSize
   const defaultFontSizeInput = formatPromptFontSizeInput(defaultFontSize)
   const defaultMinLines = DEFAULT_SYSTEM_SETTINGS.promptEditorMinLines
@@ -95,9 +92,9 @@
   const selectedNewPromptFocusItem = $derived(
     newPromptFocusItems.find((item) => item.id === systemSettingsClientState.newPromptFocus)!
   )
-  /** Reset is available only when the choice differs from the default and saving has settled. */
+  /** Reset is available only when the choice differs from the default. */
   const isNewPromptFocusResetDisabled = $derived(
-    isUpdating || systemSettingsClientState.newPromptFocus === DEFAULT_SYSTEM_SETTINGS.newPromptFocus
+    systemSettingsClientState.newPromptFocus === DEFAULT_SYSTEM_SETTINGS.newPromptFocus
   )
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const appVersionLabel = `v${getRuntimeConfig().appVersion}`
@@ -226,16 +223,16 @@
   const displayMinLinesError = $derived(validation.minLinesError)
   const displayMaxLinesError = $derived(validation.maxLinesError)
   const isFontSizeResetDisabled = $derived(
-    isUpdating || systemSettingsClientState.promptFontSizeInput === defaultFontSizeInput
+    systemSettingsClientState.promptFontSizeInput === defaultFontSizeInput
   )
   const isMinLinesResetDisabled = $derived(
-    isUpdating || systemSettingsClientState.promptEditorMinLinesInput === defaultMinLinesInput
+    systemSettingsClientState.promptEditorMinLinesInput === defaultMinLinesInput
   )
   const isMaxLinesResetDisabled = $derived(
-    isUpdating || systemSettingsClientState.promptEditorMaxLinesInput === defaultMaxLinesInput
+    systemSettingsClientState.promptEditorMaxLinesInput === defaultMaxLinesInput
   )
   const isShowLineNumbersResetDisabled = $derived(
-    isUpdating || systemSettingsClientState.showLineNumbers === defaultShowLineNumbers
+    systemSettingsClientState.showLineNumbers === defaultShowLineNumbers
   )
 
   // Side effect: flush unsaved system settings when leaving the settings screen.
@@ -365,7 +362,6 @@
               showIcon
               menuWidth="260px"
               testId="new-prompt-focus-selector"
-              disabled={isUpdating}
               onselect={(item) => updateNewPromptFocus(item.id as NewPromptFocus)}
             />
           {/snippet}
@@ -483,7 +479,7 @@
               text="Reset"
               appearance="outline"
               onclick={() => resetSettingToDefault(String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines), setSystemSettingsClientStateAttachedNoteMaxLinesInput)}
-              disabled={isUpdating || systemSettingsClientState.attachedNoteMaxLinesInput === String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines)}
+              disabled={systemSettingsClientState.attachedNoteMaxLinesInput === String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines)}
             />
           {/snippet}
         </ControlRow>
@@ -500,7 +496,6 @@
               testId="show-line-numbers-toggle"
               pressed={systemSettingsClientState.showLineNumbers}
               onclick={handleShowLineNumbersToggle}
-              disabled={isUpdating}
             />
           {/snippet}
 
@@ -555,7 +550,6 @@
               testId="automatic-updates-toggle"
               pressed={systemSettingsClientState.automaticUpdates}
               onclick={() => updateAutomaticUpdates(!systemSettingsClientState.automaticUpdates)}
-              disabled={isUpdating}
             />
           {/snippet}
 
@@ -565,7 +559,7 @@
               text="Reset"
               appearance="outline"
               onclick={() => updateAutomaticUpdates(DEFAULT_SYSTEM_SETTINGS.automaticUpdates)}
-              disabled={isUpdating || systemSettingsClientState.automaticUpdates === DEFAULT_SYSTEM_SETTINGS.automaticUpdates}
+              disabled={systemSettingsClientState.automaticUpdates === DEFAULT_SYSTEM_SETTINGS.automaticUpdates}
             />
           {/snippet}
         </ControlRow>
