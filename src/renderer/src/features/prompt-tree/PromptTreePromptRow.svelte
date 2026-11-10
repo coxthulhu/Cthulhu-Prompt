@@ -193,9 +193,11 @@
     padding-right: 12px;
   }
 
+  /* sidebarStyles.css brightens this icon with the row text. */
   .prompt-tree-prompt-content :global(.prompt-tree-row-icon) {
     flex-shrink: 0;
     color: var(--ui-secondary-icon-glyph);
+    transition: color var(--ui-animation-duration-fast) ease-out;
   }
 
   .prompt-tree-row-count {

@@ -67,6 +67,19 @@
   color: var(--ui-normal-text);
 }
 
+/* Row icons brighten one step in the same states that brighten the row text. */
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(
+    [data-row-state='idle']:hover,
+    [data-row-state='active'],
+    [data-row-state='drag-active'],
+    [data-row-state='over'],
+    [data-row-state='dragging'],
+    [data-row-state='blocked-over']
+  )
+  :is(.sidebarPromptTreeCategoryIcon, .prompt-tree-row-icon) {
+  color: var(--ui-hoverable-icon-glyph);
+}
+
 :is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton)[data-row-state='idle']:hover {
   background-color: var(--ui-neutral-normal-surface);
 }
@@ -119,6 +132,7 @@
 
 .sidebarPromptTreeCategoryIcon {
   color: var(--ui-secondary-icon-glyph);
+  transition: color var(--ui-animation-duration-fast) ease-out;
 }
 
 .sidebarPromptTreeActionSlot {
