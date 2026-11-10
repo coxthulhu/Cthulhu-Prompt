@@ -17,7 +17,7 @@
     closeOnOutsideClick?: boolean
     /** Toggle control that handles its own click, so pressing it is never an outside press. */
     trigger?: HTMLElement
-    placement?: 'center' | 'bottom-left' | 'top-left'
+    placement?: 'center' | 'bottom-left'
     anchor?: HTMLElement
     offsetX?: number
     offsetY?: number
@@ -64,7 +64,7 @@
   })
   /** Live CSS anchor edges keep placement aligned through scrolling and resizing. */
   const surfaceStyle = $derived(
-    placement !== 'center'
+    placement === 'bottom-left'
       ? cssAnchor.getStyle({ placement, anchored: !!anchor, offsetX, offsetY })
       : undefined
   )
@@ -198,8 +198,7 @@
     pointer-events: auto;
   }
 
-  .cthulhuUiPopupLayer[data-placement='bottom-left'] :global(.cthulhuUiPopupSurface),
-  .cthulhuUiPopupLayer[data-placement='top-left'] :global(.cthulhuUiPopupSurface) {
+  .cthulhuUiPopupLayer[data-placement='bottom-left'] :global(.cthulhuUiPopupSurface) {
     position: fixed;
   }
 </style>

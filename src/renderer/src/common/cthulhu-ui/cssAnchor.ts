@@ -1,7 +1,7 @@
 /** Placement inputs retain the existing popup and dropdown positioning rules. */
 type CssAnchorPosition =
   | {
-      placement: 'bottom-left' | 'top-left'
+      placement: 'bottom-left'
       anchored: boolean
       offsetX: number
       offsetY: number
@@ -44,12 +44,6 @@ export const createCssAnchor = () => {
   /** Builds live CSS placement while retaining each surface's offsets and width constraints. */
   const getStyle = (position: CssAnchorPosition): string => {
     if ('anchored' in position) {
-      if (position.placement === 'top-left') {
-        return `position-anchor: ${position.anchored ? anchorName : 'auto'};
-          left: calc(${position.anchored ? 'anchor(left)' : '0px'} + ${position.offsetX}px);
-          top: calc(${position.anchored ? 'anchor(top)' : '0px'} + ${position.offsetY}px);
-          max-width: calc(100vw - ${position.anchored ? 'anchor(left)' : '0px'} - ${position.offsetX + viewportMargin}px);`
-      }
       return `position-anchor: ${position.anchored ? anchorName : 'auto'};
         left: calc(${position.anchored ? 'anchor(left)' : '0px'} + ${position.offsetX}px);
         bottom: calc(${position.anchored ? 'anchor(bottom)' : '0px'} + ${position.offsetY}px);

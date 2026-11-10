@@ -18,12 +18,10 @@
     title?: string
     ariaCurrent?: 'page' | 'step' | 'location' | 'date' | 'time' | 'true' | 'false'
     ariaExpanded?: boolean
-    ariaHaspopup?: 'dialog'
     disabled?: boolean
     /** Bound native button, used as an anchor by popup triggers. */
     buttonElement?: HTMLButtonElement
     onclick?: (event: MouseEvent) => void
-    onmouseenter?: (event: MouseEvent) => void
     children?: Snippet
   }
 
@@ -39,11 +37,9 @@
     title,
     ariaCurrent,
     ariaExpanded,
-    ariaHaspopup,
     disabled = false,
     buttonElement = $bindable(),
     onclick,
-    onmouseenter,
     children
   }: Props = $props()
 </script>
@@ -55,7 +51,6 @@
   aria-label={label}
   aria-current={ariaCurrent}
   aria-expanded={ariaExpanded}
-  aria-haspopup={ariaHaspopup}
   data-active={active ? 'true' : 'false'}
   data-compact-indicator={compactIndicator ? 'true' : 'false'}
   data-dragging={dragging ? 'true' : 'false'}
@@ -63,7 +58,6 @@
   {title}
   {disabled}
   {onclick}
-  {onmouseenter}
 >
   {#if children}
     {@render children()}

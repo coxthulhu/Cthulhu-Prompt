@@ -10,7 +10,6 @@
   import { Download, Plus } from 'lucide-svelte'
   import type { Project } from '@shared/domain/workspace/Project'
   import appIcon from '@renderer/assets/cutethulhu.png'
-  import WorkspacePopup from '@renderer/features/workspace/WorkspacePopup.svelte'
   import { getNextAppIconTooltip, INITIAL_APP_ICON_TOOLTIP } from './appIconTooltip'
 
   let {
@@ -23,7 +22,6 @@
     isAppSidebarExpanded,
     isWorkspaceReady = false,
     isDevMode = false,
-    workspacePath,
     onNavigate,
     updatesOpen,
     updateAvailable,
@@ -44,8 +42,6 @@
     isAppSidebarExpanded: boolean
     isWorkspaceReady?: boolean
     isDevMode?: boolean
-    /** Current workspace shown independently of the selected activity. */
-    workspacePath: string | null
     onNavigate: (screen: ScreenId) => void
     /** Reflects the updater popup independently of screen navigation. */
     updatesOpen: boolean
@@ -57,12 +53,8 @@
     updatesButton?: HTMLButtonElement
   }>()
 
-  /** Session-only visibility does not affect navigation or sidebar expansion. */
-  let workspaceOpen = $state(false)
-  /** Live anchor follows the top activity button when the window changes size. */
-  let workspaceButton = $state<HTMLButtonElement>()
-  /** Preserve the mascot's rotating hover messages on its new button. */
-  let workspaceTooltip = $state<string>(INITIAL_APP_ICON_TOOLTIP)
+  /** Rotating hover message on the static mascot; it changes on each pointer entry. */
+  let mascotTooltip = $state<string>(INITIAL_APP_ICON_TOOLTIP)
   /** Stationary project button list that owns pointer capture while buttons reorder. */
   let projectListElement = $state<HTMLElement>()
   /** Live drag reordering of project buttons, saved on drop without selecting the dragged project. */
@@ -127,12 +119,11 @@
 {/snippet}
 
 <nav class="appActivityBar" aria-label="Primary navigation" data-testid="app-activity-bar">
-  <ActivityBarButton bind:buttonElement={workspaceButton} class="mb-1" label="Workspace"
-    ariaExpanded={workspaceOpen} ariaHaspopup="dialog" title={workspaceTooltip} testId="workspace-button"
-    onmouseenter={() => { workspaceTooltip = getNextAppIconTooltip(workspaceTooltip) }}
-    onclick={() => { workspaceOpen = !workspaceOpen }}>
-    <img class="workspaceIcon h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" draggable="false" />
-  </ActivityBarButton>
+  <!-- Decorative mascot keeps the rail's 44px row height but is not a control. -->
+  <div class="mb-1 flex h-11 w-full flex-none items-center justify-center" data-testid="activity-bar-mascot">
+    <img class="activityBarMascot h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" title={mascotTooltip}
+      draggable="false" onmouseenter={() => { mascotTooltip = getNextAppIconTooltip(mascotTooltip) }} />
+  </div>
   {#each activityItems.filter((item) => item.id !== 'settings') as item (item.id)}
     {@render activityButton(item)}
   {/each}
@@ -181,15 +172,9 @@
   </div>
 </nav>
 
-<!-- The activity rail stays mounted while screens and the sidebar change. -->
-<WorkspacePopup bind:open={workspaceOpen} anchor={workspaceButton} {workspacePath} />
-
 <style>
-  /* Brighten the mascot alongside the rail's other ghost controls on interaction. */
-  .workspaceIcon { opacity: 0.8; transform: translateX(1px); }
-  :global(.cthulhuUiActivityBarButton:is(:hover, :focus-visible, [aria-expanded='true'])) .workspaceIcon {
-    opacity: 1;
-  }
+  /* The mascot keeps its resting rail appearance; it has no interactive states. */
+  .activityBarMascot { opacity: 0.8; transform: translateX(1px); }
   .updateDot {
     position: absolute;
     right: 7px;

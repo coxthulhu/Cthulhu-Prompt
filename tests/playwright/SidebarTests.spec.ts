@@ -152,6 +152,34 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.assertHomeActive()
   })
 
+  // The activity bar mascot is decoration: hover rotates its message, but it is never a control.
+  test('shows the activity bar mascot as a static icon', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
+    /** Mascot row that previously hosted the workspace popup trigger. */
+    const mascot = mainWindow.getByTestId('activity-bar-mascot')
+    const mascotImage = mascot.locator('img')
+
+    await expect(mascot.locator('button, a, [tabindex]')).toHaveCount(0)
+    await expect(mascotImage).toHaveCSS('width', '32px')
+    await expect(mascotImage).toHaveCSS('height', '32px')
+    await expect.poll(async () => {
+      /** Mascot and Home bounds define the intentional eight-pixel separation. */
+      const [mascotBox, home] = await Promise.all([
+        mascot.boundingBox(),
+        mainWindow.getByTestId('nav-button-home').boundingBox()
+      ])
+      return Math.abs(home!.y - mascotBox!.y - mascotBox!.height - 8)
+    }).toBeLessThanOrEqual(1)
+
+    const tooltip = await mascotImage.getAttribute('title')
+    await mascotImage.hover()
+    await expect(mascotImage).not.toHaveAttribute('title', tooltip!)
+
+    await mascotImage.click()
+    await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
+    await testHelpers.assertHomeActive()
+  })
+
   test('allows Settings without a workspace', async ({ electronApp, testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }

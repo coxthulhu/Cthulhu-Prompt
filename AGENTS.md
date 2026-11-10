@@ -17,7 +17,6 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 - **Settings Sidebar** — The App Sidebar mode on the System Settings Screen that shows a settings tree that scrolls to each settings section and row.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
 - **Project Settings Dialog** — Edits, creates, and deletes the workspace's projects as one batched save, opened from the project sidebar title's gear or the activity bar's + button.
-- **Workspace Popup** — Opens from the activity bar mascot to show the current workspace name, path, and action to open its folder in Explorer.
 - **Mockups Screen** — Provides a development-only interface for previewing UI mockups.
 - **Test Screen** — Provides a development-only interactive gallery for shared UI components.
 

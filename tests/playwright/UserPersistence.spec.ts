@@ -234,13 +234,14 @@ describe('User Persistence', () => {
     })
 
     // Startup should restore the workspace directly from user persistence.
-    const { mainWindow } = await testSetup.setupAndStart({
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
 
-    await mainWindow.getByTestId('workspace-button').click()
-    await expect(mainWindow.getByTestId('workspace-popup-path')).toHaveText(persistedWorkspacePath)
-    await expect(mainWindow.getByTestId('workspace-popup-name')).toHaveText('persisted-workspace')
+    await testHelpers.assertWorkspaceReadyPath(persistedWorkspacePath)
+    await expect(
+      mainWindow.getByTestId('home-primary-card').locator('.cthulhuUiRow .cthulhuUiTitle')
+    ).toHaveText('persisted-workspace')
   })
 
   test('applies persisted sidebar widths from user persistence', async ({
