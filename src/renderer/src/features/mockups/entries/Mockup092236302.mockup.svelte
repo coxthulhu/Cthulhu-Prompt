@@ -171,7 +171,7 @@
     {...hover(id)}
     style="display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: {ghostFill(id)}; color: {ghostGlyph(id)};"
   >
-    <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+    <Icon size={16} strokeWidth={1.75} aria-hidden="true" />
   </button>
 {/snippet}
 
@@ -185,7 +185,7 @@
       src={appIcon}
       alt="Cthulhu Prompt icon"
       draggable="false"
-      style="flex: 0 0 auto; width: 16px; height: 16px; margin: 0 10px 9px; object-fit: contain;"
+      style="flex: 0 0 auto; width: 20px; height: 20px; margin: 0 8px 7px 12px; object-fit: contain;"
     />
 
     <div role="tablist" aria-label="Screens" style="display: flex; flex: 0 0 auto; gap: 2px;">
@@ -207,7 +207,7 @@
             : ghostGlyph(tab.id)};"
         >
           {@render tabBackdrop(selected, hovered.has(tab.id))}
-          <TabIcon size={16} strokeWidth={1.75} style="position: relative;" aria-hidden="true" />
+          <TabIcon size={18} strokeWidth={1.5} style="position: relative;" aria-hidden="true" />
         </button>
       {/each}
     </div>
@@ -277,7 +277,7 @@
       {...hover('new-tab-button')}
       style="display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 28px; height: 28px; margin: 0 0 3px 10px; border-radius: 6px; background: {ghostFill('new-tab-button')}; color: {ghostGlyph('new-tab-button')};"
     >
-      <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
+      <Plus size={18} strokeWidth={1.5} aria-hidden="true" />
     </button>
 
     <div style="flex: 1 0 24px; align-self: stretch;"></div>
@@ -294,10 +294,10 @@
           ? 'var(--ui-normal-text)'
           : 'var(--ui-secondary-icon-glyph)'};"
       >
-        <Download size={16} strokeWidth={1.75} aria-hidden="true" />
+        <Download size={18} strokeWidth={1.5} aria-hidden="true" />
         <span
           aria-hidden="true"
-          style="position: absolute; right: 10px; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--ui-success-normal-text); border: 2px solid var(--ui-chrome-normal-surface); box-sizing: content-box;"
+          style="position: absolute; right: 9px; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ui-success-normal-text); border: 2px solid var(--ui-chrome-normal-surface); box-sizing: content-box;"
         ></span>
       </button>
       {@render windowControl('minimize', 'Minimize window', '', false)}
@@ -334,7 +334,7 @@
             {...hover('return-new-tab')}
             style="display: flex; flex: 0 0 auto; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 6px; border-radius: 6px; background: {ghostFill('return-new-tab')}; color: {ghostText('return-new-tab')};"
           >
-            <ArrowLeft size={14} strokeWidth={1.75} aria-hidden="true" />
+            <ArrowLeft size={18} strokeWidth={1.75} aria-hidden="true" />
             New Tab
           </button>
         </div>
@@ -388,7 +388,7 @@
                     ? 'var(--ui-neutral-focus-border)'
                     : 'var(--ui-card-normal-border)'}; border-radius: 8px; background: var(--ui-card-normal-surface);"
                 >
-                  <ItemIcon size={18} strokeWidth={1.5} style="flex: 0 0 auto; color: var(--ui-secondary-icon-glyph);" aria-hidden="true" />
+                  <ItemIcon size={16} strokeWidth={1.75} style="flex: 0 0 auto; color: var(--ui-secondary-icon-glyph);" aria-hidden="true" />
                   <span style="display: flex; flex-direction: column; min-width: 0;">
                     <span class="text-sm leading-5" style="{truncate} color: var(--ui-normal-text);">{item.title}</span>
                     <span class="text-xs leading-4" style="{truncate} color: var(--ui-muted-text);">{item.project}</span>
@@ -411,7 +411,7 @@
                   ? 'var(--ui-neutral-focus-border)'
                   : 'var(--ui-neutral-normal-border)'}; border-radius: 6px; background: {ghostFill('new-project')}; color: {ghostText('new-project')};"
               >
-                <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
+                <Plus size={16} strokeWidth={1.75} aria-hidden="true" />
                 New Project
               </button>
             </div>
