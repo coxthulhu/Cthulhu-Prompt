@@ -307,7 +307,32 @@
   </header>
 
   <div style="display: flex; flex: 1; min-height: 0;">
-    {#if activeScreenTab}
+    {#if activeScreenTab?.id === 'settings'}
+      <aside
+        style="display: flex; flex: 0 0 280px; flex-direction: column; min-height: 0; border-right: 1px solid var(--ui-neutral-hover-border); user-select: none;"
+      >
+        <div style="display: flex; flex: 0 0 auto; align-items: center; min-height: 40px; padding: 0 6px 0 10px;">
+          <h2
+            class="text-sm leading-4.5"
+            style="{truncate} font-weight: var(--font-weight-semibold); color: var(--ui-secondary-text);"
+          >
+            System Settings
+          </h2>
+        </div>
+        <div
+          class="text-sm leading-5"
+          style="display: flex; flex: 1; align-items: center; justify-content: center; min-height: 0; color: var(--ui-muted-text);"
+        >
+          Settings Tree
+        </div>
+      </aside>
+      <div
+        class="text-base leading-6"
+        style="display: flex; flex: 1; align-items: center; justify-content: center; min-width: 0; color: var(--ui-muted-text);"
+      >
+        {activeScreenTab.screenLabel}
+      </div>
+    {:else if activeScreenTab}
       <div
         class="text-base leading-6"
         style="display: flex; flex: 1; align-items: center; justify-content: center; color: var(--ui-muted-text);"
