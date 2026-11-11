@@ -201,7 +201,7 @@
   style="display: flex; flex-direction: column; height: 100%; min-height: 640px; color: var(--ui-normal-text); font-family: var(--font-sans);"
 >
   <header
-    style="display: flex; flex: 0 0 40px; align-items: center; min-width: 0; background: var(--ui-chrome-normal-surface); border-bottom: 1px solid var(--ui-neutral-hover-border); user-select: none;"
+    style="display: flex; flex: 0 0 44px; align-items: center; min-width: 0; background: var(--ui-chrome-normal-surface); border-bottom: 1px solid var(--ui-neutral-hover-border); user-select: none;"
   >
     <img
       src={appIcon}
@@ -224,7 +224,7 @@
             activeTabId = tab.id
           }}
           {...hover(tab.id)}
-          style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 34px; color: {selected || hovered.has(tab.id)
+          style="position: relative; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; color: {selected || hovered.has(tab.id)
             ? 'var(--ui-hoverable-icon-glyph)'
             : 'var(--ui-secondary-icon-glyph)'};"
         >
@@ -247,7 +247,7 @@
         {@const TabIcon = tab.icon}
         <div
           {...hover(tab.id)}
-          style="position: relative; display: flex; flex: 0 1 200px; width: 200px; min-width: 0; height: 34px;"
+          style="position: relative; display: flex; flex: 0 1 200px; width: 200px; min-width: 0; height: 42px;"
         >
           {@render tabBackdrop(selected, isHovered)}
           <button
