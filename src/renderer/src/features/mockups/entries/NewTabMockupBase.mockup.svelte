@@ -18,7 +18,7 @@
   import appIcon from '@renderer/assets/cutethulhu.png'
   import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
 
-  type CollectionKind = 'task' | 'template'
+  type WorkTabScreen = 'new-tab' | 'prompt-collection' | 'template-collection'
 
   type ScreenTab = {
     id: string
@@ -30,13 +30,15 @@
   type WorkTab = {
     id: string
     title: string
-    icon: ComponentType
+    screen: WorkTabScreen
     project: string | null
   }
 
-  const kindIcons: Record<CollectionKind, ComponentType> = {
-    task: FileText,
-    template: Layers
+  /** Icon shown for each screen a work tab can be on, matching the live title bar. */
+  const workTabIcons: Record<WorkTabScreen, ComponentType> = {
+    'new-tab': LayoutGrid,
+    'prompt-collection': FileText,
+    'template-collection': Layers
   }
 
   const screenTabs: ScreenTab[] = [
@@ -46,19 +48,40 @@
     { id: 'test-screen', label: 'Test Screen', icon: Bug, screenLabel: 'Test Screen' }
   ]
 
-  const workTabs: WorkTab[] = [
-    { id: 'bug-triage', title: 'Bug Triage', icon: kindIcons.task, project: 'Atlas Web' },
-    { id: 'code-review', title: 'Code Review', icon: kindIcons.template, project: 'Atlas Web' },
-    { id: 'schema-migrations', title: 'Schema Migrations', icon: kindIcons.task, project: 'Harbor API' },
-    { id: 'release-notes', title: 'Release Notes', icon: kindIcons.template, project: 'Harbor API' },
-    { id: 'new-tab', title: 'New Tab', icon: LayoutGrid, project: null }
-  ]
+  /** Most work tabs open at once; the New Tab button is disabled at this count. */
+  const maxWorkTabs = 6
+
+  let workTabs = $state<WorkTab[]>([
+    { id: 'bug-triage', title: 'Bug Triage', screen: 'prompt-collection', project: 'Atlas Web' },
+    { id: 'code-review', title: 'Code Review', screen: 'template-collection', project: 'Atlas Web' },
+    { id: 'schema-migrations', title: 'Schema Migrations', screen: 'prompt-collection', project: 'Harbor API' },
+    { id: 'release-notes', title: 'Release Notes', screen: 'template-collection', project: 'Harbor API' },
+    { id: 'new-tab', title: 'New Tab', screen: 'new-tab', project: null }
+  ])
+  /** Suffix that keeps the ids of tabs added from the New Tab button unique. */
+  let addedTabCount = 0
 
   let activeTabId = $state('new-tab')
   const activeScreenTab = $derived(screenTabs.find((tab) => tab.id === activeTabId))
   const activeWorkTab = $derived(workTabs.find((tab) => tab.id === activeTabId))
   /** Project tabs and System Settings show a sidebar; every other tab fills the body. */
   const hasSidebar = $derived(activeScreenTab?.id === 'settings' || Boolean(activeWorkTab?.project))
+
+  /** Appends a New Tab work tab and selects it. */
+  const addWorkTab = () => {
+    addedTabCount += 1
+    const tab: WorkTab = { id: `added-tab-${addedTabCount}`, title: 'New Tab', screen: 'new-tab', project: null }
+    workTabs = [...workTabs, tab]
+    activeTabId = tab.id
+  }
+
+  /** Closes a work tab; closing the selected tab selects its right neighbour, else its left, else Home. */
+  const closeWorkTab = (tabId: string) => {
+    const wasSelected = activeTabId === tabId
+    const index = workTabs.findIndex((tab) => tab.id === tabId)
+    workTabs = workTabs.filter((tab) => tab.id !== tabId)
+    if (wasSelected) activeTabId = (workTabs[index] ?? workTabs[index - 1])?.id ?? 'home'
+  }
 
   /** Sidebar width follows the live app's 240–400px resize range so every separator position can be checked. */
   let sidebarWidth = $state(280)
@@ -85,7 +108,7 @@
     sash.addEventListener('pointercancel', stop)
   }
 
-  /** Inline styles cannot express :hover, so hovered elements are tracked by id. */
+  /** Inline styles cannot express :hover, so hovered sidebar elements are tracked by id. */
   const hovered = new SvelteSet<string>()
   const hover = (id: string) => ({
     onpointerenter: () => hovered.add(id),
@@ -102,39 +125,6 @@
   const truncate = 'min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'
 </script>
 
-{#snippet tabBackdrop(selected: boolean, isHovered: boolean)}
-  {#if selected || isHovered}
-    <!-- Selected tabs reuse the prompt tree's active-row fills: emphasis at rest, selection on hover. -->
-    <span
-      aria-hidden="true"
-      style="position: absolute; inset: 3px; border-radius: 6px; background: {selected
-        ? isHovered
-          ? 'var(--ui-neutral-selection-surface)'
-          : 'var(--ui-neutral-emphasis-surface)'
-        : 'var(--ui-neutral-normal-surface)'};"
-    ></span>
-  {/if}
-{/snippet}
-
-{#snippet windowControl(id: string, label: string, glyph: string, isClose: boolean)}
-  <button
-    type="button"
-    aria-label={label}
-    {...hover(id)}
-    style="display: inline-flex; align-items: center; justify-content: center; width: var(--titlebar-button-width); height: 100%; background: {hovered.has(id)
-      ? isClose
-        ? '#e81123'
-        : 'var(--ui-neutral-action-fill)'
-      : 'var(--ui-ghost-surface)'}; color: var(--ui-normal-text);"
-  >
-    <span
-      aria-hidden="true"
-      style="font-family: 'Segoe MDL2 Assets', 'Segoe UI Symbol', sans-serif; font-size: 10px; line-height: 10px;"
-      >{glyph}</span
-    >
-  </button>
-{/snippet}
-
 {#snippet ghostIconButton(id: string, label: string, Icon: ComponentType)}
   <button
     type="button"
@@ -147,92 +137,62 @@
   </button>
 {/snippet}
 
-<!-- Option 3A: the continuous line stays, and the selected tab is a neutral filled pill like an active prompt tree row. -->
+<!-- The title bar mirrors the live WindowsTitleBar: full-height touching hit areas with inset neutral pills. -->
 <div
   style="display: flex; flex-direction: column; height: 100%; min-height: 640px; color: var(--ui-normal-text); font-family: var(--font-sans);"
 >
-  <header
-    style="display: flex; flex: 0 0 44px; align-items: center; min-width: 0; background: var(--ui-chrome-normal-surface); border-bottom: 1px solid var(--ui-neutral-hover-border); user-select: none;"
-  >
-    <img
-      src={appIcon}
-      alt="Cthulhu Prompt icon"
-      draggable="false"
-      style="flex: 0 0 auto; width: 20px; height: 20px; margin: 0 10px 0 12px; object-fit: contain;"
-    />
+  <header class="titlebar">
+    <img class="titlebar__app-icon" src={appIcon} alt="Cthulhu Prompt icon" draggable="false" />
 
-    <div role="tablist" aria-label="Screens" style="display: flex; flex: 0 0 auto; gap: 4px;">
+    <nav class="titlebar__screens" aria-label="Screens">
       {#each screenTabs as tab (tab.id)}
-        {@const selected = activeTabId === tab.id}
+        {@const active = activeTabId === tab.id}
         {@const TabIcon = tab.icon}
         <button
           type="button"
-          role="tab"
-          aria-selected={selected}
+          class="titlebar__screen"
           aria-label={tab.label}
+          aria-current={active ? 'page' : undefined}
+          data-active={active ? 'true' : 'false'}
           title={tab.label}
           onclick={() => {
             activeTabId = tab.id
           }}
-          {...hover(tab.id)}
-          style="position: relative; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; color: {selected || hovered.has(tab.id)
-            ? 'var(--ui-hoverable-icon-glyph)'
-            : 'var(--ui-secondary-icon-glyph)'};"
         >
-          {@render tabBackdrop(selected, hovered.has(tab.id))}
-          <TabIcon size={20} strokeWidth={1.5} style="position: relative;" aria-hidden="true" />
+          <TabIcon size={20} strokeWidth={1.5} aria-hidden="true" />
         </button>
       {/each}
-    </div>
+    </nav>
 
-    <div
-      aria-hidden="true"
-      style="flex: 0 0 auto; width: 1px; height: 18px; margin: 0 9px; background: var(--ui-neutral-normal-border);"
-    ></div>
+    <div class="titlebar__separator" aria-hidden="true"></div>
 
-    <div role="tablist" aria-label="Open tabs" style="display: flex; flex: 0 1 auto; gap: 2px; min-width: 0;">
+    <div class="titlebar__tabs" role="tablist" aria-label="Open tabs">
       {#each workTabs as tab (tab.id)}
+        {@const TabIcon = workTabIcons[tab.screen]}
         {@const selected = activeTabId === tab.id}
-        {@const isHovered = hovered.has(tab.id)}
-        {@const closeId = `${tab.id}:close`}
-        {@const TabIcon = tab.icon}
-        <div
-          {...hover(tab.id)}
-          style="position: relative; display: flex; flex: 0 1 200px; width: 200px; min-width: 0; height: 42px;"
-        >
-          {@render tabBackdrop(selected, isHovered)}
+        <div class="titlebar__tab" data-selected={selected}>
+          <!-- The tab button covers the whole pill so clicks around the close button still select the tab. -->
           <button
             type="button"
+            class="titlebar__tab-select text-sm leading-5"
             role="tab"
             aria-selected={selected}
-            class="text-sm leading-5"
             onclick={() => {
               activeTabId = tab.id
             }}
-            style="position: relative; display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; height: 100%; padding: 0 6px 0 12px; text-align: left; color: {selected ||
-            isHovered
-              ? 'var(--ui-normal-text)'
-              : 'var(--ui-hoverable-text)'};"
+            onauxclick={(event) => {
+              if (event.button === 1) closeWorkTab(tab.id)
+            }}
           >
-            <TabIcon
-              size={16}
-              aria-hidden="true"
-              style="flex: 0 0 auto; color: {selected || isHovered
-                ? 'var(--ui-hoverable-icon-glyph)'
-                : 'var(--ui-secondary-icon-glyph)'};"
-            />
-            <span style={truncate}>{tab.title}</span>
+            <TabIcon size={16} aria-hidden="true" />
+            <span class="titlebar__tab-title">{tab.title}</span>
           </button>
           <button
             type="button"
+            class="titlebar__tab-close"
             aria-label={`Close ${tab.title}`}
             title="Close Tab"
-            {...hover(closeId)}
-            style="position: relative; display: flex; flex: 0 0 auto; align-self: center; align-items: center; justify-content: center; width: 20px; height: 20px; margin-right: 7px; border-radius: 4px; background: {hovered.has(closeId)
-              ? 'var(--ui-neutral-action-hover-fill)'
-              : 'var(--ui-ghost-surface)'}; color: {hovered.has(closeId)
-              ? 'var(--ui-normal-text)'
-              : 'var(--ui-secondary-icon-glyph)'};"
+            onclick={() => closeWorkTab(tab.id)}
           >
             <X size={14} aria-hidden="true" />
           </button>
@@ -240,50 +200,43 @@
       {/each}
     </div>
 
-    <div
-      aria-hidden="true"
-      style="flex: 0 0 auto; width: 1px; height: 18px; margin: 0 4px 0 9px; background: var(--ui-neutral-normal-border);"
-    ></div>
-
     <button
       type="button"
+      class="titlebar__new-tab"
       aria-label="New Tab"
       title="New Tab"
-      {...hover('new-tab-button')}
-      style="display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: {ghostFill('new-tab-button')}; color: {hovered.has('new-tab-button')
-        ? 'var(--ui-normal-text)'
-        : 'var(--ui-secondary-icon-glyph)'};"
+      disabled={workTabs.length >= maxWorkTabs}
+      onclick={addWorkTab}
     >
       <Plus size={20} strokeWidth={1.5} aria-hidden="true" />
     </button>
 
-    <div style="flex: 1 0 24px; align-self: stretch;"></div>
-
-    <div style="display: flex; flex: 0 0 auto; align-self: stretch;">
+    <div class="titlebar__controls">
       <button
         type="button"
+        class="titlebar__control titlebar__updates"
         aria-label="App updates — update available"
         title="App updates"
-        {...hover('app-updates')}
-        style="position: relative; display: inline-flex; align-items: center; justify-content: center; width: var(--titlebar-button-width); height: 100%; background: {hovered.has('app-updates')
-          ? 'var(--ui-neutral-action-fill)'
-          : 'var(--ui-ghost-surface)'}; color: {hovered.has('app-updates')
-          ? 'var(--ui-normal-text)'
-          : 'var(--ui-secondary-icon-glyph)'};"
       >
         <Download size={20} strokeWidth={1.5} aria-hidden="true" />
-        <span
-          aria-hidden="true"
-          style="position: absolute; right: 9px; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ui-success-normal-text); border: 2px solid var(--ui-chrome-normal-surface); box-sizing: content-box;"
-        ></span>
+        <span class="titlebar__update-dot"></span>
       </button>
-      {@render windowControl('minimize', 'Minimize window', '', false)}
-      {@render windowControl('restore', 'Restore window', '', false)}
-      {@render windowControl('close', 'Close window', '', true)}
+      <button type="button" class="titlebar__control" aria-label="Minimize window">
+        <span class="titlebar__icon" aria-hidden="true">&#xE921;</span>
+      </button>
+      <button type="button" class="titlebar__control" aria-label="Restore window">
+        <span class="titlebar__icon" aria-hidden="true">&#xE923;</span>
+      </button>
+      <button type="button" class="titlebar__control titlebar__control--close" aria-label="Close window">
+        <span class="titlebar__icon" aria-hidden="true">&#xE8BB;</span>
+      </button>
     </div>
   </header>
 
-  <div style="display: flex; flex: 1; min-height: 0; background: var(--background);">
+  <!-- The live title bar has no bottom border; the sidebar and screen below it each draw the top line. -->
+  <div
+    style="display: flex; flex: 1; min-height: 0; background: var(--background); border-top: 1px solid var(--ui-neutral-hover-border);"
+  >
     {#if hasSidebar}
       <!-- Live app surfaces: chrome-colored sidebar, darker content, and a T-junction where the borders meet. -->
       <aside
@@ -342,10 +295,293 @@
       style="display: flex; flex: 1; align-items: center; justify-content: center; min-width: 0; color: var(--ui-muted-text);"
     >
       {activeWorkTab
-        ? activeWorkTab.project
-          ? 'Collection Screen'
-          : 'New Tab Screen'
+        ? activeWorkTab.screen === 'new-tab'
+          ? 'New Tab Screen'
+          : 'Collection Screen'
         : activeScreenTab?.screenLabel}
     </div>
   </div>
 </div>
+
+<style>
+  /* Copied from WindowsTitleBar.svelte without the window drag regions, which would move the app window. */
+  .titlebar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    background: var(--ui-chrome-normal-surface);
+    height: var(--titlebar-height);
+    min-height: var(--titlebar-height);
+    user-select: none;
+  }
+
+  .titlebar__app-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin: 0 10px 0 12px;
+    object-fit: contain;
+  }
+
+  /* Full-height row of touching screen buttons, so no drag region sits above, below, or between them. */
+  .titlebar__screens {
+    display: flex;
+    flex: none;
+    align-self: stretch;
+  }
+
+  .titlebar__screen {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    color: var(--ui-secondary-icon-glyph);
+    cursor: default;
+  }
+
+  /* The outer buttons overlap their surroundings by 2px so the wider hit areas leave the outer pills in place. */
+  .titlebar__screen:first-child {
+    margin-left: -2px;
+  }
+
+  .titlebar__screen:last-child {
+    margin-right: -2px;
+  }
+
+  /* Hovered and selected screens reuse the prompt tree's row fills as an inset pill, 36px square and 10px from its neighbours. */
+  .titlebar__screen::before {
+    position: absolute;
+    inset: 4px 5px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    content: '';
+  }
+
+  .titlebar__screen :global(svg) {
+    position: relative;
+  }
+
+  .titlebar__screen:is(:hover, :focus-visible, [data-active='true']) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .titlebar__screen:is(:hover, :focus-visible)::before {
+    background: var(--ui-neutral-normal-surface);
+  }
+
+  .titlebar__screen[data-active='true']::before {
+    background: var(--ui-neutral-emphasis-surface);
+  }
+
+  .titlebar__screen[data-active='true']:hover::before {
+    background: var(--ui-neutral-selection-surface);
+  }
+
+  .titlebar__separator {
+    flex: none;
+    width: 1px;
+    height: 18px;
+    margin: 0 9px;
+    background: var(--ui-neutral-normal-border);
+  }
+
+  /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. */
+  .titlebar__tabs {
+    display: flex;
+    flex: 0 1 auto;
+    align-self: stretch;
+    min-width: 0;
+  }
+
+  .titlebar__tab {
+    position: relative;
+    display: flex;
+    flex: 0 1 222px;
+    width: 222px;
+    min-width: 0;
+  }
+
+  /* The outer tabs overlap their surroundings by 1px so the wider hit areas leave the outer pills in place. */
+  .titlebar__tab:first-child {
+    margin-left: -1px;
+  }
+
+  .titlebar__tab:last-child {
+    margin-right: -1px;
+  }
+
+  /* Insets keep each pill 36px tall in the 44px title bar and 4px from its neighbours across the touching hit areas. */
+  .titlebar__tab::before {
+    position: absolute;
+    inset: 4px 2px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    content: '';
+  }
+
+  .titlebar__tab:is(:hover, :focus-within)::before {
+    background: var(--ui-neutral-normal-surface);
+  }
+
+  .titlebar__tab[data-selected='true']::before {
+    background: var(--ui-neutral-emphasis-surface);
+  }
+
+  .titlebar__tab[data-selected='true']:hover::before {
+    background: var(--ui-neutral-selection-surface);
+  }
+
+  /* The right padding reserves the close button's slot inside the full-pill tab button. */
+  .titlebar__tab-select {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0 34px 0 13px;
+    text-align: left;
+    color: var(--ui-hoverable-text);
+    cursor: default;
+  }
+
+  .titlebar__tab-select :global(svg) {
+    flex: none;
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .titlebar__tab:is(:hover, :focus-within, [data-selected='true']) .titlebar__tab-select {
+    color: var(--ui-normal-text);
+  }
+
+  .titlebar__tab:is(:hover, :focus-within, [data-selected='true']) .titlebar__tab-select :global(svg) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .titlebar__tab-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .titlebar__tab-close {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin: 0 8px 0 auto;
+    border-radius: 4px;
+    color: var(--ui-secondary-icon-glyph);
+    cursor: default;
+  }
+
+  .titlebar__tab-close:is(:hover, :focus-visible) {
+    background: var(--ui-neutral-action-hover-fill);
+    color: var(--ui-normal-text);
+  }
+
+  /* Full-height hit area touching the last tab; its pill sits 4px from the last tab pill, like the gap between tabs. */
+  .titlebar__new-tab {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    color: var(--ui-secondary-icon-glyph);
+    cursor: default;
+  }
+
+  /* The hover pill matches the tab pills' 36px visible height. */
+  .titlebar__new-tab::before {
+    position: absolute;
+    inset: 4px 3px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    content: '';
+  }
+
+  .titlebar__new-tab :global(svg) {
+    position: relative;
+  }
+
+  .titlebar__new-tab:is(:hover, :focus-visible):not(:disabled) {
+    color: var(--ui-normal-text);
+  }
+
+  .titlebar__new-tab:is(:hover, :focus-visible):not(:disabled)::before {
+    background: var(--ui-neutral-normal-surface);
+  }
+
+  /* Matches the shared disabled button appearance once the tab limit is reached. */
+  .titlebar__new-tab:disabled {
+    opacity: 0.5;
+  }
+
+  /* The left padding keeps at least a 24px drag gap after the New Tab button. */
+  .titlebar__controls {
+    display: flex;
+    align-items: stretch;
+    height: 100%;
+    margin-left: auto;
+    padding-left: 24px;
+  }
+
+  .titlebar__control {
+    width: var(--titlebar-button-width);
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+  }
+
+  .titlebar__control:hover {
+    background: var(--ui-neutral-action-fill);
+  }
+
+  .titlebar__control:active {
+    background: var(--ui-neutral-action-hover-fill);
+  }
+
+  .titlebar__control--close:hover {
+    background: #e81123;
+    color: #ffffff;
+  }
+
+  .titlebar__control--close:active {
+    background: #f1707a;
+  }
+
+  .titlebar__updates {
+    position: relative;
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .titlebar__updates:is(:hover, :focus-visible) {
+    color: var(--ui-normal-text);
+  }
+
+  .titlebar__update-dot {
+    position: absolute;
+    right: 9px;
+    top: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ui-success-normal-text);
+    border: 2px solid var(--ui-chrome-normal-surface);
+    box-sizing: content-box;
+  }
+
+  /* Windows glyph metrics are explicitly excluded to preserve native control rendering. */
+  .titlebar__icon {
+    font-family: 'Segoe MDL2 Assets', 'Segoe UI Symbol', sans-serif;
+    font-size: 10px;
+    line-height: 10px;
+  }
+</style>
