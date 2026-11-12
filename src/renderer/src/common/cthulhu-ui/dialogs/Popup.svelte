@@ -17,7 +17,8 @@
     closeOnOutsideClick?: boolean
     /** Toggle control that handles its own click, so pressing it is never an outside press. */
     trigger?: HTMLElement
-    placement?: 'center' | 'bottom-left'
+    /** 'below-right' hangs the surface under `anchor` with their right edges aligned. */
+    placement?: 'center' | 'bottom-left' | 'below-right'
     anchor?: HTMLElement
     offsetX?: number
     offsetY?: number
@@ -66,7 +67,9 @@
   const surfaceStyle = $derived(
     placement === 'bottom-left'
       ? cssAnchor.getStyle({ placement, anchored: !!anchor, offsetX, offsetY })
-      : undefined
+      : placement === 'below-right'
+        ? cssAnchor.getStyle({ placement, offsetX, offsetY })
+        : undefined
   )
 
   /** Dismisses user requests unless closing is disabled; parents can still set open. */
@@ -198,7 +201,7 @@
     pointer-events: auto;
   }
 
-  .cthulhuUiPopupLayer[data-placement='bottom-left'] :global(.cthulhuUiPopupSurface) {
+  .cthulhuUiPopupLayer:not([data-placement='center']) :global(.cthulhuUiPopupSurface) {
     position: fixed;
   }
 </style>

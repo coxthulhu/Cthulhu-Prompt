@@ -386,10 +386,14 @@ describe('Backlog prompts', () => {
     await selectStatus(mainWindow, 'first', 'in-progress')
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['first', 'second', 'third'])
     await selectGroup(mainWindow, 'active')
+    // The clipped virtual window cannot be scrolled by Playwright, so the tree reveals the last editor.
+    await mainWindow.getByTestId('prompt-tree-active-prompt-third').click()
     await selectStatus(mainWindow, 'third', 'in-progress')
     await selectStatus(mainWindow, 'third', 'todo')
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['first', 'second', 'third'])
     await selectStatus(mainWindow, 'second', 'completed')
+    // Return to the top so the collection header's filters are visible again.
+    await testHelpers.scrollVirtualWindowTo('[data-testid="prompt-collection-virtual-window"]', 0)
     await selectGroup(mainWindow, 'completed')
     await mainWindow.locator(`${promptEditorSelector('second')} [data-testid="prompt-status-more-options-button"]`).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-more-options-menu"] .cthulhuUiDropdownPopupMoreOptionsTitle'))

@@ -229,7 +229,7 @@
       await flushAllAutosaves()
     }
   )
-  /** Activity bar toggle that the updater popup must not treat as an outside press. */
+  /** Title bar toggle that anchors the updater popup and is never treated as an outside press. */
   let updatesButton = $state<HTMLButtonElement>()
   const windowTitle = $derived(
     isDevMode && executionFolderName
@@ -649,12 +649,9 @@
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
 
-  /** Opens another project with its own last collection; re-clicking the active project toggles its sidebar. */
+  /** Opens another project with its own last collection; re-clicking the active project does nothing. */
   const activateProject = (projectId: string): void => {
-    if (activeScreen === 'project' && projectMode.projectId === projectId) {
-      activateActivity('project')
-      return
-    }
+    if (activeScreen === 'project' && projectMode.projectId === projectId) return
     persistPromptNavigationSelection()
     captureRegisteredMonacoViewStates()
     projectMode.projectId = projectId
@@ -690,15 +687,9 @@
     }))
   })
 
-  /** Re-clicking an activity changes visibility without resetting its screen selection. */
+  /** Switches screens and opens the sidebar; re-clicking the active screen does nothing. */
   const activateActivity = (screen: ScreenId): void => {
-    if (screen === activeScreen) {
-      if (activeSidebarMode) {
-        sidebarExpanded = !sidebarExpanded
-        setAppSidebarExpandedWithAutosave(sidebarExpanded)
-      }
-      return
-    }
+    if (screen === activeScreen) return
 
     navigateToScreen(screen)
     sidebarExpanded = true
@@ -743,22 +734,19 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar
-      title={windowTitle}
-      {isDevBuild}
-    />
-  {/if}
-
-  <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
-      onProjectsReorder={reorderProjects}
-      onCreateProject={() => projectSettingsDialog?.openDialog({ createProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} {isDevMode} onNavigate={activateActivity}
+    <WindowsTitleBar {activeScreen} {isDevMode} {isDevBuild} onNavigate={activateActivity}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return
         if (updater.updates.open) updater.dismiss()
         updater.updates.open = !updater.updates.open
       }} />
+  {/if}
+
+  <div class="sidebarSurface flex min-h-0 flex-1">
+    <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
+      onProjectsReorder={reorderProjects}
+      onCreateProject={() => projectSettingsDialog?.openDialog({ createProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} />
 
     <ResizableSidebar
       isSidebarVisible={isAppSidebarExpanded}

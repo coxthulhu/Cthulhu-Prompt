@@ -4,6 +4,7 @@ import {
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
+import { readWorkspaceState, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, expect } = createPlaywrightTestSuite()
 
@@ -152,31 +153,31 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.assertHomeActive()
   })
 
-  // The activity bar mascot is decoration: hover rotates its message, but it is never a control.
-  test('shows the activity bar mascot as a static icon', async ({ testSetup }) => {
+  // The title bar icon is plain decoration; the Test Screen button carries the rotating tooltip.
+  test('shows the title bar app icon and rotates the Test Screen tooltip on hover', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    /** Mascot row that previously hosted the workspace popup trigger. */
-    const mascot = mainWindow.getByTestId('activity-bar-mascot')
-    const mascotImage = mascot.locator('img')
+    /** App icon at the start of the title bar. */
+    const appIcon = mainWindow.locator('.titlebar__app-icon')
+    /** Test Screen button whose tooltip changes on every hover. */
+    const testScreenButton = mainWindow.getByTestId('nav-button-test-screen')
 
-    await expect(mascot.locator('button, a, [tabindex]')).toHaveCount(0)
-    await expect(mascotImage).toHaveCSS('width', '32px')
-    await expect(mascotImage).toHaveCSS('height', '32px')
-    await expect.poll(async () => {
-      /** Mascot and Home bounds define the intentional eight-pixel separation. */
-      const [mascotBox, home] = await Promise.all([
-        mascot.boundingBox(),
-        mainWindow.getByTestId('nav-button-home').boundingBox()
-      ])
-      return Math.abs(home!.y - mascotBox!.y - mascotBox!.height - 8)
-    }).toBeLessThanOrEqual(1)
+    await expect(appIcon).toHaveAttribute('alt', 'Cthulhu Prompt icon')
+    await expect(appIcon).not.toHaveAttribute('title')
+    await expect(appIcon).toHaveCSS('width', '20px')
+    await expect(appIcon).toHaveCSS('height', '20px')
+    await expect(mainWindow.getByTestId('activity-bar-mascot')).toHaveCount(0)
+    await expect(mainWindow.locator('.titlebar')).toHaveCSS('height', '44px')
+    // Screen and update buttons moved out of the activity bar into the title bar.
+    for (const testId of ['nav-button-home', 'nav-button-settings', 'nav-button-mockups', 'nav-button-test-screen', 'app-updates-button']) {
+      await expect(mainWindow.locator(`.titlebar [data-testid="${testId}"]`)).toBeVisible()
+      await expect(mainWindow.getByTestId('app-activity-bar').getByTestId(testId)).toHaveCount(0)
+    }
 
-    const tooltip = await mascotImage.getAttribute('title')
-    await mascotImage.hover()
-    await expect(mascotImage).not.toHaveAttribute('title', tooltip!)
-
-    await mascotImage.click()
-    await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
+    /** Tooltip shown before the hover replaces it. */
+    const tooltip = await testScreenButton.getAttribute('title')
+    await testScreenButton.hover()
+    await expect(testScreenButton).not.toHaveAttribute('title', tooltip!)
+    await expect(testScreenButton).toHaveAttribute('aria-label', 'Test Screen')
     await testHelpers.assertHomeActive()
   })
 
@@ -217,90 +218,67 @@ test.describe('Sidebar Tests', () => {
     await testHelpers.assertHomeActive()
   })
 
-  test('toggles the sidebar from the active activity and opens it when switching activities', async ({
+  // Repeated activity clicks never hide the sidebar, while switching activities still forces it open.
+  test('keeps the sidebar open on repeated activity clicks and opens it when switching activities', async ({
+    electronApp,
     testSetup
   }) => {
+    // A saved collapsed preference proves that switching activities overrides it.
+    await seedWorkspaceState(electronApp, null, 'application-user', null, {
+      hasShownWelcome: true,
+      appSidebarExpanded: false
+    })
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
+    /** Sidebar shared by both sidebar activities. */
+    const sidebar = mainWindow.getByTestId('app-sidebar')
+    /** Sash shown only while the sidebar is expanded. */
+    const resizeHandle = mainWindow.getByTestId('app-sidebar-resize-handle')
+    /** Reads whether the title bar's Enter/Space handler maximized the window. */
+    const isMaximized = () => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isMaximized())
+    /** Window state that keyboard presses on title bar buttons must not change. */
+    const initiallyMaximized = await isMaximized()
+    await expect(sidebar).toHaveCount(0)
+    expect((await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded).toBe(false)
+
+    for (const screen of ['settings', 'project']) {
+      /** Activity whose screen shows a sidebar. */
+      const activity = mainWindow.getByTestId(`nav-button-${screen}`)
+      // Keyboard activation reaches the title bar's Settings button instead of maximizing the window.
+      await activity.press('Enter')
+      await expect(activity).toHaveAttribute('aria-current', 'page')
+      await expect(sidebar).toBeVisible()
+      await expect(resizeHandle).toBeVisible()
+      await expect(mainWindow.locator('[aria-current="page"][data-testid^="nav-button-"]')).toHaveCount(1)
+      await expect(activity).not.toHaveAttribute('aria-expanded')
+      await expect(activity).not.toHaveAttribute('title', /sidebar/)
+
+      // Pointer and keyboard repeats leave the screen and its sidebar unchanged.
+      await activity.click()
+      await activity.press('Enter')
+      await activity.press('Space')
+      await expect(activity).toHaveAttribute('aria-current', 'page')
+      await expect(sidebar).toBeVisible()
+      await expect(resizeHandle).toBeVisible()
+      expect(await isMaximized()).toBe(initiallyMaximized)
+    }
+    await expect.poll(async () =>
+      (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
+    ).toBe(true)
+
+    // Re-clicking the active project keeps its selected collection and prompt.
     await testHelpers.navigateToPromptCollections('Development')
+    /** Prompt selected before the repeated click. */
     const selectedPrompt = mainWindow.getByTestId('prompt-tree-active-prompt-dev-1')
     await selectedPrompt.click()
     await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
-
-    const activityBar = mainWindow.getByTestId('app-activity-bar')
-    const activity = mainWindow.getByTestId('nav-button-project')
-    const sidebar = mainWindow.getByTestId('app-sidebar')
-    const sidebarPane = mainWindow.locator('.resizableSidebarPane')
-    const mainSurface = mainWindow.locator('.mainScreenSurface')
-    const titleBarAppIcon = mainWindow.locator('.titlebar__app-icon')
-    const expandedSidebarPaneBox = (await sidebarPane.boundingBox())!
-    const expandedMainSurfaceBox = (await mainSurface.boundingBox())!
-    const activityBarBox = (await activityBar.boundingBox())!
-    const activeIconColor = await activity.evaluate((element) => getComputedStyle(element).color)
+    /** Collection title that must survive the repeated click. */
     const collectionTitle = mainWindow.getByTestId('prompt-collection-title')
     const selectedCollectionTitle = await collectionTitle.textContent()
-    const readIndicator = () => activity.evaluate((element) => {
-      const styles = getComputedStyle(element, '::before')
-      return { height: styles.height, width: styles.width }
-    })
-
-    await expect(mainWindow.getByTestId('app-sidebar-toggle-button')).toHaveCount(0)
-    await expect(titleBarAppIcon).toHaveAttribute('alt', 'Cthulhu Prompt icon')
-    await expect(titleBarAppIcon).toHaveCSS('width', '16px')
-    await expect(titleBarAppIcon).toHaveCSS('height', '16px')
-    await expect(activity).toHaveAttribute('aria-current', 'page')
-    await expect(activity).toHaveAttribute('aria-expanded', 'true')
-    await expect(activity).toHaveAttribute('title', 'Default Project — Hide sidebar')
-    expect(await readIndicator()).toEqual({ height: '36px', width: '2px' })
-    await expect(sidebarPane).toHaveCSS('transition-duration', '0s')
-    await expect(sidebarPane).toHaveCSS('animation-name', 'none')
-
-    await activity.click()
-    // Sample geometry immediately to catch unwanted collapse animations.
-    const collapsedSidebarPaneBox = await sidebarPane.boundingBox()
-    const collapsedMainSurfaceBox = (await mainSurface.boundingBox())!
-    expect(collapsedSidebarPaneBox).toBeNull()
-    expect(
-      Math.abs(collapsedMainSurfaceBox.x - (activityBarBox.x + activityBarBox.width))
-    ).toBeLessThanOrEqual(1)
-    await expect(sidebar).toBeHidden()
-    await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeHidden()
-    await expect(activityBar).toBeVisible()
-    await expect(activity).toHaveAttribute('aria-current', 'page')
-    await expect(activity).toHaveAttribute('aria-expanded', 'false')
-    await expect(activity).toHaveAttribute('title', 'Default Project — Show sidebar')
-    await expect(activity).toHaveCSS('color', activeIconColor)
-    await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
-    expect(await readIndicator()).toEqual({ height: '26px', width: '2px' })
-
-    // Keyboard activation restores the sidebar without navigating away from the prompt.
-    await activity.press('Enter')
-    const restoredSidebarPaneBox = (await sidebarPane.boundingBox())!
-    const restoredMainSurfaceBox = (await mainSurface.boundingBox())!
-    expect(Math.abs(restoredSidebarPaneBox.width - expandedSidebarPaneBox.width)).toBeLessThanOrEqual(1)
-    expect(Math.abs(restoredMainSurfaceBox.x - expandedMainSurfaceBox.x)).toBeLessThanOrEqual(1)
-    await expect(activity).toHaveAttribute('aria-expanded', 'true')
+    await mainWindow.getByTestId('nav-button-project').click()
     await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
     await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
-    await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeVisible()
-    expect(await readIndicator()).toEqual({ height: '36px', width: '2px' })
-
-    await activity.press('Space')
-    await expect(sidebar).toBeHidden()
-    // Screens with a sidebar open it on navigation and toggle it on a repeat click.
-    for (const screen of ['settings', 'project']) {
-      const nextActivity = mainWindow.getByTestId(`nav-button-${screen}`)
-      await nextActivity.click()
-      await expect(nextActivity).toHaveAttribute('aria-current', 'page')
-      await expect(nextActivity).toHaveAttribute('aria-expanded', 'true')
-      await expect(sidebar).toBeVisible()
-      await expect(activityBar.locator('[aria-current="page"]')).toHaveCount(1)
-      await nextActivity.click()
-      await expect(nextActivity).toHaveAttribute('aria-current', 'page')
-      await expect(nextActivity).toHaveAttribute('aria-expanded', 'false')
-      await expect(sidebar).toBeHidden()
-      await expect(activityBar).toBeVisible()
-    }
+    await expect(sidebar).toBeVisible()
   })
 })

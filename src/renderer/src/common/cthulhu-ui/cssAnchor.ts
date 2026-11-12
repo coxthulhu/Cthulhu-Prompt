@@ -7,6 +7,12 @@ type CssAnchorPosition =
       offsetY: number
     }
   | {
+      /** Hangs below the anchor with both right edges aligned, before offsets. */
+      placement: 'below-right'
+      offsetX: number
+      offsetY: number
+    }
+  | {
       placement: 'cursor' | 'below-trigger'
       alignment: 'left' | 'right'
       cursorOffset: { x: number; y: number } | null
@@ -43,6 +49,12 @@ export const createCssAnchor = () => {
 
   /** Builds live CSS placement while retaining each surface's offsets and width constraints. */
   const getStyle = (position: CssAnchorPosition): string => {
+    if (position.placement === 'below-right') {
+      return `position-anchor: ${anchorName};
+        top: calc(anchor(bottom) + ${position.offsetY}px);
+        right: calc(anchor(right) + ${position.offsetX}px);`
+    }
+
     if ('anchored' in position) {
       return `position-anchor: ${position.anchored ? anchorName : 'auto'};
         left: calc(${position.anchored ? 'anchor(left)' : '0px'} + ${position.offsetX}px);

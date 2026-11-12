@@ -21,9 +21,9 @@ describe('Project sidebar', () => {
     await expect(projectButton).toHaveText('DE')
     await expect(projectButton).toHaveAttribute('title', 'Default Project')
     await expect(projectButton).toHaveAttribute('aria-label', 'Default Project')
-    // Project buttons form their own top-aligned list after the screen activities, behind a separator.
+    // Project buttons lead the activity bar now that the screen buttons live in the title bar.
     await expect(mainWindow.locator(
-      '[data-testid="app-activity-bar"] > [data-testid="nav-button-test-screen"] + .cthulhuUiSeparator + [data-testid="activity-bar-project-list"] [data-testid="nav-button-project"]'
+      '[data-testid="app-activity-bar"] > [data-testid="activity-bar-project-list"]:first-child [data-testid="nav-button-project"]'
     )).toBeVisible()
     // The + button closes the project group.
     await expect(mainWindow.locator('[data-testid="activity-bar-project-list"] + [data-testid="new-project-button"]')).toHaveAttribute('title', 'New Project')

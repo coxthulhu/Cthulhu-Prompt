@@ -2141,6 +2141,8 @@ describe('Prompt collection prompt management', () => {
     expect(await readCategoryIds(STATUS_DRAG_SECONDARY_CATEGORY_ID)).toEqual(['status-drag-secondary-first', 'status-drag-primary-first'])
     await testHelpers.navigateToPromptCollections('Status Drag Categories')
     await expect(mainWindow.locator(statusPillSelector('status-drag-primary-first'))).toHaveText('In Progress')
+    // The clipped virtual window cannot be scrolled by Playwright, so the tree reveals the moved editor.
+    await mainWindow.getByTestId('prompt-tree-active-prompt-status-drag-primary-first').click()
     await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
     await mainWindow.getByTestId('prompt-status-option-todo').click()
     /** Prompt front matter proves the status control persisted before ordering is checked. */

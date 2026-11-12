@@ -113,9 +113,8 @@ export async function getPromptCollectionScreenInfo(page: Page): Promise<{
 
 /** Opens the default project before selecting one task or template collection. */
 export async function navigateToPromptCollections(page: Page, collectionName: string): Promise<void> {
-  const activity = page.getByTestId('nav-button-project')
-  // An already expanded activity must not be clicked again before using its sidebar.
-  if (await activity.getAttribute('aria-expanded') !== 'true') await activity.click()
+  // Re-clicking the already active project leaves its screen and sidebar unchanged.
+  await page.getByTestId('nav-button-project').click()
   await clickPromptCollectionItem(page, collectionName)
 }
 

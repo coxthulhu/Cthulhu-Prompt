@@ -170,9 +170,9 @@ const dragSidebarHandleBy = async (
 }
 
 describe('User Persistence', () => {
-  // Both sidebar modes must save and restore the shared preference through startup hydration.
+  // Both sidebar modes restore a saved collapsed preference, and switching activities saves it expanded again.
   for (const screen of ['project', 'settings']) {
-    test(`persists collapsed and expanded ${screen} sidebar state across reloads`, async ({
+    test(`restores a collapsed ${screen} sidebar and persists its forced expansion across reloads`, async ({
       electronApp,
       testSetup
     }) => {
@@ -183,45 +183,47 @@ describe('User Persistence', () => {
       await testHelpers.navigateToPromptCollections('Development')
       if (screen === 'settings') await testHelpers.navigateToSettingsScreen()
 
-      /** Active activity toggles visibility without changing the restored screen. */
+      /** Activity restored as the selected screen after each reload. */
       const activity = mainWindow.getByTestId(`nav-button-${screen}`)
-      /** Sidebar surface and sash must agree with the activity's expansion state. */
+      /** Other sidebar mode shares the same application preference. */
+      const nextScreen = screen === 'project' ? 'settings' : 'project'
+      /** Activity that forces the collapsed sidebar open by switching screens. */
+      const nextActivity = mainWindow.getByTestId(`nav-button-${nextScreen}`)
+      /** Workspace whose saved screen selection is restored on reload. */
+      const workspaceId = createDeterministicId('/ws/sample')
+      /** Sidebar surface and sash must agree with the saved expansion preference. */
       const sidebar = mainWindow.getByTestId('app-sidebar')
       /** Resize handle must remain unavailable while the sidebar is collapsed. */
       const resizeHandle = mainWindow.getByTestId('app-sidebar-resize-handle')
       await expect(sidebar).toBeVisible()
+      await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe(screen)
 
-      // Inspect actual SQLite JSON before reloading so in-memory state cannot satisfy restoration.
-      for (const expanded of [false, true]) {
-        await activity.click()
-        await expect(activity).toHaveAttribute('aria-expanded', String(expanded))
-        await expect.poll(async () =>
-          (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
-        ).toBe(expanded)
-
-        await mainWindow.reload()
-        await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-        await expect(activity).toHaveAttribute('aria-current', 'page')
-        await expect(activity).toHaveAttribute('aria-expanded', String(expanded))
-        await expect(sidebar).toBeVisible({ visible: expanded })
-        await expect(resizeHandle).toBeVisible({ visible: expanded })
-      }
-
-      // Switching activities must save the existing automatic expansion behavior too.
+      // No control collapses the sidebar yet, so the saved preference is written directly before reloading.
+      await seedWorkspaceState(electronApp, null, 'application-user', null, {
+        hasShownWelcome: true,
+        appSidebarExpanded: false
+      })
+      await mainWindow.reload()
+      await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+      await expect(activity).toHaveAttribute('aria-current', 'page')
+      await expect(sidebar).toBeHidden()
+      await expect(resizeHandle).toBeHidden()
+      // Re-clicking the restored activity never shows or hides the sidebar.
       await activity.click()
       await expect(sidebar).toBeHidden()
-      await expect.poll(async () =>
-        (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
-      ).toBe(false)
-      /** Other sidebar mode shares the same application preference. */
-      const nextActivity = mainWindow.getByTestId(
-        `nav-button-${screen === 'project' ? 'settings' : 'project'}`
-      )
+
+      // Switching activities forces the sidebar open and saves that preference for the next startup.
       await nextActivity.click()
       await expect(sidebar).toBeVisible()
       await expect.poll(async () =>
         (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
       ).toBe(true)
+      await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe(nextScreen)
+      await mainWindow.reload()
+      await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+      await expect(nextActivity).toHaveAttribute('aria-current', 'page')
+      await expect(sidebar).toBeVisible()
+      await expect(resizeHandle).toBeVisible()
     })
   }
 

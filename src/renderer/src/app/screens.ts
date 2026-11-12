@@ -14,7 +14,6 @@ type ScreenConfig = {
   testId: string
   requiresWorkspace: boolean
   devOnly?: boolean
-  showInNav?: boolean
   icon?: ComponentType
   /** Sidebar mode displayed beside this screen, or null for screens without a sidebar. */
   sidebarMode: SidebarModeId | null
@@ -25,7 +24,6 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     label: 'Home',
     testId: 'nav-button-home',
     requiresWorkspace: false,
-    showInNav: true,
     icon: Home,
     sidebarMode: null
   },
@@ -33,7 +31,6 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     label: 'System Settings',
     testId: 'nav-button-settings',
     requiresWorkspace: false,
-    showInNav: true,
     icon: Settings,
     sidebarMode: SidebarModeId.Settings
   },
@@ -42,7 +39,6 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     testId: 'nav-button-mockups',
     requiresWorkspace: false,
     devOnly: true,
-    showInNav: true,
     icon: PanelsTopLeft,
     sidebarMode: null
   },
@@ -51,11 +47,10 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     testId: 'nav-button-test-screen',
     requiresWorkspace: false,
     devOnly: true,
-    showInNav: true,
     icon: Bug,
     sidebarMode: null
   },
-  /** Rendered by the activity bar's project group instead of the screen list. */
+  /** Rendered by the activity bar's project group instead of the title bar's screen buttons. */
   project: {
     label: 'Project',
     testId: 'nav-button-project',

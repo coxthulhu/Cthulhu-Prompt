@@ -120,7 +120,7 @@ describe('App updates', () => {
     const { mainWindow } = await testSetup.setupAndStart()
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
     await mainWindow.getByTestId('app-updates-button').click()
-    /** Nonmodal popup is placed beside the activity rail, matching the approved mockup. */
+    /** Nonmodal popup hangs below the title bar from its updates button. */
     const popup = mainWindow.getByTestId('app-updates-popup')
     await expect(popup).toHaveAttribute('aria-modal', 'false')
     await expect(mainWindow.getByTestId('app-updates-button')).toHaveAttribute('aria-expanded', 'true')
@@ -140,9 +140,11 @@ describe('App updates', () => {
       return Math.abs(releases.left - action.left) <= 1 && Math.abs(releases.right - action.right) <= 1
     })).toBe(true)
     await expect.poll(() => popup.locator('.cthulhuUiPopupSurface').evaluate((element) => {
-      /** Viewport offsets must remain within one CSS pixel. */
+      /** Popup surface border box. */
       const bounds = element.getBoundingClientRect()
-      return Math.abs(bounds.left - 58) <= 1 && Math.abs(window.innerHeight - bounds.bottom - 10) <= 1
+      /** Full-height title bar button the popup hangs 4px below, sharing its right edge. */
+      const button = document.querySelector('[data-testid="app-updates-button"]')!.getBoundingClientRect()
+      return Math.abs(bounds.top - button.bottom - 4) <= 1 && Math.abs(bounds.right - button.right) <= 1
     })).toBe(true)
     await controlUpdater(electronApp, { type: 'complete-check' })
     await expect(popup).toContainText('No updates available')
@@ -292,7 +294,7 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
   })
 
-  for (const dismissal of ['close button', 'Escape', 'activity bar', 'outside click'] as const) {
+  for (const dismissal of ['close button', 'Escape', 'updates button', 'outside click'] as const) {
     test(`keeps 15-minute checks after notification dismissal with ${dismissal} without reopening`, async ({ electronApp, testSetup }) => {
       await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: true, latestVersion: '1.1.0' } })
       /** The manually opened variant first closes during checking, which must not mute notifications. */
@@ -312,7 +314,7 @@ describe('App updates', () => {
       if (dismissal === 'Escape') {
         await popup.getByRole('button', { name: 'Close updates' }).focus()
         await mainWindow.keyboard.press('Escape')
-      } else if (dismissal === 'activity bar') {
+      } else if (dismissal === 'updates button') {
         await mainWindow.getByTestId('app-updates-button').click()
       } else if (dismissal === 'outside click') {
         await mainWindow.mouse.click(5, 5)

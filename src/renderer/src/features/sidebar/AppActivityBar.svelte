@@ -1,16 +1,12 @@
 <script lang="ts">
-  import type { ComponentType } from 'svelte'
   import { flip } from 'svelte/animate'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import { createListReorder } from '@renderer/common/drag-drop/listReorder.svelte.ts'
   import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
-  import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
-  import { Download, Plus } from 'lucide-svelte'
+  import { Plus } from 'lucide-svelte'
   import type { Project } from '@shared/domain/workspace/Project'
-  import appIcon from '@renderer/assets/cutethulhu.png'
-  import { getNextAppIconTooltip, INITIAL_APP_ICON_TOOLTIP } from './appIconTooltip'
 
   let {
     activeScreen,
@@ -20,19 +16,13 @@
     onProjectsReorder,
     onCreateProject,
     isAppSidebarExpanded,
-    isWorkspaceReady = false,
-    isDevMode = false,
-    onNavigate,
-    updatesOpen,
-    updateAvailable,
-    onToggleUpdates,
-    updatesButton = $bindable()
+    isWorkspaceReady = false
   } = $props<{
     /** Persisted project records in the user's display order. */
     projects: Project[]
     /** Selected project is independent of non-project screens. */
     selectedProjectId: string | null
-    /** Opens a project or toggles its already-active sidebar. */
+    /** Opens a project; the already-active project stays as it is. */
     onProjectSelect: (projectId: string) => void
     /** Saves a dragged project order; the preview stays until the save settles. */
     onProjectsReorder: (projectIds: string[]) => Promise<void>
@@ -41,20 +31,8 @@
     activeScreen: ScreenId
     isAppSidebarExpanded: boolean
     isWorkspaceReady?: boolean
-    isDevMode?: boolean
-    onNavigate: (screen: ScreenId) => void
-    /** Reflects the updater popup independently of screen navigation. */
-    updatesOpen: boolean
-    /** Shows a notification dot while a newer public release exists. */
-    updateAvailable: boolean
-    /** Toggles the shell-owned updater surface. */
-    onToggleUpdates: () => void
-    /** Bound updater toggle, identified to the shell-owned popup as its trigger. */
-    updatesButton?: HTMLButtonElement
   }>()
 
-  /** Rotating hover message on the static mascot; it changes on each pointer entry. */
-  let mascotTooltip = $state<string>(INITIAL_APP_ICON_TOOLTIP)
   /** Stationary project button list that owns pointer capture while buttons reorder. */
   let projectListElement = $state<HTMLElement>()
   /** Live drag reordering of project buttons, saved on drop without selecting the dragged project. */
@@ -64,72 +42,10 @@
     getListElement: () => projectListElement,
     onReorder: (projectIds) => onProjectsReorder(projectIds)
   })
-
-  type ActivityItem = {
-    id: ScreenId
-    label: string
-    icon: ComponentType
-    testId: string
-  }
-
-  const activityScreenOrder: ScreenId[] = [
-    'home',
-    'settings',
-    'mockups',
-    'test-screen'
-  ]
-  const activityItems = $derived<ActivityItem[]>(
-    activityScreenOrder
-      .map((screenId) => {
-        const config = screens[screenId]
-        if (
-          !config.showInNav ||
-          (config.devOnly && !isDevMode) ||
-          (config.requiresWorkspace && !isWorkspaceReady) ||
-          !config.icon
-        ) {
-          return null
-        }
-
-        return {
-          id: screenId,
-          label: config.label,
-          icon: config.icon,
-          testId: config.testId
-        }
-      })
-      .filter((item): item is ActivityItem => item !== null)
-  )
 </script>
 
-{#snippet activityButton(item: ActivityItem)}
-  <ActivityBarButton
-    icon={item.icon}
-    label={item.label}
-    title={activeScreen === item.id && screens[item.id].sidebarMode !== null
-      ? `${item.label} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar`
-      : item.label}
-    testId={item.testId}
-    active={activeScreen === item.id}
-    compactIndicator={!isAppSidebarExpanded}
-    ariaCurrent={activeScreen === item.id ? 'page' : undefined}
-    ariaExpanded={activeScreen === item.id && screens[item.id].sidebarMode !== null ? isAppSidebarExpanded : undefined}
-    onclick={() => onNavigate(item.id)}
-  />
-{/snippet}
-
-<nav class="appActivityBar" aria-label="Primary navigation" data-testid="app-activity-bar">
-  <!-- Decorative mascot keeps the rail's 44px row height but is not a control. -->
-  <div class="mb-1 flex h-11 w-full flex-none items-center justify-center" data-testid="activity-bar-mascot">
-    <img class="activityBarMascot h-8 w-8 object-contain" src={appIcon} alt="Cthulhu Prompt icon" title={mascotTooltip}
-      draggable="false" onmouseenter={() => { mascotTooltip = getNextAppIconTooltip(mascotTooltip) }} />
-  </div>
-  {#each activityItems.filter((item) => item.id !== 'settings') as item (item.id)}
-    {@render activityButton(item)}
-  {/each}
+<nav class="appActivityBar" aria-label="Projects" data-testid="app-activity-bar">
   {#if isWorkspaceReady}
-    <!-- Project buttons form their own top-aligned group below the screen activities. -->
-    <Separator class="my-1 w-7" />
     {#if projects.length > 0}
       <div bind:this={projectListElement} class="flex w-full flex-col gap-1" data-pointer-drag-owner
         data-testid="activity-bar-project-list">
@@ -143,13 +59,12 @@
           >
             <ActivityBarButton
               label={project.name}
-              title={isActive ? `${project.name} — ${isAppSidebarExpanded ? 'Hide' : 'Show'} sidebar` : project.name}
+              title={project.name}
               testId={screens.project.testId}
               active={isActive}
               dragging={projectReorder.draggedId === project.id}
               compactIndicator={!isAppSidebarExpanded}
               ariaCurrent={isActive ? 'page' : undefined}
-              ariaExpanded={isActive ? isAppSidebarExpanded : undefined}
               onclick={() => onProjectSelect(project.id)}
             >
               <span class="text-xl leading-7 font-semibold" aria-hidden="true">{project.abbreviation}</span>
@@ -160,30 +75,4 @@
     {/if}
     <ActivityBarButton icon={Plus} label="New Project" title="New Project" testId="new-project-button" onclick={onCreateProject} />
   {/if}
-  <div class="mt-auto flex w-full flex-col gap-1 relative">
-    {#each activityItems.filter((item) => item.id === 'settings') as item (item.id)}
-      {@render activityButton(item)}
-    {/each}
-    <ActivityBarButton bind:buttonElement={updatesButton} label={updateAvailable ? 'App updates — update available' : 'App updates'}
-      ariaExpanded={updatesOpen} title="App updates" testId="app-updates-button" onclick={onToggleUpdates}>
-      <Download size={24} strokeWidth={1.5} aria-hidden="true" />
-      {#if updateAvailable}<span class="updateDot" data-testid="update-available-dot"></span>{/if}
-    </ActivityBarButton>
-  </div>
 </nav>
-
-<style>
-  /* The mascot keeps its resting rail appearance; it has no interactive states. */
-  .activityBarMascot { opacity: 0.8; transform: translateX(1px); }
-  .updateDot {
-    position: absolute;
-    right: 7px;
-    top: 7px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--ui-success-normal-text);
-    border: 2px solid var(--ui-chrome-normal-surface);
-    box-sizing: content-box;
-  }
-</style>

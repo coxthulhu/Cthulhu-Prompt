@@ -52,9 +52,8 @@
   --border: oklch(1 0 0 / 10%);
   --ring: oklch(0.556 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --titlebar-height: 32px;
+  --titlebar-height: 44px;
   --titlebar-button-width: 46px;
-  --titlebar-controls-width: calc(var(--titlebar-button-width) * 3);
   --app-chrome-surface: var(--ui-chrome-normal-surface);
   /* Shared cthulhu-ui corner scale for non-pill components. */
   --cthulhu-ui-radius-card: 8px;
