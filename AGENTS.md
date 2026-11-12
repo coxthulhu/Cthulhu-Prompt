@@ -6,7 +6,7 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 ## Major Application Components
 
-- **App Title Bar** — The custom Windows title bar holding the app icon, the Home, Settings, Mockups, and Test Screen buttons, the App Updates button, and the window controls.
+- **App Title Bar** — The custom Windows title bar holding the app icon, the Home, Settings, Mockups, and Test Screen buttons, the persisted work tabs and New Tab button, the App Updates button, and the window controls.
 - **App Activity Bar** — The persistent rail of two-letter project buttons and a + new-project button shown while a workspace is open.
 - **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Project or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`, with Home, Mockups, and Test Screen always hiding the sidebar.
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.

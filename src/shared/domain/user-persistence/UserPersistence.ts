@@ -1,5 +1,30 @@
 import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/AuthoritativeSnapshot'
 
+/** Screens a work tab can show; each one selects the tab's icon. */
+export const WORK_TAB_SCREENS = ['new-tab', 'prompt-collection', 'template-collection'] as const
+
+/** Screen currently shown by a work tab. */
+export type WorkTabScreen = (typeof WORK_TAB_SCREENS)[number]
+
+/** One open tab in the title bar's tab strip. */
+export type WorkTab = {
+  id: string
+  title: string
+  screen: WorkTabScreen
+}
+
+/** Validates one persisted or IPC-supplied work tab. */
+export const isWorkTab = (value: unknown): value is WorkTab => {
+  const tab = value as Partial<WorkTab> | null
+  return (
+    typeof tab === 'object' &&
+    tab !== null &&
+    typeof tab.id === 'string' &&
+    typeof tab.title === 'string' &&
+    WORK_TAB_SCREENS.includes(tab.screen as WorkTabScreen)
+  )
+}
+
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
@@ -15,6 +40,10 @@ export type UserPersistence = {
   singlePromptNoteFraction: number
   /** Number of quick collection rows shown in the project sidebar on this machine. */
   sidebarQuickCollectionCount: number
+  /** Open work tabs on this machine, in display order. */
+  workTabs: WorkTab[]
+  /** Selected work tab or title bar screen on this machine, or null while a project is selected. */
+  selectedTabId: string | null
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
@@ -25,7 +54,9 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   settingsCollapsedSectionIds: [],
   settingsScrollTopPx: 0,
   singlePromptNoteFraction: 0.3,
-  sidebarQuickCollectionCount: 3
+  sidebarQuickCollectionCount: 3,
+  workTabs: [],
+  selectedTabId: null
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -157,7 +188,14 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
     sidebarQuickCollectionCount:
       typeof value.sidebarQuickCollectionCount === 'number'
         ? value.sidebarQuickCollectionCount
-        : DEFAULT_USER_PERSISTENCE.sidebarQuickCollectionCount
+        : DEFAULT_USER_PERSISTENCE.sidebarQuickCollectionCount,
+    workTabs: Array.isArray(value.workTabs)
+      ? value.workTabs.filter(isWorkTab)
+      : DEFAULT_USER_PERSISTENCE.workTabs,
+    selectedTabId:
+      typeof value.selectedTabId === 'string'
+        ? value.selectedTabId
+        : DEFAULT_USER_PERSISTENCE.selectedTabId
   }
 }
 

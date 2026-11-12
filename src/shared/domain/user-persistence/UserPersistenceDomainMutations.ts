@@ -1,6 +1,7 @@
 import type { DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import {
   USER_PERSISTENCE_ID,
+  isWorkTab,
   type UserPersistence
 } from '@shared/domain/user-persistence/UserPersistence'
 
@@ -12,7 +13,7 @@ export const parseSetUserPersistenceDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (
-    Object.keys(record).length !== 8 ||
+    Object.keys(record).length !== 10 ||
     (record.lastWorkspaceInfoPath !== null &&
       typeof record.lastWorkspaceInfoPath !== 'string') ||
     typeof record.appSidebarWidthPx !== 'number' ||
@@ -22,7 +23,10 @@ export const parseSetUserPersistenceDomainCommand = (
     !record.settingsCollapsedSectionIds.every((id) => typeof id === 'string') ||
     typeof record.settingsScrollTopPx !== 'number' ||
     typeof record.singlePromptNoteFraction !== 'number' ||
-    typeof record.sidebarQuickCollectionCount !== 'number'
+    typeof record.sidebarQuickCollectionCount !== 'number' ||
+    !Array.isArray(record.workTabs) ||
+    !record.workTabs.every(isWorkTab) ||
+    (record.selectedTabId !== null && typeof record.selectedTabId !== 'string')
   ) {
     return null
   }
@@ -34,7 +38,9 @@ export const parseSetUserPersistenceDomainCommand = (
     settingsCollapsedSectionIds: record.settingsCollapsedSectionIds,
     settingsScrollTopPx: Math.round(record.settingsScrollTopPx),
     singlePromptNoteFraction: record.singlePromptNoteFraction,
-    sidebarQuickCollectionCount: record.sidebarQuickCollectionCount
+    sidebarQuickCollectionCount: record.sidebarQuickCollectionCount,
+    workTabs: record.workTabs,
+    selectedTabId: record.selectedTabId
   }
 }
 

@@ -2,6 +2,7 @@ import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
 import type { WorkspacePromptCollectionUiState, WorkspaceUiState } from '@shared/domain/ui-state/UiState'
 import type { WindowPersistence } from './UserPersistenceDataAccess'
 import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
+import type { WorkTab } from '@shared/domain/user-persistence/UserPersistence'
 
 /** Whether a state type can follow the user to another machine. */
 export enum StorageScope {
@@ -23,6 +24,10 @@ export type WorkspaceStateData = {
     settingsScrollTopPx: number
     singlePromptNoteFraction: number
     sidebarQuickCollectionCount: number
+    /** Open work tabs, in display order. */
+    workTabs: WorkTab[]
+    /** Selected work tab or title bar screen, or null while a project is selected. */
+    selectedTabId: string | null
   }
   'workspace-dialog': { directory: string | null }
   window: WindowPersistence

@@ -1,4 +1,8 @@
-import { UPDATE_USER_PERSISTENCE_CHANNEL, USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
+import {
+  UPDATE_USER_PERSISTENCE_CHANNEL,
+  USER_PERSISTENCE_ID,
+  type WorkTab
+} from '@shared/domain/user-persistence/UserPersistence'
 import { planSetUserPersistenceDomainMutation } from '@shared/domain/user-persistence/UserPersistenceDomainMutations'
 import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
 import {
@@ -36,6 +40,20 @@ export const syncLastWorkspaceInfoPath = async (
   const command = { ...current, lastWorkspaceInfoPath }
   await runImmediateRendererDomainMutation({
     mutation: { command, plan: planSetUserPersistenceDomainMutation },
+    ipc: { channel: UPDATE_USER_PERSISTENCE_CHANNEL },
+    renderer: {}
+  })
+}
+
+/** Saves the open work tabs and the selected tab immediately, like workspace screen selection. */
+export const syncTabState = async (workTabs: WorkTab[], selectedTabId: string | null): Promise<void> => {
+  /** Latest optimistic preferences, including any pending autosave edits. */
+  const current = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  await runImmediateRendererDomainMutation({
+    mutation: {
+      command: { ...current, workTabs, selectedTabId },
+      plan: planSetUserPersistenceDomainMutation
+    },
     ipc: { channel: UPDATE_USER_PERSISTENCE_CHANNEL },
     renderer: {}
   })

@@ -38,7 +38,7 @@
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
   } from '@renderer/app/workspaceSelection.svelte.ts'
-  import { syncLastWorkspaceInfoPath } from '@renderer/data/Mutations/UserPersistenceMutations'
+  import { syncLastWorkspaceInfoPath, syncTabState } from '@renderer/data/Mutations/UserPersistenceMutations'
   import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
   import {
     setAppSidebarExpandedWithAutosave,
@@ -66,14 +66,17 @@
   import { setPromptCollectionSelectedEntryIdWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
+    WORK_TAB_SCREENS,
     isProjectScreenSelection,
     isWorkspaceScreenSelectionSame,
+    type WorkTab,
     type WorkspaceScreenSelection
   } from '@shared/domain/user-persistence/UserPersistence'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
   import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
+  import { compactGuid } from '@shared/utilities/compactGuid'
   import AppUpdatesPopup from '@renderer/features/updates/AppUpdatesPopup.svelte'
   import { createAppUpdates } from '@renderer/features/updates/appUpdates.svelte'
 
@@ -148,6 +151,20 @@
   setPromptNavigationContext(promptNavigation)
 
   let activeScreen = $state<ScreenId>('home')
+  /** Open work tabs in display order, restored from this machine's persistence. */
+  let workTabs = $state<WorkTab[]>(getUserPersistence().workTabs)
+  /** Work tab chosen while Home is shown; every work tab shows Home until tabs get their own screens. */
+  let selectedWorkTabId = $state<string | null>(null)
+  /** Selected tab saved by the previous session, applied once startup restores the workspace. */
+  const startupSelectedTabId = getUserPersistence().selectedTabId
+  /** Selected title bar tab: an open work tab shown on Home, the active screen, or null while a project is shown. */
+  const selectedTabId = $derived(
+    activeScreen === 'project'
+      ? null
+      : activeScreen === 'home' && workTabs.some((tab) => tab.id === selectedWorkTabId)
+        ? selectedWorkTabId
+        : activeScreen
+  )
   /** Every sidebar mode, created once so each mode's data survives screen switches. */
   const sidebarModes = createSidebarModes()
   /** Default project's collection state, shared by its sidebar and screen. */
@@ -570,6 +587,12 @@
     void (async () => {
       try {
         await restoreWorkspaceFromPersistence()
+        // The saved tab overrides the workspace's own screen; null leaves a restored project shown.
+        if (startupSelectedTabId && startupSelectedTabId in screens) {
+          navigateToScreen(startupSelectedTabId as ScreenId)
+        } else if (startupSelectedTabId) {
+          selectWorkTab(startupSelectedTabId)
+        }
       } catch (error) {
         console.error('Failed to restore workspace from user persistence.', error)
       } finally {
@@ -577,6 +600,14 @@
         showWelcomeDialog = needsWelcome
       }
     })()
+  })
+
+  // Side effect: save the open work tabs and the selected tab after startup has applied the saved ones.
+  $effect(() => {
+    const tabs = $state.snapshot(workTabs)
+    const tabId = selectedTabId
+    if (startupRestorePhase !== 'ready') return
+    void runIpcBestEffort(() => syncTabState(tabs, tabId))
   })
 
   // Side effect: keep the browser window title in sync with dev mode state.
@@ -645,6 +676,7 @@
       if (!projectMode.projectId) return
       projectMode.selectCollection(projectMode.resolveCollectionId(collectionId))
     }
+    selectedWorkTabId = null
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
@@ -687,13 +719,45 @@
     }))
   })
 
-  /** Switches screens and opens the sidebar; re-clicking the active screen does nothing. */
+  /** Switches screens and opens the sidebar; re-clicking the selected screen does nothing. */
   const activateActivity = (screen: ScreenId): void => {
-    if (screen === activeScreen) return
+    if (screen === selectedTabId) return
 
     navigateToScreen(screen)
     sidebarExpanded = true
     setAppSidebarExpandedWithAutosave(sidebarExpanded)
+  }
+
+  /** Selects a work tab, which shows Home until work tabs get their own screens. */
+  const selectWorkTab = (tabId: string): void => {
+    navigateToScreen('home')
+    selectedWorkTabId = tabId
+  }
+
+  /** Appends a tab named after the highest-numbered tab, with a random screen icon, and selects it. */
+  const addWorkTab = (): void => {
+    /** Number one past the highest "Tab N" title still open. */
+    const tabNumber = Math.max(0, ...workTabs.map((tab) => Number(tab.title.slice('Tab '.length)))) + 1
+    /** New tab appended after every open tab. */
+    const tab: WorkTab = {
+      id: compactGuid(globalThis.crypto.randomUUID()),
+      title: `Tab ${tabNumber}`,
+      screen: WORK_TAB_SCREENS[Math.floor(Math.random() * WORK_TAB_SCREENS.length)]
+    }
+    workTabs = [...workTabs, tab]
+    selectWorkTab(tab.id)
+  }
+
+  /** Closes a work tab; closing the selected tab selects its right neighbour, else its left, else Home. */
+  const closeWorkTab = (tabId: string): void => {
+    /** Selection is read before removal, which would otherwise fall back to Home. */
+    const wasSelected = selectedTabId === tabId
+    /** Position the right neighbour moves into once the tab is removed. */
+    const index = workTabs.findIndex((tab) => tab.id === tabId)
+    workTabs = workTabs.filter((tab) => tab.id !== tabId)
+    /** Right neighbour, or the left one when the closed tab was rightmost; Home stays selected without either. */
+    const nextTab = workTabs[index] ?? workTabs[index - 1]
+    if (wasSelected && nextTab) selectWorkTab(nextTab.id)
   }
 
   const navigateToScreenCollection = (promptCollectionId: string): void => {
@@ -734,7 +798,8 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar {activeScreen} {isDevMode} {isDevBuild} onNavigate={activateActivity}
+    <WindowsTitleBar {selectedTabId} {workTabs} {isDevMode} {isDevBuild} onNavigate={activateActivity}
+      onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return
