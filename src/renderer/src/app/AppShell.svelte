@@ -86,7 +86,6 @@
 
   const runtimeConfig = getRuntimeConfig()
   const isDevMode = isDevOrPlaywrightEnvironment()
-  const isDevBuild = runtimeConfig.environment === 'DEV'
   const baseWindowTitle = 'Cthulhu Prompt'
   const executionFolderName = runtimeConfig.executionFolderName
   const systemSettingsQuery = useLiveQuery((q) =>
@@ -798,7 +797,7 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar {selectedTabId} {workTabs} {isDevMode} {isDevBuild} onNavigate={activateActivity}
+    <WindowsTitleBar {selectedTabId} {workTabs} {isDevMode} {executionFolderName} onNavigate={activateActivity}
       onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {

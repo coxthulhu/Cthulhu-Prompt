@@ -11,7 +11,7 @@
     selectedTabId,
     workTabs,
     isDevMode = false,
-    isDevBuild = false,
+    executionFolderName = null,
     onNavigate,
     onSelectWorkTab,
     onAddWorkTab,
@@ -33,8 +33,8 @@
     onCloseWorkTab: (tabId: string) => void
     /** Shows the development-only Mockups and Test Screen buttons. */
     isDevMode?: boolean
-    /** Colors the updates button with the development indicator. */
-    isDevBuild?: boolean
+    /** Folder the app was launched from, shown behind the tabs in development mode. */
+    executionFolderName?: string | null
     /** Changes the screen when one of the screen buttons is pressed. */
     onNavigate: (screen: ScreenId) => void
     /** Reflects the updater popup independently of screen navigation. */
@@ -121,6 +121,13 @@
   ondblclick={handleDoubleClick}
   onkeydown={handleKeyDown}
 >
+  <!-- Rendered first because Electron applies drag regions in document order: the later no-drag buttons
+       must override the drag region this label inherits, or the label would swallow their clicks. -->
+  {#if isDevMode && executionFolderName}
+    <div class="titlebar__execution-folder text-sm leading-5" data-testid="execution-folder-name">
+      {executionFolderName}
+    </div>
+  {/if}
   <!-- The application icon stays part of the window drag region. -->
   <img
     class="titlebar__app-icon"
@@ -200,7 +207,6 @@
       bind:this={updatesButton}
       type="button"
       class="titlebar__control titlebar__updates"
-      data-dev-build={isDevBuild}
       aria-label={updateAvailable ? 'App updates — update available' : 'App updates'}
       aria-expanded={updatesOpen}
       title="App updates"
@@ -247,7 +253,10 @@
 </div>
 
 <style>
+  /* Isolation keeps the background folder label above the title bar fill but beneath every control. */
   .titlebar {
+    position: relative;
+    isolation: isolate;
     display: flex;
     align-items: center;
     background: var(--app-chrome-surface);
@@ -328,12 +337,13 @@
     background: var(--ui-neutral-normal-border);
   }
 
-  /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. */
+  /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. The opaque fill hides the background folder label. */
   .titlebar__tabs {
     display: flex;
     flex: 0 1 auto;
     align-self: stretch;
     min-width: 0;
+    background: var(--app-chrome-surface);
   }
 
   .titlebar__tab {
@@ -428,7 +438,7 @@
     color: var(--ui-normal-text);
   }
 
-  /* Full-height hit area touching the last tab; its pill sits 4px from the last tab pill, like the gap between tabs. */
+  /* Full-height hit area touching the last tab; its pill sits 4px from the last tab pill, like the gap between tabs. The opaque fill hides the background folder label. */
   .titlebar__new-tab {
     position: relative;
     display: flex;
@@ -437,6 +447,7 @@
     align-items: center;
     justify-content: center;
     width: 42px;
+    background: var(--app-chrome-surface);
     color: var(--ui-secondary-icon-glyph);
     -webkit-app-region: no-drag;
     cursor: default;
@@ -462,9 +473,21 @@
     background: var(--ui-neutral-normal-surface);
   }
 
-  /* Matches the shared disabled button appearance once the tab limit is reached. */
-  .titlebar__new-tab:disabled {
+  /* Matches the shared disabled button appearance once the tab limit is reached; only the glyph fades so the opaque fill still hides the folder label. */
+  .titlebar__new-tab:disabled :global(svg) {
     opacity: 0.5;
+  }
+
+  /* Background label 8px left of the updates button and three window controls; the opaque tab strip and New Tab button hide it when they reach it. */
+  .titlebar__execution-folder {
+    position: absolute;
+    top: 50%;
+    right: calc(var(--titlebar-button-width) * 4 + 8px);
+    z-index: -1;
+    transform: translateY(-50%);
+    color: var(--ui-development-indicator-text);
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   /* The left padding keeps at least the mockup's 24px drag gap after the New Tab button. */
@@ -510,11 +533,6 @@
 
   .titlebar__updates:is(:hover, :focus-visible, [aria-expanded='true']) {
     color: var(--ui-normal-text);
-  }
-
-  /* Development builds keep the semantic indicator color in every state. */
-  .titlebar__updates[data-dev-build='true'] {
-    color: var(--ui-development-indicator-text);
   }
 
   .titlebar__update-dot {
