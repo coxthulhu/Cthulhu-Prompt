@@ -144,6 +144,65 @@ describe('Attached note editors', () => {
       }
     })
 
+    test(`${kind} moves the caret between the title, body, and note with arrows at document edges`, async ({ testSetup }) => {
+      /** Two body lines separate edge crossings from ordinary line movement. */
+      const { mainWindow } = await startNotes(testSetup, kind, 'First line\nSecond line')
+      const owner = mainWindow.locator(OWNER)
+      const title = owner.getByTestId('prompt-title')
+      await owner.getByTestId('attached-note-button').click()
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
+      await mainWindow.keyboard.insertText('Note first\nNote second')
+      /** Reports the owner's focused field with its title offsets or Monaco cursor position. */
+      const readFocus = () => owner.evaluate((row) => {
+        /** Native title selection is reported as start and end offsets. */
+        const input = row.querySelector<HTMLInputElement>('[data-testid="prompt-title"]')!
+        if (document.activeElement === input) return { field: 'title', position: [input.selectionStart, input.selectionEnd] }
+        for (const [field, selector] of [['body', '.prompt-editor-body-editor-section'], ['note', '[data-testid="attached-note-editor"]']]) {
+          /** Registered editor inside this section owns its focus and cursor. */
+          const editor = window.__cthulhuMonacoEditors!.find((entry) => row.querySelector(selector)!.contains(entry.container))!.editor
+          const position = editor.getPosition()!
+          if (editor.hasTextFocus()) return { field, position: [position.lineNumber, position.column] }
+        }
+        return { field: 'none', position: [] }
+      })
+      /** Presses one key and waits for the expected field and caret. */
+      const press = async (key: string, field: string, position: number[]) => {
+        await mainWindow.keyboard.press(key)
+        await expect.poll(readFocus).toEqual({ field, position })
+      }
+
+      // A retained mid-body caret proves the title's ArrowDown lands at the body's start.
+      await setMonacoSelections(mainWindow, BODY, [{ selectionStartLineNumber: 2, selectionStartColumn: 4, positionLineNumber: 2, positionColumn: 4 }])
+      await title.focus()
+      await title.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 0))
+      // ArrowUp keeps focus in the title.
+      await press('ArrowUp', 'title', [0, 0])
+      await press('ArrowDown', 'body', [1, 1])
+      await press('ArrowDown', 'body', [2, 1])
+      // Reaching the last line is not enough; the first ArrowDown only moves to its end.
+      await press('ArrowDown', 'body', [2, 12])
+      for (const key of ['Shift+ArrowDown', 'Control+ArrowDown']) await press(key, 'body', [2, 12])
+      // The note's retained end caret proves the crossing lands at its start.
+      await press('ArrowDown', 'note', [1, 1])
+      await press('ArrowDown', 'note', [2, 1])
+      await press('ArrowDown', 'note', [2, 12])
+      // The note's end does not continue into the neighboring editor.
+      await press('ArrowDown', 'note', [2, 12])
+      // Reaching the first line is not enough; the first ArrowUp only moves to its start.
+      await press('ArrowUp', 'note', [1, 11])
+      await press('ArrowUp', 'note', [1, 1])
+      // A retained mid-body caret proves the note's ArrowUp lands at the body's end.
+      await setMonacoSelections(mainWindow, BODY, [{ selectionStartLineNumber: 1, selectionStartColumn: 3, positionLineNumber: 1, positionColumn: 3 }])
+      await press('ArrowUp', 'body', [2, 12])
+      await press('ArrowUp', 'body', [1, 11])
+      await press('ArrowUp', 'body', [1, 1])
+      for (const key of ['Shift+ArrowUp', 'Control+ArrowUp']) await press(key, 'body', [1, 1])
+      // A selection ending at the start collapses before the next ArrowUp leaves the body.
+      await setMonacoSelections(mainWindow, BODY, [{ selectionStartLineNumber: 1, selectionStartColumn: 3, positionLineNumber: 1, positionColumn: 1 }])
+      await press('ArrowUp', 'body', [1, 1])
+      await press('ArrowUp', 'title', [5, 5])
+    })
+
     test(`${kind} adds, edits, hides, restores, and deletes independently of its owner`, async ({ testSetup, electronApp }) => {
       /** Both owners start without notes or saved visibility. */
       const { mainWindow, testHelpers, openCollection, active } = await startNotes(testSetup, kind)

@@ -30,7 +30,8 @@
     onBeforeCopy?: () => Promise<boolean>
     onStatusChange?: (status: import('@shared/domain/prompt/Prompt').PromptStatus) => void
     onSelectionChange?: (selection: PromptCollectionFindSelection) => void
-    onTitleEditorFocus?: () => void | Promise<void>
+    /** Moves focus to the body, placing its caret at the start for ArrowDown. */
+    onTitleEditorFocus?: (atStart: boolean) => void | Promise<void>
     inputRef?: HTMLInputElement | null
     metadataTemplateLabel?: string | null
     metadataTemplateState?: 'not-selected' | 'no-template' | 'selected'
@@ -238,17 +239,15 @@
   }
 
   const handleTitleKeydown = (event: KeyboardEvent) => {
-    const isForwardTab = event.key === 'Tab' && !event.shiftKey
-    const isPlainEnter =
-      event.key === 'Enter' &&
-      !event.shiftKey &&
-      !event.ctrlKey &&
-      !event.altKey &&
-      !event.metaKey
-    if (!isForwardTab && !isPlainEnter) return
+    /** Modified Enter and arrow keys keep their native input behavior. */
+    const isUnmodified = !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
+    const isPlainEnter = event.key === 'Enter' && isUnmodified
+    /** ArrowDown moves to the body's start rather than its retained selection. */
+    const isPlainArrowDown = event.key === 'ArrowDown' && isUnmodified
+    if (!isPlainEnter && !isPlainArrowDown) return
     if (!onTitleEditorFocus) return
     event.preventDefault()
-    void onTitleEditorFocus()
+    void onTitleEditorFocus(isPlainArrowDown)
   }
 
   const handleCopySuccess = async () => {

@@ -532,19 +532,41 @@
     editor.focus()
   }
 
-  const focusEditorFromTitle = async () => {
+  /** Focuses an editor with one collapsed cursor at the document edge nearest the field being left. */
+  const focusEditorAtEdge = (
+    editor: monaco.editor.IStandaloneCodeEditor | null,
+    edge: 'start' | 'end'
+  ) => {
+    if (!editor) return
+    /** Model edge facing the direction the caret arrived from. */
+    const position =
+      edge === 'start'
+        ? new monaco.Position(1, 1)
+        : editor.getModel()!.getFullModelRange().getEndPosition()
+    // A keyboard source lets the collection keep the moved caret within its scroll band.
+    editor.setPosition(position, 'keyboard')
+    editor.revealPosition(position)
+    editor.focus()
+  }
+
+  /** Moves from the title to the body, at its start for ArrowDown or its retained selection for Enter. */
+  const focusEditorFromTitle = async (atStart: boolean) => {
     if (!editorInstance) {
       await ensureHydrated()
     }
 
     // Side effect: wait for Monaco lifecycle registration before moving keyboard focus.
     await tick()
-    editorInstance?.focus()
+    if (atStart) focusEditorAtEdge(editorInstance, 'start')
+    else editorInstance?.focus()
   }
 
-  /** Returns keyboard focus from Monaco to this row's title without changing its selection. */
-  const focusTitleFromEditorStart = () => {
-    titleInputRef?.focus({ preventScroll: true })
+  /** Moves keyboard focus from the body's start to the end of this row's title. */
+  const focusTitleEndFromBody = () => {
+    const input = titleInputRef!
+    // Place the caret before focusing so Find records the arrival position.
+    input.setSelectionRange(input.value.length, input.value.length)
+    input.focus({ preventScroll: true })
   }
 
   // Side effect: register this row with the find integration for navigation.
@@ -808,7 +830,8 @@
         findRowHandlers.revealSectionMatch = handler
       }}
       onSelectionChange={reportBodySelection}
-      onBackwardTabAtStart={focusTitleFromEditorStart}
+      onArrowUpAtStart={focusTitleEndFromBody}
+      onArrowDownAtEnd={() => focusEditorAtEdge(noteEditorInstance, 'start')}
       onImmediateHydrationRequest={(request) => {
         findRowHandlers.requestImmediateHydration = request
       }}
@@ -864,6 +887,7 @@
         ontoggle={toggleAttachedNote}
         {onInteraction}
         onEditorLifecycle={handleNoteEditorLifecycle}
+        onArrowUpAtStart={() => focusEditorAtEdge(editorInstance, 'end')}
       />
     {/key}
   {/if}

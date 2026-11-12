@@ -51,8 +51,10 @@
     ) => void
     onSelectionChange?: (selection: PromptCollectionFindSelection) => void
     onViewStateCapture?: (viewStateJson: string | null) => void
-    /** Moves focus to the owning title input when backward tabbing from the first cursor position. */
-    onBackwardTabAtStart?: () => void
+    /** Moves focus to the field above when ArrowUp is pressed at the first cursor position. */
+    onArrowUpAtStart?: () => void
+    /** Moves focus to the field below when ArrowDown is pressed at the last cursor position. */
+    onArrowDownAtEnd?: () => void
     class?: string
   }
 
@@ -80,7 +82,8 @@
     onFindMatchReveal,
     onSelectionChange,
     onViewStateCapture,
-    onBackwardTabAtStart,
+    onArrowUpAtStart,
+    onArrowDownAtEnd,
     class: className
   }: Props = $props()
 
@@ -203,7 +206,8 @@
     {onFindMatchReveal}
     {onSelectionChange}
     {onViewStateCapture}
-    {onBackwardTabAtStart}
+    {onArrowUpAtStart}
+    {onArrowDownAtEnd}
   />
 {:else}
   <MonacoEditorPlaceholder class={className} heightPx={placeholderHeightPx} {sizingConfig} />

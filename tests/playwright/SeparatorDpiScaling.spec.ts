@@ -204,7 +204,7 @@ for (const scale of [1, 1.25, 1.5, 2, 4]) {
           }
 
           await mainWindow.mouse.move(0, 0)
-          // Establish keyboard modality outside Monaco, whose Shift+Tab handler returns to the title.
+          // Establish keyboard modality outside Monaco, which handles Tab and Shift+Tab itself.
           await mainWindow.getByTestId('nav-button-home').focus()
           await mainWindow.keyboard.press('Tab')
           await button.focus()

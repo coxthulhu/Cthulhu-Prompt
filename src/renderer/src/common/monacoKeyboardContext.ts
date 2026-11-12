@@ -1,4 +1,5 @@
 import { getService, ICodeEditorService, IContextKeyService } from '@codingame/monaco-vscode-api'
+import type { monaco } from '@renderer/common/Monaco'
 
 /** Shared services are resolved before rendering so capture-phase shortcuts stay synchronous. */
 let keyboardServices: {
@@ -13,6 +14,10 @@ export const initializeMonacoKeyboardContext = async (): Promise<void> => {
   ])
   keyboardServices = { codeEditorService, contextKeyService }
 }
+
+/** Lets an open suggestion list keep the arrow keys instead of leaving the editor. */
+export const isMonacoSuggestWidgetVisible = (editor: monaco.editor.ICodeEditor): boolean =>
+  keyboardServices!.contextKeyService.getContext(editor.getDomNode()).getValue<boolean>('suggestWidgetVisible') === true
 
 /** Lets Monaco dismiss its active interaction before an application-level Escape action. */
 export const shouldMonacoHandleEscape = (event: KeyboardEvent): boolean => {

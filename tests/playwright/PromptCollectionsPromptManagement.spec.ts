@@ -742,57 +742,19 @@ describe('Prompt collection prompt management', () => {
 
     const titleInput = mainWindow.locator(promptTitleSelector('dev-1'))
     await titleInput.focus()
-    for (const modifier of ['shiftKey', 'ctrlKey', 'altKey', 'metaKey']) {
-      await titleInput.dispatchEvent('keydown', { key: 'Enter', [modifier]: true })
-      await expect(titleInput).toBeFocused()
+    for (const key of ['Enter', 'ArrowDown']) {
+      for (const modifier of ['shiftKey', 'ctrlKey', 'altKey', 'metaKey']) {
+        await titleInput.dispatchEvent('keydown', { key, [modifier]: true })
+        await expect(titleInput).toBeFocused()
+      }
     }
 
-    await mainWindow.keyboard.press('Tab')
-
+    await mainWindow.keyboard.press('Enter')
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
       .toBe(true)
 
-    await mainWindow.keyboard.press('Control+Home')
-    await mainWindow.keyboard.press('Shift+Tab')
-    await expect(titleInput).toBeFocused()
-
-    await titleInput.evaluate((input: HTMLInputElement) => input.setSelectionRange(2, 2))
-    await mainWindow.keyboard.press('Tab')
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
-      .toBe(true)
-    await mainWindow.keyboard.press('Shift+Tab')
-    await expect(titleInput).toBeFocused()
-    await expect
-      .poll(async () =>
-        titleInput.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])
-      )
-      .toEqual([2, 2])
-
-    await mainWindow.keyboard.press('Tab')
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
-      .toBe(true)
-    await mainWindow.keyboard.press('ArrowRight')
-    await mainWindow.keyboard.press('Shift+Tab')
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
-      .toBe(true)
-
-    await setMonacoSelections(mainWindow, editorSelector, [
-      {
-        selectionStartLineNumber: 1,
-        selectionStartColumn: 2,
-        positionLineNumber: 1,
-        positionColumn: 1
-      }
-    ])
-    await mainWindow.keyboard.press('Shift+Tab')
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
-      .toBe(true)
-
+    // Monaco's own ArrowUp merges multiple cursors at the start; only the next press leaves.
     await setMonacoSelections(mainWindow, editorSelector, [
       {
         selectionStartLineNumber: 1,
@@ -807,17 +769,12 @@ describe('Prompt collection prompt management', () => {
         positionColumn: 2
       }
     ])
-    await mainWindow.keyboard.press('Shift+Tab')
+    await mainWindow.keyboard.press('ArrowUp')
     await expect
       .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
       .toBe(true)
-
-    await titleInput.focus()
-    await mainWindow.keyboard.press('Enter')
-
-    await expect
-      .poll(async () => isMonacoEditorFocused(mainWindow, editorSelector), { timeout: 5000 })
-      .toBe(true)
+    await mainWindow.keyboard.press('ArrowUp')
+    await expect(titleInput).toBeFocused()
   })
 
   test('opens category creation from the sidebar', async ({ testSetup }) => {
