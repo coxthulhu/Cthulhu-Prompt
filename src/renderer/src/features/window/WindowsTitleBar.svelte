@@ -336,11 +336,13 @@
 
   /* Full-height row of touching screen buttons, so no drag region sits above, below, or between them. The row is one
      no-drag rectangle because Electron rounds each button's rectangle separately at fractional display scales, which
-     can leave draggable 1px seams between them. */
+     can leave draggable 1px seams between them. The 1px side margins keep the outer pills 13px from the app icon and
+     12px from the separator. */
   .titlebar__screens {
     display: flex;
     flex: none;
     align-self: stretch;
+    margin: 0 1px;
     -webkit-app-region: no-drag;
   }
 
@@ -349,25 +351,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 46px;
+    width: 40px;
     color: var(--ui-secondary-icon-glyph);
     -webkit-app-region: no-drag;
     cursor: default;
   }
 
-  /* The outer buttons overlap their surroundings by 2px so the wider hit areas leave the outer pills in place. */
-  .titlebar__screen:first-child {
-    margin-left: -2px;
-  }
-
-  .titlebar__screen:last-child {
-    margin-right: -2px;
-  }
-
-  /* Hovered and selected screens reuse the prompt tree's row fills as an inset pill, 36px square and 10px from its neighbours. */
+  /* Hovered and selected screens reuse the prompt tree's row fills as an inset pill, 36px square and 4px from its neighbours. */
   .titlebar__screen::before {
     position: absolute;
-    inset: 4px 5px;
+    inset: 4px 2px;
     border-radius: var(--cthulhu-ui-radius-control);
     content: '';
   }
@@ -401,13 +394,13 @@
   }
 
   /* One no-drag rectangle across the tabs and the New Tab button, which leaves no draggable seams between them at
-     fractional display scales. The right margin keeps at least the mockup's 24px drag gap before the window controls. */
+     fractional display scales. The right margin keeps at least a 40px drag gap before the window controls. */
   .titlebar__tab-row {
     display: flex;
     flex: 0 1 auto;
     align-self: stretch;
     min-width: 0;
-    margin-right: 24px;
+    margin-right: 40px;
     -webkit-app-region: no-drag;
   }
 

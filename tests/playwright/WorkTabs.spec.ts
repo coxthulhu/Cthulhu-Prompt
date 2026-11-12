@@ -111,7 +111,7 @@ describe('Work Tabs', () => {
           [`screen ${index} icon inset`, icon.left - pill.left, 8],
           [`screen ${index} icon top`, icon.top, 12]
         )
-        if (index > 0) rows.push([`screen ${index} pill gap`, pill.left - screenPills[index - 1]!.right, 10])
+        if (index > 0) rows.push([`screen ${index} pill gap`, pill.left - screenPills[index - 1]!.right, 4])
       })
       return rows
     })
