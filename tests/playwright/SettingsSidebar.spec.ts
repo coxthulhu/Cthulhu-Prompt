@@ -54,7 +54,7 @@ describe('Settings Sidebar', () => {
       'New Prompt Focus',
       'Minimum Line Count',
       'Maximum Line Count',
-      'Attached Note Maximum Lines',
+      'Attached Note Reserved Lines',
       'Show Line Numbers',
       'Report an Issue',
       'Automatic Updates',

@@ -19,8 +19,8 @@ export const parseSetSystemSettingsDomainCommand = (
     !Number.isFinite(record.promptEditorMinLines) ||
     typeof record.promptEditorMaxLines !== 'number' ||
     !Number.isFinite(record.promptEditorMaxLines) ||
-    typeof record.attachedNoteMaxLines !== 'number' ||
-    !Number.isFinite(record.attachedNoteMaxLines) ||
+    typeof record.attachedNoteReservedLines !== 'number' ||
+    !Number.isFinite(record.attachedNoteReservedLines) ||
     typeof record.showLineNumbers !== 'boolean' ||
     typeof record.automaticUpdates !== 'boolean' ||
     (record.newPromptFocus !== 'title' && record.newPromptFocus !== 'editor')
@@ -31,7 +31,7 @@ export const parseSetSystemSettingsDomainCommand = (
     promptFontSize: record.promptFontSize,
     promptEditorMinLines: record.promptEditorMinLines,
     promptEditorMaxLines: record.promptEditorMaxLines,
-    attachedNoteMaxLines: record.attachedNoteMaxLines,
+    attachedNoteReservedLines: record.attachedNoteReservedLines,
     showLineNumbers: record.showLineNumbers,
     newPromptFocus: record.newPromptFocus,
     automaticUpdates: record.automaticUpdates
@@ -53,8 +53,8 @@ export const planSetSystemSettingsDomainMutation: DomainPlanner<
   }
   /** Normalized settings shared by renderer optimism and main persistence. */
   const normalizedSettings = normalizeSystemSettings({ ...command })
-  if (normalizedSettings.promptEditorMaxLines < normalizedSettings.attachedNoteMaxLines + ATTACHED_NOTE_LINE_RESERVE) {
-    return { status: 'conflict', reason: 'Editor maximum must leave at least five lines beyond the note maximum', targets }
+  if (normalizedSettings.promptEditorMaxLines < normalizedSettings.attachedNoteReservedLines + ATTACHED_NOTE_LINE_RESERVE) {
+    return { status: 'conflict', reason: 'Editor maximum must leave at least five lines beyond the note reserved lines', targets }
   }
   return [
     {

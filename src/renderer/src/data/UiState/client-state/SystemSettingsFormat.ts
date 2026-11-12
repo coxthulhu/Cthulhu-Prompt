@@ -1,7 +1,7 @@
 import {
   ATTACHED_NOTE_LINE_RESERVE,
-  MIN_ATTACHED_NOTE_MAX_LINES,
-  MAX_ATTACHED_NOTE_MAX_LINES,
+  MIN_ATTACHED_NOTE_RESERVED_LINES,
+  MAX_ATTACHED_NOTE_RESERVED_LINES,
   MAX_PROMPT_EDITOR_MAX_LINES,
   MAX_PROMPT_EDITOR_MIN_LINES,
   MAX_PROMPT_FONT_SIZE,
@@ -16,8 +16,8 @@ export type SystemSettingsFormData = {
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
   promptEditorMaxLinesInput: string
-  /** Editable note viewport limit. */
-  attachedNoteMaxLinesInput: string
+  /** Editable note line reservation. */
+  attachedNoteReservedLinesInput: string
   showLineNumbers: boolean
   /** Selected creation focus in the settings form. */
   newPromptFocus: NewPromptFocus
@@ -29,8 +29,8 @@ export type SystemSettingsValidation = {
   fontSizeError: string | null
   minLinesError: string | null
   maxLinesError: string | null
-  /** Range or shared-budget error for the note maximum. */
-  noteMaxLinesError: string | null
+  /** Range or shared-budget error for the note reserved lines. */
+  noteReservedLinesError: string | null
 }
 
 const formatNumericInput = (value: number): string => {
@@ -81,7 +81,7 @@ export const toSystemSettingsFormData = (
   promptFontSizeInput: formatPromptFontSizeInput(settings.promptFontSize),
   promptEditorMinLinesInput: formatPromptEditorMinLinesInput(settings.promptEditorMinLines),
   promptEditorMaxLinesInput: formatPromptEditorMaxLinesInput(settings.promptEditorMaxLines),
-  attachedNoteMaxLinesInput: String(settings.attachedNoteMaxLines),
+  attachedNoteReservedLinesInput: String(settings.attachedNoteReservedLines),
   showLineNumbers: settings.showLineNumbers,
   newPromptFocus: settings.newPromptFocus,
   automaticUpdates: settings.automaticUpdates
@@ -147,24 +147,24 @@ export const getSystemSettingsValidation = (
 ): SystemSettingsValidation => {
   /** Validate both fields before comparing their rounded persisted values. */
   let maxLinesError = validateMaxLines(formData.promptEditorMaxLinesInput)
-  /** Note limit shares the numeric settings convention and reports its own range. */
-  let noteMaxLinesError = !formData.attachedNoteMaxLinesInput.trim()
-    ? 'Enter a note maximum line count.'
-    : !Number.isFinite(Number(formData.attachedNoteMaxLinesInput))
-      ? 'Note maximum line count must be a number.'
-      : Number(formData.attachedNoteMaxLinesInput) < MIN_ATTACHED_NOTE_MAX_LINES ||
-          Number(formData.attachedNoteMaxLinesInput) > MAX_ATTACHED_NOTE_MAX_LINES
-        ? `Use a value between ${MIN_ATTACHED_NOTE_MAX_LINES} and ${MAX_ATTACHED_NOTE_MAX_LINES}.`
+  /** Note reservation shares the numeric settings convention and reports its own range. */
+  let noteReservedLinesError = !formData.attachedNoteReservedLinesInput.trim()
+    ? 'Enter a note reserved line count.'
+    : !Number.isFinite(Number(formData.attachedNoteReservedLinesInput))
+      ? 'Note reserved line count must be a number.'
+      : Number(formData.attachedNoteReservedLinesInput) < MIN_ATTACHED_NOTE_RESERVED_LINES ||
+          Number(formData.attachedNoteReservedLinesInput) > MAX_ATTACHED_NOTE_RESERVED_LINES
+        ? `Use a value between ${MIN_ATTACHED_NOTE_RESERVED_LINES} and ${MAX_ATTACHED_NOTE_RESERVED_LINES}.`
         : null
-  if (!maxLinesError && !noteMaxLinesError &&
-    Math.round(Number(formData.promptEditorMaxLinesInput)) < Math.round(Number(formData.attachedNoteMaxLinesInput)) + ATTACHED_NOTE_LINE_RESERVE) {
-    maxLinesError = 'Use at least 5 more lines than the attached note maximum.'
-    noteMaxLinesError = 'Use at least 5 fewer lines than the shared editor maximum.'
+  if (!maxLinesError && !noteReservedLinesError &&
+    Math.round(Number(formData.promptEditorMaxLinesInput)) < Math.round(Number(formData.attachedNoteReservedLinesInput)) + ATTACHED_NOTE_LINE_RESERVE) {
+    maxLinesError = 'Use at least 5 more lines than the attached note reserved lines.'
+    noteReservedLinesError = 'Use at least 5 fewer lines than the shared editor maximum.'
   }
   return {
     fontSizeError: validateFontSize(formData.promptFontSizeInput),
     minLinesError: validateMinLines(formData.promptEditorMinLinesInput),
     maxLinesError,
-    noteMaxLinesError
+    noteReservedLinesError
   }
 }

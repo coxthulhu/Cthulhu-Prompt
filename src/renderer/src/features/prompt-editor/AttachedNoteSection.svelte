@@ -4,7 +4,6 @@
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { createNoteEditorModelUri, type monaco } from '@renderer/common/Monaco'
-  import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { noteEditorMeasuredHeight } from '@renderer/data/UiState/cache/NoteEditorUiCache.svelte.ts'
   import { mutatePacedNoteUpdate, flushNoteAutosaves } from '@renderer/data/Mutations/NoteMutations'
   import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
@@ -15,12 +14,15 @@
   import { formatPromptModifiedRelative, formatPromptModifiedFull } from './promptModifiedTime'
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import { ATTACHED_NOTE_HEADER_HEIGHT_PX, type AttachedNoteLayout } from './attachedNoteSizing'
+  import type { PromptEditorSizingConfig } from './promptEditorSizing'
 
   /** Note presentation and virtual-row services supplied by the owning editor. */
-  let { attachment, widthPx, devicePixelRatio, rowId, hydrationPriority, shouldDehydrate,
+  let { attachment, sizingConfig, widthPx, devicePixelRatio, rowId, hydrationPriority, shouldDehydrate,
     overlayRowElement, overflowPadding, fixedHeightPx, scrollToWithinWindowBand, ontoggle, onInteraction, onEditorLifecycle }: {
     /** Authoritative note and its current visibility and measurements. */
     attachment: AttachedNoteLayout
+    /** Shared typography and the note's line limits after the prompt claims its share. */
+    sizingConfig: PromptEditorSizingConfig
     /** Card width used to key wrapped-height measurements. */
     widthPx: number
     /** Current display scaling used by the measurement cache. */
@@ -46,10 +48,6 @@
     /** Supplies note focus to the owning card's move shortcuts. */
     onEditorLifecycle: (editor: monaco.editor.IStandaloneCodeEditor, active: boolean) => void
   } = $props()
-  /** Shared typography and note maximum from persisted system settings. */
-  const settings = getSystemSettingsContext()
-  /** A blank note starts at one visible line. */
-  const sizingConfig = $derived({ fontSize: settings.promptFontSize, minLines: 1, maxLines: settings.attachedNoteMaxLines })
   /** Separate models prevent note edits from affecting prompt text. */
   const modelUri = $derived(createNoteEditorModelUri(attachment.note.id))
   /** Relative dates refresh while the section remains mounted. */

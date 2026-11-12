@@ -21,7 +21,7 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
       promptFontSizeInput: nextFormData.promptFontSizeInput,
       promptEditorMinLinesInput: nextFormData.promptEditorMinLinesInput,
       promptEditorMaxLinesInput: nextFormData.promptEditorMaxLinesInput,
-      attachedNoteMaxLinesInput: nextFormData.attachedNoteMaxLinesInput,
+      attachedNoteReservedLinesInput: nextFormData.attachedNoteReservedLinesInput,
       showLineNumbers: nextFormData.showLineNumbers,
       newPromptFocus: nextFormData.newPromptFocus,
       automaticUpdates: nextFormData.automaticUpdates
@@ -33,7 +33,7 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
     clientState.promptFontSizeInput = nextFormData.promptFontSizeInput
     clientState.promptEditorMinLinesInput = nextFormData.promptEditorMinLinesInput
     clientState.promptEditorMaxLinesInput = nextFormData.promptEditorMaxLinesInput
-    clientState.attachedNoteMaxLinesInput = nextFormData.attachedNoteMaxLinesInput
+    clientState.attachedNoteReservedLinesInput = nextFormData.attachedNoteReservedLinesInput
     clientState.showLineNumbers = nextFormData.showLineNumbers
     clientState.newPromptFocus = nextFormData.newPromptFocus
     clientState.automaticUpdates = nextFormData.automaticUpdates
@@ -89,12 +89,12 @@ export const setSystemSettingsClientStatePromptEditorMaxLinesInput = (value: str
   )
 }
 
-/** Updates the note maximum without committing conflicting line budgets. */
-export const setSystemSettingsClientStateAttachedNoteMaxLinesInput = (value: string): void => {
+/** Updates the note reserved lines without committing conflicting line budgets. */
+export const setSystemSettingsClientStateAttachedNoteReservedLinesInput = (value: string): void => {
   updateSystemSettingsClientStateInput(
     value,
-    (formData) => formData.attachedNoteMaxLinesInput,
-    (formData, nextValue) => { formData.attachedNoteMaxLinesInput = nextValue }
+    (formData) => formData.attachedNoteReservedLinesInput,
+    (formData, nextValue) => { formData.attachedNoteReservedLinesInput = nextValue }
   )
 }
 

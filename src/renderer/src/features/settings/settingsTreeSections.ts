@@ -22,7 +22,7 @@ export const settingsTreeSections: SettingsTreeSection[] = [
       { id: 'new-prompt-focus', label: 'New Prompt Focus', targetTestId: 'editor-layout-new-prompt-focus-row' },
       { id: 'min-lines', label: 'Minimum Line Count', targetTestId: 'editor-layout-min-lines-row' },
       { id: 'max-lines', label: 'Maximum Line Count', targetTestId: 'editor-layout-max-lines-row' },
-      { id: 'note-max-lines', label: 'Attached Note Maximum Lines', targetTestId: 'editor-layout-note-max-lines-row' },
+      { id: 'note-reserved-lines', label: 'Attached Note Reserved Lines', targetTestId: 'editor-layout-note-reserved-lines-row' },
       { id: 'line-numbers', label: 'Show Line Numbers', targetTestId: 'editor-layout-line-numbers-row' }
     ]
   },

@@ -616,6 +616,8 @@
 
     const previousHeightPx = monacoHeightPx
     const nextHeightPx = measureContentHeightPx()
+    // Shared-budget line limits move with the other editor's height, so skip Monaco's relayout when the clamped height holds.
+    if (!editorChanged && !fontSizeChanged && !lineNumbersChanged && nextHeightPx === previousHeightPx) return
     const updatedHeightPx = layoutEditor(nextHeightPx)
     emitChange(editor.getValue(), updatedHeightPx !== previousHeightPx, updatedHeightPx)
   })

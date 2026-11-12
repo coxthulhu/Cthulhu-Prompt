@@ -987,7 +987,7 @@
     fontSize: 16,
     minLines: 2,
     maxLines: 35,
-    attachedNoteMaxLines: 10
+    attachedNoteReservedLines: 10
   }
   const lineHeightPx = Math.round(editorSizing.fontSize * 1.35)
   const editorCleanupCallbacks = new SvelteSet<() => void>()
@@ -998,7 +998,7 @@
       ? Math.ceil((noteHeights.get(prompt.note.id) ?? lineHeightPx) / lineHeightPx)
       : 0
     const maxLines = 'visible' in document
-      ? editorSizing.attachedNoteMaxLines
+      ? editorSizing.attachedNoteReservedLines
       : editorSizing.maxLines - reservedNoteLines
     const minLines = Math.min(document.minLines ?? editorSizing.minLines, maxLines)
     return Math.min(Math.max(heightPx, lineHeightPx * minLines), lineHeightPx * maxLines)

@@ -723,7 +723,7 @@ describe('shared domain mutation planners', () => {
       promptFontSize: 16,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 35,
-      attachedNoteMaxLines: 10,
+      attachedNoteReservedLines: 10,
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -747,7 +747,7 @@ describe('shared domain mutation planners', () => {
         promptFontSize: 100,
         promptEditorMinLines: 3,
         promptEditorMaxLines: 30,
-        attachedNoteMaxLines: 10,
+        attachedNoteReservedLines: 10,
         showLineNumbers: false,
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
@@ -762,7 +762,7 @@ describe('shared domain mutation planners', () => {
       promptFontSize: 32,
       promptEditorMinLines: 3,
       promptEditorMaxLines: 30,
-      attachedNoteMaxLines: 10,
+      attachedNoteReservedLines: 10,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,

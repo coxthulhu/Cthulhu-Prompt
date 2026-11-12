@@ -6,7 +6,7 @@
   import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
   import { noteEditorMeasuredHeight } from '@renderer/data/UiState/cache/NoteEditorUiCache.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
-  import { getAttachedNoteSectionHeight, getPromptSizingWithNote, type AttachedNoteLayout } from '../prompt-editor/attachedNoteSizing'
+  import { getAttachedNoteSectionHeight, getNoteSizingWithPrompt, getPromptSizingWithNote, type AttachedNoteLayout } from '../prompt-editor/attachedNoteSizing'
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { emptyCollectionMessage, createFirstItemMessage } from '@renderer/common/emptyStateText'
   import {
@@ -236,7 +236,7 @@
   const noteVisibilityQuery = useLiveQuery(attachedNoteUiStateCollection)
   /** Session markers survive scrolling and screen navigation. */
   const noteClientStateQuery = useLiveQuery(noteClientStateCollection)
-  /** Settings supply the shared font and note viewport maximum. */
+  /** Settings supply the shared font, line budget, and note line reservation. */
   const systemSettings = getSystemSettingsContext()
   /** Notes indexed once for all owner rows. */
   const noteById = $derived(Object.fromEntries(noteQuery.data.map((note) => [note.id, note])))
@@ -246,22 +246,54 @@
   /** Independent session flags indexed by note identity. */
   const noteEditedById = $derived(Object.fromEntries(noteClientStateQuery.data.map((state) => [state.id, state.isEdited])))
 
-  /** Resolves the same wrapped note height for row estimates and the mounted editor. */
+  /** Prompt viewport height from its measured row, or from its text before Monaco measures it. */
+  const getPromptMonacoHeightPx = (promptId: string, cardWidthPx: number, devicePixelRatio: number, sizing: PromptEditorSizingConfig): number => {
+    /** Row height recorded by the prompt's last hydrated editor at this width. */
+    const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(promptId, cardWidthPx, devicePixelRatio)
+    return measuredRowHeightPx == null
+      ? estimateMonacoHeightPx(promptDraftById[promptId]!.text, sizing)
+      : clampMonacoHeightPx(
+          getMonacoHeightFromRowPx(
+            measuredRowHeightPx,
+            getPromptEditorTitleAreaWidthPx(cardWidthPx, true),
+            compactLayoutMaxWidthPx,
+            isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
+          ),
+          sizing
+        )
+  }
+
+  /** Resolves the same note height for row heights and the mounted editor after the prompt claims its share of the shared lines. */
   const getAttachedNoteLayout = (promptId: string, widthPx: number, devicePixelRatio: number): AttachedNoteLayout | undefined => {
     /** Owner reference determines whether this card has a note section. */
     const noteId = promptDraftById[promptId]!.attachedNoteId
     /** Standalone notes are not rendered inside owner cards. */
     const note = noteId ? noteById[noteId] : undefined
     if (note?.kind !== 'attached') return undefined
-    /** Notes start at one visual line and share the main editor's typography. */
-    const sizing = { fontSize: systemSettings.promptFontSize, minLines: 1, maxLines: systemSettings.attachedNoteMaxLines }
-    return {
+    /** Notes start at one visual line, share the main editor's typography, and never exceed the shared maximum. */
+    const sizing = { ...promptEditorSizingConfig, minLines: 1 }
+    /** Wrapped note height before the prompt limits it. */
+    const contentHeightPx = clampMonacoHeightPx(
+      noteEditorMeasuredHeight.lookup(`${note.id}:${sizing.fontSize}`, widthPx, devicePixelRatio) ?? estimateMonacoHeightPx(note.noteText, sizing),
+      sizing
+    )
+    /** Content height stands in for the displayed height, which matches it within the reserved lines the prompt sizing uses. */
+    const layout = {
       note,
       visible: noteVisibleByKey[createAttachedNoteUiStateKey(workspaceId!, note.id)] ?? false,
       isEdited: noteEditedById[note.id] ?? false,
+      editorHeightPx: contentHeightPx
+    }
+    /** Prompt height comes from the same measured-or-estimated source as the virtual row. */
+    const promptHeightPx = getPromptMonacoHeightPx(
+      promptId, widthPx, devicePixelRatio,
+      getPromptSizingWithNote(promptEditorSizingConfig, systemSettings.attachedNoteReservedLines, layout)
+    )
+    return {
+      ...layout,
       editorHeightPx: clampMonacoHeightPx(
-        noteEditorMeasuredHeight.lookup(`${note.id}:${sizing.fontSize}`, widthPx, devicePixelRatio) ?? estimateMonacoHeightPx(note.noteText, sizing),
-        sizing
+        contentHeightPx,
+        getNoteSizingWithPrompt(promptEditorSizingConfig, systemSettings.attachedNoteReservedLines, promptHeightPx)
       )
     }
   }
@@ -359,34 +391,24 @@
           promptDraftById[row.promptId]!.text,
           getPromptEditorTitleAreaWidthPx(cardWidthPx, true),
           heightPx,
-          getPromptSizingWithNote(promptEditorSizingConfig, attachment),
+          getPromptSizingWithNote(promptEditorSizingConfig, systemSettings.attachedNoteReservedLines, attachment),
           compactLayoutMaxWidthPx,
           isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
         ) + getAttachedNoteSectionHeight(attachment)
       },
       lookupMeasuredHeight: (row, widthPx, devicePixelRatio) => {
         const cardWidthPx = getPromptCollectionSectionContentWidthPx(widthPx, row.indentLevel)
+        if (lookupPromptEditorMeasuredHeight(row.promptId, cardWidthPx, devicePixelRatio) == null) return null
         /** Current visibility and note measurements determine this row's shared budget. */
         const attachment = getAttachedNoteLayout(row.promptId, cardWidthPx, devicePixelRatio)
-        const measuredRowHeightPx = lookupPromptEditorMeasuredHeight(
-          row.promptId,
-          cardWidthPx,
-          devicePixelRatio
-        )
-        if (measuredRowHeightPx == null) return null
-
-        const titleAreaWidthPx = getPromptEditorTitleAreaWidthPx(cardWidthPx, true)
         return getRowHeightPx(
-          clampMonacoHeightPx(
-            getMonacoHeightFromRowPx(
-              measuredRowHeightPx,
-              titleAreaWidthPx,
-              compactLayoutMaxWidthPx,
-              isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
-            ),
-            getPromptSizingWithNote(promptEditorSizingConfig, attachment)
+          getPromptMonacoHeightPx(
+            row.promptId,
+            cardWidthPx,
+            devicePixelRatio,
+            getPromptSizingWithNote(promptEditorSizingConfig, systemSettings.attachedNoteReservedLines, attachment)
           ),
-          titleAreaWidthPx,
+          getPromptEditorTitleAreaWidthPx(cardWidthPx, true),
           compactLayoutMaxWidthPx,
           isTemplateCollection ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
         ) + getAttachedNoteSectionHeight(attachment)

@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte'
   import AttachedNoteButton from './AttachedNoteButton.svelte'
   import AttachedNoteSection from './AttachedNoteSection.svelte'
-  import { ATTACHED_NOTE_HEADER_HEIGHT_PX, getAttachedNoteSectionHeight, getPromptSizingWithNote, type AttachedNoteLayout } from './attachedNoteSizing'
+  import { ATTACHED_NOTE_HEADER_HEIGHT_PX, getAttachedNoteSectionHeight, getNoteSizingWithPrompt, getPromptSizingWithNote, type AttachedNoteLayout } from './attachedNoteSizing'
   import { createAttachedNote, deleteNote, setAttachedNoteVisible } from '@renderer/data/Mutations/NoteMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { compactGuid } from '@shared/utilities/compactGuid'
@@ -195,11 +195,15 @@
   } = $props()
   const systemSettings = getSystemSettingsContext()
   const promptNavigation = getPromptNavigationContext()
-  const promptEditorSizingConfig: PromptEditorSizingConfig = $derived(getPromptSizingWithNote({
+  /** Shared typography and line budget before the prompt and its note divide it. */
+  const sharedSizingConfig: PromptEditorSizingConfig = $derived({
     fontSize: systemSettings.promptFontSize,
     minLines: systemSettings.promptEditorMinLines,
     maxLines: systemSettings.promptEditorMaxLines
-  }, attachment))
+  })
+  const promptEditorSizingConfig: PromptEditorSizingConfig = $derived(
+    getPromptSizingWithNote(sharedSizingConfig, systemSettings.attachedNoteReservedLines, attachment)
+  )
   /** Includes collapsed note chrome and the expanded editor's displayed height. */
   const noteSectionHeightPx = $derived(getAttachedNoteSectionHeight(attachment))
   /** Whether this editor belongs to an automatically ordered final-status screen. */
@@ -265,6 +269,10 @@
   })
   const getInitialMonacoHeightPx = () => placeholderMonacoHeightPx
   let monacoHeightPx = $state<number>(getInitialMonacoHeightPx())
+  /** Note line limits that grow into any shared lines the prompt's displayed height leaves unused. */
+  const noteEditorSizingConfig = $derived(
+    getNoteSizingWithPrompt(sharedSizingConfig, systemSettings.attachedNoteReservedLines, monacoHeightPx)
+  )
   let rowElement = $state<HTMLDivElement | null>(null)
   let overflowHost = $state<HTMLDivElement | null>(null)
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
@@ -843,6 +851,7 @@
     {#key attachment.note.id}
       <AttachedNoteSection
         {attachment}
+        sizingConfig={noteEditorSizingConfig}
         widthPx={virtualWindowWidthPx}
         {devicePixelRatio}
         {rowId}

@@ -21,7 +21,7 @@
   import {
     setSystemSettingsClientStateFontSizeInput,
     setSystemSettingsClientStatePromptEditorMaxLinesInput,
-    setSystemSettingsClientStateAttachedNoteMaxLinesInput,
+    setSystemSettingsClientStateAttachedNoteReservedLinesInput,
     setSystemSettingsClientStatePromptEditorMinLinesInput,
     setSystemSettingsClientStateShowLineNumbers,
     setSystemSettingsClientStateNewPromptFocus,
@@ -44,8 +44,8 @@
   import { getRuntimeConfig } from '@renderer/app/runtimeConfig'
   import {
     DEFAULT_SYSTEM_SETTINGS,
-    MIN_ATTACHED_NOTE_MAX_LINES,
-    MAX_ATTACHED_NOTE_MAX_LINES,
+    MIN_ATTACHED_NOTE_RESERVED_LINES,
+    MAX_ATTACHED_NOTE_RESERVED_LINES,
     MAX_PROMPT_EDITOR_MAX_LINES,
     MAX_PROMPT_EDITOR_MIN_LINES,
     MAX_PROMPT_FONT_SIZE,
@@ -418,7 +418,7 @@
         <ControlRow
           testId="editor-layout-max-lines-row"
           label="Maximum Line Count"
-          detail="Shared maximum visible lines for a prompt or template and its attached note. Must exceed the note maximum by at least 5."
+          detail="Shared maximum visible lines for a prompt or template and its attached note. Must exceed the note reserved lines by at least 5."
         >
           {#snippet control()}
             <FloatingValidationMessage message={displayMaxLinesError} textTestId="max-lines-error">
@@ -452,23 +452,23 @@
         <Separator />
 
         <ControlRow
-          testId="editor-layout-note-max-lines-row"
-          label="Attached Note Maximum Lines"
-          detail="Maximum visible note lines before scrolling. These lines share the editor maximum above."
+          testId="editor-layout-note-reserved-lines-row"
+          label="Attached Note Reserved Lines"
+          detail="Note lines kept from the shared maximum above before the prompt or template uses them. The note can also grow into any lines the prompt or template leaves unused."
         >
           {#snippet control()}
-            <FloatingValidationMessage message={validation.noteMaxLinesError} textTestId="note-max-lines-error">
+            <FloatingValidationMessage message={validation.noteReservedLinesError} textTestId="note-reserved-lines-error">
               <NumericStepperInput
-                data-testid="note-max-lines-input"
-                value={systemSettingsClientState.attachedNoteMaxLinesInput}
-                min={MIN_ATTACHED_NOTE_MAX_LINES}
-                max={MAX_ATTACHED_NOTE_MAX_LINES}
+                data-testid="note-reserved-lines-input"
+                value={systemSettingsClientState.attachedNoteReservedLinesInput}
+                min={MIN_ATTACHED_NOTE_RESERVED_LINES}
+                max={MAX_ATTACHED_NOTE_RESERVED_LINES}
                 helperText="lines"
-                aria-label="Attached note maximum lines"
-                aria-invalid={validation.noteMaxLinesError ? 'true' : undefined}
-                decreaseLabel="Decrease attached note maximum lines"
-                increaseLabel="Increase attached note maximum lines"
-                onvaluechange={setSystemSettingsClientStateAttachedNoteMaxLinesInput}
+                aria-label="Attached note reserved lines"
+                aria-invalid={validation.noteReservedLinesError ? 'true' : undefined}
+                decreaseLabel="Decrease attached note reserved lines"
+                increaseLabel="Increase attached note reserved lines"
+                onvaluechange={setSystemSettingsClientStateAttachedNoteReservedLinesInput}
                 onblur={handleInputBlur}
               />
             </FloatingValidationMessage>
@@ -478,8 +478,8 @@
               icon={RefreshCcw}
               text="Reset"
               appearance="outline"
-              onclick={() => resetSettingToDefault(String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines), setSystemSettingsClientStateAttachedNoteMaxLinesInput)}
-              disabled={systemSettingsClientState.attachedNoteMaxLinesInput === String(DEFAULT_SYSTEM_SETTINGS.attachedNoteMaxLines)}
+              onclick={() => resetSettingToDefault(String(DEFAULT_SYSTEM_SETTINGS.attachedNoteReservedLines), setSystemSettingsClientStateAttachedNoteReservedLinesInput)}
+              disabled={systemSettingsClientState.attachedNoteReservedLinesInput === String(DEFAULT_SYSTEM_SETTINGS.attachedNoteReservedLines)}
             />
           {/snippet}
         </ControlRow>

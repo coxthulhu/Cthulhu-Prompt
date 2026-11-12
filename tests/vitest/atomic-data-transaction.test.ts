@@ -739,7 +739,7 @@ describe('atomic data transaction', () => {
         promptFontSize: 16,
         promptEditorMinLines: 2,
         promptEditorMaxLines: 30,
-        attachedNoteMaxLines: 10,
+        attachedNoteReservedLines: 10,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
@@ -780,7 +780,7 @@ describe('atomic data transaction', () => {
       promptFontSize: 22,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 30,
-      attachedNoteMaxLines: 10,
+      attachedNoteReservedLines: 10,
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -799,7 +799,7 @@ describe('atomic data transaction', () => {
         promptFontSize: 18,
         promptEditorMinLines: 4,
         promptEditorMaxLines: 30,
-        attachedNoteMaxLines: 10,
+        attachedNoteReservedLines: 10,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
@@ -837,7 +837,7 @@ describe('atomic data transaction', () => {
           promptFontSize: 18,
           promptEditorMinLines: 4,
           promptEditorMaxLines: 30,
-          attachedNoteMaxLines: 10,
+          attachedNoteReservedLines: 10,
           showLineNumbers: true,
           /** Default creation focus included in the complete settings record. */
           newPromptFocus: 'editor' as const,
@@ -889,7 +889,7 @@ describe('atomic data transaction', () => {
         promptFontSize: 16,
         promptEditorMinLines: 2,
         promptEditorMaxLines: 30,
-        attachedNoteMaxLines: 10,
+        attachedNoteReservedLines: 10,
         showLineNumbers: true,
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,

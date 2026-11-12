@@ -10,8 +10,8 @@ export type SystemSettingsClientStateRecord = {
   promptFontSizeInput: string
   promptEditorMinLinesInput: string
   promptEditorMaxLinesInput: string
-  /** Editable note viewport limit, retained as text while invalid. */
-  attachedNoteMaxLinesInput: string
+  /** Editable note line reservation, retained as text while invalid. */
+  attachedNoteReservedLinesInput: string
   showLineNumbers: boolean
   /** Selected creation focus in the settings form. */
   newPromptFocus: NewPromptFocus

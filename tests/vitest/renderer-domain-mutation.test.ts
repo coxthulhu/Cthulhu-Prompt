@@ -691,7 +691,7 @@ describe('renderer domain mutation framework', () => {
       promptFontSizeInput: '16',
       promptEditorMinLinesInput: '2',
       promptEditorMaxLinesInput: '35',
-      attachedNoteMaxLinesInput: '10',
+      attachedNoteReservedLinesInput: '10',
       showLineNumbers: true,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -742,7 +742,7 @@ describe('renderer domain mutation framework', () => {
             promptFontSize: 20,
             promptEditorMinLines: 2,
             promptEditorMaxLines: 35,
-            attachedNoteMaxLines: 10,
+            attachedNoteReservedLines: 10,
             showLineNumbers: false,
             /** Default creation focus included in the complete settings record. */
             newPromptFocus: 'editor' as const,
@@ -764,7 +764,7 @@ describe('renderer domain mutation framework', () => {
       promptFontSize: 20,
       promptEditorMinLines: 2,
       promptEditorMaxLines: 35,
-      attachedNoteMaxLines: 10,
+      attachedNoteReservedLines: 10,
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
@@ -776,7 +776,7 @@ describe('renderer domain mutation framework', () => {
       promptFontSizeInput: '20',
       promptEditorMinLinesInput: '2',
       promptEditorMaxLinesInput: '35',
-      attachedNoteMaxLinesInput: '10',
+      attachedNoteReservedLinesInput: '10',
       showLineNumbers: false,
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,

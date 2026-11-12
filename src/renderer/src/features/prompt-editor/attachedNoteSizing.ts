@@ -18,7 +18,7 @@ export type AttachedNoteLayout = {
   visible: boolean
   /** Independent renderer-session edit indicator. */
   isEdited: boolean
-  /** Measured or estimated wrapped editor viewport height. */
+  /** Displayed note viewport height after the prompt claims its share of the shared lines. */
   editorHeightPx: number
 }
 
@@ -32,14 +32,26 @@ export const getAttachedNoteSectionHeight = (attachment: AttachedNoteLayout | un
         : 0)
     : 0
 
-/** Reserves visible note lines while letting the shared maximum override the prompt minimum. */
+/** Keeps a visible note's lines up to its reservation while letting the shared maximum override the prompt minimum. */
 export const getPromptSizingWithNote = (
   sizing: PromptEditorSizingConfig,
+  reservedLines: number,
   attachment: AttachedNoteLayout | undefined
 ): PromptEditorSizingConfig => {
-  /** Hidden attachments return their entire line allocation to the prompt. */
+  /** Hidden attachments return every line to the prompt, and note lines beyond the reservation never limit it. */
   const maxLines = sizing.maxLines - (attachment?.visible
-    ? Math.ceil(attachment.editorHeightPx / getLineHeightPx(sizing.fontSize))
+    ? Math.min(Math.ceil(attachment.editorHeightPx / getLineHeightPx(sizing.fontSize)), reservedLines)
     : 0)
   return { ...sizing, minLines: Math.min(sizing.minLines, maxLines), maxLines }
 }
+
+/** Lets a note fill the shared lines the prompt's displayed height leaves unused, never capping below its reservation. */
+export const getNoteSizingWithPrompt = (
+  sizing: PromptEditorSizingConfig,
+  reservedLines: number,
+  promptHeightPx: number
+): PromptEditorSizingConfig => ({
+  fontSize: sizing.fontSize,
+  minLines: 1,
+  maxLines: Math.max(reservedLines, sizing.maxLines - Math.ceil(promptHeightPx / getLineHeightPx(sizing.fontSize)))
+})

@@ -21,6 +21,9 @@ const BODY = `${OWNER} .prompt-editor-body-editor-section`
 /** Note text editor has its own focus, model, and viewport. */
 const NOTE = `${OWNER} [data-testid="attached-note-editor"]`
 
+/** Registered Monaco editor tagged with the number of public layout calls a test observed. */
+type CountedEditor = NonNullable<Window['__cthulhuMonacoEditors']>[number]['editor'] & { layoutCount: number }
+
 /** Starts two owners in either library, optionally with an overflowing main document. */
 const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template', text = 'Owner text') => {
   /** Equivalent fixtures expose the same shared editor behavior. */
@@ -267,7 +270,7 @@ describe('Attached note editors', () => {
         return note.height / note.lineHeight
       }).toBeGreaterThan(1)
       await expect.poll(async () => {
-        /** Wrapped content is capped at ten lines and shares the same thirty-five-line total. */
+        /** The long prompt claims every unreserved line, so wrapped content stops at the ten reserved lines within the thirty-five-line total. */
         const { body, note } = await readLineBudget(mainWindow)
         return Math.max(Math.abs(body.height + note.height - 35 * body.lineHeight), Math.abs(note.height - Math.min(note.contentHeight, 10 * note.lineHeight)))
       }).toBeLessThanOrEqual(1)
@@ -283,32 +286,96 @@ describe('Attached note editors', () => {
       })).toBeLessThanOrEqual(1)
       await expectCardFits(mainWindow)
     })
+
+    test(`${kind} lets a note grow into lines the prompt leaves unused and returns them as the prompt grows`, async ({ testSetup }) => {
+      /** One-line prompt text still displays its two-line minimum. */
+      const { mainWindow, testHelpers, openCollection } = await startNotes(testSetup, kind)
+      /** Polls both real viewports against expected line counts. */
+      const expectLines = (bodyLines: number, noteLines: number) => expect.poll(async () => {
+        const { body, note } = await readLineBudget(mainWindow)
+        return Math.max(Math.abs(body.height - bodyLines * body.lineHeight), Math.abs(note.height - noteLines * note.lineHeight))
+      }).toBeLessThanOrEqual(1)
+      await mainWindow.locator(OWNER).getByTestId('attached-note-button').click()
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
+      await mainWindow.keyboard.insertText(Array(40).fill('Note line').join('\n'))
+      // The note fills all thirty-three lines beyond the prompt's two-line minimum.
+      await expectLines(2, 33)
+      await expectCardFits(mainWindow)
+      // Remounting resolves the same split from cached measurements.
+      await testHelpers.navigateToHomeScreen()
+      await openCollection()
+      await waitForMonacoEditor(mainWindow, BODY)
+      await waitForMonacoEditor(mainWindow, NOTE)
+      await expectLines(2, 33)
+      await expectCardFits(mainWindow)
+      await focusMonacoEditor(mainWindow, BODY)
+      await mainWindow.keyboard.press('Control+End')
+      // Ten prompt lines take eight of the note's extra lines back.
+      await mainWindow.keyboard.insertText(`\n${Array(9).fill('Prompt line').join('\n')}`)
+      await expectLines(10, 25)
+      await expectCardFits(mainWindow)
+      // Thirty prompt lines stop at the note's ten reserved lines.
+      await mainWindow.keyboard.insertText(`\n${Array(20).fill('Prompt line').join('\n')}`)
+      await expectLines(25, 10)
+      await expectCardFits(mainWindow)
+    })
   }
 
+  test('does not relayout a short note while the prompt height changes', async ({ testSetup }) => {
+    const { mainWindow } = await startNotes(testSetup, 'prompt')
+    await mainWindow.locator(OWNER).getByTestId('attached-note-button').click()
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
+    await mainWindow.keyboard.insertText('Note line')
+    await mainWindow.locator(NOTE).evaluate((section) => {
+      /** Hydrated note editor that carries its own relayout counter. */
+      const editor = window.__cthulhuMonacoEditors!.find((entry) => section.contains(entry.container))!.editor as CountedEditor
+      /** Original Monaco layout retained behind the counter. */
+      const layout = editor.layout.bind(editor)
+      editor.layoutCount = 0
+      editor.layout = (...args) => {
+        editor.layoutCount += 1
+        layout(...args)
+      }
+    })
+    await focusMonacoEditor(mainWindow, BODY)
+    await mainWindow.keyboard.press('Control+End')
+    // Each prompt line beyond its two-line minimum lowers the note's maximum without changing its one-line height.
+    for (let lines = 2; lines <= 5; lines += 1) {
+      await mainWindow.keyboard.press('Enter')
+      await expect.poll(async () => {
+        const { body, note } = await readLineBudget(mainWindow)
+        return Math.max(Math.abs(body.height - lines * body.lineHeight), Math.abs(note.height - note.lineHeight))
+      }).toBeLessThanOrEqual(1)
+    }
+    // A remounted note editor would report no count instead of zero.
+    expect(await mainWindow.locator(NOTE).evaluate((section) => (window.__cthulhuMonacoEditors!
+      .find((entry) => section.contains(entry.container))!.editor as CountedEditor).layoutCount)).toBe(0)
+  })
+
   test('validates both line limits, persists valid settings, and gives the shared maximum priority over the prompt minimum', async ({ testSetup }) => {
-    /** Short main text exposes the minimum-height conflict once the note consumes five lines. */
+    /** Short main text exposes the minimum-height conflict once the note consumes its five reserved lines. */
     const { mainWindow, testHelpers, openCollection } = await startNotes(testSetup, 'prompt')
     await testHelpers.navigateToSettingsScreen()
     /** Both fields remain editable while conflicting values are rejected. */
-    const noteMax = mainWindow.getByTestId('note-max-lines-input')
+    const noteReserved = mainWindow.getByTestId('note-reserved-lines-input')
     /** Existing maximum now supplies the combined line budget. */
     const totalMax = mainWindow.getByTestId('max-lines-input')
-    await expect(noteMax).toHaveValue('10')
+    await expect(noteReserved).toHaveValue('10')
     for (const value of ['0', '21']) {
-      await noteMax.fill(value)
-      await expect(mainWindow.getByTestId('note-max-lines-error')).toContainText('between 1 and 20')
+      await noteReserved.fill(value)
+      await expect(mainWindow.getByTestId('note-reserved-lines-error')).toContainText('between 1 and 20')
     }
-    await noteMax.fill('20')
+    await noteReserved.fill('20')
     await totalMax.fill('24')
-    await expect(noteMax).toHaveAttribute('aria-invalid', 'true')
+    await expect(noteReserved).toHaveAttribute('aria-invalid', 'true')
     await expect(totalMax).toHaveAttribute('aria-invalid', 'true')
     await totalMax.blur()
     expect(await readSettings(mainWindow)).toMatchObject({ promptEditorMaxLines: 35 })
-    await noteMax.fill('5')
+    await noteReserved.fill('5')
     await totalMax.fill('10')
     await mainWindow.getByTestId('min-lines-input').fill('10')
     await testHelpers.navigateToHomeScreen()
-    await expect.poll(() => readSettings(mainWindow)).toMatchObject({ attachedNoteMaxLines: 5, promptEditorMaxLines: 10, promptEditorMinLines: 10 })
+    await expect.poll(() => readSettings(mainWindow)).toMatchObject({ attachedNoteReservedLines: 5, promptEditorMaxLines: 10, promptEditorMinLines: 10 })
     await openCollection()
     await mainWindow.locator(OWNER).getByTestId('attached-note-button').click()
     await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
@@ -320,10 +387,10 @@ describe('Attached note editors', () => {
     }).toBeLessThanOrEqual(1)
     await expectCardFits(mainWindow)
     await testHelpers.navigateToSettingsScreen()
-    await expect(noteMax).toHaveValue('5')
-    await noteMax.fill('1')
+    await expect(noteReserved).toHaveValue('5')
+    await noteReserved.fill('1')
     await testHelpers.navigateToHomeScreen()
-    await expect.poll(() => readSettings(mainWindow)).toMatchObject({ attachedNoteMaxLines: 1 })
+    await expect.poll(() => readSettings(mainWindow)).toMatchObject({ attachedNoteReservedLines: 1 })
     await openCollection()
     await waitForMonacoEditor(mainWindow, NOTE)
     await expect.poll(async () => {
