@@ -151,12 +151,12 @@
   const truncate = 'min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'
 </script>
 
-{#snippet tabBackdrop(selected: boolean, isHovered: boolean)}
+{#snippet tabBackdrop(selected: boolean, isHovered: boolean, inset: string = '3px')}
   {#if selected || isHovered}
     <!-- Selected tabs reuse the prompt tree's active-row fills: emphasis at rest, selection on hover. -->
     <span
       aria-hidden="true"
-      style="position: absolute; inset: 3px; border-radius: 6px; background: {selected
+      style="position: absolute; inset: {inset}; border-radius: 6px; background: {selected
         ? isHovered
           ? 'var(--ui-neutral-selection-surface)'
           : 'var(--ui-neutral-emphasis-surface)'
@@ -247,9 +247,10 @@
         {@const TabIcon = tab.icon}
         <div
           {...hover(tab.id)}
-          style="position: relative; display: flex; flex: 0 1 200px; width: 200px; min-width: 0; height: 42px;"
+          style="position: relative; display: flex; flex: 0 1 220px; width: 220px; min-width: 0; height: 42px;"
         >
-          {@render tabBackdrop(selected, isHovered)}
+          <!-- Work tab pills inset 1px horizontally so neighbouring pills sit 4px apart across the 2px list gap. -->
+          {@render tabBackdrop(selected, isHovered, '3px 1px')}
           <button
             type="button"
             role="tab"
