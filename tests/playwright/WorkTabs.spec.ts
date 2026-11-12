@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import type { ElectronApplication } from 'playwright'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
+import { resolvePaletteColors } from '../helpers/PaletteHelpers'
 import { readWorkspaceState, readWorkspaceUiState, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -39,6 +40,14 @@ const expectSelectedTab = async (mainWindow: Page, title: string): Promise<void>
 /** Asserts no work tab is selected. */
 const expectNoSelectedTab = async (mainWindow: Page): Promise<void> => {
   await expect(mainWindow.getByTestId('work-tab').getByRole('tab', { selected: true })).toHaveCount(0)
+}
+
+/** Asserts a work tab, including any drag offset, stays in the title bar row with its left edge within 1px of the expected position. */
+const expectTabAt = async (mainWindow: Page, title: string, left: number): Promise<void> => {
+  await expect.poll(async () => {
+    const box = (await getTab(mainWindow, title).boundingBox())!
+    return Math.max(Math.abs(box.x - left), Math.abs(box.y))
+  }, { message: `${title} position` }).toBeLessThanOrEqual(1)
 }
 
 describe('Work Tabs', () => {
@@ -203,6 +212,98 @@ describe('Work Tabs', () => {
     await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
     await expect(homeButton).toHaveAttribute('aria-current', 'page')
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+  })
+
+  test('drags a work tab over its neighbours within the strip and saves the new order', async ({ electronApp, testSetup }) => {
+    const { mainWindow } = await testSetup.setupAndStart()
+    for (let index = 0; index < 3; index += 1) await mainWindow.getByTestId('new-tab-button').click()
+    await expectSelectedTab(mainWindow, 'Tab 3')
+    /** Strip that holds pointer capture while a tab is dragged. */
+    const tabStrip = mainWindow.getByRole('tablist', { name: 'Open tabs' })
+    /** Left edges of the three tab slots before any drag. */
+    const slots = await getTabs(mainWindow).evaluateAll((tabs) => tabs.map((tab) => tab.getBoundingClientRect().left))
+    /** Width shared by the touching tab slots. */
+    const slotWidth = slots[1]! - slots[0]!
+    /** Dragged tab wrapper, which carries the drag state. */
+    const draggedTab = mainWindow.getByTestId('work-tab').filter({ has: getTab(mainWindow, 'Tab 1') })
+    /** Press point on Tab 1's title, clear of its close button. */
+    const x = slots[0]! + 40
+    /** Vertical centre of the title bar. */
+    const y = (await tabStrip.boundingBox())!.height / 2
+    /** Saved work tab titles in display order. */
+    const readSavedTitles = async (): Promise<string[]> => (await readTabState(electronApp)).workTabs.map((tab) => tab.title)
+
+    // Pressing selects the tab before release, and 3px of movement does not start a drag.
+    await mainWindow.mouse.move(x, y)
+    await mainWindow.mouse.down()
+    await expectSelectedTab(mainWindow, 'Tab 1')
+    await mainWindow.mouse.move(x + 3, y + 3)
+    await expect(draggedTab).toHaveAttribute('data-dragging', 'false')
+
+    // 4px of vertical movement starts the drag and captures the pointer, but only horizontal movement moves the tab.
+    await mainWindow.mouse.move(x + 3, y + 4)
+    await expect(draggedTab).toHaveAttribute('data-dragging', 'true')
+    await expect.poll(() => tabStrip.evaluate((strip) => strip.hasPointerCapture(1))).toBe(true)
+    await expectTabAt(mainWindow, 'Tab 1', slots[0]! + 3)
+
+    // Short of half of its neighbour, the tab slides over the unmoved neighbour on an opaque selected hover fill.
+    await mainWindow.mouse.move(x + slotWidth / 2 - 5, y + 100)
+    await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth / 2 - 5)
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3'])
+    /** Work tab drawn on top where the dragged tab overlaps Tab 2. */
+    const topTabTitle = await mainWindow.evaluate(
+      ([left, top]) => document.elementFromPoint(left!, top!)!.closest('[data-testid="work-tab"]')!.textContent!.trim(),
+      [slots[1]! + 10, y]
+    )
+    expect(topTabTitle).toBe('Tab 1')
+    /** Selected hover fill and the opaque chrome surface beneath it. */
+    const [selectionFill, chromeSurface] = await resolvePaletteColors(mainWindow.locator('body'), [
+      '--ui-neutral-selection-surface',
+      '--app-chrome-surface'
+    ])
+    /** Dragged pill's fill layers as [images, color]; the chrome color layer has no image. */
+    const dragFill = await draggedTab.evaluate((tab) => {
+      const pill = getComputedStyle(tab, '::before')
+      return [pill.backgroundImage, pill.backgroundColor]
+    })
+    expect(dragFill).toEqual([`linear-gradient(${selectionFill}, ${selectionFill}), none`, chromeSurface])
+
+    // Covering half of the neighbour snaps it into the dragged tab's old slot without animating.
+    await mainWindow.mouse.move(x + slotWidth / 2 + 5, y + 100)
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 1', 'Tab 3'])
+    expect(await tabStrip.evaluate((strip) => strip.getAnimations({ subtree: true }).length)).toBe(0)
+    await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth / 2 + 5)
+
+    // The tab stops at either end of the strip when the pointer goes past it, and each snap saves during the drag.
+    await mainWindow.mouse.move(x + slotWidth * 3, y + 100)
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 3', 'Tab 1'])
+    await expectTabAt(mainWindow, 'Tab 1', slots[2]!)
+    await expect.poll(readSavedTitles).toEqual(['Tab 2', 'Tab 3', 'Tab 1'])
+    await mainWindow.mouse.move(1, y + 100)
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3'])
+    await expectTabAt(mainWindow, 'Tab 1', slots[0]!)
+
+    // Releasing lands the tab in its slot, keeps it selected, and saves the order.
+    await mainWindow.mouse.move(x + slotWidth + 10, y)
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 1', 'Tab 3'])
+    await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth + 10)
+    await mainWindow.mouse.up()
+    await expectTabAt(mainWindow, 'Tab 1', slots[1]!)
+    await expectSelectedTab(mainWindow, 'Tab 1')
+    await expect.poll(async () => {
+      const { workTabs, selectedTabId } = await readTabState(electronApp)
+      return { titles: workTabs.map((tab) => tab.title), selected: workTabs.find((tab) => tab.id === selectedTabId)?.title }
+    }).toEqual({ titles: ['Tab 2', 'Tab 1', 'Tab 3'], selected: 'Tab 1' })
+
+    // Pressing an unselected tab's close button and dragging away neither selects, drags, nor closes it.
+    /** Close button of the unselected rightmost tab. */
+    const closeBox = (await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).boundingBox())!
+    await mainWindow.mouse.move(closeBox.x + closeBox.width / 2, closeBox.y + closeBox.height / 2)
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(x + slotWidth, y)
+    await mainWindow.mouse.up()
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 1', 'Tab 3'])
+    await expectSelectedTab(mainWindow, 'Tab 1')
   })
 
   test('restores work tabs, their order and icons, and the selected tab after reloading', async ({

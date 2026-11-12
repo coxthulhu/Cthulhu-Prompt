@@ -759,6 +759,13 @@
     if (wasSelected && nextTab) selectWorkTab(nextTab.id)
   }
 
+  /** Moves a dragged work tab into the given display slot; the tab state effect saves the new order. */
+  const moveWorkTab = (tabId: string, index: number): void => {
+    /** Tabs other than the dragged one, in display order. */
+    const otherTabs = workTabs.filter((tab) => tab.id !== tabId)
+    workTabs = [...otherTabs.slice(0, index), workTabs.find((tab) => tab.id === tabId)!, ...otherTabs.slice(index)]
+  }
+
   const navigateToScreenCollection = (promptCollectionId: string): void => {
     if (!isWorkspaceReady) return
     if (!selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) return
@@ -798,7 +805,7 @@
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
     <WindowsTitleBar {selectedTabId} {workTabs} {isDevMode} {executionFolderName} onNavigate={activateActivity}
-      onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab}
+      onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab} onMoveWorkTab={moveWorkTab}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
         if (updater.updates.snapshot?.status === 'restarting') return

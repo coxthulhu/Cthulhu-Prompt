@@ -4,6 +4,7 @@
   // Application artwork shown at the start of the title bar.
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { screens, type ScreenId } from '@renderer/app/screens'
+  import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
   import type { WorkTab, WorkTabScreen } from '@shared/domain/user-persistence/UserPersistence'
   import { getNextTestScreenTooltip, INITIAL_TEST_SCREEN_TOOLTIP } from './testScreenTooltip'
 
@@ -16,6 +17,7 @@
     onSelectWorkTab,
     onAddWorkTab,
     onCloseWorkTab,
+    onMoveWorkTab,
     updatesOpen,
     updateAvailable,
     onToggleUpdates,
@@ -31,6 +33,8 @@
     onAddWorkTab: () => void
     /** Closes a work tab from its close button or a middle click. */
     onCloseWorkTab: (tabId: string) => void
+    /** Moves a dragged work tab into the given display slot. */
+    onMoveWorkTab: (tabId: string, index: number) => void
     /** Shows the development-only Mockups and Test Screen buttons. */
     isDevMode?: boolean
     /** Folder the app was launched from, shown behind the tabs in development mode. */
@@ -65,6 +69,51 @@
   }
   /** Rotating hover message on the Test Screen button; it changes on each pointer entry. */
   let testScreenTooltip = $state<string>(INITIAL_TEST_SCREEN_TOOLTIP)
+  /** Distance the pointer must move along either axis before a pressed tab starts dragging. */
+  const tabDragThresholdPx = 4
+  /** Stationary tab strip that owns pointer capture while its tabs reorder. */
+  let tabStripElement = $state<HTMLElement>()
+  /** Dragged work tab and its horizontal offset from its current slot, or null while no tab is dragged. */
+  let draggedTab = $state<{ id: string; offsetX: number } | null>(null)
+
+  /** Selects a work tab on a left press, then drags it along the strip once the pointer moves far enough. */
+  const handleTabPointerDown = (event: PointerEvent, tabId: string): void => {
+    if (event.button !== 0) return
+    onSelectWorkTab(tabId)
+    /** Shared width of the touching tab slots. */
+    const slotWidth = (event.currentTarget as HTMLElement).getBoundingClientRect().width
+    /** Slot the tab occupies, updated as it snaps into new slots. */
+    let index = workTabs.findIndex((tab: WorkTab) => tab.id === tabId)
+    /** Tab's left edge relative to the first slot when pressed. */
+    const startLeft = index * slotWidth
+    /** Left edge of the last slot, which keeps the tab inside the strip. */
+    const maxLeft = (workTabs.length - 1) * slotWidth
+    const session = startPointerDrag({
+      target: tabStripElement!,
+      event,
+      captureImmediately: false,
+      onMove: (moveEvent) => {
+        /** Horizontal pointer movement since the press; vertical movement only counts toward the threshold. */
+        const deltaX = moveEvent.clientX - event.clientX
+        if (!draggedTab) {
+          if (Math.max(Math.abs(deltaX), Math.abs(moveEvent.clientY - event.clientY)) < tabDragThresholdPx) return
+          session.capture()
+        }
+        /** Tab's left edge relative to the first slot, clamped to the strip. */
+        const left = Math.min(Math.max(startLeft + deltaX, 0), maxLeft)
+        /** Slot whose previous tab the dragged tab covers by at least half. */
+        const nextIndex = Math.round(left / slotWidth)
+        if (nextIndex !== index) {
+          index = nextIndex
+          onMoveWorkTab(tabId, index)
+        }
+        draggedTab = { id: tabId, offsetX: left - index * slotWidth }
+      },
+      onFinish: () => {
+        draggedTab = null
+      }
+    })
+  }
 
   const handleMinimize = () => {
     void windowControls.minimize()
@@ -159,17 +208,26 @@
     {/each}
   </nav>
   <div class="titlebar__separator" aria-hidden="true"></div>
-  <div class="titlebar__tabs" role="tablist" aria-label="Open tabs">
+  <div bind:this={tabStripElement} class="titlebar__tabs" role="tablist" aria-label="Open tabs">
     {#each workTabs as tab (tab.id)}
       {@const TabIcon = workTabIcons[tab.screen]}
       {@const selected = selectedTabId === tab.id}
-      <div class="titlebar__tab" data-selected={selected} data-testid="work-tab">
-        <!-- The tab button covers the whole pill so clicks around the close button still select the tab. -->
+      {@const dragging = draggedTab?.id === tab.id}
+      <div
+        class="titlebar__tab"
+        data-selected={selected}
+        data-dragging={dragging}
+        data-testid="work-tab"
+        style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
+      >
+        <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
+             Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
         <button
           type="button"
           class="titlebar__tab-select text-sm leading-5"
           role="tab"
           aria-selected={selected}
+          onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
           onclick={() => onSelectWorkTab(tab.id)}
           onauxclick={(event) => {
             if (event.button === 1) onCloseWorkTab(tab.id)
@@ -337,13 +395,15 @@
     background: var(--ui-neutral-normal-border);
   }
 
-  /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. The opaque fill hides the background folder label. */
+  /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. The opaque fill hides the background folder label.
+     The arrow cursor stays while the strip holds pointer capture during a tab drag. */
   .titlebar__tabs {
     display: flex;
     flex: 0 1 auto;
     align-self: stretch;
     min-width: 0;
     background: var(--app-chrome-surface);
+    cursor: default;
   }
 
   .titlebar__tab {
@@ -382,6 +442,18 @@
 
   .titlebar__tab[data-selected='true']:hover::before {
     background: var(--ui-neutral-selection-surface);
+  }
+
+  /* The dragged tab slides over its neighbours. */
+  .titlebar__tab[data-dragging='true'] {
+    z-index: 1;
+  }
+
+  /* The dragged tab keeps the selected hover fill, layered on the chrome surface so the tabs beneath stay hidden.
+     It follows the selected hover rule so it wins that specificity tie whether or not the tab keeps :hover. */
+  .titlebar__tab[data-selected='true'][data-dragging='true']::before {
+    background: linear-gradient(var(--ui-neutral-selection-surface), var(--ui-neutral-selection-surface)),
+      var(--app-chrome-surface);
   }
 
   /* The right padding reserves the close button's slot inside the full-pill tab button. */
