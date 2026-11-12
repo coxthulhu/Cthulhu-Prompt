@@ -208,58 +208,60 @@
     {/each}
   </nav>
   <div class="titlebar__separator" aria-hidden="true"></div>
-  <div bind:this={tabStripElement} class="titlebar__tabs" role="tablist" aria-label="Open tabs">
-    {#each workTabs as tab (tab.id)}
-      {@const TabIcon = workTabIcons[tab.screen]}
-      {@const selected = selectedTabId === tab.id}
-      {@const dragging = draggedTab?.id === tab.id}
-      <div
-        class="titlebar__tab"
-        data-selected={selected}
-        data-dragging={dragging}
-        data-testid="work-tab"
-        style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
-      >
-        <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
-             Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
-        <button
-          type="button"
-          class="titlebar__tab-select text-sm leading-5"
-          role="tab"
-          aria-selected={selected}
-          onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
-          onclick={() => onSelectWorkTab(tab.id)}
-          onauxclick={(event) => {
-            if (event.button === 1) onCloseWorkTab(tab.id)
-          }}
+  <div class="titlebar__tab-row">
+    <div bind:this={tabStripElement} class="titlebar__tabs" role="tablist" aria-label="Open tabs">
+      {#each workTabs as tab (tab.id)}
+        {@const TabIcon = workTabIcons[tab.screen]}
+        {@const selected = selectedTabId === tab.id}
+        {@const dragging = draggedTab?.id === tab.id}
+        <div
+          class="titlebar__tab"
+          data-selected={selected}
+          data-dragging={dragging}
+          data-testid="work-tab"
+          style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
         >
-          <TabIcon size={16} aria-hidden="true" />
-          <span class="titlebar__tab-title">{tab.title}</span>
-        </button>
-        <button
-          type="button"
-          class="titlebar__tab-close"
-          aria-label={`Close ${tab.title}`}
-          title="Close Tab"
-          data-testid="work-tab-close"
-          onclick={() => onCloseWorkTab(tab.id)}
-        >
-          <X size={14} aria-hidden="true" />
-        </button>
-      </div>
-    {/each}
+          <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
+               Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
+          <button
+            type="button"
+            class="titlebar__tab-select text-sm leading-5"
+            role="tab"
+            aria-selected={selected}
+            onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
+            onclick={() => onSelectWorkTab(tab.id)}
+            onauxclick={(event) => {
+              if (event.button === 1) onCloseWorkTab(tab.id)
+            }}
+          >
+            <TabIcon size={16} aria-hidden="true" />
+            <span class="titlebar__tab-title">{tab.title}</span>
+          </button>
+          <button
+            type="button"
+            class="titlebar__tab-close"
+            aria-label={`Close ${tab.title}`}
+            title="Close Tab"
+            data-testid="work-tab-close"
+            onclick={() => onCloseWorkTab(tab.id)}
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      {/each}
+    </div>
+    <button
+      type="button"
+      class="titlebar__new-tab"
+      aria-label="New Tab"
+      title="New Tab"
+      data-testid="new-tab-button"
+      disabled={workTabs.length >= maxWorkTabs}
+      onclick={onAddWorkTab}
+    >
+      <Plus size={20} strokeWidth={1.5} aria-hidden="true" />
+    </button>
   </div>
-  <button
-    type="button"
-    class="titlebar__new-tab"
-    aria-label="New Tab"
-    title="New Tab"
-    data-testid="new-tab-button"
-    disabled={workTabs.length >= maxWorkTabs}
-    onclick={onAddWorkTab}
-  >
-    <Plus size={20} strokeWidth={1.5} aria-hidden="true" />
-  </button>
   <div class="titlebar__controls">
     <button
       bind:this={updatesButton}
@@ -332,11 +334,14 @@
     object-fit: contain;
   }
 
-  /* Full-height row of touching screen buttons, so no drag region sits above, below, or between them. */
+  /* Full-height row of touching screen buttons, so no drag region sits above, below, or between them. The row is one
+     no-drag rectangle because Electron rounds each button's rectangle separately at fractional display scales, which
+     can leave draggable 1px seams between them. */
   .titlebar__screens {
     display: flex;
     flex: none;
     align-self: stretch;
+    -webkit-app-region: no-drag;
   }
 
   .titlebar__screen {
@@ -393,6 +398,17 @@
     height: 18px;
     margin: 0 9px;
     background: var(--ui-neutral-normal-border);
+  }
+
+  /* One no-drag rectangle across the tabs and the New Tab button, which leaves no draggable seams between them at
+     fractional display scales. The right margin keeps at least the mockup's 24px drag gap before the window controls. */
+  .titlebar__tab-row {
+    display: flex;
+    flex: 0 1 auto;
+    align-self: stretch;
+    min-width: 0;
+    margin-right: 24px;
+    -webkit-app-region: no-drag;
   }
 
   /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. The opaque fill hides the background folder label.
@@ -562,13 +578,13 @@
     pointer-events: none;
   }
 
-  /* The left padding keeps at least the mockup's 24px drag gap after the New Tab button. */
+  /* One no-drag rectangle across the window controls, which leaves no draggable seams between them at fractional display scales. */
   .titlebar__controls {
     display: flex;
     align-items: stretch;
     height: 100%;
     margin-left: auto;
-    padding-left: 24px;
+    -webkit-app-region: no-drag;
   }
 
   .titlebar__control {

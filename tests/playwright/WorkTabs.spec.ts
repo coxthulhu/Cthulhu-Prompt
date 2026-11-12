@@ -66,7 +66,7 @@ describe('Work Tabs', () => {
       /** App icon immediately before the screen buttons. */
       const appIcon = document.querySelector('.titlebar__app-icon')!.getBoundingClientRect()
       /** Divider between the screen buttons and the tab strip. */
-      const separator = document.querySelector('.titlebar [aria-label="Open tabs"]')!.previousElementSibling!.getBoundingClientRect()
+      const separator = document.querySelector('.titlebar__separator')!.getBoundingClientRect()
       /** Visible pill drawn by an element's inset ::before backdrop. */
       const getPill = (element: HTMLElement) => {
         const rect = element.getBoundingClientRect()
@@ -147,6 +147,16 @@ describe('Work Tabs', () => {
       return found
     })
     expect(misses.length, misses.slice(0, 10).join(' ')).toBe(0)
+
+    // Each button group is one no-drag rectangle, so Electron's per-rectangle rounding at fractional display scales
+    // leaves no draggable seams between its buttons.
+    for (const group of [
+      mainWindow.getByRole('navigation', { name: 'Screens' }),
+      mainWindow.locator('.titlebar__tab-row'),
+      mainWindow.locator('.titlebar__controls')
+    ]) {
+      await expect(group).toHaveCSS('-webkit-app-region', 'no-drag')
+    }
   })
 
   test('adds, selects, limits, and closes work tabs', async ({ testSetup }) => {
