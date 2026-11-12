@@ -251,6 +251,7 @@
         >
           <!-- Work tab pills inset 1px horizontally so neighbouring pills sit 4px apart across the 2px list gap. -->
           {@render tabBackdrop(selected, isHovered, '3px 1px')}
+          <!-- The tab button covers the whole pill so clicks around the close button still select the tab; the right padding reserves the close button's slot. -->
           <button
             type="button"
             role="tab"
@@ -259,7 +260,7 @@
             onclick={() => {
               activeTabId = tab.id
             }}
-            style="position: relative; display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; height: 100%; padding: 0 6px 0 12px; text-align: left; color: {selected ||
+            style="position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 33px 0 12px; text-align: left; color: {selected ||
             isHovered
               ? 'var(--ui-normal-text)'
               : 'var(--ui-hoverable-text)'};"
@@ -278,7 +279,7 @@
             aria-label={`Close ${tab.title}`}
             title="Close Tab"
             {...hover(closeId)}
-            style="position: relative; display: flex; flex: 0 0 auto; align-self: center; align-items: center; justify-content: center; width: 20px; height: 20px; margin-right: 7px; border-radius: 4px; background: {hovered.has(closeId)
+            style="position: relative; display: flex; flex: 0 0 auto; align-self: center; align-items: center; justify-content: center; width: 20px; height: 20px; margin: 0 7px 0 auto; border-radius: 4px; background: {hovered.has(closeId)
               ? 'var(--ui-neutral-action-hover-fill)'
               : 'var(--ui-ghost-surface)'}; color: {hovered.has(closeId)
               ? 'var(--ui-normal-text)'
