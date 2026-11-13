@@ -61,12 +61,12 @@ describe('Prompt collection stacking', () => {
       '.prompt-collection-header-bar',
       '.prompt-find-widget-host',
       '[data-testid="prompt-collection-screen"] .virtual-window-scroll-shadow',
-      '[data-testid="prompt-collection-screen"] .virtual-window-scrollbar-track'
+      '[data-testid="prompt-collection-screen"] .app-scrollbar-track'
     ]
     for (const selector of targets) {
       // Keep the scrollbar revealed while measuring each overlap.
       await mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).hover({ position: { x: 2, y: 100 } })
-      await expect(mainWindow.locator('[data-testid="prompt-collection-screen"] .virtual-window-scrollbar'))
+      await expect(mainWindow.locator('[data-testid="prompt-collection-screen"] .app-scrollbar'))
         .toHaveClass(/\bvisible\b/)
       /** A shared hit point puts the widget over the actual target without changing its layer. */
       const point = await mainWindow.evaluate((targetSelector) => {

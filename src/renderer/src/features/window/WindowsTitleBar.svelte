@@ -5,6 +5,8 @@
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { screens, type ScreenId } from '@renderer/app/screens'
   import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
+  import Scrollbar from '@renderer/common/scrollbar/Scrollbar.svelte'
+  import { WHEEL_SCROLL_MULTIPLIER } from '@renderer/common/scrollTimings'
   import type { WorkTab, WorkTabScreen } from '@shared/domain/user-persistence/UserPersistence'
   import { getNextTestScreenTooltip, INITIAL_TEST_SCREEN_TOOLTIP } from './testScreenTooltip'
 
@@ -59,8 +61,6 @@
   const visibleScreenIds = $derived(
     titleBarScreenIds.filter((screenId) => isDevMode || !screens[screenId].devOnly)
   )
-  /** Most work tabs open at once; the New Tab button is disabled at this count. */
-  const maxWorkTabs = 6
   /** Icon shown for each screen a work tab can be on. */
   const workTabIcons: Record<WorkTabScreen, ComponentType> = {
     'new-tab': LayoutGrid,
@@ -75,6 +75,26 @@
   let tabStripElement = $state<HTMLElement>()
   /** Dragged work tab and its horizontal offset from its current slot, or null while no tab is dragged. */
   let draggedTab = $state<{ id: string; offsetX: number } | null>(null)
+  /** Tab strip's horizontal scroll position, visible width, and content width, mirrored for its scrollbar. */
+  let tabScroll = $state({ offsetPx: 0, viewportPx: 0, contentPx: 0 })
+  /** Increments on each tab strip scroll so its scrollbar briefly shows. */
+  let tabScrollRevealVersion = $state(0)
+  /** Whether the pointer is over the tab strip, which shows its scrollbar. */
+  let isTabStripHovered = $state(false)
+
+  /** Copies the tab strip's scroll position and extents into state. */
+  const syncTabScroll = (): void => {
+    tabScroll = {
+      offsetPx: tabStripElement!.scrollLeft,
+      viewportPx: tabStripElement!.clientWidth,
+      contentPx: tabStripElement!.scrollWidth
+    }
+  }
+
+  /** Scrolls the tab strip sideways by vertical wheel input, at the rate the app's screens scroll. */
+  const handleTabStripWheel = (event: WheelEvent): void => {
+    tabStripElement!.scrollLeft += event.deltaY * WHEEL_SCROLL_MULTIPLIER
+  }
 
   /** Selects a work tab on a left press, then drags it along the strip once the pointer moves far enough. */
   const handleTabPointerDown = (event: PointerEvent, tabId: string): void => {
@@ -129,7 +149,8 @@
 
   const handleDoubleClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement | null
-    if (target?.closest('button')) {
+    // The tab row also holds the tab strip's scrollbar, which is not a button.
+    if (target?.closest('button, .titlebar__tab-row')) {
       return
     }
     void windowControls.toggleMaximize()
@@ -159,6 +180,22 @@
       isActive = false
       unsubscribe()
     }
+  })
+
+  // Side effect: re-measure the tab strip's scroll extents when it resizes or its tab count changes; observing fires
+  // the first measurement.
+  $effect(() => {
+    void workTabs.length
+    const observer = new ResizeObserver(syncTabScroll)
+    observer.observe(tabStripElement!)
+    return () => observer.disconnect()
+  })
+
+  // Side effect: scroll the selected work tab fully into view whenever the selection changes, such as a new tab added
+  // past the strip's right edge.
+  $effect(() => {
+    void selectedTabId
+    tabStripElement!.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   })
 </script>
 
@@ -209,46 +246,82 @@
   </nav>
   <div class="titlebar__separator" aria-hidden="true"></div>
   <div class="titlebar__tab-row">
-    <div bind:this={tabStripElement} class="titlebar__tabs" role="tablist" aria-label="Open tabs">
-      {#each workTabs as tab (tab.id)}
-        {@const TabIcon = workTabIcons[tab.screen]}
-        {@const selected = selectedTabId === tab.id}
-        {@const dragging = draggedTab?.id === tab.id}
-        <div
-          class="titlebar__tab"
-          data-selected={selected}
-          data-dragging={dragging}
-          data-testid="work-tab"
-          style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
-        >
-          <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
-               Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
-          <button
-            type="button"
-            class="titlebar__tab-select text-sm leading-5"
-            role="tab"
-            aria-selected={selected}
-            onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
-            onclick={() => onSelectWorkTab(tab.id)}
-            onauxclick={(event) => {
-              if (event.button === 1) onCloseWorkTab(tab.id)
-            }}
+    <!-- Hovering the tabs shows their scrollbar, and vertical wheel input scrolls them sideways. -->
+    <div
+      class="titlebar__tab-viewport"
+      role="presentation"
+      onmouseenter={() => { isTabStripHovered = true }}
+      onmouseleave={() => { isTabStripHovered = false }}
+      onwheel={handleTabStripWheel}
+      onmousedown={(event) => {
+        // Middle presses would start Chromium's autoscroll on the overflowing strip, which swallows the tab's
+        // middle-click close; cancelling the press keeps the auxclick.
+        if (event.button === 1) event.preventDefault()
+      }}
+    >
+      <div
+        bind:this={tabStripElement}
+        class="titlebar__tabs"
+        role="tablist"
+        aria-label="Open tabs"
+        onscroll={() => {
+          syncTabScroll()
+          tabScrollRevealVersion += 1
+        }}
+      >
+        {#each workTabs as tab (tab.id)}
+          {@const TabIcon = workTabIcons[tab.screen]}
+          {@const selected = selectedTabId === tab.id}
+          {@const dragging = draggedTab?.id === tab.id}
+          <div
+            class="titlebar__tab"
+            data-selected={selected}
+            data-dragging={dragging}
+            data-testid="work-tab"
+            style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
           >
-            <TabIcon size={16} aria-hidden="true" />
-            <span class="titlebar__tab-title">{tab.title}</span>
-          </button>
-          <button
-            type="button"
-            class="titlebar__tab-close"
-            aria-label={`Close ${tab.title}`}
-            title="Close Tab"
-            data-testid="work-tab-close"
-            onclick={() => onCloseWorkTab(tab.id)}
-          >
-            <X size={14} aria-hidden="true" />
-          </button>
-        </div>
-      {/each}
+            <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
+                 Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
+            <button
+              type="button"
+              class="titlebar__tab-select text-sm leading-5"
+              role="tab"
+              aria-selected={selected}
+              onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
+              onclick={() => onSelectWorkTab(tab.id)}
+              onauxclick={(event) => {
+                if (event.button === 1) onCloseWorkTab(tab.id)
+              }}
+            >
+              <TabIcon size={16} aria-hidden="true" />
+              <span class="titlebar__tab-title">{tab.title}</span>
+            </button>
+            <button
+              type="button"
+              class="titlebar__tab-close"
+              aria-label={`Close ${tab.title}`}
+              title="Close Tab"
+              data-testid="work-tab-close"
+              onclick={() => onCloseWorkTab(tab.id)}
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        {/each}
+      </div>
+      <Scrollbar
+        orientation="horizontal"
+        overlay
+        scrollOffsetPx={tabScroll.offsetPx}
+        viewportSizePx={tabScroll.viewportPx}
+        contentSizePx={tabScroll.contentPx}
+        thicknessPx={3}
+        isHovered={isTabStripHovered}
+        revealVersion={tabScrollRevealVersion}
+        onScrollOffsetChange={(offsetPx) => {
+          tabStripElement!.scrollLeft = offsetPx
+        }}
+      />
     </div>
     <button
       type="button"
@@ -256,7 +329,6 @@
       aria-label="New Tab"
       title="New Tab"
       data-testid="new-tab-button"
-      disabled={workTabs.length >= maxWorkTabs}
       onclick={onAddWorkTab}
     >
       <Plus size={20} strokeWidth={1.5} aria-hidden="true" />
@@ -404,33 +476,39 @@
     -webkit-app-region: no-drag;
   }
 
+  /* Anchors the overlay scrollbar along the bottom of the tabs. Its 1px negative margins let the outer tabs overlap
+     their surroundings so the wider hit areas leave the outer pills in place; they sit here because the scrolling
+     strip would clip them on its own tabs. */
+  .titlebar__tab-viewport {
+    position: relative;
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0 -1px;
+  }
+
   /* Full-height strip of touching tabs, so no drag region sits above, below, or between them. The opaque fill hides the background folder label.
+     It scrolls sideways once its tabs reach their minimum width, with the native scrollbar replaced by the overlay one.
      The arrow cursor stays while the strip holds pointer capture during a tab drag. */
   .titlebar__tabs {
     display: flex;
     flex: 0 1 auto;
     align-self: stretch;
     min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
     background: var(--app-chrome-surface);
     cursor: default;
   }
 
+  /* Tabs shrink from 222px to 120px to fit the strip before it scrolls. */
   .titlebar__tab {
     position: relative;
     display: flex;
     flex: 0 1 222px;
     width: 222px;
-    min-width: 0;
+    min-width: 120px;
     -webkit-app-region: no-drag;
-  }
-
-  /* The outer tabs overlap their surroundings by 1px so the wider hit areas leave the outer pills in place. */
-  .titlebar__tab:first-child {
-    margin-left: -1px;
-  }
-
-  .titlebar__tab:last-child {
-    margin-right: -1px;
   }
 
   /* Insets keep each pill 36px tall in the 44px title bar and 4px from its neighbours across the touching hit areas. */
@@ -546,17 +624,12 @@
     position: relative;
   }
 
-  .titlebar__new-tab:is(:hover, :focus-visible):not(:disabled) {
+  .titlebar__new-tab:is(:hover, :focus-visible) {
     color: var(--ui-normal-text);
   }
 
-  .titlebar__new-tab:is(:hover, :focus-visible):not(:disabled)::before {
+  .titlebar__new-tab:is(:hover, :focus-visible)::before {
     background: var(--ui-neutral-normal-surface);
-  }
-
-  /* Matches the shared disabled button appearance once the tab limit is reached; only the glyph fades so the opaque fill still hides the folder label. */
-  .titlebar__new-tab:disabled :global(svg) {
-    opacity: 0.5;
   }
 
   /* Background label 8px left of the updates button and three window controls; the opaque tab strip and New Tab button hide it when they reach it. */

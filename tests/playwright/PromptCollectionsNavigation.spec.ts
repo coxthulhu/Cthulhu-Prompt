@@ -710,7 +710,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
     await expect(
-      mainWindow.locator('[data-testid="prompt-collection-screen"] .virtual-window-scrollbar')
+      mainWindow.locator('[data-testid="prompt-collection-screen"] .app-scrollbar')
     ).toHaveCSS('width', '14px')
   })
 

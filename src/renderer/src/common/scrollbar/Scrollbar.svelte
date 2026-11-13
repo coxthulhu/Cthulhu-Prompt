@@ -3,47 +3,57 @@
   import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
 
   type Props = {
-    scrollTopPx: number
-    viewportHeightPx: number
-    totalHeightPx: number
-    widthPx: number
+    /** Axis the scrollbar runs along. */
+    orientation?: 'vertical' | 'horizontal'
+    /** Current scroll position along the axis. */
+    scrollOffsetPx: number
+    /** Visible extent of the scrolled area along the axis, which is also the track length. */
+    viewportSizePx: number
+    /** Full extent of the scrolled content along the axis. */
+    contentSizePx: number
+    /** Track size across the axis: its width when vertical and its height when horizontal. */
+    thicknessPx: number
     overlay?: boolean
-    isPointerOverWindow: boolean
+    /** Shows the scrollbar while the pointer is over the scrolled area. */
+    isHovered: boolean
     revealVersion: number
-    onScrollTopChange: (nextScrollTop: number) => void
+    onScrollOffsetChange: (nextScrollOffset: number) => void
     /** Cancels a pending measured reveal as soon as a scroll gesture starts. */
-    onScrollAttempt: () => void
+    onScrollAttempt?: () => void
   }
 
   let {
-    scrollTopPx,
-    viewportHeightPx,
-    totalHeightPx,
-    widthPx,
+    orientation = 'vertical',
+    scrollOffsetPx,
+    viewportSizePx,
+    contentSizePx,
+    thicknessPx,
     overlay = false,
-    isPointerOverWindow,
+    isHovered,
     revealVersion,
-    onScrollTopChange,
+    onScrollOffsetChange,
     onScrollAttempt
   }: Props = $props()
 
   const MIN_THUMB_PX = 20
   const HIDE_TIMEOUT_MS = 500
 
-  const maxScrollTopPx = $derived(Math.max(0, totalHeightPx - viewportHeightPx))
-  const trackHeightPx = $derived(Math.max(0, viewportHeightPx))
-  const thumbHeightPx = $derived.by(() => {
-    if (trackHeightPx <= 0) return MIN_THUMB_PX
-    if (totalHeightPx <= 0) return trackHeightPx
-    const rawThumbHeight = (viewportHeightPx / totalHeightPx) * trackHeightPx
-    return Math.min(trackHeightPx, Math.max(MIN_THUMB_PX, rawThumbHeight))
+  /** Whether the track runs left to right instead of top to bottom. */
+  const isHorizontal = $derived(orientation === 'horizontal')
+  const maxScrollOffsetPx = $derived(Math.max(0, contentSizePx - viewportSizePx))
+  const trackLengthPx = $derived(Math.max(0, viewportSizePx))
+  const thumbLengthPx = $derived.by(() => {
+    if (trackLengthPx <= 0) return MIN_THUMB_PX
+    if (contentSizePx <= 0) return trackLengthPx
+    const rawThumbLength = (viewportSizePx / contentSizePx) * trackLengthPx
+    return Math.min(trackLengthPx, Math.max(MIN_THUMB_PX, rawThumbLength))
   })
-  const maxThumbTopPx = $derived(Math.max(0, trackHeightPx - thumbHeightPx))
-  const thumbTopPx = $derived.by(() => {
-    if (maxScrollTopPx <= 0) return 0
-    return (scrollTopPx / maxScrollTopPx) * maxThumbTopPx
+  const maxThumbOffsetPx = $derived(Math.max(0, trackLengthPx - thumbLengthPx))
+  const thumbOffsetPx = $derived.by(() => {
+    if (maxScrollOffsetPx <= 0) return 0
+    return (scrollOffsetPx / maxScrollOffsetPx) * maxThumbOffsetPx
   })
-  const isScrollbarNeeded = $derived(totalHeightPx > viewportHeightPx)
+  const isScrollbarNeeded = $derived(contentSizePx > viewportSizePx)
 
   let trackElement: HTMLDivElement | null = null
   let dragCleanup: (() => void) | null = null
@@ -53,6 +63,10 @@
 
   const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, min), max)
+
+  /** Pointer position along the axis, measured from the track's start edge. */
+  const getPointerOffset = (event: PointerEvent, trackRect: DOMRect): number =>
+    isHorizontal ? event.clientX - trackRect.left : event.clientY - trackRect.top
 
   const clearHideTimeout = () => {
     if (hideTimeoutId == null) return
@@ -66,10 +80,10 @@
   }
 
   const scheduleHide = () => {
-    if (isPointerOverWindow || isDragging || !isScrollbarNeeded) return
+    if (isHovered || isDragging || !isScrollbarNeeded) return
     clearHideTimeout()
     hideTimeoutId = window.setTimeout(() => {
-      if (isPointerOverWindow || isDragging) return
+      if (isHovered || isDragging) return
       visibilityClass = 'invisible fade'
     }, HIDE_TIMEOUT_MS)
   }
@@ -84,33 +98,33 @@
     scheduleHide()
   }
 
-  const applyThumbTop = (nextThumbTop: number) => {
-    if (maxScrollTopPx <= 0 || maxThumbTopPx <= 0) {
-      onScrollTopChange(0)
+  const applyThumbOffset = (nextThumbOffset: number) => {
+    if (maxScrollOffsetPx <= 0 || maxThumbOffsetPx <= 0) {
+      onScrollOffsetChange(0)
       return
     }
 
-    const nextScrollTop = (nextThumbTop / maxThumbTopPx) * maxScrollTopPx
-    onScrollTopChange(nextScrollTop)
+    const nextScrollOffset = (nextThumbOffset / maxThumbOffsetPx) * maxScrollOffsetPx
+    onScrollOffsetChange(nextScrollOffset)
   }
 
   /** Captures a thumb or track press while preserving its initial thumb offset. */
   const startDragging = (event: PointerEvent, dragOffsetPx: number) => {
     if (!trackElement) return
-    onScrollAttempt()
+    onScrollAttempt?.()
     const rect = trackElement.getBoundingClientRect()
     revealScrollbar()
     isDragging = true
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
-      const nextThumbTop = clamp(moveEvent.clientY - rect.top - dragOffsetPx, 0, maxThumbTopPx)
-      applyThumbTop(nextThumbTop)
+      const nextThumbOffset = clamp(getPointerOffset(moveEvent, rect) - dragOffsetPx, 0, maxThumbOffsetPx)
+      applyThumbOffset(nextThumbOffset)
     }
 
     const handlePointerUp = () => {
       dragCleanup = null
       isDragging = false
-      if (isPointerOverWindow) {
+      if (isHovered) {
         revealScrollbar()
         return
       }
@@ -131,9 +145,8 @@
     if (!trackElement || event.button !== 0 || isDragging) return
     event.preventDefault()
 
-    const rect = trackElement.getBoundingClientRect()
-    const clickOffset = event.clientY - rect.top
-    const dragOffsetPx = clamp(clickOffset - thumbTopPx, 0, thumbHeightPx)
+    const clickOffset = getPointerOffset(event, trackElement.getBoundingClientRect())
+    const dragOffsetPx = clamp(clickOffset - thumbOffsetPx, 0, thumbLengthPx)
     startDragging(event, dragOffsetPx)
   }
 
@@ -141,16 +154,15 @@
     if (!trackElement || event.target !== trackElement || event.button !== 0 || isDragging) return
     event.preventDefault()
 
-    const rect = trackElement.getBoundingClientRect()
-    const clickOffset = event.clientY - rect.top
-    const nextThumbTop = clamp(clickOffset - thumbHeightPx / 2, 0, maxThumbTopPx)
-    applyThumbTop(nextThumbTop)
-    startDragging(event, thumbHeightPx / 2)
+    const clickOffset = getPointerOffset(event, trackElement.getBoundingClientRect())
+    const nextThumbOffset = clamp(clickOffset - thumbLengthPx / 2, 0, maxThumbOffsetPx)
+    applyThumbOffset(nextThumbOffset)
+    startDragging(event, thumbLengthPx / 2)
   }
 
   // Side effect: keep scrollbar visibility aligned with hover state.
   $effect(() => {
-    if (isPointerOverWindow) {
+    if (isHovered) {
       revealScrollbar()
       return
     }
@@ -171,7 +183,7 @@
       hideScrollbar(false)
       return
     }
-    if (isPointerOverWindow) {
+    if (isHovered) {
       revealScrollbar()
     }
   })
@@ -184,78 +196,96 @@
 </script>
 
 <div
-  class={`virtual-window-scrollbar ${visibilityClass}`}
-  class:virtual-window-scrollbar--overlay={overlay}
-  style={`width:${widthPx}px;`}
+  class={`app-scrollbar ${visibilityClass}`}
+  class:app-scrollbar--overlay={overlay}
+  data-orientation={orientation}
+  style={isHorizontal ? `height:${thicknessPx}px;` : `width:${thicknessPx}px;`}
   aria-hidden="true"
 >
   <div
     bind:this={trackElement}
-    class="virtual-window-scrollbar-track"
+    class="app-scrollbar-track"
     role="button"
     tabindex="-1"
     onpointerdown={handleTrackPointerDown}
   >
     <div
-      class="virtual-window-scrollbar-thumb"
+      class="app-scrollbar-thumb"
       role="button"
       tabindex="-1"
       class:active={isDragging}
-      style={`height:${thumbHeightPx}px; transform:translate3d(0, ${thumbTopPx}px, 0);`}
+      style={isHorizontal
+        ? `width:${thumbLengthPx}px; transform:translate3d(${thumbOffsetPx}px, 0, 0);`
+        : `height:${thumbLengthPx}px; transform:translate3d(0, ${thumbOffsetPx}px, 0);`}
       onpointerdown={handleThumbPointerDown}
     ></div>
   </div>
 </div>
 
 <style>
-  .virtual-window-scrollbar {
+  .app-scrollbar {
     display: flex;
     height: 100%;
     flex: 0 0 auto;
     user-select: none;
   }
 
-  .virtual-window-scrollbar--overlay {
+  .app-scrollbar[data-orientation='horizontal'] {
+    width: 100%;
+  }
+
+  .app-scrollbar--overlay {
     position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
   }
 
-  .virtual-window-scrollbar.visible {
+  /* A horizontal overlay runs along the bottom edge of the scrolled area. */
+  .app-scrollbar--overlay[data-orientation='horizontal'] {
+    top: auto;
+    left: 0;
+  }
+
+  .app-scrollbar.visible {
     transition: opacity var(--ui-animation-duration-standard) linear;
     z-index: var(--z-chrome);
   }
 
-  .virtual-window-scrollbar.invisible {
+  .app-scrollbar.invisible {
     opacity: 0;
     pointer-events: none;
   }
 
-  .virtual-window-scrollbar.invisible.fade {
+  .app-scrollbar.invisible.fade {
     transition: opacity 800ms linear;
   }
 
-  .virtual-window-scrollbar-track {
+  .app-scrollbar-track {
     touch-action: none;
     position: relative;
     width: 100%;
     height: 100%;
   }
 
-  .virtual-window-scrollbar-thumb {
+  .app-scrollbar-thumb {
     position: absolute;
     left: 0;
     right: 0;
-    background: var(--vscode-scrollbarSlider-background);
+    background: rgba(121, 121, 121, 0.4);
     touch-action: none;
   }
 
-  .virtual-window-scrollbar-thumb:hover {
-    background: var(--vscode-scrollbarSlider-hoverBackground);
+  .app-scrollbar[data-orientation='horizontal'] .app-scrollbar-thumb {
+    top: 0;
+    bottom: 0;
   }
 
-  .virtual-window-scrollbar-thumb.active {
-    background: var(--vscode-scrollbarSlider-activeBackground);
+  .app-scrollbar-thumb:hover {
+    background: rgba(100, 100, 100, 0.7);
+  }
+
+  .app-scrollbar-thumb.active {
+    background: rgba(191, 191, 191, 0.4);
   }
 </style>

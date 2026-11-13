@@ -190,7 +190,7 @@ describe('Measured Find Scrolling', () => {
           await mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).dispatchEvent('wheel', { deltaY: -100 })
         } else if (action === 'scrollbar-press') {
           /** Thumb press counts as user intent even before any pointer movement. */
-          const thumb = mainWindow.locator(`${PROMPT_COLLECTION_HOST_SELECTOR}`).locator('..').locator('.virtual-window-scrollbar-thumb')
+          const thumb = mainWindow.locator(`${PROMPT_COLLECTION_HOST_SELECTOR}`).locator('..').locator('.app-scrollbar-thumb')
           await mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).hover()
           /** Real pointer coordinates allow the scrollbar to capture an active drag pointer. */
           const thumbBounds = (await thumb.boundingBox())!

@@ -98,7 +98,7 @@ describe('Pointer capture', () => {
           ? mainWindow.getByTestId('test-screen-accordion-sash-active')
           : control === 'sidebar'
             ? mainWindow.getByTestId('app-sidebar-resize-handle')
-            : frame.locator('.virtual-window-scrollbar-thumb')
+            : frame.locator('.app-scrollbar-thumb')
         await handle.scrollIntoViewIfNeeded()
         await recordPointerId(handle)
         /** Pointer origin measured before resizing moves the handle. */

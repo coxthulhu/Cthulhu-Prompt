@@ -15,7 +15,8 @@
   } from './virtualWindowTypes'
   import type { VirtualRowState } from './virtualWindowRows'
   import { overlayRowWrapperStyle, rowWrapperStyle } from './virtualWindowRowStyles'
-  import VirtualWindowScrollbar from './VirtualWindowScrollbar.svelte'
+  import Scrollbar from '@renderer/common/scrollbar/Scrollbar.svelte'
+  import { WHEEL_SCROLL_MULTIPLIER } from '@renderer/common/scrollTimings'
   import { useVirtualWindowCallbacks } from './virtualWindowCallbacks.svelte.ts'
   import { createVirtualWindowHydrationState } from './virtualWindowHydrationState.svelte.ts'
   import { createVirtualWindowMeasurements } from './virtualWindowMeasurements.svelte.ts'
@@ -51,7 +52,6 @@
   const DEFAULT_RIGHT_SCROLL_PADDING_PX = 8
   const DEFAULT_SCROLLBAR_WIDTH_PX = 10
   const WINDOW_BAND_PADDING_PX = 100
-  const WHEEL_SCROLL_MULTIPLIER = 0.4
 
   let {
     items,
@@ -247,7 +247,7 @@
 </script>
 
 <div
-  class="relative h-full w-full virtual-window-scrollbar-theme"
+  class="relative h-full w-full"
   role="presentation"
   onmouseenter={() => {
     isPointerOverWindow = true
@@ -318,15 +318,15 @@
       {/each}
     </div>
 
-    <VirtualWindowScrollbar
-      {scrollTopPx}
-      viewportHeightPx={viewportHeight}
-      {totalHeightPx}
-      widthPx={scrollbarWidthPx}
+    <Scrollbar
+      scrollOffsetPx={scrollTopPx}
+      viewportSizePx={viewportHeight}
+      contentSizePx={totalHeightPx}
+      thicknessPx={scrollbarWidthPx}
       overlay={overlayScrollbar}
-      {isPointerOverWindow}
+      isHovered={isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
-      onScrollTopChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
+      onScrollOffsetChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
       onScrollAttempt={cancelPendingMeasurement}
     />
   </div>
@@ -344,13 +344,6 @@
     z-index: var(--z-overlay);
   }
 
-  .virtual-window-scrollbar-theme {
-    --vscode-scrollbar-shadow: #000000;
-    --vscode-scrollbarSlider-background: rgba(121, 121, 121, 0.4);
-    --vscode-scrollbarSlider-hoverBackground: rgba(100, 100, 100, 0.7);
-    --vscode-scrollbarSlider-activeBackground: rgba(191, 191, 191, 0.4);
-  }
-
   .virtual-window-scroll-shadow {
     position: absolute;
     top: 0;
@@ -359,7 +352,7 @@
     display: none;
     pointer-events: none;
     z-index: var(--z-raised);
-    box-shadow: var(--vscode-scrollbar-shadow) 0 6px 6px -6px inset;
+    box-shadow: #000000 0 6px 6px -6px inset;
   }
 
   .virtual-window-scroll-shadow--active {

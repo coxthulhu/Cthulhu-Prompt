@@ -271,7 +271,7 @@ describe('Dropdown tracking', () => {
       await expect(menu).toBeVisible()
     }
     /** Real custom scrollbar must retain pointer capture from this first press. */
-    const thumb = mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).locator('..').locator('.virtual-window-scrollbar-thumb')
+    const thumb = mainWindow.locator(PROMPT_COLLECTION_HOST_SELECTOR).locator('..').locator('.app-scrollbar-thumb')
     await thumb.hover()
     /** Press coordinates precede the scrollbar's own movement. */
     const thumbBox = await box(thumb)

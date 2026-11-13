@@ -159,7 +159,7 @@ describe('Work Tabs', () => {
     }
   })
 
-  test('adds, selects, limits, and closes work tabs', async ({ testSetup }) => {
+  test('adds, selects, and closes work tabs', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     /** Title bar Home button, selected only while no work tab is selected. */
     const homeButton = mainWindow.getByTestId('nav-button-home')
@@ -187,16 +187,18 @@ describe('Work Tabs', () => {
     await expect(homeButton).toHaveAttribute('aria-current', 'page')
     await expectNoSelectedTab(mainWindow)
 
-    // The New Tab button disables at six tabs.
-    for (let index = 0; index < 3; index += 1) await newTabButton.click()
+    // New tabs keep appending past six, the former limit.
+    for (let index = 0; index < 4; index += 1) await newTabButton.click()
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await expectSelectedTab(mainWindow, 'Tab 7')
+    await mainWindow.getByRole('button', { name: 'Close Tab 7', exact: true }).click()
     await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6'])
-    await expect(newTabButton).toBeDisabled()
+    await expectSelectedTab(mainWindow, 'Tab 6')
 
     // Closing the selected tab selects its right neighbour.
     await getTab(mainWindow, 'Tab 3').click()
     await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).click()
     await expectSelectedTab(mainWindow, 'Tab 4')
-    await expect(newTabButton).toBeEnabled()
 
     // Middle-clicking an unselected tab closes it without changing the selection.
     await getTab(mainWindow, 'Tab 6').click({ button: 'middle' })
@@ -222,6 +224,124 @@ describe('Work Tabs', () => {
     await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
     await expect(homeButton).toHaveAttribute('aria-current', 'page')
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+  })
+
+  test('shrinks tabs to their minimum width, then scrolls them with the wheel and a hover-only scrollbar', async ({ testSetup }) => {
+    const { mainWindow } = await testSetup.setupAndStart()
+    const newTabButton = mainWindow.getByTestId('new-tab-button')
+    /** Strip that scrolls once its tabs reach their minimum width. */
+    const tabStrip = mainWindow.getByRole('tablist', { name: 'Open tabs' })
+    /** Horizontal overlay scrollbar along the bottom of the tabs. */
+    const scrollbar = mainWindow.locator('.titlebar .app-scrollbar')
+    /** Draggable thumb inside the tab strip's scrollbar. */
+    const thumb = scrollbar.locator('.app-scrollbar-thumb')
+    /** Strip's scroll position, its largest possible scroll position, and its visible and content widths. */
+    const readStripScroll = () =>
+      tabStrip.evaluate((strip) => ({
+        left: strip.scrollLeft,
+        max: strip.scrollWidth - strip.clientWidth,
+        clientWidth: strip.clientWidth,
+        scrollWidth: strip.scrollWidth
+      }))
+    /** Asserts the strip's scroll position is within 1px of the expected position. */
+    const expectStripScrollAt = async (left: number): Promise<void> => {
+      await expect.poll(async () => Math.abs((await readStripScroll()).left - left), { message: 'strip scroll' })
+        .toBeLessThanOrEqual(1)
+    }
+
+    // Ten tabs stop shrinking at 120px and overflow the strip, which scrolls the new, selected tab fully into view
+    // beside the New Tab button. The New Tab button keeps its 40px drag gap before the window controls, and the
+    // scrollbar's brief reveal from that scroll fades while the pointer is off the tabs.
+    for (let index = 0; index < 10; index += 1) await newTabButton.click()
+    await expectSelectedTab(mainWindow, 'Tab 10')
+    /** Rendered tab widths in display order. */
+    const tabWidths = await getTabs(mainWindow).evaluateAll((tabs) => tabs.map((tab) => tab.getBoundingClientRect().width))
+    expect(tabWidths).toHaveLength(10)
+    for (const width of tabWidths) expect(Math.abs(width - 120)).toBeLessThanOrEqual(1)
+    const { max, clientWidth, scrollWidth } = await readStripScroll()
+    expect(max).toBeGreaterThan(0)
+    await expectStripScrollAt(max)
+    /** Visible strip bounds, which the New Tab button overlaps by 1px. */
+    const stripBox = (await tabStrip.boundingBox())!
+    /** New Tab button bounds beside the strip. */
+    const newTabBox = (await newTabButton.boundingBox())!
+    /** Window controls group after the drag gap. */
+    const controlsBox = (await mainWindow.locator('.titlebar__controls').boundingBox())!
+    expect(Math.abs(newTabBox.x - (stripBox.x + stripBox.width - 1))).toBeLessThanOrEqual(1)
+    expect(Math.abs(controlsBox.x - (newTabBox.x + newTabBox.width) - 40)).toBeLessThanOrEqual(1)
+    await expect(scrollbar).toHaveClass(/\binvisible\b/)
+
+    // Hovering the tabs shows a 3px scrollbar across the bottom of the strip, with a proportional thumb at the end.
+    await getTab(mainWindow, 'Tab 10').hover()
+    await expect(scrollbar).toHaveClass(/\bvisible\b/)
+    const scrollbarBox = (await scrollbar.boundingBox())!
+    const thumbBox = (await thumb.boundingBox())!
+    /** Scrollbar and thumb geometry as [label, actual, expected] rows, in pixels. */
+    const rows: Array<[string, number, number]> = [
+      ['scrollbar height', scrollbarBox.height, 3],
+      ['scrollbar bottom', scrollbarBox.y + scrollbarBox.height, stripBox.y + stripBox.height],
+      ['scrollbar left', scrollbarBox.x, stripBox.x],
+      ['scrollbar width', scrollbarBox.width, stripBox.width],
+      ['thumb height', thumbBox.height, 3],
+      ['thumb width', thumbBox.width, (clientWidth / scrollWidth) * clientWidth],
+      ['thumb right', thumbBox.x + thumbBox.width, stripBox.x + stripBox.width]
+    ]
+    for (const [label, actual, expected] of rows) {
+      expect(Math.abs(actual - expected), label).toBeLessThanOrEqual(1)
+    }
+
+    // Wheel up scrolls left and wheel down scrolls right, at the screens' rate of 0.4px per wheel delta unit.
+    await mainWindow.mouse.wheel(0, -100)
+    await expectStripScrollAt(max - 40)
+    await mainWindow.mouse.wheel(0, -100)
+    await expectStripScrollAt(max - 80)
+    await mainWindow.mouse.wheel(0, 100)
+    await expectStripScrollAt(max - 40)
+    await mainWindow.mouse.wheel(0, 100)
+    await expectStripScrollAt(max)
+
+    // Dragging the thumb past the strip's left edge scrolls to the start without selecting or dragging a tab.
+    await mainWindow.mouse.move(thumbBox.x + thumbBox.width / 2, thumbBox.y + thumbBox.height / 2)
+    await mainWindow.mouse.down()
+    await mainWindow.mouse.move(1, thumbBox.y + thumbBox.height / 2)
+    await expect(thumb).toHaveClass(/\bactive\b/)
+    await mainWindow.mouse.up()
+    await expectStripScrollAt(0)
+    await expect.poll(async () => Math.abs((await thumb.boundingBox())!.x - stripBox.x), { message: 'thumb left' })
+      .toBeLessThanOrEqual(1)
+    await expectSelectedTab(mainWindow, 'Tab 10')
+    await expect(getTabs(mainWindow)).toHaveText(Array.from({ length: 10 }, (_, index) => `Tab ${index + 1}`))
+
+    // Moving the pointer off the tabs hides the scrollbar.
+    await newTabButton.hover()
+    await expect(scrollbar).toHaveClass(/\binvisible\b/)
+
+    // Selecting a hidden tab scrolls it just into view; dispatched clicks avoid Playwright scrolling the tab itself.
+    await getTab(mainWindow, 'Tab 9').dispatchEvent('click')
+    await expectSelectedTab(mainWindow, 'Tab 9')
+    await expect.poll(async () => {
+      const tabBox = (await getTab(mainWindow, 'Tab 9').boundingBox())!
+      return Math.abs(tabBox.x + tabBox.width - (stripBox.x + stripBox.width))
+    }, { message: 'Tab 9 right edge' }).toBeLessThanOrEqual(1)
+    await getTab(mainWindow, 'Tab 1').dispatchEvent('click')
+    await expectSelectedTab(mainWindow, 'Tab 1')
+    await expectStripScrollAt(0)
+
+    // Middle-clicking a tab still closes it while the strip overflows, instead of starting Chromium's middle-click
+    // autoscroll on the scrolling strip.
+    await getTab(mainWindow, 'Tab 2').click({ button: 'middle' })
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
+    await expectSelectedTab(mainWindow, 'Tab 1')
+    await expectStripScrollAt(0)
+
+    // Closing unselected tabs until the rest fit re-measures the strip without a resize or scroll, so the
+    // hovered scrollbar hides.
+    await expect(scrollbar).toHaveClass(/\bvisible\b/)
+    await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).click()
+    await mainWindow.getByRole('button', { name: 'Close Tab 4', exact: true }).click()
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
+    await expect(scrollbar).toHaveClass(/\binvisible\b/)
+    expect((await readStripScroll()).max).toBe(0)
   })
 
   test('drags a work tab over its neighbours within the strip and saves the new order', async ({ electronApp, testSetup }) => {
