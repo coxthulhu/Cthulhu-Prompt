@@ -10,15 +10,20 @@
     Home,
     Layers,
     LayoutGrid,
+    Move,
     PanelsTopLeft,
+    Pencil,
     Plus,
     Search,
     Settings,
-    Settings2,
     X
   } from 'lucide-svelte'
   import appIcon from '@renderer/assets/cutethulhu.png'
+  import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
+  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
+  import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
 
   type WorkTabScreen = 'new-tab' | 'prompt-collection' | 'template-collection'
 
@@ -41,6 +46,8 @@
     name: string
     kind: 'prompt' | 'template'
     count: number
+    /** Relative time since the collection was last updated, in the live Show All dropdown's wording. */
+    updated: string
   }
 
   type ProjectGroup = {
@@ -54,28 +61,28 @@
       id: 'atlas-web',
       name: 'Atlas Web',
       collections: [
-        { id: 'bug-triage', name: 'Bug Triage', kind: 'prompt', count: 14 },
-        { id: 'feature-work', name: 'Feature Work', kind: 'prompt', count: 9 },
-        { id: 'code-review', name: 'Code Review', kind: 'template', count: 6 },
-        { id: 'ui-polish', name: 'UI Polish', kind: 'prompt', count: 21 },
-        { id: 'refactors', name: 'Refactors', kind: 'prompt', count: 7 }
+        { id: 'bug-triage', name: 'Bug Triage', kind: 'prompt', count: 14, updated: 'Today' },
+        { id: 'feature-work', name: 'Feature Work', kind: 'prompt', count: 9, updated: 'Today' },
+        { id: 'code-review', name: 'Code Review', kind: 'template', count: 6, updated: 'Yesterday' },
+        { id: 'ui-polish', name: 'UI Polish', kind: 'prompt', count: 21, updated: 'Today' },
+        { id: 'refactors', name: 'Refactors', kind: 'prompt', count: 7, updated: '2 weeks ago' }
       ]
     },
     {
       id: 'harbor-api',
       name: 'Harbor API',
       collections: [
-        { id: 'schema-migrations', name: 'Schema Migrations', kind: 'prompt', count: 11 },
-        { id: 'endpoint-tests', name: 'Endpoint Tests', kind: 'prompt', count: 18 },
-        { id: 'release-notes', name: 'Release Notes', kind: 'template', count: 4 }
+        { id: 'schema-migrations', name: 'Schema Migrations', kind: 'prompt', count: 11, updated: 'Today' },
+        { id: 'endpoint-tests', name: 'Endpoint Tests', kind: 'prompt', count: 18, updated: '2 days ago' },
+        { id: 'release-notes', name: 'Release Notes', kind: 'template', count: 4, updated: '5 days ago' }
       ]
     },
     {
       id: 'lantern-mobile',
       name: 'Lantern Mobile',
       collections: [
-        { id: 'onboarding-flow', name: 'Onboarding Flow', kind: 'prompt', count: 5 },
-        { id: 'store-listing', name: 'Store Listing', kind: 'template', count: 1 }
+        { id: 'onboarding-flow', name: 'Onboarding Flow', kind: 'prompt', count: 5, updated: '6 days ago' },
+        { id: 'store-listing', name: 'Store Listing', kind: 'template', count: 1, updated: '3 weeks ago' }
       ]
     }
   ]
@@ -177,18 +184,6 @@
 
   const truncate = 'min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;'
 </script>
-
-{#snippet ghostIconButton(id: string, label: string, Icon: ComponentType)}
-  <button
-    type="button"
-    aria-label={label}
-    title={label}
-    {...hover(id)}
-    style="display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: {ghostFill(id)}; color: {ghostGlyph(id)};"
-  >
-    <Icon size={16} aria-hidden="true" />
-  </button>
-{/snippet}
 
 <!-- The title bar mirrors the live WindowsTitleBar: full-height touching hit areas with inset neutral pills. -->
 <div
@@ -302,7 +297,15 @@
           >
             <h2 style="{truncate} color: var(--ui-secondary-text);">{activeWorkTab?.project ?? 'System Settings'}</h2>
             {#if activeWorkTab?.project}
-              {@render ghostIconButton('sidebar-project-settings', 'Project Settings', Settings2)}
+              <IconButton
+                icon={Pencil}
+                label="Project Settings"
+                title="Project Settings"
+                size="tiny"
+                baseVariant="muted"
+                hoverVariant="glyph"
+                textBaseline
+              />
             {/if}
           </div>
           {#if activeWorkTab?.project}
@@ -390,44 +393,48 @@
 
           <p
             class="text-xs leading-4"
-            style="display: flex; align-items: center; gap: 4px; margin-top: 10px; color: var(--ui-muted-text);"
+            style="display: flex; align-items: center; gap: 4px; margin-top: 10px; padding-left: 4px; color: var(--ui-muted-text);"
           >
-            <GripVertical size={14} aria-hidden="true" style="flex: none; color: var(--ui-muted-icon-glyph);" />
+            <Move size={14} aria-hidden="true" style="flex: none; color: var(--ui-muted-icon-glyph);" />
             Drag to reorder projects and collections
           </p>
 
           {#each projects as project (project.id)}
             <section aria-label={project.name} style="margin-top: 22px;">
-              <div style="display: flex; align-items: center; gap: 4px; height: 32px; margin-bottom: 8px;">
+              <div
+                class="text-xl leading-7"
+                style="display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 8px;"
+              >
+                <!-- The 2px top margin lowers the centered grip 1px onto the baseline-aligned title's capitals. -->
                 <button
                   type="button"
                   aria-label={`Reorder ${project.name}`}
                   title="Drag to reorder"
                   {...hover(`project-grip-${project.id}`)}
-                  style="display: flex; flex: none; align-items: center; justify-content: center; width: 20px; height: 28px; margin-left: -6px; border-radius: 4px; background: {ghostFill(
+                  style="display: flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 32px; margin: 2px 0 0 -8px; border-radius: 4px; background: {ghostFill(
                     `project-grip-${project.id}`
                   )}; color: {ghostGlyph(`project-grip-${project.id}`)}; cursor: grab;"
                 >
-                  <GripVertical size={16} aria-hidden="true" />
+                  <GripVertical size={20} aria-hidden="true" />
                 </button>
-                <h2
-                  class="text-base leading-6"
-                  style="{truncate} color: var(--ui-hoverable-text); font-weight: var(--font-weight-semibold);"
-                >
-                  {project.name}
-                </h2>
-                {@render ghostIconButton(`project-settings-${project.id}`, 'Project Settings', Settings2)}
-                <button
-                  type="button"
-                  class="text-xs leading-4"
-                  {...hover(`new-collection-${project.id}`)}
-                  style="display: flex; flex: none; align-items: center; gap: 4px; height: 26px; margin-left: auto; padding: 0 8px 0 6px; border-radius: 6px; background: {ghostFill(
-                    `new-collection-${project.id}`
-                  )}; color: {ghostText(`new-collection-${project.id}`)};"
-                >
-                  <Plus size={14} aria-hidden="true" />
-                  New Collection
-                </button>
+                <!-- Baseline alignment puts the edit button's text line on the project name's baseline, like the category editor title. -->
+                <div style="display: flex; align-items: baseline; gap: 2px; min-width: 0;">
+                  <h2 style="{truncate} color: var(--ui-hoverable-text); font-weight: var(--font-weight-semibold);">
+                    {project.name}
+                  </h2>
+                  <!-- The 28px compact button matches the title's 28px line, and the 18px icon scales with the 20px title. -->
+                  <IconButton
+                    icon={Pencil}
+                    label="Project Settings"
+                    title="Project Settings"
+                    size="compact"
+                    iconSize={18}
+                    baseVariant="muted"
+                    hoverVariant="glyph"
+                    textBaseline
+                  />
+                </div>
+                <Button icon={Plus} text="New Collection" appearance="outline" style="margin-left: auto;" />
               </div>
 
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
@@ -436,41 +443,49 @@
                   {@const isTileHovered = hovered.has(tileId)}
                   {@const isOpen = openCollectionKeys.includes(`${project.name}/${collection.name}`)}
                   {@const KindIcon = collection.kind === 'template' ? Layers : FileText}
+                  {@const countText = `${collection.count} ${collection.kind}${collection.count === 1 ? '' : 's'}`}
+                  <!-- Geometry and type copy the Show All dropdown's SelectorButton rows (58px, 1px border, 8px padding,
+                       34px icon cell, 8px gap, title over dot-separated details) while keeping this mockup's tile colors. -->
                   <button
                     type="button"
                     {...hover(tileId)}
-                    style="display: flex; align-items: center; gap: 12px; min-width: 0; height: 60px; padding: 0 14px; border-radius: 8px; border: 1px solid {isTileHovered
+                    style="display: grid; grid-template-columns: 34px 8px minmax(0, 1fr) auto; align-items: center; min-width: 0; height: 58px; padding: 8px; border-radius: var(--cthulhu-ui-radius-card); border: 1px solid {isTileHovered
                       ? 'var(--ui-neutral-hover-border)'
                       : 'var(--ui-neutral-muted-border)'}; background: {isTileHovered
                       ? 'var(--ui-neutral-action-fill)'
                       : 'var(--ui-neutral-normal-surface)'}; text-align: left; cursor: pointer;"
                   >
-                    <KindIcon
-                      size={20}
-                      aria-hidden="true"
-                      style="flex: none; color: {isTileHovered
+                    <IconCell
+                      icon={KindIcon}
+                      variant="compact"
+                      style="grid-column: 1; color: {isTileHovered
                         ? 'var(--ui-hoverable-icon-glyph)'
                         : 'var(--ui-secondary-icon-glyph)'};"
                     />
-                    <span style="display: flex; flex: 1; flex-direction: column; min-width: 0;">
+                    <span style="display: flex; grid-column: 3; flex-direction: column; gap: 2px; min-width: 0;">
                       <span
                         class="text-sm leading-5"
                         style="{truncate} color: {isTileHovered
                           ? 'var(--ui-normal-text)'
-                          : 'var(--ui-hoverable-text)'}; font-weight: 500;"
+                          : 'var(--ui-hoverable-text)'}; font-weight: var(--font-weight-semibold);"
                       >
                         {collection.name}
                       </span>
-                      <span class="text-xs leading-4" style="{truncate} color: var(--ui-muted-text);">
-                        {collection.count}
-                        {collection.kind === 'template' ? 'template' : 'prompt'}{collection.count === 1 ? '' : 's'}
+                      <span
+                        class="text-xs leading-4.5"
+                        title={`${countText} · ${collection.updated}`}
+                        style="display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; color: var(--ui-muted-text);"
+                      >
+                        <span class="min-w-0 truncate">{countText}</span>
+                        <SeparatorDot />
+                        <span class="min-w-0 truncate">{collection.updated}</span>
                       </span>
                     </span>
                     {#if isOpen}
                       <span
                         class="text-xs leading-4"
                         title="Open in another tab"
-                        style="display: flex; flex: none; align-items: center; gap: 5px; color: var(--ui-secondary-text);"
+                        style="display: flex; grid-column: 4; align-items: center; gap: 5px; padding-left: 8px; color: var(--ui-secondary-text);"
                       >
                         <span
                           style="width: 6px; height: 6px; border-radius: 50%; background: var(--ui-success-normal-text);"
