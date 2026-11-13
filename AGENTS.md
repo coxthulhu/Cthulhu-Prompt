@@ -122,6 +122,7 @@ describe('My Feature', () => {
 ## Commit & Pull Request Guidelines
 
 - Commits: short, imperative present tense (e.g., “Fix tests”, “Add virtualization test”); group related changes; reference issues.
+- Committing and pushing directly to `main` is allowed. When asked to commit or push, do it on the current branch, normally `main`. Never create a branch unless the user asks for one. If the working tree holds changes that aren't part of the task, stage only the task's files.
 - Do not run `gh auth status` as a preflight for `git push` or other Git commands. Git uses the remote's configured authentication independently of GitHub CLI. Run `gh auth status` only when the user explicitly requests a GitHub CLI operation and its authentication state is material.
 - Never run `git commit` and `git push` in parallel; finish the commit first, then push in a separate step.
 - Git commands that write to `.git` must use escalated permissions in the tool call, even when they do not contact a remote. This includes `git commit`, `git merge`, `git rebase`, `git cherry-pick`, `git stash`, `git tag`, and any retry after a `.git/index.lock` or read-only filesystem error.
