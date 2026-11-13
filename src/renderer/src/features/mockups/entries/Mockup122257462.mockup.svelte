@@ -21,9 +21,11 @@
   import appIcon from '@renderer/assets/cutethulhu.png'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
 
   type WorkTabScreen = 'new-tab' | 'prompt-collection' | 'template-collection'
 
@@ -86,6 +88,9 @@
       ]
     }
   ]
+
+  /** Sample workspace folder name, shown as the New Tab page title like the Home Screen's workspace summary. */
+  const workspaceName = 'Studio Prompts'
 
   let searchQuery = $state('')
   let isSearchFocused = $state(false)
@@ -352,43 +357,30 @@
         <div
           style="display: flex; flex-direction: column; width: 100%; max-width: 880px; margin: auto; padding: 32px 24px; box-sizing: border-box;"
         >
+          <Title title={workspaceName} tooltip={workspaceName} variant="workspace" style="margin-bottom: 16px;" />
+
           <div style="display: flex; align-items: center; gap: 10px;">
-            <label
-              {...hover('new-tab-search')}
-              style="display: flex; flex: 1; align-items: center; gap: 8px; min-width: 0; height: 36px; padding: 0 12px; border-radius: 6px; border: 1px solid {isSearchFocused
-                ? 'var(--ui-neutral-focus-border)'
-                : hovered.has('new-tab-search')
-                  ? 'var(--ui-neutral-hover-border)'
-                  : 'var(--ui-neutral-normal-border)'}; background: var(--ui-neutral-field-surface); color: {isSearchFocused
-                ? 'var(--ui-hoverable-icon-glyph)'
-                : 'var(--ui-muted-icon-glyph)'}; cursor: text;"
-            >
-              <Search size={16} aria-hidden="true" style="flex: none;" />
-              <input
-                type="text"
-                class="text-sm leading-5"
+            <!-- The search icon overlays the standard TextInput at its usual 14px text inset; the 38px left padding
+                 starts the text after the 16px icon and an 8px gap. The icon follows the input so it paints above it. -->
+            <div style="position: relative; display: flex; flex: 1; min-width: 0;">
+              <TextInput
+                class="w-full pl-9.5"
                 aria-label="Search projects and collections"
                 placeholder="Search projects and collections"
                 spellcheck="false"
                 bind:value={searchQuery}
                 onfocus={() => (isSearchFocused = true)}
                 onblur={() => (isSearchFocused = false)}
-                style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ui-normal-text);"
               />
-            </label>
-            <button
-              type="button"
-              class="text-sm leading-5"
-              {...hover('new-project')}
-              style="display: flex; flex: none; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; border-radius: 6px; border: 1px solid {hovered.has('new-project')
-                ? 'var(--ui-accent-muted-hover-border)'
-                : 'var(--ui-accent-muted-border)'}; background: {hovered.has('new-project')
-                ? 'var(--ui-accent-action-hover-fill)'
-                : 'var(--ui-accent-action-fill)'}; color: var(--ui-normal-text); font-weight: var(--font-weight-semibold);"
-            >
-              <Plus size={16} aria-hidden="true" />
-              New Project
-            </button>
+              <Search
+                size={16}
+                aria-hidden="true"
+                style="position: absolute; top: 50%; left: 15px; transform: translateY(-50%); pointer-events: none; color: {isSearchFocused
+                  ? 'var(--ui-hoverable-icon-glyph)'
+                  : 'var(--ui-muted-icon-glyph)'};"
+              />
+            </div>
+            <Button icon={Plus} text="New Project" appearance="outline" />
           </div>
 
           <p
@@ -402,33 +394,41 @@
           {#each projects as project (project.id)}
             <section aria-label={project.name} style="margin-top: 22px;">
               <div
-                class="text-xl leading-7"
+                class="text-lg leading-7"
                 style="display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 8px;"
               >
-                <!-- The 2px top margin lowers the centered grip 1px onto the baseline-aligned title's capitals. -->
-                <button
-                  type="button"
-                  aria-label={`Reorder ${project.name}`}
-                  title="Drag to reorder"
-                  {...hover(`project-grip-${project.id}`)}
-                  style="display: flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 32px; margin: 2px 0 0 -8px; border-radius: 4px; background: {ghostFill(
-                    `project-grip-${project.id}`
-                  )}; color: {ghostGlyph(`project-grip-${project.id}`)}; cursor: grab;"
-                >
-                  <GripVertical size={20} aria-hidden="true" />
-                </button>
-                <!-- Baseline alignment puts the edit button's text line on the project name's baseline, like the category editor title. -->
-                <div style="display: flex; align-items: baseline; gap: 2px; min-width: 0;">
-                  <h2 style="{truncate} color: var(--ui-hoverable-text); font-weight: var(--font-weight-semibold);">
-                    {project.name}
-                  </h2>
-                  <!-- The 28px compact button matches the title's 28px line, and the 18px icon scales with the 20px title. -->
+                <!-- Baseline alignment puts the edit button's text line on the project name's baseline, like the category editor title.
+                     The row's 18px font matches the dialog title, so the text-baseline pencil centers on the title's capitals. -->
+                <div style="display: flex; align-items: baseline; min-width: 0;">
+                  <!-- One drag handle covers the grip and the title. Only the title takes part in baseline alignment, so the
+                       handle's baseline is the title's and the pencil beside it lines up; the grip centers on the handle.
+                       The 3px vertical padding centers the 28px title line in the 34px highlight, and the -9px margin keeps
+                       the grip glyph 5px outside the content edge inside its 26px cell. -->
+                  <button
+                    type="button"
+                    aria-label={`Reorder ${project.name}`}
+                    title="Drag to reorder"
+                    {...hover(`project-grip-${project.id}`)}
+                    style="display: flex; align-items: baseline; min-width: 0; height: 34px; margin-left: -9px; padding: 3px 8px 3px 0; border-radius: var(--cthulhu-ui-radius-control); background: {ghostFill(
+                      `project-grip-${project.id}`
+                    )}; text-align: left; cursor: grab;"
+                  >
+                    <span
+                      style="display: flex; flex: none; align-self: center; align-items: center; justify-content: center; width: 26px; height: 28px; color: {ghostGlyph(
+                        `project-grip-${project.id}`
+                      )};"
+                    >
+                      <GripVertical size={18} aria-hidden="true" />
+                    </span>
+                    <!-- The dialog variant truncates but omits min-width: 0, so the class lets it shrink inside this flex row. -->
+                    <Title title={project.name} tooltip={project.name} variant="dialog" class="min-w-0" />
+                  </button>
+                  <!-- The 28px compact button matches the title's 28px line, and its default 16px icon scales with the 18px title. -->
                   <IconButton
                     icon={Pencil}
                     label="Project Settings"
                     title="Project Settings"
                     size="compact"
-                    iconSize={18}
                     baseVariant="muted"
                     hoverVariant="glyph"
                     textBaseline
