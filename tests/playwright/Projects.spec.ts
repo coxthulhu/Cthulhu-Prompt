@@ -9,29 +9,29 @@ import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import { dragGhostSelector, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 
-/** Real Electron coverage drives Project Settings and project reordering; controls remain for invalid commands and read-only workspace snapshots. */
+/** Real Electron coverage drives Manage Projects and project reordering; controls remain for invalid commands and read-only workspace snapshots. */
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-/** Selector rows in the Project Settings dialog, one per retained draft. */
-const projectSelectorItems = '[data-testid^="project-settings-selector-"]'
+/** Selector rows in the Manage Projects dialog, one per retained draft. */
+const projectSelectorItems = '[data-testid^="manage-project-selector-"]'
 
-/** Project Settings dialog shared by the sidebar gear and the activity bar's + button. */
-const projectDialog = (page: Page) => page.getByRole('dialog', { name: 'Project Settings' })
+/** Manage Projects dialog shared by the sidebar gear and the activity bar's + button. */
+const projectDialog = (page: Page) => page.getByRole('dialog', { name: 'Manage Projects' })
 
 /** Replaces the selected draft's required name and abbreviation. */
 const fillProject = async (page: Page, name: string, abbreviation: string): Promise<void> => {
-  await projectDialog(page).getByTestId('project-settings-name-input').fill(name)
-  await projectDialog(page).getByTestId('project-settings-abbreviation-input').fill(abbreviation)
+  await projectDialog(page).getByTestId('manage-project-name-input').fill(name)
+  await projectDialog(page).getByTestId('manage-project-abbreviation-input').fill(abbreviation)
 }
 
 /** Stages deletion of one saved project through the required acknowledgement. */
 const deleteProject = async (page: Page, projectId: string): Promise<void> => {
-  await projectDialog(page).getByTestId(`project-settings-selector-${projectId}`).click()
-  await projectDialog(page).getByTestId('project-settings-delete-button').click()
-  /** Destructive confirmation shown above Project Settings. */
+  await projectDialog(page).getByTestId(`manage-project-selector-${projectId}`).click()
+  await projectDialog(page).getByTestId('manage-projects-delete-button').click()
+  /** Destructive confirmation shown above Manage Projects. */
   const confirmation = page.getByRole('dialog', { name: 'Delete Project' })
   await confirmation.getByRole('checkbox').check()
-  await confirmation.getByTestId('project-settings-confirm-delete-button').click()
+  await confirmation.getByTestId('manage-projects-confirm-delete-button').click()
   await expect(confirmation).toHaveCount(0)
 }
 
@@ -56,7 +56,7 @@ const watchTextSelectionStarts = async (page: Page): Promise<void> => {
 const didStartTextSelection = async (page: Page): Promise<boolean> =>
   (await page.locator('body').getAttribute('data-text-selection-started')) === 'true'
 
-/** Starts a real pointer drag on a Show All collection row, Project Settings row, or project button. */
+/** Starts a real pointer drag on a Show All collection row, Manage Projects row, or project button. */
 const beginPointerDrag = async (page: Page, selector: string): Promise<void> => {
   /** Source row scrolled into view before measuring its geometry. */
   const row = page.locator(selector)
@@ -182,20 +182,20 @@ describe('Persisted projects', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptCollections('Templates')
-    // The + button opens Project Settings with a focused draft appended after the existing project.
+    // The + button opens Manage Projects with a focused draft appended after the existing project.
     await mainWindow.getByTestId('new-project-button').click()
-    /** Project Settings dialog opened by the + button. */
+    /** Manage Projects dialog opened by the + button. */
     const dialog = projectDialog(mainWindow)
     await expect(dialog.getByTestId('dialog-subtitle')).toHaveText('project-isolation')
-    await expect(dialog.getByTestId('project-settings-name-input')).toBeFocused()
+    await expect(dialog.getByTestId('manage-project-name-input')).toBeFocused()
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Default Project\s*2 collections/, /New Project\s*2 collections/])
-    await dialog.getByTestId('project-settings-name-input').fill('Second Project')
-    await dialog.getByTestId('project-settings-abbreviation-input').pressSequentially('s2x')
-    await expect(dialog.getByTestId('project-settings-abbreviation-input')).toHaveValue('S2')
-    await dialog.getByTestId('project-settings-short-description-input').fill(' Short ')
-    await focusMonacoEditor(mainWindow, '[data-testid="project-settings-full-description-input"]')
+    await dialog.getByTestId('manage-project-name-input').fill('Second Project')
+    await dialog.getByTestId('manage-project-abbreviation-input').pressSequentially('s2x')
+    await expect(dialog.getByTestId('manage-project-abbreviation-input')).toHaveValue('S2')
+    await dialog.getByTestId('manage-project-short-description-input').fill(' Short ')
+    await focusMonacoEditor(mainWindow, '[data-testid="manage-project-full-description-input"]')
     await mainWindow.keyboard.insertText('Full')
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog).toHaveCount(0)
     // Saving the + draft opens the new project at its first starter collection.
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second Project')
@@ -266,16 +266,16 @@ describe('Persisted projects', () => {
     /** Original bytes include identity and timestamps in front matter. */
     const original = await readTextFile(electronApp, `${path}/DefaultProject/Prompts/Tasks/Active/Keep Me.prompt.md`)
     // The gear immediately follows the title and opens settings to the shown project.
-    await expect(mainWindow.locator('[data-testid="sidebar-title"] + [data-testid="sidebar-project-settings-button"]')).toBeVisible()
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
-    /** Project Settings dialog opened by the sidebar gear. */
+    await expect(mainWindow.locator('[data-testid="sidebar-title"] + [data-testid="sidebar-manage-projects-button"]')).toBeVisible()
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
+    /** Manage Projects dialog opened by the sidebar gear. */
     const dialog = projectDialog(mainWindow)
-    await expect(dialog.getByTestId(`project-settings-selector-${projectId}`)).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.getByTestId(`manage-project-selector-${projectId}`)).toHaveAttribute('aria-pressed', 'true')
     await fillProject(mainWindow, 'Renamed Project', 'rp')
-    await expect(dialog.getByTestId('project-settings-abbreviation-input')).toHaveValue('RP')
-    await focusMonacoEditor(mainWindow, '[data-testid="project-settings-full-description-input"]')
+    await expect(dialog.getByTestId('manage-project-abbreviation-input')).toHaveValue('RP')
+    await focusMonacoEditor(mainWindow, '[data-testid="manage-project-full-description-input"]')
     await mainWindow.keyboard.insertText('New description')
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Renamed Project')
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText('RP')
@@ -286,17 +286,17 @@ describe('Persisted projects', () => {
     await mainWindow.evaluate(() => window.playwrightTestControls!.notes.renameOwner('prompt', 'task', 'After Rename'))
     expect(await checkFileExists(electronApp, `${path}/RenamedProject/Prompts/Tasks/Active/After Rename.prompt.md`)).toBe(true)
     // Deleting a saved project requires the acknowledgement and waits for Save.
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
-    await dialog.getByTestId('project-settings-delete-button').click()
-    /** Destructive confirmation shown above Project Settings. */
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
+    await dialog.getByTestId('manage-projects-delete-button').click()
+    /** Destructive confirmation shown above Manage Projects. */
     const confirmation = mainWindow.getByRole('dialog', { name: 'Delete Project' })
-    await expect(confirmation.getByTestId('project-settings-confirm-delete-button')).toBeDisabled()
+    await expect(confirmation.getByTestId('manage-projects-confirm-delete-button')).toBeDisabled()
     await confirmation.getByRole('checkbox').check()
-    await confirmation.getByTestId('project-settings-confirm-delete-button').click()
+    await confirmation.getByTestId('manage-projects-confirm-delete-button').click()
     await expect(confirmation).toHaveCount(0)
     await expect(dialog.locator(projectSelectorItems)).toHaveCount(0)
     expect(await checkFileExists(electronApp, `${path}/RenamedProject`)).toBe(true)
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveCount(0)
     expect(await checkFileExists(electronApp, `${path}/RenamedProject`)).toBe(false)
@@ -316,14 +316,14 @@ describe('Persisted projects', () => {
     /** Minimal fixture starts with a persisted but empty default project. */
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal', path } })
     await mainWindow.getByTestId('new-project-button').click()
-    /** Project Settings dialog holding one new draft. */
+    /** Manage Projects dialog holding one new draft. */
     const dialog = projectDialog(mainWindow)
     /** Required name field validated against collection naming rules and sibling projects. */
-    const name = dialog.getByTestId('project-settings-name-input')
+    const name = dialog.getByTestId('manage-project-name-input')
     /** Required abbreviation field uppercased while typing. */
-    const abbreviation = dialog.getByTestId('project-settings-abbreviation-input')
+    const abbreviation = dialog.getByTestId('manage-project-abbreviation-input')
     /** Batched save disabled while any draft is invalid. */
-    const save = dialog.getByTestId('project-settings-save-button')
+    const save = dialog.getByTestId('manage-projects-save-button')
     await expect(save).toBeDisabled()
     for (const [field, value, error] of [
       ['name', 'default project', 'A project with this name already exists'],
@@ -335,16 +335,16 @@ describe('Persisted projects', () => {
       ['abbreviation', 'A!', 'Project abbreviation must contain exactly two letters or digits']
     ] as const) {
       await (field === 'name' ? name : abbreviation).fill(value)
-      if (error) await expect(dialog.getByTestId(`project-settings-${field}-error`)).toHaveText(error)
-      else await expect(dialog.getByTestId(`project-settings-${field}-error`)).toHaveCount(0)
+      if (error) await expect(dialog.getByTestId(`manage-project-${field}-error`)).toHaveText(error)
+      else await expect(dialog.getByTestId(`manage-project-${field}-error`)).toHaveCount(0)
       await expect(save).toBeDisabled()
     }
     await abbreviation.fill('')
     await abbreviation.pressSequentially('rtx')
     await expect(abbreviation).toHaveValue('RT')
-    await expect(dialog.getByTestId('project-settings-abbreviation-error')).toHaveCount(0)
+    await expect(dialog.getByTestId('manage-project-abbreviation-error')).toHaveCount(0)
     await name.fill('Retry Project')
-    await expect(dialog.getByTestId('project-settings-name-error')).toHaveCount(0)
+    await expect(dialog.getByTestId('manage-project-name-error')).toHaveCount(0)
     await runSqlStatement(electronApp, `CREATE TRIGGER reject_project_create BEFORE INSERT ON workspace_state WHEN NEW.state_type = 'project-order' BEGIN SELECT RAISE(ABORT, 'Project create failure'); END`)
     // Main failure exercises the production optimistic rollback and staged filesystem cleanup.
     await save.click()
@@ -395,7 +395,7 @@ describe('Persisted projects', () => {
     // New projects append without disturbing existing or discovered positions.
     await mainWindow.getByTestId('new-project-button').click()
     await fillProject(mainWindow, 'Fresh Project', 'FP')
-    await projectDialog(mainWindow).getByTestId('project-settings-save-button').click()
+    await projectDialog(mainWindow).getByTestId('manage-projects-save-button').click()
     await expect(projectDialog(mainWindow)).toHaveCount(0)
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'AL', 'ZE', 'FP'])
     /** Generated identity of the project created through the dialog. */
@@ -415,9 +415,9 @@ describe('Persisted projects', () => {
     expect(await readWorkspaceState(electronApp, createDeterministicId(path), 'project-order', null)).toEqual({ ids: [zetaId, defaultId, alphaId, createdId] })
     // Removing the selected project returns Home and removes only its own content.
     await mainWindow.getByRole('button', { name: 'Zeta', exact: true }).click()
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
     await deleteProject(mainWindow, zetaId)
-    await projectDialog(mainWindow).getByTestId('project-settings-save-button').click()
+    await projectDialog(mainWindow).getByTestId('manage-projects-save-button').click()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'AL', 'FP'])
     expect(await checkFileExists(electronApp, `${path}/Zeta`)).toBe(false)
@@ -447,28 +447,28 @@ describe('Persisted projects', () => {
     await mainWindow.getByTestId('sidebar-collection-favorite-all-tasks').click()
     await mainWindow.keyboard.press('Escape')
     // One save mixes two swaps, one confirmed deletion, two creations, and a discarded draft.
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
-    /** Project Settings dialog opened to the selected project. */
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
+    /** Manage Projects dialog opened to the selected project. */
     const dialog = projectDialog(mainWindow)
-    await expect(dialog.getByTestId(`project-settings-selector-${defaultId}`)).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.getByTestId(`manage-project-selector-${defaultId}`)).toHaveAttribute('aria-pressed', 'true')
     await fillProject(mainWindow, 'Second', 'S2')
-    await expect(dialog.getByTestId('project-settings-name-error')).toHaveText('A project with this name already exists')
-    await expect(dialog.getByTestId('project-settings-save-button')).toBeDisabled()
-    await dialog.getByTestId('project-settings-selector-second').click()
+    await expect(dialog.getByTestId('manage-project-name-error')).toHaveText('A project with this name already exists')
+    await expect(dialog.getByTestId('manage-projects-save-button')).toBeDisabled()
+    await dialog.getByTestId('manage-project-selector-second').click()
     await fillProject(mainWindow, 'Default Project', 'DE')
     await deleteProject(mainWindow, 'removed')
     for (const [name, abbreviation] of [['Removed', 'RM'], ['Extra', 'EX']]) {
-      await dialog.getByTestId('project-settings-new-button').click()
+      await dialog.getByTestId('manage-projects-new-button').click()
       await fillProject(mainWindow, name, abbreviation)
     }
     // New drafts are discarded without a confirmation.
-    await dialog.getByTestId('project-settings-new-button').click()
-    await dialog.getByTestId('project-settings-delete-button').click()
+    await dialog.getByTestId('manage-projects-new-button').click()
+    await dialog.getByTestId('manage-projects-delete-button').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Delete Project' })).toHaveCount(0)
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second\s*2 collections/, /Default Project\s*1 collection(?!s)/, /Removed\s*2 collections/, /Extra\s*2 collections/])
     /** Stable identity allocated for the draft that reuses the deleted directory. */
-    const replacementId = (await dialog.locator(projectSelectorItems).nth(2).getAttribute('data-testid'))!.replace('project-settings-selector-', '')
-    await dialog.getByTestId('project-settings-save-button').click()
+    const replacementId = (await dialog.locator(projectSelectorItems).nth(2).getAttribute('data-testid'))!.replace('manage-project-selector-', '')
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second')
     await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Keep Me')
@@ -487,11 +487,11 @@ describe('Persisted projects', () => {
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM', 'EX'])
     await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
     // Delete the other populated project and rename the selected project into its old directory.
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
     await deleteProject(mainWindow, defaultId)
-    await dialog.getByTestId('project-settings-selector-second').click()
+    await dialog.getByTestId('manage-project-selector-second').click()
     await fillProject(mainWindow, 'Second', 'S2')
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second')
     expect(await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(second)
@@ -499,7 +499,7 @@ describe('Persisted projects', () => {
     expect(await checkFileExists(electronApp, `${path}/Second/Prompts/Tasks/Active/After Batch.prompt.md`)).toBe(true)
   })
 
-  test('reorders projects with Project Settings drag handles without changing the selected draft', async ({ testSetup, electronApp }) => {
+  test('reorders projects with Manage Projects drag handles without changing the selected draft', async ({ testSetup, electronApp }) => {
     /** Three saved projects give the dragged row more than one destination. */
     const path = '/ws/project-dialog-reorder'
     /** Fixture identity owning the private project order. */
@@ -512,50 +512,50 @@ describe('Persisted projects', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
     await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
-    /** Project Settings dialog opened to the selected project. */
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
+    /** Manage Projects dialog opened to the selected project. */
     const dialog = projectDialog(mainWindow)
     /** Row dragged above the selected project. */
-    const secondRow = dialog.getByTestId('project-settings-selector-second')
+    const secondRow = dialog.getByTestId('manage-project-selector-second')
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Default Project/, /Removed/, /Second/])
-    await expect(dialog.getByTestId('project-settings-save-button')).toBeDisabled()
-    await dialog.getByTestId('project-settings-drag-handle-second').hover()
-    await expect(dialog.getByTestId('project-settings-drag-handle-second')).toHaveCSS('cursor', 'grab')
+    await expect(dialog.getByTestId('manage-projects-save-button')).toBeDisabled()
+    await dialog.getByTestId('manage-projects-drag-handle-second').hover()
+    await expect(dialog.getByTestId('manage-projects-drag-handle-second')).toHaveCSS('cursor', 'grab')
     // Dragging previews the new order live with the Show All dragged-row styling and no ghost.
     await watchTextSelectionStarts(mainWindow)
-    await beginPointerDrag(mainWindow, '[data-testid="project-settings-selector-second"]')
+    await beginPointerDrag(mainWindow, '[data-testid="manage-project-selector-second"]')
     await expect(secondRow).toHaveAttribute('data-row-state', 'dragging')
     await expect(secondRow).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
     await expect(secondRow).toHaveCSS('border-top-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border'))
     await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
-    await moveActiveDragToTarget(mainWindow, `[data-testid="project-settings-selector-${defaultId}"]`)
+    await moveActiveDragToTarget(mainWindow, `[data-testid="manage-project-selector-${defaultId}"]`)
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second/, /Default Project/, /Removed/])
-    await expect(dialog.getByTestId(`project-settings-selector-${defaultId}`)).toHaveAttribute('data-row-state', 'drag-active')
-    await expect(dialog.getByTestId('project-settings-selector-removed')).toHaveAttribute('data-row-state', 'drag-idle')
+    await expect(dialog.getByTestId(`manage-project-selector-${defaultId}`)).toHaveAttribute('data-row-state', 'drag-active')
+    await expect(dialog.getByTestId('manage-project-selector-removed')).toHaveAttribute('data-row-state', 'drag-idle')
     await finishActiveDrag(mainWindow)
     // The drop keeps the selected draft, highlights no text, and waits for Save Changes.
     expect(await didStartTextSelection(mainWindow)).toBe(false)
     await expect(secondRow).toHaveAttribute('aria-pressed', 'false')
-    await expect(dialog.getByTestId(`project-settings-selector-${defaultId}`)).toHaveAttribute('aria-pressed', 'true')
-    await expect(dialog.getByTestId('project-settings-name-input')).toHaveValue('Default Project')
-    await expect(dialog.getByTestId('project-settings-save-button')).toBeEnabled()
+    await expect(dialog.getByTestId(`manage-project-selector-${defaultId}`)).toHaveAttribute('aria-pressed', 'true')
+    await expect(dialog.getByTestId('manage-project-name-input')).toHaveValue('Default Project')
+    await expect(dialog.getByTestId('manage-projects-save-button')).toBeEnabled()
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'RM', 'S2'])
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM'])
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Default Project')
     await expect.poll(() => readWorkspaceState(electronApp, workspaceId, 'project-order', null))
       .toEqual({ ids: ['second', defaultId, 'removed'] })
     // Dragging from the handle works too, and closing discards the unsaved reorder.
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
-    await beginPointerDrag(mainWindow, '[data-testid="project-settings-drag-handle-removed"]')
-    await moveActiveDragToTarget(mainWindow, '[data-testid="project-settings-selector-second"]')
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
+    await beginPointerDrag(mainWindow, '[data-testid="manage-projects-drag-handle-removed"]')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="manage-project-selector-second"]')
     await finishActiveDrag(mainWindow)
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Removed/, /Second/, /Default Project/])
-    await dialog.getByTestId('project-settings-close-button').click()
+    await dialog.getByTestId('manage-projects-close-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['S2', 'DE', 'RM'])
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Second/, /Default Project/, /Removed/])
     expect(await readWorkspaceState(electronApp, workspaceId, 'project-order', null)).toEqual({ ids: ['second', defaultId, 'removed'] })
   })
@@ -673,19 +673,19 @@ describe('Persisted projects', () => {
     /** Deleted project preferences must survive the failed transaction. */
     const removedOrder = await readWorkspaceState(electronApp, before.id, 'collection-order', 'removed')
     // Two swaps, one confirmed deletion, and a replacement for the deleted directory are staged together.
-    await mainWindow.getByTestId('sidebar-project-settings-button').click()
-    /** Project Settings dialog that keeps its drafts across the failed save. */
+    await mainWindow.getByTestId('sidebar-manage-projects-button').click()
+    /** Manage Projects dialog that keeps its drafts across the failed save. */
     const dialog = projectDialog(mainWindow)
     await fillProject(mainWindow, 'Second', 'S2')
-    await dialog.getByTestId('project-settings-selector-second').click()
+    await dialog.getByTestId('manage-project-selector-second').click()
     await fillProject(mainWindow, 'Default Project', 'DE')
     await deleteProject(mainWindow, 'removed')
-    await dialog.getByTestId('project-settings-new-button').click()
+    await dialog.getByTestId('manage-projects-new-button').click()
     await fillProject(mainWindow, 'Removed', 'RM')
     /** Stable identity allocated for the replacement draft. */
-    const replacementId = (await dialog.locator(projectSelectorItems).last().getAttribute('data-testid'))!.replace('project-settings-selector-', '')
+    const replacementId = (await dialog.locator(projectSelectorItems).last().getAttribute('data-testid'))!.replace('manage-project-selector-', '')
     await electronApp.evaluate(({ app }, target) => app.emit('test-fail-file-commit', target), `${path}/Removed`)
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog.getByTestId('management-dialog-error')).toHaveText('Failed to save project changes. Please try again.')
     await expect.poll(() => testSetup.getRendererErrors().some((error) => error.message.includes('Injected file commit failure'))).toBe(true)
     testSetup.removeRendererErrorsContaining('Injected file commit failure')
@@ -701,7 +701,7 @@ describe('Persisted projects', () => {
     expect(await readWorkspaceState(electronApp, before.id, 'project-order', null)).toEqual({ ids: before.projects.map((project) => project.id) })
     expect(await readWorkspaceState(electronApp, before.id, 'collection-order', replacementId)).toBeNull()
     // The dialog keeps every draft, so saving again retries the same batch.
-    await dialog.getByTestId('project-settings-save-button').click()
+    await dialog.getByTestId('manage-projects-save-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Second')
     expect(await readTextFile(electronApp, `${path}/Second/Prompts/Tasks/Active/Keep Me.prompt.md`)).toBe(original)

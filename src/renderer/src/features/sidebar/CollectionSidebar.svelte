@@ -128,7 +128,7 @@
     isWorkspaceLoading = false,
     onScreenCollectionSelect,
     onDeleteSelectedPromptCollection,
-    onOpenProjectSettings
+    onManageProjects
   } = $props<{
     /** Mode title shown in the shared sidebar header. */
     title: string
@@ -138,8 +138,8 @@
     isWorkspaceLoading?: boolean
     onScreenCollectionSelect: (screenCollectionId: string) => void
     onDeleteSelectedPromptCollection: (screenCollectionId: string) => void
-    /** Opens project settings to this sidebar's project. */
-    onOpenProjectSettings: () => void
+    /** Opens project management to this sidebar's project. */
+    onManageProjects: () => void
   }>()
 
   /** Selected collection owned by this mode. */
@@ -861,14 +861,14 @@
         {#snippet titleAccessory()}
           <IconButton
             icon={Settings2}
-            label="Project Settings"
-            title="Project Settings"
+            label="Manage Projects"
+            title="Manage Projects"
             size="tiny"
             baseVariant="muted"
             hoverVariant="glyph"
             textBaseline
-            testId="sidebar-project-settings-button"
-            onclick={onOpenProjectSettings}
+            testId="sidebar-manage-projects-button"
+            onclick={onManageProjects}
           />
         {/snippet}
         <DropdownPopupDetailed

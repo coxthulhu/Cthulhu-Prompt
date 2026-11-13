@@ -26,7 +26,7 @@
     onProjectSelect: (projectId: string) => void
     /** Saves a dragged project order; the preview stays until the save settles. */
     onProjectsReorder: (projectIds: string[]) => Promise<void>
-    /** Opens project settings to a new project draft. */
+    /** Opens project management to a new project draft. */
     onCreateProject: () => void
     activeScreen: ScreenId
     isAppSidebarExpanded: boolean

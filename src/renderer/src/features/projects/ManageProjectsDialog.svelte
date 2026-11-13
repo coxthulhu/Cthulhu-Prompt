@@ -33,7 +33,7 @@
   const modelOwnerId = globalThis.crypto.randomUUID()
   /** Increasing identity gives every dialog opening fresh Monaco draft models. */
   let editorSessionId = $state(0)
-  /** Controls whether the project settings modal is visible. */
+  /** Controls whether the project management modal is visible. */
   let isDialogOpen = $state(false)
   /** Normalized project list captured when the dialog opened for change detection. */
   let originalProjectsJson = $state('')
@@ -192,7 +192,7 @@
     isSubmitting = false
   }
 
-  /** Closes project settings and discards all unsaved drafts. */
+  /** Closes project management and discards all unsaved drafts. */
   const handleCancel = (): void => {
     if (!isSubmitting) resetDialog()
   }
@@ -202,17 +202,17 @@
 <ManagementDialog
   bind:open={isDialogOpen}
   icon={Settings}
-  title="Project Settings"
+  title="Manage Projects"
   subtitle={workspace?.workspaceName ?? ''}
   listLabel="All Projects"
   items={selectorItems}
   {selectedId}
   addText="New Project"
-  itemTestIdPrefix="project-settings-selector"
-  addTestId="project-settings-new-button"
-  submitTestId="project-settings-save-button"
-  cancelTestId="project-settings-close-button"
-  dragHandleTestIdPrefix="project-settings-drag-handle"
+  itemTestIdPrefix="manage-project-selector"
+  addTestId="manage-projects-new-button"
+  submitTestId="manage-projects-save-button"
+  cancelTestId="manage-projects-close-button"
+  dragHandleTestIdPrefix="manage-projects-drag-handle"
   {isSubmitting}
   {canSubmit}
   {submissionError}
@@ -229,33 +229,33 @@
         label={selectedDraft.name.trim() || 'New Project'}
         detail="Project settings"
         deleteLabel="Delete project"
-        deleteTestId="project-settings-delete-button"
+        deleteTestId="manage-projects-delete-button"
         disabled={isSubmitting}
         ondelete={deleteSelectedDraft}
       >
         <ManagementTextField
-          id="project-settings-name-input"
+          id="manage-project-name-input"
           title="Project Name"
           help="Required. Names must be unique in this workspace."
           required
           bind:value={selectedDraft.name}
           bind:ref={nameInput}
           errorMessage={selectedDraft.nameInteracted && !isSubmitting ? selectedErrors.name : null}
-          errorTestId="project-settings-name-error"
+          errorTestId="manage-project-name-error"
           disabled={isSubmitting}
           oninput={() => {
             selectedDraft.nameInteracted = true
           }}
         />
         <ManagementTextField
-          id="project-settings-abbreviation-input"
+          id="manage-project-abbreviation-input"
           title="Abbreviation"
           help="Required. Two letters or digits shown in the activity bar. Must be unique."
           required
           maxlength={2}
           bind:value={selectedDraft.abbreviation}
           errorMessage={selectedDraft.abbreviationInteracted && !isSubmitting ? selectedErrors.abbreviation : null}
-          errorTestId="project-settings-abbreviation-error"
+          errorTestId="manage-project-abbreviation-error"
           disabled={isSubmitting}
           oninput={() => {
             selectedDraft.abbreviation = selectedDraft.abbreviation.toUpperCase()
@@ -263,14 +263,14 @@
           }}
         />
         <ManagementTextField
-          id="project-settings-short-description-input"
+          id="manage-project-short-description-input"
           title="Short Description"
           help="A brief summary to help you recognize this project."
           bind:value={selectedDraft.shortDescription}
           disabled={isSubmitting}
         />
         <ManagementDescriptionField
-          id="project-settings-full-description-input"
+          id="manage-project-full-description-input"
           help="Describe what this project covers and how its prompts are used."
           modelKey={`${modelOwnerId}-${editorSessionId}-${selectedDraft.id}`}
           bind:value={selectedDraft.description}
@@ -286,7 +286,7 @@
   description="This project and all of its collections, prompts, and templates will be permanently deleted when you save your changes."
   confirmationText="Yes, I want to delete this project and all of its contents."
   confirmText="Delete project"
-  confirmTestId="project-settings-confirm-delete-button"
+  confirmTestId="manage-projects-confirm-delete-button"
   oncancel={() => {
     pendingDeleteId = null
   }}

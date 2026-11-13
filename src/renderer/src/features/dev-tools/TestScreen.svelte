@@ -111,7 +111,7 @@
   /** Include every supported size so the gallery also covers rectangular title actions. */
   const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'compact-large-icon', 'tiny', 'sidebar-rail']
   const categoryIconSizes = [14, 18, 24, 32] as const
-  /** Lucide alternatives for the sidebar title's Project Settings button, compared at several sizes. */
+  /** Lucide alternatives for the sidebar title's Manage Projects button, compared at several sizes. */
   const iconCandidates: {
     name: string
     description: string
@@ -368,7 +368,7 @@
                   </div>
                   <div class="variant-controls">
                     <IconButton icon={CandidateIcon} label={candidate.name} title={candidate.name} />
-                    <!-- Same configuration as the sidebar title's Project Settings button. -->
+                    <!-- Same configuration as the sidebar title's Manage Projects button. -->
                     <IconButton
                       icon={CandidateIcon}
                       label={candidate.name}
