@@ -1,5 +1,5 @@
 import { createCollection, localOnlyCollectionOptions } from '@tanstack/svelte-db'
-import type { NewPromptFocus } from '@shared/domain/settings/SystemSettings'
+import type { NewPromptFocus, UpdateChannel } from '@shared/domain/settings/SystemSettings'
 
 /** Singleton key for renderer-session system-settings state. */
 export const SYSTEM_SETTINGS_CLIENT_STATE_ID = 'system-settings-client-state'
@@ -17,6 +17,8 @@ export type SystemSettingsClientStateRecord = {
   newPromptFocus: NewPromptFocus
   /** Current automatic-update selection in the settings form. */
   automaticUpdates: boolean
+  /** Current update channel selection in the settings form. */
+  updateChannel: UpdateChannel
 }
 
 /** Local-only renderer-session state for system settings. */

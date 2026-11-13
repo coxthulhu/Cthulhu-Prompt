@@ -3,6 +3,9 @@ import type { AuthoritativeSnapshotQueryResult } from '@shared/ipc/Authoritative
 /** Field focused after creating a prompt or prompt template. */
 export type NewPromptFocus = 'title' | 'editor'
 
+/** Release type the auto-updater follows. */
+export type UpdateChannel = 'stable' | 'prerelease'
+
 export interface SystemSettings {
   promptFontSize: number
   promptEditorMinLines: number
@@ -14,6 +17,8 @@ export interface SystemSettings {
   newPromptFocus: NewPromptFocus
   /** Allows startup and periodic update checks with automatic downloads. */
   automaticUpdates: boolean
+  /** Whether update checks also consider prereleases. */
+  updateChannel: UpdateChannel
 }
 
 export const SYSTEM_SETTINGS_ID = 'system-settings'
@@ -40,7 +45,8 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = Object.freeze({
   showLineNumbers: true,
   newPromptFocus: 'editor',
   /** Automatic update discovery is enabled for new and existing installations. */
-  automaticUpdates: true
+  automaticUpdates: true,
+  updateChannel: 'stable'
 })
 
 const clampPromptFontSize = (value: number): number => {
@@ -103,7 +109,11 @@ export const normalizeSystemSettings = (payload: Record<string, unknown>): Syste
     automaticUpdates:
       typeof payload.automaticUpdates === 'boolean'
         ? payload.automaticUpdates
-        : DEFAULT_SYSTEM_SETTINGS.automaticUpdates
+        : DEFAULT_SYSTEM_SETTINGS.automaticUpdates,
+    updateChannel:
+      payload.updateChannel === 'stable' || payload.updateChannel === 'prerelease'
+        ? payload.updateChannel
+        : DEFAULT_SYSTEM_SETTINGS.updateChannel
   }
 }
 

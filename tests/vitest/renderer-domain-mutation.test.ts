@@ -696,7 +696,8 @@ describe('renderer domain mutation framework', () => {
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
       /** Automatic updates default to enabled in complete settings records. */
-      automaticUpdates: true
+      automaticUpdates: true,
+      updateChannel: 'stable'
     })
     /** IPC implementation returning the latest valid settings command as authoritative truth. */
     const invoke = vi.fn(
@@ -747,7 +748,8 @@ describe('renderer domain mutation framework', () => {
             /** Default creation focus included in the complete settings record. */
             newPromptFocus: 'editor' as const,
             /** Automatic updates default to enabled in complete settings records. */
-            automaticUpdates: true
+            automaticUpdates: true,
+            updateChannel: 'stable'
           },
           expectations: [
             {
@@ -769,7 +771,8 @@ describe('renderer domain mutation framework', () => {
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
       /** Automatic updates default to enabled in complete settings records. */
-      automaticUpdates: true
+      automaticUpdates: true,
+      updateChannel: 'stable'
     })
     expect(systemSettingsClientStateCollection.get(SYSTEM_SETTINGS_CLIENT_STATE_ID)).toMatchObject({
       id: SYSTEM_SETTINGS_CLIENT_STATE_ID,
@@ -781,7 +784,8 @@ describe('renderer domain mutation framework', () => {
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
       /** Automatic updates default to enabled in complete settings records. */
-      automaticUpdates: true
+      automaticUpdates: true,
+      updateChannel: 'stable'
     })
   })
 

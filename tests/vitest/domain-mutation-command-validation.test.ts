@@ -292,7 +292,8 @@ describe('domain mutation command validation', () => {
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
       /** Automatic updates default to enabled in complete settings records. */
-      automaticUpdates: true
+      automaticUpdates: true,
+      updateChannel: 'stable'
     }
     expect(parseSetSystemSettingsDomainCommand(command)).toEqual(command)
     expect(parseSetSystemSettingsDomainCommand({ ...command, promptFontSize: NaN })).toBeNull()
@@ -308,6 +309,11 @@ describe('domain mutation command validation', () => {
     })
     expect(parseSetSystemSettingsDomainCommand({ ...command, automaticUpdates: undefined })).toBeNull()
     expect(parseSetSystemSettingsDomainCommand({ ...command, automaticUpdates: 'false' })).toBeNull()
+    expect(parseSetSystemSettingsDomainCommand({ ...command, updateChannel: 'prerelease' })).toEqual({
+      ...command,
+      updateChannel: 'prerelease'
+    })
+    expect(parseSetSystemSettingsDomainCommand({ ...command, updateChannel: 'beta' })).toBeNull()
   })
 
   it('rejects extra location command fields', () => {

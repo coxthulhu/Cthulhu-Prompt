@@ -744,7 +744,8 @@ describe('atomic data transaction', () => {
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
         /** Automatic updates default to enabled in complete settings records. */
-        automaticUpdates: true
+        automaticUpdates: true,
+        updateChannel: 'stable'
       },
       persistenceFields: {}
     })
@@ -785,7 +786,8 @@ describe('atomic data transaction', () => {
       /** Default creation focus included in the complete settings record. */
       newPromptFocus: 'editor' as const,
       /** Automatic updates default to enabled in complete settings records. */
-      automaticUpdates: true
+      automaticUpdates: true,
+      updateChannel: 'stable'
     })
     expect(outcome.results.prompt.revision).toBeNull()
     expect(outcome.results.prompt.data).toBeNull()
@@ -804,7 +806,8 @@ describe('atomic data transaction', () => {
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
         /** Automatic updates default to enabled in complete settings records. */
-        automaticUpdates: true
+        automaticUpdates: true,
+        updateChannel: 'stable'
       },
       persistenceFields: {}
     })
@@ -842,7 +845,8 @@ describe('atomic data transaction', () => {
           /** Default creation focus included in the complete settings record. */
           newPromptFocus: 'editor' as const,
           /** Automatic updates default to enabled in complete settings records. */
-          automaticUpdates: true
+          automaticUpdates: true,
+          updateChannel: 'stable'
         }
       }
     })
@@ -894,7 +898,8 @@ describe('atomic data transaction', () => {
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
         /** Automatic updates default to enabled in complete settings records. */
-        automaticUpdates: true
+        automaticUpdates: true,
+        updateChannel: 'stable'
       },
       persistenceFields: {}
     })

@@ -46,7 +46,7 @@
     if (state.status === 'ready') return 'Ready to update and restart.'
     if (state.mode === 'development') return 'Automatic updates are unavailable in development builds.'
     if (state.hasUpdate) return state.mode === 'portable' ? 'A new portable version is available.' : 'A new version is available to download.'
-    return state.latestVersion === state.currentVersion ? 'You are using the latest version.' : 'No newer stable release is available.'
+    return state.latestVersion === state.currentVersion ? 'You are using the latest version.' : 'No newer release is available.'
   })
 
   /** Missing or malformed publication timestamps match the mockup's dash placeholder. */

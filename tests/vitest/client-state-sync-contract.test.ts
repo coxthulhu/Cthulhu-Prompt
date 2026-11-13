@@ -66,6 +66,7 @@ const createSystemSettings = (overrides: Partial<SystemSettings> = {}): SystemSe
   newPromptFocus: 'editor' as const,
   /** Automatic updates default to enabled in complete settings records. */
   automaticUpdates: true,
+  updateChannel: 'stable',
   ...overrides
 })
 
@@ -137,7 +138,8 @@ describe('client-state sync contract', () => {
         /** Default creation focus included in the complete settings record. */
         newPromptFocus: 'editor' as const,
         /** Automatic updates default to enabled in complete settings records. */
-        automaticUpdates: true
+        automaticUpdates: true,
+        updateChannel: 'stable'
       })
     )
 

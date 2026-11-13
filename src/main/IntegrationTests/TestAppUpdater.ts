@@ -10,8 +10,8 @@ export type TestUpdateConfig = {
   latestVersion: string
   currentDate: string | null
   latestDate: string | null
-  prerelease: boolean
-  draft: boolean
+  /** Optional prerelease published alongside the stable latestVersion release. */
+  prereleaseVersion: string | null
   holdCheck: boolean
   checkError: boolean
   dateError: boolean
@@ -46,7 +46,7 @@ export const createTestAppUpdater = (): UpdateSource => {
   const config: TestUpdateConfig = {
     mode: 'installed', currentVersion: '1.0.0', latestVersion: '1.0.0',
     currentDate: '2026-09-14T12:00:00Z', latestDate: '2026-09-14T12:00:00Z',
-    prerelease: false, draft: false, holdCheck: false, checkError: false,
+    prereleaseVersion: null, holdCheck: false, checkError: false,
     dateError: false, installError: false
   }
   /** Counts real service calls and records its actual interval configuration. */
@@ -89,14 +89,15 @@ export const createTestAppUpdater = (): UpdateSource => {
   return {
     get mode() { return config.mode },
     get currentVersion() { return config.currentVersion },
-    latestRelease: async (): Promise<UpdateRelease> => {
+    releases: async (): Promise<UpdateRelease[]> => {
       stats.checks += 1
       if (config.holdCheck) await new Promise<void>((resolve) => { finishCheck = resolve })
       if (config.checkError) throw new Error('Controlled check failure')
-      return {
-        tag: `v${config.latestVersion}`, version: config.latestVersion, publishedAt: config.latestDate,
-        prerelease: config.prerelease, draft: config.draft
-      }
+      /** Published versions in GitHub's newest-first order. */
+      const versions = config.prereleaseVersion ? [config.prereleaseVersion, config.latestVersion] : [config.latestVersion]
+      return versions.map((version) => ({
+        tag: `v${version}`, version, publishedAt: config.latestDate, prerelease: version === config.prereleaseVersion
+      }))
     },
     currentReleaseDate: async () => {
       if (config.dateError) throw new Error('Controlled date lookup failure')

@@ -58,6 +58,7 @@ describe('Settings Sidebar', () => {
       'Show Line Numbers',
       'Report an Issue',
       'Automatic Updates',
+      'Update Channel',
       'Current Version'
     ])
     await expect(tree.locator('[aria-current="true"]')).toHaveCount(0)

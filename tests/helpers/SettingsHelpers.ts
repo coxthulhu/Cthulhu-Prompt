@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
-import type { NewPromptFocus } from '@shared/domain/settings/SystemSettings'
+import type { NewPromptFocus, UpdateChannel } from '@shared/domain/settings/SystemSettings'
 
 /** Changes automatic updates in Settings and waits until main has committed the preference. */
 export async function setAutomaticUpdates(
@@ -40,6 +40,27 @@ export async function setNewPromptFocus(
     return result.snapshots.find(
       (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
     )?.data?.newPromptFocus === expected
+  }, value)
+}
+
+/** Chooses the update channel through its dropdown and waits for main to commit it. */
+export async function setUpdateChannel(
+  mainWindow: Page,
+  testHelpers: { navigateToSettingsScreen: () => Promise<void> },
+  value: UpdateChannel
+): Promise<void> {
+  await testHelpers.navigateToSettingsScreen()
+  await mainWindow.getByTestId('update-channel-selector').click()
+  await mainWindow.getByTestId(`update-channel-option-${value}`).click()
+  await expect(mainWindow.getByTestId('update-channel-selector')).toHaveText(
+    value === 'stable' ? 'Stable' : 'Prerelease'
+  )
+  await mainWindow.waitForFunction(async (expected) => {
+    /** Committed state is the same channel read by the main-process updater. */
+    const result = await window.electron.ipcRenderer.invoke('load-system-settings')
+    return result.snapshots.find(
+      (snapshot: AuthoritativeSnapshot) => snapshot.entityType === 'systemSettings'
+    )?.data?.updateChannel === expected
   }, value)
 }
 

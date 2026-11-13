@@ -77,7 +77,8 @@ const readValidatedSystemSettings = (
     attachedNoteReservedLines: Math.round(Number(clientState.attachedNoteReservedLinesInput)),
     showLineNumbers: clientState.showLineNumbers,
     newPromptFocus: clientState.newPromptFocus,
-    automaticUpdates: clientState.automaticUpdates
+    automaticUpdates: clientState.automaticUpdates,
+    updateChannel: clientState.updateChannel
   }
 }
 
@@ -123,6 +124,7 @@ export const mutateSystemSettingsClientStateWithAutosave = (
             nextClientState.showLineNumbers = nextFormData.showLineNumbers
             nextClientState.newPromptFocus = nextFormData.newPromptFocus
             nextClientState.automaticUpdates = nextFormData.automaticUpdates
+            nextClientState.updateChannel = nextFormData.updateChannel
           }
         )
       })

@@ -49,7 +49,11 @@ const updateFailed = (error: Error): void => {
 const automaticUpdatesEnabled = (): boolean =>
   getRequiredSystemSettingsEntry().committed.automaticUpdates
 
-/** Checks stable releases; only enabled automatic checks start downloading new updates. */
+/** Reads the committed channel so changes apply to the next check without restarting. */
+const prereleasesEnabled = (): boolean =>
+  getRequiredSystemSettingsEntry().committed.updateChannel === 'prerelease'
+
+/** Checks the selected channel; only enabled automatic checks start downloading new updates. */
 const check = async (automatic: boolean): Promise<void> => {
   if (automatic && !automaticUpdatesEnabled()) return
   if (state.status === 'checking' || state.status === 'downloading' || isUpdateRestarting()) return
@@ -58,11 +62,17 @@ const check = async (automatic: boolean): Promise<void> => {
   publish({ status: 'checking' })
   try {
     /** Date lookup failures never prevent release discovery. */
-    const [latest, currentReleaseDate] = await Promise.all([
-      source.latestRelease(), source.currentReleaseDate().catch(() => null)
+    const [releases, currentReleaseDate] = await Promise.all([
+      source.releases(), source.currentReleaseDate().catch(() => null)
     ])
-    release = latest && !latest.prerelease && !latest.draft ? latest : null
-    if (release && !valid(release.version)) throw new Error('Invalid release version')
+    /** Prereleases are candidates only on the prerelease channel. */
+    const includePrereleases = prereleasesEnabled()
+    /** Highest channel version wins, so a later-published patch to an older line never replaces a newer release. */
+    release = null
+    for (const candidate of releases) {
+      if ((includePrereleases || !candidate.prerelease) && valid(candidate.version) &&
+        (!release || gt(candidate.version, release.version))) release = candidate
+    }
     /** Semantic comparison prohibits downgrades even for unpublished running versions. */
     const hasUpdate = !!release && gt(release.version, source.currentVersion)
     publish({

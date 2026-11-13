@@ -5,7 +5,7 @@ import { runSqlStatement, seedUserPersistence, readSystemSettings } from '../hel
 import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
 import { join } from 'node:path'
-import { setAutomaticUpdates } from '../helpers/SettingsHelpers'
+import { setAutomaticUpdates, setUpdateChannel } from '../helpers/SettingsHelpers'
 
 /** Production updater UI and service run with controlled release/download/install boundaries. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -389,11 +389,31 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('update-latest-card')).toHaveAttribute('data-available', 'false')
     await mainWindow.evaluate(() => window.appUpdates.download())
     expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(0)
-    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '3.0.0-beta.1', prerelease: true } })
+    await controlUpdater(electronApp, { type: 'configure', config: { prereleaseVersion: '3.0.0' } })
     await mainWindow.getByTestId('update-action').click()
     await expect(mainWindow.getByTestId('app-updates-popup')).toContainText('No updates available')
     await mainWindow.evaluate(() => window.appUpdates.download())
     expect((await controlUpdater(electronApp, { type: 'stats' })).downloads).toBe(0)
+  })
+
+  // Prereleases stay hidden until the user opts in; the committed channel applies to the next check.
+  test('ignores a newer prerelease on the default Stable channel and downloads it after choosing Prerelease', async ({ electronApp, testSetup }) => {
+    await controlUpdater(electronApp, { type: 'configure', config: { prereleaseVersion: '1.1.0' } })
+    /** Startup checks the default channel, where 1.0.0 is the newest stable release. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.navigateToSettingsScreen()
+    await expect(mainWindow.getByTestId('update-channel-selector')).toHaveText('Stable')
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
+    await setUpdateChannel(mainWindow, testHelpers, 'prerelease')
+    expect((await readSystemSettings(electronApp)).updateChannel).toBe('prerelease')
+    expect(await controlUpdater(electronApp, { type: 'stats' })).toMatchObject({ checks: 1, downloads: 0 })
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloadedVersions).toEqual(['1.1.0'])
+    await controlUpdater(electronApp, { type: 'complete-download' })
+    /** A newer stable release listed after the prerelease must still win on the prerelease channel. */
+    await controlUpdater(electronApp, { type: 'configure', config: { latestVersion: '1.2.0' } })
+    await controlUpdater(electronApp, { type: 'interval' })
+    await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).downloadedVersions).toEqual(['1.1.0', '1.2.0'])
   })
 
   test('does not notify on a failed startup check and allows retry', async ({ electronApp, testSetup }) => {

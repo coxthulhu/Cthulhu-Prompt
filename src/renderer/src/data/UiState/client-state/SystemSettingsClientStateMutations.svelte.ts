@@ -1,4 +1,4 @@
-import type { NewPromptFocus, SystemSettings } from '@shared/domain/settings/SystemSettings'
+import type { NewPromptFocus, SystemSettings, UpdateChannel } from '@shared/domain/settings/SystemSettings'
 import {
   SYSTEM_SETTINGS_CLIENT_STATE_ID,
   type SystemSettingsClientStateRecord,
@@ -24,7 +24,8 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
       attachedNoteReservedLinesInput: nextFormData.attachedNoteReservedLinesInput,
       showLineNumbers: nextFormData.showLineNumbers,
       newPromptFocus: nextFormData.newPromptFocus,
-      automaticUpdates: nextFormData.automaticUpdates
+      automaticUpdates: nextFormData.automaticUpdates,
+      updateChannel: nextFormData.updateChannel
     })
     return
   }
@@ -37,6 +38,7 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
     clientState.showLineNumbers = nextFormData.showLineNumbers
     clientState.newPromptFocus = nextFormData.newPromptFocus
     clientState.automaticUpdates = nextFormData.automaticUpdates
+    clientState.updateChannel = nextFormData.updateChannel
   })
 }
 
@@ -121,5 +123,12 @@ export const setSystemSettingsClientStateNewPromptFocus = (value: NewPromptFocus
 export const setSystemSettingsClientStateAutomaticUpdates = (value: boolean): void => {
   mutateSystemSettingsClientStateWithAutosave((clientState) => {
     clientState.automaticUpdates = value
+  })
+}
+
+/** Updates the auto-updater release channel through the existing settings autosave. */
+export const setSystemSettingsClientStateUpdateChannel = (value: UpdateChannel): void => {
+  mutateSystemSettingsClientStateWithAutosave((clientState) => {
+    clientState.updateChannel = value
   })
 }

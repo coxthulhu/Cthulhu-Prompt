@@ -9,7 +9,6 @@ export type UpdateRelease = {
   version: string
   publishedAt: string | null
   prerelease: boolean
-  draft: boolean
 }
 
 /** Download measurements passed through to the existing progress bar. */
@@ -19,7 +18,8 @@ export type UpdateProgress = { percent: number; transferred: number; total: numb
 export interface UpdateSource {
   mode: UpdateMode
   currentVersion: string
-  latestRelease: () => Promise<UpdateRelease | null>
+  /** Published releases, including prereleases, for channel selection. */
+  releases: () => Promise<UpdateRelease[]>
   currentReleaseDate: () => Promise<string | null>
   download: (release: UpdateRelease, progress: (value: UpdateProgress) => void) => Promise<void>
   /** Stops the active transfer when the application exits. */
@@ -28,18 +28,18 @@ export interface UpdateSource {
 }
 
 /** GitHub release fields read from its public REST API. */
-type GithubRelease = { tag_name: string; published_at: string | null; prerelease: boolean; draft: boolean }
+type GithubRelease = { tag_name: string; published_at: string | null; prerelease: boolean }
 
 /** Reads release metadata in main, independently of the renderer's network restrictions. */
-const fetchRelease = async (suffix: string): Promise<GithubRelease | null> => {
+const fetchReleases = async <T>(suffix: string): Promise<T | null> => {
   /** A bounded request restores the Check button when GitHub cannot be reached. */
-  const response = await fetch(`https://api.github.com/repos/coxthulhu/Cthulhu-Prompt/releases/${suffix}`, {
+  const response = await fetch(`https://api.github.com/repos/coxthulhu/Cthulhu-Prompt/releases${suffix}`, {
     headers: { Accept: 'application/vnd.github+json' },
     signal: AbortSignal.timeout(30000)
   })
   if (response.status === 404) return null
   if (!response.ok) throw new Error(`GitHub release check failed (${response.status})`)
-  return await response.json() as GithubRelease
+  return await response.json() as T
 }
 
 /** Creates the Windows release source; installation is called only for installed distributions. */
@@ -59,18 +59,17 @@ export const createUpdateSource = (onError: (error: Error) => void): UpdateSourc
   return {
     mode,
     currentVersion,
-    latestRelease: async () => {
-      /** GitHub's latest endpoint excludes drafts and prereleases. */
-      const release = await fetchRelease('latest')
-      return release && {
+    releases: async () => {
+      /** Anonymous listings exclude drafts; the newest 100 releases include every candidate update. */
+      const releases = await fetchReleases<GithubRelease[]>('?per_page=100')
+      return releases!.map((release) => ({
         tag: release.tag_name,
         version: release.tag_name.replace(/^v/, ''),
         publishedAt: release.published_at,
-        prerelease: release.prerelease,
-        draft: release.draft
-      }
+        prerelease: release.prerelease
+      }))
     },
-    currentReleaseDate: async () => (await fetchRelease(`tags/v${currentVersion}`))?.published_at ?? null,
+    currentReleaseDate: async () => (await fetchReleases<GithubRelease>(`/tags/v${currentVersion}`))?.published_at ?? null,
     download: async (release, progress) => {
       cancellationToken = new CancellationToken()
       updater = new NsisUpdater({

@@ -115,6 +115,10 @@
     /** Keeps the shared settings context consistent with the persisted settings shape. */
     get automaticUpdates() {
       return systemSettingsQuery.data.automaticUpdates
+    },
+    /** Keeps the shared settings context consistent with the persisted settings shape. */
+    get updateChannel() {
+      return systemSettingsQuery.data.updateChannel
     }
   }
   const workspaceSelection: WorkspaceSelectionContext = {

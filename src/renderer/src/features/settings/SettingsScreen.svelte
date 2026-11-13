@@ -11,7 +11,7 @@
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
   import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import SimpleSelectorButton from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
-  import { ExternalLink, Info, RefreshCcw, Settings, TextCursorInput, Type } from 'lucide-svelte'
+  import { ExternalLink, FlaskConical, Info, RefreshCcw, Settings, ShieldCheck, TextCursorInput, Type } from 'lucide-svelte'
   import {
     flushSystemSettingsAutosaves,
     selectSystemSettingsClientStateRecord,
@@ -25,7 +25,8 @@
     setSystemSettingsClientStatePromptEditorMinLinesInput,
     setSystemSettingsClientStateShowLineNumbers,
     setSystemSettingsClientStateNewPromptFocus,
-    setSystemSettingsClientStateAutomaticUpdates
+    setSystemSettingsClientStateAutomaticUpdates,
+    setSystemSettingsClientStateUpdateChannel
   } from '@renderer/data/UiState/client-state/SystemSettingsClientStateMutations.svelte.ts'
   import {
     getSystemSettingsValidation,
@@ -52,7 +53,8 @@
     MIN_PROMPT_EDITOR_MAX_LINES,
     MIN_PROMPT_EDITOR_MIN_LINES,
     MIN_PROMPT_FONT_SIZE,
-    type NewPromptFocus
+    type NewPromptFocus,
+    type UpdateChannel
   } from '@shared/domain/settings/SystemSettings'
 
   let { sidebarModeData }: {
@@ -95,6 +97,27 @@
   /** Reset is available only when the choice differs from the default. */
   const isNewPromptFocusResetDisabled = $derived(
     systemSettingsClientState.newPromptFocus === DEFAULT_SYSTEM_SETTINGS.newPromptFocus
+  )
+  /** Release types the auto-updater can follow. */
+  const updateChannelItems = [
+    {
+      id: 'stable',
+      label: 'Stable',
+      detail: 'Only receive stable releases',
+      icon: ShieldCheck,
+      testId: 'update-channel-option-stable'
+    },
+    {
+      id: 'prerelease',
+      label: 'Prerelease',
+      detail: 'Also receive early releases before they become stable',
+      icon: FlaskConical,
+      testId: 'update-channel-option-prerelease'
+    }
+  ]
+  /** Dropdown label reflecting the current update channel. */
+  const selectedUpdateChannelItem = $derived(
+    updateChannelItems.find((item) => item.id === systemSettingsClientState.updateChannel)!
   )
   const githubIssuesUrl = 'https://github.com/coxthulhu/Cthulhu-Prompt/issues'
   const appVersionLabel = `v${getRuntimeConfig().appVersion}`
@@ -214,6 +237,14 @@
   const updateAutomaticUpdates = async (value: boolean): Promise<void> => {
     await runIpcBestEffort(async () => {
       setSystemSettingsClientStateAutomaticUpdates(value)
+      await flushSystemSettingsAutosaves()
+    })
+  }
+
+  /** Saves an update channel selection immediately, including resetting it to the default. */
+  const updateUpdateChannel = async (value: UpdateChannel): Promise<void> => {
+    await runIpcBestEffort(async () => {
+      setSystemSettingsClientStateUpdateChannel(value)
       await flushSystemSettingsAutosaves()
     })
   }
@@ -355,7 +386,7 @@
         >
           {#snippet control()}
             <SimpleSelectorButton
-              class="settingsNewPromptFocusSelector"
+              class="settingsSelector"
               label="New prompt focus"
               items={newPromptFocusItems}
               selectedItem={selectedNewPromptFocusItem}
@@ -566,6 +597,38 @@
 
         <Separator />
 
+        <!-- Choose whether update checks follow stable releases only or also prereleases. -->
+        <ControlRow
+          testId="about-update-channel-row"
+          label="Update Channel"
+          detail="Choose which releases updates are checked against."
+        >
+          {#snippet control()}
+            <SimpleSelectorButton
+              class="settingsSelector"
+              label="Update channel"
+              items={updateChannelItems}
+              selectedItem={selectedUpdateChannelItem}
+              showIcon
+              menuWidth="300px"
+              testId="update-channel-selector"
+              onselect={(item) => updateUpdateChannel(item.id as UpdateChannel)}
+            />
+          {/snippet}
+
+          {#snippet actions()}
+            <Button
+              icon={RefreshCcw}
+              text="Reset"
+              appearance="outline"
+              onclick={() => updateUpdateChannel(DEFAULT_SYSTEM_SETTINGS.updateChannel)}
+              disabled={systemSettingsClientState.updateChannel === DEFAULT_SYSTEM_SETTINGS.updateChannel}
+            />
+          {/snippet}
+        </ControlRow>
+
+        <Separator />
+
         <DisplayRow
           testId="about-version-display-row"
           label="Current Version"
@@ -583,8 +646,8 @@
 </section>
 
 <style>
-  /* Match this settings selector to its Reset button without resizing other selectors. */
-  section :global(.settingsNewPromptFocusSelector) {
+  /* Match settings selectors to their Reset buttons without resizing other selectors. */
+  section :global(.settingsSelector) {
     height: 40px;
   }
 </style>

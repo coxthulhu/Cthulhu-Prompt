@@ -9,7 +9,8 @@ import {
   MIN_PROMPT_EDITOR_MIN_LINES,
   MIN_PROMPT_FONT_SIZE,
   type SystemSettings,
-  type NewPromptFocus
+  type NewPromptFocus,
+  type UpdateChannel
 } from '@shared/domain/settings/SystemSettings'
 
 export type SystemSettingsFormData = {
@@ -23,6 +24,8 @@ export type SystemSettingsFormData = {
   newPromptFocus: NewPromptFocus
   /** Current automatic-update selection in the settings form. */
   automaticUpdates: boolean
+  /** Current update channel selection in the settings form. */
+  updateChannel: UpdateChannel
 }
 
 export type SystemSettingsValidation = {
@@ -84,7 +87,8 @@ export const toSystemSettingsFormData = (
   attachedNoteReservedLinesInput: String(settings.attachedNoteReservedLines),
   showLineNumbers: settings.showLineNumbers,
   newPromptFocus: settings.newPromptFocus,
-  automaticUpdates: settings.automaticUpdates
+  automaticUpdates: settings.automaticUpdates,
+  updateChannel: settings.updateChannel
 })
 
 const validateFontSize = (value: string): string | null => {

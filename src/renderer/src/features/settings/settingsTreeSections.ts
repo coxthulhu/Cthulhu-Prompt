@@ -33,6 +33,7 @@ export const settingsTreeSections: SettingsTreeSection[] = [
     rows: [
       { id: 'report-issue', label: 'Report an Issue', targetTestId: 'about-issue-display-row' },
       { id: 'automatic-updates', label: 'Automatic Updates', targetTestId: 'about-automatic-updates-row' },
+      { id: 'update-channel', label: 'Update Channel', targetTestId: 'about-update-channel-row' },
       { id: 'current-version', label: 'Current Version', targetTestId: 'about-version-display-row' }
     ]
   }
