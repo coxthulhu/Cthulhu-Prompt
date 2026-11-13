@@ -18,6 +18,8 @@ export function buildReleaseNotes(tag, repository, changelog) {
   /** Tagged download path; draft asset URLs 404 once the release is published. */
   const base = `https://github.com/${repository}/releases/download/${tag}`
   return [
+    // Markers keep the download table identifiable for any later tooling that edits notes.
+    '<!-- downloads:start -->',
     '## Downloads',
     '',
     '| Platform | Link |',
@@ -25,6 +27,7 @@ export function buildReleaseNotes(tag, repository, changelog) {
     // These names match the NSIS and portable artifactName settings in electron-builder.yml.
     `| Windows Installer | [Download](<${base}/CthulhuPrompt_${version}_Windows_Setup.exe>) |`,
     `| Windows Portable | [Download](<${base}/CthulhuPrompt_${version}_Windows_Portable.exe>) |`,
+    '<!-- downloads:end -->',
     '',
     section,
     ''

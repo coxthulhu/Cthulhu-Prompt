@@ -51,12 +51,14 @@ describe('publish release', () => {
 
     const downloadBase = `https://github.com/${repository}/releases/download/v1.2.3`
     expect(ghCall().notes).toBe([
+      '<!-- downloads:start -->',
       '## Downloads',
       '',
       '| Platform | Link |',
       '| --- | --- |',
       `| Windows Installer | [Download](<${downloadBase}/CthulhuPrompt_1.2.3_Windows_Setup.exe>) |`,
       `| Windows Portable | [Download](<${downloadBase}/CthulhuPrompt_1.2.3_Windows_Portable.exe>) |`,
+      '<!-- downloads:end -->',
       '',
       '## Changes',
       '',
