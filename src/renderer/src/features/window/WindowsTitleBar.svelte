@@ -273,12 +273,16 @@
           {@const TabIcon = workTabIcons[tab.screen]}
           {@const selected = selectedTabId === tab.id}
           {@const dragging = draggedTab?.id === tab.id}
+          <!-- Middle clicks close the tab from anywhere on the pill, including its close button. -->
           <div
             class="titlebar__tab"
             data-selected={selected}
             data-dragging={dragging}
             data-testid="work-tab"
             style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
+            onauxclick={(event) => {
+              if (event.button === 1) onCloseWorkTab(tab.id)
+            }}
           >
             <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
                  Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
@@ -289,9 +293,6 @@
               aria-selected={selected}
               onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
               onclick={() => onSelectWorkTab(tab.id)}
-              onauxclick={(event) => {
-                if (event.button === 1) onCloseWorkTab(tab.id)
-              }}
             >
               <TabIcon size={16} aria-hidden="true" />
               <span class="titlebar__tab-title">{tab.title}</span>

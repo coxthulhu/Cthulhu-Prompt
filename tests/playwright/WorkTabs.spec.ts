@@ -215,8 +215,13 @@ describe('Work Tabs', () => {
     await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 4', 'Tab 5'])
     await expectSelectedTab(mainWindow, 'Tab 5')
 
+    // Middle-clicking an unselected tab's close button closes it without changing the selection.
+    await mainWindow.getByRole('button', { name: 'Close Tab 2', exact: true }).click({ button: 'middle' })
+    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 4', 'Tab 5'])
+    await expectSelectedTab(mainWindow, 'Tab 5')
+
     // Closing the last remaining tab returns the selection to Home.
-    for (const title of ['Tab 5', 'Tab 4', 'Tab 2']) {
+    for (const title of ['Tab 5', 'Tab 4']) {
       await mainWindow.getByRole('button', { name: `Close ${title}`, exact: true }).click()
     }
     await expectSelectedTab(mainWindow, 'Tab 1')
