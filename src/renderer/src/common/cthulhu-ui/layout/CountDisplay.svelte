@@ -31,9 +31,13 @@
 <style>
   .cthulhuUiCountDisplay {
     align-items: center;
-    color: var(--ui-muted-text);
+    color: var(--ui-secondary-text);
     display: inline-flex;
     gap: 8px;
+  }
+
+  .cthulhuUiCountDisplay :global(.cthulhuUiCountDisplayIcon) {
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .cthulhuUiCountDisplayValue {
