@@ -9,6 +9,7 @@
 - "Commentary channel" → your next message to the user.
 - Give the `./scripts/wsl-*.sh` wrappers a 300000 ms timeout.
 - If Git needs interactive auth, suggest that the user run the command with the `!` prefix.
+- Never schedule wakeups or timers (e.g., `ScheduleWakeup`) unless the user explicitly asks; subagents and background commands already notify on completion.
 
 ## Commits
 
