@@ -13,6 +13,7 @@
   let {
     selectedTabId,
     workTabs,
+    canAddWorkTab,
     isDevMode = false,
     executionFolderName = null,
     onNavigate,
@@ -29,6 +30,8 @@
     selectedTabId: string | null
     /** Open work tabs in display order. */
     workTabs: WorkTab[]
+    /** Enables the New Tab button, which needs an open workspace. */
+    canAddWorkTab: boolean
     /** Selects a work tab. */
     onSelectWorkTab: (tabId: string) => void
     /** Appends and selects a new work tab. */
@@ -330,6 +333,7 @@
       aria-label="New Tab"
       title="New Tab"
       data-testid="new-tab-button"
+      disabled={!canAddWorkTab}
       onclick={onAddWorkTab}
     >
       <Plus size={20} strokeWidth={1.5} aria-hidden="true" />
@@ -625,12 +629,18 @@
     position: relative;
   }
 
-  .titlebar__new-tab:is(:hover, :focus-visible) {
+  .titlebar__new-tab:is(:hover, :focus-visible):not(:disabled) {
     color: var(--ui-normal-text);
   }
 
-  .titlebar__new-tab:is(:hover, :focus-visible)::before {
+  .titlebar__new-tab:is(:hover, :focus-visible):not(:disabled)::before {
     background: var(--ui-neutral-normal-surface);
+  }
+
+  /* Matches the shared disabled button appearance while no workspace is open; only the glyph fades so the opaque fill
+     keeps hiding the background folder label. */
+  .titlebar__new-tab:disabled :global(svg) {
+    opacity: 0.5;
   }
 
   /* Background label 8px left of the updates button and three window controls; the opaque tab strip and New Tab button hide it when they reach it. */

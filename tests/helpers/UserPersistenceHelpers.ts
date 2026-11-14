@@ -164,6 +164,10 @@ export const seedUserPersistence = async (
     settingsScrollTopPx?: number
     /** Quick collection rows shown in the project sidebar. */
     sidebarQuickCollectionCount?: number
+    /** Open work tabs in display order. */
+    workTabs?: Array<{ id: string; title: string; screen: string }>
+    /** Selected work tab or title bar screen. */
+    selectedTabId?: string | null
   }
 ): Promise<void> => {
   await seedWorkspaceState(electronApp, null, 'application-machine', null, {
@@ -171,7 +175,9 @@ export const seedUserPersistence = async (
     appSidebarWidthPx: data.appSidebarWidthPx ?? 275,
     settingsCollapsedSectionIds: data.settingsCollapsedSectionIds ?? [],
     settingsScrollTopPx: data.settingsScrollTopPx ?? 0,
-    sidebarQuickCollectionCount: data.sidebarQuickCollectionCount ?? 3
+    sidebarQuickCollectionCount: data.sidebarQuickCollectionCount ?? 3,
+    workTabs: data.workTabs ?? [],
+    selectedTabId: data.selectedTabId ?? null
   }, 'machine-specific')
 }
 

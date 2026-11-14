@@ -22,6 +22,7 @@
   import PromptCollectionScreen from '../features/prompt-collections/PromptCollectionScreen.svelte'
   import SinglePromptScreen from '../features/prompt-collections/SinglePromptScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
+  import NewTabScreen from '@renderer/features/new-tab/NewTabScreen.svelte'
   import { createSidebarModes, SidebarModeId } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import type {
     WorkspaceCreationResult,
@@ -66,7 +67,6 @@
   import { setPromptCollectionSelectedEntryIdWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import {
     USER_PERSISTENCE_ID,
-    WORK_TAB_SCREENS,
     isProjectScreenSelection,
     isWorkspaceScreenSelectionSame,
     type WorkTab,
@@ -154,19 +154,17 @@
   setPromptNavigationContext(promptNavigation)
 
   let activeScreen = $state<ScreenId>('home')
-  /** Open work tabs in display order, restored from this machine's persistence. */
-  let workTabs = $state<WorkTab[]>(getUserPersistence().workTabs)
-  /** Work tab chosen while Home is shown; every work tab shows Home until tabs get their own screens. */
+  /** Builds a work tab showing the New Tab screen, the only screen work tabs have until they can show collections. */
+  const toNewTab = (id: string): WorkTab => ({ id, title: 'New Tab', screen: 'new-tab' })
+  /** Open work tabs in display order, restored from this machine's persistence and shown as New Tabs. */
+  let workTabs = $state<WorkTab[]>(getUserPersistence().workTabs.map((tab) => toNewTab(tab.id)))
+  /** Work tab whose New Tab screen is shown while the New Tab screen is active. */
   let selectedWorkTabId = $state<string | null>(null)
   /** Selected tab saved by the previous session, applied once startup restores the workspace. */
   const startupSelectedTabId = getUserPersistence().selectedTabId
-  /** Selected title bar tab: an open work tab shown on Home, the active screen, or null while a project is shown. */
+  /** Selected title bar tab: the work tab on the New Tab screen, the active screen, or null while a project is shown. */
   const selectedTabId = $derived(
-    activeScreen === 'project'
-      ? null
-      : activeScreen === 'home' && workTabs.some((tab) => tab.id === selectedWorkTabId)
-        ? selectedWorkTabId
-        : activeScreen
+    activeScreen === 'project' ? null : activeScreen === 'new-tab' ? selectedWorkTabId : activeScreen
   )
   /** Every sidebar mode, created once so each mode's data survives screen switches. */
   const sidebarModes = createSidebarModes()
@@ -225,7 +223,7 @@
   const workspacePromptCollectionCount = $derived(selectedWorkspacePromptCollections.length)
   /** Mounted prompt-collection screen used for sidebar actions owned by that screen. */
   let promptCollectionScreen = $state<PromptCollectionScreenHandle | null>(null)
-  /** Shell-owned project management opened by the sidebar gear and the activity bar's + button. */
+  /** Shell-owned project management opened by the sidebar gear, the activity bar's + button, and the New Tab screen. */
   let manageProjectsDialog = $state<ManageProjectsDialog | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
@@ -298,6 +296,14 @@
       }
     }
 
+    // Work tabs restore from the app-wide selected tab, so the workspace itself keeps Home.
+    if (screen === 'new-tab') {
+      return {
+        selectedScreen: 'home',
+        selectedScreenData: null
+      }
+    }
+
     return {
       selectedScreen: screen,
       selectedScreenData: null
@@ -306,6 +312,8 @@
 
   /** Saves the current workspace before releasing its data and navigation caches. */
   const closeSelectedWorkspace = async (): Promise<void> => {
+    // Work tabs belong to the open workspace, so closing or replacing it closes them all.
+    if (getSelectedWorkspaceId()) workTabs = []
     persistPromptNavigationSelection()
     captureRegisteredMonacoViewStates()
     await closeWorkspaceMutation()
@@ -590,6 +598,8 @@
     void (async () => {
       try {
         await restoreWorkspaceFromPersistence()
+        // Work tabs belong to the open workspace, so they close when startup restores none.
+        if (!getSelectedWorkspaceId()) workTabs = []
         // The saved tab overrides the workspace's own screen; null leaves a restored project shown.
         if (startupSelectedTabId && startupSelectedTabId in screens) {
           navigateToScreen(startupSelectedTabId as ScreenId)
@@ -731,22 +741,15 @@
     setAppSidebarExpandedWithAutosave(sidebarExpanded)
   }
 
-  /** Selects a work tab, which shows Home until work tabs get their own screens. */
+  /** Selects a work tab, which shows its New Tab screen. */
   const selectWorkTab = (tabId: string): void => {
-    navigateToScreen('home')
+    navigateToScreen('new-tab')
     selectedWorkTabId = tabId
   }
 
-  /** Appends a tab named after the highest-numbered tab, with a random screen icon, and selects it. */
+  /** Appends a New Tab after every open tab and selects it. */
   const addWorkTab = (): void => {
-    /** Number one past the highest "Tab N" title still open. */
-    const tabNumber = Math.max(0, ...workTabs.map((tab) => Number(tab.title.slice('Tab '.length)))) + 1
-    /** New tab appended after every open tab. */
-    const tab: WorkTab = {
-      id: compactGuid(globalThis.crypto.randomUUID()),
-      title: `Tab ${tabNumber}`,
-      screen: WORK_TAB_SCREENS[Math.floor(Math.random() * WORK_TAB_SCREENS.length)]
-    }
+    const tab = toNewTab(compactGuid(globalThis.crypto.randomUUID()))
     workTabs = [...workTabs, tab]
     selectWorkTab(tab.id)
   }
@@ -758,9 +761,11 @@
     /** Position the right neighbour moves into once the tab is removed. */
     const index = workTabs.findIndex((tab) => tab.id === tabId)
     workTabs = workTabs.filter((tab) => tab.id !== tabId)
-    /** Right neighbour, or the left one when the closed tab was rightmost; Home stays selected without either. */
+    /** Right neighbour, or the left one when the closed tab was rightmost; Home is selected without either. */
     const nextTab = workTabs[index] ?? workTabs[index - 1]
-    if (wasSelected && nextTab) selectWorkTab(nextTab.id)
+    if (!wasSelected) return
+    if (nextTab) selectWorkTab(nextTab.id)
+    else navigateToScreen('home')
   }
 
   /** Moves a dragged work tab into the given display slot; the tab state effect saves the new order. */
@@ -808,7 +813,7 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar {selectedTabId} {workTabs} {isDevMode} {executionFolderName} onNavigate={activateActivity}
+    <WindowsTitleBar {selectedTabId} {workTabs} canAddWorkTab={isWorkspaceReady} {isDevMode} {executionFolderName} onNavigate={activateActivity}
       onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab} onMoveWorkTab={moveWorkTab}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
@@ -821,7 +826,7 @@
   <div class="sidebarSurface flex min-h-0 flex-1">
     <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
       onProjectsReorder={reorderProjects}
-      onCreateProject={() => manageProjectsDialog?.openDialog({ createProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} />
+      onCreateProject={() => manageProjectsDialog?.openDialog({ createProject: true, openCreatedProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} />
 
     <ResizableSidebar
       isSidebarVisible={isAppSidebarExpanded}
@@ -885,6 +890,12 @@
                 />
               {/key}
             {/if}
+          {:else if activeScreen === 'new-tab' && selectedWorkspace}
+            <NewTabScreen
+              workspace={selectedWorkspace}
+              onCreateProject={() => manageProjectsDialog?.openDialog({ createProject: true })}
+              onEditProject={(projectId) => manageProjectsDialog?.openDialog({ projectId })}
+            />
           {:else if activeScreen === 'test-screen'}
             <TestScreen />
           {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ComponentType, Snippet } from 'svelte'
   import DropdownPopupCore, {
+    type DropdownPopupMenuAlignment,
     type DropdownPopupPlacement,
     type DropdownPopupTriggerContext
   } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupCore.svelte'
@@ -23,6 +24,8 @@
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
+    /** Edge of the trigger the menu lines up with when placed below it. */
+    menuAlignment?: DropdownPopupMenuAlignment
     dragOpenTypes?: string[]
     onselect?: (item: DropdownPopupItem, event: MouseEvent) => void
   }
@@ -34,6 +37,7 @@
     menuWidth = '236px',
     testId,
     placement = 'cursor',
+    menuAlignment,
     dragOpenTypes,
     onselect
   }: Props = $props()
@@ -45,6 +49,7 @@
   {menuWidth}
   {testId}
   {placement}
+  {menuAlignment}
   {dragOpenTypes}
   menuClass="cthulhuUiDropdownPopupSimpleMenu p-[4px]"
 >

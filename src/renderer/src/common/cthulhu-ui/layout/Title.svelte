@@ -2,7 +2,8 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
-  type TitleVariant = 'page' | 'small' | 'card' | 'dialog' | 'row' | 'workspace'
+  /** Text size and treatment of a title. */
+  export type TitleVariant = 'page' | 'small' | 'card' | 'dialog' | 'row' | 'workspace'
 
   const textClasses: Record<TitleVariant, string> = {
     page: 'text-3xl leading-9',

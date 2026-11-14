@@ -54,10 +54,7 @@
   } from '@shared/domain/prompt/Prompt'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
-  import {
-    getMarkdownContentCategoryOrder,
-    getOrderedMarkdownContentIds
-  } from '@shared/domain/markdown-content/MarkdownContent'
+  import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
   import type { Category } from '@shared/domain/category/Category'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
   import DropdownPopupDetailed, { type DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
@@ -79,7 +76,7 @@
   import { promptEntryDragState } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
   import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
   import { getPromptStatusGroupCounts, promptStatusGroups, sidebarPromptStatusGroups } from '../prompt-collections/promptStatusGroups'
-  import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
+  import { getPromptCollectionDetails } from '../prompt-collections/promptCollectionDetails'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { PromptCollectionScreenMode } from '@renderer/features/prompt-collections/promptCollectionScreenMode'
   import { saveCategories } from '@renderer/data/Mutations/CategoryMutations'
@@ -256,11 +253,6 @@
     return () => window.clearInterval(intervalId)
   })
 
-  const formatPromptCollectionModifiedRelative = (modifiedAt: string): string => {
-    const relativeTime = formatPromptModifiedRelative(modifiedAt, nowMs)
-    return `${relativeTime[0]!.toUpperCase()}${relativeTime.slice(1)}`
-  }
-
   const promptCollectionDropdownCollections = $derived.by((): PromptCollection[] => {
     if (!promptCollectionSelectorPreviewIds || draggedCollectionSection !== 'all') {
       return promptCollections
@@ -281,46 +273,20 @@
       promptTemplateQuery.data.map((template) => [template.id, template])
     )
 
-    const getCollectionMetadata = (
-      promptCollection: PromptCollection
-    ): { promptCount: number; newestModifiedAt: string | null } => {
-      let promptCount = 0
-      let newestModifiedAt: string | null = null
-
-      for (const entryId of (promptCollection.kind === 'template'
-        ? getOrderedMarkdownContentIds(promptCollection, 'template')
-        : Object.values(promptCollection.statusFolders).flatMap((layout) => layout.ordering === 'category'
-          ? layout.categoryOrder.categories.flatMap((group) => group.entries.map((entry) => entry.id))
-          : []))) {
-
-        promptCount += 1
-        const modifiedAt =
-          promptCollection.kind === 'template'
-            ? templateById.get(entryId)?.modifiedAt
-            : promptById.get(entryId)?.modifiedAt
-        if (!modifiedAt) continue
-        if (!newestModifiedAt || modifiedAt > newestModifiedAt) newestModifiedAt = modifiedAt
-      }
-
-      return { promptCount, newestModifiedAt }
-    }
-
     return promptCollectionDropdownCollections.map((promptCollection) => {
-      const { promptCount, newestModifiedAt } = getCollectionMetadata(promptCollection)
-      const detailParts: DropdownPopupDetailedItem['detailParts'] = [
-        `${promptCount} ${promptCollection.kind === 'template' ? 'template' : 'prompt'}${promptCount === 1 ? '' : 's'}`
-      ]
+      const details = getPromptCollectionDetails(promptCollection, promptById, templateById, nowMs)
+      const detailParts: DropdownPopupDetailedItem['detailParts'] = [details.countText]
 
-      if (newestModifiedAt) {
+      if (details.modifiedText) {
         detailParts.push({
-          text: formatPromptCollectionModifiedRelative(newestModifiedAt),
+          text: details.modifiedText,
           testId: 'sidebar-prompt-collection-modified-time'
         })
       }
 
       return {
         id: promptCollection.id,
-        count: promptCount,
+        count: details.count,
         label: promptCollection.displayName,
         detailParts,
         icon: promptCollection.kind === 'template' ? Layers : FileText,

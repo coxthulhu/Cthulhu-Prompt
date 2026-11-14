@@ -6,7 +6,10 @@
   import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
+  import OpenIndicator from '@renderer/common/cthulhu-ui/layout/OpenIndicator.svelte'
 
+  /** Row style: 'tile' is a bordered card for grids, such as the New Tab screen's collections. */
+  export type SelectorButtonVariant = 'default' | 'tile'
   export type SelectorButtonSelectionVariant = 'neutral' | 'accent'
   export type SelectorButtonRowState =
     | 'idle'
@@ -31,7 +34,10 @@
     detail?: string
     detailParts?: SelectorButtonDetailPart[]
     open?: boolean
+    /** Shows the open indicator in the trailing column, for rows without a chevron or trailing accessory. */
+    openInTab?: boolean
     selected?: boolean
+    variant?: SelectorButtonVariant
     rowState?: SelectorButtonRowState
     selectionVariant?: SelectorButtonSelectionVariant
     showChevron?: boolean
@@ -61,7 +67,9 @@
     detail,
     detailParts,
     open = false,
+    openInTab = false,
     selected = false,
+    variant = 'default',
     rowState = 'idle',
     selectionVariant = 'neutral',
     showChevron = true,
@@ -98,6 +106,8 @@
   type="button"
   class={mergeClasses('cthulhuUiButtonBase cthulhuUiSelectorButton', className)}
   data-open={open ? 'true' : 'false'}
+  data-open-in-tab={openInTab ? 'true' : 'false'}
+  data-variant={variant}
   data-selected={selected ? 'true' : 'false'}
   data-row-state={rowState}
   data-selection-variant={selectionVariant}
@@ -148,6 +158,10 @@
     {/if}
   </span>
 
+  {#if openInTab}
+    <OpenIndicator class="cthulhuUiSelectorButtonOpenIndicator" />
+  {/if}
+
   {#if trailingAccessory}
     <span class="cthulhuUiSelectorButtonTrailingAccessory">
       {@render trailingAccessory()}
@@ -180,6 +194,11 @@
 
   .cthulhuUiSelectorButton[data-chevron='false'][data-trailing-accessory='false'] {
     grid-template-columns: 34px 8px minmax(0, 1fr);
+  }
+
+  /* The open indicator takes a trailing column sized to its label. */
+  .cthulhuUiSelectorButton[data-open-in-tab='true'][data-chevron='false'][data-trailing-accessory='false'] {
+    grid-template-columns: 34px 8px minmax(0, 1fr) auto;
   }
 
   .cthulhuUiSelectorButton[data-leading-accessory='true'] {
@@ -378,5 +397,35 @@
   .cthulhuUiSelectorButton[data-leading-accessory='true']
     .cthulhuUiSelectorButtonTrailingAccessory {
     grid-column: 6;
+  }
+
+  .cthulhuUiSelectorButton :global(.cthulhuUiSelectorButtonOpenIndicator) {
+    grid-column: 4;
+    padding-left: 8px;
+  }
+
+  /* Tiles sit on a raised, bordered surface that brightens with its icon on hover and focus; these rules follow the
+     shared row rules so they win their specificity ties. */
+  .cthulhuUiSelectorButton[data-variant='tile'] {
+    background-color: var(--ui-neutral-normal-surface);
+    border: 1px solid var(--ui-neutral-muted-border);
+  }
+
+  .cthulhuUiSelectorButton[data-variant='tile']:where(:not(:disabled):hover, :not(:disabled):focus-visible) {
+    background-color: var(--ui-neutral-action-fill);
+    border-color: var(--ui-neutral-hover-border);
+  }
+
+  .cthulhuUiSelectorButton[data-variant='tile'] :global(.cthulhuUiSelectorButtonIconCell) {
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .cthulhuUiSelectorButton[data-variant='tile']:where(:not(:disabled):hover, :not(:disabled):focus-visible)
+    :global(.cthulhuUiSelectorButtonIconCell) {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .cthulhuUiSelectorButton[data-variant='tile'] .cthulhuUiSelectorButtonDetail {
+    color: var(--ui-muted-text);
   }
 </style>

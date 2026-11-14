@@ -1,5 +1,5 @@
 import type { ComponentType } from 'svelte'
-import { Bug, Home, PanelsTopLeft, Settings } from 'lucide-svelte'
+import { Bug, Home, LayoutGrid, PanelsTopLeft, Settings } from 'lucide-svelte'
 import { SidebarModeId } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
 
 export type ScreenId =
@@ -8,6 +8,7 @@ export type ScreenId =
   | 'mockups'
   | 'test-screen'
   | 'project'
+  | 'new-tab'
 
 type ScreenConfig = {
   label: string
@@ -56,5 +57,13 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     testId: 'nav-button-project',
     requiresWorkspace: true,
     sidebarMode: SidebarModeId.Project
+  },
+  /** Shown by the selected work tab instead of a title bar screen button. */
+  'new-tab': {
+    label: 'New Tab',
+    testId: 'nav-button-new-tab',
+    requiresWorkspace: true,
+    icon: LayoutGrid,
+    sidebarMode: null
   }
 }

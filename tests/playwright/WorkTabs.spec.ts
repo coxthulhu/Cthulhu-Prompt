@@ -1,39 +1,66 @@
 import type { Page } from '@playwright/test'
 import type { ElectronApplication } from 'playwright'
 import { createDeterministicId } from '../fixtures/FixtureIds'
+import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { resolvePaletteColors } from '../helpers/PaletteHelpers'
-import { readWorkspaceState, readWorkspaceUiState, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
+import {
+  readWorkspaceState,
+  readWorkspaceUiState,
+  seedUserPersistence,
+  seedWorkspaceState
+} from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-/** Lucide icon class rendered for each persisted work tab screen. */
-const WORK_TAB_ICON_CLASSES = {
-  'new-tab': 'lucide-layout-grid',
-  'prompt-collection': 'lucide-file-text',
-  'template-collection': 'lucide-layers'
-} as const
-
 /** Persisted tab state read directly from this machine's application record. */
 type PersistedTabState = {
-  workTabs: Array<{ id: string; title: string; screen: keyof typeof WORK_TAB_ICON_CLASSES }>
+  workTabs: Array<{ id: string; title: string; screen: string }>
   selectedTabId: string | null
 }
 
 /** Reads the saved work tabs and selected tab without production reconstruction code. */
-const readTabState = async (electronApp: ElectronApplication): Promise<PersistedTabState> =>
-  (await readWorkspaceState<PersistedTabState>(electronApp, null, 'application-machine', null))!
+const readTabState = async (electronApp: ElectronApplication): Promise<PersistedTabState> => {
+  /** Whole machine record, which also holds unrelated preferences. */
+  const { workTabs, selectedTabId } = (await readWorkspaceState<PersistedTabState>(electronApp, null, 'application-machine', null))!
+  return { workTabs, selectedTabId }
+}
 
 /** Work tab body buttons in display order. */
 const getTabs = (mainWindow: Page) => mainWindow.getByTestId('work-tab').getByRole('tab')
 
-/** Work tab button with the given title. */
-const getTab = (mainWindow: Page, title: string) =>
-  mainWindow.getByRole('tab', { name: title, exact: true })
+/** Work tab wrapper carrying a test label; every new tab is titled "New Tab", so tests label tabs to tell them apart. */
+const getLabeledTab = (mainWindow: Page, label: string) =>
+  mainWindow.locator(`[data-testid="work-tab"][data-test-label="${label}"]`)
 
-/** Asserts exactly the given work tab is selected. */
-const expectSelectedTab = async (mainWindow: Page, title: string): Promise<void> => {
-  await expect(getTab(mainWindow, title)).toHaveAttribute('aria-selected', 'true')
+/** Body button of the work tab with the given test label. */
+const getTab = (mainWindow: Page, label: string) => getLabeledTab(mainWindow, label).getByRole('tab')
+
+/** Close button of the work tab with the given test label. */
+const getCloseButton = (mainWindow: Page, label: string) => getLabeledTab(mainWindow, label).getByTestId('work-tab-close')
+
+/** Adds one New Tab per label and labels each; keyed rendering keeps a label on its tab through reorders and closes. */
+const addTabs = async (mainWindow: Page, labels: string[]): Promise<void> => {
+  for (const label of labels) {
+    /** Tab count before this addition, which is the appended tab's index. */
+    const count = await mainWindow.getByTestId('work-tab').count()
+    await mainWindow.getByTestId('new-tab-button').click()
+    await mainWindow.getByTestId('work-tab').nth(count).evaluate((tab, value) => {
+      tab.dataset.testLabel = value
+    }, label)
+  }
+}
+
+/** Asserts the labeled work tabs are shown in the given order. */
+const expectTabLabels = async (mainWindow: Page, labels: string[]): Promise<void> => {
+  await expect.poll(() => mainWindow.getByTestId('work-tab').evaluateAll(
+    (tabs) => tabs.map((tab) => (tab as HTMLElement).dataset.testLabel)
+  )).toEqual(labels)
+}
+
+/** Asserts exactly the work tab with the given test label is selected. */
+const expectSelectedTab = async (mainWindow: Page, label: string): Promise<void> => {
+  await expect(getTab(mainWindow, label)).toHaveAttribute('aria-selected', 'true')
   await expect(mainWindow.getByTestId('work-tab').getByRole('tab', { selected: true })).toHaveCount(1)
 }
 
@@ -43,16 +70,23 @@ const expectNoSelectedTab = async (mainWindow: Page): Promise<void> => {
 }
 
 /** Asserts a work tab, including any drag offset, stays in the title bar row with its left edge within 1px of the expected position. */
-const expectTabAt = async (mainWindow: Page, title: string, left: number): Promise<void> => {
+const expectTabAt = async (mainWindow: Page, label: string, left: number): Promise<void> => {
   await expect.poll(async () => {
-    const box = (await getTab(mainWindow, title).boundingBox())!
+    const box = (await getTab(mainWindow, label).boundingBox())!
     return Math.max(Math.abs(box.x - left), Math.abs(box.y))
-  }, { message: `${title} position` }).toBeLessThanOrEqual(1)
+  }, { message: `${label} position` }).toBeLessThanOrEqual(1)
+}
+
+/** Simulates Windows launching a second instance for a double-clicked workspace file. */
+const openWorkspaceFile = async (electronApp: ElectronApplication, workspaceInfoPath: string): Promise<void> => {
+  await electronApp.evaluate(({ app }, path) => {
+    app.emit('second-instance', {}, ['cthulhuprompt.exe', path], 'C:\\')
+  }, workspaceInfoPath)
 }
 
 describe('Work Tabs', () => {
   test('fills the title bar around the screen and tab pills with click targets without moving the pills', async ({ testSetup }) => {
-    const { mainWindow } = await testSetup.setupAndStart()
+    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
     const newTabButton = mainWindow.getByTestId('new-tab-button')
     for (let index = 0; index < 3; index += 1) await newTabButton.click()
     await expect(mainWindow.getByTestId('work-tab')).toHaveCount(3)
@@ -159,22 +193,23 @@ describe('Work Tabs', () => {
     }
   })
 
-  test('adds, selects, and closes work tabs', async ({ testSetup }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+  test('adds New Tabs that show the New Tab screen, selects them, and closes them', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
     /** Title bar Home button, selected only while no work tab is selected. */
     const homeButton = mainWindow.getByTestId('nav-button-home')
-    const newTabButton = mainWindow.getByTestId('new-tab-button')
 
     // A fresh install starts with no tabs and Home selected.
     await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
     await expect(homeButton).toHaveAttribute('aria-current', 'page')
 
-    // New tabs append, select themselves, and show Home.
-    for (let index = 0; index < 3; index += 1) await newTabButton.click()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3'])
+    // New tabs append, select themselves, and show the New Tab screen under the New Tab title and icon.
+    await addTabs(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3'])
+    await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab', 'New Tab'])
+    await expect(getTabs(mainWindow).locator('svg')).toContainClass(Array(3).fill('lucide-layout-grid'))
     await expectSelectedTab(mainWindow, 'Tab 3')
     await expect(homeButton).not.toHaveAttribute('aria-current', 'page')
-    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
 
     // Screen buttons and work tabs share one selection.
     await testHelpers.navigateToSettingsScreen()
@@ -182,57 +217,51 @@ describe('Work Tabs', () => {
     await expectNoSelectedTab(mainWindow)
     await getTab(mainWindow, 'Tab 1').click()
     await expectSelectedTab(mainWindow, 'Tab 1')
-    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await homeButton.click()
     await expect(homeButton).toHaveAttribute('aria-current', 'page')
     await expectNoSelectedTab(mainWindow)
 
     // New tabs keep appending past six, the former limit.
-    for (let index = 0; index < 4; index += 1) await newTabButton.click()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await addTabs(mainWindow, ['Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
     await expectSelectedTab(mainWindow, 'Tab 7')
-    await mainWindow.getByRole('button', { name: 'Close Tab 7', exact: true }).click()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6'])
+    await getCloseButton(mainWindow, 'Tab 7').click()
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6'])
     await expectSelectedTab(mainWindow, 'Tab 6')
 
     // Closing the selected tab selects its right neighbour.
     await getTab(mainWindow, 'Tab 3').click()
-    await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).click()
+    await getCloseButton(mainWindow, 'Tab 3').click()
     await expectSelectedTab(mainWindow, 'Tab 4')
 
     // Middle-clicking an unselected tab closes it without changing the selection.
     await getTab(mainWindow, 'Tab 6').click({ button: 'middle' })
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 4', 'Tab 5'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 4', 'Tab 5'])
     await expectSelectedTab(mainWindow, 'Tab 4')
 
     // Closing the selected rightmost tab selects its left neighbour.
     await getTab(mainWindow, 'Tab 5').click()
     await getTab(mainWindow, 'Tab 5').click({ button: 'middle' })
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 4'])
     await expectSelectedTab(mainWindow, 'Tab 4')
 
-    // New tabs are named one past the highest open tab number.
-    await newTabButton.click()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 4', 'Tab 5'])
-    await expectSelectedTab(mainWindow, 'Tab 5')
-
     // Middle-clicking an unselected tab's close button closes it without changing the selection.
-    await mainWindow.getByRole('button', { name: 'Close Tab 2', exact: true }).click({ button: 'middle' })
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 4', 'Tab 5'])
-    await expectSelectedTab(mainWindow, 'Tab 5')
+    await getCloseButton(mainWindow, 'Tab 2').click({ button: 'middle' })
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 4'])
+    await expectSelectedTab(mainWindow, 'Tab 4')
 
     // Closing the last remaining tab returns the selection to Home.
-    for (const title of ['Tab 5', 'Tab 4']) {
-      await mainWindow.getByRole('button', { name: `Close ${title}`, exact: true }).click()
-    }
+    await getCloseButton(mainWindow, 'Tab 4').click()
     await expectSelectedTab(mainWindow, 'Tab 1')
-    await mainWindow.getByRole('button', { name: 'Close Tab 1', exact: true }).click()
+    await getCloseButton(mainWindow, 'Tab 1').click()
     await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
     await expect(homeButton).toHaveAttribute('aria-current', 'page')
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
   })
 
   test('shrinks tabs to their minimum width, then scrolls them with the wheel and a hover-only scrollbar', async ({ testSetup }) => {
-    const { mainWindow } = await testSetup.setupAndStart()
+    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
     const newTabButton = mainWindow.getByTestId('new-tab-button')
     /** Strip that scrolls once its tabs reach their minimum width. */
     const tabStrip = mainWindow.getByRole('tablist', { name: 'Open tabs' })
@@ -253,11 +282,13 @@ describe('Work Tabs', () => {
       await expect.poll(async () => Math.abs((await readStripScroll()).left - left), { message: 'strip scroll' })
         .toBeLessThanOrEqual(1)
     }
+    /** Test labels of the ten tabs in creation order. */
+    const labels = Array.from({ length: 10 }, (_, index) => `Tab ${index + 1}`)
 
     // Ten tabs stop shrinking at 120px and overflow the strip, which scrolls the new, selected tab fully into view
     // beside the New Tab button. The New Tab button keeps its 40px drag gap before the window controls, and the
     // scrollbar's brief reveal from that scroll fades while the pointer is off the tabs.
-    for (let index = 0; index < 10; index += 1) await newTabButton.click()
+    await addTabs(mainWindow, labels)
     await expectSelectedTab(mainWindow, 'Tab 10')
     /** Rendered tab widths in display order. */
     const tabWidths = await getTabs(mainWindow).evaluateAll((tabs) => tabs.map((tab) => tab.getBoundingClientRect().width))
@@ -315,7 +346,7 @@ describe('Work Tabs', () => {
     await expect.poll(async () => Math.abs((await thumb.boundingBox())!.x - stripBox.x), { message: 'thumb left' })
       .toBeLessThanOrEqual(1)
     await expectSelectedTab(mainWindow, 'Tab 10')
-    await expect(getTabs(mainWindow)).toHaveText(Array.from({ length: 10 }, (_, index) => `Tab ${index + 1}`))
+    await expectTabLabels(mainWindow, labels)
 
     // Moving the pointer off the tabs hides the scrollbar.
     await newTabButton.hover()
@@ -335,24 +366,29 @@ describe('Work Tabs', () => {
     // Middle-clicking a tab still closes it while the strip overflows, instead of starting Chromium's middle-click
     // autoscroll on the scrolling strip.
     await getTab(mainWindow, 'Tab 2').click({ button: 'middle' })
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
     await expectSelectedTab(mainWindow, 'Tab 1')
     await expectStripScrollAt(0)
 
     // Closing unselected tabs until the rest fit re-measures the strip without a resize or scroll, so the
     // hovered scrollbar hides.
     await expect(scrollbar).toHaveClass(/\bvisible\b/)
-    await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).click()
-    await mainWindow.getByRole('button', { name: 'Close Tab 4', exact: true }).click()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
+    await getCloseButton(mainWindow, 'Tab 3').click()
+    await getCloseButton(mainWindow, 'Tab 4').click()
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
     await expect(scrollbar).toHaveClass(/\binvisible\b/)
     expect((await readStripScroll()).max).toBe(0)
   })
 
   test('drags a work tab over its neighbours within the strip and saves the new order', async ({ electronApp, testSetup }) => {
-    const { mainWindow } = await testSetup.setupAndStart()
-    for (let index = 0; index < 3; index += 1) await mainWindow.getByTestId('new-tab-button').click()
+    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    await addTabs(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3'])
     await expectSelectedTab(mainWindow, 'Tab 3')
+    await expect.poll(async () => (await readTabState(electronApp)).workTabs.length).toBe(3)
+    /** Saved tab IDs in creation order, which tell the saved tabs apart now that every tab is titled "New Tab". */
+    const createdIds = (await readTabState(electronApp)).workTabs.map((tab) => tab.id)
+    /** Test label of a saved tab, from its creation position. */
+    const getSavedLabel = (tabId: string | null): string => `Tab ${createdIds.indexOf(tabId!) + 1}`
     /** Strip that holds pointer capture while a tab is dragged. */
     const tabStrip = mainWindow.getByRole('tablist', { name: 'Open tabs' })
     /** Left edges of the three tab slots before any drag. */
@@ -360,13 +396,14 @@ describe('Work Tabs', () => {
     /** Width shared by the touching tab slots. */
     const slotWidth = slots[1]! - slots[0]!
     /** Dragged tab wrapper, which carries the drag state. */
-    const draggedTab = mainWindow.getByTestId('work-tab').filter({ has: getTab(mainWindow, 'Tab 1') })
+    const draggedTab = getLabeledTab(mainWindow, 'Tab 1')
     /** Press point on Tab 1's title, clear of its close button. */
     const x = slots[0]! + 40
     /** Vertical centre of the title bar. */
     const y = (await tabStrip.boundingBox())!.height / 2
-    /** Saved work tab titles in display order. */
-    const readSavedTitles = async (): Promise<string[]> => (await readTabState(electronApp)).workTabs.map((tab) => tab.title)
+    /** Saved work tab labels in display order. */
+    const readSavedLabels = async (): Promise<string[]> =>
+      (await readTabState(electronApp)).workTabs.map((tab) => getSavedLabel(tab.id))
 
     // Pressing selects the tab before release, and 3px of movement does not start a drag.
     await mainWindow.mouse.move(x, y)
@@ -384,13 +421,13 @@ describe('Work Tabs', () => {
     // Short of half of its neighbour, the tab slides over the unmoved neighbour on an opaque selected hover fill.
     await mainWindow.mouse.move(x + slotWidth / 2 - 5, y + 100)
     await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth / 2 - 5)
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3'])
     /** Work tab drawn on top where the dragged tab overlaps Tab 2. */
-    const topTabTitle = await mainWindow.evaluate(
-      ([left, top]) => document.elementFromPoint(left!, top!)!.closest('[data-testid="work-tab"]')!.textContent!.trim(),
+    const topTabLabel = await mainWindow.evaluate(
+      ([left, top]) => (document.elementFromPoint(left!, top!)!.closest('[data-testid="work-tab"]') as HTMLElement).dataset.testLabel,
       [slots[1]! + 10, y]
     )
-    expect(topTabTitle).toBe('Tab 1')
+    expect(topTabLabel).toBe('Tab 1')
     /** Selected hover fill and the opaque chrome surface beneath it. */
     const [selectionFill, chromeSurface] = await resolvePaletteColors(mainWindow.locator('body'), [
       '--ui-neutral-selection-surface',
@@ -405,76 +442,87 @@ describe('Work Tabs', () => {
 
     // Covering half of the neighbour snaps it into the dragged tab's old slot without animating.
     await mainWindow.mouse.move(x + slotWidth / 2 + 5, y + 100)
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 1', 'Tab 3'])
+    await expectTabLabels(mainWindow, ['Tab 2', 'Tab 1', 'Tab 3'])
     expect(await tabStrip.evaluate((strip) => strip.getAnimations({ subtree: true }).length)).toBe(0)
     await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth / 2 + 5)
 
     // The tab stops at either end of the strip when the pointer goes past it, and each snap saves during the drag.
     await mainWindow.mouse.move(x + slotWidth * 3, y + 100)
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 3', 'Tab 1'])
+    await expectTabLabels(mainWindow, ['Tab 2', 'Tab 3', 'Tab 1'])
     await expectTabAt(mainWindow, 'Tab 1', slots[2]!)
-    await expect.poll(readSavedTitles).toEqual(['Tab 2', 'Tab 3', 'Tab 1'])
+    await expect.poll(readSavedLabels).toEqual(['Tab 2', 'Tab 3', 'Tab 1'])
     await mainWindow.mouse.move(1, y + 100)
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3'])
     await expectTabAt(mainWindow, 'Tab 1', slots[0]!)
 
     // Releasing lands the tab in its slot, keeps it selected, and saves the order.
     await mainWindow.mouse.move(x + slotWidth + 10, y)
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 1', 'Tab 3'])
+    await expectTabLabels(mainWindow, ['Tab 2', 'Tab 1', 'Tab 3'])
     await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth + 10)
     await mainWindow.mouse.up()
     await expectTabAt(mainWindow, 'Tab 1', slots[1]!)
     await expectSelectedTab(mainWindow, 'Tab 1')
     await expect.poll(async () => {
       const { workTabs, selectedTabId } = await readTabState(electronApp)
-      return { titles: workTabs.map((tab) => tab.title), selected: workTabs.find((tab) => tab.id === selectedTabId)?.title }
-    }).toEqual({ titles: ['Tab 2', 'Tab 1', 'Tab 3'], selected: 'Tab 1' })
+      return { labels: workTabs.map((tab) => getSavedLabel(tab.id)), selected: getSavedLabel(selectedTabId) }
+    }).toEqual({ labels: ['Tab 2', 'Tab 1', 'Tab 3'], selected: 'Tab 1' })
 
     // Pressing an unselected tab's close button and dragging away neither selects, drags, nor closes it.
     /** Close button of the unselected rightmost tab. */
-    const closeBox = (await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).boundingBox())!
+    const closeBox = (await getCloseButton(mainWindow, 'Tab 3').boundingBox())!
     await mainWindow.mouse.move(closeBox.x + closeBox.width / 2, closeBox.y + closeBox.height / 2)
     await mainWindow.mouse.down()
     await mainWindow.mouse.move(x + slotWidth, y)
     await mainWindow.mouse.up()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 2', 'Tab 1', 'Tab 3'])
+    await expectTabLabels(mainWindow, ['Tab 2', 'Tab 1', 'Tab 3'])
     await expectSelectedTab(mainWindow, 'Tab 1')
   })
 
-  test('restores work tabs, their order and icons, and the selected tab after reloading', async ({
+  test('converts restored work tabs to New Tabs and restores their order and the selected tab after reloading', async ({
     electronApp,
     testSetup
   }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
     /** Workspace whose own saved screen the app-wide selected tab overrides. */
-    const workspaceId = createDeterministicId('/ws/sample')
+    const workspacePath = '/ws/sample'
+    const workspaceId = createDeterministicId(workspacePath)
+    // Tabs saved before every tab showed the New Tab screen, with their old titles and screens, restore with the workspace.
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath),
+      workTabs: [
+        { id: 'tab-1', title: 'Tab 1', screen: 'prompt-collection' },
+        { id: 'tab-2', title: 'Tab 2', screen: 'template-collection' },
+        { id: 'tab-3', title: 'Tab 3', screen: 'new-tab' }
+      ],
+      selectedTabId: 'tab-2'
+    })
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample', autoSetup: false } })
     const homeButton = mainWindow.getByTestId('nav-button-home')
-    /** Icons inside the tab bodies, excluding each tab's close glyph. */
-    const tabIcons = getTabs(mainWindow).locator('svg')
     /** Reloads the renderer and waits for the app to mount and finish startup restoration. */
     const reload = async (): Promise<void> => {
       await mainWindow.reload()
       await expect(mainWindow.getByTestId('app-activity-bar')).toBeVisible()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
     }
+    /** Asserts the three restored tabs are New Tabs with the second one selected on its New Tab screen. */
+    const expectRestoredTabs = async (): Promise<void> => {
+      await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab', 'New Tab'])
+      await expect(getTabs(mainWindow).locator('svg')).toContainClass(Array(3).fill('lucide-layout-grid'))
+      await expect(getTabs(mainWindow).nth(1)).toHaveAttribute('aria-selected', 'true')
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab', { selected: true })).toHaveCount(1)
+      await expect(homeButton).not.toHaveAttribute('aria-current', 'page')
+      await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    }
+    /** Converted tabs saved in their original order. */
+    const convertedTabs = ['tab-1', 'tab-2', 'tab-3'].map((id) => ({ id, title: 'New Tab', screen: 'new-tab' }))
 
-    for (let index = 0; index < 3; index += 1) await mainWindow.getByTestId('new-tab-button').click()
-    await getTab(mainWindow, 'Tab 2').click()
-    await expect.poll(async () => {
-      const { workTabs, selectedTabId } = await readTabState(electronApp)
-      return { titles: workTabs.map((tab) => tab.title), selected: workTabs.find((tab) => tab.id === selectedTabId)?.title }
-    }).toEqual({ titles: ['Tab 1', 'Tab 2', 'Tab 3'], selected: 'Tab 2' })
-    /** Icons rendered from the persisted screens, which must survive the reload unchanged. */
-    const iconClasses = (await readTabState(electronApp)).workTabs.map((tab) => WORK_TAB_ICON_CLASSES[tab.screen])
-    await expect(tabIcons).toContainClass(iconClasses)
+    // Restored tabs become New Tabs, keeping their order and selection, and are saved that way.
+    await expectRestoredTabs()
+    await expect.poll(() => readTabState(electronApp)).toEqual({ workTabs: convertedTabs, selectedTabId: 'tab-2' })
 
-    // A selected work tab restores with its order, icons, and the Home screen.
+    // A selected work tab restores with its order and its New Tab screen.
     await reload()
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2', 'Tab 3'])
-    await expect(tabIcons).toContainClass(iconClasses)
-    await expectSelectedTab(mainWindow, 'Tab 2')
-    await expect(homeButton).not.toHaveAttribute('aria-current', 'page')
-    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await expectRestoredTabs()
+    expect(await readTabState(electronApp)).toEqual({ workTabs: convertedTabs, selectedTabId: 'tab-2' })
 
     // A selected screen button restores even when the workspace's own saved screen differs.
     await testHelpers.navigateToSettingsScreen()
@@ -494,7 +542,7 @@ describe('Work Tabs', () => {
     await expectNoSelectedTab(mainWindow)
 
     // A selected project saves no tab, so the workspace's project screen restores with no tab selected.
-    await mainWindow.getByRole('button', { name: 'Close Tab 3', exact: true }).click()
+    await mainWindow.getByTestId('work-tab-close').nth(2).click()
     await mainWindow.getByTestId('nav-button-project').click()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Development Tools')
     await expect.poll(async () => (await readTabState(electronApp)).selectedTabId).toBeNull()
@@ -504,6 +552,80 @@ describe('Work Tabs', () => {
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Development Tools')
     await expect(homeButton).not.toHaveAttribute('aria-current', 'page')
     await expectNoSelectedTab(mainWindow)
-    await expect(getTabs(mainWindow)).toHaveText(['Tab 1', 'Tab 2'])
+    await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab'])
+    expect((await readTabState(electronApp)).workTabs.map((tab) => tab.id)).toEqual(['tab-1', 'tab-2'])
+
+    // Selecting a tab saves the workspace's own screen as Home, since the app-wide selected tab restores the tab.
+    await getTabs(mainWindow).first().click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe('home')
+  })
+
+  test('adds tabs only while a workspace is open and closes every tab when the workspace closes or changes', async ({
+    electronApp,
+    testSetup
+  }) => {
+    /** Second workspace, opened from Home and then replaced by a double-clicked file while a New Tab is shown. */
+    const otherPath = '/ws/other'
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'minimal', autoSetup: false, additionalFilesystem: setupWorkspaceScenario(otherPath, 'minimal') }
+    })
+    const newTabButton = mainWindow.getByTestId('new-tab-button')
+    /** Home's path of the open workspace. */
+    const workspacePath = mainWindow.getByTestId('workspace-ready-path')
+
+    // New Tab is disabled until a workspace opens.
+    await expect(newTabButton).toBeDisabled()
+    await testHelpers.setupWorkspaceViaUI()
+    await expect(newTabButton).toBeEnabled()
+    await addTabs(mainWindow, ['Tab 1', 'Tab 2'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2'])
+
+    // Closing the workspace from Home closes every tab and disables New Tab again.
+    await testHelpers.navigateToHomeScreen()
+    await testHelpers.clearWorkspaceViaUI()
+    await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
+    await expect(newTabButton).toBeDisabled()
+    await expect.poll(async () => (await readTabState(electronApp)).workTabs).toEqual([])
+
+    // Opening another workspace from Home closes every tab.
+    await testSetup.setupFileDialog([getWorkspaceInfoPath('/ws/minimal')])
+    await testHelpers.setupWorkspaceViaUI()
+    await addTabs(mainWindow, ['Tab 3', 'Tab 4'])
+    await testHelpers.navigateToHomeScreen()
+    await testSetup.setupFileDialog([getWorkspaceInfoPath(otherPath)])
+    await mainWindow.getByTestId('open-workspace-button').click()
+    await expect(workspacePath).toContainText('other')
+    await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
+    await expect(newTabButton).toBeEnabled()
+
+    // Opening a double-clicked workspace file while a New Tab is shown closes every tab and shows that workspace.
+    await addTabs(mainWindow, ['Tab 5', 'Tab 6'])
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await openWorkspaceFile(electronApp, getWorkspaceInfoPath('/ws/minimal'))
+    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await expect(workspacePath).toContainText('minimal')
+    await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
+    await expect(newTabButton).toBeEnabled()
+    await expect.poll(() => readTabState(electronApp)).toEqual({ workTabs: [], selectedTabId: 'home' })
+  })
+
+  test('closes restored work tabs when startup cannot reopen their workspace', async ({ electronApp, testSetup }) => {
+    await seedUserPersistence(electronApp, {
+      lastWorkspaceInfoPath: getWorkspaceInfoPath('/ws/missing'),
+      workTabs: [{ id: 'tab-1', title: 'New Tab', screen: 'new-tab' }],
+      selectedTabId: 'tab-1'
+    })
+    const { mainWindow } = await testSetup.setupAndStart()
+
+    // The missing workspace leaves Home selected with no tabs and New Tab disabled.
+    await expect(mainWindow.getByTestId('nav-button-home')).toHaveAttribute('aria-current', 'page')
+    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
+    await expect(mainWindow.getByTestId('new-tab-button')).toBeDisabled()
+    await expect.poll(() => readTabState(electronApp)).toEqual({ workTabs: [], selectedTabId: 'home' })
+    testSetup.removeRendererErrorsContaining('Failed to restore last workspace')
+    testSetup.removeRendererErrorsContaining('IPC invocation error')
+    testSetup.removeRendererErrorsContaining('missing.cthulhuprompt')
   })
 })

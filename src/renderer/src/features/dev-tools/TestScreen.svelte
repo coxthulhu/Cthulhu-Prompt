@@ -14,6 +14,7 @@
     FileText,
     Folder,
     Folders,
+    Layers,
     ListTodo,
     Loader,
     MoreHorizontal,
@@ -46,6 +47,8 @@
   import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
   import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
   import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
+  import DraggableTitle from '@renderer/common/cthulhu-ui/layout/DraggableTitle.svelte'
+  import OpenIndicator from '@renderer/common/cthulhu-ui/layout/OpenIndicator.svelte'
   import DisplayRow from '@renderer/common/cthulhu-ui/layout/DisplayRow.svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
   import Popup from '@renderer/common/cthulhu-ui/dialogs/Popup.svelte'
@@ -768,6 +771,34 @@
                   }}
                 />
               </div>
+
+              <div class="component-sample">
+                {@render componentLabel('SelectorButton: tile, and tile with openInTab')}
+                <div class="component-sample-grid">
+                  <SelectorButton
+                    variant="tile"
+                    icon={FileText}
+                    text="Bug Triage"
+                    detailParts={['14 prompts', 'Today']}
+                    showChevron={false}
+                    testId="test-screen-tile-selector"
+                  />
+                  <SelectorButton
+                    variant="tile"
+                    icon={Layers}
+                    text="Code Review"
+                    detailParts={['6 templates', 'Yesterday']}
+                    showChevron={false}
+                    openInTab
+                    testId="test-screen-open-tile-selector"
+                  />
+                </div>
+              </div>
+
+              <div class="component-sample">
+                {@render componentLabel('OpenIndicator')}
+                <OpenIndicator />
+              </div>
             </div>
           </div>
         </CardSurface>
@@ -785,6 +816,14 @@
                   bind:value={workspaceNameValue}
                   aria-label="Workspace name sample"
                   placeholder="Workspace name"
+                />
+              </div>
+              <div class="component-sample">
+                {@render componentLabel('TextInput: icon')}
+                <TextInput
+                  icon={Search}
+                  aria-label="Search sample"
+                  placeholder="Search projects and collections"
                 />
               </div>
               <div class="component-sample">
@@ -920,13 +959,16 @@
       <div class="component-section">
         <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('Title', 'Page, small, card, and dialog title variants.')}
+            {@render componentTitle('Title', 'Page, small, card, and dialog title variants, and the draggable title.')}
 
             <div class="stack">
               <Title title="Title: Page title" />
               <Title title="Title: Small title" variant="small" />
               <Title title="Title: Card title" variant="card" />
               <Title title="Title: Dialog title" variant="dialog" />
+              <div class="variant-controls">
+                <DraggableTitle title="DraggableTitle: Dialog title" />
+              </div>
             </div>
           </div>
         </CardSurface>

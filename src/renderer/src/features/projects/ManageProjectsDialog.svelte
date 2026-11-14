@@ -120,8 +120,8 @@
     return id
   }
 
-  /** Opens the dialog to one project, or to a new draft that is opened after saving. */
-  export const openDialog = (options: { projectId?: string; createProject?: boolean }): void => {
+  /** Opens the dialog to one project, or to a new draft that is opened after saving when openCreatedProject is set. */
+  export const openDialog = (options: { projectId?: string; createProject?: boolean; openCreatedProject?: boolean }): void => {
     if (!workspace) return
     drafts = workspace.projects.map(createDraft)
     originalProjectsJson = JSON.stringify(drafts.map(toProjectInfo))
@@ -129,7 +129,9 @@
     submissionError = null
     selectedId = options.projectId ?? drafts[0]?.id ?? null
     isDialogOpen = true
-    navigateToProjectId = options.createProject ? addDraft() : null
+    /** Draft appended and selected for a New Project button. */
+    const createdDraftId = options.createProject ? addDraft() : null
+    navigateToProjectId = options.openCreatedProject ? createdDraftId : null
   }
 
   /** Clears every unsaved project draft when the dialog closes. */
