@@ -70,7 +70,8 @@ const moveMouseToBoxCenter = async (page: Page, box: ElementBox): Promise<void> 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
 }
 
-const beginDragFromLocator = async (
+/** Presses the center of a source and moves past the production drag threshold. */
+export const beginDragFromLocator = async (
   page: Page,
   locator: Locator,
   errorMessage: string

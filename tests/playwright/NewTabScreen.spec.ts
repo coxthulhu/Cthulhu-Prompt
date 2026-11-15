@@ -6,8 +6,10 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
+import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { promptCollectionSelectorTriggerSelector } from '../helpers/PromptCollectionSelectors'
-import { seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
+import { beginDragFromLocator, dragGhostSelector, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
+import { readWorkspaceState, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -84,13 +86,18 @@ const expectSectionNames = async (page: Page, names: string[]): Promise<void> =>
 /** Manage Projects dialog opened from the New Tab screen. */
 const projectDialog = (page: Page) => page.getByRole('dialog', { name: 'Manage Projects' })
 
-/** Opens the two-project workspace, with Harbor API first and a reordered default project, on a New Tab. */
-const openNewTab = async (electronApp: ElectronApplication, testSetup: TestSetup): Promise<Page> => {
+/** Opens the two-project workspace, with Harbor API first and a reordered default project, on a New Tab; extra files
+ *  add projects after those two. */
+const openNewTab = async (
+  electronApp: ElectronApplication,
+  testSetup: TestSetup,
+  extraFiles: Record<string, string | null> = {}
+): Promise<Page> => {
   await seedWorkspaceState(electronApp, workspaceId, 'project-order', null, { ids: [harborProjectId, defaultProjectId] })
   await seedWorkspaceState(electronApp, workspaceId, 'collection-order', defaultProjectId, {
     entries: ['code-review', 'feature-work', 'bug-triage'].map((id) => ({ kind: 'collection', id }))
   })
-  await testSetup.setupFilesystem(workspaceFiles)
+  await testSetup.setupFilesystem({ ...workspaceFiles, ...extraFiles })
   await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
   const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await testHelpers.setupWorkspaceViaUI()
@@ -98,6 +105,42 @@ const openNewTab = async (electronApp: ElectronApplication, testSetup: TestSetup
   await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
   return mainWindow
 }
+
+/** Third project, appended after the seeded two, whose middle collection is hidden by a "release" search. */
+const lanternProjectId = 'lantern'
+/** Lantern Mobile's files and its three task collections. */
+const lanternFiles = {
+  ...moveToProject(createWorkspaceWithCollections(workspacePath, [
+    { folderName: 'ReleaseChecklist', displayName: 'Release Checklist', promptCollectionId: 'release-checklist' },
+    { folderName: 'OfflineSync', displayName: 'Offline Sync', promptCollectionId: 'offline-sync' },
+    { folderName: 'ReleaseBuilds', displayName: 'Release Builds', promptCollectionId: 'release-builds' }
+  ]), 'LanternMobile'),
+  [`${workspacePath}/LanternMobile/ProjectInfo.json`]: JSON.stringify({ id: lanternProjectId, name: 'Lantern Mobile', abbreviation: 'LM' })
+}
+
+/** Starts a real pointer drag on a project title or collection tile once earlier reorder animations have settled. */
+const beginPointerDrag = async (page: Page, testId: string): Promise<void> => {
+  // Measured boxes include flip transforms, so a source still sliding from the previous drop would be missed.
+  await expect.poll(() => page.getByTestId('new-tab-screen').evaluate((screen) => screen.getAnimations({ subtree: true }).length))
+    .toBe(0)
+  await beginDragFromLocator(page, page.getByTestId(testId), `Missing drag geometry for ${testId}`)
+}
+
+/** Moves an active drag below the last project section at the screen's left edge, outside the centered content column. */
+const moveActiveDragBelowProjects = async (page: Page): Promise<void> => {
+  const screenBox = (await page.getByTestId('new-tab-screen').boundingBox())!
+  const lastSectionBox = (await getSections(page).last().boundingBox())!
+  await page.mouse.move(screenBox.x + 4, lastSectionBox.y + lastSectionBox.height + 10, { steps: 12 })
+}
+
+/** Reads one project's saved collection order as collection IDs. */
+const readCollectionOrder = async (electronApp: ElectronApplication, projectId: string): Promise<string[] | undefined> =>
+  (await readWorkspaceState<{ entries: { id: string }[] }>(electronApp, workspaceId, 'collection-order', projectId))
+    ?.entries.map((entry) => entry.id)
+
+/** Reads the saved project order. */
+const readProjectOrder = async (electronApp: ElectronApplication): Promise<string[] | undefined> =>
+  (await readWorkspaceState<{ ids: string[] }>(electronApp, workspaceId, 'project-order', null))?.ids
 
 describe('New Tab Screen', () => {
   test('lists projects in activity bar order with their collections in Show All order', async ({ electronApp, testSetup }) => {
@@ -232,5 +275,127 @@ describe('New Tab Screen', () => {
     await expect(harborTiles.filter({ hasText: 'Bug Triage' }).locator('svg.lucide-file-text')).toHaveCount(1)
     await expect(harborTiles.filter({ hasText: 'Changelog' }).locator('svg.lucide-layers')).toHaveCount(1)
     await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(3)
+  })
+
+  test('reorders projects by dragging their titles, following only the pointer\'s height', async ({ electronApp, testSetup }) => {
+    const mainWindow = await openNewTab(electronApp, testSetup)
+    /** Default Project's drag handle. */
+    const defaultTitle = mainWindow.getByTestId(`new-tab-project-title-${defaultProjectId}`)
+
+    // Dragging a project's title previews the new order live with the dragged-row fill and border and no ghost.
+    await beginPointerDrag(mainWindow, `new-tab-project-title-${defaultProjectId}`)
+    await expect(defaultTitle).toHaveAttribute('data-dragging', 'true')
+    await expect(defaultTitle).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
+    await expect(defaultTitle).toHaveCSS('box-shadow',
+      `${await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border')} 0px 0px 0px 1px inset`)
+    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
+    await moveActiveDragToTarget(mainWindow, `[data-testid="new-tab-project-title-${harborProjectId}"]`)
+    await expectSectionNames(mainWindow, ['Default Project', 'Harbor API'])
+    expect(await readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId])
+
+    // The drop saves the order the activity bar shows.
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readProjectOrder(electronApp)).toEqual([defaultProjectId, harborProjectId])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'HA'])
+    await expect(defaultTitle).toHaveAttribute('data-dragging', 'false')
+
+    // Only the pointer's height matters: below every section is last even at the screen's left edge, outside the
+    // content column, and above them, over the search bar, is first. Dropping outside the list saves the last slot.
+    await beginPointerDrag(mainWindow, `new-tab-project-title-${defaultProjectId}`)
+    await moveActiveDragBelowProjects(mainWindow)
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
+    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-search-input"]')
+    await expectSectionNames(mainWindow, ['Default Project', 'Harbor API'])
+    await moveActiveDragBelowProjects(mainWindow)
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['HA', 'DE'])
+  })
+
+  test('reorders collections by dragging their tiles within their own project', async ({ electronApp, testSetup }) => {
+    const mainWindow = await openNewTab(electronApp, testSetup)
+    /** Bug Triage, the default project's last tile. */
+    const bugTriageTile = mainWindow.getByTestId('new-tab-collection-bug-triage')
+
+    // Dragging a tile previews the new order live with the Show All dropdown's dragged-row fill and border and no ghost.
+    await beginPointerDrag(mainWindow, 'new-tab-collection-bug-triage')
+    await expect(bugTriageTile).toHaveAttribute('data-row-state', 'dragging')
+    await expect(bugTriageTile).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
+    await expect(bugTriageTile).toHaveCSS('border-top-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border'))
+    await expect(mainWindow.getByTestId('new-tab-collection-code-review')).toHaveAttribute('data-row-state', 'drag-idle')
+    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
+    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-code-review"]')
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+
+    // Leaving the project, even onto another project's tile, keeps the tile in its last slot within its own project.
+    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-endpoint-tests"]')
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
+    expect(await readCollectionOrder(electronApp, defaultProjectId)).toEqual(['code-review', 'feature-work', 'bug-triage'])
+
+    // Dropping outside the project saves that slot without opening either collection.
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCollectionOrder(electronApp, defaultProjectId)).toEqual(['bug-triage', 'code-review', 'feature-work'])
+    await expect(bugTriageTile).toHaveAttribute('data-row-state', 'idle')
+    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['New Tab'])
+
+    // The default project's Show All dropdown shares the saved order.
+    await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
+    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await expect(mainWindow.locator('[data-dropdown-section="all"] [role="menuitem"]'))
+      .toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+  })
+
+  test('reorders filtered projects and collections right after the visible item before them', async ({ electronApp, testSetup }) => {
+    await seedWorkspaceState(electronApp, workspaceId, 'collection-order', lanternProjectId, {
+      entries: ['release-checklist', 'offline-sync', 'release-builds'].map((id) => ({ kind: 'collection', id }))
+    })
+    const mainWindow = await openNewTab(electronApp, testSetup, lanternFiles)
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
+
+    // The search hides Default Project between the other two, and Offline Sync between Lantern Mobile's release tiles.
+    await mainWindow.getByTestId('new-tab-search-input').fill('release')
+    await expectSectionNames(mainWindow, ['Harbor API', 'Lantern Mobile'])
+    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Release Builds/])
+
+    // Dragging Harbor API after Lantern Mobile saves it right after Lantern Mobile, which leaves the hidden Default
+    // Project ahead of both rather than keeping Harbor API at its old position.
+    await beginPointerDrag(mainWindow, `new-tab-project-title-${harborProjectId}`)
+    await moveActiveDragBelowProjects(mainWindow)
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readProjectOrder(electronApp)).toEqual([defaultProjectId, lanternProjectId, harborProjectId])
+    await expectSectionNames(mainWindow, ['Lantern Mobile', 'Harbor API'])
+
+    // Dragging it back to the start of the visible projects saves it first, ahead of the hidden Default Project.
+    await beginPointerDrag(mainWindow, `new-tab-project-title-${harborProjectId}`)
+    await moveActiveDragToTarget(mainWindow, `[data-testid="new-tab-project-title-${lanternProjectId}"]`)
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId, lanternProjectId])
+    await expectSectionNames(mainWindow, ['Harbor API', 'Lantern Mobile'])
+
+    // Dragging Release Checklist after Release Builds saves it right after Release Builds, which leaves the hidden
+    // Offline Sync ahead of both.
+    await beginPointerDrag(mainWindow, 'new-tab-collection-release-checklist')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-release-builds"]')
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
+      .toEqual(['offline-sync', 'release-builds', 'release-checklist'])
+    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Builds/, /Release Checklist/])
+
+    // Dragging it back to the start of the visible tiles saves it first, ahead of the hidden Offline Sync.
+    await beginPointerDrag(mainWindow, 'new-tab-collection-release-checklist')
+    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-release-builds"]')
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
+      .toEqual(['release-checklist', 'offline-sync', 'release-builds'])
+
+    // Clearing the search shows the hidden items where the saved orders put them.
+    await mainWindow.getByTestId('new-tab-search-input').fill('')
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
+    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Offline Sync/, /Release Builds/])
+    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['HA', 'DE', 'LM'])
   })
 })

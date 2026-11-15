@@ -38,3 +38,17 @@ export const saveProjects = async (workspaceId: string, projects: ProjectInfo[],
   if (navigateToProjectId) projectNavigation.request({ workspaceId, projectId: navigateToProjectId })
   else if (deletesSelectedProject) projectNavigation.request({ workspaceId, projectId: null })
 }
+
+/** Moves one project right after another, or first when previousProjectId is null, keeping the others' order. */
+export const moveProject = async (workspaceId: string, projectId: string, previousProjectId: string | null): Promise<void> => {
+  /** Saved projects in their current order. */
+  const projects = workspaceCollection.get(workspaceId)!.projects
+  /** Every other project, with the moved one inserted after its new predecessor below. */
+  const nextProjects = projects.filter((project) => project.id !== projectId)
+  nextProjects.splice(
+    nextProjects.findIndex((project) => project.id === previousProjectId) + 1,
+    0,
+    projects.find((project) => project.id === projectId)!
+  )
+  await saveProjects(workspaceId, nextProjects)
+}

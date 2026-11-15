@@ -405,7 +405,8 @@
   }
 
   /* Tiles sit on a raised, bordered surface that brightens with its icon on hover and focus; these rules follow the
-     shared row rules so they win their specificity ties. */
+     shared row rules so they win their specificity ties. Accent tiles take the accent dragged-row fill and border,
+     whose rules are more specific, and their icon brightens while dragged. */
   .cthulhuUiSelectorButton[data-variant='tile'] {
     background-color: var(--ui-neutral-normal-surface);
     border: 1px solid var(--ui-neutral-muted-border);
@@ -420,7 +421,11 @@
     color: var(--ui-secondary-icon-glyph);
   }
 
-  .cthulhuUiSelectorButton[data-variant='tile']:where(:not(:disabled):hover, :not(:disabled):focus-visible)
+  .cthulhuUiSelectorButton[data-variant='tile']:where(
+      :not(:disabled):hover,
+      :not(:disabled):focus-visible,
+      [data-row-state='dragging']
+    )
     :global(.cthulhuUiSelectorButtonIconCell) {
     color: var(--ui-hoverable-icon-glyph);
   }

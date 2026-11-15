@@ -13,7 +13,7 @@
     projects,
     selectedProjectId,
     onProjectSelect,
-    onProjectsReorder,
+    onProjectMove,
     onCreateProject,
     isAppSidebarExpanded,
     isWorkspaceReady = false
@@ -24,8 +24,8 @@
     selectedProjectId: string | null
     /** Opens a project; the already-active project stays as it is. */
     onProjectSelect: (projectId: string) => void
-    /** Saves a dragged project order; the preview stays until the save settles. */
-    onProjectsReorder: (projectIds: string[]) => Promise<void>
+    /** Saves a dragged project right after another, or first without one; the preview stays until the save settles. */
+    onProjectMove: (projectId: string, previousProjectId: string | null) => Promise<void>
     /** Opens project management to a new project draft. */
     onCreateProject: () => void
     activeScreen: ScreenId
@@ -40,7 +40,7 @@
     dragType: 'activity-bar-project',
     getIds: () => projects.map((project: Project) => project.id),
     getListElement: () => projectListElement,
-    onReorder: (projectIds) => onProjectsReorder(projectIds)
+    onReorder: (_, projectId, previousProjectId) => onProjectMove(projectId, previousProjectId)
   })
 </script>
 

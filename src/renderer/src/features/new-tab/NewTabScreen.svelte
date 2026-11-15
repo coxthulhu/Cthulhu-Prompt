@@ -1,5 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { flip } from 'svelte/animate'
+  import type { Action } from 'svelte/action'
   import { useLiveQuery } from '@tanstack/svelte-db'
   import { FileText, Layers, Move, Plus, Search, Settings2 } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
@@ -10,16 +12,31 @@
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import DraggableTitle from '@renderer/common/cthulhu-ui/layout/DraggableTitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
-  import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
+  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
+  import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
+  import { createListReorder } from '@renderer/common/drag-drop/listReorder.svelte.ts'
+  import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
+  import { moveProject } from '@renderer/data/Mutations/ProjectMutations'
+  import { movePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
   import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
   import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
   import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import CreatePromptCollectionDialog from '@renderer/features/prompt-collections/CreatePromptCollectionDialog.svelte'
   import { getPromptCollectionDetails } from '@renderer/features/prompt-collections/promptCollectionDetails'
+  import NewTabCollectionGrid, { type NewTabCollectionTile } from './NewTabCollectionGrid.svelte'
   import type { Prompt } from '@shared/domain/prompt/Prompt'
   import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
+  import type { Project } from '@shared/domain/workspace/Project'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
+
+  /** One project section, keyed by its project's ID. */
+  type ProjectGroup = {
+    id: string
+    project: Project
+    /** The project's collection tiles in Show All order. */
+    collections: NewTabCollectionTile[]
+  }
 
   let { workspace, openCollectionIds, onOpenCollection, onCreateProject, onEditProject } = $props<{
     /** Open workspace whose projects and collections are listed. */
@@ -63,17 +80,18 @@
   })
 
   /** Projects in activity bar order, each with its collections in Show All order and their tile details. */
-  const projectGroups = $derived.by(() => {
+  const projectGroups = $derived.by((): ProjectGroup[] => {
     const collectionById = new Map(promptCollectionQuery.data.map((collection) => [collection.id, collection]))
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
     const templateById = new Map(promptTemplateQuery.data.map((template) => [template.id, template]))
 
     return workspace.projects.map((project) => ({
+      id: project.id,
       project,
       collections: project.collectionEntries.flatMap((entry) => {
         const collection = collectionById.get(entry.id)
         return collection
-          ? [{ collection, details: getPromptCollectionDetails(collection, promptById, templateById, nowMs) }]
+          ? [{ id: collection.id, collection, details: getPromptCollectionDetails(collection, promptById, templateById, nowMs) }]
           : []
       })
     }))
@@ -91,6 +109,29 @@
       return collections.length > 0 ? [{ ...group, collections }] : []
     })
   )
+
+  /** Project title handle action typed for DraggableTitle's generic button action slot. */
+  const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
+  /** Stationary project section list that owns pointer capture while sections reorder. */
+  let projectListElement = $state<HTMLElement>()
+  /** Live drag reordering of the visible projects, saved right after the visible project before the dropped one. */
+  const projectReorder = createListReorder({
+    dragType: 'new-tab-project',
+    getIds: () => visibleProjectGroups.map((group) => group.id),
+    // Sections differ in height, so the slot counts the other sections whose untransformed middle is above the
+    // pointer; equal-height slots would flip a short section back and forth over a tall one. Only the pointer's
+    // vertical position matters: above the list is first and below it is last.
+    getTargetIndex: (_, clientY) => {
+      /** Top of the list, the origin of its sections' offsets. */
+      const listTop = projectListElement!.getBoundingClientRect().top
+      return ([...projectListElement!.children] as HTMLElement[]).filter((section) =>
+        section.dataset.projectId !== projectReorder.draggedId &&
+        listTop + section.offsetTop + section.offsetHeight / 2 < clientY
+      ).length
+    },
+    onReorder: (_, projectId, previousProjectId) =>
+      runIpcBestEffort(() => moveProject(workspace.id, projectId, previousProjectId))
+  })
 
   /** Opens collection creation for one project and kind. */
   const openCreateCollectionDialog = (projectId: string, kind: PromptCollectionKind): void => {
@@ -135,72 +176,76 @@
       Drag to reorder projects and collections
     </p>
 
-    {#each visibleProjectGroups as { project, collections } (project.id)}
-      <section class="mt-[22px]" aria-label={project.name} data-testid={`new-tab-project-${project.id}`}>
-        <!-- The row's 18px font matches the dialog title, so the text-baseline edit button centers on the title's capitals. -->
-        <div class="mb-2 flex h-10 items-center gap-1 text-lg leading-7">
-          <div class="flex min-w-0 items-baseline">
-            <!-- The -9px margin keeps the grip glyph 5px outside the content edge inside its 26px cell. Dragging does
-                 nothing until projects can be reordered here. -->
-            <DraggableTitle
-              title={project.name}
-              class="-ml-[9px]"
-              testId={`new-tab-project-title-${project.id}`}
-            />
-            <!-- The 28px compact button matches the title's 28px line. -->
-            <IconButton
-              icon={Settings2}
-              label="Edit Project"
-              title="Edit Project"
-              size="compact"
-              baseVariant="muted"
-              hoverVariant="glyph"
-              textBaseline
-              testId={`new-tab-edit-project-${project.id}`}
-              onclick={() => onEditProject(project.id)}
-            />
-          </div>
-          <DropdownPopupSimple
-            label="New Collection"
-            items={createCollectionItems}
-            menuWidth="260px"
-            placement="below-trigger"
-            menuAlignment="right"
-            testId="new-tab-new-collection-menu"
-            onselect={(item) => openCreateCollectionDialog(project.id, item.id as PromptCollectionKind)}
-          >
-            {#snippet trigger(dropdown)}
-              <Button
-                icon={Plus}
-                text="New Collection"
-                appearance="outline"
-                class="ml-auto"
-                buttonAction={dropdown.triggerAction}
-                aria-haspopup={dropdown.ariaHaspopup}
-                aria-expanded={dropdown.ariaExpanded}
-                testId={`new-tab-new-collection-${project.id}`}
-                onclick={dropdown.toggle}
+    <!-- Sections only slide while a drag previews a reorder; other changes apply instantly. -->
+    <div bind:this={projectListElement} class="relative" data-pointer-drag-owner>
+      {#each projectReorder.sort(visibleProjectGroups) as { project, collections } (project.id)}
+        <section
+          class="mt-[22px]"
+          aria-label={project.name}
+          data-project-id={project.id}
+          data-testid={`new-tab-project-${project.id}`}
+          animate:flip={{ duration: projectReorder.draggedId ? uiAnimationDurationMs.standard : 0 }}
+        >
+          <!-- The row's 18px font matches the dialog title, so the text-baseline edit button centers on the title's capitals. -->
+          <div class="mb-2 flex h-10 items-center gap-1 text-lg leading-7">
+            <div class="flex min-w-0 items-baseline">
+              <!-- The -9px margin keeps the grip glyph 5px outside the content edge inside its 26px cell. -->
+              <DraggableTitle
+                title={project.name}
+                class="-ml-[9px]"
+                dragging={projectReorder.draggedId === project.id}
+                buttonAction={draggableButtonAction}
+                buttonActionParameter={projectReorder.getDraggableOptions(project.id)}
+                testId={`new-tab-project-title-${project.id}`}
               />
-            {/snippet}
-          </DropdownPopupSimple>
-        </div>
+              <!-- The 28px compact button matches the title's 28px line. -->
+              <IconButton
+                icon={Settings2}
+                label="Edit Project"
+                title="Edit Project"
+                size="compact"
+                baseVariant="muted"
+                hoverVariant="glyph"
+                textBaseline
+                testId={`new-tab-edit-project-${project.id}`}
+                onclick={() => onEditProject(project.id)}
+              />
+            </div>
+            <DropdownPopupSimple
+              label="New Collection"
+              items={createCollectionItems}
+              menuWidth="260px"
+              placement="below-trigger"
+              menuAlignment="right"
+              testId="new-tab-new-collection-menu"
+              onselect={(item) => openCreateCollectionDialog(project.id, item.id as PromptCollectionKind)}
+            >
+              {#snippet trigger(dropdown)}
+                <Button
+                  icon={Plus}
+                  text="New Collection"
+                  appearance="outline"
+                  class="ml-auto"
+                  buttonAction={dropdown.triggerAction}
+                  aria-haspopup={dropdown.ariaHaspopup}
+                  aria-expanded={dropdown.ariaExpanded}
+                  testId={`new-tab-new-collection-${project.id}`}
+                  onclick={dropdown.toggle}
+                />
+              {/snippet}
+            </DropdownPopupSimple>
+          </div>
 
-        <div class="grid grid-cols-3 gap-2">
-          {#each collections as { collection, details } (collection.id)}
-            <SelectorButton
-              variant="tile"
-              icon={collection.kind === 'template' ? Layers : FileText}
-              text={collection.displayName}
-              detailParts={details.modifiedText ? [details.countText, details.modifiedText] : [details.countText]}
-              showChevron={false}
-              openInTab={openCollectionIds.includes(collection.id)}
-              testId={`new-tab-collection-${collection.id}`}
-              onclick={() => onOpenCollection(collection.id)}
-            />
-          {/each}
-        </div>
-      </section>
-    {/each}
+          <NewTabCollectionGrid
+            {collections}
+            {openCollectionIds}
+            {onOpenCollection}
+            onMoveCollection={(collectionId, previousCollectionId) =>
+              runIpcBestEffort(() => movePromptCollection(workspace.id, collectionId, previousCollectionId))}
+          />
+        </section>
+      {/each}
+    </div>
 
     {#if normalizedQuery && visibleProjectGroups.length === 0}
       <p class="newTabNoResults mt-[22px] text-sm leading-5" data-testid="new-tab-no-results">
