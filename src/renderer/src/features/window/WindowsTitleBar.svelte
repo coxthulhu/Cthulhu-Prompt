@@ -84,6 +84,11 @@
   let tabScrollRevealVersion = $state(0)
   /** Whether the pointer is over the tab strip, which shows its scrollbar. */
   let isTabStripHovered = $state(false)
+  /** Strip width held after a mouse close so the next close button lands under the pointer, or null while the tabs
+      fill the row. */
+  let heldStripWidth = $state<number | null>(null)
+  /** Whether a tab is pressed, from pointer down through release, which keeps any held strip width. */
+  let isTabPressed = false
 
   /** Copies the tab strip's scroll position and extents into state. */
   const syncTabScroll = (): void => {
@@ -102,6 +107,7 @@
   /** Selects a work tab on a left press, then drags it along the strip once the pointer moves far enough. */
   const handleTabPointerDown = (event: PointerEvent, tabId: string): void => {
     if (event.button !== 0) return
+    isTabPressed = true
     onSelectWorkTab(tabId)
     /** Shared width of the touching tab slots. */
     const slotWidth = (event.currentTarget as HTMLElement).getBoundingClientRect().width
@@ -134,8 +140,20 @@
       },
       onFinish: () => {
         draggedTab = null
+        isTabPressed = false
       }
     })
+  }
+
+  /** Closes a work tab; mouse closes hold the strip's width so the next close button lands under the pointer. */
+  const closeTab = (event: MouseEvent, tabId: string): void => {
+    if ((event as PointerEvent).pointerType === 'mouse') {
+      /** Width shared by every tab slot. */
+      const tabWidth = (event.currentTarget as HTMLElement).closest('.titlebar__tab')!.getBoundingClientRect().width
+      // Closing the rightmost tab keeps the strip's right edge, so the remaining tabs widen under the pointer.
+      heldStripWidth = tabWidth * (workTabs.at(-1)!.id === tabId ? workTabs.length : workTabs.length - 1)
+    }
+    onCloseWorkTab(tabId)
   }
 
   const handleMinimize = () => {
@@ -192,6 +210,27 @@
     const observer = new ResizeObserver(syncTabScroll)
     observer.observe(tabStripElement!)
     return () => observer.disconnect()
+  })
+
+  // Side effect: while a strip width is held, read the OS cursor through the main process every 5ms, since the renderer
+  // gets no pointer events once the cursor reaches the title bar's drag region or leaves the window, and release the
+  // width once the cursor is off the tabs and no tab is pressed.
+  $effect(() => {
+    if (heldStripWidth === null) return
+    let isPolling = true
+    void (async () => {
+      while (isPolling) {
+        await new Promise((resolve) => window.setTimeout(resolve, 5))
+        /** OS cursor position in the window, or null while it is outside the window. */
+        const point = await windowControls.getCursorPoint()
+        if (!isTabPressed && !(point && document.elementFromPoint(point.x, point.y)?.closest('.titlebar__tab-viewport'))) {
+          heldStripWidth = null
+        }
+      }
+    })()
+    return () => {
+      isPolling = false
+    }
   })
 
   // Side effect: scroll the selected work tab fully into view whenever the selection changes, such as a new tab added
@@ -267,6 +306,7 @@
         class="titlebar__tabs"
         role="tablist"
         aria-label="Open tabs"
+        style:max-width={heldStripWidth === null ? undefined : `${heldStripWidth}px`}
         onscroll={() => {
           syncTabScroll()
           tabScrollRevealVersion += 1
@@ -284,7 +324,7 @@
             data-testid="work-tab"
             style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
             onauxclick={(event) => {
-              if (event.button === 1) onCloseWorkTab(tab.id)
+              if (event.button === 1) closeTab(event, tab.id)
             }}
           >
             <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
@@ -306,7 +346,7 @@
               aria-label={`Close ${tab.title}`}
               title="Close Tab"
               data-testid="work-tab-close"
-              onclick={() => onCloseWorkTab(tab.id)}
+              onclick={(event) => closeTab(event, tab.id)}
             >
               <X size={14} aria-hidden="true" />
             </button>
@@ -334,7 +374,10 @@
       title="New Tab"
       data-testid="new-tab-button"
       disabled={!canAddWorkTab}
-      onclick={onAddWorkTab}
+      onclick={() => {
+        heldStripWidth = null
+        onAddWorkTab()
+      }}
     >
       <Plus size={20} strokeWidth={1.5} aria-hidden="true" />
     </button>

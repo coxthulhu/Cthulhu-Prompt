@@ -5,6 +5,7 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import { moveOsCursor } from '../helpers/OsCursorHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import {
@@ -151,8 +152,10 @@ describe('Work Tab Collections', () => {
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
   })
 
-  test('selects the work tab already showing a clicked collection, whose tile is marked open', async ({ testSetup }) => {
+  test('selects the work tab already showing a clicked collection, whose tile is marked open', async ({ electronApp, testSetup }) => {
     const { mainWindow } = await startWorkspace(testSetup)
+    // Mouse closes read the OS cursor, which stays outside the window so held tab widths release at once.
+    await moveOsCursor(electronApp, mainWindow, null)
     await openInNewTab(mainWindow, 'long-tasks')
     await mainWindow.getByTestId('new-tab-button').click()
 

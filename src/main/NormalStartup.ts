@@ -107,6 +107,18 @@ function setupWindowControlHandlers(): void {
   ipcMain.handle('window-is-maximized', (event) => {
     return Boolean(withWindow(event)?.isMaximized())
   })
+
+  // The renderer gets no pointer events over the title bar's drag region or outside the window, so it reads the OS
+  // cursor here. The cursor and content bounds are both in DIPs, which match the renderer's unzoomed CSS pixels.
+  ipcMain.handle('window-cursor-point', (event) => {
+    /** Window content rectangle in screen DIPs. */
+    const bounds = withWindow(event)!.getContentBounds()
+    /** OS cursor position in screen DIPs. */
+    const cursor = screen.getCursorScreenPoint()
+    const x = cursor.x - bounds.x
+    const y = cursor.y - bounds.y
+    return x >= 0 && y >= 0 && x < bounds.width && y < bounds.height ? { x, y } : null
+  })
 }
 
 function buildRuntimeConfig(): RuntimeConfig {

@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow } from 'electron'
+import { app, ipcMain, BrowserWindow, screen } from 'electron'
 import { Volume } from 'memfs'
 import { startupNormally } from '../NormalStartup'
 import { getFs, setFs } from '../fs-provider'
@@ -227,6 +227,13 @@ export function setupTestStartupListener(): void {
   setFs(filesystem)
   /** Every Playwright launch replaces release fetching and installer execution before startup. */
   const updateSource = createTestAppUpdater()
+  // Side effect: Playwright cannot move the OS cursor, so reading it fails until a test simulates the cursor with its
+  // own screen.getCursorScreenPoint. The screen module is only usable once the app is ready.
+  void app.whenReady().then(() => {
+    screen.getCursorScreenPoint = () => {
+      throw new Error('Playwright tests must stub screen.getCursorScreenPoint to simulate the OS cursor.')
+    }
+  })
   initializeIpcGatingForE2E()
   // Side effect: allow the persistent logging integration test to opt in without cross-test logs.
   ;(app as any).on('test-initialize-persistent-logging', () => {

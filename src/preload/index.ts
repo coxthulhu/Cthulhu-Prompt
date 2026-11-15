@@ -78,6 +78,8 @@ const windowControls = {
   close: () => electronAPI.ipcRenderer.invoke('window-close'),
   confirmClose: () => electronAPI.ipcRenderer.invoke('window-confirm-close'),
   isMaximized: () => electronAPI.ipcRenderer.invoke('window-is-maximized'),
+  /** Reads the OS cursor's position in the window's content, or null while the cursor is outside the window. */
+  getCursorPoint: () => electronAPI.ipcRenderer.invoke('window-cursor-point'),
   onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
     const listener = (_event: unknown, isMaximized: boolean) => {
       callback(isMaximized)

@@ -9,6 +9,8 @@ interface WindowControls {
   close: () => Promise<void>
   confirmClose: () => Promise<void>
   isMaximized: () => Promise<boolean>
+  /** Reads the OS cursor's position in the window's content, or null while the cursor is outside the window. */
+  getCursorPoint: () => Promise<{ x: number; y: number } | null>
   onMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void
   onCloseRequested: (callback: () => void) => () => void
   onOpenWorkspaceFile: (callback: (workspaceInfoPath: string) => void) => () => void

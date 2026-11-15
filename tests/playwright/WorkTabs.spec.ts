@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import type { ElectronApplication } from 'playwright'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
+import { moveOsCursor, type Point } from '../helpers/OsCursorHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { resolvePaletteColors } from '../helpers/PaletteHelpers'
 import {
@@ -82,6 +83,59 @@ const openWorkspaceFile = async (electronApp: ElectronApplication, workspaceInfo
   await electronApp.evaluate(({ app }, path) => {
     app.emit('second-instance', {}, ['cthulhuprompt.exe', path], 'C:\\')
   }, workspaceInfoPath)
+}
+
+/** Waits until the title bar reads the simulated OS cursor three more times, giving held widths the chance to release. */
+const waitForCursorReads = async (electronApp: ElectronApplication): Promise<void> => {
+  /** Reads how many times the main process has read the simulated cursor. */
+  const readCount = () => electronApp.evaluate(() => (globalThis as { cursorReads?: number }).cursorReads ?? 0)
+  /** Reads counted before waiting. */
+  const start = await readCount()
+  await expect.poll(readCount, { message: 'cursor reads' }).toBeGreaterThanOrEqual(start + 3)
+}
+
+/** Rendered work tab widths in display order. */
+const readTabWidths = (mainWindow: Page): Promise<number[]> =>
+  mainWindow.getByTestId('work-tab').evaluateAll((tabs) => tabs.map((tab) => tab.getBoundingClientRect().width))
+
+/** Asserts every work tab's width is within 1px of the expected width. */
+const expectTabWidths = async (mainWindow: Page, width: number): Promise<void> => {
+  await expect.poll(async () => Math.max(...(await readTabWidths(mainWindow)).map((tabWidth) => Math.abs(tabWidth - width))), {
+    message: 'tab widths'
+  }).toBeLessThanOrEqual(1)
+}
+
+/** Centre of the close button of the work tab with the given test label. */
+const getCloseCenter = async (mainWindow: Page, label: string): Promise<Point> => {
+  /** Close button bounds. */
+  const box = (await getCloseButton(mainWindow, label).boundingBox())!
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
+
+/** Asserts the close button of the work tab with the given test label is centred within 1px of the point. */
+const expectCloseAt = async (mainWindow: Page, label: string, point: Point): Promise<void> => {
+  /** Close button's current centre. */
+  const center = await getCloseCenter(mainWindow, label)
+  expect(Math.max(Math.abs(center.x - point.x), Math.abs(center.y - point.y)), `${label} close position`).toBeLessThanOrEqual(1)
+}
+
+/** Point on the title of the work tab with the given test label, clear of its close button. */
+const getTitlePoint = async (mainWindow: Page, label: string): Promise<Point> => {
+  /** Tab button bounds, which cover the whole tab. */
+  const box = (await getTab(mainWindow, label).boundingBox())!
+  return { x: box.x + 40, y: box.y + box.height / 2 }
+}
+
+/** Opens seven tabs labeled Tab 1 to Tab 7, which shrink to fill the title bar row, and returns the width each of a
+    given number of tabs takes when they fill that row, up to their 222px maximum. */
+const openSevenTabs = async (mainWindow: Page): Promise<(count: number) => number> => {
+  await addTabs(mainWindow, Array.from({ length: 7 }, (_, index) => `Tab ${index + 1}`))
+  await expect(getTabs(mainWindow)).toHaveCount(7)
+  /** Row width the seven shrunken tabs fill. */
+  const rowWidth = (await readTabWidths(mainWindow)).reduce((sum, width) => sum + width, 0)
+  // Five tabs must still shrink, so held widths differ from filled widths down to four tabs.
+  expect(rowWidth / 5).toBeLessThan(221)
+  return (count) => Math.min(222, rowWidth / count)
 }
 
 describe('Work Tabs', () => {
@@ -193,8 +247,10 @@ describe('Work Tabs', () => {
     }
   })
 
-  test('adds New Tabs that show the New Tab screen, selects them, and closes them', async ({ testSetup }) => {
+  test('adds New Tabs that show the New Tab screen, selects them, and closes them', async ({ electronApp, testSetup }) => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    // Mouse closes read the OS cursor, which stays outside the window so held tab widths release at once.
+    await moveOsCursor(electronApp, mainWindow, null)
     /** Title bar Home button, selected only while no work tab is selected. */
     const homeButton = mainWindow.getByTestId('nav-button-home')
 
@@ -260,8 +316,10 @@ describe('Work Tabs', () => {
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
   })
 
-  test('shrinks tabs to their minimum width, then scrolls them with the wheel and a hover-only scrollbar', async ({ testSetup }) => {
+  test('shrinks tabs to their minimum width, then scrolls them with the wheel and a hover-only scrollbar', async ({ electronApp, testSetup }) => {
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    // Mouse closes read the OS cursor, which stays outside the window so held tab widths release at once.
+    await moveOsCursor(electronApp, mainWindow, null)
     const newTabButton = mainWindow.getByTestId('new-tab-button')
     /** Strip that scrolls once its tabs reach their minimum width. */
     const tabStrip = mainWindow.getByRole('tablist', { name: 'Open tabs' })
@@ -371,10 +429,12 @@ describe('Work Tabs', () => {
     await expectStripScrollAt(0)
 
     // Closing unselected tabs until the rest fit re-measures the strip without a resize or scroll, so the
-    // hovered scrollbar hides.
+    // hovered scrollbar hides. Keyboard closes hold no tab widths, which would briefly resize the strip.
     await expect(scrollbar).toHaveClass(/\bvisible\b/)
-    await getCloseButton(mainWindow, 'Tab 3').click()
-    await getCloseButton(mainWindow, 'Tab 4').click()
+    for (const label of ['Tab 3', 'Tab 4']) {
+      await getCloseButton(mainWindow, label).focus()
+      await mainWindow.keyboard.press('Enter')
+    }
     await expectTabLabels(mainWindow, ['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8', 'Tab 9', 'Tab 10'])
     await expect(scrollbar).toHaveClass(/\binvisible\b/)
     expect((await readStripScroll()).max).toBe(0)
@@ -478,6 +538,151 @@ describe('Work Tabs', () => {
     await expectSelectedTab(mainWindow, 'Tab 1')
   })
 
+  test('holds tab widths after mouse closes so repeated clicks close the following tabs until the OS cursor leaves the tabs', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    /** Width each of a given number of tabs takes when they fill the row. */
+    const fillWidth = await openSevenTabs(mainWindow)
+
+    // Left-clicking Tab 2's close button holds the widths while the OS cursor stays over the tabs, which slides Tab 3's
+    // close button under the pointer, where a middle click closes Tab 3 and keeps holding them.
+    /** Pointer and OS cursor position on Tab 2's close button. */
+    const point = await getCloseCenter(mainWindow, 'Tab 2')
+    await moveOsCursor(electronApp, mainWindow, point)
+    await mainWindow.mouse.click(point.x, point.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(7))
+    await expectCloseAt(mainWindow, 'Tab 3', point)
+    await mainWindow.mouse.click(point.x, point.y, { button: 'middle' })
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(7))
+    await expectCloseAt(mainWindow, 'Tab 4', point)
+
+    // Leaving the window above the title bar, where the page gets no pointer events, releases the widths.
+    await moveOsCursor(electronApp, mainWindow, null)
+    await expectTabWidths(mainWindow, fillWidth(5))
+
+    // Moving onto the New Tab button releases widths held by another close.
+    /** Pointer and OS cursor position on Tab 4's close button. */
+    const nextPoint = await getCloseCenter(mainWindow, 'Tab 4')
+    await moveOsCursor(electronApp, mainWindow, nextPoint)
+    await mainWindow.mouse.click(nextPoint.x, nextPoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(5))
+    /** New Tab button bounds beside the held strip. */
+    const newTabBox = (await mainWindow.getByTestId('new-tab-button').boundingBox())!
+    await moveOsCursor(electronApp, mainWindow, { x: newTabBox.x + newTabBox.width / 2, y: newTabBox.y + newTabBox.height / 2 })
+    await expectTabWidths(mainWindow, fillWidth(4))
+  })
+
+  test('widens the remaining tabs under the pointer when mouse closes go right to left', async ({ electronApp, testSetup }) => {
+    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    /** Width each of a given number of tabs takes when they fill the row. */
+    const fillWidth = await openSevenTabs(mainWindow)
+    /** Strip whose held width the tabs fill. */
+    const tabStrip = mainWindow.getByRole('tablist', { name: 'Open tabs' })
+
+    // Closing the rightmost tab widens the rest to fill the row, which lands Tab 6's close button under the pointer.
+    /** Pointer and OS cursor position on the rightmost tab's close button in the full row. */
+    const rightPoint = await getCloseCenter(mainWindow, 'Tab 7')
+    await moveOsCursor(electronApp, mainWindow, rightPoint)
+    await mainWindow.mouse.click(rightPoint.x, rightPoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(6))
+    await expectCloseAt(mainWindow, 'Tab 6', rightPoint)
+    await expect(tabStrip).not.toHaveCSS('max-width', 'none')
+
+    // Closing Tab 2 holds the five remaining tabs' widths, leaving the held strip short of the row.
+    /** Pointer and OS cursor position on Tab 2's close button. */
+    const middlePoint = await getCloseCenter(mainWindow, 'Tab 2')
+    await moveOsCursor(electronApp, mainWindow, middlePoint)
+    await mainWindow.mouse.click(middlePoint.x, middlePoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(6))
+
+    // Closing the rightmost tab keeps the held strip's right edge, so the tabs widen only within it and Tab 5's close
+    // button lands under the pointer.
+    /** Held strip width from Tab 2's close. */
+    const heldWidth = fillWidth(6) * 5
+    /** Pointer and OS cursor position on the rightmost tab's close button in the held strip. */
+    const heldRightPoint = await getCloseCenter(mainWindow, 'Tab 6')
+    await moveOsCursor(electronApp, mainWindow, heldRightPoint)
+    await mainWindow.mouse.click(heldRightPoint.x, heldRightPoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, heldWidth / 4)
+    await expectCloseAt(mainWindow, 'Tab 5', heldRightPoint)
+
+    // Closing Tab 5 widens the last three tabs only to their 222px maximum, which leaves the pointer over the drag
+    // region past the New Tab button, so the widths release.
+    await mainWindow.mouse.click(heldRightPoint.x, heldRightPoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 4'])
+    await expectTabWidths(mainWindow, 222)
+    /** New Tab button bounds after the last three tabs. */
+    const newTabBox = (await mainWindow.getByTestId('new-tab-button').boundingBox())!
+    expect(heldRightPoint.x).toBeGreaterThan(newTabBox.x + newTabBox.width)
+    await expect(tabStrip).toHaveCSS('max-width', 'none')
+  })
+
+  test('keeps held tab widths while a tab is pressed or dragged, and holds none for keyboard closes or after New Tab', async ({
+    electronApp,
+    testSetup
+  }) => {
+    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    /** Width each of a given number of tabs takes when they fill the row. */
+    const fillWidth = await openSevenTabs(mainWindow)
+    /** Wrapper of the pressed tab, which carries the drag state. */
+    const pressedTab = getLabeledTab(mainWindow, 'Tab 3')
+
+    // After closing Tab 2, pressing Tab 3 keeps the held widths while the OS cursor leaves the window, before and after
+    // the drag threshold, and releases them once the drag ends.
+    /** Pointer and OS cursor position on Tab 2's close button. */
+    const closePoint = await getCloseCenter(mainWindow, 'Tab 2')
+    await moveOsCursor(electronApp, mainWindow, closePoint)
+    await mainWindow.mouse.click(closePoint.x, closePoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 4', 'Tab 5', 'Tab 6', 'Tab 7'])
+    /** Press point on Tab 3's title after it slid into Tab 2's slot. */
+    const pressPoint = await getTitlePoint(mainWindow, 'Tab 3')
+    await moveOsCursor(electronApp, mainWindow, pressPoint)
+    await mainWindow.mouse.down()
+    await moveOsCursor(electronApp, mainWindow, null)
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(7))
+    await mainWindow.mouse.move(pressPoint.x + 20, pressPoint.y + 100)
+    await expect(pressedTab).toHaveAttribute('data-dragging', 'true')
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(7))
+    await mainWindow.mouse.up()
+    await expect(pressedTab).toHaveAttribute('data-dragging', 'false')
+    await expectTabWidths(mainWindow, fillWidth(6))
+
+    // Closing a tab from the keyboard holds no widths, even while the OS cursor is over the tabs.
+    await moveOsCursor(electronApp, mainWindow, await getTitlePoint(mainWindow, 'Tab 1'))
+    await getCloseButton(mainWindow, 'Tab 4').focus()
+    await mainWindow.keyboard.press('Enter')
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 3', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await expectTabWidths(mainWindow, fillWidth(5))
+
+    // Clicking New Tab releases held widths even though the OS cursor still reads over the tabs.
+    /** Pointer and OS cursor position on Tab 3's close button. */
+    const nextPoint = await getCloseCenter(mainWindow, 'Tab 3')
+    await moveOsCursor(electronApp, mainWindow, nextPoint)
+    await mainWindow.mouse.click(nextPoint.x, nextPoint.y)
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7'])
+    await waitForCursorReads(electronApp)
+    await expectTabWidths(mainWindow, fillWidth(5))
+    await addTabs(mainWindow, ['Tab 8'])
+    await expectTabLabels(mainWindow, ['Tab 1', 'Tab 5', 'Tab 6', 'Tab 7', 'Tab 8'])
+    await expectTabWidths(mainWindow, fillWidth(5))
+  })
+
   test('converts restored work tabs to New Tabs and restores their order and the selected tab after reloading', async ({
     electronApp,
     testSetup
@@ -496,6 +701,8 @@ describe('Work Tabs', () => {
       selectedTabId: 'tab-2'
     })
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample', autoSetup: false } })
+    // Mouse closes read the OS cursor, which stays outside the window so held tab widths release at once.
+    await moveOsCursor(electronApp, mainWindow, null)
     const homeButton = mainWindow.getByTestId('nav-button-home')
     /** Reloads the renderer and waits for the app to mount and finish startup restoration. */
     const reload = async (): Promise<void> => {
