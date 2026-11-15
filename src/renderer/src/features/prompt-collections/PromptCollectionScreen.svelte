@@ -40,17 +40,16 @@
     getScreenMode: () => screenMode
   })
 
-  let didDeleteScreenCollection = $state(false)
-
   /** Keeps the collection header at its current offset when selecting a different status tab. */
   const handleScreenModeChange = (nextMode: PromptCollectionScreenMode): void => {
     controller.preserveScrollForScreenMode(nextMode)
     sidebarModeData.setScreenMode(nextMode)
   }
 
-  // Side effect: persist the last selected row for this collection when the screen unmounts.
+  // Side effect: persist the last selected row for this collection when the screen unmounts, unless the collection was
+  // deleted, which can unmount a work tab's screen before its deletion finishes.
   onDestroy(() => {
-    if (didDeleteScreenCollection) return
+    if (!controller.screenCollection) return
     controller.persistActivePromptScreenRow()
   })
 
@@ -129,7 +128,6 @@
     )
 
     if (didDelete && isScreenPromptCollection) {
-      didDeleteScreenCollection = true
       onPromptCollectionDeleted()
     }
   }

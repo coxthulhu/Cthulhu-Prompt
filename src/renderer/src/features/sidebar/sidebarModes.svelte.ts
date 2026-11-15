@@ -18,6 +18,8 @@ import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersist
 /** Identifies which overall sidebar mode is displayed, independently of the active screen. */
 export enum SidebarModeId {
   Project = 'project',
+  /** One collection open in a work tab, with only its title, Show All, and prompt tree. */
+  Collection = 'collection',
   Settings = 'settings'
 }
 
@@ -174,9 +176,10 @@ export class SettingsSidebarModeData {
 /** One sidebar mode: its identity, header title, and the state it shares with its screens. */
 export type SidebarMode =
   | { id: SidebarModeId.Project; title: string; data: CollectionSidebarModeData }
+  | { id: SidebarModeId.Collection; title: string; data: CollectionSidebarModeData }
   | { id: SidebarModeId.Settings; title: string; data: SettingsSidebarModeData }
 
-/** Creates every sidebar mode once so each mode's data survives screen switches. */
+/** Creates the shared sidebar modes once so their data survives screen switches; each work tab owns its collection mode's data. */
 export const createSidebarModes = () => ({
   [SidebarModeId.Project]: {
     id: SidebarModeId.Project,
@@ -184,4 +187,4 @@ export const createSidebarModes = () => ({
     data: new CollectionSidebarModeData()
   },
   [SidebarModeId.Settings]: { id: SidebarModeId.Settings, title: 'System Settings', data: new SettingsSidebarModeData() }
-}) satisfies Record<SidebarModeId, SidebarMode>
+}) satisfies Record<Exclude<SidebarModeId, SidebarModeId.Collection>, SidebarMode>

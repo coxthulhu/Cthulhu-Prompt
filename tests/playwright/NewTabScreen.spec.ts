@@ -118,8 +118,7 @@ describe('New Tab Screen', () => {
       'lucide-layers', 'lucide-file-text', 'lucide-file-text'
     ])
 
-    // Clicking a tile, or pressing a project title's drag handle, leaves the New Tab screen as it is.
-    await mainWindow.getByTestId('new-tab-collection-bug-triage').click()
+    // Pressing a project title's drag handle leaves the New Tab screen as it is.
     await mainWindow.getByTestId(`new-tab-project-title-${harborProjectId}`).click()
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveAttribute('aria-selected', 'true')

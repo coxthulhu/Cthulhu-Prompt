@@ -29,6 +29,7 @@
     Folder,
     FolderCog,
     Layers,
+    LayoutGrid,
     MoreHorizontal,
     Pencil,
     Plus,
@@ -125,7 +126,8 @@
     isWorkspaceLoading = false,
     onScreenCollectionSelect,
     onDeleteSelectedPromptCollection,
-    onManageProjects
+    onManageProjects,
+    onShowAll
   } = $props<{
     /** Mode title shown in the shared sidebar header. */
     title: string
@@ -137,6 +139,8 @@
     onDeleteSelectedPromptCollection: (screenCollectionId: string) => void
     /** Opens project management to this sidebar's project. */
     onManageProjects: () => void
+    /** Returns a work tab to its New Tab screen; when set, the header holds only the title and this Show All button. */
+    onShowAll?: () => void
   }>()
 
   /** Selected collection owned by this mode. */
@@ -822,102 +826,118 @@
 
 <div class="collectionSidebar flex min-h-0 flex-1 flex-col">
   {#if collectionListState !== 'no-workspace'}
-    <div class="shrink-0 pb-1">
-      <SidebarHeader {title}>
-        {#snippet titleAccessory()}
-          <IconButton
-            icon={Settings2}
-            label="Manage Projects"
-            title="Manage Projects"
-            size="tiny"
-            baseVariant="muted"
-            hoverVariant="glyph"
-            textBaseline
-            testId="sidebar-manage-projects-button"
-            onclick={onManageProjects}
+    <div class="shrink-0" class:pb-1={!onShowAll}>
+      {#if onShowAll}
+        <!-- A work tab's collection is fixed, so Show All leaves it for the tab's New Tab screen instead of listing
+             the project's collections. The header lines up with the collection screen's header bar beside it. -->
+        <SidebarHeader {title} icon={isTemplateCollection ? Layers : FileText} screenHeader>
+          <Button
+            text="Show All"
+            appearance="outline"
+            borderless
+            icon={LayoutGrid}
+            class="sidebarCollectionShowAll"
+            onclick={onShowAll}
+            testId="sidebar-show-all-button"
           />
-        {/snippet}
-        <DropdownPopupDetailed
-          label="Collection selector"
-          menuWidth="380px"
-          items={promptCollectionDropdownItems}
-          sections={collectionDropdownSections}
-          selectedItem={screenCollectionDropdownItem}
-          footerItems={createCollectionItems}
-          itemDragOptions={promptCollectionSelectorItemDragOptions}
-          itemSelectionVariant="accent"
-          dragOpenTypes={promptCollectionSelectorDragOpenTypes}
-          placement="below-trigger"
-          testId="sidebar-prompt-collection-selector-menu"
-          onselect={handlePromptCollectionDropdownSelect}
-        >
-          {#snippet rowAccessory(item, sectionId)}
-            <button
-              type="button"
-              class="sidebarCollectionFavorite"
-              role="menuitemcheckbox"
-              aria-checked={favoriteCollectionIds.includes(item.id)}
-              aria-label={`${favoriteCollectionIds.includes(item.id) ? 'Remove' : 'Add'} ${item.label} ${favoriteCollectionIds.includes(item.id) ? 'from' : 'to'} favorites`}
-              title={favoriteCollectionIds.includes(item.id) ? 'Remove from Favorites' : 'Add to Favorites'}
-              data-testid={`sidebar-collection-favorite-${sectionId}-${item.id}`}
-              onclick={() => toggleCollectionFavorite(item.id)}
-            >
-              <Star size={16} fill={favoriteCollectionIds.includes(item.id) ? 'currentColor' : 'none'} aria-hidden="true" />
-            </button>
-          {/snippet}
-          {#snippet trigger(dropdown)}
-            <Button
-              buttonAction={dropdown.triggerAction}
-              text="Show All"
-              appearance="outline"
-              borderless
-              endIcon={dropdown.open ? ChevronUp : ChevronDown}
-              iconClass="size-5"
-              class="sidebarCollectionShowAll"
-              disabled={promptCollectionSelectorDisabled}
-              aria-haspopup={dropdown.ariaHaspopup}
-              aria-expanded={dropdown.ariaExpanded}
-              onclick={dropdown.toggle}
-              testId="sidebar-prompt-collection-selector-trigger"
+        </SidebarHeader>
+      {:else}
+        <SidebarHeader {title}>
+          {#snippet titleAccessory()}
+            <IconButton
+              icon={Settings2}
+              label="Manage Projects"
+              title="Manage Projects"
+              size="tiny"
+              baseVariant="muted"
+              hoverVariant="glyph"
+              textBaseline
+              testId="sidebar-manage-projects-button"
+              onclick={onManageProjects}
             />
           {/snippet}
-        </DropdownPopupDetailed>
-      </SidebarHeader>
-      {#if collectionListState === 'empty'}
-        <div class="sidebarTopLevelInsetWithInnerPadding grid gap-0.5">
-          {#each createCollectionItems as item (item.id)}
-            <SelectorButton
+          <DropdownPopupDetailed
+            label="Collection selector"
+            menuWidth="380px"
+            items={promptCollectionDropdownItems}
+            sections={collectionDropdownSections}
+            selectedItem={screenCollectionDropdownItem}
+            footerItems={createCollectionItems}
+            itemDragOptions={promptCollectionSelectorItemDragOptions}
+            itemSelectionVariant="accent"
+            dragOpenTypes={promptCollectionSelectorDragOpenTypes}
+            placement="below-trigger"
+            testId="sidebar-prompt-collection-selector-menu"
+            onselect={handlePromptCollectionDropdownSelect}
+          >
+            {#snippet rowAccessory(item, sectionId)}
+              <button
+                type="button"
+                class="sidebarCollectionFavorite"
+                role="menuitemcheckbox"
+                aria-checked={favoriteCollectionIds.includes(item.id)}
+                aria-label={`${favoriteCollectionIds.includes(item.id) ? 'Remove' : 'Add'} ${item.label} ${favoriteCollectionIds.includes(item.id) ? 'from' : 'to'} favorites`}
+                title={favoriteCollectionIds.includes(item.id) ? 'Remove from Favorites' : 'Add to Favorites'}
+                data-testid={`sidebar-collection-favorite-${sectionId}-${item.id}`}
+                onclick={() => toggleCollectionFavorite(item.id)}
+              >
+                <Star size={16} fill={favoriteCollectionIds.includes(item.id) ? 'currentColor' : 'none'} aria-hidden="true" />
+              </button>
+            {/snippet}
+            {#snippet trigger(dropdown)}
+              <Button
+                buttonAction={dropdown.triggerAction}
+                text="Show All"
+                appearance="outline"
+                borderless
+                endIcon={dropdown.open ? ChevronUp : ChevronDown}
+                iconClass="size-5"
+                class="sidebarCollectionShowAll"
+                disabled={promptCollectionSelectorDisabled}
+                aria-haspopup={dropdown.ariaHaspopup}
+                aria-expanded={dropdown.ariaExpanded}
+                onclick={dropdown.toggle}
+                testId="sidebar-prompt-collection-selector-trigger"
+              />
+            {/snippet}
+          </DropdownPopupDetailed>
+        </SidebarHeader>
+        {#if collectionListState === 'empty'}
+          <div class="sidebarTopLevelInsetWithInnerPadding grid gap-0.5">
+            {#each createCollectionItems as item (item.id)}
+              <SelectorButton
+                icon={item.icon}
+                text={item.label}
+                detail={item.detail}
+                showChevron={false}
+                disabled={promptCollectionSelectorDisabled}
+                testId={`sidebar-prompt-collection-add-${item.kind === 'template' ? 'template' : 'task'}-button`}
+                onclick={() => openCreatePromptCollectionDialog(item.kind)}
+              />
+            {/each}
+          </div>
+        {:else}
+          {#each quickCollectionItems as item (item.id)}
+            <PromptTreePromptRow
+              collectionId={item.id}
+              promptId={item.id}
+              promptTitle={item.label}
               icon={item.icon}
-              text={item.label}
-              detail={item.detail}
-              showChevron={false}
-              disabled={promptCollectionSelectorDisabled}
-              testId={`sidebar-prompt-collection-add-${item.kind === 'template' ? 'template' : 'task'}-button`}
-              onclick={() => openCreatePromptCollectionDialog(item.kind)}
+              count={item.count}
+              isActive={screenCollection?.id === item.id}
+              isDragging={false}
+              isPromptDragActive={promptEntryDragState.draggedEntry !== null}
+              testId={`sidebar-quick-collection-${item.id}`}
+              getPromptDroppableOptions={() => getCollectionPromptDroppableOptions(item.id, 'quick')}
+              onPromptSelect={onScreenCollectionSelect}
             />
           {/each}
-        </div>
-      {:else}
-        {#each quickCollectionItems as item (item.id)}
-          <PromptTreePromptRow
-            collectionId={item.id}
-            promptId={item.id}
-            promptTitle={item.label}
-            icon={item.icon}
-            count={item.count}
-            isActive={screenCollection?.id === item.id}
-            isDragging={false}
-            isPromptDragActive={promptEntryDragState.draggedEntry !== null}
-            testId={`sidebar-quick-collection-${item.id}`}
-            getPromptDroppableOptions={() => getCollectionPromptDroppableOptions(item.id, 'quick')}
-            onPromptSelect={onScreenCollectionSelect}
-          />
-        {/each}
+        {/if}
       {/if}
     </div>
     <div class="relative">
-      <Separator />
-      {#if collectionListState === 'ready'}
+      <Separator data-testid="sidebar-header-separator" />
+      {#if collectionListState === 'ready' && !onShowAll}
         <ResizeSash
           orientation="horizontal"
           isDragging={quickCollectionDrag !== null}

@@ -8,7 +8,7 @@ export type ScreenId =
   | 'mockups'
   | 'test-screen'
   | 'project'
-  | 'new-tab'
+  | 'work-tab'
 
 type ScreenConfig = {
   label: string
@@ -58,12 +58,13 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     requiresWorkspace: true,
     sidebarMode: SidebarModeId.Project
   },
-  /** Shown by the selected work tab instead of a title bar screen button. */
-  'new-tab': {
-    label: 'New Tab',
-    testId: 'nav-button-new-tab',
+  /** Shown by the selected work tab instead of a title bar screen button: its New Tab screen, which hides the
+      sidebar, or its collection or single-prompt screen beside the collection mode. */
+  'work-tab': {
+    label: 'Work Tab',
+    testId: 'nav-button-work-tab',
     requiresWorkspace: true,
     icon: LayoutGrid,
-    sidebarMode: null
+    sidebarMode: SidebarModeId.Collection
   }
 }

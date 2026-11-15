@@ -8,14 +8,15 @@ This repository contains Cthulhu Prompt, an Electron application that stores and
 
 - **App Title Bar** — The custom Windows title bar holding the app icon, the Home, Settings, Mockups, and Test Screen buttons, the persisted work tabs and New Tab button, the App Updates button, and the window controls.
 - **App Activity Bar** — The persistent rail of two-letter project buttons and a + new-project button shown while a workspace is open.
-- **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Project or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`, with Home, New Tab, Mockups, and Test Screen always hiding the sidebar.
+- **App Sidebar** — The collapsible, resizable workspace panel that renders the active sidebar mode (Project, Collection, or Settings) beneath a shared title header; each screen chooses its mode in `screens.ts`, with Home, a work tab's New Tab screen, Mockups, and Test Screen always hiding the sidebar.
 - **Prompt Tree** — The folder-tree type component inside the App Sidebar that allows creating, reordering, and navigating to prompts/templates inside of a prompt/template collection.
 - **Home Screen** — Opens, creates, closes, and summarizes the current workspace.
-- **New Tab Screen** — Shown by each work tab, it lists the open workspace's projects and their collections with a search bar and buttons to create and edit projects and create collections.
+- **New Tab Screen** — Shown by each work tab without a collection, it lists the open workspace's projects and their collections with a search bar and buttons to create and edit projects and create collections, and opens a clicked collection in that tab or selects the work tab already showing it.
 - **Prompt Collections Screen** — Manages and edits prompt collections, categories, prompts, and prompt templates.
 - **Single Prompt Screen** — Shows one prompt or template full screen beside the collection sidebar, with a resizable attached note and a path and Find scoped to that prompt.
 - **System Settings Screen** — Configures prompt editor appearance and layout settings and displays application information.
 - **Collection Sidebar** — The App Sidebar project mode used to select, create, and reorder a project's task and template collections together, then navigate to the prompts or templates within them.
+- **Tab Collection Sidebar** — The App Sidebar collection mode beside a work tab's collection or single-prompt screen, holding the collection's title, a Show All button that returns the tab to its New Tab screen, and the prompt tree with its button bar.
 - **Settings Sidebar** — The App Sidebar mode on the System Settings Screen that shows a settings tree that scrolls to each settings section and row.
 - **App Updates Popup** — Shows stable releases, checks for updates, and downloads and restarts installed Windows copies to update.
 - **Manage Projects Dialog** — Edits, creates, and deletes the workspace's projects as one batched save, opened from the project sidebar title's gear or the activity bar's + button.

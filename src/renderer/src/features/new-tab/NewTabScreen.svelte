@@ -21,9 +21,13 @@
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
 
-  let { workspace, onCreateProject, onEditProject } = $props<{
+  let { workspace, openCollectionIds, onOpenCollection, onCreateProject, onEditProject } = $props<{
     /** Open workspace whose projects and collections are listed. */
     workspace: Workspace
+    /** Collections shown by other work tabs, whose tiles are marked open. */
+    openCollectionIds: string[]
+    /** Opens a collection in this tab, or selects the work tab already showing it. */
+    onOpenCollection: (collectionId: string) => void
     /** Opens Manage Projects to a new draft without leaving this screen. */
     onCreateProject: () => void
     /** Opens Manage Projects to one project. */
@@ -183,14 +187,15 @@
 
         <div class="grid grid-cols-3 gap-2">
           {#each collections as { collection, details } (collection.id)}
-            <!-- Opening a collection in this tab comes with full tab management. -->
             <SelectorButton
               variant="tile"
               icon={collection.kind === 'template' ? Layers : FileText}
               text={collection.displayName}
               detailParts={details.modifiedText ? [details.countText, details.modifiedText] : [details.countText]}
               showChevron={false}
+              openInTab={openCollectionIds.includes(collection.id)}
               testId={`new-tab-collection-${collection.id}`}
+              onclick={() => onOpenCollection(collection.id)}
             />
           {/each}
         </div>
