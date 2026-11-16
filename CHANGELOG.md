@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.0.37
+
+### New Features
+
+- Added work tabs to the title bar for opening collections and single prompts side by side, with drag reordering, middle-click closing, and scrolling when tabs overflow.
+- Added restoring open work tabs, each tab's collection, prompt, and screen locations, and sidebar expansion after restarting.
+- Added a New Tab screen that lists the workspace's projects and collections, with search and drag reordering, and opens a clicked collection in that tab.
+- Added projects for grouping collections, managed with the Manage Projects dialog, moving existing collections into a Default Project automatically.
+- Added a full-screen single-prompt editor with a resizable attached note.
+- Added a settings sidebar that jumps to each System Settings section and setting.
+- Added an Update Channel setting for also receiving prereleases.
+- Added the .cthulhuprompt file association to open workspaces by double-clicking, renaming existing .cthulhuprompt.json workspace files automatically.
+- Added double-clicking a template, or No template, in the template selector to choose it and copy the prompt.
+
+### Changes
+
+- Moved Home, System Settings, and App Updates into the title bar, replacing the activity bar, Workspace Popup, collection quick pickers, and collection favorites.
+- Moved Rename Collection and Manage Categories into the sidebar actions menu.
+- Replaced the Tab and Shift+Tab focus shortcuts with arrow keys that move between a prompt's title, body, and note at their edges.
+- Renamed the attached note max lines setting to reserved lines and let notes grow into lines the prompt leaves unused.
+- Delete blank attached notes without confirmation, including when they are hidden.
+- Close the App Updates popup by clicking outside it.
+- Keep System Settings controls enabled while changes save.
+- Refined sidebar tree icon and count label colors.
+
+### Fixed
+
+- Fixed startup failures leaving the app hanging; they now show an error and exit.
+- Fixed mouse wheel scrolling in a prompt editor scrolling the surrounding screen after reaching the editor's edge.
+
 ## 0.0.36
 
 ### New Features
