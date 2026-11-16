@@ -2,7 +2,7 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
   readUserPersistence,
-  readWorkspaceUiState,
+  readTabSession,
   seedUserPersistence,
   seedWorkspaceUiState
 } from '../helpers/UserPersistenceHelpers'
@@ -81,7 +81,7 @@ describe('Welcome Dialog', () => {
     })
     await welcome.getByRole('button', { name: 'Close', exact: true }).click()
     await testHelpers.navigateToSettingsScreen()
-    await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe('settings')
+    await expect.poll(async () => (await readTabSession(electronApp, workspaceId)).user?.selectedTabId).toBe('settings')
     await mainWindow.reload()
     await expect(mainWindow.locator('[data-testid="settings-screen"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="startup-loading-overlay"]')).toHaveCount(0)
@@ -130,6 +130,8 @@ describe('Welcome Dialog', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
     await mainWindow.locator('[data-testid="welcome-open-workspace-button"]').click()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await testHelpers.navigateToHomeScreen()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(workspacePath)
     await mainWindow.locator('[data-testid="show-welcome-button"]').click()
     const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })

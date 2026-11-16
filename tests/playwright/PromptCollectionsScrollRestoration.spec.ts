@@ -7,7 +7,7 @@ import {
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { clickPromptCollectionItem } from '../helpers/PromptCollectionHelpers'
 import {
-  runSqlQuery,
+  readCollectionView,
   seedUserPersistence,
   seedWorkspaceUiState
 } from '../helpers/UserPersistenceHelpers'
@@ -74,14 +74,7 @@ const startSavedWorkspace = async (
 
 /** Reads saved offsets without extending existing snapshot equality contracts. */
 const readOffsets = async (electronApp: ElectronApplication, collectionId: 'Alpha' | 'Beta') => {
-  /** SQLite result after the normal renderer autosave has flushed. */
-  const result = await runSqlQuery(
-    electronApp,
-    `SELECT json_extract(data_json, '$.scrollTopByMode') AS offsets FROM workspace_state
-     WHERE state_type = 'collection-machine' AND workspace_id = '${WORKSPACE_ID}' AND entity_id = '${collectionId}'`
-  )
-  expect(result.success).toBe(true)
-  return JSON.parse(String(result.rows?.[0]?.offsets)) as Record<string, number>
+  return (await readCollectionView(electronApp, WORKSPACE_ID, collectionId))?.scrollTopByMode ?? {}
 }
 
 /** Checks actual viewport position with the repository's pixel tolerance. */
@@ -105,7 +98,7 @@ describe('Prompt collection status scroll restoration', () => {
       (await (mainWindow as Page).locator(HOST).evaluate((host) => host.clientHeight)))
     expect(reachableOffset).toBeLessThan(900)
     await expectScroll(testHelpers, reachableOffset)
-    await expect.poll(async () => Math.abs((await readOffsets(electronApp, 'Alpha')).backlog - reachableOffset))
+    await expect.poll(async () => Math.abs((await readOffsets(electronApp, 'Alpha')).backlog! - reachableOffset))
       .toBeLessThanOrEqual(2)
   })
 
@@ -168,7 +161,7 @@ describe('Prompt collection status scroll restoration', () => {
     expect(reachableOffset).toBeLessThan(900)
     await expectScroll(testHelpers, reachableOffset)
     await expect
-      .poll(async () => Math.abs((await readOffsets(electronApp, 'Alpha')).backlog - reachableOffset))
+      .poll(async () => Math.abs((await readOffsets(electronApp, 'Alpha')).backlog! - reachableOffset))
       .toBeLessThanOrEqual(2)
     await expect.poll(async () => (await readOffsets(electronApp, 'Alpha')).active).toBe(40)
     expect(await readOffsets(electronApp, 'Beta')).toEqual({

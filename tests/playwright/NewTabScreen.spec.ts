@@ -100,7 +100,6 @@ const openNewTab = async (
   await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
   const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await testHelpers.setupWorkspaceViaUI()
-  await mainWindow.getByTestId('new-tab-button').click()
   await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
   return mainWindow
 }

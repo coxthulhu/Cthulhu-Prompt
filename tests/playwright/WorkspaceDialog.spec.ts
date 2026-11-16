@@ -42,6 +42,8 @@ describe('Workspace Open dialog persistence', () => {
     })
     await stubNativeDialog(electronApp, { canceled: false, filePaths: [workspaceInfoPath] })
     await mainWindow.getByTestId('open-workspace-button').click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await testHelpers.navigateToHomeScreen()
     await expect(mainWindow.getByTestId('workspace-ready-path')).toBeVisible()
     expect(await readSavedDirectory(electronApp)).toBe(workspacePath)
 

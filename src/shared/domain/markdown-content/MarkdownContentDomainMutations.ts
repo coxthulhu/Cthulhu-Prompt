@@ -1,4 +1,5 @@
 import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
+import { removeContentFromTabSession } from '@shared/domain/ui-state/TabSession'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
@@ -35,7 +36,6 @@ import {
   resolvePromptTitleUpdateForPromptIds
 } from '@shared/domain/prompt/promptFallbackTitle'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 
 /** Renderer-authored command for creating one prompt at an exact collection position. */
 export type CreatePromptDomainCommand = {
@@ -523,6 +523,10 @@ const createDeletePlanner = (
   /** Category-order reference removed with the deleted content. */
   const entry = createContentEntryRef(kind, command.contentId)
   return [
+    ...(state.get('workspaceUiState', command.workspaceId) ? [{
+      type: 'update' as const, entityType: 'workspaceUiState' as const, id: command.workspaceId,
+      recipe: (draft) => removeContentFromTabSession(draft, command.promptCollectionId, command.contentId, content.attachedNoteId)
+    } satisfies DomainChange] : []),
     {
       type: 'update',
       entityType: 'promptCollection',
@@ -545,12 +549,7 @@ const createDeletePlanner = (
       type: 'delete',
       entityType: kind === 'prompt' ? 'prompt' : 'promptTemplate',
       id: command.contentId
-    } as DomainChange,
-    {
-      type: 'delete',
-      entityType: 'markdownContentUiState',
-      id: createMarkdownContentUiStateKey(command.workspaceId, command.contentId)
-    }
+    } as DomainChange
   ]
 }
 

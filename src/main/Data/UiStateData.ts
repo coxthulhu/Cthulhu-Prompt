@@ -1,9 +1,6 @@
 import {
-  accordionUiStateSqlitePersistence,
   attachedNoteUiStateSqlitePersistence,
-  markdownContentUiStateSqlitePersistence,
   userPersistenceSqlitePersistence,
-  workspacePromptCollectionUiStateSqlitePersistence,
   workspaceUiStateSqlitePersistence
 } from '../Persistence/sqlite/UiStateSqlitePersistence'
 import { createRevisionData } from './RevisionDataFactory'
@@ -22,27 +19,6 @@ export const userPersistenceData = createRevisionData({
 /** Authoritative workspace-level UI state backed by SQLite. */
 export const workspaceUiStateData = createRevisionData({
   persistence: workspaceUiStateSqlitePersistence,
-  emitCommittedRevisionChanged,
-  targetPolicy: 'deleteIfPresent'
-})
-
-/** Authoritative workspace prompt-collection UI state backed by SQLite. */
-export const workspacePromptCollectionUiStateData = createRevisionData({
-  persistence: workspacePromptCollectionUiStateSqlitePersistence,
-  emitCommittedRevisionChanged,
-  targetPolicy: 'deleteIfPresent'
-})
-
-/** Authoritative accordion UI state backed by SQLite. */
-export const accordionUiStateData = createRevisionData({
-  persistence: accordionUiStateSqlitePersistence,
-  emitCommittedRevisionChanged,
-  targetPolicy: 'deleteIfPresent'
-})
-
-/** Authoritative markdown-content editor UI state backed by SQLite. */
-export const markdownContentUiStateData = createRevisionData({
-  persistence: markdownContentUiStateSqlitePersistence,
   emitCommittedRevisionChanged,
   targetPolicy: 'deleteIfPresent'
 })

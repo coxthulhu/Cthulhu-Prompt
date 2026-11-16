@@ -105,7 +105,6 @@ describe('prompt template workspace loading', () => {
     if (!collectionResult.success) throw new Error(collectionResult.error)
 
     expect(collectionResult.prompts).toEqual([])
-    expect(collectionResult.markdownContentUiStates).toEqual([])
     expect(collectionResult.promptTemplates).toHaveLength(1)
     expect(collectionResult.promptTemplates[0]?.data).toMatchObject({
       id: 'category-template',

@@ -7,10 +7,7 @@ import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCo
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
-import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
-import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
 import { clearPromptCollectionClientStateCollection } from '@renderer/data/UiState/client-state/PromptCollectionClientState'
 import { clearPromptClientStateCollection } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
 import { clearPromptTemplateClientStateCollection } from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
@@ -36,10 +33,7 @@ export const clearWorkspaceData = (): void => {
     notesCollection,
     promptTemplatesCollection,
     attachedNoteUiStateCollection,
-    markdownContentUiStateCollection,
     workspaceUiStateCollection,
-    workspacePromptCollectionUiStateCollection,
-    accordionUiStateCollection
   ]) {
     collection.utils.clearAuthoritative()
   }

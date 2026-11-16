@@ -35,7 +35,7 @@ import {
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
-import { runSqlQuery, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
+import { readTabSession, runSqlQuery } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -2688,15 +2688,15 @@ describe('Prompt collection prompt management', () => {
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).not.toContainText(
       'Click the Add Prompt button'
     )
-    /** Active sash used to persist a non-default workspace-wide status-tree split. */
+    /** Active sash used to persist a non-default collection-specific status-tree split. */
     const activeAccordionSash = mainWindow.locator(
       '[data-testid="sidebar-prompt-status-accordion-sash-active"]'
     )
-    /** Completed section height before the workspace-wide split changes. */
+    /** Completed section height before the collection-specific split changes. */
     const initialCompletedHeightPx = await mainWindow
       .locator('[data-testid="sidebar-prompt-status-accordion-section-completed"]')
       .evaluate((section) => section.getBoundingClientRect().height)
-    /** Active section height before the workspace-wide split changes. */
+    /** Active section height before the collection-specific split changes. */
     const initialActiveHeightPx = await mainWindow
       .locator('[data-testid="sidebar-prompt-status-accordion-section-active"]')
       .evaluate((section) => section.getBoundingClientRect().height)
@@ -2737,10 +2737,10 @@ describe('Prompt collection prompt management', () => {
         .locator('[data-testid="sidebar-prompt-status-accordion-section-active"]')
         .evaluate((section) => section.getBoundingClientRect().height)
     ])
-    expect(Math.abs(navigatedStatusHeightsPx[0] - resizedCompletedHeightPx)).toBeLessThanOrEqual(2)
-    expect(Math.abs(navigatedStatusHeightsPx[1] - resizedActiveHeightPx)).toBeLessThanOrEqual(2)
+    expect(Math.abs(navigatedStatusHeightsPx[0] - initialCompletedHeightPx)).toBeLessThanOrEqual(2)
+    expect(Math.abs(navigatedStatusHeightsPx[1] - initialActiveHeightPx)).toBeLessThanOrEqual(2)
 
-    /** Completed header whose shared persisted state should survive collection navigation. */
+    /** Completed header whose independently persisted state should survive collection navigation. */
     const completedAccordionHeader = mainWindow.locator(
       '[data-testid="sidebar-prompt-status-accordion-header-completed"]'
     )
@@ -2750,6 +2750,8 @@ describe('Prompt collection prompt management', () => {
     await expect(
       mainWindow.locator('[data-testid="sidebar-prompt-status-accordion-header-completed"]')
     ).toHaveAttribute('aria-expanded', 'true')
+    expect(Math.abs((await mainWindow.getByTestId('sidebar-prompt-status-accordion-section-completed').boundingBox())!.height - resizedCompletedHeightPx)).toBeLessThanOrEqual(2)
+    expect(Math.abs((await mainWindow.getByTestId('sidebar-prompt-status-accordion-section-active').boundingBox())!.height - resizedActiveHeightPx)).toBeLessThanOrEqual(2)
   })
 
   test('archives prompts and exposes archived status views and drag targets', async ({
@@ -2911,22 +2913,12 @@ describe('Prompt collection prompt management', () => {
     const workspaceId = (
       await runSqlQuery(
         electronApp,
-        `SELECT workspace_id AS workspaceId FROM workspace_state WHERE state_type = 'workspace-navigation' LIMIT 1`
+        `SELECT workspace_id AS workspaceId FROM workspace_state WHERE state_type = 'tab-session-user' LIMIT 1`
       )
     ).rows?.[0]?.workspaceId as string
-    for (const contentId of ['dev-1', 'dev-2']) {
-      await seedWorkspaceState(electronApp, workspaceId, 'markdown-editor', contentId, { editorViewStateJson: '{}' }, 'machine-specific')
-    }
-    expect(
-      (
-        await runSqlQuery(
-          electronApp,
-          `SELECT entity_id AS contentId FROM workspace_state
-           WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceId}' AND entity_id IN ('dev-1', 'dev-2')
-           ORDER BY entity_id`
-        )
-      ).rows
-    ).toEqual([{ contentId: 'dev-1' }, { contentId: 'dev-2' }])
+    await testHelpers.navigateToHomeScreen()
+    await expect.poll(async () => Object.keys((await readTabSession(electronApp, workspaceId)).machine?.tabs[(await readTabSession(electronApp, workspaceId)).user!.tabs[0].id].view.editorViewStates ?? {}).sort()).toEqual(['dev-1', 'dev-2'])
+    await mainWindow.getByTestId('work-tab').getByRole('tab').first().click()
 
     // Create an empty prompt, then delete it without the confirmation dialog.
     const initialIds = await getPromptEditorIds(mainWindow)
@@ -2971,16 +2963,7 @@ describe('Prompt collection prompt management', () => {
     await dialog.locator('button:has-text("Delete")').click()
     await expect(mainWindow.locator(promptEditorSelector('dev-1'))).toHaveCount(0)
     await waitForPromptCount(mainWindow, 1)
-    expect(
-      (
-        await runSqlQuery(
-          electronApp,
-          `SELECT entity_id AS content_id FROM workspace_state
-           WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceId}' AND entity_id IN ('dev-1', 'dev-2')
-           ORDER BY entity_id`
-        )
-      ).rows
-    ).toEqual([{ content_id: 'dev-2' }])
+    await expect.poll(async () => Object.keys((await readTabSession(electronApp, workspaceId)).machine?.tabs[(await readTabSession(electronApp, workspaceId)).user!.tabs[0].id].view.editorViewStates ?? {}).sort()).toEqual(['dev-2'])
 
     // Navigate away and back to ensure deletions persist.
     await testHelpers.navigateToHomeScreen()

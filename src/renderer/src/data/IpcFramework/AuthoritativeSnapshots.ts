@@ -5,9 +5,7 @@ import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import type { DomainEntityType } from '@shared/domain/DomainChanges'
 import { createPromptFull, isPromptFull } from '@shared/domain/prompt/Prompt'
 import { createPromptTemplateFull, isPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
-import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
@@ -16,7 +14,6 @@ import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemp
 import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
 import { clearPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
 
@@ -41,14 +38,8 @@ export const getRendererRevisionCollection = (entityType: DomainEntityType) => {
       return promptTemplatesCollection
     case 'userPersistence':
       return userPersistenceCollection
-    case 'markdownContentUiState':
-      return markdownContentUiStateCollection
     case 'workspaceUiState':
       return workspaceUiStateCollection
-    case 'workspacePromptCollectionUiState':
-      return workspacePromptCollectionUiStateCollection
-    case 'accordionUiState':
-      return accordionUiStateCollection
   }
 }
 
@@ -132,17 +123,8 @@ const reconcileRendererAuthoritativeSnapshot = (
     case 'userPersistence':
       userPersistenceCollection.utils.upsertAuthoritative(snapshot)
       return
-    case 'markdownContentUiState':
-      markdownContentUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
     case 'workspaceUiState':
       workspaceUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'workspacePromptCollectionUiState':
-      workspacePromptCollectionUiStateCollection.utils.upsertAuthoritative(snapshot)
-      return
-    case 'accordionUiState':
-      accordionUiStateCollection.utils.upsertAuthoritative(snapshot)
       return
   }
 }

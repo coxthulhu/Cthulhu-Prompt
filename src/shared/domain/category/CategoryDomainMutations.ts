@@ -1,3 +1,4 @@
+import { removeCategoriesFromTabSession } from '@shared/domain/ui-state/TabSession'
 import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import type {
   DomainChange,
@@ -21,11 +22,6 @@ import {
   type PromptCollection
 } from '@shared/domain/prompt-collection/PromptCollection'
 import { isPromptStatusFolderId, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import {
-  createWorkspacePromptCollectionUiStateKey,
-  type WorkspacePromptCollectionUiState
-} from '@shared/domain/ui-state/UiState'
-import { isProjectScreenSelection } from '@shared/domain/user-persistence/UserPersistence'
 
 /** Renderer-authored command for creating one collection-owned category. */
 export type CreateCategoryDomainCommand = {
@@ -555,82 +551,11 @@ export const planSaveCategoriesDomainMutation: DomainPlanner<
     } })
   }
 
-  /** Workspace navigation currently pointing at a staged deleted category. */
-  const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
-  /** Deleted active category whose selected row must transfer to the collection owner. */
-  const selectedDeletedCategoryId =
-    workspaceUiState &&
-    isProjectScreenSelection(workspaceUiState) &&
-    workspaceUiState.selectedScreenData.promptCollectionId === command.promptCollectionId &&
-    workspaceUiState.selectedScreenData.contentOwnerId &&
-    deletedCategoryIds.includes(workspaceUiState.selectedScreenData.contentOwnerId)
-      ? workspaceUiState.selectedScreenData.contentOwnerId
-      : null
-  if (selectedDeletedCategoryId && workspaceUiState) {
-    /** Deleted owner's prior selection used to retain a selected prompt when possible. */
-    const deletedUiState = state.get(
-      'workspacePromptCollectionUiState',
-      createWorkspacePromptCollectionUiStateKey(command.workspaceId, selectedDeletedCategoryId)
-    )
-    /** Collection owner's prompt-collection view state receiving the transferred selection. */
-    const collectionUiStateId = createWorkspacePromptCollectionUiStateKey(
-      command.workspaceId,
-      command.promptCollectionId
-    )
-    /** Existing collection state retained except for its selected row. */
-    const collectionUiState = state.get('workspacePromptCollectionUiState', collectionUiStateId)
-    /** Selected row normalized from category details to the collection header. */
-    const selectedEntryId =
-      !deletedUiState ||
-      deletedUiState.selectedEntryId === 'category-details' ||
-      deletedUiState.selectedEntryId === 'collection-header'
-        ? 'collection-header'
-        : deletedUiState.selectedEntryId
-    changes.push({
-      type: 'update',
-      entityType: 'workspaceUiState',
-      id: command.workspaceId,
-      recipe: (draft) => {
-        if (isProjectScreenSelection(draft)) {
-          draft.selectedScreenData.contentOwnerId = command.promptCollectionId
-        }
-      }
-    })
-    if (collectionUiState) {
-      changes.push({
-        type: 'update',
-        entityType: 'workspacePromptCollectionUiState',
-        id: collectionUiStateId,
-        recipe: (draft) => {
-          draft.selectedEntryId = selectedEntryId
-        }
-      })
-    } else {
-      /** Default collection view state created when active selection transfers from a category. */
-      const nextCollectionUiState: WorkspacePromptCollectionUiState = {
-        workspaceId: command.workspaceId,
-        contentOwnerId: command.promptCollectionId,
-        selectedEntryId,
-        treeIsExpanded: true,
-        contentSectionIsExpanded: true,
-        scrollTopByMode: {},
-        selectedMode: PromptStatusFolderId.Active,
-        shownFinalStatusGroups: {}
-      }
-      changes.push({
-        type: 'insert',
-        entityType: 'workspacePromptCollectionUiState',
-        id: collectionUiStateId,
-        data: nextCollectionUiState
-      })
-    }
-  }
-  for (const categoryId of deletedCategoryIds) {
-    changes.push({
-      type: 'delete',
-      entityType: 'workspacePromptCollectionUiState',
-      id: createWorkspacePromptCollectionUiStateKey(command.workspaceId, categoryId)
-    })
+  /** Category cleanup updates every independent tab and the last-closed snapshot atomically. */
+  if (deletedCategoryIds.length > 0 && state.get('workspaceUiState', command.workspaceId)) {
+    changes.push({ type: 'update', entityType: 'workspaceUiState', id: command.workspaceId, recipe: (draft) => {
+      removeCategoriesFromTabSession(draft, command.promptCollectionId, deletedCategoryIds)
+    } })
   }
   return changes
 }
@@ -729,82 +654,12 @@ export const planDeleteCategoryDomainMutation: DomainPlanner<
     }
   }
 
-  /** Workspace-level navigation state used to identify an actively selected category. */
-  const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
-  /** Whether the deleted category currently owns the visible prompt-collection selection. */
-  const isActiveCategory =
-    workspaceUiState &&
-    isProjectScreenSelection(workspaceUiState) &&
-    workspaceUiState.selectedScreenData.promptCollectionId === command.promptCollectionId &&
-    workspaceUiState.selectedScreenData.contentOwnerId === command.categoryId
-  /** Composite key for the deleted category's prompt-collection view state. */
-  const categoryUiStateId = createWorkspacePromptCollectionUiStateKey(
-    command.workspaceId,
-    command.categoryId
-  )
-  /** Persisted row selection last owned by the deleted category. */
-  const categoryUiState = state.get('workspacePromptCollectionUiState', categoryUiStateId)
-
-  if (isActiveCategory && workspaceUiState) {
-    /** Collection owner state receiving the transferred selected prompt or template. */
-    const collectionUiStateId = createWorkspacePromptCollectionUiStateKey(
-      command.workspaceId,
-      command.promptCollectionId
-    )
-    /** Existing collection expansion state preserved while its selection changes. */
-    const collectionUiState = state.get('workspacePromptCollectionUiState', collectionUiStateId)
-    /** Selected entry normalized from category-only details to the collection header. */
-    const selectedEntryId =
-      !categoryUiState ||
-      categoryUiState.selectedEntryId === 'category-details' ||
-      categoryUiState.selectedEntryId === 'collection-header'
-        ? 'collection-header'
-        : categoryUiState.selectedEntryId
-    changes.push({
-      type: 'update',
-      entityType: 'workspaceUiState',
-      id: command.workspaceId,
-      recipe: (draft) => {
-        if (isProjectScreenSelection(draft)) {
-          draft.selectedScreenData.contentOwnerId = command.promptCollectionId
-        }
-      }
-    })
-    if (collectionUiState) {
-      changes.push({
-        type: 'update',
-        entityType: 'workspacePromptCollectionUiState',
-        id: collectionUiStateId,
-        recipe: (draft) => {
-          draft.selectedEntryId = selectedEntryId
-        }
-      })
-    } else {
-      /** Default collection state created only when an active category selection must transfer. */
-      const nextCollectionUiState: WorkspacePromptCollectionUiState = {
-        workspaceId: command.workspaceId,
-        contentOwnerId: command.promptCollectionId,
-        selectedEntryId,
-        treeIsExpanded: true,
-        contentSectionIsExpanded: true,
-        scrollTopByMode: {},
-        selectedMode: PromptStatusFolderId.Active,
-        shownFinalStatusGroups: {}
-      }
-      changes.push({
-        type: 'insert',
-        entityType: 'workspacePromptCollectionUiState',
-        id: collectionUiStateId,
-        data: nextCollectionUiState
-      })
-    }
+  /** Category cleanup updates every independent tab and the last-closed snapshot atomically. */
+  if (state.get('workspaceUiState', command.workspaceId)) {
+    changes.push({ type: 'update', entityType: 'workspaceUiState', id: command.workspaceId, recipe: (draft) => {
+      removeCategoriesFromTabSession(draft, command.promptCollectionId, [command.categoryId])
+    } })
   }
-
-  changes.push({
-    type: 'delete',
-    entityType: 'workspacePromptCollectionUiState',
-    id: categoryUiStateId
-  })
   return changes
 }
 

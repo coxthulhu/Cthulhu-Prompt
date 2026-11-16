@@ -1,3 +1,4 @@
+import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
@@ -68,9 +69,10 @@ describe('Template archive', () => {
     /** Original categorized order remains byte-for-byte stable after reopening. */
     const order = await readTextFile(electronApp, orderPath)
     expect(JSON.parse(order).categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual(['archive-predecessor', TEMPLATE_ID])
+    await waitForRendererPersistence(mainWindow)
     await mainWindow.reload()
     // Finish restoring the active screen before navigation decides whether to toggle its sidebar.
-    await expect(mainWindow.getByTestId('nav-button-home')).toBeVisible()
+    await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
     await testHelpers.navigateToPromptCollections('Library')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toContainText('Active 2')
@@ -132,6 +134,7 @@ describe('Template archive', () => {
     await testHelpers.navigateToPromptCollections('Library')
     await mainWindow.locator(promptEditorSelector(TEMPLATE_ID)).getByTestId('prompt-archive-button').click()
     await expect.poll(() => checkFileExists(electronApp, ARCHIVED_PATH)).toBe(true)
+    await waitForRendererPersistence(mainWindow)
     await mainWindow.reload()
     await testHelpers.navigateToPromptCollections('Tasks')
     await stubClipboard(mainWindow)

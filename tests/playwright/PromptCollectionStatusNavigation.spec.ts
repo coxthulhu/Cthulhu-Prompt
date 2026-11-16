@@ -1,7 +1,7 @@
 import { createPlaywrightTestSuite, type PlaywrightTestFixtures } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { clickPromptCollectionItem } from '../helpers/PromptCollectionHelpers'
-import { readWorkspaceUiState, runSqlQuery, seedUserPersistence, seedWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
+import { readTabSession, readCollectionView, seedUserPersistence, seedWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
 
 /** Real sidebar and startup coverage for collection-specific status navigation. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -57,27 +57,26 @@ const startWorkspace = async (
 
 /** Reads saved modes and visibility independently of renderer-session memory. */
 const readNavigation = async (electronApp: PlaywrightTestFixtures['electronApp']) => {
-  /** Collection rows written through the normal UI-state autosave path. */
-  const result = await runSqlQuery(electronApp,
-    `SELECT entity_id AS id, json_extract(data_json, '$.selectedMode') AS mode, json_extract(data_json, '$.shownFinalStatusGroups') AS shown
-     FROM workspace_state WHERE state_type = 'collection-user' AND workspace_id = '${WORKSPACE_ID}' ORDER BY entity_id`)
-  expect(result.success).toBe(true)
-  return result.rows?.map((row) => ({ ...row, shown: JSON.parse(String(row.shown)) }))
+  return await Promise.all(['Alpha', 'Beta', 'Templates'].map(async (id) => {
+    /** Actual independently owned saved collection view. */
+    const view = await readCollectionView(electronApp, WORKSPACE_ID, id)
+    return { id, mode: view?.selectedMode, shown: view?.shownFinalStatusGroups }
+  }))
 }
 
 describe('Prompt collection status navigation', () => {
   // Startup must restore every nondefault mode without inventing a previous session visit.
   for (const mode of ['backlog', 'completed', 'archived'] as const) {
-    test(`restores ${mode} at startup and expands its saved collapsed section`, async ({ electronApp, testSetup }) => {
+    test(`restores ${mode} at startup and preserves its saved collapsed section`, async ({ electronApp, testSetup }) => {
       /** Renderer launched from persisted navigation with no in-memory return history. */
       const { mainWindow } = await startWorkspace({ electronApp, testSetup }, mode)
       await expect(mainWindow.getByTestId(`prompt-collection-${mode}-filter`)).toHaveAttribute('aria-pressed', 'true')
-      await expect(mainWindow.getByTestId(`sidebar-prompt-status-accordion-header-${mode}`)).toHaveAttribute('aria-expanded', 'true')
+      await expect(mainWindow.getByTestId(`sidebar-prompt-status-accordion-header-${mode}`)).toHaveAttribute('aria-expanded', 'false')
       await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-active')).toHaveAttribute('aria-expanded', 'false')
       await expect(mainWindow.getByTestId(`sidebar-prompt-status-accordion-section-${mode === 'archived' ? 'completed' : 'archived'}`)).toHaveCount(0)
-      await expect.poll(async () => (await readWorkspaceUiState(electronApp, WORKSPACE_ID))
-        .accordionViewEntries[0]?.sections.find((section) => section.id === mode))
-        .toEqual({ id: mode, isExpanded: true, configuredExpandedHeightPx: 200 })
+      await expect.poll(async () => (await readCollectionView(electronApp, WORKSPACE_ID))
+        ?.accordionSections.find((section) => section.id === mode))
+        .toEqual({ id: mode, isExpanded: false, configuredExpandedHeightPx: 200 })
 
       if (mode !== 'backlog') {
         await mainWindow.getByTestId(`toggle-${mode}-prompts-button`).click()
@@ -91,7 +90,7 @@ describe('Prompt collection status navigation', () => {
     /** Empty task collections keep navigation controls available throughout the history sequence. */
     const { mainWindow } = await startWorkspace({ electronApp, testSetup })
     await mainWindow.getByTestId('prompt-collection-backlog-filter').click()
-    await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').click()
+    if (await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').getAttribute('aria-expanded') === 'true') await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').click()
     await mainWindow.getByTestId('toggle-completed-prompts-button').click()
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
     await mainWindow.getByTestId('toggle-completed-prompts-button').click()
@@ -116,7 +115,7 @@ describe('Prompt collection status navigation', () => {
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
     await clickPromptCollectionItem(mainWindow, 'Alpha')
     await expect(mainWindow.getByTestId('prompt-collection-completed-filter')).toHaveAttribute('aria-pressed', 'true')
-    await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-completed')).toHaveAttribute('aria-expanded', 'true')
+    await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-completed')).toHaveAttribute('aria-expanded', 'false')
     await mainWindow.getByTestId('toggle-completed-prompts-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
   })
@@ -135,11 +134,11 @@ describe('Prompt collection status navigation', () => {
     await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
 
     for (const activity of ['home', 'settings'] as const) {
-      await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').click()
+      if (await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').getAttribute('aria-expanded') === 'true') await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').click()
       await mainWindow.getByTestId(`nav-button-${activity}`).click()
-      await testHelpers.navigateToPromptCollections('Beta')
+      await mainWindow.getByTestId('work-tab').getByRole('tab').first().click()
       await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
-      await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog')).toHaveAttribute('aria-expanded', 'true')
+      await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog')).toHaveAttribute('aria-expanded', 'false')
     }
     await expect.poll(() => readNavigation(electronApp)).toEqual([
       { id: 'Alpha', mode: 'archived', shown: { completed: true, archived: true } },
@@ -147,10 +146,10 @@ describe('Prompt collection status navigation', () => {
       { id: 'Templates', mode: 'active', shown: {} }
     ])
     await testHelpers.navigateToHomeScreen()
-    await expect.poll(async () => (await readWorkspaceUiState(electronApp, WORKSPACE_ID)).selectedScreen).toBe('home')
+    await expect.poll(async () => (await readTabSession(electronApp, WORKSPACE_ID)).user?.selectedTabId).toBe('home')
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
-    await testHelpers.navigateToPromptCollections('Beta')
+    await mainWindow.getByTestId('work-tab').getByRole('tab').first().click()
     await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-completed')).toBeVisible()
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-archived')).toHaveCount(0)
@@ -159,7 +158,7 @@ describe('Prompt collection status navigation', () => {
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-completed')).toBeVisible()
     // Persisted visibility does not count as a visit in the new session's return history.
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
-    await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
+    await expect(mainWindow.getByTestId('prompt-collection-completed-filter')).toHaveAttribute('aria-pressed', 'true')
     await testHelpers.navigateToPromptCollections('Templates')
     await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
   })

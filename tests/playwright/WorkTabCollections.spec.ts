@@ -1,18 +1,18 @@
-import type { ElectronApplication, Page } from 'playwright'
+import type { Page } from 'playwright'
 import {
   createWorkspaceWithCollections,
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { moveOsCursor } from '../helpers/OsCursorHelpers'
+import { waitForMonacoEditor, setMonacoSelections } from '../helpers/MonacoHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import {
   promptEditorSelector,
   promptTreePromptSelector
 } from '../helpers/PromptCollectionSelectors'
-import { readWorkspaceState } from '../helpers/UserPersistenceHelpers'
+import { createDeterministicId } from '../fixtures/FixtureIds'
+import { readTabSession } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -55,20 +55,12 @@ const startWorkspace = async (testSetup: TestSetup) => {
 
 /** Adds a New Tab and opens one collection from its tile. */
 const openInNewTab = async (page: Page, collectionId: string): Promise<void> => {
-  await page.getByTestId('new-tab-button').click()
+  if (!await page.getByTestId('new-tab-screen').isVisible()) await page.getByTestId('new-tab-button').click()
   await page.getByTestId(`new-tab-collection-${collectionId}`).click()
 }
 
-/** Reads the work tabs saved on this machine as title and screen pairs. */
-const readSavedTabs = async (electronApp: ElectronApplication): Promise<string[]> => {
-  const { workTabs } = (await readWorkspaceState<{ workTabs: Array<{ title: string; screen: string }> }>(
-    electronApp, null, 'application-machine', null
-  ))!
-  return workTabs.map((tab) => `${tab.title}:${tab.screen}`)
-}
-
 describe('Work Tab Collections', () => {
-  test('opens collections in their tabs beside a title-only sidebar, returns to New Tab with Show All, and restores as New Tabs', async ({
+  test('opens collections in their tabs beside a title-only sidebar, returns to New Tab with Show All, and restores their collection locations', async ({
     electronApp,
     testSetup
   }) => {
@@ -141,42 +133,18 @@ describe('Work Tab Collections', () => {
     await expect(mainWindow.getByTestId('sidebar-title-icon')).toContainClass('lucide-layers')
     await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('Reviews')
 
-    // Tabs are saved as New Tabs, so they reopen on their New Tab screens with the selection kept.
-    await expect.poll(() => readSavedTabs(electronApp)).toEqual(['New Tab:new-tab', 'New Tab:new-tab'])
+    // Saved identities reopen the actual collections and keep the selected tab.
+    await expect.poll(async () => {
+      /** The final selected collection must be committed before reloading. */
+      const saved = (await readTabSession(electronApp, createDeterministicId(workspacePath))).user
+      return [saved?.tabs.map((tab) => tab.collectionId), saved?.selectedTabId === saved?.tabs[1]?.id]
+    }).toEqual([['long-tasks', 'reviews'], true])
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('nav-button-home')).toBeVisible()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-    await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab'])
+    await expect(getTabs(mainWindow)).toHaveText(['Long Tasks', 'Reviews'])
     await expect(getTabs(mainWindow).nth(1)).toHaveAttribute('aria-selected', 'true')
-    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
-  })
-
-  test('selects the work tab already showing a clicked collection, whose tile is marked open', async ({ electronApp, testSetup }) => {
-    const { mainWindow } = await startWorkspace(testSetup)
-    // Mouse closes read the OS cursor, which stays outside the window so held tab widths release at once.
-    await moveOsCursor(electronApp, mainWindow, null)
-    await openInNewTab(mainWindow, 'long-tasks')
-    await mainWindow.getByTestId('new-tab-button').click()
-
-    // Only the collection shown by another tab is marked open.
-    await expect(mainWindow.getByTestId('new-tab-collection-long-tasks')).toHaveAttribute('data-open-in-tab', 'true')
-    await expect(mainWindow.getByTestId('new-tab-collection-long-tasks')).toContainText('Open')
-    await expect(mainWindow.getByTestId('new-tab-collection-short-tasks')).toHaveAttribute('data-open-in-tab', 'false')
-
-    // Clicking it selects that tab instead of opening the collection again.
-    await mainWindow.getByTestId('new-tab-collection-long-tasks').click()
-    await expect(getTabs(mainWindow).nth(0)).toHaveAttribute('aria-selected', 'true')
-    await expect(mainWindow.getByTestId('prompt-collection-screen')).toBeVisible()
-    await expect(getTabs(mainWindow)).toHaveText(['Long Tasks', 'New Tab'])
-
-    // The second tab stays on its New Tab screen.
-    await getTabs(mainWindow).nth(1).click()
-    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
-
-    // Closing the tab showing the collection clears its open marker.
-    await mainWindow.getByTestId('work-tab-close').nth(0).click()
-    await expect(getTabs(mainWindow)).toHaveText(['New Tab'])
-    await expect(mainWindow.getByTestId('new-tab-collection-long-tasks')).toHaveAttribute('data-open-in-tab', 'false')
+    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('Reviews')
   })
 
   test('names its tab after the prompt open in its single-prompt editor and keeps it open across tab switches', async ({ testSetup }) => {
@@ -209,8 +177,8 @@ describe('Work Tab Collections', () => {
     await expect(getTabs(mainWindow)).toHaveText(['Long Tasks', 'New Tab'])
   })
 
-  test('returns work tabs to their New Tab screen when their collection is deleted', async ({ testSetup }) => {
-    const { mainWindow, testHelpers } = await startWorkspace(testSetup)
+  test('returns work tabs to their New Tab screen when their collection is deleted', async ({ testSetup, electronApp }) => {
+    const { mainWindow } = await startWorkspace(testSetup)
     /** Destructive confirmation for collections with content. */
     const confirmation = mainWindow.getByRole('dialog', { name: 'Delete Collection' })
     /** Deletes the sidebar's collection through its actions menu and confirmation. */
@@ -222,12 +190,45 @@ describe('Work Tab Collections', () => {
       await expect(confirmation).toHaveCount(0)
     }
 
-    // Deleting the selected collection returns its tab to New Tab.
+    // Deleting a collection clears every tab showing it, including background tabs.
     await openInNewTab(mainWindow, 'short-tasks')
-    await testHelpers.navigateToPromptCollections('Short Tasks')
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('short-1'))
+    await setMonacoSelections(mainWindow, promptEditorSelector('short-1'), [{ selectionStartLineNumber: 1, selectionStartColumn: 3, positionLineNumber: 1, positionColumn: 3 }])
+    await mainWindow.getByTestId('new-tab-button').click()
+    await mainWindow.getByTestId('new-tab-collection-short-tasks').click()
     await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('Short Tasks')
+    await mainWindow.getByTestId('new-tab-button').click()
+    await mainWindow.getByTestId('new-tab-collection-reviews').click()
+    await waitForMonacoEditor(mainWindow, promptEditorSelector('review-1'))
+    await setMonacoSelections(mainWindow, promptEditorSelector('review-1'), [{ selectionStartLineNumber: 1, selectionStartColumn: 4, positionLineNumber: 1, positionColumn: 4 }])
+    await getTabs(mainWindow).nth(1).click()
+    /** Unrelated collection state must survive both duplicate-tab cleanup and later deletion. */
+    const workspaceId = createDeterministicId(workspacePath)
+    await expect.poll(async () => (await readTabSession(electronApp, workspaceId)).user?.tabs.map((tab) => tab.collectionId)).toEqual(['short-tasks', 'short-tasks', 'reviews'])
+    await expect.poll(async () => {
+      /** Nonempty editor maps make the deletion and sibling assertions substantive. */
+      const saved = await readTabSession(electronApp, workspaceId)
+      return saved.user?.tabs.map((tab) => Object.keys(saved.machine?.tabs[tab.id].view.editorViewStates ?? {}))
+    }).toEqual([['short-1'], ['short-1'], ['review-1']])
+    /** Sibling view snapshot used to detect destructive session-wide cleanup. */
+    const beforeDeletion = await readTabSession(electronApp, workspaceId)
+    /** Portable and local state of the unrelated tab. */
+    const sibling = { user: beforeDeletion.user!.tabs[2].view, machine: beforeDeletion.machine!.tabs[beforeDeletion.user!.tabs[2].id].view }
     await deleteSidebarCollection()
-    await expect(getTabs(mainWindow)).toHaveText(['New Tab'])
+    await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab', 'Reviews'])
+    await expect.poll(async () => {
+      /** Observe actual saved owners in both storage scopes after deletion. */
+      const saved = await readTabSession(electronApp, workspaceId)
+      return [saved.user?.tabs.map((tab) => tab.collectionId), saved.user?.lastClosedCollections['short-tasks'], saved.machine?.lastClosedCollections['short-tasks']]
+    }).toEqual([[null, null, 'reviews'], undefined, undefined])
+    /** Cleared tabs release editor maps while the unrelated collection keeps its choices. */
+    const saved = await readTabSession(electronApp, workspaceId)
+    expect(saved.user!.tabs[2].view).toEqual(sibling.user)
+    expect(saved.machine!.tabs[saved.user!.tabs[2].id].view).toEqual(sibling.machine)
+    for (const tab of saved.user!.tabs.slice(0, 2)) {
+      expect(saved.machine!.tabs[tab.id].view.editorViewStates).toEqual({})
+      expect(saved.machine!.tabs[tab.id].singlePromptEditorViewStates).toEqual({})
+    }
     await getTabs(mainWindow).nth(0).click()
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('new-tab-collection-short-tasks')).toHaveCount(0)
@@ -240,7 +241,7 @@ describe('Work Tab Collections', () => {
     await deleteSidebarCollection()
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('app-sidebar')).toHaveCount(0)
-    await expect(getTabs(mainWindow)).toHaveText(['New Tab'])
+    await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab', 'Reviews'])
     await expect(mainWindow.getByTestId('new-tab-collection-long-tasks')).toHaveCount(0)
   })
 })

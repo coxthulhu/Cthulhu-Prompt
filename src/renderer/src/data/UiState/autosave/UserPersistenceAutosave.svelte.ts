@@ -65,6 +65,16 @@ export const setSinglePromptNoteFractionWithAutosave = (fraction: number): void 
   })
 }
 
+/** Saves fixed-screen selection and application-wide mockup selection. */
+export const setApplicationNavigationWithAutosave = (selectedTabId: string, selectedMockupId: string | null): void => {
+  /** Current preferences preserve independently owned sizing and settings. */
+  const userPersistence = userPersistenceCollection.get(USER_PERSISTENCE_ID)!
+  if (userPersistence.selectedTabId === selectedTabId && userPersistence.selectedMockupId === selectedMockupId) return
+  mutatePacedUserPersistenceAutosaveUpdate({
+    userPersistence: { ...userPersistence, selectedTabId, selectedMockupId }, debounceMs: AUTOSAVE_MS
+  })
+}
+
 export const flushUserPersistenceAutosaves = async (): Promise<void> => {
   await submitPacedUpdateTransactionAndWait(userPersistenceCollection.id, USER_PERSISTENCE_ID)
 }

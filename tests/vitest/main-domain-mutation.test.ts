@@ -27,7 +27,7 @@ const mockMainData = vi.hoisted(() => {
     prompt: new Map<string, Entry>(),
     note: new Map<string, Entry>(),
     promptTemplate: new Map<string, Entry>(),
-    workspacePromptCollectionUiState: new Map<string, Entry>()
+    attachedNoteUiState: new Map<string, Entry>()
   }
   /** Creates committed reads required by the generic main framework. */
   const createStore = (entityType: keyof typeof entries) => ({
@@ -43,8 +43,8 @@ const mockMainData = vi.hoisted(() => {
     prompt: { committedStore: createStore('prompt'), targetPolicy: 'requirePresent' },
     note: { committedStore: createStore('note'), targetPolicy: 'requirePresent' },
     promptTemplate: { committedStore: createStore('promptTemplate'), targetPolicy: 'requirePresent' },
-    workspacePromptCollectionUiState: {
-      committedStore: createStore('workspacePromptCollectionUiState'),
+    attachedNoteUiState: {
+      committedStore: createStore('attachedNoteUiState'),
       targetPolicy: 'deleteIfPresent'
     }
   }
@@ -414,18 +414,13 @@ describe('main domain mutation framework', () => {
   })
 
   it('uses collection delete policy for the required expectation target set', async () => {
-    const optionalUiStateId = 'workspace:category'
-    mockMainData.entries.workspacePromptCollectionUiState.set(optionalUiStateId, {
+    const optionalUiStateId = 'workspace:note'
+    mockMainData.entries.attachedNoteUiState.set(optionalUiStateId, {
       revision: 7,
       committed: {
         workspaceId: 'workspace',
-        contentOwnerId: 'category',
-        selectedEntryId: 'category-details',
-        treeIsExpanded: true,
-        contentSectionIsExpanded: true,
-        scrollTopByMode: {},
-        selectedMode: PromptStatusFolderId.Active,
-        shownFinalStatusGroups: {}
+        noteId: 'note',
+        visible: true
       },
       persistenceFields: {}
     })
@@ -441,7 +436,7 @@ describe('main domain mutation framework', () => {
       },
       {
         type: 'delete',
-        entityType: 'workspacePromptCollectionUiState',
+        entityType: 'attachedNoteUiState',
         id: optionalUiStateId
       }
     ]
@@ -467,7 +462,7 @@ describe('main domain mutation framework', () => {
       expect.arrayContaining([
         expect.objectContaining({ entityType: 'promptCollection', id: 'root' }),
         expect.objectContaining({
-          entityType: 'workspacePromptCollectionUiState',
+          entityType: 'attachedNoteUiState',
           id: optionalUiStateId
         })
       ]),
@@ -477,7 +472,7 @@ describe('main domain mutation framework', () => {
       result.payload.snapshots.map((snapshot) => `${snapshot.entityType}:${snapshot.id}`)
     ).toEqual([
       'promptCollection:root',
-      `workspacePromptCollectionUiState:${optionalUiStateId}`
+      `attachedNoteUiState:${optionalUiStateId}`
     ])
   })
 })

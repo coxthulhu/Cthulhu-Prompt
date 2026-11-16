@@ -1,3 +1,4 @@
+import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -7,16 +8,13 @@ import {
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import {
-  PROMPT_COLLECTION_HOST_SELECTOR,
-  promptEditorSelector,
-} from '../helpers/PromptCollectionSelectors'
+import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import { parsePromptMarkdown, serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import {
-  readWorkspaceUiState,
+  readCollectionView,
   seedWorkspaceUiState
 } from '../helpers/UserPersistenceHelpers'
 import {
@@ -1214,7 +1212,14 @@ describe('Prompt categories', () => {
     expect(nameSelection).toEqual({ start: 0, end: 11, length: 11 })
     await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
 
-    await manageButton.click()
+    // Deleting the selected prompt's category must repair its tab's retained navigation.
+    await mainWindow.getByTestId('prompt-tree-active-prompt-managed-second').click()
+    await expect.poll(async () => {
+      /** Saved precondition proves this test starts with a selection owned by the deleted category. */
+      const view = await readCollectionView(electronApp, createDeterministicId(WORKSPACE_PATH))
+      return { contentOwnerId: view?.contentOwnerId, selectedEntryId: view?.selectedEntryId }
+    }).toEqual({ contentOwnerId: SECOND_PROMPT_CATEGORY_ID, selectedEntryId: 'managed-second' })
+    await openManageCategoriesFromSidebar(mainWindow)
     /** New-category action that appends and focuses the first new draft. */
     const newCategoryButton = categoryDialog.locator(
       '[data-testid="manage-categories-new-button"]'
@@ -1290,6 +1295,14 @@ describe('Prompt categories', () => {
         )
       )
       .not.toHaveProperty('category')
+    // Leaving captures the live coordinator after the real renderer mutation has reconciled.
+    await testHelpers.navigateToHomeScreen()
+    await waitForRendererPersistence(mainWindow)
+    await expect.poll(async () => {
+      /** Deleted category state must stay absent when the tab captures its current location. */
+      const view = await readCollectionView(electronApp, createDeterministicId(WORKSPACE_PATH))
+      return { contentOwnerId: view?.contentOwnerId, selectedEntryId: view?.selectedEntryId, deletedOwner: view?.owners[SECOND_PROMPT_CATEGORY_ID] }
+    }).toEqual({ contentOwnerId: PROMPT_ROOT_ID, selectedEntryId: 'managed-second', deletedOwner: undefined })
   })
 
   test('deletes a category and moves its ordered prompts to Uncategorized', async ({
@@ -1341,10 +1354,18 @@ describe('Prompt categories', () => {
     expect(await readTextFile(electronApp, promptPath)).toContain(PROMPT_CATEGORY_ID)
     expect(await readTextFile(electronApp, templatePath)).toContain(TEMPLATE_CATEGORY_ID)
 
+    await waitForRendererPersistence(mainWindow)
     /** Atomic retained-set response returned by the main-process IPC handler. */
-    const saveResponse = await mainWindow.evaluate(
+    const { saveResponse, rootOwnerBeforeDelete } = await mainWindow.evaluate(
       async ({ categoryId, collectionId, workspaceId }) => {
-        return await (window as any).electron.ipcRenderer.invoke('save-categories', {
+        /** Read the session's actual revision after startup autosaves finish. */
+        const session = await (window as any).electron.ipcRenderer.invoke('load-workspace-ui-state', {
+          requestId: 'category-delete-session', clientId: (window as any).ipcClientId, payload: { workspaceId }
+        })
+        /** Mounted collection selection can expand its root before the deletion command. */
+        const rootOwnerBeforeDelete = session.workspaceUiState.data.tabs.find((tab: any) => tab.collectionId === collectionId).view.owners[collectionId]
+        /** The mutation must retain those live flags independently of the last-closed snapshot. */
+        const saveResponse = await (window as any).electron.ipcRenderer.invoke('save-categories', {
           requestId: 'save-categories-delete-test',
           clientId: (window as any).ipcClientId,
           payload: {
@@ -1377,17 +1398,12 @@ describe('Prompt categories', () => {
                 entityType: 'workspaceUiState',
                 id: workspaceId,
                 expected: 'revision',
-                revision: 0
-              },
-              {
-                entityType: 'workspacePromptCollectionUiState',
-                id: `${workspaceId}:${collectionId}`,
-                expected: 'revision',
-                revision: 0
+                revision: session.workspaceUiState.revision
               }
             ]
           }
         })
+        return { saveResponse, rootOwnerBeforeDelete }
       },
       { categoryId: PROMPT_CATEGORY_ID, collectionId: PROMPT_ROOT_ID, workspaceId }
     )
@@ -1421,11 +1437,6 @@ describe('Prompt categories', () => {
             })
           },
           { entityType: 'category', id: PROMPT_CATEGORY_ID, deleted: true },
-          {
-            entityType: 'workspacePromptCollectionUiState',
-            id: `${workspaceId}:${PROMPT_CATEGORY_ID}`,
-            deleted: true
-          },
           expect.objectContaining({
             entityType: 'prompt',
             id: 'categorized-prompt',
@@ -1437,27 +1448,14 @@ describe('Prompt categories', () => {
             entityType: 'workspaceUiState',
             id: workspaceId,
             data: expect.objectContaining({
-              selectedScreenData: {
-                projectId: createDeterministicId(`${WORKSPACE_PATH}:DefaultProject`),
-                promptCollectionId: PROMPT_ROOT_ID,
-                contentOwnerId: PROMPT_ROOT_ID,
-                openPromptId: null
-              }
+              tabs: expect.arrayContaining([expect.objectContaining({ collectionId: PROMPT_ROOT_ID, view: expect.objectContaining({
+                contentOwnerId: PROMPT_ROOT_ID, selectedEntryId: 'categorized-prompt',
+                owners: expect.objectContaining({ [PROMPT_ROOT_ID]: rootOwnerBeforeDelete })
+              }) })]),
+              lastClosedCollections: expect.objectContaining({ [PROMPT_ROOT_ID]: expect.objectContaining({
+                owners: expect.objectContaining({ [PROMPT_ROOT_ID]: { treeIsExpanded: false, contentSectionIsExpanded: false } })
+              }) })
             })
-          }),
-          expect.objectContaining({
-            entityType: 'workspacePromptCollectionUiState',
-            id: `${workspaceId}:${PROMPT_ROOT_ID}`,
-            data: {
-              workspaceId,
-              contentOwnerId: PROMPT_ROOT_ID,
-              selectedEntryId: 'categorized-prompt',
-              treeIsExpanded: false,
-              contentSectionIsExpanded: false,
-              scrollTopByMode: {},
-              selectedMode: 'active',
-              shownFinalStatusGroups: {}
-            }
           })
         ])
       }
@@ -1476,21 +1474,12 @@ describe('Prompt categories', () => {
     expect(deletedCategoryPrompt.data.modifiedAt).not.toBe(initialModifiedAt)
     await expect
       .poll(async () => {
-        /** Persisted split UI state after category ownership is transferred to the root. */
-        const uiState = await readWorkspaceUiState(electronApp, workspaceId)
-        /** Root owner row whose selection changes without replacing expansion fields. */
-        const rootState = uiState.promptCollectionViewEntries.find(
-          (entry) => entry.contentOwnerId === PROMPT_ROOT_ID
-        )
+        /** The active tab must transfer selection and drop the removed category's state. */
+        const view = await readCollectionView(electronApp, workspaceId)
         return {
-          contentOwnerId:
-            uiState.selectedScreen === 'project'
-              ? (uiState.selectedScreenData as { contentOwnerId?: string } | null)?.contentOwnerId
-              : null,
-          categoryPresent: uiState.promptCollectionViewEntries.some(
-            (entry) => entry.contentOwnerId === PROMPT_CATEGORY_ID
-          ),
-          rootState
+          contentOwnerId: view?.contentOwnerId,
+          categoryPresent: Boolean(view?.owners[PROMPT_CATEGORY_ID]),
+          rootState: { contentOwnerId: view?.contentOwnerId, selectedEntryId: view?.selectedEntryId, ...view?.owners[PROMPT_ROOT_ID] }
         }
       })
       .toEqual({
@@ -1499,8 +1488,7 @@ describe('Prompt categories', () => {
         rootState: {
           contentOwnerId: PROMPT_ROOT_ID,
           selectedEntryId: 'categorized-prompt',
-          treeIsExpanded: false,
-          contentSectionIsExpanded: false
+          ...rootOwnerBeforeDelete
         }
       })
     await expect

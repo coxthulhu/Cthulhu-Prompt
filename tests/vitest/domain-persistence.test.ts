@@ -31,12 +31,9 @@ const mockDomainData = vi.hoisted(() => {
     note: new Map<string, Entry>(),
     promptTemplate: new Map<string, Entry>(),
     userPersistence: new Map<string, Entry>(),
-    markdownContentUiState: new Map<string, Entry>(),
     /** Optional visibility participates in the complete persistence graph. */
     attachedNoteUiState: new Map<string, Entry>(),
-    workspaceUiState: new Map<string, Entry>(),
-    workspacePromptCollectionUiState: new Map<string, Entry>(),
-    accordionUiState: new Map<string, Entry>()
+    workspaceUiState: new Map<string, Entry>()
   }
   /** Creates the committed-store reads used by domain persistence planning. */
   const createStore = (entityType: keyof typeof entries) => ({
@@ -53,14 +50,8 @@ const mockDomainData = vi.hoisted(() => {
     note: { committedStore: createStore('note'), targetPolicy: 'requirePresent' },
     promptTemplate: { committedStore: createStore('promptTemplate') },
     userPersistence: { committedStore: createStore('userPersistence') },
-    markdownContentUiState: { committedStore: createStore('markdownContentUiState') },
     attachedNoteUiState: { committedStore: createStore('attachedNoteUiState'), targetPolicy: 'deleteIfPresent' },
-    workspaceUiState: { committedStore: createStore('workspaceUiState') },
-    workspacePromptCollectionUiState: {
-      committedStore: createStore('workspacePromptCollectionUiState'),
-      targetPolicy: 'deleteIfPresent'
-    },
-    accordionUiState: { committedStore: createStore('accordionUiState') }
+    workspaceUiState: { committedStore: createStore('workspaceUiState') }
   }
   /** Clears authoritative entries between persistence-planning tests. */
   const reset = (): void => {

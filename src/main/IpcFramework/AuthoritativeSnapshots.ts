@@ -68,24 +68,12 @@ const buildMainAuthoritativeSnapshot = (target: DomainTarget): AuthoritativeSnap
     }
     case 'userPersistence':
     case 'attachedNoteUiState':
-    case 'markdownContentUiState':
-    case 'workspaceUiState':
-    case 'workspacePromptCollectionUiState':
-    case 'accordionUiState': {
+    case 'workspaceUiState': {
       /** Current SQLite-backed entry selected by its authoritative target ID. */
       const entry = data[target.entityType].committedStore.getEntry(target.id)
       return entry
-        ? ({
-            entityType: target.entityType,
-            id: target.id,
-            revision: entry.revision,
-            data: entry.committed
-          } as AuthoritativeSnapshot)
-        : ({
-            entityType: target.entityType,
-            id: target.id,
-            deleted: true
-          } as AuthoritativeSnapshot)
+        ? ({ entityType: target.entityType, id: target.id, revision: entry.revision, data: entry.committed } as AuthoritativeSnapshot)
+        : ({ entityType: target.entityType, id: target.id, deleted: true } as AuthoritativeSnapshot)
     }
   }
 }

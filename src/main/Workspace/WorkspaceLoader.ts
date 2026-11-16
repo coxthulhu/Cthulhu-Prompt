@@ -1,3 +1,5 @@
+import { migrateTabSession, readTabSession, writeTabSession } from '../Persistence/sqlite/TabSessionPersistence'
+import { removeCollectionFromTabSession, pruneCollectionTabViews } from '@shared/domain/ui-state/TabSession'
 import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import { readNoteFiles } from '../Persistence/workspace/NoteReads'
 import { loadAttachedNoteUiStates } from '../Queries/AttachedNoteUiStateQuery'
@@ -161,6 +163,20 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
     ...loadedPromptIds,
     ...loadedPromptTemplateIds
   ])
+
+  // Convert legacy navigation only after collection ownership has been loaded and repaired.
+  migrateTabSession(workspaceId, promptCollections.map((entry) => entry.data), workspaceEntry.persistenceFields.workspaceInfoPath)
+  /** Existing tabs whose collections disappeared externally return to their New Tab screens. */
+  const session = readTabSession(workspaceId)
+  if (session) {
+    for (const id of new Set([...Object.keys(session.lastClosedCollections), ...session.tabs.flatMap((tab) => tab.collectionId ?? [])])) {
+      if (!loadedPromptCollectionIds.includes(id)) removeCollectionFromTabSession(session, id)
+    }
+    for (const { data: collection } of promptCollections) {
+      pruneCollectionTabViews(session, collection.id, getPromptCollectionCategoryIds(collection), getMarkdownContentIds(collection, collection.kind), notes.map((note) => note.id))
+    }
+    writeTabSession(session)
+  }
 
   /** Live attachment identities prune preferences left by external deletes or detachments. */
   const attachedNoteIds = new Set(notes.filter((note) => note.data.kind === 'attached').map((note) => note.id))

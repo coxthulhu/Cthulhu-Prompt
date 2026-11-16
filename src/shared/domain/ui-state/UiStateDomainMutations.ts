@@ -1,45 +1,6 @@
-import type { DomainChange, DomainPlanner } from '@shared/domain/DomainChanges'
-import { isPromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import {
-  createAccordionUiStateKey,
-  createWorkspacePromptCollectionUiStateKey,
-  type AccordionUiState,
-  type WorkspacePromptCollectionUiState,
-  type WorkspaceUiState
-} from '@shared/domain/ui-state/UiState'
-import {
-  parseWorkspaceAccordionSections,
-  parseWorkspaceScreenSelection
-} from '@shared/domain/user-persistence/UserPersistence'
-
-/** Builds an insert or update plan for one complete authoritative UI-state record. */
-const planUiStateUpsert = <
-  TEntityType extends
-    | 'workspaceUiState'
-    | 'workspacePromptCollectionUiState'
-    | 'accordionUiState',
-  TCommand extends WorkspaceUiState | WorkspacePromptCollectionUiState | AccordionUiState
->(
-  state: Parameters<DomainPlanner<TCommand>>[0],
-  entityType: TEntityType,
-  id: string,
-  command: TCommand
-): DomainChange[] => {
-  /** Existing authoritative record deciding whether the plan inserts or updates. */
-  const existing = state.get(entityType, id)
-  return existing
-    ? [
-        {
-          type: 'update',
-          entityType,
-          id,
-          recipe: (draft) => {
-            Object.assign(draft, command)
-          }
-        } as DomainChange
-      ]
-    : [{ type: 'insert', entityType, id, data: command } as DomainChange]
-}
+import type { DomainPlanner } from '@shared/domain/DomainChanges'
+import type { WorkspaceUiState } from './UiState'
+import { isWorkspaceTab, isCollectionViewState } from './TabSession'
 
 /** Strict runtime parser for workspace-level UI-state replacement commands. */
 export const parseSetWorkspaceUiStateDomainCommand = (
@@ -49,104 +10,15 @@ export const parseSetWorkspaceUiStateDomainCommand = (
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
   if (Object.keys(record).length !== 4 || typeof record.workspaceId !== 'string') return null
-  /** Validated discriminated workspace screen selection. */
-  const selection = parseWorkspaceScreenSelection(
-    record.selectedScreen,
-    record.selectedScreenData
-  )
-  if (
-    !selection ||
-    (typeof record.lastCollectionIdByProject !== 'object' || record.lastCollectionIdByProject === null ||
-      Array.isArray(record.lastCollectionIdByProject) || Object.values(record.lastCollectionIdByProject).some((id) => id !== null && typeof id !== 'string'))
-  ) {
-    return null
-  }
-  return {
-    workspaceId: record.workspaceId,
-    ...selection,
-    lastCollectionIdByProject: record.lastCollectionIdByProject as Record<string, string | null>
-  }
+  if (!Array.isArray(record.tabs) || !record.tabs.every(isWorkspaceTab) ||
+    typeof record.selectedTabId !== 'string' ||
+    typeof record.lastClosedCollections !== 'object' || record.lastClosedCollections === null ||
+    Array.isArray(record.lastClosedCollections) || !Object.values(record.lastClosedCollections).every(isCollectionViewState)) return null
+  return record as WorkspaceUiState
 }
 
-/** Strict runtime parser for prompt-collection view UI-state replacement commands. */
-export const parseSetWorkspacePromptCollectionUiStateDomainCommand = (
-  value: unknown
-): WorkspacePromptCollectionUiState | null => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw command fields validated without allowing additional properties. */
-  const record = value as Record<string, unknown>
-  if (
-    Object.keys(record).length !== 8 ||
-    typeof record.workspaceId !== 'string' ||
-    typeof record.contentOwnerId !== 'string' ||
-    typeof record.selectedEntryId !== 'string' ||
-    typeof record.treeIsExpanded !== 'boolean' ||
-    typeof record.contentSectionIsExpanded !== 'boolean' ||
-    !isPromptStatusFolderId(record.selectedMode) ||
-    typeof record.shownFinalStatusGroups !== 'object' ||
-    record.shownFinalStatusGroups === null ||
-    Array.isArray(record.shownFinalStatusGroups) ||
-    Object.entries(record.shownFinalStatusGroups).some(
-      ([mode, shown]) => !isPromptStatusFolderId(mode) || typeof shown !== 'boolean'
-    ) ||
-    typeof record.scrollTopByMode !== 'object' ||
-    record.scrollTopByMode === null ||
-    Array.isArray(record.scrollTopByMode) ||
-    Object.entries(record.scrollTopByMode).some(
-      ([mode, offset]) => !isPromptStatusFolderId(mode) ||
-        typeof offset !== 'number' || !Number.isFinite(offset) || offset < 0
-    )
-  ) {
-    return null
-  }
-  return record as WorkspacePromptCollectionUiState
-}
-
-/** Strict runtime parser for complete accordion UI-state replacement commands. */
-export const parseSetAccordionUiStateDomainCommand = (
-  value: unknown
-): AccordionUiState | null => {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
-  /** Raw command fields validated without allowing additional properties. */
-  const record = value as Record<string, unknown>
-  if (
-    Object.keys(record).length !== 3 ||
-    typeof record.workspaceId !== 'string' ||
-    typeof record.persistenceId !== 'string'
-  ) {
-    return null
-  }
-  /** Validated accordion sections retained in persisted order. */
-  const sections = parseWorkspaceAccordionSections(record.sections)
-  return sections ? { workspaceId: record.workspaceId, persistenceId: record.persistenceId, sections } : null
-}
-
-/** Plans one insert-or-update workspace-level UI-state replacement. */
-export const planSetWorkspaceUiStateDomainMutation: DomainPlanner<WorkspaceUiState> = (
-  state,
-  command
-) => planUiStateUpsert(state, 'workspaceUiState', command.workspaceId, command)
-
-/** Plans one insert-or-update prompt-collection view UI-state replacement. */
-export const planSetWorkspacePromptCollectionUiStateDomainMutation: DomainPlanner<WorkspacePromptCollectionUiState> = (
-  state,
-  command
-) =>
-  planUiStateUpsert(
-    state,
-    'workspacePromptCollectionUiState',
-    createWorkspacePromptCollectionUiStateKey(command.workspaceId, command.contentOwnerId),
-    command
-  )
-
-/** Plans one insert-or-update accordion UI-state replacement. */
-export const planSetAccordionUiStateDomainMutation: DomainPlanner<AccordionUiState> = (
-  state,
-  command
-) =>
-  planUiStateUpsert(
-    state,
-    'accordionUiState',
-    createAccordionUiStateKey(command.workspaceId, command.persistenceId),
-    command
-  )
+/** Replaces one complete workspace tab session through the shared mutation framework. */
+export const planSetWorkspaceUiStateDomainMutation: DomainPlanner<WorkspaceUiState> = (state, command) =>
+  state.get('workspaceUiState', command.workspaceId)
+    ? [{ type: 'update', entityType: 'workspaceUiState', id: command.workspaceId, recipe: (draft) => { Object.assign(draft, command) } }]
+    : [{ type: 'insert', entityType: 'workspaceUiState', id: command.workspaceId, data: command }]

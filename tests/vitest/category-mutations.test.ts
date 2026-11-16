@@ -512,11 +512,6 @@ describe('category mutations', () => {
             modifiedAt: '2026-08-16T12:00:00.000Z',
             templateText: 'Template text.'
           }
-        },
-        {
-          entityType: 'workspacePromptCollectionUiState',
-          id: `${WORKSPACE_ID}:${CATEGORY_ID}`,
-          deleted: true
         }
       ]
     }

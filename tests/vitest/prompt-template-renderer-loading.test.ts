@@ -203,8 +203,7 @@ describe('prompt template renderer loading', () => {
             templateText: 'Review {{change}}.'
           }
         }
-      ],
-      markdownContentUiStates: []
+      ]
     })
 
     await loadPromptCollectionInitial('renderer-template-workspace', 'renderer-template-collection')

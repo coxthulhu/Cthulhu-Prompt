@@ -8,11 +8,6 @@ import type {
 } from '@shared/domain/DomainChanges'
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
-import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
-import {
-  createAccordionUiStateKey,
-  createWorkspacePromptCollectionUiStateKey
-} from '@shared/domain/ui-state/UiState'
 import { data } from './Data'
 import type { DomainPersistenceFieldsMap } from '../Persistence/PersistenceTypes'
 
@@ -72,10 +67,7 @@ const createEmptyGraphEntries = (): DomainGraphEntries => ({
   promptTemplate: new Map(),
   userPersistence: new Map(),
   attachedNoteUiState: new Map(),
-  markdownContentUiState: new Map(),
   workspaceUiState: new Map(),
-  workspacePromptCollectionUiState: new Map(),
-  accordionUiState: new Map()
 })
 
 /** Wraps typed entity maps with uniform graph lookup helpers. */
@@ -106,21 +98,6 @@ const getDomainEntityId = <TEntityType extends DomainEntityType>(
       const uiState = entity as DomainEntityMap['attachedNoteUiState']
       return createAttachedNoteUiStateKey(uiState.workspaceId, uiState.noteId)
     }
-    case 'markdownContentUiState': {
-      /** Markdown UI state whose workspace and content IDs form its authoritative key. */
-      const uiState = entity as DomainEntityMap['markdownContentUiState']
-      return createMarkdownContentUiStateKey(uiState.workspaceId, uiState.contentId)
-    }
-    case 'workspacePromptCollectionUiState': {
-      /** Prompt-collection UI state whose workspace and owner IDs form its authoritative key. */
-      const uiState = entity as DomainEntityMap['workspacePromptCollectionUiState']
-      return createWorkspacePromptCollectionUiStateKey(uiState.workspaceId, uiState.contentOwnerId)
-    }
-    case 'accordionUiState': {
-      /** Accordion UI state whose workspace and persistence IDs form its authoritative key. */
-      const uiState = entity as DomainEntityMap['accordionUiState']
-      return createAccordionUiStateKey(uiState.workspaceId, uiState.persistenceId)
-    }
     default:
       return (entity as { id: string }).id
   }
@@ -141,10 +118,7 @@ const captureCommittedDomainGraph = (): DomainGraph => {
     'promptTemplate',
     'userPersistence',
     'attachedNoteUiState',
-    'markdownContentUiState',
     'workspaceUiState',
-    'workspacePromptCollectionUiState',
-    'accordionUiState'
   ]
 
   for (const entityType of entityTypes) {
@@ -179,10 +153,7 @@ const copyDomainGraph = (graph: DomainGraph): DomainGraph =>
     promptTemplate: new Map(graph.entries.promptTemplate),
     userPersistence: new Map(graph.entries.userPersistence),
     attachedNoteUiState: new Map(graph.entries.attachedNoteUiState),
-    markdownContentUiState: new Map(graph.entries.markdownContentUiState),
     workspaceUiState: new Map(graph.entries.workspaceUiState),
-    workspacePromptCollectionUiState: new Map(graph.entries.workspacePromptCollectionUiState),
-    accordionUiState: new Map(graph.entries.accordionUiState)
   })
 
 /** Finds the optional renderer expectation associated with one planned target. */

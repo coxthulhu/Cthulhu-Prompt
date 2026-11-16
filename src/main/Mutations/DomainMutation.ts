@@ -70,10 +70,7 @@ const parseDomainRevisionExpectation: Parser<DomainRevisionExpectation> = (value
     record.entityType === 'promptTemplate' ||
     record.entityType === 'userPersistence' ||
     record.entityType === 'attachedNoteUiState' ||
-    record.entityType === 'markdownContentUiState' ||
-    record.entityType === 'workspaceUiState' ||
-    record.entityType === 'workspacePromptCollectionUiState' ||
-    record.entityType === 'accordionUiState'
+    record.entityType === 'workspaceUiState'
       ? record.entityType
       : null
   /** Runtime-validated target ID. */

@@ -16,11 +16,8 @@ const mockTransactionState = vi.hoisted(() => {
     'note',
     'promptTemplate',
     'userPersistence',
-    'markdownContentUiState',
     'attachedNoteUiState',
     'workspaceUiState',
-    'workspacePromptCollectionUiState',
-    'accordionUiState'
   ] as const
   type StoreName = (typeof storeNames)[number]
   type Entry = {
@@ -38,12 +35,9 @@ const mockTransactionState = vi.hoisted(() => {
     note: new Map(),
     promptTemplate: new Map(),
     userPersistence: new Map(),
-    markdownContentUiState: new Map(),
-    /** Optional attachment preferences share the SQLite transaction. */
     attachedNoteUiState: new Map(),
+    /** Optional attachment preferences share the SQLite transaction. */
     workspaceUiState: new Map(),
-    workspacePromptCollectionUiState: new Map(),
-    accordionUiState: new Map()
   }
   /** Persistence staging counts recorded independently for each authoritative store. */
   const stageCounts = Object.fromEntries(
@@ -119,11 +113,8 @@ const mockTransactionState = vi.hoisted(() => {
     /** Whether this test store exercises the SQLite persistence path. */
     const isSqliteStore =
       store === 'userPersistence' ||
-      store === 'markdownContentUiState' ||
       store === 'attachedNoteUiState' ||
-      store === 'workspaceUiState' ||
-      store === 'workspacePromptCollectionUiState' ||
-      store === 'accordionUiState'
+      store === 'workspaceUiState'
     return {
       committedStore: createCommittedStore(store),
       persistence: isSqliteStore
@@ -154,11 +145,8 @@ const mockTransactionState = vi.hoisted(() => {
       loadDataFromPersistence: async (_id: string, _persistenceFields: unknown) => undefined,
       emitCommittedRevisionChanged: (_id: string) => undefined,
       targetPolicy:
-        store === 'markdownContentUiState' ||
         store === 'attachedNoteUiState' ||
-        store === 'workspaceUiState' ||
-        store === 'workspacePromptCollectionUiState' ||
-        store === 'accordionUiState'
+        store === 'workspaceUiState'
           ? ('deleteIfPresent' as const)
           : ('requirePresent' as const)
     }
@@ -174,11 +162,8 @@ const mockTransactionState = vi.hoisted(() => {
       note: createRevisionData('note'),
       promptTemplate: createRevisionData('promptTemplate'),
       userPersistence: createRevisionData('userPersistence'),
-      markdownContentUiState: createRevisionData('markdownContentUiState'),
       attachedNoteUiState: createRevisionData('attachedNoteUiState'),
       workspaceUiState: createRevisionData('workspaceUiState'),
-      workspacePromptCollectionUiState: createRevisionData('workspacePromptCollectionUiState'),
-      accordionUiState: createRevisionData('accordionUiState')
     },
     reset,
     seedEntry,
@@ -266,7 +251,7 @@ describe('atomic data transaction', () => {
           draft.title = 'After'
         }
       }),
-      markdownContentUiState: tx.markdownContentUiState.delete({ id: uiStateId })
+      attachedNoteUiState: tx.attachedNoteUiState.delete({ id: uiStateId })
     }))
 
     expect(outcome).toMatchObject({ status: 'success' })
@@ -274,13 +259,13 @@ describe('atomic data transaction', () => {
     expect(persistenceEvents).toEqual([
       'stage:prompt',
       'sqlite:begin',
-      'sqlite:markdownContentUiState',
+      'sqlite:attachedNoteUiState',
       'commit:prompt',
       'sqlite:commit'
     ])
     expect(mockTransactionState.sqliteCommands).toEqual([
       {
-        store: 'markdownContentUiState',
+        store: 'attachedNoteUiState',
         id: uiStateId,
         transition: { before: null, after: null }
       }
@@ -310,7 +295,7 @@ describe('atomic data transaction', () => {
             draft.title = 'After'
           }
         }),
-        markdownContentUiState: tx.markdownContentUiState.delete({
+        attachedNoteUiState: tx.attachedNoteUiState.delete({
           id: 'workspace:prompt-1'
         })
       }))
@@ -319,7 +304,7 @@ describe('atomic data transaction', () => {
     expect(persistenceEvents).toEqual([
       'stage:prompt',
       'sqlite:begin',
-      'sqlite:markdownContentUiState',
+      'sqlite:attachedNoteUiState',
       'commit:prompt',
       'sqlite:rollback',
       'revert:prompt'
@@ -336,10 +321,10 @@ describe('atomic data transaction', () => {
     const uiStateId = 'workspace:missing-content'
     /** Delete-only domain projection allowed by the collection target policy. */
     const projection = projectDomainTransitions(
-      [{ type: 'delete', entityType: 'markdownContentUiState', id: uiStateId }],
+      [{ type: 'delete', entityType: 'attachedNoteUiState', id: uiStateId }],
       [
         {
-          entityType: 'markdownContentUiState',
+          entityType: 'attachedNoteUiState',
           id: uiStateId,
           expected: 'absent'
         }
@@ -348,7 +333,7 @@ describe('atomic data transaction', () => {
 
     expect(projection.transitions).toEqual([
       {
-        entityType: 'markdownContentUiState',
+        entityType: 'attachedNoteUiState',
         id: uiStateId,
         before: null,
         after: null,
@@ -360,7 +345,7 @@ describe('atomic data transaction', () => {
     })
     expect(mockTransactionState.sqliteCommands).toEqual([
       {
-        store: 'markdownContentUiState',
+        store: 'attachedNoteUiState',
         id: uiStateId,
         transition: { before: null, after: null }
       }
@@ -608,11 +593,8 @@ describe('atomic data transaction', () => {
       note: 0,
       promptTemplate: 0,
       userPersistence: 0,
-      markdownContentUiState: 0,
       attachedNoteUiState: 0,
       workspaceUiState: 0,
-      workspacePromptCollectionUiState: 0,
-      accordionUiState: 0
     })
   })
 
@@ -724,11 +706,8 @@ describe('atomic data transaction', () => {
       note: 0,
       promptTemplate: 0,
       userPersistence: 0,
-      markdownContentUiState: 0,
       attachedNoteUiState: 0,
       workspaceUiState: 0,
-      workspacePromptCollectionUiState: 0,
-      accordionUiState: 0
     })
   })
 

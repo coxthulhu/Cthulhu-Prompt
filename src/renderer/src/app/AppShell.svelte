@@ -1,6 +1,6 @@
 <script lang="ts">
   import ManageProjectsDialog from '@renderer/features/projects/ManageProjectsDialog.svelte'
-  import { findCollectionProject, getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
+  import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
   import { tick, untrack } from 'svelte'
   import { clearWorkspaceMonacoModels } from '@renderer/common/Monaco'
   import { useLiveQuery } from '@tanstack/svelte-db'
@@ -23,6 +23,7 @@
   import NewTabScreen from '@renderer/features/new-tab/NewTabScreen.svelte'
   import {
     CollectionSidebarModeData,
+    setTabStateContext,
     createSidebarModes,
     SidebarModeId,
     type SidebarMode
@@ -44,10 +45,11 @@
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
   } from '@renderer/app/workspaceSelection.svelte.ts'
-  import { syncLastWorkspaceInfoPath, syncTabState } from '@renderer/data/Mutations/UserPersistenceMutations'
-  import { syncWorkspaceScreenSelection } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
+  import { syncLastWorkspaceInfoPath } from '@renderer/data/Mutations/UserPersistenceMutations'
+  import { setWorkspaceUiStateWithAutosave } from '@renderer/data/Mutations/WorkspaceUiStateMutations'
   import {
     setAppSidebarExpandedWithAutosave,
+    setApplicationNavigationWithAutosave,
     setAppSidebarWidthWithAutosave
   } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
   import { loadWorkspaceUiState } from '@renderer/data/Queries/WorkspaceUiStateQuery'
@@ -68,13 +70,13 @@
   } from './PromptNavigationContext.svelte.ts'
   import { flushAllAutosaves } from '@renderer/data/UiState/autosave/AutosaveFlushes.svelte.ts'
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
-  import { setPromptCollectionSelectedEntryIdWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
+  import { createCollectionViewState, createWorkspaceTab, pruneCollectionTabViews, type CollectionViewState, type WorkspaceTab } from '@shared/domain/ui-state/TabSession'
+  import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection/PromptCollection'
+  import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+  import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
   import {
     USER_PERSISTENCE_ID,
-    isProjectScreenSelection,
-    isWorkspaceScreenSelectionSame,
-    type WorkTab,
-    type WorkspaceScreenSelection
+    type WorkTab
   } from '@shared/domain/user-persistence/UserPersistence'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Prompt } from '@shared/domain/prompt/Prompt'
@@ -157,21 +159,32 @@
   ) as { data: PromptCollection[] }
   /** Prompts and templates whose titles name work tabs with a prompt open. */
   const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
+  /** Loaded note identities preserve valid attached-editor locations during deletion cleanup. */
+  const noteQuery = useLiveQuery(notesCollection)
   const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as { data: PromptTemplate[] }
 
   setSystemSettingsContext(systemSettings)
   setWorkspaceSelectionContext(workspaceSelection)
-  setPromptNavigationContext(promptNavigation)
+  setPromptNavigationContext(() => selectedWorkTab?.mode.navigation ?? promptNavigation)
+  setTabStateContext(() => selectedWorkTab?.mode)
 
   let activeScreen = $state<ScreenId>('home')
   /** One open work tab and the collection state it shows; it shows its New Tab screen while no collection is selected. */
   type OpenWorkTab = { id: string; mode: CollectionSidebarModeData }
   /** Builds a work tab showing its New Tab screen. */
-  const createWorkTab = (id: string): OpenWorkTab => ({ id, mode: new CollectionSidebarModeData() })
+  const createWorkTab = (record: WorkspaceTab): OpenWorkTab => {
+    /** The callback closes this specific tab even when it is in the background. */
+    const tab: OpenWorkTab = { id: record.id, mode: new CollectionSidebarModeData(record, () => rememberClosedCollection(tab)) }
+    return tab
+  }
   /** Describes a work tab on its New Tab screen to the title bar and to persistence. */
   const toNewTab = (id: string): WorkTab => ({ id, title: 'New Tab', screen: 'new-tab' })
-  /** Open work tabs in display order, restored from this machine's persistence as New Tabs. */
-  let workTabs = $state<OpenWorkTab[]>(getUserPersistence().workTabs.map((tab) => createWorkTab(tab.id)))
+  /** Open work tabs in display order, restored from the workspace session. */
+  let workTabs = $state<OpenWorkTab[]>([])
+  /** Last collection views closed by the user, independent of open tab locations. */
+  let lastClosedCollections = $state<Record<string, CollectionViewState>>({})
+  /** Workspace replacement must not autosave the intermediate empty tab list. */
+  let restoringSession = $state(false)
   /** Work tab whose screen is shown while the work tab screen is active. */
   let selectedWorkTabId = $state<string | null>(null)
   /** Selected work tab, or undefined while another screen is active. */
@@ -193,8 +206,6 @@
       screen: collection.kind === 'template' ? 'template-collection' : 'prompt-collection'
     }
   }))
-  /** Selected tab saved by the previous session, applied once startup restores the workspace. */
-  const startupSelectedTabId = getUserPersistence().selectedTabId
   /** Selected title bar tab: the shown work tab or fixed screen. */
   const selectedTabId = $derived(
     activeScreen === 'work-tab' ? selectedWorkTabId : activeScreen
@@ -215,7 +226,7 @@
   })
   /** Screens without a sidebar always use the collapsed layout, including programmatic navigation. */
   const isAppSidebarExpanded = $derived(activeSidebarMode !== null && sidebarExpanded)
-  let selectedMockupId = $state<string | null>(null)
+  let selectedMockupId = $state<string | null>(getUserPersistence().selectedMockupId)
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = getSelectedWorkspaceId()
 
@@ -277,7 +288,8 @@
   const updater = createAppUpdates(
     () => !startupRestoreOverlay.isVisible() && !showWelcomeDialog && !homeWorkflowBusy && !isWorkspaceLoading,
     async () => {
-      persistPromptNavigationSelection()
+      captureTabState()
+      saveTabSession()
       captureRegisteredMonacoViewStates()
       await flushAllAutosaves()
     }
@@ -302,59 +314,52 @@
     workspaceActionCount -= 1
   }
 
-  const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
-    /** Existing shared collection UI state still uses the legacy project-shaped owner pointer. */
-    const mode = screen === 'work-tab' ? selectedWorkTab?.mode : undefined
-    const collectionId = mode?.collectionId
-    const project = collectionId && selectedWorkspace ? findCollectionProject(selectedWorkspace, collectionId) : undefined
-    if (collectionId && project) {
-      /** Preserve the restored category owner until the collection initializes its navigation. */
-      const saved = untrack(() => workspaceUiStateCollection.get(getSelectedWorkspaceId()!))
-      const savedOwnerId = saved && isProjectScreenSelection(saved) && saved.selectedScreenData.promptCollectionId === collectionId
-        ? saved.selectedScreenData.contentOwnerId : collectionId
-      return {
-        selectedScreen: 'project',
-        selectedScreenData: {
-          projectId: project.id,
-          promptCollectionId: collectionId,
-          contentOwnerId: promptNavigation.screenCollectionId === collectionId
-            ? promptNavigation.contentOwnerId ?? collectionId : savedOwnerId,
-          openPromptId: mode!.openPromptId
-        }
-      }
+  /** Captures the visible row and Monaco positions before a tab leaves its mounted screen. */
+  const captureTabState = (tab = selectedWorkTab): void => {
+    captureRegisteredMonacoViewStates()
+    if (!tab || tab.mode.openPromptId) return
+    /** Selection coordinator belongs to the departing tab. */
+    const navigation = tab.mode.navigation
+    if (navigation.contentOwnerId && navigation.selectedRow) {
+      tab.mode.view.contentOwnerId = navigation.contentOwnerId
+      tab.mode.view.selectedEntryId = promptNavigationRowToPersistedEntryId(navigation.selectedRow)
     }
+  }
 
-    if (screen === 'mockups') {
-      return {
-        selectedScreen: screen,
-        selectedScreenData: {
-          mockupId: selectedMockupId
-        }
-      }
-    }
+  /** Saves only the last closing collection view; single-prompt tabs are not open collection views. */
+  const rememberClosedCollection = (tab: OpenWorkTab): void => {
+    captureTabState(tab)
+    /** Only the final nonsingle view updates this collection's remembered position. */
+    const collectionId = tab.mode.collectionId
+    if (!collectionId || tab.mode.openPromptId || workTabs.some((other) => other.id !== tab.id && other.mode.collectionId === collectionId && !other.mode.openPromptId)) return
+    lastClosedCollections[collectionId] = globalThis.structuredClone($state.snapshot(tab.mode.view))
+  }
 
-    // Work tabs restore from the app-wide selected tab, so the workspace itself keeps Home.
-    if (screen === 'work-tab') {
-      return {
-        selectedScreen: 'home',
-        selectedScreenData: null
-      }
+  /** Queues the complete workspace session through the existing authoritative autosave flow. */
+  const saveTabSession = (): void => {
+    /** Session writes always belong to the currently loaded workspace. */
+    const workspaceId = getSelectedWorkspaceId()
+    if (!workspaceId || restoringSession) return
+    /** Snapshot is read reactively; writing it must not subscribe this effect to the mutation queue. */
+    const session = {
+      workspaceId, tabs: workTabs.map((tab) => $state.snapshot(tab.mode.record)),
+      selectedTabId: selectedTabId ?? 'home', lastClosedCollections: $state.snapshot(lastClosedCollections)
     }
-
-    return {
-      selectedScreen: screen,
-      selectedScreenData: null
-    }
+    untrack(() => setWorkspaceUiStateWithAutosave(session, AUTOSAVE_MS))
   }
 
   /** Saves the current workspace before releasing its data and navigation caches. */
   const closeSelectedWorkspace = async (): Promise<void> => {
-    // Work tabs belong to the open workspace, so closing or replacing it closes them all.
-    if (getSelectedWorkspaceId()) workTabs = []
-    persistPromptNavigationSelection()
-    captureRegisteredMonacoViewStates()
+    captureTabState()
+    saveTabSession()
+    restoringSession = true
     await closeWorkspaceMutation()
+    workTabs = []
+    lastClosedCollections = {}
+    selectedWorkTabId = null
+    activeScreen = 'home'
     promptNavigation.clear()
+    restoringSession = false
     // Side effect: let workspace editors unmount before releasing their Monaco models.
     await tick()
     await clearWorkspaceMonacoModels()
@@ -374,115 +379,38 @@
     const loadedWorkspace = await loadWorkspaceByPath(workspaceInfoPath)
     await loadWorkspaceUiState(loadedWorkspace.workspaceId)
     setSelectedWorkspaceId(loadedWorkspace.workspaceId)
+    await restoreWorkspaceScreenFromPersistence()
     await syncLastWorkspaceInfoPath(loadedWorkspace.workspaceInfoPath)
   }
 
-  const syncCurrentWorkspaceScreenSelection = async (
-    screen: ScreenId,
-    workspaceScreenSelection = buildWorkspaceScreenSelection(screen)
-  ): Promise<void> => {
-    const workspaceId = getSelectedWorkspaceId()
-    if (!workspaceId) {
-      return
-    }
-
-    /** Current persistence used to skip an unchanged screen selection write. */
-    const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
-
-    if (
-      workspaceUiState &&
-      isWorkspaceScreenSelectionSame(workspaceUiState, workspaceScreenSelection)
-    ) {
-      return
-    }
-
-    await syncWorkspaceScreenSelection(workspaceId, workspaceScreenSelection)
-  }
-
-  const restoreWorkspaceHomeScreen = async (workspaceId: string): Promise<void> => {
-    activeScreen = 'home'
-    await syncWorkspaceScreenSelection(workspaceId, {
-      selectedScreen: 'home',
-      selectedScreenData: null
-    })
-  }
-
+  /** Restores this workspace's tabs and selected screen for every workspace-opening route. */
   const restoreWorkspaceScreenFromPersistence = async (): Promise<void> => {
-    const workspaceId = getSelectedWorkspaceId()
-    if (!workspaceId) {
-      return
-    }
-
-    const workspaceUiState = workspaceUiStateCollection.get(workspaceId)
-    if (!workspaceUiState) {
-      return
-    }
-
-    // Former project navigation opens its collection in an ordinary work tab.
-    if (isProjectScreenSelection(workspaceUiState)) {
-      // Existing work tabs retain their current restore-as-New-Tab behavior.
-      if (workTabs.some((tab) => tab.id === startupSelectedTabId)) return
-      const { promptCollectionId, openPromptId } = workspaceUiState.selectedScreenData
-      if (!promptCollectionId || !selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) {
-        await restoreWorkspaceHomeScreen(workspaceId)
-        return
-      }
-      /** Keep the legacy owner selection available while the restored collection mounts. */
-      const tab = createWorkTab(compactGuid(globalThis.crypto.randomUUID()))
-      tab.mode.selectCollection(promptCollectionId)
-      tab.mode.openPromptId = openPromptId
-      workTabs = [...workTabs, tab]
-      selectedWorkTabId = tab.id
-      activeScreen = 'work-tab'
-      return
-    }
-
-    const persistedScreenConfig = screens[workspaceUiState.selectedScreen]
-    if (persistedScreenConfig.devOnly && !isDevMode) {
-      await restoreWorkspaceHomeScreen(workspaceId)
-      return
-    }
-
-    if (workspaceUiState.selectedScreen === 'mockups') {
-      const persistedMockupId = workspaceUiState.selectedScreenData.mockupId
-      // Let the mockups screen select its first entry when the saved mockup was deleted.
-      selectedMockupId =
-        persistedMockupId !== null && hasMockup(persistedMockupId) ? persistedMockupId : null
-      activeScreen = 'mockups'
-      return
-    }
-
-    activeScreen = workspaceUiState.selectedScreen
+    /** Workspace state has already loaded before its tabs are created. */
+    const workspaceId = getSelectedWorkspaceId()!
+    /** Authoritative session is cloned into independent reactive tab records. */
+    const session = workspaceUiStateCollection.get(workspaceId)!
+    restoringSession = true
+    workTabs = session.tabs.map((record) => createWorkTab(globalThis.structuredClone(record)))
+    lastClosedCollections = globalThis.structuredClone(session.lastClosedCollections)
+    /** A saved fixed-screen selection has no matching work tab. */
+    const tab = workTabs.find((candidate) => candidate.id === session.selectedTabId)
+    selectedWorkTabId = tab?.id ?? null
+    activeScreen = tab ? 'work-tab' : session.selectedTabId in screens ? session.selectedTabId as ScreenId : 'home'
+    if (screens[activeScreen].devOnly && !isDevMode) activeScreen = 'home'
+    if (selectedMockupId && !hasMockup(selectedMockupId)) selectedMockupId = null
+    // Let restored components mount before autosaving their locations.
+    await tick()
+    restoringSession = false
   }
 
   const isWorkspaceMissingError = (message?: string): boolean => {
     return message === 'Invalid workspace path'
   }
 
-  const persistPromptNavigationSelection = () => {
-    const workspaceId = getSelectedWorkspaceId()
-    /** prompt collection containing the current navigation selection. */
-    const promptCollectionId = promptNavigation.screenCollectionId
-    const contentOwnerId = promptNavigation.contentOwnerId
-    const selectedRow = promptNavigation.selectedRow
-    if (!workspaceId || !promptCollectionId || !contentOwnerId || !selectedRow) {
-      return
-    }
-
-    setPromptCollectionSelectedEntryIdWithAutosave(
-      workspaceId,
-      promptCollectionId,
-      contentOwnerId,
-      promptNavigationRowToPersistedEntryId(selectedRow)
-    )
-  }
-
-  /** Shows the opened workspace's saved screen, or Home while the first-launch Welcome is pending. */
+  /** Workspace loading already restores its session; only Welcome overrides the selected screen. */
   const restoreSelectedWorkspaceScreen = async (): Promise<void> => {
     if (needsWelcome && startupRestorePhase !== 'ready') {
-      await restoreWorkspaceHomeScreen(getSelectedWorkspaceId()!)
-    } else {
-      await restoreWorkspaceScreenFromPersistence()
+      activeScreen = 'home'
     }
   }
 
@@ -573,7 +501,7 @@
 
           if (result.success) {
             await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
-            addWorkTab()
+            if (workTabs[0]) selectWorkTab(workTabs[0].id)
             return { success: true }
           }
 
@@ -617,13 +545,10 @@
     void (async () => {
       try {
         await restoreWorkspaceFromPersistence()
-        // Work tabs belong to the open workspace, so they close when startup restores none.
-        if (!getSelectedWorkspaceId()) workTabs = []
-        // The saved tab overrides the workspace's screen; null keeps the restored location.
-        if (startupSelectedTabId && startupSelectedTabId in screens) {
-          navigateToScreen(startupSelectedTabId as ScreenId)
-        } else if (startupSelectedTabId) {
-          selectWorkTab(startupSelectedTabId)
+        if (!getSelectedWorkspaceId()) {
+          /** Fixed screens can also restore without an open workspace. */
+          const savedScreen = getUserPersistence().selectedTabId
+          activeScreen = savedScreen && savedScreen in screens && savedScreen !== 'work-tab' ? savedScreen as ScreenId : 'home'
         }
       } catch (error) {
         console.error('Failed to restore workspace from user persistence.', error)
@@ -634,21 +559,32 @@
     })()
   })
 
-  // Side effect: save the open work tabs as New Tabs, which is how they restore, and the selected tab after startup
-  // has applied the saved ones. Reading only tab IDs keeps navigation inside a tab from saving.
+  // Side effect: persist each tab's location, search, and access order once restoration completes.
   $effect(() => {
-    const tabs = workTabs.map((tab) => toNewTab(tab.id))
-    const tabId = selectedTabId
-    if (startupRestorePhase !== 'ready') return
-    void runIpcBestEffort(() => syncTabState(tabs, tabId))
+    if (startupRestorePhase !== 'ready' || restoringSession) return
+    saveTabSession()
   })
 
-  // Side effect: return work tabs to their New Tab screen once their collection is deleted, including with its project.
+  // Side effect: deleted collections release all their tab views and last-closed snapshots.
   $effect(() => {
+    /** Current collection identities exclude deleted or externally removed collections. */
+    const ids = new Set(selectedWorkspacePromptCollections.map((collection) => collection.id))
     for (const tab of workTabs) {
-      if (tab.mode.collectionId && !selectedWorkspacePromptCollections.some((collection) => collection.id === tab.mode.collectionId)) {
-        untrack(() => tab.mode.clear())
-      }
+      if (tab.mode.collectionId && !ids.has(tab.mode.collectionId)) untrack(() => {
+        delete lastClosedCollections[tab.mode.collectionId!]
+        tab.mode.record.collectionId = null
+        tab.mode.clear()
+      })
+    }
+    for (const id of Object.keys(lastClosedCollections)) if (!ids.has(id)) untrack(() => { delete lastClosedCollections[id] })
+    for (const collection of selectedWorkspacePromptCollections) {
+      /** Ownership is available in collection summaries even when no editor has been loaded. */
+      const categoryIds = getPromptCollectionCategoryIds(collection)
+      /** Current content IDs repair single-prompt tabs and retained row selections after deletion. */
+      const contentIds = getMarkdownContentIds(collection, collection.kind)
+      /** Notes are loaded with the workspace before its tab session is restored. */
+      const noteIds = noteQuery.data.map((note) => note.id)
+      untrack(() => pruneCollectionTabViews({ tabs: workTabs.map((tab) => tab.mode.record), lastClosedCollections }, collection.id, categoryIds, contentIds, noteIds))
     }
   })
 
@@ -657,36 +593,22 @@
     document.title = windowTitle
   })
 
-  // Side effect: persist mockup tab changes while the mockups screen is active.
+  // Side effect: fixed-screen selection and mockup selection also work without a workspace.
   $effect(() => {
-    const workspaceScreenSelection: WorkspaceScreenSelection = {
-      selectedScreen: 'mockups',
-      selectedScreenData: {
-        mockupId: selectedMockupId
-      }
-    }
-
-    if (activeScreen !== 'mockups') {
-      return
-    }
-
-    void runIpcBestEffort(() =>
-      syncCurrentWorkspaceScreenSelection('mockups', workspaceScreenSelection)
-    )
-  })
-
-  // Side effect: preserve the shared owner pointer used by collection selection and category cleanup.
-  $effect(() => {
-    const selection = buildWorkspaceScreenSelection(activeScreen)
-    if (activeScreen !== 'work-tab') return
-    untrack(() => { void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('work-tab', selection)) })
+    if (startupRestorePhase !== 'ready') return
+    /** Without a workspace, the application falls back to Home instead of a work tab. */
+    const screen = activeScreen === 'work-tab' ? 'home' : activeScreen
+    /** Mockup selection is application-wide. */
+    const mockupId = selectedMockupId
+    untrack(() => setApplicationNavigationWithAutosave(screen, mockupId))
   })
 
   // Side effect: flush pending autosaves before allowing the main process to close the window.
   $effect(() => {
     const unsubscribe = windowControls.onCloseRequested(() => {
       void (async () => {
-        persistPromptNavigationSelection()
+        captureTabState()
+        saveTabSession()
         captureRegisteredMonacoViewStates()
         await flushAllAutosaves()
         await windowControls.confirmClose()
@@ -703,17 +625,13 @@
     void openWorkspaceFile(workspaceInfoPath)
   }))
 
-  /** Shows a fixed screen or the selected work tab. */
-  const navigateToScreen = (screen: ScreenId) => {
-    const config = screens[screen]
-    if (!config) return
-    if (config.devOnly && !isDevMode) {
-      return
-    }
-    if (config.requiresWorkspace && !isWorkspaceReady) return
+  /** Selects a fixed screen after capturing the departing tab. */
+  const navigateToScreen = (screen: ScreenId): void => {
+    if (screens[screen].devOnly && !isDevMode) return
+    if (screens[screen].requiresWorkspace && !isWorkspaceReady) return
+    captureTabState()
     selectedWorkTabId = null
     activeScreen = screen
-    void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
 
   /** Switches screens and opens the sidebar; re-clicking the selected screen does nothing. */
@@ -727,26 +645,38 @@
 
   /** Selects a work tab, which shows its New Tab, collection, or single-prompt screen. */
   const selectWorkTab = (tabId: string): void => {
+    /** Switching to a collection exposes its sidebar; repeated selection preserves the preference. */
+    const changedTab = selectedTabId !== tabId
     navigateToScreen('work-tab')
     selectedWorkTabId = tabId
+    /** Selected tab receives the next access-order value. */
+    const tab = workTabs.find((candidate) => candidate.id === tabId)!
+    if (changedTab && tab.mode.collectionId) {
+      sidebarExpanded = true
+      setAppSidebarExpandedWithAutosave(true)
+    }
+    tab.mode.record.lastAccessed = Math.max(0, ...workTabs.map((candidate) => candidate.mode.record.lastAccessed)) + 1
   }
 
   /** Appends a New Tab after every open tab and selects it. */
   const addWorkTab = (): void => {
-    const tab = createWorkTab(compactGuid(globalThis.crypto.randomUUID()))
+    /** Fresh tabs intentionally inherit no search or viewport state. */
+    const tab = createWorkTab(createWorkspaceTab(compactGuid(globalThis.crypto.randomUUID())))
     workTabs = [...workTabs, tab]
     selectWorkTab(tab.id)
   }
 
-  /** Opens a collection in the selected work tab and shows the sidebar, or selects the work tab already showing it. */
+  /** Opens an independent collection view, seeded from the latest eligible tab or last closed location. */
   const openCollectionInWorkTab = (collectionId: string): void => {
-    /** Work tab already showing the collection. */
-    const openTab = workTabs.find((tab) => tab.mode.collectionId === collectionId)
-    if (openTab) {
-      selectWorkTab(openTab.id)
-      return
-    }
-    selectedWorkTab!.mode.selectCollection(collectionId)
+    /** The selected New Tab becomes this independent collection view. */
+    const tab = selectedWorkTab!
+    /** Most recently accessed collection view supplies the starting location; single prompts are excluded. */
+    const source = workTabs.filter((other) => other.id !== tab.id && other.mode.collectionId === collectionId && !other.mode.openPromptId)
+      .sort((left, right) => right.mode.record.lastAccessed - left.mode.record.lastAccessed)[0]
+    tab.mode.record.view = globalThis.structuredClone($state.snapshot(source?.mode.view ?? lastClosedCollections[collectionId] ?? createCollectionViewState()))
+    tab.mode.record.collectionId = collectionId
+    tab.mode.record.openPromptId = null
+    tab.mode.record.lastAccessed = Math.max(0, ...workTabs.map((other) => other.mode.record.lastAccessed)) + 1
     sidebarExpanded = true
     setAppSidebarExpandedWithAutosave(true)
   }
@@ -754,6 +684,8 @@
   /** Closes a work tab; closing the selected tab selects its right neighbour, else its left, else Home. */
   const closeWorkTab = (tabId: string): void => {
     /** Selection is read before removal, which would otherwise fall back to Home. */
+    const closingTab = workTabs.find((tab) => tab.id === tabId)!
+    rememberClosedCollection(closingTab)
     const wasSelected = selectedTabId === tabId
     /** Position the right neighbour moves into once the tab is removed. */
     const index = workTabs.findIndex((tab) => tab.id === tabId)
@@ -772,7 +704,7 @@
     workTabs = [...otherTabs.slice(0, index), workTabs.find((tab) => tab.id === tabId)!, ...otherTabs.slice(index)]
   }
 
-  /** Returns the selected tab from its single-prompt screen to the collection. */
+  /** Returns the selected tab from a single prompt to its collection. */
   const navigateToScreenCollection = (): void => { selectedWorkTab?.mode.closeOpenPrompt() }
 
   /** Navigates to the selected collection and opens its screen-owned deletion flow after it mounts. */
@@ -791,11 +723,11 @@
      collection selected; deleting that collection calls onPromptCollectionDeleted. -->
 {#snippet collectionScreen(modeData: CollectionSidebarModeData, onPromptCollectionDeleted: () => void)}
   {#if modeData.openPromptId}
-    {#key `${modeData.collectionId}:${modeData.openPromptId}`}
+    {#key `${modeData.record.id}:${modeData.collectionId}:${modeData.openPromptId}`}
       <SinglePromptScreen sidebarModeData={modeData} />
     {/key}
   {:else}
-    {#key `${modeData.collectionId}:${modeData.screenMode}`}
+    {#key `${modeData.record.id}:${modeData.collectionId}:${modeData.screenMode}`}
       <PromptCollectionScreen bind:this={promptCollectionScreen} sidebarModeData={modeData} {onPromptCollectionDeleted} />
     {/key}
   {/if}
@@ -828,6 +760,7 @@
     >
       {#snippet sidebar()}
         {#if activeSidebarMode}
+          {#key selectedTabId}
           <AppSidebar
             mode={activeSidebarMode}
             {isWorkspaceReady}
@@ -836,6 +769,7 @@
             onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
             onShowAll={() => selectedWorkTab!.mode.clear()}
           />
+          {/key}
         {/if}
       {/snippet}
 
@@ -863,10 +797,13 @@
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
           {:else if activeScreen === 'work-tab' && selectedWorkspace && selectedWorkTab}
-            {#if selectedWorkTab.mode.collectionId}
-              {@render collectionScreen(selectedWorkTab.mode, () => selectedWorkTab!.mode.clear())}
+            <!-- The keyed item retains its owning tab through teardown after selection or removal. -->
+            {#each [selectedWorkTab] as tab (tab.id)}
+            {#if tab.mode.collectionId}
+              {@render collectionScreen(tab.mode, tab.mode.clear)}
             {:else}
               <NewTabScreen
+                viewState={tab.mode.record.newTab}
                 workspace={selectedWorkspace}
                 openCollectionIds={workTabs.flatMap((tab) => tab.mode.collectionId ?? [])}
                 onOpenCollection={openCollectionInWorkTab}
@@ -874,6 +811,7 @@
                 onEditProject={(projectId) => manageProjectsDialog?.openDialog({ projectId })}
               />
             {/if}
+            {/each}
           {:else if activeScreen === 'test-screen'}
             <TestScreen />
           {/if}

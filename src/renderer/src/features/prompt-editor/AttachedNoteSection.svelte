@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
+  import { notesCollection } from '@renderer/data/Collections/NotesCollection'
+  import { onMount, untrack } from 'svelte'
   import { EyeOff, NotebookPen } from 'lucide-svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
@@ -59,7 +61,9 @@
   /** Independently positioned wrapper for the note's popup origin. */
   let overflowPaddingHost = $state<HTMLDivElement | null>(null)
   /** Retains the caret and internal scroll when hiding and revealing the note. */
-  let viewStateJson = $state<string | null>(null)
+  const editorViewStates = getTabStateContext()?.editorViewStates
+  /** Note cursor and viewport in this tab and screen. */
+  let viewStateJson = $state<string | null>(untrack(() => editorViewStates?.[attachment.note.id] ?? null))
 
   // Side effect: refresh the relative timestamp and release the note popup host on unmount.
   onMount(() => {
@@ -118,7 +122,11 @@
     testId="attached-note-editor"
     initialValue={attachment.note.noteText}
     initialViewStateJson={viewStateJson}
-    onViewStateCapture={(value) => { viewStateJson = value }}
+    viewStateCaptureKey={`note:${attachment.note.id}`}
+    onViewStateCapture={(value) => {
+      viewStateJson = value
+      if (editorViewStates && value && notesCollection.has(attachment.note.id)) editorViewStates[attachment.note.id] = value
+    }}
     {modelUri}
     containerWidthPx={widthPx}
     placeholderHeightPx={fixedHeightPx ?? attachment.editorHeightPx}

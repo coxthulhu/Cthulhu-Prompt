@@ -1,13 +1,9 @@
 <script lang="ts">
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { onDestroy, type Snippet } from 'svelte'
   import { startPointerDrag } from '@renderer/common/drag-drop/pointerDrag'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
-  import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
-  import { setAccordionViewEntryWithAutosave } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
   import type { WorkspaceAccordionSectionViewEntry } from '@shared/domain/user-persistence/UserPersistence'
-  import type { AccordionUiState } from '@shared/domain/ui-state/UiState'
   import {
     setAccordionContext,
     type AccordionContext,
@@ -47,12 +43,12 @@
     ...restProps
   }: Props = $props()
 
-  /** Reactive workspace owner used to scope persisted accordion state. */
-  const workspaceSelection = getWorkspaceSelectionContext()
-  /** Reactive accordion UI-state records rendered by this component. */
-  const accordionUiStateQuery = useLiveQuery(accordionUiStateCollection) as {
-    data: AccordionUiState[]
-  }
+  /** Tab view captured at mount; gallery examples retain sections only locally. */
+  const tabView = getTabStateContext()?.view
+  /** Section choices for gallery examples outside workspace tabs. */
+  let localSections = $state<WorkspaceAccordionSectionViewEntry[]>([])
+  /** Active section choices owned by this tab or standalone example. */
+  const savedSections = $derived(tabView?.accordionSections ?? localSections)
   /** Accordion root measured whenever its available height changes. */
   let accordionElement = $state<HTMLDivElement | null>(null)
   /** Current viewport height available to the accordion section stack. */
@@ -68,20 +64,11 @@
   /** Explicit section heights preserving header positions between toggles and viewport resizing. */
   let toggledHeightsById = $state<Record<string, number> | null>(null)
 
-  /** Complete persisted state for this accordion, or null before its first saved change. */
-  const persistedAccordionViewEntry = $derived.by(() => {
-    /** Currently selected workspace that owns this accordion state. */
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    return accordionUiStateQuery.data.find(
-      (entry) => entry.workspaceId === workspaceId && entry.persistenceId === persistenceId
-    ) ?? null
-  })
-
   /** Registered sections merged with their saved state or component defaults. */
   const resolvedSections = $derived.by(() => {
     /** Saved sections indexed for both scale calculation and state restoration. */
     const savedSectionsById = new Map(
-      persistedAccordionViewEntry?.sections.map((section) => [section.id, section])
+      savedSections.map((section) => [section.id, section])
     )
     /** Saved weights of expanded sections participating in the current layout. */
     let savedExpandedWeight = 0
@@ -237,14 +224,11 @@
 
   /** Persists one complete ordered accordion snapshot through workspace autosave. */
   const persistAccordionSections = (sections: WorkspaceAccordionSectionViewEntry[]): void => {
-    /** Selected workspace required by workspace-specific persistence. */
-    const workspaceId = workspaceSelection.selectedWorkspaceId
-    if (!workspaceId) return
     /** Updated visible sections indexed without discarding temporarily unrendered sections. */
     const updatedSectionById = new Map(sections.map((section) => [section.id, section]))
     /** Saved section order with visible values replaced by their latest interaction state. */
     const mergedSections =
-      persistedAccordionViewEntry?.sections.map(
+      savedSections.map(
         (section) => updatedSectionById.get(section.id) ?? section
       ) ?? []
     /** Saved IDs used to append sections that have never been persisted before. */
@@ -252,12 +236,8 @@
     for (const section of sections) {
       if (!mergedSectionIds.has(section.id)) mergedSections.push(section)
     }
-    /** Complete accordion entry written as one optimistic autosave update. */
-    const accordionViewEntry: Pick<AccordionUiState, 'persistenceId' | 'sections'> = {
-      persistenceId,
-      sections: mergedSections
-    }
-    setAccordionViewEntryWithAutosave(workspaceId, accordionViewEntry)
+    if (tabView) tabView.accordionSections = mergedSections
+    else localSections = mergedSections
   }
 
   /** Shrinks expanded sections in the supplied order and returns the absorbed height. */

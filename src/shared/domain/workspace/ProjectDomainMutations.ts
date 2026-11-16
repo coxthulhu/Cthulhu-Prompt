@@ -1,3 +1,4 @@
+import { removeCollectionFromTabSession } from '@shared/domain/ui-state/TabSession'
 import type { DomainChange, DomainPlanner } from '../DomainChanges'
 import { planDeletePromptCollectionDomainMutation } from '../prompt-collection/PromptCollectionDomainMutations'
 import { createEmptyPromptCollectionSettings, createPromptStatusFolderLayouts, type PromptCollection } from '../prompt-collection/PromptCollection'
@@ -97,10 +98,9 @@ export const planSaveProjects: DomainPlanner<SaveProjectsCommand> = (state, comm
   changes.push({ type: 'update', entityType: 'workspace', id: workspace.id, recipe: (draft) => { draft.projects = projects } })
   if (deletedProjects.length && state.get('workspaceUiState', workspace.id)) {
     changes.push({ type: 'update', entityType: 'workspaceUiState', id: workspace.id, recipe: (draft) => {
-      if (draft.selectedScreen === 'project' && !retainedIds.has(draft.selectedScreenData.projectId)) {
-        Object.assign(draft, { selectedScreen: 'home', selectedScreenData: null })
+      for (const project of deletedProjects) {
+        for (const entry of project.collectionEntries) removeCollectionFromTabSession(draft, entry.id)
       }
-      for (const project of deletedProjects) delete draft.lastCollectionIdByProject[project.id]
     } })
   }
   return changes

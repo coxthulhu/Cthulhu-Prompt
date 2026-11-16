@@ -1,3 +1,4 @@
+import { removeCollectionFromTabSession } from '@shared/domain/ui-state/TabSession'
 import { findCollectionProject } from '@shared/domain/workspace/Project'
 import { getCollectionNoteIds } from '@shared/domain/note/Note'
 import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
@@ -19,8 +20,6 @@ import {
   preparePromptCollectionName
 } from '@shared/domain/prompt-collection/promptCollectionName'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
-import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
-import { createWorkspacePromptCollectionUiStateKey } from '@shared/domain/ui-state/UiState'
 
 /** Renderer-authored command for creating one collection prompt or template collection. */
 export type CreatePromptCollectionDomainCommand = {
@@ -302,11 +301,6 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
   const contentIds = getMarkdownContentIds(promptCollection, promptCollection.kind)
   /** Category IDs owned by the deleted collection. */
   const categoryIds = getPromptCollectionCategoryIds(promptCollection)
-  /** First collection of either kind remaining in project order after the requested deletion. */
-  const nextPromptCollectionId =
-    project.collectionEntries.find(
-      (entry) => entry.id !== command.promptCollectionId
-    )?.id ?? null
   /** Complete domain changes applied atomically in meaningful ownership order. */
   const changes: DomainChange[] = [
     {
@@ -343,20 +337,6 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
       id: command.promptCollectionId
     }
   ]
-  for (const contentId of contentIds) {
-    changes.push({
-      type: 'delete',
-      entityType: 'markdownContentUiState',
-      id: createMarkdownContentUiStateKey(command.workspaceId, contentId)
-    })
-  }
-  for (const contentOwnerId of [command.promptCollectionId, ...categoryIds]) {
-    changes.push({
-      type: 'delete',
-      entityType: 'workspacePromptCollectionUiState',
-      id: createWorkspacePromptCollectionUiStateKey(command.workspaceId, contentOwnerId)
-    })
-  }
   /** Existing workspace screen state adjusted when it references the deleted collection. */
   const workspaceUiState = state.get('workspaceUiState', command.workspaceId)
   if (workspaceUiState) {
@@ -365,20 +345,7 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
       entityType: 'workspaceUiState',
       id: command.workspaceId,
       recipe: (draft) => {
-        if (
-          draft.selectedScreen === 'project' &&
-          draft.selectedScreenData.promptCollectionId === command.promptCollectionId
-        ) {
-          draft.selectedScreenData = {
-            projectId: project.id,
-            promptCollectionId: nextPromptCollectionId,
-            contentOwnerId: nextPromptCollectionId,
-            openPromptId: null
-          }
-        }
-        if (draft.lastCollectionIdByProject[project.id] === command.promptCollectionId) {
-          draft.lastCollectionIdByProject[project.id] = nextPromptCollectionId
-        }
+        removeCollectionFromTabSession(draft, command.promptCollectionId)
       }
     })
   }

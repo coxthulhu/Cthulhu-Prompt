@@ -6,7 +6,6 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { runSqlQuery, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -304,19 +303,8 @@ describe('Prompt template mutations', () => {
       ]
     })
 
-    for (const contentId of [templateId, 'sibling-template']) {
-      await seedWorkspaceState(electronApp, WORKSPACE_ID, 'markdown-editor', contentId, { editorViewStateJson: '{}' }, 'machine-specific')
-    }
-    expect(
-      (
-        await runSqlQuery(
-          electronApp,
-          `SELECT entity_id AS contentId FROM workspace_state
-           WHERE state_type = 'markdown-editor' AND workspace_id = '${WORKSPACE_ID}'
-           ORDER BY entity_id`
-        )
-      ).rows
-    ).toEqual([{ contentId: templateId }, { contentId: 'sibling-template' }])
+    /** Current session revision participates in atomic editor-state cleanup. */
+    const session = await invoke('load-workspace-ui-state', { workspaceId: WORKSPACE_ID })
     const deleteResult = await invoke('delete-prompt-template', {
       command: {
         workspaceId: WORKSPACE_ID,
@@ -324,6 +312,7 @@ describe('Prompt template mutations', () => {
         contentId: templateId
       },
       expectations: [
+        { entityType: 'workspaceUiState', id: WORKSPACE_ID, expected: 'revision', revision: session.workspaceUiState.revision },
         {
           entityType: 'promptCollection',
           id: DESTINATION_COLLECTION_ID,
@@ -351,11 +340,7 @@ describe('Prompt template mutations', () => {
             })
           }),
           { entityType: 'promptTemplate', id: templateId, deleted: true },
-          {
-            entityType: 'markdownContentUiState',
-            id: `${WORKSPACE_ID}:${templateId}`,
-            deleted: true
-          }
+          expect.objectContaining({ entityType: 'workspaceUiState', id: WORKSPACE_ID })
         ])
       }
     })
@@ -373,16 +358,6 @@ describe('Prompt template mutations', () => {
         )
       )
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
-    expect(
-      (
-        await runSqlQuery(
-          electronApp,
-          `SELECT entity_id AS content_id FROM workspace_state
-           WHERE state_type = 'markdown-editor' AND workspace_id = '${WORKSPACE_ID}'
-             AND entity_id IN ('${templateId}', 'sibling-template')
-           ORDER BY entity_id`
-        )
-      ).rows
-    ).toEqual([{ content_id: 'sibling-template' }])
+
   })
 })

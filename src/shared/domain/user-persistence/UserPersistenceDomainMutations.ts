@@ -1,7 +1,6 @@
 import type { DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import {
   USER_PERSISTENCE_ID,
-  isWorkTab,
   type UserPersistence
 } from '@shared/domain/user-persistence/UserPersistence'
 
@@ -23,8 +22,7 @@ export const parseSetUserPersistenceDomainCommand = (
     !record.settingsCollapsedSectionIds.every((id) => typeof id === 'string') ||
     typeof record.settingsScrollTopPx !== 'number' ||
     typeof record.singlePromptNoteFraction !== 'number' ||
-    !Array.isArray(record.workTabs) ||
-    !record.workTabs.every(isWorkTab) ||
+    (record.selectedMockupId !== null && typeof record.selectedMockupId !== 'string') ||
     (record.selectedTabId !== null && typeof record.selectedTabId !== 'string')
   ) {
     return null
@@ -37,7 +35,7 @@ export const parseSetUserPersistenceDomainCommand = (
     settingsCollapsedSectionIds: record.settingsCollapsedSectionIds,
     settingsScrollTopPx: Math.round(record.settingsScrollTopPx),
     singlePromptNoteFraction: record.singlePromptNoteFraction,
-    workTabs: record.workTabs,
+    selectedMockupId: record.selectedMockupId,
     selectedTabId: record.selectedTabId
   }
 }

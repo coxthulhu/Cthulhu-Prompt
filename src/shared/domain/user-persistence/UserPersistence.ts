@@ -13,18 +13,6 @@ export type WorkTab = {
   screen: WorkTabScreen
 }
 
-/** Validates one persisted or IPC-supplied work tab. */
-export const isWorkTab = (value: unknown): value is WorkTab => {
-  const tab = value as Partial<WorkTab> | null
-  return (
-    typeof tab === 'object' &&
-    tab !== null &&
-    typeof tab.id === 'string' &&
-    typeof tab.title === 'string' &&
-    WORK_TAB_SCREENS.includes(tab.screen as WorkTabScreen)
-  )
-}
-
 export type UserPersistence = {
   lastWorkspaceInfoPath: string | null
   appSidebarWidthPx: number
@@ -38,10 +26,10 @@ export type UserPersistence = {
   settingsScrollTopPx: number
   /** Share of the single-prompt editor area given to a visible attached note on this machine. */
   singlePromptNoteFraction: number
-  /** Open work tabs on this machine, in display order. */
-  workTabs: WorkTab[]
-  /** Selected work tab or title bar screen on this machine, or null while a project is selected. */
+  /** Last selected fixed screen when no workspace is open. */
   selectedTabId: string | null
+  /** Last selected mockup, shared across workspaces. */
+  selectedMockupId: string | null
 }
 
 export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
@@ -52,8 +40,8 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   settingsCollapsedSectionIds: [],
   settingsScrollTopPx: 0,
   singlePromptNoteFraction: 0.3,
-  workTabs: [],
-  selectedTabId: null
+  selectedTabId: 'home',
+  selectedMockupId: null
 }
 
 export const USER_PERSISTENCE_ID = 'user-persistence'
@@ -100,41 +88,11 @@ export type WorkspaceScreenSelection =
     }
   | ProjectWorkspaceScreenSelection
 
-/** Narrows a complete screen selection to the project screen. */
-export const isProjectScreenSelection = (
-  selection: WorkspaceScreenSelection
-): selection is ProjectWorkspaceScreenSelection =>
-  selection.selectedScreen === 'project'
-
 /** Persisted collapse and configured sizing state for one accordion section. */
 export type WorkspaceAccordionSectionViewEntry = {
   id: string
   isExpanded: boolean
   configuredExpandedHeightPx: number
-}
-
-export const isWorkspaceScreenSelectionSame = (
-  left: WorkspaceScreenSelection,
-  right: WorkspaceScreenSelection
-): boolean => {
-  if (left.selectedScreen !== right.selectedScreen) {
-    return false
-  }
-
-  if (isProjectScreenSelection(left) && isProjectScreenSelection(right)) {
-    return (
-      left.selectedScreenData.projectId === right.selectedScreenData.projectId &&
-      left.selectedScreenData.promptCollectionId === right.selectedScreenData.promptCollectionId &&
-      left.selectedScreenData.contentOwnerId === right.selectedScreenData.contentOwnerId &&
-      left.selectedScreenData.openPromptId === right.selectedScreenData.openPromptId
-    )
-  }
-
-  if (left.selectedScreen === 'mockups' && right.selectedScreen === 'mockups') {
-    return left.selectedScreenData.mockupId === right.selectedScreenData.mockupId
-  }
-
-  return true
 }
 
 export const LOAD_USER_PERSISTENCE_CHANNEL = 'load-user-persistence'
@@ -182,9 +140,7 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
       typeof value.singlePromptNoteFraction === 'number'
         ? value.singlePromptNoteFraction
         : DEFAULT_USER_PERSISTENCE.singlePromptNoteFraction,
-    workTabs: Array.isArray(value.workTabs)
-      ? value.workTabs.filter(isWorkTab)
-      : DEFAULT_USER_PERSISTENCE.workTabs,
+    selectedMockupId: typeof value.selectedMockupId === 'string' ? value.selectedMockupId : null,
     selectedTabId:
       typeof value.selectedTabId === 'string'
         ? value.selectedTabId

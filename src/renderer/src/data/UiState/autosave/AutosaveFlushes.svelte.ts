@@ -1,7 +1,6 @@
 import { flushPromptClientStateAutosaves } from '@renderer/data/UiState/client-state/PromptClientStateMutations.svelte.ts'
 import { flushNoteAutosaves } from '@renderer/data/Mutations/NoteMutations'
 import { flushPromptTemplateClientStateAutosaves } from '@renderer/data/UiState/client-state/PromptTemplateClientStateMutations.svelte.ts'
-import { flushMarkdownContentUiStateAutosaves } from './MarkdownContentUiStateAutosave.svelte.ts'
 import { flushSystemSettingsAutosaves } from '@renderer/data/UiState/autosave/SystemSettingsAutosave.svelte.ts'
 import { flushUserPersistenceAutosaves } from './UserPersistenceAutosave.svelte.ts'
 import { flushWorkspaceUiStateAutosaves } from './WorkspaceUiStateAutosave.svelte.ts'
@@ -12,7 +11,6 @@ const workspaceScopedAutosaveFlushTasks: AutosaveFlushTask[] = [
   flushNoteAutosaves,
   flushPromptClientStateAutosaves,
   flushPromptTemplateClientStateAutosaves,
-  flushMarkdownContentUiStateAutosaves,
   flushSystemSettingsAutosaves,
   flushWorkspaceUiStateAutosaves
 ]

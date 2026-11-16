@@ -7,11 +7,8 @@ import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCo
 import type { PromptTemplatePersisted, PromptTemplateSummaryData } from '@shared/domain/prompt-template/PromptTemplate'
 import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
 import type { Workspace } from '@shared/domain/workspace/Workspace'
-import type { MarkdownContentUiState } from '@shared/domain/ui-state/MarkdownContentUiState'
 import type { UserPersistence } from '@shared/domain/user-persistence/UserPersistence'
 import type {
-  AccordionUiState,
-  WorkspacePromptCollectionUiState,
   WorkspaceUiState
 } from '@shared/domain/ui-state/UiState'
 import type { AuthoritativeSnapshotPayload } from '@shared/ipc/AuthoritativeSnapshot'
@@ -32,10 +29,7 @@ export type DomainEntityMap = {
   userPersistence: UserPersistence
   /** User-specific visibility independent of note content. */
   attachedNoteUiState: AttachedNoteUiState
-  markdownContentUiState: MarkdownContentUiState
   workspaceUiState: WorkspaceUiState
-  workspacePromptCollectionUiState: WorkspacePromptCollectionUiState
-  accordionUiState: AccordionUiState
 }
 export type DomainEntityType = keyof DomainEntityMap
 

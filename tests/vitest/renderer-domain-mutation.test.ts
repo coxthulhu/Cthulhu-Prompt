@@ -93,7 +93,7 @@ const planRenameCategoryWithOptionalDelete: DomainPlanner<RenameTestCommand> = (
   },
   {
     type: 'delete',
-    entityType: 'workspacePromptCollectionUiState',
+    entityType: 'attachedNoteUiState',
     id: OPTIONAL_UI_STATE_ID
   }
 ]
@@ -107,7 +107,7 @@ const planDeleteCategory: DomainPlanner<Record<string, never>> = () => [
 const planDeleteAbsentUiState: DomainPlanner<Record<string, never>> = () => [
   {
     type: 'delete',
-    entityType: 'workspacePromptCollectionUiState',
+    entityType: 'attachedNoteUiState',
     id: OPTIONAL_UI_STATE_ID
   }
 ]
@@ -329,7 +329,7 @@ describe('renderer domain mutation framework', () => {
       payload: {
         snapshots: [
           {
-            entityType: 'workspacePromptCollectionUiState',
+            entityType: 'attachedNoteUiState',
             id: OPTIONAL_UI_STATE_ID,
             deleted: true
           }

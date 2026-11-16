@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
   import { emptyItemsLabel } from '@renderer/common/emptyStateText'
   import { useLiveQuery } from '@tanstack/svelte-db'
@@ -46,7 +47,7 @@
     lookupWorkspacePersistedCategoryTreeExpandedState,
     setCategoryTreeExpandedStateWithAutosave,
     setPromptCollectionSelectedEntryIdWithAutosave
-  } from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
+  } from '@renderer/data/UiState/TabViewState'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDER_REGISTRY, type Prompt } from '@shared/domain/prompt/Prompt'
   import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
@@ -132,6 +133,8 @@
   /** Whether a prompt-tree creation action is waiting for persistence. */
   let isCreatingTreeContent = $state(false)
   const promptNavigation = getPromptNavigationContext()
+  /** Capture this tab's view so unmount callbacks cannot write into its next screen. */
+  const tabView = getTabStateContext()!.view
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
     data: PromptClientStateRecord[]
@@ -290,7 +293,7 @@
     }
 
     return (
-      lookupWorkspacePersistedCategoryTreeExpandedState(workspaceId, categoryId) ??
+      lookupWorkspacePersistedCategoryTreeExpandedState(tabView, categoryId) ??
       true
     )
   }
@@ -308,7 +311,7 @@
 
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
-      setCategoryTreeExpandedStateWithAutosave(workspaceId, categoryId, isExpanded)
+      setCategoryTreeExpandedStateWithAutosave(tabView, categoryId, isExpanded)
     }
   }
 
@@ -608,7 +611,7 @@
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
       setPromptCollectionSelectedEntryIdWithAutosave(
-        workspaceId,
+        tabView,
         collection.id,
         categoryId ?? collection.id,
         promptNavigationRowToPersistedEntryId(row)
@@ -837,6 +840,11 @@
       return
     }
 
+    // Restoring a tab preserves its exact tree viewport; explicit navigation may reveal a row.
+    if ((promptNavigation.selectionSource === 'restore' || promptNavigation.selectionSource === 'restore-hold') && tabView.treeScrollTopByMode[screenMode] !== undefined) {
+      promptNavigation.treeRevealRequests.consume(request, () => undefined)
+      return
+    }
     const rowId = getPromptTreeRowId(request.payload)
     if (!rowId) return
     if (!virtualItems.some((item) => item.id === rowId)) return
@@ -887,6 +895,8 @@
     {:else}
       <div class="flex min-h-0 flex-1 flex-col">
       <PromptTreeVirtualList
+        initialScrollTopPx={tabView.treeScrollTopByMode[screenMode]}
+        onScrollTopChange={(offset) => { tabView.treeScrollTopByMode[screenMode] = offset }}
         items={virtualItems}
         testId={virtualWindowTestId}
         spacerTestId={`${virtualWindowTestId}-spacer`}

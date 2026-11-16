@@ -5,9 +5,7 @@ import type {
   LoadPromptCollectionInitialPayload,
   LoadPromptCollectionInitialResult
 } from '@shared/domain/prompt-collection/PromptCollection'
-import { isFinalPromptStatus, PromptStatus } from '@shared/domain/prompt/Prompt'
 import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection/PromptCollection'
-import { createMarkdownContentUiStateKey } from '@shared/domain/ui-state/MarkdownContentUiState'
 import { data } from '../Data/Data'
 import {
   buildNoteSnapshot,
@@ -46,35 +44,8 @@ export const loadPromptCollectionInitialData = async (
     const categories = getLoadedCategoryEntries(
       getPromptCollectionCategoryIds(promptCollectionEntry.committed)
     ).map(buildCategorySnapshot)
-    const { promptIds, promptTemplateIds, prompts, promptTemplates } =
+    const { prompts, promptTemplates } =
       loadPromptCollectionMarkdownContents(promptCollections)
-    const contentIds = [
-      ...promptIds.filter(
-        (promptId) =>
-          !isFinalPromptStatus(
-            data.prompt.committedStore.getEntry(promptId)?.committed.status ??
-              PromptStatus.Todo
-          )
-      ),
-      ...promptTemplateIds
-    ]
-    // Side effect: hydrate SQLite-backed editor state into the shared committed stores.
-    await Promise.all(
-      contentIds.map((contentId) =>
-        data.markdownContentUiState.loadDataFromPersistence(
-          createMarkdownContentUiStateKey(payload.workspaceId, contentId),
-          {}
-        )
-      )
-    )
-    /** Loaded editor UI-state entries returned through revision envelopes. */
-    const markdownContentUiStates = contentIds.flatMap((contentId) => {
-      /** Composite authoritative key for the current content record. */
-      const id = createMarkdownContentUiStateKey(payload.workspaceId, contentId)
-      /** Committed SQLite entry when this content has saved editor state. */
-      const entry = data.markdownContentUiState.committedStore.getEntry(id)
-      return entry ? [{ id, revision: entry.revision, data: entry.committed }] : []
-    })
     /** Notes are loaded independently of whether their owner editors are active. */
     const noteIds = getCollectionNoteIds({
       get: (type, id) => data[type].committedStore.getEntry(id)?.committed as never,
@@ -92,7 +63,6 @@ export const loadPromptCollectionInitialData = async (
         const entry = data.note.committedStore.getEntry(id)
         return entry ? [buildNoteSnapshot(entry)] : []
       }),
-      markdownContentUiStates
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

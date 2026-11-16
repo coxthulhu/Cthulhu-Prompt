@@ -40,8 +40,22 @@ export class UserPersistenceDataAccess {
 
   /** Reassembles renderer persistence with independent defaults for each storage scope. */
   static readUserPersistence(): UserPersistence {
+    /** Preserve the imported choice before workspace migration removes its source. */
+    const applicationUser = WorkspaceStateDataAccess.read(null, 'application-user', null)
+    /** Latest legacy mockup choice seeds the application preference once. */
+    const legacyMockup = SqliteDataAccess.getDatabase().prepare(`SELECT json_extract(data_json, '$.selectedScreenData.mockupId') AS id
+      FROM workspace_state WHERE state_type = 'workspace-navigation' AND json_extract(data_json, '$.selectedScreen') = 'mockups'
+      ORDER BY rowid DESC LIMIT 1`).get() as { id: string | null } | undefined
+    if (applicationUser?.selectedMockupId === undefined && legacyMockup?.id) {
+      WorkspaceStateDataAccess.write(null, 'application-user', null, {
+        hasShownWelcome: applicationUser?.hasShownWelcome ?? false,
+        appSidebarExpanded: applicationUser?.appSidebarExpanded ?? true,
+        selectedMockupId: legacyMockup.id
+      })
+    }
     return parseUserPersistence({
       ...DEFAULT_USER_PERSISTENCE,
+      selectedMockupId: legacyMockup?.id ?? null,
       ...WorkspaceStateDataAccess.read(null, 'application-machine', null),
       ...WorkspaceStateDataAccess.read(null, 'application-user', null)
     })!
@@ -58,7 +72,8 @@ export class UserPersistenceDataAccess {
     SqliteDataAccess.runTransaction(() => {
       WorkspaceStateDataAccess.write(null, 'application-user', null, {
         hasShownWelcome: next.hasShownWelcome,
-        appSidebarExpanded: next.appSidebarExpanded
+        appSidebarExpanded: next.appSidebarExpanded,
+        selectedMockupId: next.selectedMockupId
       })
       WorkspaceStateDataAccess.write(null, 'application-machine', null, {
         lastWorkspaceInfoPath: next.lastWorkspaceInfoPath,
@@ -66,7 +81,6 @@ export class UserPersistenceDataAccess {
         settingsCollapsedSectionIds: next.settingsCollapsedSectionIds,
         settingsScrollTopPx: next.settingsScrollTopPx,
         singlePromptNoteFraction: next.singlePromptNoteFraction,
-        workTabs: next.workTabs,
         selectedTabId: next.selectedTabId
       })
     })

@@ -33,10 +33,7 @@ import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemp
 import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
-import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
-import { workspacePromptCollectionUiStateCollection } from '@renderer/data/Collections/WorkspacePromptCollectionUiStateCollection'
-import { accordionUiStateCollection } from '@renderer/data/Collections/AccordionUiStateCollection'
 import {
   getRendererRevisionCollection,
   reconcileRendererAuthoritativeSnapshots
@@ -166,20 +163,8 @@ const getRendererDomainEntity = <TEntityType extends DomainEntityType>(
     }
     case 'userPersistence':
       return userPersistenceCollection.get(id) as DomainPlannerEntityMap[TEntityType] | undefined
-    case 'markdownContentUiState':
-      return markdownContentUiStateCollection.get(id) as
-        | DomainPlannerEntityMap[TEntityType]
-        | undefined
     case 'workspaceUiState':
       return workspaceUiStateCollection.get(id) as
-        | DomainPlannerEntityMap[TEntityType]
-        | undefined
-    case 'workspacePromptCollectionUiState':
-      return workspacePromptCollectionUiStateCollection.get(id) as
-        | DomainPlannerEntityMap[TEntityType]
-        | undefined
-    case 'accordionUiState':
-      return accordionUiStateCollection.get(id) as
         | DomainPlannerEntityMap[TEntityType]
         | undefined
   }
@@ -222,20 +207,8 @@ const getAllRendererDomainEntities = <TEntityType extends DomainEntityType>(
       return userPersistenceCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
-    case 'markdownContentUiState':
-      return markdownContentUiStateCollection.toArray as unknown as Array<
-        DomainPlannerEntityMap[TEntityType]
-      >
     case 'workspaceUiState':
       return workspaceUiStateCollection.toArray as unknown as Array<
-        DomainPlannerEntityMap[TEntityType]
-      >
-    case 'workspacePromptCollectionUiState':
-      return workspacePromptCollectionUiStateCollection.toArray as unknown as Array<
-        DomainPlannerEntityMap[TEntityType]
-      >
-    case 'accordionUiState':
-      return accordionUiStateCollection.toArray as unknown as Array<
         DomainPlannerEntityMap[TEntityType]
       >
   }

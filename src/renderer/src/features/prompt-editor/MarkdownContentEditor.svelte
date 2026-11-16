@@ -11,6 +11,8 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import EditorSplitHandle from './EditorSplitHandle.svelte'
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
+  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
+  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersistence'
   import { setSinglePromptNoteFractionWithAutosave } from '@renderer/data/UiState/autosave/UserPersistenceAutosave.svelte.ts'
   import { createPromptEditorModelUri, monaco } from '@renderer/common/Monaco'
@@ -28,10 +30,7 @@
   import { syncMonacoOverflowHost } from './monacoOverflowHost'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/domain/prompt/promptFallbackTitle'
-  import {
-    lookupMarkdownContentEditorViewStateJson,
-    setMarkdownContentEditorViewStateJson
-  } from '@renderer/data/UiState/autosave/MarkdownContentUiStateAutosave.svelte.ts'
+  import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
   import { getPromptNavigationContext } from '@renderer/app/PromptNavigationContext.svelte.ts'
   import { getPromptCollectionFindContext } from '../prompt-collections/find/promptCollectionFindContext'
@@ -224,9 +223,10 @@
   const subtitleBarHeightPx = $derived(
     contentKind === 'template' ? EDITOR_SUBTITLE_BAR_HEIGHT_PX : 0
   )
-  const initialEditorViewStateJson = $derived(
-    lookupMarkdownContentEditorViewStateJson(workspaceId, promptId)
-  )
+  /** Editor locations remain bound to the screen that mounted this editor. */
+  const editorViewStates = getTabStateContext()?.editorViewStates
+  /** Saved selection and viewport for this prompt in this tab. */
+  const initialEditorViewStateJson = $derived(editorViewStates?.[promptId] ?? null)
   // Derived content state and sizing so the row updates with virtual window changes.
   const promptData = $derived.by(() => {
     return {
@@ -836,8 +836,8 @@
         findRowHandlers.requestImmediateHydration = request
       }}
       onViewStateCapture={(viewStateJson) => {
-        if (!workspaceId) return
-        setMarkdownContentEditorViewStateJson(workspaceId, promptId, viewStateJson)
+        if (!workspaceId || (!promptsCollection.has(promptId) && !promptTemplatesCollection.has(promptId))) return
+        if (editorViewStates && viewStateJson) editorViewStates[promptId] = viewStateJson
       }}
       onHydrationChange={handleHydrationChange}
       onChange={(text, meta) => {

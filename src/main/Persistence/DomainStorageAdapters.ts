@@ -256,10 +256,7 @@ const domainStorageAdapters: {
   promptTemplate: createMarkdownStorageAdapter('promptTemplate', 'template'),
   userPersistence: { deriveDesiredFields: () => ({}) },
   attachedNoteUiState: { deriveDesiredFields: () => ({}) },
-  markdownContentUiState: { deriveDesiredFields: () => ({}) },
   workspaceUiState: { deriveDesiredFields: () => ({}) },
-  workspacePromptCollectionUiState: { deriveDesiredFields: () => ({}) },
-  accordionUiState: { deriveDesiredFields: () => ({}) }
 }
 
 /** Converts one graph entry into the persistence record used during staging. */
@@ -475,10 +472,7 @@ export const planDomainStorageTransitions = (
     'note',
     'userPersistence',
     'attachedNoteUiState',
-    'markdownContentUiState',
     'workspaceUiState',
-    'workspacePromptCollectionUiState',
-    'accordionUiState'
   ]
 
   for (const entityType of entityTypes) {

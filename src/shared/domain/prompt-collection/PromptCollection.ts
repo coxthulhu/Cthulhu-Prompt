@@ -3,7 +3,6 @@ import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/Pro
 import type { PromptEntryRef, PromptTemplateEntryRef, NoteEntryRef } from '@shared/domain/OrderContainer'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { IpcResult } from '@shared/ipc/IpcResult'
-import type { MarkdownContentUiState } from '@shared/domain/ui-state/MarkdownContentUiState'
 import {
   PROMPT_STATUS_FOLDERS,
   PROMPT_STATUS_FOLDER_REGISTRY,
@@ -337,7 +336,6 @@ export type LoadPromptCollectionInitialResult = IpcResult<{
   /** Full notes available independently of owner editor hydration. */
   notes: Array<RevisionEnvelope<import('@shared/domain/note/Note').Note>>
   promptTemplates: Array<RevisionEnvelope<PromptTemplatePersisted>>
-  markdownContentUiStates: Array<RevisionEnvelope<MarkdownContentUiState>>
   /** Visibility preferences independent of owner editor hydration. */
   attachedNoteUiStates: Array<RevisionEnvelope<import('@shared/domain/ui-state/AttachedNoteUiState').AttachedNoteUiState>>
 }>

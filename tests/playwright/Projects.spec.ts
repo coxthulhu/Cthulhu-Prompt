@@ -139,7 +139,6 @@ describe('Persisted projects', () => {
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-favorites', info.id)).toBeNull()
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', info.id)).toEqual({ entries: ['templates', 'tasks'].map((id) => ({ kind: 'collection', id })) })
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', null)).toBeNull()
-    await testHelpers.navigateToPromptCollections('Templates')
     await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Templates')
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
@@ -181,10 +180,10 @@ describe('Persisted projects', () => {
     expect(await readWorkspaceState(electronApp, workspaceId, 'collection-order', JSON.parse(info).id)).toEqual({ entries: [{ kind: 'collection', id: 'tasks' }, { kind: 'collection', id: 'templates' }] })
   })
 
-  test('creates a project, isolates collection names, and opens its collections after workspace file opens', async ({ testSetup, electronApp }) => {
+  test('creates a project, isolates collection names, and restores tabs through workspace file opens', async ({ testSetup, electronApp }) => {
     /** Two workspaces exercise both double-click transitions. */
     const path = '/ws/project-isolation'
-    /** Other workspace closes the previous workspace's work tabs. */
+    /** Other workspace must retain its own fresh New Tab. */
     const otherPath = `${path}-other`
     await testSetup.setupFilesystem({ ...workspaceFiles(path), ...workspaceFiles(otherPath) })
     await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
@@ -212,11 +211,11 @@ describe('Persisted projects', () => {
     await expect(mainWindow.getByTestId('prompt-title')).toHaveCount(0)
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['Templates', 'Tasks'])
     await openWorkspaceFile(electronApp, getWorkspaceInfoPath(otherPath))
-    await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(otherPath)
-    await expect(mainWindow.getByTestId('work-tab')).toHaveCount(0)
+    await expect(mainWindow.getByTestId('new-tab-workspace-title')).toHaveText('project-isolation-other')
     await openWorkspaceFile(electronApp, getWorkspaceInfoPath(path))
-    await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(path)
-    await testHelpers.navigateToPromptCollections('Templates')
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['Templates', 'Tasks'])
+    await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Tasks')
+    await mainWindow.getByTestId('work-tab').getByRole('tab').first().click()
     await expect(mainWindow.getByTestId('sidebar-title')).toHaveText('Templates')
   })
 
@@ -357,7 +356,6 @@ describe('Persisted projects', () => {
     /** Existing rail and template picker provide user-visible evidence of the persisted graph. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
-    await showCollectionBrowser(mainWindow)
     await expect(projectNames(mainWindow)).toHaveText(['Default Project', 'Alpha', 'Zeta'])
     await showCollectionBrowser(mainWindow)
     await mainWindow.getByTestId('new-tab-collection-tasks').click()

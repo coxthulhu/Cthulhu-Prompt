@@ -31,10 +31,7 @@ export type DomainPersistenceFieldsMap = {
   userPersistence: Record<string, never>
   /** Visibility records have no filesystem location. */
   attachedNoteUiState: Record<string, never>
-  markdownContentUiState: Record<string, never>
   workspaceUiState: Record<string, never>
-  workspacePromptCollectionUiState: Record<string, never>
-  accordionUiState: Record<string, never>
 }
 
 export type PersistenceStageResult<TPersistenceFields> = {

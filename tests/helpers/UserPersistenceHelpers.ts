@@ -292,3 +292,32 @@ export const readWorkspaceUiState = async (electronApp: ElectronApplication, wor
     }))
   }
 }
+
+/** Reads the new session's actual SQLite payloads without calling the production adapter. */
+export const readTabSession = async (electronApp: ElectronApplication, workspaceId: string) => {
+  /** Both storage scopes are fetched together so an autosave cannot split the observation. */
+  const result = await runSqlQuery(electronApp, `SELECT state_type, data_json FROM workspace_state WHERE workspace_id = ${toSqlText(workspaceId)} AND state_type IN ('tab-session-user', 'tab-session-machine')`)
+  if (!result.success) throw new Error(result.error)
+  /** Portable navigation and tab identities. */
+  const user = JSON.parse(String(result.rows?.find((row) => row.state_type === 'tab-session-user')?.data_json ?? 'null')) as import('../../src/main/Persistence/sqlite/TabSessionPersistence').TabSessionUserState | null
+  /** Local geometry keyed by the same identities. */
+  const machine = JSON.parse(String(result.rows?.find((row) => row.state_type === 'tab-session-machine')?.data_json ?? 'null')) as import('../../src/main/Persistence/sqlite/TabSessionPersistence').TabSessionMachineState | null
+  return { user, machine }
+}
+
+/** Reads one collection view from an explicitly chosen tab, or its last-closed snapshot. */
+export const readCollectionView = async (electronApp: ElectronApplication, workspaceId: string, collectionId?: string, tabIndex?: number) => {
+  /** Actual persisted session in both storage scopes. */
+  const { user, machine } = await readTabSession(electronApp, workspaceId)
+  /** Selected tab by identity, explicit index, or collection identity for single-view tests. */
+  const tab = tabIndex !== undefined ? user?.tabs[tabIndex] : collectionId
+    ? user?.tabs.find((candidate) => candidate.collectionId === collectionId && !candidate.openPromptId)
+    : user?.tabs.find((candidate) => candidate.id === user.selectedTabId) ?? user?.tabs[0]
+  /** Portable view choices from an open tab or remembered final close. */
+  const view = tab?.view ?? (tabIndex === undefined && collectionId ? user?.lastClosedCollections[collectionId] : undefined)
+  /** Machine-local geometry with the same owner. */
+  const local = tab ? machine?.tabs[tab.id]?.view : machine?.lastClosedCollections[collectionId!]
+  return view ? { ...view, ...local, accordionSections: view.accordionSections.map((section) => ({
+    ...section, configuredExpandedHeightPx: local?.heights[section.id] ?? 1
+  })) } : undefined
+}

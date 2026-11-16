@@ -292,10 +292,13 @@ export const createPromptNavigationContextValue = (): PromptNavigationContext =>
   }
 }
 
-export const setPromptNavigationContext = (value: PromptNavigationContext): void => {
+/** Supplies fixed navigation or the owning tab's coordinator to mounted descendants. */
+export const setPromptNavigationContext = (value: PromptNavigationContext | (() => PromptNavigationContext)): void => {
   setContext(PROMPT_NAVIGATION_CONTEXT, value)
 }
 
 export const getPromptNavigationContext = (): PromptNavigationContext => {
-  return getContext<PromptNavigationContext>(PROMPT_NAVIGATION_CONTEXT)
+  /** The shell supplies the owning tab when a screen or sidebar mounts. */
+  const context = getContext<PromptNavigationContext | (() => PromptNavigationContext)>(PROMPT_NAVIGATION_CONTEXT)
+  return typeof context === 'function' ? context() : context
 }

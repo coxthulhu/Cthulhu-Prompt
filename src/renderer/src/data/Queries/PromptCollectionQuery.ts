@@ -10,7 +10,6 @@ import { ipcInvokeWithPayload } from '@renderer/data/IpcFramework/IpcRequestInvo
 import { runLoad } from '@renderer/data/IpcFramework/Load'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { collectPromptCollectionGraphIds } from '@renderer/data/Collections/PromptCollectionGraph'
-import { markdownContentUiStateCollection } from '@renderer/data/Collections/MarkdownContentUiStateCollection'
 import {
   setPromptCollectionClientStateHasLoadedInitialData,
   upsertPromptCollectionClientStates
@@ -45,7 +44,6 @@ export const loadPromptCollectionInitial = async (
   categoryCollection.utils.upsertManyAuthoritative(result.categories)
   promptCollectionsCollection.utils.upsertManyAuthoritative(result.promptCollections)
   upsertPromptCollectionClientStates(result.promptCollections.map((promptCollection) => promptCollection.id))
-  markdownContentUiStateCollection.utils.upsertManyAuthoritative(result.markdownContentUiStates)
   setPromptCollectionClientStateHasLoadedInitialData(promptCollectionId, true)
 
   // Prune client state against the reconciled collection state after applying the load result.

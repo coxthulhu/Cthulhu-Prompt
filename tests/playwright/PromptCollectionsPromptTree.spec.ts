@@ -9,7 +9,7 @@ import {
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector
 } from '../helpers/PromptCollectionSelectors'
-import { readWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
+import { readCollectionView, readTabSession } from '../helpers/UserPersistenceHelpers'
 import {
   focusMonacoEditor,
   isMonacoEditorFocused,
@@ -53,6 +53,7 @@ const COMPLETED_TREE_COLLECTION_NAME = 'Completed Tree Navigation'
 const COMPLETED_TREE_PROMPT_COUNT = 20
 const COMPLETED_TREE_TARGET_PROMPT_ID = 'completed-tree-prompt-0'
 const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
+const CATEGORIES_MAIN_COLLECTION_ID = createDeterministicId(`${CATEGORIES_WORKSPACE_PATH}:Main`)
 const CATEGORY_ID = createDeterministicId(
   `${CATEGORIES_WORKSPACE_PATH}:Main/Category`
 )
@@ -467,16 +468,19 @@ describe('Prompt collection prompt tree', () => {
       '[data-testid="prompt-editor-category-prompt"]'
     )
     await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Main')
-
+    await expect
+      .poll(async () => {
+        const persisted = await readTabSession(electronApp, workspaceId)
+        return persisted.user?.tabs[0].collectionId
+      })
+      .toBe(CATEGORIES_MAIN_COLLECTION_ID)
 
     await testHelpers.navigateToHomeScreen()
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          return persisted.promptCollectionViewEntries.find(
-            (entry) => entry.contentOwnerId === CATEGORY_ID
-          )?.selectedEntryId
+          const persisted = await readCollectionView(electronApp, workspaceId)
+          return persisted?.selectedEntryId
         },
         { timeout: 15000 }
       )
@@ -600,10 +604,8 @@ describe('Prompt collection prompt tree', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          return persisted.promptCollectionViewEntries.find(
-            (entry) => entry.contentOwnerId === CATEGORY_ID
-          )?.treeIsExpanded
+          const persisted = await readCollectionView(electronApp, workspaceId)
+          return persisted?.owners[CATEGORY_ID]?.treeIsExpanded
         },
         { timeout: 15000 }
       )
@@ -621,10 +623,8 @@ describe('Prompt collection prompt tree', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          const categoryEntry = persisted.promptCollectionViewEntries.find(
-            (entry) => entry.contentOwnerId === CATEGORY_ID
-          )
+          const persisted = await readCollectionView(electronApp, workspaceId)
+          const categoryEntry = persisted?.owners[CATEGORY_ID]
           return categoryEntry?.treeIsExpanded
         },
         { timeout: 15000 }

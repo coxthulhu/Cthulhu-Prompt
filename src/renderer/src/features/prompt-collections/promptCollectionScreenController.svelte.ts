@@ -1,3 +1,4 @@
+import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { getPromptLocation, setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
 import {
@@ -70,7 +71,7 @@ import {
   lookupWorkspacePersistedPromptCollectionSelection,
   setPromptCollectionContentSectionExpandedStateWithAutosave,
   setPromptCollectionSelectedEntryIdWithAutosave
-} from '@renderer/data/UiState/autosave/WorkspaceUiStateAutosave.svelte.ts'
+} from '@renderer/data/UiState/TabViewState'
 import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
 import type {
   ScrollToWithinWindowBand,
@@ -141,6 +142,8 @@ export const createPromptCollectionScreenController = ({
   const workspaceSelection = getWorkspaceSelectionContext()
   const systemSettings = getSystemSettingsContext()
   const promptNavigation = getPromptNavigationContext()
+  /** Capture this tab's view so unmount callbacks cannot write into its next screen. */
+  const tabView = getTabStateContext()!.view
   const promptEditorSizingConfig: PromptEditorSizingConfig = $derived({
     fontSize: systemSettings.promptFontSize,
     minLines: systemSettings.promptEditorMinLines,
@@ -343,7 +346,7 @@ export const createPromptCollectionScreenController = ({
   let viewportMetrics = $state<VirtualWindowViewportMetrics | null>(null)
   /** Seeds the virtual window from this collection's persisted status-mode offset. */
   const getRestoredPromptCollectionScrollTop = (): number =>
-    workspaceId ? (lookupPromptCollectionScrollTop(workspaceId, screenCollectionId, screenMode) ?? 0) : 0
+    workspaceId ? (lookupPromptCollectionScrollTop(tabView, screenCollectionId, screenMode) ?? 0) : 0
 
   let initialPromptCollectionScrollTopPx = $state(getRestoredPromptCollectionScrollTop())
   let latestCenteredPromptScreenRow = $state<ActivePromptScreenRow | null>(null)
@@ -367,7 +370,7 @@ export const createPromptCollectionScreenController = ({
     }
 
     return (
-      lookupWorkspacePersistedPromptCollectionContentSectionExpandedState(workspaceId, contentOwnerId) ??
+      lookupWorkspacePersistedPromptCollectionContentSectionExpandedState(tabView, contentOwnerId) ??
       true
     )
   }
@@ -651,7 +654,7 @@ export const createPromptCollectionScreenController = ({
       return
     }
 
-    setPromptCollectionContentSectionExpandedStateWithAutosave(workspaceId, contentOwnerId, isExpanded)
+    setPromptCollectionContentSectionExpandedStateWithAutosave(tabView, contentOwnerId, isExpanded)
   }
 
   const toggleContentSectionExpanded = (contentOwnerId: string) => {
@@ -738,6 +741,7 @@ export const createPromptCollectionScreenController = ({
     })
   }
 
+  /** Saves the selected row into the owning tab without changing its viewport. */
   const persistActivePromptScreenRow = () => {
     if (isFinalMode) {
       return
@@ -754,12 +758,15 @@ export const createPromptCollectionScreenController = ({
     }
 
     setPromptCollectionSelectedEntryIdWithAutosave(
-      workspaceId,
+      tabView,
       screenCollectionId,
       selectedTarget.contentOwnerId,
       promptNavigationRowToPersistedEntryId(toPromptNavigationRow(selectedTarget))
     )
   }
+
+  // Side effect: include current selection in ongoing session autosaves, including renderer reloads.
+  $effect(() => { persistActivePromptScreenRow() })
 
   const selectCreatedPrompt = (contentOwnerId: string, promptId: string): void => {
     const row = promptIdToPromptNavigationRow(promptId)
@@ -777,7 +784,7 @@ export const createPromptCollectionScreenController = ({
     const workspaceId = workspaceSelection.selectedWorkspaceId
     if (workspaceId) {
       setPromptCollectionSelectedEntryIdWithAutosave(
-        workspaceId,
+        tabView,
         screenCollectionId,
         contentOwnerId,
         promptNavigationRowToPersistedEntryId(row)
@@ -894,10 +901,10 @@ export const createPromptCollectionScreenController = ({
       promptNavigation.contentRevealRequests.pending?.payload.screenCollectionId === screenCollectionId
     const explicitSelectionTarget = hasExplicitSelection ? currentNavigationTarget : null
     /** Saved zero is a real position and must also override saved-item restoration. */
-    const savedScrollTop = lookupPromptCollectionScrollTop(workspaceId, screenCollectionId, screenMode)
+    const savedScrollTop = lookupPromptCollectionScrollTop(tabView, screenCollectionId, screenMode)
     const persistedSelection =
-      !explicitSelectionTarget && !canUseCachedData
-        ? lookupWorkspacePersistedPromptCollectionSelection(workspaceId, screenCollectionId)
+      !explicitSelectionTarget
+        ? lookupWorkspacePersistedPromptCollectionSelection(tabView, screenCollectionId)
         : null
     const persistedSelectionTarget = persistedSelection
       ? toActivePromptScreenRow(
@@ -1055,10 +1062,20 @@ export const createPromptCollectionScreenController = ({
     })
   })
 
-  // Side effect: normalize stale prompt selections once rows are loaded.
+  // Side effect: repair deleted category owners and stale prompt selections once rows are loaded.
   $effect(() => {
     if (!isVirtualContentReady) return
     if (isFinalMode) return
+    if (activePromptScreenRow && activePromptScreenRow.contentOwnerId !== screenCollectionId && !categoryById[activePromptScreenRow.contentOwnerId]) {
+      setCurrentCollectionSelection(
+        activePromptScreenRow.kind === 'prompt'
+          ? { ...activePromptScreenRow, contentOwnerId: screenCollectionId }
+          : { kind: 'collection-header', contentOwnerId: screenCollectionId },
+        'restore',
+        { forceRequest: true }
+      )
+      return
+    }
     if (!activePromptScreenRow || activePromptScreenRow.kind !== 'prompt') return
     if (navigablePromptIds.includes(activePromptScreenRow.promptId)) return
 
@@ -1322,14 +1339,14 @@ export const createPromptCollectionScreenController = ({
   const handleVirtualScrollTopChange = (nextScrollTop: number) => {
     scrollTopPx = nextScrollTop
     if (!workspaceId) return
-    setPromptCollectionScrollTopWithAutosave(workspaceId, screenCollectionId, screenMode, nextScrollTop)
+    setPromptCollectionScrollTopWithAutosave(tabView, screenCollectionId, screenMode, nextScrollTop)
   }
 
   /** Copies the visible offset to the destination before the header tab remounts the screen. */
   const preserveScrollForScreenMode = (nextMode: PromptCollectionScreenMode): void => {
     if (!workspaceId || nextMode === screenMode) return
     setPromptCollectionScrollTopWithAutosave(
-      workspaceId, screenCollectionId, nextMode, scrollApi?.getScrollTop() ?? scrollTopPx
+      tabView, screenCollectionId, nextMode, scrollApi?.getScrollTop() ?? scrollTopPx
     )
   }
 

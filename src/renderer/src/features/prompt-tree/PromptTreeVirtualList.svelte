@@ -77,6 +77,10 @@
   } from '@renderer/common/virtual-window/virtualWindowTypes'
 
   type Props = {
+    /** Retained tree viewport supplied by the owning tab. */
+    initialScrollTopPx?: number
+    /** Reports reachable tree offsets to tab persistence. */
+    onScrollTopChange?: (offset: number) => void
     items: VirtualWindowItem<PromptTreeRow>[]
     testId: string
     spacerTestId: string
@@ -96,6 +100,8 @@
   }
 
   let {
+    initialScrollTopPx,
+    onScrollTopChange,
     items,
     testId,
     spacerTestId,
@@ -156,6 +162,8 @@
 
 <SvelteVirtualWindow
   {items}
+  {initialScrollTopPx}
+  {onScrollTopChange}
   {rowRegistry}
   overlayScrollbar
   leftScrollPaddingPx={0}

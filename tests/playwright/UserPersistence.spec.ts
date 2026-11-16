@@ -9,7 +9,8 @@ import { createTestRequestId } from '../helpers/TestRequestId'
 import {
   readUserPersistence,
   readWorkspaceState,
-  readWorkspaceUiState,
+  readTabSession,
+  readCollectionView,
   seedWorkspaceState,
   seedUserPersistence,
   seedWindowPersistence,
@@ -167,7 +168,7 @@ const dragSidebarHandleBy = async (
 
 describe('User Persistence', () => {
   // Both sidebar modes restore a saved collapsed preference, and switching activities saves it expanded again.
-  for (const screen of ['settings']) {
+  for (const screen of ['work-tab', 'settings']) {
     test(`restores a collapsed ${screen} sidebar and persists its forced expansion across reloads`, async ({
       electronApp,
       testSetup
@@ -180,11 +181,11 @@ describe('User Persistence', () => {
       if (screen === 'settings') await testHelpers.navigateToSettingsScreen()
 
       /** Activity restored as the selected screen after each reload. */
-      const activity = mainWindow.getByTestId(`nav-button-${screen}`)
+      const activity = screen === 'work-tab' ? mainWindow.getByTestId('work-tab').getByRole('tab').first() : mainWindow.getByTestId('nav-button-settings')
       /** Other sidebar mode shares the same application preference. */
-      const nextScreen = 'settings'
+      const nextScreen = screen === 'work-tab' ? 'settings' : 'work-tab'
       /** Activity that forces the collapsed sidebar open by switching screens. */
-      const nextActivity = mainWindow.getByTestId(`nav-button-${nextScreen}`)
+      const nextActivity = nextScreen === 'work-tab' ? mainWindow.getByTestId('work-tab').getByRole('tab').first() : mainWindow.getByTestId('nav-button-settings')
       /** Workspace whose saved screen selection is restored on reload. */
       const workspaceId = createDeterministicId('/ws/sample')
       /** Sidebar surface and sash must agree with the saved expansion preference. */
@@ -192,7 +193,7 @@ describe('User Persistence', () => {
       /** Resize handle must remain unavailable while the sidebar is collapsed. */
       const resizeHandle = mainWindow.getByTestId('app-sidebar-resize-handle')
       await expect(sidebar).toBeVisible()
-      await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe(screen)
+      await expect.poll(async () => (await readTabSession(electronApp, workspaceId)).user?.selectedTabId).toBe(screen === 'work-tab' ? (await readTabSession(electronApp, workspaceId)).user?.tabs[0].id : screen)
 
       // No control collapses the sidebar yet, so the saved preference is written directly before reloading.
       await seedWorkspaceState(electronApp, null, 'application-user', null, {
@@ -201,7 +202,7 @@ describe('User Persistence', () => {
       })
       await mainWindow.reload()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-      await expect(activity).toHaveAttribute('aria-current', 'page')
+      await expect(activity).toHaveAttribute(screen === 'work-tab' ? 'aria-selected' : 'aria-current', screen === 'work-tab' ? 'true' : 'page')
       await expect(sidebar).toBeHidden()
       await expect(resizeHandle).toBeHidden()
       // Re-clicking the restored activity never shows or hides the sidebar.
@@ -209,16 +210,15 @@ describe('User Persistence', () => {
       await expect(sidebar).toBeHidden()
 
       // Switching activities forces the sidebar open and saves that preference for the next startup.
-      await testHelpers.navigateToHomeScreen()
       await nextActivity.click()
       await expect(sidebar).toBeVisible()
       await expect.poll(async () =>
         (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
       ).toBe(true)
-      await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe(nextScreen)
+      await expect.poll(async () => (await readTabSession(electronApp, workspaceId)).user?.selectedTabId).toBe(nextScreen === 'work-tab' ? (await readTabSession(electronApp, workspaceId)).user?.tabs[0].id : nextScreen)
       await mainWindow.reload()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
-      await expect(nextActivity).toHaveAttribute('aria-current', 'page')
+      await expect(nextActivity).toHaveAttribute(nextScreen === 'work-tab' ? 'aria-selected' : 'aria-current', nextScreen === 'work-tab' ? 'true' : 'page')
       await expect(sidebar).toBeVisible()
       await expect(resizeHandle).toBeVisible()
     })
@@ -237,6 +237,7 @@ describe('User Persistence', () => {
       workspace: { scenario: 'none' }
     })
 
+    await testHelpers.navigateToHomeScreen()
     await testHelpers.assertWorkspaceReadyPath(persistedWorkspacePath)
     await expect(
       mainWindow.getByTestId('home-primary-card').locator('.cthulhuUiRow .cthulhuUiTitle')
@@ -259,6 +260,7 @@ describe('User Persistence', () => {
       workspace: { scenario: 'none' }
     })
 
+    await testHelpers.navigateToHomeScreen()
     await testHelpers.assertWorkspaceReadyPath(persistedWorkspacePath)
 
     await testHelpers.navigateToPromptCollections('Development')
@@ -421,10 +423,10 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
+        const persisted = await readTabSession(electronApp, workspaceId)
+        return persisted.user?.selectedTabId
       })
-      .toBe('home:null')
+      .toBe('home')
   })
 
   test('resets malformed persisted screen data to home and saves it', async ({
@@ -450,11 +452,13 @@ describe('User Persistence', () => {
 
     await expect
       .poll(async () => {
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return `${persisted.selectedScreen}:${JSON.stringify(persisted.selectedScreenData)}`
+        const persisted = await readTabSession(electronApp, workspaceId)
+        return persisted.user?.selectedTabId
       })
-      .toBe('home:null')
+      .toBe('home')
   })
+
+
 
   test('autosaves active prompt tree entry id in workspace persistence', async ({
     electronApp,
@@ -476,12 +480,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          const entries = persisted.promptCollectionViewEntries
-          const viewEntry = entries.find(
-            (entry) => entry.contentOwnerId === developmentPromptCollectionId
-          )
-          return viewEntry?.selectedEntryId ?? null
+          return (await readCollectionView(electronApp, workspaceId, developmentPromptCollectionId))?.selectedEntryId ?? null
         },
         { timeout: 15000 }
       )
@@ -496,6 +495,8 @@ describe('User Persistence', () => {
     const workspacePath = '/ws/categories'
     /** Stable workspace identity derived by the categories fixture. */
     const workspaceId = createDeterministicId(workspacePath)
+    /** prompt-collection identity derived by the categories fixture. */
+    const promptCollectionId = createDeterministicId(`${workspacePath}:Main`)
     /** Category identity derived by the categories fixture. */
     const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -520,16 +521,13 @@ describe('User Persistence', () => {
         .poll(
           async () => {
             /** Workspace persistence flushed while final window confirmation remains gated. */
-            const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-            /** Category view entry written by the close-time selection flush. */
-            const categoryEntry = persisted.promptCollectionViewEntries.find(
-              (entry) => entry.contentOwnerId === categoryId
-            )
-            return categoryEntry?.selectedEntryId ?? 'none'
+            const persisted = await readTabSession(electronApp, workspaceId)
+            const tab = persisted.user?.tabs[0]
+            return `${tab?.collectionId ?? 'none'}:${tab?.view.contentOwnerId ?? 'none'}:${tab?.view.selectedEntryId ?? 'none'}`
           },
           { timeout: 15000 }
         )
-        .toBe('category-details')
+        .toBe(`${promptCollectionId}:${categoryId}:category-details`)
 
       /** Window-close completion observed after releasing the held confirmation IPC. */
       const windowClosed = mainWindow.waitForEvent('close')
@@ -566,19 +564,13 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          const entries = persisted.promptCollectionViewEntries
-          const examplesEntry = entries.find(
-            (entry) => entry.contentOwnerId === examplesPromptCollectionId
-          )
-          const developmentEntry = entries.find(
-            (entry) => entry.contentOwnerId === developmentPromptCollectionId
-          )
-          return `${examplesEntry?.selectedEntryId ?? 'none'}:${developmentEntry?.selectedEntryId ?? 'none'}:${entries.length}`
+          const examplesEntry = await readCollectionView(electronApp, workspaceId, examplesPromptCollectionId)
+          const developmentEntry = await readCollectionView(electronApp, workspaceId, developmentPromptCollectionId)
+          return `${examplesEntry?.selectedEntryId ?? 'none'}:${developmentEntry?.selectedEntryId ?? 'none'}`
         },
         { timeout: 15000 }
       )
-      .toBe('simple-1:dev-2:2')
+      .toBe('simple-1:dev-2')
   })
 
   test('autosaves prompt collection prompts section expanded state', async ({
@@ -606,12 +598,7 @@ describe('User Persistence', () => {
     await expect
       .poll(
         async () => {
-          const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-          const entry = persisted.promptCollectionViewEntries.find(
-            (viewEntry) => viewEntry.contentOwnerId === categoryId
-          )
-          const promptsExpanded = entry?.contentSectionIsExpanded ?? null
-          return promptsExpanded
+          return (await readCollectionView(electronApp, workspaceId))?.owners[categoryId]?.contentSectionIsExpanded ?? null
         },
         { timeout: 15000 }
       )

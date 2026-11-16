@@ -38,12 +38,14 @@
     collections: NewTabCollectionTile[]
   }
 
-  let { workspace, openCollectionIds, onOpenCollection, onCreateProject, onEditProject } = $props<{
+  let { viewState, workspace, openCollectionIds, onOpenCollection, onCreateProject, onEditProject } = $props<{
+    /** This tab's retained search and viewport. */
+    viewState: { search: string; scrollTop: number }
     /** Open workspace whose projects and collections are listed. */
     workspace: Workspace
     /** Collections shown by other work tabs, whose tiles are marked open. */
     openCollectionIds: string[]
-    /** Opens a collection in this tab, or selects the work tab already showing it. */
+    /** Opens a collection in this tab, including collections already shown elsewhere. */
     onOpenCollection: (collectionId: string) => void
     /** Opens Manage Projects to a new draft without leaving this screen. */
     onCreateProject: () => void
@@ -61,8 +63,10 @@
     { id: 'template', label: 'Create Template Collection', icon: Layers, testId: 'new-tab-create-template-collection-item' }
   ]
 
-  /** Text typed into the search bar. */
-  let searchQuery = $state('')
+  /** Scroll host restored once after the tab's filtered content mounts. */
+  let scrollHost: HTMLElement
+  // Side effect: restore the retained New Tab viewport after applying its saved search.
+  onMount(() => { scrollHost.scrollTop = viewState.scrollTop })
   /** Clock for the tiles' relative modification times. */
   let nowMs = $state(Date.now())
   /** Project that receives the collection created from its New Collection menu. */
@@ -79,7 +83,7 @@
     return () => window.clearInterval(intervalId)
   })
 
-  /** Projects in activity bar order, each with its collections in Show All order and their tile details. */
+  /** Projects in saved order, each with its collections in Show All order and their tile details. */
   const projectGroups = $derived.by((): ProjectGroup[] => {
     const collectionById = new Map(promptCollectionQuery.data.map((collection) => [collection.id, collection]))
     const promptById = new Map(promptQuery.data.map((prompt) => [prompt.id, prompt]))
@@ -98,7 +102,7 @@
   })
 
   /** Case-insensitive search text; empty matches everything. */
-  const normalizedQuery = $derived(searchQuery.trim().toLowerCase())
+  const normalizedQuery = $derived(viewState.search.trim().toLowerCase())
   /** Projects whose names match keep every collection; others keep only matching collections and hide without any. */
   const visibleProjectGroups = $derived(
     projectGroups.flatMap((group) => {
@@ -142,7 +146,7 @@
 
 <!-- Content is top aligned and the scrollbar's space is always reserved, so search results changing its height never
      move the search bar or shift the content sideways. -->
-<main class="newTabScreen flex min-w-0 flex-1 flex-col overflow-y-auto" data-testid="new-tab-screen">
+<main bind:this={scrollHost} onscroll={() => { viewState.scrollTop = scrollHost.scrollTop }} class="newTabScreen flex min-w-0 flex-1 flex-col overflow-y-auto" data-testid="new-tab-screen">
   <div class="mx-auto flex w-full max-w-[880px] flex-col px-6 py-8">
     <Title
       title={workspace.workspaceName}
@@ -156,7 +160,7 @@
       <TextInput
         icon={Search}
         class="flex-1"
-        bind:value={searchQuery}
+        bind:value={viewState.search}
         aria-label="Search projects and collections"
         placeholder="Search projects and collections"
         spellcheck="false"

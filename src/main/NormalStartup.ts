@@ -11,7 +11,6 @@ import { setupPromptCollectionMutationHandlers } from './Mutations/PromptCollect
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
 import { setupPromptTemplateMutationHandlers } from './Mutations/PromptTemplateMutations'
 import { setupCategoryMutationHandlers } from './Mutations/CategoryMutations'
-import { setupMarkdownContentUiStateMutationHandlers } from './Mutations/MarkdownContentUiStateMutations'
 import { setupSystemSettingsMutationHandlers } from './Mutations/SystemSettingsMutations'
 import { setupUserPersistenceMutationHandlers } from './Mutations/UserPersistenceMutations'
 import { setupUiStateMutationHandlers } from './Mutations/UiStateMutations'
@@ -395,7 +394,6 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupPromptMutationHandlers()
     setupPromptTemplateMutationHandlers()
     setupCategoryMutationHandlers()
-    setupMarkdownContentUiStateMutationHandlers()
     setupWindowControlHandlers()
     setupSecondInstanceHandler()
 

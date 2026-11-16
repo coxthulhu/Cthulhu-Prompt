@@ -694,11 +694,9 @@ describe('Prompt template collection UI', () => {
     )
     await expect
       .poll(async () => {
-        const result = await runSqlQuery(
-          electronApp,
-          `SELECT entity_id AS content_id FROM workspace_state WHERE state_type = 'markdown-editor' AND entity_id = '${TEMPLATE_ID}'`
-        )
-        return result.rows?.[0]?.content_id ?? null
+        /** Closed collection snapshot retains its editor location in the machine scope. */
+        const result = await runSqlQuery(electronApp, "SELECT data_json FROM workspace_state WHERE state_type = 'tab-session-machine'")
+        return result.rows?.some((row) => Object.values(JSON.parse(String(row.data_json)).lastClosedCollections).some((view: any) => view.editorViewStates[TEMPLATE_ID])) ? TEMPLATE_ID : null
       })
       .toBe(TEMPLATE_ID)
 
