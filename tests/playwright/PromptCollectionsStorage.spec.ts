@@ -1,23 +1,17 @@
+import { clickPromptCollectionItem, showCollectionBrowser, openCollectionCreation } from '../helpers/PromptCollectionHelpers'
 import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import type { Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  selectedQuickCollectionSelector,
+  selectedCollectionTitleSelector,
   promptEditorSelector,
-  promptCollectionSelectorDropdownItemSelector,
-  promptCollectionSelectorMenuSelector,
-  promptCollectionSelectorTriggerSelector
+  collectionTileSelector,
 } from '../helpers/PromptCollectionSelectors'
 import {
   checkFileExists,
   readTextFile,
   readPromptCollectionEntryIds
 } from '../helpers/PromptPersistenceTestHelpers'
-import {
-  beginPromptHandleDrag,
-  finishActiveDrag,
-  moveActiveDragToTarget
-} from '../helpers/PromptDragDropHelpers'
 
 // The repository Playwright wrapper supplies the configured test primitives.
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -25,7 +19,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 // The sample workspace supplies existing canonical prompt collections.
 const WORKSPACE_PATH = '/ws/sample'
 // These selectors target the shared collection-creation controls.
-const COLLECTION_ADD_ITEM = '[data-testid="sidebar-prompt-collection-dropdown-add-task-item"]'
 const COLLECTION_NAME_INPUT = '[data-testid="create-prompt-collection-name-input"]'
 const COLLECTION_CREATE_BUTTON = '[data-testid="create-prompt-collection-button"]'
 // These selectors target prompt and status controls.
@@ -67,11 +60,12 @@ const readCategoryOrderPromptIds = async (
 
 // Creates and selects a prompt collection through the production creation dialog.
 const createCollection = async (page: Page, folderName: string): Promise<void> => {
-  await page.locator(promptCollectionSelectorTriggerSelector).click()
-  await page.locator(COLLECTION_ADD_ITEM).click()
+  await showCollectionBrowser(page)
+  await openCollectionCreation(page)
   await page.locator(COLLECTION_NAME_INPUT).fill(folderName)
   await page.locator(COLLECTION_CREATE_BUTTON).click()
-  await expect(page.locator(selectedQuickCollectionSelector)).toContainText(folderName)
+  await clickPromptCollectionItem(page, folderName)
+  await expect(page.locator(selectedCollectionTitleSelector)).toContainText(folderName)
 }
 
 // Reads the stable collection ID persisted in CollectionInfo.json.
@@ -107,10 +101,9 @@ describe('Prompt collection storage', () => {
   }) => {
     // The project shows the collection selector for the sample workspace.
     const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await mainWindow.getByTestId('nav-button-project').click()
 
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
-    await mainWindow.locator(COLLECTION_ADD_ITEM).click()
+    await showCollectionBrowser(mainWindow)
+    await openCollectionCreation(mainWindow)
     /** Task creation dialog opened from the project's task footer action. */
     const taskDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Task Collection"]'
@@ -123,9 +116,10 @@ describe('Prompt collection storage', () => {
     await expect(mainWindow.getByLabel('Collection Name')).toBeVisible()
     await mainWindow.locator(COLLECTION_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
+    await clickPromptCollectionItem(mainWindow, ALPHA_NAME)
 
     // The selected prompt collection exposes category creation without add-category dividers.
-    const selectedCollection = mainWindow.locator(selectedQuickCollectionSelector)
+    const selectedCollection = mainWindow.locator(selectedCollectionTitleSelector)
     await expect(selectedCollection).toContainText(ALPHA_NAME)
     // The created task collection identifies its type in the overview header.
     await expect(
@@ -173,8 +167,8 @@ describe('Prompt collection storage', () => {
       Promise.all(omittedPaths.map((path) => checkFileExists(electronApp, path)))
     ).resolves.toEqual(omittedPaths.map(() => false))
 
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
-    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
+    await showCollectionBrowser(mainWindow)
+    await openCollectionCreation(mainWindow, 'template')
     /** Template creation dialog opened from the project's template footer action. */
     const templateDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Template Collection"]'
@@ -206,17 +200,14 @@ describe('Prompt collection storage', () => {
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    await mainWindow.getByTestId('nav-button-project').click()
     await createCollection(mainWindow, ALPHA_NAME)
     await createCollection(mainWindow, BETA_NAME)
 
     // Collection IDs identify legal and illegal selector drop targets.
     const alphaPath = folderPath(ALPHA_NAME)
-    const betaPath = folderPath(BETA_NAME)
     const alphaId = await readCollectionId(electronApp, alphaPath)
-    const betaId = await readCollectionId(electronApp, betaPath)
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
-    await mainWindow.locator(promptCollectionSelectorDropdownItemSelector(alphaId)).click()
+    await showCollectionBrowser(mainWindow)
+    await mainWindow.locator(collectionTileSelector(alphaId)).click()
 
     // Two active prompts make both move buttons meaningful.
     await mainWindow.locator(ADD_PROMPT_BUTTON).click()
@@ -252,32 +243,11 @@ describe('Prompt collection storage', () => {
       .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
       .toEqual(initialPromptIds)
 
-    // The active prompt can move to another prompt collection.
-    await beginPromptHandleDrag(mainWindow, firstPromptId)
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-    const destination = mainWindow.locator(promptCollectionSelectorDropdownItemSelector(betaId))
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorDropdownItemSelector(betaId))
-    await expect(destination).toHaveAttribute('data-row-state', 'over')
-    await finishActiveDrag(mainWindow)
-    await expect
-      .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
-      .toEqual([secondPromptId])
-    await expect
-      .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(BETA_NAME)))
-      .toEqual([firstPromptId])
-    await expect
-      .poll(() => readCategoryOrderPromptIds(electronApp, ALPHA_NAME))
-      .toEqual([secondPromptId])
-    await expect
-      .poll(() => readCategoryOrderPromptIds(electronApp, BETA_NAME))
-      .toEqual([firstPromptId])
-
     // Completing moves the Markdown file from Active to Completed and updates frontmatter.
-    await testHelpers.navigateToPromptCollections(BETA_NAME)
+    await testHelpers.navigateToPromptCollections(ALPHA_NAME)
     await expect(mainWindow.locator(promptEditorSelector(firstPromptId))).toBeVisible()
-    const activePromptPath = `${betaPath}/Active/${FIRST_PROMPT_TITLE}.prompt.md`
-    const completedPromptPath = `${betaPath}/Completed/${FIRST_PROMPT_TITLE}.prompt.md`
+    const activePromptPath = `${alphaPath}/Active/${FIRST_PROMPT_TITLE}.prompt.md`
+    const completedPromptPath = `${alphaPath}/Completed/${FIRST_PROMPT_TITLE}.prompt.md`
     await mainWindow
       .locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-complete-button"]`)
       .click()
@@ -287,9 +257,9 @@ describe('Prompt collection storage', () => {
       'status: Completed'
     )
     await expect(
-      readPromptCollectionEntryIds(electronApp, activeOrderPath(BETA_NAME))
-    ).resolves.toEqual([])
-    await expect(readCategoryOrderPromptIds(electronApp, BETA_NAME)).resolves.toEqual([])
+      readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME))
+    ).resolves.toEqual([secondPromptId])
+    await expect(readCategoryOrderPromptIds(electronApp, ALPHA_NAME)).resolves.toEqual([secondPromptId])
 
     // Completed mode shows only the cross-status drag handle without ordering arrows.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
@@ -310,8 +280,8 @@ describe('Prompt collection storage', () => {
     await expect.poll(() => checkFileExists(electronApp, activePromptPath)).toBe(true)
     await expect.poll(() => readTextFile(electronApp, activePromptPath)).toContain('status: Todo')
     await expect
-      .poll(() => readCategoryOrderPromptIds(electronApp, BETA_NAME))
-      .toEqual([firstPromptId])
+      .poll(() => readCategoryOrderPromptIds(electronApp, ALPHA_NAME))
+      .toEqual([firstPromptId, secondPromptId])
 
     // Switching back to Active reveals the restored prompt in the collection.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
@@ -327,7 +297,7 @@ describe('Prompt collection storage', () => {
       .locator('[role="dialog"][aria-label="Delete Prompt"] button:has-text("Delete")')
       .click()
     await expect
-      .poll(() => readCategoryOrderPromptIds(electronApp, BETA_NAME))
-      .toEqual([])
+      .poll(() => readCategoryOrderPromptIds(electronApp, ALPHA_NAME))
+      .toEqual([secondPromptId])
   })
 })

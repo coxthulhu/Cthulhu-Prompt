@@ -7,7 +7,6 @@ export type ScreenId =
   | 'settings'
   | 'mockups'
   | 'test-screen'
-  | 'project'
   | 'work-tab'
 
 type ScreenConfig = {
@@ -50,13 +49,6 @@ export const screens: Record<ScreenId, ScreenConfig> = {
     devOnly: true,
     icon: Bug,
     sidebarMode: null
-  },
-  /** Rendered by the activity bar's project group instead of the title bar's screen buttons. */
-  project: {
-    label: 'Project',
-    testId: 'nav-button-project',
-    requiresWorkspace: true,
-    sidebarMode: SidebarModeId.Project
   },
   /** Shown by the selected work tab instead of a title bar screen button: its New Tab screen, which hides the
       sidebar, or its collection or single-prompt screen beside the collection mode. */

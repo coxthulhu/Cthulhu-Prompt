@@ -137,7 +137,7 @@ describe('Prompt collection status navigation', () => {
     for (const activity of ['home', 'settings'] as const) {
       await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog').click()
       await mainWindow.getByTestId(`nav-button-${activity}`).click()
-      await mainWindow.getByTestId('nav-button-project').click()
+      await testHelpers.navigateToPromptCollections('Beta')
       await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
       await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-header-backlog')).toHaveAttribute('aria-expanded', 'true')
     }
@@ -150,7 +150,7 @@ describe('Prompt collection status navigation', () => {
     await expect.poll(async () => (await readWorkspaceUiState(electronApp, WORKSPACE_ID)).selectedScreen).toBe('home')
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
-    await mainWindow.getByTestId('nav-button-project').click()
+    await testHelpers.navigateToPromptCollections('Beta')
     await expect(mainWindow.getByTestId('prompt-collection-backlog-filter')).toHaveAttribute('aria-pressed', 'true')
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-completed')).toBeVisible()
     await expect(mainWindow.getByTestId('sidebar-prompt-status-accordion-section-archived')).toHaveCount(0)

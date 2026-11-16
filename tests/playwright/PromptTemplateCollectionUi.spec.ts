@@ -11,8 +11,7 @@ import {
   PROMPT_COLLECTION_HOST_SELECTOR,
   PROMPT_TITLE_SELECTOR,
   promptEditorSelector,
-  promptCollectionSelectorDropdownItemSelector,
-  promptCollectionSelectorTriggerSelector
+  showAllCollectionsSelector
 } from '../helpers/PromptCollectionSelectors'
 import {
   createWorkspaceWithCollections,
@@ -750,19 +749,10 @@ describe('Prompt template collection UI', () => {
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
 
     await testHelpers.navigateToPromptCollections('Prompts')
-    // Quick picks use each collection kind's icon instead of a folder, whether or not they are selected.
-    await expect(mainWindow.getByTestId(`sidebar-quick-collection-${promptCollectionId}`).locator('svg').first())
-      .toHaveClass(/lucide-file-text/)
-    await expect(mainWindow.getByTestId(`sidebar-quick-collection-${templateCollectionId}`).locator('svg').first())
-      .toHaveClass(/lucide-layers/)
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
-    await expect(mainWindow.locator(promptCollectionSelectorDropdownItemSelector(promptCollectionId))).toBeVisible()
-    await expect(mainWindow.locator(promptCollectionSelectorDropdownItemSelector(templateCollectionId))).toBeVisible()
-    await mainWindow.keyboard.press('Escape')
-
-    await testHelpers.navigateToPromptCollections('Templates')
-    await expect(mainWindow.getByTestId(`sidebar-quick-collection-${templateCollectionId}`).locator('svg').first())
-      .toHaveClass(/lucide-layers/)
+    await mainWindow.locator(showAllCollectionsSelector).click()
+    await expect(mainWindow.getByTestId(`new-tab-collection-${promptCollectionId}`).locator('svg').first()).toHaveClass(/lucide-file-text/)
+    await expect(mainWindow.getByTestId(`new-tab-collection-${templateCollectionId}`).locator('svg').first()).toHaveClass(/lucide-layers/)
+    await mainWindow.getByTestId(`new-tab-collection-${templateCollectionId}`).click()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Templates')
   })
 })

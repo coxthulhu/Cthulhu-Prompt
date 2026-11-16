@@ -37,7 +37,6 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
     WorkspaceStateDataAccess.write(workspaceId, 'project-order', null, { ids: projects.map((project) => project.id) })
     for (const project of projects) {
       WorkspaceStateDataAccess.write(workspaceId, 'collection-order', project.id, { entries: project.collectionEntries })
-      WorkspaceStateDataAccess.write(workspaceId, 'collection-favorites', project.id, { ids: project.favoriteCollectionIds })
     }
   },
   stageChanges: async ({ before, after }) => {
@@ -83,7 +82,7 @@ export const workspacePersistence: PersistenceLayer<Workspace, WorkspacePersiste
           }
         }
         if (!previous || serializeProjectInfo(previous) !== serializeProjectInfo(project)) {
-          /** Only public fields are written; favorites and order never enter this file. */
+          /** Only public fields are written; private ordering never enter this file. */
           const infoPath = path.join(source, PROJECT_INFO_FILENAME)
           /** Temporary metadata participates in the same rollback as every child write. */
           const temp = resolveTempPath(infoPath)

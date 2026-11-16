@@ -23,7 +23,6 @@ export type WorkspaceStateData = {
     settingsCollapsedSectionIds: string[]
     settingsScrollTopPx: number
     singlePromptNoteFraction: number
-    sidebarQuickCollectionCount: number
     /** Open work tabs, in display order. */
     workTabs: WorkTab[]
     /** Selected work tab or title bar screen, or null while a project is selected. */

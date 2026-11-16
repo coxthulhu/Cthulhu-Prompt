@@ -10,7 +10,6 @@
     isWorkspaceLoading,
     onScreenCollectionSelect,
     onDeleteSelectedPromptCollection,
-    onManageProjects,
     onShowAll
   }: {
     /** Active sidebar mode, chosen by the active screen. */
@@ -21,8 +20,6 @@
     onScreenCollectionSelect: (collectionId: string) => void
     /** Opens the screen-owned deletion flow for a collection mode's selected collection. */
     onDeleteSelectedPromptCollection: (collectionId: string) => void
-    /** Opens project management to the project shown by a collection mode. */
-    onManageProjects: () => void
     /** Returns the selected work tab to its New Tab screen from the collection mode's Show All button. */
     onShowAll: () => void
   } = $props()
@@ -40,8 +37,7 @@
         {isWorkspaceLoading}
         {onScreenCollectionSelect}
         {onDeleteSelectedPromptCollection}
-        {onManageProjects}
-        onShowAll={mode.id === SidebarModeId.Collection ? onShowAll : undefined}
+        {onShowAll}
       />
     {/key}
   {/if}

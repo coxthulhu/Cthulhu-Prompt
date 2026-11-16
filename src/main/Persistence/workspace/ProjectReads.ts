@@ -35,20 +35,13 @@ export const readWorkspaceProjects = (workspacePath: string, workspaceId: string
     /** Shared identity and private order are loaded independently. */
     const info = prepareProjectInfo(readProjectInfo(projectPath), projects)
     if (projects.some((project) => project.id === info.id)) throw new Error('Duplicate project ID')
-    projects.push({ ...info, folderName: directory.name, collectionEntries: [], favoriteCollectionIds: [] })
+    projects.push({ ...info, folderName: directory.name, collectionEntries: [] })
   }
   /** Legacy preferences remain until all replacement rows have been committed by the caller's transaction. */
   const legacyOrder = WorkspaceStateDataAccess.read(workspaceId, 'collection-order', null)
-  /** Favorites from the formerly implicit project are distributed only to their actual owners. */
-  const legacyFavorites = WorkspaceStateDataAccess.read(workspaceId, 'collection-favorites', null)
   for (const project of projects) {
     project.collectionEntries = readWorkspaceCollectionEntries(path.join(workspacePath, project.folderName), workspaceId, project.id, legacyOrder?.entries)
-    /** Existing memberships alone survive pruning; discoveries are never automatically starred. */
-    const remaining = new Set(project.collectionEntries.map((entry) => entry.id))
-    /** An existing project preference takes precedence over a legacy import. */
-    const favorites = WorkspaceStateDataAccess.read(workspaceId, 'collection-favorites', project.id) ?? legacyFavorites
-    project.favoriteCollectionIds = (favorites?.ids ?? []).filter((id) => remaining.delete(id))
-    WorkspaceStateDataAccess.write(workspaceId, 'collection-favorites', project.id, { ids: project.favoriteCollectionIds })
+    WorkspaceStateDataAccess.delete(workspaceId, 'collection-favorites', project.id)
   }
   WorkspaceStateDataAccess.delete(workspaceId, 'collection-order', null)
   WorkspaceStateDataAccess.delete(workspaceId, 'collection-favorites', null)

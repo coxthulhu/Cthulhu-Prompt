@@ -37,7 +37,7 @@
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import UiSplitIconButton from '@renderer/common/cthulhu-ui/buttons/SplitIconButton.svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import UiIconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import UiSeparator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import UiSeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
@@ -1143,7 +1143,7 @@
     else prompt.attachedNote = { id: window.crypto.randomUUID(), modifiedLabel: 'Updated today', visible: true, isEdited: false, text: '' }
   }
 
-  const attachedNoteMoreOptions = (prompt: MockPrompt): DropdownPopupDetailedItem[] => [
+  const attachedNoteMoreOptions = (prompt: MockPrompt): DropdownPopupMoreOptionsItem[] => [
     prompt.attachedNote
       ? { id: 'delete', label: 'Delete Note', detail: 'Permanently delete attached note', icon: Trash2 }
       : { id: 'add', label: 'Add Note', detail: 'Add and show an attached note', icon: NotebookPen }

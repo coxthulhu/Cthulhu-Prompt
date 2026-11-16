@@ -22,8 +22,6 @@ export type Project = ProjectInfo & {
   folderName: string
   /** Combined order of task and template collections. */
   collectionEntries: CollectionEntryRef[]
-  /** Independent ordered favorites belonging to this user. */
-  favoriteCollectionIds: string[]
 }
 
 /** Default project's initial display name; it has no special identity after creation. */

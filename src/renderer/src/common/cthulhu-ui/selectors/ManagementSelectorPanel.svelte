@@ -56,7 +56,7 @@
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
   /** Stationary row list that owns pointer capture while rows reorder. */
   let itemsElement = $state<HTMLElement>()
-  /** Live drag reordering shared with the activity bar's project buttons. */
+  /** Live drag reordering saves the management list's displayed order. */
   const reorder = createListReorder({
     dragType: 'management-selector-item',
     getIds: () => items.map((item) => item.id),
@@ -64,7 +64,7 @@
     onReorder: (ids) => onreorder!(ids)
   })
 
-  /** Selection and drag state shown by one row, matching the Show All collection dropdown. */
+  /** Selection and drag state shown by one management row. */
   const getRowState = (id: string): SelectorButtonRowState => {
     if (reorder.draggedId === id) return 'dragging'
     if (selectedId === id) return reorder.draggedId ? 'drag-active' : 'active'

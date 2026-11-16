@@ -38,8 +38,6 @@ export type UserPersistence = {
   settingsScrollTopPx: number
   /** Share of the single-prompt editor area given to a visible attached note on this machine. */
   singlePromptNoteFraction: number
-  /** Number of quick collection rows shown in the project sidebar on this machine. */
-  sidebarQuickCollectionCount: number
   /** Open work tabs on this machine, in display order. */
   workTabs: WorkTab[]
   /** Selected work tab or title bar screen on this machine, or null while a project is selected. */
@@ -54,7 +52,6 @@ export const DEFAULT_USER_PERSISTENCE: UserPersistence = {
   settingsCollapsedSectionIds: [],
   settingsScrollTopPx: 0,
   singlePromptNoteFraction: 0.3,
-  sidebarQuickCollectionCount: 3,
   workTabs: [],
   selectedTabId: null
 }
@@ -185,10 +182,6 @@ export const parseUserPersistence = (value: unknown): UserPersistence | null => 
       typeof value.singlePromptNoteFraction === 'number'
         ? value.singlePromptNoteFraction
         : DEFAULT_USER_PERSISTENCE.singlePromptNoteFraction,
-    sidebarQuickCollectionCount:
-      typeof value.sidebarQuickCollectionCount === 'number'
-        ? value.sidebarQuickCollectionCount
-        : DEFAULT_USER_PERSISTENCE.sidebarQuickCollectionCount,
     workTabs: Array.isArray(value.workTabs)
       ? value.workTabs.filter(isWorkTab)
       : DEFAULT_USER_PERSISTENCE.workTabs,

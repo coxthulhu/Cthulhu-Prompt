@@ -1,5 +1,5 @@
 import type { ElectronApplication } from 'playwright'
-import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
+import { selectedCollectionTitleSelector } from '../helpers/PromptCollectionSelectors'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { getWorkspaceInfoPath, setupWorkspaceScenario } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -60,7 +60,7 @@ describe('Workspace file association', () => {
     await emitSecondInstance(electronApp, fileWorkspaceInfoPath)
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Development Tools'
     )
     await expect
@@ -110,7 +110,7 @@ startupFileSuite.describe('Workspace file association startup', () => {
     await startupFileSuite.expect(
       mainWindow.locator('[data-testid="prompt-collection-screen"]')
     ).toBeVisible()
-    await startupFileSuite.expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await startupFileSuite.expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Development Tools'
     )
     await startupFileSuite.expect

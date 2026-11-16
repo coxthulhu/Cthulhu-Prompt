@@ -75,7 +75,7 @@ test.describe('Sidebar Tests', () => {
     for (const screen of ['home', 'mockups', 'test-screen']) {
       await testHelpers.navigateToPromptCollections('Development')
       await expect(sidebar).toBeVisible()
-      const activity = mainWindow.getByTestId(`nav-button-${screen}`)
+      const activity = screen === 'work-tab' ? mainWindow.getByTestId('work-tab').getByRole('tab').first() : mainWindow.getByTestId(`nav-button-${screen}`)
       await activity.click()
       await expect(sidebar).toHaveCount(0)
       await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
@@ -113,15 +113,15 @@ test.describe('Sidebar Tests', () => {
     await mainWindow.getByTestId('toggle-archived-prompts-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-archived-filter')).toHaveAttribute('aria-pressed', 'true')
     await testHelpers.navigateToPromptCollections('Delta')
-    await expect(sidebarTitle).toHaveText('Default Project')
+    await expect(sidebarTitle).toHaveText('Delta')
     await expect(collectionTitle).toHaveText('Delta')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
 
     // The project reopens its last collection of either kind, and each collection keeps its status mode.
     await testHelpers.navigateToHomeScreen()
     await expect(sidebarTitle).toHaveCount(0)
-    await mainWindow.getByTestId('nav-button-project').click()
-    await expect(sidebarTitle).toHaveText('Default Project')
+    await mainWindow.getByTestId('work-tab').getByRole('tab').first().click()
+    await expect(sidebarTitle).toHaveText('Delta')
     await expect(collectionTitle).toHaveText('Delta')
     await expect(mainWindow.getByTestId('prompt-collection-active-filter')).toHaveAttribute('aria-pressed', 'true')
     await testHelpers.navigateToPromptCollections('Beta')
@@ -203,12 +203,12 @@ test.describe('Sidebar Tests', () => {
   })
 
   test('allows navigating to Settings after workspace setup', async ({ testSetup }) => {
-    const { testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
+    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
       workspace: { scenario: 'empty' }
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    expect(await testHelpers.getActiveScreen()).toBe('prompt-collection')
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
 
     await testHelpers.navigateToSettingsScreen()
     expect(await testHelpers.getActiveScreen()).toBe('settings')
@@ -242,15 +242,16 @@ test.describe('Sidebar Tests', () => {
     await expect(sidebar).toHaveCount(0)
     expect((await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded).toBe(false)
 
-    for (const screen of ['settings', 'project']) {
+    for (const screen of ['settings', 'work-tab']) {
+      if (screen === 'work-tab') await testHelpers.navigateToPromptCollections('Development')
       /** Activity whose screen shows a sidebar. */
-      const activity = mainWindow.getByTestId(`nav-button-${screen}`)
+      const activity = screen === 'work-tab' ? mainWindow.getByTestId('work-tab').getByRole('tab').first() : mainWindow.getByTestId(`nav-button-${screen}`)
       // Keyboard activation reaches the title bar's Settings button instead of maximizing the window.
       await activity.press('Enter')
-      await expect(activity).toHaveAttribute('aria-current', 'page')
+      await expect(activity).toHaveAttribute(screen === 'work-tab' ? 'aria-selected' : 'aria-current', screen === 'work-tab' ? 'true' : 'page')
       await expect(sidebar).toBeVisible()
       await expect(resizeHandle).toBeVisible()
-      await expect(mainWindow.locator('[aria-current="page"][data-testid^="nav-button-"]')).toHaveCount(1)
+      await expect(mainWindow.locator('[aria-current="page"][data-testid^="nav-button-"]')).toHaveCount(screen === 'work-tab' ? 0 : 1)
       await expect(activity).not.toHaveAttribute('aria-expanded')
       await expect(activity).not.toHaveAttribute('title', /sidebar/)
 
@@ -258,7 +259,7 @@ test.describe('Sidebar Tests', () => {
       await activity.click()
       await activity.press('Enter')
       await activity.press('Space')
-      await expect(activity).toHaveAttribute('aria-current', 'page')
+      await expect(activity).toHaveAttribute(screen === 'work-tab' ? 'aria-selected' : 'aria-current', screen === 'work-tab' ? 'true' : 'page')
       await expect(sidebar).toBeVisible()
       await expect(resizeHandle).toBeVisible()
       expect(await isMaximized()).toBe(initiallyMaximized)
@@ -276,7 +277,7 @@ test.describe('Sidebar Tests', () => {
     /** Collection title that must survive the repeated click. */
     const collectionTitle = mainWindow.getByTestId('prompt-collection-title')
     const selectedCollectionTitle = await collectionTitle.textContent()
-    await mainWindow.getByTestId('nav-button-project').click()
+    await mainWindow.getByTestId('work-tab').getByRole('tab').first().click()
     await expect(selectedPrompt).toHaveAttribute('aria-current', 'true')
     await expect(collectionTitle).toHaveText(selectedCollectionTitle!)
     await expect(sidebar).toBeVisible()

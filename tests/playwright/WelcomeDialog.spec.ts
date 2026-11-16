@@ -78,7 +78,6 @@ describe('Welcome Dialog', () => {
       hasShownWelcome: 1,
       settingsCollapsedSectionIds: [],
       settingsScrollTopPx: 0,
-      sidebarQuickCollectionCount: 3
     })
     await welcome.getByRole('button', { name: 'Close', exact: true }).click()
     await testHelpers.navigateToSettingsScreen()
@@ -113,9 +112,9 @@ describe('Welcome Dialog', () => {
     await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Welcome Workspace')
     await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
     await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-    // Workspace creation opens the default project; Home owns the persisted workspace path display.
-    await expect(mainWindow.getByTestId('prompt-collection-screen')).toBeVisible()
-    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
+    // Workspace creation opens its initial New Tab; Home owns the path display.
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toContainText('My Prompts')
     await mainWindow.getByTestId('nav-button-home').click()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)

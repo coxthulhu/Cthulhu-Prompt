@@ -5,7 +5,6 @@ import { startPointerDrag } from './pointerDrag'
 const DRAG_START_DISTANCE_PX = 4
 const DRAG_GHOST_OFFSET_PX = 4
 const DRAG_GHOST_OPACITY = '1'
-const DROPDOWN_KEEP_OPEN_INSET_PX = 16
 /** Default symmetric snap expansion applied to every drop target. */
 export const DEFAULT_DROPPABLE_SNAP_DIMENSIONS = { x: 0, y: 100 } as const
 
@@ -123,15 +122,6 @@ type VirtualDropGeometry = {
   visibleRect: DOMRect
 }
 
-type DragDropDropdownRegistration = {
-  triggerNode: HTMLElement
-  getMenuNode: () => HTMLElement | null
-  getDragOpenTypes: () => readonly string[]
-  isOpen: () => boolean
-  openForDrag: () => void
-  closeDragOpened: () => void
-}
-
 // Imperative session state must not inherit stale values from outgoing Svelte effect branches.
 let activeDrag: ActiveDrag | null = null
 let cursorX = $state(0)
@@ -139,7 +129,6 @@ let cursorY = $state(0)
 let activeDragGhost = $state<ActiveDragGhost | null>(null)
 let activeDropTarget: ActiveDropTarget | null = null
 const droppableRegistrations = new SvelteSet<DroppableRegistration>()
-const dragDropDropdownRegistrations = new SvelteSet<DragDropDropdownRegistration>()
 
 export const dragDropOverlayState = {
   get activeDragGhost() {
@@ -318,123 +307,6 @@ const distanceToRect = (x: number, y: number, rect: DOMRect): number => {
   return Math.hypot(x - clampedX, y - clampedY)
 }
 
-const isPointInInflatedRect = (x: number, y: number, rect: DOMRect, insetPx: number): boolean => {
-  return (
-    x >= rect.left - insetPx &&
-    x <= rect.right + insetPx &&
-    y >= rect.top - insetPx &&
-    y <= rect.bottom + insetPx
-  )
-}
-
-const getUnionRect = (firstRect: DOMRect, secondRect: DOMRect): DOMRect => {
-  const left = Math.min(firstRect.left, secondRect.left)
-  const top = Math.min(firstRect.top, secondRect.top)
-  const right = Math.max(firstRect.right, secondRect.right)
-  const bottom = Math.max(firstRect.bottom, secondRect.bottom)
-
-  return DOMRect.fromRect({
-    x: left,
-    y: top,
-    width: right - left,
-    height: bottom - top
-  })
-}
-
-const getDropdownKeepOpenRect = (registration: DragDropDropdownRegistration): DOMRect => {
-  const triggerRect = registration.triggerNode.getBoundingClientRect()
-  const menuRect = registration.getMenuNode()?.getBoundingClientRect()
-
-  return menuRect ? getUnionRect(triggerRect, menuRect) : triggerRect
-}
-
-const isCursorNearDropdown = (registration: DragDropDropdownRegistration): boolean => {
-  return isPointInInflatedRect(
-    cursorX,
-    cursorY,
-    getDropdownKeepOpenRect(registration),
-    DROPDOWN_KEEP_OPEN_INSET_PX
-  )
-}
-
-const canDragOpenDropdown = (
-  registration: DragDropDropdownRegistration,
-  dragType: string
-): boolean => {
-  return registration.getDragOpenTypes().includes(dragType)
-}
-
-const findHoveredDragOpenDropdown = (dragType: string): DragDropDropdownRegistration | null => {
-  for (const element of document.elementsFromPoint(cursorX, cursorY)) {
-    for (const registration of dragDropDropdownRegistrations) {
-      if (
-        canDragOpenDropdown(registration, dragType) &&
-        element instanceof Node &&
-        registration.triggerNode.contains(element)
-      ) {
-        return registration
-      }
-    }
-  }
-
-  return null
-}
-
-const getTopmostOpenDropdownLayer = (): DragDropDropdownRegistration | null => {
-  let topmostRegistration: DragDropDropdownRegistration | null = null
-  let topmostNode: HTMLElement | null = null
-
-  for (const registration of dragDropDropdownRegistrations) {
-    if (!registration.isOpen()) {
-      continue
-    }
-
-    const node = registration.getMenuNode()
-    if (!topmostRegistration || !topmostNode || !node) {
-      topmostRegistration = registration
-      topmostNode = node
-      continue
-    }
-
-    if (topmostNode.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING) {
-      topmostRegistration = registration
-      topmostNode = node
-    }
-  }
-
-  return topmostRegistration
-}
-
-const isDroppableInOpenDropdownLayer = (registration: DroppableRegistration): boolean => {
-  const dropdownLayer = getTopmostOpenDropdownLayer()
-  if (!dropdownLayer) {
-    return true
-  }
-
-  const menuNode = dropdownLayer.getMenuNode()
-  return menuNode ? menuNode.contains(registration.node) : false
-}
-
-const updateDragOpenDropdowns = (): void => {
-  if (!activeDrag) {
-    return
-  }
-
-  findHoveredDragOpenDropdown(activeDrag.dragType)?.openForDrag()
-
-  for (const registration of dragDropDropdownRegistrations) {
-    if (registration.isOpen() && !isCursorNearDropdown(registration)) {
-      registration.closeDragOpened()
-    }
-  }
-}
-
-const closeDragOpenedDropdowns = (): void => {
-  for (const registration of dragDropDropdownRegistrations) {
-    registration.closeDragOpened()
-  }
-}
-
 const getVirtualViewport = (node: HTMLElement): HTMLElement | null => {
   return node.closest('[data-virtual-window-viewport]')
 }
@@ -567,9 +439,6 @@ const getNearestDropTarget = (
       continue
     }
 
-    if (!isDroppableInOpenDropdownLayer(registration)) {
-      continue
-    }
 
     for (const candidate of getSnapCandidatesForRegistration(registration, x, y)) {
       candidates.push(candidate)
@@ -630,7 +499,6 @@ const updateDragCursor = (nextX: number, nextY: number): void => {
       y: snapToDevicePixel(nextY + DRAG_GHOST_OFFSET_PX)
     }
   }
-  updateDragOpenDropdowns()
   updateActiveDropTarget()
   activeDrag?.onDragMove?.(nextX, nextY)
 }
@@ -720,21 +588,6 @@ const endDrag = (cancelled: boolean): void => {
     completedDropTarget.registration.getOptions().onDrop?.(completedDrag.payload)
   }
   completedDrag.onDragFinish?.(dropPayload, cancelled)
-  closeDragOpenedDropdowns()
-}
-
-export const registerDragDropDropdown = (
-  registration: DragDropDropdownRegistration
-): (() => void) => {
-  dragDropDropdownRegistrations.add(registration)
-
-  return () => {
-    registration.closeDragOpened()
-    dragDropDropdownRegistrations.delete(registration)
-    if (activeDrag) {
-      updateActiveDropTarget()
-    }
-  }
 }
 
 export const draggable = <TSourcePayload = unknown, TDropPayload = unknown>(

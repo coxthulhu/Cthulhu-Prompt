@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron'
-import { parseSetCollectionFavoriteCommand, planSetCollectionFavorite, planMoveCollectionFavorite } from '@shared/domain/workspace/CollectionFavoritesDomainMutations'
 import { data } from '../Data/Data'
 import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
 import {
@@ -16,14 +15,6 @@ import { handleMainDomainMutation } from './DomainMutation'
 
 /** Registers workspace lifecycle and collection ordering mutations. */
 export const setupWorkspaceMutationHandlers = (): void => {
-  handleMainDomainMutation({
-    ipc: { channel: 'set-collection-favorite' },
-    mutation: { parseCommand: parseSetCollectionFavoriteCommand, plan: planSetCollectionFavorite }
-  })
-  handleMainDomainMutation({
-    ipc: { channel: 'move-collection-favorite' },
-    mutation: { parseCommand: parseMovePromptCollectionDomainCommand, plan: planMoveCollectionFavorite }
-  })
   ipcMain.handle(
     'create-workspace',
     async (_, request: unknown): Promise<IpcMutationActionResponse> =>

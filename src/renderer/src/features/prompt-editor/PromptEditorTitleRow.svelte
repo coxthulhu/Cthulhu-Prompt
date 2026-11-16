@@ -56,7 +56,7 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import IconButtonBar from '@renderer/common/cthulhu-ui/buttons/IconButtonBar.svelte'
   import SplitIconButton from '@renderer/common/cthulhu-ui/buttons/SplitIconButton.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
   import PromptEditorButtonBar from './PromptEditorButtonBar.svelte'
@@ -280,7 +280,7 @@
   /** Accessible main split-button label matching its current default action. */
   const deletePrimaryLabel = $derived(isArchiveDefaultAction ? deleteLabel.replace('Delete', 'Archive') : deleteLabel)
   /** Alternate action offered by the prompt delete split button. */
-  const deleteMoreOptions = $derived.by<DropdownPopupDetailedItem[]>(() => [
+  const deleteMoreOptions = $derived.by<DropdownPopupMoreOptionsItem[]>(() => [
     isArchiveDefaultAction
       ? {
           id: 'delete',
@@ -308,7 +308,7 @@
   }
 
   /** Runs the split button action selected from its one-item dropdown. */
-  const handleDeleteMoreOptionsSelect = (item: DropdownPopupDetailedItem) => {
+  const handleDeleteMoreOptionsSelect = (item: DropdownPopupMoreOptionsItem) => {
     if (item.id === 'archive') {
       onArchive?.()
       return

@@ -1,9 +1,7 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
 import {
-  promptEditorSelector,
-  promptCollectionSelectorMenuSelector,
-  promptCollectionSelectorTriggerSelector
+  promptEditorSelector
 } from '../helpers/PromptCollectionSelectors'
 
 /** Real Electron fixtures exercise the shared router through production UI surfaces. */
@@ -84,9 +82,9 @@ describe('Keyboard routing', () => {
     await expect(name).toHaveValue('Replacement')
     await dialog.getByTestId('manage-categories-close-button').click()
 
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('selected-prompt-collection-actions-button').click()
     /** Actual collection dropdown supplies the higher popup layer. */
-    const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
+    const menu = mainWindow.getByRole('menu')
     await expect(menu).toBeVisible()
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).toHaveCount(0)
@@ -107,9 +105,9 @@ describe('Keyboard routing', () => {
     const findInput = mainWindow.getByTestId('prompt-find-input')
     await mainWindow.keyboard.press('Control+F')
     await findInput.fill('code')
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('selected-prompt-collection-actions-button').click()
     /** Popup must keep ownership of both Escape and the blocked Find shortcut. */
-    const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
+    const menu = mainWindow.getByRole('menu')
     await expect(menu).toBeVisible()
     await mainWindow.keyboard.press('Control+F')
     await expect(findInput).not.toBeFocused()

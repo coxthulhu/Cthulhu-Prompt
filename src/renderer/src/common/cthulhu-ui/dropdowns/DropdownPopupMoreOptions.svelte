@@ -6,8 +6,18 @@
     type DropdownPopupTriggerContext
   } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupCore.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
   import SeparatorDot from '@renderer/common/cthulhu-ui/layout/SeparatorDot.svelte'
+
+  /** An action row with an icon and optional descriptive details. */
+  export type DropdownPopupMoreOptionsItem = {
+    id: string
+    label: string
+    detail?: string
+    detailParts?: Array<string | { text: string; icon?: ComponentType; testId?: string }>
+    icon: ComponentType
+    iconClass?: string
+    testId?: string
+  }
 
   type DetailPart = {
     text: string
@@ -17,14 +27,13 @@
 
   type Props = {
     label: string
-    items: DropdownPopupDetailedItem[]
+    items: DropdownPopupMoreOptionsItem[]
     trigger: Snippet<[DropdownPopupTriggerContext]>
     menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
     menuAlignment?: DropdownPopupMenuAlignment
-    dragOpenTypes?: string[]
-    onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
+    onselect?: (item: DropdownPopupMoreOptionsItem, event: MouseEvent) => void
   }
 
   let {
@@ -35,11 +44,10 @@
     testId,
     placement = 'below-trigger',
     menuAlignment = 'right',
-    dragOpenTypes,
     onselect
   }: Props = $props()
 
-  const getDetailParts = (item: DropdownPopupDetailedItem): DetailPart[] =>
+  const getDetailParts = (item: DropdownPopupMoreOptionsItem): DetailPart[] =>
     (item.detailParts?.length ? item.detailParts : item.detail ? [item.detail] : []).map(
       (detailPart) => (typeof detailPart === 'string' ? { text: detailPart } : detailPart)
     )
@@ -52,7 +60,6 @@
   {testId}
   {placement}
   {menuAlignment}
-  {dragOpenTypes}
   menuClass="cthulhuUiDropdownPopupMoreOptionsMenu p-[4px]"
 >
   {#snippet children({ close })}

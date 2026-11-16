@@ -1,3 +1,4 @@
+import { showCollectionBrowser } from '../helpers/PromptCollectionHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
@@ -5,10 +6,7 @@ import { PROMPT_TITLE_SELECTOR, promptEditorSelector } from '../helpers/PromptCo
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const DAY_MS = 24 * 60 * 60 * 1000
-const SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER =
-  '[data-testid="sidebar-prompt-collection-selector-trigger"]'
-const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-collection-dropdown-item-"]'
-const SIDEBAR_PROMPT_COLLECTION_MODIFIED_TIME = '[data-testid="sidebar-prompt-collection-modified-time"]'
+const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM = '[data-testid^="new-tab-collection-"]'
 const CATEGORY_PROMPT_EDITOR = promptEditorSelector('categories-ui-category-prompt')
 const CATEGORY_PROMPT_TITLE = `${CATEGORY_PROMPT_EDITOR} ${PROMPT_TITLE_SELECTOR}`
 
@@ -32,8 +30,7 @@ describe('Prompt collection selector metadata', () => {
       }
     })
 
-    await mainWindow.getByTestId('nav-button-project').click()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
+    await showCollectionBrowser(mainWindow)
 
     const hierarchyItem = mainWindow
       .locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM)
@@ -43,20 +40,20 @@ describe('Prompt collection selector metadata', () => {
       .filter({ hasText: 'Empty Root' })
 
     await expect(hierarchyItem).toContainText('4 prompts')
-    await expect(hierarchyItem.locator(SIDEBAR_PROMPT_COLLECTION_MODIFIED_TIME)).toHaveText(
+    await expect(hierarchyItem).toContainText(
       '2 days ago'
     )
     await expect(emptyRootItem).toContainText('0 prompts')
-    await expect(emptyRootItem.locator(SIDEBAR_PROMPT_COLLECTION_MODIFIED_TIME)).toHaveCount(0)
-    await mainWindow.keyboard.press('Escape')
+    await expect(emptyRootItem).not.toContainText('ago')
+    await hierarchyItem.click()
 
     await testHelpers.pauseIpcChannel('update-prompt')
     await testHelpers.navigateToPromptCollections('Hierarchy')
     await waitForMonacoEditor(mainWindow, CATEGORY_PROMPT_EDITOR)
     await mainWindow.locator(CATEGORY_PROMPT_TITLE).fill('Category Prompt Updated')
 
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await expect(hierarchyItem.locator(SIDEBAR_PROMPT_COLLECTION_MODIFIED_TIME)).toHaveText('Today')
+    await showCollectionBrowser(mainWindow)
+    await expect(hierarchyItem).toContainText('Today')
     await testHelpers.resumeIpcChannel('update-prompt')
   })
 })

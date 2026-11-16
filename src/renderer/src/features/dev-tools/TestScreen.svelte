@@ -35,14 +35,13 @@
   } from 'lucide-svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
   import AccordionSection from '@renderer/features/sidebar/accordion/AccordionSection.svelte'
-  import ActivityBarButton from '@renderer/common/cthulhu-ui/buttons/ActivityBarButton.svelte'
   import CardSurface, {
     type CardSurfaceVariant
   } from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import DropdownPopupSimple, {
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupSimple.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import Card from '@renderer/common/cthulhu-ui/layout/Card.svelte'
   import CopyButton from '@renderer/common/cthulhu-ui/buttons/CopyButton.svelte'
@@ -70,7 +69,6 @@
   import ProgressBar from '@renderer/common/cthulhu-ui/loading/ProgressBar.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
-  import DetailedSelectorButton from '@renderer/common/cthulhu-ui/selectors/DetailedSelectorButton.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
   import SimpleSelectorButton, {
     type SimpleSelectorButtonItem
@@ -81,7 +79,7 @@
   import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
   import ValuePill from '@renderer/common/cthulhu-ui/layout/ValuePill.svelte'
 
-  /** Workspace-scoped persistence key for the Test Screen accordion demo. */
+  /** Stable identity for the Test Screen accordion demo. */
   const TEST_ACCORDION_PERSISTENCE_ID = 'test-screen-prompt-status'
   /** Prompt-like rows owned by the Research accordion section. */
   const researchAccordionItems = [
@@ -122,7 +120,7 @@
   }[] = [
     {
       name: 'Settings',
-      description: 'The current gear; also the System Settings glyph in the activity bar.',
+      description: 'The current gear; also the System Settings glyph in the title bar.',
       icon: Settings
     },
     {
@@ -185,7 +183,7 @@
     { id: 'rename', label: 'Rename', icon: Pencil },
     { id: 'delete', label: 'Delete prompt', icon: Trash2, variant: 'danger' }
   ]
-  const detailedDropdownItems: DropdownPopupDetailedItem[] = [
+  const detailedDropdownItems: DropdownPopupMoreOptionsItem[] = [
     {
       id: 'engineering',
       label: 'Engineering Workflows',
@@ -220,13 +218,7 @@
       tone: 'success'
     }
   ]
-  const detailedDropdownFooterItem: DropdownPopupDetailedItem = {
-    id: 'add-collection',
-    label: 'Add Collection',
-    detail: 'Create a new collection',
-    icon: Plus
-  }
-  const iconButtonMoreOptionsItems: DropdownPopupDetailedItem[] = [
+  const iconButtonMoreOptionsItems: DropdownPopupMoreOptionsItem[] = [
     {
       id: 'copy-markdown',
       label: 'Copy as Markdown',
@@ -531,9 +523,9 @@
                     disabled={buttonSamplesDisabled} testId="test-screen-disable-split"
                     moreOptionsTestId="test-screen-disable-split-menu"
                     onclick={recordButtonSampleActivation} />
-                  <DetailedSelectorButton label="Disabled selector" items={detailedDropdownItems}
+                  <SimpleSelectorButton label="Disabled selector" items={detailedDropdownItems}
                     selectedItem={detailedDropdownItems[0]!} disabled={buttonSamplesDisabled}
-                    triggerTestId="test-screen-disable-selector" />
+                    testId="test-screen-disable-selector" />
                 </div>
                 <Button text="Focus target" testId="test-screen-button-focus-target" />
                 <span data-testid="test-screen-button-activations">{buttonSampleActivations}</span>
@@ -566,21 +558,6 @@
                     variant="menu"
                     data-testid="test-screen-icon-cell-menu"
                   />
-                </div>
-              </div>
-              <div class="component-sample">
-                {@render componentLabel('ActivityBarButton')}
-                <div class="variant-controls">
-                  <div class="w-12">
-                    <ActivityBarButton
-                      icon={Search}
-                      label="Idle activity"
-                      testId="test-screen-idle-activity-button"
-                    />
-                  </div>
-                  <div class="w-12">
-                    <ActivityBarButton icon={Settings} label="Active activity" active />
-                  </div>
                 </div>
               </div>
               <div class="component-sample">
@@ -755,21 +732,6 @@
                     testId="test-screen-success-simple-selector"
                   />
                 </div>
-              </div>
-
-              <div class="component-sample">
-                {@render componentLabel('DetailedSelectorButton')}
-                <DetailedSelectorButton
-                  label="Collection selector"
-                  items={detailedDropdownItems}
-                  selectedItem={selectedDetailedDropdownItem}
-                  footerItems={[detailedDropdownFooterItem]}
-                  testId="detailed-dropdown-menu"
-                  triggerTestId="detailed-dropdown-trigger"
-                  onselect={(item) => {
-                    selectedDetailedDropdownItem = item
-                  }}
-                />
               </div>
 
               <div class="component-sample">
@@ -1076,7 +1038,7 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Accordion',
-              'Workspace-persisted expansion with resizable proportional sections.'
+              'Expandable groups with resizable proportional sections.'
             )}
 
             <div class="accordion-demo-shell">

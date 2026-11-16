@@ -151,7 +151,7 @@ describe('shared domain mutation planners', () => {
       const workspace = {
         id: 'workspace', workspacePath: 'C:\\Workspace', workspaceName: 'Workspace',
         projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
       }
       const state = createDomainState({
         workspace: [workspace], promptCollection: [collection],
@@ -193,7 +193,7 @@ describe('shared domain mutation planners', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
     }
     /** Shared rename plan applied in renderer and main process. */
     const plan = planRenamePromptCollectionDomainMutation(
@@ -222,7 +222,7 @@ describe('shared domain mutation planners', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: sibling.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: sibling.id }] }]
     }
     /** Root creation plan shared by renderer and main. */
     const createPlan = planCreatePromptCollectionDomainMutation(
@@ -256,7 +256,7 @@ describe('shared domain mutation planners', () => {
       ...workspace,
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [
+        collectionEntries: [
         { kind: 'collection' as const, id: sibling.id },
         { kind: 'collection' as const, id: 'created' }
       ] }]
@@ -339,7 +339,7 @@ describe('shared domain mutation planners', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
     }
     /** Planner state containing summary-compatible prompt and template projections. */
     const state = createDomainState({
@@ -409,7 +409,7 @@ describe('shared domain mutation planners', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
     }
     /** Existing category records split between retention and staged deletion. */
     const categories = [
@@ -533,7 +533,7 @@ describe('shared domain mutation planners', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: collection.id }] }]
     }
     /** Existing root state whose expansion fields must survive selection transfer. */
     const rootUiState = {

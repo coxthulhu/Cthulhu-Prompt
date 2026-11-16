@@ -62,7 +62,7 @@ describe('prompt-collection domain mutations', () => {
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
         projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [
+        collectionEntries: [
           { kind: 'collection', id: EXISTING_ROOT_ID },
           { kind: 'collection', id: SECOND_ROOT_ID }
         ] }]

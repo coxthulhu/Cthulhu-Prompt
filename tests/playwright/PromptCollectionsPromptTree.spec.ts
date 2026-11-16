@@ -2,7 +2,7 @@ import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
-  selectedQuickCollectionSelector,
+  selectedCollectionTitleSelector,
   MONACO_PLACEHOLDER_SELECTOR,
   PROMPT_EDITOR_PREFIX_SELECTOR,
   PROMPT_COLLECTION_HOST_SELECTOR,
@@ -53,7 +53,6 @@ const COMPLETED_TREE_COLLECTION_NAME = 'Completed Tree Navigation'
 const COMPLETED_TREE_PROMPT_COUNT = 20
 const COMPLETED_TREE_TARGET_PROMPT_ID = 'completed-tree-prompt-0'
 const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
-const CATEGORIES_MAIN_COLLECTION_ID = createDeterministicId(`${CATEGORIES_WORKSPACE_PATH}:Main`)
 const CATEGORY_ID = createDeterministicId(
   `${CATEGORIES_WORKSPACE_PATH}:Main/Category`
 )
@@ -467,15 +466,8 @@ describe('Prompt collection prompt tree', () => {
       testHelpers,
       '[data-testid="prompt-editor-category-prompt"]'
     )
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Main')
-    await expect
-      .poll(async () => {
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return persisted.selectedScreen === 'project'
-          ? (persisted.selectedScreenData as { promptCollectionId: string | null }).promptCollectionId
-          : null
-      })
-      .toBe(CATEGORIES_MAIN_COLLECTION_ID)
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Main')
+
 
     await testHelpers.navigateToHomeScreen()
     await expect
@@ -511,7 +503,7 @@ describe('Prompt collection prompt tree', () => {
     await mainWindow.locator(CATEGORY_TOGGLE).click({ button: 'right' })
     await expect(mainWindow.locator(CATEGORY_OPEN_MENU_ITEM)).toBeVisible()
     await mainWindow.locator(CATEGORY_OPEN_MENU_ITEM).click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Main')
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Main')
     await expectRowToReachPromptCollectionCategoryBias(mainWindow, testHelpers, CATEGORY_EDITOR)
     await expect(mainWindow.locator(CATEGORY_CONTENT_TOGGLE)).toHaveAttribute(
       'aria-expanded',

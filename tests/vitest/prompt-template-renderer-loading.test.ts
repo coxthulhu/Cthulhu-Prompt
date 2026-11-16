@@ -40,7 +40,7 @@ describe('prompt template renderer loading', () => {
           workspaceName: 'Templates',
           /** Existing fixtures start without user favorites. */
           projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection', id: 'renderer-template-collection' }] }]
+        collectionEntries: [{ kind: 'collection', id: 'renderer-template-collection' }] }]
         }
       },
       promptCollections: [

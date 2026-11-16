@@ -41,8 +41,6 @@
   let drafts = $state<ProjectDraft[]>([])
   /** Currently selected project draft. */
   let selectedId = $state<string | null>(null)
-  /** New draft created by the activity bar's + button, opened after a successful save. */
-  let navigateToProjectId = $state<string | null>(null)
   /** Existing project awaiting delete confirmation before its removal is staged. */
   let pendingDeleteId = $state<string | null>(null)
   /** Name input of the selected draft, focused when a new draft is added. */
@@ -121,7 +119,7 @@
   }
 
   /** Opens the dialog to one project, or to a new draft that is opened after saving when openCreatedProject is set. */
-  export const openDialog = (options: { projectId?: string; createProject?: boolean; openCreatedProject?: boolean }): void => {
+  export const openDialog = (options: { projectId?: string; createProject?: boolean }): void => {
     if (!workspace) return
     drafts = workspace.projects.map(createDraft)
     originalProjectsJson = JSON.stringify(drafts.map(toProjectInfo))
@@ -130,8 +128,7 @@
     selectedId = options.projectId ?? drafts[0]?.id ?? null
     isDialogOpen = true
     /** Draft appended and selected for a New Project button. */
-    const createdDraftId = options.createProject ? addDraft() : null
-    navigateToProjectId = options.openCreatedProject ? createdDraftId : null
+    if (options.createProject) addDraft()
   }
 
   /** Clears every unsaved project draft when the dialog closes. */
@@ -139,7 +136,6 @@
     isDialogOpen = false
     drafts = []
     selectedId = null
-    navigateToProjectId = null
     pendingDeleteId = null
     submissionError = null
   }
@@ -181,10 +177,9 @@
     const workspaceId = workspace!.id
     const projects = projectInfos
     /** New project opened after saving, if the + button's draft was retained. */
-    const openedProjectId = projects.some((project) => project.id === navigateToProjectId) ? navigateToProjectId : null
     const didSave = await runIpcBestEffort(
       async () => {
-        await saveProjects(workspaceId, projects, openedProjectId)
+        await saveProjects(workspaceId, projects)
         return true
       },
       () => false
@@ -252,7 +247,7 @@
         <ManagementTextField
           id="manage-project-abbreviation-input"
           title="Abbreviation"
-          help="Required. Two letters or digits shown in the activity bar. Must be unique."
+          help="Required. Two letters or digits, unique within this workspace."
           required
           maxlength={2}
           bind:value={selectedDraft.abbreviation}

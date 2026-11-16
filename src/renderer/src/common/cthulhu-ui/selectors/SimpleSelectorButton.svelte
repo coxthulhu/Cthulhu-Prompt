@@ -2,13 +2,13 @@
   import type { ComponentType } from 'svelte'
   import { ChevronDown, ChevronUp } from 'lucide-svelte'
   import DropdownPopupMoreOptions from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import '@renderer/common/cthulhu-ui/buttons/button.css'
   import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
 
   export type SimpleSelectorButtonTone = 'neutral' | 'warning' | 'success'
 
-  export type SimpleSelectorButtonItem = DropdownPopupDetailedItem & {
+  export type SimpleSelectorButtonItem = DropdownPopupMoreOptionsItem & {
     selectedLabel?: string
     tone?: SimpleSelectorButtonTone
     variant?: string

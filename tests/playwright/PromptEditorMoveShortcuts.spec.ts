@@ -2,7 +2,7 @@ import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
 import { focusMonacoEditor, isMonacoEditorFocused, setMonacoSelections } from '../helpers/MonacoHelpers'
-import { promptEditorSelector, promptCollectionSelectorTriggerSelector } from '../helpers/PromptCollectionSelectors'
+import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 
 /** Real editor coverage for shortcut ownership and retained editing selections. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -124,7 +124,7 @@ describe('Editor move shortcuts', () => {
     await focusMonacoEditor(mainWindow, '[data-testid="manage-category-full-description-input"]')
     await pressMoveShortcuts()
     await mainWindow.getByTestId('manage-categories-close-button').click()
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('selected-prompt-collection-actions-button').click()
     // A popup must block the screen even if a background field is programmatically focused.
     await mainWindow.locator(promptEditorSelector('dev-2')).getByTestId('prompt-title').focus()
     await pressMoveShortcuts()

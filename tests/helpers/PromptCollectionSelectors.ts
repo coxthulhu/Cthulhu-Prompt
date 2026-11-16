@@ -18,22 +18,18 @@ export const promptTreePromptSelector = (promptId: string, group: 'active' | 'co
 export const promptTreeCategorySelector = (categoryName: string, group: 'active' | 'backlog' | 'template' = 'active'): string =>
   `[data-testid="prompt-tree-${group}-category-toggle-button-${categoryName.replace(/\s+/g, '')}"]`
 
-/** Shared trigger for the collection selector. */
-export const promptCollectionSelectorTriggerSelector =
-  '[data-testid="sidebar-prompt-collection-selector-trigger"]'
+/** Returns the active tab to its collection browser. */
+export const showAllCollectionsSelector =
+  '[data-testid="sidebar-show-all-button"]'
 
-/** Selected collection remains visible in the quick list even outside the first three. */
-export const selectedQuickCollectionSelector =
-  '[data-testid^="sidebar-quick-collection-"][aria-current="true"]'
+/** Title of the collection displayed by the active tab. */
+export const selectedCollectionTitleSelector =
+  '[data-testid="sidebar-title"]'
 
-/** Direct collection drop target and navigation button. */
-export const quickCollectionSelector = (collectionId: string): string =>
-  `[data-testid="sidebar-quick-collection-${collectionId}"]`
+/** New Tab screen containing selectable collections. */
+export const collectionBrowserSelector =
+  '[data-testid="new-tab-screen"]'
 
-/** Shared menu containing selectable collections. */
-export const promptCollectionSelectorMenuSelector =
-  '[data-testid="sidebar-prompt-collection-selector-menu"]'
-
-/** Selects the dropdown row for a stable collection identity. */
-export const promptCollectionSelectorDropdownItemSelector = (collectionId: string): string =>
-  `[data-testid="sidebar-prompt-collection-dropdown-item-${collectionId}"]`
+/** Selects a collection tile by its stable identity. */
+export const collectionTileSelector = (collectionId: string): string =>
+  `[data-testid="new-tab-collection-${collectionId}"]`

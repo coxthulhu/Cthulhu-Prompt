@@ -9,7 +9,6 @@ import { moveOsCursor } from '../helpers/OsCursorHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import {
-  PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector,
   promptTreePromptSelector
 } from '../helpers/PromptCollectionSelectors'
@@ -145,7 +144,7 @@ describe('Work Tab Collections', () => {
     // Tabs are saved as New Tabs, so they reopen on their New Tab screens with the selection kept.
     await expect.poll(() => readSavedTabs(electronApp)).toEqual(['New Tab:new-tab', 'New Tab:new-tab'])
     await mainWindow.reload()
-    await expect(mainWindow.getByTestId('app-activity-bar')).toBeVisible()
+    await expect(mainWindow.getByTestId('nav-button-home')).toBeVisible()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
     await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab'])
     await expect(getTabs(mainWindow).nth(1)).toHaveAttribute('aria-selected', 'true')
@@ -210,37 +209,6 @@ describe('Work Tab Collections', () => {
     await expect(getTabs(mainWindow)).toHaveText(['Long Tasks', 'New Tab'])
   })
 
-  test('shares its collection scroll position and status group with the project screen', async ({ testSetup }) => {
-    const { mainWindow, testHelpers } = await startWorkspace(testSetup)
-    // The project shows the same collection before the tab opens it.
-    await testHelpers.navigateToPromptCollections('Long Tasks')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('p0'))
-    await openInNewTab(mainWindow, 'long-tasks')
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('p0'))
-
-    // Switching from the scrolled tab to the project shows the collection at the same scroll position.
-    await testHelpers.scrollVirtualWindowTo(PROMPT_COLLECTION_HOST_SELECTOR, 900)
-    const scrollTop = await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)
-    expect(scrollTop).toBeGreaterThan(0)
-    await mainWindow.getByTestId('nav-button-project').click()
-    await expect(mainWindow.getByTestId('app-sidebar')).toHaveAttribute('data-sidebar-mode', 'project')
-    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('Long Tasks')
-    // The project's title names the project, so it has no collection icon.
-    await expect(mainWindow.getByTestId('sidebar-title-icon')).toHaveCount(0)
-    await expect.poll(async () => Math.abs(await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR) - scrollTop))
-      .toBeLessThanOrEqual(1)
-
-    // A status group shown in the tab is the one the project screen shows.
-    await getTabs(mainWindow).nth(0).click()
-    await expect(mainWindow.getByTestId('app-sidebar')).toHaveAttribute('data-sidebar-mode', 'collection')
-    await mainWindow.getByTestId('toggle-archived-prompts-button').click()
-    await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Archived')
-    await mainWindow.getByTestId('nav-button-project').click()
-    await expect(mainWindow.getByTestId('app-sidebar')).toHaveAttribute('data-sidebar-mode', 'project')
-    await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Archived')
-    await expect(mainWindow.getByTestId('toggle-archived-prompts-button')).toHaveAttribute('data-active', 'true')
-  })
-
   test('returns work tabs to their New Tab screen when their collection is deleted', async ({ testSetup }) => {
     const { mainWindow, testHelpers } = await startWorkspace(testSetup)
     /** Destructive confirmation for collections with content. */
@@ -254,7 +222,7 @@ describe('Work Tab Collections', () => {
       await expect(confirmation).toHaveCount(0)
     }
 
-    // Deleting a collection on the project screen returns the background tab showing it to its New Tab screen.
+    // Deleting the selected collection returns its tab to New Tab.
     await openInNewTab(mainWindow, 'short-tasks')
     await testHelpers.navigateToPromptCollections('Short Tasks')
     await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('Short Tasks')

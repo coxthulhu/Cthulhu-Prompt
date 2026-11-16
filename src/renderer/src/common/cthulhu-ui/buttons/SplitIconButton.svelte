@@ -3,7 +3,7 @@
   import type { Action } from 'svelte/action'
   import { ChevronDown } from 'lucide-svelte'
   import DropdownPopupMoreOptions from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
-  import type { DropdownPopupDetailedItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupDetailed.svelte'
+  import type { DropdownPopupMoreOptionsItem } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import type { DropdownPopupMenuAlignment } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupCore.svelte'
   import IconButton, {
     type IconButtonBaseVariant,
@@ -20,7 +20,7 @@
   type Props = {
     icon: ComponentType
     label: string
-    moreOptions: DropdownPopupDetailedItem[]
+    moreOptions: DropdownPopupMoreOptionsItem[]
     baseVariant?: IconButtonBaseVariant
     mainHoverVariant?: IconButtonHoverVariant
     moreOptionsHoverVariant?: IconButtonHoverVariant
@@ -41,7 +41,7 @@
     menuWidth?: string
     menuAlignment?: DropdownPopupMenuAlignment
     onclick?: (event: MouseEvent) => void
-    onselect?: (item: DropdownPopupDetailedItem, event: MouseEvent) => void
+    onselect?: (item: DropdownPopupMoreOptionsItem, event: MouseEvent) => void
   }
 
   /** Shared presentation and callbacks for the two split-button actions. */

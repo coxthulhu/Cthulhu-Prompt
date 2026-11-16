@@ -1,4 +1,5 @@
-import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
+import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
+import { selectedCollectionTitleSelector } from '../helpers/PromptCollectionSelectors'
 import { createLegacyStateDatabase } from '../fixtures/LegacyStateDatabase'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
@@ -48,6 +49,7 @@ describe('Collection terminology migrations', () => {
     /** UI startup runs migrations before loading collection identities. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
+    await testHelpers.navigateToHomeScreen()
     await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('3')
     await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('Prompt Collections')
     for (const [filePath, contents] of Object.entries(current)) {
@@ -124,7 +126,7 @@ describe('Collection terminology migrations', () => {
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
       await testHelpers.navigateToPromptCollections(kind === 'task' ? 'Tasks' : 'Library')
-      await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(kind === 'task' ? 'Tasks' : 'Library')
+      await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(kind === 'task' ? 'Tasks' : 'Library')
     })
   }
 
@@ -158,9 +160,11 @@ describe('Collection terminology migrations', () => {
     /** Opening the project and reloading must restore the migrated collection overview through the real UI. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.navigateToPromptCollections('Tasks')
+    await mainWindow.getByTestId('sidebar-collection-overview-button').click()
     await expect(mainWindow.getByTestId('prompt-collection-header')).toBeVisible()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Tasks')
     await mainWindow.getByTestId('sidebar-collection-overview-button').click()
+    await waitForRendererPersistence(mainWindow)
     await mainWindow.reload()
     await expect(mainWindow.getByTestId('prompt-collection-header')).toBeVisible()
     await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Tasks')

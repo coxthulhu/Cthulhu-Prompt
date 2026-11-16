@@ -1,23 +1,10 @@
-import { resolvePaletteColor } from '../helpers/PaletteHelpers'
-import { createDeterministicId } from '../fixtures/FixtureIds'
+
 import { expectPointerCapture, recordPointerId } from '../helpers/PointerCaptureHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { Locator, Page } from 'playwright'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import {
-  selectedQuickCollectionSelector,
-  PROMPT_COLLECTION_HOST_SELECTOR,
-  promptEditorSelector,
-  promptCollectionSelectorDropdownItemSelector,
-  promptCollectionSelectorMenuSelector,
-  promptCollectionSelectorTriggerSelector,
-  promptTreePromptSelector
-} from '../helpers/PromptCollectionSelectors'
-import {
-  checkPersistedPromptFilesExistByTitle,
-  expectPersistedCollectionPromptIds,
-  readPromptCollectionEntryIds
-} from '../helpers/PromptPersistenceTestHelpers'
+import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector, promptTreePromptSelector } from '../helpers/PromptCollectionSelectors'
+import { expectPersistedCollectionPromptIds, readPromptCollectionEntryIds } from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptHandleDrag,
   beginPromptTreeRowDrag,
@@ -36,40 +23,26 @@ import {
   scrollUntilPromptEditorVisible
 } from '../helpers/PromptDragDropHelpers'
 import { expectCurrentCollectionPromptEditors } from '../helpers/PromptCollectionHelpers'
-import {
-  createWorkspaceWithCollections,
-  getWorkspaceInfoPath,
-  setupWorkspaceScenario
-} from '../fixtures/WorkspaceFixtures'
+import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
-import { seedWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/sample'
 const VIRTUAL_WORKSPACE_PATH = '/ws/virtual'
 const DEVELOPMENT_COLLECTION_NAME = 'Development'
-const EXAMPLES_COLLECTION_NAME = 'Examples'
 const promptCollectionCategoryOrderPath = (workspacePath: string, folderName: string): string => {
   // CategoryOrder belongs only to the selected collection's flat Active directory.
   const [collectionFolderName] = folderName.split('/')
   return `${workspacePath}/DefaultProject/Prompts/${collectionFolderName}/Active/_CategoryOrder.json`
 }
 const DEVELOPMENT_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, DEVELOPMENT_COLLECTION_NAME)
-const EXAMPLES_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, EXAMPLES_COLLECTION_NAME)
-const WORKSPACE_ID = createDeterministicId(WORKSPACE_PATH)
-const DEVELOPMENT_COLLECTION_ID = createDeterministicId(`${WORKSPACE_PATH}:${DEVELOPMENT_COLLECTION_NAME}`)
-const EXAMPLES_COLLECTION_ID = createDeterministicId(`${WORKSPACE_PATH}:${EXAMPLES_COLLECTION_NAME}`)
 const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
-const EXAMPLE_1_ID = 'simple-1'
 const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
-const MOVE_FALLBACK_WORKSPACE_PATH = '/ws/drag-fallback-title'
 const CATEGORY_SCROLL_WORKSPACE_PATH = '/ws/drag-category-scroll'
 const ANCHORING_COLLECTION_NAME = 'Anchoring'
 const DESTINATION_COLLECTION_NAME = 'Destination'
-const FALLBACK_SOURCE_COLLECTION_NAME = 'FallbackSource'
-const FALLBACK_DESTINATION_COLLECTION_NAME = 'FallbackDestination'
 const CATEGORY_SCROLL_COLLECTION_NAME = 'Cross Category'
 const CATEGORY_SCROLL_COLLECTION_PATH = promptCollectionCategoryOrderPath(
   CATEGORY_SCROLL_WORKSPACE_PATH,
@@ -90,9 +63,6 @@ const SHORT_COLLECTION_NAME = 'Short'
 const SHORT_COLLECTION_PATH = promptCollectionCategoryOrderPath(VIRTUAL_WORKSPACE_PATH, SHORT_COLLECTION_NAME)
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 const PROMPT_MOVE_SCROLL_TOLERANCE_PX = 2
-const FALLBACK_DESTINATION_COLLECTION_ID = createDeterministicId(
-  `${MOVE_FALLBACK_WORKSPACE_PATH}:${FALLBACK_DESTINATION_COLLECTION_NAME}`
-)
 
 type PromptDividerHighlightStyles = {
   indicatorBackgroundColor: string
@@ -136,18 +106,6 @@ const getPromptDividerRow = (page: Page, previousPromptId: string | null): Locat
   page
     .locator(promptDividerSelector(previousPromptId))
     .locator('xpath=ancestor::div[contains(@class, "promptDividerRow")]')
-
-const dragPromptHandleToCollectionSelectorItem = async (
-  mainWindow: Page,
-  promptId: string,
-  promptCollectionId: string
-): Promise<void> => {
-  await beginPromptHandleDrag(mainWindow, promptId)
-  await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-  await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-  await moveActiveDragToTarget(mainWindow, promptCollectionSelectorDropdownItemSelector(promptCollectionId))
-  await finishActiveDrag(mainWindow)
-}
 
 const getPromptDividerHighlightStyles = async (
   locator: Locator
@@ -291,22 +249,6 @@ const scrollPromptTreeUntilRowUnmounts = async (
   throw new Error(`Dragged prompt row stayed mounted after wheel scrolling: ${promptId}`)
 }
 
-const moveActiveDragRightOfPromptCollectionSelector = async (page: Page): Promise<void> => {
-  const trigger = page.locator(promptCollectionSelectorTriggerSelector)
-  const triggerBox = await trigger.boundingBox()
-  if (!triggerBox) {
-    throw new Error('Missing prompt collection selector geometry')
-  }
-
-  await page.mouse.move(
-    triggerBox.x + triggerBox.width + 420,
-    triggerBox.y + triggerBox.height / 2,
-    {
-      steps: 12
-    }
-  )
-}
-
 const buildDragScrollAnchoringWorkspace = (workspacePath: string) => {
   const tallPrompt = heightTestPrompts.twoHundredLine
 
@@ -389,90 +331,7 @@ const buildCategoryScrollWorkspace = (): Record<string, string | null> => {
   return filesystem
 }
 
-const buildMoveFallbackWorkspace = () =>
-  createWorkspaceWithCollections(MOVE_FALLBACK_WORKSPACE_PATH, [
-    {
-      folderName: FALLBACK_SOURCE_COLLECTION_NAME,
-      displayName: FALLBACK_SOURCE_COLLECTION_NAME,
-      prompts: [
-        {
-          id: 'move-fallback-source-existing',
-          title: '',
-          promptText: 'I already use New Prompt in the source collection.'
-        },
-        {
-          id: 'move-fallback-source',
-          title: '',
-          promptText: 'Move New Prompt 1.'
-        }
-      ]
-    },
-    {
-      folderName: FALLBACK_DESTINATION_COLLECTION_NAME,
-      displayName: FALLBACK_DESTINATION_COLLECTION_NAME,
-      prompts: [
-        {
-          id: 'move-fallback-destination',
-          title: '',
-          promptText: 'I already use New Prompt.'
-        },
-        {
-          id: 'move-fallback-destination-1',
-          title: '',
-          promptText: 'I already use New Prompt 1.'
-        }
-      ]
-    }
-  ])
-
 describe('Prompt collection prompt drag-drop', () => {
-  test('increments an existing fallback suffix when moving into a collection with a collision', async ({
-    testSetup,
-    electronApp
-  }) => {
-    await testSetup.setupFilesystem(buildMoveFallbackWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(MOVE_FALLBACK_WORKSPACE_PATH)])
-
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
-    await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptCollections(FALLBACK_SOURCE_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector('move-fallback-source'))
-
-    await dragPromptHandleToCollectionSelectorItem(
-      mainWindow,
-      'move-fallback-source',
-      FALLBACK_DESTINATION_COLLECTION_ID
-    )
-
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      FALLBACK_SOURCE_COLLECTION_NAME
-    )
-    await expectCurrentCollectionPromptEditors(mainWindow, ['move-fallback-source-existing'])
-
-    await expect
-      .poll(async () => {
-        const [oldFiles, newFiles] = await Promise.all([
-          checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: MOVE_FALLBACK_WORKSPACE_PATH,
-            folderName: FALLBACK_SOURCE_COLLECTION_NAME,
-            promptId: 'move-fallback-source',
-            promptTitle: 'New Prompt 1'
-          }),
-          checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: MOVE_FALLBACK_WORKSPACE_PATH,
-            folderName: FALLBACK_DESTINATION_COLLECTION_NAME,
-            promptId: 'move-fallback-source',
-            promptTitle: 'New Prompt 2'
-          })
-        ])
-
-        return { oldFiles, newFiles }
-      })
-      .toEqual({
-        oldFiles: { markdownExists: false },
-        newFiles: { markdownExists: true }
-      })
-  })
 
   test('silently ignores dropping a prompt onto itself in the prompt tree', async ({
     testSetup,
@@ -788,324 +647,6 @@ describe('Prompt collection prompt drag-drop', () => {
     expect(dropStyles.separatorColors[0]).not.toBe(defaultStyles.separatorColors[0])
 
     await finishActiveDrag(mainWindow)
-  })
-
-  test('moves a dragged editor prompt without navigating while the root page header is mounted', async ({
-    testSetup,
-    electronApp
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
-    await expect(mainWindow.locator('[data-testid="prompt-collection-header"]')).toBeVisible()
-    await mainWindow.locator(promptTreePromptSelector(DEV_1_ID)).click()
-    await expect(mainWindow.locator(promptTreePromptSelector(DEV_1_ID))).toHaveAttribute(
-      'aria-current',
-      'true'
-    )
-
-    await dragPromptHandleToCollectionSelectorItem(mainWindow, DEV_1_ID, EXAMPLES_COLLECTION_ID)
-
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      DEVELOPMENT_COLLECTION_NAME
-    )
-    await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
-    await expect(mainWindow.locator('[data-testid="prompt-collection-header"]')).toBeVisible()
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [
-      DEV_1_ID,
-      EXAMPLE_1_ID
-    ])
-    await expect
-      .poll(async () => {
-        const [oldFiles, newFiles] = await Promise.all([
-          checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: WORKSPACE_PATH,
-            folderName: DEVELOPMENT_COLLECTION_NAME,
-            promptId: DEV_1_ID,
-            promptTitle: 'Code Review'
-          }),
-          checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: WORKSPACE_PATH,
-            folderName: EXAMPLES_COLLECTION_NAME,
-            promptId: DEV_1_ID,
-            promptTitle: 'Code Review'
-          })
-        ])
-
-        return { oldFiles, newFiles }
-      })
-      .toEqual({
-        oldFiles: { markdownExists: false },
-        newFiles: { markdownExists: true }
-      })
-  })
-
-  test('moves a prompt to the start of another collection without navigating to it', async ({
-    testSetup,
-    electronApp
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
-
-    await dragPromptHandleToCollectionSelectorItem(mainWindow, DEV_1_ID, EXAMPLES_COLLECTION_ID)
-
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      DEVELOPMENT_COLLECTION_NAME
-    )
-    await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [
-      DEV_1_ID,
-      EXAMPLE_1_ID
-    ])
-    await expect
-      .poll(async () => {
-        const [oldFiles, newFiles] = await Promise.all([
-          checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: WORKSPACE_PATH,
-            folderName: DEVELOPMENT_COLLECTION_NAME,
-            promptId: DEV_1_ID,
-            promptTitle: 'Code Review'
-          }),
-          checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: WORKSPACE_PATH,
-            folderName: EXAMPLES_COLLECTION_NAME,
-            promptId: DEV_1_ID,
-            promptTitle: 'Code Review'
-          })
-        ])
-
-        return { oldFiles, newFiles }
-      })
-      .toEqual({
-        oldFiles: { markdownExists: false },
-        newFiles: { markdownExists: true }
-      })
-  })
-
-  test('moves a prompt-tree row into another collection without navigating to it', async ({
-    testSetup,
-    electronApp
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
-
-    await beginPromptTreeRowDrag(mainWindow, DEV_1_ID)
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptCollectionSelectorDropdownItemSelector(EXAMPLES_COLLECTION_ID)
-    )
-    await finishActiveDrag(mainWindow)
-
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      DEVELOPMENT_COLLECTION_NAME
-    )
-    await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [
-      DEV_1_ID,
-      EXAMPLE_1_ID
-    ])
-
-    await testHelpers.navigateToPromptCollections(EXAMPLES_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-    await expect(getPromptTreeStatusIndicator(mainWindow, DEV_1_ID)).toHaveAttribute(
-      'data-edited',
-      'true'
-    )
-    await expect(mainWindow.locator(promptEditorStatusIndicatorSelector(DEV_1_ID))).toHaveAttribute(
-      'data-edited',
-      'true'
-    )
-  })
-
-  test('keeps the current collection open after moving an editor prompt from the selector dropdown', async ({
-    testSetup,
-    electronApp
-  }) => {
-    await testSetup.setupFilesystem(setupWorkspaceScenario(WORKSPACE_PATH, 'sample'))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
-    await seedWorkspaceUiState(electronApp, {
-      workspaceId: WORKSPACE_ID,
-      selectedScreen: 'home',
-      selectedScreenData: null,
-      promptCollectionViewEntries: [
-        {
-          contentOwnerId: EXAMPLES_COLLECTION_ID,
-          selectedEntryId: 'collection-header'
-        }
-      ]
-    })
-
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-    await testHelpers.setupWorkspaceViaUI()
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
-
-    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-
-    const destinationItem = mainWindow.locator(
-      promptCollectionSelectorDropdownItemSelector(EXAMPLES_COLLECTION_ID)
-    )
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptCollectionSelectorDropdownItemSelector(EXAMPLES_COLLECTION_ID)
-    )
-    await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
-    await expect(destinationItem).toHaveCSS(
-      'background-color',
-      await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-hover-surface')
-    )
-    await expect(destinationItem).toHaveCSS(
-      'border-top-color',
-      await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-hover-border')
-    )
-    await finishActiveDrag(mainWindow)
-
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      DEVELOPMENT_COLLECTION_NAME
-    )
-    await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID])
-    await expect(mainWindow.locator('[data-testid="prompt-collection-header"]')).toBeVisible()
-    await expect(mainWindow.locator(promptEditorSelector(DEV_1_ID))).toHaveCount(0)
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [
-      DEV_1_ID,
-      EXAMPLE_1_ID
-    ])
-  })
-
-  test('does not move a prompt when released above the collection selector dropdown', async ({
-    testSetup,
-    electronApp
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-
-    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-
-    /** Destination row that must stop accepting the drag outside its visible bounds. */
-    const destinationItem = mainWindow.locator(
-      promptCollectionSelectorDropdownItemSelector(EXAMPLES_COLLECTION_ID)
-    )
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptCollectionSelectorDropdownItemSelector(EXAMPLES_COLLECTION_ID)
-    )
-    await expect(destinationItem).toHaveAttribute('data-row-state', 'over')
-
-    /** Popup geometry used to leave the menu vertically while staying within its close halo. */
-    const menuBox = await mainWindow.locator(promptCollectionSelectorMenuSelector).boundingBox()
-    /** Destination geometry keeps the pointer horizontally aligned with the former target. */
-    const destinationBox = await destinationItem.boundingBox()
-    if (!menuBox || !destinationBox) {
-      throw new Error('Missing prompt collection dropdown geometry for outside release')
-    }
-
-    await mainWindow.mouse.move(
-      destinationBox.x + destinationBox.width / 2,
-      menuBox.y - 1,
-      { steps: 12 }
-    )
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-    await expect(destinationItem).toHaveAttribute('data-row-state', 'idle')
-    await expect(mainWindow.locator('[data-drop-indicator-active="true"]')).toHaveCount(0)
-    await finishActiveDrag(mainWindow)
-
-    await expectCurrentCollectionPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [EXAMPLE_1_ID])
-  })
-
-  test('closes the selector dropdown when an active prompt drag moves off to the right', async ({
-    testSetup,
-    electronApp
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_1_ID))
-
-    await beginPromptHandleDrag(mainWindow, DEV_1_ID)
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-
-    await moveActiveDragRightOfPromptCollectionSelector(mainWindow)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toHaveCount(0)
-    await expect(mainWindow.locator('body')).toHaveCSS('cursor', 'grabbing')
-    await finishActiveDrag(mainWindow)
-
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [EXAMPLE_1_ID])
-  })
-
-  test('does not allow dropping a selector prompt drag onto its own collection', async ({
-    testSetup,
-    electronApp
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections(DEVELOPMENT_COLLECTION_NAME)
-    await waitForMonacoEditor(mainWindow, promptEditorSelector(DEV_2_ID))
-
-    await beginPromptHandleDrag(mainWindow, DEV_2_ID)
-    await moveActiveDragToTarget(mainWindow, promptCollectionSelectorTriggerSelector)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toBeVisible()
-
-    const sourceItem = mainWindow.locator(
-      promptCollectionSelectorDropdownItemSelector(DEVELOPMENT_COLLECTION_ID)
-    )
-    await moveActiveDragToTarget(
-      mainWindow,
-      promptCollectionSelectorDropdownItemSelector(DEVELOPMENT_COLLECTION_ID)
-    )
-    await expect(sourceItem).toHaveAttribute('data-row-state', 'blocked-over')
-    await expect(sourceItem).toHaveCSS(
-      'background-color',
-      await resolvePaletteColor(mainWindow.locator('body'), '--ui-neutral-emphasis-surface')
-    )
-    await expect(sourceItem).toHaveCSS(
-      'border-top-color',
-      await resolvePaletteColor(mainWindow.locator('body'), '--ui-neutral-emphasis-border')
-    )
-    await finishActiveDrag(mainWindow)
-
-    await expectCurrentCollectionPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, EXAMPLES_COLLECTION_PATH, [EXAMPLE_1_ID])
   })
 
   test('keeps scroll position stable when a same-collection drag only reorders rows', async ({

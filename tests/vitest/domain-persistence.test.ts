@@ -175,7 +175,7 @@ describe('domain persistence planning', () => {
         workspaceName: 'Workspace',
         /** Existing fixtures start without user favorites. */
         projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: root.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: root.id }] }]
       }
       /** Loaded category physically contained by the renamed root. */
       const category = {
@@ -414,7 +414,7 @@ describe('domain persistence planning', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: root.id }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: root.id }] }]
     }
     mockDomainData.seed('workspace', workspace.id, workspace, {
       workspacePath: workspace.workspacePath,

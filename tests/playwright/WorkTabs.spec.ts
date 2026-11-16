@@ -707,7 +707,7 @@ describe('Work Tabs', () => {
     /** Reloads the renderer and waits for the app to mount and finish startup restoration. */
     const reload = async (): Promise<void> => {
       await mainWindow.reload()
-      await expect(mainWindow.getByTestId('app-activity-bar')).toBeVisible()
+      await expect(mainWindow.getByTestId('nav-button-home')).toBeVisible()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
     }
     /** Asserts the three restored tabs are New Tabs with the second one selected on its New Tab screen. */
@@ -747,20 +747,6 @@ describe('Work Tabs', () => {
     await expect(mainWindow.getByTestId('settings-screen')).toBeVisible()
     await expect(homeButton).not.toHaveAttribute('aria-current', 'page')
     await expectNoSelectedTab(mainWindow)
-
-    // A selected project saves no tab, so the workspace's project screen restores with no tab selected.
-    await mainWindow.getByTestId('work-tab-close').nth(2).click()
-    await mainWindow.getByTestId('nav-button-project').click()
-    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Development Tools')
-    await expect.poll(async () => (await readTabState(electronApp)).selectedTabId).toBeNull()
-    await expect.poll(async () => (await readWorkspaceUiState(electronApp, workspaceId)).selectedScreen).toBe('project')
-    await reload()
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveAttribute('aria-current', 'page')
-    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Development Tools')
-    await expect(homeButton).not.toHaveAttribute('aria-current', 'page')
-    await expectNoSelectedTab(mainWindow)
-    await expect(getTabs(mainWindow)).toHaveText(['New Tab', 'New Tab'])
-    expect((await readTabState(electronApp)).workTabs.map((tab) => tab.id)).toEqual(['tab-1', 'tab-2'])
 
     // Selecting a tab saves the workspace's own screen as Home, since the app-wide selected tab restores the tab.
     await getTabs(mainWindow).first().click()

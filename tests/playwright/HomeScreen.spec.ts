@@ -62,6 +62,7 @@ describe('Home Screen', () => {
       workspace: { scenario: 'minimal' }
     })
 
+    await mainWindow.getByTestId('nav-button-home').click()
     for (const width of [800, 1400]) {
       await electronApp.evaluate(({ BrowserWindow }, windowWidth) => {
         const window = BrowserWindow.getAllWindows()[0]
@@ -149,6 +150,7 @@ describe('Home Screen', () => {
 
       await testHelpers.setupWorkspaceViaUI()
 
+      await testHelpers.navigateToHomeScreen()
       const promptStat = mainWindow.locator('[data-testid="home-prompt-count-stat"]')
       await expect(promptStat.locator('strong')).toHaveText('5')
       await expect(promptStat).toContainText('Prompts')
@@ -167,6 +169,7 @@ describe('Home Screen', () => {
       expect(workspaceSetupResult!.setupDialogAppeared).toBe(false)
       expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
+      await testHelpers.navigateToHomeScreen()
       await testHelpers.assertWorkspaceReadyPath('/ws/categories')
       await testHelpers.navigateToPromptCollections('Main')
       await mainWindow.locator('[data-testid="prompt-collection-manage-categories-button"]').click()
@@ -424,6 +427,7 @@ Keep this partial body.`
 
       await mainWindow.click('[data-testid="open-workspace-button"]')
 
+      await mainWindow.getByTestId('nav-button-home').click()
       await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
       await expect(
         mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
@@ -456,6 +460,7 @@ Keep this partial body.`
       await expect(
         mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
       ).toHaveCount(0)
+      await mainWindow.getByTestId('nav-button-home').click()
       await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
       expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
@@ -476,6 +481,7 @@ Keep this partial body.`
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
+      await testHelpers.navigateToPromptCollections('My Prompts')
       await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
       await testHelpers.navigateToHomeScreen()
@@ -658,6 +664,8 @@ Keep this partial body.`
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
       ).toBeEnabled()
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
+      await mainWindow.getByTestId('new-tab-screen').waitFor()
+      await testHelpers.navigateToPromptCollections('My Prompts')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
         timeout: 5000
@@ -736,21 +744,21 @@ Keep this partial body.`
       await expect(mainWindow.locator('[data-testid^="prompt-tree-active-prompt-"]')).toHaveCount(0)
 
       // The default project lists both kinds together in combined alphabetical order.
-      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
+      await mainWindow.locator('[data-testid="sidebar-show-all-button"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
+        mainWindow.locator('[data-testid^="new-tab-collection-"]')
       ).toHaveCount(2)
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(0)
       ).toContainText('My Prompts')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(1)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(1)
       ).toContainText('2 templates')
       await mainWindow
-        .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
+        .locator('[data-testid^="new-tab-collection-"]')
         .nth(1)
         .click()
       const exampleFeatureTemplate = await testHelpers.verifyPromptVisible(
@@ -785,6 +793,8 @@ Keep this partial body.`
       await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'false')
 
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
+      await mainWindow.getByTestId('new-tab-screen').waitFor()
+      await testHelpers.navigateToPromptCollections('My Prompts')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
         timeout: 5000
@@ -802,22 +812,22 @@ Keep this partial body.`
       expect(screenInfo.promptCount).toBe(0)
 
       // The default project lists both kinds together in combined alphabetical order.
-      await mainWindow.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click()
+      await mainWindow.locator('[data-testid="sidebar-show-all-button"]').click()
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
+        mainWindow.locator('[data-testid^="new-tab-collection-"]')
       ).toHaveCount(2)
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(0)
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(0)
       ).toContainText('My Prompts')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(1)
       ).toContainText('My Templates')
       await expect(
-        mainWindow.locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]').nth(1)
+        mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(1)
       ).toContainText('0 templates')
 
       await mainWindow
-        .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
+        .locator('[data-testid^="new-tab-collection-"]')
         .nth(1)
         .click()
       await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toHaveText(

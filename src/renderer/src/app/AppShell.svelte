@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { projectNavigation } from '@renderer/features/projects/projectNavigation.svelte.ts'
   import ManageProjectsDialog from '@renderer/features/projects/ManageProjectsDialog.svelte'
   import { findCollectionProject, getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
   import { tick, untrack } from 'svelte'
@@ -8,7 +7,6 @@
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import ResizableSidebar from '@renderer/features/sidebar/ResizableSidebar.svelte'
   import AppSidebar from '@renderer/features/sidebar/AppSidebar.svelte'
-  import AppActivityBar from '@renderer/features/sidebar/AppActivityBar.svelte'
   import WindowsTitleBar from '@renderer/features/window/WindowsTitleBar.svelte'
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
@@ -59,7 +57,6 @@
     createWorkspace as createWorkspaceMutation
   } from '@renderer/data/Mutations/WorkspaceMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import { moveProject } from '@renderer/data/Mutations/ProjectMutations'
   import {
     setWorkspaceSelectionContext,
     type WorkspaceSelectionContext
@@ -198,14 +195,12 @@
   }))
   /** Selected tab saved by the previous session, applied once startup restores the workspace. */
   const startupSelectedTabId = getUserPersistence().selectedTabId
-  /** Selected title bar tab: the shown work tab, the active screen, or null while a project is shown. */
+  /** Selected title bar tab: the shown work tab or fixed screen. */
   const selectedTabId = $derived(
-    activeScreen === 'project' ? null : activeScreen === 'work-tab' ? selectedWorkTabId : activeScreen
+    activeScreen === 'work-tab' ? selectedWorkTabId : activeScreen
   )
   /** Shared sidebar modes, created once so each mode's data survives screen switches. */
   const sidebarModes = createSidebarModes()
-  /** Default project's collection state, shared by its sidebar and screen. */
-  const projectMode = sidebarModes[SidebarModeId.Project].data
   /** Sidebar mode displayed beside the active screen; a work tab shows its collection mode only while a collection is open. */
   const activeSidebarMode = $derived.by((): SidebarMode | null => {
     const modeId = screens[activeScreen].sidebarMode
@@ -216,8 +211,7 @@
       )
       return collection ? { id: modeId, title: collection.displayName, data: selectedWorkTab!.mode } : null
     }
-    return modeId === null ? null : modeId === SidebarModeId.Project
-      ? { ...sidebarModes[modeId], title: selectedProject?.name ?? '' } : sidebarModes[modeId]
+    return modeId === null ? null : sidebarModes[modeId]
   })
   /** Screens without a sidebar always use the collapsed layout, including programmatic navigation. */
   const isAppSidebarExpanded = $derived(activeSidebarMode !== null && sidebarExpanded)
@@ -233,8 +227,6 @@
 
     return null
   })
-  /** Selected project metadata is reactive to successful edits and renames. */
-  const selectedProject = $derived(selectedWorkspace?.projects.find((project) => project.id === projectMode.projectId))
   const workspacePath = $derived(selectedWorkspace?.workspacePath ?? null)
   const selectedWorkspacePromptCollections = $derived.by(() => {
     if (!selectedWorkspace) {
@@ -266,7 +258,7 @@
   const workspacePromptCollectionCount = $derived(selectedWorkspacePromptCollections.length)
   /** Mounted prompt-collection screen used for sidebar actions owned by that screen. */
   let promptCollectionScreen = $state<PromptCollectionScreenHandle | null>(null)
-  /** Shell-owned project management opened by the sidebar gear, the activity bar's + button, and the New Tab screen. */
+  /** Shell-owned project management opened from the New Tab screen. */
   let manageProjectsDialog = $state<ManageProjectsDialog | null>(null)
   const isWorkspaceReady = $derived(Boolean(selectedWorkspace))
   let workspaceActionCount = $state(0)
@@ -311,21 +303,23 @@
   }
 
   const buildWorkspaceScreenSelection = (screen: ScreenId): WorkspaceScreenSelection => {
-    if (screen === 'project') {
-      /** Collection selected by the project mode. */
-      const screenCollectionId = projectMode.collectionId
-      /** Current owner retained when rebuilding persistence for the already-selected collection. */
-      const contentOwnerId =
-        promptNavigation.screenCollectionId === screenCollectionId
-          ? (promptNavigation.contentOwnerId ?? screenCollectionId)
-          : screenCollectionId
+    /** Existing shared collection UI state still uses the legacy project-shaped owner pointer. */
+    const mode = screen === 'work-tab' ? selectedWorkTab?.mode : undefined
+    const collectionId = mode?.collectionId
+    const project = collectionId && selectedWorkspace ? findCollectionProject(selectedWorkspace, collectionId) : undefined
+    if (collectionId && project) {
+      /** Preserve the restored category owner until the collection initializes its navigation. */
+      const saved = untrack(() => workspaceUiStateCollection.get(getSelectedWorkspaceId()!))
+      const savedOwnerId = saved && isProjectScreenSelection(saved) && saved.selectedScreenData.promptCollectionId === collectionId
+        ? saved.selectedScreenData.contentOwnerId : collectionId
       return {
-        selectedScreen: screen,
+        selectedScreen: 'project',
         selectedScreenData: {
-          projectId: projectMode.projectId!,
-          promptCollectionId: screenCollectionId,
-          contentOwnerId,
-          openPromptId: projectMode.openPromptId
+          projectId: project.id,
+          promptCollectionId: collectionId,
+          contentOwnerId: promptNavigation.screenCollectionId === collectionId
+            ? promptNavigation.contentOwnerId ?? collectionId : savedOwnerId,
+          openPromptId: mode!.openPromptId
         }
       }
     }
@@ -360,7 +354,6 @@
     persistPromptNavigationSelection()
     captureRegisteredMonacoViewStates()
     await closeWorkspaceMutation()
-    projectMode.clear()
     promptNavigation.clear()
     // Side effect: let workspace editors unmount before releasing their Monaco models.
     await tick()
@@ -425,45 +418,28 @@
       return
     }
 
-    const persistedScreenConfig = screens[workspaceUiState.selectedScreen]
-    if (persistedScreenConfig.devOnly && !isDevMode) {
-      await restoreWorkspaceHomeScreen(workspaceId)
+    // Former project navigation opens its collection in an ordinary work tab.
+    if (isProjectScreenSelection(workspaceUiState)) {
+      // Existing work tabs retain their current restore-as-New-Tab behavior.
+      if (workTabs.some((tab) => tab.id === startupSelectedTabId)) return
+      const { promptCollectionId, openPromptId } = workspaceUiState.selectedScreenData
+      if (!promptCollectionId || !selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) {
+        await restoreWorkspaceHomeScreen(workspaceId)
+        return
+      }
+      /** Keep the legacy owner selection available while the restored collection mounts. */
+      const tab = createWorkTab(compactGuid(globalThis.crypto.randomUUID()))
+      tab.mode.selectCollection(promptCollectionId)
+      tab.mode.openPromptId = openPromptId
+      workTabs = [...workTabs, tab]
+      selectedWorkTabId = tab.id
+      activeScreen = 'work-tab'
       return
     }
 
-    if (isProjectScreenSelection(workspaceUiState)) {
-      projectMode.projectId = workspaceUiState.selectedScreenData.projectId
-      const persistedPromptCollectionId = workspaceUiState.selectedScreenData.promptCollectionId
-      /** Collection selected from screen data, remembered state, or project order. */
-      const restoredPromptCollectionId = projectMode.resolveCollectionId(persistedPromptCollectionId)
-      projectMode.selectCollection(restoredPromptCollectionId)
-      /** Single-prompt editor restored only within its own collection; it closes itself if the prompt is gone. */
-      const restoredOpenPromptId =
-        persistedPromptCollectionId === restoredPromptCollectionId
-          ? workspaceUiState.selectedScreenData.openPromptId
-          : null
-      projectMode.openPromptId = restoredOpenPromptId
-      activeScreen = workspaceUiState.selectedScreen
-      /** Last project collection, re-synced when it differs from the restored collection. */
-      const persistedLastPromptCollectionId = workspaceUiState.lastCollectionIdByProject[projectMode.projectId!]
-      if (
-        restoredPromptCollectionId &&
-        (persistedPromptCollectionId !== restoredPromptCollectionId ||
-          persistedLastPromptCollectionId !== restoredPromptCollectionId)
-      ) {
-        await syncWorkspaceScreenSelection(workspaceId, {
-          selectedScreen: workspaceUiState.selectedScreen,
-          selectedScreenData: {
-            projectId: projectMode.projectId!,
-            promptCollectionId: restoredPromptCollectionId,
-            contentOwnerId:
-              persistedPromptCollectionId === restoredPromptCollectionId
-                ? workspaceUiState.selectedScreenData.contentOwnerId
-                : restoredPromptCollectionId,
-            openPromptId: restoredOpenPromptId
-          }
-        })
-      }
+    const persistedScreenConfig = screens[workspaceUiState.selectedScreen]
+    if (persistedScreenConfig.devOnly && !isDevMode) {
+      await restoreWorkspaceHomeScreen(workspaceId)
       return
     }
 
@@ -597,7 +573,7 @@
 
           if (result.success) {
             await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
-            navigateToScreen('project')
+            addWorkTab()
             return { success: true }
           }
 
@@ -643,7 +619,7 @@
         await restoreWorkspaceFromPersistence()
         // Work tabs belong to the open workspace, so they close when startup restores none.
         if (!getSelectedWorkspaceId()) workTabs = []
-        // The saved tab overrides the workspace's own screen; null leaves a restored project shown.
+        // The saved tab overrides the workspace's screen; null keeps the restored location.
         if (startupSelectedTabId && startupSelectedTabId in screens) {
           navigateToScreen(startupSelectedTabId as ScreenId)
         } else if (startupSelectedTabId) {
@@ -699,13 +675,11 @@
     )
   })
 
-  // Side effect: persist opening and closing the single-prompt editor while the project screen is shown.
+  // Side effect: preserve the shared owner pointer used by collection selection and category cleanup.
   $effect(() => {
-    void projectMode.openPromptId
-    untrack(() => {
-      if (activeScreen !== 'project') return
-      void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('project'))
-    })
+    const selection = buildWorkspaceScreenSelection(activeScreen)
+    if (activeScreen !== 'work-tab') return
+    untrack(() => { void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection('work-tab', selection)) })
   })
 
   // Side effect: flush pending autosaves before allowing the main process to close the window.
@@ -729,54 +703,21 @@
     void openWorkspaceFile(workspaceInfoPath)
   }))
 
-  /** Shows a screen, selecting the given or remembered collection when it is a collection activity. */
-  const navigateToScreen = (screen: ScreenId, collectionId?: string) => {
+  /** Shows a fixed screen or the selected work tab. */
+  const navigateToScreen = (screen: ScreenId) => {
     const config = screens[screen]
     if (!config) return
     if (config.devOnly && !isDevMode) {
       return
     }
     if (config.requiresWorkspace && !isWorkspaceReady) return
-    if (screen === 'project') {
-      if (!projectMode.projectId) projectMode.projectId = selectedWorkspace?.projects[0]?.id ?? null
-      if (!projectMode.projectId) return
-      projectMode.selectCollection(projectMode.resolveCollectionId(collectionId))
-    }
     selectedWorkTabId = null
     activeScreen = screen
     void runIpcBestEffort(() => syncCurrentWorkspaceScreenSelection(screen))
   }
 
-  /** Opens another project with its own last collection; re-clicking the active project does nothing. */
-  const activateProject = (projectId: string): void => {
-    if (activeScreen === 'project' && projectMode.projectId === projectId) return
-    persistPromptNavigationSelection()
-    captureRegisteredMonacoViewStates()
-    projectMode.projectId = projectId
-    projectMode.selectCollection(null)
-    navigateToScreen('project')
-    sidebarExpanded = true
-    setAppSidebarExpandedWithAutosave(true)
-  }
-
-  // Consume successful project lifecycle requests in the shell that owns navigation.
-  $effect(() => {
-    /** Only requests belonging to the currently open workspace can change its screen. */
-    const request = projectNavigation.pending
-    if (!request) return
-    untrack(() => projectNavigation.consume(request, ({ workspaceId, projectId }) => {
-      if (workspaceId !== getSelectedWorkspaceId()) return
-      if (projectId) activateProject(projectId)
-      else {
-        projectMode.clear()
-        promptNavigation.clear()
-        navigateToScreen('home')
-      }
-    }))
-  })
-
   /** Switches screens and opens the sidebar; re-clicking the selected screen does nothing. */
-  const activateActivity = (screen: ScreenId): void => {
+  const activateFixedScreen = (screen: ScreenId): void => {
     if (screen === selectedTabId) return
 
     navigateToScreen(screen)
@@ -805,7 +746,6 @@
       selectWorkTab(openTab.id)
       return
     }
-    selectedWorkTab!.mode.projectId = findCollectionProject(selectedWorkspace!, collectionId)!.id
     selectedWorkTab!.mode.selectCollection(collectionId)
     sidebarExpanded = true
     setAppSidebarExpandedWithAutosave(true)
@@ -832,36 +772,13 @@
     workTabs = [...otherTabs.slice(0, index), workTabs.find((tab) => tab.id === tabId)!, ...otherTabs.slice(index)]
   }
 
-  const navigateToScreenCollection = (promptCollectionId: string): void => {
-    if (!isWorkspaceReady) return
-    if (!selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) return
-    /** Collection state behind the shown screen: the selected work tab's, else the project's. */
-    const shownMode = selectedWorkTab?.mode ?? (activeScreen === 'project' ? projectMode : null)
-    if (shownMode?.collectionId === promptCollectionId) {
-      // Reselecting the shown collection returns from the single-prompt editor to its collection view.
-      shownMode.closeOpenPrompt()
-      return
-    }
-    projectMode.projectId = findCollectionProject(selectedWorkspace!, promptCollectionId)!.id
-    navigateToScreen('project', promptCollectionId)
-  }
-
-  /** Selects the first remaining collection of either kind or retains the empty project screen. */
-  const navigateAfterPromptCollectionDelete = (): void => {
-    /** First remaining collection in project order. */
-    const nextPromptCollectionId = selectedProject?.collectionEntries[0]?.id ?? null
-    if (!nextPromptCollectionId) {
-      projectMode.selectCollection(null)
-      return
-    }
-
-    navigateToScreenCollection(nextPromptCollectionId)
-  }
+  /** Returns the selected tab from its single-prompt screen to the collection. */
+  const navigateToScreenCollection = (): void => { selectedWorkTab?.mode.closeOpenPrompt() }
 
   /** Navigates to the selected collection and opens its screen-owned deletion flow after it mounts. */
   const requestSelectedPromptCollectionDelete = (promptCollectionId: string): void => {
     if (!selectedWorkspacePromptCollections.some((collection) => collection.id === promptCollectionId)) return
-    navigateToScreenCollection(promptCollectionId)
+    navigateToScreenCollection()
     // Side effect: wait for navigation to mount the selected collection screen before opening its dialog.
     void (async () => {
       await tick()
@@ -870,7 +787,7 @@
   }
 </script>
 
-<!-- Single-prompt or collection screen for the project's or a work tab's collection state, which must have a
+<!-- Single-prompt or collection screen for a work tab's collection state, which must have a
      collection selected; deleting that collection calls onPromptCollectionDeleted. -->
 {#snippet collectionScreen(modeData: CollectionSidebarModeData, onPromptCollectionDeleted: () => void)}
   {#if modeData.openPromptId}
@@ -886,7 +803,7 @@
 
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
-    <WindowsTitleBar {selectedTabId} workTabs={titleBarWorkTabs} canAddWorkTab={isWorkspaceReady} {isDevMode} {executionFolderName} onNavigate={activateActivity}
+    <WindowsTitleBar {selectedTabId} workTabs={titleBarWorkTabs} canAddWorkTab={isWorkspaceReady} {isDevMode} {executionFolderName} onNavigate={activateFixedScreen}
       onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab} onMoveWorkTab={moveWorkTab}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {
@@ -897,10 +814,6 @@
   {/if}
 
   <div class="sidebarSurface flex min-h-0 flex-1">
-    <AppActivityBar projects={selectedWorkspace?.projects ?? []} selectedProjectId={projectMode.projectId} onProjectSelect={activateProject}
-      onProjectMove={(projectId, previousProjectId) => runIpcBestEffort(() => moveProject(selectedWorkspace!.id, projectId, previousProjectId))}
-      onCreateProject={() => manageProjectsDialog?.openDialog({ createProject: true, openCreatedProject: true })} {activeScreen} {isAppSidebarExpanded} {isWorkspaceReady} />
-
     <ResizableSidebar
       isSidebarVisible={isAppSidebarExpanded}
       defaultWidth={appSidebarDefaultWidthPx}
@@ -921,7 +834,6 @@
             {isWorkspaceLoading}
             onScreenCollectionSelect={navigateToScreenCollection}
             onDeleteSelectedPromptCollection={requestSelectedPromptCollectionDelete}
-            onManageProjects={() => manageProjectsDialog?.openDialog({ projectId: projectMode.projectId! })}
             onShowAll={() => selectedWorkTab!.mode.clear()}
           />
         {/if}
@@ -950,10 +862,6 @@
             <SettingsScreen sidebarModeData={sidebarModes[SidebarModeId.Settings].data} />
           {:else if activeScreen === 'mockups'}
             <MockupsScreen bind:activeMockupId={selectedMockupId} />
-          {:else if activeScreen === 'project'}
-            {#if projectMode.collectionId && workspacePath}
-              {@render collectionScreen(projectMode, navigateAfterPromptCollectionDelete)}
-            {/if}
           {:else if activeScreen === 'work-tab' && selectedWorkspace && selectedWorkTab}
             {#if selectedWorkTab.mode.collectionId}
               {@render collectionScreen(selectedWorkTab.mode, () => selectedWorkTab!.mode.clear())}

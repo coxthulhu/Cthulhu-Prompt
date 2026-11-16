@@ -26,14 +26,18 @@ export async function clickPromptCollectionItem(
   }
   const displayName = displayNameByCollectionName[collectionName] ?? collectionName
 
-  await page.locator('[data-testid="sidebar-prompt-collection-selector-trigger"]').click({
-    timeout
-  })
-  await page
-    .locator('[data-testid^="sidebar-prompt-collection-dropdown-item-"]')
-    // Exact names avoid selecting a different collection after alphabetical fallback ordering.
-    .filter({ has: page.getByText(displayName, { exact: true }) })
-    .click({ timeout })
+  // Reuse the selected tab, treating Show All as closing its collection before opening another.
+  if (await page.getByTestId('sidebar-show-all-button').isVisible()) await page.getByTestId('sidebar-show-all-button').click()
+  else if (!await page.getByTestId('new-tab-screen').isVisible()) {
+    const tab = page.getByTestId('work-tab').getByRole('tab').first()
+    if (await tab.count()) {
+      await tab.click()
+      if (await page.getByTestId('sidebar-show-all-button').isVisible()) await page.getByTestId('sidebar-show-all-button').click()
+    } else await page.getByTestId('new-tab-button').click()
+  }
+  await page.getByTestId('new-tab-search-input').fill('')
+  await page.locator('[data-testid^="new-tab-collection-"]')
+    .filter({ has: page.getByText(displayName, { exact: true }) }).click({ timeout })
   await page.waitForSelector('[data-testid="prompt-collection-screen"]', {
     state: 'attached',
     timeout
@@ -114,7 +118,6 @@ export async function getPromptCollectionScreenInfo(page: Page): Promise<{
 /** Opens the default project before selecting one task or template collection. */
 export async function navigateToPromptCollections(page: Page, collectionName: string): Promise<void> {
   // Re-clicking the already active project leaves its screen and sidebar unchanged.
-  await page.getByTestId('nav-button-project').click()
   await clickPromptCollectionItem(page, collectionName)
 }
 
@@ -166,4 +169,17 @@ export const expectCurrentCollectionPromptEditors = async (
 export const openManageCategoriesFromSidebar = async (page: Page): Promise<void> => {
   await page.getByTestId('selected-prompt-collection-actions-button').click()
   await page.getByTestId('manage-categories-selected-prompt-collection-menu-item').click()
+}
+
+/** Returns the current tab to its browser, creating a tab only when none is visible. */
+export async function showCollectionBrowser(page: Page): Promise<void> {
+  if (await page.getByTestId('sidebar-show-all-button').isVisible()) await page.getByTestId('sidebar-show-all-button').click()
+  else if (!await page.getByTestId('new-tab-screen').isVisible()) await page.getByTestId('new-tab-button').click()
+}
+
+/** Opens the first project's collection creation menu through the New Tab screen. */
+export async function openCollectionCreation(page: Page, kind: 'prompt' | 'template' = 'prompt'): Promise<void> {
+  await showCollectionBrowser(page)
+  await page.locator('button[data-testid^="new-tab-new-collection-"]').first().click()
+  await page.getByTestId('new-tab-new-collection-menu').getByRole('menuitem', { name: kind === 'prompt' ? 'Task Collection' : 'Template Collection', exact: false }).click()
 }

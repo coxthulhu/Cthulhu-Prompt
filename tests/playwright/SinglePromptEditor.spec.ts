@@ -8,7 +8,6 @@ import {
   promptEditorSelector,
   promptTreePromptSelector
 } from '../helpers/PromptCollectionSelectors'
-import { readWorkspaceUiState } from '../helpers/UserPersistenceHelpers'
 
 /** Real application coverage for the full-screen single-prompt editor. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -231,27 +230,6 @@ describe('Single prompt editor', () => {
     await mainWindow.getByTestId('prompt-confirm-delete-button').click()
     await expect(mainWindow.locator(SCREEN)).toHaveCount(0)
     await expect(mainWindow.locator(promptEditorSelector('p3'))).toHaveCount(0)
-  })
-
-  test('restores the open prompt after a renderer reload', async ({ electronApp, testSetup }) => {
-    const { mainWindow } = await startWorkspace(testSetup)
-    await openPrompt(mainWindow, 'p1')
-    await expect.poll(async () => {
-      const state = await readWorkspaceUiState(electronApp, WORKSPACE_ID)
-      return state.selectedScreenData && 'openPromptId' in state.selectedScreenData ? state.selectedScreenData.openPromptId : null
-    }).toBe('p1')
-
-    await mainWindow.reload()
-    await expect(mainWindow.locator(SCREEN)).toBeVisible()
-    await waitForMonacoEditor(mainWindow, BODY)
-    await expect(mainWindow.getByTestId('prompt-collection-header-prompt')).toHaveText('Prompt 1')
-    await expect(mainWindow.locator(promptTreePromptSelector('p1'))).toHaveAttribute('aria-current', 'true')
-
-    await mainWindow.getByTestId('single-prompt-return-button').click()
-    await expect.poll(async () => {
-      const state = await readWorkspaceUiState(electronApp, WORKSPACE_ID)
-      return state.selectedScreenData && 'openPromptId' in state.selectedScreenData ? state.selectedScreenData.openPromptId : 'missing'
-    }).toBeNull()
   })
 
   test('ignores move shortcuts', async ({ testSetup }) => {

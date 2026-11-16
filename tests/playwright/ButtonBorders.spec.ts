@@ -25,10 +25,6 @@ describe('Button styling', () => {
       mainWindow.locator('[data-testid="test-screen"]'),
       '--ui-neutral-action-fill'
     )
-    const neutralFilledHover = await resolvePaletteColor(
-      mainWindow.locator('[data-testid="test-screen"]'),
-      '--ui-neutral-action-hover-fill'
-    )
     const accentBorder = await resolvePaletteColor(
       mainWindow.locator('[data-testid="test-screen"]'),
       '--ui-accent-muted-border'
@@ -36,14 +32,6 @@ describe('Button styling', () => {
     const accentHoverBorder = await resolvePaletteColor(
       mainWindow.locator('[data-testid="test-screen"]'),
       '--ui-accent-muted-hover-border'
-    )
-    const accentFill = await resolvePaletteColor(
-      mainWindow.locator('[data-testid="test-screen"]'),
-      '--ui-accent-action-fill'
-    )
-    const accentHoverFill = await resolvePaletteColor(
-      mainWindow.locator('[data-testid="test-screen"]'),
-      '--ui-accent-action-hover-fill'
     )
     const transparent = await resolvePaletteColor(
       mainWindow.locator('[data-testid="test-screen"]'),
@@ -218,20 +206,8 @@ describe('Button styling', () => {
     await expect(simpleDropdownItem).toHaveCSS('background-color', neutralFill)
     await mainWindow.keyboard.press('Escape')
 
-    const selectorButton = mainWindow.locator('[data-testid="detailed-dropdown-trigger"]')
-    await selectorButton.hover()
-    await expect(selectorButton).toHaveCSS('background-color', neutralFill)
-    await selectorButton.click()
-    await expect(selectorButton).toHaveCSS('background-color', neutralFilledHover)
-    const selectedSelectorItem = mainWindow
-      .locator('[data-testid="detailed-dropdown-menu"]')
-      .locator('[role="menuitem"][aria-selected="true"]')
-    await selectedSelectorItem.hover()
-    await expect(selectedSelectorItem).toHaveCSS('background-color', neutralFilledHover)
-    await mainWindow.keyboard.press('Escape')
-
     // Sidebar controls render only in the project mode.
-    await testHelpers.clickNavButton('Default Project')
+    await testHelpers.navigateToPromptCollections('Hierarchy')
     const promptTreeActionButton = mainWindow.locator('.sidebarPromptTreeActionButton').first()
     await promptTreeActionButton.waitFor({ state: 'attached' })
     await expect(promptTreeActionButton).toHaveCSS('border-top-style', 'none')
@@ -253,7 +229,7 @@ describe('Button styling', () => {
     await expect(sidebarActionsButton).toHaveCSS('border-top-style', 'none')
 
     const collectionSelectorTrigger = mainWindow.locator(
-      '[data-testid="sidebar-prompt-collection-selector-trigger"]'
+      '[data-testid="sidebar-show-all-button"]'
     )
     await mainWindow.mouse.move(0, 0)
     await expect(collectionSelectorTrigger).toHaveCSS('background-color', transparent)
@@ -263,37 +239,6 @@ describe('Button styling', () => {
       await resolvePaletteColor(collectionSelectorTrigger, '--ui-neutral-subtle-action-hover-fill')
     )
     await expect(collectionSelectorTrigger).toHaveCSS('border-top-style', 'none')
-    await collectionSelectorTrigger.click()
-    await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
-    await expect(collectionSelectorTrigger).toHaveCSS('border-top-style', 'none')
-
-    const collectionSelectorMenu = mainWindow.locator(
-      '[data-testid="sidebar-prompt-collection-selector-menu"]'
-    )
-    const selectedCollection = collectionSelectorMenu.locator('[role="menuitem"][aria-selected="true"]')
-    await expect(selectedCollection).toHaveCSS('background-color', accentFill)
-    await expect(selectedCollection).toHaveCSS('border-top-color', accentBorder)
-    await selectedCollection.hover()
-    await expect(collectionSelectorTrigger).toHaveCSS('background-color', neutralFilledHover)
-    await expect(collectionSelectorTrigger).toHaveCSS('border-top-style', 'none')
-    await expect(selectedCollection).toHaveCSS('background-color', accentHoverFill)
-    await expect(selectedCollection).toHaveCSS('border-top-color', accentHoverBorder)
-
-    const unselectedCollection = collectionSelectorMenu
-      .locator('[role="menuitem"][aria-selected="false"]')
-      .first()
-    await unselectedCollection.hover()
-    await expect(unselectedCollection).toHaveCSS('background-color', neutralFill)
-    await expect(unselectedCollection).toHaveCSS('border-top-color', neutralHoverBorder)
-
-    const createCollectionItem = collectionSelectorMenu.locator(
-      '[data-testid="sidebar-prompt-collection-dropdown-add-task-item"]'
-    )
-    await createCollectionItem.hover()
-    await expect(createCollectionItem).toHaveCSS('background-color', accentHoverFill)
-    await expect(createCollectionItem).toHaveCSS('border-top-color', accentHoverBorder)
-    await mainWindow.keyboard.press('Escape')
-
     await testHelpers.clickNavButton('Test Screen')
     const sidebarRailButton = mainWindow.getByRole('button', {
       name: 'normal neutral sidebar-rail',
@@ -390,8 +335,6 @@ describe('Button styling', () => {
     const mutedText = await resolvePaletteColor(gallery, '--ui-muted-text')
     const hoverableText = await resolvePaletteColor(gallery, '--ui-hoverable-text')
     const normalText = await resolvePaletteColor(gallery, '--ui-normal-text')
-    // Shared glyph colors define the idle icon hierarchy.
-    const mutedIcon = await resolvePaletteColor(gallery, '--ui-muted-icon-glyph')
     const hoverableIcon = await resolvePaletteColor(gallery, '--ui-hoverable-icon-glyph')
     // Semantic foregrounds must survive hover feedback.
     const warningForeground = await resolvePaletteColor(gallery, '--ui-warning-icon-glyph')
@@ -427,19 +370,8 @@ describe('Button styling', () => {
     await expect(iconTextButton).toHaveCSS('color', normalText)
     await expect(iconTextButton.locator('svg')).toHaveCSS('color', normalText)
 
-    // Activity and inline controls preserve their lower-emphasis idle tones before interaction.
-    const activityButton = mainWindow.locator(
-      '[data-testid="test-screen-idle-activity-button"]'
-    )
+    // Inline controls retain their lower-emphasis idle tone.
     const inlineButton = mainWindow.locator('[data-testid="test-screen-muted-inline-button"]')
-    await mainWindow.mouse.move(0, 0)
-    await expect(activityButton).toHaveCSS('color', mutedIcon)
-    await activityButton.focus()
-    await mainWindow.keyboard.press('Tab')
-    await mainWindow.keyboard.press('Shift+Tab')
-    await expect(activityButton).toBeFocused()
-    await expect(activityButton).toHaveCSS('color', normalText)
-    expect(await activityButton.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
     await mainWindow.mouse.move(0, 0)
     await expect(inlineButton).toHaveCSS('color', mutedText)
     await inlineButton.hover()

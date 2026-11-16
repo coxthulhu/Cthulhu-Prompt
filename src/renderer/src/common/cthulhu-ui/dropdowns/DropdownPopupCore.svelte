@@ -6,7 +6,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { Action } from 'svelte/action'
-  import { registerDragDropDropdown } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import { registerKeyboardScope } from '@renderer/common/keyboardRouter'
   import CardSurface from '@renderer/common/cthulhu-ui/layout/CardSurface.svelte'
   import { createCssAnchor } from '@renderer/common/cthulhu-ui/cssAnchor'
@@ -45,7 +44,6 @@
     testId?: string
     placement?: DropdownPopupPlacement
     menuAlignment?: DropdownPopupMenuAlignment
-    dragOpenTypes?: string[]
   }
 
   let {
@@ -57,7 +55,6 @@
     testId,
     placement = 'cursor',
     menuAlignment = 'left',
-    dragOpenTypes = []
   }: Props = $props()
 
   const fallbackMenuWidth = 236
@@ -82,12 +79,10 @@
   /** Null uses the trigger's live edges for keyboard and drag opening. */
   let cursorOffset = $state<CursorOffset | null>(null)
   let open = $state(false)
-  let openedByDrag = $state(false)
   let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
 
   const closeMenu = () => {
     open = false
-    openedByDrag = false
     cursorOffset = null
 
     if (activeDropdownCloser === closeMenu) {
@@ -96,7 +91,7 @@
   }
 
   /** Opens against live trigger edges or captures a fixed cursor offset from that trigger. */
-  const openMenu = (nextOpenedByDrag: boolean, event?: MouseEvent, cursorGap = 0) => {
+  const openMenu = (event?: MouseEvent, cursorGap = 0) => {
     if (!anchorElement) return
     activeDropdownCloser?.()
     activeDropdownCloser = closeMenu
@@ -109,7 +104,6 @@
       }
     }
     measuredMenuSize = { width: fallbackMenuWidth, height: fallbackMenuHeight }
-    openedByDrag = nextOpenedByDrag
     open = true
   }
 
@@ -136,26 +130,12 @@
       return
     }
 
-    openMenu(false, event?.detail !== 0 ? event : undefined)
+    openMenu(event?.detail !== 0 ? event : undefined)
   }
 
   // Opens or repositions the popup from an explicit mouse interaction.
   const openMenuAt = (event: MouseEvent): void => {
-    openMenu(false, event, cursorContextMenuGap)
-  }
-
-  const openMenuForDrag = () => {
-    if (open || !anchorElement) {
-      return
-    }
-
-    openMenu(true)
-  }
-
-  const closeDragOpenedMenu = () => {
-    if (openedByDrag) {
-      closeMenu()
-    }
+    openMenu(event, cursorContextMenuGap)
   }
 
   /** CSS clamps live anchor coordinates against the viewport using the observed menu size. */
@@ -191,23 +171,6 @@
       }
     }
   }
-
-  // Side effect: expose this popup to the drag/drop layer while its trigger is mounted.
-  $effect(() => {
-    const triggerNode = anchorElement
-    if (!triggerNode) {
-      return
-    }
-
-    return registerDragDropDropdown({
-      triggerNode,
-      getMenuNode: () => menuLayerRef,
-      getDragOpenTypes: () => dragOpenTypes,
-      isOpen: () => open,
-      openForDrag: openMenuForDrag,
-      closeDragOpened: closeDragOpenedMenu
-    })
-  })
 
   // Side effect: dismiss the open popup from document-level outside clicks and Escape.
   $effect(() => {

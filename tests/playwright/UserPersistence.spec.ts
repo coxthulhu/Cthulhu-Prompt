@@ -1,8 +1,6 @@
-import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
+import { selectedCollectionTitleSelector } from '../helpers/PromptCollectionSelectors'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import {
-  createWorkspaceWithCollections,
-  createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath,
   setupWorkspaceScenario
 } from '../fixtures/WorkspaceFixtures'
@@ -22,8 +20,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 /** Main prompt-collection virtual viewport used to verify restored reveal positions. */
 const PROMPT_COLLECTION_HOST_SELECTOR = '[data-testid="prompt-collection-virtual-window"]'
-const SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER =
-  '[data-testid="sidebar-prompt-collection-selector-trigger"]'
 /** Preferred viewport-top offset used when restoring a prompt selection. */
 const PROMPT_COLLECTION_VERTICAL_BIAS_PX = 300
 /** Retained viewport-top offset used when restoring a category selection. */
@@ -171,7 +167,7 @@ const dragSidebarHandleBy = async (
 
 describe('User Persistence', () => {
   // Both sidebar modes restore a saved collapsed preference, and switching activities saves it expanded again.
-  for (const screen of ['project', 'settings']) {
+  for (const screen of ['settings']) {
     test(`restores a collapsed ${screen} sidebar and persists its forced expansion across reloads`, async ({
       electronApp,
       testSetup
@@ -186,7 +182,7 @@ describe('User Persistence', () => {
       /** Activity restored as the selected screen after each reload. */
       const activity = mainWindow.getByTestId(`nav-button-${screen}`)
       /** Other sidebar mode shares the same application preference. */
-      const nextScreen = screen === 'project' ? 'settings' : 'project'
+      const nextScreen = 'settings'
       /** Activity that forces the collapsed sidebar open by switching screens. */
       const nextActivity = mainWindow.getByTestId(`nav-button-${nextScreen}`)
       /** Workspace whose saved screen selection is restored on reload. */
@@ -213,6 +209,7 @@ describe('User Persistence', () => {
       await expect(sidebar).toBeHidden()
 
       // Switching activities forces the sidebar open and saves that preference for the next startup.
+      await testHelpers.navigateToHomeScreen()
       await nextActivity.click()
       await expect(sidebar).toBeVisible()
       await expect.poll(async () =>
@@ -394,7 +391,7 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Development Tools'
     )
   })
@@ -459,107 +456,6 @@ describe('User Persistence', () => {
       .toBe('home:null')
   })
 
-  test('syncs workspace screen persistence and clears collection when leaving prompt collections', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const workspacePath = '/ws/sample'
-    const workspaceId = createDeterministicId(workspacePath)
-    const developmentPromptCollectionId = createDeterministicId(`${workspacePath}:Development`)
-    const { testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    await testHelpers.navigateToPromptCollections('Development')
-
-    await expect
-      .poll(async () => {
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return [
-          persisted.selectedScreen,
-          JSON.stringify(persisted.selectedScreenData),
-          persisted.lastCollectionId
-        ].join(':')
-      })
-      .toBe(
-        `project:{"projectId":"${createDeterministicId(`${workspacePath}:DefaultProject`)}","promptCollectionId":"${developmentPromptCollectionId}","contentOwnerId":"${developmentPromptCollectionId}","openPromptId":null}:${developmentPromptCollectionId}`
-      )
-
-    await testHelpers.navigateToSettingsScreen()
-
-    await expect
-      .poll(async () => {
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return [
-          persisted.selectedScreen,
-          JSON.stringify(persisted.selectedScreenData),
-          persisted.lastCollectionId
-        ].join(':')
-      })
-      .toBe(`settings:null:${developmentPromptCollectionId}`)
-  })
-
-  test('remembers the last collection of either kind', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const persistedWorkspacePath = '/ws/persisted-last-collection'
-    const workspaceId = createDeterministicId(persistedWorkspacePath)
-    const taskAlphaId = 'persisted-task-alpha'
-    const taskBetaId = 'persisted-task-beta'
-    const templateAlphaId = 'persisted-template-alpha'
-    /** Mixed-kind workspace whose last collection may be either kind. */
-    const filesystem = {
-      ...createWorkspaceWithCollections(persistedWorkspacePath, [
-        { folderName: 'TaskAlpha', displayName: 'Task Alpha', promptCollectionId: taskAlphaId },
-        { folderName: 'TaskBeta', displayName: 'Task Beta', promptCollectionId: taskBetaId }
-      ]),
-      ...createWorkspaceWithTemplateCollections(persistedWorkspacePath, [
-        { folderName: 'TemplateAlpha', displayName: 'Template Alpha', collectionId: templateAlphaId }
-      ])
-    }
-    await testSetup.setupFilesystem(filesystem)
-    await seedUserPersistence(electronApp, {
-      lastWorkspaceInfoPath: getWorkspaceInfoPath(persistedWorkspacePath)
-    })
-    await seedWorkspaceUiState(electronApp, {
-      workspaceId,
-      selectedScreen: 'home',
-      selectedScreenData: null,
-      lastCollectionId: taskBetaId,
-      promptCollectionViewEntries: []
-    })
-
-    const { mainWindow } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
-
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Task Beta')
-    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
-
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await mainWindow
-      .locator(`[data-testid="sidebar-prompt-collection-dropdown-item-${templateAlphaId}"]`)
-      .click()
-    await expect
-      .poll(async () => {
-        /** Persisted selection captured after choosing a template collection. */
-        const persisted = await readWorkspaceUiState(electronApp, workspaceId)
-        return [persisted.selectedScreen, persisted.lastCollectionId].join(':')
-      })
-      .toBe(`project:${templateAlphaId}`)
-
-    await mainWindow.locator('[data-testid="nav-button-home"]').click()
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Template Alpha')
-  })
-
   test('autosaves active prompt tree entry id in workspace persistence', async ({
     electronApp,
     testSetup
@@ -600,8 +496,6 @@ describe('User Persistence', () => {
     const workspacePath = '/ws/categories'
     /** Stable workspace identity derived by the categories fixture. */
     const workspaceId = createDeterministicId(workspacePath)
-    /** prompt-collection identity derived by the categories fixture. */
-    const promptCollectionId = createDeterministicId(`${workspacePath}:Main`)
     /** Category identity derived by the categories fixture. */
     const categoryId = createDeterministicId(`${workspacePath}:Main/Category`)
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -631,19 +525,11 @@ describe('User Persistence', () => {
             const categoryEntry = persisted.promptCollectionViewEntries.find(
               (entry) => entry.contentOwnerId === categoryId
             )
-            /** Prompt-collection screen data containing the newly persisted owner pointer. */
-            const selectedScreenData =
-              persisted.selectedScreen === 'project'
-                ? (persisted.selectedScreenData as {
-                    promptCollectionId: string | null
-                    contentOwnerId?: string | null
-                  })
-                : null
-            return `${selectedScreenData?.promptCollectionId ?? 'none'}:${selectedScreenData?.contentOwnerId ?? 'none'}:${categoryEntry?.selectedEntryId ?? 'none'}`
+            return categoryEntry?.selectedEntryId ?? 'none'
           },
           { timeout: 15000 }
         )
-        .toBe(`${promptCollectionId}:${categoryId}:category-details`)
+        .toBe('category-details')
 
       /** Window-close completion observed after releasing the held confirmation IPC. */
       const windowClosed = mainWindow.waitForEvent('close')
@@ -757,7 +643,7 @@ describe('User Persistence', () => {
     })
 
     await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toBeVisible()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Development Tools'
     )
     await expect.poll(async () => getActivePromptTreeTitle(mainWindow)).toBe('Bug Analysis')

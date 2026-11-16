@@ -397,7 +397,7 @@ describe('atomic data transaction', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
     }
     /** collection updated to own the inserted category. */
     const promptCollection = {
@@ -483,7 +483,7 @@ describe('atomic data transaction', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: 'root' }] }]
     }
     /** Prompt root containing one category and one active prompt. */
     const promptCollection = {
@@ -624,7 +624,7 @@ describe('atomic data transaction', () => {
       workspaceName: 'Workspace',
       /** Existing fixtures start without user favorites. */
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection' as const, id: 'templates' }] }]
+        collectionEntries: [{ kind: 'collection' as const, id: 'templates' }] }]
     }
     /** Template root containing one active template. */
     const promptCollection = {

@@ -7,7 +7,6 @@ import {
 } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
-import { promptCollectionSelectorTriggerSelector } from '../helpers/PromptCollectionSelectors'
 import { beginDragFromLocator, dragGhostSelector, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
 import { readWorkspaceState, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
@@ -143,7 +142,7 @@ const readProjectOrder = async (electronApp: ElectronApplication): Promise<strin
   (await readWorkspaceState<{ ids: string[] }>(electronApp, workspaceId, 'project-order', null))?.ids
 
 describe('New Tab Screen', () => {
-  test('lists projects in activity bar order with their collections in Show All order', async ({ electronApp, testSetup }) => {
+  test('lists projects in workspace order with their collections in Show All order', async ({ electronApp, testSetup }) => {
     const mainWindow = await openNewTab(electronApp, testSetup)
 
     // The workspace name heads the screen, above the search bar, New Project button, and reorder hint.
@@ -152,8 +151,7 @@ describe('New Tab Screen', () => {
     await expect(mainWindow.getByTestId('new-tab-new-project-button')).toHaveText('New Project')
     await expect(mainWindow.getByText('Drag to reorder projects and collections')).toBeVisible()
 
-    // Projects follow the activity bar, and each one's collections follow its Show All order with kind icons and counts.
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['HA', 'DE'])
+    // Projects follow the workspace, and each one's collections follow its Show All order with kind icons and counts.
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
     await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
     await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
@@ -166,11 +164,7 @@ describe('New Tab Screen', () => {
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveAttribute('aria-selected', 'true')
 
-    // The default project's Show All dropdown lists the same collections in the same order.
-    await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
-    await expect(mainWindow.locator('[data-dropdown-section="all"] [role="menuitem"]'))
-      .toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
+
   })
 
   test('filters projects and collections by case-insensitive name matches', async ({ electronApp, testSetup }) => {
@@ -223,8 +217,6 @@ describe('New Tab Screen', () => {
     // Saving keeps the New Tab screen and its tab selected, and appends the project with its starter collections.
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveAttribute('aria-selected', 'true')
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['HA', 'DE', 'LM'])
-    await expect(mainWindow.locator('[data-testid="nav-button-project"][aria-current="page"]')).toHaveCount(0)
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
     await expect(getSections(mainWindow).nth(2).locator('[data-testid^="new-tab-collection-"]'))
       .toHaveText([/My Prompts\s*0 prompts/, /My Templates\s*0 templates/])
@@ -293,10 +285,9 @@ describe('New Tab Screen', () => {
     await expectSectionNames(mainWindow, ['Default Project', 'Harbor API'])
     expect(await readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId])
 
-    // The drop saves the order the activity bar shows.
+    // The drop saves the order the workspace shows.
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readProjectOrder(electronApp)).toEqual([defaultProjectId, harborProjectId])
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['DE', 'HA'])
     await expect(defaultTitle).toHaveAttribute('data-dragging', 'false')
 
     // Only the pointer's height matters: below every section is last even at the screen's left edge, outside the
@@ -310,7 +301,6 @@ describe('New Tab Screen', () => {
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId])
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['HA', 'DE'])
   })
 
   test('reorders collections by dragging their tiles within their own project', async ({ electronApp, testSetup }) => {
@@ -342,11 +332,7 @@ describe('New Tab Screen', () => {
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['New Tab'])
 
-    // The default project's Show All dropdown shares the saved order.
-    await mainWindow.getByRole('button', { name: 'Default Project', exact: true }).click()
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
-    await expect(mainWindow.locator('[data-dropdown-section="all"] [role="menuitem"]'))
-      .toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+
   })
 
   test('reorders filtered projects and collections right after the visible item before them', async ({ electronApp, testSetup }) => {
@@ -396,6 +382,5 @@ describe('New Tab Screen', () => {
     await mainWindow.getByTestId('new-tab-search-input').fill('')
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
     await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Offline Sync/, /Release Builds/])
-    await expect(mainWindow.getByTestId('nav-button-project')).toHaveText(['HA', 'DE', 'LM'])
   })
 })

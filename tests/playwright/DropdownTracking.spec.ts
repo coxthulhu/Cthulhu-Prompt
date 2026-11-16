@@ -1,12 +1,9 @@
 import type { Locator, Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import {
   PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector,
-  promptCollectionSelectorMenuSelector,
-  promptCollectionSelectorTriggerSelector,
   promptTreeCategorySelector
 } from '../helpers/PromptCollectionSelectors'
 
@@ -97,15 +94,15 @@ describe('Dropdown tracking', () => {
   })
 
   test('below-trigger menu follows trigger dimensions and a live device scale change', async ({ testSetup }) => {
-    /** Root selector uses below-trigger placement and trigger-dependent minimum width. */
+    /** Options menus follow the right edge and grow to at least the trigger's width. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await testHelpers.navigateToPromptCollections('Development')
-    /** Actual root selector anchor. */
-    const trigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
-    /** Detailed menu whose width must follow the resized trigger. */
-    const menu = mainWindow.locator(promptCollectionSelectorMenuSelector)
+    await testHelpers.clickNavButton('Test Screen')
+    /** Actual split-button options anchor. */
+    const trigger = mainWindow.getByTestId('icon-button-more-options-chevron')
+    /** Menu whose minimum width and right edge follow the resized trigger. */
+    const menu = mainWindow.getByTestId('icon-button-more-options-menu')
     await trigger.click()
-    await expect(menu).toHaveCSS('width', '380px')
+    await expect(menu).toHaveCSS('width', '240px')
     await trigger.evaluate((element: HTMLElement) => {
       // This positioning fixture deliberately exceeds the action button's normal width cap.
       element.style.maxWidth = 'none'
@@ -118,9 +115,9 @@ describe('Dropdown tracking', () => {
         /** Both elements are measured in CSS pixels after the browser's layout pass. */
         const [triggerBox, menuBox] = await Promise.all([box(trigger), box(menu)])
         return Math.max(
-          Math.abs(menuBox.x - triggerBox.x),
+          Math.abs(menuBox.x + menuBox.width - triggerBox.x - triggerBox.width),
           Math.abs(menuBox.y - triggerBox.y - triggerBox.height - 4),
-          Math.abs(menuBox.width - triggerBox.width)
+          Math.abs(menuBox.width - Math.max(240, triggerBox.width))
         )
       }).toBeLessThanOrEqual(2)
     }
@@ -183,12 +180,12 @@ describe('Dropdown tracking', () => {
   test('menus retain edge clamping as the trigger and menu dimensions change', async ({ testSetup }) => {
     /** The real collection selector supplies a resizable below-trigger menu. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'sample' } })
-    await testHelpers.navigateToPromptCollections('Development')
+    await testHelpers.clickNavButton('Test Screen')
     /** Move the real trigger into an unclipped geometry fixture without replacing its handlers. */
-    const trigger = mainWindow.locator(promptCollectionSelectorTriggerSelector)
+    const trigger = mainWindow.getByTestId('icon-button-more-options-chevron')
     await trigger.evaluate((element: HTMLElement) => {
       document.body.appendChild(element)
-      element.style.cssText += ';position:fixed;left:calc(100vw - 150px);top:calc(100vh - 60px);width:120px;height:40px;'
+      element.style.cssText += ';position:fixed;left:calc(100vw - 60px);top:calc(100vh - 60px);width:120px;height:40px;'
     })
     await trigger.click()
     /** Popup layer owns the height constraint and scrollbars. */
@@ -201,7 +198,7 @@ describe('Dropdown tracking', () => {
       return Math.max(Math.abs(viewport.width - menuBox.x - menuBox.width - 16), Math.abs(viewport.height - menuBox.y - menuBox.height - 8))
     }).toBeLessThanOrEqual(2)
     // Content changes exercise the menu observer without a window or trigger resize event.
-    await mainWindow.locator(promptCollectionSelectorMenuSelector).evaluate((element: HTMLElement) => { element.style.minHeight = '400px' })
+    await mainWindow.getByTestId('icon-button-more-options-menu').evaluate((element: HTMLElement) => { element.style.minHeight = '400px' })
     await expect.poll(async () => {
       /** New bottom position must reflect the taller menu. */
       const menuBox = await box(layer)
@@ -285,29 +282,24 @@ describe('Dropdown tracking', () => {
   })
 
   test('allows menu scrolling while blocking native background scrolling and restores it on close', async ({ testSetup }) => {
-    /** Many real collections make the detailed selector itself scrollable. */
-    const workspacePath = '/ws/dropdown-scroll'
-    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, Array.from({ length: 30 }, (_, index) => ({
-      folderName: `Collection ${index}`, displayName: `Collection ${index}`, prompts: []
-    }))))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToPromptCollections('Collection 0')
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'minimal' } })
+    await testHelpers.clickNavButton('Test Screen')
+    await mainWindow.getByTestId('icon-button-more-options-chevron').scrollIntoViewIfNeeded()
     // The collection screen scrolls virtually, so cover it with a native scroller beside the sidebar selector.
     await mainWindow.locator('.mainScreenSurface').evaluate((surface: HTMLElement) => {
       const rect = surface.getBoundingClientRect()
       const scroller = document.createElement('div')
       scroller.dataset.testid = 'native-scroll-background'
-      scroller.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;overflow-y:scroll;`
+      scroller.style.cssText = `position:fixed;right:0;top:${rect.top}px;width:180px;height:${rect.height}px;overflow-y:scroll;`
       scroller.innerHTML = '<div style="height:5000px"></div>'
       document.body.appendChild(scroller)
     })
     /** Native background scroll container. */
     const background = mainWindow.getByTestId('native-scroll-background')
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('icon-button-more-options-chevron').click()
     /** Detailed menu scrolls its item list independently of the background. */
-    const items = mainWindow.getByTestId('sidebar-prompt-collection-selector-menu-items')
+    const items = mainWindow.getByTestId('icon-button-more-options-menu')
+    await items.evaluate((element: HTMLElement) => { element.style.maxHeight = '80px'; element.style.overflowY = 'auto' })
     await items.hover()
     await mainWindow.mouse.wheel(0, 500)
     await expect.poll(() => items.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
@@ -328,7 +320,7 @@ describe('Dropdown tracking', () => {
     expect(await background.evaluate((element) => element.dispatchEvent(new Event('touchmove', { bubbles: true, cancelable: true })))).toBe(false)
     expect(await items.evaluate((element) => element.dispatchEvent(new Event('touchmove', { bubbles: true, cancelable: true })))).toBe(true)
     await mainWindow.keyboard.press('Escape')
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toHaveCount(0)
+    await expect(mainWindow.getByTestId('icon-button-more-options-menu')).toHaveCount(0)
     expect(await background.evaluate((element) => element.dispatchEvent(new Event('touchmove', { bubbles: true, cancelable: true })))).toBe(true)
     await mainWindow.keyboard.press('PageDown')
     await expect.poll(() => background.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
@@ -337,9 +329,9 @@ describe('Dropdown tracking', () => {
     await expect.poll(() => background.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
     // Native scrollbar track presses must also dismiss the menu and scroll on the same press.
     await background.evaluate((element) => { element.scrollTop = 0 })
-    await mainWindow.locator(promptCollectionSelectorTriggerSelector).click()
+    await mainWindow.getByTestId('icon-button-more-options-chevron').click()
     await mainWindow.mouse.click(backgroundBox.x + backgroundBox.width - 6, backgroundBox.y + backgroundBox.height - 30)
-    await expect(mainWindow.locator(promptCollectionSelectorMenuSelector)).toHaveCount(0)
+    await expect(mainWindow.getByTestId('icon-button-more-options-menu')).toHaveCount(0)
     await expect.poll(() => background.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
   })
 })

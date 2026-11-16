@@ -26,7 +26,6 @@
     placement?: DropdownPopupPlacement
     /** Edge of the trigger the menu lines up with when placed below it. */
     menuAlignment?: DropdownPopupMenuAlignment
-    dragOpenTypes?: string[]
     onselect?: (item: DropdownPopupItem, event: MouseEvent) => void
   }
 
@@ -38,7 +37,6 @@
     testId,
     placement = 'cursor',
     menuAlignment,
-    dragOpenTypes,
     onselect
   }: Props = $props()
 </script>
@@ -50,7 +48,6 @@
   {testId}
   {placement}
   {menuAlignment}
-  {dragOpenTypes}
   menuClass="cthulhuUiDropdownPopupSimpleMenu p-[4px]"
 >
   {#snippet children({ close })}

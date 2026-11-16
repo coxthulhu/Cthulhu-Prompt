@@ -71,9 +71,9 @@ export const planSaveProjects: DomainPlanner<SaveProjectsCommand> = (state, comm
     /** Existing identity determines whether starter creation is permitted. */
     const existing = workspace.projects.find((project) => project.id === info.id)
     if (existing ? starterCollections !== null : starterCollections === null) throw new Error('Project creation identity mismatch')
-    /** Retained collections and favorites never come from the dialog. */
+    /** Retained collections never come from the dialog. */
     const project: Project = { ...info, folderName: preparePromptCollectionName(info.name).folderName,
-      collectionEntries: existing?.collectionEntries ?? [], favoriteCollectionIds: existing?.favoriteCollectionIds ?? [] }
+      collectionEntries: existing?.collectionEntries ?? [] }
     if (starterCollections) {
       for (const [id, kind] of [[starterCollections.promptCollectionId, 'prompt'], [starterCollections.templateCollectionId, 'template']] as const) {
         if (starterIds.has(id) || state.get('promptCollection', id)) throw new Error('Starter collection identity already exists')

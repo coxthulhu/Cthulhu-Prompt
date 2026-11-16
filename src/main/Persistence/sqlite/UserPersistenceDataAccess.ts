@@ -66,7 +66,6 @@ export class UserPersistenceDataAccess {
         settingsCollapsedSectionIds: next.settingsCollapsedSectionIds,
         settingsScrollTopPx: next.settingsScrollTopPx,
         singlePromptNoteFraction: next.singlePromptNoteFraction,
-        sidebarQuickCollectionCount: next.sidebarQuickCollectionCount,
         workTabs: next.workTabs,
         selectedTabId: next.selectedTabId
       })

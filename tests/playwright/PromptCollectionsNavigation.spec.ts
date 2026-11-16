@@ -1,4 +1,6 @@
-import { selectedQuickCollectionSelector } from '../helpers/PromptCollectionSelectors'
+import { resolvePaletteColor } from '../helpers/PaletteHelpers'
+import { clickPromptCollectionItem, showCollectionBrowser, openCollectionCreation } from '../helpers/PromptCollectionHelpers'
+import { selectedCollectionTitleSelector } from '../helpers/PromptCollectionSelectors'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { ConsoleMessage, Page } from 'playwright'
@@ -8,15 +10,12 @@ import {
   readTextFile
 } from '../helpers/PromptPersistenceTestHelpers'
 import {
-  createWorkspaceWithCollections,
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { readPromptNavigationHighlightAnimation } from '../helpers/PromptNavigationHighlightHelpers'
 import { typeInMonacoEditor } from '../helpers/MonacoHelpers'
-import { readWorkspaceCollectionOrder, runSqlQuery, seedWorkspaceState, seedCollectionUiState } from '../helpers/UserPersistenceHelpers'
-import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
-import { getPromptCollectionCategoryIds, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
+import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -29,12 +28,6 @@ const DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM =
   '[data-testid="delete-selected-prompt-collection-menu-item"]'
 const MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM =
   '[data-testid="manage-categories-selected-prompt-collection-menu-item"]'
-const SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER =
-  '[data-testid="sidebar-prompt-collection-selector-trigger"]'
-const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM = '[data-testid^="sidebar-prompt-collection-dropdown-item-"]'
-const SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ADD_ITEM =
-  '[data-testid="sidebar-prompt-collection-dropdown-add-task-item"]'
-const SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON = '[data-testid="sidebar-prompt-collection-add-task-button"]'
 const SHORT_PROMPT_50 = '[data-testid="prompt-tree-active-prompt-short-50"]'
 const SHORT_EDITOR_50 = '[data-testid="prompt-editor-short-50"]'
 const PROMPT_TREE_HOST = '[data-testid="prompt-tree-active-virtual-window"]'
@@ -43,199 +36,9 @@ const PROMPT_COLLECTION_HOST = '[data-testid="prompt-collection-virtual-window"]
 const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const CATEGORIES_WORKSPACE_PATH = '/ws/categories'
 const TEMPLATE_WORKSPACE_PATH = '/ws/templates'
-/** Mixed-kind workspace used to verify ordered selection after collection deletion. */
-const DELETE_NAVIGATION_WORKSPACE_PATH = '/ws/delete-navigation'
 
 
 describe('Prompt Collection Navigation (non-virtual)', () => {
-  test('deletes root-owned SQLite UI state with a prompt collection', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'categories' }
-    })
-    await testHelpers.navigateToPromptCollections('Main')
-
-    /** Collection category order used to identify one category-owned cached UI-state row. */
-    const categoryOrder = JSON.parse(
-      await readTextFile(
-        electronApp,
-        '/ws/categories/DefaultProject/Prompts/Main/Active/_CategoryOrder.json'
-      )
-    )
-    /** Category ID deleted with the prompt collection. */
-    const categoryId = categoryOrder.categories.find(
-      (category: { categoryId: string | null }) => category.categoryId !== null
-    ).categoryId as string
-    /** Persisted workspace selection identifying the active workspace and collection. */
-    const workspaceRow = (
-      await runSqlQuery(
-        electronApp,
-        `SELECT workspace_id AS workspaceId, json_extract(data_json, '$.selectedScreenData') AS selectedScreenDataJson
-         FROM workspace_state WHERE state_type = 'workspace-navigation' LIMIT 1`
-      )
-    ).rows?.[0] as { workspaceId: string; selectedScreenDataJson: string }
-    /** prompt-collection ID selected in the persisted workspace screen state. */
-    const promptCollectionId = JSON.parse(workspaceRow.selectedScreenDataJson).promptCollectionId as string
-    /** Current authoritative snapshots used to invoke the existing deletion IPC directly. */
-    const workspaceLoadResult = await mainWindow.evaluate(async () => {
-      return await window.electron.ipcRenderer.invoke('load-workspace-by-path', {
-        requestId: `root-delete-load-${Date.now()}`,
-        clientId: window.ipcClientId,
-        payload: { workspaceInfoPath: '/ws/categories/categories.cthulhuprompt' }
-      })
-    })
-    /** Authoritative workspace revision payload required by collection deletion. */
-    const workspaceSnapshot = workspaceLoadResult.workspace as {
-      id: string
-      revision: number
-      data: unknown
-    }
-    /** Authoritative collection revision payload required by collection deletion. */
-    const promptCollectionSnapshot = workspaceLoadResult.promptCollections.find(
-      (snapshot: { id: string }) => snapshot.id === promptCollectionId
-    ) as { id: string; revision: number; data: unknown }
-
-    for (const contentOwnerId of [promptCollectionId, categoryId, 'sibling-owner']) {
-      await seedCollectionUiState(electronApp, workspaceRow.workspaceId, { contentOwnerId, selectedEntryId: 'collection-settings' })
-    }
-    for (const contentId of ['base-before', 'sibling-content']) {
-      await seedWorkspaceState(electronApp, workspaceRow.workspaceId, 'markdown-editor', contentId, { editorViewStateJson: '{}' }, 'machine-specific')
-    }
-    /** Seed verification proving every target and sibling row exists before deletion. */
-    const seededRow = (
-      await runSqlQuery(
-        electronApp,
-        `SELECT
-           (SELECT COUNT(*) FROM workspace_state
-            WHERE state_type IN ('collection-user', 'collection-machine') AND workspace_id = '${workspaceRow.workspaceId}'
-              AND entity_id IN (
-                '${promptCollectionId}', '${categoryId}', 'sibling-owner'
-              )) AS promptCollectionCount,
-           (SELECT COUNT(*) FROM workspace_state
-            WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
-              AND entity_id IN ('base-before', 'sibling-content')) AS markdownCount`
-      )
-    ).rows?.[0]
-    expect(seededRow).toEqual({
-      promptCollectionCount: 6,
-      markdownCount: 2
-    })
-
-    /** Split UI-state load that hydrates the newly seeded SQLite records authoritatively. */
-    const uiStateLoadResult = await mainWindow.evaluate(async (workspaceId) => {
-      return await window.electron.ipcRenderer.invoke('load-workspace-ui-state', {
-        requestId: `root-delete-ui-state-${Date.now()}`,
-        clientId: window.ipcClientId,
-        payload: { workspaceId }
-      })
-    }, workspaceRow.workspaceId)
-    /** collection data used to derive every non-optional deletion target. */
-    const promptCollectionData = promptCollectionSnapshot.data as PromptCollection
-    /** Content IDs across every status folder owned by the deleted collection. */
-    const contentIds = getMarkdownContentIds(promptCollectionData, promptCollectionData.kind)
-    /** Category IDs whose files are deleted with the collection. */
-    const categoryIds = getPromptCollectionCategoryIds(promptCollectionData)
-    /** Required generic domain expectations; optional SQLite deletes are excluded by policy. */
-    const deletionExpectations = [
-      {
-        entityType: 'workspace',
-        id: workspaceSnapshot.id,
-        expected: 'revision',
-        revision: workspaceSnapshot.revision
-      },
-      ...contentIds.map((contentId) => {
-        /** Workspace-load snapshot supplying the current content revision. */
-        const snapshot = (
-          promptCollectionData.kind === 'prompt'
-            ? workspaceLoadResult.prompts
-            : workspaceLoadResult.promptTemplates
-        ).find((candidate: { id: string }) => candidate.id === contentId)
-        return {
-          entityType: promptCollectionData.kind === 'prompt' ? 'prompt' : 'promptTemplate',
-          id: contentId,
-          expected: 'revision',
-          revision: snapshot.revision
-        }
-      }),
-      ...categoryIds.map((ownedCategoryId) => {
-        /** Workspace-load category snapshot supplying the current category revision. */
-        const snapshot = workspaceLoadResult.categories.find(
-          (candidate: { id: string }) => candidate.id === ownedCategoryId
-        )
-        return {
-          entityType: 'category',
-          id: ownedCategoryId,
-          expected: 'revision',
-          revision: snapshot.revision
-        }
-      }),
-      {
-        entityType: 'promptCollection',
-        id: promptCollectionSnapshot.id,
-        expected: 'revision',
-        revision: promptCollectionSnapshot.revision
-      },
-      {
-        entityType: 'workspaceUiState',
-        id: workspaceRow.workspaceId,
-        expected: 'revision',
-        revision: uiStateLoadResult.workspaceUiState.revision
-      }
-    ]
-    /** Direct generic-domain handler response for collection deletion. */
-    const deleteResult = await mainWindow.evaluate(
-      async ({ workspaceId, promptCollectionId, expectations }) => {
-        return await window.electron.ipcRenderer.invoke('delete-prompt-collection', {
-          requestId: `root-delete-${Date.now()}`,
-          clientId: window.ipcClientId,
-          payload: {
-            command: { workspaceId, promptCollectionId },
-            expectations
-          }
-        })
-      },
-      {
-        workspaceId: workspaceRow.workspaceId,
-        promptCollectionId,
-        expectations: deletionExpectations
-      }
-    )
-    expect(deleteResult).toMatchObject({ success: true })
-
-    /** Counts and workspace selection left after the collection logical commit. */
-    const cleanupRow = (
-      await runSqlQuery(
-        electronApp,
-        `SELECT
-           (SELECT COUNT(*) FROM workspace_state
-            WHERE state_type IN ('collection-user', 'collection-machine') AND workspace_id = '${workspaceRow.workspaceId}'
-              AND entity_id IN ('${promptCollectionId}', '${categoryId}')) AS promptCollectionCount,
-           (SELECT COUNT(*) FROM workspace_state
-            WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
-              AND entity_id = 'base-before') AS markdownCount,
-           (SELECT COUNT(*) FROM workspace_state
-            WHERE state_type IN ('collection-user', 'collection-machine') AND workspace_id = '${workspaceRow.workspaceId}'
-              AND entity_id = 'sibling-owner') AS siblingPromptCollectionCount,
-           (SELECT COUNT(*) FROM workspace_state
-            WHERE state_type = 'markdown-editor' AND workspace_id = '${workspaceRow.workspaceId}'
-              AND entity_id = 'sibling-content') AS siblingMarkdownCount,
-           json_extract(data_json, '$.selectedScreen') AS selectedScreen,
-           json_extract(data_json, '$.lastCollectionId') AS lastCollectionId
-         FROM workspace_state
-         WHERE state_type = 'workspace-navigation' AND workspace_id = '${workspaceRow.workspaceId}'`
-      )
-    ).rows?.[0]
-    expect(cleanupRow).toEqual({
-      promptCollectionCount: 0,
-      markdownCount: 0,
-      siblingPromptCollectionCount: 2,
-      siblingMarkdownCount: 1,
-      selectedScreen: 'project',
-      lastCollectionId: null
-    })
-  })
 
   test('opens template collections and renders template-specific controls', async ({ testSetup }) => {
     await testSetup.setupFilesystem(
@@ -276,12 +79,10 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toBeVisible()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
+    await showCollectionBrowser(mainWindow)
     await expect(
       mainWindow
-        .locator('[data-testid="sidebar-prompt-collection-dropdown-item-template-collection-1"]')
+        .locator('[data-testid="new-tab-collection-template-collection-1"]')
         .locator('.lucide-layers')
     ).toBeVisible()
     await mainWindow.keyboard.press('Escape')
@@ -435,7 +236,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const screenInfo = await testHelpers.getPromptCollectionScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Example Prompts'
     )
   })
@@ -671,7 +472,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     let screenInfo = await testHelpers.getPromptCollectionScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(1)
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Example Prompts'
     )
 
@@ -686,7 +487,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     screenInfo = await testHelpers.getPromptCollectionScreenInfo()
     expect(screenInfo.hasPromptEditors).toBe(true)
     expect(screenInfo.promptCount).toBe(2)
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Development Tools'
     )
 
@@ -697,201 +498,12 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect(bugAnalysisResult.found).toBe(true)
   })
 
-  test('opens the project view and renders prompt list', async ({ testSetup }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
 
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await testHelpers.navigateToPromptCollections('Examples')
 
-    const screenInfo = await testHelpers.getPromptCollectionScreenInfo()
-    expect(screenInfo.hasPromptEditors).toBe(true)
-    expect(screenInfo.promptCount).toBe(1)
-    await expect(
-      mainWindow.locator('[data-testid="prompt-collection-screen"] .app-scrollbar')
-    ).toHaveCSS('width', '14px')
-  })
 
-  test('opens the first collection from the project button when no collection was selected', async ({
-    testSetup
-  }) => {
-    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
 
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
 
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-
-    await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-1"]', {
-      state: 'attached'
-    })
-    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Development Tools'
-    )
-  })
-
-  test('opens the first ordered collection when it is a template collection', async ({
-    electronApp,
-    testSetup
-  }) => {
-    /** Template-only workspace whose persisted order differs from alphabetical order. */
-    const workspacePath = '/ws/template-activity-fallback'
-    /** Two template collections used to prove the first persisted collection is selected. */
-    const filesystem = createWorkspaceWithTemplateCollections(workspacePath, [
-      { folderName: 'Alpha', displayName: 'Alpha Templates', collectionId: 'template-alpha' },
-      { folderName: 'Zulu', displayName: 'Zulu Templates', collectionId: 'template-zulu' }
-    ])
-    await seedWorkspaceState(electronApp, createDeterministicId(workspacePath), 'collection-order', null, {
-      entries: [
-        { kind: 'collection', id: 'template-zulu' },
-        { kind: 'collection', id: 'template-alpha' }
-      ]
-    })
-
-    await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
-    /** Window and UI helpers for opening the custom workspace normally. */
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Zulu Templates'
-    )
-  })
-
-  test('restores the last prompt collection scroll when opened from the activity bar', async ({
-    testSetup
-  }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'virtual' }
-    })
-
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
-
-    await testHelpers.navigateToPromptCollections('Short')
-    await mainWindow.waitForSelector(PROMPT_COLLECTION_HOST, { state: 'attached' })
-    await testHelpers.scrollVirtualWindowTo(PROMPT_COLLECTION_HOST, 900)
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST))
-      .toBeGreaterThan(0)
-    const savedScrollTop = await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST)
-
-    await testHelpers.navigateToHomeScreen()
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await mainWindow.waitForSelector(PROMPT_COLLECTION_HOST, { state: 'attached' })
-
-    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
-    await expect
-      .poll(async () => testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST))
-      .toBe(savedScrollTop)
-  })
-
-  test('selects prompt collections and opens create dialog from the sidebar dropdown', async ({
-    testSetup
-  }) => {
-    const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'sample' }
-    })
-
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
-
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await mainWindow
-      .locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM)
-      .filter({ hasText: 'Development Tools' })
-      .click()
-
-    await mainWindow.waitForSelector('[data-testid="prompt-editor-dev-2"]', {
-      state: 'attached'
-    })
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
-      'Development Tools'
-    )
-    expect(await testHelpers.getActiveScreen()).toBe('prompt-collection')
-
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ADD_ITEM).click()
-    const createPromptCollectionDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Task Collection"]'
-    )
-    await expect(createPromptCollectionDialog).toBeVisible()
-    const createDialogBox = await createPromptCollectionDialog.locator('.cthulhuUiPopupSurface').boundingBox()
-    expect(createDialogBox).not.toBeNull()
-    expect(Math.abs(createDialogBox!.width - 520)).toBeLessThanOrEqual(2)
-    await expect(
-      createPromptCollectionDialog.locator('[data-testid="dialog-header-icon"]')
-    ).toBeVisible()
-    await expect(
-      createPromptCollectionDialog.locator('[data-testid="dialog-subtitle"]')
-    ).toHaveText('Organize one-time prompts for individual tasks.')
-    const nameField = createPromptCollectionDialog.locator(
-      '[data-testid="prompt-collection-name-field"]'
-    )
-    const nameInput = createPromptCollectionDialog.getByLabel('Collection Name')
-    await expect(nameField.locator('.cthulhuUiTitle')).toHaveText('Collection Name')
-    await expect(nameField.locator('.cthulhuUiSubtitle')).toHaveText(
-      'Required. Names must be unique among task prompt collections.'
-    )
-    await expect(nameInput).toHaveAttribute(
-      'aria-describedby',
-      'create-prompt-collection-name-input-help'
-    )
-    const nameFieldBox = await nameField.boundingBox()
-    const nameInputBox = await nameInput.boundingBox()
-    expect(nameFieldBox).not.toBeNull()
-    expect(nameInputBox).not.toBeNull()
-    expect(nameInputBox!.y).toBeGreaterThan(nameFieldBox!.y)
-    expect(Math.abs(nameInputBox!.width - nameFieldBox!.width)).toBeLessThanOrEqual(2)
-  })
-
-  test('shows both add collection buttons when the project has no collections', async ({
-    testSetup
-  }) => {
-    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'minimal' }
-    })
-
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
-
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toBeVisible()
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toContainText(
-      'Create Task Collection'
-    )
-    await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-template-button')).toContainText(
-      'Create Template Collection'
-    )
-    await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveText(
-      'Create a collection to get started.'
-    )
-    await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCSS('font-size', '14px')
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER)).toHaveText('Show All')
-    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
-    await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="home-screen"]')).toHaveCount(0)
-
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON).click()
-    await expect(
-      mainWindow.locator('[data-testid="create-prompt-collection-name-input"]')
-    ).toBeVisible()
-  })
 
   test('shows only the selected collection prompt rows in the prompt tree', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1033,89 +645,6 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await deleteDialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
-  test('selects the first remaining collection and retains the screen after deleting the last collection', async ({
-    testSetup
-  }) => {
-    /** Mixed prompt and template collections used to verify project-order deletion fallback. */
-    const filesystem = {
-      ...createWorkspaceWithCollections(DELETE_NAVIGATION_WORKSPACE_PATH, [
-        {
-          folderName: 'DeleteSecond',
-          displayName: 'Delete Second',
-          promptCollectionId: 'delete-second',
-          prompts: [{ id: 'delete-prompt', title: 'Delete', promptText: 'Delete me.' }]
-        },
-        {
-          folderName: 'LastPrompt',
-          displayName: 'Last Prompt',
-          promptCollectionId: 'last-prompt',
-          prompts: [{ id: 'last-prompt-content', title: 'Last', promptText: 'Last prompt.' }]
-        }
-      ]),
-      ...createWorkspaceWithTemplateCollections(DELETE_NAVIGATION_WORKSPACE_PATH, [
-        {
-          folderName: 'FirstTemplate',
-          displayName: 'First Template',
-          collectionId: 'first-template',
-          templates: [{ id: 'first-template-content', title: 'First', templateText: 'First.' }]
-        }
-      ])
-    }
-    filesystem[`${DELETE_NAVIGATION_WORKSPACE_PATH}/DefaultProject/Prompts/CollectionOrder.json`] = JSON.stringify(
-      {
-        entries: ['delete-second', 'last-prompt'].map((id) => ({
-          kind: 'collection',
-          id
-        }))
-      },
-      null,
-      2
-    )
-    await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(DELETE_NAVIGATION_WORKSPACE_PATH)])
-    /** Mixed workspace window and helpers used for consecutive deletions of both kinds. */
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-    /** Result of selecting the custom workspace through the normal UI flow. */
-    const workspaceSetupResult = await testHelpers.setupWorkspaceViaUI()
-
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
-
-    await testHelpers.navigateToPromptCollections('Delete Second')
-    /** Confirmation dialog shared by each consecutive deletion. */
-    const deleteDialog = mainWindow.locator('[role="dialog"][aria-label="Delete Collection"]')
-    /** Deletes the selected non-empty collection through its confirmation dialog. */
-    const deleteSelectedCollection = async (): Promise<void> => {
-      await mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON).click()
-      await mainWindow.locator(DELETE_SELECTED_PROMPT_COLLECTION_MENU_ITEM).click()
-      await expect(deleteDialog.getByRole('checkbox')).not.toBeChecked()
-      await expect(deleteDialog.getByRole('button', { name: 'Delete collection' })).toBeDisabled()
-      await deleteDialog.getByRole('checkbox').check()
-      await deleteDialog.getByRole('button', { name: 'Delete collection' }).click()
-    }
-
-    // Deletion returns to the first remaining collection of either kind in project order.
-    await deleteSelectedCollection()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('First Template')
-    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('First Template')
-    await deleteSelectedCollection()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Last Prompt')
-    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Last Prompt')
-    await deleteSelectedCollection()
-
-    await expect(mainWindow.locator('[data-testid="nav-button-project"]')).toHaveAttribute(
-      'data-active',
-      'true'
-    )
-    await expect(mainWindow.locator('[data-testid="prompt-collection-screen"]')).toHaveCount(0)
-    await expect(mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON)).toContainText(
-      'Create Task Collection'
-    )
-    await expect(mainWindow.getByTestId('sidebar-prompt-collection-add-template-button')).toContainText(
-      'Create Template Collection'
-    )
-  })
 
   test('root title rename button does not hide prompts', async ({ testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1133,17 +662,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(mainWindow.locator(DEVELOPMENT_PROMPT_ROW)).toBeVisible()
   })
 
-  test('disables selected collection actions when no prompt collection exists', async ({ testSetup }) => {
-    const { mainWindow, workspaceSetupResult } = await testSetup.setupAndStart({
-      workspace: { scenario: 'minimal' }
-    })
 
-    expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await mainWindow.getByTestId('nav-button-project').click()
-
-    await expect(mainWindow.locator(SELECTED_PROMPT_COLLECTION_ACTIONS_BUTTON)).toBeDisabled()
-    await expect(mainWindow.locator(TOGGLE_ALL_CATEGORIES_BUTTON)).toBeDisabled()
-  })
 
   test('creates and navigates to a new collection', async ({ electronApp, testSetup }) => {
     const { mainWindow, testHelpers, workspaceSetupResult } = await testSetup.setupAndStart({
@@ -1151,9 +670,8 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await mainWindow.getByTestId('nav-button-project').click()
 
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_ADD_BUTTON).click()
+    await openCollectionCreation(mainWindow)
 
     const collectionNameInput = mainWindow.locator('[data-testid="create-prompt-collection-name-input"]')
     const errorMessage = mainWindow.locator('[data-testid="create-prompt-collection-name-error"]')
@@ -1197,7 +715,8 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     })
 
     await createButton.click()
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await clickPromptCollectionItem(mainWindow, 'Test Collection')
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Test Collection'
     )
     expect(
@@ -1214,7 +733,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     await testHelpers.navigateToPromptCollections('Test Collection')
 
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Test Collection'
     )
     await expect(mainWindow.locator(PROMPT_COLLECTION_HOST)).toBeVisible()
@@ -1273,9 +792,8 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))!
     ).entries
 
-    await mainWindow.locator('[data-testid="nav-button-project"]').click()
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
+    await showCollectionBrowser(mainWindow)
+    await openCollectionCreation(mainWindow, 'template')
     const createTemplateCollectionDialog = mainWindow.locator(
       '[role="dialog"][aria-label="Create Template Collection"]'
     )
@@ -1283,8 +801,9 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(createTemplateCollectionDialog.getByLabel('Collection Name')).toBeVisible()
     await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
     await mainWindow.locator('[data-testid="create-prompt-collection-button"]').click()
+    await mainWindow.locator('[data-testid^="new-tab-collection-"]').filter({ has: mainWindow.getByText('Examples', { exact: true }) }).click()
 
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText('Examples')
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Examples')
     await expect(mainWindow.locator('[data-testid="prompt-collection-title"]')).toHaveText(
       'Examples'
     )
@@ -1332,8 +851,8 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     expect(
       await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/Completed`)
     ).toBe(false)
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    await mainWindow.getByTestId('sidebar-prompt-collection-dropdown-add-template-item').click()
+    await showCollectionBrowser(mainWindow)
+    await openCollectionCreation(mainWindow, 'template')
     await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-collection-name-error"]')
@@ -1412,22 +931,11 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(rootHeader.locator('[data-testid="prompt-collection-manage-categories-button"]')).toHaveCSS('border-top-width', '0px')
     await expect(rootHeader.locator('[data-testid="prompt-collection-delete-button"]')).toHaveCSS('border-top-width', '0px')
 
-    await mainWindow.locator(SIDEBAR_PROMPT_COLLECTION_SELECTOR_TRIGGER).click()
-    /** Actual sidebar selection provides the reference colors for the header selector. */
-    const selectedCollection = mainWindow.locator(`${SIDEBAR_PROMPT_COLLECTION_DROPDOWN_ITEM}[data-selected="true"]`)
-    await expect(selectedCollection).toBeVisible()
-    /** Capture settled sidebar colors before moving focus to the header. */
-    const selectedColors = await selectedCollection.evaluate((element) => {
-      /** Computed selection colors resolve the current application palette. */
-      const style = getComputedStyle(element)
-      return { background: style.backgroundColor, border: style.borderTopColor, text: style.color }
-    })
-    await mainWindow.keyboard.press('Escape')
-    /** Active filter must share the sidebar's selected-entry colors. */
+    /** Selected status uses the shared accent palette without relying on the removed collection selector. */
     const activeFilter = rootHeader.locator('[data-testid="prompt-collection-active-filter"]')
-    await expect(activeFilter).toHaveCSS('background-color', selectedColors.background)
-    await expect(activeFilter).toHaveCSS('border-top-color', selectedColors.border)
-    await expect(activeFilter).toHaveCSS('color', selectedColors.text)
+    await expect(activeFilter).toHaveCSS('background-color', await resolvePaletteColor(activeFilter, '--ui-accent-action-fill'))
+    await expect(activeFilter).toHaveCSS('border-top-color', await resolvePaletteColor(activeFilter, '--ui-accent-muted-border'))
+    await expect(activeFilter).toHaveCSS('color', await resolvePaletteColor(activeFilter, '--ui-normal-text'))
     await rootHeader.locator('[data-testid="prompt-collection-title-edit"]').click()
 
     const renameDialog = mainWindow.getByRole('dialog', { name: 'Rename Collection' })
@@ -1473,7 +981,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await renameButton.click()
     await expect(renameDialog).toHaveCount(0)
     await expect(rootTitle).toHaveText('Devel opment')
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Devel opment'
     )
     await expect
@@ -1500,7 +1008,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(mainWindow.locator('[data-testid="prompt-collection-header-collection"]')).toContainText(
       'Renamed Development'
     )
-    await expect(mainWindow.locator(selectedQuickCollectionSelector)).toContainText(
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText(
       'Renamed Development'
     )
     await expect(rootHeader).toContainText('Renamed Development')

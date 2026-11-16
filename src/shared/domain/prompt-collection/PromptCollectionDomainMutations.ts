@@ -280,7 +280,7 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
   const workspace = state.get('workspace', command.workspaceId)
   /** collection whose complete graph will be removed. */
   const promptCollection = state.get('promptCollection', command.promptCollectionId)
-  /** Project owns the collection order and favorites. */
+  /** Project owns the collection order. */
   const project = workspace && findCollectionProject(workspace, command.promptCollectionId)
   /** Required workspace and collection targets returned for ownership conflicts. */
   const targets: DomainTarget[] = [
@@ -317,7 +317,6 @@ export const planDeletePromptCollectionDomainMutation: DomainPlanner<DeletePromp
         // Remove only the deleted collection's project-owned preferences.
         const owner = draft.projects.find((candidate) => candidate.id === project.id)!
         owner.collectionEntries = removeEntry(owner.collectionEntries, 'collection', command.promptCollectionId)
-        owner.favoriteCollectionIds = owner.favoriteCollectionIds.filter((id) => id !== command.promptCollectionId)
       }
     },
     ...getCollectionNoteIds(state, promptCollection).flatMap((id): DomainChange[] => [

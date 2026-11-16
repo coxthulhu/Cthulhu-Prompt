@@ -97,6 +97,8 @@ describe('Workspace switching', () => {
       await testHelpers.navigateToHomeScreen()
       await testSetup.setupFileDialog([getWorkspaceInfoPath(label === 'A' ? pathA : pathB)])
       await mainWindow.locator('[data-testid="open-workspace-button"]').click()
+      await expect(mainWindow.getByTestId('new-tab-button')).toBeEnabled()
+      await testHelpers.navigateToHomeScreen()
       await expect(mainWindow.locator('[data-testid="open-workspace-button"]')).toBeEnabled()
       await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(
         label === 'A' ? pathA : pathB

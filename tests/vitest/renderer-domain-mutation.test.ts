@@ -223,7 +223,7 @@ describe('renderer domain mutation framework', () => {
     workspaceCollection.utils.upsertAuthoritative({ id: 'note-workspace', revision: 1, data: {
       id: 'note-workspace', workspacePath: 'C:\\Workspace', workspaceName: 'Workspace',
       projects: [{ id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
-        favoriteCollectionIds: [], collectionEntries: [{ kind: 'collection', id: PROMPT_COLLECTION_ID }] }]
+        collectionEntries: [{ kind: 'collection', id: PROMPT_COLLECTION_ID }] }]
     } })
     let rejectSave!: (error: Error) => void
     const invoke = vi.fn(() => new Promise((_resolve, reject) => { rejectSave = reject }))

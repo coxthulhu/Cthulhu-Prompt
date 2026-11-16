@@ -74,7 +74,10 @@ describe('Shared button behavior', () => {
     await expect(buttons).toHaveCount(7)
     for (const button of await buttons.all()) {
       await expect(button).toBeDisabled()
-      await expect(button).toHaveCSS('opacity', '0.5')
+      // Compound selectors apply the disabled appearance to their shared outer control.
+      await expect.poll(() => button.evaluate((element) =>
+        getComputedStyle(element.closest('.cthulhuUiButtonBase')!).opacity
+      )).toBe('0.5')
     }
     await buttons.evaluateAll((elements) => elements.forEach((element) => (element as HTMLButtonElement).click()))
     await expect(mainWindow.getByTestId('test-screen-button-activations')).toHaveText('0')
