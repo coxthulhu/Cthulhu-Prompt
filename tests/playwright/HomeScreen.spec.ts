@@ -26,6 +26,9 @@ describe('Home Screen', () => {
     await expect(mainWindow.getByTestId('home-primary-card')).toContainText(
       'Open a workspace or create one to get started.'
     )
+    // New tabs need a workspace, so Home does not prompt for one yet and Open stays the accent action.
+    await expect(mainWindow.getByTestId('home-new-tab-card')).toHaveCount(0)
+    await expect(mainWindow.getByTestId('open-workspace-button')).toHaveAttribute('data-variant', 'accent')
     await expect(mainWindow.locator('.sidebarPromptTreeStatus')).toHaveCount(0)
 
     expect(await testHelpers.isWorkspaceGetStarted()).toBe(true)
@@ -91,6 +94,39 @@ describe('Home Screen', () => {
       expect(Math.abs(openBox!.y - closeBox!.y)).toBeLessThanOrEqual(1)
       expect(closeBox!.y + closeBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height)
     }
+  })
+
+  test('prompts for a New Tab only while the open workspace has no tabs', async ({ testSetup }) => {
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'minimal' }
+    })
+    /** Home callout that points an open workspace without tabs to the tab bar. */
+    const newTabCard = mainWindow.getByTestId('home-new-tab-card')
+    /** Work tabs in the title bar. */
+    const workTabs = mainWindow.getByTestId('work-tab')
+
+    // The workspace restores with its initial tab, so Home has no callout.
+    await expect(workTabs).toHaveCount(1)
+    await testHelpers.navigateToHomeScreen()
+    await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
+    await expect(newTabCard).toHaveCount(0)
+
+    // Closing the last tab shows the callout, whose New Tab button is the only accent action.
+    // Keyboard closing avoids the mouse close's held strip width, which polls the real OS cursor.
+    await mainWindow.getByTestId('work-tab-close').press('Enter')
+    await expect(workTabs).toHaveCount(0)
+    await expect(newTabCard).toBeVisible()
+    await expect(
+      mainWindow.getByTestId('home-screen').locator('button[data-variant="accent"]')
+    ).toHaveText('New Tab')
+
+    // The callout's button opens and selects a New Tab, like the title bar's New Tab button.
+    await mainWindow.getByTestId('home-new-tab-button').click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect(workTabs).toHaveCount(1)
+    await expect(workTabs).toHaveAttribute('data-selected', 'true')
+    await testHelpers.navigateToHomeScreen()
+    await expect(newTabCard).toHaveCount(0)
   })
 
   describe('Workspace Management', () => {

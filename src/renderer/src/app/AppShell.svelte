@@ -787,6 +787,8 @@
               {isWorkspaceLoading}
               promptCount={workspacePromptCount}
               promptCollectionCount={workspacePromptCollectionCount}
+              hasWorkTabs={workTabs.length > 0}
+              onAddWorkTab={addWorkTab}
               onWorkspaceSelect={selectWorkspace}
               onWorkspaceCreate={createWorkspace}
               onWorkspaceClear={() => void closeWorkspace()}

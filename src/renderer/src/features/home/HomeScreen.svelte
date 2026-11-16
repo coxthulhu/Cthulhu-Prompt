@@ -6,6 +6,8 @@
     FolderOpen,
     FolderPlus,
     Folders,
+    LayoutGrid,
+    Plus,
     X
   } from 'lucide-svelte'
   import ErrorDialog from '@renderer/common/cthulhu-ui/dialogs/ErrorDialog.svelte'
@@ -14,6 +16,7 @@
   import CountDisplay from '@renderer/common/cthulhu-ui/layout/CountDisplay.svelte'
   import CthulhuPromptWordmark from '@renderer/common/cthulhu-ui/layout/CthulhuPromptWordmark.svelte'
   import LinkButton from '@renderer/common/cthulhu-ui/buttons/LinkButton.svelte'
+  import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
   import type {
@@ -35,6 +38,8 @@
     isWorkspaceLoading,
     promptCount,
     promptCollectionCount,
+    hasWorkTabs,
+    onAddWorkTab,
     onWorkspaceSelect,
     onWorkspaceCreate,
     onWorkspaceClear,
@@ -51,6 +56,10 @@
     isWorkspaceLoading: boolean
     promptCount: number
     promptCollectionCount: number
+    /** Whether any work tab is open, which hides the New Tab callout. */
+    hasWorkTabs: boolean
+    /** Appends and selects a New Tab, like the title bar's New Tab button. */
+    onAddWorkTab: () => void
     onWorkspaceSelect: (workspaceInfoPath: string) => Promise<WorkspaceSelectionResult>
     onWorkspaceCreate: (
       path: string,
@@ -159,59 +168,86 @@
       </div>
     </header>
 
-    <CardSurface
-      class="overflow-hidden"
-      role="region"
-      aria-label="Workspace"
-      data-testid="home-primary-card"
-    >
-      <WorkspaceSummary {workspacePath} pathTestId="workspace-ready-path"
-        openFolderTestId="home-open-workspace-folder-button" />
-      <Separator />
-      <div class="flex flex-wrap items-center justify-between gap-5 p-4">
-        <div class="flex flex-wrap items-center gap-[22px]">
-          <CountDisplay
-            icon={FileText}
-            count={promptCount}
-            label="Prompts"
-            data-testid="home-prompt-count-stat"
-          />
-          <CountDisplay
-            icon={Folders}
-            count={promptCollectionCount}
-            label="Prompt Collections"
-            data-testid="home-prompt-collection-count-stat"
-          />
+    <!-- The cards stack closer to each other than to the header. -->
+    <div class="flex flex-col gap-3">
+      <CardSurface
+        class="overflow-hidden"
+        role="region"
+        aria-label="Workspace"
+        data-testid="home-primary-card"
+      >
+        <WorkspaceSummary {workspacePath} pathTestId="workspace-ready-path"
+          openFolderTestId="home-open-workspace-folder-button" />
+        <Separator />
+        <div class="flex flex-wrap items-center justify-between gap-5 p-4">
+          <div class="flex flex-wrap items-center gap-[22px]">
+            <CountDisplay
+              icon={FileText}
+              count={promptCount}
+              label="Prompts"
+              data-testid="home-prompt-count-stat"
+            />
+            <CountDisplay
+              icon={Folders}
+              count={promptCollectionCount}
+              label="Prompt Collections"
+              data-testid="home-prompt-collection-count-stat"
+            />
+          </div>
+          <div class="ml-auto flex items-center gap-2">
+            <Button
+              testId="open-workspace-button"
+              icon={FolderOpen}
+              text="Open"
+              variant={workspacePath ? 'neutral' : 'accent'}
+              appearance={workspacePath ? 'outline' : 'filled'}
+              onclick={handleSelectFolder}
+              disabled={isWorkspaceActionDisabled}
+            />
+            <Button
+              testId="create-workspace-button"
+              icon={FolderPlus}
+              text="Create"
+              variant={workspacePath ? 'neutral' : 'accent'}
+              appearance={workspacePath ? 'outline' : 'filled'}
+              onclick={handleCreateFolder}
+              disabled={isWorkspaceActionDisabled}
+            />
+            <Button
+              testId="close-workspace-button"
+              icon={X}
+              text="Close"
+              appearance="outline"
+              onclick={onWorkspaceClear}
+              disabled={!isWorkspaceReady || isWorkspaceActionDisabled}
+            />
+          </div>
         </div>
-        <div class="ml-auto flex items-center gap-2">
-          <Button
-            testId="open-workspace-button"
-            icon={FolderOpen}
-            text="Open"
-            variant="accent"
-            onclick={handleSelectFolder}
-            disabled={isWorkspaceActionDisabled}
-          />
-          <Button
-            testId="create-workspace-button"
-            icon={FolderPlus}
-            text="Create"
-            variant={workspacePath ? 'neutral' : 'accent'}
-            appearance={workspacePath ? 'outline' : 'filled'}
-            onclick={handleCreateFolder}
-            disabled={isWorkspaceActionDisabled}
-          />
-          <Button
-            testId="close-workspace-button"
-            icon={X}
-            text="Close"
-            appearance="outline"
-            onclick={onWorkspaceClear}
-            disabled={!isWorkspaceReady || isWorkspaceActionDisabled}
-          />
-        </div>
-      </div>
-    </CardSurface>
+      </CardSurface>
+
+      <!-- Points an open workspace without tabs to the tab bar, where its collections open. -->
+      {#if isWorkspaceReady && !hasWorkTabs}
+        <CardSurface role="region" aria-label="Get started" data-testid="home-new-tab-card">
+          <Row
+            icon={LayoutGrid}
+            label="Open a new tab to get started"
+            detail="Your prompt collections open in tabs at the top of the window."
+            wrapDetail
+            class="p-4"
+          >
+            {#snippet trailing()}
+              <Button
+                testId="home-new-tab-button"
+                icon={Plus}
+                text="New Tab"
+                variant="accent"
+                onclick={onAddWorkTab}
+              />
+            {/snippet}
+          </Row>
+        </CardSurface>
+      {/if}
+    </div>
   </section>
 
   {#if showWelcomeDialog}
