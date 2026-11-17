@@ -15,9 +15,15 @@
 }
 
 .appSidebar {
+  --sidebar-left-inset: 2px;
   border-top: 1px solid var(--ui-neutral-hover-border);
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Inset the content while the header separator and accordion borders span the sidebar. */
+.appSidebar :is(.sidebarHeader, .cthulhuSidebarPromptSectionHeader, .sidebarPromptTree) {
+  margin-left: var(--sidebar-left-inset);
 }
 
 /* Keep shared top-level sidebar sections aligned with compact selector spacing. */

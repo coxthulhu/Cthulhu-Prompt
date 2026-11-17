@@ -177,7 +177,7 @@
     gap: 7px;
     grid-template-columns: 24px 18px minmax(0, 1fr) auto;
     height: 36px;
-    padding: 0 12px 0 6px;
+    padding: 0 12px 0 calc(6px + var(--sidebar-left-inset, 0px));
     text-align: left;
     width: 100%;
   }

@@ -99,12 +99,20 @@ describe('Work Tab Collections', () => {
     // collection screen's header bar beside it.
     await expect(mainWindow.getByTestId('sidebar-title'))
       .toHaveCSS('color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-normal-text'))
-    /** Top of the sidebar header's separator line. */
-    const separatorTop = (await mainWindow.getByTestId('sidebar-header-separator').boundingBox())!.y
+    const sidebarBox = (await sidebar.boundingBox())!
+    const separatorBox = (await mainWindow.getByTestId('sidebar-header-separator').boundingBox())!
+    const activeHeaderBox = (await mainWindow.getByTestId('sidebar-prompt-status-accordion-header-active').boundingBox())!
+    const indicatorBox = (await sidebar.getByTestId('prompt-tree-status-indicator').first().boundingBox())!
+    expect(indicatorBox.width).toBe(2)
+    expect(indicatorBox.x - sidebarBox.x).toBe(2)
+    for (const divider of [separatorBox, activeHeaderBox]) {
+      expect(divider.x).toBe(sidebarBox.x)
+      expect(divider.width).toBe(sidebarBox.width)
+    }
     /** Header bar holding the breadcrumb path, whose last pixel row is its bottom border. */
     const headerBarBox = (await mainWindow.locator('.prompt-collection-header-bar').boundingBox())!
     // Under 1px, so a separator one pixel row off fails while fractional rounding passes.
-    expect(Math.abs(separatorTop - (headerBarBox.y + headerBarBox.height - 1))).toBeLessThan(1)
+    expect(Math.abs(separatorBox.y - (headerBarBox.y + headerBarBox.height - 1))).toBeLessThan(1)
 
     // Show All returns the tab to its New Tab screen, which hides the sidebar, and a tile opens the collection again.
     await showAllButton.click()
