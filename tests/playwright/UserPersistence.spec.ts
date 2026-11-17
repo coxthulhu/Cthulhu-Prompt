@@ -322,7 +322,7 @@ describe('User Persistence', () => {
         const state = await readMainWindowState(electronApp)
         return `${state.width}:${state.height}`
       })
-      .toBe('1366:768')
+      .toBe('1440:900')
   })
 
   test('prefers fullscreen when fullscreen and maximized are both persisted', async ({

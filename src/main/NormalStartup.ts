@@ -39,8 +39,8 @@ import { isUpdateRestarting, isUpdateInstalling, setupAppUpdater } from './updat
 import type { UpdateSource } from './updates/UpdateSource'
 import { isWorkspaceInfoPath } from './Persistence/PromptPersistencePaths'
 
-const WINDOW_DEFAULT_WIDTH = 1366
-const WINDOW_DEFAULT_HEIGHT = 768
+const WINDOW_DEFAULT_WIDTH = 1440
+const WINDOW_DEFAULT_HEIGHT = 900
 const WINDOW_MIN_WIDTH = 950
 const WINDOW_MIN_HEIGHT = 600
 
