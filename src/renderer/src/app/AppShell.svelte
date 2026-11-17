@@ -501,7 +501,6 @@
 
           if (result.success) {
             await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
-            if (workTabs[0]) selectWorkTab(workTabs[0].id)
             return { success: true }
           }
 

@@ -208,7 +208,7 @@ test.describe('Sidebar Tests', () => {
     })
 
     expect(workspaceSetupResult!.workspaceReady).toBe(true)
-    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
 
     await testHelpers.navigateToSettingsScreen()
     expect(await testHelpers.getActiveScreen()).toBe('settings')

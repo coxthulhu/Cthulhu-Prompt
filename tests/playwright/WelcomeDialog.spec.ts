@@ -112,9 +112,10 @@ describe('Welcome Dialog', () => {
     await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Welcome Workspace')
     await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
     await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-    // Workspace creation opens its initial New Tab; Home owns the path display.
-    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
-    await expect(mainWindow.getByTestId('new-tab-screen')).toContainText('My Prompts')
+    // Creation from Welcome opens both collections and selects My Prompts.
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab').nth(0)).toHaveAttribute('aria-selected', 'true')
+    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
     await mainWindow.getByTestId('nav-button-home').click()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)

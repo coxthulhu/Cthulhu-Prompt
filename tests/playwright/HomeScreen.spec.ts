@@ -1,4 +1,4 @@
-import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
+import { readTabSession, readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   createWorkspaceWithCollections,
@@ -517,21 +517,42 @@ Keep this partial body.`
       const setupResult = await testHelpers.createWorkspaceViaUI()
       expect(setupResult.setupDialogAppeared).toBe(true)
       expect(setupResult.workspaceReady).toBe(true)
-      await testHelpers.navigateToPromptCollections('My Prompts')
+      /** Default collection tabs must appear without manually navigating to either collection. */
+      const tabs = mainWindow.getByTestId('work-tab').getByRole('tab')
+      await expect(tabs).toHaveText(['My Prompts', 'My Templates'])
+      await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true')
       await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await expect(mainWindow.getByTestId('prompt-collection-header-section')).toHaveText('Active')
+
+      // The newly created session survives a reload with the same selected collection.
+      await mainWindow.reload()
+      await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+      await expect(tabs).toHaveText(['My Prompts', 'My Templates'])
+      await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true')
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
       await testHelpers.navigateToHomeScreen()
       /** Created workspace root shown by the ready-state home screen. */
       const workspacePath = await testHelpers.getDisplayedWorkspacePath()
       expect(workspacePath).not.toBeNull()
-      expect(
-        JSON.parse(
-          await readTextFile(
-            electronApp,
-            `${workspacePath}\\TestWorkspace.cthulhuprompt`
-          )
-        ).schemaVersion
-      ).toBe(8)
+      /** Persisted identity lets the test wait for later user changes before reopening. */
+      const workspaceInfo = JSON.parse(await readTextFile(electronApp, `${workspacePath}\\TestWorkspace.cthulhuprompt`))
+      expect(workspaceInfo.schemaVersion).toBe(8)
+
+      // Later selection and tab closure must replace the initial defaults permanently.
+      await tabs.nth(1).click()
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Templates')
+      await mainWindow.getByTestId('work-tab-close').nth(0).press('Enter')
+      await expect(tabs).toHaveText(['My Templates'])
+      await expect.poll(async () => {
+        /** Observe the saved single-tab session before reloading the renderer. */
+        const saved = (await readTabSession(electronApp, workspaceInfo.workspaceId)).user
+        return [saved?.tabs.length, saved?.selectedTabId === saved?.tabs[0]?.id]
+      }).toEqual([1, true])
+      await mainWindow.reload()
+      await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
+      await expect(tabs).toHaveText(['My Templates'])
+      await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true')
+      await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Templates')
     })
 
     test('keeps create workspace dialog open after outside click', async ({ testSetup }) => {
@@ -700,8 +721,8 @@ Keep this partial body.`
         mainWindow.locator('[data-testid="create-workspace-submit-button"]')
       ).toBeEnabled()
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.getByTestId('new-tab-screen').waitFor()
-      await testHelpers.navigateToPromptCollections('My Prompts')
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab').nth(0)).toHaveAttribute('aria-selected', 'true')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
         timeout: 5000
@@ -829,8 +850,8 @@ Keep this partial body.`
       await expect(includeExamplesToggle).toHaveAttribute('aria-pressed', 'false')
 
       await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-      await mainWindow.getByTestId('new-tab-screen').waitFor()
-      await testHelpers.navigateToPromptCollections('My Prompts')
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+      await expect(mainWindow.getByTestId('work-tab').getByRole('tab').nth(0)).toHaveAttribute('aria-selected', 'true')
       await mainWindow.waitForSelector('[data-testid="prompt-collection-screen"]', {
         state: 'visible',
         timeout: 5000

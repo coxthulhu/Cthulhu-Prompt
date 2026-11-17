@@ -35,6 +35,9 @@ import {
   resolvePromptDirectoryPath
 } from '../Persistence/PromptPersistencePaths'
 import { LATEST_WORKSPACE_SCHEMA_VERSION } from '../Persistence/workspace/WorkspaceMigrations'
+import { createCollectionViewState, createWorkspaceTab } from '@shared/domain/ui-state/TabSession'
+import { createDefaultWorkspaceUiState } from '@shared/domain/ui-state/UiState'
+import { writeTabSession } from '../Persistence/sqlite/TabSessionPersistence'
 
 const EXAMPLE_COLLECTION_NAME = 'MyPrompts'
 const EXAMPLE_COLLECTION_DISPLAY_NAME = 'My Prompts'
@@ -74,19 +77,23 @@ const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string):
   return `${workspaceRootPath}\\${preparedWorkspaceName.folderName}${WORKSPACE_INFO_FILENAME_SUFFIX}`
 }
 
-const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): void => {
+/** Writes workspace metadata and returns the identity used by its initial tab session. */
+const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): string => {
   const fs = getFs()
   const workspaceInfoPath = resolveWorkspaceInfoPath(workspacePath, workspaceName)
+  /** Shared identity for workspace files and SQLite navigation state. */
+  const workspaceId = compactGuid(randomUUID())
   const content = JSON.stringify(
     {
       schemaVersion: LATEST_WORKSPACE_SCHEMA_VERSION,
-      workspaceId: compactGuid(randomUUID()),
+      workspaceId,
       workspaceName
     },
     null,
     2
   )
   fs.writeFileSync(workspaceInfoPath, content, 'utf8')
+  return workspaceId
 }
 
 const writeMyProjectCollection = (
@@ -375,22 +382,35 @@ export const createWorkspace = async (
     const templatesPath = path.join(projectPath, TEMPLATES_DIRECTORY_NAME)
     fs.mkdirSync(promptsPath, { recursive: true })
     fs.mkdirSync(templatesPath, { recursive: true })
-    writeWorkspaceInfoFile(workspacePath, workspaceName)
+    /** Newly created workspace owns its initial tabs independently of other workspaces. */
+    const workspaceId = writeWorkspaceInfoFile(workspacePath, workspaceName)
     fs.writeFileSync(path.join(projectPath, 'ProjectInfo.json'), JSON.stringify({
       id: compactGuid(randomUUID()), name: 'Default Project', abbreviation: 'DE'
     }, null, 2), 'utf8')
 
     /** Initial templates supply references for the bundled prompts. */
-    const { templateIdByKey } = writeMyTemplatesCollection(
+    const { collectionId: templateCollectionId, templateIdByKey } = writeMyTemplatesCollection(
       projectPath,
       includeExamplePrompts
     )
-    // SQLite collection orders are initialized when the new workspace is loaded.
-    writeMyProjectCollection(
+    /** Initial prompt collection opens before the template collection in the tab strip. */
+    const promptCollectionId = writeMyProjectCollection(
       projectPath,
       includeExamplePrompts,
       templateIdByKey
     )
+
+    /** Seed only newly created workspaces; later opens restore the user's saved session. */
+    const tabs = [promptCollectionId, templateCollectionId].map((collectionId) => ({
+      ...createWorkspaceTab(compactGuid(randomUUID())),
+      collectionId,
+      view: { ...createCollectionViewState(), contentOwnerId: collectionId }
+    }))
+    writeTabSession({
+      ...createDefaultWorkspaceUiState(workspaceId),
+      tabs,
+      selectedTabId: tabs[0].id
+    })
 
     return { success: true }
   } catch (error) {

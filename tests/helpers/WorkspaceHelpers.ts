@@ -30,6 +30,7 @@ export async function setupWorkspaceViaUI(page: Page): Promise<{
   }
 }
 
+/** Creates a workspace and waits for its automatically selected My Prompts collection. */
 export async function createWorkspaceViaUI(page: Page): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
@@ -37,7 +38,7 @@ export async function createWorkspaceViaUI(page: Page): Promise<{
   await page.click('[data-testid="create-workspace-button"]')
 
   const createDialog = page.locator('[role="dialog"][aria-label="Create Workspace"]')
-  const promptCollectionScreen = page.getByTestId('new-tab-screen')
+  const promptCollectionScreen = page.getByTestId('prompt-collection-screen')
   const WORKSPACE_SETUP_TIMEOUT_MS = 10000
 
   await createDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
