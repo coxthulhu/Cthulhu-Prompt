@@ -51,13 +51,10 @@
       number={1}
       icon={Home}
       title="Create a workspace"
-      description="Choose a folder on your computer. Your tasks and templates live here as simple Markdown files, ready to commit to source control."
+      description="Choose a folder on your computer. Your tasks and templates live here as simple Markdown files, ready to commit to source control. Use the tabs at the top to switch between open collections."
     >
       {#snippet tip()}
-        <span class="welcomeScreenIcons" aria-hidden="true">
-          <Home size={14} /><FileText size={14} /><Layers size={14} />
-        </span>
-        <span>Use the left-hand icon bar to switch screens.</span>
+        To open another prompt collection, click + (New Tab) and choose it from the list.
       {/snippet}
     </NumberedStepRow>
     <NumberedStepRow
@@ -65,7 +62,7 @@
       icon={Layers}
       title="Build a prompt template"
       badge="Optional"
-      description="Use Prompt Templates to write a reusable workflow: investigate a bug, implement a feature with Q&amp;A, or create mockups. Your task's text is added when you copy."
+      description="Select the My Templates tab to write a reusable workflow. You can investigate a bug, implement a feature with Q&amp;A, or create mockups. Your task's text is added when you copy."
     >
       {#snippet tip()}
         <span class="welcomeWorkflow">Investigate a bug</span>
@@ -77,7 +74,7 @@
       number={3}
       icon={FileText}
       title="Add a prompt task"
-      description="Open Task Prompts and add the change you want your AI to make. Include context, requirements, and details. Name your tasks and group them into custom categories."
+      description="Select the My Prompts tab and add the change you want your AI to make. Include context, requirements, and details. Name your tasks and group them into custom categories."
     >
       {#snippet tip()}
         Backlog<ArrowRight size={14} aria-hidden="true" />
@@ -109,15 +106,6 @@
 </Dialog>
 
 <style>
-  .welcomeScreenIcons {
-    display: flex;
-    gap: 10px;
-    padding: 5px 9px;
-    border: 1px solid var(--ui-neutral-muted-border);
-    border-radius: 5px;
-    color: var(--ui-muted-icon-glyph);
-  }
-
   .welcomeWorkflow {
     padding: 2px 9px;
     border-radius: 4px;

@@ -31,8 +31,14 @@ describe('Welcome Dialog', () => {
     await expect(welcome.locator('[data-testid="dialog-subtitle"]')).toHaveText(
       'Your first prompt, from workspace to clipboard.'
     )
-    await expect(welcome.getByRole('listitem')).toHaveCount(4)
-    await expect(welcome.getByRole('listitem').nth(1)).toContainText('Optional')
+    /** Walkthrough steps point first-time users to the controls and tabs they will see. */
+    const steps = welcome.getByRole('listitem')
+    await expect(steps).toHaveCount(4)
+    await expect(steps.nth(0)).toContainText('tabs at the top to switch between open collections')
+    await expect(steps.nth(0)).toContainText('open another prompt collection, click + (New Tab)')
+    await expect(steps.nth(1)).toContainText('Optional')
+    await expect(steps.nth(1)).toContainText('My Templates tab')
+    await expect(steps.nth(2)).toContainText('My Prompts tab')
     await expect.poll(async () => (await readUserPersistence(electronApp)).hasShownWelcome).toBe(1)
     await expect(welcome).toBeVisible()
     await welcome.getByRole('button', { name: 'Close', exact: true }).click()
