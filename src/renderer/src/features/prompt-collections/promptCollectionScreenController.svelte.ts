@@ -159,11 +159,13 @@ export const createPromptCollectionScreenController = ({
   /** Live project membership scopes collection names and screen actions to the current project. */
   const workspaceQuery = useLiveQuery(workspaceCollection)
   /** The collection identity determines ownership even after a project rename. */
-  const projectCollectionIds = $derived.by(() => {
+  const collectionProject = $derived.by(() => {
     /** Current workspace owns all loaded project records. */
     const workspace = workspaceQuery.data.find((candidate) => candidate.id === workspaceId)
-    return workspace ? findCollectionProject(workspace, screenCollectionId)?.collectionEntries.map((entry) => entry.id) ?? [] : []
+    return workspace && findCollectionProject(workspace, screenCollectionId)
   })
+  /** Limits collection actions to siblings in the owning project. */
+  const projectCollectionIds = $derived(collectionProject?.collectionEntries.map((entry) => entry.id) ?? [])
 
   const promptCollectionQuery = useLiveQuery(promptCollectionsCollection) as {
     data: PromptCollection[]
@@ -1376,6 +1378,9 @@ export const createPromptCollectionScreenController = ({
     },
     get collectionDisplayName(): string {
       return collectionDisplayName
+    },
+    get projectName(): string | undefined {
+      return collectionProject?.name
     },
     get screenCollection(): PromptCollection | null {
       return screenCollection

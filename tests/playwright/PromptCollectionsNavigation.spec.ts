@@ -345,6 +345,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(headerSection).toHaveCSS('color', ancestorBreadcrumbColor)
     await expect(headerCategory).toHaveCSS('color', currentBreadcrumbColor)
     await expect(mainWindow.locator('.prompt-collection-header-breadcrumb button')).toHaveText([
+      'Default Project',
       'Hierarchy',
       'Active',
       'Primary'
@@ -409,6 +410,9 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'true'
     )
     await expect(mainWindow.locator('.monaco-editor textarea:focus')).toHaveCount(0)
+
+    await mainWindow.getByTestId('prompt-collection-header-project').click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
   })
 
   test('restores prompt content when revisiting collections', async ({ testSetup }) => {

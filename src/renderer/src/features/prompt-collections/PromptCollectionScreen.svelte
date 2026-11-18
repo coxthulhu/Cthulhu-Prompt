@@ -162,6 +162,13 @@
       <PromptCollectionHeaderBar
         isReady={controller.isVirtualContentReady}
         segments={[
+          ...(controller.projectName
+            ? [{
+                label: controller.projectName,
+                testId: 'prompt-collection-header-project',
+                onclick: sidebarModeData.clear
+              }]
+            : []),
           {
             label: controller.collectionDisplayName,
             testId: 'prompt-collection-header-collection',

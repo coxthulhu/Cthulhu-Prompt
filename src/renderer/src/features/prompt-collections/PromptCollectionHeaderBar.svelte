@@ -16,7 +16,7 @@
   let { isReady, segments, findLabel, onFind, pathActions }: {
     /** Hides the path and Find until the screen's content can respond to them. */
     isReady: boolean
-    /** Path segments from the collection down to the most specific location. */
+    /** Path segments from the broadest to the most specific location. */
     segments: PromptCollectionHeaderSegment[]
     /** Find button label and tooltip, including its shortcut. */
     findLabel: string
