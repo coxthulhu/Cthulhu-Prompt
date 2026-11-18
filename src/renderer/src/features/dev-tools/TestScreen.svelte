@@ -4,33 +4,29 @@
   import {
     AlertCircle,
     Archive,
-    Bolt,
+    BookMarked,
     Check,
     CircleCheckBig,
     ClipboardList,
-    Cog,
     Copy,
     Download,
     FileText,
     Folder,
     Folders,
+    IterationCw,
     Layers,
+    ListRestart,
     ListTodo,
     Loader,
     MoreHorizontal,
-    NotebookPen,
     Pencil,
-    PencilLine,
     Pin,
     Plus,
+    Repeat,
     Search,
     Settings,
-    Settings2,
-    SlidersHorizontal,
     Sparkles,
-    SquarePen,
     Trash2,
-    Wrench,
     X
   } from 'lucide-svelte'
   import Accordion from '@renderer/features/sidebar/accordion/Accordion.svelte'
@@ -112,61 +108,31 @@
   /** Include every supported size so the gallery also covers rectangular title actions. */
   const IconButtonSizes: IconButtonSize[] = ['default', 'large', 'compact', 'compact-large-icon', 'tiny', 'sidebar-rail']
   const categoryIconSizes = [14, 18, 24, 32] as const
-  /** Lucide alternatives for the sidebar title's Manage Projects button, compared at several sizes. */
+  /** Lucide alternatives for a repeatable-prompt collection kind, compared at several sizes. */
   const iconCandidates: {
     name: string
     description: string
     icon: ComponentType
   }[] = [
     {
-      name: 'Settings',
-      description: 'The current gear; also the System Settings glyph in the title bar.',
-      icon: Settings
+      name: 'Repeat',
+      description: 'A rectangular loop that reads as "run this again"; distinct from the round refresh glyphs.',
+      icon: Repeat
     },
     {
-      name: 'Settings2',
-      description: 'Two toggle sliders; reads as settings without repeating the System Settings gear.',
-      icon: Settings2
+      name: 'ListRestart',
+      description: 'A list with a restart arrow; close to the ListTodo glyph on the Active status folder.',
+      icon: ListRestart
     },
     {
-      name: 'SlidersHorizontal',
-      description: 'Three adjustment sliders; suggests tuning this project rather than the app.',
-      icon: SlidersHorizontal
+      name: 'IterationCw',
+      description: 'A clockwise arrow circling back; abstract and less recognizable at small sizes.',
+      icon: IterationCw
     },
     {
-      name: 'Cog',
-      description: 'A heavier spoked gear that stays distinct from the System Settings glyph.',
-      icon: Cog
-    },
-    {
-      name: 'Bolt',
-      description: 'A hex nut; a lighter mechanical cue for configuring the project.',
-      icon: Bolt
-    },
-    {
-      name: 'Wrench',
-      description: 'A maintenance tool; suggests managing the project setup.',
-      icon: Wrench
-    },
-    {
-      name: 'Pencil',
-      description: 'Matches the category rename pencil; reads as editing this project.',
-      icon: Pencil
-    },
-    {
-      name: 'PencilLine',
-      description: 'A pencil over a line; focuses on renaming the title it follows.',
-      icon: PencilLine
-    },
-    {
-      name: 'SquarePen',
-      description: 'Edit inside a frame; suggests opening an editor for the project.',
-      icon: SquarePen
-    },
-    {
-      name: 'NotebookPen',
-      description: 'An annotated notebook; leans toward the project name and descriptions.',
-      icon: NotebookPen
+      name: 'BookMarked',
+      description: 'A bookmarked book; leans toward saved favorites more than repetition.',
+      icon: BookMarked
     }
   ]
   const collectionDropdownItems: DropdownPopupItem[] = [
@@ -339,7 +305,7 @@
           <div class="component-section-content">
             {@render componentTitle(
               'Icon Candidates',
-              'Lucide icon alternatives compared at several sizes, as an icon button, and as the sidebar title button.'
+              'Lucide icon alternatives for a repeatable-prompt collection kind, compared at several sizes, as an icon button, and on a New Tab collection tile.'
             )}
 
             <div class="category-icon-grid">
@@ -363,16 +329,15 @@
                   </div>
                   <div class="variant-controls">
                     <IconButton icon={CandidateIcon} label={candidate.name} title={candidate.name} />
-                    <!-- Same configuration as the sidebar title's Manage Projects button. -->
-                    <IconButton
-                      icon={CandidateIcon}
-                      label={candidate.name}
-                      title={candidate.name}
-                      size="tiny"
-                      baseVariant="muted"
-                      hoverVariant="glyph"
-                    />
                   </div>
+                  <!-- Same configuration as a New Tab collection tile. -->
+                  <SelectorButton
+                    variant="tile"
+                    icon={CandidateIcon}
+                    text="Daily Standup"
+                    detailParts={['5 routines', 'Today']}
+                    showChevron={false}
+                  />
                 </div>
               {/each}
             </div>
