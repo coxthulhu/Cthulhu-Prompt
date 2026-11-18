@@ -2,7 +2,7 @@ import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCo
 import { getOrderedMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 import { formatPromptModifiedRelative } from '@renderer/features/prompt-editor/promptModifiedTime'
 
-/** Count and relative modification time shown beneath a collection's name in the Show All dropdown and New Tab tiles. */
+/** Count and relative modification time shown beneath a collection's name in New Tab tiles. */
 export type PromptCollectionDetails = {
   /** Active content count, including Backlog for task collections. */
   count: number

@@ -380,8 +380,8 @@ describe('New Tab Screen', () => {
     /** Cursor ghost naming the dragged collection. */
     const dragGhost = mainWindow.locator(dragGhostSelector)
 
-    // Dragging a tile gives it the Show All dropdown's dragged-row fill and border, idles the other tiles, and shows a
-    // ghost with the tile's icon and name.
+    // Dragging a tile gives it the dragged-row fill and border, idles the other tiles, and shows a ghost with the
+    // tile's icon and name.
     await beginPointerDrag(mainWindow, 'new-tab-collection-bug-triage')
     await expect(bugTriageTile).toHaveAttribute('data-row-state', 'dragging')
     await expect(bugTriageTile).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))

@@ -94,7 +94,7 @@
 <div class="grid grid-cols-3 gap-2" data-pointer-drag-owner>
   {#each collections as { collection, details }, index (collection.id)}
     <div class="relative min-w-0" use:droppable={getDropOptions(collection.id, collections[index - 1]?.id ?? null)}>
-      <!-- The accent selection variant gives a dragged tile the Show All dropdown's dragged-row fill and border. -->
+      <!-- The accent selection variant gives a dragged tile its dragged-row fill and border. -->
       <SelectorButton
         variant="tile"
         icon={getCollectionIcon(collection)}

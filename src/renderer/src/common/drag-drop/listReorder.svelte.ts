@@ -15,7 +15,7 @@ type ListReorderOptions = {
   onReorder: (ids: string[], draggedId: string, previousId: string | null) => void | Promise<unknown>
 }
 
-/** Previews a dragged row's new position live and commits on drop, matching the Show All collection dropdown. */
+/** Previews a dragged row's new position live and commits on drop. */
 export const createListReorder = (options: ListReorderOptions) => {
   /** Row currently being dragged, or null while idle. */
   let draggedId = $state<string | null>(null)
