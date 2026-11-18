@@ -281,9 +281,20 @@ describe('New Tab Screen', () => {
     const nameInput = mainWindow.getByTestId('create-prompt-collection-name-input')
     const createButton = mainWindow.getByTestId('create-prompt-collection-button')
 
-    // The menu offers both kinds under the creation dialogs' names.
+    // The menu offers both kinds under the creation dialogs' names, each with an untruncated description.
     await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
-    await expect(menu.getByRole('menuitem')).toHaveText(['Create Task Collection', 'Create Template Collection'])
+    await expect(menu.locator('.cthulhuUiDropdownPopupMoreOptionsTitle')).toHaveText([
+      'Create Task Collection',
+      'Create Template Collection'
+    ])
+    const menuDetails = menu.locator('.cthulhuUiDropdownPopupMoreOptionsSubtitlePart')
+    await expect(menuDetails).toHaveText([
+      'One-time prompts for individual tasks',
+      'Reusable prompts for repeatable workflows'
+    ])
+    expect(
+      await menuDetails.evaluateAll((details) => details.every((detail) => detail.scrollWidth <= detail.clientWidth))
+    ).toBe(true)
 
     // A task collection may reuse another project's task collection name.
     await mainWindow.getByTestId('new-tab-create-task-collection-item').click()

@@ -5,9 +5,9 @@
   import { FileText, Folder, Layers, Move, Plus, Search, Settings } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import DropdownPopupSimple, {
-    type DropdownPopupItem
-  } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupSimple.svelte'
+  import DropdownPopupMoreOptions, {
+    type DropdownPopupMoreOptionsItem
+  } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import DraggableTitle from '@renderer/common/cthulhu-ui/layout/DraggableTitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
@@ -57,10 +57,25 @@
   const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
   const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as { data: PromptTemplate[] }
 
-  /** Creation actions in each project's New Collection menu, named like the dialogs they open; ids are the kinds. */
-  const createCollectionItems: DropdownPopupItem[] = [
-    { id: 'prompt', label: 'Create Task Collection', icon: FileText, testId: 'new-tab-create-task-collection-item' },
-    { id: 'template', label: 'Create Template Collection', icon: Layers, testId: 'new-tab-create-template-collection-item' }
+  /**
+   * Creation actions in each project's New Collection menu, named like the dialogs they open and described like their
+   * subtitles; ids are the kinds.
+   */
+  const createCollectionItems: DropdownPopupMoreOptionsItem[] = [
+    {
+      id: 'prompt',
+      label: 'Create Task Collection',
+      detail: 'One-time prompts for individual tasks',
+      icon: FileText,
+      testId: 'new-tab-create-task-collection-item'
+    },
+    {
+      id: 'template',
+      label: 'Create Template Collection',
+      detail: 'Reusable prompts for repeatable workflows',
+      icon: Layers,
+      testId: 'new-tab-create-template-collection-item'
+    }
   ]
 
   /** Scroll host restored once after the tab's filtered content mounts. */
@@ -224,12 +239,11 @@
               testId={`new-tab-edit-project-${project.id}`}
               onclick={() => onEditProject(project.id)}
             />
-            <DropdownPopupSimple
+            <!-- The menu is wide enough to show each detail on one line without truncation. -->
+            <DropdownPopupMoreOptions
               label="New Collection"
               items={createCollectionItems}
-              menuWidth="260px"
-              placement="below-trigger"
-              menuAlignment="right"
+              menuWidth="300px"
               testId="new-tab-new-collection-menu"
               onselect={(item) => openCreateCollectionDialog(project.id, item.id as PromptCollectionKind)}
             >
@@ -245,7 +259,7 @@
                   onclick={dropdown.toggle}
                 />
               {/snippet}
-            </DropdownPopupSimple>
+            </DropdownPopupMoreOptions>
           </div>
 
           <NewTabCollectionGrid
