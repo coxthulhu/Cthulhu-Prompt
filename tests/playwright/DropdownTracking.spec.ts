@@ -101,6 +101,8 @@ describe('Dropdown tracking', () => {
     const trigger = mainWindow.getByTestId('icon-button-more-options-chevron')
     /** Menu whose minimum width and right edge follow the resized trigger. */
     const menu = mainWindow.getByTestId('icon-button-more-options-menu')
+    // Center the trigger so the menu has room below it regardless of the Test Screen sections above.
+    await trigger.evaluate((element: HTMLElement) => element.scrollIntoView({ block: 'center' }))
     await trigger.click()
     await expect(menu).toHaveCSS('width', '240px')
     await trigger.evaluate((element: HTMLElement) => {
