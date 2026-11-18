@@ -255,7 +255,8 @@ describe('Prompt Collection Order', () => {
 
     // A template collection can move ahead of task collections in the shared order.
     await beginPromptCollectionDropdownDrag(mainWindow, 'template-beta')
-    await moveActiveDragToTarget(mainWindow, promptCollectionDropdownItemSelector('prompt-alpha'))
+    // The tile's left half drops before it.
+    await moveActiveDragToTarget(mainWindow, promptCollectionDropdownItemSelector('prompt-alpha'), 'center', 'left')
     await finishActiveDrag(mainWindow)
     await expect
       .poll(async () => await readWorkspacePromptCollectionIds(electronApp, COMBINED_REPAIR_WORKSPACE_PATH))

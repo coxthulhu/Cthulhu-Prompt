@@ -4,6 +4,7 @@
   import DropTarget, {
     type DropTargetState
   } from '@renderer/common/drag-drop/DropTarget.svelte'
+  import MoveHereIndicator from '@renderer/common/drag-drop/MoveHereIndicator.svelte'
   import type {
     DroppableOptions,
     DroppableState
@@ -42,7 +43,7 @@
 </script>
 
 {#snippet dividerContent({ isOver = false, isBlocked = false } = {})}
-  {@const dividerText = isOver ? 'Move Here' : `Add ${contentLabel}`}
+  {@const dividerText = `Add ${contentLabel}`}
   <div
     class="promptDividerRow grid w-full items-center"
     data-revealed={revealed}
@@ -50,35 +51,15 @@
     data-drop-blocked={isBlocked ? 'true' : undefined}
     style={`height:${PROMPT_DIVIDER_ROW_HEIGHT_PX}px;`}
   >
-    <div
-      class={(mode === 'separator' && !isOver) || (isOver && isBlocked)
-        ? 'grid h-full grid-cols-1 items-center'
-        : 'promptDividerContent grid h-full items-center'}
-    >
-      {#if (mode === 'separator' && !isOver) || (isOver && isBlocked)}
-        <!-- Completed rows and blocked drops use one uninterrupted separator. -->
-        <Separator
-          data-testid={isOver && isBlocked ? testId : undefined}
-          class={isOver
-            ? `!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`
-            : undefined}
-        />
-      {:else if isOver}
-        <Separator
-          class={`!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`}
-        />
-        <div
-          class="promptDividerMoveIndicator text-sm"
-          data-drop-over="true"
-          data-testid={testId}
-          aria-label={dividerText}
-        >
-          <span>{dividerText}</span>
-        </div>
-        <Separator
-          class={`!h-2.5 rounded-full !border-0 ${isBlocked ? '!bg-[var(--ui-muted-icon-glyph)]' : '!bg-[var(--ui-info-strong-border)]'}`}
-        />
-      {:else}
+    {#if isOver}
+      <MoveHereIndicator {isBlocked} {testId} class="h-full" />
+    {:else if mode === 'separator'}
+      <!-- Completed rows use one uninterrupted separator. -->
+      <div class="grid h-full grid-cols-1 items-center">
+        <Separator />
+      </div>
+    {:else}
+      <div class="promptDividerContent grid h-full items-center">
         <!-- The centered line buttons limit separator clicks without moving the visible lines. -->
         <!-- Both separator buttons skip Tab navigation so the add action has one Tab stop. -->
         <button
@@ -125,8 +106,8 @@
         >
           <Separator />
         </button>
-      {/if}
-    </div>
+      </div>
+    {/if}
   </div>
 {/snippet}
 
@@ -157,26 +138,8 @@
 </DropTarget>
 
 <style>
-  .promptDividerMoveIndicator {
-    align-items: center;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-normal-text);
-    display: inline-flex;
-    flex: 0 0 auto;
-    font-weight: var(--font-weight-semibold);
-    height: 26px;
-    justify-content: center;
-    min-width: 96px;
-    padding: 0 10px;
-    white-space: nowrap;
-  }
-
   .promptDividerContent {
     grid-template-columns: minmax(14px, 1fr) auto minmax(14px, 1fr);
-  }
-
-  .promptDividerRow[data-drop-over='true'] .promptDividerContent {
-    grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
   }
 
   .promptDividerSeparatorButton {

@@ -8,6 +8,7 @@ import {
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { beginDragFromLocator, dragGhostSelector, finishActiveDrag, moveActiveDragToTarget } from '../helpers/PromptDragDropHelpers'
+import { collectionTileSelector } from '../helpers/PromptCollectionSelectors'
 import { readWorkspaceState, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -116,12 +117,53 @@ const lanternFiles = {
   [`${workspacePath}/LanternMobile/ProjectInfo.json`]: JSON.stringify({ id: lanternProjectId, name: 'Lantern Mobile', abbreviation: 'LM' })
 }
 
-/** Starts a real pointer drag on a project title or collection tile once earlier reorder animations have settled. */
-const beginPointerDrag = async (page: Page, testId: string): Promise<void> => {
-  // Measured boxes include flip transforms, so a source still sliding from the previous drop would be missed.
-  await expect.poll(() => page.getByTestId('new-tab-screen').evaluate((screen) => screen.getAnimations({ subtree: true }).length))
-    .toBe(0)
+/** Starts a real pointer drag on a project title or collection tile. */
+const beginPointerDrag = async (page: Page, testId: string): Promise<void> =>
   await beginDragFromLocator(page, page.getByTestId(testId), `Missing drag geometry for ${testId}`)
+
+
+/** Move Here indicator marking a dragged project's drop boundary. */
+const getProjectDropIndicator = (page: Page) => page.getByTestId('new-tab-project-drop-indicator')
+
+/** Vertical line marking a dragged tile's drop boundary. */
+const getTileDropIndicator = (page: Page) => page.getByTestId('new-tab-tile-drop-indicator')
+
+/** Asserts the Move Here indicator sits inside one project's section, centered 11px above or below it, in blue with its
+ *  label or as one gray bar. */
+const expectProjectDropIndicator = async (page: Page, projectId: string, side: 'above' | 'below', blocked: boolean): Promise<void> => {
+  /** Section the indicator belongs to. */
+  const section = page.getByTestId(`new-tab-project-${projectId}`)
+  const indicator = section.getByTestId('new-tab-project-drop-indicator')
+  await expect(indicator).toBeVisible()
+  if (blocked) await expect(indicator).not.toContainText('Move Here')
+  else await expect(indicator).toHaveText('Move Here')
+  await expect(indicator.locator('.cthulhuUiSeparator').first()).toHaveCSS('background-color',
+    await resolvePaletteColor(page.locator('body'), blocked ? '--ui-muted-icon-glyph' : '--ui-info-strong-border'))
+  // The overlay centers in the middle of the 22px gap beside the section.
+  const sectionBox = (await section.boundingBox())!
+  const indicatorBox = (await indicator.boundingBox())!
+  /** Middle of the gap the indicator marks. */
+  const expectedCenterY = side === 'above' ? sectionBox.y - 11 : sectionBox.y + sectionBox.height + 11
+  expect(Math.abs(indicatorBox.y + indicatorBox.height / 2 - expectedCenterY)).toBeLessThanOrEqual(1)
+}
+
+/** Asserts the tile drop line sits on one side of one tile, centered in the 8px gap and spanning the tile's height
+ *  less its 2px bottom inset, in blue or gray. */
+const expectTileDropIndicator = async (page: Page, collectionId: string, side: 'left' | 'right', blocked: boolean): Promise<void> => {
+  const indicator = getTileDropIndicator(page)
+  /** Grid cell holding both the tile and its indicator. */
+  const cell = indicator.locator('..')
+  await expect(cell.locator(collectionTileSelector(collectionId))).toHaveCount(1)
+  await expect(indicator).toHaveAttribute('data-edge', side)
+  await expect(indicator.locator('line')).toHaveCSS('stroke',
+    await resolvePaletteColor(page.locator('body'), blocked ? '--ui-muted-icon-glyph' : '--ui-info-strong-border'))
+  const cellBox = (await cell.boundingBox())!
+  const indicatorBox = (await indicator.boundingBox())!
+  /** Middle of the 8px gap beside the cell. */
+  const expectedCenterX = side === 'left' ? cellBox.x - 4 : cellBox.x + cellBox.width + 4
+  expect(Math.abs(indicatorBox.x + indicatorBox.width / 2 - expectedCenterX)).toBeLessThanOrEqual(1)
+  expect(Math.abs(indicatorBox.y - cellBox.y)).toBeLessThanOrEqual(1)
+  expect(Math.abs(indicatorBox.y + indicatorBox.height - (cellBox.y + cellBox.height - 2))).toBeLessThanOrEqual(1)
 }
 
 /** Moves an active drag below the last project section at the screen's left edge, outside the centered content column. */
@@ -268,70 +310,136 @@ describe('New Tab Screen', () => {
     await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(3)
   })
 
-  test('reorders projects by dragging their titles, following only the pointer\'s height', async ({ electronApp, testSetup }) => {
+  test('reorders projects by dragging their titles onto a Move Here indicator placed by the pointer\'s height', async ({ electronApp, testSetup }) => {
     const mainWindow = await openNewTab(electronApp, testSetup)
     /** Default Project's drag handle. */
     const defaultTitle = mainWindow.getByTestId(`new-tab-project-title-${defaultProjectId}`)
+    /** Cursor ghost naming the dragged project. */
+    const dragGhost = mainWindow.locator(dragGhostSelector)
 
-    // Dragging a project's title previews the new order live with the dragged-row fill and border and no ghost.
+    // Dragging a project's title gives it the dragged-row fill and border and a ghost with the project icon and name.
     await beginPointerDrag(mainWindow, `new-tab-project-title-${defaultProjectId}`)
     await expect(defaultTitle).toHaveAttribute('data-dragging', 'true')
     await expect(defaultTitle).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
     await expect(defaultTitle).toHaveCSS('box-shadow',
       `${await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border')} 0px 0px 0px 1px inset`)
-    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
+    await expect(dragGhost).toHaveText('Default Project')
+    await expect(dragGhost.getByTestId('drag-ghost-icon')).toHaveClass(/lucide-folder-kanban/)
+
+    // Both of the dragged project's own boundaries change nothing, so the indicator is one gray bar: above its section
+    // over its own title, and below it past the last section's middle.
+    await expectProjectDropIndicator(mainWindow, defaultProjectId, 'above', true)
+    await moveActiveDragBelowProjects(mainWindow)
+    await expectProjectDropIndicator(mainWindow, defaultProjectId, 'below', true)
+
+    // Over Harbor API's title, a blue Move Here indicator marks the gap above Harbor API while the sections stay put
+    // and the dragged title stays blue.
     await moveActiveDragToTarget(mainWindow, `[data-testid="new-tab-project-title-${harborProjectId}"]`)
-    await expectSectionNames(mainWindow, ['Default Project', 'Harbor API'])
+    await expectProjectDropIndicator(mainWindow, harborProjectId, 'above', false)
+    await expect(defaultTitle).toHaveAttribute('data-dragging', 'true')
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
     expect(await readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId])
 
-    // The drop saves the order the workspace shows.
+    // The drop saves the indicated order and clears the ghost and indicator.
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readProjectOrder(electronApp)).toEqual([defaultProjectId, harborProjectId])
+    await expectSectionNames(mainWindow, ['Default Project', 'Harbor API'])
     await expect(defaultTitle).toHaveAttribute('data-dragging', 'false')
+    await expect(getProjectDropIndicator(mainWindow)).toHaveCount(0)
+    await expect(dragGhost).toHaveCount(0)
 
-    // Only the pointer's height matters: below every section is last even at the screen's left edge, outside the
-    // content column, and above them, over the search bar, is first. Dropping outside the list saves the last slot.
+    // Only the pointer's height matters: below every section, even at the screen's left edge outside the content
+    // column, the indicator is below the last section; above them, over the search bar, it is above the first, which
+    // is gray for the first project.
     await beginPointerDrag(mainWindow, `new-tab-project-title-${defaultProjectId}`)
     await moveActiveDragBelowProjects(mainWindow)
-    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
+    await expectProjectDropIndicator(mainWindow, harborProjectId, 'below', false)
     await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-search-input"]')
+    await expectProjectDropIndicator(mainWindow, defaultProjectId, 'above', true)
+
+    // Dropping on the gray indicator changes nothing.
+    await finishActiveDrag(mainWindow)
+    await expect(getProjectDropIndicator(mainWindow)).toHaveCount(0)
     await expectSectionNames(mainWindow, ['Default Project', 'Harbor API'])
+    expect(await readProjectOrder(electronApp)).toEqual([defaultProjectId, harborProjectId])
+
+    // Dropping below every section saves the project last.
+    await beginPointerDrag(mainWindow, `new-tab-project-title-${defaultProjectId}`)
     await moveActiveDragBelowProjects(mainWindow)
-    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readProjectOrder(electronApp)).toEqual([harborProjectId, defaultProjectId])
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
   })
 
-  test('reorders collections by dragging their tiles within their own project', async ({ electronApp, testSetup }) => {
+  test('reorders collections by dragging their tiles onto a vertical drop line within their own project', async ({ electronApp, testSetup }) => {
     const mainWindow = await openNewTab(electronApp, testSetup)
     /** Bug Triage, the default project's last tile. */
     const bugTriageTile = mainWindow.getByTestId('new-tab-collection-bug-triage')
+    /** Cursor ghost naming the dragged collection. */
+    const dragGhost = mainWindow.locator(dragGhostSelector)
 
-    // Dragging a tile previews the new order live with the Show All dropdown's dragged-row fill and border and no ghost.
+    // Dragging a tile gives it the Show All dropdown's dragged-row fill and border, idles the other tiles, and shows a
+    // ghost with the tile's icon and name.
     await beginPointerDrag(mainWindow, 'new-tab-collection-bug-triage')
     await expect(bugTriageTile).toHaveAttribute('data-row-state', 'dragging')
     await expect(bugTriageTile).toHaveCSS('background-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-normal-surface'))
     await expect(bugTriageTile).toHaveCSS('border-top-color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border'))
     await expect(mainWindow.getByTestId('new-tab-collection-code-review')).toHaveAttribute('data-row-state', 'drag-idle')
-    await expect(mainWindow.locator(dragGhostSelector)).toHaveCount(0)
-    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-code-review"]')
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+    await expect(dragGhost).toHaveText('Bug Triage')
+    await expect(dragGhost.getByTestId('drag-ghost-icon')).toHaveClass(/lucide-file-text/)
 
-    // Leaving the project, even onto another project's tile, keeps the tile in its last slot within its own project.
-    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-endpoint-tests"]')
-    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+    // Both of the dragged tile's own boundaries change nothing, so their lines are gray: past its own middle, and past
+    // the middle of the tile before it.
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('bug-triage'), 'center', 'right')
+    await expectTileDropIndicator(mainWindow, 'bug-triage', 'right', true)
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('feature-work'), 'center', 'right')
+    await expectTileDropIndicator(mainWindow, 'feature-work', 'right', true)
+
+    // Before the first tile's middle, a blue line marks its left side while the tiles stay put and the dragged tile
+    // stays blue.
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('code-review'), 'center', 'left')
+    await expectTileDropIndicator(mainWindow, 'code-review', 'left', false)
+    await expect(bugTriageTile).toHaveAttribute('data-row-state', 'dragging')
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
+
+    // Outside its own project's grid, even over another project's tile, there is no drop line.
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('endpoint-tests'))
+    await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
+
+    // Dropping there changes nothing and opens neither collection.
+    await finishActiveDrag(mainWindow)
+    await expect(bugTriageTile).toHaveAttribute('data-row-state', 'idle')
+    await expect(dragGhost).toHaveCount(0)
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
     await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
     expect(await readCollectionOrder(electronApp, defaultProjectId)).toEqual(['code-review', 'feature-work', 'bug-triage'])
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['New Tab'])
 
-    // Dropping outside the project saves that slot without opening either collection.
+    // Dropping on the blue line saves the tile first without opening it.
+    await beginPointerDrag(mainWindow, 'new-tab-collection-bug-triage')
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('code-review'), 'center', 'left')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCollectionOrder(electronApp, defaultProjectId)).toEqual(['bug-triage', 'code-review', 'feature-work'])
-    await expect(bugTriageTile).toHaveAttribute('data-row-state', 'idle')
-    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.endpointTests, tileText.releaseNotes])
+    await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.bugTriage, tileText.codeReview, tileText.featureWork])
+    await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['New Tab'])
 
-
+    // In Harbor API's unfilled row, the empty cell after the last tile marks that tile's right side.
+    await beginPointerDrag(mainWindow, 'new-tab-collection-endpoint-tests')
+    /** First Harbor API tile, whose offset to the next tile gives the column pitch. */
+    const endpointTestsBox = (await mainWindow.getByTestId('new-tab-collection-endpoint-tests').boundingBox())!
+    /** Last Harbor API tile, whose row's third cell is empty. */
+    const releaseNotesBox = (await mainWindow.getByTestId('new-tab-collection-release-notes').boundingBox())!
+    await mainWindow.mouse.move(
+      releaseNotesBox.x + (releaseNotesBox.x - endpointTestsBox.x) + releaseNotesBox.width / 2,
+      releaseNotesBox.y + releaseNotesBox.height / 2,
+      { steps: 12 }
+    )
+    await expectTileDropIndicator(mainWindow, 'release-notes', 'right', false)
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCollectionOrder(electronApp, harborProjectId)).toEqual(['release-notes', 'endpoint-tests'])
+    await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.releaseNotes, tileText.endpointTests])
   })
 
   test('reorders filtered projects and collections right after the visible item before them', async ({ electronApp, testSetup }) => {
@@ -364,7 +472,7 @@ describe('New Tab Screen', () => {
     // Dragging Release Checklist after Release Builds saves it right after Release Builds, which leaves the hidden
     // Offline Sync ahead of both.
     await beginPointerDrag(mainWindow, 'new-tab-collection-release-checklist')
-    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-release-builds"]')
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('release-builds'), 'center', 'right')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
       .toEqual(['offline-sync', 'release-builds', 'release-checklist'])
@@ -372,7 +480,7 @@ describe('New Tab Screen', () => {
 
     // Dragging it back to the start of the visible tiles saves it first, ahead of the hidden Offline Sync.
     await beginPointerDrag(mainWindow, 'new-tab-collection-release-checklist')
-    await moveActiveDragToTarget(mainWindow, '[data-testid="new-tab-collection-release-builds"]')
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('release-builds'), 'center', 'left')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
       .toEqual(['release-checklist', 'offline-sync', 'release-builds'])

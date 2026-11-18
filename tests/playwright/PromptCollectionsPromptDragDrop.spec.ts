@@ -114,7 +114,7 @@ const getPromptDividerHighlightStyles = async (
     const buttonStyle = getComputedStyle(element)
     const separators = Array.from(
       element
-        .closest('.promptDividerContent')
+        .closest('.promptDividerRow')
         ?.querySelectorAll<HTMLElement>('.cthulhuUiSeparator') ?? []
     )
 
@@ -456,7 +456,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await expect(initialDividerRow).toHaveAttribute('data-drop-over', 'true')
     await expect(initialDividerRow).toHaveAttribute('data-drop-blocked', 'true')
     await expect(initialDividerRow.locator('.cthulhuUiSeparator')).toHaveCount(1)
-    await expect(initialDividerRow.locator('.promptDividerMoveIndicator')).toHaveCount(0)
+    await expect(initialDividerRow.locator('.moveHereIndicatorLabel')).toHaveCount(0)
     await finishActiveDrag(mainWindow)
 
     await beginPromptHandleDrag(mainWindow, DEV_2_ID)
@@ -483,7 +483,7 @@ describe('Prompt collection prompt drag-drop', () => {
       return colors
     })
     await expect(afterFirstPromptDividerRow.locator('.cthulhuUiSeparator')).toHaveCount(1)
-    await expect(afterFirstPromptDividerRow.locator('.promptDividerMoveIndicator')).toHaveCount(0)
+    await expect(afterFirstPromptDividerRow.locator('.moveHereIndicatorLabel')).toHaveCount(0)
     /** Blocked divider row geometry used to verify the separator spans the target. */
     const blockedDividerRowBox = await afterFirstPromptDividerRow.boundingBox()
     /** Single blocked separator geometry compared against the full row. */

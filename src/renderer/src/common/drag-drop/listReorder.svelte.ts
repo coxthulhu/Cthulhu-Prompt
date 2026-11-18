@@ -6,10 +6,8 @@ type ListReorderOptions = {
   dragType: string
   /** Committed row IDs in display order. */
   getIds: () => string[]
-  /** Stationary container of equal-height rows that defines the drop area; unused when getTargetIndex is supplied. */
-  getListElement?: () => HTMLElement | undefined
-  /** Replaces the equal-height row hit test: the dragged row's slot under the pointer, or null to leave it in place. */
-  getTargetIndex?: (clientX: number, clientY: number) => number | null
+  /** Stationary container of equal-height rows that defines the drop area. */
+  getListElement: () => HTMLElement | undefined
   /**
    * Receives the complete new order, the dragged row, and the row now before it (null when first) after a drop
    * changes the order; a returned promise keeps the preview until it settles.
@@ -29,7 +27,7 @@ export const createListReorder = (options: ListReorderOptions) => {
   /** Resolves the hovered row slot of equal-height rows, or null while the pointer is outside the list. */
   const getRowTargetIndex = (clientX: number, clientY: number): number | null => {
     /** Row container measured with its own scroll offset. */
-    const list = options.getListElement!()!
+    const list = options.getListElement()!
     if (!document.elementsFromPoint(clientX, clientY).some((element) => list.contains(element))) return null
     /** Untransformed row height plus the list gap, so flip animations do not disturb hit testing. */
     const rowPitch = (list.firstElementChild as HTMLElement).offsetHeight + parseFloat(getComputedStyle(list).rowGap)
@@ -57,11 +55,8 @@ export const createListReorder = (options: ListReorderOptions) => {
         previewIds = sourceIds
       },
       onDragMove: (_, clientX, clientY) => {
-        /** Hovered slot; the built-in hit test returns the row to its original slot outside the list. */
-        const targetIndex = options.getTargetIndex
-          ? options.getTargetIndex(clientX, clientY)
-          : (getRowTargetIndex(clientX, clientY) ?? sourceIds.indexOf(id))
-        if (targetIndex === null) return
+        /** Hovered slot; outside the list the row returns to its original slot. */
+        const targetIndex = getRowTargetIndex(clientX, clientY) ?? sourceIds.indexOf(id)
         /** Order with the dragged row in the target slot. */
         const nextIds = sourceIds.filter((sourceId) => sourceId !== id)
         nextIds.splice(targetIndex, 0, id)

@@ -17,6 +17,8 @@ type PromptCollectionScrollHelpers = {
 }
 
 export type TargetVerticalAlign = 'top' | 'center' | 'bottom'
+/** Horizontal drag point within a target, for targets such as grid tiles whose halves drop on different sides. */
+export type TargetHorizontalAlign = 'left' | 'center' | 'right'
 
 export const promptHandleSelector = (promptId: string): string =>
   `${promptEditorSelector(promptId)} [data-testid="prompt-drag-handle"]`
@@ -53,9 +55,15 @@ export const expectDragGhostIconBeforeLabel = async (dragGhost: Locator): Promis
 
 const getTargetPoint = (
   targetBox: ElementBox,
-  verticalAlign: TargetVerticalAlign
+  verticalAlign: TargetVerticalAlign,
+  horizontalAlign: TargetHorizontalAlign
 ): { x: number; y: number } => {
-  const x = targetBox.x + targetBox.width / 2
+  const x =
+    horizontalAlign === 'left'
+      ? targetBox.x + targetBox.width * 0.25
+      : horizontalAlign === 'right'
+        ? targetBox.x + targetBox.width * 0.75
+        : targetBox.x + targetBox.width / 2
   const y =
     verticalAlign === 'top'
       ? targetBox.y + targetBox.height * 0.25
@@ -89,14 +97,15 @@ export const beginDragFromLocator = async (
 export const moveActiveDragToTarget = async (
   page: Page,
   targetSelector: string,
-  verticalAlign: TargetVerticalAlign = 'center'
+  verticalAlign: TargetVerticalAlign = 'center',
+  horizontalAlign: TargetHorizontalAlign = 'center'
 ): Promise<void> => {
   const target = page.locator(targetSelector)
   await target.scrollIntoViewIfNeeded()
   await expect(target).toBeVisible()
 
   const targetBox = await getRequiredBox(target, `Missing drag geometry for ${targetSelector}`)
-  const targetPoint = getTargetPoint(targetBox, verticalAlign)
+  const targetPoint = getTargetPoint(targetBox, verticalAlign, horizontalAlign)
   await page.mouse.move(targetPoint.x, targetPoint.y, { steps: 12 })
 }
 

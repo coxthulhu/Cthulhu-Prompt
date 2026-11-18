@@ -1,28 +1,18 @@
 <script lang="ts">
-  import { FileText, Folder } from 'lucide-svelte'
-  import type { PromptDragGhostKind } from './promptDragGhost'
+  import type { ComponentType } from 'svelte'
 
-  // The ghost kind selects the same leading icon shown by the corresponding editor.
-  let { title, kind }: { title: string; kind: PromptDragGhostKind } = $props()
+  // The leading icon matches the one shown beside the dragged item.
+  let { title, icon: Icon }: { title: string; icon: ComponentType } = $props()
 </script>
 
 <div class="promptDragGhost">
   <div class="promptDragGhostButton">
-    {#if kind === 'category'}
-      <Folder
-        class="promptDragGhostIcon"
-        size={16}
-        data-testid="drag-ghost-icon"
-        aria-hidden="true"
-      />
-    {:else}
-      <FileText
-        class="promptDragGhostIcon"
-        size={16}
-        data-testid="drag-ghost-icon"
-        aria-hidden="true"
-      />
-    {/if}
+    <Icon
+      class="promptDragGhostIcon"
+      size={16}
+      data-testid="drag-ghost-icon"
+      aria-hidden="true"
+    />
     <span class="sidebarPromptTreeSettingsLabel min-w-0 truncate text-sm">{title}</span>
   </div>
 </div>

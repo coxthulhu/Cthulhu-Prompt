@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { flip } from 'svelte/animate'
   import type { Action } from 'svelte/action'
   import { FileText, Layers } from 'lucide-svelte'
-  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
-  import { createListReorder } from '@renderer/common/drag-drop/listReorder.svelte.ts'
+  import DropIndicator from '@renderer/common/drag-drop/DropIndicator.svelte'
+  import { createDropIndicatorReorder } from '@renderer/common/drag-drop/dropIndicatorReorder.svelte.ts'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
   import type { PromptCollectionDetails } from '@renderer/features/prompt-collections/promptCollectionDetails'
+  import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 
   /** One collection tile, keyed by its collection's ID. */
@@ -27,17 +27,19 @@
     onMoveCollection: (collectionId: string, previousCollectionId: string | null) => Promise<void>
   }>()
 
+  /** Kind icon shared by a collection's tile and its drag ghost. */
+  const getCollectionIcon = (collection: PromptCollection) => (collection.kind === 'template' ? Layers : FileText)
   /** Tile action typed for SelectorButton's generic button action slot. */
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
-  /** Stationary tile grid that owns pointer capture and defines where a dragged tile can go. */
+  /** Tile grid that owns pointer capture and defines where a dragged tile can go. */
   let gridElement = $state<HTMLElement>()
-  /** Live drag reordering of the tiles, kept inside this project's grid. */
-  const reorder = createListReorder({
+  /** Drag reordering of the tiles, kept inside this project's grid. */
+  const reorder = createDropIndicatorReorder({
     dragType: 'new-tab-collection',
     getIds: () => collections.map((tile: NewTabCollectionTile) => tile.id),
-    // Grid slots come from untransformed tile sizes, so flip animations do not disturb hit testing. Outside the grid
-    // the dragged tile keeps its last slot; space after the last tile maps to the last slot.
-    getTargetIndex: (clientX, clientY) => {
+    // The tile under the pointer, and which half of it, sets the boundary; space after the last tile of an unfilled
+    // row is after that tile. Outside the grid there is no target.
+    getDropTarget: (clientX, clientY) => {
       const grid = gridElement!
       /** Grid bounds, gaps and an unfilled last row included. */
       const rect = grid.getBoundingClientRect()
@@ -47,22 +49,32 @@
       const style = window.getComputedStyle(grid)
       /** Tiles per row. */
       const columnCount = style.gridTemplateColumns.split(' ').length
-      const column = Math.min(Math.floor((clientX - rect.left) / (tile.offsetWidth + parseFloat(style.columnGap))), columnCount - 1)
+      /** Tile width plus the gap after it. */
+      const columnPitch = tile.offsetWidth + parseFloat(style.columnGap)
+      const column = Math.min(Math.floor((clientX - rect.left) / columnPitch), columnCount - 1)
       const row = Math.floor((clientY - rect.top) / (tile.offsetHeight + parseFloat(style.rowGap)))
-      return Math.min(row * columnCount + column, collections.length - 1)
+      /** Tile in the pointer's grid cell, absent in an unfilled row's empty cells. */
+      const hoveredTile: NewTabCollectionTile | undefined = collections[row * columnCount + column]
+      return hoveredTile
+        ? { id: hoveredTile.id, after: clientX - rect.left - column * columnPitch > tile.offsetWidth / 2 }
+        : { id: collections[collections.length - 1].id, after: true }
     },
-    onReorder: (_, collectionId, previousCollectionId) => onMoveCollection(collectionId, previousCollectionId)
+    createGhost: (collectionId) => {
+      /** Dragged tile's collection, named and iconed like its tile. */
+      const { collection } = collections.find((tile: NewTabCollectionTile) => tile.id === collectionId)!
+      return createPromptDragGhost(collection.displayName, 'collection', getCollectionIcon(collection))
+    },
+    onReorder: (collectionId, previousCollectionId) => onMoveCollection(collectionId, previousCollectionId)
   })
 </script>
 
 <div bind:this={gridElement} class="grid grid-cols-3 gap-2" data-pointer-drag-owner>
-  {#each reorder.sort<NewTabCollectionTile>(collections) as { collection, details } (collection.id)}
-    <!-- Tiles only slide while a drag previews a reorder; other changes apply instantly. -->
-    <div class="min-w-0" animate:flip={{ duration: reorder.draggedId ? uiAnimationDurationMs.standard : 0 }}>
+  {#each collections as { collection, details } (collection.id)}
+    <div class="relative min-w-0">
       <!-- The accent selection variant gives a dragged tile the Show All dropdown's dragged-row fill and border. -->
       <SelectorButton
         variant="tile"
-        icon={collection.kind === 'template' ? Layers : FileText}
+        icon={getCollectionIcon(collection)}
         text={collection.displayName}
         detailParts={details.modifiedText ? [details.countText, details.modifiedText] : [details.countText]}
         showChevron={false}
@@ -74,6 +86,16 @@
         testId={`new-tab-collection-${collection.id}`}
         onclick={() => onOpenCollection(collection.id)}
       />
+      {#if reorder.dropTarget?.id === collection.id}
+        <!-- The tile-high line starts at the tile's top and centers in the 8px gap beside it. -->
+        <DropIndicator
+          testId="new-tab-tile-drop-indicator"
+          edge={reorder.dropTarget?.after ? 'right' : 'left'}
+          insetStart="10px"
+          edgeOffset="4px"
+          isBlocked={reorder.isBlocked}
+        />
+      {/if}
     </div>
   {/each}
 </div>

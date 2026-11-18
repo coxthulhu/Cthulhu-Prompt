@@ -1,9 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { flip } from 'svelte/animate'
   import type { Action } from 'svelte/action'
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { FileText, Layers, Move, Plus, Search, Settings2 } from 'lucide-svelte'
+  import { FileText, FolderKanban, Layers, Move, Plus, Search, Settings2 } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -12,9 +11,9 @@
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import DraggableTitle from '@renderer/common/cthulhu-ui/layout/DraggableTitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
-  import { uiAnimationDurationMs } from '@renderer/common/uiAnimationDurations'
   import { draggable } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
-  import { createListReorder } from '@renderer/common/drag-drop/listReorder.svelte.ts'
+  import { createDropIndicatorReorder } from '@renderer/common/drag-drop/dropIndicatorReorder.svelte.ts'
+  import MoveHereIndicator from '@renderer/common/drag-drop/MoveHereIndicator.svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { moveProject } from '@renderer/data/Mutations/ProjectMutations'
   import { movePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
@@ -23,6 +22,7 @@
   import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import CreatePromptCollectionDialog from '@renderer/features/prompt-collections/CreatePromptCollectionDialog.svelte'
   import { getPromptCollectionDetails } from '@renderer/features/prompt-collections/promptCollectionDetails'
+  import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
   import NewTabCollectionGrid, { type NewTabCollectionTile } from './NewTabCollectionGrid.svelte'
   import type { Prompt } from '@shared/domain/prompt/Prompt'
   import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
@@ -116,24 +116,29 @@
 
   /** Project title handle action typed for DraggableTitle's generic button action slot. */
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
-  /** Stationary project section list that owns pointer capture while sections reorder. */
+  /** Project section list that owns pointer capture and is measured to place a dragged project. */
   let projectListElement = $state<HTMLElement>()
-  /** Live drag reordering of the visible projects, saved right after the visible project before the dropped one. */
-  const projectReorder = createListReorder({
+  /** Drag reordering of the visible projects, saved right after the visible project before the drop boundary. */
+  const projectReorder = createDropIndicatorReorder({
     dragType: 'new-tab-project',
     getIds: () => visibleProjectGroups.map((group) => group.id),
-    // Sections differ in height, so the slot counts the other sections whose untransformed middle is above the
-    // pointer; equal-height slots would flip a short section back and forth over a tall one. Only the pointer's
-    // vertical position matters: above the list is first and below it is last.
-    getTargetIndex: (_, clientY) => {
-      /** Top of the list, the origin of its sections' offsets. */
-      const listTop = projectListElement!.getBoundingClientRect().top
-      return ([...projectListElement!.children] as HTMLElement[]).filter((section) =>
-        section.dataset.projectId !== projectReorder.draggedId &&
-        listTop + section.offsetTop + section.offsetHeight / 2 < clientY
-      ).length
+    // Sections differ in height, so a dragged project goes before the first section whose middle is below the
+    // pointer. Only the pointer's vertical position matters: above the list is first and below it is last.
+    getDropTarget: (_, clientY) => {
+      /** Project sections in display order. */
+      const sections = [...projectListElement!.children] as HTMLElement[]
+      /** First section whose middle is below the pointer, absent below every section's middle. */
+      const nextSection = sections.find((section) => {
+        const rect = section.getBoundingClientRect()
+        return rect.top + rect.height / 2 > clientY
+      })
+      return nextSection
+        ? { id: nextSection.dataset.projectId!, after: false }
+        : { id: sections[sections.length - 1].dataset.projectId!, after: true }
     },
-    onReorder: (_, projectId, previousProjectId) =>
+    createGhost: (projectId) =>
+      createPromptDragGhost(workspace.projects.find((project) => project.id === projectId)!.name, 'project', FolderKanban),
+    onReorder: (projectId, previousProjectId) =>
       runIpcBestEffort(() => moveProject(workspace.id, projectId, previousProjectId))
   })
 
@@ -180,16 +185,24 @@
       Drag to reorder projects and collections
     </p>
 
-    <!-- Sections only slide while a drag previews a reorder; other changes apply instantly. -->
-    <div bind:this={projectListElement} class="relative" data-pointer-drag-owner>
-      {#each projectReorder.sort(visibleProjectGroups) as { project, collections } (project.id)}
+    <div bind:this={projectListElement} data-pointer-drag-owner>
+      {#each visibleProjectGroups as { project, collections } (project.id)}
         <section
-          class="mt-[22px]"
+          class="relative mt-[22px]"
           aria-label={project.name}
           data-project-id={project.id}
           data-testid={`new-tab-project-${project.id}`}
-          animate:flip={{ duration: projectReorder.draggedId ? uiAnimationDurationMs.standard : 0 }}
         >
+          {#if projectReorder.dropTarget?.id === project.id}
+            <!-- The indicator overlays the middle of the 22px gap above the section, or the same spot below the last one. -->
+            <div
+              class={`absolute inset-x-0 ${projectReorder.dropTarget.after ? 'bottom-[-11px] translate-y-1/2' : 'top-[-11px] -translate-y-1/2'}`}
+              aria-hidden="true"
+              data-testid="new-tab-project-drop-indicator"
+            >
+              <MoveHereIndicator isBlocked={projectReorder.isBlocked} />
+            </div>
+          {/if}
           <!-- The row's 18px font matches the dialog title, so the text-baseline edit button centers on the title's capitals. -->
           <div class="mb-2 flex h-10 items-center gap-1 text-lg leading-7">
             <div class="flex min-w-0 items-baseline">
