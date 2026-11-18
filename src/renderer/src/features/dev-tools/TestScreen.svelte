@@ -110,7 +110,7 @@
     'glyph'
   ]
   /** Include every supported size so the gallery also covers rectangular title actions. */
-  const IconButtonSizes: IconButtonSize[] = ['default', 'compact', 'compact-large-icon', 'tiny', 'sidebar-rail']
+  const IconButtonSizes: IconButtonSize[] = ['default', 'large', 'compact', 'compact-large-icon', 'tiny', 'sidebar-rail']
   const categoryIconSizes = [14, 18, 24, 32] as const
   /** Lucide alternatives for the sidebar title's Manage Projects button, compared at several sizes. */
   const iconCandidates: {
@@ -1028,6 +1028,22 @@
                   </div>
                 {/each}
               {/each}
+              <div class="variant-row">
+                <span class="text-sm">IconButton: outline appearance</span>
+                <div class="variant-controls icon-only-controls">
+                  {#each IconButtonSizes as size (size)}
+                    <div class="icon-only-sample" data-fill-size={size === 'sidebar-rail'}>
+                      <IconButton
+                        icon={Settings}
+                        label={`outline ${size}`}
+                        appearance="outline"
+                        {size}
+                        title={`outline ${size}`}
+                      />
+                    </div>
+                  {/each}
+                </div>
+              </div>
             </div>
           </div>
         </CardSurface>

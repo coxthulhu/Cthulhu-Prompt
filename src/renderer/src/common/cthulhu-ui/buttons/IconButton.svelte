@@ -6,10 +6,13 @@
 
   export type IconButtonSize =
     | 'default'
+    | 'large'
     | 'compact'
     | 'compact-large-icon'
     | 'tiny'
     | 'sidebar-rail'
+  /** Ghost keeps the stronger icon-button hover fill; outline uses the outline action buttons' subtler hover fill. */
+  export type IconButtonAppearance = 'ghost' | 'outline'
   export type IconButtonBaseVariant = 'normal' | 'dim' | 'muted'
   export type IconButtonHoverVariant = 'neutral' | 'accent' | 'success' | 'danger' | 'glyph'
   type IconButtonAction = Action<HTMLButtonElement, unknown>
@@ -18,6 +21,7 @@
     icon: ComponentType
     label: string
     size?: IconButtonSize
+    appearance?: IconButtonAppearance
     iconSize?: number
     baseVariant?: IconButtonBaseVariant
     hoverVariant?: IconButtonHoverVariant
@@ -49,6 +53,7 @@
     icon: Icon,
     label,
     size = 'default',
+    appearance = 'ghost',
     iconSize: requestedIconSize,
     baseVariant = 'normal',
     hoverVariant = 'neutral',
@@ -75,7 +80,7 @@
 
   const iconSize = $derived(
     requestedIconSize ??
-      (size === 'default' || size === 'compact-large-icon' ? 20 : size === 'tiny' ? 14 : 16)
+      (size === 'default' || size === 'large' || size === 'compact-large-icon' ? 20 : size === 'tiny' ? 14 : 16)
   )
   const resolvedButtonAction = $derived(buttonAction ?? noopButtonAction)
 </script>
@@ -90,6 +95,7 @@
   aria-current={ariaCurrent}
   aria-pressed={ariaPressed}
   data-size={size}
+  data-appearance={appearance}
   data-base-variant={baseVariant}
   data-hover-variant={hoverVariant}
   data-active={active === undefined ? undefined : active ? 'true' : 'false'}
@@ -116,6 +122,12 @@
     justify-content: center;
     padding: 0;
     width: 36px;
+  }
+
+  .cthulhuUiIconButton[data-size='large'] {
+    /* Matches the 40px height of text action buttons so the two can share a row. */
+    height: 40px;
+    width: 40px;
   }
 
   .cthulhuUiIconButton[data-size='compact'] {

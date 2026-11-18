@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { Action } from 'svelte/action'
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { FileText, FolderKanban, Layers, Move, Plus, Search, Settings2 } from 'lucide-svelte'
+  import { FileText, FolderKanban, Layers, Move, Plus, Search, Settings } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -203,31 +203,27 @@
               <MoveHereIndicator isBlocked={projectReorder.isBlocked} />
             </div>
           {/if}
-          <!-- The row's 18px font matches the dialog title, so the text-baseline edit button centers on the title's capitals. -->
-          <div class="mb-2 flex h-10 items-center gap-1 text-lg leading-7">
-            <div class="flex min-w-0 items-baseline">
-              <!-- The -9px margin keeps the grip glyph 5px outside the content edge inside its 26px cell. -->
-              <DraggableTitle
-                title={project.name}
-                class="-ml-[9px]"
-                dragging={projectReorder.draggedId === project.id}
-                buttonAction={draggableButtonAction}
-                buttonActionParameter={projectReorder.getDraggableOptions(project.id)}
-                testId={`new-tab-project-title-${project.id}`}
-              />
-              <!-- The 28px compact button matches the title's 28px line. -->
-              <IconButton
-                icon={Settings2}
-                label="Edit Project"
-                title="Edit Project"
-                size="compact"
-                baseVariant="muted"
-                hoverVariant="glyph"
-                textBaseline
-                testId={`new-tab-edit-project-${project.id}`}
-                onclick={() => onEditProject(project.id)}
-              />
-            </div>
+          <div class="mb-2 flex h-10 items-center gap-2.5 text-lg leading-7">
+            <!-- The -9px margin keeps the grip glyph 5px outside the content edge inside its 26px cell. -->
+            <DraggableTitle
+              title={project.name}
+              class="-ml-[9px]"
+              dragging={projectReorder.draggedId === project.id}
+              buttonAction={draggableButtonAction}
+              buttonActionParameter={projectReorder.getDraggableOptions(project.id)}
+              testId={`new-tab-project-title-${project.id}`}
+            />
+            <!-- The large size matches the 40px New Collection button beside it. -->
+            <IconButton
+              icon={Settings}
+              label="Edit Project"
+              title="Edit Project"
+              size="large"
+              appearance="outline"
+              class="ml-auto"
+              testId={`new-tab-edit-project-${project.id}`}
+              onclick={() => onEditProject(project.id)}
+            />
             <DropdownPopupSimple
               label="New Collection"
               items={createCollectionItems}
@@ -242,7 +238,6 @@
                   icon={Plus}
                   text="New Collection"
                   appearance="outline"
-                  class="ml-auto"
                   buttonAction={dropdown.triggerAction}
                   aria-haspopup={dropdown.ariaHaspopup}
                   aria-expanded={dropdown.ariaExpanded}
