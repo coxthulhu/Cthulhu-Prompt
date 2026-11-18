@@ -9,11 +9,18 @@ import { USER_PERSISTENCE_ID } from '@shared/domain/user-persistence/UserPersist
 import { createCollectionViewState, createWorkspaceTab, type WorkspaceTab } from '@shared/domain/ui-state/TabSession'
 import { createPromptNavigationContextValue } from '@renderer/app/PromptNavigationContext.svelte.ts'
 import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
+import type { ManageCategoriesDialogOpenOptions } from '@renderer/features/prompt-collections/ManageCategoriesDialog.svelte'
 
 /** Sidebar modes available beside fixed screens and workspace tabs. */
 export enum SidebarModeId {
   Collection = 'collection',
   Settings = 'settings'
+}
+
+/** Collection dialog openers registered by the tab's collection sidebar. */
+type CollectionDialogOpeners = {
+  openRenamePromptCollection: (promptCollectionId: string) => void
+  openManageCategories: (options?: ManageCategoriesDialogOpenOptions) => void
 }
 
 /** Mounted components capture their owning tab rather than looking up the active tab during teardown. */
@@ -31,6 +38,8 @@ export class CollectionSidebarModeData {
   readonly navigation = createPromptNavigationContextValue()
   /** Called before a collection view is closed, including entry into single-prompt mode. */
   private readonly onCloseCollection: () => void
+  /** Rename and category dialogs hosted once by the sidebar, which stays mounted beside both collection screens. */
+  private collectionDialogs: CollectionDialogOpeners | null = null
 
   /** Seeds the tab from its saved record and installs the session-owned close rule. */
   constructor(record = createWorkspaceTab(''), onCloseCollection = () => {}) {
@@ -50,6 +59,24 @@ export class CollectionSidebarModeData {
   get view() { return this.record.view }
   /** Editor locations for the currently mounted screen. */
   get editorViewStates() { return this.openPromptId ? this.record.singlePromptEditorViewStates : this.view.editorViewStates }
+
+  /** Registers the sidebar's dialog openers and returns the cleanup for its unmount. */
+  registerCollectionDialogs = (openers: CollectionDialogOpeners): (() => void) => {
+    this.collectionDialogs = openers
+    return () => {
+      if (this.collectionDialogs === openers) this.collectionDialogs = null
+    }
+  }
+
+  /** Opens collection rename in the sidebar-hosted dialog. */
+  openRenamePromptCollectionDialog = (promptCollectionId: string): void => {
+    this.collectionDialogs?.openRenamePromptCollection(promptCollectionId)
+  }
+
+  /** Opens category management in the sidebar-hosted dialog, optionally targeting one category. */
+  openManageCategoriesDialog = (options?: ManageCategoriesDialogOpenOptions): void => {
+    this.collectionDialogs?.openManageCategories(options)
+  }
 
   /** Opens a single prompt after recording the collection's last-closed position if eligible. */
   openPrompt = (promptId: string): void => {

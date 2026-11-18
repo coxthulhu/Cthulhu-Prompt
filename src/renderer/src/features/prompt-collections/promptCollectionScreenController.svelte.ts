@@ -58,6 +58,7 @@ import { findCollectionProject } from '@shared/domain/workspace/Project'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import type { Category } from '@shared/domain/category/Category'
 import {
+  getCategoryContentIds,
   getMarkdownContentCategoryOrder,
   getMarkdownContentIds
 } from '@shared/domain/markdown-content/MarkdownContent'
@@ -287,18 +288,6 @@ export const createPromptCollectionScreenController = ({
       ? getCategoryOrderCategoryIds(
           getMarkdownContentCategoryOrder(screenCollection, screenMode)
         ).flatMap((categoryId) => {
-          const category = categoryById[categoryId]
-          return category ? [category] : []
-        })
-      : []
-  )
-  /** Collection-owned categories in the Active collection's category ordering. */
-  const managedCategories = $derived.by(() =>
-    screenCollection
-      ? getCategoryOrderCategoryIds(
-          getMarkdownContentCategoryOrder(screenCollection, PromptStatusFolderId.Active)
-        ).flatMap((categoryId) => {
-          /** Loaded category associated with one Active ordering group. */
           const category = categoryById[categoryId]
           return category ? [category] : []
         })
@@ -1145,6 +1134,8 @@ export const createPromptCollectionScreenController = ({
         statusSection: screenMode
       })
       for (const entry of group.entries) {
+        // Notes are not rendered as content rows, so they are never move-button positions.
+        if (entry.kind !== screenCollection.kind) continue
         targets.push({
           collectionId: screenCollection.id,
           categoryId: group.categoryId,
@@ -1159,11 +1150,9 @@ export const createPromptCollectionScreenController = ({
 
   /** Returns active content IDs for one exact category group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
-    (screenCollection && !isFinalMode
-      ? getMarkdownContentCategoryOrder(screenCollection, screenMode).categories
-      : [])
-      .find((group) => group.categoryId === categoryId)
-      ?.entries.map((entry) => entry.id) ?? []
+    screenCollection && !isFinalMode
+      ? getCategoryContentIds(screenCollection, screenMode, categoryId)
+      : []
 
   const resolveAdjacentPromptMove = (
     target: PromptCollectionPromptTarget,
@@ -1393,9 +1382,6 @@ export const createPromptCollectionScreenController = ({
     },
     get categories(): Category[] {
       return categories
-    },
-    get managedCategories(): Category[] {
-      return managedCategories
     },
     get orderedPromptCollectionScreenRows(): PromptCollectionScreenRow[] {
       return orderedPromptCollectionScreenRows

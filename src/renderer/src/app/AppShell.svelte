@@ -84,7 +84,7 @@
   import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
-  import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
+  import { resolveWorkspaceInfoPath } from '@shared/domain/workspace/workspacePath'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import AppUpdatesPopup from '@renderer/features/updates/AppUpdatesPopup.svelte'
   import { createAppUpdates } from '@renderer/features/updates/appUpdates.svelte'
@@ -367,11 +367,6 @@
 
   const resetWorkspaceState = async () => {
     await runIpcBestEffort(closeSelectedWorkspace)
-  }
-
-  const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
-    const workspaceFileName = preparePromptCollectionName(workspaceName).folderName
-    return `${workspacePath.replace(/[\\/]+$/, '')}\\${workspaceFileName}.cthulhuprompt`
   }
 
   const loadWorkspaceSelection = async (workspaceInfoPath: string): Promise<void> => {

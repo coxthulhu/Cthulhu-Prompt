@@ -107,7 +107,7 @@ describe('Single prompt editor', () => {
 
     await openPrompt(mainWindow, promptId)
     await expect(mainWindow.locator('.prompt-collection-header-breadcrumb button')).toHaveText([
-      'Content', 'Active', `Prompt ${promptId.slice(1)}`
+      'Default Project', 'Content', 'Active', `Prompt ${promptId.slice(1)}`
     ])
     await expect(mainWindow.getByTestId('prompt-collection-find-button')).toHaveAttribute('title', 'Find in Prompt (Control + F)')
     expect(await getMonacoEditorText(mainWindow, BODY)).toBe(`Body ${promptId.slice(1)} Second line Third line`)

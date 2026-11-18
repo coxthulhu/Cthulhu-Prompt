@@ -1,10 +1,4 @@
-import {
-  getPromptStatusFolderDefinition,
-  PROMPT_STATUS_FOLDERS,
-  PromptStatus,
-  type PromptPersisted
-} from '@shared/domain/prompt/Prompt'
-import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
+import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
 import {
   parsePromptMarkdown,
   serializePromptMarkdown
@@ -14,57 +8,12 @@ import {
   readMarkdownModifiedAt,
   type MarkdownPersistenceFields
 } from './MarkdownPersistence'
+import {
+  hasStatusFolderNormalizationChanges,
+  normalizeContentForStatusFolder
+} from './StatusFolderNormalization'
 
 export type PromptPersistenceFields = MarkdownPersistenceFields
-
-const getPromptStatusFolderForDirectory = (folderName: string) => {
-  const folderNameParts = folderName.split(/[\\/]/)
-  const finalFolderName = folderNameParts[folderNameParts.length - 1]
-  /** Registry definition whose directory name matches the persisted parent status folder. */
-  const statusFolder = PROMPT_STATUS_FOLDERS.find(
-    (candidate) => candidate.directoryName === finalFolderName
-  )
-  return statusFolder ?? getPromptStatusFolderDefinition(PromptStatus.Todo)
-}
-
-const normalizePromptStatusForStatusFolder = (
-  prompt: PromptPersisted,
-  folderName: string
-): PromptPersisted => {
-  /** Registry definition owning the physical directory being loaded. */
-  const statusFolder = getPromptStatusFolderForDirectory(folderName)
-  if (statusFolder.isFinal) {
-    if (
-      (statusFolder.statuses as readonly PromptStatus[]).includes(prompt.status) &&
-      prompt.finalizedAt
-    ) {
-      return prompt
-    }
-
-    return {
-      ...prompt,
-      status: statusFolder.entryStatus,
-      finalizedAt: getCurrentIsoSecondTimestamp()
-    }
-  }
-
-  if (
-    (statusFolder.statuses as readonly PromptStatus[]).includes(prompt.status) &&
-    !prompt.finalizedAt
-  ) {
-    return prompt
-  }
-
-  const { finalizedAt: _finalizedAt, ...activePrompt } = prompt
-  return {
-    ...activePrompt,
-    status: statusFolder.entryStatus
-  }
-}
-
-const hasSameStatusMetadata = (left: PromptPersisted, right: PromptPersisted): boolean => {
-  return left.status === right.status && left.finalizedAt === right.finalizedAt
-}
 
 export const readPromptModifiedAt = (persistenceFields: PromptPersistenceFields): string => {
   return readMarkdownModifiedAt(persistenceFields, 'prompt')
@@ -75,7 +24,6 @@ export const promptPersistence = createMarkdownPersistence<PromptPersisted>({
   parseMarkdown: parsePromptMarkdown,
   serializeMarkdown: serializePromptMarkdown,
   normalizeLoadedData: (prompt, folderPath) =>
-    normalizePromptStatusForStatusFolder(prompt, folderPath),
-  shouldRewriteNormalizedData: (loaded, normalized) =>
-    !hasSameStatusMetadata(loaded, normalized)
+    normalizeContentForStatusFolder(prompt, folderPath, 'prompt'),
+  shouldRewriteNormalizedData: hasStatusFolderNormalizationChanges
 })

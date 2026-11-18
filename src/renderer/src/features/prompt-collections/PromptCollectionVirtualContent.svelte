@@ -94,7 +94,10 @@
     PromptCollectionScreenMode
   } from './promptCollectionScreenMode'
   import { resolvePromptTreePromptMove } from '@renderer/features/prompt-tree/promptTreeDrag'
-  import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+  import {
+    getCategoryContentIds,
+    getMarkdownContentCategoryOrder
+  } from '@shared/domain/markdown-content/MarkdownContent'
   import type {
     PromptCollectionDividerTarget,
     PromptCollectionPromptTarget,
@@ -624,12 +627,9 @@
 
   /** Returns group-ordered content IDs from one exact CategoryOrder group. */
   const getCategoryEntryIds = (categoryId: string | null): string[] =>
-    (promptCollectionById[screenCollectionId] && !isFinalMode
-      ? getMarkdownContentCategoryOrder(promptCollectionById[screenCollectionId], screenMode).categories
-      : [])
-      .find((group) => group.categoryId === categoryId)
-      ?.entries.filter((entry) => entry.kind === contentKind)
-      .map((entry) => entry.id) ?? []
+    promptCollectionById[screenCollectionId] && !isFinalMode
+      ? getCategoryContentIds(promptCollectionById[screenCollectionId], screenMode, categoryId)
+      : []
 
   /** Builds a category-only target for a full-width divider boundary. */
   const getCategoryDividerDropOptions = (

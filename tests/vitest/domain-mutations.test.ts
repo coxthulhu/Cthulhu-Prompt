@@ -24,7 +24,10 @@ import {
   planPromptTemplateUpdate,
   planPromptUpdate,
 } from '@shared/domain/markdown-content/MarkdownContentDomainMutations'
-import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+import {
+  getCategoryContentIds,
+  getMarkdownContentCategoryOrder
+} from '@shared/domain/markdown-content/MarkdownContent'
 import { PromptStatus, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import {
   createPromptStatusFolderLayouts,
@@ -38,7 +41,11 @@ import {
 import { planSetPromptLocationDomainMutation } from '@shared/domain/prompt/PromptDomainMutations'
 import { SYSTEM_SETTINGS_ID } from '@shared/domain/settings/SystemSettings'
 import { planSetSystemSettingsDomainMutation } from '@shared/domain/settings/SystemSettingsDomainMutations'
-import { parseCreateAttachedNoteCommand, planCreateAttachedNote } from '@shared/domain/note/NoteDomainMutations'
+import {
+  parseCreateAttachedNoteCommand,
+  planCreateAttachedNote,
+  planSetNoteLocation
+} from '@shared/domain/note/NoteDomainMutations'
 
 /** Narrows a planner update whose entity and operation are established by its test case. */
 const getUpdateRecipe = <TEntityType extends DomainEntityType>(change: DomainChange): DomainUpdateRecipe<TEntityType> =>
@@ -1178,5 +1185,77 @@ describe('shared domain mutation planners', () => {
     expect(movedTemplate.fallbackTitle).toBe('New Template 1')
     // Pure movement retains the domain timestamp; persisted snapshots use filesystem mtime.
     expect(movedTemplate.modifiedAt).toBe('now')
+  })
+})
+
+describe('shared category-ordered entry moves', () => {
+  /** Prompt collection whose category orders a prompt followed by a standalone note. */
+  const createNoteCollection = (): PromptCollection => {
+    const collection = createCollection('root', 'prompt', 'category', 'prompt')
+    getMarkdownContentCategoryOrder(collection).categories[1]!.entries.push({ kind: 'note', id: 'note' })
+    return collection
+  }
+
+  /** Standalone note currently placed after the prompt. */
+  const note = {
+    kind: 'standalone' as const,
+    id: 'note',
+    title: 'Note',
+    fallbackTitle: '',
+    createdAt: '2026-08-29T12:00:00Z',
+    modifiedAt: '2026-08-29T12:00:00Z',
+    noteText: 'Note text',
+    category: 'category',
+    status: PromptStatus.Todo
+  }
+
+  it('excludes notes from category content IDs', () => {
+    expect(getCategoryContentIds(createNoteCollection(), PromptStatusFolderId.Active, 'category')).toEqual([
+      'prompt'
+    ])
+  })
+
+  it('skips collection writes when a note stays in place', () => {
+    const plan = planSetNoteLocation(
+      createDomainState({ promptCollection: [createNoteCollection()], note: [note] }),
+      {
+        noteId: 'note',
+        sourcePromptCollectionId: 'root',
+        modifiedAt: '2026-08-30T12:00:00Z',
+        location: {
+          promptCollectionId: 'root',
+          categoryId: 'category',
+          previousEntryId: 'prompt',
+          status: PromptStatus.Todo
+        }
+      }
+    )
+    if (!Array.isArray(plan)) throw new Error('Expected note location plan')
+    expect(plan.map((change) => change.entityType)).toEqual(['note'])
+  })
+
+  it('updates the collection when a note moves', () => {
+    const plan = planSetNoteLocation(
+      createDomainState({ promptCollection: [createNoteCollection()], note: [note] }),
+      {
+        noteId: 'note',
+        sourcePromptCollectionId: 'root',
+        modifiedAt: '2026-08-30T12:00:00Z',
+        location: {
+          promptCollectionId: 'root',
+          categoryId: 'category',
+          previousEntryId: null,
+          status: PromptStatus.Todo
+        }
+      }
+    )
+    if (!Array.isArray(plan)) throw new Error('Expected note location plan')
+    expect(plan.map((change) => change.entityType)).toEqual(['promptCollection', 'note'])
+    /** Collection after applying the planned reorder. */
+    const movedCollection = produce(createNoteCollection(), getUpdateRecipe<'promptCollection'>(plan[0]!))
+    expect(getMarkdownContentCategoryOrder(movedCollection).categories[1]!.entries).toEqual([
+      { kind: 'note', id: 'note' },
+      { kind: 'prompt', id: 'prompt' }
+    ])
   })
 })

@@ -1,10 +1,10 @@
 import { isPromptTemplateStatus, PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import type { DomainChange, DomainPlanner, DomainTarget } from '@shared/domain/DomainChanges'
 import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { getPromptStatusFolderContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+import { getPromptStatusFolderContentIds, planCategoryOrderedEntryMove } from '@shared/domain/markdown-content/MarkdownContent'
 import { promptTemplateEntryRef, promptEntryRef } from '@shared/domain/OrderContainer'
 import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, PromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
-import { removeCategoryOrderEntry, type PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
+import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
 import { DEFAULT_PROMPT_TEMPLATE_FALLBACK_TITLE, resolvePromptTitleUpdateForPromptIds } from '@shared/domain/prompt/promptFallbackTitle'
 
 /** Renderer-authored command setting the complete location of one prompt or template. */
@@ -17,7 +17,7 @@ export type SetPromptLocationDomainCommand = {
 }
 
 /** Parses the exact shared location shape, including automatic final-status ordering. */
-const parsePromptLocation = (value: unknown): PromptLocation | null => {
+export const parsePromptLocation = (value: unknown): PromptLocation | null => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw location fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
@@ -83,21 +83,6 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
 
   /** Destination workflow and its category or finalization ordering. */
   const destinationStatus = getPromptStatusFolderDefinition(location.status)
-  /** Destination layout used for exact placement validation. */
-  const destinationLayout = destination.statusFolders[destinationStatus.id]
-  /** Whether the physical owning collection or status folder changes. */
-  const transfersOwnership = source.id !== destination.id || sourceStatus.id !== destinationStatus.id
-  /** Source layout used to resolve the current ordered category. */
-  const sourceLayout = source.statusFolders[sourceStatus.id]
-  /** Current ordered category, absent for automatically sorted final statuses. */
-  const sourceCategory = sourceLayout.ordering === 'category'
-    ? sourceLayout.categoryOrder.categories.find((group) => group.entries.some((entry) => entry.id === promptId))
-    : undefined
-  /** Current predecessor within the source category. */
-  const sourcePreviousEntryId = sourceCategory?.entries[sourceCategory.entries.findIndex((entry) => entry.id === promptId) - 1]?.id ?? null
-  /** Whether this command changes any collection ordering or ownership. */
-  const changesOrdering = transfersOwnership || (destinationLayout.ordering === 'category' &&
-    (sourceCategory?.categoryId !== location.categoryId || sourcePreviousEntryId !== location.previousEntryId))
   /** Status changes own modified/finalized timestamps; pure moves retain their timestamps. */
   const changesStatus = (prompt.status ?? (kind === 'template' ? PromptTemplateStatus.Active : PromptStatus.Todo)) !== location.status
   /** Finalization is retained within one final status and cleared on restoration. */
@@ -120,35 +105,18 @@ export const planSetPromptLocationDomainMutation: DomainPlanner<SetPromptLocatio
   const entry = kind === 'prompt' ? promptEntryRef(promptId) : promptTemplateEntryRef(promptId)
 
   try {
-    /** Validated destination placement; final statuses retain their restoration category. */
-    const placement = destinationLayout.ordering === 'category'
-      ? placeMarkdownContentInCategoryOrder(destinationLayout.categoryOrder, prompt, entry, location.categoryId, location.previousEntryId)
-      : null
-    if (destinationLayout.ordering === 'finalizedAt' && location.previousEntryId !== null) {
-      return { status: 'conflict', reason: 'Prompt location placement conflict', targets }
-    }
-    /** One update per affected collection, even for moves between layouts in the same collection. */
-    const changes: DomainChange[] = changesOrdering
-      ? Array.from(new Set([source.id, destination.id])).map((id) => ({
-          type: 'update' as const,
-          entityType: 'promptCollection' as const,
-          id,
-          recipe: (draft) => {
-            if (id === source.id) {
-              /** Source layout losing the old ordered or finalized reference. */
-              const layout = draft.statusFolders[sourceStatus.id]
-              if (layout.ordering === 'category') layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
-              else layout.promptIds = layout.promptIds.filter((id) => id !== promptId)
-            }
-            if (id === destination.id) {
-              /** Destination layout receiving the validated placement exactly once. */
-              const layout = draft.statusFolders[destinationStatus.id]
-              if (layout.ordering === 'category') layout.categoryOrder = placement!.categoryOrder
-              else layout.promptIds = [promptId, ...layout.promptIds.filter((id) => id !== promptId)]
-            }
-          }
-        }))
-      : []
+    /** Collection layout updates, empty when the content already sits at this location. */
+    const changes: DomainChange[] = planCategoryOrderedEntryMove({
+      source,
+      sourceStatusFolderId: sourceStatus.id,
+      destination,
+      destinationStatusFolderId: destinationStatus.id,
+      entry,
+      content: prompt,
+      categoryId: location.categoryId,
+      previousEntryId: location.previousEntryId,
+      finalizedIdsKey: 'promptIds'
+    })
     changes.push({
       type: 'update',
       entityType,

@@ -10,46 +10,22 @@ import { getPromptStatusFolderContentIds } from '@shared/domain/markdown-content
 import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
 import type { TextMeasurement } from '@renderer/data/UiState/cache/measuredHeightCache'
 import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
-import {
-  promptTemplateClientStateCollection,
-  type PromptTemplateClientStateRecord
-} from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
 import { mutatePacedPromptTemplateAutosaveUpdate } from '@renderer/data/Mutations/PromptTemplateMutations'
-import {
-  clearPromptEditorMeasuredHeights,
-  recordPromptEditorMeasuredHeight
-} from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
-import { createMarkdownContentClientState } from './MarkdownContentClientState'
-
-/** Lifecycle helpers for prompt-template client state and editor measurements. */
-const clientState = createMarkdownContentClientState<PromptTemplateClientStateRecord>({
-  authoritativeCollectionId: promptTemplatesCollection.id,
-  getClientState: (templateId) => promptTemplateClientStateCollection.get(templateId),
-  getClientStates: () => promptTemplateClientStateCollection.toArray,
-  getClientStateIds: () =>
-    Array.from(promptTemplateClientStateCollection.keys(), (id) => String(id)),
-  insertClientStates: (clientStates) => {
-    promptTemplateClientStateCollection.insert(clientStates)
-  },
-  deleteClientStates: (templateIds) => {
-    promptTemplateClientStateCollection.delete(templateIds)
-  },
-  createClientState: (templateId) => ({ id: templateId, isEdited: false }),
-  beforeDelete: clearPromptEditorMeasuredHeights
-})
+import { recordPromptEditorMeasuredHeight } from '@renderer/data/UiState/cache/PromptEditorUiCache.svelte.ts'
+import { promptTemplateClientState } from './PromptTemplateClientState'
 
 /** Adds missing client-state records for loaded prompt templates. */
-export const upsertPromptTemplateClientStates = clientState.upsertClientStates
+export const upsertPromptTemplateClientStates = promptTemplateClientState.upsertClientStates
 /** Deletes prompt-template client state and associated UI caches. */
-export const deletePromptTemplateClientStates = clientState.deleteClientStates
+export const deletePromptTemplateClientStates = promptTemplateClientState.deleteClientStates
 /** Deletes one prompt template's client state and associated UI cache. */
-export const removePromptTemplateClientState = clientState.removeClientState
+export const removePromptTemplateClientState = promptTemplateClientState.removeClientState
 /** Flushes autosaves associated with prompt-template client state. */
-export const flushPromptTemplateClientStateAutosaves = clientState.flushAutosaves
+export const flushPromptTemplateClientStateAutosaves = promptTemplateClientState.flushAutosaves
 /** Clears all prompt-template client state for the current workspace. */
-export const clearPromptTemplateClientStateCollection = clientState.clearClientStateCollection
+export const clearPromptTemplateClientStateCollection = promptTemplateClientState.clearClientStateCollection
 
 /** Resolves filename siblings within the template's current physical status directory. */
 const getSiblingTemplateIds = (templateId: string): string[] => {

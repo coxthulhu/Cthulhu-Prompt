@@ -23,7 +23,10 @@ export const getPromptCollectionDetails = (
   const entryIds = promptCollection.kind === 'template'
     ? getOrderedMarkdownContentIds(promptCollection, 'template')
     : Object.values(promptCollection.statusFolders).flatMap((layout) => layout.ordering === 'category'
-      ? layout.categoryOrder.categories.flatMap((group) => group.entries.map((entry) => entry.id))
+      // Notes can share category orders but are not counted as prompts.
+      ? layout.categoryOrder.categories.flatMap((group) =>
+          group.entries.flatMap((entry) => (entry.kind === 'prompt' ? [entry.id] : []))
+        )
       : [])
   /** Content lookup matching the collection's kind. */
   const contentById = promptCollection.kind === 'template' ? templateById : promptById

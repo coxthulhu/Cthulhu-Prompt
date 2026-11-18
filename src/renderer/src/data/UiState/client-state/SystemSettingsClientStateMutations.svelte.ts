@@ -42,93 +42,51 @@ export const upsertSystemSettingsClientState = (settings: SystemSettings): void 
   })
 }
 
-/** Applies one changed system-settings input through the autosave transaction. */
-const updateSystemSettingsClientStateInput = (
-  value: string,
-  selectInput: (clientState: SystemSettingsClientStateRecord) => string,
-  applyInput: (clientState: SystemSettingsClientStateRecord, value: string) => void
+/** Editable system-settings field stored in renderer-session client state. */
+type SystemSettingsClientStateField = Exclude<keyof SystemSettingsClientStateRecord, 'id'>
+
+/** Applies one changed system-settings field through the autosave transaction. */
+export const setSystemSettingsClientStateField = <TField extends SystemSettingsClientStateField>(
+  field: TField,
+  value: SystemSettingsClientStateRecord[TField]
 ): void => {
-  const clientState = getSystemSettingsClientStateRecord()
-  if (selectInput(clientState) === value) {
+  if (getSystemSettingsClientStateRecord()[field] === value) {
     return
   }
 
   mutateSystemSettingsClientStateWithAutosave((nextClientState) => {
-    applyInput(nextClientState, value)
+    nextClientState[field] = value
   })
 }
 
 /** Updates the client-side font-size input. */
-export const setSystemSettingsClientStateFontSizeInput = (value: string): void => {
-  updateSystemSettingsClientStateInput(
-    value,
-    (formData) => formData.promptFontSizeInput,
-    (formData, nextValue) => {
-      formData.promptFontSizeInput = nextValue
-    }
-  )
-}
+export const setSystemSettingsClientStateFontSizeInput = (value: string): void =>
+  setSystemSettingsClientStateField('promptFontSizeInput', value)
 
 /** Updates the client-side minimum editor-lines input. */
-export const setSystemSettingsClientStatePromptEditorMinLinesInput = (value: string): void => {
-  updateSystemSettingsClientStateInput(
-    value,
-    (formData) => formData.promptEditorMinLinesInput,
-    (formData, nextValue) => {
-      formData.promptEditorMinLinesInput = nextValue
-    }
-  )
-}
+export const setSystemSettingsClientStatePromptEditorMinLinesInput = (value: string): void =>
+  setSystemSettingsClientStateField('promptEditorMinLinesInput', value)
 
 /** Updates the client-side maximum editor-lines input. */
-export const setSystemSettingsClientStatePromptEditorMaxLinesInput = (value: string): void => {
-  updateSystemSettingsClientStateInput(
-    value,
-    (formData) => formData.promptEditorMaxLinesInput,
-    (formData, nextValue) => {
-      formData.promptEditorMaxLinesInput = nextValue
-    }
-  )
-}
+export const setSystemSettingsClientStatePromptEditorMaxLinesInput = (value: string): void =>
+  setSystemSettingsClientStateField('promptEditorMaxLinesInput', value)
 
-/** Updates the note reserved lines without committing conflicting line budgets. */
-export const setSystemSettingsClientStateAttachedNoteReservedLinesInput = (value: string): void => {
-  updateSystemSettingsClientStateInput(
-    value,
-    (formData) => formData.attachedNoteReservedLinesInput,
-    (formData, nextValue) => { formData.attachedNoteReservedLinesInput = nextValue }
-  )
-}
+/** Updates the note reserved lines input. */
+export const setSystemSettingsClientStateAttachedNoteReservedLinesInput = (value: string): void =>
+  setSystemSettingsClientStateField('attachedNoteReservedLinesInput', value)
 
 /** Updates the client-side line-number toggle. */
-export const setSystemSettingsClientStateShowLineNumbers = (value: boolean): void => {
-  const clientState = getSystemSettingsClientStateRecord()
-  if (clientState.showLineNumbers === value) {
-    return
-  }
-
-  mutateSystemSettingsClientStateWithAutosave((nextClientState) => {
-    nextClientState.showLineNumbers = value
-  })
-}
+export const setSystemSettingsClientStateShowLineNumbers = (value: boolean): void =>
+  setSystemSettingsClientStateField('showLineNumbers', value)
 
 /** Updates the preferred initial focus for new prompts and templates. */
-export const setSystemSettingsClientStateNewPromptFocus = (value: NewPromptFocus): void => {
-  mutateSystemSettingsClientStateWithAutosave((clientState) => {
-    clientState.newPromptFocus = value
-  })
-}
+export const setSystemSettingsClientStateNewPromptFocus = (value: NewPromptFocus): void =>
+  setSystemSettingsClientStateField('newPromptFocus', value)
 
 /** Updates automatic update discovery through the existing settings autosave. */
-export const setSystemSettingsClientStateAutomaticUpdates = (value: boolean): void => {
-  mutateSystemSettingsClientStateWithAutosave((clientState) => {
-    clientState.automaticUpdates = value
-  })
-}
+export const setSystemSettingsClientStateAutomaticUpdates = (value: boolean): void =>
+  setSystemSettingsClientStateField('automaticUpdates', value)
 
 /** Updates the auto-updater release channel through the existing settings autosave. */
-export const setSystemSettingsClientStateUpdateChannel = (value: UpdateChannel): void => {
-  mutateSystemSettingsClientStateWithAutosave((clientState) => {
-    clientState.updateChannel = value
-  })
-}
+export const setSystemSettingsClientStateUpdateChannel = (value: UpdateChannel): void =>
+  setSystemSettingsClientStateField('updateChannel', value)

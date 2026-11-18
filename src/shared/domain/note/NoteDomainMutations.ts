@@ -1,13 +1,18 @@
 import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
 import type { DomainChange, DomainPlanner, DomainState, DomainTarget } from '@shared/domain/DomainChanges'
 import { createAttachedNoteUiStateKey, deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
-import { getMarkdownContentIds, placeMarkdownContentInCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+import {
+  getMarkdownContentIds,
+  placeMarkdownContentInCategoryOrder,
+  planCategoryOrderedEntryMove
+} from '@shared/domain/markdown-content/MarkdownContent'
 import { getPromptStatusFolderDefinition, isFinalPromptStatus, isPromptStatus, type PromptLocation } from '@shared/domain/prompt/Prompt'
 import { isPromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { removeCategoryOrderEntry } from '@shared/domain/prompt-collection/PromptCollection'
 import { resolveAvailablePromptFallbackTitle, resolvePromptTitleUpdate } from '@shared/domain/prompt/promptFallbackTitle'
 import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { DEFAULT_NOTE_FALLBACK_TITLE, findNoteOwner, getStandaloneNoteIds, type StandaloneNote } from './Note'
+import { parsePromptLocation } from '@shared/domain/prompt/PromptDomainMutations'
 
 /** Renderer-generated identity and timestamp for a new empty attachment. */
 export type CreateAttachedNoteCommand = {
@@ -81,14 +86,8 @@ export const parseUpdateNoteCommand = (value: unknown): UpdateNoteCommand | null
 export const parseSetNoteLocationCommand = (value: unknown): SetNoteLocationCommand | null => {
   /** Top-level fields validated before inspecting placement. */
   const record = commandRecord(value, ['noteId', 'modifiedAt', 'sourcePromptCollectionId', 'location'])
-  if (!record || typeof record.sourcePromptCollectionId !== 'string' || !record.location || typeof record.location !== 'object') return null
-  /** Nested location shares the existing prompt/template placement contract. */
-  const location = record.location as Record<string, unknown>
-  if (Object.keys(location).length !== 4 || typeof location.promptCollectionId !== 'string' ||
-    (location.categoryId !== null && typeof location.categoryId !== 'string') ||
-    (location.previousEntryId !== null && typeof location.previousEntryId !== 'string') ||
-    (!isPromptStatus(location.status) && !isPromptTemplateStatus(location.status)) ||
-    (isFinalPromptStatus(location.status) && location.previousEntryId !== null)) return null
+  // Nested location uses the same placement contract as prompts and templates.
+  if (!record || typeof record.sourcePromptCollectionId !== 'string' || !parsePromptLocation(record.location)) return null
   return record as SetNoteLocationCommand
 }
 
@@ -254,33 +253,19 @@ export const planSetNoteLocation: DomainPlanner<SetNoteLocationCommand> = (state
   const sourceFolder = getPromptStatusFolderDefinition(note.status)
   /** Destination workflow definition. */
   const targetFolder = getPromptStatusFolderDefinition(location.status)
-  /** Target layout used to validate the requested predecessor. */
-  const targetLayout = destination.statusFolders[targetFolder.id]
-  /** Stable ordered identity used in removal and insertion. */
-  const entry = { kind: 'note' as const, id: note.id }
   try {
-    /** Manual insertion is validated before returning any changes. */
-    const placement = targetLayout.ordering === 'category'
-      ? placeMarkdownContentInCategoryOrder(targetLayout.categoryOrder, note, entry, location.categoryId, location.previousEntryId)
-      : null
-    if (targetLayout.ordering === 'finalizedAt' && location.previousEntryId !== null) throw new Error('Finalized ordering is automatic')
-    /** One collection update per owner, even when transferring between its folders. */
-    const changes: DomainChange[] = [...new Set([source.id, destination.id])].map((id) => ({
-      type: 'update', entityType: 'promptCollection', id, recipe: (draft) => {
-        if (id === source.id) {
-          /** Source layout loses the old reference. */
-          const layout = draft.statusFolders[sourceFolder.id]
-          if (layout.ordering === 'category') layout.categoryOrder = removeCategoryOrderEntry(layout.categoryOrder, entry)
-          else layout.noteIds = layout.noteIds.filter((id) => id !== note.id)
-        }
-        if (id === destination.id) {
-          /** Destination receives the validated reference once. */
-          const layout = draft.statusFolders[targetFolder.id]
-          if (layout.ordering === 'category') layout.categoryOrder = placement!.categoryOrder
-          else layout.noteIds = [note.id, ...layout.noteIds.filter((id) => id !== note.id)]
-        }
-      }
-    }))
+    /** Shared prompt and note ordering skips collection writes when the note does not move. */
+    const changes: DomainChange[] = planCategoryOrderedEntryMove({
+      source,
+      sourceStatusFolderId: sourceFolder.id,
+      destination,
+      destinationStatusFolderId: targetFolder.id,
+      entry: { kind: 'note', id: note.id },
+      content: note,
+      categoryId: location.categoryId,
+      previousEntryId: location.previousEntryId,
+      finalizedIdsKey: 'noteIds'
+    })
     changes.push({ type: 'update', entityType: 'note', id: note.id, recipe: (draft) => {
       if (draft.kind !== 'standalone') return
       if (note.status !== location.status) draft.modifiedAt = command.modifiedAt

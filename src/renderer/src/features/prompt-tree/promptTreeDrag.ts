@@ -11,8 +11,8 @@ import {
 import { setPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
 import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
-import { getContentStatusFolders, getContentStatusFolderEntryStatus, getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDER_REGISTRY, type PromptLocation, type PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
-import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
+import { getContentStatusFolders, getContentStatusFolderEntryStatus, getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDER_REGISTRY, type PromptLocation } from '@shared/domain/prompt/Prompt'
+import { getCategoryContentIds } from '@shared/domain/markdown-content/MarkdownContent'
 
 type PromptTreePromptDragControllerOptions = {
   getPromptCollections: () => PromptCollection[]
@@ -29,16 +29,6 @@ const findPromptCollection = (promptCollections: PromptCollection[], collectionI
   return promptCollections.find((collection) => collection.id === collectionId) ?? null
 }
 
-/** Returns active entry IDs from one exact collection or category group. */
-const getCategoryEntryIds = (
-  promptCollection: PromptCollection,
-  categoryId: string | null,
-  statusFolderId: PromptStatusFolderId
-): string[] =>
-  getMarkdownContentCategoryOrder(promptCollection, statusFolderId).categories
-    .find((group) => group.categoryId === categoryId)
-    ?.entries.filter((entry) => entry.kind === promptCollection.kind)
-    .map((entry) => entry.id) ?? []
 
 /** Resolves a tree or editor drop into one complete prompt location. */
 export const resolvePromptTreePromptMove = (
@@ -91,10 +81,10 @@ export const resolvePromptTreePromptMove = (
     sourceContentOwnerId,
     sourceGroup.ordering === 'finalizedAt'
       ? []
-      : getCategoryEntryIds(sourcePromptCollection, sourceCategoryId, sourceGroup.id),
+      : getCategoryContentIds(sourcePromptCollection, sourceGroup.id, sourceCategoryId),
     sourcePayload.fromId,
     { ...dropPayload, collectionId: destinationContentOwnerId },
-    getCategoryEntryIds(destinationPromptCollection, destinationCategoryId, destinationGroup.id)
+    getCategoryContentIds(destinationPromptCollection, destinationGroup.id, destinationCategoryId)
   )
   if (previousEntryId === undefined) return null
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { findCollectionProject } from '@shared/domain/workspace/Project'
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
   import { useLiveQuery } from '@tanstack/svelte-db'
@@ -140,7 +141,7 @@
 
   /** Collections in the owning project remain available to rename validation. */
   const promptCollections = $derived(promptCollectionQuery.data.filter((collection) =>
-    selectedWorkspace?.projects.find((project) => project.collectionEntries.some((entry) => entry.id === screenCollectionId))
+    (selectedWorkspace && findCollectionProject(selectedWorkspace, screenCollectionId))
       ?.collectionEntries.some((entry) => entry.id === collection.id)))
   /** The tab sidebar only mounts while its collection is available. */
   const screenCollection = $derived(promptCollectionQuery.data.find((collection) => collection.id === screenCollectionId) ?? null)
@@ -288,6 +289,15 @@
     manageCategoriesDialog?.openDialog({ categoryId })
   }
 
+  // Side effect: let this tab's collection screens open the dialogs hosted here; unregisters on unmount.
+  $effect(() =>
+    modeData.registerCollectionDialogs({
+      openRenamePromptCollection: (promptCollectionId) =>
+        renamePromptCollectionDialog?.openDialog(promptCollectionId),
+      openManageCategories: (options) => manageCategoriesDialog?.openDialog(options)
+    })
+  )
+
   /** Persists every retained category draft through one atomic mutation. */
   const handleSaveCategories = async (
     categories: ManagedCategoryInput[]
@@ -318,9 +328,8 @@
     const draggedEntry = promptEntryDragState.draggedEntry
     return {
       collectionId: screenCollectionId,
-      categoryId: draggedEntry?.kind === 'content'
-        ? promptsCollection.get(draggedEntry.contentId)?.category ?? null
-        : null,
+      // The drag location already resolves prompt and template categories, including retained final ones.
+      categoryId: draggedEntry?.kind === 'content' ? draggedEntry.location.categoryId : null,
       targetEntryId: null,
       position: 'before',
       statusSection

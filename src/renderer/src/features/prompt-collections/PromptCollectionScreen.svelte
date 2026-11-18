@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte'
   import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import PromptCollectionHeaderBar from './PromptCollectionHeaderBar.svelte'
+  import { buildPromptCollectionBreadcrumb } from './promptCollectionBreadcrumb'
   import LoadingOverlay from '@renderer/common/cthulhu-ui/loading/LoadingOverlay.svelte'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { isPromptCollectionEmpty } from '@renderer/data/Collections/PromptCollectionEntries'
@@ -10,15 +11,7 @@
   import PromptCollectionFindIntegration from './find/PromptCollectionFindIntegration.svelte'
   import { createPromptCollectionScreenController } from './promptCollectionScreenController.svelte.ts'
   import { PromptCollectionScreenMode } from './promptCollectionScreenMode'
-  import RenamePromptCollectionDialog from './RenamePromptCollectionDialog.svelte'
-  import ManageCategoriesDialog, {
-    type ManagedCategoryInput,
-    type ManageCategoriesDialogOpenOptions
-  } from './ManageCategoriesDialog.svelte'
-  import {
-    moveCategory,
-    saveCategories
-  } from '@renderer/data/Mutations/CategoryMutations'
+  import { moveCategory } from '@renderer/data/Mutations/CategoryMutations'
   import type { CollectionSidebarModeData } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
 
   let {
@@ -53,21 +46,11 @@
     controller.persistActivePromptScreenRow()
   })
 
-  /** Imperative handle for opening collection rename. */
-  let renamePromptCollectionDialog = $state<{ openDialog: (promptCollectionId: string) => void } | null>(null)
-  /** Imperative handle for opening collection category management. */
-  let manageCategoriesDialog = $state<{
-    openDialog: (options?: ManageCategoriesDialogOpenOptions) => void
-  } | null>(null)
   let deletePromptCollectionId = $state<string | null>(null)
 
-  const openRenamePromptCollectionDialog = (promptCollectionId: string) => {
-    renamePromptCollectionDialog?.openDialog(promptCollectionId)
-  }
-
-  /** Opens category management to the first retained category, if present. */
+  /** Opens category management, hosted by this tab's sidebar, to the first retained category. */
   const openManageCategoriesDialog = (): void => {
-    manageCategoriesDialog?.openDialog()
+    sidebarModeData.openManageCategoriesDialog()
   }
 
   /** Opens category management to one row and optionally selects its complete name. */
@@ -75,29 +58,7 @@
     categoryId: string,
     focusName: boolean
   ): void => {
-    manageCategoriesDialog?.openDialog({ categoryId, focusName })
-  }
-
-  /** Persists every retained category draft through one atomic mutation. */
-  const handleSaveCategories = async (
-    categories: ManagedCategoryInput[]
-  ): Promise<boolean> => {
-    if (!controller.workspaceId || !controller.screenCollection) return false
-    /** Validated workspace identity retained across the asynchronous save callback. */
-    const workspaceId = controller.workspaceId
-    /** Validated collection identity retained across the asynchronous save callback. */
-    const promptCollectionId = controller.screenCollection.id
-    return await runIpcBestEffort(
-      async () => {
-        await saveCategories(
-          workspaceId,
-          promptCollectionId,
-          categories
-        )
-        return true
-      },
-      () => false
-    )
+    sidebarModeData.openManageCategoriesDialog({ categoryId, focusName })
   }
 
   /** Persists one category-group reorder from the collection screen. */
@@ -161,32 +122,22 @@
     <main class="relative flex-1 min-h-0 flex flex-col" data-testid="prompt-collection-screen">
       <PromptCollectionHeaderBar
         isReady={controller.isVirtualContentReady}
-        segments={[
-          ...(controller.projectName
-            ? [{
-                label: controller.projectName,
-                testId: 'prompt-collection-header-project',
-                onclick: sidebarModeData.clear
-              }]
-            : []),
-          {
+        segments={buildPromptCollectionBreadcrumb({
+          project: controller.projectName
+            ? { label: controller.projectName, onclick: sidebarModeData.clear }
+            : null,
+          collection: {
             label: controller.collectionDisplayName,
-            testId: 'prompt-collection-header-collection',
             onclick: controller.handleHeaderCollectionClick
           },
-          {
+          statusGroup: {
             label: controller.headerGroupLabel,
-            testId: 'prompt-collection-header-section',
             onclick: controller.handleHeaderCollectionClick
           },
-          ...(controller.headerCategoryLabel !== null
-            ? [{
-                label: controller.headerCategoryLabel,
-                testId: 'prompt-collection-header-category',
-                onclick: controller.handleHeaderCategoryClick
-              }]
-            : [])
-        ]}
+          category: controller.headerCategoryLabel !== null
+            ? { label: controller.headerCategoryLabel, onclick: controller.handleHeaderCategoryClick }
+            : null
+        })}
         findLabel="Find in Collection (Control + F)"
         onFind={findControls.toggleFindDialog}
       />
@@ -243,7 +194,7 @@
             onBreadcrumbCategoryChange={controller.handleBreadcrumbCategoryChange}
             onUserScroll={controller.handleVirtualUserScroll}
             onContentSectionToggle={controller.toggleContentSectionExpanded}
-            onRenamePromptCollection={openRenamePromptCollectionDialog}
+            onRenamePromptCollection={sidebarModeData.openRenamePromptCollectionDialog}
             onManageCategory={openManageCategoryDialog}
             onScreenModeChange={handleScreenModeChange}
           />
@@ -261,21 +212,6 @@
     </main>
   {/snippet}
 </PromptCollectionFindIntegration>
-
-<ManageCategoriesDialog
-  bind:this={manageCategoriesDialog}
-  categories={controller.managedCategories}
-  collectionDisplayName={controller.collectionDisplayName}
-  contentKind={controller.contentKind}
-  isWorkspaceReady={controller.workspaceId !== null && controller.screenCollection !== null}
-  onsubmit={handleSaveCategories}
-/>
-
-<RenamePromptCollectionDialog
-  bind:this={renamePromptCollectionDialog}
-  isWorkspaceReady={controller.screenCollection !== null}
-  promptCollections={controller.promptCollections}
-/>
 
 <ConfirmationDialog
   open={deletePromptCollectionTarget !== null}

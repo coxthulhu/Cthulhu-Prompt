@@ -33,7 +33,9 @@ export const createMarkdownContentClientState = <TClientState extends ClientStat
   const deleteClientStates = (contentIds: string[]): void => {
     if (contentIds.length === 0) return
     config.beforeDelete?.(contentIds)
-    config.deleteClientStates(contentIds)
+    /** Records present in this session; authoritative deletes can name unloaded content. */
+    const existingIds = contentIds.filter((contentId) => config.getClientState(contentId))
+    if (existingIds.length > 0) config.deleteClientStates(existingIds)
   }
 
   /** Deletes one client-state record. */

@@ -7,13 +7,14 @@ import {
   type PromptCollectionSettingsField
 } from '@shared/domain/prompt-collection/PromptCollection'
 import {
+  getContentStatusFolders,
   PROMPT_STATUS_FOLDER_REGISTRY,
   PromptStatusFolderId
 } from '@shared/domain/prompt/Prompt'
+import { WORKSPACE_INFO_FILENAME_SUFFIX } from '@shared/domain/workspace/workspacePath'
 
 export const PROMPTS_DIRECTORY_NAME = 'Prompts'
 export const TEMPLATES_DIRECTORY_NAME = 'Templates'
-export const WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt'
 /** Workspace info suffix used before the .cthulhuprompt file association; renamed on load. */
 export const LEGACY_WORKSPACE_INFO_FILENAME_SUFFIX = '.cthulhuprompt.json'
 /** Filename for category-view ordering owned by a collection. */
@@ -58,6 +59,20 @@ export const resolvePromptStatusFolderName = (
     PROMPT_STATUS_FOLDER_REGISTRY[statusFolderId].directoryName
   )
 
+/** Resolves every physical status directory owned by a collection of this kind. */
+export const resolveContentStatusFolderPaths = (
+  workspacePath: string,
+  collectionFolderName: string,
+  kind: PromptCollectionKind
+): string[] =>
+  getContentStatusFolders(kind).map((statusFolder) =>
+    resolvePromptDirectoryPath(
+      workspacePath,
+      resolvePromptStatusFolderName(collectionFolderName, statusFolder.id),
+      kind
+    )
+  )
+
 /** Resolves the physical Active status directory within a prompt collection. */
 export const resolveActivePromptStatusFolderName = (
   collectionFolderName: string
@@ -71,13 +86,6 @@ export const resolvePromptCollectionStorageName = (
   _kind: PromptCollectionKind
 ): string => {
   return folderName
-}
-
-export const resolveWorkspaceInfoPath = (
-  workspacePath: string,
-  workspaceFileName: string
-): string => {
-  return path.join(workspacePath, `${workspaceFileName}${WORKSPACE_INFO_FILENAME_SUFFIX}`)
 }
 
 export const resolveWorkspacePathFromInfoPath = (workspaceInfoPath: string): string => {

@@ -32,9 +32,9 @@ import {
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   resolveCategoriesDirectoryPath,
   resolvePromptDirectoryPath,
-  resolvePromptStatusFolderName,
-  resolveWorkspaceInfoPath
+  resolvePromptStatusFolderName
 } from './PromptPersistencePaths'
+import { resolveWorkspaceInfoPath } from '@shared/domain/workspace/workspacePath'
 import type { WorkspacePersistenceFields } from './WorkspacePersistence'
 
 /** One typed storage transition staged without inventing a domain mutation. */

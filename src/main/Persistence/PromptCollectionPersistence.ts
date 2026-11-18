@@ -4,10 +4,7 @@ import {
   type CategoryOrder,
   type PromptCollection,
 } from '@shared/domain/prompt-collection/PromptCollection'
-import {
-  getContentStatusFolders,
-  type PromptStatusFolderId
-} from '@shared/domain/prompt/Prompt'
+import type { PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
 import type {
   PromptCollectionCategoryOrderFile,
   PromptCollectionInfoFile
@@ -31,8 +28,8 @@ import {
   resolvePromptCollectionInfoPath,
   resolvePromptDirectoryPath,
   resolvePromptCollectionSettingsTextPath,
-  resolvePromptCollectionStorageName,
-  resolvePromptStatusFolderName
+  resolveContentStatusFolderPaths,
+  resolvePromptCollectionStorageName
 } from './PromptPersistencePaths'
 import { getFs } from '../fs-provider'
 import { readPromptCollection } from './workspace/WorkspaceReads'
@@ -100,18 +97,12 @@ export const promptCollectionPersistence: PersistenceLayer<
     const isCollectionDirectory = !/[\\/]/.test(stagingRelativePath)
     /** Existing status-directory paths and creation state for a prompt collection. */
     const statusDirectories = isCollectionDirectory
-      ? getContentStatusFolders(kind).map((statusFolder) => {
-          /** Physical directory owned by one registry entry. */
-          const directoryPath = resolvePromptDirectoryPath(
-            workspacePath,
-            resolvePromptStatusFolderName(stagingRelativePath, statusFolder.id),
-            kind
-          )
-          return {
+      ? resolveContentStatusFolderPaths(workspacePath, stagingRelativePath, kind).map(
+          (directoryPath) => ({
             path: directoryPath,
             alreadyExists: fs.existsSync(directoryPath)
-          }
-        })
+          })
+        )
       : []
     /** Whether the committed target owns collection-only category persistence. */
     const isTargetCollectionDirectory = !/[\\/]/.test(targetRelativePath)

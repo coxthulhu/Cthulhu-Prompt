@@ -6,10 +6,10 @@ import type { DomainEntityType } from '@shared/domain/DomainChanges'
 import { createPromptFull, isPromptFull } from '@shared/domain/prompt/Prompt'
 import { createPromptTemplateFull, isPromptTemplateFull } from '@shared/domain/prompt-template/PromptTemplate'
 import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
+import { promptClientState } from '@renderer/data/UiState/client-state/PromptClientState'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
-import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
+import { promptTemplateClientState } from '@renderer/data/UiState/client-state/PromptTemplateClientState'
 import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
 import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
 import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
@@ -50,14 +50,10 @@ const reconcileRendererAuthoritativeSnapshot = (
   if ('deleted' in snapshot) {
     getRendererRevisionCollection(snapshot.entityType).utils.deleteAuthoritative(snapshot.id)
     if (snapshot.entityType === 'note') deleteNoteClientStates([snapshot.id])
-    if (snapshot.entityType === 'prompt' && promptClientStateCollection.has(snapshot.id)) {
-      promptClientStateCollection.delete(snapshot.id)
-    }
-    if (
-      snapshot.entityType === 'promptTemplate' &&
-      promptTemplateClientStateCollection.has(snapshot.id)
-    ) {
-      promptTemplateClientStateCollection.delete(snapshot.id)
+    // Side effect: shared client-state deletes also clear the content's measured editor heights.
+    if (snapshot.entityType === 'prompt') promptClientState.deleteClientStates([snapshot.id])
+    if (snapshot.entityType === 'promptTemplate') {
+      promptTemplateClientState.deleteClientStates([snapshot.id])
     }
     return
   }
@@ -94,9 +90,7 @@ const reconcileRendererAuthoritativeSnapshot = (
       /** Full prompt snapshot normalized for the renderer collection and client state. */
       const promptSnapshot = { ...snapshot, data: createPromptFull(snapshot.data) }
       promptsCollection.utils.upsertAuthoritative(promptSnapshot)
-      if (!promptClientStateCollection.has(snapshot.id)) {
-        promptClientStateCollection.insert({ id: snapshot.id, isEdited: false })
-      }
+      promptClientState.upsertClientStates([snapshot])
       return
     }
     case 'promptTemplate': {
@@ -115,9 +109,7 @@ const reconcileRendererAuthoritativeSnapshot = (
         data: createPromptTemplateFull(snapshot.data)
       }
       promptTemplatesCollection.utils.upsertAuthoritative(promptTemplateSnapshot)
-      if (!promptTemplateClientStateCollection.has(snapshot.id)) {
-        promptTemplateClientStateCollection.insert({ id: snapshot.id, isEdited: false })
-      }
+      promptTemplateClientState.upsertClientStates([snapshot])
       return
     }
     case 'userPersistence':

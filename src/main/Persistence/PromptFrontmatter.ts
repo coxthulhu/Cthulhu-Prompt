@@ -4,6 +4,7 @@ import {
   isFinalPromptStatus,
   isPromptStatus,
   PromptStatus,
+  type PromptContentStatus,
   type PromptPersisted,
   type PromptTemplateReference
 } from '@shared/domain/prompt/Prompt'
@@ -143,6 +144,15 @@ const parseMarkdownContent = <TFrontmatter, TContent>(
   }
 }
 
+/** Finalization metadata written only for final statuses that carry a timestamp. */
+export const createFinalizedAtMetadata = (content: {
+  status?: PromptContentStatus
+  finalizedAt?: string
+}): { finalizedAt?: string } =>
+  content.status !== undefined && isFinalPromptStatus(content.status) && content.finalizedAt
+    ? { finalizedAt: content.finalizedAt }
+    : {}
+
 const createTitleMetadata = (content: {
   id: string
   title: string
@@ -183,9 +193,7 @@ export const serializePromptMarkdown = (prompt: PromptPersisted): string => {
     ...(prompt.category !== undefined ? { category: prompt.category } : {}),
     ...(prompt.templates !== undefined ? { templates: prompt.templates } : {}),
     status: prompt.status,
-    ...(isFinalPromptStatus(prompt.status) && prompt.finalizedAt
-      ? { finalizedAt: prompt.finalizedAt }
-      : {})
+    ...createFinalizedAtMetadata(prompt)
   }
   return serializeMarkdownFrontmatter(metadata, prompt.promptText)
 }
@@ -216,7 +224,9 @@ export const serializePromptTemplateMarkdown = (template: PromptTemplatePersiste
   const metadata: PromptTemplateFrontmatterData = {
     ...createTitleMetadata(template),
     ...(template.attachedNoteId ? { attachedNoteId: template.attachedNoteId } : {}),
-    ...(template.status === PromptTemplateStatus.Archived ? { status: template.status, finalizedAt: template.finalizedAt } : {}),
+    ...(template.status === PromptTemplateStatus.Archived
+      ? { status: template.status, ...createFinalizedAtMetadata(template) }
+      : {}),
     ...(template.category !== undefined ? { category: template.category } : {})
   }
   return serializeMarkdownFrontmatter(metadata, template.templateText)

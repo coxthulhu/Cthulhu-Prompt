@@ -1,5 +1,3 @@
-import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
-import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
 import {
   parsePromptTemplateMarkdown,
@@ -10,6 +8,10 @@ import {
   readMarkdownModifiedAt,
   type MarkdownPersistenceFields
 } from './MarkdownPersistence'
+import {
+  hasStatusFolderNormalizationChanges,
+  normalizeContentForStatusFolder
+} from './StatusFolderNormalization'
 
 export type PromptTemplatePersistenceFields = MarkdownPersistenceFields
 
@@ -21,15 +23,7 @@ export const promptTemplatePersistence = createMarkdownPersistence<PromptTemplat
   kind: 'template',
   parseMarkdown: parsePromptTemplateMarkdown,
   serializeMarkdown: serializePromptTemplateMarkdown,
-  normalizeLoadedData: (template, folderPath) => {
-    /** Physical location determines archive membership, matching task loading. */
-    const archived = folderPath.split(/[\\/]/).at(-1) === 'Archived'
-    /** Active templates do not retain a finalization timestamp. */
-    const { finalizedAt, ...content } = template
-    return archived
-      ? { ...content, status: PromptTemplateStatus.Archived, finalizedAt: finalizedAt ?? getCurrentIsoSecondTimestamp() }
-      : { ...content, status: PromptTemplateStatus.Active }
-  },
-  shouldRewriteNormalizedData: (loaded, normalized) =>
-    loaded.status !== normalized.status || loaded.finalizedAt !== normalized.finalizedAt
+  normalizeLoadedData: (template, folderPath) =>
+    normalizeContentForStatusFolder(template, folderPath, 'template'),
+  shouldRewriteNormalizedData: hasStatusFolderNormalizationChanges
 })

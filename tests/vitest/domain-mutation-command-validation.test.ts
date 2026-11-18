@@ -137,6 +137,7 @@ describe('domain mutation command validation', () => {
       })
     ).toBeNull()
     expect(parseSaveCategoriesDomainCommand({ ...command, legacyDrafts: [] })).toBeNull()
+    expect(parseSaveCategoriesDomainCommand({ ...command, modifiedAt: 'timestamp' })).toBeNull()
   })
 
   it('accepts category-details and reorder commands', () => {
@@ -335,9 +336,10 @@ describe('domain mutation command validation', () => {
       categoryId: 'category',
       promptCollectionId: 'root',
       workspaceId: 'workspace',
-      modifiedAt: 'timestamp'
+      modifiedAt: '2026-08-30T12:00:00Z'
     }
     expect(parseDeleteCategoryDomainCommand(command)).toEqual(command)
+    expect(parseDeleteCategoryDomainCommand({ ...command, modifiedAt: 'timestamp' })).toBeNull()
   })
 
   it('rejects extra category deletion fields', () => {
@@ -346,7 +348,7 @@ describe('domain mutation command validation', () => {
       categoryId: 'category',
       promptCollectionId: 'root',
       workspaceId: 'workspace',
-      modifiedAt: 'timestamp',
+      modifiedAt: '2026-08-30T12:00:00Z',
       category: { id: 'legacy' }
     }
     expect(parseDeleteCategoryDomainCommand(command)).toBeNull()

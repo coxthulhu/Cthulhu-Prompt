@@ -1,25 +1,21 @@
 import type { Note } from '@shared/domain/note/Note'
-import { getPromptStatusFolderDefinition, isPromptStatus, PROMPT_STATUS_FOLDERS } from '@shared/domain/prompt/Prompt'
-import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
-import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 import { createMarkdownPersistence } from './MarkdownPersistence'
 import { parseNoteMarkdown, serializeNoteMarkdown } from './NoteFrontmatter'
+import {
+  hasStatusFolderNormalizationChanges,
+  normalizeContentForStatusFolder
+} from './StatusFolderNormalization'
 
 /** Notes share Markdown staging while retaining their collection's library and workflow. */
 export const notePersistence = createMarkdownPersistence<Note>({
   kind: 'note', parseMarkdown: parseNoteMarkdown, serializeMarkdown: serializeNoteMarkdown,
-  normalizeLoadedData: (note, folderPath, fields) => {
-    if (note.kind === 'attached') return note
-    /** Physical folder is authoritative, as for prompts and templates. */
-    const folder = PROMPT_STATUS_FOLDERS.find((candidate) => candidate.directoryName === folderPath.split(/[\\/]/).at(-1))!
-    /** Retain Todo/InProgress when both map to the same Active directory. */
-    const status = fields.collectionKind === 'template'
-      ? folder.isFinal ? PromptTemplateStatus.Archived : PromptTemplateStatus.Active
-      : isPromptStatus(note.status) && getPromptStatusFolderDefinition(note.status).id === folder.id
-        ? note.status : folder.entryStatus
-    /** Finalization is present only in final folders. */
-    const { finalizedAt, ...content } = note
-    return { ...content, status, ...(folder.isFinal ? { finalizedAt: finalizedAt ?? getCurrentIsoSecondTimestamp() } : {}) }
-  },
-  shouldRewriteNormalizedData: (before, after) => JSON.stringify(before) !== JSON.stringify(after)
+  normalizeLoadedData: (note, folderPath, fields) => note.kind === 'attached'
+    ? note
+    // Standalone notes follow their collection's status folders, like prompts and templates.
+    : normalizeContentForStatusFolder(note, folderPath, fields.collectionKind ?? 'prompt'),
+  // Attached notes carry no workflow metadata, so only standalone notes can need a rewrite.
+  shouldRewriteNormalizedData: (loaded, normalized) =>
+    loaded.kind === 'standalone' &&
+    normalized.kind === 'standalone' &&
+    hasStatusFolderNormalizationChanges(loaded, normalized)
 })

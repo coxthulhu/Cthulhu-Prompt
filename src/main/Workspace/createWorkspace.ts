@@ -1,12 +1,15 @@
 import { randomUUID } from 'crypto'
 import * as path from 'path'
 import { parseMarkdownFrontmatter } from '../Persistence/MarkdownFrontmatter'
-import { isWorkspaceRootPath, workspaceRootPathErrorMessage } from '@shared/domain/workspace/workspacePath'
+import {
+  isWorkspaceRootPath,
+  resolveWorkspaceInfoPath,
+  workspaceRootPathErrorMessage
+} from '@shared/domain/workspace/workspacePath'
 import { compactGuid } from '@shared/utilities/compactGuid'
 import { getCurrentIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
-import { PROMPT_STATUS_FOLDERS, PromptStatus } from '@shared/domain/prompt/Prompt'
+import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import { createFilenameAllocator } from '../Persistence/FilenameAllocation'
-import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
 import { promptEntryRef, promptTemplateEntryRef } from '@shared/domain/OrderContainer'
 import { getFs } from '../fs-provider'
 import {
@@ -25,12 +28,11 @@ import {
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
-  WORKSPACE_INFO_FILENAME_SUFFIX,
   isWorkspaceInfoFilename,
   resolveActivePromptStatusFolderName,
   resolveCategoriesDirectoryPath,
   resolveCategoryPathFromStem,
-  resolvePromptStatusFolderName,
+  resolveContentStatusFolderPaths,
   resolvePromptCollectionCategoryOrderPath,
   resolvePromptDirectoryPath
 } from '../Persistence/PromptPersistencePaths'
@@ -71,12 +73,6 @@ const DEFAULT_TEMPLATE_COLLECTION_DISPLAY_NAME = 'My Templates'
 
 type CreateWorkspaceResult = { success: true } | { success: false; error: string }
 
-const resolveWorkspaceInfoPath = (workspacePath: string, workspaceName: string): string => {
-  const preparedWorkspaceName = preparePromptCollectionName(workspaceName)
-  const workspaceRootPath = workspacePath.replace(/[\\/]+$/, '')
-  return `${workspaceRootPath}\\${preparedWorkspaceName.folderName}${WORKSPACE_INFO_FILENAME_SUFFIX}`
-}
-
 /** Writes workspace metadata and returns the identity used by its initial tab session. */
 const writeWorkspaceInfoFile = (workspacePath: string, workspaceName: string): string => {
   const fs = getFs()
@@ -108,16 +104,6 @@ const writeMyProjectCollection = (
     workspacePath,
     resolveActivePromptStatusFolderName(EXAMPLE_COLLECTION_NAME),
     'prompt'
-  )
-  /** Canonical flat directories owned by automatically ordered final statuses. */
-  const finalStatusFolderPaths = PROMPT_STATUS_FOLDERS.filter(
-    (statusFolder) => statusFolder.ordering === 'finalizedAt'
-  ).map((statusFolder) =>
-    resolvePromptDirectoryPath(
-      workspacePath,
-      resolvePromptStatusFolderName(EXAMPLE_COLLECTION_NAME, statusFolder.id),
-      'prompt'
-    )
   )
   const collectionInfoPath = path.join(
     exampleFolderPath,
@@ -165,9 +151,9 @@ const writeMyProjectCollection = (
   /** Names reserved across every bundled file written into this collection. */
   const filenames = createFilenameAllocator()
 
-  fs.mkdirSync(activeFolderPath, { recursive: true })
-  for (const finalStatusFolderPath of finalStatusFolderPaths) {
-    fs.mkdirSync(finalStatusFolderPath, { recursive: true })
+  // Side effect: create every status directory the collection owns, matching collection creation.
+  for (const statusFolderPath of resolveContentStatusFolderPaths(workspacePath, EXAMPLE_COLLECTION_NAME, 'prompt')) {
+    fs.mkdirSync(statusFolderPath, { recursive: true })
   }
   fs.mkdirSync(resolveCategoriesDirectoryPath(workspacePath, EXAMPLE_COLLECTION_NAME, 'prompt'), {
     recursive: true
@@ -295,8 +281,9 @@ const writeMyTemplatesCollection = (
   )
 
   // Side effect: create template status directories before writing examples and order metadata.
-  fs.mkdirSync(path.join(templateCollectionPath, 'Active'), { recursive: true })
-  fs.mkdirSync(path.join(templateCollectionPath, 'Archived'), { recursive: true })
+  for (const statusFolderPath of resolveContentStatusFolderPaths(workspacePath, DEFAULT_TEMPLATE_COLLECTION_NAME, 'template')) {
+    fs.mkdirSync(statusFolderPath, { recursive: true })
+  }
 
   /** Template names share the same allocation policy as prompts and categories. */
   const filenames = createFilenameAllocator()

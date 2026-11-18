@@ -2,6 +2,7 @@ import type { Note } from '@shared/domain/note/Note'
 import { isFinalPromptStatus, isPromptStatus } from '@shared/domain/prompt/Prompt'
 import { isPromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { parseMarkdownFrontmatter, serializeMarkdownFrontmatter } from './MarkdownFrontmatter'
+import { createFinalizedAtMetadata } from './PromptFrontmatter'
 
 /** Parses either minimal attachment metadata or a complete standalone note. */
 export const parseNoteMarkdown = (source: string, modifiedAt = ''): Note | null => {
@@ -42,6 +43,6 @@ export const serializeNoteMarkdown = (note: Note): string => serializeMarkdownFr
     ...(note.title.trim() ? { title: note.title } : { fallbackTitle: note.fallbackTitle }),
     ...(note.category !== undefined ? { category: note.category } : {}),
     status: note.status,
-    ...(note.finalizedAt ? { finalizedAt: note.finalizedAt } : {})
+    ...createFinalizedAtMetadata(note)
   }, note.noteText
 )

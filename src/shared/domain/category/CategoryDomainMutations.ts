@@ -22,6 +22,7 @@ import {
   type PromptCollection
 } from '@shared/domain/prompt-collection/PromptCollection'
 import { isPromptStatusFolderId, PromptStatusFolderId } from '@shared/domain/prompt/Prompt'
+import { parseIsoSecondTimestamp } from '@shared/utilities/isoTimestamp'
 
 /** Renderer-authored command for creating one collection-owned category. */
 export type CreateCategoryDomainCommand = {
@@ -55,12 +56,14 @@ export const parseSaveCategoriesDomainCommand = (
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
+  /** Whole-second UTC timestamp written into every affected content record. */
+  const modifiedAt = parseIsoSecondTimestamp(record.modifiedAt)
   if (
     Object.keys(record).length !== 4 ||
     typeof record.workspaceId !== 'string' ||
     typeof record.promptCollectionId !== 'string' ||
     !Array.isArray(record.categories) ||
-    typeof record.modifiedAt !== 'string'
+    modifiedAt === null
   ) {
     return null
   }
@@ -93,7 +96,7 @@ export const parseSaveCategoriesDomainCommand = (
     workspaceId: record.workspaceId,
     promptCollectionId: record.promptCollectionId,
     categories,
-    modifiedAt: record.modifiedAt
+    modifiedAt
   }
 }
 
@@ -159,12 +162,14 @@ export const parseDeleteCategoryDomainCommand = (
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
   /** Raw command fields validated without allowing additional properties. */
   const record = value as Record<string, unknown>
+  /** Whole-second UTC timestamp written into every affected content record. */
+  const modifiedAt = parseIsoSecondTimestamp(record.modifiedAt)
   if (
     Object.keys(record).length !== 4 ||
     typeof record.categoryId !== 'string' ||
     typeof record.promptCollectionId !== 'string' ||
     typeof record.workspaceId !== 'string' ||
-    typeof record.modifiedAt !== 'string'
+    modifiedAt === null
   ) {
     return null
   }
@@ -172,7 +177,7 @@ export const parseDeleteCategoryDomainCommand = (
     categoryId: record.categoryId,
     promptCollectionId: record.promptCollectionId,
     workspaceId: record.workspaceId,
-    modifiedAt: record.modifiedAt
+    modifiedAt
   }
 }
 

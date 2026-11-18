@@ -1,4 +1,5 @@
 import { readNoteFiles } from './NoteReads'
+import { scanMarkdownFiles } from './MarkdownFileScan'
 import { parseNoteMarkdown, serializeNoteMarkdown } from '../NoteFrontmatter'
 import type { StandaloneNote } from '@shared/domain/note/Note'
 import { createPromptStatusFolderLayouts } from '@shared/domain/prompt-collection/PromptCollection'
@@ -39,6 +40,7 @@ import {
   parsePromptTemplateMarkdown
 } from '../PromptFrontmatter'
 import {
+  NOTE_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_MARKDOWN_FILENAME_SUFFIX,
   PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX,
   CATEGORY_FILENAME_SUFFIX,
@@ -172,42 +174,51 @@ const readFileModifiedAt = (filePath: string): string => {
   return fs.statSync(filePath).mtime.toISOString()
 }
 
+/** One valid prompt, template, or standalone note discovered in a status folder. */
+type ScannedContentFile = {
+  content: PromptPersisted | PromptTemplatePersisted | StandaloneNote
+  isNote: boolean
+  stem: string
+  markdownPath: string
+}
+
+/** Scans a folder's prompts or templates, and optionally its standalone notes, sharing one ID space. */
+const scanMarkdownContentFiles = (
+  folderPath: string,
+  kind: PromptCollectionContentKind,
+  includeNotes: boolean
+): ScannedContentFile[] => {
+  /** Filename suffix identifying the collection's content kind. */
+  const contentSuffix =
+    kind === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
+  return scanMarkdownFiles(
+    folderPath,
+    includeNotes ? [contentSuffix, NOTE_MARKDOWN_FILENAME_SUFFIX] : [contentSuffix],
+    (fileText, suffix) => {
+      if (suffix === NOTE_MARKDOWN_FILENAME_SUFFIX) {
+        /** Attached notes belong to their owner rather than the folder's ordered content. */
+        const note = parseNoteMarkdown(fileText)
+        return note?.kind === 'standalone' ? note : null
+      }
+      return kind === 'prompt' ? parsePromptMarkdown(fileText) : parsePromptTemplateMarkdown(fileText)
+    }
+  ).map((file) => ({
+    content: file.parsed,
+    isNote: file.suffix === NOTE_MARKDOWN_FILENAME_SUFFIX,
+    stem: file.stem,
+    markdownPath: file.markdownPath
+  }))
+}
+
 const readContentStemById = (
   workspacePath: string,
   folderName: string,
   kind: PromptCollectionContentKind
-): Map<string, string> => {
-  const fs = getFs()
-  const folderPath = resolvePromptDirectoryPath(workspacePath, folderName, kind)
-  const contentStemById = new Map<string, string>()
-
-  if (!fs.existsSync(folderPath)) {
-    return contentStemById
-  }
-
-  const entries = fs.readdirSync(folderPath, { withFileTypes: true })
-  const filenameSuffix =
-    kind === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
-
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    if (!entry.isFile() || !entry.name.endsWith(filenameSuffix)) {
-      continue
-    }
-
-    const contentStem = entry.name.slice(0, -filenameSuffix.length)
-    const fileText = fs.readFileSync(path.join(folderPath, entry.name), 'utf8')
-    const content =
-      kind === 'prompt'
-        ? parsePromptMarkdown(fileText)
-        : parsePromptTemplateMarkdown(fileText)
-    if (!content) {
-      continue
-    }
-    contentStemById.set(content.id, contentStem)
-  }
-
-  return contentStemById
-}
+): Map<string, string> =>
+  new Map(
+    scanMarkdownContentFiles(resolvePromptDirectoryPath(workspacePath, folderName, kind), kind, false)
+      .map((file) => [file.content.id, file.stem])
+  )
 
 export const readPromptStemByPromptId = (
   workspacePath: string,
@@ -306,42 +317,24 @@ const readCollectionCategoryOrderContents = (
   kind: PromptCollectionContentKind,
   statusFolderId: PromptStatusFolderId
 ): CategoryOrderContent[] => {
-  /** Filesystem used for ordered-content discovery. */
-  const fs = getFs()
   /** Physical collection containing every item covered by the category order. */
   const orderedCollectionPath = resolvePromptDirectoryPath(
     workspacePath,
     resolvePromptStatusFolderName(collectionFolderName, statusFolderId),
     kind
   )
-  /** Filename suffix identifying the collection's content kind. */
-  const filenameSuffix =
-    kind === 'prompt' ? PROMPT_MARKDOWN_FILENAME_SUFFIX : PROMPT_TEMPLATE_MARKDOWN_FILENAME_SUFFIX
-  /** First valid discovered record for each stable content ID. */
-  const contentById = new Map<string, CategoryOrderContent>()
-
-  if (fs.existsSync(orderedCollectionPath)) {
-    for (const entry of fs
-      .readdirSync(orderedCollectionPath, { withFileTypes: true })
-      .sort((left, right) => left.name.localeCompare(right.name))) {
-      if (!entry.isFile() || (!entry.name.endsWith(filenameSuffix) && !entry.name.endsWith('.note.md'))) continue
-      /** Full path of one ordered prompt or template markdown file. */
-      const entryPath = path.join(orderedCollectionPath, entry.name)
-      /** Parsed content whose stable ID participates in category ordering. */
-      const content =
-        entry.name.endsWith('.note.md') ? parseNoteMarkdown(fs.readFileSync(entryPath, 'utf8')) :
-        kind === 'prompt'
-          ? parsePromptMarkdown(fs.readFileSync(entryPath, 'utf8'))
-          : parsePromptTemplateMarkdown(fs.readFileSync(entryPath, 'utf8'))
-      if (!content || ('kind' in content && content.kind === 'attached') || contentById.has(content.id)) continue
-      contentById.set(content.id, {
-        entry: 'kind' in content ? { kind: 'note', id: content.id } : kind === 'prompt' ? promptEntryRef(content.id) : promptTemplateEntryRef(content.id),
-        content,
-        markdownPath: entryPath
-      })
-    }
-  }
-  return [...contentById.values()].sort((left, right) => {
+  /** First valid discovered record for each stable content ID, including standalone notes. */
+  const contents: CategoryOrderContent[] = scanMarkdownContentFiles(orderedCollectionPath, kind, true)
+    .map((file) => ({
+      entry: file.isNote
+        ? { kind: 'note' as const, id: file.content.id }
+        : kind === 'prompt'
+          ? promptEntryRef(file.content.id)
+          : promptTemplateEntryRef(file.content.id),
+      content: file.content,
+      markdownPath: file.markdownPath
+    }))
+  return contents.sort((left, right) => {
     /** Case-insensitive displayed-name comparison requested for repaired entries. */
     const nameComparison = getPromptDisplayTitle(left.content)
       .toLocaleLowerCase()

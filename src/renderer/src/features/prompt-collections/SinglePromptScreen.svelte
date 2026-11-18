@@ -48,6 +48,9 @@
     PROMPT_COLLECTION_FIND_TITLE_SECTION_KEY
   } from './find/promptCollectionFindSectionKeys'
   import PromptCollectionHeaderBar from './PromptCollectionHeaderBar.svelte'
+  import { buildPromptCollectionBreadcrumb } from './promptCollectionBreadcrumb'
+  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
+  import { findCollectionProject } from '@shared/domain/workspace/Project'
   import { promptEditorRowId } from './promptCollectionRowIds'
   import { deleteMarkdownContent, setMarkdownContentStatus } from './markdownContentActions'
   import {
@@ -78,6 +81,13 @@
   const noteQuery = useLiveQuery(notesCollection)
   const noteVisibilityQuery = useLiveQuery(attachedNoteUiStateCollection)
   const noteClientStateQuery = useLiveQuery(noteClientStateCollection)
+  const workspaceQuery = useLiveQuery(workspaceCollection)
+  /** Project that owns this collection, shown first in the breadcrumb like the collection screen. */
+  const collectionProject = $derived.by(() => {
+    /** Current workspace owns all loaded project records. */
+    const workspace = workspaceQuery.data.find((candidate) => candidate.id === workspaceId)
+    return workspace && findCollectionProject(workspace, collectionId)
+  })
 
   /** Whether this collection's full content is loaded, including after a restart into this screen. */
   let isLoaded = $state(promptCollectionClientStateCollection.get(collectionId)?.hasLoadedInitialData ?? false)
@@ -248,30 +258,26 @@
     <main class="relative flex min-h-0 flex-1 flex-col" data-testid="single-prompt-screen">
       <PromptCollectionHeaderBar
         isReady={isOpenable && draft !== null}
-        segments={[
-          {
+        segments={buildPromptCollectionBreadcrumb({
+          project: collectionProject
+            ? { label: collectionProject.name, onclick: sidebarModeData.clear }
+            : null,
+          collection: {
             label: collection?.displayName ?? '',
-            testId: 'prompt-collection-header-collection',
             onclick: () => navigateToCollectionRow(collectionId, 'collection-header')
           },
-          {
+          statusGroup: {
             label: PROMPT_STATUS_FOLDER_REGISTRY[statusFolder.id].label,
-            testId: 'prompt-collection-header-section',
             onclick: () => navigateToCollectionRow(collectionId, 'collection-header')
           },
-          ...(categoryId && categoryLabel
-            ? [{
-                label: categoryLabel,
-                testId: 'prompt-collection-header-category',
-                onclick: () => navigateToCollectionRow(categoryId, 'category-details')
-              }]
-            : []),
-          {
+          category: categoryId && categoryLabel
+            ? { label: categoryLabel, onclick: () => navigateToCollectionRow(categoryId, 'category-details') }
+            : null,
+          prompt: {
             label: draft ? getPromptDisplayTitle(draft) : '',
-            testId: 'prompt-collection-header-prompt',
             onclick: () => navigateToCollectionRow(categoryId ?? collectionId, promptIdToPromptNavigationRow(promptId))
           }
-        ]}
+        })}
         findLabel={`Find in ${isTemplateCollection ? 'Template' : 'Prompt'} (Control + F)`}
         onFind={findControls.toggleFindDialog}
       >
