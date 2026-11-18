@@ -543,7 +543,12 @@ describe('Prompt template collection UI', () => {
     await testHelpers.navigateToPromptCollections('Templates')
     await stubClipboard(mainWindow)
 
-    await mainWindow.locator('[data-testid="prompt-divider-add-initial"]').click()
+    // Each category's initial divider reuses this button test ID, and the 1440x900 window also renders Category Templates' one.
+    await mainWindow
+      .locator(
+        `[data-testid="prompt-collection-divider-${TEMPLATE_COLLECTION_ID}-initial"] [data-testid="prompt-divider-add-initial"]`
+      )
+      .click()
     const editors = mainWindow.locator('[data-testid^="prompt-editor-"]')
     await expect(editors).toHaveCount(2)
     const newEditor = editors.filter({ has: mainWindow.locator('[placeholder="New Template..."]') })

@@ -51,7 +51,8 @@ const CENTER_TRACKING_CASES = [
     key: 'padding-overflow',
     testName: 'centers a measured title after its nearly viewport-height body hydrates',
     query: 'cthulhu-centered-row-padding-overflow-marker',
-    promptText: 'W'.repeat(2600),
+    // Sized so the row leaves 0-100px of the default 1440x900 window's viewport.
+    promptText: 'W'.repeat(3400),
   },
   {
     key: 'row-overflow',
