@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { Action } from 'svelte/action'
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { FileText, FolderKanban, Layers, Move, Plus, Search, Settings } from 'lucide-svelte'
+  import { FileText, Folder, Layers, Move, Plus, Search, Settings } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import DropdownPopupSimple, {
@@ -137,7 +137,7 @@
         : { id: sections[sections.length - 1].dataset.projectId!, after: true }
     },
     createGhost: (projectId) =>
-      createPromptDragGhost(workspace.projects.find((project) => project.id === projectId)!.name, 'project', FolderKanban),
+      createPromptDragGhost(workspace.projects.find((project) => project.id === projectId)!.name, 'project', Folder),
     onReorder: (projectId, previousProjectId) =>
       runIpcBestEffort(() => moveProject(workspace.id, projectId, previousProjectId))
   })

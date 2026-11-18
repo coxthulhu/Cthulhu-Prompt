@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { FolderKanban, Settings } from 'lucide-svelte'
+  import { Folder, Settings } from 'lucide-svelte'
   import { getProjectInfoErrors, type ProjectInfo } from '@shared/domain/workspace/Project'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
   import { compactGuid } from '@shared/utilities/compactGuid'
@@ -77,7 +77,7 @@
         NEW_PROJECT_COLLECTION_COUNT
       return {
         id: draft.id,
-        icon: FolderKanban,
+        icon: Folder,
         text: draft.name.trim() || 'New Project',
         detail: `${count} ${count === 1 ? 'collection' : 'collections'}`
       }
@@ -222,7 +222,7 @@
   {#if selectedDraft}
     {#key selectedDraft.id}
       <ManagementEditor
-        icon={FolderKanban}
+        icon={Folder}
         label={selectedDraft.name.trim() || 'New Project'}
         detail="Project settings"
         deleteLabel="Delete project"

@@ -326,7 +326,7 @@ describe('New Tab Screen', () => {
     await expect(defaultTitle).toHaveCSS('box-shadow',
       `${await resolvePaletteColor(mainWindow.locator('body'), '--ui-info-muted-border')} 0px 0px 0px 1px inset`)
     await expect(dragGhost).toHaveText('Default Project')
-    await expect(dragGhost.getByTestId('drag-ghost-icon')).toHaveClass(/lucide-folder-kanban/)
+    await expect(dragGhost.getByTestId('drag-ghost-icon')).toHaveClass(/(^|\s)lucide-folder(\s|$)/)
 
     // Both of the dragged project's own boundaries change nothing, so the indicator is one gray bar: above its section
     // over its own title, and below it past the last section's middle.
