@@ -195,11 +195,19 @@ describe('User Persistence', () => {
       await expect(sidebar).toBeVisible()
       await expect.poll(async () => (await readTabSession(electronApp, workspaceId)).user?.selectedTabId).toBe(screen === 'work-tab' ? (await readTabSession(electronApp, workspaceId)).user?.tabs[0].id : screen)
 
-      // No control collapses the sidebar yet, so the saved preference is written directly before reloading.
-      await seedWorkspaceState(electronApp, null, 'application-user', null, {
-        hasShownWelcome: true,
-        appSidebarExpanded: false
-      })
+      /** Title bar toggle shared by Settings and collection tabs. */
+      const toggle = mainWindow.getByTestId('app-sidebar-toggle-button')
+      await expect(toggle).toHaveAccessibleName('Collapse sidebar')
+      await expect(toggle.locator('svg')).toContainClass('lucide-panel-left-close')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await toggle.click()
+      await expect(sidebar).toBeHidden()
+      await expect(toggle).toHaveAccessibleName('Expand sidebar')
+      await expect(toggle.locator('svg')).toContainClass('lucide-panel-left-open')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect.poll(async () =>
+        (await readWorkspaceState(electronApp, null, 'application-user', null))?.appSidebarExpanded
+      ).toBe(false)
       await mainWindow.reload()
       await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
       await expect(activity).toHaveAttribute(screen === 'work-tab' ? 'aria-selected' : 'aria-current', screen === 'work-tab' ? 'true' : 'page')
@@ -207,6 +215,13 @@ describe('User Persistence', () => {
       await expect(resizeHandle).toBeHidden()
       // Re-clicking the restored activity never shows or hides the sidebar.
       await activity.click()
+      await expect(sidebar).toBeHidden()
+
+      // Keyboard activation can reopen and collapse the restored sidebar in place.
+      await toggle.press('Space')
+      await expect(sidebar).toBeVisible()
+      await expect(resizeHandle).toBeVisible()
+      await toggle.press('Enter')
       await expect(sidebar).toBeHidden()
 
       // Switching activities forces the sidebar open and saves that preference for the next startup.

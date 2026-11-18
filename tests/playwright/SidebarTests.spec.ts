@@ -69,6 +69,8 @@ test.describe('Sidebar Tests', () => {
       workspace: { scenario: 'sample' }
     })
     const sidebar = mainWindow.getByTestId('app-sidebar')
+    /** In development, Test Screen is the last screen button before the sidebar toggle. */
+    const toggle = mainWindow.locator('[data-testid="nav-button-test-screen"] + [data-testid="app-sidebar-toggle-button"]')
     await expect(sidebar).toHaveCount(0)
     await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
 
@@ -77,6 +79,8 @@ test.describe('Sidebar Tests', () => {
       await expect(sidebar).toBeVisible()
       const activity = screen === 'work-tab' ? mainWindow.getByTestId('work-tab').getByRole('tab').first() : mainWindow.getByTestId(`nav-button-${screen}`)
       await activity.click()
+      await expect(toggle).toBeVisible()
+      await expect(toggle).toBeDisabled()
       await expect(sidebar).toHaveCount(0)
       await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
       await expect(mainWindow.getByTestId('app-sidebar-resize-handle')).toBeHidden()
@@ -87,6 +91,10 @@ test.describe('Sidebar Tests', () => {
       await expect(sidebar).toHaveCount(0)
       await expect(mainWindow.locator('.resizableSidebarPane')).toBeHidden()
     }
+    await mainWindow.getByTestId('new-tab-button').click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect(toggle).toBeVisible()
+    await expect(toggle).toBeDisabled()
   })
 
   // Each collection mode restores its own collection and status view after other modes are displayed.

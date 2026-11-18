@@ -633,13 +633,18 @@
     activeScreen = screen
   }
 
+  /** Applies and saves the sidebar expansion preference shared by Settings and collection tabs. */
+  const setSidebarExpanded = (expanded: boolean): void => {
+    sidebarExpanded = expanded
+    setAppSidebarExpandedWithAutosave(expanded)
+  }
+
   /** Switches screens and opens the sidebar; re-clicking the selected screen does nothing. */
   const activateFixedScreen = (screen: ScreenId): void => {
     if (screen === selectedTabId) return
 
     navigateToScreen(screen)
-    sidebarExpanded = true
-    setAppSidebarExpandedWithAutosave(sidebarExpanded)
+    setSidebarExpanded(true)
   }
 
   /** Selects a work tab, which shows its New Tab, collection, or single-prompt screen. */
@@ -651,8 +656,7 @@
     /** Selected tab receives the next access-order value. */
     const tab = workTabs.find((candidate) => candidate.id === tabId)!
     if (changedTab && tab.mode.collectionId) {
-      sidebarExpanded = true
-      setAppSidebarExpandedWithAutosave(true)
+      setSidebarExpanded(true)
     }
     tab.mode.record.lastAccessed = Math.max(0, ...workTabs.map((candidate) => candidate.mode.record.lastAccessed)) + 1
   }
@@ -676,8 +680,7 @@
     tab.mode.record.collectionId = collectionId
     tab.mode.record.openPromptId = null
     tab.mode.record.lastAccessed = Math.max(0, ...workTabs.map((other) => other.mode.record.lastAccessed)) + 1
-    sidebarExpanded = true
-    setAppSidebarExpandedWithAutosave(true)
+    setSidebarExpanded(true)
   }
 
   /** Closes a work tab; closing the selected tab selects its right neighbour, else its left, else Home. */
@@ -735,6 +738,7 @@
 <div class="flex h-screen w-full flex-col">
   {#if isWindows}
     <WindowsTitleBar {selectedTabId} workTabs={titleBarWorkTabs} canAddWorkTab={isWorkspaceReady} {isDevMode} {executionFolderName} onNavigate={activateFixedScreen}
+      hasSidebar={activeSidebarMode !== null} {isAppSidebarExpanded} onToggleSidebar={() => setSidebarExpanded(!sidebarExpanded)}
       onSelectWorkTab={selectWorkTab} onAddWorkTab={addWorkTab} onCloseWorkTab={closeWorkTab} onMoveWorkTab={moveWorkTab}
       bind:updatesButton updatesOpen={updater.updates.open} updateAvailable={updater.updates.snapshot?.hasUpdate ?? false}
       onToggleUpdates={() => {

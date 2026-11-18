@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ComponentType } from 'svelte'
-  import { Download, FileText, Layers, LayoutGrid, Plus, X } from 'lucide-svelte'
+  import { Download, FileText, Layers, LayoutGrid, PanelLeftClose, PanelLeftOpen, Plus, X } from 'lucide-svelte'
   // Application artwork shown at the start of the title bar.
   import appIcon from '@renderer/assets/cutethulhu.png'
   import { screens, type ScreenId } from '@renderer/app/screens'
@@ -14,6 +14,9 @@
     selectedTabId,
     workTabs,
     canAddWorkTab,
+    hasSidebar,
+    isAppSidebarExpanded,
+    onToggleSidebar,
     isDevMode = false,
     executionFolderName = null,
     onNavigate,
@@ -32,6 +35,12 @@
     workTabs: WorkTab[]
     /** Enables the New Tab button, which needs an open workspace. */
     canAddWorkTab: boolean
+    /** Whether the active screen provides a sidebar. */
+    hasSidebar: boolean
+    /** Whether the active screen's sidebar is visible. */
+    isAppSidebarExpanded: boolean
+    /** Toggles the sidebar for the active screen. */
+    onToggleSidebar: () => void
     /** Selects a work tab. */
     onSelectWorkTab: (tabId: string) => void
     /** Appends and selects a new work tab. */
@@ -57,6 +66,10 @@
   }>()
 
   const windowControls = window.windowControls
+  /** Icon for the action available from the sidebar button. */
+  const SidebarIcon = $derived(isAppSidebarExpanded ? PanelLeftClose : PanelLeftOpen)
+  /** Tooltip and accessible name describing the sidebar action. */
+  const sidebarLabel = $derived(isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar')
   let isMaximized = $state(false)
   /** Screen buttons in title bar order. */
   const titleBarScreenIds: ScreenId[] = ['home', 'settings', 'mockups', 'test-screen']
@@ -285,6 +298,18 @@
         <ScreenIcon size={20} strokeWidth={1.5} aria-hidden="true" />
       </button>
     {/each}
+    <button
+      type="button"
+      class="titlebar__screen"
+      disabled={!hasSidebar}
+      aria-expanded={isAppSidebarExpanded}
+      aria-label={sidebarLabel}
+      title={sidebarLabel}
+      data-testid="app-sidebar-toggle-button"
+      onclick={onToggleSidebar}
+    >
+      <SidebarIcon size={20} strokeWidth={1.5} aria-hidden="true" />
+    </button>
   </nav>
   <div class="titlebar__separator" aria-hidden="true"></div>
   <div class="titlebar__tab-row">
@@ -489,11 +514,11 @@
     position: relative;
   }
 
-  .titlebar__screen:is(:hover, :focus-visible, [data-active='true']) {
+  .titlebar__screen:enabled:is(:hover, :focus-visible, [data-active='true']) {
     color: var(--ui-hoverable-icon-glyph);
   }
 
-  .titlebar__screen:is(:hover, :focus-visible)::before {
+  .titlebar__screen:where(:enabled):is(:hover, :focus-visible)::before {
     background: var(--ui-neutral-normal-surface);
   }
 
@@ -682,6 +707,7 @@
 
   /* Matches the shared disabled button appearance while no workspace is open; only the glyph fades so the opaque fill
      keeps hiding the background folder label. */
+  .titlebar__screen:disabled :global(svg),
   .titlebar__new-tab:disabled :global(svg) {
     opacity: 0.5;
   }

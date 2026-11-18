@@ -113,6 +113,13 @@ describe('Single prompt editor', () => {
     expect(await getMonacoEditorText(mainWindow, BODY)).toBe(`Body ${promptId.slice(1)} Second line Third line`)
     await expect(mainWindow.locator(SCREEN).getByTestId('prompt-open-button')).toHaveCount(0)
     await expect(mainWindow.locator(SCREEN).getByTestId('prompt-close-button')).toBeVisible()
+    /** Toggling the sidebar in a single-prompt view keeps the prompt open and its tree row selected. */
+    const sidebarToggle = mainWindow.getByTestId('app-sidebar-toggle-button')
+    await sidebarToggle.click()
+    await expect(mainWindow.getByTestId('app-sidebar')).toBeHidden()
+    await expect(mainWindow.locator(SCREEN)).toBeVisible()
+    await sidebarToggle.click()
+    await expect(mainWindow.getByTestId('app-sidebar')).toBeVisible()
     await expect(mainWindow.locator(promptTreePromptSelector(promptId))).toHaveAttribute('aria-current', 'true')
     // Without a note, the body editor fills the screen down to its bottom padding.
     const screenBottom = await mainWindow.locator(SCREEN).evaluate((screen) => screen.getBoundingClientRect().bottom)
