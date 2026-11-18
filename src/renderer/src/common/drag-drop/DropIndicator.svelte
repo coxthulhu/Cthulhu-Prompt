@@ -3,8 +3,8 @@
 
   type Props = {
     testId: string
-    /** Row edge for a horizontal line, or tile side for a vertical line. */
-    edge: DroppableEdge | 'left' | 'right'
+    /** Row edge for a horizontal line, or a tile's left side for a vertical line. */
+    edge: DroppableEdge
     /** Offset of the chevron's start, from the left for horizontal lines and from the top for vertical ones. */
     insetStart?: string
     edgeOffset?: string
@@ -22,8 +22,8 @@
   const style = $derived(
     `--drag-drop-indicator-inset-start:${insetStart};--drag-drop-indicator-edge-offset:${edgeOffset};`
   )
-  /** Left and right edges draw a downward line beside a tile instead of a line across a row. */
-  const isVertical = $derived(edge === 'left' || edge === 'right')
+  /** A left edge draws a downward line beside a tile instead of a line across a row. */
+  const isVertical = $derived(edge === 'left')
 </script>
 
 <div
@@ -67,19 +67,12 @@
     top: calc(100% + var(--drag-drop-indicator-edge-offset, 0px));
   }
 
-  .dragDropIndicator:is([data-edge='left'], [data-edge='right']) {
+  .dragDropIndicator[data-edge='left'] {
     top: calc(var(--drag-drop-indicator-inset-start, 38px) - 10px);
     bottom: 2px;
+    left: calc(0px - var(--drag-drop-indicator-edge-offset, 0px));
     width: 10px;
     transform: translateX(-50%);
-  }
-
-  .dragDropIndicator[data-edge='left'] {
-    left: calc(0px - var(--drag-drop-indicator-edge-offset, 0px));
-  }
-
-  .dragDropIndicator[data-edge='right'] {
-    left: calc(100% + var(--drag-drop-indicator-edge-offset, 0px));
   }
 
   .dragDropIndicatorSvg {

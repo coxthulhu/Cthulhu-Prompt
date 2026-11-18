@@ -8,8 +8,9 @@ const DRAG_GHOST_OPACITY = '1'
 /** Default symmetric snap expansion applied to every drop target. */
 export const DEFAULT_DROPPABLE_SNAP_DIMENSIONS = { x: 0, y: 100 } as const
 
-export type DroppableEdge = 'top' | 'bottom'
-export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom'
+/** Top and bottom edges run across a row; a left edge runs down a tile's left side. */
+export type DroppableEdge = 'top' | 'bottom' | 'left'
+export type DroppableAllowedEdges = 'none' | 'top' | 'bottom' | 'top-and-bottom' | 'left'
 /** Symmetric target expansion used to make a drop target snappable. */
 export type DroppableSnapDimensions = {
   x?: number
@@ -108,11 +109,14 @@ type ActiveDropTarget = {
 type SnapCandidate = {
   registration: DroppableRegistration
   edge: DroppableEdge | null
+  rowDistance: number
   distance: number
 }
 
 /** Minimal geometry shared by candidates participating in nearest-target selection. */
 export type DroppableDistanceCandidate = {
+  /** Vertical gap from the pointer to a left edge's tile row, compared before distance; 0 for other edges. */
+  rowDistance: number
   distance: number
 }
 
@@ -211,15 +215,19 @@ const setDroppableState = (dropTarget: ActiveDropTarget | null, isOver: boolean)
   dropState.edge = isOver ? dropTarget.edge : null
 }
 
-/** Selects the nearest candidate while retaining iterable order for exact ties. */
+/** Selects the nearest candidate in the nearest row while retaining iterable order for exact ties. */
 export const selectNearestDroppableCandidate = <TCandidate extends DroppableDistanceCandidate>(
   candidates: Iterable<TCandidate>
 ): TCandidate | null => {
-  /** Current winner, retained when a later candidate has equal distance. */
+  /** Current winner, retained when a later candidate has equal row distance and distance. */
   let nearestCandidate: TCandidate | null = null
 
   for (const candidate of candidates) {
-    if (!nearestCandidate || candidate.distance < nearestCandidate.distance) {
+    if (
+      !nearestCandidate ||
+      candidate.rowDistance < nearestCandidate.rowDistance ||
+      (candidate.rowDistance === nearestCandidate.rowDistance && candidate.distance < nearestCandidate.distance)
+    ) {
       nearestCandidate = candidate
     }
   }
@@ -311,12 +319,12 @@ const getVirtualViewport = (node: HTMLElement): HTMLElement | null => {
   return node.closest('[data-virtual-window-viewport]')
 }
 
-const getDroppableEdgeY = (nodeRect: DOMRect, edge: DroppableEdge): number => {
+const getDroppableEdgeY = (nodeRect: DOMRect, edge: 'top' | 'bottom'): number => {
   return edge === 'top' ? nodeRect.top : nodeRect.bottom
 }
 
 const isDroppableEdgeVisibleInViewport = (
-  edge: DroppableEdge,
+  edge: 'top' | 'bottom',
   nodeRect: DOMRect,
   viewportRect: DOMRect | null
 ): boolean => {
@@ -379,8 +387,8 @@ export const isPointInDroppableSnapZone = (
 /** Builds the eligible edge list for one registered target. */
 const getDroppableEdges = (allowedEdges: DroppableAllowedEdges): (DroppableEdge | null)[] => {
   if (allowedEdges === 'top-and-bottom') return ['top', 'bottom']
-  if (allowedEdges === 'top' || allowedEdges === 'bottom') return [allowedEdges]
-  return [null]
+  if (allowedEdges === 'none') return [null]
+  return [allowedEdges]
 }
 
 /** Measures the pointer against one candidate's unexpanded target geometry. */
@@ -392,6 +400,7 @@ const getCandidateDistance = (
   visibleRect: DOMRect
 ): number => {
   if (!edge) return distanceToRect(x, y, visibleRect)
+  if (edge === 'left') return distanceToSegment(x, y, nodeRect.left, visibleRect.top, nodeRect.left, visibleRect.bottom)
 
   const edgeY = getDroppableEdgeY(nodeRect, edge)
   return distanceToSegment(x, y, visibleRect.left, edgeY, visibleRect.right, edgeY)
@@ -415,10 +424,12 @@ const getSnapCandidatesForRegistration = (
   }
 
   return getDroppableEdges(options.allowedEdges)
-    .filter((edge) => !edge || isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect))
+    .filter((edge) => !edge || edge === 'left' || isDroppableEdgeVisibleInViewport(edge, nodeRect, viewportRect))
     .map((edge) => ({
       registration,
       edge,
+      // Left edges line up in rows of tiles, so the row nearest the pointer wins before any edge distance.
+      rowDistance: edge === 'left' ? Math.max(visibleRect.top - y, 0, y - visibleRect.bottom) : 0,
       distance: getCandidateDistance(x, y, edge, nodeRect, visibleRect)
     }))
 }

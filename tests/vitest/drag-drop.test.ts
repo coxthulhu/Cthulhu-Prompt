@@ -24,9 +24,9 @@ describe('drag-drop defaults', () => {
 
   it('keeps a blocked first candidate when an allowed candidate ties it', () => {
     /** First tied candidate models the earlier blocked registration. */
-    const blockedCandidate = { distance: 12, isBlocked: true }
+    const blockedCandidate = { rowDistance: 0, distance: 12, isBlocked: true }
     /** Second tied candidate proves allowed state does not affect nearest selection. */
-    const allowedCandidate = { distance: 12, isBlocked: false }
+    const allowedCandidate = { rowDistance: 0, distance: 12, isBlocked: false }
 
     expect(selectNearestDroppableCandidate([blockedCandidate, allowedCandidate])).toBe(
       blockedCandidate

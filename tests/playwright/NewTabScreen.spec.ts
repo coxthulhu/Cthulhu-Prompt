@@ -107,15 +107,17 @@ const openNewTab = async (
 
 /** Third project, appended after the seeded two, whose middle collection is hidden by a "release" search. */
 const lanternProjectId = 'lantern'
-/** Lantern Mobile's files and its three task collections. */
-const lanternFiles = {
-  ...moveToProject(createWorkspaceWithCollections(workspacePath, [
-    { folderName: 'ReleaseChecklist', displayName: 'Release Checklist', promptCollectionId: 'release-checklist' },
-    { folderName: 'OfflineSync', displayName: 'Offline Sync', promptCollectionId: 'offline-sync' },
-    { folderName: 'ReleaseBuilds', displayName: 'Release Builds', promptCollectionId: 'release-builds' }
-  ]), 'LanternMobile'),
+/** Lantern Mobile's three task collections. */
+const lanternCollections = [
+  { folderName: 'ReleaseChecklist', displayName: 'Release Checklist', promptCollectionId: 'release-checklist' },
+  { folderName: 'OfflineSync', displayName: 'Offline Sync', promptCollectionId: 'offline-sync' },
+  { folderName: 'ReleaseBuilds', displayName: 'Release Builds', promptCollectionId: 'release-builds' }
+]
+/** Lantern Mobile's files holding the given task collections. */
+const createLanternFiles = (collections: typeof lanternCollections): Record<string, string | null> => ({
+  ...moveToProject(createWorkspaceWithCollections(workspacePath, collections), 'LanternMobile'),
   [`${workspacePath}/LanternMobile/ProjectInfo.json`]: JSON.stringify({ id: lanternProjectId, name: 'Lantern Mobile', abbreviation: 'LM' })
-}
+})
 
 /** Starts a real pointer drag on a project title or collection tile. */
 const beginPointerDrag = async (page: Page, testId: string): Promise<void> =>
@@ -147,14 +149,14 @@ const expectProjectDropIndicator = async (page: Page, projectId: string, side: '
   expect(Math.abs(indicatorBox.y + indicatorBox.height / 2 - expectedCenterY)).toBeLessThanOrEqual(1)
 }
 
-/** Asserts the tile drop line sits on one side of one tile, centered in the 8px gap and spanning the tile's height
- *  less its 2px bottom inset, in blue or gray. */
+/** Asserts the only tile drop line sits on one side of one tile's grid cell, centered in the 8px gap and spanning the
+ *  cell's height less its 2px bottom inset, in blue or gray. */
 const expectTileDropIndicator = async (page: Page, collectionId: string, side: 'left' | 'right', blocked: boolean): Promise<void> => {
   const indicator = getTileDropIndicator(page)
-  /** Grid cell holding both the tile and its indicator. */
-  const cell = indicator.locator('..')
-  await expect(cell.locator(collectionTileSelector(collectionId))).toHaveCount(1)
-  await expect(indicator).toHaveAttribute('data-edge', side)
+  /** Grid cell holding the tile, the line on its left, and for the last tile, the line after it. */
+  const cell = page.locator(collectionTileSelector(collectionId)).locator('..')
+  await expect(indicator).toHaveCount(1)
+  await expect(cell.getByTestId('new-tab-tile-drop-indicator')).toHaveCount(1)
   await expect(indicator.locator('line')).toHaveCSS('stroke',
     await resolvePaletteColor(page.locator('body'), blocked ? '--ui-muted-icon-glyph' : '--ui-info-strong-border'))
   const cellBox = (await cell.boundingBox())!
@@ -388,12 +390,12 @@ describe('New Tab Screen', () => {
     await expect(dragGhost).toHaveText('Bug Triage')
     await expect(dragGhost.getByTestId('drag-ghost-icon')).toHaveClass(/lucide-file-text/)
 
-    // Both of the dragged tile's own boundaries change nothing, so their lines are gray: past its own middle, and past
-    // the middle of the tile before it.
+    // Both of the dragged tile's own lines change nothing, so they are gray: past its own middle, the line after it, and
+    // past the middle of the tile before it, the line on its own left.
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('bug-triage'), 'center', 'right')
     await expectTileDropIndicator(mainWindow, 'bug-triage', 'right', true)
     await moveActiveDragToTarget(mainWindow, collectionTileSelector('feature-work'), 'center', 'right')
-    await expectTileDropIndicator(mainWindow, 'feature-work', 'right', true)
+    await expectTileDropIndicator(mainWindow, 'bug-triage', 'left', true)
 
     // Before the first tile's middle, a blue line marks its left side while the tiles stay put and the dragged tile
     // stays blue.
@@ -402,8 +404,8 @@ describe('New Tab Screen', () => {
     await expect(bugTriageTile).toHaveAttribute('data-row-state', 'dragging')
     await expect(getTiles(mainWindow, defaultProjectId)).toHaveText([tileText.codeReview, tileText.featureWork, tileText.bugTriage])
 
-    // Outside its own project's grid, even over another project's tile, there is no drop line.
-    await moveActiveDragToTarget(mainWindow, collectionTileSelector('endpoint-tests'))
+    // More than 100px above its own grid, over the top of another project's tile, there is no drop line.
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('endpoint-tests'), 'top')
     await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
 
     // Dropping there changes nothing and opens neither collection.
@@ -442,11 +444,62 @@ describe('New Tab Screen', () => {
     await expect(getTiles(mainWindow, harborProjectId)).toHaveText([tileText.releaseNotes, tileText.endpointTests])
   })
 
+  test('snaps a dragged tile to the nearest line in the row nearest the pointer, up to 100px outside its grid', async ({ electronApp, testSetup }) => {
+    await seedWorkspaceState(electronApp, workspaceId, 'collection-order', lanternProjectId, {
+      entries: ['release-checklist', 'offline-sync', 'release-builds', 'crash-reports'].map((id) => ({ kind: 'collection', id }))
+    })
+    const mainWindow = await openNewTab(electronApp, testSetup, createLanternFiles([
+      ...lanternCollections,
+      { folderName: 'CrashReports', displayName: 'Crash Reports', promptCollectionId: 'crash-reports' }
+    ]))
+    /** Release Checklist, first in Lantern Mobile's full first row and at its grid's left edge. */
+    const checklistBox = (await mainWindow.getByTestId('new-tab-collection-release-checklist').boundingBox())!
+    /** Release Builds, last in the first row and at the grid's right edge. */
+    const buildsBox = (await mainWindow.getByTestId('new-tab-collection-release-builds').boundingBox())!
+    /** Crash Reports, alone in the second row. */
+    const crashBox = (await mainWindow.getByTestId('new-tab-collection-crash-reports').boundingBox())!
+    /** Vertical middles of the grid's two rows. */
+    const firstRowY = buildsBox.y + buildsBox.height / 2
+    const secondRowY = crashBox.y + crashBox.height / 2
+
+    await beginPointerDrag(mainWindow, 'new-tab-collection-release-checklist')
+
+    // The first row has no line at its end: past its last tile's middle, and 40px right of the grid, the line stays on
+    // that tile's left.
+    await moveActiveDragToTarget(mainWindow, collectionTileSelector('release-builds'), 'center', 'right')
+    await expectTileDropIndicator(mainWindow, 'release-builds', 'left', false)
+    await mainWindow.mouse.move(buildsBox.x + buildsBox.width + 40, firstRowY, { steps: 12 })
+    await expectTileDropIndicator(mainWindow, 'release-builds', 'left', false)
+
+    // The second row's empty third cell is nearer the line on Release Builds' left than either of Crash Reports' lines,
+    // but it is in the second row, so it marks the line after Crash Reports.
+    await mainWindow.mouse.move(buildsBox.x + buildsBox.width / 2, secondRowY, { steps: 12 })
+    await expectTileDropIndicator(mainWindow, 'crash-reports', 'right', false)
+
+    // 60px below the grid still snaps to the line after Crash Reports, but 120px below it there is no line.
+    await mainWindow.mouse.move(buildsBox.x + buildsBox.width / 2, crashBox.y + crashBox.height + 60, { steps: 12 })
+    await expectTileDropIndicator(mainWindow, 'crash-reports', 'right', false)
+    await mainWindow.mouse.move(buildsBox.x + buildsBox.width / 2, crashBox.y + crashBox.height + 120, { steps: 12 })
+    await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
+
+    // 120px left of the grid there is no line, but 40px left of it snaps to the second row's first line, and dropping
+    // there saves the tile right before Crash Reports.
+    await mainWindow.mouse.move(checklistBox.x - 120, secondRowY, { steps: 12 })
+    await expect(getTileDropIndicator(mainWindow)).toHaveCount(0)
+    await mainWindow.mouse.move(checklistBox.x - 40, secondRowY, { steps: 12 })
+    await expectTileDropIndicator(mainWindow, 'crash-reports', 'left', false)
+    await finishActiveDrag(mainWindow)
+    await expect.poll(() => readCollectionOrder(electronApp, lanternProjectId))
+      .toEqual(['offline-sync', 'release-builds', 'release-checklist', 'crash-reports'])
+    await expect(getTiles(mainWindow, lanternProjectId))
+      .toHaveText([/Offline Sync/, /Release Builds/, /Release Checklist/, /Crash Reports/])
+  })
+
   test('reorders filtered projects and collections right after the visible item before them', async ({ electronApp, testSetup }) => {
     await seedWorkspaceState(electronApp, workspaceId, 'collection-order', lanternProjectId, {
       entries: ['release-checklist', 'offline-sync', 'release-builds'].map((id) => ({ kind: 'collection', id }))
     })
-    const mainWindow = await openNewTab(electronApp, testSetup, lanternFiles)
+    const mainWindow = await openNewTab(electronApp, testSetup, createLanternFiles(lanternCollections))
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
 
     // The search hides Default Project between the other two, and Offline Sync between Lantern Mobile's release tiles.
