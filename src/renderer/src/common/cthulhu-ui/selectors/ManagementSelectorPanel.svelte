@@ -103,7 +103,7 @@
           rowState={getRowState(item.id)}
           selectionVariant="accent"
           ariaPressed={selectedId === item.id}
-          class="cthulhuUiManagementSelectorPanelItem"
+          class="cthulhuUiManagementSelectorPanelItem cthulhuUiButtonSelectable"
           testId={itemTestIdPrefix ? `${itemTestIdPrefix}-${item.id}` : undefined}
           leadingAccessory={onreorder ? dragHandle : undefined}
           leadingAccessoryTestId={dragHandleTestIdPrefix ? `${dragHandleTestIdPrefix}-${item.id}` : undefined}

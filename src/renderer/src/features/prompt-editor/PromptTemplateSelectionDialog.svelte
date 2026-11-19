@@ -408,7 +408,7 @@
   onsubmit={handleConfirm}
 >
   <!-- Picker rows suppress native text highlighting during double-click selection. -->
-  <div class="prompt-template-selection-body select-none">
+  <div class="prompt-template-selection-body select-none" data-mode={mode}>
     <div class="prompt-template-no-template-panel">
       <button
         type="button"
@@ -531,6 +531,17 @@
     padding-top: 14px;
   }
 
+  /* Quick-mode options apply and copy immediately, so the dialog keeps the pointer there; select-mode options use the
+     arrow because choosing the selected option again does nothing. */
+  .prompt-template-selection-body[data-mode='select-and-copy']
+    :is(
+      .prompt-template-no-template-option,
+      :global(.sidebarPromptTreeSettingsButton),
+      :global(.sidebarPromptTreeToggleButton)
+    ) {
+    cursor: pointer;
+  }
+
   .prompt-template-no-template-panel {
     margin-bottom: 15px;
   }
@@ -540,7 +551,6 @@
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-text);
-    cursor: pointer;
     display: grid;
     gap: 11px;
     grid-template-columns: 34px minmax(0, 1fr) 20px;
@@ -558,14 +568,11 @@
     color: var(--ui-normal-text);
   }
 
+  /* Choosing the selected option again does nothing, so it keeps the brighter accent fill while hovered. */
   .prompt-template-no-template-option[data-row-state='active'] {
-    background: var(--ui-accent-action-fill);
+    background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-border);
     color: var(--ui-normal-text);
-  }
-
-  .prompt-template-no-template-option[data-row-state='active']:hover {
-    background: var(--ui-accent-action-hover-fill);
   }
 
   .prompt-template-no-template-option :global(.prompt-template-no-template-icon) {

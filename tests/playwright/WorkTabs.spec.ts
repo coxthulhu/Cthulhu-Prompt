@@ -469,7 +469,7 @@ describe('Work Tabs', () => {
     await expect.poll(() => tabStrip.evaluate((strip) => strip.hasPointerCapture(1))).toBe(true)
     await expectTabAt(mainWindow, 'Tab 1', slots[0]! + 3)
 
-    // Short of half of its neighbour, the tab slides over the unmoved neighbour on an opaque selected hover fill.
+    // Short of half of its neighbour, the tab slides over the unmoved neighbour on an opaque selected fill.
     await mainWindow.mouse.move(x + slotWidth / 2 - 5, y + 100)
     await expectTabAt(mainWindow, 'Tab 1', slots[0]! + slotWidth / 2 - 5)
     await expectTabLabels(mainWindow, ['Tab 1', 'Tab 2', 'Tab 3'])
@@ -479,7 +479,7 @@ describe('Work Tabs', () => {
       [slots[1]! + 10, y]
     )
     expect(topTabLabel).toBe('Tab 1')
-    /** Selected hover fill and the opaque chrome surface beneath it. */
+    /** Selected fill and the opaque chrome surface beneath it. */
     const [selectionFill, chromeSurface] = await resolvePaletteColors(mainWindow.locator('body'), [
       '--ui-neutral-selection-surface',
       '--app-chrome-surface'

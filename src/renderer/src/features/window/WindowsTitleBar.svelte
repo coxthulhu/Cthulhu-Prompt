@@ -519,14 +519,11 @@
   }
 
   .titlebar__screen:where(:enabled):is(:hover, :focus-visible)::before {
-    background: var(--ui-neutral-normal-surface);
-  }
-
-  .titlebar__screen[data-active='true']::before {
     background: var(--ui-neutral-emphasis-surface);
   }
 
-  .titlebar__screen[data-active='true']:hover::before {
+  /* Choosing the shown screen again does nothing, so its brighter fill stays the same while hovered. */
+  .titlebar__screen[data-active='true']::before {
     background: var(--ui-neutral-selection-surface);
   }
 
@@ -593,14 +590,11 @@
   }
 
   .titlebar__tab:is(:hover, :focus-within)::before {
-    background: var(--ui-neutral-normal-surface);
-  }
-
-  .titlebar__tab[data-selected='true']::before {
     background: var(--ui-neutral-emphasis-surface);
   }
 
-  .titlebar__tab[data-selected='true']:hover::before {
+  /* Choosing the selected tab again does nothing, so its brighter fill stays the same while hovered. */
+  .titlebar__tab[data-selected='true']::before {
     background: var(--ui-neutral-selection-surface);
   }
 
@@ -609,8 +603,7 @@
     z-index: 1;
   }
 
-  /* The dragged tab keeps the selected hover fill, layered on the chrome surface so the tabs beneath stay hidden.
-     It follows the selected hover rule so it wins that specificity tie whether or not the tab keeps :hover. */
+  /* The dragged tab keeps the selected fill, layered on the chrome surface so the tabs beneath stay hidden. */
   .titlebar__tab[data-selected='true'][data-dragging='true']::before {
     background: linear-gradient(var(--ui-neutral-selection-surface), var(--ui-neutral-selection-surface)),
       var(--app-chrome-surface);

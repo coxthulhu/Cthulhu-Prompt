@@ -32,7 +32,7 @@
 >
   {#each items as item (item.id)}
     <button
-      class="cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiButtonToggle cthulhuUiButtonBarSelectorButton text-sm leading-5"
+      class="cthulhuUiButtonBase cthulhuUiButtonSurface cthulhuUiButtonToggle cthulhuUiButtonSelectable cthulhuUiButtonBarSelectorButton text-sm leading-5"
       type="button"
       {disabled}
       aria-pressed={selectedId === item.id}
@@ -61,6 +61,14 @@
   .cthulhuUiButtonBarSelectorButton[aria-pressed='false'] {
     /* Unselected segments reserve a border without displaying it. */
     --cthulhu-ui-button-border: var(--ui-ghost-surface);
+  }
+
+  .cthulhuUiButtonBarSelectorButton[aria-pressed='true'] {
+    /* Choosing the selected segment again does nothing, so it keeps the brighter accent colors while hovered. */
+    --cthulhu-ui-button-fill: var(--ui-accent-action-hover-fill);
+    --cthulhu-ui-button-border: var(--ui-accent-muted-hover-border);
+    --cthulhu-ui-button-hover-fill: var(--ui-accent-action-hover-fill);
+    --cthulhu-ui-button-hover-border: var(--ui-accent-muted-hover-border);
   }
 
   .cthulhuUiButtonBarSelectorLabel {

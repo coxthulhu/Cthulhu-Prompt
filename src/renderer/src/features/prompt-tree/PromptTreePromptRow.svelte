@@ -217,15 +217,11 @@
 
   .sidebarPromptTreeSettingsButton[data-selection-control] {
     border-radius: var(--cthulhu-ui-radius-control);
-    cursor: pointer;
     padding-right: 14px;
   }
 
+  /* Choosing the selected option again does nothing, so it keeps the brighter accent fill while hovered. */
   .sidebarPromptTreeSettingsButton[data-selection-control][data-row-state='active'] {
-    background: var(--ui-accent-action-fill);
-  }
-
-  .sidebarPromptTreeSettingsButton[data-selection-control][data-row-state='active']:hover {
     background: var(--ui-accent-action-hover-fill);
   }
 

@@ -12,6 +12,11 @@
   pointer-events: none;
 }
 
+/* Choosing the selected option again does nothing, so selectable options keep the arrow cursor in every state. */
+.cthulhuUiButtonSelectable {
+  cursor: default;
+}
+
 /* Bordered controls share their surface; components retain their own geometry. */
 .cthulhuUiButtonSurface {
   /* Idle fill, border, and foreground for ghost controls. */

@@ -330,16 +330,17 @@ describe('Prompt template selection', () => {
         '[data-testid="prompt-tree-template-category-toggle-button-UnusableCategoryTemplates"]'
       )
     ).toHaveCount(0)
+    // Select-mode options keep the arrow because choosing the selected option again does nothing.
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveCSS(
       'cursor',
-      'pointer'
+      'default'
     )
     await expect(
       dialog.locator('[data-testid="prompt-tree-template-prompt-template-second"]')
-    ).toHaveCSS('cursor', 'pointer')
+    ).toHaveCSS('cursor', 'default')
     await expect(
       dialog.locator('[data-testid="prompt-tree-template-category-toggle-button-CategoryTemplates"]')
-    ).toHaveCSS('cursor', 'pointer')
+    ).toHaveCSS('cursor', 'default')
     await expect(
       dialog
         .locator('[data-testid="prompt-tree-template-category-toggle-button-CategoryTemplates"]')
@@ -658,6 +659,9 @@ describe('Prompt template selection', () => {
     ).toHaveCSS('cursor', 'pointer')
     await expect(
       quickDialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]')
+    ).toHaveCSS('cursor', 'pointer')
+    await expect(
+      quickDialog.locator('[data-testid="prompt-tree-template-category-toggle-button-CategoryTemplates"]')
     ).toHaveCSS('cursor', 'pointer')
     await expect(
       quickDialog.locator(

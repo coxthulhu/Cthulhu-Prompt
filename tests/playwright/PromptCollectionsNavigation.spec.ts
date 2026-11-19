@@ -935,10 +935,10 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     await expect(rootHeader.locator('[data-testid="prompt-collection-manage-categories-button"]')).toHaveCSS('border-top-width', '0px')
     await expect(rootHeader.locator('[data-testid="prompt-collection-delete-button"]')).toHaveCSS('border-top-width', '0px')
 
-    /** Selected status uses the shared accent palette without relying on the removed collection selector. */
+    /** Selected status uses the brighter accent colors, which it keeps while hovered because reselecting does nothing. */
     const activeFilter = rootHeader.locator('[data-testid="prompt-collection-active-filter"]')
-    await expect(activeFilter).toHaveCSS('background-color', await resolvePaletteColor(activeFilter, '--ui-accent-action-fill'))
-    await expect(activeFilter).toHaveCSS('border-top-color', await resolvePaletteColor(activeFilter, '--ui-accent-muted-border'))
+    await expect(activeFilter).toHaveCSS('background-color', await resolvePaletteColor(activeFilter, '--ui-accent-action-hover-fill'))
+    await expect(activeFilter).toHaveCSS('border-top-color', await resolvePaletteColor(activeFilter, '--ui-accent-muted-hover-border'))
     await expect(activeFilter).toHaveCSS('color', await resolvePaletteColor(activeFilter, '--ui-normal-text'))
     await rootHeader.locator('[data-testid="prompt-collection-title-edit"]').click()
 

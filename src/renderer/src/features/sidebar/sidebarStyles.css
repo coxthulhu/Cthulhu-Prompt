@@ -86,20 +86,19 @@
   color: var(--ui-hoverable-icon-glyph);
 }
 
-:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton)[data-row-state='idle']:hover {
-  background-color: var(--ui-neutral-normal-surface);
-}
-
-:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton)[data-row-state='active']:hover {
-  background-color: var(--ui-neutral-selection-surface);
-}
-
 :is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(
-    [data-row-state='active'],
-    [data-row-state='drag-active'],
+    [data-row-state='idle']:hover,
     [data-row-state='blocked-over']
   ) {
   background-color: var(--ui-neutral-emphasis-surface);
+}
+
+/* Selected rows keep this brighter fill while hovered, since choosing a selected prompt again does nothing. */
+:is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(
+    [data-row-state='active'],
+    [data-row-state='drag-active']
+  ) {
+  background-color: var(--ui-neutral-selection-surface);
 }
 
 :is(.sidebarPromptTreeRow, .sidebarPromptTreeSettingsButton):is(

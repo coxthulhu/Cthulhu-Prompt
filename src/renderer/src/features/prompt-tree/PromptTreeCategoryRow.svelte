@@ -306,8 +306,4 @@
   .sidebarPromptTreeRow[data-rounded-corners='true'] .sidebarPromptTreeToggleButton {
     border-radius: var(--cthulhu-ui-radius-control);
   }
-
-  .sidebarPromptTreeRow[data-rounded-corners='true'] .sidebarPromptTreeToggleButton {
-    cursor: pointer;
-  }
 </style>

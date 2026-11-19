@@ -210,7 +210,6 @@
   }
 
   .cthulhuUiSelectorButton:where(:not(:disabled)[data-row-state='idle']:hover),
-  .cthulhuUiSelectorButton:where(:not(:disabled)[data-row-state='active']:hover),
   .cthulhuUiSelectorButton:where(:not(:disabled):focus-visible) {
     background-color: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
@@ -255,17 +254,10 @@
     border-color: var(--ui-neutral-hover-border);
   }
 
+  /* Choosing the selected row again does nothing, so it keeps the brighter accent colors while hovered. */
   .cthulhuUiSelectorButton[data-selection-variant='accent']:where(
       [data-row-state='active'],
       [data-row-state='drag-active']
-    ) {
-    background-color: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-  }
-
-  .cthulhuUiSelectorButton[data-selection-variant='accent']:where(
-      [data-row-state='active']:hover,
-      [data-row-state='active']:focus-visible
     ) {
     background-color: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
