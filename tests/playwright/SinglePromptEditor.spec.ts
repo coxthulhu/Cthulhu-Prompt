@@ -325,12 +325,14 @@ describe('Single prompt editor', () => {
       top: Math.round(section.getBoundingClientRect().top),
       scrollTop: window.__cthulhuMonacoEditors!.find((entry) => section.contains(entry.container))!.editor.getScrollTop()
     }))
-    // Place the caret in the body and wheel-scroll it, as a user would before toggling the note.
-    await mainWindow.locator(BODY).click({ position: { x: 40, y: 30 } })
+    /** Full-screen editors accept the wheel even while a toolbar button has focus. */
+    const closeButton = mainWindow.locator(SCREEN).getByTestId('prompt-close-button')
+    await closeButton.focus()
     const bodyBox = (await mainWindow.locator(BODY).boundingBox())!
     await mainWindow.mouse.move(bodyBox.x + bodyBox.width / 2, bodyBox.y + bodyBox.height / 2)
     await mainWindow.mouse.wheel(0, 500)
     await expect.poll(async () => (await readBody()).scrollTop).toBeGreaterThan(0)
+    await expect(closeButton).toBeFocused()
     const anchored = await readBody()
 
     for (const expanded of ['false', 'true']) {

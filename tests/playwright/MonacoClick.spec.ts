@@ -1,6 +1,7 @@
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
   focusMonacoEditor,
+  getEditorScrollTop,
   getMonacoCursorPosition,
   isMonacoEditorFocused,
   waitForMonacoEditor
@@ -118,19 +119,6 @@ async function clickMonacoLine(
     throw new Error(`Failed to measure visible Monaco line ${lineNumber} in ${editorSelector}.`)
   }
   await page.mouse.click(point.x, point.y)
-}
-
-/** Returns the internal vertical scroll offset for one hydrated Monaco editor. */
-async function getEditorScrollTop(page: Page, editorSelector: string): Promise<number | null> {
-  return await page.evaluate((selector) => {
-    /** Hydrated Monaco root used to match the editor test registry entry. */
-    const monacoNode = document.querySelector(`${selector} .monaco-editor`)
-    /** Registered Monaco instance associated with the requested prompt editor. */
-    const entry = window.__cthulhuMonacoEditors?.find(
-      (item) => item.container === monacoNode || item.container?.contains(monacoNode)
-    )
-    return entry ? Math.round(entry.editor.getScrollTop()) : null
-  }, editorSelector)
 }
 
 /** Sets the internal vertical scroll offset for one hydrated Monaco editor. */
@@ -252,7 +240,7 @@ describe('Monaco editor clicks', () => {
     })
   }
 
-  test('routes wheel scrolling according to Monaco focus and scroll boundaries', async ({
+  test('routes wheel scrolling according to the focused card field and scroll boundaries', async ({
     testSetup
   }) => {
     /** Height fixture supplies a prompt that overflows Monaco and the collection viewport. */
@@ -267,34 +255,39 @@ describe('Monaco editor clicks', () => {
 
     /** Monaco root receives each synthetic wheel input at a stable visible point. */
     const monacoRoot = mainWindow.locator(`${FORTY_LINE_EDITOR} .monaco-editor`).first()
-    /** Title focus explicitly leaves Monaco unfocused for the first wheel assertion. */
-    const titleInput = mainWindow.locator(`${FORTY_LINE_EDITOR} ${PROMPT_TITLE_SELECTOR}`)
-    await titleInput.focus()
-    await expect.poll(() => isMonacoEditorFocused(mainWindow, FORTY_LINE_EDITOR)).toBe(false)
+    /** A focused toolbar control on the same card leaves the wheel with the collection. */
+    const toolbarButton = mainWindow.locator(FORTY_LINE_EDITOR).getByTestId('prompt-open-button')
+    await toolbarButton.focus()
     await monacoRoot.hover({ position: { x: 40, y: 20 } })
+    await expect(toolbarButton).toBeFocused()
 
     /** Unfocused Monaco scroll offset must remain fixed while the collection screen moves. */
     const unfocusedEditorScrollTop = await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)
+    /** Compare with the actual starting offset after positioning the pointer. */
+    const collectionTop = await testHelpers.getElementScrollTop(HOST_SELECTOR)
     await mainWindow.mouse.wheel(0, 200)
     await expect
       .poll(() => testHelpers.getElementScrollTop(HOST_SELECTOR))
-      .toBeGreaterThan(0)
+      .toBeGreaterThan(collectionTop)
     expect(await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBe(
       unfocusedEditorScrollTop
     )
 
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
     await setEditorScrollTop(mainWindow, FORTY_LINE_EDITOR, 0)
-    await focusMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
+    /** Title focus enables the body's wheel without moving the caret out of the title. */
+    const titleInput = mainWindow.locator(`${FORTY_LINE_EDITOR} ${PROMPT_TITLE_SELECTOR}`)
+    await titleInput.focus()
     await monacoRoot.hover({ position: { x: 40, y: 20 } })
     await mainWindow.mouse.wheel(0, 200)
 
     await expect.poll(() => getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBeGreaterThan(0)
+    await expect(titleInput).toBeFocused()
     expect(await testHelpers.getElementScrollTop(HOST_SELECTOR)).toBeLessThanOrEqual(2)
 
     await setEditorScrollTop(mainWindow, FORTY_LINE_EDITOR, 100_000)
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
-    await expect.poll(() => isMonacoEditorFocused(mainWindow, FORTY_LINE_EDITOR)).toBe(true)
+    await expect(titleInput).toBeFocused()
     await expect.poll(() => getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBeGreaterThan(0)
     await monacoRoot.hover({ position: { x: 40, y: 20 } })
     // Let the earlier editor-latched wheel gesture expire before starting a new one at the edge.
@@ -306,7 +299,7 @@ describe('Monaco editor clicks', () => {
       .toBeGreaterThan(0)
   })
 
-  test('keeps an editor wheel gesture from overscrolling the collection until it idles', async ({
+  test('keeps a body wheel gesture from overscrolling the collection while its note has focus', async ({
     testSetup
   }) => {
     /** Height fixture supplies a prompt that overflows Monaco and the collection viewport. */
@@ -316,15 +309,17 @@ describe('Monaco editor clicks', () => {
     await testHelpers.navigateToPromptCollections('Forty Line Prompt')
     await waitForMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
 
+    /** Only the body should scroll when the note holds the caret. */
+    const body = `${FORTY_LINE_EDITOR} .prompt-editor-body-editor-section`
     /** Monaco root receives each wheel input at a stable visible point. */
-    const monacoRoot = mainWindow.locator(`${FORTY_LINE_EDITOR} .monaco-editor`).first()
-    await focusMonacoEditor(mainWindow, FORTY_LINE_EDITOR)
-    await expect.poll(() => isMonacoEditorFocused(mainWindow, FORTY_LINE_EDITOR)).toBe(true)
-    await setEditorScrollTop(mainWindow, FORTY_LINE_EDITOR, 100_000)
+    const monacoRoot = mainWindow.locator(`${body} .monaco-editor`).first()
+    await mainWindow.locator(FORTY_LINE_EDITOR).getByTestId('attached-note-button').click()
+    await expect.poll(() => isMonacoEditorFocused(mainWindow, `${FORTY_LINE_EDITOR} [data-testid="attached-note-editor"]`)).toBe(true)
+    await setEditorScrollTop(mainWindow, body, 100_000)
     /** Monaco clamps the oversized offset to its maximum internal scroll position. */
-    const maxEditorScrollTop = (await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR))!
+    const maxEditorScrollTop = (await getEditorScrollTop(mainWindow, body))!
     expect(maxEditorScrollTop).toBeGreaterThan(40)
-    await setEditorScrollTop(mainWindow, FORTY_LINE_EDITOR, maxEditorScrollTop - 40)
+    await setEditorScrollTop(mainWindow, body, maxEditorScrollTop - 40)
     await testHelpers.scrollVirtualWindowTo(HOST_SELECTOR, 0)
     await monacoRoot.hover({ position: { x: 40, y: 20 } })
 
@@ -332,7 +327,7 @@ describe('Monaco editor clicks', () => {
     await mainWindow.mouse.wheel(0, 200)
     await mainWindow.mouse.wheel(0, 200)
     await expect
-      .poll(() => getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR))
+      .poll(() => getEditorScrollTop(mainWindow, body))
       .toBe(maxEditorScrollTop)
     // Let browser input and two layout frames complete before asserting the collection held still.
     await mainWindow.evaluate(() => new Promise<void>((resolve) => {
@@ -346,7 +341,7 @@ describe('Monaco editor clicks', () => {
     await expect
       .poll(() => testHelpers.getElementScrollTop(HOST_SELECTOR))
       .toBeGreaterThan(0)
-    expect(await getEditorScrollTop(mainWindow, FORTY_LINE_EDITOR)).toBe(maxEditorScrollTop)
+    expect(await getEditorScrollTop(mainWindow, body)).toBe(maxEditorScrollTop)
   })
 
   test('keeps the editor attached after clicking a word', async ({ testSetup }) => {

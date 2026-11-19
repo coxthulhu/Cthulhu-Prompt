@@ -283,6 +283,12 @@
   /** Only a newly added note requests automatic editor focus. */
   let focusNewNoteId = $state<string | null>(null)
 
+  /** The title, body, and attached note share wheel scrolling while any one has focus. */
+  const hasEditingFocus = (): boolean =>
+    document.activeElement === titleInputRef ||
+    editorInstance?.hasWidgetFocus() === true ||
+    noteEditorInstance?.hasWidgetFocus() === true
+
   /** Adds and reveals a new note, deletes a blank note on hide, or toggles an existing note without moving focus. */
   const toggleAttachedNote = (): void => {
     onInteraction?.()
@@ -824,6 +830,7 @@
       {rowId}
       {scrollToWithinWindowBand}
       onEditorLifecycle={handleEditorLifecycle}
+      {hasEditingFocus}
       findSectionKey={PROMPT_COLLECTION_FIND_BODY_SECTION_KEY}
       {findRequest}
       onFindMatchReveal={(handler) => {
@@ -887,6 +894,7 @@
         ontoggle={toggleAttachedNote}
         {onInteraction}
         onEditorLifecycle={handleNoteEditorLifecycle}
+        {hasEditingFocus}
         onArrowUpAtStart={() => focusEditorAtEdge(editorInstance, 'end')}
       />
     {/key}

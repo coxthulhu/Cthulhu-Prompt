@@ -20,7 +20,7 @@
 
   /** Note presentation and virtual-row services supplied by the owning editor. */
   let { attachment, sizingConfig, widthPx, devicePixelRatio, rowId, hydrationPriority, shouldDehydrate,
-    overlayRowElement, overflowPadding, fixedHeightPx, scrollToWithinWindowBand, ontoggle, onInteraction, onEditorLifecycle, onArrowUpAtStart }: {
+    overlayRowElement, overflowPadding, fixedHeightPx, scrollToWithinWindowBand, ontoggle, onInteraction, onEditorLifecycle, hasEditingFocus, onArrowUpAtStart }: {
     /** Authoritative note and its current visibility and measurements. */
     attachment: AttachedNoteLayout
     /** Shared typography and the note's line limits after the prompt claims its share. */
@@ -49,6 +49,8 @@
     onInteraction?: () => void
     /** Supplies note focus to the owning card's move shortcuts. */
     onEditorLifecycle: (editor: monaco.editor.IStandaloneCodeEditor, active: boolean) => void
+    /** Checks focus in the owning title, body, or note before routing wheel input. */
+    hasEditingFocus: () => boolean
     /** Returns to the owner's body when ArrowUp is pressed at the note's first cursor position. */
     onArrowUpAtStart: () => void
   } = $props()
@@ -138,6 +140,7 @@
     {rowId}
     {scrollToWithinWindowBand}
     {onEditorLifecycle}
+    {hasEditingFocus}
     {onArrowUpAtStart}
     findSectionKey="attached-note"
     onBlur={() => { void runIpcBestEffort(flushNoteAutosaves) }}

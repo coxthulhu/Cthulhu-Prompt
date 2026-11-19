@@ -3,7 +3,8 @@ import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { createDeterministicId } from '../fixtures/FixtureIds'
-import { focusMonacoEditor, isMonacoEditorFocused, setMonacoSelections, waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import { focusMonacoEditor, getEditorScrollTop, isMonacoEditorFocused, setMonacoSelections, waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import { PROMPT_COLLECTION_HOST_SELECTOR } from '../helpers/PromptCollectionSelectors'
 import { readWorkspaceState } from '../helpers/UserPersistenceHelpers'
 import { readTextFile, checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
@@ -83,6 +84,58 @@ const expectCardFits = async (page: Page) => {
 
 describe('Attached note editors', () => {
   for (const kind of ['prompt', 'template'] as const) {
+    test(`${kind} scrolls the hovered editor while its title or paired editor keeps focus`, async ({ testSetup }) => {
+      /** Both documents overflow so either can scroll independently. */
+      const text = Array(100).fill('Scrollable line').join('\n')
+      /** The second card supplies a focus target outside the body and note under test. */
+      const { mainWindow, testHelpers } = await startNotes(testSetup, kind, text)
+      /** Card controls used to add the note and focus its title. */
+      const owner = mainWindow.locator(OWNER)
+      await owner.getByTestId('attached-note-button').click()
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
+      await mainWindow.keyboard.insertText(text)
+      await mainWindow.keyboard.press('Control+Home')
+
+      /** Reveals the wheel target and measures the collection after moving the pointer. */
+      const hoverEditor = async (selector: string) => {
+        await testHelpers.scrollVirtualElementIntoView(PROMPT_COLLECTION_HOST_SELECTOR, selector, 0)
+        await mainWindow.locator(`${selector} .monaco-editor`).first().hover({ position: { x: 40, y: 20 } })
+        return testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)
+      }
+      /** Only the hovered editor may move in response to the wheel. */
+      const expectEditorScroll = async (hovered: string, other: string) => {
+        /** Collection offset before this gesture. */
+        const collectionTop = await hoverEditor(hovered)
+        /** Independent offsets before this gesture. */
+        const [hoveredTop, otherTop] = await Promise.all([getEditorScrollTop(mainWindow, hovered), getEditorScrollTop(mainWindow, other)])
+        await mainWindow.mouse.wheel(0, 120)
+        await expect.poll(() => getEditorScrollTop(mainWindow, hovered)).toBeGreaterThan(hoveredTop!)
+        expect(await getEditorScrollTop(mainWindow, other)).toBe(otherTop)
+        expect(await testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)).toBe(collectionTop)
+      }
+
+      await expectEditorScroll(BODY, NOTE)
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, NOTE)).toBe(true)
+      await focusMonacoEditor(mainWindow, BODY)
+      await expectEditorScroll(NOTE, BODY)
+      await expect.poll(() => isMonacoEditorFocused(mainWindow, BODY)).toBe(true)
+      await owner.getByTestId('prompt-title').focus()
+      await expectEditorScroll(NOTE, BODY)
+      await expect(owner.getByTestId('prompt-title')).toBeFocused()
+
+      /** Another card's title sends the same wheel input to the collection. */
+      const neighborTitle = mainWindow.getByTestId('prompt-editor-neighbor').getByTestId('prompt-title')
+      await neighborTitle.focus()
+      /** Offsets distinguish collection scrolling from a second internal note scroll. */
+      const collectionTop = await hoverEditor(NOTE)
+      await expect(neighborTitle).toBeFocused()
+      /** The note still has room to scroll when its owner loses focus. */
+      const noteTop = await getEditorScrollTop(mainWindow, NOTE)
+      await mainWindow.mouse.wheel(0, 120)
+      await expect.poll(() => testHelpers.getElementScrollTop(PROMPT_COLLECTION_HOST_SELECTOR)).toBeGreaterThan(collectionTop)
+      expect(await getEditorScrollTop(mainWindow, NOTE)).toBe(noteTop)
+    })
+
     test(`${kind} creates an expanded note without a collapsed frame or a second height change`, async ({ testSetup }) => {
       const { mainWindow } = await startNotes(testSetup, kind)
       // Observe painted frames from the Add click through Monaco taking focus.

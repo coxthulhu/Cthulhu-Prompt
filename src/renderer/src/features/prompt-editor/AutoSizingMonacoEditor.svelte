@@ -30,6 +30,8 @@
     sizingConfig: PromptEditorSizingConfig
     /** Optional exact editor height that disables content-based vertical resizing. */
     fixedHeightPx?: number
+    /** Checks focus across related fields when this editor belongs to a prompt or template. */
+    hasEditingFocus?: () => boolean
     /** Accessible name announced for the Monaco text field. */
     ariaLabel?: string
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
@@ -69,6 +71,7 @@
     rowId,
     sizingConfig,
     fixedHeightPx,
+    hasEditingFocus,
     ariaLabel,
     scrollToWithinWindowBand,
     onChange,
@@ -216,22 +219,22 @@
     focusTarget?.focus(options)
   }
 
-  /** Enables Monaco wheel scrolling only while the editor owns widget focus. */
-  const syncMouseWheelHandling = (
-    targetEditor: monaco.editor.IStandaloneCodeEditor,
-    handleMouseWheel: boolean
-  ): void => {
-    targetEditor.updateOptions({ scrollbar: { handleMouseWheel } })
-  }
-
   /** Timestamp of the previous wheel event over this editor, used to detect new gestures. */
   let lastWheelTimeStampMs = Number.NEGATIVE_INFINITY
-  /** Whether the current wheel gesture started while the focused editor could scroll. */
+  /** Whether the current wheel gesture started while the hovered editor could scroll. */
   let isWheelGestureLatchedToEditor = false
 
-  /** Keeps an editor-latched wheel gesture from scrolling the surrounding window past Monaco's edge. */
+  /** Routes the wheel before Monaco receives it and holds a gesture at the hovered editor's edge. */
   const handleWheelCapture = (event: WheelEvent): void => {
-    if (!editor?.hasWidgetFocus() || event.deltaY === 0) return
+    if (!editor) return
+    /** Standalone editors use their own focus when they have no related editing fields. */
+    const focused = hasEditingFocus?.() ?? editor.hasWidgetFocus()
+    /** Fixed-height editors also accept the wheel when focus is outside their editing fields. */
+    const handleMouseWheel = fixedHeightPx !== undefined || focused
+    if (editor.getOption(monaco.editor.EditorOption.scrollbar).handleMouseWheel !== handleMouseWheel) {
+      editor.updateOptions({ scrollbar: { handleMouseWheel } })
+    }
+    if (!focused || event.deltaY === 0) return
     const scrollTop = editor.getScrollTop()
     const canEditorScroll =
       event.deltaY > 0
@@ -523,12 +526,8 @@
       }
 
       const changeDisposable = nextEditor.onDidChangeModelContent(handleContentChange)
-      const blurDisposable = nextEditor.onDidBlurEditorWidget(() => {
-        syncMouseWheelHandling(nextEditor, fixedHeightPx !== undefined)
-        onBlur?.()
-      })
+      const blurDisposable = nextEditor.onDidBlurEditorWidget(() => onBlur?.())
       const focusDisposable = nextEditor.onDidFocusEditorWidget(() => {
-        syncMouseWheelHandling(nextEditor, true)
         focusEditor(nextEditor)
         reportSelectionAnchor(nextEditor, nextEditor.getSelection())
       })

@@ -29,6 +29,8 @@
     sizingConfig: PromptEditorSizingConfig
     /** Optional exact editor height that disables content-based vertical resizing. */
     fixedHeightPx?: number
+    /** Checks whether this editor or a related editing field owns wheel scrolling. */
+    hasEditingFocus?: () => boolean
     scrollToWithinWindowBand?: ScrollToWithinWindowBand
     onImmediateHydrationRequest?: (request: (() => Promise<void>) | null) => void
     onHydrationChange?: (isHydrated: boolean) => void
@@ -71,6 +73,7 @@
     rowId,
     sizingConfig,
     fixedHeightPx,
+    hasEditingFocus,
     scrollToWithinWindowBand,
     onImmediateHydrationRequest,
     onHydrationChange,
@@ -197,6 +200,7 @@
     {rowId}
     {sizingConfig}
     {fixedHeightPx}
+    {hasEditingFocus}
     {scrollToWithinWindowBand}
     {onChange}
     {onBlur}

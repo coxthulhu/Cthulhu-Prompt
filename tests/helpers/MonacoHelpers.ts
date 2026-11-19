@@ -6,6 +6,15 @@ const MONACO_ROOT_SELECTOR = '.monaco-editor'
 const MONACO_VIEW_LINES_SELECTOR = '.view-lines'
 const MONACO_READY_SELECTOR = `${MONACO_ROOT_SELECTOR}:has(${MONACO_VIEW_LINES_SELECTOR})`
 
+/** Reads the internal vertical offset of the first Monaco editor in the requested section. */
+export async function getEditorScrollTop(page: Page, editorSelector: string): Promise<number | null> {
+  return page.locator(editorSelector).evaluate((section) => {
+    /** Registry entries identify the body and note independently inside a card. */
+    const entry = window.__cthulhuMonacoEditors?.find((item) => section.contains(item.container))
+    return entry ? Math.round(entry.editor.getScrollTop()) : null
+  })
+}
+
 export async function waitForMonacoEditor(
   page: Page,
   editorSelector: string,
