@@ -66,6 +66,9 @@
   import { createLoadingOverlayState } from '@renderer/common/cthulhu-ui/loading/loadingOverlayState.svelte.ts'
   import NumericStepperInput from '@renderer/common/cthulhu-ui/forms/NumericStepperInput.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
+  import OptionCardSelector, {
+    type OptionCardSelectorItem
+  } from '@renderer/common/cthulhu-ui/selectors/OptionCardSelector.svelte'
   import SimpleSelectorButton, {
     type SimpleSelectorButtonItem
   } from '@renderer/common/cthulhu-ui/selectors/SimpleSelectorButton.svelte'
@@ -184,6 +187,23 @@
       tone: 'success'
     }
   ]
+  /** Option card samples pair each choice with a description long enough to wrap. */
+  const optionCardSelectorItems: OptionCardSelectorItem<'tasks' | 'templates'>[] = [
+    {
+      id: 'tasks',
+      label: 'Task Collection',
+      description: 'One-time prompts for individual pieces of work, refined with the AI and checked off when complete.',
+      icon: FileText,
+      testId: 'test-screen-option-card-tasks'
+    },
+    {
+      id: 'templates',
+      label: 'Template Collection',
+      description: 'Reusable instructions that wrap a task to describe how the AI should do the work and respond.',
+      icon: Layers,
+      testId: 'test-screen-option-card-templates'
+    }
+  ]
   const iconButtonMoreOptionsItems: DropdownPopupMoreOptionsItem[] = [
     {
       id: 'copy-markdown',
@@ -235,6 +255,8 @@
   /** Gallery sample whose live bounds supply the optional popup anchor. */
   let popupAnchor = $state<HTMLElement>()
   let selectedDetailedDropdownItem = $state(detailedDropdownItems[0]!)
+  /** Interactive option card selection in the Selectors gallery. */
+  let selectedOptionCardId = $state<'tasks' | 'templates'>('tasks')
   let testLoadingOverlayActive = $state(false)
   // Gallery controls update the shared progress bar's value and percentage together.
   let progressBarValue = $state(64)
@@ -662,7 +684,7 @@
       <div class="component-section">
         <CardSurface>
           <div class="component-section-content">
-            {@render componentTitle('Selectors', 'Compact and detailed dropdown selectors.')}
+            {@render componentTitle('Selectors', 'Dropdown, tile, and option card selectors.')}
 
             <div class="stack">
               <div class="component-sample">
@@ -725,6 +747,20 @@
               <div class="component-sample">
                 {@render componentLabel('OpenIndicator')}
                 <OpenIndicator />
+              </div>
+
+              <div class="component-sample">
+                {@render componentLabel('OptionCardSelector')}
+                <OptionCardSelector
+                  label="Collection type"
+                  items={optionCardSelectorItems}
+                  selectedId={selectedOptionCardId}
+                  class="max-w-[620px]"
+                  testId="test-screen-option-card-selector"
+                  onselect={(id) => {
+                    selectedOptionCardId = id
+                  }}
+                />
               </div>
             </div>
           </div>

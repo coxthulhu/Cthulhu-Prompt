@@ -1,12 +1,13 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import type { ComponentType } from 'svelte'
+  import type { ComponentType, Snippet } from 'svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
   import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
+  import { mergeClasses } from '@renderer/common/cthulhu-ui/mergeClasses'
   import { FolderPlus } from 'lucide-svelte'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import {
@@ -35,6 +36,8 @@
     duplicatePromptCollectionId = null,
     failureMessage,
     icon = FolderPlus,
+    leadingFields,
+    class: className,
     onsubmit
   } = $props<{
     isWorkspaceReady: boolean
@@ -54,6 +57,10 @@
     duplicatePromptCollectionId?: string | null
     failureMessage: string
     icon?: ComponentType
+    /** Extra fields shown above the collection name field. */
+    leadingFields?: Snippet
+    /** Dialog classes merged over the default width, such as a wider max width. */
+    class?: string
     onsubmit: SubmitPromptCollectionName
   }>()
 
@@ -153,7 +160,7 @@
 
 <Dialog
   bind:open={isDialogOpen}
-  class="w-full max-w-[520px]"
+  class={mergeClasses('w-full max-w-[520px]', className)}
   icon={icon}
   {title}
   {subtitle}
@@ -166,6 +173,7 @@
   onsubmit={handleSubmit}
 >
   <div class="cthulhuPromptCollectionNameDialogFields grid min-w-0 gap-[17px] px-4 py-4">
+    {@render leadingFields?.()}
     <div data-testid="prompt-collection-name-field">
       <TitleSubtitleStack class="mb-[7px]">
         <div class="flex items-center gap-1">

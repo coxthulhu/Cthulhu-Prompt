@@ -203,7 +203,6 @@ describe('Persisted projects', () => {
     const info = JSON.parse(await readTextFile(electronApp, `${path}/SecondProject/ProjectInfo.json`))
     expect(info).toEqual({ id: expect.stringMatching(/^[a-f0-9]{32}$/i), name: 'Second Project', abbreviation: 'S2', shortDescription: 'Short', description: 'Full' })
     await mainWindow.getByTestId(`new-tab-new-collection-${info.id}`).click()
-    await mainWindow.getByTestId('new-tab-create-task-collection-item').click()
     await mainWindow.getByTestId('create-prompt-collection-name-input').fill('Tasks')
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await mainWindow.getByTestId(`new-tab-project-${info.id}`).locator('[data-testid^="new-tab-collection-"]').filter({ has: mainWindow.getByText('Tasks', { exact: true }) }).click()

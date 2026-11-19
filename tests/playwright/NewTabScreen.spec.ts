@@ -275,43 +275,61 @@ describe('New Tab Screen', () => {
     await expect(mainWindow.getByTestId(`new-tab-project-title-${harborProjectId}`)).toHaveText('Harbor Web')
   })
 
-  test('creates task and template collections in a project from its New Collection menu', async ({ electronApp, testSetup }) => {
+  test('creates task and template collections in a project from its New Collection dialog type picker', async ({ electronApp, testSetup }) => {
     const mainWindow = await openNewTab(electronApp, testSetup)
-    const menu = mainWindow.getByTestId('new-tab-new-collection-menu')
-    const nameInput = mainWindow.getByTestId('create-prompt-collection-name-input')
-    const createButton = mainWindow.getByTestId('create-prompt-collection-button')
+    /** Creation dialog opened by each project's New Collection button. */
+    const dialog = mainWindow.getByRole('dialog', { name: 'Create Collection' })
+    const taskOption = dialog.getByTestId('create-prompt-collection-type-prompt')
+    const templateOption = dialog.getByTestId('create-prompt-collection-type-template')
+    const nameInput = dialog.getByTestId('create-prompt-collection-name-input')
+    const createButton = dialog.getByTestId('create-prompt-collection-button')
+    const nameError = dialog.getByTestId('create-prompt-collection-name-error')
 
-    // The menu offers both kinds under the creation dialogs' names, each with an untruncated description.
+    // The type picker is the first field, with full-width Task and Template cards stacked, Task selected, and the name
+    // focused.
     await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
-    await expect(menu.locator('.cthulhuUiDropdownPopupMoreOptionsTitle')).toHaveText([
-      'Create Task Collection',
-      'Create Template Collection'
+    await expect(dialog.getByTestId('create-prompt-collection-type-selector').getByRole('button')).toHaveText([
+      /Task Collection\s+A task describes one piece of work\./,
+      /Template Collection\s+A template wraps a task/
     ])
-    const menuDetails = menu.locator('.cthulhuUiDropdownPopupMoreOptionsSubtitlePart')
-    await expect(menuDetails).toHaveText([
-      'One-time prompts for individual tasks',
-      'Reusable prompts for repeatable workflows'
-    ])
-    expect(
-      await menuDetails.evaluateAll((details) => details.every((detail) => detail.scrollWidth <= detail.clientWidth))
-    ).toBe(true)
+    const typeFieldBox = (await dialog.getByTestId('create-prompt-collection-type-field').boundingBox())!
+    const nameFieldBox = (await dialog.getByTestId('prompt-collection-name-field').boundingBox())!
+    expect(typeFieldBox.y + typeFieldBox.height).toBeLessThanOrEqual(nameFieldBox.y)
+    const taskBox = (await taskOption.boundingBox())!
+    const templateBox = (await templateOption.boundingBox())!
+    for (const box of [taskBox, templateBox]) {
+      expect(Math.abs(box.x - typeFieldBox.x)).toBeLessThanOrEqual(1)
+      expect(Math.abs(box.width - typeFieldBox.width)).toBeLessThanOrEqual(1)
+    }
+    expect(templateBox.y).toBeGreaterThan(taskBox.y + taskBox.height)
+    await expect(taskOption).toHaveAttribute('aria-pressed', 'true')
+    await expect(templateOption).toHaveAttribute('aria-pressed', 'false')
+    await expect(nameInput).toBeFocused()
 
-    // A task collection may reuse another project's task collection name.
-    await mainWindow.getByTestId('new-tab-create-task-collection-item').click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Create Task Collection' })).toBeVisible()
-    await nameInput.fill('Bug Triage')
-    await createButton.click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Create Task Collection' })).toHaveCount(0)
-
-    // A template collection's name must be unique among this project's template collections.
-    await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
-    await mainWindow.getByTestId('new-tab-create-template-collection-item').click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Create Template Collection' })).toBeVisible()
+    // A template collection's name must be unique among this project's template collections, and switching the type
+    // rechecks the name against that type's collections.
+    await templateOption.click()
+    await expect(templateOption).toHaveAttribute('aria-pressed', 'true')
+    await expect(taskOption).toHaveAttribute('aria-pressed', 'false')
     await nameInput.fill('Release Notes')
+    await expect(nameError).toHaveText('A collection with this name already exists')
+    await expect(createButton).toBeDisabled()
+    await taskOption.click()
+    await expect(nameError).toHaveCount(0)
+    await expect(createButton).toBeEnabled()
+    await templateOption.click()
+    await expect(nameError).toHaveText('A collection with this name already exists')
     await expect(createButton).toBeDisabled()
     await nameInput.fill('Changelog')
     await createButton.click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Create Template Collection' })).toHaveCount(0)
+    await expect(dialog).toHaveCount(0)
+
+    // Reopening selects Task again, and a task collection may reuse another project's task collection name.
+    await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
+    await expect(taskOption).toHaveAttribute('aria-pressed', 'true')
+    await nameInput.fill('Bug Triage')
+    await createButton.click()
+    await expect(dialog).toHaveCount(0)
 
     // Both new collections show in that project only, with their kind icons, and the New Tab screen stays.
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()

@@ -2,12 +2,9 @@
   import { onMount } from 'svelte'
   import type { Action } from 'svelte/action'
   import { useLiveQuery } from '@tanstack/svelte-db'
-  import { FileText, Folder, Layers, Move, Plus, Search, Settings } from 'lucide-svelte'
+  import { Folder, Move, Plus, Search, Settings } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
-  import DropdownPopupMoreOptions, {
-    type DropdownPopupMoreOptionsItem
-  } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupMoreOptions.svelte'
   import TextInput from '@renderer/common/cthulhu-ui/forms/TextInput.svelte'
   import DraggableTitle from '@renderer/common/cthulhu-ui/layout/DraggableTitle.svelte'
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
@@ -25,7 +22,7 @@
   import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
   import NewTabCollectionGrid, { type NewTabCollectionTile } from './NewTabCollectionGrid.svelte'
   import type { Prompt } from '@shared/domain/prompt/Prompt'
-  import type { PromptCollection, PromptCollectionKind } from '@shared/domain/prompt-collection/PromptCollection'
+  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import type { Project } from '@shared/domain/workspace/Project'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
@@ -57,37 +54,16 @@
   const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
   const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as { data: PromptTemplate[] }
 
-  /**
-   * Creation actions in each project's New Collection menu, named like the dialogs they open and described like their
-   * subtitles; ids are the kinds.
-   */
-  const createCollectionItems: DropdownPopupMoreOptionsItem[] = [
-    {
-      id: 'prompt',
-      label: 'Create Task Collection',
-      detail: 'One-time prompts for individual tasks',
-      icon: FileText,
-      testId: 'new-tab-create-task-collection-item'
-    },
-    {
-      id: 'template',
-      label: 'Create Template Collection',
-      detail: 'Reusable prompts for repeatable workflows',
-      icon: Layers,
-      testId: 'new-tab-create-template-collection-item'
-    }
-  ]
-
   /** Scroll host restored once after the tab's filtered content mounts. */
   let scrollHost: HTMLElement
   // Side effect: restore the retained New Tab viewport after applying its saved search.
   onMount(() => { scrollHost.scrollTop = viewState.scrollTop })
   /** Clock for the tiles' relative modification times. */
   let nowMs = $state(Date.now())
-  /** Project that receives the collection created from its New Collection menu. */
+  /** Project that receives the collection created from its New Collection button. */
   let createCollectionProjectId = $state<string | null>(null)
-  /** Shared creation dialog, opened for one project and kind at a time. */
-  let createPromptCollectionDialog = $state<{ openDialog: (kind: PromptCollectionKind) => void } | null>(null)
+  /** Shared creation dialog, opened for one project at a time. */
+  let createPromptCollectionDialog = $state<{ openDialog: () => void } | null>(null)
 
   // Side effect: keep the tiles' relative modification times fresh while the screen is open.
   onMount(() => {
@@ -157,10 +133,10 @@
       runIpcBestEffort(() => moveProject(workspace.id, projectId, previousProjectId))
   })
 
-  /** Opens collection creation for one project and kind. */
-  const openCreateCollectionDialog = (projectId: string, kind: PromptCollectionKind): void => {
+  /** Opens collection creation for one project. */
+  const openCreateCollectionDialog = (projectId: string): void => {
     createCollectionProjectId = projectId
-    createPromptCollectionDialog!.openDialog(kind)
+    createPromptCollectionDialog!.openDialog()
   }
 </script>
 
@@ -239,27 +215,13 @@
               testId={`new-tab-edit-project-${project.id}`}
               onclick={() => onEditProject(project.id)}
             />
-            <!-- The menu is wide enough to show each detail on one line without truncation. -->
-            <DropdownPopupMoreOptions
-              label="New Collection"
-              items={createCollectionItems}
-              menuWidth="300px"
-              testId="new-tab-new-collection-menu"
-              onselect={(item) => openCreateCollectionDialog(project.id, item.id as PromptCollectionKind)}
-            >
-              {#snippet trigger(dropdown)}
-                <Button
-                  icon={Plus}
-                  text="New Collection"
-                  appearance="outline"
-                  buttonAction={dropdown.triggerAction}
-                  aria-haspopup={dropdown.ariaHaspopup}
-                  aria-expanded={dropdown.ariaExpanded}
-                  testId={`new-tab-new-collection-${project.id}`}
-                  onclick={dropdown.toggle}
-                />
-              {/snippet}
-            </DropdownPopupMoreOptions>
+            <Button
+              icon={Plus}
+              text="New Collection"
+              appearance="outline"
+              testId={`new-tab-new-collection-${project.id}`}
+              onclick={() => openCreateCollectionDialog(project.id)}
+            />
           </div>
 
           <NewTabCollectionGrid

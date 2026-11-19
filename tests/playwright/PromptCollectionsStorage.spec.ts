@@ -104,15 +104,7 @@ describe('Prompt collection storage', () => {
 
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow)
-    /** Task creation dialog opened from the project's task footer action. */
-    const taskDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Task Collection"]'
-    )
-    await expect(taskDialog).toBeVisible()
-    await expect(taskDialog).toContainText('Organize one-time prompts for individual tasks.')
-    await expect(
-      mainWindow.locator('[data-testid="create-prompt-collection-type-selector"]')
-    ).toHaveCount(0)
+    await expect(mainWindow.locator('[role="dialog"][aria-label="Create Collection"]')).toBeVisible()
     await expect(mainWindow.getByLabel('Collection Name')).toBeVisible()
     await mainWindow.locator(COLLECTION_NAME_INPUT).fill(ALPHA_NAME)
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
@@ -169,16 +161,6 @@ describe('Prompt collection storage', () => {
 
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
-    /** Template creation dialog opened from the project's template footer action. */
-    const templateDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Template Collection"]'
-    )
-    await expect(templateDialog).toContainText(
-      'Organize reusable prompts for repeatable workflows.'
-    )
-    await expect(
-      mainWindow.locator('[data-testid="create-prompt-collection-type-selector"]')
-    ).toHaveCount(0)
     await mainWindow.locator(COLLECTION_NAME_INPUT).fill(TEMPLATE_ALPHA_NAME)
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
     /** Canonical template collection created by the template dialog. */

@@ -177,9 +177,9 @@ export async function showCollectionBrowser(page: Page): Promise<void> {
   else if (!await page.getByTestId('new-tab-screen').isVisible()) await page.getByTestId('new-tab-button').click()
 }
 
-/** Opens the first project's collection creation menu through the New Tab screen. */
+/** Opens the first project's collection creation dialog through the New Tab screen and selects one collection type. */
 export async function openCollectionCreation(page: Page, kind: 'prompt' | 'template' = 'prompt'): Promise<void> {
   await showCollectionBrowser(page)
   await page.locator('button[data-testid^="new-tab-new-collection-"]').first().click()
-  await page.getByTestId('new-tab-new-collection-menu').getByRole('menuitem', { name: kind === 'prompt' ? 'Task Collection' : 'Template Collection', exact: false }).click()
+  await page.getByTestId(`create-prompt-collection-type-${kind}`).click()
 }

@@ -1,4 +1,11 @@
 <script lang="ts">
+  import { FileText, Layers } from 'lucide-svelte'
+  import OptionCardSelector, {
+    type OptionCardSelectorItem
+  } from '@renderer/common/cthulhu-ui/selectors/OptionCardSelector.svelte'
+  import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
+  import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
+  import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import { getWorkspaceSelectionContext } from '@renderer/app/WorkspaceSelectionContext'
   import { createPromptCollection } from '@renderer/data/Mutations/PromptCollectionMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
@@ -21,13 +28,33 @@
     onCreated?: (promptCollectionId: string) => void
   }>()
 
+  /** Collection types offered by the picker, with the icons their New Tab tiles use. */
+  const collectionTypeOptions: OptionCardSelectorItem<PromptCollectionKind>[] = [
+    {
+      id: 'prompt',
+      label: 'Task Collection',
+      description:
+        'A task describes one piece of work. Refine it with the AI, run it, and mark it complete. Apply a template to add instructions for how the work should be done.',
+      icon: FileText,
+      testId: 'create-prompt-collection-type-prompt'
+    },
+    {
+      id: 'template',
+      label: 'Template Collection',
+      description:
+        'A template wraps a task to describe how the AI should do the work and respond to you, such as steps to follow or response rules like "be concise".',
+      icon: Layers,
+      testId: 'create-prompt-collection-type-template'
+    }
+  ]
+
   const workspaceSelection = getWorkspaceSelectionContext()
   let promptCollectionNameDialog = $state<{ openDialog: () => void } | null>(null)
-  /** Collection kind chosen by the action that opened the dialog. */
+  /** Collection kind chosen in the dialog's type picker. */
   let kind = $state<PromptCollectionKind>('prompt')
-  /** Opens the collection name dialog for one collection kind. */
-  export const openDialog = (nextKind: PromptCollectionKind) => {
-    kind = nextKind
+  /** Opens the collection dialog with the Task type selected. */
+  export const openDialog = () => {
+    kind = 'prompt'
     promptCollectionNameDialog?.openDialog()
   }
 
@@ -60,22 +87,36 @@
   {isWorkspaceReady}
   promptCollections={promptCollections.filter((collection) => collection.kind === kind)}
   {isPromptCollectionListLoading}
-  title={kind === 'template'
-    ? 'Create Template Collection'
-    : 'Create Task Collection'}
-  subtitle={kind === 'template'
-    ? 'Organize reusable prompts for repeatable workflows.'
-    : 'Organize one-time prompts for individual tasks.'}
+  title="Create Collection"
+  subtitle="Choose a type and name for the new collection."
   submitText="Create Collection"
   submittingText="Creating..."
   submitTestId="create-prompt-collection-button"
   inputTestId="create-prompt-collection-name-input"
   errorTestId="create-prompt-collection-name-error"
-  rowDetail={kind === 'template'
-    ? 'Required. Names must be unique among prompt template collections.'
-    : 'Required. Names must be unique among task prompt collections.'}
-  failureMessage={kind === 'template'
-    ? 'Failed to create prompt template collection. Please try again.'
-    : 'Failed to create task prompt collection. Please try again.'}
+  rowDetail="Required. Names must be unique among collections of the same type."
+  failureMessage="Failed to create collection. Please try again."
+  class="max-w-[660px]"
   onsubmit={handleCreateCollection}
-/>
+>
+  {#snippet leadingFields()}
+    <div data-testid="create-prompt-collection-type-field">
+      <TitleSubtitleStack class="mb-[7px]">
+        <Title title="Collection Type" variant="small" />
+        <Subtitle
+          id="create-prompt-collection-type-help"
+          text="Choose what the collection holds. The type can't be changed later."
+        />
+      </TitleSubtitleStack>
+      <OptionCardSelector
+        label="Collection Type"
+        items={collectionTypeOptions}
+        selectedId={kind}
+        ariaDescribedby="create-prompt-collection-type-help"
+        testId="create-prompt-collection-type-selector"
+        onselect={(nextKind) => (kind = nextKind)}
+      />
+    </div>
+  {/snippet}
+</PromptCollectionNameDialog>
+

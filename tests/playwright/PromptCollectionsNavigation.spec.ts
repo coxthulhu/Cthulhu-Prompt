@@ -798,11 +798,11 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
 
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
-    const createTemplateCollectionDialog = mainWindow.locator(
-      '[role="dialog"][aria-label="Create Template Collection"]'
+    const createCollectionDialog = mainWindow.locator(
+      '[role="dialog"][aria-label="Create Collection"]'
     )
-    await expect(createTemplateCollectionDialog).toBeVisible()
-    await expect(createTemplateCollectionDialog.getByLabel('Collection Name')).toBeVisible()
+    await expect(createCollectionDialog).toBeVisible()
+    await expect(createCollectionDialog.getByLabel('Collection Name')).toBeVisible()
     await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
     await mainWindow.locator('[data-testid="create-prompt-collection-button"]').click()
     await mainWindow.locator('[data-testid^="new-tab-collection-"]').filter({ has: mainWindow.getByText('Examples', { exact: true }) }).click()
