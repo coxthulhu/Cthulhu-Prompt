@@ -65,7 +65,6 @@
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-text);
     column-gap: 12px;
-    cursor: pointer;
     display: grid;
     grid-template-columns: 18px minmax(0, 1fr) 17px;
     min-width: 0;
@@ -88,15 +87,11 @@
     outline-offset: 2px;
   }
 
+  /* Choosing the selected option again does nothing, so it keeps the brighter accent colors while hovered. */
   .cthulhuUiOptionCardSelectorOption[aria-pressed='true'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-    color: var(--ui-normal-text);
-  }
-
-  .cthulhuUiOptionCardSelectorOption[aria-pressed='true']:where(:hover, :focus-visible) {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
+    color: var(--ui-normal-text);
   }
 
   .cthulhuUiOptionCardSelectorOption :global(.cthulhuUiOptionCardSelectorIcon) {
