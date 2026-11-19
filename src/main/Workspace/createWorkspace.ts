@@ -21,6 +21,7 @@ import example2PromptSource from '../BundledPrompts/Example2.md?raw'
 import example3PromptSource from '../BundledPrompts/Example3.md?raw'
 import exampleBugFixTemplateSource from '../BundledPrompts/ExampleBugFixTemplate.md?raw'
 import exampleFeatureTemplateSource from '../BundledPrompts/ExampleFeatureTemplate.md?raw'
+import exampleSimpleTemplateSource from '../BundledPrompts/ExampleSimpleTemplate.md?raw'
 import {
   PROMPTS_DIRECTORY_NAME,
   TEMPLATES_DIRECTORY_NAME,
@@ -48,7 +49,7 @@ const BUNDLED_PROMPT_CATEGORY_DISPLAY_NAMES = [
   'Features & Improvements',
   'Bug Fixes'
 ] as const
-type BundledTemplateKey = 'feature' | 'bugFix'
+type BundledTemplateKey = 'feature' | 'bugFix' | 'simple'
 // Ordered bundled prompt sources used when initializing a workspace with examples.
 const BUNDLED_PROMPT_SOURCES: Array<{
   source: string
@@ -63,6 +64,7 @@ const BUNDLED_TEMPLATE_SOURCES: Array<{
   key: BundledTemplateKey
   source: string
 }> = [
+  { key: 'simple', source: exampleSimpleTemplateSource },
   { key: 'feature', source: exampleFeatureTemplateSource },
   { key: 'bugFix', source: exampleBugFixTemplateSource }
 ]

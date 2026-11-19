@@ -813,20 +813,19 @@ Keep this partial body.`
       ).toContainText('My Templates')
       await expect(
         mainWindow.locator('[data-testid^="new-tab-collection-"]').nth(1)
-      ).toContainText('2 templates')
+      ).toContainText('3 templates')
       await mainWindow
         .locator('[data-testid^="new-tab-collection-"]')
         .nth(1)
         .click()
-      const exampleFeatureTemplate = await testHelpers.verifyPromptVisible(
-        'Example: Q&A with Implementation & Testing'
-      )
-      const exampleBugFixTemplate = await testHelpers.verifyPromptVisible(
+      // The tree lists every template, unlike the virtualized editors below the viewport.
+      await expect(
+        mainWindow.locator('[data-testid^="prompt-tree-template-prompt-"]')
+      ).toHaveText([
+        'Example: Simple Template',
+        'Example: Q&A with Implementation & Testing',
         'Example: Bug Fix Template'
-      )
-      expect(exampleFeatureTemplate.found).toBe(true)
-      expect(exampleBugFixTemplate.found).toBe(true)
-      expect((await testHelpers.getPromptCollectionScreenInfo()).promptCount).toBe(2)
+      ])
     })
 
     test('creates a blank My Prompts collection when examples are disabled', async ({ testSetup }) => {
