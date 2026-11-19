@@ -5,6 +5,8 @@ type VirtualWindowMeasurementsOptions = {
   getLeftScrollPaddingPx: () => number
   getRightScrollPaddingPx: () => number
   getScrollbarWidthPx: () => number
+  /** Captures the visible row before publishing a new measurement width. */
+  onBeforeWidthChange: () => void
 }
 
 export const createVirtualWindowMeasurements = (options: VirtualWindowMeasurementsOptions) => {
@@ -15,7 +17,6 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
   let viewportHeight = $state(0)
   let devicePixelRatio = $state(1)
   let widthResizeActive = $state(false)
-  let hasInitializedWidth = false
   let previousWidthPx = 0
   let widthResizeVersion = 0
   let widthResizeResetHandle: number | null = null
@@ -42,18 +43,13 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
   }
 
   const applyContainerWidth = (nextWidth: number) => {
-    containerWidth = nextWidth
-    if (nextWidth <= 0) return
-    if (!hasInitializedWidth) {
-      hasInitializedWidth = true
-      previousWidthPx = nextWidth
-      return
+    if (nextWidth > 0 && previousWidthPx > 0 && nextWidth !== previousWidthPx) {
+      options.onBeforeWidthChange()
+      widthResizeActive = true
+      scheduleWidthResizeIdleReset(++widthResizeVersion)
     }
-    if (nextWidth === previousWidthPx) return
-    previousWidthPx = nextWidth
-    widthResizeActive = true
-    const version = (widthResizeVersion += 1)
-    scheduleWidthResizeIdleReset(version)
+    containerWidth = nextWidth
+    if (nextWidth > 0) previousWidthPx = nextWidth
   }
 
   // Side effect: track viewport sizing and width changes to drive row measurement.
@@ -67,8 +63,8 @@ export const createVirtualWindowMeasurements = (options: VirtualWindowMeasuremen
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0]
       if (!entry) return
-      viewportHeight = entry.contentRect.height
       applyContainerWidth(Math.round(entry.contentRect.width))
+      viewportHeight = entry.contentRect.height
     })
 
     if (viewportFrame) {

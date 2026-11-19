@@ -7,6 +7,7 @@ import {
   promptEditorSelector
 } from '../helpers/PromptCollectionSelectors'
 import { waitForMonacoEditor } from '../helpers/MonacoHelpers'
+import { getRowViewportOffsets, scrollPromptEditorAcrossViewportTop } from '../helpers/PromptDragDropHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -381,6 +382,103 @@ describe('Prompt Collection Hydration', () => {
         })
       }
     }
+  })
+
+  test('preserves the viewport position inside a wrapped prompt when collapsing the sidebar', async ({ testSetup }) => {
+    /** Long single-line prompts wrap far beyond their initial height estimate at either width. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'long-wrapped-lines' }
+    })
+    await testHelpers.navigateToPromptCollections(LONG_SINGLE_LINE_COLLECTION_NAME)
+    /** Selector for the first prompt's hydrated editor. */
+    const editorSelector = await waitForMonacoEditor(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+    /** Monaco's width with the sidebar open, before any editor has seen the wider viewport. */
+    const initialEditorWidth = await testHelpers.getPromptRowWidth(editorSelector)
+    /** Deep enough into the wrapped prompt that its short estimate can leave it outside overscan. */
+    const depthPx = 620
+    await expect.poll(() => testHelpers.getPromptRowHeight(MEASUREMENT_PROMPT_SELECTOR)).toBeGreaterThan(depthPx)
+    await scrollPromptEditorAcrossViewportTop(mainWindow, testHelpers, MEASUREMENT_PROMPT_ID, depthPx)
+    /** Restricts geometry checks to whole prompt cards inside the virtual window. */
+    const promptCards = mainWindow.locator(HOST_SELECTOR).locator(`[data-virtual-window-row]${PROMPT_ROW_SELECTOR}`)
+    /** Reads the prompt crossing the top edge, even if resizing unmounts the original prompt. */
+    const readAnchor = () => promptCards.evaluateAll((cards, hostSelector) => {
+      /** Vertical position of the collection's top edge. */
+      const top = document.querySelector(hostSelector)!.getBoundingClientRect().top
+      for (const card of cards) {
+        /** Row bounds relative to the same window as the collection. */
+        const rect = card.getBoundingClientRect()
+        if (rect.top <= top && rect.bottom > top) {
+          return { rowId: card.getAttribute('data-testid'), offset: top - rect.top }
+        }
+      }
+      return null
+    }, HOST_SELECTOR)
+    /** User-visible position just before the toggle. */
+    const before = await readAnchor()
+    expect(before?.rowId).toBe(`prompt-editor-${MEASUREMENT_PROMPT_ID}`)
+    expect(Math.abs(before!.offset - depthPx)).toBeLessThanOrEqual(1)
+
+    await mainWindow.getByRole('button', { name: 'Collapse sidebar', exact: true }).click()
+    // Wait for the currently displayed editors to finish measuring at the wider width.
+    await expect.poll(() => promptCards.evaluateAll((cards, { hostSelector, width }) => {
+      /** Visible part of the collection in window coordinates. */
+      const viewport = document.querySelector(hostSelector)!.getBoundingClientRect()
+      /** Mounted prompt cards intersecting the viewport after the toggle. */
+      const visible = cards.filter((row) => {
+        /** Card bounds used to exclude offscreen editors from the readiness check. */
+        const rect = row.getBoundingClientRect()
+        return rect.bottom > viewport.top && rect.top < viewport.bottom
+      })
+      return visible.length > 0 && visible.every((row) =>
+        (row.querySelector('.monaco-editor')?.getBoundingClientRect().width ?? 0) > width
+      )
+    }, { hostSelector: HOST_SELECTOR, width: initialEditorWidth })).toBe(true)
+    await expect(async () => {
+      /** Row identity and offset sampled together at the new width. */
+      const after = await readAnchor()
+      expect(after?.rowId).toBe(before!.rowId)
+      expect(Math.abs(after!.offset - before!.offset)).toBeLessThanOrEqual(1)
+    }).toPass({ timeout: 5000 })
+  })
+
+  test('clamps the viewport to the last pixel of a resized prompt and keeps it anchored on expansion', async ({
+    electronApp, testSetup
+  }) => {
+    /** Identical long prompts reach the editor height limit at both sidebar widths. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
+      workspace: { scenario: 'long-wrapped-lines' }
+    })
+    // At this width the sidebar makes the prompt toolbar occupy a second line.
+    await electronApp.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].setContentSize(960, 800)
+    })
+    await testHelpers.navigateToPromptCollections(LONG_SINGLE_LINE_COLLECTION_NAME)
+    await waitForMonacoEditor(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+    /** Tracks the first card's rendered height as the toolbar changes layout. */
+    const readHeight = () => testHelpers.getPromptRowHeight(MEASUREMENT_PROMPT_SELECTOR)
+    await expect.poll(readHeight).toBeGreaterThan(620)
+    /** The original position near the bottom disappears when the second toolbar line goes away. */
+    const tallHeight = await readHeight()
+    await scrollPromptEditorAcrossViewportTop(mainWindow, testHelpers, MEASUREMENT_PROMPT_ID, tallHeight - 10)
+    /** Reads this same card's edges relative to the top of the collection viewport. */
+    const readEdges = () => getRowViewportOffsets(mainWindow, MEASUREMENT_PROMPT_SELECTOR)
+    expect(Math.abs((await readEdges())!.bottom - 10)).toBeLessThanOrEqual(1)
+
+    await mainWindow.getByRole('button', { name: 'Collapse sidebar', exact: true }).click()
+    await expect(async () => {
+      /** Accept the clamp only once the wider prompt has regained its full editor height. */
+      const edges = (await readEdges())!
+      /** Full height and visible bottom edge come from the same rendered layout. */
+      const height = edges.bottom - edges.top
+      expect(height).toBeGreaterThan(620)
+      expect(height).toBeLessThan(tallHeight - 10)
+      expect(edges.bottom).toBe(1)
+    }).toPass({ timeout: 5000 })
+    /** This clamped depth still fits after expanding the sidebar again. */
+    const clampedTop = (await readEdges())!.top
+    await mainWindow.getByRole('button', { name: 'Expand sidebar', exact: true }).click()
+    await expect.poll(readHeight).toBe(tallHeight)
+    await expect.poll(async () => Math.abs((await readEdges())!.top - clampedTop)).toBeLessThanOrEqual(1)
   })
 
   test('shrinks hydrated prompt rows after expanding and shrinking the virtual window', async ({

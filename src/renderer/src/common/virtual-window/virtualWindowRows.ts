@@ -16,6 +16,13 @@ export type VirtualRowState<TRow extends { kind: string }> = {
   snippet: VirtualWindowRowSnippet<TRow>
 }
 
+/** Top row and position captured before its width-dependent height changes. */
+export type VirtualWindowResizeAnchor = {
+  rowId: string
+  height: number
+  offsetInRow: number
+}
+
 export const normalizeDevicePixelRatio = (dpr: number): number => {
   if (!Number.isFinite(dpr) || dpr <= 0) return 1
   return dpr
@@ -40,7 +47,8 @@ export const buildRows = <TRow extends { kind: string }>(
   registry: VirtualWindowRowTypeRegistry<TRow>,
   width: number,
   viewportHeightPx: number,
-  dpr: number
+  dpr: number,
+  resizeAnchor: VirtualWindowResizeAnchor | null
 ): VirtualRowState<TRow>[] => {
   const rows: VirtualRowState<TRow>[] = []
   const safeDpr = normalizeDevicePixelRatio(dpr)
@@ -48,7 +56,10 @@ export const buildRows = <TRow extends { kind: string }>(
 
   nextItems.forEach((item, index) => {
     const entry = registry[item.row.kind]
-    const estimatedHeight = entry.estimateHeight(item.row, width, viewportHeightPx)
+    // Keep the top row mounted at its previous height while its new width is unmeasured.
+    const estimatedHeight = item.id === resizeAnchor?.rowId
+      ? resizeAnchor.height
+      : entry.estimateHeight(item.row, width, viewportHeightPx)
     const measuredHeightPx = entry.lookupMeasuredHeight?.(item.row, width, safeDpr) ?? null
     const resolvedHeightCssPx = resolveRowHeightCssPx(estimatedHeight, measuredHeightPx)
     const heightDevicePx = toDevicePixelHeight(resolvedHeightCssPx, safeDpr)

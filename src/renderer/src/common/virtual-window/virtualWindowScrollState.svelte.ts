@@ -1,6 +1,6 @@
 import { untrack } from 'svelte'
 import { computeAnchoredScrollTop, findIndexAtOffset } from './virtualWindowRowUtils'
-import type { VirtualRowState } from './virtualWindowRows'
+import type { VirtualRowState, VirtualWindowResizeAnchor } from './virtualWindowRows'
 import type {
   ScrollToWithinWindowBand,
   ScrollToWithinWindowBandType,
@@ -39,6 +39,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   let previousRowStates = $state<VirtualRowState<TRow>[]>([])
   let scrollbarRevealVersion = $state(0)
   let lastScrollTop = 0
+  /** Preserves the visible prompt while its editor measures the new width. */
+  let resizeAnchor = $state.raw<VirtualWindowResizeAnchor | null>(null)
   /** Single row placement retained while virtual measurements settle. */
   let trackedRow = $state<{ rowId: string; placement: TrackedRowScrollPlacement } | null>(null)
   /** One measured reveal whose row stays mounted until completion or cancellation. */
@@ -49,9 +51,10 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     scrollPaddingPx: number
   } | null>(null)
 
-  /** Releases the extra mounted row without changing the viewport. */
-  const cancelPendingMeasurement = (): void => {
+  /** Releases pending placements when user scrolling or explicit navigation takes over. */
+  const cancelPendingScroll = (): void => {
     pendingMeasurement = null
+    resizeAnchor = null
   }
 
   const maxScrollTopPx = $derived(Math.max(0, getTotalHeightPx() - getViewportHeight()))
@@ -73,7 +76,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   }
 
   const applyUserScrollTop = (nextScrollTop: number) => {
-    cancelPendingMeasurement()
+    cancelPendingScroll()
     trackedRow = null
     const didScroll = applyScrollTop(nextScrollTop, true)
     if (didScroll) {
@@ -85,6 +88,9 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     applyScrollTop(nextScrollTop, false)
   }
 
+  /** Current geometry of the row captured at the start of a width change. */
+  const resizingRow = $derived(resizeAnchor && getRowStates().find((row) => row.id === resizeAnchor!.rowId))
+
   // Resolve one position for rendering and scroll updates, giving active tracking priority.
   const resolvedScrollTopPx = $derived.by(() => {
     const rowStates = getRowStates()
@@ -95,6 +101,13 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
       if (row) {
         return clampScrollTop(getTrackedRowScrollTop(row, viewportHeight, tracked.placement))
       }
+    }
+    if (resizeAnchor && resizingRow) {
+      // A genuinely shorter row can retain the viewport only as far as its last pixel.
+      const offset = resizeAnchor.offsetInRow < resizingRow.height
+        ? resizeAnchor.offsetInRow
+        : Math.max(0, resizingRow.height - 1)
+      return clampScrollTop(resizingRow.offset + offset)
     }
     return clampScrollTop(
       computeAnchoredScrollTop(previousRowStates, rowStates, scrollTopPx, anchorOffsetPx)
@@ -143,6 +156,15 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     return getRowStates().slice(viewportStartIndex, viewportEndIndex + 1)
   })
 
+  /** Captures the top row in the old layout before its exact measurement becomes unavailable. */
+  const captureResizeAnchor = (): void => {
+    if (scrollAnchorMode !== 'top' || pendingMeasurement || resizeAnchor) return
+    /** First visible row at the old width. Fixed-height rows already keep their position. */
+    const row = viewportRows[0]
+    if (row?.measuredHeightPx == null) return
+    resizeAnchor = { rowId: row.id, height: row.height, offsetInRow: resolvedScrollTopPx - row.offset }
+  }
+
   const setScrollAnchorMode = (next: 'top' | 'center') => {
     scrollAnchorMode = next
   }
@@ -152,7 +174,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     sourceTrailingRowId: string,
     destinationDividerRowId: string
   ): void => {
-    cancelPendingMeasurement()
+    cancelPendingScroll()
     const rows = getRowStates()
     const sourceRow = rows.find((row) => row.id === sourceRowId)
     const sourceTrailingRow = rows.find((row) => row.id === sourceTrailingRowId)
@@ -239,7 +261,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
   const scrollToWithinWindowBand: ScrollToWithinWindowBand = (
     rowId, offset, scrollType, scrollPaddingPx = windowBandPaddingPx
   ) => {
-    cancelPendingMeasurement()
+    cancelPendingScroll()
     trackedRow = null
     if (typeof offset === 'number') {
       scrollToOffsetWithinWindowBand(rowId, offset, scrollType, scrollPaddingPx)
@@ -250,7 +272,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     pendingMeasurement = request
     completePendingMeasurement()
     return () => {
-      if (pendingMeasurement === request) cancelPendingMeasurement()
+      if (pendingMeasurement === request) pendingMeasurement = null
     }
   }
 
@@ -283,7 +305,7 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
 
   /** Starts the one active tracked-row placement. */
   const scrollToAndTrackRow: ScrollToAndTrackRow = (rowId, placement) => {
-    cancelPendingMeasurement()
+    cancelPendingScroll()
     const viewportHeight = getViewportHeight()
     if (viewportHeight <= 0) return
 
@@ -314,6 +336,8 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     untrack(() => {
       applyProgrammaticScrollTop(nextScrollTop)
       previousRowStates = rowStates
+      // Ordinary top anchoring resumes from the committed position at the measured width.
+      if (resizeAnchor && (!resizingRow || resizingRow.measuredHeightPx !== null)) resizeAnchor = null
     })
   })
 
@@ -338,7 +362,10 @@ export const createVirtualWindowScrollState = <TRow extends { kind: string }>(
     getScrollbarRevealVersion: () => scrollbarRevealVersion,
     scrollToWithinWindowBand,
     completePendingMeasurement,
-    cancelPendingMeasurement,
+    cancelPendingScroll,
+    captureResizeAnchor,
+    /** Old row dimensions used only as a provisional height during resize. */
+    getResizeAnchor: (): VirtualWindowResizeAnchor | null => resizeAnchor,
     /** Pending target receives hydration priority ahead of ordinary overscan rows. */
     getPendingMeasurementRowId: () => pendingMeasurement?.rowId ?? null,
     scrollToAndTrackRow,

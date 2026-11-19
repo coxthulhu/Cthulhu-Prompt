@@ -1,5 +1,5 @@
 import type { VirtualWindowItem, VirtualWindowRowTypeRegistry } from './virtualWindowTypes'
-import { buildRows, normalizeDevicePixelRatio, type VirtualRowState } from './virtualWindowRows'
+import { buildRows, normalizeDevicePixelRatio, type VirtualRowState, type VirtualWindowResizeAnchor } from './virtualWindowRows'
 
 type VirtualWindowRowsStateOptions<TRow extends { kind: string }> = {
   getItems: () => VirtualWindowItem<TRow>[]
@@ -7,6 +7,8 @@ type VirtualWindowRowsStateOptions<TRow extends { kind: string }> = {
   getMeasurementWidth: () => number
   getViewportHeight: () => number
   getDevicePixelRatio: () => number
+  /** Supplies the previous height of the row anchored during a width change. */
+  getResizeAnchor: () => VirtualWindowResizeAnchor | null
 }
 
 export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
@@ -23,7 +25,8 @@ export const createVirtualWindowRowsState = <TRow extends { kind: string }>(
       getRowRegistry(),
       measurementWidth,
       getViewportHeight(),
-      getDevicePixelRatio()
+      getDevicePixelRatio(),
+      options.getResizeAnchor()
     )
   })
 

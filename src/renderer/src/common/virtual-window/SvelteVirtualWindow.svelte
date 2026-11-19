@@ -83,19 +83,21 @@
       getViewportFrame: () => viewportFrame,
       getLeftScrollPaddingPx: () => leftScrollPaddingPx,
       getRightScrollPaddingPx: () => rightScrollPaddingPx,
-      getScrollbarWidthPx: () => reservedScrollbarWidthPx
+      getScrollbarWidthPx: () => reservedScrollbarWidthPx,
+      onBeforeWidthChange: () => captureResizeAnchor()
     })
 
   const measurementWidth = $derived(getMeasurementWidth())
   const viewportHeight = $derived(getViewportHeight())
   const devicePixelRatio = $derived(getDevicePixelRatio())
 
-  const { getRowStates, getTotalHeightPx } = createVirtualWindowRowsState({
+  const { getRowStates, getTotalHeightPx } = createVirtualWindowRowsState<TRow>({
     getItems: () => items,
     getRowRegistry: () => rowRegistry,
     getMeasurementWidth,
     getViewportHeight,
-    getDevicePixelRatio
+    getDevicePixelRatio,
+    getResizeAnchor: () => getResizeAnchor()
   })
 
   const {
@@ -112,11 +114,13 @@
     getScrollbarRevealVersion,
     scrollToWithinWindowBand,
     completePendingMeasurement,
-    cancelPendingMeasurement,
+    cancelPendingScroll,
+    captureResizeAnchor,
+    getResizeAnchor,
     getPendingMeasurementRowId,
     scrollToAndTrackRow,
     compensateForRowMove
-  } = createVirtualWindowScrollState({
+  } = createVirtualWindowScrollState<TRow>({
     getRowStates,
     getTotalHeightPx,
     getViewportHeight,
@@ -180,7 +184,7 @@
 
   const scrollApiInternal: VirtualWindowScrollApi = {
     scrollTo: (scrollTopPx: number) => {
-      cancelPendingMeasurement()
+      cancelPendingScroll()
       applyProgrammaticScrollTop(scrollTopPx)
     },
     getScrollTop: () => getScrollTopPx(),
@@ -240,7 +244,7 @@
     rowRegistry[row.kind].overlayRow?.snippet ?? null
 
   const handleWheel = (event: WheelEvent) => {
-    cancelPendingMeasurement()
+    cancelPendingScroll()
     if (viewportHeight <= 0) return
     applyUserScrollTop(scrollTopPx + event.deltaY * WHEEL_SCROLL_MULTIPLIER)
   }
@@ -327,7 +331,7 @@
       isHovered={isPointerOverWindow}
       revealVersion={scrollbarRevealVersion}
       onScrollOffsetChange={(nextScrollTop) => applyUserScrollTop(nextScrollTop)}
-      onScrollAttempt={cancelPendingMeasurement}
+      onScrollAttempt={cancelPendingScroll}
     />
   </div>
 
