@@ -16,6 +16,8 @@
     LayoutGrid,
     MoreHorizontal,
     Move,
+    PanelLeftClose,
+    PanelLeftOpen,
     PanelsTopLeft,
     Plus,
     Search,
@@ -94,10 +96,21 @@
     { id: 'test-screen', label: 'Test Screen', icon: Bug, screenLabel: 'Test Screen' }
   ]
 
-  /** Creation actions in each project's New Collection menu. */
+  /** Creation actions in each project's New Collection menu, named like the dialogs they open and described like their
+      subtitles. */
   const createCollectionItems = [
-    { id: 'prompt', label: 'Create Task Collection', icon: FileText },
-    { id: 'template', label: 'Create Template Collection', icon: Layers }
+    {
+      id: 'prompt',
+      label: 'Create Task Collection',
+      detail: 'One-time prompts for individual tasks',
+      icon: FileText
+    },
+    {
+      id: 'template',
+      label: 'Create Template Collection',
+      detail: 'Reusable prompts for repeatable workflows',
+      icon: Layers
+    }
   ]
 
   const workspaceName = 'Lantern Studio Prompts'
@@ -181,8 +194,16 @@
   )
   /** Collections shown by work tabs, whose tiles are marked open. */
   const openCollectionIds = $derived(workTabs.flatMap((tab) => tab.collectionId ?? []))
-  /** The sidebar shows beside System Settings and a work tab's collection; New Tab and the other screens fill the body. */
+  /** System Settings and a work tab's collection have a sidebar; New Tab and the other screens fill the body. */
   const hasSidebar = $derived(selectedId === 'settings' || Boolean(selectedCollection))
+  /** Sidebar expansion preference shared by System Settings and collection tabs, flipped by the title bar toggle. */
+  let sidebarExpanded = $state(true)
+  /** Screens without a sidebar always use the collapsed layout. */
+  const isAppSidebarExpanded = $derived(hasSidebar && sidebarExpanded)
+  /** Icon for the action the title bar's sidebar button performs. */
+  const SidebarIcon = $derived(isAppSidebarExpanded ? PanelLeftClose : PanelLeftOpen)
+  /** Tooltip and accessible name describing the sidebar action. */
+  const sidebarLabel = $derived(isAppSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar')
 
   const getCollectionIcon = (kind: CollectionKind): ComponentType => (kind === 'template' ? Layers : FileText)
 
@@ -224,19 +245,43 @@
   })
   const hasSearch = $derived(Boolean(selectedWorkTab?.view.search.trim()))
 
-  // ---- Work tabs ----
+  // ---- Screens and work tabs ----
+
+  /** Switches to a fixed screen and expands the sidebar; re-clicking the selected screen does nothing. */
+  const activateFixedScreen = (screenId: string) => {
+    if (screenId === selectedId) return
+    selectedId = screenId
+    sidebarExpanded = true
+  }
+
+  /** Selects a work tab; switching to a tab that shows a collection expands the sidebar, while reselecting keeps it. */
+  const selectWorkTab = (tabId: string) => {
+    const changedTab = selectedId !== tabId
+    selectedId = tabId
+    if (changedTab && workTabs.find((tab) => tab.id === tabId)?.collectionId) sidebarExpanded = true
+  }
 
   /** Stationary tab strip that scrolls sideways and owns pointer capture while a tab drags. */
   let tabStripElement = $state<HTMLElement>()
+  /** Viewport around the tab strip, whose bounds release a held strip width. */
+  let tabViewportElement = $state<HTMLElement>()
   /** Dragged work tab and its horizontal offset from its current slot. */
   let draggedTab = $state<{ id: string; offsetX: number } | null>(null)
+  /** Strip width held after a mouse close so the next close button lands under the pointer, or null while the tabs
+      fill the row. */
+  let heldStripWidth = $state<number | null>(null)
+  /** Whether a tab is pressed, from pointer down through release, which keeps any held strip width. */
+  let isTabPressed = false
+  /** Vertical wheel input scrolls the tabs sideways at the rate the app's screens scroll. */
+  const wheelScrollMultiplier = 0.4
 
   /** Appends a New Tab work tab and selects it. */
   const addWorkTab = () => {
+    heldStripWidth = null
     addedTabCount += 1
     const tab = createWorkTab(`tab-${addedTabCount}`, null)
     workTabs.push(tab)
-    selectedId = tab.id
+    selectWorkTab(tab.id)
   }
 
   /** Closes a work tab; closing the selected tab selects its right neighbour, else its left, else Home. */
@@ -244,7 +289,32 @@
     const wasSelected = selectedId === tabId
     const index = workTabs.findIndex((tab) => tab.id === tabId)
     workTabs = workTabs.filter((tab) => tab.id !== tabId)
-    if (wasSelected) selectedId = (workTabs[index] ?? workTabs[index - 1])?.id ?? 'home'
+    if (!wasSelected) return
+    const nextTab = workTabs[index] ?? workTabs[index - 1]
+    if (nextTab) selectWorkTab(nextTab.id)
+    else selectedId = 'home'
+  }
+
+  /** Closes a tab from its close button or a middle click; mouse closes hold the strip's width so the next close
+      button lands under the pointer. */
+  const closeTab = (event: MouseEvent, tabId: string) => {
+    if ((event as PointerEvent).pointerType === 'mouse') {
+      /** Width shared by every tab slot. */
+      const tabWidth = (event.currentTarget as HTMLElement).closest('.titlebar__tab')!.getBoundingClientRect().width
+      // Closing the rightmost tab keeps the strip's right edge, so the remaining tabs widen under the pointer.
+      heldStripWidth = tabWidth * (workTabs.at(-1)!.id === tabId ? workTabs.length : workTabs.length - 1)
+    }
+    closeWorkTab(tabId)
+  }
+
+  /** Releases a held strip width once the pointer is off the tabs and no tab is pressed. The live app polls the OS
+      cursor because its drag region swallows pointer events; the mockup has no drag region, so pointer events do. */
+  const releaseHeldStripWidth = (clientX: number, clientY: number) => {
+    if (isTabPressed || heldStripWidth === null) return
+    const rect = tabViewportElement!.getBoundingClientRect()
+    if (clientX < rect.left || clientX >= rect.right || clientY < rect.top || clientY >= rect.bottom) {
+      heldStripWidth = null
+    }
   }
 
   /** Moves a dragged work tab into the given display slot. */
@@ -256,7 +326,8 @@
   /** Selects a work tab on a left press, then slides it along the strip once the pointer moves 4px. */
   const handleTabPointerDown = (event: PointerEvent, tabId: string) => {
     if (event.button !== 0) return
-    selectedId = tabId
+    isTabPressed = true
+    selectWorkTab(tabId)
     const strip = tabStripElement!
     /** Shared width of the touching tab slots. */
     const slotWidth = (event.currentTarget as HTMLElement).getBoundingClientRect().width
@@ -277,8 +348,10 @@
       }
       draggedTab = { id: tabId, offsetX: left - index * slotWidth }
     }
-    const finish = () => {
+    const finish = (finishEvent: PointerEvent) => {
       draggedTab = null
+      isTabPressed = false
+      releaseHeldStripWidth(finishEvent.clientX, finishEvent.clientY)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', finish)
       window.removeEventListener('pointercancel', finish)
@@ -293,6 +366,110 @@
   $effect(() => {
     void selectedId
     tabStripElement?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  })
+
+  // ---- Tab strip overlay scrollbar, mirroring the shared Scrollbar the live title bar uses ----
+
+  /** Shortest thumb, matching the shared scrollbar. */
+  const minThumbPx = 20
+  /** Delay before a scroll-revealed scrollbar starts fading while the pointer is off the tabs. */
+  const scrollbarHideDelayMs = 500
+  /** Tab strip's horizontal scroll position, visible width, and content width. */
+  let tabScroll = $state({ offsetPx: 0, viewportPx: 0, contentPx: 0 })
+  /** Whether the pointer is over the tabs, which keeps their scrollbar shown. */
+  let isTabStripHovered = $state(false)
+  /** Whether the scrollbar's thumb or track is being dragged, which keeps it shown. */
+  let isDraggingTabScrollbar = $state(false)
+  /** 'visible' while hovered, scrolling, or dragging; 'fading' fades out over 800ms; 'hidden' hides at once. */
+  let tabScrollbarVisibility = $state<'visible' | 'fading' | 'hidden'>('hidden')
+  let tabScrollbarHideTimeout: number | undefined
+  let tabScrollbarTrackElement = $state<HTMLElement>()
+
+  const isTabScrollbarNeeded = $derived(tabScroll.contentPx > tabScroll.viewportPx)
+  /** The track spans the visible strip, so the thumb's share of it matches the visible share of the tabs. */
+  const tabThumbLengthPx = $derived(
+    tabScroll.contentPx <= 0
+      ? tabScroll.viewportPx
+      : Math.min(tabScroll.viewportPx, Math.max(minThumbPx, (tabScroll.viewportPx / tabScroll.contentPx) * tabScroll.viewportPx))
+  )
+  const tabThumbOffsetPx = $derived.by(() => {
+    const maxScrollOffsetPx = tabScroll.contentPx - tabScroll.viewportPx
+    return maxScrollOffsetPx > 0 ? (tabScroll.offsetPx / maxScrollOffsetPx) * (tabScroll.viewportPx - tabThumbLengthPx) : 0
+  })
+
+  /** Copies the tab strip's scroll position and extents into state. */
+  const syncTabScroll = () => {
+    tabScroll = {
+      offsetPx: tabStripElement!.scrollLeft,
+      viewportPx: tabStripElement!.clientWidth,
+      contentPx: tabStripElement!.scrollWidth
+    }
+  }
+
+  /** Shows the scrollbar when the tabs overflow, then fades it after a delay unless hovered or dragged. */
+  const revealTabScrollbar = () => {
+    window.clearTimeout(tabScrollbarHideTimeout)
+    if (!isTabScrollbarNeeded) {
+      tabScrollbarVisibility = 'hidden'
+      return
+    }
+    tabScrollbarVisibility = 'visible'
+    if (isTabStripHovered || isDraggingTabScrollbar) return
+    tabScrollbarHideTimeout = window.setTimeout(() => {
+      if (!isTabStripHovered && !isDraggingTabScrollbar) tabScrollbarVisibility = 'fading'
+    }, scrollbarHideDelayMs)
+  }
+
+  /** Scrolls the strip so the thumb's left edge sits at the given track offset. */
+  const setTabThumbOffset = (thumbOffsetPx: number) => {
+    const maxThumbOffsetPx = tabScroll.viewportPx - tabThumbLengthPx
+    const clampedOffsetPx = Math.min(Math.max(thumbOffsetPx, 0), maxThumbOffsetPx)
+    tabStripElement!.scrollLeft =
+      maxThumbOffsetPx > 0 ? (clampedOffsetPx / maxThumbOffsetPx) * (tabScroll.contentPx - tabScroll.viewportPx) : 0
+  }
+
+  /** Drags the thumb from where it was pressed, or centers it on a pressed track point and drags from there. */
+  const handleTabScrollbarPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || isDraggingTabScrollbar) return
+    event.preventDefault()
+    const track = event.currentTarget as HTMLElement
+    const trackLeft = tabScrollbarTrackElement!.getBoundingClientRect().left
+    const pressOffsetPx = event.clientX - trackLeft
+    const pressedThumb = event.target !== track
+    /** Pointer distance from the thumb's left edge, held for the whole drag. */
+    const grabOffsetPx = pressedThumb
+      ? Math.min(Math.max(pressOffsetPx - tabThumbOffsetPx, 0), tabThumbLengthPx)
+      : tabThumbLengthPx / 2
+    if (!pressedThumb) setTabThumbOffset(pressOffsetPx - grabOffsetPx)
+    isDraggingTabScrollbar = true
+    track.setPointerCapture(event.pointerId)
+    const move = (moveEvent: PointerEvent) => setTabThumbOffset(moveEvent.clientX - trackLeft - grabOffsetPx)
+    const finish = () => {
+      isDraggingTabScrollbar = false
+      track.removeEventListener('pointermove', move)
+      track.removeEventListener('pointerup', finish)
+      track.removeEventListener('pointercancel', finish)
+    }
+    track.addEventListener('pointermove', move)
+    track.addEventListener('pointerup', finish)
+    track.addEventListener('pointercancel', finish)
+  }
+
+  // Side effect: re-measure the tab strip's scroll extents when it resizes or its tab count changes; observing fires
+  // the first measurement.
+  $effect(() => {
+    void workTabs.length
+    const observer = new ResizeObserver(syncTabScroll)
+    observer.observe(tabStripElement!)
+    return () => observer.disconnect()
+  })
+
+  // Side effect: show the scrollbar while the pointer is over overflowing tabs, fade it after the pointer leaves unless
+  // its thumb is still dragged, and cancel any pending fade on unmount.
+  $effect(() => {
+    if (isTabStripHovered) revealTabScrollbar()
+    else if (!isDraggingTabScrollbar) tabScrollbarVisibility = isTabScrollbarNeeded ? 'fading' : 'hidden'
+    return () => window.clearTimeout(tabScrollbarHideTimeout)
   })
 
   // ---- Sidebar ----
@@ -329,16 +506,25 @@
     node.scrollTop = view.scrollTop
   }
 
-  /** Opens a clicked collection in the selected tab, including collections already open elsewhere. */
+  /** Opens a clicked collection in the selected tab, including collections already open elsewhere, and expands the
+      sidebar beside it. */
   const openCollection = (collectionId: string) => {
     if (justDragged || !selectedWorkTab) return
     selectedWorkTab.collectionId = collectionId
+    sidebarExpanded = true
   }
 
   /** Project whose New Collection menu is open; the menu is CSS-anchored to that project's trigger, like the live
       dropdown, so it follows the trigger when the screen scrolls. */
   let collectionMenu = $state<{ projectId: string } | null>(null)
   let collectionMenuElement = $state<HTMLElement>()
+  /** Rendered menu size, which keeps the menu inside the viewport; starts at the live dropdown's fallback size. */
+  let collectionMenuWidthPx = $state(236)
+  let collectionMenuHeightPx = $state(336)
+  /** Keys that would scroll the background, which the open menu holds still. */
+  const menuScrollKeys = new Set(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home', 'PageDown', 'PageUp', ' '])
+  /** Mounted New Collection buttons by project ID, which the open menu watches. */
+  const collectionMenuTriggers: Record<string, HTMLElement> = {}
 
   /** CSS anchor name of one project's New Collection button. */
   const getCollectionMenuAnchor = (projectId: string): string => `--new-collection-${projectId}`
@@ -348,28 +534,56 @@
     collectionMenu = collectionMenu?.projectId === projectId ? null : { projectId }
   }
 
-  // Side effect: close the open New Collection menu on outside presses and Escape, and hold the background still
-  // while it is open, like the live dropdown.
+  /** Side effect: registers a project's New Collection button and closes its open menu when the button unmounts, such
+      as when a search hides its project, like the live dropdown trigger. */
+  const collectionMenuTrigger: Action<HTMLElement, string> = (node, projectId) => {
+    collectionMenuTriggers[projectId] = node
+    return {
+      destroy() {
+        delete collectionMenuTriggers[projectId]
+        if (collectionMenu?.projectId === projectId) collectionMenu = null
+      }
+    }
+  }
+
+  // Side effect: close the open New Collection menu on outside presses, Escape, or its button scrolling fully out of
+  // view, and hold the background still while it is open, like the live dropdown.
   $effect(() => {
     if (!collectionMenu) return
+    const trigger = collectionMenuTriggers[collectionMenu.projectId]
     const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Element
-      if (collectionMenuElement?.contains(target) || target.closest('[data-collection-menu-trigger]')) return
+      const target = event.target as Node
+      if (collectionMenuElement?.contains(target) || trigger?.contains(target)) return
       collectionMenu = null
     }
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') collectionMenu = null
+      if (event.key === 'Escape') {
+        collectionMenu = null
+        return
+      }
+      // Space still activates a focused menu item; the other scroll keys stay with the menu.
+      const activatesMenuItem =
+        event.key === ' ' && event.target instanceof HTMLButtonElement && collectionMenuElement?.contains(event.target)
+      if (menuScrollKeys.has(event.key) && !activatesMenuItem) event.preventDefault()
     }
     const preventBackgroundScroll = (event: Event) => {
       if (!collectionMenuElement?.contains(event.target as Node)) event.preventDefault()
     }
+    /** Viewport and clipping ancestors both count, so a trigger scrolled out of view closes its menu. */
+    const triggerObserver = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) collectionMenu = null
+    })
+    if (trigger) triggerObserver.observe(trigger)
     document.addEventListener('pointerdown', handlePointerDown, true)
     document.addEventListener('keydown', handleKeyDown)
     document.addEventListener('wheel', preventBackgroundScroll, { capture: true, passive: false })
+    document.addEventListener('touchmove', preventBackgroundScroll, { capture: true, passive: false })
     return () => {
+      triggerObserver.disconnect()
       document.removeEventListener('pointerdown', handlePointerDown, true)
       document.removeEventListener('keydown', handleKeyDown)
       document.removeEventListener('wheel', preventBackgroundScroll, { capture: true })
+      document.removeEventListener('touchmove', preventBackgroundScroll, { capture: true })
     }
   })
 
@@ -581,31 +795,62 @@
           aria-current={active ? 'page' : undefined}
           data-active={active ? 'true' : 'false'}
           title={screen.label}
-          onclick={() => {
-            selectedId = screen.id
-          }}
+          onclick={() => activateFixedScreen(screen.id)}
         >
           <ScreenIcon size={20} strokeWidth={1.5} aria-hidden="true" />
         </button>
       {/each}
+      <!-- The sidebar toggle names the action it performs, and is disabled on screens without a sidebar. -->
+      <button
+        type="button"
+        class="titlebar__screen"
+        disabled={!hasSidebar}
+        aria-expanded={isAppSidebarExpanded}
+        aria-label={sidebarLabel}
+        title={sidebarLabel}
+        onclick={() => {
+          sidebarExpanded = !sidebarExpanded
+        }}
+      >
+        <SidebarIcon size={20} strokeWidth={1.5} aria-hidden="true" />
+      </button>
     </nav>
 
     <div class="titlebar__separator" aria-hidden="true"></div>
 
     <div class="titlebar__tab-row">
-      <!-- Vertical wheel input scrolls the tabs sideways once they reach their 120px minimum width. -->
+      <!-- Hovering the tabs shows their scrollbar, and vertical wheel input scrolls them sideways once they reach their
+           120px minimum width. -->
       <div
+        bind:this={tabViewportElement}
         class="titlebar__tab-viewport"
         role="presentation"
+        onmouseenter={() => {
+          isTabStripHovered = true
+        }}
+        onmouseleave={(event) => {
+          isTabStripHovered = false
+          releaseHeldStripWidth(event.clientX, event.clientY)
+        }}
         onwheel={(event) => {
-          tabStripElement!.scrollLeft += event.deltaY
+          tabStripElement!.scrollLeft += event.deltaY * wheelScrollMultiplier
         }}
         onmousedown={(event) => {
           // Middle presses would start Chromium's autoscroll on the overflowing strip and swallow the middle-click close.
           if (event.button === 1) event.preventDefault()
         }}
       >
-        <div bind:this={tabStripElement} class="titlebar__tabs" role="tablist" aria-label="Open tabs">
+        <div
+          bind:this={tabStripElement}
+          class="titlebar__tabs"
+          role="tablist"
+          aria-label="Open tabs"
+          style:max-width={heldStripWidth === null ? undefined : `${heldStripWidth}px`}
+          onscroll={() => {
+            syncTabScroll()
+            revealTabScrollbar()
+          }}
+        >
           {#each workTabs as tab (tab.id)}
             {@const display = getTabDisplay(tab)}
             {@const TabIcon = display.icon}
@@ -617,19 +862,18 @@
               data-dragging={dragging}
               style:transform={dragging ? `translateX(${draggedTab!.offsetX}px)` : undefined}
               onauxclick={(event) => {
-                if (event.button === 1) closeWorkTab(tab.id)
+                if (event.button === 1) closeTab(event, tab.id)
               }}
             >
-              <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab. -->
+              <!-- The tab button covers the whole pill so presses around the close button still select and drag the tab.
+                   Mouse presses select on pointer down; the click keeps Enter and Space selection. -->
               <button
                 type="button"
                 class="titlebar__tab-select text-sm leading-5"
                 role="tab"
                 aria-selected={selected}
                 onpointerdown={(event) => handleTabPointerDown(event, tab.id)}
-                onclick={() => {
-                  selectedId = tab.id
-                }}
+                onclick={() => selectWorkTab(tab.id)}
               >
                 <TabIcon size={16} aria-hidden="true" />
                 <span class="titlebar__tab-title">{display.title}</span>
@@ -639,12 +883,29 @@
                 class="titlebar__tab-close"
                 aria-label={`Close ${display.title}`}
                 title="Close Tab"
-                onclick={() => closeWorkTab(tab.id)}
+                onclick={(event) => closeTab(event, tab.id)}
               >
                 <X size={14} aria-hidden="true" />
               </button>
             </div>
           {/each}
+        </div>
+        <!-- 3px overlay scrollbar along the bottom of the tabs, shown while they overflow and are hovered or scrolled.
+             Pressing the track centers the thumb on the press and drags it from there. -->
+        <div class="tabScrollbar" data-visibility={tabScrollbarVisibility} aria-hidden="true">
+          <div
+            bind:this={tabScrollbarTrackElement}
+            class="tabScrollbarTrack"
+            role="presentation"
+            onpointerdown={handleTabScrollbarPointerDown}
+          >
+            <div
+              class="tabScrollbarThumb"
+              data-active={isDraggingTabScrollbar}
+              style:width={`${tabThumbLengthPx}px`}
+              style:transform={`translate3d(${tabThumbOffsetPx}px, 0, 0)`}
+            ></div>
+          </div>
         </div>
       </div>
       <button type="button" class="titlebar__new-tab" aria-label="New Tab" title="New Tab" onclick={addWorkTab}>
@@ -671,7 +932,7 @@
 
   <!-- The live title bar has no bottom border; the sidebar and screen below it each draw the top line. -->
   <div class="appBody">
-    {#if hasSidebar}
+    {#if isAppSidebarExpanded}
       <aside class="appSidebar" style:flex-basis={`${sidebarWidth}px`}>
         {#if selectedCollection}
           {@const KindIcon = getCollectionIcon(selectedCollection.kind)}
@@ -806,7 +1067,7 @@
                         class="mockButton mockButton--action text-sm leading-5"
                         aria-haspopup="menu"
                         aria-expanded={collectionMenu?.projectId === project.id}
-                        data-collection-menu-trigger
+                        use:collectionMenuTrigger={project.id}
                         style:anchor-name={getCollectionMenuAnchor(project.id)}
                         onclick={() => toggleCollectionMenu(project.id)}
                       >
@@ -887,29 +1148,42 @@
   </div>
 
   {#if collectionMenu}
-    <!-- New Collection menu: a 260px overlay card 4px below the trigger, right-aligned with it. -->
+    <!-- New Collection menu: an overlay card at least 300px wide, 4px below the trigger with right edges aligned, and
+         clamped inside the viewport by its measured size. Each row's detail fits on one line at that width. -->
     <div
       bind:this={collectionMenuElement}
+      bind:offsetWidth={collectionMenuWidthPx}
+      bind:offsetHeight={collectionMenuHeightPx}
       class="dropdownLayer"
       style:position-anchor={getCollectionMenuAnchor(collectionMenu.projectId)}
+      style:--menu-width={`${collectionMenuWidthPx}px`}
+      style:--menu-height={`${collectionMenuHeightPx}px`}
     >
       <div class="dropdownCard" role="menu" aria-label="New Collection">
-        {#each createCollectionItems as menuItem (menuItem.id)}
-          {@const ItemIcon = menuItem.icon}
-          <button
-            type="button"
-            class="dropdownItem"
-            role="menuitem"
-            onclick={() => {
-              collectionMenu = null
-            }}
-          >
-            <span class="dropdownItemIcon">
-              <ItemIcon size={16} aria-hidden="true" />
-            </span>
-            <span class="dropdownItemLabel text-sm leading-5">{menuItem.label}</span>
-          </button>
-        {/each}
+        <div class="dropdownItems">
+          {#each createCollectionItems as menuItem (menuItem.id)}
+            {@const ItemIcon = menuItem.icon}
+            <button
+              type="button"
+              class="dropdownItem"
+              role="menuitem"
+              onclick={() => {
+                collectionMenu = null
+              }}
+            >
+              <span class="dropdownItemIcon">
+                <ItemIcon size={20} aria-hidden="true" />
+              </span>
+              <span class="dropdownItemTextStack">
+                <!-- Menu titles keep the live menu's 18px line height instead of the default. -->
+                <span class="dropdownItemTitle text-sm leading-4.5">{menuItem.label}</span>
+                <span class="dropdownItemDetail text-xs leading-4" title={menuItem.detail}>
+                  <span class="dropdownItemDetailPart">{menuItem.detail}</span>
+                </span>
+              </span>
+            </button>
+          {/each}
+        </div>
       </div>
     </div>
   {/if}
@@ -994,11 +1268,11 @@
     position: relative;
   }
 
-  .titlebar__screen:is(:hover, :focus-visible, [data-active='true']) {
+  .titlebar__screen:enabled:is(:hover, :focus-visible, [data-active='true']) {
     color: var(--ui-hoverable-icon-glyph);
   }
 
-  .titlebar__screen:is(:hover, :focus-visible)::before {
+  .titlebar__screen:where(:enabled):is(:hover, :focus-visible)::before {
     background: var(--ui-neutral-normal-surface);
   }
 
@@ -1174,6 +1448,63 @@
 
   .titlebar__new-tab:is(:hover, :focus-visible)::before {
     background: var(--ui-neutral-normal-surface);
+  }
+
+  /* The sidebar toggle matches the shared disabled button appearance on screens without a sidebar; only the glyph
+     fades. */
+  .titlebar__screen:disabled :global(svg) {
+    opacity: 0.5;
+  }
+
+  /* ---- Tab strip overlay scrollbar, copied from the shared Scrollbar along the bottom of the tabs ---- */
+
+  .tabScrollbar {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    height: 3px;
+    user-select: none;
+  }
+
+  .tabScrollbar[data-visibility='visible'] {
+    z-index: var(--z-chrome);
+    transition: opacity var(--ui-animation-duration-standard) linear;
+  }
+
+  .tabScrollbar:is([data-visibility='fading'], [data-visibility='hidden']) {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .tabScrollbar[data-visibility='fading'] {
+    transition: opacity 800ms linear;
+  }
+
+  .tabScrollbarTrack {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
+
+  /* Thumb colors are copied from the shared Scrollbar component. */
+  .tabScrollbarThumb {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    background: rgba(121, 121, 121, 0.4);
+    touch-action: none;
+  }
+
+  .tabScrollbarThumb:hover {
+    background: rgba(100, 100, 100, 0.7);
+  }
+
+  .tabScrollbarThumb[data-active='true'] {
+    background: rgba(191, 191, 191, 0.4);
   }
 
   .titlebar__controls {
@@ -1823,35 +2154,49 @@
     stroke: var(--ui-muted-icon-glyph);
   }
 
-  /* ---- New Collection menu ---- */
+  /* ---- New Collection menu, copied from DropdownPopupCore and DropdownPopupMoreOptions ---- */
 
+  /* Below-trigger right alignment: the menu grows with a wider trigger, hangs 4px below it, and stays 16px inside the
+     viewport's sides and top and 8px above its bottom. */
   .dropdownLayer {
     position: fixed;
-    top: calc(anchor(bottom) + 4px);
-    left: calc(anchor(right) - 260px);
-    width: 260px;
+    top: clamp(16px, calc(anchor(bottom) + 4px), calc(100vh - var(--menu-height) - 8px));
+    left: clamp(16px, calc(anchor(right) - var(--menu-width)), calc(100vw - var(--menu-width) - 16px));
+    width: max(300px, anchor-size(width));
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     z-index: var(--z-popup);
     border-radius: var(--cthulhu-ui-radius-card);
     box-shadow: 0 0 12px var(--ui-shadow-raised);
     color: var(--ui-normal-text);
   }
 
+  /* Overlay card surface; the layer's shadow replaces the card's own. */
   .dropdownCard {
-    display: grid;
+    width: 100%;
+    min-width: 0;
     padding: 4px;
+    overflow: hidden;
     border: 1px solid var(--ui-card-normal-border);
     border-radius: var(--cthulhu-ui-radius-card);
     background: var(--ui-card-overlay-surface);
   }
 
+  .dropdownItems {
+    display: grid;
+    gap: 1px;
+  }
+
+  /* Two-line rows: a 28px icon cell beside a title and its detail. */
   .dropdownItem {
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr);
     align-items: center;
     gap: 8px;
     width: 100%;
-    min-height: 34px;
-    padding: 4px 8px;
+    min-height: 50px;
+    padding: 6px 8px;
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-text);
     text-align: left;
@@ -1866,12 +2211,18 @@
     color: var(--ui-normal-text);
   }
 
+  .dropdownItem:focus-visible {
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: -2px;
+  }
+
   .dropdownItemIcon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--cthulhu-ui-radius-card);
     color: var(--ui-hoverable-icon-glyph);
     transition: color var(--ui-animation-duration-standard) ease;
   }
@@ -1880,9 +2231,43 @@
     color: var(--ui-normal-text);
   }
 
-  .dropdownItemLabel {
+  .dropdownItemTextStack {
+    display: grid;
+    gap: 2px;
     min-width: 0;
-    overflow-wrap: anywhere;
+  }
+
+  .dropdownItemTitle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  /* The detail brightens with its row on hover and focus. */
+  .dropdownItemDetail {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--ui-secondary-text);
+    transition: color var(--ui-animation-duration-standard) ease;
+  }
+
+  .dropdownItem:is(:hover, :focus-visible) .dropdownItemDetail {
+    color: var(--ui-normal-text);
+  }
+
+  .dropdownItemDetailPart {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* ---- Drag ghost ---- */
