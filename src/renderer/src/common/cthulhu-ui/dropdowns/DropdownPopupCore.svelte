@@ -80,6 +80,8 @@
   let cursorOffset = $state<CursorOffset | null>(null)
   let open = $state(false)
   let measuredMenuSize = $state({ width: fallbackMenuWidth, height: fallbackMenuHeight })
+  /** True when the open menu came from openAt, so a left press on its trigger dismisses it. */
+  let openedAsContextMenu = false
 
   const closeMenu = () => {
     open = false
@@ -91,13 +93,16 @@
   }
 
   /** Opens against live trigger edges or captures a fixed cursor offset from that trigger. */
-  const openMenu = (event?: MouseEvent, cursorGap = 0) => {
+  const openMenu = (event?: MouseEvent, asContextMenu = false) => {
     if (!anchorElement) return
     activeDropdownCloser?.()
     activeDropdownCloser = closeMenu
+    openedAsContextMenu = asContextMenu
     if (placement === 'cursor' && event) {
       /** Only the opening offset is measured; CSS tracks all subsequent trigger movement. */
       const triggerRect = anchorElement.getBoundingClientRect()
+      /** Context menus open slightly right of the cursor. */
+      const cursorGap = asContextMenu ? cursorContextMenuGap : 0
       cursorOffset = {
         x: event.clientX + cursorGap - triggerRect.left,
         y: event.clientY - triggerRect.top
@@ -135,7 +140,7 @@
 
   // Opens or repositions the popup from an explicit mouse interaction.
   const openMenuAt = (event: MouseEvent): void => {
-    openMenu(event, cursorContextMenuGap)
+    openMenu(event, true)
   }
 
   /** CSS clamps live anchor coordinates against the viewport using the observed menu size. */
@@ -181,7 +186,12 @@
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node
 
-      if (anchorElement?.contains(target) || menuLayerRef?.contains(target)) {
+      if (menuLayerRef?.contains(target)) {
+        return
+      }
+
+      // Toggle triggers close from their own click; context-menu triggers close on a left press.
+      if (anchorElement?.contains(target) && !(openedAsContextMenu && event.button === 0)) {
         return
       }
 

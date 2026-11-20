@@ -141,6 +141,22 @@ describe('Dropdown tracking', () => {
     }
   })
 
+  test('category context menu closes when its own row is left-clicked', async ({ testSetup }) => {
+    /** Categories start expanded, so the left click below collapses this one. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'categories' } })
+    await testHelpers.navigateToPromptCollections('Main')
+    /** The toggle button covers the whole category row that anchors the context menu. */
+    const toggle = mainWindow.locator(promptTreeCategorySelector('Category'))
+    /** Context menu is the sole open menu in this isolated window. */
+    const menu = mainWindow.getByRole('menu')
+    await toggle.click({ button: 'right', position: { x: 60, y: 10 } })
+    await expect(menu).toBeVisible()
+    // Left-click the same row away from the menu, which opens right of the cursor.
+    await toggle.click({ position: { x: 30, y: 10 } })
+    await expect(menu).toHaveCount(0)
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
   test('category context menu retains its cursor gap while the category row moves', async ({ testSetup }) => {
     /** Category rows open the shared dropdown through an explicit right-click. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'categories' } })
