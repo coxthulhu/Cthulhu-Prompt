@@ -38,7 +38,6 @@
     ariaPressed?: boolean | 'mixed'
     buttonAction?: IconButtonAction | null
     buttonActionParameter?: unknown
-    menuWidth?: string
     menuAlignment?: DropdownPopupMenuAlignment
     onclick?: (event: MouseEvent) => void
     onselect?: (item: DropdownPopupMoreOptionsItem, event: MouseEvent) => void
@@ -65,7 +64,6 @@
     ariaPressed,
     buttonAction,
     buttonActionParameter,
-    menuWidth,
     menuAlignment = 'right',
     onclick,
     onselect
@@ -105,7 +103,6 @@
   <DropdownPopupMoreOptions
     label={moreOptionsLabel}
     items={moreOptions}
-    {menuWidth}
     {menuAlignment}
     testId={menuTestId}
     {onselect}

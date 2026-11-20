@@ -403,7 +403,6 @@
         <DropdownPopupSimple
           label="Selected Collection Actions"
           items={selectedPromptCollectionActionsItems}
-          menuWidth="204px"
           testId="selected-prompt-collection-actions-menu"
           onselect={handleSelectedPromptCollectionActionsSelect}
         >

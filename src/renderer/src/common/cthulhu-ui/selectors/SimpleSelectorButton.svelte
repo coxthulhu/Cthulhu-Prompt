@@ -24,7 +24,6 @@
     testId?: string
     moreOptionsTestId?: string
     menuTestId?: string
-    menuWidth?: string
     onselect?: (item: SimpleSelectorButtonItem, event: MouseEvent) => void
   }
 
@@ -38,7 +37,6 @@
     testId,
     moreOptionsTestId,
     menuTestId,
-    menuWidth,
     onselect
   }: SimpleSelectorButtonProps = $props()
 
@@ -50,7 +48,6 @@
 <DropdownPopupMoreOptions
   label={`${label} More Options`}
   {items}
-  {menuWidth}
   testId={menuTestId}
   onselect={(item, event) => onselect?.(item, event)}
 >

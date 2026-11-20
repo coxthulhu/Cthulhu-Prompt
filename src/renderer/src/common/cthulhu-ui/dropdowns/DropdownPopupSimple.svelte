@@ -21,7 +21,6 @@
     label: string
     items: DropdownPopupItem[]
     trigger: Snippet<[DropdownPopupTriggerContext]>
-    menuWidth?: string
     testId?: string
     placement?: DropdownPopupPlacement
     /** Edge of the trigger the menu lines up with when placed below it. */
@@ -33,7 +32,6 @@
     label,
     items,
     trigger,
-    menuWidth = '236px',
     testId,
     placement = 'cursor',
     menuAlignment,
@@ -44,7 +42,6 @@
 <DropdownPopupCore
   {label}
   {trigger}
-  {menuWidth}
   {testId}
   {placement}
   {menuAlignment}

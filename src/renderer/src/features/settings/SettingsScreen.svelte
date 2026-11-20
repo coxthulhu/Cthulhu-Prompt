@@ -391,7 +391,6 @@
               items={newPromptFocusItems}
               selectedItem={selectedNewPromptFocusItem}
               showIcon
-              menuWidth="260px"
               testId="new-prompt-focus-selector"
               onselect={(item) => updateNewPromptFocus(item.id as NewPromptFocus)}
             />
@@ -610,7 +609,6 @@
               items={updateChannelItems}
               selectedItem={selectedUpdateChannelItem}
               showIcon
-              menuWidth="300px"
               testId="update-channel-selector"
               onselect={(item) => updateUpdateChannel(item.id as UpdateChannel)}
             />

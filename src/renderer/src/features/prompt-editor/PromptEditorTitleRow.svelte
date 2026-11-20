@@ -461,7 +461,6 @@
             testId={isArchiveDefaultAction ? 'prompt-archive-button' : 'prompt-delete-button'}
             moreOptionsTestId="prompt-delete-more-options-button"
             menuTestId="prompt-delete-more-options-menu"
-            menuWidth="240px"
             onclick={handleDeletePrimaryClick}
             onselect={handleDeleteMoreOptionsSelect}
           />

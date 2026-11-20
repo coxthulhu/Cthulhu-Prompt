@@ -240,7 +240,6 @@
     <DropdownPopupSimple
       label={`Category options for ${category.displayName}`}
       items={dropdownItems}
-      menuWidth="196px"
       onselect={handleCategoryOptionsSelect}
     >
       {#snippet trigger(dropdown)}

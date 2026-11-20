@@ -104,7 +104,18 @@ describe('Dropdown tracking', () => {
     // Center the trigger so the menu has room below it regardless of the Test Screen sections above.
     await trigger.evaluate((element: HTMLElement) => element.scrollIntoView({ block: 'center' }))
     await trigger.click()
-    await expect(menu).toHaveCSS('width', '240px')
+    /** Width chosen by the fixture's original menu content. */
+    const initialWidth = (await box(menu)).width
+    // A longer title must widen the content-sized menu instead of truncating, while staying narrower than the 400px trigger below.
+    await menu.locator('.cthulhuUiDropdownPopupMoreOptionsTitle').first().evaluate((element) => {
+      element.textContent = 'Copy as Markdown with title and body'
+    })
+    await expect.poll(async () => (await box(menu)).width).toBeGreaterThan(initialWidth + 2)
+    await expect.poll(() => menu.evaluate((element) =>
+      [...element.querySelectorAll('.truncate')].every((text) => text.scrollWidth - text.clientWidth <= 1)
+    )).toBe(true)
+    /** Width chosen by the widened content before the trigger grows past it. */
+    const contentWidth = (await box(menu)).width
     await trigger.evaluate((element: HTMLElement) => {
       // This positioning fixture deliberately exceeds the action button's normal width cap.
       element.style.maxWidth = 'none'
@@ -119,7 +130,7 @@ describe('Dropdown tracking', () => {
         return Math.max(
           Math.abs(menuBox.x + menuBox.width - triggerBox.x - triggerBox.width),
           Math.abs(menuBox.y - triggerBox.y - triggerBox.height - 4),
-          Math.abs(menuBox.width - Math.max(240, triggerBox.width))
+          Math.abs(menuBox.width - Math.max(contentWidth, triggerBox.width))
         )
       }).toBeLessThanOrEqual(2)
     }
@@ -171,6 +182,13 @@ describe('Dropdown tracking', () => {
     /** Existing context-menu behavior adds a four-pixel horizontal cursor gap. */
     const initialMenu = await box(menu)
     expect(Math.abs(initialMenu.x - before.x - 54)).toBeLessThanOrEqual(2)
+    expect(initialMenu.width).toBeGreaterThanOrEqual(198)
+    /** Longest category action, which previously wrapped inside a fixed-width menu. */
+    const settingsLabel = await box(
+      menu.getByTestId('prompt-tree-active-category-settings-menu-item-Category').locator('.cthulhuUiDropdownPopupSimpleItemLabel')
+    )
+    // The label's leading-5 line height is 20px, so a wrapped label would be 40px tall.
+    expect(Math.abs(settingsLabel.height - 20)).toBeLessThanOrEqual(2)
     /** Cursor offsets stay fixed when the anchor changes both width and height. */
     const offset = { x: initialMenu.x - before.x, y: initialMenu.y - before.y }
     await trigger.evaluate((element: HTMLElement) => {

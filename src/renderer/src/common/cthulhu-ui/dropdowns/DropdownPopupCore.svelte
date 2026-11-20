@@ -39,7 +39,6 @@
     label: string
     trigger: Snippet<[DropdownPopupTriggerContext]>
     children: Snippet<[DropdownPopupContentContext]>
-    menuWidth?: string
     menuClass?: string
     testId?: string
     placement?: DropdownPopupPlacement
@@ -50,7 +49,6 @@
     label,
     trigger,
     children,
-    menuWidth = '236px',
     menuClass,
     testId,
     placement = 'cursor',
@@ -149,7 +147,6 @@
       placement,
       alignment: menuAlignment,
       cursorOffset,
-      width: menuWidth,
       size: measuredMenuSize
     })
   )

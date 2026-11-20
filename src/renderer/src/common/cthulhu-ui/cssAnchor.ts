@@ -16,7 +16,6 @@ type CssAnchorPosition =
       placement: 'cursor' | 'below-trigger'
       alignment: 'left' | 'right'
       cursorOffset: { x: number; y: number } | null
-      width: string
       size: { width: number; height: number }
     }
 
@@ -30,6 +29,8 @@ const firstItemCenterOffset = 25
 const belowTriggerGap = 4
 /** Clamped dropdowns leave room below their rendered border box. */
 const bottomGap = 8
+/** Content-sized dropdowns never shrink below this comfortable click width. */
+const minMenuWidth = 200
 
 /** Creates one CSS anchor with shared registration, cleanup, and placement calculations. */
 export const createCssAnchor = () => {
@@ -62,10 +63,10 @@ export const createCssAnchor = () => {
         max-width: calc(${position.anchored ? 'anchor-size(width)' : '100vw'} - ${position.offsetX + viewportMargin}px);`
     }
 
-    /** Below-trigger menus grow with their trigger; cursor menus retain their requested width. */
-    const width = position.placement === 'below-trigger'
-      ? `max(${position.width}, anchor-size(width))`
-      : position.width
+    /** Menus fit their content; below-trigger menus also grow to their trigger's width. */
+    const minWidth = position.placement === 'below-trigger'
+      ? `max(${minMenuWidth}px, anchor-size(width))`
+      : `${minMenuWidth}px`
     /** Horizontal attachment preserves opening cursor offsets and left/right alignment. */
     const anchorX = position.cursorOffset
       ? `anchor(left) + ${position.cursorOffset.x}px`
@@ -77,7 +78,8 @@ export const createCssAnchor = () => {
       ? `anchor(bottom) + ${belowTriggerGap}px`
       : `${position.cursorOffset ? `anchor(top) + ${position.cursorOffset.y}px` : 'anchor(center)'} - ${firstItemCenterOffset}px`
 
-    return `position-anchor: ${anchorName}; width: ${width};
+    return `position-anchor: ${anchorName}; width: max-content; min-width: ${minWidth};
+      max-width: calc(100vw - ${viewportMargin * 2}px);
       left: clamp(${viewportMargin}px, calc(${anchorX} - ${position.alignment === 'right' ? position.size.width : 0}px), calc(100vw - ${position.size.width + viewportMargin}px));
       top: clamp(${viewportMargin}px, calc(${anchorY}), calc(100vh - ${position.size.height + bottomGap}px));`
   }
