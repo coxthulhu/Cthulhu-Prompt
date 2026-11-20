@@ -7,10 +7,15 @@
     Ban,
     Check,
     Archive,
+    ArrowRight,
+    ArrowUpToLine,
     Clock,
     ChevronDown,
     ChevronRight,
     ChevronUp,
+    ChevronsDownUp,
+    ChevronsUpDown,
+    CircleCheckBig,
     CircleDashed,
     ClipboardCheck,
     Copy,
@@ -21,25 +26,45 @@
     FolderCog,
     FolderOpen,
     GripVertical,
+    Icon as LucideIcon,
     Layers,
+    LayoutGrid,
+    ListTodo,
+    Maximize2,
+    MoreHorizontal,
     NotebookPen,
     Pencil,
     Play,
     Plus,
     Search,
+    Settings,
     Trash2,
     Zap,
-    X
+    X,
+    type IconProps
   } from 'lucide-svelte'
   import * as monaco from 'monaco-editor'
   import { estimateTokenCount } from 'tokenx'
+  import ResizeSash from '@renderer/common/cthulhu-ui/layout/ResizeSash.svelte'
 
-  // Standalone snapshot of the prompt-collection screen: all fixtures, controls, and mutations live here.
-  // Only third-party Svelte/icons/Monaco/token counting and the host's palette/theme are shared.
-  // Editor sizing below intentionally uses application defaults, independent of persisted settings.
-  // Snapshot: task-prompt collection UI, including attached notes and Ctrl+Shift+Arrow reordering.
-  // No workspace, IPC, live components, settings, or domain mutations are used.
+  // Standalone snapshot of a work tab's collection screen beside its Tab Collection Sidebar: all fixtures,
+  // controls, and mutations live here. Only third-party Svelte/icons/Monaco/token counting, the host's
+  // palette/theme, and the shared ResizeSash are reused. Editor sizing uses application defaults.
+  // Snapshot: project breadcrumb, sidebar status accordion and prompt tree with scroll-follow selection,
+  // attached notes, arrow-key field navigation, shared wheel scrolling, and drag/drop between both panes.
+  // No workspace, IPC, settings, or domain mutations are used; Show All and Open in editor are inert.
   const NO_TEMPLATE_LABEL = 'No template'
+  /** Lucide notebook-pen with its lower-right corner opened for a delete mark, matching the live NotebookX icon. */
+  const notebookXIconNode: IconProps['iconNode'] = [
+    ['path', { d: 'M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h7' }],
+    ['path', { d: 'M2 6h4' }],
+    ['path', { d: 'M2 10h4' }],
+    ['path', { d: 'M2 14h4' }],
+    ['path', { d: 'M2 18h4' }],
+    ['path', { d: 'M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z' }],
+    ['path', { d: 'm17 17 5 5' }],
+    ['path', { d: 'm22 17-5 5' }]
+  ]
   const TEMPLATE_NOT_SELECTED_LABEL = 'Not selected'
 
   const MockPromptStatus = {
@@ -59,21 +84,37 @@
     { id: MockPromptStatus.Archived, label: 'Archived', detail: 'Archived prompts must be restored to another status', icon: Archive }
   ]
 
-  // Side effect: portal the local popup out of editor containers and clamp it like the live dropdown.
-  const mountMockMenu = (node: HTMLElement, options: { anchor: HTMLElement; width: number }) => {
-    const { anchor, width } = options
-    document.body.appendChild(node)
+  /** Opening point of the open menu: the cursor, or the trigger's left edge and middle for keyboard opening. */
+  let menuPoint = { x: 0, y: 0 }
+  /** Records where a menu opens; context menus open slightly right of the cursor like the live dropdowns. */
+  const captureMenuPoint = (event: MouseEvent, anchor: HTMLElement, isContextMenu = false) => {
     const rect = anchor.getBoundingClientRect()
-    node.style.width = `${Math.max(width, rect.width)}px`
+    menuPoint = event.detail === 0 && !isContextMenu
+      ? { x: rect.left, y: rect.top + rect.height / 2 }
+      : { x: event.clientX + (isContextMenu ? 4 : 0), y: event.clientY }
+  }
+  /** Closes every local popup menu. */
+  const closeMenus = () => {
+    statusMenuId = null
+    deleteMenuId = null
+    noteMenuId = null
+    isCollectionActionsOpen = false
+    categoryMenu = null
+  }
+
+  // Side effect: portal the local popup, size it to its content, and center its first item on the opening point.
+  const mountMockMenu = (node: HTMLElement, options: { anchor: HTMLElement; isContextMenu?: boolean }) => {
+    const { anchor, isContextMenu = false } = options
+    document.body.appendChild(node)
+    const point = menuPoint
     const menu = node.getBoundingClientRect()
-    node.style.left = `${Math.max(16, Math.min(rect.right - menu.width, window.innerWidth - menu.width - 16))}px`
-    node.style.top = `${Math.max(16, Math.min(rect.bottom + 4, window.innerHeight - menu.height - 8))}px`
+    node.style.left = `${Math.max(16, Math.min(point.x, window.innerWidth - menu.width - 16))}px`
+    node.style.top = `${Math.max(16, Math.min(point.y - 25, window.innerHeight - menu.height - 8))}px`
     const dismiss = (event: PointerEvent) => {
-      if (!node.contains(event.target as Node) && !anchor.contains(event.target as Node)) {
-        statusMenuId = null
-        deleteMenuId = null
-        noteMenuId = null
-      }
+      if (node.contains(event.target as Node)) return
+      // Toggle triggers close from their own click; context menus also close on a left press over their row.
+      if (anchor.contains(event.target as Node) && !(isContextMenu && event.button === 0)) return
+      closeMenus()
     }
     const keydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -104,10 +145,12 @@
   let deleteAnchor = $state<HTMLElement | null>(null)
   let statusAnchor = $state<HTMLElement | null>(null)
   const toggleStatusMenu = (prompt: MockPrompt, event: MouseEvent) => {
-    deleteMenuId = null
-    noteMenuId = null
+    const isOpen = statusMenuId === prompt.id
+    closeMenus()
+    if (isOpen) return
     statusAnchor = (event.currentTarget as HTMLElement).parentElement
-    statusMenuId = statusMenuId === prompt.id ? null : prompt.id
+    captureMenuPoint(event, statusAnchor!)
+    statusMenuId = prompt.id
   }
 
   type MockIconButtonOptions = {
@@ -120,6 +163,8 @@
     disabled?: boolean
     hoverVariant?: 'neutral' | 'accent' | 'success' | 'danger' | 'glyph'
     iconClass?: string
+    /** Custom Lucide node list drawn instead of the icon component, such as NotebookX. */
+    iconNode?: IconProps['iconNode']
     iconSize?: number
     onclick?: (event: MouseEvent) => void
     size?: 'default' | 'compact' | 'compact-large-icon' | 'tiny' | 'sidebar-rail'
@@ -298,6 +343,14 @@
     selectedTemplateIds.add(template.id)
   }
 
+  /** Double-clicking an option in select mode applies it and copies immediately, like quick selection. */
+  const selectAndCopyTemplate = (template: MockTemplate | null) => {
+    if (!templateDialogPrompt) return
+    const prompt = templateDialogPrompt
+    closeTemplateDialog()
+    requestCopyPrompt(prompt, template)
+  }
+
   const confirmTemplateSelections = () => {
     if (!templateDialogPrompt) return
     const selectedTemplates = templateCollections
@@ -412,6 +465,19 @@
       ].join('\n'),
       MockPromptStatus.Archived,
       { finalizedAt: Date.now() - 3 * 86_400_000 }
+    ),
+    createPrompt(
+      'base-audit',
+      'Audit the current settings flow',
+      'base-root',
+      NO_TEMPLATE_LABEL,
+      [
+        'Walk through the current settings flow and list every screen, field, and saved value.',
+        '',
+        'Note any field that saves without validation.'
+      ].join('\n'),
+      MockPromptStatus.Completed,
+      { finalizedAt: Date.now() - 2 * 86_400_000, modifiedLabel: 'Updated 2 days ago' }
     )
   ])
 
@@ -433,6 +499,33 @@
             'Keep the patch focused and preserve unrelated work in the tree.'
           ].join('\n'),
           MockPromptStatus.InProgress
+        ),
+        createPrompt(
+          'base-settings-api',
+          'Wire the notification settings API',
+          'base-implementation',
+          'Draft Implementation Plan',
+          [
+            'Add the notification settings endpoints behind the existing preferences service.',
+            '',
+            '- Validate every field before saving.',
+            '- Return the saved settings so the client can refresh its cache.'
+          ].join('\n'),
+          MockPromptStatus.Todo,
+          { isEdited: true }
+        ),
+        createPrompt(
+          'base-settings-panel',
+          'Build the notification settings panel',
+          'base-implementation',
+          NO_TEMPLATE_LABEL,
+          [
+            'Build the notification settings panel using the shared form controls.',
+            '',
+            'Disable Save until a field changes and show inline validation errors.'
+          ].join('\n'),
+          MockPromptStatus.Todo,
+          { modifiedLabel: 'Updated yesterday' }
         )
       ],
     },
@@ -462,13 +555,25 @@
     }
   ])
 
+  /** Header filters list category workflows before finalized groups, like the live status registry. */
   const groups = ['Active', 'Backlog', 'Completed', 'Archived'] as const
-  let screenMode = $state<(typeof groups)[number]>('Active')
+  type MockGroup = (typeof groups)[number]
+  type MockFinalGroup = 'Completed' | 'Archived'
+  const isFinalGroup = (group: MockGroup): group is MockFinalGroup =>
+    group === 'Completed' || group === 'Archived'
+  let screenMode = $state<MockGroup>('Active')
+  /** Project that owns this collection, shown first in the breadcrumb. */
+  const projectName = 'Customer Portal'
   let rootTitle = $state('Product Work')
   let statusMenuId = $state<string | null>(null)
   let deleteMenuId = $state<string | null>(null)
   let noteMenuId = $state<string | null>(null)
   let noteAnchor = $state<HTMLElement | null>(null)
+  /** Sidebar button-bar Selected Collection Actions menu. */
+  let isCollectionActionsOpen = $state(false)
+  let collectionActionsAnchor = $state<HTMLElement | null>(null)
+  /** Category context menu opened from one status tree's category row. */
+  let categoryMenu = $state<{ group: MockGroup; categoryId: string; anchor: HTMLElement } | null>(null)
   let findOpen = $state(false)
   let findQuery = $state('')
   let findIndex = $state(0)
@@ -595,15 +700,41 @@
     }
     breadcrumbCategoryId = categoryId
   }
-  const selectGroup = (group: (typeof groups)[number]) => {
+  /** Each status group's last scroll offset, restored when the screen returns to that group. */
+  const scrollTopByMode: Partial<Record<MockGroup, number>> = {}
+  /** Status groups in visit order, used to leave a finalized group when its sidebar section is hidden. */
+  let modeHistory: MockGroup[] = ['Active']
+
+  /** Shows a status group and its sidebar section, then restores that group's scroll offset (live setScreenMode). */
+  const setScreenMode = async (group: MockGroup) => {
+    closeMenus()
+    if (isFinalGroup(group) && !shownFinalGroups[group]) {
+      shownFinalGroups[group] = true
+      toggledAccordionHeights = null
+    }
+    if (!accordionSections[group].expanded) {
+      accordionSections[group].expanded = true
+      toggledAccordionHeights = null
+    }
+    modeHistory = [group, ...modeHistory.filter((mode) => mode !== group)]
+    if (group === screenMode) return
     screenMode = group
-    statusMenuId = null
-    deleteMenuId = null
-    noteMenuId = null
     breadcrumbCategoryId = null
-    viewport?.scrollTo({ top: 0 })
+    isSelectionManual = false
+    // Side effect: restore the next group's offset after its rows replace the previous group's rows.
+    await tick()
+    if (viewport) viewport.scrollTop = scrollTopByMode[group] ?? 0
+    followCenterRow()
+    updateBreadcrumb()
   }
-  const visiblePrompts = (prompts: MockPrompt[]) => prompts.filter((prompt) => matchesGroup(prompt))
+
+  /** Header filters keep the collection header at its current offset in the next status group. */
+  const selectGroup = (group: MockGroup) => {
+    if (group !== screenMode && viewport) scrollTopByMode[group] = viewport.scrollTop
+    void setScreenMode(group)
+  }
+  const visiblePrompts = (prompts: MockPrompt[], group: MockGroup = screenMode) =>
+    prompts.filter((prompt) => matchesGroup(prompt, group))
   const removePrompt = (prompt: MockPrompt) => {
     rootPrompts = rootPrompts.filter((item) => item.id !== prompt.id)
     for (const category of categories) category.prompts = category.prompts.filter((item) => item.id !== prompt.id)
@@ -614,11 +745,151 @@
     confirmation = { title: 'Delete Prompt', description: 'Are you sure you want to permanently delete this prompt?',
       submit: 'Delete', confirm: () => removePrompt(prompt) }
   }
-  const addPrompt = (category?: MockCategory, afterId?: string) => {
+  /** Inserts a blank prompt in the displayed workflow and returns it. */
+  const addPrompt = (category?: MockCategory, afterId?: string): MockPrompt => {
     const prompts = category ? category.prompts : rootPrompts
     const prompt = createPrompt(window.crypto.randomUUID(), '', category?.id ?? 'base-root', TEMPLATE_NOT_SELECTED_LABEL, '',
       screenMode === 'Backlog' ? MockPromptStatus.Backlog : MockPromptStatus.Todo)
     prompts.splice(afterId ? prompts.findIndex((item) => item.id === afterId) + 1 : 0, 0, prompt)
+    return prompt
+  }
+
+  /** Divider creation selects the new prompt, keeps it in view, and focuses its body (the default new-prompt focus). */
+  const addPromptFromDivider = async (category?: MockCategory, afterId?: string) => {
+    const prompt = addPrompt(category, afterId)
+    selection = { kind: 'prompt', id: prompt.id }
+    isSelectionManual = true
+    // Side effect: wait for the new card and its Monaco editor to mount before focusing it.
+    await tick()
+    revealInScreenMinimal(document.getElementById(`base-card-${prompt.id}`))
+    mountedEditors.get(prompt.id)?.focus()
+  }
+
+  // ---- Screen selection mirrored by the sidebar tree ----
+  type MockSelection = { kind: 'header' } | { kind: 'prompt' | 'category'; id: string }
+  /** Screen row highlighted in the matching status tree, like the live prompt-navigation selection. */
+  let selection = $state<MockSelection>({ kind: 'header' })
+  /** Tree, breadcrumb, and creation selections hold until the user scrolls the screen again. */
+  let isSelectionManual = false
+  /** Replays the prompt rail's violet wash after a tree click. */
+  let navigationHighlight = $state<{ promptId: string; generation: number } | null>(null)
+  let navigationHighlightGeneration = 0
+  /** Live reveal offsets: prompts sit 300px below the viewport top and categories 80px. */
+  const PROMPT_VERTICAL_BIAS_PX = 300
+  const CATEGORY_TOP_OFFSET_PX = 80
+
+  /** Selects the header near the top, otherwise the header, category, or prompt card nearest the viewport center. */
+  const followCenterRow = () => {
+    if (!viewport) return
+    if (viewport.scrollTop < 1) {
+      selection = { kind: 'header' }
+      return
+    }
+    const viewportRect = viewport.getBoundingClientRect()
+    const centerY = viewportRect.top + viewport.clientHeight / 2
+    let nearest: HTMLElement | null = null
+    let nearestDistance = Number.POSITIVE_INFINITY
+    for (const row of viewport.querySelectorAll<HTMLElement>('[data-follow-row]')) {
+      const rect = row.getBoundingClientRect()
+      const distance = centerY < rect.top ? rect.top - centerY : centerY > rect.bottom ? centerY - rect.bottom : 0
+      if (distance < nearestDistance) {
+        nearest = row
+        nearestDistance = distance
+      }
+    }
+    if (!nearest) return
+    const kind = nearest.dataset.followRow
+    const id = nearest.dataset.followId ?? ''
+    if (kind === 'header') selection = { kind: 'header' }
+    else if (kind === 'prompt' || kind === 'category') selection = { kind, id }
+  }
+
+  /** User scrolling releases a held selection and follows the centered row again. */
+  const releaseManualSelection = () => {
+    if (!isSelectionManual) return
+    isSelectionManual = false
+    followCenterRow()
+  }
+
+  // Side effect: wheel input and presses on the screen's own scrollbar count as user scrolling.
+  const releaseSelectionOnUserScroll = (node: HTMLElement) => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target === node) releaseManualSelection()
+    }
+    node.addEventListener('wheel', releaseManualSelection, { passive: true })
+    node.addEventListener('pointerdown', handlePointerDown)
+    return {
+      destroy() {
+        node.removeEventListener('wheel', releaseManualSelection)
+        node.removeEventListener('pointerdown', handlePointerDown)
+      }
+    }
+  }
+
+  /** Places a row with the live vertical-bias rule: the bias, reduced to center a tall row, but at least 20px. */
+  const revealInScreen = (element: HTMLElement | null, verticalBiasPx: number) => {
+    if (!element || !viewport) return
+    const rect = element.getBoundingClientRect()
+    const bias = Math.max(20, Math.min(verticalBiasPx, (viewport.clientHeight - rect.height) / 2))
+    viewport.scrollTop += rect.top - viewport.getBoundingClientRect().top - bias
+  }
+
+  /** Scrolls only far enough to show the nearer edge of a row. */
+  const revealInScreenMinimal = (element: HTMLElement | null) => {
+    if (!element || !viewport) return
+    const rect = element.getBoundingClientRect()
+    const viewportRect = viewport.getBoundingClientRect()
+    if (rect.top < viewportRect.top) viewport.scrollTop -= viewportRect.top - rect.top
+    else if (rect.bottom > viewportRect.bottom) viewport.scrollTop += Math.min(rect.bottom - viewportRect.bottom, rect.top - viewportRect.top)
+  }
+
+  /** Returns the screen and tree to the collection header. */
+  const goToTop = () => {
+    closeMenus()
+    selection = { kind: 'header' }
+    isSelectionManual = true
+    viewport?.scrollTo({ top: 0 })
+  }
+
+  /** Reveals a prompt from its tree row, switching to the row's status group and expanding its category first. */
+  const navigateToPrompt = async (group: MockGroup, prompt: MockPrompt) => {
+    await setScreenMode(group)
+    const category = categories.find((item) => item.id === prompt.categoryId)
+    if (category && !isFinalGroup(group)) category.collapsed = false
+    selection = { kind: 'prompt', id: prompt.id }
+    isSelectionManual = true
+    navigationHighlight = { promptId: prompt.id, generation: ++navigationHighlightGeneration }
+    // Side effect: wait for an expanded category's cards to mount before measuring the target.
+    await tick()
+    revealInScreen(document.getElementById(`base-card-${prompt.id}`), PROMPT_VERTICAL_BIAS_PX)
+  }
+
+  /** Opens a category from its context menu: expands it in both panes and aligns its card near the top. */
+  const openCategory = async (group: MockGroup, category: MockCategory) => {
+    await setScreenMode(group)
+    category.collapsed = false
+    treeCollapsedCategoryIds.delete(category.id)
+    selection = { kind: 'category', id: category.id }
+    isSelectionManual = true
+    // Side effect: wait for the expanded category before aligning its card.
+    await tick()
+    revealInScreen(document.getElementById(`base-category-card-${category.id}`), CATEGORY_TOP_OFFSET_PX)
+  }
+
+  /** Creates a prompt at the top of the collection or a category from the tree, then reveals and focuses it. */
+  const addPromptFromTree = async (group: MockGroup, category?: MockCategory) => {
+    await setScreenMode(group)
+    if (category) {
+      category.collapsed = false
+      treeCollapsedCategoryIds.delete(category.id)
+    }
+    const prompt = addPrompt(category)
+    selection = { kind: 'prompt', id: prompt.id }
+    isSelectionManual = true
+    // Side effect: wait for the new card and its Monaco editor to mount before revealing and focusing it.
+    await tick()
+    revealInScreen(document.getElementById(`base-card-${prompt.id}`), PROMPT_VERTICAL_BIAS_PX)
+    mountedEditors.get(prompt.id)?.focus()
   }
   const movePrompt = (prompt: MockPrompt, direction: number) => {
     const sections = [
@@ -649,21 +920,35 @@
     if (category) category.collapsed = false
   }
 
+  /** Whether a visible blank note makes deletion the note button's main action. */
+  const isBlankVisibleNote = (prompt: MockPrompt) =>
+    Boolean(prompt.note?.visible && !prompt.note.text.trim())
+
+  /** Adds and focuses a new note, deletes a visible blank note instead of hiding it, or toggles an existing note. */
   const toggleAttachedNote = async (prompt: MockPrompt) => {
-    noteMenuId = null
+    closeMenus()
+    if (isBlankVisibleNote(prompt)) {
+      prompt.note = undefined
+      return
+    }
     if (prompt.note) {
       prompt.note.visible = !prompt.note.visible
       return
     }
     const id = window.crypto.randomUUID()
-    prompt.note = { id, text: '', minLines: 1, visible: true, isEdited: false, modifiedLabel: 'Updated just now' }
+    prompt.note = { id, text: '', minLines: 1, visible: true, isEdited: false, modifiedLabel: 'Updated today' }
     // Side effect: focus only newly added notes after their local Monaco host mounts.
     await tick()
     mountedEditors.get(id)?.focus()
   }
 
+  /** Deletes blank notes immediately and confirms deletion for notes with text. */
   const requestNoteDelete = (prompt: MockPrompt) => {
-    noteMenuId = null
+    closeMenus()
+    if (!prompt.note?.text.trim()) {
+      prompt.note = undefined
+      return
+    }
     confirmation = {
       title: 'Delete Attached Note',
       description: 'Are you sure you want to permanently delete this attached note?',
@@ -706,76 +991,181 @@
     return { destroy: () => node.removeEventListener('keydown', keydown, true) }
   }
 
+  // ---- Drag and drop shared by screen rails, tree rows, dividers, and sidebar status headers ----
   type MockDragSource = { kind: 'prompt' | 'category'; id: string; title: string }
-  type MockDropTarget = { category?: MockCategory; afterId?: string; nextCategoryId?: string | null; categoryOnly?: boolean }
+  type MockDropEdge = 'top' | 'bottom'
+  type MockEdgeMode = 'none' | 'top' | 'bottom' | 'top-and-bottom'
+  /** Drop action, 'blocked' for a drop that would change nothing, or null when the target rejects the source. */
+  type MockDropResult = (() => void) | 'blocked' | null
+  type MockDropTarget = {
+    key: string
+    /** Row edges that choose a before/after placement for this source; whole-target drops omit it. */
+    edges?: (source: MockDragSource) => MockEdgeMode
+    resolve: (source: MockDragSource, edge: MockDropEdge | null) => MockDropResult
+  }
+  /** Placement in one status group: before or after a prompt, or first in the category when neither is given. */
+  type MockPromptPlacement = { group: MockGroup; categoryId: string; beforeId?: string; afterId?: string }
   let dragSource = $state<MockDragSource | null>(null)
   let dragPosition = $state({ x: 0, y: 0 })
+  /** Hovered target and edge; blocked targets draw the gray no-op indicator. */
+  let activeDrop = $state<{ key: string; edge: MockDropEdge | null; isBlocked: boolean } | null>(null)
+  let activeDropAction: (() => void) | null = null
   const dropTargets = new SvelteMap<HTMLElement, MockDropTarget>()
-  let hoveredDropTarget: HTMLElement | null = null
 
-  const finishDrop = (target: MockDropTarget) => {
-    if (!dragSource) return
-    if (dragSource.kind === 'category') {
-      const category = categories.find((item) => item.id === dragSource?.id)
-      if (!category || target.nextCategoryId === category.id) return
-      categories = categories.filter((item) => item.id !== category.id)
-      const index = categories.findIndex((item) => item.id === target.nextCategoryId)
-      categories.splice(index < 0 ? categories.length : index, 0, category)
-    } else {
-      const prompt = allPrompts.find((item) => item.id === dragSource?.id)
-      if (!prompt || target.afterId === prompt.id) return
-      removePrompt(prompt)
-      prompt.categoryId = target.category?.id ?? 'base-root'
-      const prompts = target.category?.prompts ?? rootPrompts
-      const index = target.afterId ? prompts.findIndex((item) => item.id === target.afterId) + 1 : 0
-      prompts.splice(index, 0, prompt)
+  const getCategoryPrompts = (categoryId: string) =>
+    categories.find((category) => category.id === categoryId)?.prompts ?? rootPrompts
+
+  /** Status given to a prompt entering a group; prompts already active keep Todo or In Progress. */
+  const getGroupEntryStatus = (group: MockGroup, prompt: MockPrompt): MockPromptStatus =>
+    group === 'Active'
+      ? matchesGroup(prompt, 'Active') ? prompt.status : MockPromptStatus.Todo
+      : MockPromptStatus[group]
+
+  const movePromptTo = (prompt: MockPrompt, placement: MockPromptPlacement) => {
+    const status = getGroupEntryStatus(placement.group, prompt)
+    removePrompt(prompt)
+    prompt.categoryId = placement.categoryId
+    const prompts = getCategoryPrompts(placement.categoryId)
+    const anchorId = placement.beforeId ?? placement.afterId
+    const anchorIndex = anchorId ? prompts.findIndex((item) => item.id === anchorId) : -1
+    prompts.splice(anchorIndex < 0 ? 0 : anchorIndex + (placement.afterId ? 1 : 0), 0, prompt)
+    if (status !== prompt.status) setPromptStatus(prompt, status)
+  }
+
+  /** Resolves a prompt drop, blocking drops that leave the prompt in its current place. */
+  const resolvePromptMove = (source: MockDragSource, placement: MockPromptPlacement): MockDropResult => {
+    if (source.kind !== 'prompt') return null
+    const prompt = allPrompts.find((item) => item.id === source.id)
+    if (!prompt) return null
+    if (matchesGroup(prompt, placement.group)) {
+      // Finalized groups order by finalization time, so a move within one changes nothing.
+      if (isFinalGroup(placement.group)) return 'blocked'
+      if (prompt.categoryId === placement.categoryId) {
+        const visible = visiblePrompts(getCategoryPrompts(placement.categoryId), placement.group)
+        const index = visible.findIndex((item) => item.id === prompt.id)
+        const isNoOp = placement.beforeId !== undefined
+          ? placement.beforeId === prompt.id || placement.beforeId === visible[index + 1]?.id
+          : placement.afterId !== undefined
+            ? placement.afterId === prompt.id || placement.afterId === visible[index - 1]?.id
+            : index === 0
+        if (isNoOp) return 'blocked'
+      }
+    }
+    return () => movePromptTo(prompt, placement)
+  }
+
+  /** Resolves a category reorder before the next category, or to the end for null. */
+  const resolveCategoryMove = (source: MockDragSource, nextCategoryId: string | null): MockDropResult => {
+    if (source.kind !== 'category') return null
+    const index = categories.findIndex((category) => category.id === source.id)
+    if (index < 0) return null
+    if (nextCategoryId === source.id || (categories[index + 1]?.id ?? null) === nextCategoryId) return 'blocked'
+    return () => {
+      const [category] = categories.splice(index, 1)
+      const nextIndex = nextCategoryId ? categories.findIndex((item) => item.id === nextCategoryId) : -1
+      categories.splice(nextIndex < 0 ? categories.length : nextIndex, 0, category)
     }
   }
 
-  // Side effect: register only local divider elements, never the live screen's drag/drop targets.
-  const mockDropTarget = (node: HTMLElement, options: MockDropTarget) => {
-    dropTargets.set(node, options)
+  /** Screen divider: prompts land after its previous prompt; root boundary dividers also reorder categories. */
+  const getDividerDropTarget = (
+    category: MockCategory | undefined,
+    afterId: string | undefined,
+    nextCategoryId: string | null | undefined
+  ): MockDropTarget => ({
+    key: `divider:${category?.id ?? 'base-root'}:${afterId ?? 'initial'}`,
+    resolve: (source) => source.kind === 'category'
+      ? nextCategoryId === undefined ? null : resolveCategoryMove(source, nextCategoryId)
+      : resolvePromptMove(source, { group: screenMode, categoryId: category?.id ?? 'base-root', afterId })
+  })
+
+  /** Sidebar status header: moves a prompt into that group at the top of its category. */
+  const getStatusHeaderDropTarget = (group: MockGroup): MockDropTarget => ({
+    key: `status-header:${group}`,
+    resolve: (source) => {
+      const prompt = allPrompts.find((item) => item.id === source.id)
+      if (source.kind !== 'prompt' || !prompt) return null
+      return matchesGroup(prompt, group) ? 'blocked' : resolvePromptMove(source, { group, categoryId: prompt.categoryId })
+    }
+  })
+
+  // Side effect: register a local drop target for this mockup's gesture, never the live drag/drop registry.
+  const mockDropTarget = (node: HTMLElement, target: MockDropTarget) => {
+    dropTargets.set(node, target)
     return {
       update(next: MockDropTarget) { dropTargets.set(node, next) },
       destroy() { dropTargets.delete(node) }
     }
   }
 
-  // Side effect: own the pointer gesture, local ghost, and divider highlights until drop or Escape.
-  const mockDragHandle = (node: HTMLButtonElement, options: MockDragSource) => {
+  /** Finds the accepting target under the pointer, ignoring rows scrolled outside their scroll area. */
+  const findDropTarget = (source: MockDragSource, x: number, y: number) => {
+    for (const [element, target] of dropTargets) {
+      const rect = element.getBoundingClientRect()
+      if (!rect.height || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue
+      const clip = element.closest('[data-drop-clip]')?.getBoundingClientRect()
+      if (clip && (y < clip.top || y > clip.bottom)) continue
+      const mode = target.edges?.(source) ?? 'none'
+      const edge: MockDropEdge | null = mode === 'none'
+        ? null
+        : mode === 'top-and-bottom' ? (y < rect.top + rect.height / 2 ? 'top' : 'bottom') : mode
+      const result = target.resolve(source, edge)
+      if (result !== null) return { key: target.key, edge, result }
+    }
+    return null
+  }
+
+  /** Scrolls the screen or a tree while a drag pauses near its top or bottom edge. */
+  const autoScrollDuringDrag = (x: number, y: number) => {
+    for (const scroller of document.querySelectorAll<HTMLElement>('[data-drop-clip]')) {
+      const rect = scroller.getBoundingClientRect()
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue
+      if (y < rect.top + 32) scroller.scrollTop -= 12
+      else if (y > rect.bottom - 32) scroller.scrollTop += 12
+    }
+  }
+
+  /** A drag released over its own row would also click it; swallow that click. */
+  const suppressNextClick = () => {
+    const swallow = (event: MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    window.addEventListener('click', swallow, { capture: true, once: true })
+    window.setTimeout(() => window.removeEventListener('click', swallow, { capture: true }), 0)
+  }
+
+  // Side effect: own the pointer gesture, local ghost, and drop indicators until drop or Escape.
+  const mockDragHandle = (node: HTMLElement, options: MockDragSource & { disabled?: boolean }) => {
     let source = options
     let cleanupGesture = () => {}
     const down = (event: PointerEvent) => {
-      if (event.button !== 0 || isFinalMode) return
+      if (event.button !== 0 || source.disabled) return
       event.preventDefault()
       const startX = event.clientX
       const startY = event.clientY
+      const dragged: MockDragSource = { kind: source.kind, id: source.id, title: source.title }
       const move = (next: PointerEvent) => {
         if (!dragSource && Math.hypot(next.clientX - startX, next.clientY - startY) < 4) return
-        dragSource = source
-        dragPosition = { x: next.clientX + 12, y: next.clientY + 12 }
-        hoveredDropTarget?.removeAttribute('data-drop-over')
-        hoveredDropTarget = null
-        for (const [element, target] of dropTargets) {
-          const allowed = source.kind === 'category' ? target.nextCategoryId !== undefined : !target.categoryOnly
-          if (!allowed) continue
-          const rect = element.getBoundingClientRect()
-          if (next.clientX >= rect.left && next.clientX <= rect.right && next.clientY >= rect.top && next.clientY <= rect.bottom) {
-            hoveredDropTarget = element
-            element.setAttribute('data-drop-over', 'true')
-            break
-          }
+        if (!dragSource) {
+          closeMenus()
+          dragSource = dragged
         }
-        if (viewport) {
-          const rect = viewport.getBoundingClientRect()
-          if (next.clientY < rect.top + 40) viewport.scrollTop -= 20
-          if (next.clientY > rect.bottom - 40) viewport.scrollTop += 20
+        dragPosition = { x: next.clientX + 4, y: next.clientY + 4 }
+        const hit = findDropTarget(dragged, next.clientX, next.clientY)
+        activeDropAction = typeof hit?.result === 'function' ? hit.result : null
+        const isBlocked = hit?.result === 'blocked'
+        if (activeDrop?.key !== hit?.key || activeDrop?.edge !== hit?.edge || activeDrop?.isBlocked !== isBlocked) {
+          activeDrop = hit ? { key: hit.key, edge: hit.edge, isBlocked } : null
         }
+        autoScrollDuringDrag(next.clientX, next.clientY)
       }
       const up = () => {
-        const target = hoveredDropTarget ? dropTargets.get(hoveredDropTarget) : null
-        if (target) finishDrop(target)
+        const wasDragging = dragSource !== null
+        const action = activeDropAction
         cleanupGesture()
+        action?.()
+        if (wasDragging) suppressNextClick()
       }
       const cancel = (next: KeyboardEvent) => { if (next.key === 'Escape') cleanupGesture() }
       cleanupGesture = () => {
@@ -783,8 +1173,8 @@
         document.removeEventListener('pointerup', up)
         document.removeEventListener('pointercancel', cleanupGesture)
         document.removeEventListener('keydown', cancel)
-        hoveredDropTarget?.removeAttribute('data-drop-over')
-        hoveredDropTarget = null
+        activeDrop = null
+        activeDropAction = null
         dragSource = null
       }
       document.addEventListener('pointermove', move)
@@ -794,9 +1184,393 @@
     }
     node.addEventListener('pointerdown', down)
     return {
-      update(next: MockDragSource) { source = next },
+      update(next: MockDragSource & { disabled?: boolean }) { source = next },
       destroy() { cleanupGesture(); node.removeEventListener('pointerdown', down) }
     }
+  }
+
+  // ---- Tab Collection Sidebar ----
+  /** Sidebar width follows the live app's 275px default and 240–400px resize range. */
+  let sidebarWidth = $state(275)
+  let isResizingSidebar = $state(false)
+  let sidebarElement = $state<HTMLElement | null>(null)
+
+  // Side effect: capture the sash pointer and clamp the sidebar width until release.
+  const startSidebarResize = (event: PointerEvent) => {
+    const sash = event.currentTarget as HTMLElement
+    const startX = event.clientX
+    const startWidth = sidebarWidth
+    const resize = (moveEvent: PointerEvent) => {
+      sidebarWidth = Math.min(400, Math.max(240, startWidth + moveEvent.clientX - startX))
+    }
+    const stop = () => {
+      isResizingSidebar = false
+      sash.removeEventListener('pointermove', resize)
+      sash.removeEventListener('pointerup', stop)
+      sash.removeEventListener('pointercancel', stop)
+    }
+    event.preventDefault()
+    sash.setPointerCapture(event.pointerId)
+    isResizingSidebar = true
+    sash.addEventListener('pointermove', resize)
+    sash.addEventListener('pointerup', stop)
+    sash.addEventListener('pointercancel', stop)
+  }
+
+  /** Sidebar keeps finalized sections above the category-ordered workflows. */
+  const sidebarGroups: MockGroup[] = ['Completed', 'Archived', 'Active', 'Backlog']
+  const groupIcons: Record<MockGroup, ComponentType> = {
+    Active: ListTodo,
+    Backlog: Clock,
+    Completed: CircleCheckBig,
+    Archived: Archive
+  }
+  /** Finalized sections appear only after their toolbar toggle or a header filter selects them. */
+  let shownFinalGroups = $state<Record<MockFinalGroup, boolean>>({ Completed: false, Archived: false })
+  const groupCounts = $derived(Object.fromEntries(groups.map((group) =>
+    [group, allPrompts.filter((prompt) => matchesGroup(prompt, group)).length])) as Record<MockGroup, number>)
+
+  /** Shows a finalized group at the top of the screen, or leaves it for the latest visible group when hidden. */
+  const toggleFinalGroup = (group: MockFinalGroup) => {
+    closeMenus()
+    toggledAccordionHeights = null
+    if (!shownFinalGroups[group]) {
+      shownFinalGroups[group] = true
+      scrollTopByMode[group] = 0
+      void setScreenMode(group)
+      return
+    }
+    shownFinalGroups[group] = false
+    if (screenMode !== group) return
+    const returnMode = modeHistory.find((mode) => mode !== group && (!isFinalGroup(mode) || shownFinalGroups[mode]))
+    void setScreenMode(returnMode ?? 'Active')
+  }
+
+  // Sidebar status accordion: proportional section heights, header toggles, and sashes between expanded sections.
+  const ACCORDION_COLLAPSED_HEIGHT_PX = 36
+  /** The 36px header plus the live 64px minimum content height. */
+  const ACCORDION_MINIMUM_EXPANDED_HEIGHT_PX = 100
+  type MockAccordionSection = { group: MockGroup; expanded: boolean; weightPx: number }
+  /** Expansion and configured height weight per section; Active starts at 400px and the others at 200px. */
+  let accordionSections = $state<Record<MockGroup, { expanded: boolean; weightPx: number }>>({
+    Active: { expanded: true, weightPx: 400 },
+    Backlog: { expanded: true, weightPx: 200 },
+    Completed: { expanded: true, weightPx: 200 },
+    Archived: { expanded: true, weightPx: 200 }
+  })
+  const resolvedAccordionSections = $derived<MockAccordionSection[]>(sidebarGroups
+    .filter((group) => !isFinalGroup(group) || shownFinalGroups[group])
+    .map((group) => ({ group, ...accordionSections[group] })))
+  let accordionElement = $state<HTMLDivElement | null>(null)
+  let accordionHeightPx = $state(0)
+  /** Heights captured by a header toggle so headers above it keep their positions. */
+  let toggledAccordionHeights = $state<Record<string, number> | null>(null)
+  let accordionDragGroup = $state<MockGroup | null>(null)
+  let accordionDragHeights = $state<Record<string, number> | null>(null)
+
+  /** Gives collapsed sections their header height and shares the rest by weight, honoring minimum heights. */
+  const calculateAccordionHeights = (sections: MockAccordionSection[], availableHeightPx: number) => {
+    const heights: Record<string, number> = {}
+    let unallocated = sections.filter((section) => section.expanded)
+    const collapsedHeightPx = (sections.length - unallocated.length) * ACCORDION_COLLAPSED_HEIGHT_PX
+    let remainingHeightPx = Math.max(
+      unallocated.length * ACCORDION_MINIMUM_EXPANDED_HEIGHT_PX,
+      availableHeightPx - collapsedHeightPx
+    )
+    for (const section of sections) {
+      if (!section.expanded) heights[section.group] = ACCORDION_COLLAPSED_HEIGHT_PX
+    }
+    while (unallocated.length > 0) {
+      const scale = remainingHeightPx / unallocated.reduce((sum, section) => sum + section.weightPx, 0)
+      const constrained = unallocated.filter((section) => section.weightPx * scale < ACCORDION_MINIMUM_EXPANDED_HEIGHT_PX)
+      if (constrained.length === 0) {
+        for (const section of unallocated) heights[section.group] = section.weightPx * scale
+        break
+      }
+      for (const section of constrained) {
+        heights[section.group] = ACCORDION_MINIMUM_EXPANDED_HEIGHT_PX
+        remainingHeightPx -= ACCORDION_MINIMUM_EXPANDED_HEIGHT_PX
+      }
+      unallocated = unallocated.filter((section) => !constrained.includes(section))
+    }
+    return heights
+  }
+  const accordionHeights = $derived(
+    accordionDragHeights ?? toggledAccordionHeights ?? calculateAccordionHeights(resolvedAccordionSections, accordionHeightPx)
+  )
+
+  /** Shrinks expanded sections in the given order without crossing their minimum and returns the absorbed height. */
+  const shrinkAccordionSections = (
+    sections: MockAccordionSection[],
+    heights: Record<string, number>,
+    indexes: number[],
+    requestedHeightPx: number
+  ) => {
+    let remainingHeightPx = requestedHeightPx
+    for (const index of indexes) {
+      const section = sections[index]
+      if (!section.expanded) continue
+      const absorbedHeightPx = Math.max(0, Math.min(remainingHeightPx, heights[section.group] - ACCORDION_MINIMUM_EXPANDED_HEIGHT_PX))
+      heights[section.group] -= absorbedHeightPx
+      remainingHeightPx -= absorbedHeightPx
+      if (remainingHeightPx === 0) break
+    }
+    return requestedHeightPx - remainingHeightPx
+  }
+
+  /** Collapses into the last expanded section, or expands by taking space from below first, then above. */
+  const toggleAccordionSection = (group: MockGroup) => {
+    const sections = resolvedAccordionSections
+    const index = sections.findIndex((section) => section.group === group)
+    const nextSections = sections.map((section) =>
+      section.group === group ? { ...section, expanded: !section.expanded } : section)
+    const heights = { ...accordionHeights }
+    if (sections[index].expanded) {
+      const releasedHeightPx = heights[group] - ACCORDION_COLLAPSED_HEIGHT_PX
+      const receivingSection = nextSections.findLast((section) => section.expanded)
+      heights[group] = ACCORDION_COLLAPSED_HEIGHT_PX
+      if (receivingSection) heights[receivingSection.group] += releasedHeightPx
+    } else {
+      const targetHeightPx = calculateAccordionHeights(nextSections, accordionHeightPx)[group]
+      const unusedHeightPx = Math.max(0, accordionHeightPx - Object.values(heights).reduce((sum, height) => sum + height, 0))
+      let remainingHeightPx = Math.max(0, targetHeightPx - heights[group] - unusedHeightPx)
+      const belowIndexes = nextSections.map((_, sectionIndex) => sectionIndex).filter((sectionIndex) => sectionIndex > index).reverse()
+      remainingHeightPx -= shrinkAccordionSections(nextSections, heights, belowIndexes, remainingHeightPx)
+      if (remainingHeightPx > 0) {
+        const aboveIndexes = nextSections.map((_, sectionIndex) => sectionIndex).filter((sectionIndex) => sectionIndex < index).reverse()
+        shrinkAccordionSections(nextSections, heights, aboveIndexes, remainingHeightPx)
+      }
+      heights[group] = targetHeightPx
+    }
+    accordionSections[group].expanded = !accordionSections[group].expanded
+    toggledAccordionHeights = heights
+  }
+
+  /** An expanded section has a sash when an expanded section above it can trade height. */
+  const canResizeAccordionSection = (group: MockGroup) => {
+    const index = resolvedAccordionSections.findIndex((section) => section.group === group)
+    return index > 0 && resolvedAccordionSections[index].expanded &&
+      resolvedAccordionSections.slice(0, index).some((section) => section.expanded)
+  }
+
+  /** The first of a trailing run of collapsed sections stays at the bottom. */
+  const isAccordionSectionBottomAnchored = (group: MockGroup) => {
+    const index = resolvedAccordionSections.findIndex((section) => section.group === group)
+    if (index <= 0 || resolvedAccordionSections[index].expanded) return false
+    return resolvedAccordionSections[index - 1].expanded &&
+      resolvedAccordionSections.slice(index + 1).every((section) => !section.expanded)
+  }
+
+  // Side effect: capture a section sash, trade height with the sections above or below, then keep the new weights.
+  const startAccordionResize = (group: MockGroup, event: PointerEvent) => {
+    if (event.button !== 0 || accordionDragGroup || !canResizeAccordionSection(group)) return
+    event.preventDefault()
+    event.stopPropagation()
+    const sash = event.currentTarget as HTMLElement
+    const sections = resolvedAccordionSections
+    const index = sections.findIndex((section) => section.group === group)
+    const startY = event.clientY
+    const startHeights = { ...accordionHeights }
+    let hasChanged = false
+    accordionDragGroup = group
+    accordionDragHeights = { ...startHeights }
+    toggledAccordionHeights = null
+    document.body.style.cursor = 'ns-resize'
+    const resize = (moveEvent: PointerEvent) => {
+      const deltaPx = moveEvent.clientY - startY
+      const heights = { ...startHeights }
+      let absorbedPx = 0
+      if (deltaPx > 0) {
+        const shrinkingIndexes = sections.map((_, sectionIndex) => sectionIndex).filter((sectionIndex) => sectionIndex >= index)
+        absorbedPx = shrinkAccordionSections(sections, heights, shrinkingIndexes, deltaPx)
+        heights[sections.slice(0, index).findLast((section) => section.expanded)!.group] += absorbedPx
+      } else if (deltaPx < 0) {
+        const shrinkingIndexes = sections.map((_, sectionIndex) => sectionIndex).filter((sectionIndex) => sectionIndex < index).reverse()
+        absorbedPx = shrinkAccordionSections(sections, heights, shrinkingIndexes, -deltaPx)
+        heights[group] += absorbedPx
+      }
+      if (absorbedPx > 0) hasChanged = true
+      accordionDragHeights = heights
+    }
+    const stop = () => {
+      if (hasChanged && accordionDragHeights) {
+        for (const section of sections) {
+          if (section.expanded) accordionSections[section.group].weightPx = accordionDragHeights[section.group]
+        }
+      }
+      accordionDragGroup = null
+      accordionDragHeights = null
+      document.body.style.cursor = ''
+      sash.removeEventListener('pointermove', resize)
+      sash.removeEventListener('pointerup', stop)
+      sash.removeEventListener('pointercancel', stop)
+    }
+    sash.setPointerCapture(event.pointerId)
+    sash.addEventListener('pointermove', resize)
+    sash.addEventListener('pointerup', stop)
+    sash.addEventListener('pointercancel', stop)
+  }
+
+  // Side effect: measure the accordion's available height and drop toggle snapshots whenever it resizes.
+  $effect(() => {
+    if (!accordionElement) return
+    const element = accordionElement
+    const observer = new ResizeObserver(() => {
+      accordionHeightPx = element.clientHeight
+      toggledAccordionHeights = null
+    })
+    accordionHeightPx = element.clientHeight
+    observer.observe(element)
+    return () => observer.disconnect()
+  })
+
+  // Prompt tree rows per status group; category expansion is shared by every tree, like the live per-category key.
+  type MockTreeRow =
+    | { kind: 'prompt'; key: string; prompt: MockPrompt; indent: 0 | 1; isLastRow: boolean }
+    | { kind: 'category'; key: string; category: MockCategory; isExpanded: boolean }
+    | { kind: 'empty-category'; key: string; category: MockCategory }
+  const treeCollapsedCategoryIds = new SvelteSet<string>()
+  const getTreeRows = (group: MockGroup): MockTreeRow[] => {
+    if (isFinalGroup(group)) {
+      const prompts = allPrompts.filter((prompt) => matchesGroup(prompt, group))
+        .sort((left, right) => (right.finalizedAt ?? 0) - (left.finalizedAt ?? 0))
+      return prompts.map((prompt, index) =>
+        ({ kind: 'prompt', key: `prompt:${prompt.id}`, prompt, indent: 0, isLastRow: index === prompts.length - 1 }))
+    }
+    const rows: MockTreeRow[] = []
+    const uncategorized = visiblePrompts(rootPrompts, group)
+    uncategorized.forEach((prompt, index) =>
+      rows.push({ kind: 'prompt', key: `prompt:${prompt.id}`, prompt, indent: 0, isLastRow: index === uncategorized.length - 1 }))
+    for (const category of categories) {
+      const isExpanded = !treeCollapsedCategoryIds.has(category.id)
+      rows.push({ kind: 'category', key: `category:${category.id}`, category, isExpanded })
+      if (!isExpanded) continue
+      const prompts = visiblePrompts(category.prompts, group)
+      if (prompts.length === 0) rows.push({ kind: 'empty-category', key: `empty:${category.id}`, category })
+      prompts.forEach((prompt, index) =>
+        rows.push({ kind: 'prompt', key: `prompt:${prompt.id}`, prompt, indent: 1, isLastRow: index === prompts.length - 1 }))
+    }
+    return rows
+  }
+  const treeRowsByGroup = $derived(Object.fromEntries(groups.map((group) => [group, getTreeRows(group)])) as Record<MockGroup, MockTreeRow[]>)
+  const areAllTreeCategoriesCollapsed = $derived(
+    categories.length > 0 && categories.every((category) => treeCollapsedCategoryIds.has(category.id))
+  )
+  const toggleTreeCategory = (categoryId: string) => {
+    if (treeCollapsedCategoryIds.has(categoryId)) treeCollapsedCategoryIds.delete(categoryId)
+    else treeCollapsedCategoryIds.add(categoryId)
+  }
+  const toggleAllTreeCategories = () => {
+    closeMenus()
+    if (areAllTreeCategoriesCollapsed) treeCollapsedCategoryIds.clear()
+    else for (const category of categories) treeCollapsedCategoryIds.add(category.id)
+  }
+
+  /** The header selection highlights the first row of the displayed group's tree. */
+  const selectedTreeRowKey = $derived(selection.kind === 'header'
+    ? (treeRowsByGroup[screenMode][0]?.key ?? null)
+    : `${selection.kind}:${selection.id}`)
+  /** Live row states: active rows keep their fill and other rows lose hover feedback during a drag. */
+  const getTreeRowState = (group: MockGroup, key: string, source: MockDragSource) =>
+    dragSource?.kind === source.kind && dragSource.id === source.id
+      ? 'dragging'
+      : group === screenMode && selectedTreeRowKey === key
+        ? dragSource ? 'drag-active' : 'active'
+        : dragSource ? 'drag-idle' : 'idle'
+
+  /** Tree drop edges inset by one indent for drops into a category, matching the live 15px + 12px-per-level rule. */
+  const getTreeIndicatorInsetPx = (indent: number) => 15 + indent * 12
+
+  /** Tree prompt row: prompts land before or after it; the first tree row also accepts its top edge. */
+  const getTreePromptDropTarget = (group: MockGroup, row: Extract<MockTreeRow, { kind: 'prompt' }>, isFirstRow: boolean): MockDropTarget => ({
+    key: `tree:${group}:${row.key}`,
+    edges: (source) => source.kind === 'prompt' ? (isFirstRow ? 'top-and-bottom' : 'bottom') : 'none',
+    resolve: (source, edge) => resolvePromptMove(source, {
+      group,
+      categoryId: isFinalGroup(group) && source.kind === 'prompt'
+        ? (allPrompts.find((item) => item.id === source.id)?.categoryId ?? 'base-root')
+        : row.prompt.categoryId,
+      ...(edge === 'top' ? { beforeId: row.prompt.id } : { afterId: row.prompt.id })
+    })
+  })
+
+  /** Tree category row: prompts drop into the category; categories drop before it. */
+  const getTreeCategoryDropTarget = (group: MockGroup, category: MockCategory, isFirstRow: boolean): MockDropTarget => ({
+    key: `tree:${group}:category:${category.id}`,
+    edges: (source) => source.kind === 'category' ? 'top' : isFirstRow ? 'top-and-bottom' : 'bottom',
+    resolve: (source, edge) => source.kind === 'category'
+      ? resolveCategoryMove(source, category.id)
+      : edge === 'top'
+        ? resolvePromptMove(source, { group, categoryId: 'base-root' })
+        : resolvePromptMove(source, { group, categoryId: category.id })
+  })
+
+  /** Tree bottom spacer: categories move to the end; finalized trees accept prompts. */
+  const getTreeBottomDropTarget = (group: MockGroup): MockDropTarget => ({
+    key: `tree:${group}:bottom-spacer`,
+    edges: () => 'top',
+    resolve: (source) => isFinalGroup(group)
+      ? getStatusHeaderDropTarget(group).resolve(source, null)
+      : resolveCategoryMove(source, null)
+  })
+
+  /** Empty status tree: prompts drop at the top of the collection, or into a finalized group. */
+  const getTreeEmptyDropTarget = (group: MockGroup): MockDropTarget => ({
+    key: `tree:${group}:empty`,
+    edges: () => 'top',
+    resolve: (source) => isFinalGroup(group)
+      ? getStatusHeaderDropTarget(group).resolve(source, null)
+      : resolvePromptMove(source, { group, categoryId: 'base-root' })
+  })
+
+  /** Plain boundary after a screen category card: accepts only category reorders. */
+  const getCategorySeparatorDropTarget = (categoryId: string, nextCategoryId: string | null): MockDropTarget => ({
+    key: `separator:${categoryId}`,
+    resolve: (source) => resolveCategoryMove(source, nextCategoryId)
+  })
+
+  // Side effect: keep the selected row visible in its status tree, scrolling only as far as needed.
+  $effect(() => {
+    const key = selectedTreeRowKey
+    const group = screenMode
+    if (!key || !sidebarElement) return
+    const sidebar = sidebarElement
+    window.requestAnimationFrame(() => {
+      const row = sidebar.querySelector<HTMLElement>(`[data-tree-group="${group}"] [data-tree-row-key="${key}"]`)
+      const scroller = row?.closest<HTMLElement>('.base-tree-scroll')
+      if (!row || !scroller) return
+      const rowRect = row.getBoundingClientRect()
+      const scrollerRect = scroller.getBoundingClientRect()
+      if (rowRect.top < scrollerRect.top) scroller.scrollTop -= scrollerRect.top - rowRect.top
+      else if (rowRect.bottom > scrollerRect.bottom) scroller.scrollTop += rowRect.bottom - scrollerRect.bottom
+    })
+  })
+
+  /** Opens the Selected Collection Actions or a category context menu at the cursor. */
+  const toggleCollectionActions = (event: MouseEvent) => {
+    const isOpen = isCollectionActionsOpen
+    closeMenus()
+    if (isOpen) return
+    collectionActionsAnchor = event.currentTarget as HTMLElement
+    captureMenuPoint(event, collectionActionsAnchor)
+    isCollectionActionsOpen = true
+  }
+  const openCategoryMenu = async (event: MouseEvent, group: MockGroup, categoryId: string) => {
+    event.preventDefault()
+    if (event.button !== 2) return
+    const anchor = event.currentTarget as HTMLElement
+    captureMenuPoint(event, anchor, true)
+    closeMenus()
+    // Side effect: let an open menu unmount first, so a repeated right-click reopens it at the new cursor point.
+    await tick()
+    categoryMenu = { group, categoryId, anchor }
+  }
+  const requestCollectionDelete = () => {
+    closeMenus()
+    confirmation = { title: 'Delete Collection',
+      description: 'This collection and everything inside it will be permanently deleted, including completed and archived prompts.',
+      acknowledgement: 'Yes, I want to delete this collection and all of its contents.',
+      submit: 'Delete collection', confirm: () => { rootPrompts = []; categories = [] } }
   }
   let nameDialog = $state<{ value: string; save: (value: string) => void } | null>(null)
   let nameInteracted = $state(false)
@@ -888,6 +1662,20 @@
     managementDrafts = []
     selectedCategoryId = null
     shouldFocusManagementName = false
+  }
+
+  /** Close, X, and Escape ask before discarding changed drafts, like the live management dialogs. */
+  const requestCloseManageCategories = () => {
+    if (!managementHasChanges) {
+      closeManageCategories()
+      return
+    }
+    confirmation = {
+      title: 'Discard Changes',
+      description: 'Your unsaved changes will be lost.',
+      submit: 'Discard changes',
+      confirm: closeManageCategories
+    }
   }
 
   const addCategoryDraft = () => {
@@ -1081,9 +1869,73 @@
       if ('visible' in document) {
         const note = document as MockAttachedNote
         note.isEdited = true
-        note.modifiedLabel = 'Updated just now'
+        note.modifiedLabel = 'Updated today'
       } else if ('isEdited' in document) markPromptEdited(document as MockPrompt)
     })
+
+    /** Prompt whose body or attached note this editor shows; category descriptions have none. */
+    const getOwnerPrompt = () => 'visible' in document
+      ? allPrompts.find((prompt) => prompt.note?.id === document.id)
+      : allPrompts.find((prompt) => prompt.id === document.id)
+    const getTitleInput = (prompt: MockPrompt) =>
+      window.document.getElementById(`base-card-${prompt.id}`)?.querySelector<HTMLInputElement>('input') ?? null
+
+    // Plain ArrowUp at the body's start moves to the title's end, ArrowDown at its end moves to the note's start,
+    // and ArrowUp at the note's start returns to the body's end; selections and open suggestions keep Monaco's keys.
+    const keyDownDisposable = editor.onKeyDown((event) => {
+      if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return
+      const isUp = event.keyCode === monaco.KeyCode.UpArrow
+      if (!isUp && event.keyCode !== monaco.KeyCode.DownArrow) return
+      const owner = getOwnerPrompt()
+      if (!owner || editor.getDomNode()?.querySelector('.suggest-widget.visible')) return
+      const isNote = 'visible' in document
+      if (isNote && !isUp) return
+      const leave = isNote
+        ? () => focusEditorAtEdge(mountedEditors.get(owner.id), 'end')
+        : isUp
+          ? () => {
+              const input = getTitleInput(owner)
+              input?.setSelectionRange(input.value.length, input.value.length)
+              input?.focus({ preventScroll: true })
+            }
+          : owner.note?.visible ? () => focusEditorAtEdge(mountedEditors.get(owner.note!.id), 'start') : null
+      if (!leave) return
+      const selections = editor.getSelections()
+      if (selections?.length !== 1 || !selections[0].isEmpty()) return
+      const edge = isUp ? new monaco.Position(1, 1) : editor.getModel()!.getFullModelRange().getEndPosition()
+      if (!selections[0].getPosition().equals(edge)) return
+      event.preventDefault()
+      event.stopPropagation()
+      leave()
+    })
+
+    // A prompt's title, body, and note share wheel scrolling while any of them has focus; fixed-height editors always
+    // scroll. A gesture that starts while the editor can scroll stays with it at its edge instead of moving the screen.
+    let lastWheelTimeStampMs = Number.NEGATIVE_INFINITY
+    let isWheelGestureLatchedToEditor = false
+    const handleWheelCapture = (event: WheelEvent) => {
+      const owner = getOwnerPrompt()
+      const isFocused = owner
+        ? window.document.activeElement === getTitleInput(owner) ||
+          mountedEditors.get(owner.id)?.hasWidgetFocus() === true ||
+          mountedEditors.get(owner.note?.id ?? '')?.hasWidgetFocus() === true
+        : editor.hasWidgetFocus()
+      const handleMouseWheel = document.fixedHeightPx !== undefined || isFocused
+      if (editor.getOption(monaco.editor.EditorOption.scrollbar).handleMouseWheel !== handleMouseWheel) {
+        editor.updateOptions({ scrollbar: { handleMouseWheel } })
+      }
+      if (!isFocused || event.deltaY === 0) return
+      const scrollTop = editor.getScrollTop()
+      const canEditorScroll = event.deltaY > 0
+        ? scrollTop + editor.getLayoutInfo().height < editor.getScrollHeight()
+        : scrollTop > 0
+      if (event.timeStamp - lastWheelTimeStampMs > 250) isWheelGestureLatchedToEditor = canEditorScroll
+      lastWheelTimeStampMs = event.timeStamp
+      if (!isWheelGestureLatchedToEditor || canEditorScroll) return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    host.addEventListener('wheel', handleWheelCapture, { capture: true, passive: false })
 
     let isDisposed = false
     const cleanup = () => {
@@ -1091,6 +1943,8 @@
       isDisposed = true
       contentSizeDisposable.dispose()
       contentDisposable.dispose()
+      keyDownDisposable.dispose()
+      host.removeEventListener('wheel', handleWheelCapture, { capture: true })
       const viewState = editor.saveViewState()
       if (viewState) editorViewStates.set(document.id, viewState)
       editorHeightSync.delete(document.id)
@@ -1107,6 +1961,20 @@
       cleanup()
       editorCleanupCallbacks.delete(cleanup)
     }
+  }
+
+  /** Focuses an editor with one collapsed cursor at the document edge facing the field being left. */
+  const focusEditorAtEdge = (
+    editor: monaco.editor.IStandaloneCodeEditor | undefined,
+    edge: 'start' | 'end'
+  ) => {
+    if (!editor) return
+    const position = edge === 'start'
+      ? new monaco.Position(1, 1)
+      : editor.getModel()!.getFullModelRange().getEndPosition()
+    editor.setPosition(position, 'keyboard')
+    editor.revealPosition(position)
+    editor.focus()
   }
 
   const mountMockupMonaco = (node: HTMLElement, document: MockDocument) => {
@@ -1134,16 +2002,15 @@
   // Side effect: handle sandbox find and dismiss open mock dialogs and menus; remove the listener on unmount.
   $effect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
+      // Escape closes only the top-most layer, so a discard confirmation can sit above Manage Categories.
       if (event.key === 'Escape') {
-        closeTemplateDialog()
-        nameDialog = null
-        closeManageCategories()
-        confirmation = null
-        copyError = null
-        statusMenuId = null
-        deleteMenuId = null
-        noteMenuId = null
-        findOpen = false
+        if (statusMenuId || deleteMenuId || noteMenuId || isCollectionActionsOpen || categoryMenu) closeMenus()
+        else if (confirmation) confirmation = null
+        else if (copyError) copyError = null
+        else if (templateDialogPrompt) closeTemplateDialog()
+        else if (nameDialog) nameDialog = null
+        else if (manageCategoriesOpen) requestCloseManageCategories()
+        else findOpen = false
       }
       if (event.ctrlKey && event.key.toLowerCase() === 'f' && !templateDialogPrompt && !nameDialog && !manageCategoriesOpen && !confirmation) {
         event.preventDefault()
@@ -1238,17 +2105,49 @@
     disabled={options.disabled}
     onclick={options.onclick}
   >
-    <Icon
-      class={options.iconClass}
-      size={options.iconSize ??
-        (options.size === undefined || options.size === 'default' || options.size === 'compact-large-icon'
-          ? 20
-          : options.size === 'tiny'
-            ? 14
-            : 16)}
-      aria-hidden="true"
-    />
+    {#if options.iconNode}
+      <LucideIcon
+        name="notebook-x"
+        iconNode={options.iconNode}
+        class={options.iconClass}
+        size={options.iconSize ?? 20}
+        aria-hidden="true"
+      />
+    {:else}
+      <Icon
+        class={options.iconClass}
+        size={options.iconSize ??
+          (options.size === undefined || options.size === 'default' || options.size === 'compact-large-icon'
+            ? 20
+            : options.size === 'tiny'
+              ? 14
+              : 16)}
+        aria-hidden="true"
+      />
+    {/if}
   </button>
+{/snippet}
+
+<!-- Live MoveHereIndicator: blue bars around a Move Here label, or one gray bar when the drop changes nothing. -->
+{#snippet MoveHereIndicator(isBlocked: boolean)}
+  <div class="base-move-here" data-blocked={isBlocked ? 'true' : 'false'} aria-hidden="true">
+    <span class="base-move-here-bar"></span>
+    {#if !isBlocked}
+      <span class="base-move-here-label text-sm"><span>Move Here</span></span>
+      <span class="base-move-here-bar"></span>
+    {/if}
+  </div>
+{/snippet}
+
+<!-- Live DropIndicator: a chevron and line on a tree row's top or bottom edge. -->
+{#snippet TreeDropIndicator(edge: 'top' | 'bottom', insetPx: number, isBlocked: boolean)}
+  <div class="base-tree-drop-indicator" data-edge={edge} data-blocked={isBlocked ? 'true' : 'false'}
+    style={`--base-drop-inset:${insetPx}px;`} aria-hidden="true">
+    <svg width="100%" height="10">
+      <path d="M3 1.5 L8 5 L3 8.5" />
+      <line x1="8" y1="5" x2="100%" y2="5"></line>
+    </svg>
+  </div>
 {/snippet}
 
 {#snippet IconCell(Icon: ComponentType, large = false)}
@@ -1295,6 +2194,7 @@
             ? selectedTemplateIds.has(template.id)
             : undefined}
           onclick={() => selectTemplate(template)}
+          ondblclick={templateDialogMode === 'select' ? () => selectAndCopyTemplate(template) : undefined}
         >
           <span
             class="base-template-guide"
@@ -1372,7 +2272,7 @@
     </div>
     {#if statusMenuId === prompt.id && statusAnchor}
       <div class="base-status-menu" role="menu" aria-label="Change status More Options"
-        use:mountMockMenu={{ anchor: statusAnchor, width: 260 }}>
+        use:mountMockMenu={{ anchor: statusAnchor }}>
         {#each statusItems.filter((item) => item.id !== prompt.status && item.id !== 'Archived') as item (item.id)}
           <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => setPromptStatus(prompt, item.id)}>
             <span class="base-status-menu-icon" data-status={item.id}><item.icon size={18} aria-hidden="true" /></span>
@@ -1388,30 +2288,40 @@
 {/snippet}
 
 {#snippet AttachedNoteControl(prompt: MockPrompt)}
-  {@const label = !prompt.note ? 'Add attached note' : prompt.note.visible ? 'Hide attached note' : 'Show attached note'}
+  <!-- A visible blank note makes deletion the main action, so its options trigger is disabled. -->
+  {@const isDeleteDefault = isBlankVisibleNote(prompt)}
+  {@const label = !prompt.note
+    ? 'Add attached note'
+    : isDeleteDefault ? 'Delete attached note' : prompt.note.visible ? 'Hide attached note' : 'Show attached note'}
   <div class="base-split-button">
     {@render IconButton(!prompt.note ? NotebookPen : prompt.note.visible ? Eye : EyeOff, label, {
-      ariaPressed: prompt.note ? prompt.note.visible : undefined,
+      ariaPressed: prompt.note && !isDeleteDefault ? prompt.note.visible : undefined,
+      hoverVariant: isDeleteDefault ? 'danger' : 'neutral',
+      iconNode: isDeleteDefault ? notebookXIconNode : undefined,
       onclick: () => { void toggleAttachedNote(prompt) }
     })}
     <span class="base-split-separator" aria-hidden="true"></span>
     {@render IconButton(ChevronDown, `${label} More Options`, {
-      disabled: !prompt.note,
+      disabled: !prompt.note || isDeleteDefault,
       active: noteMenuId === prompt.id,
       ariaExpanded: noteMenuId === prompt.id,
       ariaHaspopup: 'menu',
       onclick: (event) => {
-        statusMenuId = null
-        deleteMenuId = null
+        const isOpen = noteMenuId === prompt.id
+        closeMenus()
+        if (isOpen) return
         noteAnchor = event.currentTarget as HTMLElement
-        noteMenuId = noteMenuId === prompt.id ? null : prompt.id
+        captureMenuPoint(event, noteAnchor)
+        noteMenuId = prompt.id
       }
     })}
     {#if noteMenuId === prompt.id && noteAnchor}
       <div class="base-status-menu" role="menu" aria-label="Attached note actions"
-        use:mountMockMenu={{ anchor: noteAnchor, width: 240 }}>
+        use:mountMockMenu={{ anchor: noteAnchor }}>
         <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => requestNoteDelete(prompt)}>
-          <span class="base-status-menu-icon" data-action="delete"><Trash2 size={20} aria-hidden="true" /></span>
+          <span class="base-status-menu-icon" data-action="delete">
+            <LucideIcon name="notebook-x" iconNode={notebookXIconNode} size={20} aria-hidden="true" />
+          </span>
           <span class="base-status-menu-text">
             <span class="base-status-menu-title text-sm leading-4.5">Delete Note</span>
             <span class="base-status-menu-subtitle text-xs">Permanently delete attached note</span>
@@ -1461,22 +2371,32 @@
 
 {#snippet Divider(category?: MockCategory, afterId?: string, nextCategoryId?: string | null)}
   {#if !isFinalMode}
-  <div class="base-divider-row" use:mockDropTarget={{ category, afterId, nextCategoryId }}>
-    <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
-    <button type="button" class="base-divider-line-button" tabindex="-1" aria-label="Add Prompt from left separator" onclick={() => addPrompt(category, afterId)}>
-      {@render Separator()}
-    </button>
-    <div class="base-divider-actions">
-      <button type="button" class="base-divider-action-button text-xs leading-4" aria-label="Add Prompt" onclick={() => addPrompt(category, afterId)}>
-        <Plus size={13} aria-hidden="true" />
-        <span>Add Prompt</span>
-      </button>
-
+    {@const dropTarget = getDividerDropTarget(category, afterId, nextCategoryId)}
+    <!-- An empty status group keeps every Add Prompt action revealed. -->
+    <div class="base-divider-row" data-revealed={groupCounts[screenMode] === 0 ? 'true' : 'false'}
+      use:mockDropTarget={dropTarget}>
+      {#if activeDrop?.key === dropTarget.key}
+        {@render MoveHereIndicator(activeDrop.isBlocked)}
+      {:else}
+        <div class="base-divider-content">
+          <button type="button" class="base-divider-line-button" tabindex="-1" aria-label="Add Prompt from left separator"
+            onclick={() => { void addPromptFromDivider(category, afterId) }}>
+            {@render Separator()}
+          </button>
+          <div class="base-divider-actions">
+            <button type="button" class="base-divider-action-button text-xs leading-4" aria-label="Add Prompt"
+              onclick={() => { void addPromptFromDivider(category, afterId) }}>
+              <Plus size={13} aria-hidden="true" />
+              <span>Add Prompt</span>
+            </button>
+          </div>
+          <button type="button" class="base-divider-line-button" tabindex="-1" aria-label="Add Prompt from right separator"
+            onclick={() => { void addPromptFromDivider(category, afterId) }}>
+            {@render Separator()}
+          </button>
+        </div>
+      {/if}
     </div>
-    <button type="button" class="base-divider-line-button" tabindex="-1" aria-label="Add Prompt from right separator" onclick={() => addPrompt(category, afterId)}>
-      {@render Separator()}
-    </button>
-  </div>
   {:else}
     <div class="base-final-gap">{@render Separator()}</div>
   {/if}
@@ -1485,16 +2405,29 @@
 {#snippet PromptCard(prompt: MockPrompt)}
   {@const archiveDefault = prompt.status !== 'Archived' && Boolean(prompt.title.trim() || prompt.text.trim())}
   {@const titleMatches = getTitleMatches(prompt)}
+  {@const isHighlighted = navigationHighlight?.promptId === prompt.id}
+  <!-- Focus inside a card selects it in the sidebar tree, like the live prompt-interaction selection. -->
   <article
     id={`base-card-${prompt.id}`}
     class="base-editor-card base-prompt-card"
     data-testid={`base-mockup-prompt-editor-${prompt.id}`}
     data-prompt-category-id={prompt.categoryId}
+    data-follow-row="prompt"
+    data-follow-id={prompt.id}
+    data-dragging={dragSource?.kind === 'prompt' && dragSource.id === prompt.id ? 'true' : 'false'}
     use:promptMoveShortcuts={prompt}
+    onfocusin={() => {
+      selection = { kind: 'prompt', id: prompt.id }
+      isSelectionManual = true
+    }}
   >
     <aside class="base-editor-sidebar">
-      <button type="button" aria-label="Drag prompt" title="Drag prompt" class="base-drag-button" tabindex="-1" disabled={isFinalMode}
-        use:mockDragHandle={{ kind: 'prompt', id: prompt.id, title: prompt.title || 'Untitled prompt' }}>
+      <!-- Keyed by generation so each tree click replays the rail's violet wash. -->
+      {#key isHighlighted ? navigationHighlight?.generation : null}
+        <span class="base-rail-highlight" data-navigation-highlight={isHighlighted ? 'true' : undefined} aria-hidden="true"></span>
+      {/key}
+      <button type="button" aria-label="Drag prompt" class="base-drag-button" tabindex="-1" disabled={isFinalMode}
+        use:mockDragHandle={{ kind: 'prompt', id: prompt.id, title: prompt.title.trim() || 'New Prompt', disabled: isFinalMode }}>
         <GripVertical size={16} aria-hidden="true" />
       </button>
     </aside>
@@ -1519,9 +2452,14 @@
               oninput={() => markPromptEdited(prompt)}
               onscroll={(event) => syncTitleHighlightScroll(event.currentTarget)}
               onkeydown={(event) => {
-                if (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey)) {
+                // Plain Enter keeps the body's selection; plain ArrowDown starts at the body's first position.
+                if (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey) return
+                if (event.key === 'Enter') {
                   event.preventDefault()
                   mountedEditors.get(prompt.id)?.focus()
+                } else if (event.key === 'ArrowDown') {
+                  event.preventDefault()
+                  focusEditorAtEdge(mountedEditors.get(prompt.id), 'start')
                 }
               }} />
             </div>
@@ -1562,6 +2500,7 @@
               onclick: () => openTemplateDialog(prompt)
             })}
             {@render AttachedNoteControl(prompt)}
+            {@render IconButton(Maximize2, 'Open in editor')}
           </div>
           <span class="base-actions-separator" aria-hidden="true"></span>
           {@render StatusControl(prompt)}
@@ -1578,15 +2517,17 @@
                 ariaExpanded: deleteMenuId === prompt.id,
                 ariaHaspopup: 'menu',
                 onclick: (event) => {
-                  statusMenuId = null
-                  noteMenuId = null
+                  const isOpen = deleteMenuId === prompt.id
+                  closeMenus()
+                  if (isOpen) return
                   deleteAnchor = event.currentTarget as HTMLElement
-                  deleteMenuId = deleteMenuId === prompt.id ? null : prompt.id
+                  captureMenuPoint(event, deleteAnchor)
+                  deleteMenuId = prompt.id
                 }
               })}
               {#if deleteMenuId === prompt.id && deleteAnchor}
                 <div class="base-status-menu" role="menu" aria-label="Prompt actions"
-                  use:mountMockMenu={{ anchor: deleteAnchor, width: 240 }}>
+                  use:mountMockMenu={{ anchor: deleteAnchor }}>
                   <button class="base-status-menu-item" type="button" role="menuitem" onclick={() => {
                     deleteMenuId = null
                     if (archiveDefault) requestPromptDelete(prompt)
@@ -1620,7 +2561,8 @@
 
 {#snippet CategoryCard(category: MockCategory)}
   <section id={`base-category-${category.id}`} class="base-category-section" data-category-id={category.id} data-testid={`base-mockup-category-${category.id}`}>
-    <article class="base-editor-card base-category-card">
+    <article id={`base-category-card-${category.id}`} class="base-editor-card base-category-card"
+      data-follow-row="category" data-follow-id={category.id}>
       <aside class="base-category-sidebar">
         {#if !isFinalMode}
         <button type="button" aria-label="Drag category" title="Drag category" tabindex="-1"
@@ -1678,34 +2620,296 @@
       {/each}
     </div>
     {:else}
-      <div class="base-category-children base-collapsed-summary" use:mockDropTarget={{ category }}>
-        <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
-        <button type="button" class="text-sm leading-5" onclick={() => category.collapsed = false}>
-          {visiblePrompts(category.prompts).length} {visiblePrompts(category.prompts).length === 1 ? 'prompt' : 'prompts'} hidden. Click to expand...
-        </button>
+      {@const summaryTarget = {
+        key: `collapsed:${category.id}`,
+        resolve: (source: MockDragSource) => resolvePromptMove(source, { group: screenMode, categoryId: category.id })
+      }}
+      <div class="base-category-children base-collapsed-summary" use:mockDropTarget={summaryTarget}>
+        {#if activeDrop?.key === summaryTarget.key}
+          {@render MoveHereIndicator(activeDrop.isBlocked)}
+        {:else}
+          <button type="button" class="text-sm leading-5" onclick={() => category.collapsed = false}>
+            {visiblePrompts(category.prompts).length} {visiblePrompts(category.prompts).length === 1 ? 'prompt' : 'prompts'} hidden. Click to expand...
+          </button>
+        {/if}
       </div>
     {/if}
     <div class="base-category-bottom-cap" aria-hidden="true"></div>
   </section>
 {/snippet}
 
-<main class="base-prompt-collection-mockup" data-testid="base-prompt-collection-mockup">
+<!-- Tree guide lines: one 1px line per indent level, shown while the tree is hovered or focused. -->
+{#snippet TreeGutter(indent: number, isLastRow: boolean)}
+  <span class="base-tree-gutter" aria-hidden="true">
+    {#each Array.from({ length: indent }, (_, index) => index) as lineIndex (lineIndex)}
+      <span class="base-tree-guide" data-last={isLastRow ? 'true' : 'false'} style={`--base-guide-index:${lineIndex};`}></span>
+    {/each}
+  </span>
+{/snippet}
+
+<!-- Compact inline text action used by empty categories and empty status trees. -->
+{#snippet TreeInlineActionRow(text: string, indent: number, onclick: () => void)}
+  <div class="base-tree-inline-row" style={`--base-tree-indent:${indent};`}>
+    {#if indent > 0}{@render TreeGutter(indent, true)}{/if}
+    <div class="base-tree-inline-button-wrap">
+      <button type="button" class="base-inline-text-button text-sm leading-4.5" {onclick}>
+        <span>{text}</span>
+      </button>
+    </div>
+  </div>
+{/snippet}
+
+{#snippet TreePromptRow(group: MockGroup, row: Extract<MockTreeRow, { kind: 'prompt' }>, isFirstRow: boolean)}
+  {@const dropTarget = getTreePromptDropTarget(group, row, isFirstRow)}
+  {@const source = { kind: 'prompt' as const, id: row.prompt.id, title: row.prompt.title.trim() || 'New Prompt' }}
+  <div class="base-tree-prompt-row" data-tree-row-key={row.key} style={`--base-tree-indent:${row.indent};`}
+    use:mockDropTarget={dropTarget}>
+    <!-- The status accent overlays the row without changing its geometry. -->
+    <span class="base-status-indicator base-tree-status-indicator" data-status={row.prompt.status}
+      data-edited={row.prompt.isEdited} aria-hidden="true"></span>
+    <button type="button" class="base-tree-prompt-button" data-row-state={getTreeRowState(group, row.key, source)}
+      aria-current={group === screenMode && selectedTreeRowKey === row.key ? 'true' : undefined}
+      use:mockDragHandle={source}
+      onclick={(event) => {
+        void navigateToPrompt(group, row.prompt)
+        if (event.detail !== 0) event.currentTarget.blur()
+      }}>
+      {@render TreeGutter(row.indent, row.isLastRow)}
+      <span class="base-tree-prompt-label text-sm">{source.title}</span>
+    </button>
+    {#if activeDrop?.key === dropTarget.key && activeDrop.edge}
+      {@render TreeDropIndicator(activeDrop.edge, getTreeIndicatorInsetPx(row.indent), activeDrop.isBlocked)}
+    {/if}
+  </div>
+{/snippet}
+
+<!-- Category rows toggle tree expansion; right-click opens the category options and hover reveals Add to top. -->
+{#snippet TreeCategoryRow(group: MockGroup, row: Extract<MockTreeRow, { kind: 'category' }>, isFirstRow: boolean)}
+  {@const dropTarget = getTreeCategoryDropTarget(group, row.category, isFirstRow)}
+  {@const source = { kind: 'category' as const, id: row.category.id, title: row.category.title }}
+  <div class="base-tree-category-row" data-tree-row-key={row.key} use:mockDropTarget={dropTarget}>
+    <div class="base-tree-row" role="group" data-row-state={getTreeRowState(group, row.key, source)}
+      oncontextmenu={(event) => { void openCategoryMenu(event, group, row.category.id) }}>
+      <button type="button" class="base-tree-toggle-button"
+        aria-label={`${row.isExpanded ? 'Collapse' : 'Expand'} category ${row.category.title}`}
+        aria-expanded={row.isExpanded}
+        use:mockDragHandle={source}
+        onclick={(event) => {
+          toggleTreeCategory(row.category.id)
+          if (event.detail !== 0) event.currentTarget.blur()
+        }}>
+        <span class="base-tree-chevron" data-expanded={row.isExpanded ? 'true' : 'false'}>
+          <ChevronRight size={20} aria-hidden="true" />
+        </span>
+        <span class="base-tree-category-icon"><Folder size={16} aria-hidden="true" /></span>
+        <span class="base-tree-category-label text-sm leading-5">{row.category.title}</span>
+      </button>
+      <div class="base-tree-action-slot">
+        <div class="base-tree-category-actions">
+          <button type="button" class="base-tree-action-button" aria-label={`Add Prompt to top of category ${row.category.title}`}
+            onclick={(event) => {
+              void addPromptFromTree(group, row.category)
+              if (event.detail !== 0) event.currentTarget.blur()
+            }}>
+            <Plus size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </div>
+    {#if categoryMenu?.group === group && categoryMenu.categoryId === row.category.id}
+      <div class="base-status-menu base-simple-menu" role="menu" aria-label={`Category options for ${row.category.title}`}
+        use:mountMockMenu={{ anchor: categoryMenu.anchor, isContextMenu: true }}>
+        <button class="base-simple-menu-item" type="button" role="menuitem"
+          onclick={() => { closeMenus(); void openCategory(group, row.category) }}>
+          <ArrowRight size={16} aria-hidden="true" />
+          <span class="text-sm leading-5">Open Category</span>
+        </button>
+        <button class="base-simple-menu-item" type="button" role="menuitem"
+          onclick={() => { closeMenus(); openManageCategories(row.category.id) }}>
+          <Settings size={16} aria-hidden="true" />
+          <span class="text-sm leading-5">Open Category Settings</span>
+        </button>
+      </div>
+    {/if}
+    {#if activeDrop?.key === dropTarget.key && activeDrop.edge}
+      {@render TreeDropIndicator(activeDrop.edge, getTreeIndicatorInsetPx(activeDrop.edge === 'bottom' ? 1 : 0), activeDrop.isBlocked)}
+    {/if}
+  </div>
+{/snippet}
+
+<!-- One status group's prompt tree: uncategorized prompts, then categories with their prompts. -->
+{#snippet StatusTree(group: MockGroup)}
+  {@const rows = treeRowsByGroup[group]}
+  <div class="base-sidebar-tree" data-tree-group={group}>
+    {#if rows.length === 0}
+      {@const emptyTarget = getTreeEmptyDropTarget(group)}
+      <div class="base-tree-empty" use:mockDropTarget={emptyTarget}>
+        {@render TreeInlineActionRow(
+          `No ${group.toLowerCase()} prompts. Click to ${isFinalGroup(group) ? 'view' : 'add'}.`,
+          0,
+          () => { void (isFinalGroup(group) ? setScreenMode(group) : addPromptFromTree(group)) }
+        )}
+        {#if activeDrop?.key === emptyTarget.key && activeDrop.edge}
+          {@render TreeDropIndicator(activeDrop.edge, getTreeIndicatorInsetPx(0), activeDrop.isBlocked)}
+        {/if}
+      </div>
+    {:else}
+      {@const bottomTarget = getTreeBottomDropTarget(group)}
+      <div class="base-tree-scroll" data-drop-clip>
+        {#each rows as row, rowIndex (row.key)}
+          {#if row.kind === 'prompt'}
+            {@render TreePromptRow(group, row, rowIndex === 0)}
+          {:else if row.kind === 'category'}
+            {@render TreeCategoryRow(group, row, rowIndex === 0)}
+          {:else}
+            {@render TreeInlineActionRow('Category is empty. Click to add.', 1, () => { void addPromptFromTree(group, row.category) })}
+          {/if}
+        {/each}
+        <!-- One trailing row of space that also accepts end-of-tree drops. -->
+        <div class="base-tree-bottom-spacer" use:mockDropTarget={bottomTarget}>
+          {#if activeDrop?.key === bottomTarget.key && activeDrop.edge}
+            {@render TreeDropIndicator(activeDrop.edge, getTreeIndicatorInsetPx(0), activeDrop.isBlocked)}
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
+{/snippet}
+
+<div class="base-app-body" data-dragging={dragSource ? 'true' : 'false'} data-testid="base-prompt-collection-shell">
   {#if dragSource}
-    <div class="base-drag-ghost text-sm" style={`left:${dragPosition.x}px; top:${dragPosition.y}px;`} aria-hidden="true">
+    <div class="base-drag-ghost" style={`left:${dragPosition.x}px; top:${dragPosition.y}px;`} aria-hidden="true">
       {#if dragSource.kind === 'category'}<Folder size={16} />{:else}<FileText size={16} />{/if}
-      <span>{dragSource.title}</span>
+      <span class="text-sm">{dragSource.title}</span>
     </div>
   {/if}
+
+  <!-- Tab Collection Sidebar: the collection title and Show All, the button bar, and the status accordion. -->
+  <aside class="base-app-sidebar" style:flex-basis={`${sidebarWidth}px`} bind:this={sidebarElement}
+    data-testid="base-mockup-sidebar">
+    <header class="base-sidebar-header">
+      <div class="base-sidebar-title-group text-sm leading-4.5">
+        <FileText size={16} class="base-sidebar-title-icon" aria-hidden="true" />
+        <h2 class="base-sidebar-title">{rootTitle}</h2>
+      </div>
+      <button type="button" class="base-show-all-button text-sm leading-5">
+        <LayoutGrid size={16} aria-hidden="true" />
+        <span>Show All</span>
+      </button>
+    </header>
+    {@render Separator()}
+
+    <div class="base-sidebar-button-bar">
+      {@render IconButton(ArrowUpToLine, 'Go to Top', { borderless: true, baseVariant: 'dim', onclick: goToTop })}
+      {@render IconButton(Check, 'Show Completed Prompts', {
+        borderless: true,
+        baseVariant: 'dim',
+        active: shownFinalGroups.Completed,
+        onclick: () => toggleFinalGroup('Completed')
+      })}
+      {@render IconButton(Archive, 'Show Archived Prompts', {
+        borderless: true,
+        baseVariant: 'dim',
+        active: shownFinalGroups.Archived,
+        onclick: () => toggleFinalGroup('Archived')
+      })}
+      {@render IconButton(
+        areAllTreeCategoriesCollapsed ? ChevronsUpDown : ChevronsDownUp,
+        areAllTreeCategoriesCollapsed ? 'Expand All Categories' : 'Collapse All Categories',
+        { borderless: true, baseVariant: 'dim', onclick: toggleAllTreeCategories }
+      )}
+      {@render IconButton(MoreHorizontal, 'Selected Collection Actions', {
+        borderless: true,
+        baseVariant: 'dim',
+        active: isCollectionActionsOpen,
+        ariaExpanded: isCollectionActionsOpen,
+        ariaHaspopup: 'menu',
+        onclick: toggleCollectionActions
+      })}
+      {#if isCollectionActionsOpen && collectionActionsAnchor}
+        <div class="base-status-menu base-simple-menu" role="menu" aria-label="Selected Collection Actions"
+          use:mountMockMenu={{ anchor: collectionActionsAnchor }}>
+          <button class="base-simple-menu-item" type="button" role="menuitem" onclick={() => {
+            closeMenus()
+            nameDialog = { value: rootTitle, save: (value) => rootTitle = value }
+          }}>
+            <Pencil size={16} aria-hidden="true" />
+            <span class="text-sm leading-5">Rename Collection</span>
+          </button>
+          <button class="base-simple-menu-item" type="button" role="menuitem" onclick={() => {
+            closeMenus()
+            openManageCategories()
+          }}>
+            <FolderCog size={16} aria-hidden="true" />
+            <span class="text-sm leading-5">Manage Categories</span>
+          </button>
+          <button class="base-simple-menu-item" type="button" role="menuitem" data-variant="danger"
+            onclick={requestCollectionDelete}>
+            <Trash2 size={16} aria-hidden="true" />
+            <span class="text-sm leading-5">Delete Collection</span>
+          </button>
+        </div>
+      {/if}
+    </div>
+
+    <div class="base-accordion" bind:this={accordionElement}>
+      {#each resolvedAccordionSections as section (section.group)}
+        {@const GroupIcon = groupIcons[section.group]}
+        {@const headerTarget = getStatusHeaderDropTarget(section.group)}
+        <section class="base-accordion-section" data-expanded={section.expanded ? 'true' : 'false'}
+          data-bottom-anchored={isAccordionSectionBottomAnchored(section.group) ? 'true' : 'false'}
+          style={`--base-accordion-section-height:${accordionHeights[section.group] ?? ACCORDION_COLLAPSED_HEIGHT_PX}px;`}>
+          {#if canResizeAccordionSection(section.group)}
+            <ResizeSash
+              orientation="horizontal"
+              isDragging={accordionDragGroup === section.group}
+              label={`Resize ${section.group} section`}
+              tabindex={-1}
+              onpointerdown={(event) => startAccordionResize(section.group, event)}
+            />
+          {/if}
+          <!-- Dropping a prompt on a header moves it into that status group. -->
+          <button type="button" class="base-accordion-header" aria-expanded={section.expanded}
+            data-drop-state={activeDrop?.key === headerTarget.key ? activeDrop.isBlocked ? 'blocked' : 'over' : 'idle'}
+            use:mockDropTarget={headerTarget}
+            onclick={() => toggleAccordionSection(section.group)}>
+            <span class="base-accordion-chevron"><ChevronRight size={20} aria-hidden="true" /></span>
+            <span class="base-accordion-icon"><GroupIcon size={16} aria-hidden="true" /></span>
+            <span class="base-accordion-label text-sm leading-5">{section.group}</span>
+            <span class="base-accordion-count text-xs leading-4.5">{groupCounts[section.group]}</span>
+          </button>
+          <div class="base-accordion-content" hidden={!section.expanded}>
+            {@render StatusTree(section.group)}
+          </div>
+        </section>
+      {/each}
+    </div>
+
+    <ResizeSash
+      orientation="vertical"
+      label="Resize sidebar"
+      isDragging={isResizingSidebar}
+      tabindex={-1}
+      onpointerdown={startSidebarResize}
+    />
+  </aside>
+
+<div class="base-main-surface">
+<main class="base-prompt-collection-mockup" data-testid="base-prompt-collection-mockup">
   <div class="base-header-bar">
+    <!-- Project, collection, status group, and the category at the sample point; the project segment is inert. -->
     <div class="base-breadcrumb text-sm">
-      <button type="button" onclick={() => viewport?.scrollTo({ top: 0 })}>{rootTitle}</button>
+      <button type="button">{projectName}</button>
       <span>/</span>
-      <button type="button" onclick={() => viewport?.scrollTo({ top: 0 })}>{screenMode}</button>
+      <button type="button" onclick={goToTop}>{rootTitle}</button>
+      <span>/</span>
+      <button type="button" onclick={goToTop}>{screenMode}</button>
       {#if breadcrumbCategory}
         <span>/</span>
         <button type="button" onclick={() => {
-          const section = document.getElementById(`base-category-${breadcrumbCategory.id}`)
-          if (section && viewport) viewport.scrollTop += section.getBoundingClientRect().top - viewport.getBoundingClientRect().top - 80
+          selection = { kind: 'category', id: breadcrumbCategory.id }
+          isSelectionManual = true
+          revealInScreen(document.getElementById(`base-category-card-${breadcrumbCategory.id}`), CATEGORY_TOP_OFFSET_PX)
         }}>{breadcrumbCategory.title}</button>
       {/if}
     </div>
@@ -1722,8 +2926,16 @@
       <button type="button" class="base-find-button codicon codicon-widget-close" title="Close" aria-label="Close find" onclick={() => findOpen = false}></button>
     </div>
   {/if}
-  <div class="base-content-viewport" bind:this={viewport} bind:clientHeight={viewportHeight} onscroll={updateBreadcrumb}>
-    <section class="base-root-header">
+  <!-- Scrolling records the group's offset, updates the breadcrumb, and moves the tree selection with the centered row;
+       wheel and scrollbar input release a selection held by the tree, breadcrumb, or a focused card. -->
+  <div class="base-content-viewport" data-drop-clip bind:this={viewport} bind:clientHeight={viewportHeight}
+    onscroll={() => {
+      if (viewport) scrollTopByMode[screenMode] = viewport.scrollTop
+      updateBreadcrumb()
+      if (!isSelectionManual) followCenterRow()
+    }}
+    use:releaseSelectionOnUserScroll>
+    <section class="base-root-header" data-follow-row="header">
       <div class="base-root-title-row">
         <div class="base-root-title-block">
           {@render IconCell(FileText, true)}
@@ -1747,7 +2959,7 @@
           {#each groups as group (group)}
             <button class="text-sm leading-5" type="button" aria-pressed={screenMode === group}
               onclick={() => selectGroup(group)}>
-              <span class="base-filter-label">{group} <span class="base-filter-count text-xs leading-4.5">{allPrompts.filter((prompt) => matchesGroup(prompt, group)).length}</span></span>
+              <span class="base-filter-label">{group} <span class="base-filter-count text-xs leading-4.5">{groupCounts[group]}</span></span>
             </button>
           {/each}
         </div>
@@ -1759,10 +2971,7 @@
           </button>
           <span class="base-root-action-divider" aria-hidden="true"></span>
           {@render IconButton(Trash2, 'Delete collection', { borderless: true, hoverVariant: 'danger',
-            onclick: () => confirmation = { title: 'Delete Collection',
-              description: 'This collection and everything inside it will be permanently deleted, including completed and archived prompts.',
-              acknowledgement: 'Yes, I want to delete this collection and all of its contents.',
-              submit: 'Delete collection', confirm: () => { rootPrompts = []; categories = [] } }
+            onclick: requestCollectionDelete
           })}
         </div>
       </div>
@@ -1783,10 +2992,14 @@
       {/each}
       <div class="base-categories-inset">
         {#each categories as category, categoryIndex (category.id)}
+          {@const separatorTarget = getCategorySeparatorDropTarget(category.id, categories[categoryIndex + 1]?.id ?? null)}
           {@render CategoryCard(category)}
-          <div class="base-final-gap" use:mockDropTarget={{ categoryOnly: true, nextCategoryId: categories[categoryIndex + 1]?.id ?? null }}>
-            <span class="base-drop-indicator text-sm" aria-hidden="true">Move Here</span>
-            {@render Separator()}
+          <div class="base-final-gap" use:mockDropTarget={separatorTarget}>
+            {#if activeDrop?.key === separatorTarget.key}
+              {@render MoveHereIndicator(activeDrop.isBlocked)}
+            {:else}
+              {@render Separator()}
+            {/if}
           </div>
         {/each}
       </div>
@@ -1801,6 +3014,8 @@
     <div style={`height:${Math.ceil(viewportHeight * 0.75 / 4) * 4}px;`} aria-hidden="true"></div>
   </div>
 </main>
+</div>
+</div>
 
 {#if manageCategoriesOpen}
   <div class="base-template-dialog-layer" role="presentation" use:mountMockDialog>
@@ -1813,7 +3028,7 @@
             <p class="text-sm">{rootTitle}</p>
           </div>
         </div>
-        {@render IconButton(X, 'Close', { onclick: closeManageCategories })}
+        {@render IconButton(X, 'Close', { onclick: requestCloseManageCategories })}
       </header>
       {@render Separator()}
 
@@ -1918,7 +3133,7 @@
 
       {@render Separator()}
       <footer class="base-template-dialog-footer">
-        <button type="button" class="base-dialog-cancel-button text-sm" onclick={closeManageCategories}>Close</button>
+        <button type="button" class="base-dialog-cancel-button text-sm" onclick={requestCloseManageCategories}>Close</button>
         <button
           type="button"
           class="base-dialog-confirm-button text-sm"
@@ -2080,7 +3295,7 @@
 
       {@render Separator()}
 
-      <div class="base-template-dialog-body">
+      <div class="base-template-dialog-body" data-mode={templateDialogMode}>
         <div class="base-no-template-panel">
           <button
             type="button"
@@ -2090,6 +3305,7 @@
               ? selectedTemplateIds.size === 0
               : undefined}
             onclick={() => selectTemplate(null)}
+            ondblclick={templateDialogMode === 'select' ? () => selectAndCopyTemplate(null) : undefined}
           >
             <span class="base-no-template-icon"><Ban size={18} aria-hidden="true" /></span>
             <span class="base-no-template-copy">
@@ -2139,6 +3355,7 @@
                         ? selectedTemplateIds.has(template.id)
                         : undefined}
                       onclick={() => selectTemplate(template)}
+                      ondblclick={templateDialogMode === 'select' ? () => selectAndCopyTemplate(template) : undefined}
                     >
                       <span
                         class="base-template-guide"
@@ -2191,20 +3408,628 @@
 {/if}
 
 <style>
+  /* ---- App body: chrome-colored sidebar beside the darker screen surface, as in AppShell ---- */
+
+  .base-app-body {
+    display: flex;
+    height: 100%;
+    min-height: 640px;
+    background: var(--app-chrome-surface);
+    color: var(--ui-normal-text);
+  }
+
+  /* Matches the live drag cursor and keeps text from selecting while a prompt or category drags. */
+  .base-app-body[data-dragging='true'],
+  .base-app-body[data-dragging='true'] :global(*) {
+    cursor: grabbing !important;
+    user-select: none;
+  }
+
+  .base-app-sidebar {
+    --base-sidebar-left-inset: 2px;
+
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    border-top: 1px solid var(--ui-neutral-hover-border);
+    border-right: 1px solid var(--ui-neutral-hover-border);
+    user-select: none;
+  }
+
+  .base-main-surface {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: clip;
+    background: var(--background);
+    border-top: 1px solid var(--ui-neutral-hover-border);
+  }
+
   .base-prompt-collection-mockup {
     position: relative;
     box-sizing: border-box;
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
-    height: 100%;
-    min-height: 100%;
+    min-height: 0;
     min-width: 0;
     width: 100%;
   }
 
-
   button {
     cursor: pointer;
+  }
+
+  /* ---- Sidebar header and button bar ---- */
+
+  /* 35px below the sidebar's top border puts the separator on the screen header bar's bottom border row. */
+  .base-sidebar-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    min-height: 35px;
+    margin-left: var(--base-sidebar-left-inset);
+    padding: 0 4px 0 10px;
+  }
+
+  .base-sidebar-title-group {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-weight: var(--font-weight-semibold);
+  }
+
+  /* With the group's 4px gap, the margin gives the 8px icon-to-title spacing of work tabs and tree rows. */
+  .base-sidebar-title-group :global(.base-sidebar-title-icon) {
+    flex: none;
+    margin-right: 4px;
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .base-sidebar-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ui-normal-text);
+  }
+
+  .base-show-all-button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
+    background: var(--ui-ghost-surface);
+    color: var(--ui-hoverable-text);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
+  }
+
+  .base-show-all-button:is(:hover, :focus-visible) {
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .base-sidebar-button-bar {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 40px;
+    margin-left: var(--base-sidebar-left-inset);
+    padding: 4px 8px;
+  }
+
+  /* ---- Sidebar status accordion ---- */
+
+  .base-accordion {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .base-accordion-section {
+    position: relative;
+    display: flex;
+    flex: 0 0 var(--base-accordion-section-height);
+    flex-direction: column;
+    min-height: var(--base-accordion-section-height);
+    overflow: visible;
+  }
+
+  .base-accordion-section[data-bottom-anchored='true'] {
+    margin-top: auto;
+  }
+
+  .base-accordion-header {
+    display: grid;
+    flex: 0 0 36px;
+    grid-template-columns: 24px 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 calc(6px + var(--base-sidebar-left-inset));
+    border: 0;
+    border-top: 1px solid var(--ui-neutral-muted-border);
+    background: transparent;
+    color: var(--ui-muted-text);
+    text-align: left;
+  }
+
+  .base-accordion-header:is(:hover, :focus-visible) {
+    color: var(--ui-normal-text);
+  }
+
+  .base-accordion-header[data-drop-state='over'] {
+    background: var(--ui-info-normal-surface);
+    box-shadow: inset 0 0 0 1px var(--ui-info-strong-border);
+  }
+
+  .base-accordion-header[data-drop-state='blocked'] {
+    background: var(--ui-neutral-emphasis-surface);
+    box-shadow: inset 0 0 0 1px var(--ui-neutral-emphasis-border);
+  }
+
+  .base-accordion-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-muted-icon-glyph);
+    transform: rotate(0deg);
+  }
+
+  .base-accordion-section[data-expanded='true'] .base-accordion-chevron {
+    transform: rotate(90deg);
+  }
+
+  .base-accordion-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--ui-secondary-icon-glyph);
+  }
+
+  .base-accordion-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.01em;
+  }
+
+  .base-accordion-count {
+    color: var(--ui-muted-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .base-accordion-header:is(:hover, :focus-visible) :is(.base-accordion-chevron, .base-accordion-icon, .base-accordion-count) {
+    color: var(--ui-normal-text);
+  }
+
+  /* Visible overflow lets tree-edge drop indicators overlap the adjacent status header slightly. */
+  .base-accordion-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .base-accordion-content[hidden] {
+    display: none;
+  }
+
+  /* ---- Prompt tree ---- */
+
+  .base-sidebar-tree {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    margin-left: var(--base-sidebar-left-inset);
+  }
+
+  .base-tree-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Approximates the live overlay scrollbar: a square 10px thumb on a clear track, shown while the tree is hovered. */
+  .base-tree-scroll::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .base-tree-scroll::-webkit-scrollbar-track {
+    background: var(--ui-ghost-surface);
+  }
+
+  .base-tree-scroll::-webkit-scrollbar-thumb {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .base-tree-scroll:not(:hover)::-webkit-scrollbar-thumb {
+    background: var(--ui-ghost-surface);
+  }
+
+  .base-tree-bottom-spacer {
+    position: relative;
+    height: 16px;
+  }
+
+  .base-tree-empty {
+    position: relative;
+  }
+
+  .base-tree-category-row,
+  .base-tree-prompt-row {
+    position: relative;
+    width: 100%;
+    padding-block: 1px;
+  }
+
+  /* Category rows and prompt buttons share row geometry, colors, and row-state feedback. */
+  .base-tree-row,
+  .base-tree-prompt-button {
+    width: 100%;
+    height: 30px;
+    border: 0;
+    background: transparent;
+    color: var(--ui-hoverable-text);
+    cursor: default;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-tree-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  :is(.base-tree-row, .base-tree-prompt-button):is(
+      [data-row-state='idle']:hover,
+      [data-row-state='active'],
+      [data-row-state='drag-active'],
+      [data-row-state='dragging']
+    ) {
+    color: var(--ui-normal-text);
+  }
+
+  .base-tree-row:is(
+      [data-row-state='idle']:hover,
+      [data-row-state='active'],
+      [data-row-state='drag-active'],
+      [data-row-state='dragging']
+    )
+    .base-tree-category-icon {
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  :is(.base-tree-row, .base-tree-prompt-button)[data-row-state='idle']:hover {
+    background-color: var(--ui-neutral-emphasis-surface);
+  }
+
+  /* Selected rows keep this brighter fill while hovered, since choosing a selected prompt again does nothing. */
+  :is(.base-tree-row, .base-tree-prompt-button):is([data-row-state='active'], [data-row-state='drag-active']) {
+    background-color: var(--ui-neutral-selection-surface);
+  }
+
+  :is(.base-tree-row, .base-tree-prompt-button)[data-row-state='dragging'] {
+    background-color: var(--ui-info-normal-surface);
+  }
+
+  .base-tree-toggle-button {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 24px 18px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    padding: 0 12px 0 6px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: default;
+    text-align: left;
+  }
+
+  .base-tree-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-hoverable-icon-glyph);
+    transform: rotate(0deg);
+    transition: transform var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-tree-chevron[data-expanded='true'] {
+    transform: rotate(90deg);
+  }
+
+  .base-tree-row:is([data-row-state='idle']:hover, [data-row-state='active'], [data-row-state='drag-active'], :focus-within)
+    .base-tree-chevron {
+    color: var(--ui-normal-text);
+  }
+
+  .base-tree-category-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--ui-secondary-icon-glyph);
+    transition: color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-tree-category-label,
+  .base-tree-prompt-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .base-tree-action-slot {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+    margin-right: 14px;
+    pointer-events: none;
+  }
+
+  .base-tree-category-actions {
+    display: none;
+    gap: 2px;
+    pointer-events: auto;
+  }
+
+  .base-tree-row:is([data-row-state='idle']:hover, [data-row-state='active']:hover, :focus-within) .base-tree-toggle-button {
+    padding-right: 56px;
+  }
+
+  .base-tree-row:is([data-row-state='idle']:hover, [data-row-state='active']:hover, :focus-within) .base-tree-category-actions {
+    display: flex;
+  }
+
+  /* Compact borderless Add action: the row's text color, with a quieter surface fill on hover. */
+  .base-tree-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
+    background: var(--ui-ghost-surface);
+    color: var(--ui-normal-text);
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-tree-action-button:is(:hover, :focus-visible) {
+    background-color: var(--ui-neutral-normal-surface);
+  }
+
+  .base-tree-prompt-button {
+    display: grid;
+    grid-template-columns: calc(5px + 12px * var(--base-tree-indent)) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 0 22px 0 0;
+    text-align: left;
+  }
+
+  .base-tree-status-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    width: 2px;
+    pointer-events: none;
+  }
+
+  /* Guide lines start 13px into the row and step 12px per level; they show while the tree is hovered or focused. */
+  .base-tree-gutter {
+    position: relative;
+    align-self: stretch;
+    min-width: 0;
+    margin-left: 5px;
+  }
+
+  .base-tree-guide {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: calc(8px + 12px * var(--base-guide-index));
+    width: 0;
+    border-left: 1px solid var(--ui-neutral-emphasis-border);
+    opacity: 0;
+    transition: opacity var(--ui-animation-duration-standard) ease-out;
+  }
+
+  .base-tree-guide[data-last='true'] {
+    bottom: 0;
+  }
+
+  .base-sidebar-tree:is(:hover, :focus-within) .base-tree-guide {
+    opacity: 1;
+  }
+
+  .base-tree-inline-row {
+    display: grid;
+    grid-template-columns: calc(12px * var(--base-tree-indent)) minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    height: 24px;
+  }
+
+  .base-tree-inline-row .base-tree-gutter {
+    min-height: 22px;
+  }
+
+  .base-tree-inline-button-wrap {
+    display: flex;
+    grid-column: 2;
+    align-items: center;
+    height: 22px;
+    min-width: 0;
+    padding-left: 12px;
+  }
+
+  .base-inline-text-button {
+    max-width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ui-muted-text);
+    font-weight: var(--font-weight-normal);
+    text-align: inherit;
+    transition: color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-inline-text-button span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .base-inline-text-button:is(:hover, :focus-visible) {
+    color: var(--ui-normal-text);
+  }
+
+  .base-app-body[data-dragging='true'] .base-inline-text-button:hover {
+    color: var(--ui-muted-text);
+  }
+
+  /* Tree drop indicator: a chevron and line centered on the row edge, inset by the target's indent. */
+  .base-tree-drop-indicator {
+    position: absolute;
+    right: 2px;
+    left: calc(var(--base-drop-inset) - 10px);
+    z-index: 3;
+    height: 10px;
+    pointer-events: none;
+    transform: translateY(-50%);
+  }
+
+  .base-tree-drop-indicator[data-edge='top'] {
+    top: 0;
+  }
+
+  .base-tree-drop-indicator[data-edge='bottom'] {
+    top: 100%;
+  }
+
+  .base-tree-drop-indicator svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .base-tree-drop-indicator :is(path, line) {
+    fill: none;
+    stroke: var(--ui-info-strong-border);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .base-tree-drop-indicator[data-blocked='true'] :is(path, line) {
+    stroke: var(--ui-muted-icon-glyph);
+  }
+
+  /* ---- Simple dropdown menu (collection actions and category options) ---- */
+
+  .base-simple-menu {
+    gap: 0;
+  }
+
+  .base-simple-menu-item {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 34px;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: var(--cthulhu-ui-radius-control);
+    background: var(--ui-ghost-surface);
+    color: var(--ui-hoverable-text);
+    text-align: left;
+    transition:
+      background-color var(--ui-animation-duration-standard) ease,
+      color var(--ui-animation-duration-standard) ease;
+  }
+
+  .base-simple-menu-item :global(svg) {
+    justify-self: center;
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .base-simple-menu-item:is(:hover, :focus-visible) {
+    background: var(--ui-neutral-action-fill);
+    color: var(--ui-normal-text);
+  }
+
+  .base-simple-menu-item:is(:hover, :focus-visible) :global(svg) {
+    color: var(--ui-normal-text);
+  }
+
+  .base-simple-menu-item[data-variant='danger']:is(:hover, :focus-visible) {
+    background: var(--ui-danger-action-hover-fill);
+  }
+
+  .base-simple-menu-item span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .base-icon-button {
@@ -2245,6 +4070,10 @@
 
   .base-icon-button[data-base-variant='muted'] {
     color: var(--ui-muted-icon-glyph);
+  }
+
+  .base-icon-button[data-base-variant='dim'] {
+    color: var(--ui-secondary-icon-glyph);
   }
 
   .base-icon-button[data-hover-variant='glyph'],
@@ -2353,18 +4182,20 @@
   }
 
   .base-breadcrumb button {
+    flex: 0 1 auto;
     background: transparent;
     border: 0;
-    color: inherit;
+    color: var(--ui-muted-text);
     min-width: 0;
+    overflow: hidden;
     padding: 0;
+    text-overflow: ellipsis;
+    transition: color var(--ui-animation-duration-standard);
+    white-space: nowrap;
   }
 
-  .base-breadcrumb button:first-child {
-    color: var(--ui-muted-text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .base-breadcrumb button:hover {
+    color: var(--ui-hoverable-text);
   }
 
   .base-breadcrumb span {
@@ -2374,19 +4205,19 @@
 
   .base-breadcrumb button:last-child {
     color: var(--ui-hoverable-text);
-    white-space: nowrap;
   }
 
-  .base-breadcrumb button:first-child:hover,
   .base-breadcrumb button:last-child:hover {
     color: var(--ui-normal-text);
   }
 
+  /* Matches the live virtual window's 24px left and 12px right scroll padding. */
   .base-content-viewport {
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
     overflow-y: auto;
+    padding-left: 24px;
     padding-right: 12px;
   }
 
@@ -2523,12 +4354,14 @@
     width: 1px;
   }
 
+  /* Selectable segments keep the arrow cursor, since choosing the selected one again does nothing. */
   .base-filter-bar button {
     align-items: center;
     background: var(--ui-ghost-surface);
     border: 1px solid var(--ui-ghost-surface);
     border-radius: 6px;
     color: var(--ui-hoverable-text);
+    cursor: default;
     display: flex;
     font-family: inherit;
     gap: 8px;
@@ -2543,16 +4376,13 @@
     color: var(--ui-normal-text);
   }
 
-  .base-filter-bar button[aria-pressed='true'] {
-    background: var(--ui-accent-action-fill);
-    border-color: var(--ui-accent-muted-border);
-    color: var(--ui-normal-text);
-  }
-
+  /* The selected segment keeps the brighter accent colors whether or not it is hovered. */
+  .base-filter-bar button[aria-pressed='true'],
   .base-filter-bar button[aria-pressed='true']:hover,
   .base-filter-bar button[aria-pressed='true']:focus-visible {
     background: var(--ui-accent-action-hover-fill);
     border-color: var(--ui-accent-muted-hover-border);
+    color: var(--ui-normal-text);
   }
 
   .base-filter-bar button:focus-visible,
@@ -2578,11 +4408,55 @@
 
   .base-divider-row {
     position: relative;
+    height: 28px;
+    min-width: 0;
+  }
+
+  .base-divider-content {
     align-items: center;
     display: grid;
     grid-template-columns: minmax(14px, 1fr) auto minmax(14px, 1fr);
-    height: 28px;
+    height: 100%;
     min-width: 0;
+  }
+
+  .base-divider-row[data-revealed='true'] .base-divider-actions {
+    opacity: 1;
+  }
+
+  /* Live MoveHereIndicator: 10px pill bars around a label at least 96px wide. */
+  .base-move-here {
+    align-items: center;
+    display: grid;
+    grid-template-columns: minmax(24px, 1fr) auto minmax(24px, 1fr);
+    height: 100%;
+    width: 100%;
+  }
+
+  .base-move-here[data-blocked='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .base-move-here-bar {
+    background: var(--ui-info-strong-border);
+    border-radius: 999px;
+    height: 10px;
+  }
+
+  .base-move-here[data-blocked='true'] .base-move-here-bar {
+    background: var(--ui-muted-icon-glyph);
+  }
+
+  .base-move-here-label {
+    align-items: center;
+    color: var(--ui-normal-text);
+    display: inline-flex;
+    font-weight: var(--font-weight-semibold);
+    height: 26px;
+    justify-content: center;
+    min-width: 96px;
+    padding: 0 10px;
+    white-space: nowrap;
   }
 
   .base-divider-line-button {
@@ -2705,7 +4579,45 @@
   }
 
   .base-editor-sidebar .base-drag-button {
+    position: relative;
+    z-index: 1;
     flex: 1 1 52px;
+  }
+
+  .base-editor-sidebar {
+    position: relative;
+  }
+
+  .base-editor-card {
+    transition: opacity var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .base-editor-card[data-dragging='true'] {
+    opacity: 0.72;
+  }
+
+  /* The violet wash sits behind the drag handle without intercepting input. */
+  .base-rail-highlight {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: var(--ui-ghost-surface);
+  }
+
+  .base-rail-highlight[data-navigation-highlight='true'] {
+    animation: base-rail-navigation-highlight 1000ms linear;
+  }
+
+  /* 50ms fade in, 500ms hold, then 450ms fade out. */
+  @keyframes base-rail-navigation-highlight {
+    0%,
+    100% {
+      background: var(--ui-ghost-surface);
+    }
+    5%,
+    55% {
+      background: var(--ui-accent-action-hover-fill);
+    }
   }
 
   .base-editor-sidebar button:disabled {
@@ -2884,7 +4796,7 @@
     background: transparent;
     border: 1px solid transparent;
     border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-secondary-icon-glyph);
+    color: var(--ui-hoverable-icon-glyph);
     display: inline-flex;
     flex: 0 0 auto;
     justify-content: center;
@@ -3402,26 +5314,40 @@
       color var(--ui-animation-duration-fast) ease-out;
   }
 
-  .base-template-root-option:hover,
-  .base-template-option-button:hover,
-  .base-template-category-button:hover {
+  /* Select-mode options keep the arrow cursor; quick-mode options apply and copy, so they use the pointer. */
+  .base-template-root-option,
+  .base-template-option-button,
+  .base-template-category-button {
+    cursor: default;
+  }
+
+  .base-template-dialog-body[data-mode='select-and-copy']
+    :is(.base-template-root-option, .base-template-option-button, .base-template-category-button) {
+    cursor: pointer;
+  }
+
+  .base-template-root-option:hover {
     background: var(--ui-neutral-subtle-action-hover-fill);
     color: var(--ui-normal-text);
   }
 
+  /* Template and folder rows reuse the prompt tree's row hover. */
+  .base-template-option-button:hover,
+  .base-template-category-button:hover {
+    background: var(--ui-neutral-emphasis-surface);
+    color: var(--ui-normal-text);
+  }
+
+  /* Choosing the selected option again does nothing, so it keeps the brighter accent fill while hovered. */
   .base-template-root-option.active,
-  .base-template-option-button.active {
-    background: var(--ui-accent-action-fill);
+  .base-template-option-button.active,
+  .base-template-option-button.active:hover {
+    background: var(--ui-accent-action-hover-fill);
     color: var(--ui-normal-text);
   }
 
   .base-template-root-option.active {
     border-color: var(--ui-accent-muted-border);
-  }
-
-  .base-template-root-option.active:hover,
-  .base-template-option-button.active:hover {
-    background: var(--ui-accent-action-hover-fill);
   }
 
   .base-template-option-button {
@@ -3589,26 +5515,8 @@
   .base-final-gap { position: relative; height: 28px; display: flex; align-items: center; }
   .base-collapsed-summary { position: relative; height: 28px; display: flex; align-items: center; justify-content: center; }
   .base-collapsed-summary button { background: var(--ui-ghost-surface); border: 0; color: var(--ui-secondary-text); padding: 0; }
-  .base-collapsed-summary button:hover { color: var(--ui-hoverable-text); }
-  .base-drop-indicator {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--ui-normal-text);
-    font-weight: var(--font-weight-semibold);
-    pointer-events: none;
-  }
-  .base-drop-indicator::before,
-  .base-drop-indicator::after { content: ''; height: 10px; border-radius: 999px; background: var(--ui-info-strong-border); flex: 1; }
-  .base-divider-row:global([data-drop-over='true']) > :not(.base-drop-indicator),
-  .base-final-gap:global([data-drop-over='true']) > :not(.base-drop-indicator),
-  .base-collapsed-summary:global([data-drop-over='true']) > :not(.base-drop-indicator) { visibility: hidden; }
-  .base-divider-row:global([data-drop-over='true']) > .base-drop-indicator,
-  .base-final-gap:global([data-drop-over='true']) > .base-drop-indicator,
-  .base-collapsed-summary:global([data-drop-over='true']) > .base-drop-indicator { display: flex; }
+  .base-collapsed-summary button:hover { color: var(--ui-normal-text); }
+  /* Live prompt drag ghost: the dragged item's icon and title on a compact field surface. */
   .base-drag-ghost {
     position: fixed;
     z-index: 80;
@@ -3616,15 +5524,19 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    max-width: 320px;
-    padding: 8px 12px;
-    border: 1px solid var(--ui-neutral-normal-border);
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 120px;
+    max-width: 400px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--ui-neutral-muted-border);
     border-radius: var(--cthulhu-ui-radius-control);
-    background: var(--ui-card-overlay-surface);
+    background: var(--ui-neutral-field-surface);
     color: var(--ui-normal-text);
-    box-shadow: 0 4px 12px var(--ui-card-normal-shadow);
   }
-  .base-drag-ghost span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .base-drag-ghost :global(svg) { flex: 0 0 auto; color: var(--ui-hoverable-icon-glyph); }
+  .base-drag-ghost span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .base-editor-sidebar .base-drag-button,
   .base-category-sidebar button { cursor: grab; }
   .base-empty { color: var(--ui-secondary-text); text-align: center; padding: 48px 0; }
@@ -3792,10 +5704,14 @@
     display: grid;
     gap: 1px;
     max-height: calc(100vh - 32px);
+    /* Menus fit their text but never narrow below a comfortable 200px click width. */
+    max-width: calc(100vw - 32px);
+    min-width: 200px;
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 4px;
     position: fixed;
+    width: max-content;
     z-index: 60;
   }
   .base-status-menu-item {
