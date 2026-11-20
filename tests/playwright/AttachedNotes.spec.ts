@@ -397,6 +397,8 @@ describe('Attached note editors', () => {
         return Math.abs(editor.getBoundingClientRect().height - 35 * lineHeight)
       })).toBeLessThanOrEqual(1)
       await expectCardFits(mainWindow)
+      // Rapid line insertions must leave the background tokenizer with a valid state for every line.
+      expect(testSetup.getRendererErrors().filter((error) => error.message.includes('Cannot set null/undefined state'))).toEqual([])
     })
 
     test(`${kind} lets a note grow into lines the prompt leaves unused and returns them as the prompt grows`, async ({ testSetup }) => {
