@@ -1,10 +1,11 @@
 import { removeCollectionFromTabSession } from '@shared/domain/ui-state/TabSession'
-import { findCollectionProject } from '@shared/domain/workspace/Project'
+import { findCollectionProject, type Project } from '@shared/domain/workspace/Project'
 import { getCollectionNoteIds } from '@shared/domain/note/Note'
 import { deleteAttachedNoteUiState } from '@shared/domain/ui-state/AttachedNoteUiState'
 import type {
   DomainChange,
   DomainPlanner,
+  DomainState,
   DomainTarget
 } from '@shared/domain/DomainChanges'
 import { collectionEntryRef, removeEntry, resolveEntryInsertIndex } from '@shared/domain/OrderContainer'
@@ -138,6 +139,11 @@ export const parseMovePromptCollectionDomainCommand = (
   }
 }
 
+/** Resolves both task and template collections for project-wide name validation. */
+const getProjectCollections = (state: DomainState, project: Project): PromptCollection[] =>
+  project.collectionEntries.map((entry) => state.get('promptCollection', entry.id))
+    .filter((collection) => collection !== undefined)
+
 /** Plans collection creation and exact workspace placement. */
 export const planCreatePromptCollectionDomainMutation: DomainPlanner<
   CreatePromptCollectionDomainCommand
@@ -155,14 +161,6 @@ export const planCreatePromptCollectionDomainMutation: DomainPlanner<
   ]
   /** Validated and normalized collection names. */
   const preparedName = preparePromptCollectionName(command.displayName)
-  /** Same-kind sibling collections participating in name-conflict validation. */
-  const siblings = project
-    ? project.collectionEntries.flatMap((entry) => {
-        /** Loaded sibling referenced by one workspace entry. */
-        const sibling = state.get('promptCollection', entry.id)
-        return sibling && sibling.kind === command.kind ? [sibling] : []
-      })
-    : []
   /** Requested insertion index after validating its predecessor. */
   const insertIndex = project
     ? resolveEntryInsertIndex(project.collectionEntries, command.previousEntryId)
@@ -172,7 +170,7 @@ export const planCreatePromptCollectionDomainMutation: DomainPlanner<
     !workspace || !project ||
     existingPromptCollection ||
     !preparedName.validation.isValid ||
-    hasPromptCollectionNameConflict(siblings, preparedName.folderName) ||
+    hasPromptCollectionNameConflict(getProjectCollections(state, project), preparedName.folderName) ||
     insertIndex === null
   ) {
     return { status: 'conflict', reason: 'Prompt collection creation conflict', targets }
@@ -240,19 +238,11 @@ export const planRenamePromptCollectionDomainMutation: DomainPlanner<
   const project = workspace && findCollectionProject(workspace, promptCollection.id)
   /** Validated and normalized display and directory names. */
   const preparedName = preparePromptCollectionName(command.displayName)
-  /** Same-kind sibling collections participating in name-conflict validation. */
-  const siblingCollections = project
-    ? project.collectionEntries.flatMap((entry) => {
-        /** Loaded collection referenced by one workspace entry. */
-        const candidate = state.get('promptCollection', entry.id)
-        return candidate && candidate.kind === promptCollection.kind ? [candidate] : []
-      })
-    : []
 
   if (
-    !workspace ||
+    !project ||
     !preparedName.validation.isValid ||
-    hasPromptCollectionNameConflict(siblingCollections, preparedName.folderName, promptCollection.id)
+    hasPromptCollectionNameConflict(getProjectCollections(state, project), preparedName.folderName, promptCollection.id)
   ) {
     return { status: 'conflict', reason: 'Prompt collection rename conflict', targets }
   }

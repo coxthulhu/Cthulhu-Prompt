@@ -786,13 +786,13 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await expect(createCollectionDialog).toBeVisible()
     await expect(createCollectionDialog.getByLabel('Collection Name')).toBeVisible()
-    await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
+    await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Snippets')
     await mainWindow.locator('[data-testid="create-prompt-collection-button"]').click()
-    await mainWindow.locator('[data-testid^="new-tab-collection-"]').filter({ has: mainWindow.getByText('Examples', { exact: true }) }).click()
+    await mainWindow.locator('[data-testid^="new-tab-collection-"]').filter({ has: mainWindow.getByText('Snippets', { exact: true }) }).click()
 
-    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Examples')
+    await expect(mainWindow.locator(selectedCollectionTitleSelector)).toContainText('Snippets')
     await expect(mainWindow.locator('[data-testid="prompt-collection-title"]')).toHaveText(
-      'Examples'
+      'Snippets'
     )
     // The created template collection identifies its type in the subtitle.
     await expect(
@@ -807,13 +807,13 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await mainWindow.keyboard.press('Escape')
     await expect(mainWindow.locator(MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM)).toHaveCount(0)
-    const templateCollection = (await findCollection(electronApp, 'Examples', 'template'))!
-    expect(templateCollection.displayName).toBe('Examples')
+    const templateCollection = (await findCollection(electronApp, 'Snippets', 'template'))!
+    expect(templateCollection.displayName).toBe('Snippets')
     expect(templateCollection.statusFolders.active.categoryOrder.categories).toEqual([{ categoryId: null, entries: [] }])
     expect((await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))?.entries[0].id).toBe(templateCollection.id)
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
-    await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
+    await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Snippets')
     await expect(
       mainWindow.locator('[data-testid="create-prompt-collection-name-error"]')
     ).toContainText('A collection with this name already exists')

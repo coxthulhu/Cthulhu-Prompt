@@ -396,18 +396,18 @@ describe('New Tab Screen', () => {
       await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-muted-hover-border'))
     await expect(nameInput).toBeFocused()
 
-    // A template collection's name must be unique among this project's template collections, and switching the type
-    // rechecks the name against that type's collections.
+    // The existing template reserves its name for both types, including case and whitespace variants.
     await templateOption.click()
     await expect(templateOption).toHaveAttribute('aria-pressed', 'true')
     await expect(taskOption).toHaveAttribute('aria-pressed', 'false')
-    await nameInput.fill('Release Notes')
+    await nameInput.fill('releaseNOTES')
     await expect(nameError).toHaveText('A collection with this name already exists')
     await expect(createButton).toBeDisabled()
     await taskOption.click()
-    await expect(nameError).toHaveCount(0)
-    await expect(createButton).toBeEnabled()
+    await expect(nameError).toHaveText('A collection with this name already exists')
+    await expect(createButton).toBeDisabled()
     await templateOption.click()
+    await nameInput.fill('Endpoint Tests')
     await expect(nameError).toHaveText('A collection with this name already exists')
     await expect(createButton).toBeDisabled()
     await nameInput.fill('Changelog')
@@ -429,6 +429,35 @@ describe('New Tab Screen', () => {
     await expect(harborTiles.filter({ hasText: 'Bug Triage' }).locator('svg.lucide-file-text')).toHaveCount(1)
     await expect(harborTiles.filter({ hasText: 'Changelog' }).locator('svg.lucide-layers')).toHaveCount(1)
     await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(3)
+  })
+
+  test('keeps existing same-name collections and allows renaming one to a name used in another project', async ({ electronApp, testSetup }) => {
+    /** The default project already has a task collection named Bug Triage. */
+    const mainWindow = await openNewTab(electronApp, testSetup, createWorkspaceWithTemplateCollections(workspacePath, [{
+      folderName: 'BugTriage', displayName: 'Bug Triage', collectionId: 'bug-triage-templates'
+    }]))
+    await expect(mainWindow.getByTestId('new-tab-collection-bug-triage')).toContainText('Bug Triage')
+    await mainWindow.getByTestId('new-tab-collection-bug-triage-templates').click()
+    await expect(mainWindow.getByTestId('prompt-collection-title')).toHaveText('Bug Triage')
+    await mainWindow.getByTestId('prompt-collection-title-edit').click()
+    /** Rename dialog for the template half of the existing pair. */
+    const dialog = mainWindow.getByRole('dialog', { name: 'Rename Collection' })
+    /** Project-wide validation runs as the collection name is edited. */
+    const nameInput = dialog.getByTestId('rename-prompt-collection-name-input')
+    /** Submitting persists the name on this collection alone. */
+    const renameButton = dialog.getByTestId('rename-prompt-collection-button')
+    await nameInput.fill('Feature Work')
+    await expect(dialog.getByTestId('rename-prompt-collection-name-error')).toHaveText('A collection with this name already exists')
+    await expect(renameButton).toBeDisabled()
+
+    // Only Harbor API uses Release Notes, so it is available in the default project.
+    await nameInput.fill('Release Notes')
+    await renameButton.click()
+    await expect(dialog).toHaveCount(0)
+    await mainWindow.getByTestId('new-tab-button').click()
+    await expect(mainWindow.getByTestId('new-tab-collection-bug-triage-templates')).toContainText('Release Notes')
+    await expect(mainWindow.getByTestId('new-tab-collection-bug-triage')).toContainText('Bug Triage')
+    await expect(mainWindow.getByTestId('new-tab-collection-release-notes')).toContainText('Release Notes')
   })
 
   test('reorders projects by dragging their titles onto a Move Here indicator placed by the pointer\'s height', async ({ electronApp, testSetup }) => {

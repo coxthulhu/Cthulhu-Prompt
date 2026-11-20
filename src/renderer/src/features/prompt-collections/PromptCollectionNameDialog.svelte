@@ -30,7 +30,6 @@
     inputTestId,
     errorTestId,
     rowLabel = 'Collection Name',
-    rowDetail,
     initialDisplayName = '',
     unchangedDisplayName = null,
     duplicatePromptCollectionId = null,
@@ -51,7 +50,6 @@
     inputTestId: string
     errorTestId: string
     rowLabel?: string
-    rowDetail: string
     initialDisplayName?: string
     unchangedDisplayName?: string | null
     duplicatePromptCollectionId?: string | null
@@ -179,7 +177,7 @@
           <Title title={rowLabel} variant="small" />
           <span class="text-sm leading-5 text-[var(--ui-muted-text)]">*</span>
         </div>
-        <Subtitle id={inputHelpId} text={rowDetail} />
+        <Subtitle id={inputHelpId} text="Required. Names must be unique within this project." />
       </TitleSubtitleStack>
       <FloatingValidationMessage message={errorMessage} textTestId={errorTestId}>
         <TextInput

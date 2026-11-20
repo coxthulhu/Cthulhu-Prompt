@@ -22,7 +22,7 @@
     /** Selected project owns the new collection. */
     projectId: string | null
     isWorkspaceReady: boolean
-    /** Every project collection; only same-kind collections participate in name conflicts. */
+    /** Collections in the project receiving the new collection. */
     promptCollections: PromptCollection[]
     isPromptCollectionListLoading: boolean
     onCreated?: (promptCollectionId: string) => void
@@ -94,7 +94,7 @@
 <PromptCollectionNameDialog
   bind:this={promptCollectionNameDialog}
   {isWorkspaceReady}
-  promptCollections={promptCollections.filter((collection) => collection.kind === kind)}
+  {promptCollections}
   {isPromptCollectionListLoading}
   title="Create Collection"
   subtitle="Choose a name and type for the new collection."
@@ -103,7 +103,6 @@
   submitTestId="create-prompt-collection-button"
   inputTestId="create-prompt-collection-name-input"
   errorTestId="create-prompt-collection-name-error"
-  rowDetail="Required. Names must be unique among collections of the same type."
   failureMessage="Failed to create collection. Please try again."
   class="max-w-[660px]"
   onsubmit={handleCreateCollection}

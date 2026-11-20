@@ -10,7 +10,7 @@
     promptCollections
   } = $props<{
     isWorkspaceReady: boolean
-    /** Every project collection; only same-kind collections participate in name conflicts. */
+    /** Collections in the project that owns the rename target. */
     promptCollections: PromptCollection[]
   }>()
 
@@ -22,13 +22,6 @@
   const targetCollection = $derived(
     promptCollections.find((collection) => collection.id === targetCollectionId) ?? null
   )
-  /** Collection names conflict with same-kind collection siblings. */
-  const siblingCollections = $derived.by(() => {
-    if (!targetCollection) return []
-    return promptCollections.filter(
-      (collection) => (collection.kind === 'template') === (targetCollection.kind === 'template')
-    )
-  })
 
   /** Opens the rename dialog prefilled with one collection's current name. */
   export const openDialog = (promptCollectionId: string): void => {
@@ -56,7 +49,7 @@
 <PromptCollectionNameDialog
   bind:this={promptCollectionNameDialog}
   {isWorkspaceReady}
-  promptCollections={siblingCollections}
+  {promptCollections}
   isPromptCollectionListLoading={false}
   icon={Pencil}
   title="Rename Collection"
@@ -67,7 +60,6 @@
   inputTestId="rename-prompt-collection-name-input"
   errorTestId="rename-prompt-collection-name-error"
   rowLabel="Collection Name"
-  rowDetail="Required. Names must be unique among collections of the same type."
   initialDisplayName={targetCollection?.displayName ?? ''}
   unchangedDisplayName={targetCollection?.displayName ?? null}
   duplicatePromptCollectionId={targetCollection?.id ?? null}

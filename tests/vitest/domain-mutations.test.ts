@@ -208,6 +208,29 @@ describe('shared domain mutation planners', () => {
     })
   })
 
+  it('rejects create and rename commands that reuse another collection type’s name in the project', () => {
+    /** Existing task and template in the same project. */
+    const collections = [createCollection('Tasks', 'prompt', null), createCollection('Guides', 'template', null)]
+    /** Both shared planners validate against this project even when called without a dialog. */
+    const state = createDomainState({
+      promptCollection: collections,
+      workspace: [{
+        id: 'workspace', workspacePath: 'C:\\Workspace', workspaceName: 'Workspace',
+        projects: [{
+          id: 'project', name: 'Default Project', abbreviation: 'DE', folderName: 'DefaultProject',
+          collectionEntries: collections.map(({ id }) => ({ kind: 'collection', id }))
+        }]
+      }]
+    })
+    expect(planCreatePromptCollectionDomainMutation(state, {
+      workspaceId: 'workspace', projectId: 'project', promptCollectionId: 'new', displayName: 'guides',
+      kind: 'prompt', previousEntryId: null
+    })).toMatchObject({ status: 'conflict' })
+    expect(planRenamePromptCollectionDomainMutation(state, {
+      promptCollectionId: 'Guides', displayName: 'Tasks'
+    })).toMatchObject({ status: 'conflict' })
+  })
+
   it('plans collection creation and exact workspace reordering', () => {
     /** Existing sibling root used as the creation predecessor. */
     const sibling = createCollection('sibling', 'prompt', null)
