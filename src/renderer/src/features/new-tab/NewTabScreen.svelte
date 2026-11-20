@@ -35,6 +35,12 @@
     collections: NewTabCollectionTile[]
   }
 
+  /** One project section shown for the current search. */
+  type VisibleProjectGroup = ProjectGroup & {
+    /** The project's collections the search hides from its grid. */
+    hiddenCollectionCount: number
+  }
+
   let { viewState, workspace, openCollectionIds, onOpenCollection, onCreateProject, onEditProject } = $props<{
     /** This tab's retained search and viewport. */
     viewState: { search: string; scrollTop: number }
@@ -94,16 +100,21 @@
 
   /** Case-insensitive search text; empty matches everything. */
   const normalizedQuery = $derived(viewState.search.trim().toLowerCase())
-  /** Projects whose names match keep every collection; others keep only matching collections and hide without any. */
+  /** Projects whose names match keep every collection; others keep only matching collections, counting the rest as
+   *  hidden, and hide without any. */
   const visibleProjectGroups = $derived(
-    projectGroups.flatMap((group) => {
-      if (group.project.name.toLowerCase().includes(normalizedQuery)) return [group]
+    projectGroups.flatMap((group): VisibleProjectGroup[] => {
+      if (group.project.name.toLowerCase().includes(normalizedQuery)) return [{ ...group, hiddenCollectionCount: 0 }]
       const collections = group.collections.filter(({ collection }) =>
         collection.displayName.toLowerCase().includes(normalizedQuery)
       )
-      return collections.length > 0 ? [{ ...group, collections }] : []
+      return collections.length > 0
+        ? [{ ...group, collections, hiddenCollectionCount: group.collections.length - collections.length }]
+        : []
     })
   )
+  /** Projects the search hides entirely, counted after the last visible project. */
+  const hiddenProjectCount = $derived(projectGroups.length - visibleProjectGroups.length)
 
   /** Project title handle action typed for DraggableTitle's generic button action slot. */
   const draggableButtonAction = draggable as unknown as Action<HTMLButtonElement, unknown>
@@ -177,7 +188,7 @@
     </p>
 
     <div bind:this={projectListElement} data-pointer-drag-owner>
-      {#each visibleProjectGroups as { project, collections } (project.id)}
+      {#each visibleProjectGroups as { project, collections, hiddenCollectionCount } (project.id)}
         <section
           class="relative mt-[22px]"
           aria-label={project.name}
@@ -226,6 +237,7 @@
 
           <NewTabCollectionGrid
             {collections}
+            {hiddenCollectionCount}
             {openCollectionIds}
             {onOpenCollection}
             onMoveCollection={(collectionId, previousCollectionId) =>
@@ -238,6 +250,10 @@
     {#if normalizedQuery && visibleProjectGroups.length === 0}
       <p class="newTabNoResults mt-[22px] text-sm leading-5" data-testid="new-tab-no-results">
         No projects or collections match your search.
+      </p>
+    {:else if hiddenProjectCount > 0}
+      <p class="newTabHiddenProjects mt-[22px] text-sm leading-5" data-testid="new-tab-hidden-projects">
+        {hiddenProjectCount} {hiddenProjectCount === 1 ? 'Project' : 'Projects'} Hidden
       </p>
     {/if}
   </div>
@@ -259,7 +275,8 @@
   }
 
   .newTabHint,
-  .newTabNoResults {
+  .newTabNoResults,
+  .newTabHiddenProjects {
     color: var(--ui-muted-text);
   }
 

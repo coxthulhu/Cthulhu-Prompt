@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Action } from 'svelte/action'
-  import { FileText, Layers } from 'lucide-svelte'
+  import { EyeOff, FileText, Layers } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
     draggable,
@@ -9,6 +9,7 @@
     type DroppableOptions
   } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
   import DropIndicator from '@renderer/common/drag-drop/DropIndicator.svelte'
+  import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import SelectorButton from '@renderer/common/cthulhu-ui/selectors/SelectorButton.svelte'
   import type { PromptCollectionDetails } from '@renderer/features/prompt-collections/promptCollectionDetails'
   import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
@@ -24,9 +25,11 @@
   /** Drop payload naming the tile a dropped tile follows, or null to place it first. */
   type TileDropPayload = { previousId: string | null }
 
-  let { collections, openCollectionIds, onOpenCollection, onMoveCollection } = $props<{
+  let { collections, hiddenCollectionCount, openCollectionIds, onOpenCollection, onMoveCollection } = $props<{
     /** One project's visible collections in Show All order. */
     collections: NewTabCollectionTile[]
+    /** The project's collections the search hides, counted by a card after the last tile when any are hidden. */
+    hiddenCollectionCount: number
     /** Collections shown by other work tabs, whose tiles are marked open. */
     openCollectionIds: string[]
     /** Opens a clicked collection. */
@@ -91,7 +94,8 @@
   })
 </script>
 
-<div class="grid grid-cols-3 gap-2" data-pointer-drag-owner>
+<!-- Equal rows keep the hidden-collections card as tall as a tile, even alone in its own row. -->
+<div class="grid grid-cols-3 auto-rows-fr gap-2" data-pointer-drag-owner>
   {#each collections as { collection, details }, index (collection.id)}
     <div class="relative min-w-0" use:droppable={getDropOptions(collection.id, collections[index - 1]?.id ?? null)}>
       <!-- The accent selection variant gives a dragged tile its dragged-row fill and border. -->
@@ -140,4 +144,26 @@
       {/if}
     </div>
   {/each}
+  {#if hiddenCollectionCount > 0}
+    <!-- A non-interactive placeholder in the cell after the last tile, where the grid's end drop zone already places a
+         dropped tile after the last visible one. Its padding and gap line its icon and text up with a tile's. -->
+    <div class="newTabHiddenCollections flex min-w-0 items-center gap-2 p-2" data-testid="new-tab-hidden-collections">
+      <IconCell icon={EyeOff} variant="compact" />
+      <span class="min-w-0 truncate text-sm leading-5">
+        {hiddenCollectionCount} {hiddenCollectionCount === 1 ? 'Collection' : 'Collections'} Hidden
+      </span>
+    </div>
+  {/if}
 </div>
+
+<style>
+  .newTabHiddenCollections {
+    border: 1px dashed var(--ui-neutral-muted-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    color: var(--ui-muted-text);
+  }
+
+  .newTabHiddenCollections :global(.cthulhuUiIconCell) {
+    color: var(--ui-muted-icon-glyph);
+  }
+</style>

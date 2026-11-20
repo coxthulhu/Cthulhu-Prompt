@@ -77,6 +77,10 @@ const getSections = (page: Page) => page.getByTestId('new-tab-screen').locator('
 const getTiles = (page: Page, projectId: string) =>
   page.getByTestId(`new-tab-project-${projectId}`).locator('[data-testid^="new-tab-collection-"]')
 
+/** Card after one project section's tiles counting the collections a search hides. */
+const getHiddenCollections = (page: Page, projectId: string) =>
+  page.getByTestId(`new-tab-project-${projectId}`).getByTestId('new-tab-hidden-collections')
+
 /** Asserts the project sections shown, by name, in display order. */
 const expectSectionNames = async (page: Page, names: string[]): Promise<void> => {
   await expect.poll(() => getSections(page).evaluateAll((sections) => sections.map((section) => section.getAttribute('aria-label'))))
@@ -241,6 +245,80 @@ describe('New Tab Screen', () => {
     await expectSectionNames(mainWindow, ['Harbor API', 'Default Project'])
     await expect(getTiles(mainWindow, defaultProjectId)).toHaveCount(3)
     await expect(noResults).toHaveCount(0)
+  })
+
+  test('counts the collections and projects a search hides after the visible ones', async ({ electronApp, testSetup }) => {
+    await seedWorkspaceState(electronApp, workspaceId, 'collection-order', lanternProjectId, {
+      entries: ['release-checklist', 'offline-sync', 'release-builds', 'crash-reports'].map((id) => ({ kind: 'collection', id }))
+    })
+    const mainWindow = await openNewTab(electronApp, testSetup, createLanternFiles([
+      ...lanternCollections,
+      { folderName: 'CrashReports', displayName: 'Crash Reports', promptCollectionId: 'crash-reports' }
+    ]))
+    const search = mainWindow.getByTestId('new-tab-search-input')
+    /** Label after the last project section counting the projects a search hides. */
+    const hiddenProjects = mainWindow.getByTestId('new-tab-hidden-projects')
+    /** Every project's hidden-collections card. */
+    const hiddenCollectionCards = mainWindow.getByTestId('new-tab-hidden-collections')
+
+    // Without a search nothing is hidden or counted.
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
+    await expect(hiddenCollectionCards).toHaveCount(0)
+    await expect(hiddenProjects).toHaveCount(0)
+
+    // A matching project name keeps every collection without a card, and the hidden projects are counted in a label
+    // 22px below the last section.
+    await search.fill('hArBoR')
+    await expectSectionNames(mainWindow, ['Harbor API'])
+    await expect(hiddenCollectionCards).toHaveCount(0)
+    await expect(hiddenProjects).toHaveText('2 Projects Hidden')
+    const harborSectionBox = (await mainWindow.getByTestId(`new-tab-project-${harborProjectId}`).boundingBox())!
+    const hiddenProjectsBox = (await hiddenProjects.boundingBox())!
+    expect(Math.abs(hiddenProjectsBox.y - (harborSectionBox.y + harborSectionBox.height + 22))).toBeLessThanOrEqual(1)
+
+    // Projects showing only matching collections end their grids with a card counting the rest, in the cell after the
+    // last tile at a tile's height, with a hidden icon and muted text and border.
+    await search.fill('release')
+    await expectSectionNames(mainWindow, ['Harbor API', 'Lantern Mobile'])
+    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Release Builds/])
+    await expect(getHiddenCollections(mainWindow, harborProjectId)).toHaveText('1 Collection Hidden')
+    /** Lantern Mobile's hidden-collections card. */
+    const lanternHiddenCard = getHiddenCollections(mainWindow, lanternProjectId)
+    await expect(lanternHiddenCard).toHaveText('2 Collections Hidden')
+    await expect(lanternHiddenCard.locator('svg')).toContainClass('lucide-eye-off')
+    await expect(lanternHiddenCard).toHaveCSS('color', await resolvePaletteColor(mainWindow.locator('body'), '--ui-muted-text'))
+    await expect(lanternHiddenCard).toHaveCSS('border-top-style', 'dashed')
+    await expect(lanternHiddenCard).toHaveCSS('border-top-color',
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-neutral-muted-border'))
+    const checklistBox = (await mainWindow.getByTestId('new-tab-collection-release-checklist').boundingBox())!
+    const buildsBox = (await mainWindow.getByTestId('new-tab-collection-release-builds').boundingBox())!
+    const inRowCardBox = (await lanternHiddenCard.boundingBox())!
+    expect(Math.abs(inRowCardBox.x - (buildsBox.x + (buildsBox.x - checklistBox.x)))).toBeLessThanOrEqual(1)
+    expect(Math.abs(inRowCardBox.y - buildsBox.y)).toBeLessThanOrEqual(1)
+    expect(Math.abs(inRowCardBox.width - buildsBox.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(inRowCardBox.height - buildsBox.height)).toBeLessThanOrEqual(1)
+    // The one fully hidden project is counted in the singular.
+    await expect(hiddenProjects).toHaveText('1 Project Hidden')
+
+    // After a full row of tiles the card starts the next row, still at a tile's height, and no label shows while every
+    // project is visible.
+    await search.fill('RE')
+    await expectSectionNames(mainWindow, ['Harbor API', 'Default Project', 'Lantern Mobile'])
+    await expect(getTiles(mainWindow, lanternProjectId)).toHaveText([/Release Checklist/, /Release Builds/, /Crash Reports/])
+    await expect(hiddenCollectionCards).toHaveText(['1 Collection Hidden', '1 Collection Hidden', '1 Collection Hidden'])
+    const firstRowBox = (await mainWindow.getByTestId('new-tab-collection-release-checklist').boundingBox())!
+    const nextRowCardBox = (await lanternHiddenCard.boundingBox())!
+    expect(Math.abs(nextRowCardBox.x - firstRowBox.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(nextRowCardBox.y - (firstRowBox.y + firstRowBox.height + 8))).toBeLessThanOrEqual(1)
+    expect(Math.abs(nextRowCardBox.width - firstRowBox.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(nextRowCardBox.height - firstRowBox.height)).toBeLessThanOrEqual(1)
+    await expect(hiddenProjects).toHaveCount(0)
+
+    // Hiding every project shows only the empty-search message, without a label.
+    await search.fill('zzz')
+    await expectSectionNames(mainWindow, [])
+    await expect(mainWindow.getByTestId('new-tab-no-results')).toBeVisible()
+    await expect(hiddenProjects).toHaveCount(0)
   })
 
   test('creates and edits projects in Manage Projects without leaving the New Tab screen', async ({ electronApp, testSetup }) => {
