@@ -1,3 +1,4 @@
+import { detachWorkspace } from '../Persistence/sqlite/WorkspaceDatabase'
 import { ipcMain } from 'electron'
 import { data } from '../Data/Data'
 import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
@@ -21,11 +22,8 @@ export const setupWorkspaceMutationHandlers = (): void => {
       await runMutationIpcRequest(request, parseCreateWorkspaceRequest, async (validated) => {
         /** Validated command-style workspace creation payload. */
         const payload = validated.payload
-        return await createWorkspace(
-          payload.workspacePath,
-          payload.workspaceName,
-          payload.includeExamplePrompts
-        )
+        try { return createWorkspace(payload.workspaceName, payload.includeExamplePrompts) }
+        catch (error) { return { success: false as const, error: error instanceof Error ? error.message : String(error) } }
       })
   )
 
@@ -38,6 +36,7 @@ export const setupWorkspaceMutationHandlers = (): void => {
           if (name === 'systemSettings' || name === 'userPersistence') continue
           store.committedStore.clear()
         }
+        detachWorkspace()
         return { success: true }
       })
   )

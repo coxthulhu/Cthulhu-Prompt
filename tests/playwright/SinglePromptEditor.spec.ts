@@ -34,7 +34,7 @@ const startWorkspace = async (testSetup: TestSetup, p1Text?: string) => {
       promptText: index === 1 && p1Text !== undefined ? p1Text : `Body ${index}\nSecond line${index === 0 || index === 1 ? ` ${FIND_QUERY}` : ''}\nThird line`
     }))
   }], { settings: { workspaceId: WORKSPACE_ID } }))
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
   const started = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await started.testHelpers.setupWorkspaceViaUI()
   await started.testHelpers.navigateToPromptCollections('Content')

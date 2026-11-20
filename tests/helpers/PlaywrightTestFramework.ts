@@ -50,6 +50,10 @@ export interface TestSetup {
   getRendererErrors: ReturnType<typeof createRendererErrorTracker>['getRendererErrors']
   removeRendererErrorsContaining: (messagePart: string) => void
   setupFilesystem: (filesystem: Record<string, string | null>, options?: FilesystemSetupOptions) => Promise<void>
+  /** Selects the v8 source used to seed the managed Open dialog fixture. */
+  selectWorkspaceFixture: (path: string) => void
+  /** Imports a selected fixture once and returns its catalog name. */
+  prepareWorkspaceFixture: () => Promise<string>
   setupFileDialog: (results: string[]) => Promise<void>
   pauseIpcChannel: (channel: string) => Promise<void>
   resumeIpcChannel: (channel: string) => Promise<void>
@@ -141,7 +145,21 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
         )
       }
 
+      /** Legacy fixture selected for conversion before exercising the real catalog. */
+      let workspaceFixturePath = ''
+      /** Reopening a prepared database must work after the source is removed. */
+      const prepared = new Map<string, string>()
       const setupUtils: TestSetup = {
+        selectWorkspaceFixture: (path) => { workspaceFixturePath = path },
+        prepareWorkspaceFixture: async () => {
+          /** Reuse the database even if the source fixture has since changed. */
+          const existing = prepared.get(workspaceFixturePath)
+          if (existing) return existing
+          /** The catalog shows the metadata name from the imported fixture. */
+          const name = await electronApp.evaluate(({ app }, path) => new Promise<string>((ready) => app.emit('test-prepare-workspace', path, ready)), workspaceFixturePath)
+          prepared.set(workspaceFixturePath, name)
+          return name
+        },
         getRendererErrors: errorTracker.getRendererErrors,
         removeRendererErrorsContaining: errorTracker.removeRendererErrorsContaining,
         setupFilesystem: async (
@@ -243,7 +261,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
               options.workspace.scenario === 'empty'
                 ? workspacePath
                 : getWorkspaceInfoPath(workspacePath)
-            await setupUtils.setupFileDialog([fileDialogPath])
+            setupUtils.selectWorkspaceFixture(fileDialogPath)
           }
 
           await setupUtils.completeStartup()

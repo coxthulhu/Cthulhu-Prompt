@@ -1,59 +1,21 @@
 import { ipcMain, shell } from 'electron'
-import * as path from 'path'
-import type { WorkspaceFolderStatus } from '@shared/domain/workspace/Workspace'
-import {
-  isWorkspaceInfoFilename,
-  PROMPTS_DIRECTORY_NAME,
-  TEMPLATES_DIRECTORY_NAME
-} from './Persistence/PromptPersistencePaths'
 import { getDialogProvider } from './dialog-provider'
-import { getFs } from './fs-provider'
+import { listWorkspaces } from './Persistence/sqlite/WorkspaceDatabase'
+import { importWorkspace } from './Workspace/importWorkspace'
+import { data } from './Data/Data'
 
-const hasWorkspaceInfoFile = (folderPath: string): boolean => {
-  const fs = getFs()
-  return fs
-    .readdirSync(folderPath)
-    .some(isWorkspaceInfoFilename)
-}
-
-const getWorkspaceFolderStatus = (folderPath: string): WorkspaceFolderStatus => {
-  const fs = getFs()
-
-  if (!fs.existsSync(folderPath)) {
-    return { exists: false, isWorkspace: false, isEmpty: true }
-  }
-
-  const isWorkspace =
-    hasWorkspaceInfoFile(folderPath) &&
-    fs.existsSync(path.join(folderPath, PROMPTS_DIRECTORY_NAME)) &&
-    fs.existsSync(path.join(folderPath, TEMPLATES_DIRECTORY_NAME))
-
-  return {
-    exists: true,
-    isWorkspace,
-    isEmpty: fs.readdirSync(folderPath).length === 0
-  }
-}
-
+/** Registers managed workspace discovery, single-file legacy import, and Explorer selection. */
 export const setupWorkspaceDialogHandlers = (): void => {
-  ipcMain.handle('select-workspace-folder', async () => {
-    const dialogProvider = getDialogProvider()
-    return await dialogProvider.selectFolder()
+  ipcMain.handle('select-workspace-folder', () => getDialogProvider().selectFolder())
+  ipcMain.handle('list-workspaces', listWorkspaces)
+  ipcMain.handle('import-workspace', async () => {
+    /** The native picker returns one legacy metadata file. */
+    const selection = await getDialogProvider().selectWorkspaceInfoFile()
+    if (!selection.dialogCancelled && selection.filePaths.length) importWorkspace(selection.filePaths[0])
   })
-
-  ipcMain.handle('select-workspace-info-file', async () => {
-    const dialogProvider = getDialogProvider()
-    return await dialogProvider.selectWorkspaceInfoFile()
-  })
-
-  ipcMain.handle('get-workspace-folder-status', async (_, folderPath: string) => {
-    return getWorkspaceFolderStatus(folderPath)
-  })
-
-  ipcMain.handle('open-workspace-folder', async (_, workspacePath: string) => {
-    const openError = await shell.openPath(workspacePath)
-    if (openError) {
-      throw new Error(openError)
-    }
+  ipcMain.handle('open-workspace-folder', () => {
+    /** Explorer reveals the active managed file. */
+    const workspace = data.workspace.committedStore.getAllEntries()[0]?.committed
+    if (workspace) shell.showItemInFolder(workspace.workspacePath)
   })
 }

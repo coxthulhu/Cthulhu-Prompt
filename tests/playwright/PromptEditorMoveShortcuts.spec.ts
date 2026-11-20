@@ -32,7 +32,7 @@ describe('Editor move shortcuts', () => {
     for (const field of ['title', 'body', 'note'] as const) {
       test(`moves the focused ${kind} from its ${field} without changing selection or text`, async ({ testSetup }) => {
         await testSetup.setupFilesystem(createMoveWorkspace(kind))
-        await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+        testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
         /** Window and navigation helpers for the selected editor kind. */
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         await testHelpers.setupWorkspaceViaUI()

@@ -1,3 +1,4 @@
+import { findCollection, findRecord, readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { expectPointerCapture, interruptPointerDrag, recordPointerId } from '../helpers/PointerCaptureHelpers'
@@ -9,9 +10,8 @@ import {
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
 import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { focusMonacoEditor } from '../helpers/MonacoHelpers'
-import { parsePromptMarkdown, serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
+import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import {
   readCollectionView,
@@ -47,12 +47,7 @@ const TOGGLE_COMPLETED_BUTTON = '[data-testid="toggle-completed-prompts-button"]
 const readCategoryOrder = async (
   electronApp: any,
   orderPath: string
-): Promise<{
-  categories: Array<{
-    categoryId: string | null
-    entries: Array<{ kind: 'prompt' | 'template'; id: string }>
-  }>
-}> => JSON.parse(await readTextFile(electronApp, orderPath))
+) => (await findCollection(electronApp, orderPath.split('/').at(-3)!, orderPath.includes('/Templates/') ? 'template' : 'prompt'))!.statusFolders.active.categoryOrder
 
 /** Creates a workspace containing categorized prompts and templates. */
 const createCategorizedWorkspace = (): Record<string, string | null> => ({
@@ -199,7 +194,7 @@ const startCategoryWorkspace = async (
   fileModifiedTimes?: Record<string, string>
 ): Promise<{ mainWindow: any; testHelpers: any }> => {
   await testSetup.setupFilesystem(filesystem, { fileModifiedTimes })
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
   const { mainWindow, testHelpers } = await testSetup.setupAndStart({
     workspace: { scenario: 'none' }
   })
@@ -219,6 +214,11 @@ describe('Prompt categories', () => {
         for (const path of Object.keys(filesystem)) {
           if (path.includes(contentPath) && path.endsWith('.md')) delete filesystem[path]
         }
+        /** Empty the matching groups while retaining the category headers under test. */
+        const path = WORKSPACE_PATH + contentPath + '_CategoryOrder.json'
+        const order = JSON.parse(filesystem[path]!)
+        for (const group of order.categories) group.entries = []
+        filesystem[path] = JSON.stringify(order)
       }
       /** Window and navigation helpers for this empty workflow. */
       const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
@@ -272,6 +272,11 @@ describe('Prompt categories', () => {
             delete filesystem[path]
           }
         }
+        /** Only the Uncategorized group loses its source content. */
+        const path = WORKSPACE_PATH + '/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json'
+        const order = JSON.parse(filesystem[path]!)
+        order.categories.find((group: { categoryId: string | null }) => group.categoryId === null).entries = []
+        filesystem[path] = JSON.stringify(order)
       }
       /** Window and navigation helpers for the category-boundary transition. */
       const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, filesystem)
@@ -304,12 +309,8 @@ describe('Prompt categories', () => {
     await mainWindow
       .locator(`${promptEditorSelector('unknown-category-prompt')} [data-testid="prompt-title"]`)
       .fill('Unknown Category Renamed')
-    const renamedUnknownCategoryPath =
-      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Unknown Category Renamed.prompt.md`
-    await expect.poll(() => checkFileExists(electronApp, renamedUnknownCategoryPath)).toBe(true)
-    await expect.poll(() => readTextFile(electronApp, renamedUnknownCategoryPath)).not.toContain(
-      'category:'
-    )
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'unknown-category-prompt').then((item) => item?.title === 'Unknown Category Renamed')).toBe(true)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'unknown-category-prompt')).not.toHaveProperty('category')
 
     await testHelpers.navigateToPromptCollections('Templates')
     await expect(mainWindow.locator('.prompt-editor-metadata-category')).toHaveCount(0)
@@ -327,12 +328,6 @@ describe('Prompt categories', () => {
     /** Persisted collection order whose category group owns the active prompt. */
     const categoryOrderPath =
       `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
-    /** Active categorized prompt path before completion. */
-    const activePromptPath =
-      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
-    /** Completed categorized prompt path while it is excluded from collection order. */
-    const completedPromptPath =
-      `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Completed/Categorized Prompt.prompt.md`
 
     await testHelpers.navigateToPromptCollections('Prompts')
     await mainWindow
@@ -340,9 +335,9 @@ describe('Prompt categories', () => {
         `${promptEditorSelector('categorized-prompt')} [data-testid="prompt-complete-button"]`
       )
       .click()
-    await expect.poll(() => checkFileExists(electronApp, completedPromptPath)).toBe(true)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'categorized-prompt').then((item) => item?.status === 'Completed')).toBe(true)
     await expect
-      .poll(async () => parsePromptMarkdown(await readTextFile(electronApp, completedPromptPath)))
+      .poll(async () => (await readRecord(electronApp, 'prompt', 'categorized-prompt')))
       .toMatchObject({ category: PROMPT_CATEGORY_ID })
     await expect.poll(() => readCategoryOrder(electronApp, categoryOrderPath)).toEqual({
       categories: [
@@ -366,9 +361,9 @@ describe('Prompt categories', () => {
         `${promptEditorSelector('categorized-prompt')} [data-testid="prompt-uncomplete-button"]`
       )
       .click()
-    await expect.poll(() => checkFileExists(electronApp, activePromptPath)).toBe(true)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'categorized-prompt').then((item) => item?.status === 'Todo')).toBe(true)
     await expect
-      .poll(async () => parsePromptMarkdown(await readTextFile(electronApp, activePromptPath)))
+      .poll(async () => (await readRecord(electronApp, 'prompt', 'categorized-prompt')))
       .toMatchObject({ category: PROMPT_CATEGORY_ID })
     await expect.poll(() => readCategoryOrder(electronApp, categoryOrderPath)).toEqual({
       categories: [
@@ -511,12 +506,7 @@ describe('Prompt categories', () => {
       })
     await expect
       .poll(async () =>
-        parsePromptMarkdown(
-          await readTextFile(
-            electronApp,
-            `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Uncategorized Prompt.prompt.md`
-          )
-        )
+        (await findRecord(electronApp, 'prompt', 'title', 'Uncategorized Prompt'))
       )
       .toMatchObject({ category: PROMPT_CATEGORY_ID })
     await expect(collapsedCategorySummary).toContainText('2 prompts hidden')
@@ -1042,9 +1032,8 @@ describe('Prompt categories', () => {
     expect(Math.abs(populatedEditorHeightPx - 176)).toBeLessThanOrEqual(1)
     await categoryDialog.getByRole('button', { name: 'Save Changes' }).click()
 
-    const categoryPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Categories/Code Review.category.json`
-    await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(true)
-    const createdCategory = JSON.parse(await readTextFile(electronApp, categoryPath)) as {
+    await expect.poll(() => findRecord(electronApp, 'category', 'displayName', 'Code Review').then(Boolean)).toBe(true)
+    const createdCategory = JSON.parse(JSON.stringify(await findRecord(electronApp, 'category', 'displayName', 'Code Review'))) as {
       id: string
       displayName: string
       shortDescription: string | null
@@ -1057,24 +1046,17 @@ describe('Prompt categories', () => {
     })
     expect(createdCategory.id).toMatch(/^[0-9a-f]{32}$/)
     expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Active/_CategoryOrder.json`
-        )
-      ).categories.map((category: { categoryId: string | null }) => category.categoryId)
+      (await findCollection(electronApp, 'Empty'))!.statusFolders.active.categoryOrder.categories.map((category: { categoryId: string | null }) => category.categoryId)
     ).toEqual([null, createdCategory.id, EXISTING_CATEGORY_ID])
 
     await mainWindow.locator('[data-testid="prompt-collection-manage-categories-button"]').click()
     await categoryDialog.locator('[data-testid="manage-categories-new-button"]').click()
     await categoryInput.fill('Name Only')
     await categoryDialog.getByRole('button', { name: 'Save Changes' }).click()
-    /** Name-only category path verifies both optional fields remain optional. */
-    const nameOnlyCategoryPath = `${WORKSPACE_PATH}/DefaultProject/Prompts/Empty/Categories/Name Only.category.json`
-    await expect.poll(() => checkFileExists(electronApp, nameOnlyCategoryPath)).toBe(true)
+    await expect.poll(() => findRecord(electronApp, 'category', 'displayName', 'Name Only').then(Boolean)).toBe(true)
     /** Name-only persisted record created through the prompt-collection screen handler. */
     const nameOnlyCategory = JSON.parse(
-      await readTextFile(electronApp, nameOnlyCategoryPath)
+      JSON.stringify(await findRecord(electronApp, 'category', 'displayName', 'Name Only'))
     ) as {
       shortDescription: string | null
       description: string | null
@@ -1273,28 +1255,17 @@ describe('Prompt categories', () => {
       })
     await expect
       .poll(() =>
-        checkFileExists(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Categories/Review Work.category.json`
-        )
+        findRecord(electronApp, 'category', 'displayName', 'Review Work').then(Boolean)
       )
       .toBe(true)
     await expect
       .poll(() =>
-        checkFileExists(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Categories/Second.category.json`
-        )
+        findRecord(electronApp, 'category', 'displayName', 'Second').then(Boolean)
       )
       .toBe(false)
     await expect
       .poll(async () =>
-        parsePromptMarkdown(
-          await readTextFile(
-            electronApp,
-            `${WORKSPACE_PATH}/DefaultProject/Prompts/Managed/Active/Second Prompt.prompt.md`
-          )
-        )
+        (await findRecord(electronApp, 'prompt', 'title', 'Second Prompt'))
       )
       .not.toHaveProperty('category')
     // Leaving captures the live coordinator after the real renderer mutation has reconciled.
@@ -1368,16 +1339,13 @@ describe('Prompt categories', () => {
     const workspaceId = createDeterministicId(WORKSPACE_PATH)
     /** Known initial file timestamp used to verify deletion changes modifiedAt. */
     const initialModifiedAt = '2020-01-01T00:00:00.000Z'
-    /** Template path whose separately owned category must remain unchanged. */
-    const templatePath =
-      `${WORKSPACE_PATH}/DefaultProject/Templates/Templates/Active/Categorized Template.template.md`
     /** Prompt path expected to be rewritten during category deletion. */
     const promptPath =
       `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Categorized Prompt.prompt.md`
     await testSetup.setupFilesystem(filesystem, {
       fileModifiedTimes: { [promptPath]: initialModifiedAt }
     })
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     await seedWorkspaceUiState(electronApp, {
       workspaceId,
       selectedScreen: 'project',
@@ -1404,8 +1372,8 @@ describe('Prompt categories', () => {
       workspace: { scenario: 'none' }
     })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    expect(await readTextFile(electronApp, promptPath)).toContain(PROMPT_CATEGORY_ID)
-    expect(await readTextFile(electronApp, templatePath)).toContain(TEMPLATE_CATEGORY_ID)
+    expect(await readRecord(electronApp, 'prompt', 'categorized-prompt')).toMatchObject({ category: PROMPT_CATEGORY_ID })
+    expect(await readRecord(electronApp, 'promptTemplate', 'categorized-template')).toMatchObject({ category: TEMPLATE_CATEGORY_ID })
 
     await waitForRendererPersistence(mainWindow)
     /** Atomic retained-set response returned by the main-process IPC handler. */
@@ -1546,21 +1514,13 @@ describe('Prompt categories', () => {
       })
     await expect
       .poll(() =>
-        checkFileExists(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Categories/Code Review.category.json`
-        )
+        findRecord(electronApp, 'category', 'displayName', 'Code Review').then(Boolean)
       )
       .toBe(false)
-    await expect.poll(() => readTextFile(electronApp, promptPath)).not.toContain('category:')
-    await expect.poll(() => readTextFile(electronApp, templatePath)).toContain(TEMPLATE_CATEGORY_ID)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'categorized-prompt')).not.toHaveProperty('category')
+    await expect.poll(() => readRecord(electronApp, 'promptTemplate', 'categorized-template')).toMatchObject({ category: TEMPLATE_CATEGORY_ID })
     expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
-        )
-      )
+      (await findCollection(electronApp, 'Prompts'))!.statusFolders.active.categoryOrder
     ).toEqual(deletedCategoryRoot.data.statusFolders.active.categoryOrder)
   })
 

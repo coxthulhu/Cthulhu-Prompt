@@ -1,11 +1,11 @@
+import { readOrder, readRecord, rows } from '../helpers/WorkspaceDatabaseHelpers'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { createDeterministicId } from '../fixtures/FixtureIds'
-import { readWorkspaceState, runSqlQuery, seedWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
+import { readWorkspaceState, runSqlStatement, runSqlQuery, seedWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
 
 /** Real Electron integration covers note files and the production renderer mutation bridge. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -47,7 +47,7 @@ const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template') => 
     }),
     [`${active}/Owner.note.md`]: `---\nid: blocker\ncreatedAt: "2020-01-01T00:00:00Z"\ntitle: Blocker\nstatus: ${kind === 'prompt' ? 'Todo' : 'Active'}\n---\nUnrelated note`
   }, { fileModifiedTimes: { [`${active}/Owner.${kind === 'prompt' ? 'prompt' : 'template'}.md`]: ORIGINAL_TIME } })
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
   /** Application startup exercises disk discovery before any note mutation. */
   const started = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await started.testHelpers.setupWorkspaceViaUI()
@@ -81,12 +81,6 @@ const expectVisibilityRemoved = async (page: Page, app: ElectronApplication, not
   { workspaceId: WORKSPACE_ID, noteId })).toBeUndefined()
 }
 
-/** Reads physical modification times, optionally seeding an old time without rewriting content. */
-const fileTime = (app: ElectronApplication, filePath: string, setTo?: string): Promise<string> => app.evaluate(({ app }, payload) => {
-  app.emit('test-file-modified-time', payload)
-  return (global as any).testFileModifiedTime
-}, { filePath, setTo })
-
 /** Sends malformed/stale requests through real IPC instead of bypassing main validation. */
 const invoke = (page: Page, channel: string, command: object, expectations: object[] = []) => page.evaluate(
   ({ channel, command, expectations }) => window.electron.ipcRenderer.invoke(channel, {
@@ -98,7 +92,7 @@ describe('Notes persistence and commands', () => {
   for (const kind of ['prompt', 'template'] as const) {
     test(`${kind} attachment visibility is user-specific, isolated, and restored for finalized owners`, async ({ testSetup, electronApp }) => {
       /** Existing notes fixture exercises real files, SQLite, and renderer mutations. */
-      const { mainWindow, testHelpers, active } = await startNotes(testSetup, kind)
+      const { mainWindow, testHelpers } = await startNotes(testSetup, kind)
       /** Two attachments must retain independent visibility choices. */
       const ids = await mainWindow.evaluate(async (kind) => [
         await window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`),
@@ -110,12 +104,7 @@ describe('Notes persistence and commands', () => {
       /** Identical note IDs in other workspaces must not be changed or pruned. */
       const otherWorkspace = 'other-workspace'
       await seedWorkspaceState(electronApp, otherWorkspace, 'attached-note', ids[0]!, { visible: true })
-      /** Neither visibility direction may write the owner or note file. */
-      const paths = [`${active}/Owner 1.${kind}.md`, `${active}/Owner 1.note.md`]
-      /** Exact contents and physical mtimes before any visibility changes. */
-      const files = await Promise.all(paths.map((path) => readTextFile(electronApp, path)))
-      /** Independent file timestamps detect rewrites with unchanged text. */
-      const times = await Promise.all(paths.map((path) => fileTime(electronApp, path)))
+      const beforeRows = await rows(electronApp, 'SELECT * FROM content.records ORDER BY kind, id')
       /** Domain timestamps must also remain untouched. */
       const noteBefore = await readNote(mainWindow, ids[0]!)
       /** Owner metadata remains independent of the preference. */
@@ -128,8 +117,7 @@ describe('Notes persistence and commands', () => {
       await setVisible(mainWindow, ids[0]!, false)
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', ids[0]!)).toEqual({ visible: false })
       expect((await runSqlQuery(electronApp, `SELECT storage_scope FROM workspace_state WHERE workspace_id = ${toSqlText(WORKSPACE_ID)} AND state_type = 'attached-note' AND entity_id = ${toSqlText(ids[0]!)}`)).rows).toEqual([{ storage_scope: 'user-specific' }])
-      expect(await Promise.all(paths.map((path) => readTextFile(electronApp, path)))).toEqual(files)
-      expect(await Promise.all(paths.map((path) => fileTime(electronApp, path)))).toEqual(times)
+      expect(await rows(electronApp, 'SELECT * FROM content.records ORDER BY kind, id')).toEqual(beforeRows)
       expect(await readNote(mainWindow, ids[0]!)).toEqual(noteBefore)
       expect(await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, `${kind}-owner`), kind)).toEqual(ownerBefore)
       await mainWindow.evaluate(({ kind, status }) => window.playwrightTestControls!.notes.setOwnerLocation(`${kind}-source`, `${kind}-owner`, {
@@ -137,7 +125,7 @@ describe('Notes persistence and commands', () => {
       }), { kind, status: PromptStatus.Archived })
       expect(await readVisible(mainWindow, ids[0]!)).toBe(false)
       await testHelpers.clearWorkspaceViaUI()
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
       await testHelpers.setupWorkspaceViaUI()
       expect(await readVisible(mainWindow, ids[0]!)).toBe(false)
       await mainWindow.evaluate(({ workspaceId, kind }) => window.playwrightTestControls!.notes.loadCollection(workspaceId, `${kind}-target`), { workspaceId: WORKSPACE_ID, kind })
@@ -175,16 +163,15 @@ describe('Notes persistence and commands', () => {
       await expectVisibilityRemoved(mainWindow, electronApp, neighborId)
     })
 
-    test(`${kind} attachments reserve paired filenames, detach, reopen, and delete independently`, async ({ testSetup, electronApp }) => {
+    test(`${kind} attachments persist independently, detach, reopen, and delete independently`, async ({ testSetup, electronApp }) => {
       /** Hydrated library with a preexisting standalone note occupying the owner stem. */
-      const { mainWindow, testHelpers, active } = await startNotes(testSetup, kind)
+      const { mainWindow, testHelpers } = await startNotes(testSetup, kind)
       /** New GUID generated by the actual renderer command. */
       const noteId = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`), kind)
       expect(noteId).toMatch(/^[a-f0-9]{32}$/)
-      expect(await readTextFile(electronApp, `${active}/Owner.note.md`)).toContain('Unrelated note')
-      expect(await checkFileExists(electronApp, `${active}/Owner.${kind}.md`)).toBe(false)
-      expect(await readTextFile(electronApp, `${active}/Owner 1.${kind}.md`)).toContain(`attachedNoteId: ${noteId}`)
-      expect(await readTextFile(electronApp, `${active}/Owner 1.note.md`)).toBe(`---\nid: ${noteId}\n---\n`)
+      expect(await readRecord(electronApp, 'note', 'blocker')).toMatchObject({ noteText: 'Unrelated note' })
+      expect(await readRecord(electronApp, kind === 'prompt' ? 'prompt' : 'promptTemplate', kind + '-owner')).toMatchObject({ attachedNoteId: noteId })
+      expect(await readRecord(electronApp, 'note', noteId)).toMatchObject({ kind: 'attached', noteText: '' })
       expect(await invoke(mainWindow, 'create-attached-note', {
         ownerKind: kind, ownerId: `${kind}-owner`, noteId: 'second-attachment', modifiedAt: '2026-10-18T12:00:00Z'
       })).toMatchObject({ success: false, conflict: true })
@@ -192,28 +179,21 @@ describe('Notes persistence and commands', () => {
       const ownerTime = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, `${kind}-owner`)!.modifiedAt, kind)
       expect(ownerTime).not.toBe(ORIGINAL_TIME)
       /** Physical owner mtime must remain unchanged even if in-memory metadata is cached. */
-      const ownerDiskTime = await fileTime(electronApp, `${active}/Owner 1.${kind}.md`)
-      await fileTime(electronApp, `${active}/Owner 1.note.md`, ORIGINAL_TIME)
       /** Exact Markdown body includes frontmatter-looking text and trailing whitespace. */
       const body = '\n# Attached\n\n---\nKeep this body.  \n'
       await mainWindow.evaluate(({ noteId, body }) => window.playwrightTestControls!.notes.updateNote(noteId, body), { noteId, body })
-      expect(await readTextFile(electronApp, `${active}/Owner 1.note.md`)).toBe(`---\nid: ${noteId}\n---\n${body}`)
+      expect(await readRecord(electronApp, 'note', noteId)).toMatchObject({ noteText: body })
       expect(await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, `${kind}-owner`)!.modifiedAt, kind)).toBe(ownerTime)
-      expect(await fileTime(electronApp, `${active}/Owner 1.${kind}.md`)).toBe(ownerDiskTime)
-      expect(await fileTime(electronApp, `${active}/Owner 1.note.md`)).not.toBe(ORIGINAL_TIME)
       await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.renameOwner(kind, `${kind}-owner`, 'Neighbor'), kind)
-      expect(await checkFileExists(electronApp, `${active}/Owner 1.note.md`)).toBe(false)
-      expect(await readTextFile(electronApp, `${active}/Neighbor 1.note.md`)).toContain(body)
-      expect(await readTextFile(electronApp, `${active}/Neighbor 1.${kind}.md`)).toContain(`attachedNoteId: ${noteId}`)
-      await fileTime(electronApp, `${active}/Neighbor 1.${kind}.md`, ORIGINAL_TIME)
+      expect(await readRecord(electronApp, 'note', noteId)).toMatchObject({ noteText: body })
+      expect(await readRecord(electronApp, kind === 'prompt' ? 'prompt' : 'promptTemplate', kind + '-owner')).toMatchObject({ attachedNoteId: noteId })
       await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.detachNote(id), noteId)
-      expect(await fileTime(electronApp, `${active}/Neighbor 1.${kind}.md`)).not.toBe(ORIGINAL_TIME)
       expect(await readNote(mainWindow, noteId)).toMatchObject({ id: noteId, kind: 'standalone', noteText: body, title: '', fallbackTitle: 'New Note', category: `${kind}-category` })
-      expect(await readTextFile(electronApp, `${active}/New Note.note.md`)).toContain(`id: ${noteId}`)
-      expect(await readTextFile(electronApp, `${active}/Neighbor 1.${kind}.md`)).not.toContain('attachedNoteId:')
+      expect(await readRecord(electronApp, 'note', noteId)).toMatchObject({ kind: 'standalone' })
+      expect(await readRecord(electronApp, kind === 'prompt' ? 'prompt' : 'promptTemplate', kind + '-owner')).not.toHaveProperty('attachedNoteId')
       /** Category ordering contains the note immediately after its former owner. */
-      const order = JSON.parse(await readTextFile(electronApp, `${active}/_CategoryOrder.json`))
-      expect(order.categories.find((group: { categoryId: string }) => group.categoryId === `${kind}-category`).entries).toEqual([
+      const order = (await readOrder(electronApp, kind + '-source'))
+      expect(order.categories.find((group) => group.categoryId === `${kind}-category`)?.entries).toEqual([
         { kind, id: `${kind}-owner` }, { kind: 'note', id: noteId }, { kind, id: `${kind}-neighbor` }
       ])
       /** A second detachment obtains the next fallback title and leaves the original GUID untouched. */
@@ -228,7 +208,7 @@ describe('Notes persistence and commands', () => {
       const attachedId = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`), kind)
       await testHelpers.clearWorkspaceViaUI()
       expect(await readNote(mainWindow, attachedId)).toBeUndefined()
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
       await testHelpers.setupWorkspaceViaUI()
       expect(await readNote(mainWindow, noteId)).toMatchObject({ noteText: body, kind: 'standalone' })
       expect(await readNote(mainWindow, attachedId)).toMatchObject({ kind: 'attached' })
@@ -237,19 +217,18 @@ describe('Notes persistence and commands', () => {
         await window.playwrightTestControls!.notes.deleteOwner(kind, `${kind}-source`, `${kind}-owner`)
       }, { kind, workspaceId: WORKSPACE_ID })
       expect(await readNote(mainWindow, attachedId)).toBeUndefined()
-      expect(await checkFileExists(electronApp, `${active}/Neighbor 1.note.md`)).toBe(false)
-      expect(await checkFileExists(electronApp, `${active}/New Note.note.md`)).toBe(true)
       await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.deleteNote(id), noteId)
-      expect(await checkFileExists(electronApp, `${active}/New Note.note.md`)).toBe(false)
       await mainWindow.evaluate(({ kind, workspaceId }) => window.playwrightTestControls!.notes.deleteCollection(workspaceId, `${kind}-source`), { kind, workspaceId: WORKSPACE_ID })
       expect(await readNote(mainWindow, nextId)).toBeUndefined()
       expect(await readNote(mainWindow, 'blocker')).toBeUndefined()
-      expect(await checkFileExists(electronApp, active)).toBe(false)
+      for (const deleted of [attachedId, noteId, nextId, 'blocker']) {
+        expect(await readRecord(electronApp, 'note', deleted)).toBeNull()
+      }
     })
 
     test(`${kind} notes follow owner moves and enforce standalone status and library boundaries`, async ({ testSetup, electronApp }) => {
       /** Independent source and target collections in both library kinds. */
-      const { mainWindow, active, library } = await startNotes(testSetup, kind)
+      const { mainWindow } = await startNotes(testSetup, kind)
       /** Standalone note used to exercise manual and finalized ordering. */
       const noteId = await mainWindow.evaluate(async (kind) => {
         /** Create and detach through production renderer commands. */
@@ -263,51 +242,38 @@ describe('Notes persistence and commands', () => {
         promptCollectionId: `${kind}-source`, categoryId: `${kind}-category`, previousEntryId: `${kind}-neighbor`, status
       }), { kind, noteId, status })
       /** Reordering retains the note reference in the same category. */
-      const order = JSON.parse(await readTextFile(electronApp, `${active}/_CategoryOrder.json`))
+      const order = (await readOrder(electronApp, kind + '-source'))
       expect(order.categories[1].entries.map((entry: { id: string }) => entry.id)).toEqual([`${kind}-owner`, `${kind}-neighbor`, noteId])
       await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.deleteCategory(`${kind}-category`), kind)
       expect(await readNote(mainWindow, noteId)).not.toHaveProperty('category')
-      expect(await readTextFile(electronApp, `${active}/New Note.note.md`)).not.toContain('category:')
+      expect(await readRecord(electronApp, 'note', noteId)).not.toHaveProperty('category')
       /** Attachment accompanying every subsequent owner move. */
       const attachedId = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`), kind)
       await mainWindow.evaluate(({ kind, status }) => window.playwrightTestControls!.notes.setOwnerLocation(`${kind}-source`, `${kind}-owner`, {
         promptCollectionId: `${kind}-target`, categoryId: null, previousEntryId: null, status
       }), { kind, status })
-      /** Moving into an empty directory permits both paired files to reclaim the base stem. */
-      const target = `${WORKSPACE}/DefaultProject/${library}/Target`
-      expect(await checkFileExists(electronApp, `${active}/Owner 1.note.md`)).toBe(false)
-      expect(await readTextFile(electronApp, `${target}/Active/Owner.note.md`)).toContain(attachedId)
+      expect(await readRecord(electronApp, 'note', attachedId)).toMatchObject({ kind: 'attached' })
       await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.renameCollection(`${kind}-target`, 'Renamed'), kind)
-      /** Collection-directory rename moves both descendants without reallocating their stem. */
-      const renamed = `${WORKSPACE}/DefaultProject/${library}/Renamed`
-      expect(await checkFileExists(electronApp, `${target}/Active/Owner.note.md`)).toBe(false)
-      expect(await checkFileExists(electronApp, `${renamed}/Active/Owner.note.md`)).toBe(true)
       if (kind === 'prompt') {
         await mainWindow.evaluate((status) => window.playwrightTestControls!.notes.setOwnerLocation('prompt-target', 'prompt-owner', {
           promptCollectionId: 'prompt-target', categoryId: null, previousEntryId: null, status
         }), PromptStatus.Backlog)
-        expect(await checkFileExists(electronApp, `${renamed}/Backlog/Owner.note.md`)).toBe(true)
         await mainWindow.evaluate((status) => window.playwrightTestControls!.notes.setOwnerLocation('prompt-target', 'prompt-owner', {
           promptCollectionId: 'prompt-target', categoryId: null, previousEntryId: null, status
         }), PromptStatus.Completed)
-        expect(await checkFileExists(electronApp, `${renamed}/Completed/Owner.note.md`)).toBe(true)
         expect(await invoke(mainWindow, 'detach-note', { noteId: attachedId, modifiedAt: '2026-10-18T12:00:00Z' })).toMatchObject({ success: false, conflict: true })
       }
       await mainWindow.evaluate(({ kind, status }) => window.playwrightTestControls!.notes.setOwnerLocation(`${kind}-target`, `${kind}-owner`, {
         promptCollectionId: `${kind}-target`, categoryId: null, previousEntryId: null, status
       }), { kind, status: PromptStatus.Archived })
-      expect(await checkFileExists(electronApp, `${renamed}/Archived/Owner.note.md`)).toBe(true)
       expect(await invoke(mainWindow, 'detach-note', { noteId: attachedId, modifiedAt: '2026-10-18T12:00:00Z' })).toMatchObject({ success: false, conflict: true })
-      await fileTime(electronApp, `${renamed}/Archived/Owner.${kind}.md`, ORIGINAL_TIME)
       await mainWindow.evaluate(async (id) => {
         await window.playwrightTestControls!.notes.updateNote(id, 'Edited while finalized')
         await window.playwrightTestControls!.notes.deleteNote(id)
       }, attachedId)
-      expect(await checkFileExists(electronApp, `${renamed}/Archived/Owner.note.md`)).toBe(false)
-      expect(await fileTime(electronApp, `${renamed}/Archived/Owner.${kind}.md`)).not.toBe(ORIGINAL_TIME)
       /** Creating another attachment on a finalized owner remains allowed. */
       const finalId = await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.createAttachedNote(kind, `${kind}-owner`), kind)
-      expect(await readTextFile(electronApp, `${renamed}/Archived/Owner.note.md`)).toContain(finalId)
+      expect(await readRecord(electronApp, 'note', finalId)).toMatchObject({ kind: 'attached' })
       /** Cross-library movement is rejected even when the destination status is otherwise valid. */
       const move = { noteId, sourcePromptCollectionId: `${kind}-source`, modifiedAt: '2026-10-18T12:00:00Z', location: {
         promptCollectionId: `${kind === 'prompt' ? 'template' : 'prompt'}-target`, categoryId: null, previousEntryId: null, status
@@ -320,7 +286,6 @@ describe('Notes persistence and commands', () => {
         promptCollectionId: `${kind}-target`, categoryId: null, previousEntryId: null, status
       }), { kind, noteId, status: PromptStatus.Archived })
       expect(await readNote(mainWindow, noteId)).toMatchObject({ status: 'Archived', finalizedAt: expect.any(String) })
-      expect(await checkFileExists(electronApp, `${renamed}/Archived/New Note.note.md`)).toBe(true)
       await mainWindow.reload()
       await mainWindow.waitForFunction((id) => !!window.playwrightTestControls?.notes.getNote(id), noteId)
       await expect.poll(() => readNote(mainWindow, noteId)).toMatchObject({ status: 'Archived', finalizedAt: expect.any(String) })
@@ -328,7 +293,6 @@ describe('Notes persistence and commands', () => {
         promptCollectionId: `${kind}-source`, categoryId: null, previousEntryId: null, status
       }), { kind, noteId, status })
       expect(await readNote(mainWindow, noteId)).not.toHaveProperty('finalizedAt')
-      expect(await checkFileExists(electronApp, `${active}/New Note.note.md`)).toBe(true)
     })
   }
 
@@ -358,7 +322,7 @@ describe('Notes persistence and commands', () => {
     await seedWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', 'blocker', { visible: false })
     await seedWorkspaceState(electronApp, 'other-workspace', 'attached-note', 'missing', { visible: false })
     await testHelpers.clearWorkspaceViaUI()
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
     await testHelpers.setupWorkspaceViaUI()
     await expectVisibilityRemoved(mainWindow, electronApp, 'missing')
     await expectVisibilityRemoved(mainWindow, electronApp, 'blocker')
@@ -368,7 +332,7 @@ describe('Notes persistence and commands', () => {
 
   test('paced note edits flush before detachment and invalid IPC cannot change note files', async ({ testSetup, electronApp }) => {
     /** Real renderer queue with deterministic IPC gates. */
-    const { mainWindow, active } = await startNotes(testSetup, 'prompt')
+    const { mainWindow } = await startNotes(testSetup, 'prompt')
     /** Note whose pending text must survive its subsequent detachment. */
     const id = await mainWindow.evaluate(() => window.playwrightTestControls!.notes.createAttachedNote('prompt', 'prompt-owner'))
     await mainWindow.evaluate((id) => {
@@ -377,7 +341,7 @@ describe('Notes persistence and commands', () => {
     }, id)
     expect(await readNote(mainWindow, id)).toMatchObject({ kind: 'attached', noteText: 'Latest' })
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.detachNote(id), id)
-    expect(await readTextFile(electronApp, `${active}/New Note.note.md`)).toContain('Latest')
+    expect(await readRecord(electronApp, 'note', id)).toMatchObject({ noteText: 'Latest' })
     /** Successful detachment fixes identity and creation time across later edits. */
     const detached = await readNote(mainWindow, id)
     expect(detached).toMatchObject({ kind: 'standalone', createdAt: expect.any(String) })
@@ -390,33 +354,27 @@ describe('Notes persistence and commands', () => {
     expect(await invoke(mainWindow, 'update-note', { noteId: id, noteText: 'Stale', modifiedAt: '2026-10-18T12:00:00Z' }, [
       { entityType: 'note', id, expected: 'revision', revision: 0 }
     ])).toMatchObject({ success: false, conflict: true })
-    expect(await readTextFile(electronApp, `${active}/New Note.note.md`)).toContain('Latest')
+    expect(await readRecord(electronApp, 'note', id)).toMatchObject({ noteText: 'Latest' })
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.updateNote(id, 'Renamed body', 'Explicit note'), id)
-    expect(await checkFileExists(electronApp, `${active}/New Note.note.md`)).toBe(false)
-    expect(await readTextFile(electronApp, `${active}/Explicit note.note.md`)).toContain('title: Explicit note')
+    expect(await readRecord(electronApp, 'note', id)).toMatchObject({ title: 'Explicit note' })
     expect(await readNote(mainWindow, id)).toMatchObject({ createdAt: detached?.kind === 'standalone' ? detached.createdAt : undefined })
   })
 
   test('a failed detach restores owner, note, ordering, timestamps, and revisions', async ({ testSetup, electronApp }) => {
     /** Attachment whose detach will fail after preceding file writes have committed. */
-    const { mainWindow, active } = await startNotes(testSetup, 'prompt')
+    const { mainWindow } = await startNotes(testSetup, 'prompt')
     /** Real renderer-generated note identity. */
     const id = await mainWindow.evaluate(() => window.playwrightTestControls!.notes.createAttachedNote('prompt', 'prompt-owner'))
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.updateNote(id, 'Retain these notes'), id)
     await setVisible(mainWindow, id, false)
-    /** Original files and timestamps must survive partial filesystem commit. */
-    const paths = [`${active}/Owner 1.prompt.md`, `${active}/Owner 1.note.md`, `${active}/_CategoryOrder.json`]
-    /** Exact original disk contents. */
-    const before = await Promise.all(paths.map((path) => readTextFile(electronApp, path)))
-    /** Exact original physical file modification times. */
-    const times = await Promise.all(paths.map((path) => fileTime(electronApp, path)))
+    const before = await rows(electronApp, 'SELECT * FROM content.records ORDER BY kind, id')
     /** Main snapshots provide revision assertions independently of the renderer cache. */
     const load = () => mainWindow.evaluate((workspaceId) => window.electron.ipcRenderer.invoke('load-prompt-collection-initial', {
       requestId: crypto.randomUUID(), clientId: window.ipcClientId, payload: { workspaceId, promptCollectionId: 'prompt-source' }
     }), WORKSPACE_ID)
     /** Authoritative state before fault injection. */
     const initial = await load()
-    await electronApp.evaluate(({ app }, target) => { app.emit('test-fail-file-commit', target) }, `${active}/New Note.note.md`)
+    await runSqlStatement(electronApp, "CREATE TRIGGER content.reject_detach BEFORE UPDATE ON records WHEN NEW.kind='note' BEGIN SELECT RAISE(ABORT, 'Injected note write failure'); END")
     expect(await mainWindow.evaluate(async (id) => {
       try {
         await window.playwrightTestControls!.notes.detachNote(id)
@@ -424,16 +382,15 @@ describe('Notes persistence and commands', () => {
       } catch (error) {
         return String(error)
       }
-    }, id)).toContain('Injected file commit failure')
+    }, id)).toContain('Injected note write failure')
     // The deliberately rejected IPC request is expected; unrelated renderer errors still fail teardown.
-    testSetup.removeRendererErrorsContaining('Injected file commit failure')
+    testSetup.removeRendererErrorsContaining('Injected note write failure')
     testSetup.removeRendererErrorsContaining('IPC invocation error')
-    expect(await Promise.all(paths.map((path) => readTextFile(electronApp, path)))).toEqual(before)
-    expect(await Promise.all(paths.map((path) => fileTime(electronApp, path)))).toEqual(times)
-    expect(await checkFileExists(electronApp, `${active}/New Note.note.md`)).toBe(false)
+    expect(await rows(electronApp, 'SELECT * FROM content.records ORDER BY kind, id')).toEqual(before)
     expect(await readNote(mainWindow, id)).toMatchObject({ id, kind: 'attached', noteText: 'Retain these notes' })
     expect(await mainWindow.evaluate(() => window.playwrightTestControls!.notes.getOwner('prompt', 'prompt-owner'))).toMatchObject({ attachedNoteId: id })
     expect(await load()).toEqual(initial)
+    await runSqlStatement(electronApp, 'DROP TRIGGER content.reject_detach')
     expect(await readVisible(mainWindow, id)).toBe(false)
     expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', id)).toEqual({ visible: false })
     await mainWindow.evaluate((id) => window.playwrightTestControls!.notes.detachNote(id), id)

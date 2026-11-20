@@ -23,13 +23,12 @@ import { waitForRevisionMutations } from '@renderer/data/IpcFramework/RevisionMu
 
 /** Creates a workspace through the command-style IPC endpoint. */
 export const createWorkspace = async (
-  workspacePath: string,
   workspaceName: string,
   includeExamplePrompts: boolean
-): Promise<IpcMutationActionResponse> =>
-  await ipcInvokeWithPayload<IpcMutationActionResponse, CreateWorkspacePayload>(
+): Promise<IpcMutationActionResponse & { path: string }> =>
+  await ipcInvokeWithPayload<IpcMutationActionResponse & { path: string }, CreateWorkspacePayload>(
     'create-workspace',
-    { workspacePath, workspaceName, includeExamplePrompts }
+    { workspaceName, includeExamplePrompts }
   )
 
 /** Flushes pending writes before releasing all workspace memory in both processes. */

@@ -1,4 +1,4 @@
-import { promptPersistence } from '../Persistence/PromptPersistence'
+import { contentPersistence } from '../Persistence/sqlite/WorkspaceDatabase'
 import { createRevisionData } from './RevisionDataFactory'
 
 const emitCommittedRevisionChanged = (_id: string): void => {
@@ -6,6 +6,6 @@ const emitCommittedRevisionChanged = (_id: string): void => {
 }
 
 export const promptData = createRevisionData({
-  persistence: promptPersistence,
+  persistence: contentPersistence('prompt'),
   emitCommittedRevisionChanged
 })

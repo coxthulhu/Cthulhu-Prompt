@@ -53,7 +53,7 @@ describe('New prompt focus', () => {
             ? createWorkspaceWithCollections(workspacePath, [{ folderName: 'Focus', displayName: 'Focus' }])
             : createWorkspaceWithTemplateCollections(workspacePath, [{ folderName: 'Focus', displayName: 'Focus' }])
         )
-        await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+        testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
         /** Window and navigation helpers for the selected content kind. */
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)

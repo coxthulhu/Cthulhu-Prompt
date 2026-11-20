@@ -1,8 +1,7 @@
+import { readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
-import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { readClipboardText, stubClipboard } from '../helpers/ClipboardHelpers'
 
@@ -50,7 +49,7 @@ describe('Prompt copy confirmation', () => {
   for (const status of [PromptStatus.Backlog, PromptStatus.Completed, PromptStatus.Archived]) {
     test(`${status}: confirms direct copy and keeps Set Template independent`, async ({ testSetup, electronApp }) => {
       await testSetup.setupFilesystem(createCopyWorkspace(status))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Real window and navigation helpers exercise the visible status view. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -71,32 +70,29 @@ describe('Prompt copy confirmation', () => {
       const templateDialog = mainWindow.getByRole('dialog', { name: 'Select Template', exact: true })
       await templateDialog.getByTestId('prompt-tree-template-prompt-wrapper').click()
       await templateDialog.getByTestId('prompt-template-confirm-button').click()
-      /** Original file remains in its workflow when only its template is changed. */
-      const sourcePath = `${ROOT_PATH}/${status}/Direct.prompt.md`
-      await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, sourcePath)))
+      await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'direct')))
         .toMatchObject({ status, templates: [{ id: 'wrapper' }] })
       await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
       expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
       /** Byte comparison catches unintended timestamp or selection edits during cancellation. */
-      const original = await readTextFile(electronApp, sourcePath)
+      const original = await readRecord(electronApp, 'prompt', 'direct')
       await editor.getByTestId('prompt-copy-button').click()
       /** Informational dialog explains the source workflow and uses the approved action text. */
       const confirmation = mainWindow.getByRole('dialog', { name: 'Copy Prompt', exact: true })
       await expect(confirmation).toContainText(`Copying this prompt will move it from ${status} to In Progress.`)
       await expect(confirmation.getByTestId('prompt-confirm-copy-button')).toHaveText('Copy and Move')
       expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
-      expect(await readTextFile(electronApp, sourcePath)).toBe(original)
+      expect(await readRecord(electronApp, 'prompt', 'direct')).toEqual(original)
       await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click()
       await expect(confirmation).toBeHidden()
       await expect(editor.getByTestId('prompt-status-pill')).toHaveText(status)
       expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
-      expect(await readTextFile(electronApp, sourcePath)).toBe(original)
+      expect(await readRecord(electronApp, 'prompt', 'direct')).toEqual(original)
       await editor.getByTestId('prompt-copy-button').click()
       await confirmation.getByTestId('prompt-confirm-copy-button').click()
       await expect.poll(() => readClipboardText(mainWindow)).toBe('Wrapped Direct body')
-      await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/Direct.prompt.md`)))
+      await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'direct')))
         .toMatchObject({ status: PromptStatus.InProgress, templates: [{ id: 'wrapper' }] })
-      await expect.poll(() => checkFileExists(electronApp, sourcePath)).toBe(false)
       await expect(filter).toHaveAttribute('aria-pressed', 'true')
       await expect(editor).toHaveCount(0)
       await expect(confirmation).toBeHidden()
@@ -106,7 +102,7 @@ describe('Prompt copy confirmation', () => {
     for (const selectionMode of ['quick', 'double-click'] as const) {
       test(`${status}: stages ${selectionMode} choices until confirmation`, async ({ testSetup, electronApp }) => {
         await testSetup.setupFilesystem(createCopyWorkspace(status))
-        await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+        testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
         /** Real window and navigation helpers exercise both selector copy decisions. */
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         await testHelpers.setupWorkspaceViaUI()
@@ -124,10 +120,8 @@ describe('Prompt copy confirmation', () => {
           { id: 'quick-none', title: 'Quick None', option: 'prompt-template-option-none', output: 'Plain body', templates: null }
         ]) {
           await mainWindow.evaluate(() => navigator.clipboard.writeText('Keep clipboard'))
-          /** Source document detects changes made before the confirmation is accepted. */
-          const sourcePath = `${ROOT_PATH}/${status}/${choice.title}.prompt.md`
           /** Original bytes include the unset template decision and original workflow. */
-          const original = await readTextFile(electronApp, sourcePath)
+          const original = await readRecord(electronApp, 'prompt', choice.id)
           /** Undecided editor exposes quick copy and Set Template just like an Active prompt. */
           const editor = mainWindow.locator(promptEditorSelector(choice.id))
           await expect(editor.getByTestId('prompt-template-button')).toBeVisible()
@@ -148,14 +142,14 @@ describe('Prompt copy confirmation', () => {
           await expect(picker).toBeHidden()
           await expect(confirmation).toBeVisible()
           expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
-          expect(await readTextFile(electronApp, sourcePath)).toBe(original)
+          expect(await readRecord(electronApp, 'prompt', choice.id)).toEqual(original)
           if (choice.templates) await mainWindow.keyboard.press('Escape')
           else await confirmation.getByRole('button', { name: 'Close', exact: true }).click()
           await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
           await expect(editor.locator('.prompt-editor-metadata-template')).toHaveText('Not selected')
           await expect(editor.getByTestId('prompt-status-pill')).toHaveText(status)
           expect(await readClipboardText(mainWindow)).toBe('Keep clipboard')
-          expect(await readTextFile(electronApp, sourcePath)).toBe(original)
+          expect(await readRecord(electronApp, 'prompt', choice.id)).toEqual(original)
           await editor.getByTestId(selectionMode === 'quick'
             ? 'prompt-template-and-copy-button'
             : 'prompt-template-button').click()
@@ -163,9 +157,8 @@ describe('Prompt copy confirmation', () => {
           else await picker.getByTestId(choice.option).dblclick()
           await confirmation.getByTestId('prompt-confirm-copy-button').click()
           await expect.poll(() => readClipboardText(mainWindow)).toBe(choice.output)
-          await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/${choice.title}.prompt.md`)))
+          await expect.poll(async () => (await readRecord(electronApp, 'prompt', choice.id)))
             .toMatchObject({ status: PromptStatus.InProgress, templates: choice.templates })
-          await expect.poll(() => checkFileExists(electronApp, sourcePath)).toBe(false)
           await expect(filter).toHaveAttribute('aria-pressed', 'true')
           await expect(editor).toHaveCount(0)
           await expect(confirmation).toBeHidden()

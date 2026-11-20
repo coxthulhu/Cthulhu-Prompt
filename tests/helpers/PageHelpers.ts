@@ -8,6 +8,7 @@ import * as uiValidationHelpers from './UiValidationHelpers'
 
 /** IPC gates exposed through both setup and page-bound helpers. */
 export interface IpcControls {
+  prepareWorkspaceFixture: () => Promise<string>
   pauseIpcChannel: (channel: string) => Promise<void>
   resumeIpcChannel: (channel: string) => Promise<void>
 }
@@ -34,7 +35,7 @@ export function createPageHelpers(mainWindow: Page, ipcControls: IpcControls) {
     /** Validate page structure using this test’s main window. */
     validatePageStructure: () => uiValidationHelpers.validatePageStructure(mainWindow),
     /** Setup workspace via u i using this test’s main window. */
-    setupWorkspaceViaUI: () => workspaceHelpers.setupWorkspaceViaUI(mainWindow),
+    setupWorkspaceViaUI: async () => workspaceHelpers.setupWorkspaceViaUI(mainWindow, await ipcControls.prepareWorkspaceFixture()),
     /** Create workspace via u i using this test’s main window. */
     createWorkspaceViaUI: () => workspaceHelpers.createWorkspaceViaUI(mainWindow),
     /** Clear workspace via u i using this test’s main window. */
@@ -47,7 +48,7 @@ export function createPageHelpers(mainWindow: Page, ipcControls: IpcControls) {
     getDisplayedWorkspacePath: () => workspaceHelpers.getDisplayedWorkspacePath(mainWindow),
     /** Assert workspace ready path using this test’s main window. */
     assertWorkspaceReadyPath: async (path: string) => {
-      baseExpect(await workspaceHelpers.getDisplayedWorkspacePath(mainWindow)).toBe(path)
+      baseExpect(await workspaceHelpers.getDisplayedWorkspacePath(mainWindow)).toMatch(new RegExp('Workspaces[\\\\/]' + path.split('/').at(-1) + '\\.cthulhuprompt$'))
       baseExpect(await workspaceHelpers.isWorkspaceReady(mainWindow)).toBe(true)
     },
     /** Click prompt collection item using this test’s main window. */

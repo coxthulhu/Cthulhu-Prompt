@@ -84,7 +84,6 @@
   import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
-  import { resolveWorkspaceInfoPath } from '@shared/domain/workspace/workspacePath'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import AppUpdatesPopup from '@renderer/features/updates/AppUpdatesPopup.svelte'
   import { createAppUpdates } from '@renderer/features/updates/appUpdates.svelte'
@@ -409,27 +408,7 @@
     }
   }
 
-  /** Replaces the open workspace with a double-clicked workspace file, reporting failures on Home. */
-  const openWorkspaceFile = async (workspaceInfoPath: string): Promise<void> => {
-    if (isWorkspaceLoading) return
-
-    const selectionResult = await selectWorkspace(workspaceInfoPath)
-    if (selectionResult.success) {
-      await restoreSelectedWorkspaceScreen()
-      return
-    }
-
-    activeScreen = 'home'
-    workspaceOpenErrorText = selectionResult.message
-    showWorkspaceOpenErrorDialog = true
-  }
-
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
-    if (runtimeConfig.startupWorkspaceInfoPath) {
-      await openWorkspaceFile(runtimeConfig.startupWorkspaceInfoPath)
-      return
-    }
-
     const lastWorkspaceInfoPath = getUserPersistence().lastWorkspaceInfoPath
 
     if (!lastWorkspaceInfoPath) {
@@ -451,6 +430,9 @@
       return
     }
 
+    activeScreen = 'home'
+    workspaceOpenErrorText = selectionResult.message
+    showWorkspaceOpenErrorDialog = true
     console.error('Failed to restore last workspace.', {
       workspaceInfoPath: lastWorkspaceInfoPath,
       error: selectionResult.message
@@ -479,40 +461,18 @@
   }
 
   const createWorkspace = async (
-    workspacePath: string,
     workspaceName: string,
     includeExamplePrompts: boolean
   ): Promise<WorkspaceCreationResult> => {
     beginWorkspaceAction()
 
     try {
-      return await runIpcBestEffort<WorkspaceCreationResult>(
-        async () => {
-          const result = await createWorkspaceMutation(
-            workspacePath,
-            workspaceName,
-            includeExamplePrompts
-          )
-
-          if (result.success) {
-            await loadWorkspaceSelection(resolveWorkspaceInfoPath(workspacePath, workspaceName))
-            return { success: true }
-          }
-
-          await resetWorkspaceState()
-          return {
-            success: false,
-            reason: 'creation-failed'
-          }
-        },
-        async () => {
-          await resetWorkspaceState()
-          return {
-            success: false,
-            reason: 'unknown-error'
-          }
-        }
-      )
+      const result = await createWorkspaceMutation(workspaceName, includeExamplePrompts)
+      if (!result.success) return { success: false, message: result.error }
+      await loadWorkspaceSelection(result.path)
+      return { success: true }
+    } catch (error) {
+      return { success: false, message: extractErrorMessage(error) ?? 'Failed to create workspace' }
     } finally {
       endWorkspaceAction()
     }
@@ -613,11 +573,6 @@
       unsubscribe()
     }
   })
-
-  // Side effect: open workspace files double-clicked while this window is already running.
-  $effect(() => windowControls.onOpenWorkspaceFile((workspaceInfoPath) => {
-    void openWorkspaceFile(workspaceInfoPath)
-  }))
 
   /** Selects a fixed screen after capturing the departing tab. */
   const navigateToScreen = (screen: ScreenId): void => {
@@ -781,6 +736,7 @@
               bind:showWorkspaceOpenErrorDialog
               bind:workspaceOpenErrorText
               {workspacePath}
+              workspaceName={selectedWorkspace?.workspaceName}
               {isWorkspaceReady}
               {isWorkspaceLoading}
               promptCount={workspacePromptCount}

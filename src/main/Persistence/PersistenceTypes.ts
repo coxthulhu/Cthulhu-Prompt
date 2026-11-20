@@ -1,10 +1,4 @@
-import type { FilePersistenceStagedChange } from './FilePersistenceHelpers'
-import type { CategoryPersistenceFields } from './CategoryPersistence'
-import type { PromptCollectionPersistenceFields } from './PromptCollectionPersistence'
-import type { PromptPersistenceFields } from './PromptPersistence'
-import type { PromptTemplatePersistenceFields } from './PromptTemplatePersistence'
-import type { SystemSettingsPersistenceFields } from './SystemSettingsPersistence'
-import type { WorkspacePersistenceFields } from './WorkspacePersistence'
+import type { DomainEntityType } from '@shared/domain/DomainChanges'
 
 /** One present persisted record on either side of a storage transition. */
 export type PersistenceRecord<TData, TPersistenceFields> = {
@@ -18,39 +12,8 @@ export type PersistenceTransition<TData, TPersistenceFields> = {
   after: PersistenceRecord<TData, TPersistenceFields> | null
 }
 
-/** Persistence metadata associated with each authoritative domain entity type. */
-export type DomainPersistenceFieldsMap = {
-  systemSettings: SystemSettingsPersistenceFields
-  workspace: WorkspacePersistenceFields
-  promptCollection: PromptCollectionPersistenceFields
-  category: CategoryPersistenceFields
-  /** Note paths retain the owning library independently of their extension. */
-  note: PromptPersistenceFields
-  prompt: PromptPersistenceFields
-  promptTemplate: PromptTemplatePersistenceFields
-  userPersistence: Record<string, never>
-  /** Visibility records have no filesystem location. */
-  attachedNoteUiState: Record<string, never>
-  workspaceUiState: Record<string, never>
-}
-
-export type PersistenceStageResult<TPersistenceFields> = {
-  stagedChange: FilePersistenceStagedChange[]
-  nextPersistenceFields?: TPersistenceFields
-}
-
-/** Filesystem persistence staged before its synchronous logical commit. */
-export type FilePersistenceLayer<TData, TPersistenceFields> = {
-  kind: 'filesystem'
-  /** Optional SQLite state committed in the same transaction as the staged files. */
-  command?: SqlitePersistenceLayer<TData, TPersistenceFields>['command']
-  stageChanges: (
-    transition: PersistenceTransition<TData, TPersistenceFields>
-  ) => Promise<PersistenceStageResult<TPersistenceFields>>
-  commitChanges: (stagedChange: FilePersistenceStagedChange[]) => void
-  revertChanges: (stagedChange: FilePersistenceStagedChange[]) => void
-  loadData: (persistenceFields: TPersistenceFields) => Promise<TData | null>
-}
+/** Workspace records and preferences are addressed by stable entity ID. */
+export type DomainPersistenceFieldsMap = Record<DomainEntityType, Record<string, never>>
 
 /** SQLite persistence queried by authoritative ID and changed through one database command. */
 export type SqlitePersistenceLayer<TData, TPersistenceFields> = {
@@ -62,21 +25,5 @@ export type SqlitePersistenceLayer<TData, TPersistenceFields> = {
   ) => void
 }
 
-/** Persistence implementation used by one authoritative revision collection. */
-export type PersistenceLayer<TData, TPersistenceFields> =
-  | FilePersistenceLayer<TData, TPersistenceFields>
-  | SqlitePersistenceLayer<TData, TPersistenceFields>
-
-export const createPersistenceStageResult = <TPersistenceFields>(
-  stagedChange: FilePersistenceStagedChange[],
-  nextPersistenceFields?: TPersistenceFields
-): PersistenceStageResult<TPersistenceFields> => {
-  if (nextPersistenceFields === undefined) {
-    return { stagedChange }
-  }
-
-  return {
-    stagedChange,
-    nextPersistenceFields
-  }
-}
+/** Every revisioned domain store now uses SQLite. */
+export type PersistenceLayer<TData, TFields> = SqlitePersistenceLayer<TData, TFields>

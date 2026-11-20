@@ -682,7 +682,7 @@ describe('Prompt collection prompt tree', () => {
   // Verifies the collection ghost action creates, selects, and focuses uncategorized content.
   test('creates and focuses a prompt from an empty Active status action', async ({ testSetup }) => {
     await testSetup.setupFilesystem(buildCompletedTreeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH))
 
     /** Window and navigation helpers for a collection whose prompts are all Completed. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -878,7 +878,7 @@ describe('Prompt collection prompt tree', () => {
 
   test('biases a completed prompt when clicking its prompt tree row', async ({ testSetup }) => {
     await testSetup.setupFilesystem(buildCompletedTreeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_TREE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1243,7 +1243,7 @@ describe('Prompt collection prompt tree', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(UNOPENED_UNTITLED_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(UNOPENED_UNTITLED_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }

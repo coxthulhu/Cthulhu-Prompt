@@ -1,6 +1,5 @@
 <script lang="ts">
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
-  import FolderInput from '@renderer/common/cthulhu-ui/FolderInput.svelte'
   import FloatingValidationMessage from '@renderer/common/cthulhu-ui/forms/FloatingValidationMessage.svelte'
   import MessageRow from '@renderer/common/cthulhu-ui/layout/MessageRow.svelte'
   import Subtitle from '@renderer/common/cthulhu-ui/layout/Subtitle.svelte'
@@ -8,98 +7,60 @@
   import Title from '@renderer/common/cthulhu-ui/layout/Title.svelte'
   import TitleSubtitleStack from '@renderer/common/cthulhu-ui/layout/TitleSubtitleStack.svelte'
   import ToggleButton from '@renderer/common/cthulhu-ui/buttons/ToggleButton.svelte'
-  import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import type { WorkspaceFolderStatus } from '@shared/domain/workspace/Workspace'
-  import { preparePromptCollectionName } from '@shared/domain/prompt-collection/promptCollectionName'
+  import { prepareWorkspaceName, type WorkspaceListEntry } from '@shared/domain/workspace/Workspace'
   import { FolderPlus } from 'lucide-svelte'
   import type { WorkspaceCreationResult } from '@renderer/features/workspace/types'
 
   let {
     open = $bindable(false),
     isWorkspaceLoading,
+    workspaces,
     onWorkspaceCreate
   } = $props<{
     open?: boolean
+    workspaces: WorkspaceListEntry[]
     isWorkspaceLoading: boolean
     onWorkspaceCreate: (
-      path: string,
       workspaceName: string,
       includeExamplePrompts: boolean
     ) => Promise<WorkspaceCreationResult>
   }>()
 
+  /** Name used for both the workspace label and its managed filename. */
   let workspaceName = $state('')
-  let containingFolder = $state('')
+  /** Include the bundled examples when seeding the starter collections. */
   let includeExamples = $state(true)
-  let finalFolderStatus = $state<WorkspaceFolderStatus | null>(null)
+  /** Delay validation feedback until the name has been edited. */
   let hasInteractedWithName = $state(false)
+  /** Creation errors keep the dialog open with its current input. */
   let submissionError = $state<string | null>(null)
 
-  const preparedWorkspaceName = $derived(preparePromptCollectionName(workspaceName))
-  const workspaceNameValidation = $derived(preparedWorkspaceName.validation)
-  const workspaceNameError = $derived(
-    !workspaceNameValidation.isValid
-      ? (workspaceNameValidation.errorMessage ?? '').replaceAll('Collection name', 'Workspace name')
-      : null
-  )
+  /** Validate against the current profile's catalog as the name changes. */
+  const workspaceNameError = $derived(prepareWorkspaceName(workspaceName, workspaces).error)
+  /** Show the inline error only after the user has edited the name. */
   const displayedWorkspaceNameError = $derived(hasInteractedWithName ? workspaceNameError : null)
-  const trimmedContainingFolder = $derived(containingFolder.trim())
-  const finalWorkspacePath = $derived.by(() => {
-    if (!trimmedContainingFolder || !preparedWorkspaceName.folderName) {
-      return ''
-    }
+  /** Both live name validation and the current creation request gate submission. */
+  const submitDisabled = $derived(Boolean(workspaceNameError || isWorkspaceLoading))
 
-    return `${trimmedContainingFolder.replace(/[\\/]+$/, '')}\\${preparedWorkspaceName.folderName}`
-  })
-  const hasExistingWorkspace = $derived(finalFolderStatus?.isWorkspace ?? false)
-  const hasNonEmptyFinalFolder = $derived(
-    Boolean(finalFolderStatus?.exists && !finalFolderStatus.isEmpty && !hasExistingWorkspace)
-  )
-  const finalPathMessage = $derived(
-    hasExistingWorkspace
-      ? 'A workspace already exists at this path.'
-      : hasNonEmptyFinalFolder
-        ? 'This folder is not empty. Typically, you should create a workspace in an empty folder.'
-        : null
-  )
-  const finalPathMessageVariant = $derived(hasExistingWorkspace ? 'danger' : 'warning')
-  // Controls native disabled styling using only validation results already known by the renderer.
-  const submitDisabled = $derived(
-    Boolean(
-      !workspaceNameValidation.isValid ||
-      !trimmedContainingFolder ||
-      !finalWorkspacePath ||
-      hasExistingWorkspace ||
-      isWorkspaceLoading
-    )
-  )
-  const canCreateWorkspace = $derived(
-    Boolean(!submitDisabled && finalFolderStatus)
-  )
-
+  /** Restore the defaults for the next creation attempt. */
   const resetDialog = () => {
     open = false
     workspaceName = ''
-    containingFolder = ''
     includeExamples = true
-    finalFolderStatus = null
     hasInteractedWithName = false
     submissionError = null
   }
 
-  const loadFinalFolderStatus = async (path: string): Promise<WorkspaceFolderStatus> => {
-    return await ipcInvoke<WorkspaceFolderStatus, string>('get-workspace-folder-status', path)
-  }
-
+  /** Create and select the managed workspace through the shell. */
   const handleCreateWorkspace = async () => {
-    if (!canCreateWorkspace) {
+    if (submitDisabled) {
       return
     }
 
     submissionError = null
 
+    /** The shell reports persistence errors to this dialog. */
     const creationResult = await onWorkspaceCreate(
-      finalWorkspacePath,
       workspaceName.trim(),
       includeExamples
     )
@@ -108,28 +69,9 @@
       return
     }
 
-    submissionError = 'Failed to create workspace. Please try again.'
+    submissionError = creationResult.message
   }
 
-  // Side effect: refresh final-path status any time the derived target path changes.
-  $effect(() => {
-    const path = finalWorkspacePath
-    finalFolderStatus = null
-
-    if (!path) {
-      return
-    }
-
-    void runIpcBestEffort(
-      async () => {
-        finalFolderStatus = await loadFinalFolderStatus(path)
-      },
-      () => {
-        finalFolderStatus = { exists: false, isWorkspace: false, isEmpty: true }
-        return undefined
-      }
-    )
-  })
 </script>
 
 <Dialog
@@ -137,7 +79,7 @@
   class="w-full max-w-[620px]"
   icon={FolderPlus}
   title="Create Workspace"
-  subtitle="Choose a name and location for your new workspace."
+  subtitle="Choose a name for your new workspace."
   submitText={isWorkspaceLoading ? 'Creating...' : 'Create Workspace'}
   {submitDisabled}
   submitTestId="create-workspace-submit-button"
@@ -177,56 +119,6 @@
         />
       </FloatingValidationMessage>
     </div>
-
-    <div data-testid="create-workspace-containing-folder-field">
-      <TitleSubtitleStack class="mb-[7px]">
-        <Title title="Containing Folder" variant="small" />
-        <Subtitle
-          id="create-workspace-containing-folder-help"
-          text="Choose the folder that will contain the workspace."
-        />
-      </TitleSubtitleStack>
-      <FolderInput
-        class="w-full"
-        bind:value={containingFolder}
-        inputId="create-workspace-containing-folder-input"
-        inputTestId="create-workspace-containing-folder-display"
-        inputAriaLabel="Containing Folder"
-        inputAriaDescribedby="create-workspace-containing-folder-help"
-        ariaLabel="Browse for containing folder"
-        buttonTestId="create-workspace-path-browse-button"
-        disabled={isWorkspaceLoading}
-      />
-    </div>
-
-    <div data-testid="create-workspace-final-path-field">
-      <TitleSubtitleStack class="mb-[7px]">
-        <Title title="Workspace Path" variant="small" />
-        <Subtitle
-          id="create-workspace-final-path-help"
-          text="Review the full path to the workspace."
-        />
-      </TitleSubtitleStack>
-      <TextInput
-        id="create-workspace-final-path-input"
-        class="w-full"
-        value={finalWorkspacePath}
-        aria-label="Workspace Path"
-        aria-describedby="create-workspace-final-path-help"
-        aria-invalid={hasExistingWorkspace ? 'true' : undefined}
-        data-testid="create-workspace-final-path-display"
-        disabled
-      />
-    </div>
-
-    {#if finalPathMessage}
-      <MessageRow
-        text={finalPathMessage}
-        variant={finalPathMessageVariant}
-        textTestId="create-workspace-final-path-message"
-        class="w-full"
-      />
-    {/if}
 
     {#if submissionError}
       <MessageRow

@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
@@ -76,10 +77,11 @@ describe('Welcome Dialog', () => {
     const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
     await expect(welcome).toBeVisible()
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(workspacePath)
+    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toContainText(workspacePath.split('/').at(-1)! + '.cthulhuprompt')
     await expect(mainWindow.locator('[data-testid="show-welcome-button"]')).toBeVisible()
+    const profile = await electronApp.evaluate(({ app }) => app.getPath('userData'))
     await expect.poll(async () => await readUserPersistence(electronApp)).toEqual({
-      lastWorkspaceInfoPath: getWorkspaceInfoPath(workspacePath),
+      lastWorkspaceInfoPath: join(profile, 'Workspaces', 'welcome-existing.cthulhuprompt'),
       appSidebarWidthPx: 290,
       hasShownWelcome: 1,
       settingsCollapsedSectionIds: [],
@@ -116,7 +118,6 @@ describe('Welcome Dialog', () => {
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
     await expect(mainWindow.getByRole('dialog', { name: 'Create Workspace', exact: true })).toBeVisible()
     await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Welcome Workspace')
-    await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
     await mainWindow.click('[data-testid="create-workspace-submit-button"]')
     // Creation from Welcome opens both collections and selects My Prompts.
     await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
@@ -132,14 +133,16 @@ describe('Welcome Dialog', () => {
     /** Existing workspace offered by the native file picker. */
     const workspacePath = '/ws/welcome-open'
     await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** First-launch user chooses an existing workspace from Welcome. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
-    await mainWindow.locator('[data-testid="welcome-open-workspace-button"]').click()
+    const name = await testSetup.prepareWorkspaceFixture()
+    await mainWindow.getByTestId('welcome-open-workspace-button').click()
+    await mainWindow.getByRole('dialog', { name: 'Open Workspace' }).getByRole('button', { name, exact: true }).click()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await testHelpers.navigateToHomeScreen()
-    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(workspacePath)
+    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toContainText(workspacePath.split('/').at(-1)! + '.cthulhuprompt')
     await mainWindow.locator('[data-testid="show-welcome-button"]').click()
     const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
     await expect(welcome).toBeVisible()
@@ -153,7 +156,8 @@ describe('Welcome Dialog', () => {
     await testSetup.setupFileDialog([])
     /** Canceling the native picker must not reopen the already dismissed Welcome dialog. */
     const { mainWindow } = await testSetup.setupAndStart({ firstLaunch: true })
-    await mainWindow.locator('[data-testid="welcome-open-workspace-button"]').click()
+    await mainWindow.getByTestId('welcome-open-workspace-button').click()
+    await mainWindow.getByRole('dialog', { name: 'Open Workspace' }).getByRole('button', { name: 'Cancel' }).click()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
     await expect(mainWindow.locator('[data-testid="open-workspace-button"]')).toBeEnabled()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveCount(0)

@@ -227,7 +227,7 @@ describe('Prompt collection card geometry', () => {
 
   test('prompt editor cards exactly fill their pinned row height', async ({ testSetup }) => {
     await testSetup.setupFilesystem(buildGeometryWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(GEOMETRY_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(GEOMETRY_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()

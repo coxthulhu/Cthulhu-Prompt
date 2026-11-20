@@ -1,3 +1,4 @@
+import { readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import type { Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { stubClipboard } from '../helpers/ClipboardHelpers'
@@ -18,7 +19,6 @@ import {
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { dragSidebarHandleBy } from '../helpers/PromptCollectionHelpers'
 import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 
@@ -139,7 +139,7 @@ describe('Prompt template collection UI', () => {
       collectionId: TEMPLATE_COLLECTION_ID,
       categories: [{ categoryName: 'Empty', displayName: 'Empty', templates: [] }]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Window and navigation helpers for a collection with one empty template category. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -210,7 +210,7 @@ describe('Prompt template collection UI', () => {
   // Verifies the collection action creates and focuses the first uncategorized template.
   test('creates a template from the empty-collection action', async ({ testSetup }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Window and navigation helpers for the collection with no templates or categories. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -259,7 +259,7 @@ describe('Prompt template collection UI', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -343,7 +343,7 @@ describe('Prompt template collection UI', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -424,7 +424,7 @@ describe('Prompt template collection UI', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -453,7 +453,7 @@ describe('Prompt template collection UI', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -501,7 +501,7 @@ describe('Prompt template collection UI', () => {
 
   test('does not insert Prompt Text when Monaco has multiple cursors', async ({ testSetup }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -535,7 +535,7 @@ describe('Prompt template collection UI', () => {
 
   test('creates, edits, copies, and deletes a template', async ({ electronApp, testSetup }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -569,9 +569,8 @@ describe('Prompt template collection UI', () => {
       createdEditor.locator('[data-testid="prompt-title-status-indicator"]')
     ).toHaveAttribute('data-edited', 'true')
 
-    const persistedPath = `${WORKSPACE_PATH}/DefaultProject/Templates/Templates/Active/UI Template.template.md`
-    await expect.poll(() => checkFileExists(electronApp, persistedPath)).toBe(true)
-    await expect.poll(() => readTextFile(electronApp, persistedPath)).toContain('Use {{selection}}.')
+    await expect.poll(() => readRecord(electronApp, 'promptTemplate', newTemplateId!).then(Boolean)).toBe(true)
+    await expect.poll(async () => (await readRecord(electronApp, 'promptTemplate', newTemplateId!))?.templateText).toContain('Use {{selection}}.')
 
     await createdEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
@@ -583,12 +582,12 @@ describe('Prompt template collection UI', () => {
     await expect(mainWindow.getByText('Delete Template', { exact: true })).toBeVisible()
     await mainWindow.locator('[data-testid="prompt-confirm-delete-button"]').click()
     await expect(mainWindow.locator(promptEditorSelector(newTemplateId!))).toHaveCount(0)
-    await expect.poll(() => checkFileExists(electronApp, persistedPath)).toBe(false)
+    await expect.poll(() => readRecord(electronApp, 'promptTemplate', newTemplateId!).then(Boolean)).toBe(false)
   })
 
   test('wraps template actions only below 480 pixels', async ({ electronApp, testSetup }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -655,7 +654,7 @@ describe('Prompt template collection UI', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateUiWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -745,7 +744,7 @@ describe('Prompt template collection UI', () => {
       })
     }
     await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })

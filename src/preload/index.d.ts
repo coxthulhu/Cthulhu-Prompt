@@ -13,7 +13,6 @@ interface WindowControls {
   getCursorPoint: () => Promise<{ x: number; y: number } | null>
   onMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void
   onCloseRequested: (callback: () => void) => () => void
-  onOpenWorkspaceFile: (callback: (workspaceInfoPath: string) => void) => () => void
 }
 
 /** Renderer-facing API for forwarding complete error details to persistent logging. */

@@ -2,4 +2,4 @@ export type WorkspaceSelectionResult = { success: true } | { success: false; mes
 
 export type WorkspaceCreationResult =
   | { success: true }
-  | { success: false; reason: 'creation-failed' | 'unknown-error' }
+  | { success: false; message: string }

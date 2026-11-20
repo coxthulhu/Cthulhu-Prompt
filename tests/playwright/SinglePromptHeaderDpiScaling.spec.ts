@@ -24,7 +24,7 @@ for (const scale of [1, 1.25, 1.5]) {
         displayName: 'Content',
         prompts: [{ id: 'p0', title: PROMPT_TITLE, promptText: 'Body' }]
       }]))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
       await testHelpers.navigateToPromptCollections('Content')

@@ -3,24 +3,18 @@
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import Row from '@renderer/common/cthulhu-ui/layout/Row.svelte'
   import { ipcInvoke, runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
-  import { getWorkspaceFolderName } from './workspaceDisplay'
 
   /** Current workspace and distinct selectors for each summary surface. */
-  let { workspacePath, pathTestId, openFolderTestId } = $props<{
+  let { workspaceName, workspacePath, pathTestId, openFolderTestId } = $props<{
+    workspaceName?: string
     workspacePath: string | null
     pathTestId: string
     openFolderTestId: string
   }>()
 
-  /** Folder-derived title for the Home summary. */
-  const workspaceName = $derived(workspacePath ? getWorkspaceFolderName(workspacePath) : undefined)
-
-  /** Hands the selected workspace folder to Windows Explorer through the preload bridge. */
+  /** Reveals the selected workspace database in Windows Explorer. */
   const openWorkspaceFolder = (): void => {
-    /** Capture the current path for this invocation. */
-    const targetWorkspacePath = workspacePath
-    if (!targetWorkspacePath) return
-    void runIpcBestEffort(() => ipcInvoke<void, string>('open-workspace-folder', targetWorkspacePath))
+    void runIpcBestEffort(() => ipcInvoke<void>('open-workspace-folder'))
   }
 </script>
 

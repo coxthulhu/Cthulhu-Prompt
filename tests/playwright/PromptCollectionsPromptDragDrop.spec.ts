@@ -28,15 +28,7 @@ import { heightTestPrompts } from '../fixtures/TestData'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
-const WORKSPACE_PATH = '/ws/sample'
-const VIRTUAL_WORKSPACE_PATH = '/ws/virtual'
 const DEVELOPMENT_COLLECTION_NAME = 'Development'
-const promptCollectionCategoryOrderPath = (workspacePath: string, folderName: string): string => {
-  // CategoryOrder belongs only to the selected collection's flat Active directory.
-  const [collectionFolderName] = folderName.split('/')
-  return `${workspacePath}/DefaultProject/Prompts/${collectionFolderName}/Active/_CategoryOrder.json`
-}
-const DEVELOPMENT_COLLECTION_PATH = promptCollectionCategoryOrderPath(WORKSPACE_PATH, DEVELOPMENT_COLLECTION_NAME)
 const DEV_1_ID = 'dev-1'
 const DEV_2_ID = 'dev-2'
 const DRAG_SCROLL_WORKSPACE_PATH = '/ws/drag-scroll-anchor'
@@ -44,23 +36,14 @@ const CATEGORY_SCROLL_WORKSPACE_PATH = '/ws/drag-category-scroll'
 const ANCHORING_COLLECTION_NAME = 'Anchoring'
 const DESTINATION_COLLECTION_NAME = 'Destination'
 const CATEGORY_SCROLL_COLLECTION_NAME = 'Cross Category'
-const CATEGORY_SCROLL_COLLECTION_PATH = promptCollectionCategoryOrderPath(
-  CATEGORY_SCROLL_WORKSPACE_PATH,
-  CATEGORY_SCROLL_COLLECTION_NAME
-)
 const CATEGORY_SCROLL_CATEGORY_ID = 'drag-category-scroll-destination'
 const CATEGORY_SCROLL_SOURCE_ID = 'drag-category-scroll-source'
 const CATEGORY_SCROLL_DESTINATION_ID = 'drag-category-scroll-destination-prompt'
-const ANCHORING_COLLECTION_PATH = promptCollectionCategoryOrderPath(
-  DRAG_SCROLL_WORKSPACE_PATH,
-  ANCHORING_COLLECTION_NAME
-)
 const ANCHOR_1_ID = 'anchor-1'
 const ANCHOR_2_ID = 'anchor-2'
 const ANCHOR_3_ID = 'anchor-3'
 const DESTINATION_1_ID = 'destination-1'
 const SHORT_COLLECTION_NAME = 'Short'
-const SHORT_COLLECTION_PATH = promptCollectionCategoryOrderPath(VIRTUAL_WORKSPACE_PATH, SHORT_COLLECTION_NAME)
 const PROMPT_TREE_HOST_SELECTOR = '[data-testid="prompt-tree-active-virtual-window"]'
 const PROMPT_MOVE_SCROLL_TOLERANCE_PX = 2
 
@@ -381,7 +364,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_1_ID, DEV_2_ID])
   })
 
   test('does not select a prompt tree row after dragging and releasing it on itself', async ({
@@ -434,7 +417,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_1_ID, DEV_2_ID])
   })
 
   test('silently ignores dropping a prompt onto no-op add prompt rows', async ({
@@ -505,7 +488,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await finishActiveDrag(mainWindow)
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_1_ID, DEV_2_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_1_ID, DEV_2_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_1_ID, DEV_2_ID])
   })
 
   test('moves a prompt after a different prompt when dropped onto that prompt row', async ({
@@ -540,7 +523,7 @@ describe('Prompt collection prompt drag-drop', () => {
       'data-edited',
       'true'
     )
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_2_ID, DEV_1_ID])
   })
 
   test('moves a prompt after an add prompt row in the same collection', async ({
@@ -558,7 +541,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await dragPromptHandleToTarget(mainWindow, DEV_1_ID, promptDividerSelector(DEV_2_ID))
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_2_ID, DEV_1_ID])
   })
 
   test('moves a prompt from the prompt tree after a different prompt in the same collection', async ({
@@ -581,7 +564,7 @@ describe('Prompt collection prompt drag-drop', () => {
     )
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_2_ID, DEV_1_ID])
   })
 
   test('moves a prompt from the prompt tree to the initial add prompt row', async ({
@@ -599,7 +582,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await dragPromptTreeRowToTarget(mainWindow, DEV_2_ID, promptDividerSelector(null))
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_2_ID, DEV_1_ID])
   })
 
   test('marks an add prompt row divider as a drop target while hovering a valid drop', async ({
@@ -654,7 +637,7 @@ describe('Prompt collection prompt drag-drop', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildDragScrollAnchoringWorkspace(DRAG_SCROLL_WORKSPACE_PATH))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(DRAG_SCROLL_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(DRAG_SCROLL_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -674,7 +657,7 @@ describe('Prompt collection prompt drag-drop', () => {
 
     await expect
       .poll(async () =>
-        (await readPromptCollectionEntryIds(electronApp, ANCHORING_COLLECTION_PATH)).slice(0, 3)
+        (await readPromptCollectionEntryIds(electronApp, ANCHORING_COLLECTION_NAME)).slice(0, 3)
       )
       .toEqual([ANCHOR_2_ID, ANCHOR_1_ID, ANCHOR_3_ID])
 
@@ -693,7 +676,7 @@ describe('Prompt collection prompt drag-drop', () => {
       electronApp
     }) => {
       await testSetup.setupFilesystem(buildCategoryScrollWorkspace())
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(CATEGORY_SCROLL_WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(CATEGORY_SCROLL_WORKSPACE_PATH))
 
       const { mainWindow, testHelpers } = await testSetup.setupAndStart()
       await testHelpers.setupWorkspaceViaUI()
@@ -726,7 +709,7 @@ describe('Prompt collection prompt drag-drop', () => {
 
       await expect
         .poll(async () =>
-          (await readPromptCollectionEntryIds(electronApp, CATEGORY_SCROLL_COLLECTION_PATH)).slice(-2)
+          (await readPromptCollectionEntryIds(electronApp, CATEGORY_SCROLL_COLLECTION_NAME)).slice(-2)
         )
         .toEqual([CATEGORY_SCROLL_SOURCE_ID, CATEGORY_SCROLL_DESTINATION_ID])
       await expect
@@ -761,7 +744,7 @@ describe('Prompt collection prompt drag-drop', () => {
     await dragPromptHandleToTarget(mainWindow, DEV_2_ID, promptTreePromptSelector(DEV_1_ID), 'top')
 
     await expectCurrentCollectionPromptEditors(mainWindow, [DEV_2_ID, DEV_1_ID])
-    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_PATH, [DEV_2_ID, DEV_1_ID])
+    await expectPersistedCollectionPromptIds(electronApp, DEVELOPMENT_COLLECTION_NAME, [DEV_2_ID, DEV_1_ID])
   })
 
   test('keeps dragging after wheel scrolling unloads the source prompt-tree row', async ({
@@ -956,7 +939,7 @@ describe('Prompt collection prompt drag-drop', () => {
 
     await finishActiveDrag(mainWindow)
     await expect
-      .poll(async () => (await readPromptCollectionEntryIds(electronApp, SHORT_COLLECTION_PATH)).slice(0, 3))
+      .poll(async () => (await readPromptCollectionEntryIds(electronApp, SHORT_COLLECTION_NAME)).slice(0, 3))
       .toEqual(['short-1', 'short-3', 'short-2'])
   })
 
@@ -1021,7 +1004,7 @@ describe('Prompt collection prompt drag-drop', () => {
 
     await finishActiveDrag(mainWindow)
     await expect
-      .poll(async () => (await readPromptCollectionEntryIds(electronApp, SHORT_COLLECTION_PATH)).slice(0, 3))
+      .poll(async () => (await readPromptCollectionEntryIds(electronApp, SHORT_COLLECTION_NAME)).slice(0, 3))
       .toEqual(['short-1', 'short-3', 'short-2'])
   })
 

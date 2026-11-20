@@ -153,9 +153,9 @@ describe('Pointer capture', () => {
           ? PROMPT_COLLECTION_HOST_SELECTOR
           : '[data-testid="prompt-tree-active-virtual-window"]').locator('..')
         /** Existing persisted ordering must survive browser interruption unchanged. */
-        const orderPath = '/ws/sample/DefaultProject/Prompts/Development/Active/_CategoryOrder.json'
+        const collectionName = 'Development'
         /** Persisted order before the drag. */
-        const before = await readPromptCollectionEntryIds(electronApp, orderPath)
+        const before = await readPromptCollectionEntryIds(electronApp, collectionName)
         await recordPointerId(frame)
         if (source === 'editor') await beginPromptHandleDrag(mainWindow, 'dev-1')
         else await beginPromptTreeRowDrag(mainWindow, 'dev-1')
@@ -170,7 +170,7 @@ describe('Pointer capture', () => {
         await moveActiveDragToTarget(mainWindow, promptTreePromptSelector('dev-2'), 'bottom')
         await mainWindow.mouse.up()
         await expect(mainWindow.locator('body')).not.toHaveCSS('cursor', 'grabbing')
-        expect(await readPromptCollectionEntryIds(electronApp, orderPath)).toEqual(before)
+        expect(await readPromptCollectionEntryIds(electronApp, collectionName)).toEqual(before)
       })
     }
   }

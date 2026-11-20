@@ -1,5 +1,4 @@
 import type { Note } from '@shared/domain/note/Note'
-import { readMarkdownModifiedAt } from '../Persistence/MarkdownPersistence'
 import type { PromptPersisted } from '@shared/domain/prompt/Prompt'
 import type { CategoryOrder, PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
@@ -7,29 +6,18 @@ import type { CollectionEntryRef } from '@shared/domain/OrderContainer'
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { Workspace } from '@shared/domain/workspace/Workspace'
 import type { Category } from '@shared/domain/category/Category'
-import type { PromptCollectionPersistenceFields } from '../Persistence/PromptCollectionPersistence'
-import {
-  readPromptModifiedAt,
-  type PromptPersistenceFields
-} from '../Persistence/PromptPersistence'
-import {
-  readPromptTemplateModifiedAt,
-  type PromptTemplatePersistenceFields
-} from '../Persistence/PromptTemplatePersistence'
-import type { WorkspacePersistenceFields } from '../Persistence/WorkspacePersistence'
-import type { CategoryPersistenceFields } from '../Persistence/CategoryPersistence'
 import type { CommittedEntry } from './CommittedStore'
 import { data } from './Data'
 
-export type WorkspaceCommittedEntry = CommittedEntry<Workspace, WorkspacePersistenceFields>
-export type PromptCollectionCommittedEntry = CommittedEntry<PromptCollection, PromptCollectionPersistenceFields>
-export type PromptCommittedEntry = CommittedEntry<PromptPersisted, PromptPersistenceFields>
+export type WorkspaceCommittedEntry = CommittedEntry<Workspace, Record<string, never>>
+export type PromptCollectionCommittedEntry = CommittedEntry<PromptCollection, Record<string, never>>
+export type PromptCommittedEntry = CommittedEntry<PromptPersisted, Record<string, never>>
 export type PromptTemplateCommittedEntry = CommittedEntry<
   PromptTemplatePersisted,
-  PromptTemplatePersistenceFields
+  Record<string, never>
 >
-/** Loaded category entry with its persisted filename state. */
-export type CategoryCommittedEntry = CommittedEntry<Category, CategoryPersistenceFields>
+/** Category and revision loaded from the workspace database. */
+export type CategoryCommittedEntry = CommittedEntry<Category, Record<string, never>>
 
 const filterLoadedEntityIds = <TData, TPersistenceFields>(
   entityIds: string[],
@@ -154,10 +142,7 @@ export const buildPromptSnapshot = (
   return {
     id: promptEntry.committed.id,
     revision: promptEntry.revision,
-    data: {
-      ...promptEntry.committed,
-      modifiedAt: readPromptModifiedAt(promptEntry.persistenceFields)
-    }
+    data: promptEntry.committed
   }
 }
 
@@ -166,10 +151,7 @@ export const buildPromptTemplateSnapshot = (
 ): RevisionEnvelope<PromptTemplatePersisted> => ({
   id: promptTemplateEntry.committed.id,
   revision: promptTemplateEntry.revision,
-  data: {
-    ...promptTemplateEntry.committed,
-    modifiedAt: readPromptTemplateModifiedAt(promptTemplateEntry.persistenceFields)
-  }
+  data: promptTemplateEntry.committed
 })
 
 /** Builds a renderer revision envelope for one category. */
@@ -183,8 +165,8 @@ export const buildCategorySnapshot = (
 
 /** Builds a note snapshot using its own file timestamp. */
 export const buildNoteSnapshot = (
-  entry: CommittedEntry<Note, PromptPersistenceFields>
+  entry: CommittedEntry<Note, Record<string, never>>
 ): RevisionEnvelope<Note> => ({
   id: entry.committed.id, revision: entry.revision,
-  data: { ...entry.committed, modifiedAt: readMarkdownModifiedAt(entry.persistenceFields, 'note') }
+  data: entry.committed
 })

@@ -1,3 +1,4 @@
+import { readRecord, findCollection } from '../helpers/WorkspaceDatabaseHelpers'
 import { setNewPromptFocus } from '../helpers/SettingsHelpers'
 import { getPromptEditorIds } from '../helpers/PromptCollectionHelpers'
 import { resolvePaletteColors } from '../helpers/PaletteHelpers'
@@ -19,11 +20,7 @@ import {
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { heightTestPrompts } from '../fixtures/TestData'
 import {
-  checkFileExists,
-  checkPersistedPromptFilesExistByTitle,
-  readTextFile,
-  readPersistedPromptTextById,
-  resolvePersistedPromptFilePathsByTitle,
+  containsPrompt,
   readPromptCollectionEntries
 } from '../helpers/PromptPersistenceTestHelpers'
 import { serializePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
@@ -37,13 +34,16 @@ import {
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
 import { readTabSession, runSqlQuery } from '../helpers/UserPersistenceHelpers'
 
+/** Builds a Markdown path only when arranging a legacy import fixture. */
+const legacyPromptPath = (root: string, collection: string, title: string): string =>
+  `${root}/DefaultProject/Prompts/${collection.includes('/') ? collection : collection + '/Active'}/${title}.prompt.md`
+
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 const MOVE_SCROLL_WORKSPACE_PATH = '/ws/move-scroll-anchor'
 const FALLBACK_TITLE_WORKSPACE_PATH = '/ws/fallback-title-management'
 const COMPLETED_FALLBACK_GAP_WORKSPACE_PATH = '/ws/completed-fallback-gap'
 const COPY_WORKSPACE_PATH = '/ws/copy-prompt'
-const SAMPLE_WORKSPACE_PATH = '/ws/sample'
 const SELF_HEALING_WORKSPACE_PATH = '/ws/completed-self-healing'
 const COMPLETED_MODE_WORKSPACE_PATH = '/ws/completed-mode'
 /** Workspace dedicated to persisted category semantics during cross-status drops. */
@@ -331,12 +331,7 @@ const buildCompletedFallbackGapWorkspace = () => {
       }))
     }
   ])
-  const completedPath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
-    folderName: `${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Completed`,
-    promptId: completedPrompt.id,
-    promptTitle: completedPrompt.fallbackTitle
-  }).markdownPath
+  const completedPath = legacyPromptPath(COMPLETED_FALLBACK_GAP_WORKSPACE_PATH, `${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Completed`, completedPrompt.fallbackTitle)
 
   workspace[
     `${COMPLETED_FALLBACK_GAP_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETED_FALLBACK_GAP_COLLECTION_NAME}/Active/_CategoryOrder.json`
@@ -396,18 +391,8 @@ const buildCompletedSelfHealingWorkspace = () => {
       ]
     }
   ])
-  const activePath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: SELF_HEALING_WORKSPACE_PATH,
-    folderName,
-    promptId: activePrompt.id,
-    promptTitle: activePrompt.title
-  }).markdownPath
-  const completedPath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: SELF_HEALING_WORKSPACE_PATH,
-    folderName: `${folderName}/Completed`,
-    promptId: completedPrompt.id,
-    promptTitle: completedPrompt.title
-  }).markdownPath
+  const activePath = legacyPromptPath(SELF_HEALING_WORKSPACE_PATH, folderName, activePrompt.title)
+  const completedPath = legacyPromptPath(SELF_HEALING_WORKSPACE_PATH, `${folderName}/Completed`, completedPrompt.title)
 
   return {
     ...workspace,
@@ -516,32 +501,12 @@ const buildCompletedModeWorkspace = () => {
       settings: { workspaceId: COMPLETED_MODE_WORKSPACE_ID }
     }
   )
-  const newestCompletedPath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-    folderName: `${folderName}/Completed`,
-    promptId: newestCompletedPrompt.id,
-    promptTitle: newestCompletedPrompt.title
-  }).markdownPath
-  const oldestCompletedPath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-    folderName: `${folderName}/Completed`,
-    promptId: oldestCompletedPrompt.id,
-    promptTitle: oldestCompletedPrompt.title
-  }).markdownPath
+  const newestCompletedPath = legacyPromptPath(COMPLETED_MODE_WORKSPACE_PATH, `${folderName}/Completed`, newestCompletedPrompt.title)
+  const oldestCompletedPath = legacyPromptPath(COMPLETED_MODE_WORKSPACE_PATH, `${folderName}/Completed`, oldestCompletedPrompt.title)
   /** Persisted path for the newest archived fixture prompt. */
-  const newestArchivedPath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-    folderName: `${folderName}/Archived`,
-    promptId: newestArchivedPrompt.id,
-    promptTitle: newestArchivedPrompt.title
-  }).markdownPath
+  const newestArchivedPath = legacyPromptPath(COMPLETED_MODE_WORKSPACE_PATH, `${folderName}/Archived`, newestArchivedPrompt.title)
   /** Persisted path for the oldest archived fixture prompt. */
-  const oldestArchivedPath = resolvePersistedPromptFilePathsByTitle({
-    workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-    folderName: `${folderName}/Archived`,
-    promptId: oldestArchivedPrompt.id,
-    promptTitle: oldestArchivedPrompt.title
-  }).markdownPath
+  const oldestArchivedPath = legacyPromptPath(COMPLETED_MODE_WORKSPACE_PATH, `${folderName}/Archived`, oldestArchivedPrompt.title)
 
   workspace[`${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Active/_CategoryOrder.json`] =
     JSON.stringify(
@@ -638,7 +603,7 @@ describe('Prompt collection prompt management', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(buildFallbackTitleWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(FALLBACK_TITLE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(FALLBACK_TITLE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -665,9 +630,7 @@ describe('Prompt collection prompt management', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildCompletedFallbackGapWorkspace())
-    await testSetup.setupFileDialog([
-      getWorkspaceInfoPath(COMPLETED_FALLBACK_GAP_WORKSPACE_PATH)
-    ])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_FALLBACK_GAP_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -689,33 +652,23 @@ describe('Prompt collection prompt management', () => {
       .poll(
         async () => {
           const [firstAvailable, nextAfterVisibleGap] = await Promise.all([
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
-              folderName: COMPLETED_FALLBACK_GAP_COLLECTION_NAME,
-              promptId: newPromptId!,
-              promptTitle: 'New Prompt 3'
-            }),
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_FALLBACK_GAP_WORKSPACE_PATH,
-              folderName: COMPLETED_FALLBACK_GAP_COLLECTION_NAME,
-              promptId: newPromptId!,
-              promptTitle: 'New Prompt 5'
-            })
+            containsPrompt(electronApp, COMPLETED_FALLBACK_GAP_COLLECTION_NAME, newPromptId!, 'New Prompt 3'),
+            containsPrompt(electronApp, COMPLETED_FALLBACK_GAP_COLLECTION_NAME, newPromptId!, 'New Prompt 5')
           ])
           return { firstAvailable, nextAfterVisibleGap }
         },
         { timeout: 8000 }
       )
       .toEqual({
-        firstAvailable: { markdownExists: true },
-        nextAfterVisibleGap: { markdownExists: false }
+        firstAvailable: true,
+        nextAfterVisibleGap: false
       })
     await expect(titleInput).toHaveAttribute('placeholder', 'New Prompt 3...')
   })
 
   test('regenerates the fallback title when an active title is cleared', async ({ testSetup }) => {
     await testSetup.setupFilesystem(buildFallbackTitleWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(FALLBACK_TITLE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(FALLBACK_TITLE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -1141,7 +1094,7 @@ describe('Prompt collection prompt management', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(buildMoveScrollWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(MOVE_SCROLL_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(MOVE_SCROLL_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -1308,7 +1261,7 @@ describe('Prompt collection prompt management', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COPY_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COPY_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1367,14 +1320,9 @@ describe('Prompt collection prompt management', () => {
     )
     await expect
       .poll(async () => {
-        return await readPersistedPromptTextById(electronApp, {
-          workspacePath: COPY_WORKSPACE_PATH,
-          folderName: 'Copy Prompt',
-          promptId: newPromptId!,
-          promptTitle: 'New Prompt'
-        })
+        return await readRecord(electronApp, 'prompt', newPromptId!)
       })
-      .toContain('status: InProgress')
+      .toMatchObject({ status: 'InProgress' })
   })
 
   test('completes a prompt by moving it into the completed collection', async ({
@@ -1406,18 +1354,8 @@ describe('Prompt collection prompt management', () => {
       .poll(
         async () => {
           const [originalFiles, completedFiles] = await Promise.all([
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: SAMPLE_WORKSPACE_PATH,
-              folderName: COMPLETION_COLLECTION_NAME,
-              promptId: COMPLETION_PROMPT_ID,
-              promptTitle: COMPLETION_PROMPT_TITLE
-            }),
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: SAMPLE_WORKSPACE_PATH,
-              folderName: `${COMPLETION_COLLECTION_NAME}/Completed`,
-              promptId: COMPLETION_PROMPT_ID,
-              promptTitle: COMPLETION_PROMPT_TITLE
-            })
+            containsPrompt(electronApp, COMPLETION_COLLECTION_NAME, COMPLETION_PROMPT_ID, COMPLETION_PROMPT_TITLE),
+            containsPrompt(electronApp, `${COMPLETION_COLLECTION_NAME}/Completed`, COMPLETION_PROMPT_ID, COMPLETION_PROMPT_TITLE)
           ])
 
           return { originalFiles, completedFiles }
@@ -1425,23 +1363,18 @@ describe('Prompt collection prompt management', () => {
         { timeout: 8000 }
       )
       .toEqual({
-        originalFiles: { markdownExists: false },
-        completedFiles: { markdownExists: true }
+        originalFiles: false,
+        completedFiles: true
       })
 
-    const completedMarkdown = await readPersistedPromptTextById(electronApp, {
-      workspacePath: SAMPLE_WORKSPACE_PATH,
-      folderName: `${COMPLETION_COLLECTION_NAME}/Completed`,
-      promptId: COMPLETION_PROMPT_ID,
-      promptTitle: COMPLETION_PROMPT_TITLE
-    })
-    expect(completedMarkdown).toContain('status: Completed')
-    expect(completedMarkdown).toContain('finalizedAt:')
-    expect(completedMarkdown).toContain(completedText)
+    const completedRecord = await readRecord(electronApp, 'prompt', COMPLETION_PROMPT_ID)
+    expect(completedRecord).toMatchObject({ status: 'Completed' })
+    expect(completedRecord).toHaveProperty('finalizedAt')
+    expect(completedRecord?.promptText).toContain(completedText)
     expect(
       await readPromptCollectionEntries(
         electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/${COMPLETION_COLLECTION_NAME}/Active/_CategoryOrder.json`
+        COMPLETION_COLLECTION_NAME
       )
     ).toEqual([{ kind: 'prompt', id: 'dev-2' }])
 
@@ -1457,12 +1390,10 @@ describe('Prompt collection prompt management', () => {
   }) => {
     const folderName = 'Self Healing'
     const activePromptId = 'active-with-completed-flags'
-    const activePromptTitle = 'Active Bad Flags'
     const completedPromptId = 'completed-without-flags'
-    const completedPromptTitle = 'Completed Missing Flags'
 
     await testSetup.setupFilesystem(buildCompletedSelfHealingWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(SELF_HEALING_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(SELF_HEALING_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1477,39 +1408,29 @@ describe('Prompt collection prompt management', () => {
     await expect(mainWindow.locator(promptEditorSelector(completedPromptId))).toHaveCount(0)
     expect(await getPromptTreePromptRowIds(mainWindow)).toEqual([activePromptId])
 
-    const activeMarkdown = await readPersistedPromptTextById(electronApp, {
-      workspacePath: SELF_HEALING_WORKSPACE_PATH,
-      folderName,
-      promptId: activePromptId,
-      promptTitle: activePromptTitle
-    })
-    expect(activeMarkdown).toContain('status: Todo')
-    expect(activeMarkdown).not.toContain('finalizedAt:')
+    const activeRecord = await readRecord(electronApp, 'prompt', activePromptId)
+    expect(activeRecord).toMatchObject({ status: 'Todo' })
+    expect(activeRecord).not.toHaveProperty('finalizedAt')
     await expect
       .poll(
         async () =>
           await readPromptCollectionEntries(
             electronApp,
-            `${SELF_HEALING_WORKSPACE_PATH}/DefaultProject/Prompts/${folderName}/Active/_CategoryOrder.json`
+            folderName
           )
       )
       .toEqual([{ kind: 'prompt', id: activePromptId }])
-    expect(activeMarkdown).toContain('This regular prompt should keep rendering.')
+    expect(activeRecord?.promptText).toContain('This regular prompt should keep rendering.')
 
-    const completedMarkdown = await readPersistedPromptTextById(electronApp, {
-      workspacePath: SELF_HEALING_WORKSPACE_PATH,
-      folderName: `${folderName}/Completed`,
-      promptId: completedPromptId,
-      promptTitle: completedPromptTitle
-    })
-    expect(completedMarkdown).toContain('status: Completed')
-    expect(completedMarkdown).toContain('finalizedAt:')
-    expect(completedMarkdown).toContain('This completed prompt should stay hidden.')
+    const completedRecord = await readRecord(electronApp, 'prompt', completedPromptId)
+    expect(completedRecord).toMatchObject({ status: 'Completed' })
+    expect(completedRecord).toHaveProperty('finalizedAt')
+    expect(completedRecord?.promptText).toContain('This completed prompt should stay hidden.')
   })
 
   test('rejects manual ordering in a completed location through IPC', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1580,26 +1501,16 @@ describe('Prompt collection prompt management', () => {
 
     expect(moveResult).toMatchObject({ success: false, error: 'Invalid request payload' })
     expect(
-      await checkPersistedPromptFilesExistByTitle(electronApp, {
-        workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-        folderName: 'Completed Mode/Completed',
-        promptId: 'completed-mode-newest',
-        promptTitle: 'Newest Completed'
-      })
-    ).toEqual({ markdownExists: true })
+      await containsPrompt(electronApp, 'Completed Mode/Completed', 'completed-mode-newest', 'Newest Completed')
+    ).toEqual(true)
     expect(
-      await checkPersistedPromptFilesExistByTitle(electronApp, {
-        workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-        folderName: 'No Completed',
-        promptId: 'completed-mode-newest',
-        promptTitle: 'Newest Completed'
-      })
-    ).toEqual({ markdownExists: false })
+      await containsPrompt(electronApp, 'No Completed', 'completed-mode-newest', 'Newest Completed')
+    ).toEqual(false)
   })
 
   test('sets prompt statuses from the status control', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1641,14 +1552,9 @@ describe('Prompt collection prompt management', () => {
     )
     await expect
       .poll(async () => {
-        return await readPersistedPromptTextById(electronApp, {
-          workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-          folderName: 'Completed Mode',
-          promptId: 'completed-mode-active',
-          promptTitle: 'Active Prompt'
-        })
+        return await readRecord(electronApp, 'prompt', 'completed-mode-active')
       })
-      .toContain('edited tree accent')
+      .toMatchObject({ promptText: expect.stringContaining('edited tree accent') })
     // The Todo Complete button occupies the trailing segment beside the status selector.
     const todoCompleteButton = mainWindow.locator(completeSelector('completed-mode-active'))
     await expect(todoCompleteButton).toBeVisible()
@@ -1844,14 +1750,9 @@ describe('Prompt collection prompt management', () => {
     await expect(activePromptStatusSelector).toHaveCSS('border-bottom-right-radius', '0px')
     await expect
       .poll(async () => {
-        return await readPersistedPromptTextById(electronApp, {
-          workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-          folderName: 'Completed Mode',
-          promptId: 'completed-mode-active',
-          promptTitle: 'Active Prompt'
-        })
+        return await readRecord(electronApp, 'prompt', 'completed-mode-active')
       })
-      .toContain('status: Todo')
+      .toMatchObject({ status: 'Todo' })
 
     await mainWindow.locator(statusMoreOptionsSelector('completed-mode-active')).click()
     await expect(mainWindow.locator('[data-testid="prompt-status-option-todo"]')).toHaveCount(0)
@@ -1875,18 +1776,8 @@ describe('Prompt collection prompt management', () => {
       .poll(
         async () => {
           const [activeFiles, completedFiles] = await Promise.all([
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode',
-              promptId: 'completed-mode-active',
-              promptTitle: 'Active Prompt'
-            }),
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode/Completed',
-              promptId: 'completed-mode-active',
-              promptTitle: 'Active Prompt'
-            })
+            containsPrompt(electronApp, 'Completed Mode', 'completed-mode-active', 'Active Prompt'),
+            containsPrompt(electronApp, 'Completed Mode/Completed', 'completed-mode-active', 'Active Prompt')
           ])
 
           return { activeFiles, completedFiles }
@@ -1894,17 +1785,12 @@ describe('Prompt collection prompt management', () => {
         { timeout: 8000 }
       )
       .toEqual({
-        activeFiles: { markdownExists: false },
-        completedFiles: { markdownExists: true }
+        activeFiles: false,
+        completedFiles: true
       })
-    const completedFromMenuMarkdown = await readPersistedPromptTextById(electronApp, {
-      workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-      folderName: 'Completed Mode/Completed',
-      promptId: 'completed-mode-active',
-      promptTitle: 'Active Prompt'
-    })
-    expect(completedFromMenuMarkdown).toContain('status: Completed')
-    expect(completedFromMenuMarkdown).toContain('finalizedAt:')
+    const completedFromMenuRecord = await readRecord(electronApp, 'prompt', 'completed-mode-active')
+    expect(completedFromMenuRecord).toMatchObject({ status: 'Completed' })
+    expect(completedFromMenuRecord).toHaveProperty('finalizedAt')
 
     await mainWindow.locator('[data-testid="toggle-completed-prompts-button"]').click()
     await expect
@@ -1946,18 +1832,8 @@ describe('Prompt collection prompt management', () => {
       .poll(
         async () => {
           const [activeFiles, completedFiles] = await Promise.all([
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode',
-              promptId: 'completed-mode-active',
-              promptTitle: 'Active Prompt'
-            }),
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode/Completed',
-              promptId: 'completed-mode-active',
-              promptTitle: 'Active Prompt'
-            })
+            containsPrompt(electronApp, 'Completed Mode', 'completed-mode-active', 'Active Prompt'),
+            containsPrompt(electronApp, 'Completed Mode/Completed', 'completed-mode-active', 'Active Prompt')
           ])
 
           return { activeFiles, completedFiles }
@@ -1965,27 +1841,17 @@ describe('Prompt collection prompt management', () => {
         { timeout: 8000 }
       )
       .toEqual({
-        activeFiles: { markdownExists: true },
-        completedFiles: { markdownExists: false }
+        activeFiles: true,
+        completedFiles: false
       })
 
     await expect
       .poll(async () => {
-        return await readPersistedPromptTextById(electronApp, {
-          workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-          folderName: 'Completed Mode',
-          promptId: 'completed-mode-active',
-          promptTitle: 'Active Prompt'
-        })
+        return await readRecord(electronApp, 'prompt', 'completed-mode-active')
       })
-      .toContain('status: InProgress')
-    const inProgressMarkdown = await readPersistedPromptTextById(electronApp, {
-      workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-      folderName: 'Completed Mode',
-      promptId: 'completed-mode-active',
-      promptTitle: 'Active Prompt'
-    })
-    expect(inProgressMarkdown).not.toContain('finalizedAt:')
+      .toMatchObject({ status: 'InProgress' })
+    const inProgressRecord = await readRecord(electronApp, 'prompt', 'completed-mode-active')
+    expect(inProgressRecord).not.toHaveProperty('finalizedAt')
   })
 
   test('restores a finalized prompt into an empty category with unique group row IDs', async ({
@@ -1993,7 +1859,7 @@ describe('Prompt collection prompt management', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildStatusDragCategoryWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH))
     /** Window and navigation helpers for the categorized workflow fixture. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2026,24 +1892,18 @@ describe('Prompt collection prompt management', () => {
 
     await expect(emptyCategoryAction).toHaveCount(0)
 
-    /** Persisted prompt must use the destination group's entry status and category. */
-    const restoredPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/Categorized Completed.prompt.md`
-    await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain('status: Todo')
-    await expect.poll(() => readTextFile(electronApp, restoredPath)).toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
-    /** Empty destination gets exactly the restored prompt as its first ordered entry. */
-    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'status-drag-completed')).toMatchObject({ status: 'Todo' })
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'status-drag-completed')).toMatchObject({ category: STATUS_DRAG_PRIMARY_CATEGORY_ID })
     await expect.poll(async () => {
       /** Saved category order proves the transfer used the category target. */
-      const order = JSON.parse(await readTextFile(electronApp, orderPath)) as {
-        categories: Array<{ categoryId: string | null; entries: Array<{ kind: string; id: string }> }>
-      }
+      const order = (await findCollection(electronApp, 'Status Drag Categories'))!.statusFolders.active.categoryOrder
       return order.categories.find((category) => category.categoryId === STATUS_DRAG_PRIMARY_CATEGORY_ID)?.entries
     }).toEqual([{ kind: 'prompt', id: 'status-drag-completed' }])
   })
 
   test('sets status and exact placement together and preserves placement for status controls and drags', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(buildStatusDragCategoryWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH))
     /** Renderer and persistence helpers exercise the real IPC and subsequent UI actions. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -2084,14 +1944,10 @@ describe('Prompt collection prompt management', () => {
       expect.objectContaining({ entityType: 'prompt', data: expect.objectContaining({ status: PromptStatus.InProgress, category: STATUS_DRAG_SECONDARY_CATEGORY_ID }) }),
       expect.objectContaining({ entityType: 'promptCollection' })
     ]))
-    /** Persisted group order verifies the exact predecessor across every UI action. */
-    const orderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     /** Reads one category's persisted IDs without relying on renderer optimism. */
     const readCategoryIds = async (categoryId: string) => {
       /** Current order file after the atomic mutation. */
-      const order = JSON.parse(await readTextFile(electronApp, orderPath)) as {
-        categories: Array<{ categoryId: string | null; entries: Array<{ id: string }> }>
-      }
+      const order = (await findCollection(electronApp, 'Status Drag Categories'))!.statusFolders.active.categoryOrder
       return order.categories.find((group) => group.categoryId === categoryId)!.entries.map((entry) => entry.id)
     }
     expect(await readCategoryIds(STATUS_DRAG_PRIMARY_CATEGORY_ID)).toEqual(['status-drag-primary-second'])
@@ -2102,19 +1958,17 @@ describe('Prompt collection prompt management', () => {
     await mainWindow.getByTestId('prompt-tree-active-prompt-status-drag-primary-first').click()
     await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
     await mainWindow.getByTestId('prompt-status-option-todo').click()
-    /** Prompt front matter proves the status control persisted before ordering is checked. */
-    const promptPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/Primary First.prompt.md`
-    await expect.poll(() => readTextFile(electronApp, promptPath)).toContain('status: Todo')
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'status-drag-primary-first')).toMatchObject({ status: 'Todo' })
     expect(await readCategoryIds(STATUS_DRAG_SECONDARY_CATEGORY_ID)).toEqual(['status-drag-secondary-first', 'status-drag-primary-first'])
     await mainWindow.locator(statusPillSelector('status-drag-primary-first')).click()
     await mainWindow.getByTestId('prompt-status-option-in-progress').click()
-    await expect.poll(() => readTextFile(electronApp, promptPath)).toContain('status: InProgress')
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'status-drag-primary-first')).toMatchObject({ status: 'InProgress' })
     await beginPromptTreeRowDrag(mainWindow, 'status-drag-primary-first')
     await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-active-prompt-status-drag-primary-second"]', 'bottom')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readCategoryIds(STATUS_DRAG_PRIMARY_CATEGORY_ID)).toEqual(['status-drag-primary-second', 'status-drag-primary-first'])
-    expect(await readTextFile(electronApp, promptPath)).toContain('status: InProgress')
-    expect(await readTextFile(electronApp, promptPath)).toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
+    expect(await readRecord(electronApp, 'prompt', 'status-drag-primary-first')).toMatchObject({ status: 'InProgress' })
+    expect(await readRecord(electronApp, 'prompt', 'status-drag-primary-first')).toMatchObject({ category: STATUS_DRAG_PRIMARY_CATEGORY_ID })
   })
 
   test('persists category and exact order changes across status-tree drops', async ({
@@ -2122,9 +1976,7 @@ describe('Prompt collection prompt management', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildStatusDragCategoryWorkspace())
-    await testSetup.setupFileDialog([
-      getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH)
-    ])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(STATUS_DRAG_CATEGORY_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2146,14 +1998,9 @@ describe('Prompt collection prompt management', () => {
     ).toHaveAttribute('aria-pressed', 'true')
     await expect
       .poll(async () =>
-        await readPersistedPromptTextById(electronApp, {
-          workspacePath: STATUS_DRAG_CATEGORY_WORKSPACE_PATH,
-          folderName: 'Status Drag Categories/Completed',
-          promptId: 'status-drag-primary-first',
-          promptTitle: 'Primary First'
-        })
+        await readRecord(electronApp, 'prompt', 'status-drag-primary-first')
       )
-      .toContain(`category: ${STATUS_DRAG_PRIMARY_CATEGORY_ID}`)
+      .toMatchObject({ category: STATUS_DRAG_PRIMARY_CATEGORY_ID, status: 'Completed' })
 
     /** Secondary prompt row whose bottom edge defines the restored prompt's predecessor. */
     const secondaryTargetSelector = `${sidebarPromptStatusContentSelector('active')} [data-testid="prompt-tree-active-prompt-status-drag-secondary-first"]`
@@ -2161,17 +2008,10 @@ describe('Prompt collection prompt management', () => {
     await moveActiveDragToTarget(mainWindow, secondaryTargetSelector, 'bottom')
     await finishActiveDrag(mainWindow)
 
-    /** Persisted category order used to verify both ownership and exact predecessor placement. */
-    const categoryOrderPath = `${STATUS_DRAG_CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Status Drag Categories/Active/_CategoryOrder.json`
     await expect
       .poll(async () => {
         /** Current persisted groups after the Completed-to-Active transaction settles. */
-        const categoryOrder = JSON.parse(await readTextFile(electronApp, categoryOrderPath)) as {
-          categories: Array<{
-            categoryId: string | null
-            entries: Array<{ kind: 'prompt'; id: string }>
-          }>
-        }
+        const categoryOrder = (await findCollection(electronApp, 'Status Drag Categories'))!.statusFolders.active.categoryOrder
         return {
           primary: categoryOrder.categories.find(
             (category) => category.categoryId === STATUS_DRAG_PRIMARY_CATEGORY_ID
@@ -2190,14 +2030,9 @@ describe('Prompt collection prompt management', () => {
       })
     await expect
       .poll(async () =>
-        await readPersistedPromptTextById(electronApp, {
-          workspacePath: STATUS_DRAG_CATEGORY_WORKSPACE_PATH,
-          folderName: 'Status Drag Categories',
-          promptId: 'status-drag-completed',
-          promptTitle: 'Categorized Completed'
-        })
+        await readRecord(electronApp, 'prompt', 'status-drag-completed')
       )
-      .toContain(`category: ${STATUS_DRAG_SECONDARY_CATEGORY_ID}`)
+      .toMatchObject({ category: STATUS_DRAG_SECONDARY_CATEGORY_ID, status: 'Todo' })
     await expect(
       mainWindow.locator('[data-testid="prompt-collection-completed-filter"]')
     ).toHaveAttribute('aria-pressed', 'true')
@@ -2208,7 +2043,7 @@ describe('Prompt collection prompt management', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2288,7 +2123,7 @@ describe('Prompt collection prompt management', () => {
       .poll(async () =>
         await readPromptCollectionEntries(
           electronApp,
-          `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Active/_CategoryOrder.json`
+          'Completed Mode'
         )
       )
       .toEqual([
@@ -2348,7 +2183,7 @@ describe('Prompt collection prompt management', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2602,18 +2437,8 @@ describe('Prompt collection prompt management', () => {
       .poll(
         async () => {
           const [activeFiles, completedFiles] = await Promise.all([
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode',
-              promptId: 'completed-mode-newest',
-              promptTitle: 'Newest Completed'
-            }),
-            checkPersistedPromptFilesExistByTitle(electronApp, {
-              workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-              folderName: 'Completed Mode/Completed',
-              promptId: 'completed-mode-newest',
-              promptTitle: 'Newest Completed'
-            })
+            containsPrompt(electronApp, 'Completed Mode', 'completed-mode-newest', 'Newest Completed'),
+            containsPrompt(electronApp, 'Completed Mode/Completed', 'completed-mode-newest', 'Newest Completed')
           ])
 
           return { activeFiles, completedFiles }
@@ -2621,24 +2446,19 @@ describe('Prompt collection prompt management', () => {
         { timeout: 8000 }
       )
       .toEqual({
-        activeFiles: { markdownExists: true },
-        completedFiles: { markdownExists: false }
+        activeFiles: true,
+        completedFiles: false
       })
 
-    const activeMarkdown = await readPersistedPromptTextById(electronApp, {
-      workspacePath: COMPLETED_MODE_WORKSPACE_PATH,
-      folderName: 'Completed Mode',
-      promptId: 'completed-mode-newest',
-      promptTitle: 'Newest Completed'
-    })
-    expect(activeMarkdown).toContain('status: Todo')
-    expect(activeMarkdown).not.toContain('finalizedAt:')
+    const activeRecord = await readRecord(electronApp, 'prompt', 'completed-mode-newest')
+    expect(activeRecord).toMatchObject({ status: 'Todo' })
+    expect(activeRecord).not.toHaveProperty('finalizedAt')
     await expect
       .poll(
         async () =>
           await readPromptCollectionEntries(
             electronApp,
-            `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Active/_CategoryOrder.json`
+            'Completed Mode'
           )
       )
       .toEqual([
@@ -2759,7 +2579,7 @@ describe('Prompt collection prompt management', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildCompletedModeWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMPLETED_MODE_WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2786,13 +2606,7 @@ describe('Prompt collection prompt management', () => {
     await mainWindow.keyboard.press('Escape')
     await archiveButton.click()
 
-    /** Archived path receiving the prompt without a confirmation dialog. */
-    const archivedActivePromptPath =
-      `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Archived/Active Prompt.prompt.md`
-    await expect.poll(() => checkFileExists(electronApp, archivedActivePromptPath)).toBe(true)
-    await expect.poll(() => readTextFile(electronApp, archivedActivePromptPath)).toContain(
-      'status: Archived'
-    )
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'completed-mode-active')).toMatchObject({ status: 'Archived' })
     await expect(mainWindow.locator('[role="dialog"][aria-label="Delete Prompt"]')).toHaveCount(0)
 
     await mainWindow.locator('[data-testid="prompt-collection-completed-filter"]').click()
@@ -2881,10 +2695,7 @@ describe('Prompt collection prompt management', () => {
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow, 'active'))
       .toEqual(['archived-mode-newest'])
-    /** Restored active path proving Archived supports outbound status drops. */
-    const restoredPromptPath =
-      `${COMPLETED_MODE_WORKSPACE_PATH}/DefaultProject/Prompts/Completed Mode/Active/Newest Archived.prompt.md`
-    await expect.poll(() => readTextFile(electronApp, restoredPromptPath)).toContain('status: Todo')
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'archived-mode-newest')).toMatchObject({ status: 'Todo' })
 
     await beginPromptTreeRowDrag(mainWindow, 'archived-mode-newest')
     await moveActiveDragToTarget(
@@ -2895,7 +2706,7 @@ describe('Prompt collection prompt management', () => {
     await expect
       .poll(async () => await getPromptTreePromptRowIds(mainWindow, 'archived'))
       .toEqual(['archived-mode-newest', 'completed-mode-active', 'archived-mode-oldest'])
-    await expect.poll(() => checkFileExists(electronApp, restoredPromptPath)).toBe(false)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'archived-mode-newest')).toMatchObject({ status: 'Archived' })
   })
 
   test('deletes prompts and keeps deletion after navigation', async ({

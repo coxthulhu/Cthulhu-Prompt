@@ -1,14 +1,10 @@
+import { findCollection, readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { resolvePaletteColor } from '../helpers/PaletteHelpers'
 import { clickPromptCollectionItem, showCollectionBrowser, openCollectionCreation } from '../helpers/PromptCollectionHelpers'
 import { selectedCollectionTitleSelector } from '../helpers/PromptCollectionSelectors'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import type { ConsoleMessage, Page } from 'playwright'
-import {
-  checkFileExists,
-  checkPersistedPromptFilesExistByTitle,
-  readTextFile
-} from '../helpers/PromptPersistenceTestHelpers'
 import {
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
@@ -72,7 +68,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(TEMPLATE_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(TEMPLATE_WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -757,16 +753,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
         .locator(PROMPT_COLLECTION_HOST)
         .getByText('No active prompts in this collection.')
     ).toBeVisible()
-    await expect
-      .poll(async () => {
-        const infoPath = '/ws/minimal/DefaultProject/Prompts/TestCollection/_CollectionInfo'
-        return await Promise.all(
-          ['Description.md'].map((filename) =>
-            checkFileExists(electronApp, `${infoPath}/${filename}`)
-          )
-        )
-      })
-      .toEqual([false])
+    expect((await findCollection(electronApp, 'TestCollection'))?.settings.collectionDescription).toBeNull()
 
     const emptyPromptCollectionPlaceholderHasGutter = await mainWindow.evaluate((hostSelector) => {
       const host = document.querySelector<HTMLElement>(hostSelector)
@@ -791,10 +778,6 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     const { mainWindow } = await testSetup.setupAndStart({
       workspace: { scenario: 'sample' }
     })
-    /** Combined order repaired when the prompt-only sample workspace loads. */
-    const initialWorkspaceCollectionEntries = (
-      (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))!
-    ).entries
 
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
@@ -824,37 +807,10 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await mainWindow.keyboard.press('Escape')
     await expect(mainWindow.locator(MANAGE_CATEGORIES_SELECTED_PROMPT_COLLECTION_MENU_ITEM)).toHaveCount(0)
-    await expect
-      .poll(() => checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples`))
-      .toBe(true)
-
-    const collectionInfo = JSON.parse(
-      await readTextFile(
-        electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/_CollectionInfo.json`
-      )
-    ) as { displayName: string; collectionId: string; kind: string }
-    expect(collectionInfo).toEqual({
-      displayName: 'Examples',
-      collectionId: expect.any(String),
-      kind: 'template'
-    })
-    const workspaceCollectionOrder = (await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))!
-    expect(workspaceCollectionOrder.entries).toEqual([
-      { kind: 'collection', id: collectionInfo.collectionId },
-      ...initialWorkspaceCollectionEntries
-    ])
-    expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/Active/_CategoryOrder.json`
-        )
-      )
-    ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
-    expect(
-      await checkFileExists(electronApp, `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Templates/Examples/Completed`)
-    ).toBe(false)
+    const templateCollection = (await findCollection(electronApp, 'Examples', 'template'))!
+    expect(templateCollection.displayName).toBe('Examples')
+    expect(templateCollection.statusFolders.active.categoryOrder.categories).toEqual([{ categoryId: null, entries: [] }])
+    expect((await readWorkspaceCollectionOrder(electronApp, SAMPLE_WORKSPACE_PATH))?.entries[0].id).toBe(templateCollection.id)
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
     await mainWindow.locator('[data-testid="create-prompt-collection-name-input"]').fill('Examples')
@@ -989,10 +945,7 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
       'Devel opment'
     )
     await expect
-      .poll(async () => JSON.parse(await readTextFile(
-        electronApp,
-        `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/Development/_CollectionInfo.json`
-      )).displayName)
+      .poll(async () => (await readRecord(electronApp, 'promptCollection', developmentCollectionId))?.displayName)
       .toBe('Devel opment')
 
     await rootHeader.locator('[data-testid="prompt-collection-title-edit"]').click()
@@ -1017,73 +970,17 @@ describe('Prompt Collection Navigation (non-virtual)', () => {
     )
     await expect(rootHeader).toContainText('Renamed Development')
 
-    const renamedCollectionInfoPath = `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/RenamedDevelopment/_CollectionInfo.json`
-    /** Descendant prompt path expected to remain authoritative after the collection rename. */
-    const renamedPromptPath = `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/RenamedDevelopment/Active/Code Review.prompt.md`
-    const renamedCollectionInfo = JSON.parse(
-      await readTextFile(electronApp, renamedCollectionInfoPath)
-    ) as {
-      displayName: string
-      collectionId: string
-      kind: 'prompt'
-    }
-    expect(renamedCollectionInfo).toEqual({
-      displayName: 'Renamed Development',
-      collectionId: developmentCollectionId,
-      kind: 'prompt'
+    expect(await readRecord(electronApp, 'promptCollection', developmentCollectionId)).toMatchObject({
+      folderName: 'RenamedDevelopment', displayName: 'Renamed Development', kind: 'prompt'
     })
-    await expect
-      .poll(
-        async () =>
-          await checkFileExists(
-            electronApp,
-            `${SAMPLE_WORKSPACE_PATH}/DefaultProject/Prompts/Development/_CollectionInfo.json`
-          )
-      )
-      .toBe(false)
-
-    await expect
-      .poll(
-        async () =>
-          await checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: SAMPLE_WORKSPACE_PATH,
-            folderName: 'RenamedDevelopment',
-            promptId: 'dev-1',
-            promptTitle: 'Code Review'
-          })
-      )
-      .toEqual({ markdownExists: true })
-    await expect
-      .poll(
-        async () =>
-          await checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: SAMPLE_WORKSPACE_PATH,
-            folderName: 'Development',
-            promptId: 'dev-1',
-            promptTitle: 'Code Review'
-          })
-      )
-      .toEqual({ markdownExists: false })
-
     /** Renamed collection's loaded descendant editor used to verify its in-memory persistence path. */
     const promptEditorSelector = '[data-testid="prompt-editor-dev-1"]'
     /** Unique body text proving the post-rename edit reached the renamed directory. */
     const editMarker = 'post-rename descendant edit'
     await typeInMonacoEditor(mainWindow, promptEditorSelector, editMarker)
     await expect
-      .poll(async () => await readTextFile(electronApp, renamedPromptPath))
+      .poll(async () => (await readRecord(electronApp, 'prompt', 'dev-1'))?.promptText)
       .toContain(editMarker)
-    await expect
-      .poll(
-        async () =>
-          await checkPersistedPromptFilesExistByTitle(electronApp, {
-            workspacePath: SAMPLE_WORKSPACE_PATH,
-            folderName: 'Development',
-            promptId: 'dev-1',
-            promptTitle: 'Code Review'
-          })
-      )
-      .toEqual({ markdownExists: false })
   })
 
   test('jumps to a prompt when clicking a prompt tree prompt row', async ({ testSetup }) => {

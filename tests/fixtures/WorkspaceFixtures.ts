@@ -2,20 +2,18 @@ import { createDeterministicId } from './FixtureIds'
 import { samplePrompts, heightTestPrompts } from './TestData'
 import { getPromptDisplayTitle, resolvePromptTitleUpdate } from '@shared/domain/prompt/promptFallbackTitle'
 import { allocateFilenameStem } from '@shared/domain/prompt/promptFilename'
-import { PROMPT_COLLECTION_SETTINGS_FIELDS, type PromptCollectionSettings } from '@shared/domain/prompt-collection/PromptCollection'
+import { PROMPT_COLLECTION_SETTINGS_DISK_FILENAMES, PROMPT_COLLECTION_SETTINGS_FIELDS, type PromptCollectionSettings } from '@shared/domain/prompt-collection/PromptCollection'
 import {
   isFinalPromptStatus,
   PromptStatus,
   type PromptPersisted,
   type PromptTemplateReference
 } from '@shared/domain/prompt/Prompt'
-import type { PromptCollectionInfoFile } from '../../src/main/Persistence/workspace/WorkspaceDiskTypes'
 import {
   serializePromptMarkdown,
   serializePromptTemplateMarkdown
 } from '../../src/main/Persistence/PromptFrontmatter'
 import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/PromptTemplate'
-import { PROMPT_COLLECTION_SETTINGS_TEXT_FILENAMES } from '../../src/main/Persistence/PromptPersistencePaths'
 import {
   VIRTUAL_FIND_FIRST_PROMPT_INDEX,
   VIRTUAL_FIND_LAST_PROMPT_INDEX,
@@ -27,7 +25,7 @@ const createPromptCollectionInfo = (
   displayName: string,
   collectionId: string,
   kind: 'prompt' | 'template' = 'prompt'
-): PromptCollectionInfoFile => {
+) => {
   return { displayName, collectionId, kind }
 }
 
@@ -133,7 +131,7 @@ const addPromptCollectionSettingsFiles = (
   for (const field of PROMPT_COLLECTION_SETTINGS_FIELDS) {
     const value = collection.collectionSettings?.[field]
     if (value == null) continue
-    structure[`${folderPath}/_CollectionInfo/${PROMPT_COLLECTION_SETTINGS_TEXT_FILENAMES[field]}`] =
+    structure[`${folderPath}/_CollectionInfo/${PROMPT_COLLECTION_SETTINGS_DISK_FILENAMES[field]}`] =
       value
   }
 }

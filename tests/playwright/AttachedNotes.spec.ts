@@ -1,3 +1,4 @@
+import { readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import type { Page } from '@playwright/test'
 import type { AuthoritativeSnapshot } from '@shared/ipc/AuthoritativeSnapshot'
 import { createPlaywrightTestSuite, type TestSetup } from '../helpers/PlaywrightTestFramework'
@@ -6,7 +7,6 @@ import { createDeterministicId } from '../fixtures/FixtureIds'
 import { focusMonacoEditor, getEditorScrollTop, isMonacoEditorFocused, setMonacoSelections, waitForMonacoEditor } from '../helpers/MonacoHelpers'
 import { PROMPT_COLLECTION_HOST_SELECTOR } from '../helpers/PromptCollectionSelectors'
 import { readWorkspaceState } from '../helpers/UserPersistenceHelpers'
-import { readTextFile, checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import { measureEditorCardGeometry } from '../helpers/CardGeometryHelpers'
 
 /** Production controls, Monaco, SQLite, and workspace files are exercised together. */
@@ -36,7 +36,7 @@ const startNotes = async (testSetup: TestSetup, kind: 'prompt' | 'template', tex
         { id: 'owner', title: 'Owner', templateText: text }, { id: 'neighbor', title: 'Neighbor', templateText: 'Neighbor text' }
       ] }])
   await testSetup.setupFilesystem(files)
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
   /** Real application and navigation helpers for this fixture. */
   const started = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await started.testHelpers.setupWorkspaceViaUI()
@@ -258,7 +258,7 @@ describe('Attached note editors', () => {
 
     test(`${kind} adds, edits, hides, restores, and deletes independently of its owner`, async ({ testSetup, electronApp }) => {
       /** Both owners start without notes or saved visibility. */
-      const { mainWindow, testHelpers, openCollection, active } = await startNotes(testSetup, kind)
+      const { mainWindow, testHelpers, openCollection } = await startNotes(testSetup, kind)
       /** Owner-scoped locators keep toolbar and header assertions unambiguous. */
       const owner = mainWindow.locator(OWNER)
       await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
@@ -302,7 +302,7 @@ describe('Attached note editors', () => {
       await mainWindow.evaluate(() => window.playwrightTestControls!.waitForMutations())
       // Waiting for mutations alone does not submit the note's pending autosave debounce.
       // Monaco's Windows text model retains CRLF in the Markdown body.
-      await expect.poll(() => readTextFile(electronApp, `${active}/Owner.note.md`)).toContain('Remember this note\r\nSecond line')
+      await expect.poll(async () => (await readRecord(electronApp, 'note', noteId))?.noteText).toContain('Remember this note\r\nSecond line')
       expect(await mainWindow.evaluate((kind) => window.playwrightTestControls!.notes.getOwner(kind, 'owner'), kind)).toEqual(ownerBefore)
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', noteId)).toEqual({ visible: true })
       await testHelpers.navigateToHomeScreen()
@@ -316,16 +316,16 @@ describe('Attached note editors', () => {
       await mainWindow.keyboard.insertText(' saved on close')
       await testHelpers.navigateToHomeScreen()
       await testHelpers.clearWorkspaceViaUI()
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
       await testHelpers.setupWorkspaceViaUI()
       await openCollection()
       await waitForMonacoEditor(mainWindow, NOTE)
       await expect(owner.getByTestId('attached-note-indicator')).toHaveAttribute('data-edited', 'false')
-      expect(await readTextFile(electronApp, `${active}/Owner.note.md`)).toContain('Second line saved on close')
+      expect((await readRecord(electronApp, 'note', noteId))?.noteText).toContain('Second line saved on close')
       await owner.getByTestId('attached-note-button').click()
       await testHelpers.navigateToHomeScreen()
       await testHelpers.clearWorkspaceViaUI()
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE))
       await testHelpers.setupWorkspaceViaUI()
       await openCollection()
       await expect(owner.getByTestId('attached-note-header')).toHaveAttribute('aria-expanded', 'false')
@@ -340,7 +340,7 @@ describe('Attached note editors', () => {
       await mainWindow.getByTestId('attached-note-confirm-delete').click()
       await expect(owner.getByTestId('attached-note-header')).toHaveCount(0)
       await mainWindow.evaluate(() => window.playwrightTestControls!.waitForMutations())
-      expect(await checkFileExists(electronApp, `${active}/Owner.note.md`)).toBe(false)
+      expect(await readRecord(electronApp, 'note', noteId)).toBeNull()
       expect(await readWorkspaceState(electronApp, WORKSPACE_ID, 'attached-note', noteId)).toBeNull()
       await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
       /** The blank note's main action deletes it without confirmation. */
@@ -351,7 +351,7 @@ describe('Attached note editors', () => {
       await expect(mainWindow.getByTestId('attached-note-confirm-delete')).toHaveCount(0)
       await expect(owner.getByTestId('attached-note-options')).toBeDisabled()
       await mainWindow.evaluate(() => window.playwrightTestControls!.waitForMutations())
-      expect(await checkFileExists(electronApp, `${active}/Owner.note.md`)).toBe(false)
+      expect(await readRecord(electronApp, 'note', noteId)).toBeNull()
     })
 
     test(`${kind} shares visual lines and keeps wrapped notes within the budget across resize and navigation`, async ({ testSetup, electronApp }) => {

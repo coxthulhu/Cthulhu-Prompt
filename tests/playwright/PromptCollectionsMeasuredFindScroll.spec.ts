@@ -61,7 +61,7 @@ describe('Measured Find Scrolling', () => {
       id: 'measured-category', displayName: 'Hidden', shortDescription: null, description: null
     })
     await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
     /** Window and helpers exercise category expansion through real find navigation. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
@@ -101,7 +101,7 @@ describe('Measured Find Scrolling', () => {
       /** Isolated workspace containing a nearby target that can hydrate before navigation. */
       const path = `/ws/measured-find-band-${section}`
       await testSetup.setupFilesystem(buildWorkspace(path, section, 5))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
       /** Window and helpers exercise real input events and virtual scroll controls. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
@@ -166,7 +166,7 @@ describe('Measured Find Scrolling', () => {
       /** Isolated collection with its only match far outside the normal overscan window. */
       const path = `/ws/measured-find-cancel-${action}`
       await testSetup.setupFilesystem(buildWorkspace(path, 'title', 30))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
       /** Window and helpers expose the hydration pause without replacing real navigation. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)

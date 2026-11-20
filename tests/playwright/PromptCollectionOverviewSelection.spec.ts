@@ -33,7 +33,7 @@ describe('Prompt collection overview selection', () => {
       })
     }
     await testSetup.setupFilesystem(structure)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Real window and workspace navigation for the populated task collection. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -76,7 +76,7 @@ describe('Prompt collection overview selection', () => {
             [`${WORKSPACE_PATH}/DefaultProject/Prompts/Content/Categories/Second.category.json`]: JSON.stringify({ id: 'second', displayName: 'Second', shortDescription: null, description: '' }),
             [`${WORKSPACE_PATH}/DefaultProject/Prompts/Content/Active/_CategoryOrder.json`]: JSON.stringify({ categories: [{ categoryId: null, entries: [] }, { categoryId: 'first', entries: [] }, { categoryId: 'second', entries: [{ kind: 'prompt', id: 'later' }] }] })
           })
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Real window and navigation helpers for this content kind. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -106,7 +106,7 @@ describe('Prompt collection overview selection', () => {
       ] },
       { folderName: 'Empty', displayName: 'Empty', collectionId: 'empty' }
     ]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Real window and navigation helpers for populated and empty template collections. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()

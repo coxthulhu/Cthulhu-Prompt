@@ -109,7 +109,7 @@ test.describe('Sidebar Tests', () => {
         { folderName: name, displayName: name, collectionId: `template-${name}` }
       )))
     })
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
     /** Shared header title identifying the displayed sidebar mode. */

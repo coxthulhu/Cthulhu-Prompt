@@ -1,8 +1,8 @@
-import { notePersistence } from '../Persistence/NotePersistence'
+import { contentPersistence } from '../Persistence/sqlite/WorkspaceDatabase'
 import { createRevisionData } from './RevisionDataFactory'
 
 /** Committed note records use the same atomic revision lifecycle as other Markdown. */
 export const noteData = createRevisionData({
-  persistence: notePersistence,
+  persistence: contentPersistence('note'),
   emitCommittedRevisionChanged: () => { /* Mutation responses carry note revisions. */ }
 })

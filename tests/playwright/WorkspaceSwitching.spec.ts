@@ -38,7 +38,7 @@ describe('Workspace switching', () => {
       /** Workspace reopened without restarting Electron. */
       const path = `/ws/reopen-${kind}`
       await testSetup.setupFilesystem(createSwitchingWorkspace(path, 'A'))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
       /** Running application and its UI helpers. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       /** Shared content editor whose persisted text must survive every teardown. */
@@ -62,12 +62,12 @@ describe('Workspace switching', () => {
           await testHelpers.navigateToHomeScreen()
           await mainWindow.locator('[data-testid="close-workspace-button"]').click()
           await expect(mainWindow.locator('[data-testid="open-workspace-button"]')).toBeDisabled()
-          await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(path)
+          await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toContainText(path.split('/').at(-1)! + '.cthulhuprompt')
         } finally {
           await testSetup.resumeIpcChannel(updateChannel)
         }
         await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveCount(0)
-        await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+        testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
         await testHelpers.setupWorkspaceViaUI()
         await testHelpers.navigateToPromptCollections(collection)
         await waitForMonacoEditor(mainWindow, editor)
@@ -95,14 +95,12 @@ describe('Workspace switching', () => {
     // The first A visit queues edits; returning to A must read those edits from persistence.
     for (const [visit, label] of ['A', 'B', 'A', 'A'].entries()) {
       await testHelpers.navigateToHomeScreen()
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(label === 'A' ? pathA : pathB)])
-      await mainWindow.locator('[data-testid="open-workspace-button"]').click()
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(label === 'A' ? pathA : pathB))
+      await testHelpers.setupWorkspaceViaUI()
       await expect(mainWindow.getByTestId('new-tab-button')).toBeEnabled()
       await testHelpers.navigateToHomeScreen()
       await expect(mainWindow.locator('[data-testid="open-workspace-button"]')).toBeEnabled()
-      await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveText(
-        label === 'A' ? pathA : pathB
-      )
+      await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toContainText('switch-' + label.toLowerCase() + '.cthulhuprompt')
       for (const kind of ['prompt', 'template'] as const) {
         /** Displayed root name selected through the default project. */
         const folderName = `${label} ${kind === 'prompt' ? 'Prompts' : 'Templates'}`

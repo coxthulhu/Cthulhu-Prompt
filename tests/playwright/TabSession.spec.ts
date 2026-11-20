@@ -22,7 +22,7 @@ const files = createWorkspaceWithCollections(PATH, [{
 /** Starts on the automatically created New Tab screen. */
 const start = async (testSetup: PlaywrightTestFixtures['testSetup']) => {
   await testSetup.setupFilesystem(files)
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(PATH)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(PATH))
   /** Electron session whose workspace is opened through the real picker. */
   const started = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await started.testHelpers.setupWorkspaceViaUI()
@@ -141,7 +141,7 @@ describe('Workspace tab sessions', () => {
     await testHelpers.clearWorkspaceViaUI()
     await expect(tabs(mainWindow)).toHaveCount(0)
     expect((await readTabSession(electronApp, ID)).user?.tabs).toHaveLength(2)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(PATH))
     await testHelpers.setupWorkspaceViaUI()
     await expect(tabs(mainWindow)).toHaveText(['Prompt 0', 'Tasks'])
     await tabs(mainWindow).nth(0).click()
@@ -189,7 +189,7 @@ describe('Workspace tab sessions', () => {
     await testSetup.setupFilesystem(createWorkspaceWithCollections(PATH, Array.from({ length: 80 }, (_, index) => ({
       folderName: `Collection${String(index).padStart(2, '0')}`, displayName: `Collection ${index}`, promptCollectionId: `collection-${index}`
     })), { settings: { workspaceId: ID } }))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(PATH))
     /** Large native browser viewport, independent of the collection virtual scroller. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()

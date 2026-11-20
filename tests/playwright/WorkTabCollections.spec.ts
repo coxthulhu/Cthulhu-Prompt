@@ -47,7 +47,7 @@ const getTabs = (page: Page) => page.getByTestId('work-tab').getByRole('tab')
 /** Opens the workspace on Home. */
 const startWorkspace = async (testSetup: TestSetup) => {
   await testSetup.setupFilesystem(workspaceFiles)
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
   const started = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await started.testHelpers.setupWorkspaceViaUI()
   return started

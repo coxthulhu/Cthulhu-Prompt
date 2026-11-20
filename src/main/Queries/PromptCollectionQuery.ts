@@ -27,7 +27,8 @@ export const loadPromptCollectionInitialData = async (
     return { success: false, error: 'Prompt collection not loaded' }
   }
 
-  if (promptCollectionEntry.persistenceFields.workspaceId !== payload.workspaceId) {
+  if (!data.workspace.committedStore.getEntry(payload.workspaceId)?.committed.projects.some((project) =>
+    project.collectionEntries.some((entry) => entry.id === payload.promptCollectionId))) {
     return { success: false, error: 'Prompt collection does not belong to the workspace' }
   }
 

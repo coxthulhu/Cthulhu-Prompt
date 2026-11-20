@@ -1,4 +1,4 @@
-import { categoryPersistence } from '../Persistence/CategoryPersistence'
+import { contentPersistence } from '../Persistence/sqlite/WorkspaceDatabase'
 import { createRevisionData } from './RevisionDataFactory'
 
 /** Placeholder category revision notification hook for future multi-window updates. */
@@ -8,6 +8,6 @@ const emitCommittedRevisionChanged = (_id: string): void => {
 
 /** Authoritative in-memory category store backed by category JSON files. */
 export const categoryData = createRevisionData({
-  persistence: categoryPersistence,
+  persistence: contentPersistence('category'),
   emitCommittedRevisionChanged
 })

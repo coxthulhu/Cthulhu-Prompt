@@ -9,8 +9,7 @@ Cthulhu Prompt is a lightweight prompt editor and organizer that helps you write
 - Write prompts in a familiar editor with Markdown support.
 - Browse all your prompts on a single screen with infinite scrolling.
 - Runs locally and quickly without any cloud or internet requirements.
-- Saves your prompts as simple markdown files. Version control them if you want to!
-- Supports multiple users collaborating on prompts and templates in the same committed workspace.
+- Saves each workspace locally in its own SQLite database.
 - A simple interface with good performance. No elements flashing or popping in!
 - Works with any agentic interface - Just hit the copy button to get your templated prompt in your clipboard.
 
@@ -25,15 +24,8 @@ Currently, Cthulhu Prompt is supported in Windows, with support for other operat
 
 ### Setting Up a Workspace
 
-Once you have Cthulhu Prompt running, you'll need to set up a workspace. This is a simple folder on your system that all your prompts will be placed into.
+1. On Home, click **Create**, enter a unique name, and choose whether to add examples.
+2. Click **Create Workspace** to open My Prompts and My Templates.
+3. Use **Open** on Home to switch workspaces. **Open Workspace Folder** selects the database in Explorer.
 
-1. Click the Create Workspace button, then pick a folder name and a location for the folder.
-2. I recommend leaving the examples toggled on, so that you can get a sense of how the UI looks. You can delete them later.
-3. Click create, and the workspace folder should be setup! You can now edit your prompts.
-
-### Optional Steps
-
-There are a couple other things that will improve your experience with Cthulhu Prompt.
-
-1. I recommend committing this workspace folder to a private git repository for version control and sharing across machines. If you aren't sure how, just ask your AI!
-2. You can also launch an AI agent within this folder, and ask it to reorganize your prompts, edit them, and more. Cthulhu Prompt's files are very simple, and your agent should have no trouble figuring them out!
+Installed builds store databases in `%APPDATA%\CthulhuPrompt\Workspaces`. Use **Import** to copy a version-8 legacy workspace into this folder. Select the imported workspace from **Open** when you are ready to use it.

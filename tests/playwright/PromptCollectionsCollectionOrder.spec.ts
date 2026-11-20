@@ -1,11 +1,11 @@
+import { findCollection } from '../helpers/WorkspaceDatabaseHelpers'
 import { showCollectionBrowser, openCollectionCreation } from '../helpers/PromptCollectionHelpers'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { readWorkspaceCollectionOrder, runSqlQuery, runSqlStatement, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
-import { readTextFile, checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
+import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import type { ElectronApplication, Page } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  createLegacyWorkspaceFilesystem,
   createWorkspaceWithCollections,
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
@@ -20,7 +20,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 const COLLECTION_ORDER_WORKSPACE_PATH = '/ws/collection-order'
 const CREATE_COLLECTION_WORKSPACE_PATH = '/ws/collection-order-create'
 const COMBINED_REPAIR_WORKSPACE_PATH = '/ws/collection-order-combined-repair'
-const COMBINED_PERSISTED_WORKSPACE_PATH = '/ws/collection-order-combined-persisted'
 const PROMPT_COLLECTION_SELECTOR_MENU = '[data-testid="new-tab-screen"]'
 const PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX = 'new-tab-collection-'
 /** Combined fallback order sorts both kinds' folder names together; equal names keep tasks first. */
@@ -111,7 +110,7 @@ describe('Prompt Collection Order', () => {
       entries: [...COMBINED_ALPHABETICAL_IDS].reverse().map((id) => ({ kind: 'collection', id }))
     })
     await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Real UI actions must persist through clearing the main and renderer caches. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -141,7 +140,7 @@ describe('Prompt Collection Order', () => {
     for (const path of [otherPath, workspacePath]) {
       await testHelpers.navigateToHomeScreen()
       await testHelpers.clearWorkspaceViaUI()
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(path)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(path))
       await testHelpers.setupWorkspaceViaUI()
         await expect.poll(() => readPromptCollectionDropdownItemTestIds(mainWindow)).toEqual(
         (path === otherPath ? [...COMBINED_ALPHABETICAL_IDS].reverse() : savedIds).map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`)
@@ -158,7 +157,7 @@ describe('Prompt Collection Order', () => {
     /** The favorites write follows the order write, so the order must roll back when it fails. */
     const workspacePath = '/ws/sqlite-order-rollback'
     await testSetup.setupFilesystem(createCombinedCollectionWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Creation uses the real mutation and staged filesystem commit. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -171,7 +170,7 @@ describe('Prompt Collection Order', () => {
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await expect(mainWindow.getByTestId('create-prompt-collection-name-error')).toBeVisible()
     expect(await readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual(COMBINED_ALPHABETICAL_IDS)
-    expect(await checkFileExists(electronApp, `${workspacePath}/DefaultProject/Prompts/RetryCollection/_CollectionInfo.json`)).toBe(false)
+    expect(await findCollection(electronApp, 'RetryCollection').then(Boolean)).toBe(false)
     await runSqlStatement(electronApp, 'DROP TRIGGER reject_collection_order')
     await mainWindow.getByTestId('create-prompt-collection-button').click()
     await testHelpers.navigateToPromptCollections('Retry Collection')
@@ -179,7 +178,7 @@ describe('Prompt Collection Order', () => {
     await expect.poll(() => readWorkspacePromptCollectionIds(electronApp, workspacePath)).toEqual([
       expect.any(String), ...COMBINED_ALPHABETICAL_IDS
     ])
-    expect(await checkFileExists(electronApp, `${workspacePath}/DefaultProject/Prompts/RetryCollection/_CollectionInfo.json`)).toBe(true)
+    expect(await findCollection(electronApp, 'RetryCollection').then(Boolean)).toBe(true)
     expect(testSetup.getRendererErrors().some((error) => error.message.includes('Controlled collection order failure'))).toBe(true)
     testSetup.removeRendererErrorsContaining('Controlled collection order failure')
   })
@@ -199,7 +198,7 @@ describe('Prompt Collection Order', () => {
     })
 
     await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COLLECTION_ORDER_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COLLECTION_ORDER_WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -240,7 +239,7 @@ describe('Prompt Collection Order', () => {
     delete filesystem[workspaceCollectionOrderPath(COMBINED_REPAIR_WORKSPACE_PATH, 'template')]
 
     await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(COMBINED_REPAIR_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(COMBINED_REPAIR_WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -263,49 +262,6 @@ describe('Prompt Collection Order', () => {
       .toEqual(['template-beta', 'prompt-alpha', 'template-alpha', 'prompt-zulu'])
   })
 
-  test('discards an interleaved schema-one order and saves the alphabetical SQLite order', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const filesystem = createLegacyWorkspaceFilesystem(createCombinedCollectionWorkspace(COMBINED_PERSISTED_WORKSPACE_PATH), 1)
-    const persistedIds = ['template-beta', 'prompt-zulu', 'template-alpha', 'prompt-alpha']
-    /** Workspace metadata downgraded to activate the schema-one collection-order migration. */
-    const workspaceInfoPath = getWorkspaceInfoPath(COMBINED_PERSISTED_WORKSPACE_PATH)
-    /** Current workspace identity retained while its schema marker is downgraded. */
-    const workspaceInfo = JSON.parse(filesystem[workspaceInfoPath]!) as Record<string, unknown>
-    filesystem[workspaceInfoPath] = JSON.stringify({ ...workspaceInfo, schemaVersion: 1 }, null, 2)
-    delete filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/DefaultProject/Prompts/FolderOrder.json`]
-    delete filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/DefaultProject/Templates/FolderOrder.json`]
-    filesystem[`${COMBINED_PERSISTED_WORKSPACE_PATH}/WorkspaceFolderOrder.json`] = JSON.stringify(
-      { entries: persistedIds.map((id) => ({ kind: 'folder', id })) },
-      null,
-      2
-    )
-
-    await testSetup.setupFilesystem(filesystem)
-    await testSetup.setupFileDialog([workspaceInfoPath])
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
-    })
-
-    expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-    expect(
-      await readWorkspacePromptCollectionIds(electronApp, COMBINED_PERSISTED_WORKSPACE_PATH)
-    ).toEqual(COMBINED_ALPHABETICAL_IDS)
-    await expect
-      .poll(async () => await readPromptCollectionDropdownItemTestIds(mainWindow))
-      .toEqual(COMBINED_ALPHABETICAL_IDS.map((id) => `${PROMPT_COLLECTION_DROPDOWN_ITEM_PREFIX}${id}`))
-    expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath))).toMatchObject({
-      schemaVersion: 8
-    })
-    await expect(
-      checkFileExists(
-        electronApp,
-        `${COMBINED_PERSISTED_WORKSPACE_PATH}/WorkspaceFolderOrder.json`
-      )
-    ).resolves.toBe(false)
-  })
-
   test('adds new collections to the top of the persisted collection order', async ({
     electronApp,
     testSetup
@@ -316,7 +272,7 @@ describe('Prompt Collection Order', () => {
         { folderName: 'Beta', displayName: 'Beta', promptCollectionId: 'collection-beta' }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(CREATE_COLLECTION_WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(CREATE_COLLECTION_WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })

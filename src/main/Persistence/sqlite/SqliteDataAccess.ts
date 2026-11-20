@@ -842,7 +842,8 @@ export class SqliteDataAccess {
 
     const sqlitePath = resolveDatabasePath()
     const fileDb = new Database(sqlitePath)
-    fileDb.pragma('journal_mode = WAL')
+    // A rollback journal allows SQLite to commit machine state and attached workspace content atomically.
+    fileDb.pragma('journal_mode = DELETE')
     applyStartupMigrations(fileDb)
 
     database = fileDb

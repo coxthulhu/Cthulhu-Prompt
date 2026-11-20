@@ -1,3 +1,4 @@
+import { readOrder, readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { PromptStatus } from '../../src/shared/domain/prompt/Prompt'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
@@ -5,7 +6,6 @@ import {
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
 
@@ -33,7 +33,7 @@ describe('Prompt template mutations', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -119,18 +119,10 @@ describe('Prompt template mutations', () => {
     )
     expect(createdTemplate.data.status).toBe(PromptTemplateStatus.Active)
     expect(
-      await readTextFile(
-        electronApp,
-        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/New Template.template.md`
-      )
+      (await readRecord(electronApp, 'promptTemplate', templateId))?.templateText
     ).toContain('Initial {{value}}.')
     expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/_CategoryOrder.json`
-        )
-      )
+      await readOrder(electronApp, SOURCE_COLLECTION_ID)
     ).toEqual({
       categories: [
         { categoryId: null, entries: [{ kind: 'template', id: templateId }] }
@@ -173,17 +165,9 @@ describe('Prompt template mutations', () => {
     })
     /** Updated template snapshot returned by the single-target domain response. */
     const updatedTemplate = updateResult.payload.snapshots[0]
+
     expect(
-      await checkFileExists(
-        electronApp,
-        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/New Template.template.md`
-      )
-    ).toBe(false)
-    expect(
-      await readTextFile(
-        electronApp,
-        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/Renamed Template.template.md`
-      )
+      (await readRecord(electronApp, 'promptTemplate', templateId))?.templateText
     ).toContain('Updated {{value}}.')
 
     /** Complete template destination accepted by the shared prompt-location channel. */
@@ -270,33 +254,15 @@ describe('Prompt template mutations', () => {
       (snapshot: { entityType: string; id: string }) =>
         snapshot.entityType === 'promptTemplate' && snapshot.id === templateId
     )
+
     expect(
-      await checkFileExists(
-        electronApp,
-        `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/Renamed Template.template.md`
-      )
-    ).toBe(false)
-    expect(
-      await readTextFile(
-        electronApp,
-        `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/Renamed Template.template.md`
-      )
+      (await readRecord(electronApp, 'promptTemplate', templateId))?.templateText
     ).toContain('Updated {{value}}.')
     expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Templates/Source/Active/_CategoryOrder.json`
-        )
-      )
+      await readOrder(electronApp, SOURCE_COLLECTION_ID)
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
     expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/_CategoryOrder.json`
-        )
-      )
+      await readOrder(electronApp, DESTINATION_COLLECTION_ID)
     ).toEqual({
       categories: [
         { categoryId: null, entries: [{ kind: 'template', id: templateId }] }
@@ -328,6 +294,7 @@ describe('Prompt template mutations', () => {
       ]
     })
 
+    expect(await readRecord(electronApp, 'promptTemplate', templateId)).toBeNull()
     expect(deleteResult).toMatchObject({
       success: true,
       payload: {
@@ -344,19 +311,9 @@ describe('Prompt template mutations', () => {
         ])
       }
     })
+
     expect(
-      await checkFileExists(
-        electronApp,
-        `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/Renamed Template.template.md`
-      )
-    ).toBe(false)
-    expect(
-      JSON.parse(
-        await readTextFile(
-          electronApp,
-          `${WORKSPACE_PATH}/DefaultProject/Templates/Destination/Active/_CategoryOrder.json`
-        )
-      )
+      await readOrder(electronApp, DESTINATION_COLLECTION_ID)
     ).toEqual({ categories: [{ categoryId: null, entries: [] }] })
 
   })

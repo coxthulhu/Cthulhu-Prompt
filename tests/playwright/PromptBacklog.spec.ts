@@ -1,10 +1,10 @@
+import { readOrder as databaseOrder, readRecord, findRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import type { Page } from '@playwright/test'
 import type { ElectronApplication } from 'playwright'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { openManageCategoriesFromSidebar } from '../helpers/PromptCollectionHelpers'
 import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import {
   beginPromptTreeCategoryRowDrag,
   beginPromptHandleDrag,
@@ -13,7 +13,6 @@ import {
   moveActiveDragToTarget
 } from '../helpers/PromptDragDropHelpers'
 import type { CategoryOrder } from '@shared/domain/prompt-collection/PromptCollection'
-import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 
 /** Repository test fixtures and assertions for the Backlog workflow. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -53,7 +52,7 @@ const createBacklogWorkspace = () => {
 
 /** Reads the authoritative order for one workflow, including empty categories. */
 const readOrder = async (electronApp: ElectronApplication, group: 'Active' | 'Backlog'): Promise<CategoryOrder> =>
-  JSON.parse(await readTextFile(electronApp, `${ROOT_PATH}/${group}/_CategoryOrder.json`))
+  await databaseOrder(electronApp, 'backlog-root', group === 'Active' ? 'active' : 'backlog')
 
 /** Reads one category's persisted prompt IDs to distinguish append, prepend, and exact drops. */
 const readEntries = async (
@@ -79,7 +78,7 @@ describe('Backlog prompts', () => {
   // Header transfers must prepend within the retained category and reject their own workflow.
   test('drops onto workflow headers without snapping, expanding, or reordering the same section', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(createBacklogWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Running editor and sidebar sharing the same categorized prompts. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -131,7 +130,7 @@ describe('Backlog prompts', () => {
     await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-active"]')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'third'])
-    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/second.prompt.md`)))
+    await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'second')))
       .toMatchObject({ status: 'Todo', category: 'alpha' })
 
     // Finalized headers retain category metadata and reject drops that would refresh their timestamp.
@@ -148,16 +147,13 @@ describe('Backlog prompts', () => {
       await finishActiveDrag(mainWindow)
       /** Status directory owning the finalized prompt. */
       const directory = group === 'completed' ? 'Completed' : 'Archived'
-      /** Saved metadata verifies both the final status and retained category. */
-      const path = `${ROOT_PATH}/${directory}/second.prompt.md`
       // The optimistic drop completes before the destination file is necessarily persisted.
-      await expect.poll(() => checkFileExists(electronApp, path)).toBe(true)
-      await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, path)))
+      await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'second')))
         .toMatchObject({ status: directory, category: 'alpha', finalizedAt: expect.any(String) })
       /** Original content must remain byte-for-byte unchanged by a rejected drop. */
-      const original = await readTextFile(electronApp, path)
+      const original = await readRecord(electronApp, 'prompt', 'second')
       /** Saved timestamp distinguishes a fresh finalization from retention of the old one. */
-      const finalizedAt = parsePromptMarkdown(original)!.finalizedAt!
+      const finalizedAt = original!.finalizedAt!
       if (previousFinalizedAt) expect(Date.parse(finalizedAt)).toBeGreaterThan(Date.parse(previousFinalizedAt))
       previousFinalizedAt = finalizedAt
       // A rejected drop must preserve its timestamp even when the command clock has advanced.
@@ -167,13 +163,13 @@ describe('Backlog prompts', () => {
       await expect(mainWindow.getByTestId(`sidebar-prompt-status-accordion-header-${group}`))
         .toHaveAttribute('data-drop-state', 'blocked')
       await finishActiveDrag(mainWindow)
-      expect(await readTextFile(electronApp, path)).toBe(original)
+      expect(await readRecord(electronApp, 'prompt', 'second')).toEqual(original)
     }
     await beginPromptHandleDrag(mainWindow, 'second')
     await moveActiveDragToTarget(mainWindow, '[data-testid="sidebar-prompt-status-accordion-header-active"]')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['second', 'third'])
-    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/second.prompt.md`)))
+    await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'second')))
       .toMatchObject({ status: 'Todo', category: 'alpha' })
   })
 
@@ -185,7 +181,7 @@ describe('Backlog prompts', () => {
       promptCollectionId: 'backlog-root',
       prompts: [{ id: 'active-prompt', title: 'Active prompt', promptText: 'Active work' }]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Window and navigation helpers for a root with no Backlog prompts or categories. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -221,7 +217,7 @@ describe('Backlog prompts', () => {
         id: `prompt-${index}`, title: `Prompt ${index}`, promptText: `Work on ${index}`
       }))
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Running sidebar with enough Active prompts to require scrolling. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -282,7 +278,7 @@ describe('Backlog prompts', () => {
 
   test('copies Active categories once and maintains independent ordering with shared category creation', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(createBacklogWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Window and helpers for a workspace created before Backlog existed. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -319,11 +315,9 @@ describe('Backlog prompts', () => {
     await mainWindow.locator('[data-testid="manage-categories-new-button"]').click()
     await mainWindow.locator('[data-testid="manage-category-name-input"]').fill('new category')
     await mainWindow.locator('[data-testid="manage-categories-save-button"]').click()
-    /** Shared category file supplies the generated ID inserted after Uncategorized in both groups. */
-    const categoryPath = `${ROOT_PATH}/Categories/new category.category.json`
-    await expect.poll(() => checkFileExists(electronApp, categoryPath)).toBe(true)
+    await expect.poll(() => findRecord(electronApp, 'category', 'displayName', 'new category')).not.toBeNull()
     /** Persisted category identity used to assert both independent orders. */
-    const newCategory = JSON.parse(await readTextFile(electronApp, categoryPath)) as { id: string }
+    const newCategory = (await findRecord(electronApp, 'category', 'displayName', 'new category'))! as { id: string }
     await expect.poll(async () => (await readOrder(electronApp, 'Active')).categories.map((category) => category.categoryId))
       .toEqual([null, newCategory.id, 'beta', 'alpha'])
     await expect.poll(async () => (await readOrder(electronApp, 'Backlog')).categories.map((category) => category.categoryId))
@@ -332,7 +326,7 @@ describe('Backlog prompts', () => {
     // Reopen the workspace to exercise disk loading instead of only renderer hydration.
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptCollections('Work')
     await expect.poll(async () => (await readOrder(electronApp, 'Backlog')).categories.map((category) => category.categoryId))
@@ -342,7 +336,7 @@ describe('Backlog prompts', () => {
 
   test('uses dropdown and quick-button ordering while retaining Backlog template selection and creation', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(createBacklogWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Window and navigation helpers for real editor transitions. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -372,7 +366,7 @@ describe('Backlog prompts', () => {
     await mainWindow.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(secondEditor.locator('[data-testid="prompt-status-pill"]')).toHaveText('Backlog')
     await expect(secondEditor.locator('[data-testid="prompt-copy-button"]')).toBeVisible()
-    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Backlog/second.prompt.md`)))
+    await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'second')))
       .toMatchObject({ status: 'Backlog', category: 'alpha', templates: null })
     /** Right-hand quick action inserts at the top of its Active category. */
     const todoButton = secondEditor.locator('[data-testid="prompt-todo-button"]')
@@ -407,14 +401,13 @@ describe('Backlog prompts', () => {
     const createdEditor = mainWindow.locator('[data-testid^="prompt-editor-"]').filter({ has: mainWindow.locator('[data-testid="prompt-status-pill"]') })
     await expect(createdEditor.locator('[data-testid="prompt-status-pill"]')).toHaveText('Backlog')
     await createdEditor.locator('[data-testid="prompt-title"]').fill('Future work')
-    await expect.poll(() => checkFileExists(electronApp, `${ROOT_PATH}/Backlog/Future work.prompt.md`)).toBe(true)
-    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Backlog/Future work.prompt.md`)))
+    await expect.poll(async () => (await findRecord(electronApp, 'prompt', 'title', 'Future work')))
       .toMatchObject({ status: 'Backlog', title: 'Future work' })
   })
 
   test('persists exact drag positions and categories into, within, and out of Backlog', async ({ testSetup, electronApp }) => {
     await testSetup.setupFilesystem(createBacklogWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Window and navigation helpers for simultaneous Active and Backlog trees. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -427,7 +420,7 @@ describe('Backlog prompts', () => {
     await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-backlog-prompt-first"]', 'bottom')
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readEntries(electronApp, 'Backlog', 'beta')).toEqual(['first', 'second'])
-    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Backlog/second.prompt.md`)))
+    await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'second')))
       .toMatchObject({ status: 'Backlog', category: 'beta' })
     await beginPromptTreeRowDrag(mainWindow, 'second', 'backlog')
     await moveActiveDragToTarget(mainWindow, '[data-testid="prompt-tree-backlog-prompt-first"]', 'top')
@@ -438,12 +431,12 @@ describe('Backlog prompts', () => {
     await finishActiveDrag(mainWindow)
     await expect.poll(() => readEntries(electronApp, 'Active')).toEqual(['first', 'third'])
     await expect.poll(() => readEntries(electronApp, 'Backlog', 'beta')).toEqual(['second'])
-    await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, `${ROOT_PATH}/Active/first.prompt.md`)))
+    await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'first')))
       .toMatchObject({ status: 'Todo', category: 'alpha' })
     // Reload the workspace from disk to verify Backlog status and ordering survive loading.
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     await testHelpers.setupWorkspaceViaUI()
     await testHelpers.navigateToPromptCollections('Work')
     await mainWindow.locator('[data-testid="prompt-tree-backlog-prompt-second"]').click()

@@ -6,7 +6,7 @@ import {
   getMonacoCursorPosition,
   isMonacoEditorFocused
 } from '../helpers/MonacoHelpers'
-import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
+import { readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -34,12 +34,7 @@ describe('Prompt Collections Autosave (Svelte)', () => {
     expect(cursorBeforeAutosave).not.toBeNull()
     expect(cursorBeforeAutosave?.column ?? 0).toBeGreaterThan(1)
 
-    await expect.poll(() => readPersistedPromptTextById(electronApp, {
-      workspacePath: '/ws/sample',
-      folderName: 'Development',
-      promptId: 'dev-1',
-      promptTitle: 'Code Review'
-    })).toContain(marker)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)).toContain(marker)
     await waitForRendererPersistence(mainWindow)
 
     const cursorAfterAutosave = await getMonacoCursorPosition(mainWindow, DEVELOPMENT_EDITOR)
@@ -84,12 +79,7 @@ describe('Prompt Collections Autosave (Svelte)', () => {
     await expect
       .poll(
         async () => {
-          return await readPersistedPromptTextById(electronApp, {
-            workspacePath: '/ws/sample',
-            folderName: 'Development',
-            promptId: 'dev-1',
-            promptTitle: 'Code Review'
-          })
+          return await readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)
         },
         { timeout: 5000 }
       )
@@ -117,12 +107,7 @@ describe('Prompt Collections Autosave (Svelte)', () => {
     await focusMonacoEditor(mainWindow, DEVELOPMENT_EDITOR)
     await mainWindow.keyboard.type(marker, { delay: 50 })
 
-    await expect.poll(() => readPersistedPromptTextById(electronApp, {
-      workspacePath: '/ws/sample',
-      folderName: 'Development',
-      promptId: 'dev-1',
-      promptTitle: 'Code Review'
-    })).toContain(marker)
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)).toContain(marker)
     await waitForRendererPersistence(mainWindow)
 
     await testHelpers.navigateToPromptCollections('Examples')
@@ -158,13 +143,9 @@ describe('Prompt Collections Autosave (Svelte)', () => {
 
     await testHelpers.navigateToHomeScreen()
     await testHelpers.clearWorkspaceViaUI()
+    await testHelpers.setupWorkspaceViaUI()
 
-    const persistedPrompt = await readPersistedPromptTextById(electronApp, {
-      workspacePath: '/ws/sample',
-      folderName: 'Development',
-      promptId: 'dev-1',
-      promptTitle: 'Code Review'
-    })
+    const persistedPrompt = await readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)
     expect(persistedPrompt).toContain(marker)
   })
 })

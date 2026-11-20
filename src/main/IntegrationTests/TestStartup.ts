@@ -1,3 +1,5 @@
+import { listWorkspaces } from '../Persistence/sqlite/WorkspaceDatabase'
+import { importWorkspace } from '../Workspace/importWorkspace'
 import { app, ipcMain, BrowserWindow, screen } from 'electron'
 import { Volume } from 'memfs'
 import { startupNormally } from '../NormalStartup'
@@ -282,6 +284,12 @@ export function setupTestStartupListener(): void {
       })
     }
   })
+  // Seed a managed fixture from legacy test data once, preserving edits across reopen.
+  ;(app as any).on('test-prepare-workspace', (path: string, ready: (name: string) => void) => {
+    const { workspaceId, workspaceName } = JSON.parse(getFs().readFileSync(path, 'utf8'))
+    if (!listWorkspaces().some((entry) => entry.id === workspaceId)) importWorkspace(path)
+    ready(workspaceName)
+  })
   ;(app as any).on('test-setup-file-dialog', (results: string[] | null) => {
     testFixtures.fileDialogResults = results ?? undefined
     // Apply replacement dialog selections while Electron stays running during workspace tests.
@@ -292,23 +300,6 @@ export function setupTestStartupListener(): void {
     const fs = getFs()
     const exists = fs.existsSync(filePath)
     ;(global as any).testFileExistsResult = exists
-  })
-  // Test-only fault injection exercises restoration after earlier files have already committed.
-  ;(app as any).on('test-fail-file-commit', (filePath: string) => {
-    /** Original implementation is restored before throwing so rollback can complete normally. */
-    const rename = filesystem.renameSync.bind(filesystem)
-    filesystem.renameSync = (source, target) => {
-      if (String(target).replace(/\\/g, '/') === filePath) {
-        filesystem.renameSync = rename
-        throw new Error('Injected file commit failure')
-      }
-      return rename(source, target)
-    }
-  })
-  // Test-only timestamp access verifies physical file isolation without relying on cached records.
-  ;(app as any).on('test-file-modified-time', (payload: { filePath: string; setTo?: string }) => {
-    if (payload.setTo) filesystem.utimesSync(payload.filePath, new Date(payload.setTo), new Date(payload.setTo))
-    ;(global as any).testFileModifiedTime = filesystem.statSync(payload.filePath).mtime.toISOString()
   })
   ;(app as any).on('test-read-file', (payload: { filePath: string; requestId: string }) => {
     const fs = getFs()

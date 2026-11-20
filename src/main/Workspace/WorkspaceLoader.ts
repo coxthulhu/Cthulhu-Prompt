@@ -1,29 +1,20 @@
+import { rmSync } from 'node:fs'
+import { UserPersistenceDataAccess } from '../Persistence/sqlite/UserPersistenceDataAccess'
 import { migrateTabSession, readTabSession, writeTabSession } from '../Persistence/sqlite/TabSessionPersistence'
 import { removeCollectionFromTabSession, pruneCollectionTabViews } from '@shared/domain/ui-state/TabSession'
 import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
-import { readNoteFiles } from '../Persistence/workspace/NoteReads'
 import { loadAttachedNoteUiStates } from '../Queries/AttachedNoteUiStateQuery'
 import { WorkspaceStateDataAccess } from '../Persistence/sqlite/WorkspaceStateDataAccess'
 import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
 import { getCollectionNoteIds } from '@shared/domain/note/Note'
-import * as path from 'path'
-import { getContentStatusFolders, isFinalPromptStatus } from '@shared/domain/prompt/Prompt'
+import { isFinalPromptStatus } from '@shared/domain/prompt/Prompt'
 import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
-import {
-  getPromptCollectionCategoryIds,
-  type PromptContentCollection,
-  type PromptTemplateCollection
-} from '@shared/domain/prompt-collection/PromptCollection'
+import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection/PromptCollection'
 import type { LoadWorkspaceByPathResult } from '@shared/domain/workspace/Workspace'
-import { isWorkspaceRootPath } from '@shared/domain/workspace/workspacePath'
 import { getFs } from '../fs-provider'
-import {
-  readAllPromptCollections,
-  readCategoryStemById,
-  readPromptStemByPromptId,
-  readPromptTemplateStemById,
-  readWorkspaceInfo
-} from '../Persistence/workspace/WorkspaceReads'
+import { importWorkspace } from './importWorkspace'
+import { attachWorkspace, contentKinds, detachWorkspace, isManagedWorkspacePath, saveWorkspaceOrder } from '../Persistence/sqlite/WorkspaceDatabase'
+import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
 import { WorkspaceUiStateDataAccess } from '../Persistence/sqlite/WorkspaceUiStateDataAccess'
 import { MarkdownContentUiStateDataAccess } from '../Persistence/sqlite/MarkdownContentUiStateDataAccess'
 import { data } from '../Data/Data'
@@ -37,36 +28,13 @@ import {
   getLoadedPromptEntries,
   getLoadedPromptTemplateEntries
 } from '../Data/DataSnapshotHelpers'
-import {
-  isWorkspaceInfoPath,
-  migrateLegacyWorkspaceInfoPath,
-  resolvePromptStatusFolderName,
-  resolveWorkspacePathFromInfoPath
-} from '../Persistence/PromptPersistencePaths'
-import { applyWorkspaceMigrations } from '../Persistence/workspace/WorkspaceMigrations'
 
 type WorkspaceLoadPayload = Omit<
   Extract<LoadWorkspaceByPathResult, { success: true }>,
   'success' | 'workspaceInfoPath'
 >
 
-const isWorkspaceInfoPathValid = (workspaceInfoPath: string): boolean => {
-  if (!isWorkspaceInfoPath(workspaceInfoPath)) {
-    return false
-  }
-
-  const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
-  if (isWorkspaceRootPath(workspacePath)) {
-    return false
-  }
-
-  const fs = getFs()
-  return (
-    fs.existsSync(workspaceInfoPath)
-  )
-}
-
-const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<WorkspaceLoadPayload> => {
+const buildWorkspaceLoadPayloadFromData = async (workspaceId: string, requestedPath: string): Promise<WorkspaceLoadPayload> => {
   const workspaceEntry = data.workspace.committedStore.getEntry(workspaceId)
 
   if (!workspaceEntry) {
@@ -165,7 +133,7 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
   ])
 
   // Convert legacy navigation only after collection ownership has been loaded and repaired.
-  migrateTabSession(workspaceId, promptCollections.map((entry) => entry.data), workspaceEntry.persistenceFields.workspaceInfoPath)
+  migrateTabSession(workspaceId, promptCollections.map((entry) => entry.data), requestedPath)
   /** Existing tabs whose collections disappeared externally return to their New Tab screens. */
   const session = readTabSession(workspaceId)
   if (session) {
@@ -198,172 +166,39 @@ const buildWorkspaceLoadPayloadFromData = async (workspaceId: string): Promise<W
   }
 }
 
-const loadWorkspaceDataIntoNewDataLayer = async (workspaceInfoPath: string): Promise<string> => {
-  const workspacePath = resolveWorkspacePathFromInfoPath(workspaceInfoPath)
-  const workspaceId = readWorkspaceInfo(workspaceInfoPath).workspaceId
-  // Load project metadata before discovering each project's content.
-  await data.workspace.loadDataFromPersistence(workspaceId, { workspacePath, workspaceInfoPath })
-  /** Loaded projects supply the content roots without conflating workspace and project paths. */
-  const workspace = data.workspace.committedStore.getEntry(workspaceId)!.committed
-  /** Collection identity maps to its physical project root for every descendant loader. */
-  const projectPathByCollectionId = new Map<string, string>()
-  /** All collections remain loaded so templates can be selected across projects. */
-  const allPromptCollections = workspace.projects.flatMap((project) => {
-    /** Project directory owns both content libraries. */
-    const projectPath = path.join(workspacePath, project.folderName)
-    /** Both collection kinds are discovered inside the same project. */
-    const collections = [...readAllPromptCollections(projectPath), ...readAllPromptCollections(projectPath, 'template')]
-    for (const collection of collections) projectPathByCollectionId.set(collection.id, projectPath)
-    return collections
-  })
-  /** Task collections supply the initial prompt summaries. */
-  const promptCollections = allPromptCollections.filter((collection): collection is PromptContentCollection => collection.kind === 'prompt')
-  /** Template collections supply workspace-wide full template data. */
-  const promptTemplateCollections = allPromptCollections.filter((collection): collection is PromptTemplateCollection => collection.kind === 'template')
-
-  // Side effect: hydrate all prompt collections before loading prompt records.
-  await Promise.all(
-    allPromptCollections.map((promptCollection) =>
-      data.promptCollection.loadDataFromPersistence(promptCollection.id, {
-        workspaceId,
-        workspacePath: projectPathByCollectionId.get(promptCollection.id)!,
-        folderName: promptCollection.folderName,
-        folderPath: promptCollection.folderName,
-        kind: promptCollection.kind
-      })
-    )
-  )
-
-  /** Category load tasks hydrate records owned by collection prompt and template collections. */
-  const categoryLoadTasks = allPromptCollections.flatMap((promptCollection) => {
-    /** Content paths resolve within this collection's project. */
-    const workspacePath = projectPathByCollectionId.get(promptCollection.id)!
-    /** collection name used by category persistence. */
-    const collectionFolderName = promptCollection.folderName
-    const categoryStemById = readCategoryStemById(workspacePath, collectionFolderName, promptCollection.kind)
-    return getPromptCollectionCategoryIds(promptCollection).flatMap((categoryId) => {
-      const categoryStem = categoryStemById.get(categoryId)
-      if (!categoryStem) return []
-      return [
-        data.category.loadDataFromPersistence(categoryId, {
-          workspaceId,
-          workspacePath,
-          promptCollectionId: promptCollection.id,
-          collectionFolderName,
-          kind: promptCollection.kind,
-          categoryStem,
-        })
-      ]
-    })
-  })
-
-  // Side effect: hydrate collection-owned categories before constructing workspace snapshots.
-  await Promise.all(categoryLoadTasks)
-
-  const promptLoadTasks = promptCollections.flatMap((promptCollection) => {
-    /** Content paths resolve within this collection's project. */
-    const workspacePath = projectPathByCollectionId.get(promptCollection.id)!
-    return Object.entries(promptCollection.statusFolders).flatMap(
-      ([statusFolderId, layout]) => {
-        /** Physical directory selected by one stable prompt status-folder identity. */
-        const persistedFolderPath = resolvePromptStatusFolderName(
-          promptCollection.folderName,
-          statusFolderId as import('@shared/domain/prompt/Prompt').PromptStatusFolderId
-        )
-        /** Persisted prompt stems discovered within this exact status folder. */
-        const stems = readPromptStemByPromptId(workspacePath, persistedFolderPath)
-        /** Prompt IDs represented by ordered groups or the unordered layout list. */
-        const promptIds =
-          layout.ordering === 'category'
-            ? layout.categoryOrder.categories.flatMap((category) =>
-                category.entries.map((entry) => entry.id)
-              )
-            : layout.promptIds
-        return promptIds.flatMap((promptId) => {
-        if (!stems.has(promptId)) return []
-        const promptStem = stems.get(promptId) ?? promptId
-        return [
-          data.prompt.loadDataFromPersistence(promptId, {
-            workspaceId,
-            workspacePath,
-            folderPath: persistedFolderPath,
-            promptCollectionId: promptCollection.id,
-            promptId,
-            promptStem,
-          })
-        ]
-        })
-      }
-    )
-  })
-
-  // Side effect: hydrate all prompts only after prompt collection loads complete.
-  await Promise.all(promptLoadTasks)
-
-  const promptTemplateLoadTasks = promptTemplateCollections.flatMap((promptCollection) =>
-    getContentStatusFolders('template').flatMap((group) => {
-      /** Content paths resolve within this collection's project. */
-      const workspacePath = projectPathByCollectionId.get(promptCollection.id)!
-      /** Physical template directory and its discovered stable IDs. */
-      const folderPath = resolvePromptStatusFolderName(promptCollection.folderName, group.id)
-      /** Filenames used to hydrate both active and archived templates. */
-      const stems = readPromptTemplateStemById(workspacePath, folderPath)
-      return [...stems].map(([templateId, templateStem]) =>
-        data.promptTemplate.loadDataFromPersistence(templateId, {
-          workspaceId, workspacePath, folderPath,
-          promptCollectionId: promptCollection.id,
-          promptId: templateId,
-          promptStem: templateStem,
-        })
-      )
-    })
-  )
-
-  // Side effect: hydrate all prompt templates only after template collection loads complete.
-  await Promise.all(promptTemplateLoadTasks)
-
-  // Hydrate note files after their owners so unattached minimal files are not mistaken for standalone entries.
-  for (const collection of allPromptCollections) {
-    /** Notes share their collection's project root. */
-    const workspacePath = projectPathByCollectionId.get(collection.id)!
-    for (const group of getContentStatusFolders(collection.kind)) {
-      /** Physical folder supplies collection/status ownership independently of the extension. */
-      const folderPath = resolvePromptStatusFolderName(collection.folderName, group.id)
-      for (const { stem, note } of readNoteFiles(workspacePath, folderPath, collection.kind)) {
-        if (note.kind === 'attached' && ![...data.prompt.committedStore.getAllEntries(), ...data.promptTemplate.committedStore.getAllEntries()]
-          .some((entry) => entry.persistenceFields.promptCollectionId === collection.id && entry.committed.attachedNoteId === note.id)) continue
-        await data.note.loadDataFromPersistence(note.id, {
-          workspaceId, workspacePath, collectionKind: collection.kind,
-          promptCollectionId: collection.id, folderPath, promptId: note.id, promptStem: stem
-        })
-      }
-    }
-  }
-
-  return workspaceId
-}
-
-export const loadWorkspaceByPath = async (
-  requestedWorkspaceInfoPath: string
-): Promise<LoadWorkspaceByPathResult> => {
+/** Hydrates authoritative records from the selected file, migrating a remembered legacy path on first open. */
+export const loadWorkspaceByPath = async (requestedPath: string): Promise<LoadWorkspaceByPathResult> => {
+  /** A failed automatic restore must release its new filename for a retry. */
+  let imported: string | undefined
   try {
-    /** Info path after renaming a pre-rename .cthulhuprompt.json file to .cthulhuprompt. */
-    const workspaceInfoPath = migrateLegacyWorkspaceInfoPath(requestedWorkspaceInfoPath)
-    if (!isWorkspaceInfoPathValid(workspaceInfoPath)) {
-      return { success: false, error: 'Invalid workspace path' }
+    if (!isManagedWorkspacePath(requestedPath)) {
+      /** Only a remembered v8 path participates in automatic migration. */
+      const remembered = UserPersistenceDataAccess.readUserPersistence().lastWorkspaceInfoPath
+      if (requestedPath !== remembered || !getFs().existsSync(requestedPath)) throw new Error('Invalid workspace path')
+      imported = importWorkspace(requestedPath)
     }
-
-    applyWorkspaceMigrations(workspaceInfoPath)
-    const workspaceId = await loadWorkspaceDataIntoNewDataLayer(workspaceInfoPath)
-    const payload = await buildWorkspaceLoadPayloadFromData(workspaceId)
-
-    return {
-      success: true,
-      workspaceInfoPath,
-      ...payload
+    /** Remember the managed database once the workspace has loaded successfully. */
+    const workspaceInfoPath = imported ?? requestedPath
+    /** Stable identity used to look up the existing machine-specific state. */
+    const { id } = attachWorkspace(workspaceInfoPath)
+    await data.workspace.loadDataFromPersistence(id, {})
+    /** One query per entity kind hydrates all committed stores for this workspace. */
+    const db = SqliteDataAccess.getDatabase()
+    for (const kind of contentKinds) {
+      /** Each domain record retains the ID stored in the v8 source. */
+      const rows = db.prepare('SELECT id, data FROM content.records WHERE kind = ?').all(kind) as { id: string; data: string }[]
+      for (const row of rows) data[kind].committedStore.setFromDisk(row.id, JSON.parse(row.data), {})
     }
+    SqliteDataAccess.runTransaction(() => saveWorkspaceOrder(data.workspace.committedStore.getEntry(id)!.committed))
+    /** Reconcile saved tabs and local preferences using the original request path. */
+    const payload = await buildWorkspaceLoadPayloadFromData(id, requestedPath)
+    if (imported) {
+      UserPersistenceDataAccess.updateUserPersistence({ ...UserPersistenceDataAccess.readUserPersistence(), lastWorkspaceInfoPath: imported })
+    }
+    return { success: true, workspaceInfoPath, ...payload }
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    return { success: false, error: message || 'Failed to load workspace by path' }
+    detachWorkspace()
+    if (imported) rmSync(imported)
+    return { success: false, error: error instanceof Error ? error.message : String(error) }
   }
 }

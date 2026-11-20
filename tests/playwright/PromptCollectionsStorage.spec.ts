@@ -1,3 +1,4 @@
+import { findCollection, readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { clickPromptCollectionItem, showCollectionBrowser, openCollectionCreation } from '../helpers/PromptCollectionHelpers'
 import { readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import type { Page } from 'playwright'
@@ -8,8 +9,6 @@ import {
   collectionTileSelector,
 } from '../helpers/PromptCollectionSelectors'
 import {
-  checkFileExists,
-  readTextFile,
   readPromptCollectionEntryIds
 } from '../helpers/PromptPersistenceTestHelpers'
 
@@ -32,32 +31,6 @@ const BETA_NAME = 'Beta'
 const FIRST_PROMPT_TITLE = 'Alpha First'
 const SECOND_PROMPT_TITLE = 'Alpha Second'
 
-// Returns the collection disk path for one prompt collection.
-const folderPath = (folderName: string): string =>
-  `${WORKSPACE_PATH}/DefaultProject/Prompts/${folderName.replace(/\s+/g, '')}`
-
-// Returns the persisted category ordering file used by a prompt collection collection.
-const activeOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_CategoryOrder.json`
-
-// Returns the persisted category-view ordering file owned by a prompt collection.
-const activeCategoryOrderPath = (folderName: string): string =>
-  `${folderPath(folderName)}/Active/_CategoryOrder.json`
-
-// Reads every prompt ID across the persisted category groups in UI order.
-const readCategoryOrderPromptIds = async (
-  electronApp: any,
-  folderName: string
-): Promise<string[]> => {
-  // Parsed category order whose nested entries are flattened for assertions.
-  const categoryOrder = JSON.parse(
-    await readTextFile(electronApp, activeCategoryOrderPath(folderName))
-  ) as { categories: Array<{ entries: Array<{ id: string }> }> }
-  return categoryOrder.categories.flatMap((category) =>
-    category.entries.map((entry) => entry.id)
-  )
-}
-
 // Creates and selects a prompt collection through the production creation dialog.
 const createCollection = async (page: Page, folderName: string): Promise<void> => {
   await showCollectionBrowser(page)
@@ -66,15 +39,6 @@ const createCollection = async (page: Page, folderName: string): Promise<void> =
   await page.locator(COLLECTION_CREATE_BUTTON).click()
   await clickPromptCollectionItem(page, folderName)
   await expect(page.locator(selectedCollectionTitleSelector)).toContainText(folderName)
-}
-
-// Reads the stable collection ID persisted in CollectionInfo.json.
-const readCollectionId = async (electronApp: any, folderPath: string): Promise<string> => {
-  // The persisted metadata is the authoritative ID used by selector drag targets.
-  const collectionInfo = JSON.parse(
-    await readTextFile(electronApp, `${folderPath}/_CollectionInfo.json`)
-  ) as { collectionId: string }
-  return collectionInfo.collectionId
 }
 
 // Waits for the active order to reach a size and returns its prompt IDs.
@@ -87,7 +51,7 @@ const waitForActivePromptIds = async (
   let promptIds: string[] = []
   await expect
     .poll(async () => {
-      promptIds = await readPromptCollectionEntryIds(electronApp, activeOrderPath(folderName))
+      promptIds = await readPromptCollectionEntryIds(electronApp, folderName)
       return promptIds.length
     })
     .toBe(count)
@@ -95,7 +59,7 @@ const waitForActivePromptIds = async (
 }
 
 describe('Prompt collection storage', () => {
-  test('creates the canonical disk layout and enables category controls', async ({
+  test('creates a collection in the workspace database and enables category controls', async ({
     electronApp,
     testSetup
   }) => {
@@ -120,56 +84,18 @@ describe('Prompt collection storage', () => {
     await expect(mainWindow.locator('[data-testid="prompt-collection-manage-categories-button"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid^="prompt-divider-add-category-"]')).toHaveCount(0)
 
-    // The collection metadata identifies a prompt collection while only Active owns an order file.
-    const alphaPath = folderPath(ALPHA_NAME)
-    await expect
-      .poll(() => checkFileExists(electronApp, `${alphaPath}/_CollectionInfo.json`))
-      .toBe(true)
-    expect(JSON.parse(await readTextFile(electronApp, `${alphaPath}/_CollectionInfo.json`)))
-      .toMatchObject({ displayName: ALPHA_NAME, kind: 'prompt' })
     // Task collections persist in their independent user-specific SQLite order.
-    const alphaId = await readCollectionId(electronApp, alphaPath)
+    const alphaId = (await findCollection(electronApp, ALPHA_NAME))!.id
     const workspaceOrder = (await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH))!
     expect(workspaceOrder.entries).toContainEqual({ kind: 'collection', id: alphaId })
-    await expect(
-      readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME))
-    ).resolves.toEqual([])
-    await expect(readCategoryOrderPromptIds(electronApp, ALPHA_NAME)).resolves.toEqual([])
-    await expect(checkFileExists(electronApp, `${alphaPath}/Completed`)).resolves.toBe(
-      true
-    )
-    await expect(checkFileExists(electronApp, `${alphaPath}/Archived`)).resolves.toBe(true)
-
-    // The canonical layout omits collection ordering and status metadata not explicitly required.
-    const omittedPaths = [
-      `${alphaPath}/_CollectionInfo`,
-      `${alphaPath}/Active/_CollectionInfo`,
-      `${alphaPath}/Backlog/_CollectionInfo`,
-      `${alphaPath}/_CategoryOrder.json`,
-      `${alphaPath}/Active/_CollectionInfo.json`,
-      `${alphaPath}/Active/_CollectionInfo/Description.md`,
-      `${alphaPath}/Completed/_CollectionInfo.json`,
-      `${alphaPath}/Completed/_CollectionInfo/Description.md`,
-      `${alphaPath}/Completed/_CategoryOrder.json`,
-      `${alphaPath}/Archived/_CollectionInfo.json`,
-      `${alphaPath}/Archived/_CollectionInfo/Description.md`,
-      `${alphaPath}/Archived/_CategoryOrder.json`
-    ]
-    await expect(
-      Promise.all(omittedPaths.map((path) => checkFileExists(electronApp, path)))
-    ).resolves.toEqual(omittedPaths.map(() => false))
-
+    await expect(readPromptCollectionEntryIds(electronApp, ALPHA_NAME)).resolves.toEqual([])
     await showCollectionBrowser(mainWindow)
     await openCollectionCreation(mainWindow, 'template')
     await mainWindow.locator(COLLECTION_NAME_INPUT).fill(TEMPLATE_ALPHA_NAME)
     await mainWindow.locator(COLLECTION_CREATE_BUTTON).click()
-    /** Canonical template collection created by the template dialog. */
-    const templateAlphaPath = `${WORKSPACE_PATH}/DefaultProject/Templates/TemplateAlpha`
-    /** Stable ID expected at the top of the combined project order. */
-    const templateAlphaId = await readCollectionId(electronApp, templateAlphaPath)
-    expect(await checkFileExists(electronApp, `${templateAlphaPath}/Active/_CategoryOrder.json`)).toBe(true)
-    expect(await checkFileExists(electronApp, `${templateAlphaPath}/_CollectionInfo`)).toBe(false)
-    expect(await checkFileExists(electronApp, `${templateAlphaPath}/Active/_CollectionInfo`)).toBe(false)
+    await expect.poll(() => findCollection(electronApp, 'TemplateAlpha', 'template')).toMatchObject({ id: expect.any(String) })
+    /** The committed collection's stable ID must lead the combined project order. */
+    const templateAlphaId = (await findCollection(electronApp, 'TemplateAlpha', 'template'))!.id
     await expect.poll(async () => (await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH))!.entries[0])
       .toEqual({ kind: 'collection', id: templateAlphaId })
   })
@@ -186,8 +112,7 @@ describe('Prompt collection storage', () => {
     await createCollection(mainWindow, BETA_NAME)
 
     // Collection IDs identify legal and illegal selector drop targets.
-    const alphaPath = folderPath(ALPHA_NAME)
-    const alphaId = await readCollectionId(electronApp, alphaPath)
+    const alphaId = (await findCollection(electronApp, ALPHA_NAME))!.id
     await showCollectionBrowser(mainWindow)
     await mainWindow.locator(collectionTileSelector(alphaId)).click()
 
@@ -204,7 +129,7 @@ describe('Prompt collection storage', () => {
       .locator(`${promptEditorSelector(secondPromptId)} [data-testid="prompt-title"]`)
       .fill(SECOND_PROMPT_TITLE)
     await expect
-      .poll(() => checkFileExists(electronApp, `${alphaPath}/Active/${SECOND_PROMPT_TITLE}.prompt.md`))
+      .poll(() => readRecord(electronApp, 'prompt', secondPromptId).then((item) => item?.title === SECOND_PROMPT_TITLE))
       .toBe(true)
 
     // Move the current first prompt down and up to verify both ordering controls.
@@ -215,33 +140,29 @@ describe('Prompt collection storage', () => {
       .focus()
     await mainWindow.keyboard.press('Control+Shift+ArrowDown')
     await expect
-      .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
+      .poll(() => readPromptCollectionEntryIds(electronApp, ALPHA_NAME))
       .toEqual(reversedPromptIds)
     await mainWindow
       .locator(`${promptEditorSelector(initialTopPromptId)} [data-testid="prompt-title"]`)
       .focus()
     await mainWindow.keyboard.press('Control+Shift+ArrowUp')
     await expect
-      .poll(() => readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME)))
+      .poll(() => readPromptCollectionEntryIds(electronApp, ALPHA_NAME))
       .toEqual(initialPromptIds)
 
-    // Completing moves the Markdown file from Active to Completed and updates frontmatter.
+    // Completing updates the prompt status and its collection membership.
     await testHelpers.navigateToPromptCollections(ALPHA_NAME)
     await expect(mainWindow.locator(promptEditorSelector(firstPromptId))).toBeVisible()
-    const activePromptPath = `${alphaPath}/Active/${FIRST_PROMPT_TITLE}.prompt.md`
-    const completedPromptPath = `${alphaPath}/Completed/${FIRST_PROMPT_TITLE}.prompt.md`
     await mainWindow
       .locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-complete-button"]`)
       .click()
-    await expect.poll(() => checkFileExists(electronApp, activePromptPath)).toBe(false)
-    await expect.poll(() => checkFileExists(electronApp, completedPromptPath)).toBe(true)
-    await expect.poll(() => readTextFile(electronApp, completedPromptPath)).toContain(
-      'status: Completed'
-    )
+    await expect.poll(() => readRecord(electronApp, 'prompt', firstPromptId).then((item) => item?.status === 'Todo')).toBe(false)
+    await expect.poll(() => readRecord(electronApp, 'prompt', firstPromptId).then((item) => item?.status === 'Completed')).toBe(true)
+    await expect.poll(() => readRecord(electronApp, 'prompt', firstPromptId)).toMatchObject({ status: 'Completed' })
     await expect(
-      readPromptCollectionEntryIds(electronApp, activeOrderPath(ALPHA_NAME))
+      readPromptCollectionEntryIds(electronApp, ALPHA_NAME)
     ).resolves.toEqual([secondPromptId])
-    await expect(readCategoryOrderPromptIds(electronApp, ALPHA_NAME)).resolves.toEqual([secondPromptId])
+    await expect(readPromptCollectionEntryIds(electronApp, ALPHA_NAME)).resolves.toEqual([secondPromptId])
 
     // Completed mode shows only the cross-status drag handle without ordering arrows.
     await mainWindow.locator(TOGGLE_COMPLETED_BUTTON).click()
@@ -258,11 +179,11 @@ describe('Prompt collection storage', () => {
     await mainWindow
       .locator(`${promptEditorSelector(firstPromptId)} [data-testid="prompt-uncomplete-button"]`)
       .click()
-    await expect.poll(() => checkFileExists(electronApp, completedPromptPath)).toBe(false)
-    await expect.poll(() => checkFileExists(electronApp, activePromptPath)).toBe(true)
-    await expect.poll(() => readTextFile(electronApp, activePromptPath)).toContain('status: Todo')
+    await expect.poll(() => readRecord(electronApp, 'prompt', firstPromptId).then((item) => item?.status === 'Completed')).toBe(false)
+    await expect.poll(() => readRecord(electronApp, 'prompt', firstPromptId).then((item) => item?.status === 'Todo')).toBe(true)
+    await expect.poll(() => readRecord(electronApp, 'prompt', firstPromptId)).toMatchObject({ status: 'Todo' })
     await expect
-      .poll(() => readCategoryOrderPromptIds(electronApp, ALPHA_NAME))
+      .poll(() => readPromptCollectionEntryIds(electronApp, ALPHA_NAME))
       .toEqual([firstPromptId, secondPromptId])
 
     // Switching back to Active reveals the restored prompt in the collection.
@@ -279,7 +200,7 @@ describe('Prompt collection storage', () => {
       .locator('[role="dialog"][aria-label="Delete Prompt"] button:has-text("Delete")')
       .click()
     await expect
-      .poll(() => readCategoryOrderPromptIds(electronApp, ALPHA_NAME))
+      .poll(() => readPromptCollectionEntryIds(electronApp, ALPHA_NAME))
       .toEqual([secondPromptId])
   })
 })

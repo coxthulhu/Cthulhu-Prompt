@@ -1,5 +1,6 @@
+import { findCollection } from '../helpers/WorkspaceDatabaseHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { readPromptCollectionEntryIds, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { readPromptCollectionEntryIds } from '../helpers/PromptPersistenceTestHelpers'
 import {
   PROMPT_COLLECTION_HOST_SELECTOR,
   promptEditorSelector
@@ -42,11 +43,6 @@ const { test, describe, expect } = createPlaywrightTestSuite()
 
 const WORKSPACE_PATH = '/ws/move-reorder-atomicity'
 const COLLECTION_NAME = 'Move Reorder Atomicity'
-const ROOT_ORDER_PATH =
-  `${WORKSPACE_PATH}/DefaultProject/Prompts/${COLLECTION_NAME}/Active/_CategoryOrder.json`
-const CATEGORY_WORKSPACE_PATH = '/ws/categories-controls'
-const CATEGORY_ROOT_ORDER_PATH =
-  `${CATEGORY_WORKSPACE_PATH}/DefaultProject/Prompts/Controls/Active/_CategoryOrder.json`
 const MOVED_ROW_POSITION_TOLERANCE_PX = 1
 
 type FrameSnapshot = {
@@ -173,9 +169,7 @@ const expectCategoryOrders = async (
   await expect
     .poll(async () => {
       /** Current collection-order category groups flattened to prompt IDs per owner. */
-      const categoryOrder = JSON.parse(
-        await readTextFile(electronApp, CATEGORY_ROOT_ORDER_PATH)
-      ) as { categories: Array<{ entries: Array<{ id: string }> }> }
+      const categoryOrder = (await findCollection(electronApp, 'Controls'))!.statusFolders.active.categoryOrder
       return categoryOrder.categories.map((category) =>
         category.entries.map((entry) => entry.id)
       )
@@ -189,7 +183,7 @@ describe('Prompt move reorder atomicity', () => {
     electronApp
   }) => {
     await testSetup.setupFilesystem(buildWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart()
     await testHelpers.setupWorkspaceViaUI()
@@ -202,7 +196,7 @@ describe('Prompt move reorder atomicity', () => {
       'move atomic-2 down past a 25-line prompt',
       'atomic-2',
       'down',
-      () => expectCollectionOrder(electronApp, ROOT_ORDER_PATH, [
+      () => expectCollectionOrder(electronApp, COLLECTION_NAME, [
         'atomic-1',
         'atomic-3',
         'atomic-2',
@@ -217,7 +211,7 @@ describe('Prompt move reorder atomicity', () => {
       'move atomic-2 up past a 25-line prompt',
       'atomic-2',
       'up',
-      () => expectCollectionOrder(electronApp, ROOT_ORDER_PATH, [
+      () => expectCollectionOrder(electronApp, COLLECTION_NAME, [
         'atomic-1',
         'atomic-2',
         'atomic-3',
@@ -232,7 +226,7 @@ describe('Prompt move reorder atomicity', () => {
       'move atomic-3 down past a 40-line prompt',
       'atomic-3',
       'down',
-      () => expectCollectionOrder(electronApp, ROOT_ORDER_PATH, [
+      () => expectCollectionOrder(electronApp, COLLECTION_NAME, [
         'atomic-1',
         'atomic-2',
         'atomic-4',
@@ -247,7 +241,7 @@ describe('Prompt move reorder atomicity', () => {
       'move atomic-3 up past a 40-line prompt',
       'atomic-3',
       'up',
-      () => expectCollectionOrder(electronApp, ROOT_ORDER_PATH, [
+      () => expectCollectionOrder(electronApp, COLLECTION_NAME, [
         'atomic-1',
         'atomic-2',
         'atomic-3',
@@ -262,7 +256,7 @@ describe('Prompt move reorder atomicity', () => {
       'move atomic-4 down past a 10-line prompt',
       'atomic-4',
       'down',
-      () => expectCollectionOrder(electronApp, ROOT_ORDER_PATH, [
+      () => expectCollectionOrder(electronApp, COLLECTION_NAME, [
         'atomic-1',
         'atomic-2',
         'atomic-3',
@@ -277,7 +271,7 @@ describe('Prompt move reorder atomicity', () => {
       'move atomic-4 up past a 10-line prompt',
       'atomic-4',
       'up',
-      () => expectCollectionOrder(electronApp, ROOT_ORDER_PATH, [
+      () => expectCollectionOrder(electronApp, COLLECTION_NAME, [
         'atomic-1',
         'atomic-2',
         'atomic-3',

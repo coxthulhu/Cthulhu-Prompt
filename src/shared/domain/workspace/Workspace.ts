@@ -4,6 +4,7 @@ import type { PromptTemplatePersisted } from '@shared/domain/prompt-template/Pro
 import type { RevisionEnvelope } from '@shared/ipc/Revision'
 import type { IpcResult } from '@shared/ipc/IpcResult'
 import type { Project } from './Project'
+import { preparePromptCollectionName } from '../prompt-collection/promptCollectionName'
 
 export interface WorkspaceCollections {
   id: string
@@ -16,10 +17,26 @@ export interface Workspace extends WorkspaceCollections {
   workspaceName: string
 }
 
-// Special-case create payload. This is command data for workspace setup,
-// not a normal revision mutation object with entity revisions.
+/** A workspace displayed by the Open dialog. */
+export type WorkspaceListEntry = { id: string; name: string; path: string }
+
+/** Uses the same filename, validation and uniqueness rules in the dialog and on disk. */
+export const prepareWorkspaceName = (input: string, catalog: WorkspaceListEntry[]) => {
+  /** Existing workspace names follow the prompt collection naming rules. */
+  const { displayName, folderName, validation } = preparePromptCollectionName(input)
+  /** Spaces and casing do not distinguish two managed workspace filenames. */
+  const duplicate = catalog.some((entry) =>
+    preparePromptCollectionName(entry.name).folderName.toLowerCase() === folderName.toLowerCase()
+  )
+  /** Preserve the validation message for invalid names before reporting a collision. */
+  const error = validation.isValid
+    ? duplicate ? 'A workspace with this name already exists' : null
+    : validation.errorMessage!.replace('Collection name', 'Workspace name')
+  return { displayName, folderName, error }
+}
+
+/** Command data for creating and seeding a new workspace. */
 export type CreateWorkspacePayload = {
-  workspacePath: string
   workspaceName: string
   includeExamplePrompts: boolean
 }
@@ -37,7 +54,7 @@ export type WorkspaceFolderStatus = {
 }
 
 export type LoadWorkspaceByPathResult = IpcResult<{
-  /** Info path actually loaded, which differs from the request after a legacy filename rename. */
+  /** Managed database filename to remember after opening or migrating the workspace. */
   workspaceInfoPath: string
   workspace: RevisionEnvelope<Workspace>
   promptCollections: Array<RevisionEnvelope<PromptCollection>>

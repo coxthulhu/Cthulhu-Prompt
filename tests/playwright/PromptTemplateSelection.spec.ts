@@ -1,14 +1,12 @@
+import { readOrder, readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
-  createLegacyWorkspaceFilesystem,
   createWorkspaceWithCollections,
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { readTextFile } from '../helpers/PromptPersistenceTestHelpers'
 import { promptEditorSelector } from '../helpers/PromptCollectionSelectors'
 import { stubClipboard, readClipboardText } from '../helpers/ClipboardHelpers'
-import { parsePromptMarkdown } from '../../src/main/Persistence/PromptFrontmatter'
 import {
   focusMonacoEditor,
   getMonacoEditorText,
@@ -27,12 +25,6 @@ const FIRST_TEMPLATE_COLLECTION_ID = 'selection-templates-first'
 const TEMPLATE_CATEGORY_ID = 'selection-templates-category'
 const EMPTY_TEMPLATE_COLLECTION_ID = 'selection-templates-empty'
 const UNUSABLE_CATEGORY_ID = 'selection-templates-unusable-category'
-const PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Select Template.prompt.md`
-const NO_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Explicit No Template.prompt.md`
-const STALE_PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Stale Template.prompt.md`
-const MULTI_TEMPLATE_PROMPT_PATH = `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/Multiple Templates.prompt.md`
-const PROMPT_ORDER_PATH =
-  `${WORKSPACE_PATH}/DefaultProject/Prompts/Prompts/Active/_CategoryOrder.json`
 
 type TemplateIndicatorColorToken =
   | '--ui-muted-text'
@@ -40,7 +32,7 @@ type TemplateIndicatorColorToken =
   | '--ui-normal-text'
 
 const readPromptOrderIds = async (electronApp: any): Promise<string[]> => {
-  const order = JSON.parse(await readTextFile(electronApp, PROMPT_ORDER_PATH)) as {
+  const order = await readOrder(electronApp, PROMPT_COLLECTION_ID) as {
     categories: Array<{ entries: Array<{ kind: 'prompt' | 'template'; id: string }> }>
   }
   return order.categories.flatMap(({ entries }) =>
@@ -172,48 +164,7 @@ const createTemplateSelectionWorkspace = (): Record<string, string | null> => {
       collectionId: EMPTY_TEMPLATE_COLLECTION_ID
     }
   ])
-  /** Workspace metadata path downgraded because this fixture contains legacy prompt fields. */
-  const workspaceInfoPath = getWorkspaceInfoPath(WORKSPACE_PATH)
-  /** Current fixture metadata copied with an explicit version-zero migration marker. */
-  const workspaceInfo = JSON.parse(promptWorkspace[workspaceInfoPath]!) as {
-    schemaVersion: number
-    workspaceId: string
-    workspaceName: string
-  }
-
-  return createLegacyWorkspaceFilesystem({
-    ...promptWorkspace,
-    ...templateWorkspace,
-    [workspaceInfoPath]: JSON.stringify({ ...workspaceInfo, schemaVersion: 0 }, null, 2),
-    [STALE_PROMPT_PATH]: `---
-id: stale-template-prompt
-createdAt: '2026-01-01T00:00:00.000Z'
-title: Stale Template
-templateId: deleted-template
-status: Todo
----
-Keep the missing selection.`,
-    [NO_TEMPLATE_PROMPT_PATH]: `---
-id: no-template-prompt
-createdAt: '2026-01-01T00:00:00.000Z'
-title: Explicit No Template
-templateId: null
-status: Todo
----
-Copy without a template.`,
-    [`${WORKSPACE_PATH}/WorkspaceCollectionOrder.json`]: JSON.stringify(
-      {
-        entries: [
-          { kind: 'collection', id: PROMPT_COLLECTION_ID },
-          { kind: 'collection', id: SECOND_TEMPLATE_COLLECTION_ID },
-          { kind: 'collection', id: FIRST_TEMPLATE_COLLECTION_ID },
-          { kind: 'collection', id: EMPTY_TEMPLATE_COLLECTION_ID }
-        ]
-      },
-      null,
-      2
-    )
-  }, 0)
+  return { ...promptWorkspace, ...templateWorkspace }
 }
 
 describe('Prompt template selection', () => {
@@ -225,7 +176,7 @@ describe('Prompt template selection', () => {
       entries: [SECOND_TEMPLATE_COLLECTION_ID, FIRST_TEMPLATE_COLLECTION_ID, EMPTY_TEMPLATE_COLLECTION_ID, PROMPT_COLLECTION_ID].map((id) => ({ kind: 'collection', id }))
     })
     await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -423,7 +374,7 @@ describe('Prompt template selection', () => {
     await dialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]').click()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     expect(
-      parsePromptMarkdown(await readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))?.templates
+      (await readRecord(electronApp, 'prompt', 'no-template-prompt'))?.templates
     ).toBeNull()
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
 
@@ -432,7 +383,7 @@ describe('Prompt template selection', () => {
     await expect(
       dialog.locator('[data-testid="prompt-tree-template-prompt-template-category"]')
     ).toHaveAttribute('aria-pressed', 'true')
-    expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templates:')
+    expect(await readRecord(electronApp, 'prompt', 'select-template-prompt')).not.toHaveProperty('templates')
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect(dialog).toBeHidden()
     await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText(
@@ -444,8 +395,8 @@ describe('Prompt template selection', () => {
       promptEditor.locator('[data-testid="prompt-template-and-copy-button"]')
     ).toHaveCount(0)
     await expect
-      .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templates:\n  - id: template-category')
+      .poll(() => readRecord(electronApp, 'prompt', 'select-template-prompt'))
+      .toMatchObject({ templates: [{ id: 'template-category' }] })
 
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(
@@ -461,7 +412,7 @@ describe('Prompt template selection', () => {
     )
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     expect(
-      parsePromptMarkdown(await readTextFile(electronApp, PROMPT_PATH))?.templates
+      (await readRecord(electronApp, 'prompt', 'select-template-prompt'))?.templates
     ).toEqual([{ id: 'template-category' }])
     await promptEditor.locator('[data-testid="prompt-template-button"]').click()
     await dialog
@@ -481,8 +432,8 @@ describe('Prompt template selection', () => {
     await expect(promptEditor.locator('.prompt-editor-metadata-template')).toHaveText('No template')
     await expectTemplateIndicator(promptEditor, 'no-template', '--ui-muted-text')
     await expect
-      .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templates: null')
+      .poll(() => readRecord(electronApp, 'prompt', 'select-template-prompt'))
+      .toMatchObject({ templates: null })
 
     await stalePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await expect(dialog.locator('[data-testid="prompt-template-option-none"]')).toHaveAttribute(
@@ -494,16 +445,14 @@ describe('Prompt template selection', () => {
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toBeHidden()
-    expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).toContain(
-      'templates:\n  - id: deleted-template'
-    )
-    expect(await readTextFile(electronApp, STALE_PROMPT_PATH)).not.toContain('templateId:')
-    expect(await readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH)).not.toContain('templateId:')
+    expect(await readRecord(electronApp, 'prompt', 'stale-template-prompt')).toMatchObject({ templates: [{ id: 'deleted-template' }] })
+    expect(await readRecord(electronApp, 'prompt', 'stale-template-prompt')).not.toHaveProperty('templateId')
+    expect(await readRecord(electronApp, 'prompt', 'no-template-prompt')).not.toHaveProperty('templateId')
     await stalePromptEditor.locator('[data-testid="prompt-template-button"]').click()
     await dialog.locator('[data-testid="prompt-template-confirm-button"]').click()
     await expect
       .poll(
-        async () => parsePromptMarkdown(await readTextFile(electronApp, STALE_PROMPT_PATH))?.templates
+        async () => (await readRecord(electronApp, 'prompt', 'stale-template-prompt'))?.templates
       )
       .toBeNull()
 
@@ -512,7 +461,7 @@ describe('Prompt template selection', () => {
     await mainWindow.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
     expect(
-      parsePromptMarkdown(await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH))?.templates
+      (await readRecord(electronApp, 'prompt', 'multi-template-prompt'))?.templates
     ).toEqual([
       { id: 'deleted-template' },
       { id: 'template-second' },
@@ -553,9 +502,7 @@ describe('Prompt template selection', () => {
     await expect
       .poll(
         async () =>
-          parsePromptMarkdown(
-            await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH)
-          )?.templates
+          (await readRecord(electronApp, 'prompt', 'multi-template-prompt'))?.templates
       )
       .toEqual([{ id: 'template-second' }])
 
@@ -573,7 +520,7 @@ describe('Prompt template selection', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -604,7 +551,7 @@ describe('Prompt template selection', () => {
     await expect(
       promptEditor.locator('[data-testid="prompt-template-and-copy-button"]')
     ).toBeVisible()
-    expect(await readTextFile(electronApp, PROMPT_PATH)).not.toContain('templates:')
+    expect(await readRecord(electronApp, 'prompt', 'select-template-prompt')).not.toHaveProperty('templates')
 
     await multiTemplatePromptEditor.locator('[data-testid="prompt-copy-button"]').click()
     await expect
@@ -614,7 +561,7 @@ describe('Prompt template selection', () => {
       'Second Root Template + 2 More'
     )
     expect(
-      parsePromptMarkdown(await readTextFile(electronApp, MULTI_TEMPLATE_PROMPT_PATH))?.templates
+      (await readRecord(electronApp, 'prompt', 'multi-template-prompt'))?.templates
     ).toEqual([
       { id: 'deleted-template' },
       { id: 'template-second' },
@@ -636,11 +583,9 @@ describe('Prompt template selection', () => {
       noTemplatePromptEditor.locator('[data-testid="prompt-template-and-copy-button"]')
     ).toHaveCount(0)
     await expect
-      .poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH))
-      .toContain('templates: null')
-    await expect.poll(() => readTextFile(electronApp, NO_TEMPLATE_PROMPT_PATH)).toContain(
-      'status: InProgress'
-    )
+      .poll(() => readRecord(electronApp, 'prompt', 'no-template-prompt'))
+      .toMatchObject({ templates: null })
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'no-template-prompt')).toMatchObject({ status: 'InProgress' })
     await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual(initialPromptOrder)
     await expect.poll(() => readPromptOrderIds(electronApp)).toEqual(initialPromptOrder)
 
@@ -682,9 +627,9 @@ describe('Prompt template selection', () => {
       'First Root Template'
     )
     await expect
-      .poll(() => readTextFile(electronApp, PROMPT_PATH))
-      .toContain('templates:\n  - id: template-first')
-    await expect.poll(() => readTextFile(electronApp, PROMPT_PATH)).toContain('status: InProgress')
+      .poll(() => readRecord(electronApp, 'prompt', 'select-template-prompt'))
+      .toMatchObject({ templates: [{ id: 'template-first' }] })
+    await expect.poll(() => readRecord(electronApp, 'prompt', 'select-template-prompt')).toMatchObject({ status: 'InProgress' })
     await expect.poll(() => getPromptEditorIds(mainWindow)).toEqual(initialPromptOrder)
     await expect.poll(() => readPromptOrderIds(electronApp)).toEqual(initialPromptOrder)
     await expect(promptEditor.locator('[data-testid="prompt-copy-button"]')).toBeVisible()
@@ -699,7 +644,7 @@ describe('Prompt template selection', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     /** Editor and selector share the persisted prompt used for every choice. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -738,7 +683,7 @@ describe('Prompt template selection', () => {
       await expect(dialog).toBeHidden()
       expect(await mainWindow.evaluate(() => (window as any).__templateDoubleClickSelection)).toBe('')
       await expect.poll(() => readClipboardText(mainWindow)).toBe(choice.output)
-      await expect.poll(async () => parsePromptMarkdown(await readTextFile(electronApp, PROMPT_PATH)))
+      await expect.poll(async () => (await readRecord(electronApp, 'prompt', 'select-template-prompt')))
         .toMatchObject({ templates: choice.templates, status: 'InProgress' })
     }
   })
@@ -778,7 +723,7 @@ describe('Prompt template selection', () => {
       ...promptWorkspace,
       ...templateWorkspace
     })
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(virtualWorkspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(virtualWorkspacePath))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -910,7 +855,7 @@ describe('Prompt template selection', () => {
     testSetup
   }) => {
     await testSetup.setupFilesystem(createTemplateSelectionWorkspace())
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
     })
@@ -962,8 +907,6 @@ describe('Prompt template selection', () => {
     await expect(dialog.locator('[data-testid="prompt-tree-template-prompt-template-first"]')).toHaveCount(
       0
     )
-    expect(await readTextFile(electronApp, PROMPT_PATH)).toContain(
-      'templates:\n  - id: template-first'
-    )
+    expect(await readRecord(electronApp, 'prompt', 'select-template-prompt')).toMatchObject({ templates: [{ id: 'template-first' }] })
   })
 })

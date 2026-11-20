@@ -51,7 +51,7 @@
       number={1}
       icon={Home}
       title="Create a workspace"
-      description="Choose a folder on your computer. Your tasks and templates live here as simple Markdown files, ready to commit to source control. Use the tabs at the top to switch between open collections."
+      description="Give your workspace a name. Your projects, prompts, and templates are saved together in a workspace database. Use the tabs at the top to switch between open collections."
     >
       {#snippet tip()}
         To open another prompt collection, click + (New Tab) and choose it from the list.

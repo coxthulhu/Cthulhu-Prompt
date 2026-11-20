@@ -8,19 +8,18 @@ import { isButtonVisible } from './ButtonHelpers'
  */
 
 /**
- * Selects an existing workspace through UI interactions using mocked file dialog
- * @param window - The Playwright window instance
- * @returns Promise that resolves with information about what happened
+ * Opens a named workspace from the Home screen's managed workspace list.
  */
-export async function setupWorkspaceViaUI(page: Page): Promise<{
+export async function setupWorkspaceViaUI(page: Page, name: string): Promise<{
   setupDialogAppeared: boolean
   workspaceReady: boolean
 }> {
   await page.getByTestId('nav-button-home').click()
   await page.click('[data-testid="open-workspace-button"]')
 
-  // Workspace selection can restore any screen, so readiness follows the title bar control.
-  await page.waitForFunction(() => document.querySelector<HTMLButtonElement>('[data-testid="new-tab-button"]')?.disabled === false)
+  await page.getByRole('dialog', { name: 'Open Workspace' }).getByRole('button', { name, exact: true }).click()
+  // A previous workspace can still be active while its pending edits flush.
+  await page.waitForFunction((name) => window.playwrightTestControls!.projects.getWorkspace()?.workspaceName === name, name)
 
   const workspaceReady = await isWorkspaceReady(page)
 
@@ -43,7 +42,6 @@ export async function createWorkspaceViaUI(page: Page): Promise<{
 
   await createDialog.waitFor({ state: 'visible', timeout: WORKSPACE_SETUP_TIMEOUT_MS })
   await page.fill('[data-testid="create-workspace-name-input"]', 'Test Workspace')
-  await page.click('[data-testid="create-workspace-path-browse-button"]')
   await page.waitForFunction(() => {
     const button = document.querySelector<HTMLButtonElement>(
       '[data-testid="create-workspace-submit-button"]'
@@ -71,10 +69,7 @@ export async function clearWorkspaceViaUI(page: Page): Promise<void> {
   await page.getByTestId('nav-button-home').click()
   // Click "Close Workspace" button
   await page.click('[data-testid="close-workspace-button"]')
-  await page.waitForSelector('[data-testid="open-workspace-button"]', {
-    state: 'visible',
-    timeout: 5000
-  })
+  await page.waitForFunction(() => document.querySelector<HTMLButtonElement>('[data-testid="new-tab-button"]')?.disabled === true)
 }
 
 /**

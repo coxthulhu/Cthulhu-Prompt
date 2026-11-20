@@ -1,4 +1,4 @@
-import { workspacePersistence } from '../Persistence/WorkspacePersistence'
+import { workspaceDatabasePersistence } from '../Persistence/sqlite/WorkspaceDatabase'
 import { createRevisionData } from './RevisionDataFactory'
 
 const emitCommittedRevisionChanged = (_id: string): void => {
@@ -6,6 +6,6 @@ const emitCommittedRevisionChanged = (_id: string): void => {
 }
 
 export const workspaceData = createRevisionData({
-  persistence: workspacePersistence,
+  persistence: workspaceDatabasePersistence,
   emitCommittedRevisionChanged
 })

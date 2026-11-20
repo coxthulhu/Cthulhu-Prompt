@@ -2,9 +2,8 @@ import { waitForRendererPersistence } from '../helpers/RendererCompletionHelpers
 import { selectedCollectionTitleSelector } from '../helpers/PromptCollectionSelectors'
 import { createLegacyStateDatabase } from '../fixtures/LegacyStateDatabase'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createLegacyWorkspaceFilesystem, createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
-import { readWorkspaceCollectionOrder, migrateSqliteDatabase, readWorkspaceUiState, runSqlQuery, runSqlStatement, readWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
+import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { migrateSqliteDatabase, readWorkspaceUiState, runSqlQuery, runSqlStatement, readWorkspaceState, toSqlText } from '../helpers/UserPersistenceHelpers'
 
 /** Production Electron suite verifies both persisted formats through workspace startup. */
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -39,66 +38,6 @@ const createMigrationWorkspace = (): Record<string, string | null> => {
 }
 
 describe('Collection terminology migrations', () => {
-  test('upgrades schema four metadata and preserves content and ordering after reopening', async ({ electronApp, testSetup }) => {
-    /** Current expected bytes compared against the upgraded legacy workspace. */
-    const current = createMigrationWorkspace()
-    /** Authentic folder-era metadata activates the production four-to-five migration. */
-    const legacy = createLegacyWorkspaceFilesystem(current, 4)
-    await testSetup.setupFilesystem(legacy)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
-    /** UI startup runs migrations before loading collection identities. */
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await testHelpers.setupWorkspaceViaUI()
-    await testHelpers.navigateToHomeScreen()
-    await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('3')
-    await expect(mainWindow.getByTestId('home-prompt-collection-count-stat')).toContainText('Prompt Collections')
-    for (const [filePath, contents] of Object.entries(current)) {
-      if (contents === null || filePath.endsWith('.cthulhuprompt') || filePath.endsWith('/CollectionOrder.json') || filePath.endsWith('/ProjectInfo.json')) continue
-      expect(await checkFileExists(electronApp, filePath)).toBe(true)
-      if (filePath.endsWith('CollectionInfo.json') || filePath.endsWith('CollectionOrder.json')) {
-        expect(JSON.parse(await readTextFile(electronApp, filePath))).toEqual(JSON.parse(contents))
-      } else {
-        expect(await readTextFile(electronApp, filePath)).toBe(contents)
-      }
-    }
-    for (const filePath of Object.keys(legacy).filter((filePath) => filePath.includes('_FolderInfo') || filePath.endsWith('/FolderOrder.json'))) {
-      expect(await checkFileExists(electronApp, filePath)).toBe(false)
-    }
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(8)
-    expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/DefaultProject/Prompts/Tasks/Archived/_CollectionInfo`)).toBe(false)
-    await testHelpers.navigateToPromptCollections('Tasks')
-    await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Task')
-    await testHelpers.navigateToPromptCollections('Library')
-    await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Wrapper')
-    await testHelpers.navigateToHomeScreen()
-    await testHelpers.clearWorkspaceViaUI()
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
-    await testHelpers.setupWorkspaceViaUI()
-    expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/DefaultProject/Prompts/CollectionOrder.json`)).toBe(false)
-    expect(await readWorkspaceCollectionOrder(electronApp, WORKSPACE_PATH)).toEqual({ entries: [
-      { kind: 'collection', id: 'another' }, { kind: 'collection', id: 'library' }, { kind: 'collection', id: 'tasks' }
-    ] })
-    await testHelpers.navigateToPromptCollections('Library')
-    await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Wrapper')
-  })
-
-  test('keeps schema four and original files when metadata is malformed', async ({ electronApp, testSetup }) => {
-    /** Invalid metadata must be detected before renaming any valid metadata files. */
-    const legacy = createLegacyWorkspaceFilesystem(createMigrationWorkspace(), 4)
-    /** Late-sorted template metadata fails after valid task metadata has been examined. */
-    const brokenPath = `${WORKSPACE_PATH}/Templates/Library/_FolderInfo/FolderInfo.json`
-    legacy[brokenPath] = '{ malformed'
-    await testSetup.setupFilesystem(legacy)
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
-    /** Normal open flow exposes migration errors without hydrating a partial workspace. */
-    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await mainWindow.getByTestId('open-workspace-button').click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Failed to Open Workspace' })).toBeVisible()
-    expect(JSON.parse(await readTextFile(electronApp, getWorkspaceInfoPath(WORKSPACE_PATH))).schemaVersion).toBe(4)
-    expect(await readTextFile(electronApp, `${WORKSPACE_PATH}/Prompts/Tasks/_FolderInfo/FolderInfo.json`)).toBe(legacy[`${WORKSPACE_PATH}/Prompts/Tasks/_FolderInfo/FolderInfo.json`])
-    expect(await checkFileExists(electronApp, `${WORKSPACE_PATH}/Prompts/CollectionOrder.json`)).toBe(false)
-  })
-
   for (const kind of ['task', 'template'] as const) {
     test(`migrates SQLite ${kind} collection view state and resets the retired selection to Home`, async ({ electronApp, testSetup }) => {
       await testSetup.setupFilesystem(createMigrationWorkspace())

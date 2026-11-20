@@ -102,7 +102,7 @@ const openNewTab = async (
     entries: ['code-review', 'feature-work', 'bug-triage'].map((id) => ({ kind: 'collection', id }))
   })
   await testSetup.setupFilesystem({ ...workspaceFiles, ...extraFiles })
-  await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+  testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
   const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
   await testHelpers.setupWorkspaceViaUI()
   await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()

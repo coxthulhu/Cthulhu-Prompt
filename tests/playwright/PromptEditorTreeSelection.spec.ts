@@ -50,7 +50,7 @@ describe('Editor-driven prompt tree selection', () => {
   for (const kind of ['prompt', 'template'] as const) {
     test(`${kind} edits and toolbar activation hold selection until main scrolling or tree navigation`, async ({ testSetup }) => {
       await testSetup.setupFilesystem(createSelectionWorkspace(kind))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Window and virtual-scroll helpers for this content kind. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -132,7 +132,7 @@ describe('Editor-driven prompt tree selection', () => {
 
     test(`${kind} editing and move shortcuts preserve collapsed tree categories`, async ({ testSetup }) => {
       await testSetup.setupFilesystem(createSelectionWorkspace(kind, true))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Window and navigation helpers for a root with a categorized editor. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -185,7 +185,7 @@ describe('Editor-driven prompt tree selection', () => {
               { id: 'second', title: 'Second', promptText: body }
             ]
           }]))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(WORKSPACE_PATH)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(WORKSPACE_PATH))
       /** Window and virtual-scroll helpers for the long-body fixture. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()

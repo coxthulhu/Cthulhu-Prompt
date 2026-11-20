@@ -427,7 +427,7 @@ describe('Prompt collection find dialog', () => {
         /** Isolated workspace contains three matches separated by a nonmatching line. */
         const workspacePath = `/ws/find-seed-${seed.replace(' ', '-')}-${shortcut}`
         await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-        await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+        testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
         /** Real editor events exercise selection tracking and focus restoration. */
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         await testHelpers.setupWorkspaceViaUI()
@@ -485,7 +485,7 @@ describe('Prompt collection find dialog', () => {
     /** Three body occurrences provide distinct forward, backward, and wrap destinations. */
     const workspacePath = '/ws/find-f3-widget'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Application and helpers exercise native keyboard events. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -542,7 +542,7 @@ describe('Prompt collection find dialog', () => {
         { id: 'keyboard-find-last', title: 'Last needle', promptText: 'needle' }
       ]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Application and helpers drive the actual editor selection behavior. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -632,7 +632,7 @@ describe('Prompt collection find dialog', () => {
       /** Isolated three-result workspace for this section. */
       const workspacePath = `/ws/find-reorder-${section}`
       await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, section))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       /** Window and navigation helpers for real reorder shortcuts. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -705,7 +705,7 @@ describe('Prompt collection find dialog', () => {
       /** Separate workspace keeps the passive opening independent of active navigation. */
       const workspacePath = `/ws/find-passive-reorder-${section}`
       await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, section))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       /** Window and helpers for an actual selected-word opening. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -753,7 +753,7 @@ describe('Prompt collection find dialog', () => {
     /** Three body matches exercise both kinds of deletion in one real dialog flow. */
     const workspacePath = '/ws/find-scope-delete'
     await testSetup.setupFilesystem(buildFindScopeWorkspace(workspacePath, 'body'))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Window and helpers for find navigation and confirmed prompt deletion. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -793,7 +793,7 @@ describe('Prompt collection find dialog', () => {
       await testSetup.setupFilesystem(buildFindParityWorkspace(
         workspacePath, 'body', `${SCOPE_CHANGE_QUERY}\n\n${SCOPE_CHANGE_QUERY}`
       ))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
       await testHelpers.navigateToPromptCollections('Find Parity')
@@ -848,7 +848,7 @@ describe('Prompt collection find dialog', () => {
       /** Repeated suffix distinguishes the selection's start from its end. */
       const workspacePath = `/ws/find-backward-query-${section}`
       await testSetup.setupFilesystem(buildFindParityWorkspace(workspacePath, section, 'alpha beta / beta'))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       /** Application and navigation helpers for the isolated selection fixture. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -906,7 +906,7 @@ describe('Prompt collection find dialog', () => {
       /** Two occurrences distinguish passive opening from active query-edit navigation. */
       const workspacePath = `/ws/find-case-only-query-${section}`
       await testSetup.setupFilesystem(buildFindParityWorkspace(workspacePath, section, 'foo foo'))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       /** Application and navigation helpers for case-only edits. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
       await testHelpers.setupWorkspaceViaUI()
@@ -961,7 +961,7 @@ describe('Prompt collection find dialog', () => {
         /** Unicode fixture contains two matches and a cursor at the first match's end. */
         const workspacePath = `/ws/find-unicode-${unicodeCase.name}-${section}`
         await testSetup.setupFilesystem(buildFindParityWorkspace(workspacePath, section, unicodeCase.text))
-        await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+        testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
         /** Application and navigation helpers for Unicode matching. */
         const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
         await testHelpers.setupWorkspaceViaUI()
@@ -1032,7 +1032,7 @@ describe('Prompt collection find dialog', () => {
     /** Isolated prompt with three matches for forward and backward navigation. */
     const workspacePath = '/ws/find-match-colors'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Window and helpers for opening the search fixture. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1085,7 +1085,7 @@ describe('Prompt collection find dialog', () => {
       promptCollectionId: 'title-highlights-collection',
       prompts: [{ id: 'title-highlights-prompt', title: 'needle and NEEDLE', promptText: 'needle body' }]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** App window and navigation helpers for the title fixture. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -1162,7 +1162,7 @@ describe('Prompt collection find dialog', () => {
       promptCollectionId: 'long-titles-collection',
       prompts: [{ id: 'long-title-prompt', title: titleText, promptText: 'No body matches.' }]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Window and helpers used to open the long-title fixture. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -1322,7 +1322,7 @@ describe('Prompt collection find dialog', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1374,7 +1374,7 @@ describe('Prompt collection find dialog', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1566,7 +1566,7 @@ describe('Prompt collection find dialog', () => {
           promptText: section === 'body' ? 'alpha beta beta beta' : 'Unrelated text'
         }]
       }]))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       /** Application and navigation helpers for this section's fixture. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'none' }
@@ -1634,7 +1634,7 @@ describe('Prompt collection find dialog', () => {
       folderName: 'Query Cursor', displayName: 'Query Cursor', promptCollectionId: 'query-cursor-collection',
       prompts: [{ id: 'query-cursor-prompt', title: 'Search Target', promptText: 'foobar foo bar' }]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Application and navigation helpers for the cursor fixture. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -1674,7 +1674,7 @@ describe('Prompt collection find dialog', () => {
         { id: 'previous-cursor-last', title: 'Last', promptText: 'foo' }
       ]
     }]))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Application and navigation helpers for backward navigation. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
     await testHelpers.setupWorkspaceViaUI()
@@ -1722,7 +1722,7 @@ describe('Prompt collection find dialog', () => {
     /** Isolated collection with three body matches on separate lines. */
     const workspacePath = '/ws/find-manual-navigation-anchor'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
     /** Application window and navigation helpers for the regression workspace. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1775,7 +1775,7 @@ describe('Prompt collection find dialog', () => {
       /** Separate persisted workspace for each selection scenario. */
       const workspacePath = `/ws/find-open-${selectionCase}`
       await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       /** Application window and navigation helpers for this scenario. */
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'none' }
@@ -1847,7 +1847,7 @@ describe('Prompt collection find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-selection-start-match'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1900,7 +1900,7 @@ describe('Prompt collection find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-selection-start-match-reopen'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -1947,7 +1947,7 @@ describe('Prompt collection find dialog', () => {
     /** Isolated workspace containing matches on both sides of blank cursor anchors. */
     const workspacePath = '/ws/find-persisted-query-reopen'
     await testSetup.setupFilesystem(buildPersistedQueryReopenWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     /** Started application and helpers for the isolated reopen workspace. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -2033,7 +2033,7 @@ describe('Prompt collection find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-clicked-word-start-match'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2109,7 +2109,7 @@ describe('Prompt collection find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-configured-word-boundary'
     await testSetup.setupFilesystem(buildConfiguredWordWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2168,7 +2168,7 @@ describe('Prompt collection find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-typing-anchor'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2210,7 +2210,7 @@ describe('Prompt collection find dialog', () => {
     /** Isolated workspace path for the constrained sidebar find geometry. */
     const workspacePath = '/ws/find-small-sidebar'
     await testSetup.setupFilesystem(buildSmallSidebarFindWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     /** Running application and navigation helpers for the real prompt-collection sidebar. */
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
@@ -2294,7 +2294,7 @@ describe('Prompt collection find dialog', () => {
   }) => {
     const workspacePath = '/ws/find-typing-anchor-reset'
     await testSetup.setupFilesystem(buildTypingAnchorWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2467,7 +2467,7 @@ describe('Prompt collection find dialog', () => {
         }
       ])
     )
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -2593,7 +2593,7 @@ describe('Prompt collection find dialog', () => {
       await testSetup.setupFilesystem(
         buildCenteredRowHydrationWorkspace(workspacePath, trackingCase)
       )
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'none' }
@@ -2956,7 +2956,7 @@ describe('Prompt collection find dialog', () => {
     test.setTimeout(180000)
     const workspacePath = '/ws/virtual-find-loop'
     await testSetup.setupFilesystem(buildVirtualFindLoopWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }
@@ -3008,7 +3008,7 @@ describe('Prompt collection find dialog', () => {
     test.setTimeout(180000)
     const workspacePath = '/ws/virtual-find-rapid-loop'
     await testSetup.setupFilesystem(buildVirtualFindRapidWorkspace(workspacePath))
-    await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
 
     const { mainWindow, testHelpers } = await testSetup.setupAndStart({
       workspace: { scenario: 'none' }

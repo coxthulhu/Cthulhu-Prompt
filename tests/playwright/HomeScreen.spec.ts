@@ -1,3 +1,4 @@
+import { runSqlQuery } from '../helpers/UserPersistenceHelpers'
 import { readTabSession, readWorkspaceCollectionOrder } from '../helpers/UserPersistenceHelpers'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import {
@@ -5,7 +6,7 @@ import {
   createWorkspaceWithTemplateCollections,
   getWorkspaceInfoPath
 } from '../fixtures/WorkspaceFixtures'
-import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { checkFileExists } from '../helpers/PromptPersistenceTestHelpers'
 import { PromptStatus } from '@shared/domain/prompt/Prompt'
 
 const { test, describe, expect } = createPlaywrightTestSuite()
@@ -179,7 +180,7 @@ describe('Home Screen', () => {
       }
 
       await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'none' }
       })
@@ -231,216 +232,6 @@ describe('Home Screen', () => {
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
     })
 
-    test('migrates every unversioned workspace file once before opening', async ({
-      electronApp,
-      testSetup
-    }) => {
-      /** Version-zero workspace used to verify both compatibility migrations. */
-      const workspacePath = '/ws/unversioned-migration'
-      /** Current fixture structure downgraded below to the original workspace schema. */
-      const filesystem = createWorkspaceWithCollections(workspacePath, [
-        {
-          folderName: 'Examples',
-          displayName: 'Examples',
-          promptCollectionId: 'migration-collection'
-        }
-      ], { settings: { schemaVersion: 0 } })
-      /** Workspace metadata path whose omitted version must be interpreted as zero. */
-      const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
-      /** Unversioned metadata derived from the otherwise current fixture. */
-      const { schemaVersion: _schemaVersion, ...unversionedInfo } = JSON.parse(
-        filesystem[workspaceInfoPath]!
-      ) as { schemaVersion: number; workspaceId: string; workspaceName: string }
-      filesystem[workspaceInfoPath] = JSON.stringify(unversionedInfo, null, 2)
-      /** Unreferenced nested prompt carrying the retired singular template field. */
-      const promptPath = `${workspacePath}/DefaultProject/Prompts/Orphan/Nested/Legacy.prompt.md`
-      filesystem[promptPath.replace('/DefaultProject/', '/')] = `---
-id: legacy-prompt
-createdAt: '2026-01-01T00:00:00.000Z'
-title: Legacy Prompt
-templateId: template-1
-status: Todo
----
-Keep this body.`
-      /** Unreferenced nested category proving migration scans all matching workspace files. */
-      const categoryPath = `${workspacePath}/DefaultProject/Templates/Orphan/Nested.category.json`
-      filesystem[categoryPath.replace('/DefaultProject/', '/')] = JSON.stringify({
-        id: 'orphan-category',
-        displayName: 'Orphan',
-        description: null
-      })
-
-      await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([workspaceInfoPath])
-      /** Running application and UI helpers used to open the version-zero workspace twice. */
-      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      /** Canonical workspace metadata committed only after all file migrations succeed. */
-      const migratedInfoText = await readTextFile(electronApp, workspaceInfoPath)
-      /** Canonical prompt source produced from the singular template reference. */
-      const migratedPromptText = await readTextFile(electronApp, promptPath.replace('Legacy.prompt.md', 'Legacy Prompt.prompt.md'))
-      /** Canonical unreferenced category data produced by the recursive scan. */
-      const migratedCategoryText = await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))
-      expect(JSON.parse(migratedInfoText)).toEqual({
-        schemaVersion: 8,
-        workspaceId: unversionedInfo.workspaceId,
-        workspaceName: unversionedInfo.workspaceName
-      })
-      expect(migratedPromptText).toContain('templates:\n  - id: template-1')
-      expect(migratedPromptText).not.toContain('templateId:')
-      expect(migratedPromptText).toContain('Keep this body.')
-      expect(JSON.parse(migratedCategoryText)).toEqual({
-        id: 'orphan-category',
-        displayName: 'Orphan',
-        shortDescription: null,
-        description: null
-      })
-
-      await testHelpers.clearWorkspaceViaUI()
-      await testSetup.setupFileDialog([workspaceInfoPath])
-      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(await readTextFile(electronApp, workspaceInfoPath)).toBe(migratedInfoText)
-      expect(await readTextFile(electronApp, promptPath.replace('Legacy.prompt.md', 'Legacy Prompt.prompt.md'))).toBe(migratedPromptText)
-      expect(await readTextFile(electronApp, categoryPath.replace('Nested.category.json', 'Orphan.category.json'))).toBe(migratedCategoryText)
-      await expect(
-        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
-      ).toHaveCount(0)
-    })
-
-    test('accepts an explicit workspace schema version zero', async ({
-      electronApp,
-      testSetup
-    }) => {
-      /** Explicitly versioned legacy workspace accepted by the migration runner. */
-      const workspacePath = '/ws/explicit-zero-migration'
-      /** Empty version-zero workspace fixture requiring only the metadata migration. */
-      const filesystem = createWorkspaceWithCollections(workspacePath, [], {
-        settings: { schemaVersion: 0 }
-      })
-      /** Explicitly versioned workspace metadata selected through the open dialog. */
-      const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
-
-      await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([workspaceInfoPath])
-      /** Workspace helpers used to verify explicit zero reaches the ready state. */
-      const { testHelpers } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      expect((await testHelpers.setupWorkspaceViaUI()).workspaceReady).toBe(true)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(8)
-    })
-
-    test('leaves schema version zero when a workspace migration file is malformed', async ({
-      electronApp,
-      testSetup
-    }) => {
-      /** Version-zero workspace that must fail before committing its schema version. */
-      const workspacePath = '/ws/failed-migration'
-      /** Legacy fixture containing one category the migration cannot parse. */
-      const filesystem = createWorkspaceWithCollections(workspacePath, [], {
-        settings: { schemaVersion: 0 }
-      })
-      /** Legacy prompt converted before the later category failure interrupts migration. */
-      const promptPath = `${workspacePath}/Prompts/Orphan/Legacy.prompt.md`
-      filesystem[promptPath] = `---
-id: partial-prompt
-createdAt: '2026-01-01T00:00:00.000Z'
-title: Partial Prompt
-templateId: template-1
-status: Todo
----
-Keep this partial body.`
-      /** Malformed matching category encountered by the recursive migration scan. */
-      const categoryPath = `${workspacePath}/Prompts/Orphan/Broken.category.json`
-      filesystem[categoryPath] = '{ malformed'
-      /** Workspace metadata that must remain at zero after the failed step. */
-      const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
-
-      await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([workspaceInfoPath])
-      /** Running application used to observe the failed open operation. */
-      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-      await mainWindow.click('[data-testid="open-workspace-button"]')
-
-      await expect(
-        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
-      ).toBeVisible()
-      expect(await testHelpers.isWorkspaceReady()).toBe(false)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(0)
-      /** Prompt text already migrated before failure and retained for the retry assertion. */
-      const partiallyMigratedPromptText = await readTextFile(electronApp, promptPath)
-      expect(partiallyMigratedPromptText).toContain('templates:\n  - id: template-1')
-      expect(partiallyMigratedPromptText).not.toContain('templateId:')
-
-      await mainWindow
-        .locator(
-          '[role="dialog"][aria-label="Failed to Open Workspace"] button.cthulhuUiButton'
-        )
-        .click()
-      await testSetup.setupFileDialog([workspaceInfoPath])
-      await mainWindow.click('[data-testid="open-workspace-button"]')
-      await expect(
-        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
-      ).toBeVisible()
-      expect(await readTextFile(electronApp, promptPath)).toBe(partiallyMigratedPromptText)
-      expect(JSON.parse(await readTextFile(electronApp, workspaceInfoPath)).schemaVersion).toBe(0)
-    })
-
-    test('shows an error dialog when opening an empty directory', async ({ testSetup }) => {
-      const { mainWindow } = await testSetup.setupAndStart({
-        workspace: { scenario: 'empty', path: '/empty-directory-open', autoSetup: false }
-      })
-
-      await mainWindow.click('[data-testid="open-workspace-button"]')
-
-      const errorDialog = mainWindow.locator(
-        '[role="dialog"][aria-label="Failed to Open Workspace"]'
-      )
-      await expect(errorDialog).toBeVisible()
-      await expect(errorDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
-      await expect(errorDialog.locator('[data-testid="dialog-subtitle"]')).toHaveCount(0)
-      await expect(errorDialog.locator('.cthulhuUiPopupSurface')).toHaveCSS('padding-top', '16px')
-      await expect(errorDialog.locator('.cthulhuUiDialogHeader')).toHaveCSS(
-        'padding-bottom',
-        '12px'
-      )
-      await expect(errorDialog.locator('.cthulhuUiDialogHeader .cthulhuUiTitle')).toHaveCSS(
-        'line-height',
-        '28px'
-      )
-      await expect(errorDialog).toContainText('The workspace could not be opened.')
-      await expect(errorDialog).toContainText('Invalid workspace path')
-    })
-
-    test('rejects a workspace without a Templates directory', async ({ testSetup }) => {
-      const workspacePath = '/ws/missing-templates'
-      const filesystem = createWorkspaceWithCollections(workspacePath, [])
-      delete filesystem[`${workspacePath}/DefaultProject/Templates`]
-      delete filesystem[`${workspacePath}/DefaultProject/Templates/CollectionOrder.json`]
-
-      await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
-      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      await mainWindow.click('[data-testid="open-workspace-button"]')
-
-      const errorDialog = mainWindow.locator(
-        '[role="dialog"][aria-label="Failed to Open Workspace"]'
-      )
-      await expect(errorDialog).toBeVisible()
-      expect(await testHelpers.isWorkspaceReady()).toBe(false)
-      await mainWindow.locator('.cthulhuUiDialogLayer').click({ position: { x: 2, y: 2 } })
-      await expect(errorDialog).toBeHidden()
-    })
-
     test('initializes a missing SQLite collection order during load', async ({
       electronApp,
       testSetup
@@ -456,12 +247,12 @@ Keep this partial body.`
       delete filesystem[workspaceCollectionOrderPath(workspacePath)]
 
       await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
+      testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
       const { mainWindow, testHelpers } = await testSetup.setupAndStart({
         workspace: { scenario: 'none' }
       })
 
-      await mainWindow.click('[data-testid="open-workspace-button"]')
+      await testHelpers.setupWorkspaceViaUI()
 
       await mainWindow.getByTestId('nav-button-home').click()
       await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
@@ -470,37 +261,6 @@ Keep this partial body.`
       ).toHaveCount(0)
       expect(await testHelpers.isWorkspaceReady()).toBe(true)
       expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
-      expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' }] })
-    })
-
-    test('deletes malformed legacy collection orders without reading them', async ({ electronApp, testSetup }) => {
-      const workspacePath = '/ws/malformed-collection-order'
-      const filesystem = createWorkspaceWithCollections(workspacePath, [
-        {
-          folderName: 'Examples',
-          displayName: 'Examples',
-          promptCollectionId: 'collection-examples'
-        }
-      ], { settings: { schemaVersion: 5 } })
-      filesystem[`${workspacePath}/Prompts/CollectionOrder.json`] = '{ malformed'
-      filesystem[`${workspacePath}/Templates/CollectionOrder.json`] = '{ malformed'
-
-      await testSetup.setupFilesystem(filesystem)
-      await testSetup.setupFileDialog([getWorkspaceInfoPath(workspacePath)])
-      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      await mainWindow.click('[data-testid="open-workspace-button"]')
-
-      await expect(
-        mainWindow.locator('[role="dialog"][aria-label="Failed to Open Workspace"]')
-      ).toHaveCount(0)
-      await mainWindow.getByTestId('nav-button-home').click()
-      await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
-      expect(await testHelpers.isWorkspaceReady()).toBe(true)
-      expect(await checkFileExists(electronApp, workspaceCollectionOrderPath(workspacePath))).toBe(false)
-      expect(await checkFileExists(electronApp, `${workspacePath}/DefaultProject/Templates/CollectionOrder.json`)).toBe(false)
       expect(await readWorkspaceCollectionOrder(electronApp, workspacePath)).toEqual({ entries: [{ kind: 'collection', id: 'collection-examples' }] })
     })
 
@@ -535,8 +295,7 @@ Keep this partial body.`
       const workspacePath = await testHelpers.getDisplayedWorkspacePath()
       expect(workspacePath).not.toBeNull()
       /** Persisted identity lets the test wait for later user changes before reopening. */
-      const workspaceInfo = JSON.parse(await readTextFile(electronApp, `${workspacePath}\\TestWorkspace.cthulhuprompt`))
-      expect(workspaceInfo.schemaVersion).toBe(8)
+      const workspaceId = (await runSqlQuery(electronApp, 'SELECT id FROM content.workspace')).rows![0].id as string
 
       // Later selection and tab closure must replace the initial defaults permanently.
       await tabs.nth(1).click()
@@ -545,7 +304,7 @@ Keep this partial body.`
       await expect(tabs).toHaveText(['My Templates'])
       await expect.poll(async () => {
         /** Observe the saved single-tab session before reloading the renderer. */
-        const saved = (await readTabSession(electronApp, workspaceInfo.workspaceId)).user
+        const saved = (await readTabSession(electronApp, workspaceId)).user
         return [saved?.tabs.length, saved?.selectedTabId === saved?.tabs[0]?.id]
       }).toEqual([1, true])
       await mainWindow.reload()
@@ -566,7 +325,7 @@ Keep this partial body.`
       await expect(createDialog).toBeVisible()
       await expect(createDialog.locator('[data-testid="dialog-header-icon"]')).toBeVisible()
       await expect(createDialog.locator('[data-testid="dialog-subtitle"]')).toHaveText(
-        'Choose a name and location for your new workspace.'
+        'Choose a name for your new workspace.'
       )
       await expect(createDialog.locator('.cthulhuUiPopupSurface')).toHaveCSS('padding-top', '18px')
       await expect(createDialog.locator('.cthulhuUiDialogHeader')).toHaveCSS(
@@ -587,116 +346,6 @@ Keep this partial body.`
       )
     })
 
-    test('uses stacked fields and disabled path inputs in the create workspace dialog', async ({
-      testSetup
-    }) => {
-      await testSetup.setupFilesystem({ '/ws/stacked-fields': null })
-      await testSetup.setupFileDialog(['/ws/stacked-fields'])
-
-      /** Running application window used to inspect the redesigned dialog. */
-      const { mainWindow } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      await mainWindow.click('[data-testid="create-workspace-button"]')
-
-      /** Create dialog whose fields should follow the standard above/below layout. */
-      const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
-      /** Workspace-name field used to compare its full-width input placement. */
-      const nameField = createDialog.locator('[data-testid="create-workspace-name-field"]')
-      /** Containing-folder field whose heading and compound control should stack. */
-      const containingFolderField = createDialog.locator(
-        '[data-testid="create-workspace-containing-folder-field"]'
-      )
-      /** Final-path field whose heading and disabled input should stack. */
-      const finalPathField = createDialog.locator(
-        '[data-testid="create-workspace-final-path-field"]'
-      )
-      /** Add-examples field whose heading and toggle should stack. */
-      const examplesField = createDialog.locator('[data-testid="create-workspace-examples-row"]')
-      /** Disabled selected-folder display supplied by the shared folder input. */
-      const containingFolderInput = createDialog.getByLabel('Containing Folder', { exact: true })
-      /** Native folder-picker action placed to the right of its path display. */
-      const browseButton = createDialog.getByLabel('Browse for containing folder')
-      /** Disabled calculated workspace path display. */
-      const finalPathInput = createDialog.getByLabel('Workspace Path', { exact: true })
-      /** Default-enabled toggle rendered below the Add Examples description. */
-      const examplesToggle = createDialog.locator(
-        '[data-testid="create-workspace-examples-toggle"]'
-      )
-
-      await expect(createDialog.locator('.cthulhuUiPopupSurface')).toHaveCSS('width', '620px')
-      await expect(nameField.locator('.cthulhuUiTitle')).toHaveText('Workspace Name')
-      await expect(nameField.locator('.cthulhuUiSubtitle')).toHaveText(
-        'Enter a name for the new workspace.'
-      )
-      await expect(
-        containingFolderField.locator('.cthulhuUiSubtitle')
-      ).toHaveText('Choose the folder that will contain the workspace.')
-      await expect(finalPathField.locator('.cthulhuUiSubtitle')).toHaveText(
-        'Review the full path to the workspace.'
-      )
-      await expect(finalPathField.locator('.cthulhuUiTitle')).toHaveText('Workspace Path')
-      await expect(examplesField.locator('.cthulhuUiSubtitle')).toHaveText(
-        'Include example prompts and templates in the My Prompts and My Templates collections.'
-      )
-      await expect(createDialog.locator('.cthulhuUiTitleSubtitleStack svg')).toHaveCount(0)
-      await expect(containingFolderInput).toBeDisabled()
-      await expect(containingFolderInput).toHaveValue('')
-      await expect(containingFolderInput).toHaveAttribute('placeholder', 'Select a folder...')
-      await expect(finalPathInput).toBeDisabled()
-      await expect(examplesToggle).toHaveAttribute('aria-pressed', 'true')
-
-      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Stacked Workspace')
-      await browseButton.click()
-
-      await expect(containingFolderInput).toHaveValue('/ws/stacked-fields')
-      await expect(finalPathInput).toHaveValue('/ws/stacked-fields\\StackedWorkspace')
-
-      /** Heading, field, and control bounds proving the requested above/below arrangement. */
-      const [
-        nameFieldBox,
-        nameHeadingBox,
-        nameInputBox,
-        containingHeadingBox,
-        containingFolderBox,
-        browseButtonBox,
-        finalPathFieldBox,
-        finalPathHeadingBox,
-        finalPathInputBox,
-        examplesHeadingBox,
-        examplesToggleBox
-      ] = await Promise.all([
-        nameField.boundingBox(),
-        nameField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
-        createDialog.getByLabel('Workspace Name', { exact: true }).boundingBox(),
-        containingFolderField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
-        containingFolderInput.boundingBox(),
-        browseButton.boundingBox(),
-        finalPathField.boundingBox(),
-        finalPathField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
-        finalPathInput.boundingBox(),
-        examplesField.locator('.cthulhuUiTitleSubtitleStack').boundingBox(),
-        examplesToggle.boundingBox()
-      ])
-      expect(nameInputBox!.y).toBeGreaterThanOrEqual(nameHeadingBox!.y + nameHeadingBox!.height - 1)
-      expect(Math.abs(nameInputBox!.width - nameFieldBox!.width)).toBeLessThanOrEqual(2)
-      expect(containingFolderBox!.y).toBeGreaterThanOrEqual(
-        containingHeadingBox!.y + containingHeadingBox!.height - 1
-      )
-      expect(Math.abs(browseButtonBox!.y - containingFolderBox!.y)).toBeLessThanOrEqual(1)
-      expect(browseButtonBox!.x).toBeGreaterThan(
-        containingFolderBox!.x + containingFolderBox!.width
-      )
-      expect(finalPathInputBox!.y).toBeGreaterThanOrEqual(
-        finalPathHeadingBox!.y + finalPathHeadingBox!.height - 1
-      )
-      expect(Math.abs(finalPathInputBox!.width - finalPathFieldBox!.width)).toBeLessThanOrEqual(2)
-      expect(examplesToggleBox!.y).toBeGreaterThanOrEqual(
-        examplesHeadingBox!.y + examplesHeadingBox!.height - 1
-      )
-    })
-
     test('adds example prompts and templates when setting up a new workspace', async ({
       testSetup
     }) => {
@@ -709,7 +358,6 @@ Keep this partial body.`
       const createDialog = mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
       await expect(createDialog).toBeVisible()
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Example Workspace')
-      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
       const includeExamplesToggle = mainWindow.locator(
         '[data-testid="create-workspace-examples-toggle"]'
@@ -839,7 +487,6 @@ Keep this partial body.`
         mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
       ).toBeVisible()
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Blank Workspace')
-      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
       const includeExamplesToggle = mainWindow.locator(
         '[data-testid="create-workspace-examples-toggle"]'
@@ -902,7 +549,6 @@ Keep this partial body.`
 
       await mainWindow.click('[data-testid="create-workspace-button"]')
       await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Bad/Name')
-      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
 
       await expect(mainWindow.locator('[data-testid="create-workspace-name-error"]')).toContainText(
         'Workspace name contains illegal characters'
@@ -912,94 +558,5 @@ Keep this partial body.`
       ).toBeDisabled()
     })
 
-    // Verifies that a pending path lookup does not flash the submit button or allow submission.
-    test('keeps Create Workspace enabled but inoperable while the path lookup is pending', async ({
-      testSetup
-    }) => {
-      /** Containing folder selected before editing the valid workspace name. */
-      const containingFolderPath = '/ws/pending-path-containing'
-      /** Non-empty target returned only after the gated lookup is released. */
-      const nonEmptyWorkspacePath = `${containingFolderPath}\\PendingWorkspaceTwo`
-      await testSetup.setupFilesystem({
-        [containingFolderPath]: null,
-        [nonEmptyWorkspacePath]: null,
-        [`${nonEmptyWorkspacePath}\\notes.txt`]: 'Existing file'
-      })
-      await testSetup.setupFileDialog([containingFolderPath])
-
-      /** Running application window and IPC controls used to hold the second path lookup open. */
-      const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      await mainWindow.click('[data-testid="create-workspace-button"]')
-      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Pending Workspace')
-      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
-
-      /** Submit action that should remain visually active while its latest lookup is unresolved. */
-      const submitButton = mainWindow.locator('[data-testid="create-workspace-submit-button"]')
-      await expect(submitButton).toBeEnabled()
-
-      await testHelpers.pauseIpcChannel('get-workspace-folder-status')
-      try {
-        await mainWindow.fill(
-          '[data-testid="create-workspace-name-input"]',
-          'Pending Workspace Two'
-        )
-
-        await expect(
-          mainWindow.locator('[data-testid="create-workspace-final-path-display"]')
-        ).toHaveValue(nonEmptyWorkspacePath)
-        await expect(
-          mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
-        ).toHaveCount(0)
-        await expect(submitButton).toBeEnabled()
-        await submitButton.click()
-        await expect(submitButton).toBeEnabled()
-        await expect(
-          mainWindow.locator('[role="dialog"][aria-label="Create Workspace"]')
-        ).toBeVisible()
-      } finally {
-        await testHelpers.resumeIpcChannel('get-workspace-folder-status')
-      }
-
-      await expect(
-        mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
-      ).toContainText(
-        'This folder is not empty. Typically, you should create a workspace in an empty folder.'
-      )
-      await expect(submitButton).toBeEnabled()
-    })
-
-    test('warns when the final workspace folder is not empty without blocking creation', async ({
-      testSetup
-    }) => {
-      await testSetup.setupFilesystem({
-        '/ws/non-empty-containing': null,
-        '/ws/non-empty-containing\\ClientPrompts': null,
-        '/ws/non-empty-containing\\ClientPrompts/notes.txt': 'Existing file'
-      })
-      await testSetup.setupFileDialog(['/ws/non-empty-containing'])
-
-      const { mainWindow } = await testSetup.setupAndStart({
-        workspace: { scenario: 'none' }
-      })
-
-      await mainWindow.click('[data-testid="create-workspace-button"]')
-      await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Client Prompts')
-      await mainWindow.click('[data-testid="create-workspace-path-browse-button"]')
-
-      await expect(
-        mainWindow.locator('[data-testid="create-workspace-final-path-display"]')
-      ).toHaveValue('/ws/non-empty-containing\\ClientPrompts')
-      await expect(
-        mainWindow.locator('[data-testid="create-workspace-final-path-message"]')
-      ).toContainText(
-        'This folder is not empty. Typically, you should create a workspace in an empty folder.'
-      )
-      await expect(
-        mainWindow.locator('[data-testid="create-workspace-submit-button"]')
-      ).toBeEnabled()
-    })
   })
 })

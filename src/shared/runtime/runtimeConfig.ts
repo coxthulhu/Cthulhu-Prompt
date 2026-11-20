@@ -4,15 +4,12 @@ export type RuntimeConfig = {
   executionFolderName: string | null
   environment: RuntimeEnvironment
   appVersion: string
-  /** Workspace file passed on the command line by a Windows file association launch. */
-  startupWorkspaceInfoPath: string | null
 }
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   executionFolderName: null,
   environment: '',
   appVersion: '0.0.0',
-  startupWorkspaceInfoPath: null
 }
 
 export const RUNTIME_ARG_PREFIX = '--cthulhu-runtime='

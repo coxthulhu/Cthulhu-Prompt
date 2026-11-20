@@ -1,102 +1,199 @@
-import type { ElectronApplication } from 'playwright'
+import { basename, join } from 'node:path'
+import { readFile, readdir } from 'node:fs/promises'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
-import { readWorkspaceState, seedWorkspaceState, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
+import { createWorkspaceWithCollections, createWorkspaceWithTemplateCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
+import { readRecord } from '../helpers/WorkspaceDatabaseHelpers'
+import { checkFileExists, readTextFile } from '../helpers/PromptPersistenceTestHelpers'
+import { readUserPersistence, runSqlQuery, runSqlStatement, seedUserPersistence } from '../helpers/UserPersistenceHelpers'
 
+/** Managed-workspace lifecycle across the real renderer, main connection and profile filesystem. */
 const { test, describe, expect } = createPlaywrightTestSuite()
-const workspacePath = '/ws/dialog-workspace'
-const workspaceInfoPath = getWorkspaceInfoPath(workspacePath)
 
-/** Exercise the production dialog provider while replacing only the native Windows picker. */
-const stubNativeDialog = async (
-  electronApp: ElectronApplication,
-  result: { canceled: boolean; filePaths: string[] }
-): Promise<void> => {
-  await electronApp.evaluate(({ app, dialog }, selection) => {
-    ;(app as any).emit('test-setup-file-dialog', null)
-    ;(app as any).workspaceDialogOptions = null
-    dialog.showOpenDialog = (async (options: unknown) => {
-      ;(app as any).workspaceDialogOptions = options
-      return selection
-    }) as typeof dialog.showOpenDialog
-  }, result)
-}
+/** Builds a v8 source whose filename, display name, and stable identity can vary independently. */
+const fixture = (path: string, name: string, id: string) => createWorkspaceWithCollections(path, [{
+  folderName: 'Tasks', displayName: 'Tasks', promptCollectionId: 'tasks',
+  prompts: [{ id: 'task', title: 'Plan', promptText: 'Preserve this text' }]
+}], { settings: { workspaceId: id, workspaceName: name } })
 
-const readDefaultPath = async (electronApp: ElectronApplication): Promise<string | null> =>
-  electronApp.evaluate(({ app }) =>
-    ((app as any).workspaceDialogOptions?.defaultPath as string | undefined)?.replace(/\\/g, '/') ?? null
-  )
-
-const readSavedDirectory = async (electronApp: ElectronApplication): Promise<unknown> => {
-  return (await readWorkspaceState(electronApp, null, 'workspace-dialog', null))?.directory
-}
-
-describe('Workspace Open dialog persistence', () => {
-  test('stores the selected directory in SQLite and retains it after closing and reloading', async ({
-    electronApp,
-    testSetup
-  }) => {
-    await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({
-      workspace: { scenario: 'none' }
+describe('Managed workspace databases', () => {
+  test('imports silently beside the active workspace, opens from the list, and reveals its SQLite file', async ({ testSetup, electronApp }) => {
+    /** The mocked v8 workspace lives outside the managed directory. */
+    const path = '/ws/legacy'
+    /** Include both libraries and a note to verify cross-record identities survive import. */
+    const source = {
+      ...createWorkspaceWithTemplateCollections(path, [{
+        folderName: 'Library', displayName: 'Library', templates: [{ id: 'wrapper', title: 'Wrapper', templateText: '[[PROMPT_TEXT]]' }]
+      }]),
+      ...fixture(path, 'Imported Work', 'import-id')
+    }
+    /** The current source format keeps the note and the template references in front matter. */
+    const promptFile = Object.keys(source).find((file) => file.endsWith('Plan.prompt.md'))!
+    source[promptFile] = source[promptFile]!.replace('id: task', 'id: task\nattachedNoteId: attachment\ntemplates:\n  - id: wrapper')
+    source[promptFile.replace('Plan.prompt.md', 'Attached.note.md')] = '---\nid: attachment\n---\nAttached instructions'
+    /** Legacy metadata selected by the picker or remembered at startup. */
+    const info = getWorkspaceInfoPath(path)
+    await testSetup.setupFilesystem(source)
+    /** Exercise opening and importing through the real Electron renderer. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.createWorkspaceViaUI()
+    await testHelpers.navigateToHomeScreen()
+    /** The active database must remain selected after importing another workspace. */
+    const first = (await readUserPersistence(electronApp)).lastWorkspaceInfoPath
+    await testSetup.setupFileDialog([info])
+    await mainWindow.getByTestId('import-workspace-button').click()
+    await expect(mainWindow.getByTestId('open-workspace-button')).toBeEnabled()
+    await expect(mainWindow.getByRole('dialog')).toHaveCount(0)
+    expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(first)
+    await mainWindow.getByTestId('open-workspace-button').click()
+    /** The managed Open dialog lists both newly created and imported workspaces. */
+    const dialog = mainWindow.getByRole('dialog', { name: 'Open Workspace' })
+    /** Match just the two workspace choices in catalog order. */
+    const names = dialog.getByRole('button', { name: /^(Imported Work|Test Workspace)$/ })
+    await expect(names).toHaveText(['Imported Work', 'Test Workspace'])
+    await names.first().click()
+    await testHelpers.navigateToPromptCollections('Tasks')
+    await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Plan')
+    expect(await readRecord(electronApp, 'prompt', 'task')).toMatchObject({
+      status: 'Todo', promptText: 'Preserve this text', templates: [{ id: 'wrapper' }], attachedNoteId: 'attachment'
     })
-    await stubNativeDialog(electronApp, { canceled: false, filePaths: [workspaceInfoPath] })
-    await mainWindow.getByTestId('open-workspace-button').click()
-    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    expect(await readRecord(electronApp, 'note', 'attachment')).toMatchObject({ kind: 'attached', noteText: 'Attached instructions' })
+    expect(await readRecord(electronApp, 'promptTemplate', 'wrapper')).toMatchObject({ title: 'Wrapper', templateText: '[[PROMPT_TEXT]]' })
     await testHelpers.navigateToHomeScreen()
-    await expect(mainWindow.getByTestId('workspace-ready-path')).toBeVisible()
-    expect(await readSavedDirectory(electronApp)).toBe(workspacePath)
+    /** The remembered path is the file that Windows Explorer should reveal. */
+    const database = (await readUserPersistence(electronApp)).lastWorkspaceInfoPath!
+    expect(basename(database)).toBe('ImportedWork.cthulhuprompt')
+    /** Each Electron fixture has its own real profile on disk. */
+    const directory = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+    expect(database).toBe(join(directory, 'Workspaces', 'ImportedWork.cthulhuprompt'))
+    expect((await readFile(database)).subarray(0, 16).toString()).toBe('SQLite format 3\0')
+    expect(await readTextFile(electronApp, info)).toBe(source[info])
+    await electronApp.evaluate(({ app, shell }) => { shell.showItemInFolder = (file) => { (app as any).revealedWorkspace = file } })
+    await mainWindow.getByTestId('home-open-workspace-folder-button').click()
+    await expect.poll(() => electronApp.evaluate(({ app }) => (app as any).revealedWorkspace)).toBe(database)
+    await mainWindow.getByTestId('create-workspace-button').click()
+    await mainWindow.getByTestId('create-workspace-name-input').fill('importedwork')
+    await expect(mainWindow.getByTestId('create-workspace-submit-button')).toBeDisabled()
+    await expect(mainWindow.getByTestId('create-workspace-name-error')).toContainText('already exists')
+  })
 
-    await mainWindow.getByTestId('close-workspace-button').click()
-    await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveCount(0)
-    expect(await readSavedDirectory(electronApp)).toBe(workspacePath)
+  test('migrates the remembered workspace once, retains its source, and opens the database on reload', async ({ testSetup, electronApp }) => {
+    /** The mocked v8 workspace lives outside the managed directory. */
+    const path = '/ws/remembered'
+    /** Legacy metadata selected by the picker or remembered at startup. */
+    const info = getWorkspaceInfoPath(path)
+    /** Keep the original bytes available for comparison after migration. */
+    const source = fixture(path, 'Remember Me', 'my-id')
+    /** A missing v8 order should be reconstructed only inside the managed database. */
+    const orderPath = `${path}/DefaultProject/Prompts/Tasks/Active/_CategoryOrder.json`
+    delete source[orderPath]
+    await testSetup.setupFilesystem(source)
+    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: info })
+    /** Exercise opening and importing through the real Electron renderer. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+    await testHelpers.navigateToPromptCollections('Tasks')
+    await mainWindow.getByTestId('prompt-title').fill('Edited in SQLite')
+    await testHelpers.navigateToHomeScreen()
+    /** The remembered path is the file that Windows Explorer should reveal. */
+    const database = (await readUserPersistence(electronApp)).lastWorkspaceInfoPath!
+    expect(basename(database)).toBe('RememberMe.cthulhuprompt')
+    /** Read the stored title independently of the renderer to confirm persistence. */
+    const readTitle = async () => (await runSqlQuery(electronApp, "SELECT json_extract(data, '$.title') AS title FROM content.records WHERE kind='prompt' AND id='task'")).rows?.[0]?.title
+    await expect.poll(readTitle).toBe('Edited in SQLite')
+    expect((await readRecord(electronApp, 'promptCollection', 'tasks'))?.statusFolders.active.categoryOrder.categories)
+      .toEqual([{ categoryId: null, entries: [{ kind: 'prompt', id: 'task' }] }])
+    expect(await checkFileExists(electronApp, orderPath)).toBe(false)
+    for (const [file, original] of Object.entries(source)) {
+      if (original !== null) expect(await readTextFile(electronApp, file)).toBe(original)
+    }
+    // Simulate the user deleting the original files after confirming the import.
+    await testSetup.setupFilesystem({})
     await mainWindow.reload()
-    await testHelpers.navigateToHomeScreen()
-
-    await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
-    await mainWindow.getByTestId('open-workspace-button').click()
-    await expect.poll(() => readDefaultPath(electronApp)).toBe(workspacePath)
-    expect(await readSavedDirectory(electronApp)).toBe(workspacePath)
+    await expect(mainWindow.getByTestId('new-tab-button')).toBeEnabled()
+    await testHelpers.navigateToPromptCollections('Tasks')
+    await expect(mainWindow.getByTestId('prompt-title')).toHaveValue('Edited in SQLite')
   })
 
-  test('uses a directory read from SQLite and leaves it unchanged on cancel', async ({
-    electronApp,
-    testSetup
-  }) => {
-    await testSetup.setupFilesystem({ '/ws/remembered': null })
-    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: '/ws/remembered' }, 'machine-specific')
-    await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
-    await mainWindow.getByTestId('open-workspace-button').click()
-    await expect.poll(() => readDefaultPath(electronApp)).toBe('/ws/remembered')
-    expect(await readSavedDirectory(electronApp)).toBe('/ws/remembered')
-  })
-
-  for (const savedDirectory of [null, '/ws/deleted']) {
-    test(`falls back to the last workspace when the saved directory is ${savedDirectory}`, async ({
-      electronApp,
-      testSetup
-    }) => {
-      await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
-      const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-      await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: savedDirectory }, 'machine-specific')
-      await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: workspaceInfoPath })
-      await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
-      await mainWindow.getByTestId('open-workspace-button').click()
-      await expect.poll(() => readDefaultPath(electronApp)).toBe(workspacePath)
+  for (const failure of ['duplicate name', 'duplicate ID', 'duplicate prompt', 'wrong version', 'invalid Markdown', 'missing order reference'] as const) {
+    test('rejects ' + failure + ' without publishing partial data', async ({ testSetup, electronApp }) => {
+      /** Existing managed workspace used to check that failure leaves its session intact. */
+      const original = '/ws/original'
+      /** Separate legacy root for the workspace that should fail to import. */
+      const other = '/ws/other'
+      /** Change just the input needed for this failure case. */
+      const second = fixture(other, failure === 'duplicate name' ? 'MyWork' : 'Other', failure === 'duplicate ID' ? 'one' : 'two')
+      /** Legacy metadata selected by the picker or remembered at startup. */
+      const info = getWorkspaceInfoPath(other)
+      if (failure === 'duplicate prompt') {
+        /** Two different files claim the same stable ID during the publication transaction. */
+        const file = Object.keys(second).find((key) => key.endsWith('.prompt.md'))!
+        second[file.replace('Plan.prompt.md', 'Duplicate.prompt.md')] = second[file]
+      }
+      if (failure === 'wrong version') second[info] = JSON.stringify({ ...JSON.parse(second[info]!), schemaVersion: 7 })
+      if (failure === 'invalid Markdown') second[Object.keys(second).find((key) => key.endsWith('.prompt.md'))!] = 'malformed'
+      if (failure === 'missing order reference') second[Object.keys(second).find((key) => key.endsWith('Active/_CategoryOrder.json'))!] =
+        JSON.stringify({ categories: [{ categoryId: null, entries: [{ kind: 'prompt', id: 'missing' }] }] })
+      await testSetup.setupFilesystem({ ...fixture(original, 'My Work', 'one'), ...second })
+      await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: getWorkspaceInfoPath(original) })
+      /** Exercise opening and importing through the real Electron renderer. */
+      const { mainWindow, testHelpers } = await testSetup.setupAndStart()
+      await testHelpers.navigateToHomeScreen()
+      await testSetup.setupFileDialog([info])
+      await mainWindow.getByTestId('import-workspace-button').click()
+      await expect(mainWindow.getByRole('dialog', { name: 'Failed to Import Workspace' })).toContainText({
+        'duplicate name': 'name already exists', 'duplicate ID': 'ID already exists', 'wrong version': 'Expected 8',
+        'invalid Markdown': '.prompt.md', 'missing order reference': '_CategoryOrder.json', 'duplicate prompt': 'UNIQUE'
+      }[failure])
+      /** Each Electron fixture has its own real profile on disk. */
+      const directory = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+      expect(await readdir(join(directory, 'Workspaces'))).toEqual(['MyWork.cthulhuprompt'])
+      expect(await readTextFile(electronApp, info)).toBe(second[info])
+      expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(join(directory, 'Workspaces', 'MyWork.cthulhuprompt'))
+      expect(await readRecord(electronApp, 'prompt', 'task')).toMatchObject({ title: 'Plan' })
+      testSetup.removeRendererErrorsContaining('IPC invocation error')
     })
   }
 
-  test('falls back to Downloads when both saved directories are unavailable', async ({
-    electronApp,
-    testSetup
-  }) => {
-    const { mainWindow } = await testSetup.setupAndStart({ workspace: { scenario: 'none' } })
-    await seedWorkspaceState(electronApp, null, 'workspace-dialog', null, { directory: '/ws/deleted' }, 'machine-specific')
-    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: '/ws/also-deleted/Workspace.cthulhuprompt' })
-    const downloads = await electronApp.evaluate(({ app }) => app.getPath('downloads').replace(/\\/g, '/'))
-    await stubNativeDialog(electronApp, { canceled: true, filePaths: [] })
-    await mainWindow.getByTestId('open-workspace-button').click()
-    await expect.poll(() => readDefaultPath(electronApp)).toBe(downloads)
+  test('retries automatic migration after saving the workspace order fails', async ({ testSetup, electronApp }) => {
+    /** The file is published before startup saves the private order on the main connection. */
+    const path = '/ws/interrupted'
+    /** Legacy metadata selected by the picker or remembered at startup. */
+    const info = getWorkspaceInfoPath(path)
+    await testSetup.setupFilesystem(fixture(path, 'Interrupted', 'interrupted-id'))
+    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: info })
+    await runSqlStatement(electronApp, `CREATE TRIGGER fail_order BEFORE INSERT ON workspace_state
+      WHEN NEW.state_type = 'collection-order' BEGIN SELECT RAISE(ABORT, 'Order save failed'); END`)
+    /** Startup automatically attempts to restore the remembered workspace. */
+    const { mainWindow } = await testSetup.setupAndStart()
+    await expect(mainWindow.getByRole('dialog', { name: 'Failed to Open Workspace' })).toContainText('Order save failed')
+    /** Each Electron fixture has its own real profile on disk. */
+    const directory = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+    expect(await readdir(join(directory, 'Workspaces'))).toEqual([])
+    expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(info)
+    await runSqlStatement(electronApp, 'DROP TRIGGER fail_order')
+    await mainWindow.reload()
+    await expect.poll(async () => (await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(join(directory, 'Workspaces', 'Interrupted.cthulhuprompt'))
+    testSetup.removeRendererErrorsContaining('IPC invocation error')
+    testSetup.removeRendererErrorsContaining('Failed to restore last workspace')
+  })
+
+  test('retains a failed automatic migration for retry after the source is corrected', async ({ testSetup, electronApp }) => {
+    /** The mocked v8 workspace lives outside the managed directory. */
+    const path = '/ws/retry'
+    /** Keep the original bytes available for comparison after migration. */
+    const source = fixture(path, 'Retry', 'retry-id')
+    /** Legacy metadata selected by the picker or remembered at startup. */
+    const info = getWorkspaceInfoPath(path)
+    await testSetup.setupFilesystem({ ...source, [info]: '{invalid' })
+    await seedUserPersistence(electronApp, { lastWorkspaceInfoPath: info })
+    /** Startup automatically attempts to restore the remembered workspace. */
+    const { mainWindow } = await testSetup.setupAndStart()
+    await expect(mainWindow.getByRole('dialog', { name: 'Failed to Open Workspace' })).toContainText('retry.cthulhuprompt')
+    expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(info)
+    await testSetup.setupFilesystem(source)
+    await mainWindow.reload()
+    await expect(mainWindow.getByTestId('new-tab-button')).toBeEnabled()
+    expect(basename((await readUserPersistence(electronApp)).lastWorkspaceInfoPath!)).toBe('Retry.cthulhuprompt')
+    testSetup.removeRendererErrorsContaining('IPC invocation error')
+    testSetup.removeRendererErrorsContaining('Failed to restore last workspace')
   })
 })

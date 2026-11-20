@@ -16,10 +16,7 @@ export const createRevisionDataHandlers = <TData, TPersistenceFields>(params: {
     persistenceFields: TPersistenceFields
   ): Promise<void> => {
     /** Data loaded through the persistence kind owned by this authoritative collection. */
-    const loadedData =
-      persistence.kind === 'sqlite'
-        ? persistence.query(id, persistenceFields)
-        : await persistence.loadData(persistenceFields)
+    const loadedData = persistence.query(id, persistenceFields)
 
     if (!loadedData) {
       return

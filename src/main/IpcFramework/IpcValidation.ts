@@ -145,7 +145,6 @@ export const createRequestParser = <TRequest>(requestParser: Parser<TRequest>) =
 }
 
 const parseCreateWorkspacePayload = parseObject<CreateWorkspacePayload>({
-  workspacePath: parseString,
   workspaceName: parseString,
   includeExamplePrompts: parseBoolean
 })

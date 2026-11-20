@@ -3,7 +3,7 @@ import { controlUpdater } from '../helpers/AppUpdateHelpers'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { runSqlStatement, seedUserPersistence, readSystemSettings } from '../helpers/UserPersistenceHelpers'
 import { focusMonacoEditor, getMonacoEditorText, waitForMonacoEditor } from '../helpers/MonacoHelpers'
-import { readPersistedPromptTextById } from '../helpers/PromptPersistenceTestHelpers'
+import { readRecord } from '../helpers/WorkspaceDatabaseHelpers'
 import { join } from 'node:path'
 import { setAutomaticUpdates, setUpdateChannel } from '../helpers/SettingsHelpers'
 
@@ -231,7 +231,7 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('update-available-dot')).toBeVisible()
   })
 
-  test('waits through the Welcome native picker and its error dialog', async ({ electronApp, testSetup }) => {
+  test('waits through the Import native picker and its error dialog', async ({ electronApp, testSetup }) => {
     await controlUpdater(electronApp, { type: 'configure', config: { holdCheck: true, latestVersion: '1.1.0' } })
     /** Keep the real provider pending at the native Windows picker boundary. */
     await electronApp.evaluate(({ app, dialog }) => {
@@ -241,8 +241,8 @@ describe('App updates', () => {
       })) as typeof dialog.showOpenDialog
     })
     /** First-launch user chooses the native Open flow. */
-    const { mainWindow } = await testSetup.setupAndStart({ firstLaunch: true })
-    await mainWindow.getByTestId('welcome-open-workspace-button').click()
+    const { mainWindow } = await testSetup.setupAndStart()
+    await mainWindow.getByTestId('import-workspace-button').click()
     await expect.poll(() => electronApp.evaluate(({ app }) => !!(app as any).finishUpdatePicker)).toBe(true)
     await controlUpdater(electronApp, { type: 'complete-check' })
     await expect.poll(() => mainWindow.evaluate(() => window.appUpdates.getState().then((state) => state.status))).toBe('downloading')
@@ -251,7 +251,7 @@ describe('App updates', () => {
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
     await electronApp.evaluate(({ app }) => (app as any).finishUpdatePicker())
     /** Failed workspace loading still belongs to the Welcome flow. */
-    const errorDialog = mainWindow.getByRole('dialog', { name: 'Failed to Open Workspace', exact: true })
+    const errorDialog = mainWindow.getByRole('dialog', { name: 'Failed to Import Workspace', exact: true })
     await expect(errorDialog).toBeVisible()
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
     await errorDialog.getByRole('button', { name: 'Close', exact: true }).first().click()
@@ -565,9 +565,7 @@ describe('App updates', () => {
       await closed
       await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).cancellations).toBe(1)
       expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
-      expect(await readPersistedPromptTextById(electronApp, {
-        workspacePath: '/ws/sample', folderName: 'Development', promptId: 'dev-1', promptTitle: 'Code Review'
-      })).toContain('[download-close-save]')
+      expect(await readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)).toContain('[download-close-save]')
     } finally {
       await testSetup.resumeIpcChannel('update-prompt')
     }
@@ -603,15 +601,11 @@ describe('App updates', () => {
       // Exceed the restart countdown: installation must still be waiting for the held save.
       await mainWindow.waitForTimeout(1100)
       expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
-      expect(await readPersistedPromptTextById(electronApp, {
-        workspacePath: '/ws/sample', folderName: 'Development', promptId: 'dev-1', promptTitle: 'Code Review'
-      })).not.toContain('[update-save]')
+      expect(await readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)).not.toContain('[update-save]')
       /** Main-process clock measures the real restart delay, independently of renderer timing. */
       const releasedAt = await electronApp.evaluate(() => Date.now())
       await testSetup.resumeIpcChannel('update-prompt')
-      await expect.poll(() => readPersistedPromptTextById(electronApp, {
-        workspacePath: '/ws/sample', folderName: 'Development', promptId: 'dev-1', promptTitle: 'Code Review'
-      })).toContain('[update-save]')
+      await expect.poll(() => readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)).toContain('[update-save]')
       await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(1)
       expect((await controlUpdater(electronApp, { type: 'stats' })).installedAt! - releasedAt).toBeGreaterThanOrEqual(1000)
     } finally {
@@ -649,9 +643,7 @@ describe('App updates', () => {
     expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
     await electronApp.evaluate(({ app }) => (app as any).failUpdateSave())
     await expect.poll(async () => (await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(1)
-    expect(await readPersistedPromptTextById(electronApp, {
-      workspacePath: '/ws/sample', folderName: 'Development', promptId: 'dev-1', promptTitle: 'Code Review'
-    })).not.toContain('[update-save-failure]')
+    expect(await readRecord(electronApp, 'prompt', 'dev-1').then((prompt) => prompt?.promptText)).not.toContain('[update-save-failure]')
     testSetup.removeRendererErrorsContaining('IPC invocation error')
     testSetup.removeRendererErrorsContaining('Controlled update save failure')
   })
