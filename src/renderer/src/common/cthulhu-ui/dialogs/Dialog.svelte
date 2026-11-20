@@ -38,6 +38,8 @@
     submitIcon?: ComponentType
     oncancel?: () => void
     onsubmit?: () => void
+    /** Receives Close, X, and Escape requests instead of closing, so the owner can confirm first. */
+    onrequestclose?: () => void
   }
 
   /** Reactive dialog content, actions, and cancellation state. */
@@ -64,7 +66,8 @@
     submitVariant = 'accent',
     submitIcon,
     oncancel,
-    onsubmit
+    onsubmit,
+    onrequestclose
   }: Props = $props()
 
   /** Invokes the primary action only while submission is enabled. */
@@ -90,6 +93,7 @@
   closeDisabled={cancelDisabled}
   {closeOnOutsideClick}
   onclose={oncancel}
+  {onrequestclose}
 >
   {#snippet children(closeDialog)}
     {#snippet closeButton()}

@@ -325,6 +325,12 @@ describe('New Tab Screen', () => {
     const mainWindow = await openNewTab(electronApp, testSetup)
     const dialog = projectDialog(mainWindow)
 
+    // Closing an untouched New Project draft skips the discard confirmation.
+    await mainWindow.getByTestId('new-tab-new-project-button').click()
+    await dialog.getByTestId('manage-projects-close-button').click()
+    await expect(dialog).toHaveCount(0)
+    await expect(mainWindow.getByRole('dialog', { name: 'Discard Changes' })).toHaveCount(0)
+
     // New Project opens Manage Projects to a focused new draft after the existing projects.
     await mainWindow.getByTestId('new-tab-new-project-button').click()
     await expect(dialog.getByTestId('manage-project-name-input')).toBeFocused()

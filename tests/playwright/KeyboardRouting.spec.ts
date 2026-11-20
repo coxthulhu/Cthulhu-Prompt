@@ -81,6 +81,7 @@ describe('Keyboard routing', () => {
     await mainWindow.keyboard.type('Replacement')
     await expect(name).toHaveValue('Replacement')
     await dialog.getByTestId('manage-categories-close-button').click()
+    await mainWindow.getByTestId('management-dialog-discard-button').click()
 
     await mainWindow.getByTestId('selected-prompt-collection-actions-button').click()
     /** Actual collection dropdown supplies the higher popup layer. */

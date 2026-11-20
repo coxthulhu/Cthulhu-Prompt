@@ -28,6 +28,8 @@
     busy?: boolean
     children: Snippet<[() => void]>
     onclose?: () => void
+    /** Receives dismissal requests instead of closing, so the owner can confirm before closing. */
+    onrequestclose?: () => void
   }
 
   /** Reactive overlay configuration and content supplied by the owner. */
@@ -47,7 +49,8 @@
     testId,
     busy,
     children,
-    onclose
+    onclose,
+    onrequestclose
   }: Props = $props()
 
   /** Native dialog owns background inertness and modal focus containment. */
@@ -72,9 +75,10 @@
         : undefined
   )
 
-  /** Dismisses user requests unless closing is disabled; parents can still set open. */
+  /** Dismisses user requests unless closing is disabled or intercepted; parents can still set open. */
   const closePopup = (): void => {
     if (closeDisabled) return
+    if (onrequestclose) return onrequestclose()
     open = false
     onclose?.()
   }

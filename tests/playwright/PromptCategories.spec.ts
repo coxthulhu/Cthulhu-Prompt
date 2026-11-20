@@ -1092,6 +1092,7 @@ describe('Prompt categories', () => {
     )
     await expect(categoryDialog.locator('[data-testid="manage-categories-save-button"]')).toBeDisabled()
     await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
+    await mainWindow.getByTestId('management-dialog-discard-button').click()
 
     await mainWindow.locator('[data-testid="prompt-collection-delete-button"]').click()
     await expect(
@@ -1192,6 +1193,7 @@ describe('Prompt categories', () => {
     await expect(categoryName).toHaveValue('Edited Review')
     await expect(saveButton).toBeDisabled()
     await categoryDialog.locator('[data-testid="manage-categories-close-button"]').click()
+    await mainWindow.getByTestId('management-dialog-discard-button').click()
 
     await manageButton.click()
     await expect(categoryName).toHaveValue('Code Review')
@@ -1303,6 +1305,57 @@ describe('Prompt categories', () => {
       const view = await readCollectionView(electronApp, createDeterministicId(WORKSPACE_PATH))
       return { contentOwnerId: view?.contentOwnerId, selectedEntryId: view?.selectedEntryId, deletedOwner: view?.owners[SECOND_PROMPT_CATEGORY_ID] }
     }).toEqual({ contentOwnerId: PROMPT_ROOT_ID, selectedEntryId: 'managed-second', deletedOwner: undefined })
+  })
+
+  test('confirms before closing category management discards unsaved changes', async ({ testSetup }) => {
+    /** Started workspace whose Prompts collection owns the saved Code Review category. */
+    const { mainWindow, testHelpers } = await startCategoryWorkspace(testSetup, createCategorizedWorkspace())
+    await testHelpers.navigateToPromptCollections('Prompts')
+    /** Opener that should regain focus once both dialogs close. */
+    const manageButton = mainWindow.getByTestId('prompt-collection-manage-categories-button')
+    /** Management dialog whose drafts the confirmation protects. */
+    const categoryDialog = mainWindow.getByRole('dialog', { name: 'Manage Categories' })
+    /** Discard confirmation stacked above the management dialog. */
+    const discardDialog = mainWindow.getByRole('dialog', { name: 'Discard Changes' })
+    /** Selected category name edited to create an unsaved change. */
+    const categoryName = categoryDialog.getByTestId('manage-category-name-input')
+    /** Footer Close action. */
+    const closeButton = categoryDialog.getByTestId('manage-categories-close-button')
+
+    // Closing without changes, or with only a blank new category, skips the confirmation.
+    await manageButton.click()
+    await closeButton.click()
+    await expect(categoryDialog).toHaveCount(0)
+    await manageButton.click()
+    await categoryDialog.getByTestId('manage-categories-new-button').click()
+    await mainWindow.keyboard.press('Escape')
+    await expect(categoryDialog).toHaveCount(0)
+    await expect(discardDialog).toHaveCount(0)
+
+    // Close, the header X, and Escape all ask first, and backing out keeps the edit.
+    await manageButton.click()
+    await categoryName.fill('Edited Review')
+    await closeButton.click()
+    await expect(discardDialog).toBeVisible()
+    await discardDialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(discardDialog).toHaveCount(0)
+    // The header X precedes the footer Close, which shares its accessible name.
+    await categoryDialog.getByRole('button', { name: 'Close', exact: true }).first().click()
+    await expect(discardDialog).toBeVisible()
+    await mainWindow.keyboard.press('Escape')
+    await expect(discardDialog).toHaveCount(0)
+    await expect(categoryDialog).toBeVisible()
+    await expect(categoryName).toHaveValue('Edited Review')
+    await mainWindow.keyboard.press('Escape')
+    await expect(discardDialog).toBeVisible()
+
+    // Discarding closes both dialogs, restores focus to the opener, and leaves the category unchanged.
+    await mainWindow.getByTestId('management-dialog-discard-button').click()
+    await expect(discardDialog).toHaveCount(0)
+    await expect(categoryDialog).toHaveCount(0)
+    await expect(manageButton).toBeFocused()
+    await manageButton.click()
+    await expect(categoryName).toHaveValue('Code Review')
   })
 
   test('deletes a category and moves its ordered prompts to Uncategorized', async ({

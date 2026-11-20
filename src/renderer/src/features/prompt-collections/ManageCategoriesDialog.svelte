@@ -166,9 +166,11 @@
       description: category.description?.trim().length ? category.description : null
     }))
   )
-  /** Whether retained drafts differ from the opening category snapshot. */
+  /** Whether retained drafts differ from the opening category snapshot, ignoring blank new drafts. */
   const hasChanges = $derived(
-    JSON.stringify(normalizedDrafts) !== JSON.stringify(normalizedOriginalCategories)
+    JSON.stringify(
+      normalizedDrafts.filter((draft) => draft.displayName || draft.shortDescription || draft.description)
+    ) !== JSON.stringify(normalizedOriginalCategories)
   )
   /** Submission availability after workspace, change, and draft validation. */
   const canSubmit = $derived(
@@ -284,6 +286,7 @@
   cancelTestId="manage-categories-close-button"
   {isSubmitting}
   {canSubmit}
+  {hasChanges}
   {submissionError}
   onselect={selectDraft}
   onadd={addDraft}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Check } from 'lucide-svelte'
-  import type { ComponentType, Snippet } from 'svelte'
+  import { tick, type ComponentType, type Snippet } from 'svelte'
+  import ConfirmationDialog from '@renderer/common/cthulhu-ui/dialogs/ConfirmationDialog.svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import ManagementSelectorPanel, {
     type ManagementSelectorPanelItem
@@ -24,6 +25,8 @@
     dragHandleTestIdPrefix?: string
     isSubmitting: boolean
     canSubmit: boolean
+    /** Whether closing would discard edits, which first asks the user to confirm. */
+    hasChanges: boolean
     submissionError: string | null
     onselect: (id: string) => void
     onadd: () => void
@@ -52,6 +55,7 @@
     dragHandleTestIdPrefix,
     isSubmitting,
     canSubmit,
+    hasChanges,
     submissionError,
     onselect,
     onadd,
@@ -60,6 +64,18 @@
     onsubmit,
     children
   }: Props = $props()
+
+  /** Whether the discard confirmation is shown above the management dialog. */
+  let isDiscardConfirmationOpen = $state(false)
+
+  /** Closes the confirmation and management dialog, then lets the owner discard its drafts. */
+  const discardChanges = async (): Promise<void> => {
+    isDiscardConfirmationOpen = false
+    // Side effect: remove the confirmation first so the management dialog can restore focus to its opener.
+    await tick()
+    open = false
+    oncancel()
+  }
 </script>
 
 <!-- Shared layout for dialogs that edit several retained drafts and save them together. -->
@@ -78,6 +94,7 @@
   {cancelTestId}
   {oncancel}
   {onsubmit}
+  onrequestclose={hasChanges ? () => (isDiscardConfirmationOpen = true) : undefined}
 >
   <div class="cthulhuUiManagementDialogBody text-sm leading-5">
     <ManagementSelectorPanel
@@ -103,6 +120,16 @@
     </div>
   </div>
 </Dialog>
+
+<!-- Asks before Close, X, or Escape discards changed drafts. -->
+<ConfirmationDialog
+  bind:open={isDiscardConfirmationOpen}
+  title="Discard Changes"
+  description="Your unsaved changes will be lost."
+  confirmText="Discard changes"
+  confirmTestId="management-dialog-discard-button"
+  onconfirm={discardChanges}
+/>
 
 <style>
   .cthulhuUiManagementDialogBody {

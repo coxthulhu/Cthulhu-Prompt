@@ -526,6 +526,7 @@ describe('Persisted projects', () => {
     await finishActiveDrag(mainWindow)
     await expect(dialog.locator(projectSelectorItems)).toHaveText([/Removed/, /Second/, /Default Project/])
     await dialog.getByTestId('manage-projects-close-button').click()
+    await mainWindow.getByTestId('management-dialog-discard-button').click()
     await expect(dialog).toHaveCount(0)
     await expect(projectNames(mainWindow)).toHaveText(['Second', 'Default Project', 'Removed'])
     await openProjectSettings(mainWindow, defaultId)

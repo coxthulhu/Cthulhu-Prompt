@@ -83,10 +83,15 @@
       }
     })
   )
+  /** Whether retained drafts differ from the opening snapshot, ignoring blank new drafts. */
+  const hasChanges = $derived(
+    JSON.stringify(
+      projectInfos.filter((info) => info.name || info.abbreviation || info.shortDescription || info.description)
+    ) !== originalProjectsJson
+  )
   /** Submission availability after workspace, change, and draft validation. */
   const canSubmit = $derived(
-    workspace !== null && !isSubmitting &&
-      JSON.stringify(projectInfos) !== originalProjectsJson &&
+    workspace !== null && !isSubmitting && hasChanges &&
       draftErrors.every((errors) => !errors.name && !errors.abbreviation)
   )
 
@@ -212,6 +217,7 @@
   dragHandleTestIdPrefix="manage-projects-drag-handle"
   {isSubmitting}
   {canSubmit}
+  {hasChanges}
   {submissionError}
   onselect={selectDraft}
   onadd={addDraft}
