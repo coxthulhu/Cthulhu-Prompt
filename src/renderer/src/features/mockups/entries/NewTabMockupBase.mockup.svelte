@@ -2,14 +2,17 @@
   import type { ComponentType } from 'svelte'
   import type { Action } from 'svelte/action'
   import {
+    AlertCircle,
     Archive,
     ArrowUpToLine,
     Bug,
     Check,
     ChevronsDownUp,
     Download,
+    EyeOff,
     FileText,
     Folder,
+    FolderPlus,
     GripVertical,
     Home,
     Layers,
@@ -44,6 +47,12 @@
     id: string
     name: string
     collections: MockCollection[]
+  }
+
+  /** One project section shown for the current search. */
+  type VisibleProject = MockProject & {
+    /** The project's collections the search hides from its grid. */
+    hiddenCollectionCount: number
   }
 
   /** A work tab shows its New Tab screen until a collection is opened in it; each tab keeps its own search and scroll. */
@@ -96,23 +105,6 @@
     { id: 'test-screen', label: 'Test Screen', icon: Bug, screenLabel: 'Test Screen' }
   ]
 
-  /** Creation actions in each project's New Collection menu, named like the dialogs they open and described like their
-      subtitles. */
-  const createCollectionItems = [
-    {
-      id: 'prompt',
-      label: 'Create Task Collection',
-      detail: 'One-time prompts for individual tasks',
-      icon: FileText
-    },
-    {
-      id: 'template',
-      label: 'Create Template Collection',
-      detail: 'Reusable prompts for repeatable workflows',
-      icon: Layers
-    }
-  ]
-
   const workspaceName = 'Lantern Studio Prompts'
 
   const collection = (
@@ -133,7 +125,8 @@
         collection('code-review', 'Code Review', 'template', 8, 1),
         collection('ui-polish', 'UI Polish', 'prompt', 5, 3),
         collection('accessibility-audit', 'Accessibility Audit', 'prompt', 7, 9),
-        collection('component-library', 'Component Library Conventions and Patterns', 'template', 14, 18)
+        collection('component-library', 'Component Library Conventions and Patterns', 'template', 14, 18),
+        collection('e2e-test-fixes', 'E2E Test Fixes', 'prompt', 3, 2)
       ]
     },
     {
@@ -165,21 +158,23 @@
     }
   ])
 
-  const createWorkTab = (id: string, collectionId: string | null): WorkTab => ({
+  const createWorkTab = (id: string, collectionId: string | null, search = ''): WorkTab => ({
     id,
     collectionId,
-    view: { search: '', scrollTop: 0 }
+    view: { search, scrollTop: 0 }
   })
 
+  /** The last tab keeps a "test" search, which shows hidden collection cards and the hidden project count. */
   let workTabs = $state<WorkTab[]>([
     createWorkTab('tab-1', 'bug-triage'),
     createWorkTab('tab-2', 'code-review'),
     createWorkTab('tab-3', 'schema-migrations'),
     createWorkTab('tab-4', 'release-notes'),
-    createWorkTab('tab-5', null)
+    createWorkTab('tab-5', null),
+    createWorkTab('tab-6', null, 'test')
   ])
   /** Suffix that keeps the IDs of tabs added from the New Tab button unique; starts at the seeded tab count. */
-  let addedTabCount = 5
+  let addedTabCount = 6
   /** Selected fixed screen ID or work tab ID. */
   let selectedId = $state('tab-5')
 
@@ -234,16 +229,21 @@
     return item.modifiedDaysAgo === null ? [countText] : [countText, formatModified(item.modifiedDaysAgo)]
   }
 
-  /** Projects whose names match keep every collection; others keep only matching collections and hide without any. */
-  const visibleProjects = $derived.by((): MockProject[] => {
-    const query = (selectedWorkTab?.view.search ?? '').trim().toLowerCase()
-    return projects.flatMap((project) => {
-      if (project.name.toLowerCase().includes(query)) return [project]
-      const collections = project.collections.filter((item) => item.name.toLowerCase().includes(query))
-      return collections.length > 0 ? [{ ...project, collections }] : []
+  /** Case-insensitive search text of the selected tab; empty matches everything. */
+  const normalizedQuery = $derived((selectedWorkTab?.view.search ?? '').trim().toLowerCase())
+  /** Projects whose names match keep every collection; others keep only matching collections, counting the rest as
+      hidden, and hide without any. */
+  const visibleProjects = $derived(
+    projects.flatMap((project): VisibleProject[] => {
+      if (project.name.toLowerCase().includes(normalizedQuery)) return [{ ...project, hiddenCollectionCount: 0 }]
+      const collections = project.collections.filter((item) => item.name.toLowerCase().includes(normalizedQuery))
+      return collections.length > 0
+        ? [{ ...project, collections, hiddenCollectionCount: project.collections.length - collections.length }]
+        : []
     })
-  })
-  const hasSearch = $derived(Boolean(selectedWorkTab?.view.search.trim()))
+  )
+  /** Projects the search hides entirely, counted after the last visible project. */
+  const hiddenProjectCount = $derived(projects.length - visibleProjects.length)
 
   // ---- Screens and work tabs ----
 
@@ -514,78 +514,110 @@
     sidebarExpanded = true
   }
 
-  /** Project whose New Collection menu is open; the menu is CSS-anchored to that project's trigger, like the live
-      dropdown, so it follows the trigger when the screen scrolls. */
-  let collectionMenu = $state<{ projectId: string } | null>(null)
-  let collectionMenuElement = $state<HTMLElement>()
-  /** Rendered menu size, which keeps the menu inside the viewport; starts at the live dropdown's fallback size. */
-  let collectionMenuWidthPx = $state(236)
-  let collectionMenuHeightPx = $state(336)
-  /** Keys that would scroll the background, which the open menu holds still. */
-  const menuScrollKeys = new Set(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'End', 'Home', 'PageDown', 'PageUp', ' '])
-  /** Mounted New Collection buttons by project ID, which the open menu watches. */
-  const collectionMenuTriggers: Record<string, HTMLElement> = {}
+  // ---- Create Collection dialog, mirroring CreatePromptCollectionDialog and PromptCollectionNameDialog ----
 
-  /** CSS anchor name of one project's New Collection button. */
-  const getCollectionMenuAnchor = (projectId: string): string => `--new-collection-${projectId}`
+  /** Collection types offered by the dialog's picker, with the icons their tiles use. */
+  const collectionTypeOptions: { id: CollectionKind; label: string; description: string; icon: ComponentType }[] = [
+    {
+      id: 'prompt',
+      label: 'Task Collection',
+      description:
+        'A task describes one piece of work. Refine it with the AI, run it, and mark it complete. Apply a template to add instructions for how the work should be done.',
+      icon: FileText
+    },
+    {
+      id: 'template',
+      label: 'Template Collection',
+      description:
+        'A template wraps a task to describe how the AI should do the work and respond to you, such as steps to follow or response rules like "be concise".',
+      icon: Layers
+    }
+  ]
 
-  /** Toggles a project's New Collection menu. */
-  const toggleCollectionMenu = (projectId: string) => {
-    collectionMenu = collectionMenu?.projectId === projectId ? null : { projectId }
+  /** Characters a collection's folder name cannot hold. */
+  // eslint-disable-next-line no-control-regex
+  const illegalNameCharacters = /[<>:"/\\|?*\x00-\x1f]/
+  /** Windows device names a collection's folder cannot use. */
+  const reservedNames = new Set([
+    'CON',
+    'PRN',
+    'AUX',
+    'NUL',
+    ...[1, 2, 3, 4, 5, 6, 7, 8, 9].flatMap((digit) => [`COM${digit}`, `LPT${digit}`])
+  ])
+
+  /** Folder name a collection saves under: its name without whitespace. */
+  const getFolderName = (name: string): string => name.replace(/\s+/g, '')
+
+  /** First rule a name breaks, worded like the live validation, including a folder name clash with another collection of
+      the same type in the project; null when the name is valid. */
+  const getCollectionNameError = (name: string, projectId: string, kind: CollectionKind): string | null => {
+    if (!name.trim()) return 'Collection name cannot be empty'
+    if (name.length > 100) return 'Collection name must be 100 characters or less'
+    if (illegalNameCharacters.test(name)) return 'Collection name contains illegal characters: < > : " / \\ | ? *'
+    const folderName = getFolderName(name).toLowerCase()
+    if (reservedNames.has(folderName.toUpperCase())) return 'This is a reserved system name and cannot be used'
+    if (name.startsWith('.') || name.endsWith('.')) return 'Collection name cannot start or end with dots'
+    const project = projects.find((candidate) => candidate.id === projectId)
+    const hasConflict = project?.collections.some(
+      (item) => item.kind === kind && getFolderName(item.name).toLowerCase() === folderName
+    )
+    return hasConflict ? 'A collection with this name already exists' : null
   }
 
-  /** Side effect: registers a project's New Collection button and closes its open menu when the button unmounts, such
-      as when a search hides its project, like the live dropdown trigger. */
-  const collectionMenuTrigger: Action<HTMLElement, string> = (node, projectId) => {
-    collectionMenuTriggers[projectId] = node
+  /** Project that receives the collection created from its New Collection button; null while the dialog is closed. */
+  let createCollectionProjectId = $state<string | null>(null)
+  /** Type chosen in the dialog's picker; each opening starts on Task. */
+  let createCollectionKind = $state<CollectionKind>('prompt')
+  let createCollectionName = $state('')
+  /** Validation messages wait until the name has been edited. */
+  let hasEditedCollectionName = $state(false)
+  /** Suffix that keeps the IDs of created collections unique. */
+  let createdCollectionCount = 0
+
+  /** Current name's validation error, which also disables the submit button. */
+  const createCollectionError = $derived(
+    createCollectionProjectId
+      ? getCollectionNameError(createCollectionName, createCollectionProjectId, createCollectionKind)
+      : null
+  )
+
+  /** Opens collection creation for one project with the Task type selected and an empty name. */
+  const openCreateCollectionDialog = (projectId: string) => {
+    createCollectionKind = 'prompt'
+    createCollectionName = ''
+    hasEditedCollectionName = false
+    createCollectionProjectId = projectId
+  }
+
+  const closeCreateCollectionDialog = () => {
+    createCollectionProjectId = null
+  }
+
+  /** Adds the trimmed name to the end of its project's collections, like the live create mutation, and closes. */
+  const submitCreateCollection = () => {
+    if (createCollectionError || !createCollectionProjectId) return
+    const project = projects.find((candidate) => candidate.id === createCollectionProjectId)!
+    createdCollectionCount += 1
+    project.collections.push(
+      collection(`created-${createdCollectionCount}`, createCollectionName.trim(), createCollectionKind, 0, null)
+    )
+    closeCreateCollectionDialog()
+  }
+
+  /** Side effect: shows the dialog as a native modal, which makes the screen behind it inert, focuses the name field,
+      and returns focus to the opening button when the dialog unmounts. */
+  const showModalDialog: Action<HTMLDialogElement> = (node) => {
+    const opener = document.activeElement as HTMLElement | null
+    node.showModal()
+    node.querySelector('input')?.focus()
     return {
       destroy() {
-        delete collectionMenuTriggers[projectId]
-        if (collectionMenu?.projectId === projectId) collectionMenu = null
+        node.close()
+        opener?.focus({ preventScroll: true })
       }
     }
   }
-
-  // Side effect: close the open New Collection menu on outside presses, Escape, or its button scrolling fully out of
-  // view, and hold the background still while it is open, like the live dropdown.
-  $effect(() => {
-    if (!collectionMenu) return
-    const trigger = collectionMenuTriggers[collectionMenu.projectId]
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target as Node
-      if (collectionMenuElement?.contains(target) || trigger?.contains(target)) return
-      collectionMenu = null
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        collectionMenu = null
-        return
-      }
-      // Space still activates a focused menu item; the other scroll keys stay with the menu.
-      const activatesMenuItem =
-        event.key === ' ' && event.target instanceof HTMLButtonElement && collectionMenuElement?.contains(event.target)
-      if (menuScrollKeys.has(event.key) && !activatesMenuItem) event.preventDefault()
-    }
-    const preventBackgroundScroll = (event: Event) => {
-      if (!collectionMenuElement?.contains(event.target as Node)) event.preventDefault()
-    }
-    /** Viewport and clipping ancestors both count, so a trigger scrolled out of view closes its menu. */
-    const triggerObserver = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) collectionMenu = null
-    })
-    if (trigger) triggerObserver.observe(trigger)
-    document.addEventListener('pointerdown', handlePointerDown, true)
-    document.addEventListener('keydown', handleKeyDown)
-    document.addEventListener('wheel', preventBackgroundScroll, { capture: true, passive: false })
-    document.addEventListener('touchmove', preventBackgroundScroll, { capture: true, passive: false })
-    return () => {
-      triggerObserver.disconnect()
-      document.removeEventListener('pointerdown', handlePointerDown, true)
-      document.removeEventListener('keydown', handleKeyDown)
-      document.removeEventListener('wheel', preventBackgroundScroll, { capture: true })
-      document.removeEventListener('touchmove', preventBackgroundScroll, { capture: true })
-    }
-  })
 
   // ---- Drag reordering ----
 
@@ -726,7 +758,8 @@
       getIds: () => getVisibleTiles().map((tile) => tile.id),
       getDropTarget: (clientX, clientY) => {
         const tiles = getVisibleTiles()
-        const slots = [...grid.children] as HTMLElement[]
+        /** Tile slots in display order, without the hidden-collections card that can follow them. */
+        const slots = [...grid.querySelectorAll<HTMLElement>(':scope > [data-tile-slot]')]
         const lastRect = slots[slots.length - 1].getBoundingClientRect()
         /** Empty cells after the last tile; past a full row the grid's end is a zero-width line at the row's end. */
         const emptyCellCount = (tileColumnCount - (tiles.length % tileColumnCount)) % tileColumnCount
@@ -1002,7 +1035,7 @@
                 <!-- The 38px left padding starts the text after the 16px icon and an 8px gap. -->
                 <span class="searchField">
                   <input
-                    class="searchInput text-sm leading-5"
+                    class="textInput text-sm leading-5"
                     type="text"
                     value={tab.view.search}
                     aria-label="Search projects and collections"
@@ -1027,6 +1060,7 @@
 
               <div data-project-list>
                 {#each visibleProjects as project (project.id)}
+                  {@const { hiddenCollectionCount } = project}
                   {@const projectDragging = reorderDrag?.kind === 'project' && reorderDrag.id === project.id}
                   <section class="projectSection" aria-label={project.name} data-project-id={project.id}>
                     {#if reorderDrag?.kind === 'project' && reorderDrag.target?.id === project.id}
@@ -1065,23 +1099,20 @@
                       <button
                         type="button"
                         class="mockButton mockButton--action text-sm leading-5"
-                        aria-haspopup="menu"
-                        aria-expanded={collectionMenu?.projectId === project.id}
-                        use:collectionMenuTrigger={project.id}
-                        style:anchor-name={getCollectionMenuAnchor(project.id)}
-                        onclick={() => toggleCollectionMenu(project.id)}
+                        onclick={() => openCreateCollectionDialog(project.id)}
                       >
                         <Plus size={16} aria-hidden="true" />
                         <span class="mockButtonLabel">New Collection</span>
                       </button>
                     </div>
 
+                    <!-- Equal rows keep the hidden-collections card as tall as a tile, even alone in its own row. -->
                     <div class="tileGrid" data-tile-grid>
                       {#each project.collections as item (item.id)}
                         {@const TileIcon = getCollectionIcon(item.kind)}
                         {@const detailParts = getDetailParts(item)}
                         {@const isOpen = openCollectionIds.includes(item.id)}
-                        <div class="tileSlot">
+                        <div class="tileSlot" data-tile-slot>
                           <button
                             type="button"
                             class="tile"
@@ -1128,13 +1159,30 @@
                           {/if}
                         </div>
                       {/each}
+                      {#if hiddenCollectionCount > 0}
+                        <!-- A non-interactive placeholder in the cell after the last tile, where the grid's end drop
+                             target already places a dropped tile after the last visible one. Its padding and gap line
+                             its icon and text up with a tile's. -->
+                        <div class="hiddenCollections">
+                          <span class="hiddenCollectionsIcon">
+                            <EyeOff size={20} aria-hidden="true" />
+                          </span>
+                          <span class="hiddenCollectionsText text-sm leading-5">
+                            {hiddenCollectionCount} {hiddenCollectionCount === 1 ? 'Collection' : 'Collections'} Hidden
+                          </span>
+                        </div>
+                      {/if}
                     </div>
                   </section>
                 {/each}
               </div>
 
-              {#if hasSearch && visibleProjects.length === 0}
+              {#if normalizedQuery && visibleProjects.length === 0}
                 <p class="newTabNoResults text-sm leading-5">No projects or collections match your search.</p>
+              {:else if hiddenProjectCount > 0}
+                <p class="newTabHiddenProjects text-sm leading-5">
+                  {hiddenProjectCount} {hiddenProjectCount === 1 ? 'Project' : 'Projects'} Hidden
+                </p>
               {/if}
             </div>
           </main>
@@ -1147,45 +1195,130 @@
     </div>
   </div>
 
-  {#if collectionMenu}
-    <!-- New Collection menu: an overlay card at least 300px wide, 4px below the trigger with right edges aligned, and
-         clamped inside the viewport by its measured size. Each row's detail fits on one line at that width. -->
-    <div
-      bind:this={collectionMenuElement}
-      bind:offsetWidth={collectionMenuWidthPx}
-      bind:offsetHeight={collectionMenuHeightPx}
-      class="dropdownLayer"
-      style:position-anchor={getCollectionMenuAnchor(collectionMenu.projectId)}
-      style:--menu-width={`${collectionMenuWidthPx}px`}
-      style:--menu-height={`${collectionMenuHeightPx}px`}
+  {#if createCollectionProjectId}
+    {@const nameError = hasEditedCollectionName ? createCollectionError : null}
+    <!-- Create Collection dialog: a native modal card centered over a dimmed backdrop. Escape and the Close and Cancel
+         buttons dismiss it; backdrop presses do not. -->
+    <dialog
+      class="dialogLayer"
+      aria-label="Create Collection"
+      use:showModalDialog
+      oncancel={(event) => {
+        event.preventDefault()
+        closeCreateCollectionDialog()
+      }}
     >
-      <div class="dropdownCard" role="menu" aria-label="New Collection">
-        <div class="dropdownItems">
-          {#each createCollectionItems as menuItem (menuItem.id)}
-            {@const ItemIcon = menuItem.icon}
-            <button
-              type="button"
-              class="dropdownItem"
-              role="menuitem"
-              onclick={() => {
-                collectionMenu = null
-              }}
-            >
-              <span class="dropdownItemIcon">
-                <ItemIcon size={20} aria-hidden="true" />
+      <div class="dialogSurface">
+        <div class="dialogHeader">
+          <span class="dialogHeaderIcon">
+            <FolderPlus size={24} aria-hidden="true" />
+          </span>
+          <div class="dialogHeaderText">
+            <div class="dialogTitle text-lg leading-7">Create Collection</div>
+            <span class="dialogSubtitle text-sm leading-5">Choose a type and name for the new collection.</span>
+          </div>
+          <button
+            type="button"
+            class="mockButton mockButton--close"
+            aria-label="Close"
+            onclick={closeCreateCollectionDialog}
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+        </div>
+
+        <div class="dialogSeparator" aria-hidden="true"></div>
+
+        <div class="dialogFields">
+          <div>
+            <div class="fieldHeading">
+              <div class="fieldTitle text-sm leading-5">Collection Type</div>
+              <span id="new-tab-mockup-type-help" class="fieldHelp text-sm leading-5">
+                Choose what the collection holds. The type can't be changed later.
               </span>
-              <span class="dropdownItemTextStack">
-                <!-- Menu titles keep the live menu's 18px line height instead of the default. -->
-                <span class="dropdownItemTitle text-sm leading-4.5">{menuItem.label}</span>
-                <span class="dropdownItemDetail text-xs leading-4" title={menuItem.detail}>
-                  <span class="dropdownItemDetailPart">{menuItem.detail}</span>
-                </span>
+            </div>
+            <!-- Stacked single-choice cards; each card carries its pressed state and the radio mark is decorative. -->
+            <div class="optionCards" role="group" aria-label="Collection Type" aria-describedby="new-tab-mockup-type-help">
+              {#each collectionTypeOptions as option (option.id)}
+                {@const OptionIcon = option.icon}
+                <button
+                  type="button"
+                  class="optionCard"
+                  aria-pressed={createCollectionKind === option.id}
+                  onclick={() => {
+                    createCollectionKind = option.id
+                  }}
+                >
+                  <OptionIcon class="optionCardIcon" size={18} aria-hidden="true" />
+                  <span class="optionCardText">
+                    <span class="optionCardLabel text-sm leading-5">{option.label}</span>
+                    <span class="optionCardDescription text-sm leading-5">{option.description}</span>
+                  </span>
+                  <span class="optionCardRadio" aria-hidden="true"></span>
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <div>
+            <div class="fieldHeading">
+              <div class="fieldTitleRow">
+                <div class="fieldTitle text-sm leading-5">Collection Name</div>
+                <span class="fieldHelp text-sm leading-5">*</span>
+              </div>
+              <span id="new-tab-mockup-name-help" class="fieldHelp text-sm leading-5">
+                Required. Names must be unique among collections of the same type.
               </span>
-            </button>
-          {/each}
+            </div>
+            <!-- The validation message floats below the field, outside the dialog's layout flow. -->
+            <div class="validationAnchor">
+              <input
+                class="textInput text-sm leading-5"
+                type="text"
+                placeholder="Name..."
+                value={createCollectionName}
+                aria-label="Collection Name"
+                aria-invalid={nameError ? 'true' : undefined}
+                aria-describedby="new-tab-mockup-name-help"
+                oninput={(event) => {
+                  createCollectionName = event.currentTarget.value
+                  hasEditedCollectionName = true
+                }}
+                onkeydown={(event) => {
+                  if (event.key === 'Enter') submitCreateCollection()
+                }}
+              />
+              {#if nameError}
+                <div class="validationMessage text-sm leading-5">
+                  <AlertCircle class="validationMessageIcon" size={16} aria-hidden="true" />
+                  {nameError}
+                </div>
+              {/if}
+            </div>
+          </div>
+        </div>
+
+        <div class="dialogSeparator" aria-hidden="true"></div>
+
+        <div class="dialogFooter">
+          <button
+            type="button"
+            class="mockButton mockButton--action mockButton--filled text-sm leading-5"
+            onclick={closeCreateCollectionDialog}
+          >
+            <span class="mockButtonLabel">Cancel</span>
+          </button>
+          <button
+            type="button"
+            class="mockButton mockButton--action mockButton--filled mockButton--accent text-sm leading-5"
+            disabled={Boolean(createCollectionError)}
+            onclick={submitCreateCollection}
+          >
+            <span class="mockButtonLabel">Create Collection</span>
+          </button>
         </div>
       </div>
-    </div>
+    </dialog>
   {/if}
 
   {#if reorderDrag}
@@ -1273,14 +1406,11 @@
   }
 
   .titlebar__screen:where(:enabled):is(:hover, :focus-visible)::before {
-    background: var(--ui-neutral-normal-surface);
-  }
-
-  .titlebar__screen[data-active='true']::before {
     background: var(--ui-neutral-emphasis-surface);
   }
 
-  .titlebar__screen[data-active='true']:hover::before {
+  /* Choosing the shown screen again does nothing, so its brighter fill stays the same while hovered. */
+  .titlebar__screen[data-active='true']::before {
     background: var(--ui-neutral-selection-surface);
   }
 
@@ -1340,14 +1470,11 @@
   }
 
   .titlebar__tab:is(:hover, :focus-within)::before {
-    background: var(--ui-neutral-normal-surface);
-  }
-
-  .titlebar__tab[data-selected='true']::before {
     background: var(--ui-neutral-emphasis-surface);
   }
 
-  .titlebar__tab[data-selected='true']:hover::before {
+  /* Choosing the selected tab again does nothing, so its brighter fill stays the same while hovered. */
+  .titlebar__tab[data-selected='true']::before {
     background: var(--ui-neutral-selection-surface);
   }
 
@@ -1356,7 +1483,7 @@
     z-index: 1;
   }
 
-  /* The dragged tab keeps the selected hover fill, layered on the chrome surface so the tabs beneath stay hidden. */
+  /* The dragged tab keeps the selected fill, layered on the chrome surface so the tabs beneath stay hidden. */
   .titlebar__tab[data-selected='true'][data-dragging='true']::before {
     background: linear-gradient(var(--ui-neutral-selection-surface), var(--ui-neutral-selection-surface)),
       var(--app-chrome-surface);
@@ -1726,10 +1853,44 @@
     flex: 0 0 auto;
   }
 
-  /* Dropdown triggers stay highlighted while their menu is open. */
-  .mockButton[aria-expanded='true'] {
-    background-color: var(--ui-neutral-action-hover-fill);
+  .mockButton:disabled {
+    cursor: default;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* Filled actions keep a white foreground in both idle and interacted states. */
+  .mockButton--filled {
+    background-color: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
+  }
+
+  .mockButton--filled:is(:hover, :focus-visible) {
+    background-color: var(--ui-neutral-action-hover-fill);
+  }
+
+  .mockButton--accent {
+    background-color: var(--ui-accent-action-fill);
+    border-color: var(--ui-accent-muted-border);
+  }
+
+  .mockButton--accent:is(:hover, :focus-visible) {
+    background-color: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+  }
+
+  /* The dialog's 36px ghost close button keeps the stronger icon-button hover fill. */
+  .mockButton--close {
+    align-self: flex-start;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .mockButton--close:is(:hover, :focus-visible) {
+    background-color: var(--ui-neutral-action-fill);
   }
 
   .mockButton--action {
@@ -1809,11 +1970,12 @@
     min-width: 0;
   }
 
-  .searchInput {
+  /* Text field shared by the search bar and the Create Collection name field. */
+  .textInput {
     width: 100%;
     min-width: 0;
     height: 40px;
-    padding: 4px 14px 4px 38px;
+    padding: 4px 14px;
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
     outline: none;
@@ -1827,18 +1989,31 @@
       border-color var(--ui-animation-duration-standard);
   }
 
-  .searchInput::placeholder {
+  .textInput::placeholder {
     color: var(--ui-muted-text);
   }
 
-  .searchInput::selection {
+  .textInput::selection {
     background-color: var(--ui-neutral-selection-surface);
     color: var(--ui-normal-text);
   }
 
-  .searchInput:focus-visible {
+  .textInput:focus-visible {
     border-color: var(--ui-neutral-focus-border);
     box-shadow: var(--cthulhu-ui-shadow-focus);
+  }
+
+  .textInput[aria-invalid='true'] {
+    border-color: var(--ui-danger-strong-border);
+  }
+
+  .textInput[aria-invalid='true']:focus-visible {
+    box-shadow: var(--cthulhu-ui-shadow-focus-danger);
+  }
+
+  /* The search text starts after the 16px icon and an 8px gap. */
+  .searchField .textInput {
+    padding-left: 38px;
   }
 
   /* The icon sits at the text's usual 14px inset past the 1px border, and brightens while the field has focus. */
@@ -1870,7 +2045,8 @@
     color: var(--ui-muted-icon-glyph);
   }
 
-  .newTabNoResults {
+  .newTabNoResults,
+  .newTabHiddenProjects {
     margin-top: 22px;
     color: var(--ui-muted-text);
   }
@@ -1996,6 +2172,7 @@
   .tileGrid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
     gap: 8px;
   }
 
@@ -2118,6 +2295,36 @@
     background-color: var(--ui-success-normal-text);
   }
 
+  /* Dashed placeholder counting the collections a search hides; its border, padding, and 34px icon cell match a
+     tile's. */
+  .hiddenCollections {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+    border: 1px dashed var(--ui-neutral-muted-border);
+    border-radius: var(--cthulhu-ui-radius-card);
+    color: var(--ui-muted-text);
+  }
+
+  .hiddenCollectionsIcon {
+    display: flex;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    color: var(--ui-muted-icon-glyph);
+  }
+
+  .hiddenCollectionsText {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   /* ---- Tile drop indicator: a tile-high chevron line centered in the 8px gap left of a tile or after the last ---- */
 
   .tileDropIndicator {
@@ -2154,120 +2361,252 @@
     stroke: var(--ui-muted-icon-glyph);
   }
 
-  /* ---- New Collection menu, copied from DropdownPopupCore and DropdownPopupMoreOptions ---- */
+  /* ---- Create Collection dialog, copied from Popup, Dialog, OptionCardSelector, and FloatingValidationMessage ---- */
 
-  /* Below-trigger right alignment: the menu grows with a wider trigger, hangs 4px below it, and stays 16px inside the
-     viewport's sides and top and 8px above its bottom. */
-  .dropdownLayer {
+  /* Full-window native modal layer that centers the card 16px inside the viewport. */
+  .dialogLayer {
     position: fixed;
-    top: clamp(16px, calc(anchor(bottom) + 4px), calc(100vh - var(--menu-height) - 8px));
-    left: clamp(16px, calc(anchor(right) - var(--menu-width)), calc(100vw - var(--menu-width) - 16px));
-    width: max(300px, anchor-size(width));
-    max-height: calc(100vh - 32px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    z-index: var(--z-popup);
-    border-radius: var(--cthulhu-ui-radius-card);
-    box-shadow: 0 0 12px var(--ui-shadow-raised);
+    inset: 0;
+    z-index: var(--z-modal);
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 16px;
+    border: 0;
+    background: var(--ui-ghost-surface);
     color: var(--ui-normal-text);
   }
 
-  /* Overlay card surface; the layer's shadow replaces the card's own. */
-  .dropdownCard {
+  .dialogLayer[open] {
+    display: flex;
+  }
+
+  .dialogLayer::backdrop {
+    background: var(--ui-card-normal-shadow);
+  }
+
+  /* Overlay card: header, separator, fields, separator, and footer. The 18px top padding is for a header with a
+     subtitle. */
+  .dialogSurface {
+    display: flex;
+    flex-direction: column;
     width: 100%;
+    max-width: 660px;
     min-width: 0;
-    padding: 4px;
-    overflow: hidden;
+    max-height: calc(100vh - 32px);
+    padding: 18px 0 16px;
     border: 1px solid var(--ui-card-normal-border);
     border-radius: var(--cthulhu-ui-radius-card);
     background: var(--ui-card-overlay-surface);
+    box-shadow: 0 8px 12px var(--ui-card-normal-shadow);
   }
 
-  .dropdownItems {
-    display: grid;
-    gap: 1px;
-  }
-
-  /* Two-line rows: a 28px icon cell beside a title and its detail. */
-  .dropdownItem {
-    display: grid;
-    grid-template-columns: 28px minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    min-height: 50px;
-    padding: 6px 8px;
-    border-radius: var(--cthulhu-ui-radius-control);
-    color: var(--ui-hoverable-text);
-    text-align: left;
-    cursor: pointer;
-    transition:
-      background-color var(--ui-animation-duration-standard) ease,
-      color var(--ui-animation-duration-standard) ease;
-  }
-
-  .dropdownItem:is(:hover, :focus-visible) {
-    background: var(--ui-neutral-action-fill);
-    color: var(--ui-normal-text);
-  }
-
-  .dropdownItem:focus-visible {
-    outline: 2px solid var(--ui-neutral-focus-border);
-    outline-offset: -2px;
-  }
-
-  .dropdownItemIcon {
+  /* A 40px icon cell beside the title and its wrapping subtitle, with the close button at the top right. */
+  .dialogHeader {
     display: flex;
     align-items: center;
+    column-gap: 12px;
+    min-width: 0;
+    padding: 0 20px 16px;
+  }
+
+  .dialogHeaderIcon {
+    display: flex;
+    flex: 0 0 40px;
+    align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--cthulhu-ui-radius-card);
+    width: 40px;
+    height: 40px;
     color: var(--ui-hoverable-icon-glyph);
-    transition: color var(--ui-animation-duration-standard) ease;
   }
 
-  .dropdownItem:is(:hover, :focus-visible) .dropdownItemIcon {
-    color: var(--ui-normal-text);
-  }
-
-  .dropdownItemTextStack {
-    display: grid;
+  .dialogHeaderText,
+  .fieldHeading {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
     gap: 2px;
     min-width: 0;
   }
 
-  .dropdownItemTitle {
-    min-width: 0;
+  .dialogTitle {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: var(--font-weight-semibold);
   }
 
-  /* The detail brightens with its row on hover and focus. */
-  .dropdownItemDetail {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-    overflow: hidden;
-    color: var(--ui-secondary-text);
-    transition: color var(--ui-animation-duration-standard) ease;
+  .dialogSubtitle,
+  .fieldHelp {
+    overflow-wrap: anywhere;
+    color: var(--ui-muted-text);
   }
 
-  .dropdownItem:is(:hover, :focus-visible) .dropdownItemDetail {
+  .dialogSeparator {
+    flex: none;
+    border-top: 1px solid var(--ui-neutral-muted-border);
+  }
+
+  /* Fields sit 32px from the card's sides: the dialog body's 16px inset plus the fields' own 16px padding. */
+  .dialogFields {
+    display: grid;
+    gap: 17px;
+    min-width: 0;
+    padding: 16px 32px;
+  }
+
+  .fieldHeading {
+    margin-bottom: 7px;
+  }
+
+  .fieldTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .fieldTitle {
+    font-weight: var(--font-weight-semibold);
     color: var(--ui-normal-text);
   }
 
-  .dropdownItemDetailPart {
+  .dialogFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+    padding: 16px 16px 0;
+  }
+
+  /* Stacked single-choice cards: icon, text stack, and radio mark in one row, aligned with the label's line. */
+  .optionCards {
+    display: grid;
+    gap: 8px;
+  }
+
+  .optionCard {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) 17px;
+    align-items: start;
+    column-gap: 12px;
+    min-width: 0;
+    padding: 11px 14px 12px 12px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: var(--cthulhu-ui-radius-control);
+    color: var(--ui-hoverable-text);
+    text-align: left;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out,
+      color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .optionCard:is(:hover, :focus-visible) {
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    border-color: var(--ui-neutral-hover-border);
+    color: var(--ui-normal-text);
+  }
+
+  .optionCard:focus-visible {
+    outline: 2px solid var(--ui-neutral-focus-border);
+    outline-offset: 2px;
+  }
+
+  /* Choosing the selected option again does nothing, so it keeps the brighter accent colors while hovered. */
+  .optionCard[aria-pressed='true'] {
+    background: var(--ui-accent-action-hover-fill);
+    border-color: var(--ui-accent-muted-hover-border);
+    color: var(--ui-normal-text);
+  }
+
+  .optionCard :global(.optionCardIcon) {
+    margin-top: 1px;
+    color: var(--ui-hoverable-icon-glyph);
+  }
+
+  .optionCard:is(:hover, :focus-visible, [aria-pressed='true']) :global(.optionCardIcon) {
+    color: var(--ui-normal-text);
+  }
+
+  .optionCardText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .optionCardLabel {
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .optionCardDescription {
+    color: var(--ui-secondary-text);
+    /* Avoids leaving a single word on a description's last line. */
+    text-wrap: pretty;
+    transition: color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .optionCard:is(:hover, :focus-visible, [aria-pressed='true']) .optionCardDescription {
+    color: var(--ui-hoverable-text);
+  }
+
+  /* Decorative 17px radio mark whose white center shows on the selected card. */
+  .optionCardRadio {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    border: 1px solid var(--ui-neutral-normal-border);
+    border-radius: 50%;
+  }
+
+  .optionCardRadio::after {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    content: '';
+  }
+
+  .optionCard[aria-pressed='true'] .optionCardRadio {
+    border-color: var(--ui-accent-normal-border);
+  }
+
+  .optionCard[aria-pressed='true'] .optionCardRadio::after {
+    background: var(--ui-normal-text);
+  }
+
+  .validationAnchor {
+    position: relative;
+  }
+
+  /* Danger row floating 2px below the field, tinted toward the danger border. */
+  .validationMessage {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: var(--z-overlay);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    margin-top: 2px;
+    padding: 0 12px;
+    border-radius: var(--cthulhu-ui-radius-control);
+    background: color-mix(in oklch, var(--ui-card-solid-surface) 76%, var(--ui-danger-strong-border));
+    box-shadow: 0 8px 18px var(--ui-card-normal-shadow);
     white-space: nowrap;
+    color: var(--ui-normal-text);
+  }
+
+  .validationMessage :global(.validationMessageIcon) {
+    flex: none;
+    color: var(--ui-danger-icon-glyph);
   }
 
   /* ---- Drag ghost ---- */
