@@ -28,21 +28,30 @@
     onCreated?: (promptCollectionId: string) => void
   }>()
 
-  /** Collection types offered by the picker, with the icons their New Tab tiles use. */
+  /** Collection types offered by the side-by-side picker, with the icons their New Tab tiles use and the bullet points
+      listed under each card's header. */
   const collectionTypeOptions: OptionCardSelectorItem<PromptCollectionKind>[] = [
     {
       id: 'prompt',
       label: 'Task Collection',
-      description:
-        'A task describes one piece of work. Refine it with the AI, run it, and mark it complete. Apply a template to add instructions for how the work should be done.',
+      bullets: [
+        'Describes one piece of work',
+        'Refine it with the AI, then run it',
+        "Mark it complete when it's done",
+        'Apply a template to guide the work'
+      ],
       icon: FileText,
       testId: 'create-prompt-collection-type-prompt'
     },
     {
       id: 'template',
       label: 'Template Collection',
-      description:
-        'A template wraps a task to describe how the AI should do the work and respond to you, such as steps to follow or response rules like "be concise".',
+      bullets: [
+        'Wraps a task when applied to it',
+        'Guides how the AI does the work',
+        'Lists steps for the AI to follow',
+        'Sets response rules, like "be concise"'
+      ],
       icon: Layers,
       testId: 'create-prompt-collection-type-template'
     }
@@ -88,7 +97,7 @@
   promptCollections={promptCollections.filter((collection) => collection.kind === kind)}
   {isPromptCollectionListLoading}
   title="Create Collection"
-  subtitle="Choose a type and name for the new collection."
+  subtitle="Choose a name and type for the new collection."
   submitText="Create Collection"
   submittingText="Creating..."
   submitTestId="create-prompt-collection-button"
@@ -99,7 +108,7 @@
   class="max-w-[660px]"
   onsubmit={handleCreateCollection}
 >
-  {#snippet leadingFields()}
+  {#snippet trailingFields()}
     <div data-testid="create-prompt-collection-type-field">
       <TitleSubtitleStack class="mb-[7px]">
         <Title title="Collection Type" variant="small" />

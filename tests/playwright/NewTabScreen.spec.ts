@@ -369,25 +369,31 @@ describe('New Tab Screen', () => {
     const createButton = dialog.getByTestId('create-prompt-collection-button')
     const nameError = dialog.getByTestId('create-prompt-collection-name-error')
 
-    // The type picker is the first field, with full-width Task and Template cards stacked, Task selected, and the name
-    // focused.
+    // The focused name field comes first, and the type picker below it shows the Task and Template cards side by side
+    // at equal sizes across the field, each listing its bullets under its label. Task is selected with the accent fill
+    // and border.
     await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
     await expect(dialog.getByTestId('create-prompt-collection-type-selector').getByRole('button')).toHaveText([
-      /Task Collection\s+A task describes one piece of work\./,
-      /Template Collection\s+A template wraps a task/
+      /Task Collection\s*Describes one piece of work.*Apply a template to guide the work/,
+      /Template Collection\s*Wraps a task when applied to it.*Sets response rules, like "be concise"/
     ])
     const typeFieldBox = (await dialog.getByTestId('create-prompt-collection-type-field').boundingBox())!
     const nameFieldBox = (await dialog.getByTestId('prompt-collection-name-field').boundingBox())!
-    expect(typeFieldBox.y + typeFieldBox.height).toBeLessThanOrEqual(nameFieldBox.y)
+    expect(nameFieldBox.y + nameFieldBox.height).toBeLessThanOrEqual(typeFieldBox.y)
     const taskBox = (await taskOption.boundingBox())!
     const templateBox = (await templateOption.boundingBox())!
-    for (const box of [taskBox, templateBox]) {
-      expect(Math.abs(box.x - typeFieldBox.x)).toBeLessThanOrEqual(1)
-      expect(Math.abs(box.width - typeFieldBox.width)).toBeLessThanOrEqual(1)
-    }
-    expect(templateBox.y).toBeGreaterThan(taskBox.y + taskBox.height)
+    expect(Math.abs(taskBox.x - typeFieldBox.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.x - (taskBox.x + taskBox.width + 12))).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.x + templateBox.width - (typeFieldBox.x + typeFieldBox.width))).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.width - taskBox.width)).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.y - taskBox.y)).toBeLessThanOrEqual(1)
+    expect(Math.abs(templateBox.height - taskBox.height)).toBeLessThanOrEqual(1)
     await expect(taskOption).toHaveAttribute('aria-pressed', 'true')
     await expect(templateOption).toHaveAttribute('aria-pressed', 'false')
+    await expect(taskOption).toHaveCSS('background-color',
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-action-hover-fill'))
+    await expect(taskOption).toHaveCSS('border-top-color',
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-muted-hover-border'))
     await expect(nameInput).toBeFocused()
 
     // A template collection's name must be unique among this project's template collections, and switching the type

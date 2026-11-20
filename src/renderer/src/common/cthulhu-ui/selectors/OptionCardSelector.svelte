@@ -1,11 +1,11 @@
 <script module lang="ts">
   import type { ComponentType } from 'svelte'
 
-  /** One full-width choice: an icon, a label, and a wrapping description. */
+  /** One choice: a header with an icon and label above a short bullet list. */
   export type OptionCardSelectorItem<Id extends string = string> = {
     id: Id
     label: string
-    description: string
+    bullets: readonly string[]
     icon: ComponentType
     testId?: string
   }
@@ -30,9 +30,10 @@
   let { label, items, selectedId, ariaDescribedby, class: className, testId, onselect }: Props = $props()
 </script>
 
-<!-- Stacked single-choice cards; each card button carries its pressed state and the radio mark is decorative. -->
+<!-- Equal-width single-choice cards side by side; each card button carries its pressed state and the radio mark is
+     decorative. -->
 <div
-  class={mergeClasses('cthulhuUiOptionCardSelector grid gap-2', className)}
+  class={mergeClasses('cthulhuUiOptionCardSelector grid grid-flow-col auto-cols-fr gap-3', className)}
   role="group"
   aria-label={label}
   aria-describedby={ariaDescribedby}
@@ -47,28 +48,30 @@
       data-testid={item.testId}
       onclick={() => onselect?.(item.id)}
     >
-      <ItemIcon class="cthulhuUiOptionCardSelectorIcon" size={18} aria-hidden="true" />
-      <span class="cthulhuUiOptionCardSelectorText">
+      <span class="cthulhuUiOptionCardSelectorHeader">
+        <ItemIcon class="cthulhuUiOptionCardSelectorIcon" size={20} aria-hidden="true" />
         <span class="cthulhuUiOptionCardSelectorLabel text-sm leading-5">{item.label}</span>
-        <span class="cthulhuUiOptionCardSelectorDescription text-sm">{item.description}</span>
+        <SelectionIndicator control="radio" checked={selectedId === item.id} />
       </span>
-      <SelectionIndicator class="cthulhuUiOptionCardSelectorIndicator" control="radio" checked={selectedId === item.id} />
+      <span class="cthulhuUiOptionCardSelectorBullets">
+        {#each item.bullets as bullet (bullet)}
+          <span class="cthulhuUiOptionCardSelectorBullet text-sm leading-5">{bullet}</span>
+        {/each}
+      </span>
     </button>
   {/each}
 </div>
 
 <style>
-  /* Icon, text stack, and radio mark sit in one full-width row; the icon and mark align with the label's line. */
+  /* Grid rows stretch the cards to equal heights: a header row with the icon, label, and radio mark sits above a
+     divider and the bullet list. */
   .cthulhuUiOptionCardSelectorOption {
-    align-items: start;
     border: 1px solid var(--ui-neutral-normal-border);
     border-radius: var(--cthulhu-ui-radius-control);
     color: var(--ui-hoverable-text);
-    column-gap: 12px;
-    display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) 17px;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
-    padding: 11px 14px 12px 12px;
     text-align: left;
     transition:
       background-color var(--ui-animation-duration-fast) ease-out,
@@ -94,9 +97,28 @@
     color: var(--ui-normal-text);
   }
 
+  .cthulhuUiOptionCardSelectorHeader {
+    align-items: center;
+    border-bottom: 1px solid var(--ui-neutral-muted-border);
+    display: flex;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px 12px 11px 14px;
+    transition: border-color var(--ui-animation-duration-fast) ease-out;
+  }
+
+  .cthulhuUiOptionCardSelectorOption:where(:hover, :focus-visible) .cthulhuUiOptionCardSelectorHeader {
+    border-bottom-color: var(--ui-neutral-normal-border);
+  }
+
+  /* The divider takes the card's border color so it blends into the selected card. */
+  .cthulhuUiOptionCardSelectorOption[aria-pressed='true'] .cthulhuUiOptionCardSelectorHeader {
+    border-bottom-color: var(--ui-accent-muted-hover-border);
+  }
+
   .cthulhuUiOptionCardSelectorOption :global(.cthulhuUiOptionCardSelectorIcon) {
     color: var(--ui-hoverable-icon-glyph);
-    margin-top: 1px;
+    flex: none;
   }
 
   .cthulhuUiOptionCardSelectorOption:where(:hover, :focus-visible, [aria-pressed='true'])
@@ -104,30 +126,47 @@
     color: var(--ui-normal-text);
   }
 
-  .cthulhuUiOptionCardSelectorOption :global(.cthulhuUiOptionCardSelectorIndicator) {
-    margin-top: 2px;
+  .cthulhuUiOptionCardSelectorLabel {
+    flex: 1 1 auto;
+    font-weight: var(--font-weight-semibold);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
-  .cthulhuUiOptionCardSelectorText {
+  .cthulhuUiOptionCardSelectorBullets {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 6px;
     min-width: 0;
+    padding: 11px 14px 13px;
   }
 
-  .cthulhuUiOptionCardSelectorLabel {
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .cthulhuUiOptionCardSelectorDescription {
-    color: var(--ui-secondary-text);
-    /* Avoids leaving a single word on a description's last line. */
+  /* Each bullet hangs its wrapped lines past a 4px dot centered on the first line. */
+  .cthulhuUiOptionCardSelectorBullet {
+    padding-left: 14px;
+    position: relative;
     text-wrap: pretty;
-    transition: color var(--ui-animation-duration-fast) ease-out;
   }
 
-  .cthulhuUiOptionCardSelectorOption:where(:hover, :focus-visible, [aria-pressed='true'])
-    .cthulhuUiOptionCardSelectorDescription {
-    color: var(--ui-hoverable-text);
+  .cthulhuUiOptionCardSelectorBullet::before {
+    background: var(--ui-muted-icon-glyph);
+    border-radius: 50%;
+    content: '';
+    height: 4px;
+    left: 1px;
+    position: absolute;
+    top: 8px;
+    transition: background-color var(--ui-animation-duration-fast) ease-out;
+    width: 4px;
+  }
+
+  .cthulhuUiOptionCardSelectorOption:where(:hover, :focus-visible) .cthulhuUiOptionCardSelectorBullet::before {
+    background: var(--ui-secondary-icon-glyph);
+  }
+
+  .cthulhuUiOptionCardSelectorOption[aria-pressed='true'] .cthulhuUiOptionCardSelectorBullet::before {
+    background: var(--ui-normal-text);
   }
 </style>

@@ -36,7 +36,7 @@
     duplicatePromptCollectionId = null,
     failureMessage,
     icon = FolderPlus,
-    leadingFields,
+    trailingFields,
     class: className,
     onsubmit
   } = $props<{
@@ -57,8 +57,8 @@
     duplicatePromptCollectionId?: string | null
     failureMessage: string
     icon?: ComponentType
-    /** Extra fields shown above the collection name field. */
-    leadingFields?: Snippet
+    /** Extra fields shown below the collection name field. */
+    trailingFields?: Snippet
     /** Dialog classes merged over the default width, such as a wider max width. */
     class?: string
     onsubmit: SubmitPromptCollectionName
@@ -173,7 +173,6 @@
   onsubmit={handleSubmit}
 >
   <div class="cthulhuPromptCollectionNameDialogFields grid min-w-0 gap-[17px] px-4 py-4">
-    {@render leadingFields?.()}
     <div data-testid="prompt-collection-name-field">
       <TitleSubtitleStack class="mb-[7px]">
         <div class="flex items-center gap-1">
@@ -206,6 +205,7 @@
         />
       </FloatingValidationMessage>
     </div>
+    {@render trailingFields?.()}
   </div>
 </Dialog>
 

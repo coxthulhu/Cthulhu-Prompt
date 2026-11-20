@@ -187,19 +187,24 @@
       tone: 'success'
     }
   ]
-  /** Option card samples pair each choice with a description long enough to wrap. */
+  /** Option card samples give the cards different bullet counts, and one bullet long enough to wrap, so the cards
+      show their equal heights and hanging bullet lines. */
   const optionCardSelectorItems: OptionCardSelectorItem<'tasks' | 'templates'>[] = [
     {
       id: 'tasks',
       label: 'Task Collection',
-      description: 'One-time prompts for individual pieces of work, refined with the AI and checked off when complete.',
+      bullets: [
+        'One-time prompts for individual pieces of work',
+        'Refined with the AI and checked off when they are complete',
+        'Guided by an applied template'
+      ],
       icon: FileText,
       testId: 'test-screen-option-card-tasks'
     },
     {
       id: 'templates',
       label: 'Template Collection',
-      description: 'Reusable instructions that wrap a task to describe how the AI should do the work and respond.',
+      bullets: ['Reusable instructions that wrap a task', 'Describe how the AI should work and respond'],
       icon: Layers,
       testId: 'test-screen-option-card-templates'
     }
