@@ -1,4 +1,4 @@
-import { detachWorkspace } from '../Persistence/sqlite/WorkspaceDatabase'
+import { detachWorkspace, renameWorkspace } from '../Persistence/sqlite/WorkspaceDatabase'
 import { ipcMain } from 'electron'
 import { data } from '../Data/Data'
 import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
@@ -9,7 +9,8 @@ import {
 import { createWorkspace } from '../Workspace/createWorkspace'
 import {
   parseCloseWorkspaceRequest,
-  parseCreateWorkspaceRequest
+  parseCreateWorkspaceRequest,
+  parseRenameWorkspaceRequest
 } from '../IpcFramework/IpcValidation'
 import { runMutationIpcRequest } from '../IpcFramework/IpcRequest'
 import { handleMainDomainMutation } from './DomainMutation'
@@ -25,6 +26,14 @@ export const setupWorkspaceMutationHandlers = (): void => {
         try { return createWorkspace(payload.workspaceName, payload.includeExamplePrompts) }
         catch (error) { return { success: false as const, error: error instanceof Error ? error.message : String(error) } }
       })
+  )
+
+  ipcMain.handle(
+    'rename-workspace',
+    (_, request: unknown) => runMutationIpcRequest(request, parseRenameWorkspaceRequest, async ({ payload }) => {
+      try { return { success: true as const, path: renameWorkspace(payload.workspaceId, payload.workspaceName) } }
+      catch (error) { return { success: false as const, error: error instanceof Error ? error.message : String(error) } }
+    })
   )
 
   ipcMain.handle(

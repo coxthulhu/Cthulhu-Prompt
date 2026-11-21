@@ -1,6 +1,7 @@
 import type {
   CloseWorkspacePayload,
-  CreateWorkspacePayload
+  CreateWorkspacePayload,
+  RenameWorkspacePayload
 } from '@shared/domain/workspace/Workspace'
 import type { IpcMutationActionResponse } from '@shared/ipc/IpcResult'
 import {
@@ -30,6 +31,13 @@ export const createWorkspace = async (
     'create-workspace',
     { workspaceName, includeExamplePrompts }
   )
+
+/** Finishes pending workspace edits before moving the open database on Windows. */
+export const renameWorkspace = async (workspaceId: string, workspaceName: string): Promise<{ path: string }> => {
+  await submitAllPacedUpdateTransactionsAndWait()
+  await waitForRevisionMutations()
+  return ipcInvokeWithPayload<{ path: string }, RenameWorkspacePayload>('rename-workspace', { workspaceId, workspaceName })
+}
 
 /** Flushes pending writes before releasing all workspace memory in both processes. */
 export const closeWorkspace = async (): Promise<void> => {

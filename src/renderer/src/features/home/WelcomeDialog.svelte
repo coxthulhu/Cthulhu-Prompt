@@ -1,27 +1,20 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ArrowRight, BookOpen, Check, FileText, FolderOpen, FolderPlus, Home, Layers, Zap } from 'lucide-svelte'
-  import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
+  import { ArrowRight, BookOpen, Check, FileText, Home, Layers, Zap } from 'lucide-svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import NumberedStepRow from '@renderer/common/cthulhu-ui/layout/NumberedStepRow.svelte'
   import { markWelcomeShown } from '@renderer/data/Mutations/UserPersistenceMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
 
-  /** Home actions and visibility for the introductory dialog. */
-  let { open = $bindable(true), oncreate, onopen } = $props<{
+  /** The shell supplies the available destination for the current workspace. */
+  let { open = $bindable(true), action, onopen } = $props<{
     open?: boolean
-    oncreate: () => void
+    action: string | null
     onopen: () => void
   }>()
 
-  /** Closes the introduction before opening the workspace creation form. */
-  const createWorkspace = (): void => {
-    open = false
-    oncreate()
-  }
-
-  /** Closes the introduction before opening the native workspace picker. */
-  const openWorkspace = (): void => {
+  /** Dismisses Welcome and opens the requested collection or New Tab. */
+  const openTab = (): void => {
     open = false
     onopen()
   }
@@ -32,26 +25,26 @@
   })
 </script>
 
-<!-- Four steps guide the user from creating a workspace to copying a prompt. -->
+<!-- Four steps guide the user from the starter workspace to copying a prompt. -->
 <Dialog
   bind:open
   icon={BookOpen}
   title="Welcome to Cthulhu Prompt"
   subtitle="Your first prompt, from workspace to clipboard."
-  submitText="Create Workspace"
-  submitIcon={FolderPlus}
-  submitTestId="welcome-create-workspace-button"
-  showCancelButton={false}
+  submitText={action ?? ''}
+  submitIcon={ArrowRight}
+  submitTestId="welcome-open-tab-button"
+  showSubmitButton={Boolean(action)}
   scrollBody
   class="w-full max-w-[800px]"
-  onsubmit={createWorkspace}
+  onsubmit={openTab}
 >
   <ol class="m-0 list-none px-3" data-testid="welcome-steps">
     <NumberedStepRow
       number={1}
       icon={Home}
-      title="Create a workspace"
-      description="Give your workspace a name. Your projects, prompts, and templates are saved together in a workspace database. Use the tabs at the top to switch between open collections."
+      title="Make the workspace yours"
+      description="You can rename the default workspace on Home, and rename its project and collections from a New Tab. Use the tabs at the top to switch between open collections."
     >
       {#snippet tip()}
         To open another prompt collection, click + (New Tab) and choose it from the list.
@@ -95,14 +88,6 @@
       {/snippet}
     </NumberedStepRow>
   </ol>
-  {#snippet secondaryActions()}
-    <Button
-      text="Open Workspace"
-      icon={FolderOpen}
-      testId="welcome-open-workspace-button"
-      onclick={openWorkspace}
-    />
-  {/snippet}
 </Dialog>
 
 <style>

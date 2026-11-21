@@ -16,6 +16,52 @@ const fixture = (path: string, name: string, id: string) => createWorkspaceWithC
 }], { settings: { workspaceId: id, workspaceName: name } })
 
 describe('Managed workspace databases', () => {
+  test('renames the default workspace file and restores its content and tabs at the new path', async ({ testSetup, electronApp }) => {
+    /** The real first-launch database is also the source of the example to edit. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
+    await mainWindow.getByRole('button', { name: 'Open My Prompts' }).click()
+    /** Workspace identity also owns the user's saved tab session. */
+    const workspaceIdentity = async () => (await runSqlQuery(electronApp, 'SELECT id FROM content.workspace')).rows![0].id
+    /** Renaming must retain the same file contents and private session owner. */
+    const originalId = await workspaceIdentity()
+    await mainWindow.getByTestId('prompt-title').first().fill('Keep this edit')
+    await mainWindow.getByTestId('new-tab-button').click()
+    await testHelpers.navigateToHomeScreen()
+    /** A second managed file exercises the same collision rules as Create. */
+    const other = '/ws/other'
+    await testSetup.setupFilesystem(fixture(other, 'Other Workspace', 'other'))
+    testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(other))
+    await testSetup.prepareWorkspaceFixture()
+    await mainWindow.getByTestId('rename-workspace-button').click()
+    /** Name is prefilled and remains editable after a validation error. */
+    const name = mainWindow.getByTestId('rename-workspace-name-input')
+    /** Rename submits the current workspace without recreating its contents. */
+    const submit = mainWindow.getByTestId('rename-workspace-submit-button')
+    await expect(name).toHaveValue('Default Workspace')
+    await name.fill('otherworkspace')
+    await expect(submit).toBeDisabled()
+    await name.press('Enter')
+    await expect(mainWindow.getByTestId('rename-workspace-name-error')).toContainText('already exists')
+    await expect(mainWindow.getByTestId('rename-workspace-submit-error')).toHaveCount(0)
+    await name.fill('Writing Desk')
+    await name.press('Enter')
+    /** The managed filename, SQLite identity, and remembered path must agree after rename. */
+    const profile = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+    /** Windows startup and Explorer both use this managed path. */
+    const renamed = join(profile, 'Workspaces', 'WritingDesk.cthulhuprompt')
+    await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(renamed)
+    await expect(mainWindow.getByTestId('home-primary-card')).toContainText('Writing Desk')
+    await expect.poll(async () => (await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(renamed)
+    expect((await readdir(join(profile, 'Workspaces'))).filter((file) => file.endsWith('.cthulhuprompt')).sort())
+      .toEqual(['OtherWorkspace.cthulhuprompt', 'WritingDesk.cthulhuprompt'])
+    await mainWindow.reload()
+    await expect(mainWindow.getByTestId('workspace-ready-path')).toHaveText(renamed)
+    expect(await workspaceIdentity()).toBe(originalId)
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates', 'New Tab'])
+    await mainWindow.getByRole('tab', { name: 'My Prompts', exact: true }).click()
+    await expect(mainWindow.getByTestId('prompt-title').first()).toHaveValue('Keep this edit')
+  })
+
   test('imports silently beside the active workspace, opens from the list, and reveals its SQLite file', async ({ testSetup, electronApp }) => {
     /** The mocked v8 workspace lives outside the managed directory. */
     const path = '/ws/legacy'
@@ -74,6 +120,28 @@ describe('Managed workspace databases', () => {
     await mainWindow.getByTestId('create-workspace-name-input').fill('importedwork')
     await expect(mainWindow.getByTestId('create-workspace-submit-button')).toBeDisabled()
     await expect(mainWindow.getByTestId('create-workspace-name-error')).toContainText('already exists')
+  })
+
+  test('keeps the original workspace open if remembering the renamed file fails', async ({ testSetup, electronApp }) => {
+    /** Simulate a disk write failure after Windows has moved the managed file. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
+    await mainWindow.getByRole('button', { name: 'Open My Prompts' }).click()
+    await testHelpers.navigateToHomeScreen()
+    /** Original path must remain usable after the transaction rolls back. */
+    const original = (await readUserPersistence(electronApp)).lastWorkspaceInfoPath
+    await runSqlStatement(electronApp, `CREATE TRIGGER fail_rename BEFORE INSERT ON workspace_state
+      WHEN NEW.state_type = 'application-machine' AND json_extract(NEW.data_json, '$.lastWorkspaceInfoPath') LIKE '%RenameRetry.cthulhuprompt'
+      BEGIN SELECT RAISE(ABORT, 'Rename write failed'); END`)
+    await mainWindow.getByTestId('rename-workspace-button').click()
+    await mainWindow.getByTestId('rename-workspace-name-input').fill('Rename Retry')
+    await mainWindow.getByTestId('rename-workspace-submit-button').click()
+    await expect(mainWindow.getByTestId('rename-workspace-submit-error')).toContainText('Rename write failed')
+    testSetup.removeRendererErrorsContaining('IPC invocation error')
+    expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(original)
+    expect((await runSqlQuery(electronApp, 'SELECT name FROM content.workspace')).rows).toEqual([{ name: 'Default Workspace' }])
+    await runSqlStatement(electronApp, 'DROP TRIGGER fail_rename')
+    await mainWindow.getByTestId('rename-workspace-submit-button').click()
+    await expect(mainWindow.getByTestId('workspace-ready-path')).toContainText('RenameRetry.cthulhuprompt')
   })
 
   test('migrates the remembered workspace once, retains its source, and opens the database on reload', async ({ testSetup, electronApp }) => {

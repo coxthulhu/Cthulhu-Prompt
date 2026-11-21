@@ -9,6 +9,7 @@ import type { Project } from '@shared/domain/workspace/Project'
 import { collectionEntryRef } from '@shared/domain/OrderContainer'
 import { SqliteDataAccess } from './SqliteDataAccess'
 import { WorkspaceStateDataAccess } from './WorkspaceStateDataAccess'
+import { UserPersistenceDataAccess } from './UserPersistenceDataAccess'
 import type { SqlitePersistenceLayer } from '../PersistenceTypes'
 
 /** Domain entities with independently editable records in a workspace file. */
@@ -41,16 +42,20 @@ export const workspacesDirectory = (): string => join(app.getPath('userData'), '
 export const isManagedWorkspacePath = (path: string): boolean =>
   dirname(resolve(path)).toLowerCase() === resolve(workspacesDirectory()).toLowerCase() && path.toLowerCase().endsWith('.cthulhuprompt')
 
-/** Reads display names and IDs directly from managed databases. */
-export const listWorkspaces = (): WorkspaceListEntry[] => {
+/** Lists managed files without opening their databases during first-launch detection. */
+export const listWorkspacePaths = (): string[] => {
   /** Only the active profile contributes entries to the catalog. */
   const directory = workspacesDirectory()
   if (!existsSync(directory)) return []
   return readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.cthulhuprompt'))
-    .map((entry) => {
-      /** Absolute filename passed back to Open and Explorer. */
-      const path = join(directory, entry.name)
+    .map((entry) => join(directory, entry.name))
+}
+
+/** Reads display names and IDs directly from managed databases. */
+export const listWorkspaces = (): WorkspaceListEntry[] =>
+  listWorkspacePaths()
+    .map((path) => {
       /** A read-only catalog lookup leaves the active attachment alone. */
       const db = new Database(path, { readonly: true, fileMustExist: true })
       try {
@@ -62,7 +67,6 @@ export const listWorkspaces = (): WorkspaceListEntry[] => {
       }
     })
     .sort((left, right) => left.name.localeCompare(right.name))
-}
 
 /** Persists public metadata and membership. Display ordering is owned by the main database. */
 const writeProjects = (db: Database.Database, schema: 'main' | 'content', projects: Project[]): void => {
@@ -141,6 +145,45 @@ export const attachWorkspace = (path: string): { id: string; name: string } => {
   activeDatabasePath = path
   if (db.pragma('content.user_version', { simple: true }) !== 1) throw new Error('Unsupported workspace database version')
   return db.prepare('SELECT id, name FROM content.workspace').get() as { id: string; name: string }
+}
+
+/** Moves the open database and commits its new label and remembered path together. */
+export const renameWorkspace = (workspaceId: string, workspaceName: string): string => {
+  /** Look up the source by identity so the caller cannot supply a filesystem path. */
+  const catalog = listWorkspaces()
+  /** The active workspace is the only file Home can rename. */
+  const current = catalog.find((entry) => entry.id === workspaceId)
+  if (!current || current.path !== activeDatabasePath) throw new Error('Workspace is not open')
+  /** Apply the creation rules while allowing a change in spacing or capitalization. */
+  const name = prepareWorkspaceName(workspaceName, catalog.filter((entry) => entry.id !== workspaceId))
+  if (name.error) throw new Error(name.error)
+  /** Destination follows the same filename convention as workspace creation. */
+  const destination = join(workspacesDirectory(), name.folderName + '.cthulhuprompt')
+  if (destination.toLowerCase() !== current.path.toLowerCase() && existsSync(destination)) {
+    throw new Error('A workspace with this name already exists')
+  }
+
+  // Release SQLite's Windows file handle before moving the database.
+  detachWorkspace()
+  /** Tracks which filename to restore if the move or SQLite transaction fails. */
+  let moved = false
+  try {
+    if (current.path !== destination) {
+      renameSync(current.path, destination)
+      moved = true
+    }
+    attachWorkspace(destination)
+    SqliteDataAccess.runTransaction(() => {
+      SqliteDataAccess.getDatabase().prepare('UPDATE content.workspace SET name = ? WHERE id = ?').run(name.displayName, workspaceId)
+      UserPersistenceDataAccess.updateUserPersistence({ ...UserPersistenceDataAccess.readUserPersistence(), lastWorkspaceInfoPath: destination })
+    })
+    return destination
+  } catch (error) {
+    detachWorkspace()
+    if (moved) renameSync(destination, current.path)
+    attachWorkspace(current.path)
+    throw error
+  }
 }
 
 /** Orders live identities using the user's saved positions and then their display directory names. */

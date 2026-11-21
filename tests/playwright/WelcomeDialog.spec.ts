@@ -1,9 +1,11 @@
 import { join } from 'node:path'
+import { readdir } from 'node:fs/promises'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import {
   readUserPersistence,
   readTabSession,
+  runSqlQuery,
   seedUserPersistence,
   seedWorkspaceUiState
 } from '../helpers/UserPersistenceHelpers'
@@ -12,7 +14,7 @@ import {
 const { test, describe, expect } = createPlaywrightTestSuite()
 
 describe('Welcome Dialog', () => {
-  test('records first display before dismissal and stays dismissed after reload', async ({
+  test('opens the seeded Default Workspace on first launch and records Welcome before dismissal', async ({
     electronApp,
     testSetup
   }) => {
@@ -22,19 +24,24 @@ describe('Welcome Dialog', () => {
     /** Visible introduction whose persistence must not depend on closing it. */
     const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
     await expect(welcome).toBeVisible()
+    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
+    expect((await runSqlQuery(electronApp, "SELECT COUNT(*) AS count FROM content.records WHERE kind = 'promptTemplate'")).rows)
+      .toEqual([{ count: 3 }])
     await expect(welcome.getByRole('heading', { level: 2 })).toHaveText([
-      'Create a workspace',
+      'Make the workspace yours',
       'Build a prompt template',
       'Add a prompt task',
       'Pick a template. Copy and go.'
     ])
-    await expect(welcome.getByRole('button', { name: 'Cancel', exact: true })).toHaveCount(0)
+    await expect(welcome.getByRole('button', { name: 'Open My Prompts' })).toBeVisible()
+    await expect(welcome.getByRole('button', { name: /workspace/i })).toHaveCount(0)
     await expect(welcome.locator('[data-testid="dialog-subtitle"]')).toHaveText(
       'Your first prompt, from workspace to clipboard.'
     )
     /** Walkthrough steps point first-time users to the controls and tabs they will see. */
     const steps = welcome.getByRole('listitem')
     await expect(steps).toHaveCount(4)
+    await expect(steps.nth(0)).toContainText('rename the default workspace on Home, and rename its project and collections')
     await expect(steps.nth(0)).toContainText('tabs at the top to switch between open collections')
     await expect(steps.nth(0)).toContainText('open another prompt collection, click + (New Tab)')
     await expect(steps.nth(1)).toContainText('Optional')
@@ -42,15 +49,32 @@ describe('Welcome Dialog', () => {
     await expect(steps.nth(2)).toContainText('My Prompts tab')
     await expect.poll(async () => (await readUserPersistence(electronApp)).hasShownWelcome).toBe(1)
     await expect(welcome).toBeVisible()
-    await welcome.getByRole('button', { name: 'Close', exact: true }).click()
+    /** Real profile path verifies the default went into the managed workspace folder. */
+    const profile = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+    expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBe(join(profile, 'Workspaces', 'DefaultWorkspace.cthulhuprompt'))
+    await welcome.getByRole('button', { name: 'Cancel', exact: true }).click()
     await expect(welcome).toHaveCount(0)
+    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
+    await expect(mainWindow.getByRole('tab', { name: 'My Prompts', exact: true })).toHaveAttribute('aria-selected', 'true')
+    await expect(mainWindow.getByTestId('prompt-title')).toHaveCount(3)
+    await mainWindow.getByTestId('prompt-title').first().fill('My first edit')
+    // Leaving the workspace flushes pending edits; opening it again checks persistence.
+    await mainWindow.getByTestId('nav-button-home').click()
+    await expect(mainWindow.getByTestId('home-primary-card')).toContainText('Default Workspace')
+    await mainWindow.getByTestId('close-workspace-button').click()
+    await expect(mainWindow.getByTestId('close-workspace-button')).toBeDisabled()
+    await expect.poll(async () => (await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBeNull()
     await mainWindow.reload()
     await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
     await expect(mainWindow.locator('[data-testid="startup-loading-overlay"]')).toHaveCount(0)
     await expect(welcome).toHaveCount(0)
+    await mainWindow.getByTestId('open-workspace-button').click()
+    await mainWindow.getByRole('dialog', { name: 'Open Workspace' }).getByRole('button', { name: 'Default Workspace', exact: true }).click()
+    await mainWindow.getByRole('tab', { name: 'My Prompts', exact: true }).click()
+    await expect(mainWindow.getByTestId('prompt-title').first()).toHaveValue('My first edit')
   })
 
-  test('restores an existing workspace to Home for Welcome and then resumes normal screen restoration', async ({
+  test('shows Welcome over the remembered workspace screen and preserves it on Cancel', async ({
     electronApp,
     testSetup
   }) => {
@@ -71,15 +95,15 @@ describe('Welcome Dialog', () => {
       selectedScreenData: null,
       promptCollectionViewEntries: []
     })
-    /** Startup must restore the workspace without immediately returning to Settings. */
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
-    /** Welcome over the restored Home screen. */
+    /** Startup restores the saved screen even when Welcome has never been shown. */
+    const { mainWindow } = await testSetup.setupAndStart({ firstLaunch: true })
+    /** Welcome over the restored Settings screen. */
     const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
     await expect(welcome).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="home-screen"]')).toBeVisible()
-    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toContainText(workspacePath.split('/').at(-1)! + '.cthulhuprompt')
-    await expect(mainWindow.locator('[data-testid="show-welcome-button"]')).toBeVisible()
+    await expect(mainWindow.getByTestId('settings-screen')).toBeVisible()
+    /** Only the remembered workspace should be present after automatic migration. */
     const profile = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+    expect((await readdir(join(profile, 'Workspaces'))).filter((file) => file.endsWith('.cthulhuprompt'))).toEqual(['welcome-existing.cthulhuprompt'])
     await expect.poll(async () => await readUserPersistence(electronApp)).toEqual({
       lastWorkspaceInfoPath: join(profile, 'Workspaces', 'welcome-existing.cthulhuprompt'),
       appSidebarWidthPx: 290,
@@ -87,8 +111,8 @@ describe('Welcome Dialog', () => {
       settingsCollapsedSectionIds: [],
       settingsScrollTopPx: 0,
     })
-    await welcome.getByRole('button', { name: 'Close', exact: true }).click()
-    await testHelpers.navigateToSettingsScreen()
+    await welcome.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(mainWindow.getByTestId('settings-screen')).toBeVisible()
     await expect.poll(async () => (await readTabSession(electronApp, workspaceId)).user?.selectedTabId).toBe('settings')
     await mainWindow.reload()
     await expect(mainWindow.locator('[data-testid="settings-screen"]')).toBeVisible()
@@ -107,60 +131,63 @@ describe('Welcome Dialog', () => {
     await expect(welcome).toBeVisible()
     await mainWindow.keyboard.press('Escape')
     await expect(welcome).toHaveCount(0)
+    // A returning profile with an empty catalog stays empty on a real application launch.
+    await mainWindow.getByTestId('open-workspace-button').click()
+    await expect(mainWindow.getByRole('dialog', { name: 'Open Workspace' })).toContainText('No workspaces available')
   })
 
-  test('closes before creating a workspace and completes the existing creation flow', async ({ testSetup }) => {
-    await testSetup.setupFilesystem({ '/ws/welcome-create': null })
-    await testSetup.setupFileDialog(['/ws/welcome-create'])
-    /** First-launch user proceeds directly from Welcome to workspace creation. */
+  test('opens My Prompts from Home and reopens its collection when the tab was closed', async ({ testSetup }) => {
+    /** New users start with both starter collections open. */
     const { mainWindow } = await testSetup.setupAndStart({ firstLaunch: true })
-    await mainWindow.locator('[data-testid="welcome-create-workspace-button"]').click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
-    await expect(mainWindow.getByRole('dialog', { name: 'Create Workspace', exact: true })).toBeVisible()
-    await mainWindow.fill('[data-testid="create-workspace-name-input"]', 'Welcome Workspace')
-    await mainWindow.click('[data-testid="create-workspace-submit-button"]')
-    // Creation from Welcome opens both collections and selects My Prompts.
-    await expect(mainWindow.getByTestId('work-tab').getByRole('tab')).toHaveText(['My Prompts', 'My Templates'])
-    await expect(mainWindow.getByTestId('work-tab').getByRole('tab').nth(0)).toHaveAttribute('aria-selected', 'true')
-    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
+    /** Primary action reused on first launch and when reopened from Home. */
+    const open = mainWindow.getByRole('button', { name: 'Open My Prompts', exact: true })
+    await open.click()
+    /** Work tab order distinguishes selection from opening a duplicate tab. */
+    const tabs = mainWindow.getByTestId('work-tab').getByRole('tab')
     await mainWindow.getByTestId('nav-button-home').click()
-    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toBeVisible()
-    await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
-    await expect(mainWindow.getByTestId('show-welcome-button')).toBeVisible()
+    await mainWindow.getByTestId('show-welcome-button').click()
+    await open.click()
+    await expect(tabs).toHaveText(['My Prompts', 'My Templates'])
+    await expect(tabs.first()).toHaveAttribute('aria-selected', 'true')
+    await mainWindow.getByTestId('work-tab-close').first().press('Enter')
+    await expect(tabs).toHaveText(['My Templates'])
+    await mainWindow.getByTestId('nav-button-home').click()
+    await mainWindow.getByTestId('show-welcome-button').click()
+    await open.click()
+    await expect(tabs).toHaveText(['My Templates', 'My Prompts'])
+    await expect(mainWindow.getByTestId('prompt-collection-header-collection')).toHaveText('My Prompts')
   })
 
-  test('keeps Welcome available before and after closing an existing workspace', async ({ testSetup }) => {
-    /** Existing workspace offered by the native file picker. */
+  test('leaves a populated catalog alone and opens a New Tab if My Prompts is absent', async ({ testSetup, electronApp }) => {
+    /** An existing managed workspace with no remembered selection. */
     const workspacePath = '/ws/welcome-open'
     await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
     testSetup.selectWorkspaceFixture(getWorkspaceInfoPath(workspacePath))
-    /** First-launch user chooses an existing workspace from Welcome. */
-    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
+    /** Import before first launch so the managed catalog is already populated. */
     const name = await testSetup.prepareWorkspaceFixture()
-    await mainWindow.getByTestId('welcome-open-workspace-button').click()
-    await mainWindow.getByRole('dialog', { name: 'Open Workspace' }).getByRole('button', { name, exact: true }).click()
+    /** Welcome can still be read with no workspace open. */
+    const { mainWindow, testHelpers } = await testSetup.setupAndStart({ firstLaunch: true })
+    /** Dialog shared by startup and Home. */
+    const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
+    await expect(welcome).toBeVisible()
+    await expect(welcome.getByTestId('welcome-open-tab-button')).toHaveCount(0)
+    await welcome.getByRole('button', { name: 'Cancel' }).click()
+    expect((await readUserPersistence(electronApp)).lastWorkspaceInfoPath).toBeNull()
+    await mainWindow.getByTestId('open-workspace-button').click()
+    /** The fixture must be visible before checking the populated catalog for an unwanted default. */
+    const picker = mainWindow.getByRole('dialog', { name: 'Open Workspace' })
+    await expect(picker.getByRole('button', { name, exact: true })).toBeVisible()
+    await expect(picker.getByRole('button', { name: 'Default Workspace' })).toHaveCount(0)
+    await picker.getByRole('button', { name, exact: true }).click()
     await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
     await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await testHelpers.navigateToHomeScreen()
     await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toContainText(workspacePath.split('/').at(-1)! + '.cthulhuprompt')
     await mainWindow.locator('[data-testid="show-welcome-button"]').click()
-    const welcome = mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })
-    await expect(welcome).toBeVisible()
-    await welcome.getByRole('button', { name: 'Close', exact: true }).click()
-    await testHelpers.clearWorkspaceViaUI()
-    await mainWindow.locator('[data-testid="show-welcome-button"]').click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toBeVisible()
-  })
-
-  test('stays closed when the workspace picker is canceled', async ({ testSetup }) => {
-    await testSetup.setupFileDialog([])
-    /** Canceling the native picker must not reopen the already dismissed Welcome dialog. */
-    const { mainWindow } = await testSetup.setupAndStart({ firstLaunch: true })
-    await mainWindow.getByTestId('welcome-open-workspace-button').click()
-    await mainWindow.getByRole('dialog', { name: 'Open Workspace' }).getByRole('button', { name: 'Cancel' }).click()
-    await expect(mainWindow.getByRole('dialog', { name: 'Welcome to Cthulhu Prompt', exact: true })).toHaveCount(0)
-    await expect(mainWindow.locator('[data-testid="open-workspace-button"]')).toBeEnabled()
-    await expect(mainWindow.locator('[data-testid="workspace-ready-path"]')).toHaveCount(0)
+    await welcome.getByRole('button', { name: 'Open New Tab' }).click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
+    await expect(mainWindow.getByTestId('work-tab')).toHaveCount(2)
+    await expect(mainWindow.getByTestId('work-tab').last()).toHaveAttribute('data-selected', 'true')
   })
 
   test('keeps content and actions reachable at the minimum window size', async ({ electronApp, testSetup }) => {
@@ -182,8 +209,8 @@ describe('Welcome Dialog', () => {
       return bounds.top >= -1 && bounds.bottom <= window.innerHeight + 1
     })).toBe(true)
     await expect(welcome.getByRole('button', { name: 'Close', exact: true })).toBeInViewport({ ratio: 1 })
-    await expect(mainWindow.locator('[data-testid="welcome-create-workspace-button"]')).toBeInViewport({ ratio: 1 })
-    await expect(mainWindow.locator('[data-testid="welcome-open-workspace-button"]')).toBeInViewport({ ratio: 1 })
+    await expect(welcome.getByRole('button', { name: 'Open My Prompts' })).toBeInViewport({ ratio: 1 })
+    await expect(welcome.getByRole('button', { name: 'Cancel' })).toBeInViewport({ ratio: 1 })
     /** Shared row columns must stay aligned when descriptions and tips wrap. */
     const rows = welcome.getByRole('listitem')
     await expect(rows).toHaveCount(4)
@@ -213,7 +240,7 @@ describe('Welcome Dialog', () => {
     })).toBe(true)
     await welcome.getByRole('heading', { name: 'Pick a template. Copy and go.', exact: true }).scrollIntoViewIfNeeded()
     await expect(welcome.getByRole('heading', { name: 'Pick a template. Copy and go.', exact: true })).toBeInViewport()
-    await expect(mainWindow.locator('[data-testid="welcome-create-workspace-button"]')).toBeInViewport({ ratio: 1 })
-    await expect(mainWindow.locator('[data-testid="welcome-open-workspace-button"]')).toBeInViewport({ ratio: 1 })
+    await expect(welcome.getByRole('button', { name: 'Open My Prompts' })).toBeInViewport({ ratio: 1 })
+    await expect(welcome.getByRole('button', { name: 'Cancel' })).toBeInViewport({ ratio: 1 })
   })
 })

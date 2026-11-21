@@ -8,6 +8,7 @@
     Import,
     Folders,
     LayoutGrid,
+    Pencil,
     Plus,
     X
   } from 'lucide-svelte'
@@ -22,18 +23,14 @@
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import type { WorkspaceListEntry } from '@shared/domain/workspace/Workspace'
   import { ipcInvoke } from '@renderer/data/IpcFramework/IpcInvoke'
-  import type {
-    WorkspaceCreationResult,
-    WorkspaceSelectionResult
-  } from '@renderer/features/workspace/types'
+  import type { WorkspaceSelectionResult } from '@renderer/features/workspace/types'
   import WorkspaceSummary from '@renderer/features/workspace/WorkspaceSummary.svelte'
-  import CreateWorkspaceDialog from './CreateWorkspaceDialog.svelte'
-  import WelcomeDialog from './WelcomeDialog.svelte'
+  import WorkspaceNameDialog from './WorkspaceNameDialog.svelte'
 
   const workspaceOpenErrorFallbackText = 'Failed to open workspace. Please try again.'
 
   let {
-    showWelcomeDialog = $bindable(false),
+    onShowWelcome,
     showWorkspaceOpenErrorDialog = $bindable(false),
     workspaceOpenErrorText = $bindable(workspaceOpenErrorFallbackText),
     workspacePath, workspaceName,
@@ -45,11 +42,12 @@
     onAddWorkTab,
     onWorkspaceSelect,
     onWorkspaceCreate,
+    onWorkspaceRename,
     onWorkspaceClear,
     onWorkflowBusy
   } = $props<{
-    /** Welcome visibility controlled by startup or the Welcome action. */
-    showWelcomeDialog?: boolean
+    /** Opens the same introduction presented over the first-launch collection. */
+    onShowWelcome: () => void
     /** Open-failure dialog visibility, also raised by the shell for double-clicked workspace files. */
     showWorkspaceOpenErrorDialog?: boolean
     /** Failure details shown by the open-failure dialog. */
@@ -68,7 +66,9 @@
     onWorkspaceCreate: (
       workspaceName: string,
       includeExamplePrompts: boolean
-    ) => Promise<WorkspaceCreationResult>
+    ) => Promise<WorkspaceSelectionResult>
+    /** Renames the current workspace and restores its session at the new path. */
+    onWorkspaceRename: (name: string) => Promise<WorkspaceSelectionResult>
     onWorkspaceClear: () => void
     /** Defers update notifications throughout native pickers and their follow-up loading/errors. */
     onWorkflowBusy: (busy: boolean) => void
@@ -82,13 +82,14 @@
   let showOpenDialog = $state(false)
   /** Identifies the action responsible for the current failure. */
   let errorTitle = $state('Failed to Open Workspace')
-  let showCreateWorkspaceDialog = $state(false)
+  /** A newly mounted form owns one Create or Rename draft. */
+  let nameDialog = $state<'create' | 'rename' | null>(null)
   /** Covers the native picker through the final workspace-selection result. */
   let isSelectingWorkspace = $state(false)
 
-  // Side effect: keep the shell informed across Welcome-to-picker/dialog transitions.
+  // Side effect: defer updater notifications while Home owns a picker or dialog.
   $effect(() => {
-    onWorkflowBusy(showWelcomeDialog || showCreateWorkspaceDialog ||
+    onWorkflowBusy(Boolean(nameDialog) ||
       showWorkspaceOpenErrorDialog || showOpenDialog || isSelectingWorkspace || isWorkspaceLoading)
   })
 
@@ -104,13 +105,13 @@
     showWorkspaceOpenErrorDialog = true
   }
 
-  /** Refreshes the catalog before opening either workspace dialog. */
-  const showCatalogDialog = async (dialog: 'open' | 'create') => {
+  /** Refreshes available names before opening the picker or a workspace name form. */
+  const showCatalogDialog = async (dialog: 'open' | 'create' | 'rename') => {
     isSelectingWorkspace = true
     try {
       workspaces = await ipcInvoke<WorkspaceListEntry[]>('list-workspaces')
       if (dialog === 'open') showOpenDialog = true
-      else showCreateWorkspaceDialog = true
+      else nameDialog = dialog
     } catch (error) { showWorkspaceOpenError(getErrorMessage(error)) }
     finally { isSelectingWorkspace = false }
   }
@@ -149,7 +150,7 @@
           variant={workspacePath ? 'neutral' : 'accent'}
           appearance={workspacePath ? 'outline' : 'filled'}
           testId="show-welcome-button"
-          onclick={() => (showWelcomeDialog = true)}
+          onclick={onShowWelcome}
         />
         <LinkButton
           href={githubIssuesUrl}
@@ -210,6 +211,8 @@
             />
             <Button testId="import-workspace-button" icon={Import} text="Import" appearance="outline"
               onclick={importWorkspace} disabled={isWorkspaceActionDisabled} />
+            <Button testId="rename-workspace-button" icon={Pencil} text="Rename" appearance="outline"
+              onclick={() => showCatalogDialog('rename')} disabled={!isWorkspaceReady || isWorkspaceActionDisabled} />
             <Button
               testId="close-workspace-button"
               icon={X}
@@ -247,14 +250,6 @@
     </div>
   </section>
 
-  {#if showWelcomeDialog}
-    <WelcomeDialog
-      bind:open={showWelcomeDialog}
-      oncreate={() => showCatalogDialog('create')}
-      onopen={() => showCatalogDialog('open')}
-    />
-  {/if}
-
   <Dialog bind:open={showOpenDialog} icon={FolderOpen} title="Open Workspace" submitText="" showSubmitButton={false}
     scrollBody class="w-full max-w-md">
     <div class="grid gap-2 p-4">
@@ -266,12 +261,16 @@
     </div>
   </Dialog>
 
-  <CreateWorkspaceDialog
-    {workspaces}
-    bind:open={showCreateWorkspaceDialog}
-    {isWorkspaceLoading}
-    {onWorkspaceCreate}
-  />
+  {#if nameDialog}
+    <WorkspaceNameDialog
+      mode={nameDialog}
+      initialName={nameDialog === 'rename' ? workspaceName : ''}
+      workspaces={nameDialog === 'rename' ? workspaces.filter((entry) => entry.path !== workspacePath) : workspaces}
+      {isWorkspaceLoading}
+      onsave={nameDialog === 'rename' ? onWorkspaceRename : onWorkspaceCreate}
+      onclose={() => { nameDialog = null }}
+    />
+  {/if}
 
   <ErrorDialog
     bind:open={showWorkspaceOpenErrorDialog}

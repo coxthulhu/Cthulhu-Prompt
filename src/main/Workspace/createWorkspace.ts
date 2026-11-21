@@ -2,7 +2,9 @@ import { rmSync } from 'node:fs'
 import { collectionEntryRef } from '@shared/domain/OrderContainer'
 import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
 import { createPromptStatusFolderLayouts, type PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
-import { emptyContents, publishWorkspace } from '../Persistence/sqlite/WorkspaceDatabase'
+import { emptyContents, listWorkspacePaths, publishWorkspace } from '../Persistence/sqlite/WorkspaceDatabase'
+import { UserPersistenceDataAccess } from '../Persistence/sqlite/UserPersistenceDataAccess'
+import type { UserPersistence } from '@shared/domain/user-persistence/UserPersistence'
 import { SqliteDataAccess } from '../Persistence/sqlite/SqliteDataAccess'
 import { randomUUID } from 'crypto'
 import { parseMarkdownFrontmatter } from '../Persistence/MarkdownFrontmatter'
@@ -49,7 +51,7 @@ const BUNDLED_TEMPLATE_SOURCES: Array<{
 const newId = (): string => compactGuid(randomUUID())
 
 /** Seeds both starter collections, optional examples, and the initial two-tab session. */
-export const createWorkspace = (workspaceName: string, examples: boolean) => {
+export const createWorkspace = (workspaceName: string, examples: boolean, firstLaunch?: UserPersistence) => {
   /** Build the initial shared records together before publishing the file. */
   const source = emptyContents(newId(), workspaceName)
   /** Give all bundled content the same creation and modification time. */
@@ -105,10 +107,22 @@ export const createWorkspace = (workspaceName: string, examples: boolean) => {
   /** Only initialize the session once the workspace can be opened. */
   const path = publishWorkspace(source)
   try {
-    SqliteDataAccess.runTransaction(() => writeTabSession({ ...createDefaultWorkspaceUiState(source.id), tabs, selectedTabId: tabs[0].id }))
+    SqliteDataAccess.runTransaction(() => {
+      writeTabSession({ ...createDefaultWorkspaceUiState(source.id), tabs, selectedTabId: tabs[0].id })
+      if (firstLaunch) UserPersistenceDataAccess.updateUserPersistence({ ...firstLaunch, lastWorkspaceInfoPath: path })
+    })
     return { success: true as const, path }
   } catch (error) {
     rmSync(path)
     throw error
+  }
+}
+
+/** Seeds a fresh profile before the renderer restores its remembered workspace and tabs. */
+export const createDefaultWorkspaceOnFirstLaunch = (): void => {
+  /** A returning user may have explicitly closed their last workspace. */
+  const preferences = UserPersistenceDataAccess.readUserPersistence()
+  if (!preferences.hasShownWelcome && !preferences.lastWorkspaceInfoPath && listWorkspacePaths().length === 0) {
+    createWorkspace('Default Workspace', true, preferences)
   }
 }

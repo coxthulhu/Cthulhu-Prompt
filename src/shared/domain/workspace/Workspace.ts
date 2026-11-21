@@ -41,6 +41,9 @@ export type CreateWorkspacePayload = {
   includeExamplePrompts: boolean
 }
 
+/** Identifies the open workspace and the new name for its managed database. */
+export type RenameWorkspacePayload = { workspaceId: string; workspaceName: string }
+
 export type CloseWorkspacePayload = Record<string, never>
 
 export type LoadWorkspaceByPathRequest = {

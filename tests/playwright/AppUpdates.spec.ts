@@ -198,7 +198,7 @@ describe('App updates', () => {
     expect((await controlUpdater(electronApp, { type: 'stats' })).installs).toBe(0)
   })
 
-  test('waits for startup overlay and the Welcome creation dialog before automatically opening', async ({ electronApp, testSetup }) => {
+  test('waits for startup restoration and Welcome dismissal before automatically opening', async ({ electronApp, testSetup }) => {
     /** Restoring a seeded workspace gives startup a real asynchronous loading gate. */
     const workspacePath = '/ws/update-startup'
     await testSetup.setupFilesystem(createWorkspaceWithCollections(workspacePath, []))
@@ -220,12 +220,8 @@ describe('App updates', () => {
     await expect(welcome).toBeVisible()
     await expect(mainWindow.getByTestId('startup-loading-overlay')).toHaveCount(0)
     await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
-    await welcome.getByTestId('welcome-create-workspace-button').click()
-    /** Follow-up dialog must not briefly expose the update popup between dialog transitions. */
-    const create = mainWindow.getByRole('dialog', { name: 'Create Workspace', exact: true })
-    await expect(create).toBeVisible()
-    await expect(mainWindow.getByTestId('app-updates-popup')).toHaveCount(0)
-    await create.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await welcome.getByRole('button', { name: 'Open New Tab' }).click()
+    await expect(mainWindow.getByTestId('new-tab-screen')).toBeVisible()
     await expect(mainWindow.getByTestId('app-updates-popup')).toBeVisible()
     await expect(mainWindow.getByTestId('update-latest-card')).toHaveAttribute('data-available', 'true')
     await expect(mainWindow.getByTestId('update-available-dot')).toBeVisible()

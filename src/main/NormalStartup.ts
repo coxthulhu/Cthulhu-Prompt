@@ -6,6 +6,7 @@ import { basename, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { setupWorkspaceDialogHandlers } from './workspaceDialog'
+import { createDefaultWorkspaceOnFirstLaunch } from './Workspace/createWorkspace'
 import { setupWorkspaceMutationHandlers } from './Mutations/WorkspaceMutations'
 import { setupPromptCollectionMutationHandlers } from './Mutations/PromptCollectionMutations'
 import { setupPromptMutationHandlers } from './Mutations/PromptMutations'
@@ -365,6 +366,7 @@ export function startupNormally(updateSource?: UpdateSource): void {
     setupWorkspaceDialogHandlers()
     // Side effect: create/open SQLite DB before renderer or IPC work begins.
     SqliteDataAccess.initializeDatabase()
+    createDefaultWorkspaceOnFirstLaunch()
     // Import legacy settings before hydrating the SQLite singleton and starting the updater.
     importLegacySystemSettings()
     await systemSettingsData.loadDataFromPersistence(SYSTEM_SETTINGS_ID, {})

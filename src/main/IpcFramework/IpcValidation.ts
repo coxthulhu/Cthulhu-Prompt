@@ -4,7 +4,8 @@ import type { LoadWorkspaceUiStateRequest } from '@shared/domain/ui-state/UiStat
 import type {
   CloseWorkspacePayload,
   CreateWorkspacePayload,
-  LoadWorkspaceByPathRequest
+  LoadWorkspaceByPathRequest,
+  RenameWorkspacePayload
 } from '@shared/domain/workspace/Workspace'
 
 export type Parser<T> = (value: unknown) => T | null
@@ -185,6 +186,11 @@ const parseLoadPromptCollectionInitialWireRequest: Parser<
 > = parseWireRequestWithPayload<LoadPromptCollectionInitialPayload>(parseLoadPromptCollectionInitialPayload)
 
 export const parseCreateWorkspaceRequest = createRequestParser(parseCreateWorkspaceWireRequest)
+
+/** A rename accepts only the active workspace ID and a proposed display name. */
+export const parseRenameWorkspaceRequest = createRequestParser(parseWireRequestWithPayload(
+  parseObject<RenameWorkspacePayload>({ workspaceId: parseClientId, workspaceName: parseString })
+))
 
 export const parseCloseWorkspaceRequest = createRequestParser(parseCloseWorkspaceWireRequest)
 

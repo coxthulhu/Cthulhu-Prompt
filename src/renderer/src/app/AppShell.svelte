@@ -14,6 +14,7 @@
   import { getRuntimeConfig, isDevOrPlaywrightEnvironment } from './runtimeConfig'
   import TestScreen from '../features/dev-tools/TestScreen.svelte'
   import HomeScreen from '@renderer/features/home/HomeScreen.svelte'
+  import WelcomeDialog from '@renderer/features/home/WelcomeDialog.svelte'
   import MockupsScreen from '@renderer/features/mockups/MockupsScreen.svelte'
   import { hasMockup } from '@renderer/features/mockups/mockupCatalog'
   import { screens, type ScreenId } from './screens'
@@ -28,10 +29,7 @@
     SidebarModeId,
     type SidebarMode
   } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
-  import type {
-    WorkspaceCreationResult,
-    WorkspaceSelectionResult
-  } from '@renderer/features/workspace/types'
+  import type { WorkspaceSelectionResult } from '@renderer/features/workspace/types'
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
   import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
@@ -56,7 +54,8 @@
   import { loadWorkspaceByPath } from '@renderer/data/Queries/WorkspaceQuery'
   import {
     closeWorkspace as closeWorkspaceMutation,
-    createWorkspace as createWorkspaceMutation
+    createWorkspace,
+    renameWorkspace
   } from '@renderer/data/Mutations/WorkspaceMutations'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
@@ -266,6 +265,10 @@
     return promptIds.size
   })
   const workspacePromptCollectionCount = $derived(selectedWorkspacePromptCollections.length)
+  /** Welcome targets the first task collection named My Prompts in workspace order. */
+  const myPrompts = $derived(selectedWorkspacePromptCollections.find(
+    (collection) => collection.kind === 'prompt' && collection.displayName === 'My Prompts'
+  ))
   /** Mounted prompt-collection screen used for sidebar actions owned by that screen. */
   let promptCollectionScreen = $state<PromptCollectionScreenHandle | null>(null)
   /** Shell-owned project management opened from the New Tab screen. */
@@ -401,13 +404,6 @@
     return message === 'Invalid workspace path'
   }
 
-  /** Workspace loading already restores its session; only Welcome overrides the selected screen. */
-  const restoreSelectedWorkspaceScreen = async (): Promise<void> => {
-    if (needsWelcome && startupRestorePhase !== 'ready') {
-      activeScreen = 'home'
-    }
-  }
-
   const restoreWorkspaceFromPersistence = async (): Promise<void> => {
     const lastWorkspaceInfoPath = getUserPersistence().lastWorkspaceInfoPath
 
@@ -416,10 +412,7 @@
     }
 
     const selectionResult = await selectWorkspace(lastWorkspaceInfoPath)
-    if (selectionResult.success) {
-      await restoreSelectedWorkspaceScreen()
-      return
-    }
+    if (selectionResult.success) return
 
     if (isWorkspaceMissingError(selectionResult.message)) {
       await syncLastWorkspaceInfoPath(null)
@@ -460,19 +453,19 @@
     }
   }
 
-  const createWorkspace = async (
-    workspaceName: string,
-    includeExamplePrompts: boolean
-  ): Promise<WorkspaceCreationResult> => {
+  /** Loads the managed file returned by Create or Rename with its saved tabs and screen. */
+  const saveAndOpenWorkspace = async (
+    save: () => Promise<{ path: string }>
+  ): Promise<WorkspaceSelectionResult> => {
     beginWorkspaceAction()
 
     try {
-      const result = await createWorkspaceMutation(workspaceName, includeExamplePrompts)
-      if (!result.success) return { success: false, message: result.error }
-      await loadWorkspaceSelection(result.path)
+      /** The main process returns the final filename after committing the change. */
+      const { path } = await save()
+      await loadWorkspaceSelection(path)
       return { success: true }
     } catch (error) {
-      return { success: false, message: extractErrorMessage(error) ?? 'Failed to create workspace' }
+      return { success: false, message: extractErrorMessage(error) ?? 'Failed to save workspace' }
     } finally {
       endWorkspaceAction()
     }
@@ -633,6 +626,18 @@
     setSidebarExpanded(true)
   }
 
+  /** Reuses a My Prompts collection tab, opens the collection, or leaves a new tab ready to pick one. */
+  const openWelcomeTab = (): void => {
+    /** A full-screen prompt tab keeps its independent editor location. */
+    const existing = myPrompts && workTabs.find((tab) => tab.mode.collectionId === myPrompts.id && !tab.mode.openPromptId)
+    if (existing) {
+      selectWorkTab(existing.id)
+      return
+    }
+    addWorkTab()
+    if (myPrompts) openCollectionInWorkTab(myPrompts.id)
+  }
+
   /** Closes a work tab; closing the selected tab selects its right neighbour, else its left, else Home. */
   const closeWorkTab = (tabId: string): void => {
     /** Selection is read before removal, which would otherwise fall back to Home. */
@@ -732,7 +737,7 @@
         >
           {#if activeScreen === 'home'}
             <HomeScreen
-              bind:showWelcomeDialog
+              onShowWelcome={() => { showWelcomeDialog = true }}
               bind:showWorkspaceOpenErrorDialog
               bind:workspaceOpenErrorText
               {workspacePath}
@@ -744,7 +749,8 @@
               hasWorkTabs={workTabs.length > 0}
               onAddWorkTab={addWorkTab}
               onWorkspaceSelect={selectWorkspace}
-              onWorkspaceCreate={createWorkspace}
+              onWorkspaceCreate={(name, examples) => saveAndOpenWorkspace(() => createWorkspace(name, examples))}
+              onWorkspaceRename={(name) => saveAndOpenWorkspace(() => renameWorkspace(selectedWorkspace!.id, name))}
               onWorkspaceClear={() => void closeWorkspace()}
               onWorkflowBusy={(busy) => { homeWorkflowBusy = busy }}
             />
@@ -778,6 +784,12 @@
 </div>
 
 <ManageProjectsDialog bind:this={manageProjectsDialog} workspace={selectedWorkspace} />
+
+{#if showWelcomeDialog}
+  <WelcomeDialog bind:open={showWelcomeDialog}
+    action={isWorkspaceReady ? myPrompts ? 'Open My Prompts' : 'Open New Tab' : null}
+    onopen={openWelcomeTab} />
+{/if}
 
 <AppOverlays
   {startupRestoreOverlay}
