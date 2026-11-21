@@ -21,6 +21,8 @@
     projectCount: number
     /** When this workspace was last opened, as shown in the Open Workspace list. */
     lastOpened: string
+    /** The Open Workspace list's sort key for lastOpened, in epoch milliseconds; null when never opened. */
+    lastOpenedAt: number | null
     /** Database file size, as shown in the Open Workspace list. */
     fileSize: string
     /** Restored work tabs hide the New Tab callout. */
@@ -49,7 +51,7 @@
     promptCount: number,
     promptCollectionCount: number,
     hasWorkTabs: boolean,
-    details: { projectCount: number; lastOpened: string; fileSize: string },
+    details: { projectCount: number; lastOpened: string; lastOpenedAt: number | null; fileSize: string },
     openError?: string
   ): MockWorkspace => ({
     name,
@@ -67,21 +69,25 @@
     mockWorkspace('Product Development', 47, 6, false, {
       projectCount: 3,
       lastOpened: 'Today, 9:42 AM',
+      lastOpenedAt: Date.parse('2026-11-20T09:42'),
       fileSize: '1.8 MB'
     }),
     mockWorkspace('Client Website Redesign', 18, 3, true, {
       projectCount: 2,
       lastOpened: 'Yesterday, 4:15 PM',
+      lastOpenedAt: Date.parse('2026-11-19T16:15'),
       fileSize: '640 KB'
     }),
     mockWorkspace('Game Jam Prototypes', 12, 2, true, {
       projectCount: 1,
       lastOpened: 'Nov 12, 2026',
+      lastOpenedAt: Date.parse('2026-11-12T14:30'),
       fileSize: '412 KB'
     }),
     mockWorkspace('Personal Scratchpad', 6, 2, true, {
       projectCount: 1,
       lastOpened: 'Oct 29, 2026',
+      lastOpenedAt: Date.parse('2026-10-29T11:05'),
       fileSize: '188 KB'
     }),
     mockWorkspace(
@@ -89,7 +95,7 @@
       31,
       4,
       true,
-      { projectCount: 4, lastOpened: 'Aug 3, 2026', fileSize: '2.6 MB' },
+      { projectCount: 4, lastOpened: 'Aug 3, 2026', lastOpenedAt: Date.parse('2026-08-03T15:20'), fileSize: '2.6 MB' },
       'database is locked'
     )
   ]
@@ -97,6 +103,7 @@
   const importedWorkspace = mockWorkspace('Legacy Prompt Library', 64, 8, false, {
     projectCount: 5,
     lastOpened: 'Never opened',
+    lastOpenedAt: null,
     fileSize: '3.1 MB'
   })
   const duplicateImportError =
@@ -179,8 +186,17 @@
 
   const isWorkspaceLoading = $derived(workspaceActionCount > 0)
   const isWorkspaceActionDisabled = $derived(isWorkspaceLoading || isSelectingWorkspace)
-  /** The catalog lists workspaces by name. */
-  const sortedCatalog = $derived([...catalog].sort((left, right) => left.name.localeCompare(right.name)))
+  /** The open workspace leads, then the rest by most recently opened; never-opened imports follow by name. */
+  const sortedCatalog = $derived(
+    [...catalog].sort((left, right) => {
+      const openOrder = Number(right.path === workspace?.path) - Number(left.path === workspace?.path)
+      return (
+        openOrder ||
+        (right.lastOpenedAt ?? 0) - (left.lastOpenedAt ?? 0) ||
+        left.name.localeCompare(right.name)
+      )
+    })
+  )
   /** Mirrors the live naming rules, including case- and space-insensitive duplicates. */
   const workspaceNameError = $derived.by(() => {
     const fileName = toFileName(workspaceName)
@@ -247,7 +263,7 @@
       showError(entry.openError)
       return
     }
-    const opened = { ...entry, lastOpened: 'Just now' }
+    const opened = { ...entry, lastOpened: 'Just now', lastOpenedAt: Date.now() }
     catalog = catalog.map((candidate) => (candidate.path === entry.path ? opened : candidate))
     workspace = opened
   }
@@ -267,6 +283,7 @@
     const created = mockWorkspace(name, includeExamples ? 6 : 0, 2, true, {
       projectCount: 1,
       lastOpened: 'Just now',
+      lastOpenedAt: Date.now(),
       fileSize: includeExamples ? '96 KB' : '64 KB'
     })
     catalog = [...catalog, created]
@@ -570,7 +587,7 @@
                     <button
                       type="button"
                       class="workspace-option"
-                      data-current={isCurrent}
+                      aria-current={isCurrent ? 'true' : undefined}
                       title={entry.path}
                       data-testid="open-workspace-option"
                       disabled={isWorkspaceActionDisabled}
@@ -580,12 +597,7 @@
                         <Database size={24} strokeWidth={1.75} aria-hidden="true" />
                       </span>
                       <span class="workspace-option-body">
-                        <span class="workspace-option-heading">
-                          <span class="workspace-option-name text-base leading-6 font-semibold">{entry.name}</span>
-                          {#if isCurrent}
-                            <span class="workspace-option-tag text-xs leading-[18px] font-semibold">Current</span>
-                          {/if}
-                        </span>
+                        <span class="workspace-option-name text-base leading-6 font-semibold">{entry.name}</span>
                         <span class="workspace-option-stats text-sm leading-5">
                           <span class="workspace-option-stat">
                             <FileText size={14} aria-hidden="true" />
@@ -604,9 +616,16 @@
                         </span>
                       </span>
                       <span class="workspace-option-meta text-sm leading-5">
-                        <span class="workspace-option-meta-item h-6">
-                          <Clock size={14} aria-hidden="true" />{entry.lastOpened}
-                        </span>
+                        {#if isCurrent}
+                          <!-- The open workspace shows the New Tab tiles' open indicator in place of its last opened time. -->
+                          <span class="workspace-option-meta-item workspace-option-open h-6" title="Currently open">
+                            <span class="workspace-option-open-dot" aria-hidden="true"></span>Open
+                          </span>
+                        {:else}
+                          <span class="workspace-option-meta-item h-6">
+                            <Clock size={14} aria-hidden="true" />{entry.lastOpened}
+                          </span>
+                        {/if}
                         <span class="workspace-option-meta-item h-5">
                           <HardDrive size={14} aria-hidden="true" />{entry.fileSize}
                         </span>
@@ -1196,7 +1215,8 @@
     white-space: pre-wrap;
   }
 
-  /* Open Workspace list: one outlined row per workspace with its counts, last opened time, and size. */
+  /* Open Workspace list: one row per workspace with its counts, last opened time or open indicator, and size. Rows
+     take the New Tab collection tiles' surface, border, text, and hover colors. */
   .workspace-option {
     display: flex;
     align-items: center;
@@ -1206,7 +1226,7 @@
     padding: 14px 12px 14px 16px;
     border: 1px solid var(--ui-neutral-muted-border);
     border-radius: 8px;
-    background-color: var(--ui-neutral-subtle-action-hover-fill);
+    background-color: var(--ui-neutral-normal-surface);
     color: var(--ui-hoverable-text);
     text-align: left;
     cursor: pointer;
@@ -1218,8 +1238,8 @@
 
   .workspace-option:hover,
   .workspace-option:focus-visible {
-    border-color: var(--ui-neutral-emphasis-border);
-    background-color: var(--ui-neutral-normal-surface);
+    border-color: var(--ui-neutral-hover-border);
+    background-color: var(--ui-neutral-action-fill);
     color: var(--ui-normal-text);
   }
 
@@ -1234,17 +1254,6 @@
     pointer-events: none;
   }
 
-  .workspace-option[data-current='true'] {
-    border-color: var(--ui-accent-muted-border);
-    background-color: color-mix(in oklch, var(--ui-accent-action-fill) 45%, transparent);
-  }
-
-  .workspace-option[data-current='true']:hover,
-  .workspace-option[data-current='true']:focus-visible {
-    border-color: var(--ui-accent-normal-border);
-    background-color: color-mix(in oklch, var(--ui-accent-action-fill) 70%, transparent);
-  }
-
   .workspace-option-icon {
     display: flex;
     flex: 0 0 auto;
@@ -1256,10 +1265,6 @@
     color: var(--ui-hoverable-icon-glyph);
   }
 
-  .workspace-option[data-current='true'] .workspace-option-icon {
-    color: var(--ui-accent-link-text);
-  }
-
   .workspace-option-body {
     display: flex;
     flex: 1 1 auto;
@@ -1268,27 +1273,12 @@
     min-width: 0;
   }
 
-  .workspace-option-heading {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
+  /* The name inherits the row's hoverable text, brightening with it like a tile's name. */
   .workspace-option-name {
     min-width: 0;
     overflow: hidden;
-    color: var(--ui-normal-text);
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .workspace-option-tag {
-    flex: 0 0 auto;
-    padding: 0 6px;
-    border: 1px solid var(--ui-accent-normal-border);
-    border-radius: 4px;
-    color: var(--ui-accent-link-text);
   }
 
   .workspace-option-stats {
@@ -1298,11 +1288,6 @@
     row-gap: 2px;
     min-width: 0;
     color: var(--ui-secondary-text);
-    transition: color 120ms ease;
-  }
-
-  .workspace-option:is(:hover, :focus-visible) .workspace-option-stats {
-    color: var(--ui-hoverable-text);
   }
 
   .workspace-option-stat {
@@ -1317,14 +1302,10 @@
     font-weight: var(--font-weight-semibold);
   }
 
+  /* Stat and meta icons and labels take the Home screen count display's colors, which stay put on hover. */
   .workspace-option-stat :global(svg),
   .workspace-option-meta-item :global(svg) {
     flex: 0 0 auto;
-    color: var(--ui-muted-icon-glyph);
-    transition: color 120ms ease;
-  }
-
-  .workspace-option:is(:hover, :focus-visible) :is(.workspace-option-stat, .workspace-option-meta-item) :global(svg) {
     color: var(--ui-secondary-icon-glyph);
   }
 
@@ -1334,19 +1315,27 @@
     flex-direction: column;
     align-items: flex-end;
     gap: 4px;
-    color: var(--ui-muted-text);
-    white-space: nowrap;
-    transition: color 120ms ease;
-  }
-
-  .workspace-option:is(:hover, :focus-visible) .workspace-option-meta {
     color: var(--ui-secondary-text);
+    white-space: nowrap;
   }
 
   .workspace-option-meta-item {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+  }
+
+  /* Matches OpenIndicator: a success dot beside the meta column's secondary label. */
+  .workspace-option-open {
+    gap: 5px;
+  }
+
+  .workspace-option-open-dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--ui-success-normal-text);
   }
 
   .workspace-option :global(.workspace-option-chevron) {
