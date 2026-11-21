@@ -2497,7 +2497,8 @@
   }
 
   /* Two equal-height single-choice cards side by side: a header row with the icon, label, and radio mark above a
-     divider and a short bullet list. */
+     divider and a short bullet list. Hover, focus, and selection color only the card border and the header row and
+     leave the bullet body clear: gray while hovered or focused, accent while selected. */
   .optionCards {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2514,14 +2515,12 @@
     color: var(--ui-hoverable-text);
     text-align: left;
     transition:
-      background-color var(--ui-animation-duration-fast) ease-out,
       border-color var(--ui-animation-duration-fast) ease-out,
       color var(--ui-animation-duration-fast) ease-out;
   }
 
   .optionCard:is(:hover, :focus-visible) {
-    background: var(--ui-neutral-subtle-action-hover-fill);
-    border-color: var(--ui-neutral-hover-border);
+    border-color: var(--ui-neutral-emphasis-border);
     color: var(--ui-normal-text);
   }
 
@@ -2530,13 +2529,13 @@
     outline-offset: 2px;
   }
 
-  /* Choosing the selected option again does nothing, so it keeps the brighter accent colors while hovered. */
+  /* Choosing the selected option again does nothing, so it keeps its accent colors while hovered. */
   .optionCard[aria-pressed='true'] {
-    background: var(--ui-accent-action-hover-fill);
-    border-color: var(--ui-accent-muted-hover-border);
+    border-color: var(--ui-accent-normal-border);
     color: var(--ui-normal-text);
   }
 
+  /* The header's top corners follow the card's inner radius so its tint stays inside the rounded border. */
   .optionCardHeader {
     display: flex;
     align-items: center;
@@ -2544,16 +2543,21 @@
     min-width: 0;
     padding: 12px 12px 11px 14px;
     border-bottom: 1px solid var(--ui-neutral-muted-border);
-    transition: border-color var(--ui-animation-duration-fast) ease-out;
+    border-radius: calc(var(--cthulhu-ui-radius-control) - 1px) calc(var(--cthulhu-ui-radius-control) - 1px) 0 0;
+    transition:
+      background-color var(--ui-animation-duration-fast) ease-out,
+      border-color var(--ui-animation-duration-fast) ease-out;
   }
 
+  /* The divider takes the card's border color in each state. */
   .optionCard:is(:hover, :focus-visible) .optionCardHeader {
-    border-bottom-color: var(--ui-neutral-normal-border);
+    background: var(--ui-neutral-subtle-action-hover-fill);
+    border-bottom-color: var(--ui-neutral-emphasis-border);
   }
 
-  /* The divider takes the card's border color so it blends into the selected card. */
   .optionCard[aria-pressed='true'] .optionCardHeader {
-    border-bottom-color: var(--ui-accent-muted-hover-border);
+    background: var(--ui-accent-action-fill);
+    border-bottom-color: var(--ui-accent-normal-border);
   }
 
   .optionCard :global(.optionCardIcon) {
@@ -2582,13 +2586,13 @@
     padding: 11px 14px 13px;
   }
 
-  /* Each bullet hangs its wrapped lines past a 4px dot centered on the first line. */
+  /* Each bullet hangs its wrapped lines past a 4px dot centered on the first line. Bullets and dots keep these colors
+     in every state, so only the header brightens. */
   .optionCardBullet {
     position: relative;
     padding-left: 14px;
-    color: var(--ui-hoverable-text);
+    color: var(--ui-secondary-text);
     text-wrap: pretty;
-    transition: color var(--ui-animation-duration-fast) ease-out;
   }
 
   .optionCardBullet::before {
@@ -2600,19 +2604,6 @@
     border-radius: 50%;
     background: var(--ui-muted-icon-glyph);
     content: '';
-    transition: background-color var(--ui-animation-duration-fast) ease-out;
-  }
-
-  .optionCard:is(:hover, :focus-visible, [aria-pressed='true']) .optionCardBullet {
-    color: var(--ui-normal-text);
-  }
-
-  .optionCard:is(:hover, :focus-visible) .optionCardBullet::before {
-    background: var(--ui-secondary-icon-glyph);
-  }
-
-  .optionCard[aria-pressed='true'] .optionCardBullet::before {
-    background: var(--ui-normal-text);
   }
 
   /* Decorative 17px radio mark whose white center shows on the selected card. */

@@ -370,8 +370,8 @@ describe('New Tab Screen', () => {
     const nameError = dialog.getByTestId('create-prompt-collection-name-error')
 
     // The focused name field comes first, and the type picker below it shows the Task and Template cards side by side
-    // at equal sizes across the field, each listing its bullets under its label. Task is selected with the accent fill
-    // and border.
+    // at equal sizes across the field, each listing its bullets under its label. Task is selected with an accent border
+    // and an accent fill on its header row only, leaving the bullet body clear.
     await mainWindow.getByTestId(`new-tab-new-collection-${harborProjectId}`).click()
     await expect(dialog.getByTestId('create-prompt-collection-type-selector').getByRole('button')).toHaveText([
       /Task Collection\s*Describes one piece of work.*Apply a template to guide the work/,
@@ -390,10 +390,11 @@ describe('New Tab Screen', () => {
     expect(Math.abs(templateBox.height - taskBox.height)).toBeLessThanOrEqual(1)
     await expect(taskOption).toHaveAttribute('aria-pressed', 'true')
     await expect(templateOption).toHaveAttribute('aria-pressed', 'false')
-    await expect(taskOption).toHaveCSS('background-color',
-      await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-action-hover-fill'))
+    await expect(taskOption).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     await expect(taskOption).toHaveCSS('border-top-color',
-      await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-muted-hover-border'))
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-normal-border'))
+    await expect(taskOption.locator('.cthulhuUiOptionCardSelectorHeader')).toHaveCSS('background-color',
+      await resolvePaletteColor(mainWindow.locator('body'), '--ui-accent-action-fill'))
     await expect(nameInput).toBeFocused()
 
     // The existing template reserves its name for both types, including case and whitespace variants.
