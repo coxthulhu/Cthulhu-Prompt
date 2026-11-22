@@ -42,6 +42,11 @@ def run_command(command: Sequence[str], env: dict[str, str]) -> tuple[int, str]:
 
 
 def main(args: Sequence[str]) -> int:
+    # Piped Windows output defaults to the ANSI code page, which cannot encode
+    # Playwright's box-drawing and status characters.
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
     base_env = os.environ.copy()
     base_env['VITE_LOG_LEVEL'] = 'warn'
 
