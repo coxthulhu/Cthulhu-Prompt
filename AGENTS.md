@@ -63,6 +63,7 @@ When adding a new major application component or screen, add it to this list wit
 - `src/renderer/` — Svelte + TypeScript UI. App source in `src/renderer/src` (components, stores, actions, contexts, styles).
 - `tests/vitest/` — Unit/integration tests (logic, filesystem with `memfs`).
 - `tests/playwright/` — End‑to‑end UI tests; helpers/fixtures under `tests/helpers` and `tests/fixtures`.
+- `tests/performance/` — Rendering performance scenarios with their own Playwright config, run only with explicit permission.
 - Assets and packaging: `resources/`, `build/`, `electron-builder.yml`.
 
 ## Development Scripts
@@ -73,6 +74,7 @@ Run these WSL wrappers directly from the repository root. They switch to the rep
 - `./scripts/wsl-linttypecheck.sh` — Run ESLint and TypeScript checks with `npm run lint` followed by `npm run typecheck`.
 - `./scripts/wsl-vitest.sh [arguments...]` — Run the Vitest suite with `npm run test:vitest`; any arguments are forwarded to Vitest.
 - `./scripts/wsl-playwright.sh [arguments...]` — Run Playwright with `npm run test:playwright`; any arguments are forwarded to Playwright. See the Playwright section below for examples and additional rules.
+- `./scripts/wsl-playwright-performance.sh [--no-profile] [--scenario name]...` — Run the rendering performance tests with `npm run test:playwright-performance`. Never run it without explicit permission from the user. See the performance section below.
 - `./scripts/wsl-vscode.sh [path [line [column]]]` — Open the repository, a file, or a specific file position in Windows VS Code. For Codex tool calls, use `sandbox_permissions="require_escalated"`. Relative paths resolve from the repository root. Use `./scripts/wsl-vscode.sh --diff left-path right-path` to open two files in the VS Code diff editor.
 
 ### Running Playwright (Windows)
@@ -88,6 +90,16 @@ Console/page errors captured during Playwright runs are written to `temp/test-re
 - WSL wrapper, single file: `./scripts/wsl-playwright.sh tests/playwright/TestInfrastructure.spec.ts`
 - WSL wrapper, multiple files: `./scripts/wsl-playwright.sh tests/playwright/PromptCollectionsMeasuredHeights.spec.ts tests/playwright/UserPersistence.spec.ts`
 - WSL wrapper, single test with spaces: `./scripts/wsl-playwright.sh tests/playwright/PromptCollectionsPromptManagement.spec.ts --grep "preserves prompt order after navigating away"`
+
+### Running Performance Tests (Windows)
+
+Only run the performance tests when the user explicitly gives permission. They render on the real GPU in a visible window maximized on the primary monitor and take several minutes, which significantly affects the machine. Use a 600000 ms timeout, and never run them alongside another Playwright command.
+
+- `tests/performance/PromptCollectionPerformance.spec.ts` holds every scenario and uses its own config, so the regular Playwright suite never runs it. Each run imports the fixture workspace into a real on-disk workspace database.
+- Each scenario runs three measured runs with minimal frame tracking, then a profiling run that records a DevTools performance trace with labelled transitions. There are no pass/fail thresholds.
+- `--no-profile` skips the profiling run when only checking baselines. `--scenario name` limits the run to that scenario and can be repeated. Scenarios: `home-collection-switching`.
+- On success the script prints `COMPLETE temp/performance/<Timestamp>`. That folder holds `summary.md` (medians of the measured runs), `results.json` (raw frame intervals and long animation frames), `<scenario>.trace.json` (open in the DevTools Performance panel or Perfetto), and `playwright-output.txt`. On failure the script prints the build or Playwright output followed by `FAILED temp/performance/<Timestamp>`, which keeps any completed runs.
+- Record accepted baselines in the untracked `tests/performance/PerformanceBaselines.md`.
 
 ## Coding Style & Naming Conventions
 

@@ -16,6 +16,8 @@ import {
 /** Per-suite overrides for the shared Electron launch configuration. */
 export interface PlaywrightTestOptions {
   launchOptions?: NonNullable<Parameters<typeof electron.launch>[0]>
+  /** Replaces the shared Electron arguments, such as the headless display flags, for suites needing a real display. */
+  electronArgs?: string[]
 }
 
 /** Startup and optional workspace preparation requested by one test. */
@@ -61,10 +63,6 @@ export interface TestSetup {
   setupAndStart: (options?: TestSetupOptions) => Promise<StartedTest>
 }
 
-const defaultOptions: Required<PlaywrightTestOptions> = {
-  launchOptions: {}
-}
-
 // Shared Electron arguments keep every Playwright suite on the same supported virtual display.
 const DEFAULT_ELECTRON_LAUNCH_ARGS = [
   './out/main/index.js',
@@ -75,6 +73,11 @@ const DEFAULT_ELECTRON_LAUNCH_ARGS = [
   '--headless',
   '--screen-info={1920x1080}'
 ]
+
+const defaultOptions: Required<PlaywrightTestOptions> = {
+  launchOptions: {},
+  electronArgs: DEFAULT_ELECTRON_LAUNCH_ARGS
+}
 
 /** Optional filesystem timestamps supplied to the existing test setup event. */
 type FilesystemSetupOptions = {
@@ -105,7 +108,7 @@ export function createPlaywrightTestSuite(options: PlaywrightTestOptions = {}) {
           },
           ...config.launchOptions,
           args: [
-            ...DEFAULT_ELECTRON_LAUNCH_ARGS,
+            ...config.electronArgs,
             ...(config.launchOptions.args ?? []),
             `--playwright-run-id=${runId}`
           ]

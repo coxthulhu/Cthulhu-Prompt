@@ -28,7 +28,8 @@
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "patch-package && electron-builder install-app-deps && node scripts/verify-sqlite.mjs",
     "test:vitest": "vitest run tests/vitest",
-    "test:playwright": "py -3 .\\RunPlaywrightCompact.py"
+    "test:playwright": "py -3 .\\RunPlaywrightCompact.py",
+    "test:playwright-performance": "py -3 .\\RunPlaywrightPerformance.py"
   },
   "dependencies": {
     "@codingame/monaco-vscode-all-language-default-extensions": "^37.1.0",

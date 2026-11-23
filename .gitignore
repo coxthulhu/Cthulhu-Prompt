@@ -8,6 +8,7 @@ temp
 .cthulhu/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+tests/performance/PerformanceBaselines.md
 .idea/
 __pycache__/
 *.pyc
