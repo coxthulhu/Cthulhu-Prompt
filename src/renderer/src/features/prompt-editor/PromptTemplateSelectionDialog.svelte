@@ -2,22 +2,16 @@
   import { getWorkspaceCollectionEntries } from '@shared/domain/workspace/Project'
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { NO_TEMPLATE_LABEL } from '@renderer/common/emptyStateText'
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { SvelteSet } from 'svelte/reactivity'
   import { Ban, Check, Copy, FolderOpen, Layers } from 'lucide-svelte'
   import Dialog from '@renderer/common/cthulhu-ui/dialogs/Dialog.svelte'
   import IconCell from '@renderer/common/cthulhu-ui/layout/IconCell.svelte'
   import Separator from '@renderer/common/cthulhu-ui/layout/Separator.svelte'
   import SelectionIndicator from '@renderer/common/cthulhu-ui/forms/SelectionIndicator.svelte'
-  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
-  import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import { type PromptTemplateReference } from '@shared/domain/prompt/Prompt'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import type { Category } from '@shared/domain/category/Category'
-  import type { Workspace } from '@shared/domain/workspace/Workspace'
-  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
   import PromptTreeCategoryRow from '@renderer/features/prompt-tree/PromptTreeCategoryRow.svelte'
   import PromptTreePromptRow from '@renderer/features/prompt-tree/PromptTreePromptRow.svelte'
@@ -107,16 +101,16 @@
     onselectandcopy
   }: Props = $props()
 
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
   // Reactive workspaces determine which template collections appear in the dialog.
-  const workspaceQuery = useLiveQuery(workspaceCollection) as { data: Workspace[] }
+  const workspaceQuery = liveCollections.workspaces
   // Reactive collections provide the complete template-category hierarchy.
-  const promptCollectionQuery = useLiveQuery(promptCollectionsCollection) as { data: PromptCollection[] }
+  const promptCollectionQuery = liveCollections.promptCollections
   // Reactive authoritative templates keep picker titles and token eligibility current.
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
-    data: PromptTemplate[]
-  }
+  const promptTemplateQuery = liveCollections.promptTemplates
   // Reactive category metadata supplies category rows inside each template collection.
-  const categoryQuery = useLiveQuery(categoryCollection)
+  const categoryQuery = liveCollections.categories
   // Collection expansion is local to one opening of the dialog.
   /** Category IDs collapsed within the template picker. */
   const collapsedCategoryIds = new SvelteSet<string>()

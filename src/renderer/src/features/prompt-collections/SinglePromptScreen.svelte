@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte'
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { X } from 'lucide-svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
   import type { ScrollToWithinWindowBand } from '@renderer/common/virtual-window/virtualWindowTypes'
@@ -10,16 +10,7 @@
     promptIdToPromptNavigationRow,
     type PromptNavigationRow
   } from '@renderer/app/PromptNavigationContext.svelte.ts'
-  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
   import { promptCollectionClientStateCollection } from '@renderer/data/Collections/PromptCollectionClientStateCollection'
-  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-  import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
-  import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
-  import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-  import { notesCollection } from '@renderer/data/Collections/NotesCollection'
-  import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
-  import { noteClientStateCollection } from '@renderer/data/Collections/NoteClientStateCollection'
   import { loadPromptCollectionInitial } from '@renderer/data/Queries/PromptCollectionQuery'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
@@ -49,7 +40,6 @@
   } from './find/promptCollectionFindSectionKeys'
   import PromptCollectionHeaderBar from './PromptCollectionHeaderBar.svelte'
   import { buildPromptCollectionBreadcrumb } from './promptCollectionBreadcrumb'
-  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { findCollectionProject } from '@shared/domain/workspace/Project'
   import { promptEditorRowId } from './promptCollectionRowIds'
   import { deleteMarkdownContent, setMarkdownContentStatus } from './markdownContentActions'
@@ -72,16 +62,18 @@
   const workspaceId = getWorkspaceSelectionContext().selectedWorkspaceId!
   const promptNavigation = getPromptNavigationContext()
 
-  const collectionQuery = useLiveQuery(promptCollectionsCollection)
-  const promptQuery = useLiveQuery(promptsCollection)
-  const templateQuery = useLiveQuery(promptTemplatesCollection)
-  const promptClientStateQuery = useLiveQuery(promptClientStateCollection)
-  const templateClientStateQuery = useLiveQuery(promptTemplateClientStateCollection)
-  const categoryQuery = useLiveQuery(categoryCollection)
-  const noteQuery = useLiveQuery(notesCollection)
-  const noteVisibilityQuery = useLiveQuery(attachedNoteUiStateCollection)
-  const noteClientStateQuery = useLiveQuery(noteClientStateCollection)
-  const workspaceQuery = useLiveQuery(workspaceCollection)
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
+  const collectionQuery = liveCollections.promptCollections
+  const promptQuery = liveCollections.prompts
+  const templateQuery = liveCollections.promptTemplates
+  const promptClientStateQuery = liveCollections.promptClientStates
+  const templateClientStateQuery = liveCollections.promptTemplateClientStates
+  const categoryQuery = liveCollections.categories
+  const noteQuery = liveCollections.notes
+  const noteVisibilityQuery = liveCollections.attachedNoteUiStates
+  const noteClientStateQuery = liveCollections.noteClientStates
+  const workspaceQuery = liveCollections.workspaces
   /** Project that owns this collection, shown first in the breadcrumb like the collection screen. */
   const collectionProject = $derived.by(() => {
     /** Current workspace owns all loaded project records. */

@@ -16,7 +16,7 @@
 
 <script lang="ts">
   import { tick } from 'svelte'
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { Folder, FolderCog } from 'lucide-svelte'
   import type { Category } from '@shared/domain/category/Category'
   import {
@@ -26,12 +26,8 @@
   } from '@shared/domain/category/Category'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import type { PromptCollectionContentKind } from '@shared/domain/prompt-collection/PromptCollection'
-  import type { Prompt } from '@shared/domain/prompt/Prompt'
-  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import ManagementDialog from '@renderer/common/cthulhu-ui/dialogs/ManagementDialog.svelte'
   import type { ManagementSelectorPanelItem } from '@renderer/common/cthulhu-ui/selectors/ManagementSelectorPanel.svelte'
-  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import ManagementDescriptionField from '../management/ManagementDescriptionField.svelte'
   import ManagementEditor from '../management/ManagementEditor.svelte'
   import ManagementTextField from '../management/ManagementTextField.svelte'
@@ -62,12 +58,12 @@
     isWorkspaceReady,
     onsubmit
   }: Props = $props()
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
   /** Loaded prompts used to count category membership across every status. */
-  const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
+  const promptQuery = liveCollections.prompts
   /** Loaded templates used to count category membership in template collections. */
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
-    data: PromptTemplate[]
-  }
+  const promptTemplateQuery = liveCollections.promptTemplates
   /** Component-scoped identity prevents separate dialogs from sharing Monaco models. */
   const modelOwnerId = globalThis.crypto.randomUUID()
   /** Increasing identity gives every dialog opening fresh Monaco draft models. */

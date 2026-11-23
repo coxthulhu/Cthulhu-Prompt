@@ -2,7 +2,7 @@
   import { findCollectionProject } from '@shared/domain/workspace/Project'
   import { PromptTemplateStatus } from '@shared/domain/prompt-template/PromptTemplate'
   import { getPromptStatusFolderDefinition } from '@shared/domain/prompt/Prompt'
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import type {
     DroppableOptions
   } from '@renderer/common/drag-drop/dragDrop.svelte.ts'
@@ -25,11 +25,6 @@
     Pencil,
     Trash2
   } from 'lucide-svelte'
-  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
-  import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
-  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import {
     PROMPT_STATUS_ACCORDION_PERSISTENCE_ID
@@ -37,14 +32,10 @@
   import { PROMPT_COLLECTION_VERTICAL_BIAS_PX } from '../prompt-collections/promptCollectionScrollOffsets'
   import {
     PROMPT_STATUS_FOLDER_REGISTRY,
-    PromptStatusFolderId,
-    type Prompt
+    PromptStatusFolderId
   } from '@shared/domain/prompt/Prompt'
-  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
-  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
   import type { Category } from '@shared/domain/category/Category'
-  import type { Workspace } from '@shared/domain/workspace/Workspace'
   import DropdownPopupSimple, {
     type DropdownPopupItem
   } from '@renderer/common/cthulhu-ui/dropdowns/DropdownPopupSimple.svelte'
@@ -115,17 +106,13 @@
   const shownFinalStatusGroups = $derived(modeData.shownFinalStatusGroups)
   const workspaceSelection = getWorkspaceSelectionContext()
   const promptNavigation = getPromptNavigationContext()
-  const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
-    data: Workspace[]
-  }
-  const promptCollectionQuery = useLiveQuery((q) =>
-    q.from({ promptCollection: promptCollectionsCollection })
-  ) as { data: PromptCollection[] }
-  const categoryQuery = useLiveQuery(categoryCollection) as { data: Category[] }
-  const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
-    data: PromptTemplate[]
-  }
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
+  const workspaceQuery = liveCollections.workspaces
+  const promptCollectionQuery = liveCollections.promptCollections
+  const categoryQuery = liveCollections.categories
+  const promptQuery = liveCollections.prompts
+  const promptTemplateQuery = liveCollections.promptTemplates
 
   const selectedWorkspace = $derived.by(() => {
     const selectedWorkspaceId = workspaceSelection.selectedWorkspaceId

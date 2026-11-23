@@ -2,7 +2,7 @@
   import { getTabStateContext } from '@renderer/features/sidebar/sidebarModes.svelte.ts'
   import { getPromptLocation } from '@renderer/data/Mutations/PromptLocationMutations'
   import { emptyItemsLabel } from '@renderer/common/emptyStateText'
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { Loader } from 'lucide-svelte'
   import {
     createDroppableStateRegistry,
@@ -26,13 +26,6 @@
     promptEntryDragState,
     startCategoryDrag
   } from '@renderer/features/prompt-drag-drop/promptEntryDragState.svelte.ts'
-  import {
-    type PromptClientStateRecord,
-    promptClientStateCollection
-  } from '@renderer/data/Collections/PromptClientStateCollection'
-  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-  import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
   import { getPromptDisplayTitle as getPromptTitleText } from '@shared/domain/prompt/promptFallbackTitle'
   import {
     getPromptNavigationContext,
@@ -51,7 +44,6 @@
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
   import { getPromptStatusFolderDefinition, PROMPT_STATUS_FOLDER_REGISTRY, type Prompt } from '@shared/domain/prompt/Prompt'
   import { getMarkdownContentCategoryOrder } from '@shared/domain/markdown-content/MarkdownContent'
-  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import {
     getFinalPromptCollectionScreenModeDefinition,
     PromptCollectionScreenMode
@@ -136,17 +128,13 @@
   /** Capture this tab's view so unmount callbacks cannot write into its next screen. */
   const tabView = getTabStateContext()!.view
   const workspaceSelection = getWorkspaceSelectionContext()
-  const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
-    data: PromptClientStateRecord[]
-  }
-  const promptQuery = useLiveQuery(promptsCollection) as {
-    data: Prompt[]
-  }
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
-    data: PromptTemplate[]
-  }
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
+  const promptClientStateQuery = liveCollections.promptClientStates
+  const promptQuery = liveCollections.prompts
+  const promptTemplateQuery = liveCollections.promptTemplates
   /** Live category metadata used by the selected collection's tree projection. */
-  const categoryQuery = useLiveQuery(categoryCollection)
+  const categoryQuery = liveCollections.categories
 
   const promptTreeTitleById = $derived.by(() => {
     const titlesById: Record<string, string> = {}

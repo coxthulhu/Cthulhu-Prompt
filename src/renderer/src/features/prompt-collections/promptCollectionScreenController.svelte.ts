@@ -6,7 +6,7 @@ import {
   buildTemplateDraftRecord,
   type MarkdownContentDraftRecord
 } from '@renderer/features/prompt-editor/markdownContentDraftRecord'
-import { useLiveQuery } from '@tanstack/svelte-db'
+import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
 import { SvelteSet } from 'svelte/reactivity'
 import {
   getPromptStatusFolderDefinition,
@@ -38,24 +38,16 @@ import {
   type PromptNavigationSource,
   type PromptNavigationTarget
 } from '@renderer/app/PromptNavigationContext.svelte.ts'
-import {
-  type PromptClientStateRecord,
-  promptClientStateCollection
-} from '@renderer/data/Collections/PromptClientStateCollection'
+import { promptClientStateCollection } from '@renderer/data/Collections/PromptClientStateCollection'
 import {
   type PromptCollectionClientStateRecord,
   promptCollectionClientStateCollection
 } from '@renderer/data/Collections/PromptCollectionClientStateCollection'
 import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
 import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
-import {
-  type PromptTemplateClientStateRecord,
-  promptTemplateClientStateCollection
-} from '@renderer/data/Collections/PromptTemplateClientStateCollection'
+import { promptTemplateClientStateCollection } from '@renderer/data/Collections/PromptTemplateClientStateCollection'
 import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
-import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
 import { findCollectionProject } from '@shared/domain/workspace/Project'
-import { categoryCollection } from '@renderer/data/Collections/CategoryCollection'
 import type { Category } from '@shared/domain/category/Category'
 import {
   getCategoryContentIds,
@@ -157,8 +149,10 @@ export const createPromptCollectionScreenController = ({
   /** Whether the screen renders a final-status prompt list. */
   const isFinalMode = $derived(finalModeDefinition !== null)
   const workspaceId = $derived(workspaceSelection.selectedWorkspaceId)
+  /** App-lifetime live queries, so mounting this screen subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
   /** Live project membership scopes collection names and screen actions to the current project. */
-  const workspaceQuery = useLiveQuery(workspaceCollection)
+  const workspaceQuery = liveCollections.workspaces
   /** The collection identity determines ownership even after a project rename. */
   const collectionProject = $derived.by(() => {
     /** Current workspace owns all loaded project records. */
@@ -168,25 +162,13 @@ export const createPromptCollectionScreenController = ({
   /** Limits collection actions to siblings in the owning project. */
   const projectCollectionIds = $derived(collectionProject?.collectionEntries.map((entry) => entry.id) ?? [])
 
-  const promptCollectionQuery = useLiveQuery(promptCollectionsCollection) as {
-    data: PromptCollection[]
-  }
-  const promptClientStateQuery = useLiveQuery(promptClientStateCollection) as {
-    data: PromptClientStateRecord[]
-  }
-  const promptQuery = useLiveQuery(promptsCollection) as {
-    data: Prompt[]
-  }
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as {
-    data: PromptTemplate[]
-  }
-  const promptTemplateClientStateQuery = useLiveQuery(promptTemplateClientStateCollection) as {
-    data: PromptTemplateClientStateRecord[]
-  }
-  const promptCollectionClientStateQuery = useLiveQuery(promptCollectionClientStateCollection) as {
-    data: PromptCollectionClientStateRecord[]
-  }
-  const categoryQuery = useLiveQuery(categoryCollection) as { data: Category[] }
+  const promptCollectionQuery = liveCollections.promptCollections
+  const promptClientStateQuery = liveCollections.promptClientStates
+  const promptQuery = liveCollections.prompts
+  const promptTemplateQuery = liveCollections.promptTemplates
+  const promptTemplateClientStateQuery = liveCollections.promptTemplateClientStates
+  const promptCollectionClientStateQuery = liveCollections.promptCollectionClientStates
+  const categoryQuery = liveCollections.categories
 
   const screenCollection = $derived.by(() => {
     for (const candidate of promptCollectionQuery.data) {

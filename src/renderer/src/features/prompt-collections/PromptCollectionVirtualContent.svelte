@@ -1,8 +1,5 @@
 <script lang="ts">
-  import { useLiveQuery } from '@tanstack/svelte-db'
-  import { notesCollection } from '@renderer/data/Collections/NotesCollection'
-  import { attachedNoteUiStateCollection } from '@renderer/data/Collections/AttachedNoteUiStateCollection'
-  import { noteClientStateCollection } from '@renderer/data/Collections/NoteClientStateCollection'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { createAttachedNoteUiStateKey } from '@shared/domain/ui-state/AttachedNoteUiState'
   import { noteEditorMeasuredHeight } from '@renderer/data/UiState/cache/NoteEditorUiCache.svelte.ts'
   import { getSystemSettingsContext } from '@renderer/app/systemSettingsContext'
@@ -233,12 +230,14 @@
   }: PromptCollectionVirtualContentProps = $props()
 
   let scrollApi = $state<VirtualWindowScrollApi | null>(null)
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
   /** Stable subscriptions keep note edits and preferences reactive across every virtual row. */
-  const noteQuery = useLiveQuery(notesCollection)
+  const noteQuery = liveCollections.notes
   /** Visibility is independently persisted per workspace and note. */
-  const noteVisibilityQuery = useLiveQuery(attachedNoteUiStateCollection)
+  const noteVisibilityQuery = liveCollections.attachedNoteUiStates
   /** Session markers survive scrolling and screen navigation. */
-  const noteClientStateQuery = useLiveQuery(noteClientStateCollection)
+  const noteClientStateQuery = liveCollections.noteClientStates
   /** Settings supply the shared font, line budget, and note line reservation. */
   const systemSettings = getSystemSettingsContext()
   /** Notes indexed once for all owner rows. */

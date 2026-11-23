@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { Action } from 'svelte/action'
-  import { useLiveQuery } from '@tanstack/svelte-db'
+  import { getLiveCollectionsContext } from '@renderer/app/liveCollectionsContext'
   import { Folder, Move, Plus, Search, Settings } from 'lucide-svelte'
   import Button from '@renderer/common/cthulhu-ui/buttons/Button.svelte'
   import IconButton from '@renderer/common/cthulhu-ui/buttons/IconButton.svelte'
@@ -14,16 +14,10 @@
   import { runIpcBestEffort } from '@renderer/data/IpcFramework/IpcInvoke'
   import { moveProject } from '@renderer/data/Mutations/ProjectMutations'
   import { movePromptCollection } from '@renderer/data/Mutations/WorkspaceMutations'
-  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
-  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import CreatePromptCollectionDialog from '@renderer/features/prompt-collections/CreatePromptCollectionDialog.svelte'
   import { getPromptCollectionDetails } from '@renderer/features/prompt-collections/promptCollectionDetails'
   import { createPromptDragGhost } from '@renderer/features/prompt-drag-drop/promptDragGhost'
   import NewTabCollectionGrid, { type NewTabCollectionTile } from './NewTabCollectionGrid.svelte'
-  import type { Prompt } from '@shared/domain/prompt/Prompt'
-  import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
-  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import type { Project } from '@shared/domain/workspace/Project'
   import type { Workspace } from '@shared/domain/workspace/Workspace'
 
@@ -56,9 +50,11 @@
     onEditProject: (projectId: string) => void
   }>()
 
-  const promptCollectionQuery = useLiveQuery(promptCollectionsCollection) as { data: PromptCollection[] }
-  const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as { data: PromptTemplate[] }
+  /** App-lifetime live queries, so mounting this component subscribes to nothing new. */
+  const liveCollections = getLiveCollectionsContext()
+  const promptCollectionQuery = liveCollections.promptCollections
+  const promptQuery = liveCollections.prompts
+  const promptTemplateQuery = liveCollections.promptTemplates
 
   /** Scroll host restored once after the tab's filtered content mounts. */
   let scrollHost: HTMLElement

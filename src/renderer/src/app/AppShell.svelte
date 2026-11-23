@@ -33,12 +33,9 @@
   import { systemSettingsCollection } from '@renderer/data/Collections/SystemSettingsCollection'
   import { userPersistenceCollection } from '@renderer/data/Collections/UserPersistenceCollection'
   import { workspaceUiStateCollection } from '@renderer/data/Collections/WorkspaceUiStateCollection'
-  import { promptCollectionsCollection } from '@renderer/data/Collections/PromptCollectionsCollection'
-  import { promptsCollection } from '@renderer/data/Collections/PromptsCollection'
-  import { promptTemplatesCollection } from '@renderer/data/Collections/PromptTemplatesCollection'
   import { getMarkdownContentIds } from '@shared/domain/markdown-content/MarkdownContent'
-  import { workspaceCollection } from '@renderer/data/Collections/WorkspaceCollection'
   import { setSystemSettingsContext, type SystemSettingsContext } from './systemSettingsContext'
+  import { createLiveCollections, setLiveCollectionsContext } from './liveCollectionsContext'
   import {
     getSelectedWorkspaceId,
     setSelectedWorkspaceId
@@ -71,18 +68,14 @@
   import { captureRegisteredMonacoViewStates } from '@renderer/features/prompt-editor/MonacoViewStateRegistry'
   import { createCollectionViewState, createWorkspaceTab, pruneCollectionTabViews, type CollectionViewState, type WorkspaceTab } from '@shared/domain/ui-state/TabSession'
   import { getPromptCollectionCategoryIds } from '@shared/domain/prompt-collection/PromptCollection'
-  import { notesCollection } from '@renderer/data/Collections/NotesCollection'
   import { AUTOSAVE_MS } from '@renderer/data/UiState/autosave/draftAutosave'
   import {
     USER_PERSISTENCE_ID,
     type WorkTab
   } from '@shared/domain/user-persistence/UserPersistence'
   import type { PromptCollection } from '@shared/domain/prompt-collection/PromptCollection'
-  import type { Prompt } from '@shared/domain/prompt/Prompt'
-  import type { PromptTemplate } from '@shared/domain/prompt-template/PromptTemplate'
   import { getPromptDisplayTitle } from '@shared/domain/prompt/promptFallbackTitle'
   import type { SystemSettings } from '@shared/domain/settings/SystemSettings'
-  import type { Workspace } from '@shared/domain/workspace/Workspace'
   import { compactGuid } from '@shared/utilities/compactGuid'
   import AppUpdatesPopup from '@renderer/features/updates/AppUpdatesPopup.svelte'
   import { createAppUpdates } from '@renderer/features/updates/appUpdates.svelte'
@@ -149,18 +142,17 @@
   /** Restores the user's expansion preference for screens that provide a sidebar. */
   let sidebarExpanded = $state(getUserPersistence().appSidebarExpanded)
 
-  const workspaceQuery = useLiveQuery((q) => q.from({ workspace: workspaceCollection })) as {
-    data: Workspace[]
-  }
-  const promptCollectionQuery = useLiveQuery((q) =>
-    q.from({ promptCollection: promptCollectionsCollection })
-  ) as { data: PromptCollection[] }
+  /** App-lifetime live queries shared by every screen, so switching screens mounts no queries of its own. */
+  const liveCollections = createLiveCollections()
+  const workspaceQuery = liveCollections.workspaces
+  const promptCollectionQuery = liveCollections.promptCollections
   /** Prompts and templates whose titles name work tabs with a prompt open. */
-  const promptQuery = useLiveQuery(promptsCollection) as { data: Prompt[] }
+  const promptQuery = liveCollections.prompts
   /** Loaded note identities preserve valid attached-editor locations during deletion cleanup. */
-  const noteQuery = useLiveQuery(notesCollection)
-  const promptTemplateQuery = useLiveQuery(promptTemplatesCollection) as { data: PromptTemplate[] }
+  const noteQuery = liveCollections.notes
+  const promptTemplateQuery = liveCollections.promptTemplates
 
+  setLiveCollectionsContext(liveCollections)
   setSystemSettingsContext(systemSettings)
   setWorkspaceSelectionContext(workspaceSelection)
   setPromptNavigationContext(() => selectedWorkTab?.mode.navigation ?? promptNavigation)
