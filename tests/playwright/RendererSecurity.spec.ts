@@ -41,6 +41,13 @@ describe('Renderer security', () => {
     await electronApp.evaluate(({ BrowserWindow }, id) => {
       BrowserWindow.fromId(id)!.webContents.closeDevTools()
     }, windowId)
+    /** Waiting for the frontend page to close ensures all of its console messages were delivered. */
+    await expect.poll(() =>
+      electronApp.windows().some((page) => page.url().startsWith('devtools://'))
+    ).toBe(false)
+    // The DevTools frontend calls the Autofill protocol domain, which Electron does not implement.
+    testSetup.removeRendererErrorsContaining('Request Autofill.')
+    expect(testSetup.getRendererErrors()).toEqual([])
   })
 
   /** The development exception allows one exact HTTP/WS origin without opening other network access. */
