@@ -1,25 +1,36 @@
+import type { Locator, Page } from 'playwright'
 import { createCollectionViewState } from '@shared/domain/ui-state/TabSession'
 import { createDeterministicId } from '../fixtures/FixtureIds'
 import { createWorkspaceWithCollections, getWorkspaceInfoPath } from '../fixtures/WorkspaceFixtures'
 import { createPlaywrightTestSuite } from '../helpers/PlaywrightTestFramework'
-import { PROMPT_COLLECTION_HOST_SELECTOR } from '../helpers/PromptCollectionSelectors'
+import { PROMPT_COLLECTION_HOST_SELECTOR, promptEditorSelector } from '../helpers/PromptCollectionSelectors'
+import { getElementScrollTop } from '../helpers/VirtualWindowHelpers'
 import { seedWindowPersistence, seedWorkspaceState } from '../helpers/UserPersistenceHelpers'
 import {
   installFrameTracker,
   isScenarioSelected,
+  measureScrolling,
   measureTransition,
   PERFORMANCE_ELECTRON_ARGS,
   PERFORMANCE_RUNS,
   saveRun,
   startTracing,
   stopTracing,
-  type TransitionResult
+  type MeasurementResult
 } from './PerformanceHelpers'
 
 const { test, describe, expect } = createPlaywrightTestSuite({ electronArgs: PERFORMANCE_ELECTRON_ARGS })
 
 /** Switches between Home and four large collection tabs, first opening and then returning to each. */
 const HOME_COLLECTION_SWITCHING = 'home-collection-switching'
+/** Scrolls three freshly opened task collections, each at a different wheel cadence. */
+const PROMPT_COLLECTION_SCROLLING = 'prompt-collection-scrolling'
+/** One 120-unit wheel event moves the collection 48 px at its current wheel multiplier. */
+const SCROLL_VARIANTS = [
+  { name: 'Slow', intervalMs: 100 },
+  { name: 'Medium', intervalMs: 40 },
+  { name: 'Fast', intervalMs: 20 }
+]
 /** Legacy fixture path imported into the run's on-disk workspace database. */
 const WORKSPACE_PATH = '/ws/performance'
 /** Prompts in each collection. */
@@ -70,21 +81,62 @@ const createPromptMarkdown = (number: number): string => {
   ].join('\n')
 }
 
-/** Four 1000-prompt collections written through the shared legacy fixture pipeline. */
-const workspaceFiles = createWorkspaceWithCollections(WORKSPACE_PATH, COLLECTIONS.map((collection, collectionIndex) => ({
-  folderName: collection.name.replace(' ', ''),
-  displayName: collection.name,
-  promptCollectionId: collection.id,
-  prompts: Array.from({ length: PROMPTS_PER_COLLECTION }, (_, index) => {
-    /** Workspace-wide prompt number keeps every prompt's text distinct. */
-    const number = collectionIndex * PROMPTS_PER_COLLECTION + index + 1
-    return { id: `perf-prompt-${number}`, title: `${AREAS[number % AREAS.length]} prompt ${number}`, promptText: createPromptMarkdown(number) }
-  })
-})))
+/** Builds the scenario's 1000-prompt collections through the shared legacy fixture pipeline. */
+const createWorkspaceFiles = (collections: typeof COLLECTIONS) =>
+  createWorkspaceWithCollections(WORKSPACE_PATH, collections.map((collection, collectionIndex) => ({
+    folderName: collection.name.replace(' ', ''),
+    displayName: collection.name,
+    promptCollectionId: collection.id,
+    prompts: Array.from({ length: PROMPTS_PER_COLLECTION }, (_, index) => {
+      /** Workspace-wide prompt number keeps every prompt's text distinct. */
+      const number = collectionIndex * PROMPTS_PER_COLLECTION + index + 1
+      return { id: `perf-prompt-${number}`, title: `${AREAS[number % AREAS.length]} prompt ${number}`, promptText: createPromptMarkdown(number) }
+    })
+  })))
 
-if (isScenarioSelected(HOME_COLLECTION_SWITCHING)) {
-  describe(HOME_COLLECTION_SWITCHING, () => {
+/** Measures each tab's first open and cached return, alternating with Home. */
+const measureSwitches = async (page: Page, tabs: Locator): Promise<MeasurementResult[]> => {
+  /** Ordered samples for the two Home-to-collection cycles. */
+  const transitions: MeasurementResult[] = []
+  for (let cycle = 1; cycle <= CYCLES; cycle += 1) {
+    for (const [index, collection] of COLLECTIONS.entries()) {
+      transitions.push(await measureTransition(page,
+        `Cycle ${cycle}: Home → ${collection.name}${cycle === 1 ? ' (first open)' : ''}`,
+        COLLECTION_READY_SELECTOR, tabs.nth(index)))
+      transitions.push(await measureTransition(page, `Cycle ${cycle}: ${collection.name} → Home`,
+        HOME_READY_SELECTOR, page.getByTestId('nav-button-home')))
+    }
+  }
+  return transitions
+}
+
+/** Opens one tab per speed and scrolls only after its initial virtual window is fully hydrated. */
+const measureScrollVariants = async (page: Page, tabs: Locator): Promise<MeasurementResult[]> => {
+  /** One sample per wheel cadence. */
+  const samples: MeasurementResult[] = []
+  for (const [index, variant] of SCROLL_VARIANTS.entries()) {
+    await tabs.nth(index).click()
+    /** The expected collection's first Monaco editor disambiguates the tab during a switch. */
+    const firstEditor = promptEditorSelector(`perf-prompt-${index * PROMPTS_PER_COLLECTION + 1}`)
+    await page.waitForFunction((selector) => window.performanceTracker.isReady(selector), `${firstEditor} .monaco-editor`)
+    // The 24 px left gutter stays over the collection as editor rows move past the pointer.
+    await page.locator(PROMPT_COLLECTION_HOST_SELECTOR).hover({ position: { x: 12, y: 40 } })
+    expect(await getElementScrollTop(page, PROMPT_COLLECTION_HOST_SELECTOR)).toBe(0)
+    /** Measured duration and actual distance make delivered scrolling speed visible in the report. */
+    const sample = await measureScrolling(page, `${variant.name} (${variant.intervalMs} ms wheel interval)`, variant.intervalMs)
+    expect(sample.scrollDistancePx).toBeGreaterThan(0)
+    samples.push(sample)
+  }
+  return samples
+}
+
+for (const scenario of [HOME_COLLECTION_SWITCHING, PROMPT_COLLECTION_SCROLLING].filter(isScenarioSelected)) {
+  describe(scenario, () => {
     describe.configure({ mode: 'serial' })
+    /** Scrolling uses one collection per speed. Switching uses all four tabs. */
+    const collections = scenario === PROMPT_COLLECTION_SCROLLING ? COLLECTIONS.slice(0, SCROLL_VARIANTS.length) : COLLECTIONS
+    /** Source files shared by this scenario's isolated launches. */
+    const workspaceFiles = createWorkspaceFiles(collections)
 
     for (const run of PERFORMANCE_RUNS) {
       test(run.name, async ({ electronApp, testSetup }) => {
@@ -94,10 +146,10 @@ if (isScenarioSelected(HOME_COLLECTION_SWITCHING)) {
           return screen.getPrimaryDisplay().workArea
         })
         await seedWindowPersistence(electronApp, { ...workArea, isMaximized: true, isFullScreen: false })
-        // Four restored collection tabs stay unloaded on Home, so each tab's first click is its first open.
+        // Restored collection tabs stay unloaded on Home until the first click.
         await seedWorkspaceState(electronApp, createDeterministicId(WORKSPACE_PATH), 'tab-session-user', null, {
           selectedTabId: 'home',
-          tabs: COLLECTIONS.map((collection) => ({
+          tabs: collections.map((collection) => ({
             id: `tab-${collection.id}`, collectionId: collection.id, openPromptId: null, lastAccessed: 0, search: '',
             view: createCollectionViewState()
           })),
@@ -110,7 +162,7 @@ if (isScenarioSelected(HOME_COLLECTION_SWITCHING)) {
 
         /** Seeded work tabs in collection order. */
         const tabs = mainWindow.getByTestId('work-tab').getByRole('tab')
-        await expect(tabs).toHaveCount(COLLECTIONS.length)
+        await expect(tabs).toHaveCount(collections.length)
         await expect(mainWindow.getByTestId('home-screen')).toBeVisible()
         await installFrameTracker(mainWindow)
         /** DevTools trace session, recorded only by the profiling run. */
@@ -118,20 +170,13 @@ if (isScenarioSelected(HOME_COLLECTION_SWITCHING)) {
         // Let Home and the profiler's startup work settle before the first measured transition.
         await mainWindow.waitForTimeout(1000)
 
-        /** Every transition in this run, in order. */
-        const transitions: TransitionResult[] = []
-        for (let cycle = 1; cycle <= CYCLES; cycle += 1) {
-          for (const [index, collection] of COLLECTIONS.entries()) {
-            transitions.push(await measureTransition(mainWindow,
-              `Cycle ${cycle}: Home → ${collection.name}${cycle === 1 ? ' (first open)' : ''}`,
-              COLLECTION_READY_SELECTOR, tabs.nth(index)))
-            transitions.push(await measureTransition(mainWindow, `Cycle ${cycle}: ${collection.name} → Home`,
-              HOME_READY_SELECTOR, mainWindow.getByTestId('nav-button-home')))
-          }
-        }
-        if (tracing) await stopTracing(tracing, HOME_COLLECTION_SWITCHING)
+        /** Measurements in display order for this scenario's summary. */
+        const transitions = scenario === PROMPT_COLLECTION_SCROLLING
+          ? await measureScrollVariants(mainWindow, tabs)
+          : await measureSwitches(mainWindow, tabs)
+        if (tracing) await stopTracing(tracing, scenario)
 
-        saveRun(HOME_COLLECTION_SWITCHING, { run: run.name, profiled: run.profiled, transitions })
+        saveRun(scenario, { run: run.name, profiled: run.profiled, transitions })
       })
     }
   })

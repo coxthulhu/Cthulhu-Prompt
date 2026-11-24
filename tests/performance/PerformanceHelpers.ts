@@ -1,11 +1,14 @@
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import type { CDPSession, Locator, Page } from 'playwright'
 import { MONACO_PLACEHOLDER_SELECTOR } from '../helpers/PromptCollectionSelectors'
 
-/** Raw frame data the in-page tracker returns for one transition. */
-type TrackedTransition = {
-  readyMs: number
+/** Raw frame data from the first input until navigation is ready or the scrolling interval ends. */
+type FrameSample = {
+  elapsedMs: number
+  /** Virtual collection offset in the final sampled frame, measured from the verified top. */
+  scrollDistancePx?: number
   frameIntervalsMs: number[]
   longAnimationFrames: Array<{ startTime: number; duration: number; blockingDuration: number }>
 }
@@ -14,14 +17,18 @@ declare global {
   interface Window {
     /** In-page frame tracker installed by installFrameTracker. */
     performanceTracker: {
-      measure: (label: string, readySelector: string) => Promise<TrackedTransition>
+      isReady: (selector: string) => boolean
+      arm: (label: string, until: string | number) => void
+      result: () => Promise<FrameSample>
     }
   }
 }
 
-/** One transition's frame statistics with its raw samples. */
-export type TransitionResult = TrackedTransition & {
+/** Frame statistics shared by navigation and scrolling, with the measurements specific to each. */
+export type MeasurementResult = Omit<FrameSample, 'elapsedMs'> & {
   label: string
+  readyMs?: number
+  scrollDurationMs?: number
   frameCount: number
   p50FrameMs: number
   p95FrameMs: number
@@ -34,7 +41,7 @@ export type TransitionResult = TrackedTransition & {
 export type RunResult = {
   run: string
   profiled: boolean
-  transitions: TransitionResult[]
+  transitions: MeasurementResult[]
 }
 
 /** Real-display launch: no headless or GPU-disabling flags, and occluded windows keep rendering. */
@@ -107,35 +114,34 @@ export const stopTracing = async (session: CDPSession, scenario: string): Promis
 /** Frames recorded after a destination is ready; baseline runs showed no long frames after ready. */
 const SETTLE_MS = 250
 
-/** Installs one requestAnimationFrame loop and a long-animation-frame observer that time each armed transition. */
+/** Installs one animation-frame loop and long-frame observer for both navigation and scrolling. */
 export const installFrameTracker = async (page: Page): Promise<void> => {
   await page.evaluate(({ overlaySelector, placeholderSelector, unbuiltEditorSelector, settleMs }) => {
-    /** Frame start times since the current transition's last pre-click frame. */
+    /** Frame timestamps including the last frame before the first input. */
     let frameTimes: number[] = []
     /** Long animation frames reported since the last completed transition. */
-    let longFrames: TrackedTransition['longAnimationFrames'] = []
-    /** Transition awaiting its click, readiness, and settle. */
+    let longFrames: FrameSample['longAnimationFrames'] = []
+    /** Resolves with the armed measurement even if it finishes before the driver reads it. */
+    let result: Promise<FrameSample>
+    /** Input and end condition for the current sample. */
     let pending: {
       label: string
-      readySelector: string
+      until: string | number
       startTime: number | null
-      readyTime: number | null
-      resolve: (result: TrackedTransition) => void
+      endTime: number | null
+      resolve: (sample: FrameSample) => void
     } | null = null
 
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
+    /** Copies long-frame entries, including any still queued at the final sample boundary. */
+    const collectLongFrames = (entries: PerformanceEntry[]): void => {
+      for (const entry of entries) {
         longFrames.push({ startTime: entry.startTime, duration: entry.duration,
           blockingDuration: (entry as PerformanceEntry & { blockingDuration: number }).blockingDuration })
       }
-    }).observe({ type: 'long-animation-frame' })
-
-    // The press that triggers navigation starts the transition, keeping the frame that contains it.
-    addEventListener('pointerdown', (event) => {
-      if (!pending || pending.startTime !== null) return
-      pending.startTime = event.timeStamp
-      frameTimes = frameTimes.slice(-1)
-    }, { capture: true })
+    }
+    /** Observer whose buffered records can be drained before resolving a sample. */
+    const observer = new PerformanceObserver((list) => collectLongFrames(list.getEntries()))
+    observer.observe({ type: 'long-animation-frame' })
 
     /** Ready once the destination's element is mounted, the loading overlay is gone, and every editor is built. */
     const isReady = (readySelector: string): boolean =>
@@ -144,23 +150,39 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
       document.querySelector(placeholderSelector) === null &&
       document.querySelector(unbuiltEditorSelector) === null
 
-    /** Records each frame, labels the transition when ready, and resolves it after the settle. */
+    /** Marks navigation readiness or the end of the timed scroll and collects frame intervals. */
     const onFrame = (time: number): void => {
       frameTimes.push(time)
       if (pending && pending.startTime !== null) {
-        if (pending.readyTime === null && isReady(pending.readySelector)) {
-          pending.readyTime = time
+        /** Navigation includes the existing post-load settle. Scrolling samples only the wheel gesture. */
+        const scrolling = typeof pending.until === 'number'
+        if (pending.endTime === null && (typeof pending.until === 'number'
+          ? time - pending.startTime >= pending.until
+          : isReady(pending.until))) {
+          pending.endTime = time
           performance.measure(pending.label, { start: pending.startTime, end: time })
         }
-        if (pending.readyTime !== null && time >= pending.readyTime + settleMs) {
-          const { startTime, readyTime, resolve } = pending
+        if (pending.endTime !== null && time >= pending.endTime + (scrolling ? 0 : settleMs)) {
+          /** Completed sample boundaries in the renderer clock. */
+          const { startTime, endTime, resolve } = pending
           pending = null
-          resolve({
-            readyMs: readyTime - startTime,
-            frameIntervalsMs: frameTimes.slice(1).map((frameTime, index) => frameTime - frameTimes[index]),
-            longAnimationFrames: longFrames.filter((frame) => frame.startTime + frame.duration > startTime && frame.startTime < time)
-          })
-          longFrames = []
+          /** Snapshot distance and frame intervals at the same cutoff. */
+          const scrollDistancePx = scrolling
+            ? window.svelteVirtualWindowTestControls!.getScrollTop!('prompt-collection-virtual-window') ?? undefined
+            : undefined
+          /** Frame intervals through the cutoff, including the frame containing the first input. */
+          const frameIntervalsMs = frameTimes.slice(1).map((frameTime, index) => frameTime - frameTimes[index])
+          /** Chromium publishes a long-frame entry after its rendering work completes. */
+          const finish = (): void => {
+            collectLongFrames(observer.takeRecords())
+            resolve({
+              elapsedMs: endTime - startTime, scrollDistancePx, frameIntervalsMs,
+              longAnimationFrames: longFrames.filter((frame) => frame.startTime + frame.duration > startTime && frame.startTime < time)
+            })
+            longFrames = []
+          }
+          if (scrolling) requestAnimationFrame(finish)
+          else finish()
         }
       }
       requestAnimationFrame(onFrame)
@@ -168,9 +190,18 @@ export const installFrameTracker = async (page: Page): Promise<void> => {
     requestAnimationFrame(onFrame)
 
     window.performanceTracker = {
-      measure: (label, readySelector) => new Promise((resolve) => {
-        pending = { label, readySelector, startTime: null, readyTime: null, resolve }
-      })
+      isReady,
+      arm(label, until) {
+        result = new Promise((resolve) => {
+          pending = { label, until, startTime: null, endTime: null, resolve }
+        })
+        // Keep the frame containing the first input and exclude setup frames.
+        addEventListener(typeof until === 'number' ? 'wheel' : 'pointerdown', (event) => {
+          pending!.startTime = event.timeStamp
+          frameTimes = frameTimes.slice(-1)
+        }, { capture: true, once: true, passive: true })
+      },
+      result: () => result
     }
   }, {
     overlaySelector: '[data-testid="prompt-collection-loading-overlay"]',
@@ -188,37 +219,54 @@ const percentile = (values: number[], fraction: number): number =>
 /** Rounds to 0.1 ms to keep the raw results compact. */
 const round = (value: number): number => Math.round(value * 10) / 10
 
-/** Clicks the target and returns frame statistics from the press until the settle after the destination is ready. */
+/** Summarizes the same frame statistics for both benchmark scenarios. */
+const summarizeFrames = (label: string, { frameIntervalsMs, longAnimationFrames }: FrameSample): MeasurementResult => ({
+  label,
+  frameCount: frameIntervalsMs.length,
+  p50FrameMs: round(percentile(frameIntervalsMs, 0.5)),
+  p95FrameMs: round(percentile(frameIntervalsMs, 0.95)),
+  maxFrameMs: round(Math.max(...frameIntervalsMs)),
+  framesOver50Ms: frameIntervalsMs.filter((interval) => interval > 50).length,
+  longFrameBlockingMs: round(longAnimationFrames.reduce((total, frame) => total + frame.blockingDuration, 0)),
+  frameIntervalsMs: frameIntervalsMs.map(round),
+  longAnimationFrames: longAnimationFrames.map((frame) => ({
+    startTime: round(frame.startTime), duration: round(frame.duration), blockingDuration: round(frame.blockingDuration)
+  }))
+})
+
+/** Measures from the tab press until the settle after the destination becomes ready. */
 export const measureTransition = async (
-  page: Page,
-  label: string,
-  readySelector: string,
-  target: Locator
-): Promise<TransitionResult> => {
-  // The tracker arms synchronously before the click's own page calls run.
-  const [{ readyMs, frameIntervalsMs, longAnimationFrames }] = await Promise.all([
-    page.evaluate(({ label, readySelector }) => window.performanceTracker.measure(label, readySelector), { label, readySelector }),
-    target.click()
-  ])
-  return {
-    label,
-    readyMs: round(readyMs),
-    frameCount: frameIntervalsMs.length,
-    p50FrameMs: round(percentile(frameIntervalsMs, 0.5)),
-    p95FrameMs: round(percentile(frameIntervalsMs, 0.95)),
-    maxFrameMs: round(Math.max(...frameIntervalsMs)),
-    framesOver50Ms: frameIntervalsMs.filter((interval) => interval > 50).length,
-    longFrameBlockingMs: round(longAnimationFrames.reduce((total, frame) => total + frame.blockingDuration, 0)),
-    frameIntervalsMs: frameIntervalsMs.map(round),
-    longAnimationFrames: longAnimationFrames.map((frame) => ({
-      startTime: round(frame.startTime), duration: round(frame.duration), blockingDuration: round(frame.blockingDuration)
-    }))
-  }
+  page: Page, label: string, readySelector: string, target: Locator
+): Promise<MeasurementResult> => {
+  await page.evaluate(({ label, readySelector }) => window.performanceTracker.arm(label, readySelector), { label, readySelector })
+  await target.click()
+  /** Renderer frames and time to readiness for this transition. */
+  const sample = await page.evaluate(() => window.performanceTracker.result())
+  return { ...summarizeFrames(label, sample), readyMs: round(sample.elapsedMs) }
+}
+
+/** Times ten seconds of 120-unit wheel input at the requested cadence over the collection. */
+export const measureScrolling = async (
+  page: Page, label: string, intervalMs: number
+): Promise<MeasurementResult> => {
+  /** Time between the first wheel event and the end of the frame sample. */
+  const durationMs = 10_000
+  await page.evaluate(({ label, durationMs }) => window.performanceTracker.arm(label, durationMs), { label, durationMs })
+  // Schedule in the driver so a slow renderer cannot slow down the emulated mouse.
+  await Promise.all(Array.from({ length: durationMs / intervalMs }, async (_, index) => {
+    await delay(index * intervalMs)
+    await page.mouse.wheel(0, 120)
+  }))
+  /** Frame sample ending on the first animation frame at or beyond ten seconds. */
+  const sample = await page.evaluate(() => window.performanceTracker.result())
+  return { ...summarizeFrames(label, sample), scrollDurationMs: round(sample.elapsedMs), scrollDistancePx: sample.scrollDistancePx }
 }
 
 /** Summary columns, each the median of the measured runs. */
-const SUMMARY_COLUMNS: Array<[string, keyof TransitionResult]> = [
+const SUMMARY_COLUMNS: Array<[string, keyof MeasurementResult]> = [
   ['Ready ms', 'readyMs'],
+  ['Scroll ms', 'scrollDurationMs'],
+  ['Distance px', 'scrollDistancePx'],
   ['Frames', 'frameCount'],
   ['P50 frame ms', 'p50FrameMs'],
   ['P95 frame ms', 'p95FrameMs'],
@@ -232,12 +280,14 @@ const formatSummary = (results: Record<string, RunResult[]>): string => ['# Perf
   .map(([scenario, runs]) => {
     /** Runs without profiler overhead. */
     const measured = runs.filter((run) => !run.profiled)
+    /** Only show metrics collected by this scenario. */
+    const columns = SUMMARY_COLUMNS.filter(([, key]) => measured[0]?.transitions[0]?.[key] !== undefined)
     /** One row per transition, matched by position across runs. */
-    const rows = (measured[0]?.transitions ?? []).map((transition, index) => `| ${transition.label} | ${SUMMARY_COLUMNS
+    const rows = (measured[0]?.transitions ?? []).map((transition, index) => `| ${transition.label} | ${columns
       .map(([, key]) => percentile(measured.map((run) => run.transitions[index][key] as number), 0.5)).join(' | ')} |`)
     return [`## ${scenario}`, '', `Median of ${measured.length} measured run(s); the profiling run is excluded.`, '',
-      `| Transition | ${SUMMARY_COLUMNS.map(([title]) => title).join(' | ')} |`,
-      `| --- | ${SUMMARY_COLUMNS.map(() => '---:').join(' | ')} |`, ...rows].join('\n')
+      `| Sample | ${columns.map(([title]) => title).join(' | ')} |`,
+      `| --- | ${columns.map(() => '---:').join(' | ')} |`, ...rows].join('\n')
   })].join('\n\n') + '\n'
 
 /** Appends a run to results.json and rewrites summary.md, so completed runs survive a later failure. */
