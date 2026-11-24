@@ -97,7 +97,9 @@ Only run the performance tests when the user explicitly gives permission. They r
 
 - `tests/performance/PromptCollectionPerformance.spec.ts` holds every scenario and uses its own config, so the regular Playwright suite never runs it. Each run imports the fixture workspace into a real on-disk workspace database.
 - Each scenario runs three measured runs with minimal frame tracking, then a profiling run that records a DevTools performance trace with labelled transitions. There are no pass/fail thresholds.
-- `--no-profile` skips the profiling run when only checking baselines. `--scenario name` limits the run to that scenario and can be repeated. Scenarios: `home-collection-switching`, `prompt-collection-scrolling`.
+- `--no-profile` skips the profiling run when only checking baselines. `--scenario name` limits the run to that scenario and can be repeated.
+- `home-collection-switching` measures first opens and returns between Home and four large collection tabs.
+- `prompt-collection-scrolling` measures ten seconds of mouse-wheel scrolling in each of three task collections with 1,000 25-line prompts apiece.
 - On success the script prints `COMPLETE temp/performance/<Timestamp>`. That folder holds `summary.md` (medians of the measured runs), `results.json` (raw frame intervals and long animation frames), `<scenario>.trace.json` (open in the DevTools Performance panel or Perfetto), and `playwright-output.txt`. On failure the script prints the build or Playwright output followed by `FAILED temp/performance/<Timestamp>`, which keeps any completed runs.
 - Record accepted baselines in the untracked `tests/performance/PerformanceBaselines.md`.
 
